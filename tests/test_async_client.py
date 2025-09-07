@@ -4,6 +4,8 @@ import sys
 
 import pytest
 
+import anyio
+
 from mqttproto import MQTTPublishPacket, QoS
 from mqttproto.async_client import AsyncMQTTClient
 
@@ -44,19 +46,27 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
 async def test_publish_overlap() -> None:
     # Same as above but there's another overlapping suscription
     # so we need to skip duplicates IF the server doesn't filter them
-    async with AsyncMQTTClient() as client:
-        async with client.subscribe("test/+") as messages, client.subscribe("#"):
-            await client.publish("test/text", "test åäö")
-            await client.publish("test/binary", b"\x00\xff\x00\x1f")
+    async with AsyncMQTTClient() as client, AsyncMQTTClient() as c2:
+        async with (
+                anyio.create_task_group() as tg,
+                client.subscribe("test/+") as messages,
+                client.subscribe("#") as drain,
+            ):
+            @tg.start_soon
+            async def drop():
+                async for msg in drain:
+                    pass
+            await c2.publish("test/text", "test åäö")
+            await c2.publish("test/binary", b"\x00\xff\x00\x1f")
             packets: list[MQTTPublishPacket] = []
             async for packet in messages:
+                # with subscription IDs this won't happen
+                print(packet)
                 if (
                     not client.cap_subscription_ids
                     and packets
                     and packets[0].topic == "test/text"
                 ):
-                    assert not client.cap_subscription_ids
-                    # with subscription IDs this won't happen
                     continue
 
                 packets.append(packet)
@@ -67,6 +77,7 @@ async def test_publish_overlap() -> None:
             assert packets[0].payload == "test åäö"
             assert packets[1].topic == "test/binary"
             assert packets[1].payload == b"\x00\xff\x00\x1f"
+            tg.cancel_scope.cancel()
 
 
 async def test_retained_message() -> None:

@@ -493,7 +493,7 @@ class AsyncMQTTClient:
             self._pending_connect.event.set()
             self._pending_connect = None
             if not packet.session_present and self._subscriptions:
-                # The server restarted and frogot our session. Owch.
+                # The server restarted and forgot our session. Owch.
                 raise MQTTServerRestarted
 
 

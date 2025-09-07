@@ -90,7 +90,7 @@ class Notify:
                                 title = str(path)
                             await self.send(topic=path, **msg)
                         else:
-                            await self.send(topic=path, msg=str(msg))
+                            await self.send(topic=path, title="?", msg=str(msg))
 
                     # not reached, loop doesn't terminate
 

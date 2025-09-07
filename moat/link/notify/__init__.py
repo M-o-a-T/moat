@@ -73,8 +73,7 @@ class Notify:
 
     async def _run(self) -> NoReturn:
         """
-        A bridge that monitors the Notify subchannel and forwards to NTFY.SH
-        (or a private server).
+        A bridge that monitors the MoaT-Link notify subtree.
         """
         async with as_service(attrdict(debug=False)) as srv:
             try:

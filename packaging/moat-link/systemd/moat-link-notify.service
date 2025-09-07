@@ -1,5 +1,5 @@
 [Unit]
-Description=MoaT-Link NTFY forwarder
+Description=MoaT-Link Notification Forwarder
 
 ConditionFileNotEmpty=/etc/moat/moat.cfg
 
@@ -20,3 +20,4 @@ EnvironmentFile=-/etc/moat/link.env
 
 TimeoutSec=300
 WatchdogSec=10
+Restart=always

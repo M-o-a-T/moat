@@ -102,7 +102,7 @@ class Notify:
 
     async def _keepalive(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> NoReturn:
         "Monitor the keepalive topic"
-        bad = False
+        bad = True
         link = self.link
         main_host = link.cfg.main
         keep = self.cfg.keepalive

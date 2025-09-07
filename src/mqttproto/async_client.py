@@ -49,6 +49,7 @@ from ._types import (
     MQTTUnsubscribeAckPacket,
     Pattern,
     PropertyType,
+    PropertyValue,
     QoS,
     ReasonCode,
     RetainHandling,
@@ -492,7 +493,7 @@ class AsyncMQTTClient:
             self._pending_connect.event.set()
             self._pending_connect = None
             if not packet.session_present and self._subscriptions:
-                # The server restarted and frogot our session. Owch.
+                # The server restarted and forgot our session. Owch.
                 raise MQTTServerRestarted
 
 
@@ -618,6 +619,7 @@ class AsyncMQTTClient:
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
+        properties: dict[PropertyType, PropertyValue] | None = None,
         user_properties: dict[str, str] | None = None,
     ) -> None:
         """
@@ -632,7 +634,12 @@ class AsyncMQTTClient:
 
         """
         packet_id = self._state_machine.publish(
-            topic, payload, qos=qos, retain=retain, user_properties=user_properties
+            topic,
+            payload,
+            qos=qos,
+            retain=retain,
+            properties=properties,
+            user_properties=user_properties,
         )
         if qos == QoS.EXACTLY_ONCE:
             assert packet_id is not None

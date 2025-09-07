@@ -24,6 +24,7 @@ from ._types import (
     MQTTUnsubscribePacket,
     Pattern,
     PropertyType,
+    PropertyValue,
     QoS,
     ReasonCode,
     Subscription,
@@ -175,7 +176,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
-        properties: dict[PropertyType, int] | None = None,
+        properties: dict[PropertyType, PropertyValue] | None = None,
         user_properties: dict[str, str] | None = None,
     ) -> int | None:
         """
@@ -199,6 +200,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             payload=payload,
             qos=qos,
             retain=retain,
+            properties=properties if properties is not None else {},
             packet_id=packet_id,
             user_properties={} if user_properties is None else user_properties,
         )

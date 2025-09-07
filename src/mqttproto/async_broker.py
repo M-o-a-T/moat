@@ -157,6 +157,12 @@ class AsyncMQTTBroker:
         :param stream: the byte stream for the client.
 
         """
+        try:
+            await self._serve_client(stream)
+        except Exception as exc:
+            logger.exception("Client on %r died",stream)
+
+    async def _serve_client(self, stream: ByteStream) -> None:
         async with stream:
             session = AsyncMQTTClientSession(stream=stream)
             added = False

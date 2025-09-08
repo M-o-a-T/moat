@@ -295,7 +295,9 @@ class _Sender(MsgSender):
         if meta is None:
             meta=MsgMeta(origin=self._link.name)
         if t is None and not with_prev:
-            await self.send(Root.get()+path, data=data, meta=meta, retain=len(path)==0 or path[0]!="run")
+            if retain is None:
+                retain = len(path)==0 or path[0] != "run"
+            await self.send(Root.get()+path, data=data, meta=meta, retain=retain)
             return
         tt = {} if t is None else {"t":t}
         res = await self.d.set(path, data, meta, **tt)

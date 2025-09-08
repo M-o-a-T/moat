@@ -278,6 +278,9 @@ class AsyncMQTTClient:
     will: Will | None = field(
         kw_only=True, default=None, validator=optional(instance_of(Will))
     )
+    keep_alive: int = field(
+        kw_only=True, validator=[instance_of(int), ge(0), le(65535)], default=0
+    )
 
     _exit_stack: AsyncExitStack = field(init=False)
     _closed: bool = field(init=False, default=False)
@@ -438,6 +441,7 @@ class AsyncMQTTClient:
             username=self.username,
             password=self.password,
             will=self.will,
+            keep_alive=self.keep_alive,
         )
         operation = MQTTConnectOperation()
         await self._run_operation(operation)

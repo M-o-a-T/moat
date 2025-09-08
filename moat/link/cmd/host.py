@@ -29,7 +29,7 @@ async def cli(ctx):
     obj = ctx.obj
     cfg = obj.cfg["link"]
     if ctx.invoked_subcommand != "run":
-        obj.conn = await ctx.with_async_resource(Link(cfg, name=obj.name))
+        obj.conn = await ctx.with_async_resource(Link(cfg))
 
 
 
@@ -52,5 +52,5 @@ async def run(obj, main, debug):
     name = uname().node
     if not main:
         main = name == cfg.main
-    async with Link(cfg, name="!"+name) as link:
+    async with Link(cfg) as link:
         await cmd_host(link, cfg, main=main, debug=debug)

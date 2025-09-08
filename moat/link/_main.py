@@ -82,17 +82,15 @@ start "moat link server" in a separate terminal, and try again.
 
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
-@click.option("-n","--name", type=str, help="Name of this client (or server)")
 @click.pass_context
-async def cli(ctx,name):
+async def cli(ctx):
     """
     MoaT's data link
 
-    This collection of commands is useful for managing and building MoaT itself.
+    Commands for running and managing MoaT's data link layer.
     """
     obj = ctx.obj
     cfg = obj.cfg
-    obj.name = name
 
     if "link" not in cfg or "backend" not in cfg["link"]:
         sys.stderr.write(usage1)

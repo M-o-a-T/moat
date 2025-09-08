@@ -1602,7 +1602,7 @@ class Server(MsgHandler):
 
             while True:
                 try:
-                    async with BasicLink(self.cfg, self.name, data, is_server=True) as conn:
+                    async with BasicLink(self.cfg, name=self.name, data=data) as conn:
                         conn.add_sub("cl")
                         if self._server_link[name][0] is not sc:
                             return

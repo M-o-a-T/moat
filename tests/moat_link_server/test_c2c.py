@@ -37,7 +37,7 @@ async def test_c2c_basic(cfg):
         await sf.server(init={"Hello": "there!", "test": 123})
 
         c = await sf.client()
-        s = await sf.client(cli=Supi(cfg.link,"!sup"))
+        s = await sf.client(cli=Supi(cfg.link,"sup"))
         await anyio.sleep(.2)
         cln = set()
         async with c.cl().stream_in() as mm:
@@ -69,8 +69,8 @@ async def test_c2c_relay(cfg):
         c2 = MsgSender(s2)
         c2.add_sub("cl")
 
-        s = await sf.client(cli=Supi(cfg.link,"!sup"))
-        await anyio.sleep(.5)
+        s = await sf.client(cli=Supi(cfg.link,"sup"))
+        await anyio.sleep(.9)
 
         res = await c1.cl.sup.supi()
         assert res == "Yes"

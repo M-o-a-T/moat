@@ -188,8 +188,6 @@ class Hello(CmdCommon):
                     aux_data["name"] = self.them
                 elif self.they_server:
                     self.them = remote_name
-                elif remote_name[0] == "!":
-                    self.them = remote_name[1:]
                 else:  # we're the server, so use our name as a prefix
                     self.them = f"{self.me}.{remote_name}"
                     logger.debug("Remote name: %r", self.them)

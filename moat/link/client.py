@@ -106,21 +106,23 @@ class BasicCmd:
 
 class LinkCommon(CmdCommon):
     """
-    Common code for links to MQTT only (BaseLink) and a MoaT-Link server (Link).
+    Common code for links to MQTT only (BasicLink) and to a MoaT-Link server (Link).
     """
     protocol_version:int = -1
     name:str
     server_name:str
+    is_server:bool = False
 
-    def __init__(self, cfg, name: str | None = None, is_server:bool = False):
+    def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
         self._id = gen_ident(12, alphabet=al_unique)
-        if name is None:
+        if name is not None:
+            self.is_server = True
+        else:
             name = cfg.get("client_id")
-        if name is None:
-            name = "_" + self._id
+            if name is None:
+                name = "_" + self._id
         self.name = name
-        self.is_server = is_server
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")

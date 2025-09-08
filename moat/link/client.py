@@ -20,7 +20,6 @@ from attrs import define,field
 from mqttproto import RetainHandling, QoS
 from moat.lib.cmd.base import MsgSender, Caller
 from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr, attrdict, ctx_as
-from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
 from .common import CmdCommon
@@ -29,6 +28,7 @@ from .auth import AnonAuth, TokenAuth
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
+from .exceptions import ClientCancelledError
 
 from typing import TYPE_CHECKING,overload
 if TYPE_CHECKING:

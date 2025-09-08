@@ -34,7 +34,7 @@ from moat.util import (  # pylint: disable=no-name-in-module
 )
 
 from .exceptions import (
-    CancelledError,
+    ClientCancelledError,
     ClientAuthMethodError,
     ClientAuthRequiredError,
     ServerClosedError,
@@ -228,7 +228,7 @@ class StreamedRequest:
             res = await self.qr.get()
         except (anyio.EndOfStream, anyio.ClosedResourceError, EOFError):
             raise StopAsyncIteration
-        except CancelledError:
+        except ClientCancelledError:
             raise StopAsyncIteration  # just terminate
         self._path_long(res)
         return res
@@ -253,7 +253,7 @@ class StreamedRequest:
 
     async def cancel(self):
         try:
-            await self.qr.put_error(CancelledError())
+            await self.qr.put_error(ClientCancelledError())
         except (anyio.BrokenResourceError, anyio.ClosedResourceError, EOFError):
             pass
         else:

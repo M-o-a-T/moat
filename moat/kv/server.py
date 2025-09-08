@@ -57,7 +57,7 @@ from .actor.deletor import DeleteActor
 from .backend import get_backend
 from .exceptions import (
     ACLError,
-    CancelledError,
+    ClientCancelledError,
     ClientChainError,
     ClientError,
     NoAuthError,
@@ -223,7 +223,7 @@ class StreamCommand:
                 if res is not None:
                     await self.send(**res)
             except Exception as exc:
-                if not isinstance(exc, CancelledError):
+                if not isinstance(exc, ClientCancelledError):
                     self.client.logger.exception("ERS%d %r", self.client._client_nr, self.msg)
                 try:
                     await self.send(error=repr(exc))
@@ -1910,7 +1910,7 @@ class Server:
                     except TimeoutError:
                         self.logger.error("CmdTimeout! %s: %r", action, msg)
                         raise
-        except (CancelledError, anyio.get_cancelled_exc_class()):
+        except (ClientCancelledError, anyio.get_cancelled_exc_class()):
             # self.logger.warning("Cancelled %s", action)
             raise
         except BaseException as exc:

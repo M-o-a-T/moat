@@ -72,7 +72,7 @@ class ACLError(ServerError):
     pass
 
 
-class CancelledError(ClientError):
+class ClientCancelledError(ClientError):
     """A client call was cancelled."""
 
     pass

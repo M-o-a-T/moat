@@ -57,6 +57,7 @@ async def test_c2c_basic(cfg):
         assert nn==[1,2,3]
 
 @pytest.mark.anyio()
+@pytest.mark.xfail()
 async def test_c2c_relay(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)

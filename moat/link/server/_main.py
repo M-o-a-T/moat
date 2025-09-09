@@ -9,6 +9,7 @@ from moat.util import as_service
 
 
 @click.command(short_help="Run the MoaT-Link data server.")  # pylint: disable=undefined-variable
+@click.option("-n","--name", type=str, help="Name of this server (default: hostname)")
 @click.option(
     "-l",
     "--load",
@@ -31,7 +32,7 @@ from moat.util import as_service
     "setting up a new cluster!",
 )
 @click.pass_obj
-async def cli(obj, load, save, init):
+async def cli(obj, load, save, init, name):
     """
     Start a MoaT-Link server. It defaults to connecting to the local MQTT
     broker.
@@ -56,11 +57,12 @@ async def cli(obj, load, save, init):
     if save:
         kw["save"] = save
 
-    if obj.name is None:
-        raise click.UsageError("You need to specify a name ('moat link -n NAME server').")
+    if name is None:
+        import platform
+        name = platform.node()
 
     async with as_service(obj) as evt:
-        s = Server(cfg=obj.cfg.link, name=obj.name, **kw)
+        s = Server(cfg=obj.cfg.link, name=name, **kw)
         ev = anyio.Event()
 
         async def mon(ev):

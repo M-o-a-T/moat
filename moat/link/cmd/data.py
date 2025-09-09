@@ -180,68 +180,73 @@ async def delete(obj, before, recursive):
 
 
 @cli.command()
-@click.option("-s", "--state", is_flag=True, help="Also get the current state.")
+@click.option("-m", "--mode", type=str, help="Retrieval mode", default="s")
+@click.option("-M", "--mark", is_flag=True, help="Retrieval mode")
 @click.option("-o", "--only", is_flag=True, help="Value only, nothing fancy.")
+@click.option("-s", "--subtree", is_flag=True, help="Read the whole tree.")
 @click.option("-p", "--path-only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.option("-i", "--ignore", multiple=True, type=P, help="Skip this (sub)tree")
+@click.option("-n", "--min-length", type=int, help="Minimum path length")
+@click.option("-N", "--max-length", type=int, help="Maximum path length")
+@click.option("-a", "--max-age", type=int, help="Skip entries older than N seconds")
 @click.pass_obj
-async def monitor(obj, state, only, path_only, add_date, ignore):
-    """Monitor a MoaT-Link subtree"""
+async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, min_length,max_length, max_age):
+    """Monitor a MoaT-Link subtree.
+
+    The mode can be:
+    * c/current   read current data from the server
+    * u/update    read updates from MQTT
+    * s/stream    current plus updates
+    * m/mqtt      subscribe to MQTT stream, including retained data
+    """
 
     cfg = obj.cfg.link
     seen = False
     data = Node()
     plen=len(obj.path)+1
+    
+    match mode:
+        case "c"|"current":
+            state=True
+        case "u"|"update":
+            state=False
+        case "s"|"stream":
+            state=None
+        case "m"|"mqtt":
+            state=NotGiven
+        case _:
+            raise click.UsageError("Mode must be current|update|stream|mqtt")
+    if mark and state is not None:
+        raise click.UsageError("You can only add a mark in Stream mode")
 
+    def pm(p):
+        for ip in ignore:
+            if len(p)>=len(ip) and p[:len(ip)] == ip:
+                return True
+        return False
 
-    def pr(res):
-        if only:
-            res = res.get("data", NotGiven)
-        elif path_only:
-            res = res["path"]
-        elif not obj.meta:
-            del res["meta"]
-        yprint(res, stream=obj.stdout)
-        print("---", file=obj.stdout)
-        obj.stdout.flush()
+    async with obj.conn.d_watch(obj.path, state=state,mark=mark,meta=True,subtree=subtree,max_length=max_length,min_length=min_length,age=max_age) as mon:
+        async for pdm in mon:
+            if pdm is None:
+                res = '*** Snapshot data ends ***'
+            else:
+                p,d,m = pdm
+                if pm(p):
+                    continue
 
-    def set(p,d,m):
-        r = dict(path=p,meta=m.repr())
-        if d is not NotGiven:
-            r["data"] = d
-        dd = data.get(p)
-        ddm = dd.meta
-        n = dd.set(..., d, m)
-        if ddm is not None:
-            r["last"] = ts = ddm.timestamp-time.time()
-            r["_last"] = humandelta(ts, ago=True)
-        if n is False:
-            r["_***_"]="Obsolete message. Ignored."
-        return r
-
-    async with (
-        anyio.create_task_group() as tg,
-        obj.conn.monitor(cfg.root+obj.path, subtree=True) as res,
-    ):
-        if state:
-            @tg.start_soon
-            async def get_tree():
-                pl = PathLongener(())
-                async with obj.conn.d.walk(obj.path) as mon:
-                    async for n,p,d,*m in mon:
-                        p = pl.long(n,p)
-                        m = MsgMeta.restore(m)
-                        res = set(p,d,m)
-                        pr(res)
-
-        async for msg in res:
-            mp = Path.build(msg.topic[plen:])
-            if any(p == mp[: len(p)] for p in ignore):
-                continue
-
-            res = set(mp,msg.data,msg.meta)
-            pr(res)
+                m = MsgMeta.restore(m)
+                if only:
+                    res = d
+                elif path_only:
+                    res = p
+                elif obj.meta:
+                    res = [p,d,m]
+                else:
+                    res = [p,d]
+            yprint(res, stream=obj.stdout)
+            print("---", file=obj.stdout)
+            obj.stdout.flush()
 
 
 @cli.command()

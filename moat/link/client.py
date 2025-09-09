@@ -363,7 +363,7 @@ class _Sender(MsgSender):
     def d_watch(self, path:Path, mark:Literal[True], meta:Literal[False],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
         ...
 
-    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None|NotGiven=None, max_age:float|None=None, mark:bool=False, cls:type=Node) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
+    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None|NotGiven=None, age:float|None=None, mark:bool=False, min_length:int|None=None, max_length:int|None=None, cls:type=Node) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
         """
         Monitor a node or subtree.
 
@@ -373,6 +373,7 @@ class _Sender(MsgSender):
         @mark: yield `None` when the initial state has been transmitted
         @state: send the current state (True), updates (False), both with
                 current data from the server (None), or both via MQTT (NotGiven).
+        @age: cutoff this many seconds ago. Older entries are skipped.
         @cls: type of root node (default `Node`)
 
         This method returns an async context manager which yields an async iterator.
@@ -383,7 +384,8 @@ class _Sender(MsgSender):
         ``state=NotGiven`` does not work with @mark=True, or when the same
         subscription is already active somewhere else.
         """
-        return Watcher(self, path, meta, subtree, state, max_age, mark, cls)
+        return Watcher(self, path, meta, subtree, state, age, mark, cls,
+                       min_length,max_length)
 
 
     async def e_exc(self, path:Path, exc:Exception, **kw):
@@ -835,6 +837,8 @@ class Watcher(CtxObj):
     age:float|None=field()
     mark:bool=field()
     node_cls:type=field()
+    min_length:type=field()
+    max_length:type=field()
 
     _qw=field(init=False,repr=False)
     _qr=field(init=False,repr=False)
@@ -847,18 +851,33 @@ class Watcher(CtxObj):
         if self.mark and self.state is NotGiven:
             raise ValueError("MQTT doesn't send a mark. Sorry.")
         self._qw,self._qr = anyio.create_memory_object_stream(99)
+        if self.age is not None:
+            self.age = time.time()-self.age
+
+    def _chk(self,p,m):
+        if self.age and m.timestamp < self.age:
+            return False
+        if self.min_length is not None and len(p) < self.min_length:
+            return False
+        if self.max_length is not None and len(p) > self.max_length:
+            return False
+        return True
 
     async def _current(self, qw, *, task_status):
         "get the current state from the server"
         if self.subtree:
             pl = PathLongener(())
-            async with self.link.d.walk(self.path) as mon:
+            args = [self.path, self.age, self.min_length,self.max_length]
+            while args[-1] is None:
+                args.pop()
+            async with self.link.d.walk(*args) as mon:
                 task_status.started()
                 async for r in mon:
                     n,p,d,*m = r
                     p = pl.long(n,p)
                     m = MsgMeta.restore(m)
-                    await qw.send((p,d,m))
+                    if self._chk(p,m):
+                        await qw.send((p,d,m))
                 if self.mark:
                     await qw.send(None)
         else:
@@ -869,7 +888,8 @@ class Watcher(CtxObj):
             else:
                 task_status.started()
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
-                await self._qw.send((p,d,m))
+                if self._chk(p,m):
+                    await self._qw.send((p,d,m))
             if self.mark:
                 await qw.send(None)
 
@@ -883,7 +903,8 @@ class Watcher(CtxObj):
             task_status.started()
             async for msg in mon:
                 p,d,m = Path.build(msg.topic[plen:]),msg.data,msg.meta
-                await qw.send((p,d,m))
+                if self._chk(p,m):
+                    await qw.send((p,d,m))
         await qw.aclose()
 
     @asynccontextmanager
@@ -933,8 +954,7 @@ class Watcher(CtxObj):
             except anyio.EndOfStream:
                 return
             p,d,m = msg
-            if self.age is None or m.timestamp+self.age >= time.time():
-                self._node.set(p,d,m)
+            self._node.set(p,d,m)
 
     async def __anext__(self):
         while True:
@@ -945,12 +965,11 @@ class Watcher(CtxObj):
             if msg is None:
                 return None
             p,d,m = msg
-            if self.age is None or m.timestamp+self.age >= time.time():
-                if self._node.set(p,d,m, force=self._current_done.is_set()):
-                    if self.meta:
-                        return (p,d,m) if self.subtree else (d,m)
-                    else:
-                        return (p,d) if self.subtree else d
+            if self._node.set(p,d,m, force=self._current_done.is_set()):
+                if self.meta:
+                    return (p,d,m) if self.subtree else (d,m)
+                else:
+                    return (p,d) if self.subtree else d
 
 class Walker:
     """

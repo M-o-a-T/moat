@@ -376,9 +376,9 @@ class ServerClient(LinkCommon):
             async with msg.stream_out():
                 return
 
-        ts = msg.get(1, 0)
-        xmin = msg.get(2, 0)
-        xmax = msg.get(3, 9999999)
+        ts = msg.get(1, 0, nulled=True)
+        xmin = msg.get(2, 0, nulled=True)
+        xmax = msg.get(3, 9999999, nulled=True)
         async with msg.stream_out():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
@@ -1672,7 +1672,7 @@ class Server(MsgHandler):
                         # we have this connection, so don't listen to them
                         continue
                     if name == msg.data:
-                        self.logger.warning("Got self-ref client: %r %r", name,msg.data)
+                        self.logger.warning("Got self-ref client: %r", name)
                         continue
                     self._clients[name] = ClientStub(self,msg.data,name)
 

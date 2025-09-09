@@ -137,8 +137,8 @@ moat-lib-cmd:
   deb: 0.3.6-5
   pkg: 1
   pypi: 0.3.9
-  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
-  tag: 0.3.9
+  rev: 84d4b064680666628417957d8da24b72381e31f4
+  tag: 0.4.0
 moat-lib-codec:
   deb: 0.4.3-2
   pkg: 7

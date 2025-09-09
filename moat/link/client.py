@@ -816,6 +816,8 @@ class Watcher(CtxObj):
     _current_done:anyio.Event|None=field(init=False,default=None)
 
     def __attrs_post_init__(self):
+        if self.mark and self.state is NotGiven:
+            raise ValueError("MQTT doesn't send a mark. Sorry.")
         self._qw,self._qr = anyio.create_memory_object_stream(99)
 
     async def _current(self, *, task_status):

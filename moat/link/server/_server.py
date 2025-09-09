@@ -2103,10 +2103,8 @@ class Server(MsgHandler):
 
     async def sub_cl(self, msg: Msg, rcmd: list) -> None:
         "Local subcommand redirect for 'cl'"
-        if rcmd:
-            cl = self.clients[rcmd.pop()]
-            return await cl.sender.handle(msg,rcmd)
-        raise RuntimeError("Should have streamed")
+        cl = self.clients[rcmd.pop()]
+        return await cl.sender.handle(msg,rcmd)
 
     async def stream_cl(self, msg:Msg) -> None:
         """

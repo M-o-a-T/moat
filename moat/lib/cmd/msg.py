@@ -101,20 +101,25 @@ class MsgResult(Iterable):
             return self._a[k]
         return self._kw[k]  # pyright:ignore
 
-    def get(self, k: int | str, default=None) -> Any:
+    def get(self, k: int | str, default=None, nulled=False) -> Any:
         """
         Get an item. Like `__getitem__` but returns a default (None) instead of
         raising `KeyError` / `IndexError`.
         """
         if isinstance(k, int):
             try:
-                return self._a[k]
+                res = self._a[k]
             except IndexError:
                 return default
-        try:
-            return self._kw[k]  # pyright:ignore
-        except KeyError:
+        else:
+            try:
+                res = self._kw[k]  # pyright:ignore
+            except KeyError:
+                return default
+
+        if nulled and res is None:
             return default
+        return res
 
     def __contains__(self, k) -> bool:
         if isinstance(k, int):

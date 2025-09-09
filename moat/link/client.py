@@ -10,6 +10,7 @@ import time
 import sys
 import os
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
+from contextvars import ContextVar
 from traceback import format_exception
 from platform import uname
 from functools import partial
@@ -53,7 +54,15 @@ if TYPE_CHECKING:
     from .backend import Message
 
 
-__all__ = ["Link", "LinkCommon", "BasicLink"]
+__all__ = ["Link", "LinkCommon", "BasicLink", "get_link"]
+
+_the_link = ContextVar("_the_link")
+
+def get_link() -> Link|None:
+    """
+    Return the global Link instance, if one exists.
+    """
+    return _the_link.get(None)
 
 
 class TS(anyio.abc.TaskStatus):
@@ -495,6 +504,8 @@ class _Sender(MsgSender):
 class Link(LinkCommon, CtxObj):
     """
     This class combines the back-end link with a connection to a MoaT-Link server.
+
+    If "common" is set, create global state.
     """
 
     _server: ValueEvent = None
@@ -506,12 +517,21 @@ class Link(LinkCommon, CtxObj):
     _last_link_seen: anyio.Event
     _port: str|None=None
     _state: str="init"
+    _common: bool=False
 
-    def __init__(self, cfg, name: str | None = None):
+    def __new__(cls, cfg, name: str | None = None, common: bool = False):
+        if common and (link := _the_link.get(NotGiven)) is not NotGiven:
+            return link
+        return super().__new__(cls)
+
+    def __init__(self, cfg, name: str | None = None, common: bool = False):
+        if _the_link.get(NotGiven) is self:
+            return
         super().__init__(cfg, name=name)
         self._retry_msgs: set[BasicCmd] = set()
         self._server_up = anyio.Event()
         self._state_change = anyio.Event()
+        self._common = common
         with suppress(AttributeError):
             self._port = self.cfg.client.port
 
@@ -590,7 +610,8 @@ class Link(LinkCommon, CtxObj):
             try:
                 self.sdr = sdr
                 await self.tg.start(self._ping)
-                yield sdr
+                with ctx_as(_the_link,self) if self._common else nullcontext():
+                    yield sdr
             finally:
                 del self.sdr
             self.tg.cancel_scope.cancel()

@@ -1,2 +1,47 @@
 toplevel: "moat"
 done: "/src/DONE"
+move:
+  src:
+    api: github
+    name: Github
+    branch: migrated  # killed
+    token: YOUR_API_KEY_HERE
+    user: yourname
+    url: "https://github.com/{{user}}/{{repo}}"
+    parented: False
+  dst: 
+    name: Codeberg
+    api: forgejo
+    url: "https://codeberg.org/{{user}}/{{repo}}"
+    user: yourname
+    token: YOUR_API_KEY_HERE
+  local:
+    name: Backup
+    url: "https://git.yourdomain.example/{{repo}}"
+  prefix: /src/mig
+  remote: origin
+  branch: main  # name of the default branch
+  work:
+    rad: True
+    dst: True
+    local: True
+    kill: True
+    parallel: 1
+  readme: 
+    name: README.md
+    content: |
+      # Moving off {{src.name}}
+      
+      This repository has moved.
+    
+      New locations:
+      {% if add_rad -%}
+      * Radicle: {{ rad_uid }}
+      {% endif}
+      {% if add_dst -%}
+      * {{dst.name}}: {{ dst_url }}
+      {% endif}
+      {% if add_local -%}
+      * {{loc.name}}: {{ loc_url }}
+      {% endif}
+    

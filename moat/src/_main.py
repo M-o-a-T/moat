@@ -416,6 +416,30 @@ async def cli():
     pass
 
 
+@cli.command("rerepo")
+@click.option("-a","--all",is_flag=True,help="Move all your repositories.")
+@click.argument("names",type=str,nargs=-1)
+@click.pass_obj
+async def move_repo(obj, **kw):
+    """Move from forge A to forge B.
+
+    This command moves your repositories from A (github …) to a local copy,
+    B (codeberg,or any other forgejo instance), and/or Radicle.
+
+    It adds a "migrated" branch and (optionally) deletes
+    all other branches and tags.
+
+    By default, the '--all' option does not touch forked repositores.
+
+    For access tokens and configuration, load a private config file.
+    See `moat util cfg -l moat.src src` for defaults.
+
+    If the local copy is present, it will be refreshed via `git fetch`.
+    """
+    from .move import mv_repos
+    await mv_repos(obj.cfg.src.move, **kw)
+
+
 def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     """Adjust dependencies"""
     work = False

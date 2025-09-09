@@ -803,7 +803,7 @@ class Watcher(CtxObj):
     path:Path=field()
     meta:bool=field()
     subtree:bool=field()
-    state:bool|None=field()
+    state:bool|None|NotGiven=field()
     age:float|None=field()
     mark:bool=field()
     node_cls:type=field()
@@ -848,7 +848,7 @@ class Watcher(CtxObj):
     async def _updates(self, *, task_status):
         "get updates from MQTT"
         plen = 1+len(self.path)  # add the root tag
-        async with self.link.monitor(Root.get()+self.path, subtree=self.subtree, retained=False) as mon:
+        async with self.link.monitor(Root.get()+self.path, subtree=self.subtree, retained=(self.state is NotGiven)) as mon:
             task_status.started()
             async for msg in mon:
                 p,d,m = Path.build(msg.topic[plen:]),msg.data,msg.meta
@@ -863,7 +863,7 @@ class Watcher(CtxObj):
             self._qw,self._qr = anyio.create_memory_object_stream(10)
             if self.state is not True:
                 await tg.start(self._updates)
-            if self.state is not False:
+            if self.state is True or self.state is None:
                 await tg.start(self._current)
             else:
                 self._current_done.set()

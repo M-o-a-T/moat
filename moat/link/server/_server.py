@@ -2110,7 +2110,6 @@ class Server(MsgHandler):
         """
         Send the list of currently-known clients.
         """
-        cl = list(self.clients)
 # disabled
 #       if msg.args:
 #           srv = msg.args[0]
@@ -2120,6 +2119,7 @@ class Server(MsgHandler):
 #                   if not isinstance(self._clients.get(name,None), ServerClient):
 #                       self._clients[name] = ClientStub(self,srv)
 #           return
+        cl = list(self.clients.keys())
         async with msg.stream_out(len(cl)) as ml:
             for cn in cl:
                 await ml.send(cn)

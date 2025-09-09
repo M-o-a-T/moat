@@ -41,7 +41,7 @@ class Gate(_Gate):
                     try:
                         vd = self.codec_vecs.search(p)
                         cd = self.codecs.get(Path.build(vd.data["codec"]))
-                    except ValueError:
+                    except (KeyError, ValueError):
                         return NotGiven
                     try:
                         return cd.dec_value(d)

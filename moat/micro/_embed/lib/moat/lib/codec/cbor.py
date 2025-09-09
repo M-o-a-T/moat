@@ -450,7 +450,7 @@ class Codec(_Codec):
             # simple case
             ob = self._read(aux)
             return ob
-        # read chunks of bytes
+        # read chunks
         chunklist = []
         while True:
             tb = self._read_byte()
@@ -458,7 +458,7 @@ class Codec(_Codec):
                 break
             tag, aux = self._dec_tag_aux(tb)
             if tag != btag:
-                raise ValueError("var length with unexpected component")
+                raise ValueError(f"var length with unexpected component:{tag:02x} {btag:02x}")
             ob = self._read(aux)
             chunklist.append(ob)
         return b"".join(chunklist)

@@ -848,7 +848,7 @@ class Watcher(CtxObj):
             raise ValueError("MQTT doesn't send a mark. Sorry.")
         self._qw,self._qr = anyio.create_memory_object_stream(99)
 
-    async def _current(self, *, task_status):
+    async def _current(self, qw, *, task_status):
         "get the current state from the server"
         if self.subtree:
             pl = PathLongener(())
@@ -858,9 +858,9 @@ class Watcher(CtxObj):
                     n,p,d,*m = r
                     p = pl.long(n,p)
                     m = MsgMeta.restore(m)
-                    await self._qw.send((p,d,m))
+                    await qw.send((p,d,m))
                 if self.mark:
-                    await self._qw.send(None)
+                    await qw.send(None)
         else:
             try:
                 r = await self.link.d.get(self.path)
@@ -871,18 +871,20 @@ class Watcher(CtxObj):
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
                 await self._qw.send((p,d,m))
             if self.mark:
-                await self._qw.send(None)
+                await qw.send(None)
 
+        await qw.aclose()
         self._current_done.set()
 
-    async def _updates(self, *, task_status):
+    async def _updates(self, qw, *, task_status):
         "get updates from MQTT"
         plen = 1+len(self.path)  # add the root tag
         async with self.link.monitor(Root.get()+self.path, subtree=self.subtree, retained=(self.state is NotGiven)) as mon:
             task_status.started()
             async for msg in mon:
                 p,d,m = Path.build(msg.topic[plen:]),msg.data,msg.meta
-                await self._qw.send((p,d,m))
+                await qw.send((p,d,m))
+        await qw.aclose()
 
     @asynccontextmanager
     async def _ctx(self):
@@ -890,13 +892,14 @@ class Watcher(CtxObj):
             self._node = self.node_cls()
             self._current_done = anyio.Event()
             self._tg = tg
-            self._qw,self._qr = anyio.create_memory_object_stream(10)
+            qw,self._qr = anyio.create_memory_object_stream(10)
             if self.state is not True:
-                await tg.start(self._updates)
+                await tg.start(self._updates, qw.clone())
             if self.state is True or self.state is None:
-                await tg.start(self._current)
+                await tg.start(self._current, qw.clone())
             else:
                 self._current_done.set()
+            await qw.aclose()
             yield self
             tg.cancel_scope.cancel()
             await self._qw.aclose()

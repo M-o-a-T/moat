@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import anyio
 import os
+import platform
 from contextlib import asynccontextmanager
+
+from .path import P
 
 __all__ = ["as_service"]
 
@@ -19,6 +22,26 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .path import Path
 
+async def get_host_tuple(obj):
+    if hasattr(obj,"dbg_host"):
+        return obj.dbg_host
+    host = [obj.host if hasattr(obj,"host") else platform.node()]
+    if (srv := s.environ.get("MOAT_SERVICE",None)) is not None:
+        host.extend(srv.split("|"))
+        return host
+    if int(os.environ.get("SYSTEMD_EXEC_PID","0")) == os.getpid():
+        async for cg in anyio.Path("/proc/self/cgroup").readlines():
+            for cge in cg.strip().split("/"):
+                if cge.endswith(".service"):
+                    cge = cge[:-8]
+                    hi = cge.split("@",1)
+                    if hi[0] == "user":
+                        continue  # ignore
+                    if len(hi) != 1 or hi[0] != "moat-link-host":
+                        host.extend(hi)
+                    return host
+    return ()
+
 @asynccontextmanager
 async def as_service(obj=None):
     """
@@ -27,7 +50,6 @@ async def as_service(obj=None):
 
     Arguments:
         obj: command context. Needs a ``debug`` attribute.
-        host: 
 
     The CM yields a (duck-typed) event whose ``set`` method will
     trigger a ``READY=1`` mesage to systemd.
@@ -45,7 +67,8 @@ async def as_service(obj=None):
 
     async def run_announce(link, srv, rm):
         await rm.evt.wait()
-        await link.d_set(P("run.host")+srv, dict(id=link.id), retain=True)
+        if srv:
+            await link.d_set(P("run.host")+srv, dict(id=link.id), retain=True)
 
     def need_keepalive():
         pid = os.getpid()
@@ -76,25 +99,13 @@ async def as_service(obj=None):
             self.set()
 
     async with anyio.create_task_group() as tg:
-        if (link := getattr(obj,"link", None)) is not None and (host := getattr(obj,"host",None)) is None and int(os.envieon.get("SYSTEMD_EXEC_PID","0")) == os.getpid():
-            cg = await anyio.Path("/proc/self/cgroup").read_text()
-            for cge in cg.strip().split("/"):
-                if cge.endsith(".service"):
-                    cge = cge[:-8]
-                    hi = cge.split("@",1)
-                    if hi[0] == "user":
-                        break  # ignore
-                    host = [Path(os.uname().nodename)]
-                    if len(hi) != 1 or hi[0] != "moat-link-host":
-                        host += hi
-                    break
-
+        link = getattr(obj,"link", None)
         usec = need_keepalive()
         if usec:
             tg.start_soon(run_keepalive, usec)
         try:
             rm = RunMsg(tg, obj)
-            if link is not None:
+            if link is not None and (host := await get_host_tuple(obj)):
                 tg.start_soon(run_announce, link, host, rm)
             yield rm
         finally:

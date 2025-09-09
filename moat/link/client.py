@@ -12,7 +12,7 @@ import os
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
 from contextvars import ContextVar
 from traceback import format_exception
-from platform import uname
+import platform
 from functools import partial
 
 import outcome
@@ -363,7 +363,7 @@ class _Sender(MsgSender):
     def d_watch(self, path:Path, mark:Literal[True], meta:Literal[False],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
         ...
 
-    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None, mark:bool=False, cls:type=Node) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
+    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None|NotGiven=None, max_age:float|None=None, mark:bool=False, cls:type=Node) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
         """
         Monitor a node or subtree.
 
@@ -371,13 +371,17 @@ class _Sender(MsgSender):
         @meta: flag whether to return metadata too
         @subtree: flag whether to watch a subtree, not just this node
         @mark: yield `None` when the initial state has been transmitted
-        @state: send the current state (True), updates (False) or both (None)
+        @state: send the current state (True), updates (False), both with
+                current data from the server (None), or both via MQTT (NotGiven).
         @cls: type of root node (default `Node`)
 
         This method returns an async context manager which yields an async iterator.
         The iterator yields node data if neither @subtree nor @meta is set.
         Otherwise it yields tuples. The first item is the path if @subtree
         is set; the last item is the metadata if @meta is set.
+
+        ``state=NotGiven`` does not work with @mark=True, or when the same
+        subscription is already active somewhere else.
         """
         return Watcher(self, path, meta, subtree, state, max_age, mark, cls)
 
@@ -555,7 +559,23 @@ class Link(LinkCommon, CtxObj):
     def _ping_path(self):
         return P("run.ping.id")/self._id
 
-    async def _ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    @property
+    def _id_path(self):
+        return P("run.id")/self._id
+
+    async def _send_id(self):
+        await self.sdr.d_set(self._id_path, data=dict(
+            host=platform.node(),
+            pid=os.getpid(),
+        ), retain=True)
+
+    async def _send_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Periodially (or when our state changes) send a Ping.
+
+        This also sends our ID message, after the first ping,
+        but only if the task status isn't ignored.
+        """
         path = Root.get()+self._ping_path
         while True:
             await self.backend.send(path, data=dict(
@@ -564,10 +584,8 @@ class Link(LinkCommon, CtxObj):
             ), retain=False, meta=False)
 
             if task_status is not anyio.TASK_STATUS_IGNORED:
-                await self.sdr.d_set(P("run.id")/self.id,data=dict(
-                    host=uname().node,
-                    pid=os.getpid(),
-                ), retain=True)
+                # send initial run.id message, *after* the ping
+                await self._send_id()
                 task_status.started()
                 task_status=anyio.TASK_STATUS_IGNORED
 
@@ -578,6 +596,14 @@ class Link(LinkCommon, CtxObj):
                 await self._state_change.wait()
                 self._state_change = anyio.Event()
 
+    async def _monitor_id(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        path = Root.get()+self._id_path
+        async with self.backend.monitor(path) as mon:
+            task_status.started()
+            async for msg in mon:
+                if msg.data is NotGiven:
+                    raise ClientCancelledError(msg.meta)
+
     @asynccontextmanager
     async def _ctx(self):
         from .backend import get_backend
@@ -587,8 +613,8 @@ class Link(LinkCommon, CtxObj):
                 up=False,
                 state="disconnected",
                 ),
-            topic=P(":R.run.ping.id")/self.id,
-            retain=False,
+            topic=P(":R")+self._id_path,
+            retain=True,
             qos=QoS.AT_LEAST_ONCE,
         )
         async with (
@@ -609,7 +635,9 @@ class Link(LinkCommon, CtxObj):
             sdr.add_sub("i")
             try:
                 self.sdr = sdr
-                await self.tg.start(self._ping)
+                await self.tg.start(self._monitor_id)
+                await self.tg.start(self._send_ping)
+
                 with ctx_as(_the_link,self) if self._common else nullcontext():
                     yield sdr
             finally:

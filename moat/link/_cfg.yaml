@@ -36,7 +36,11 @@ timeout:
   # Ping messages every … seconds
   ping: 
     every: 10
-    timeout: 17  # no ping received
+    timeout: 22  # no ping received
+    delete: 1800  # still no ping received
+    stale: 5  # delay removal after active replacement
+    down: 25  # delayed error, give it a chance to come back
+    min: 20  # answering old messages. Should be > ping timeout
 
   # client reconnect
   connect: 

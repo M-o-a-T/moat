@@ -20,6 +20,7 @@ dependencies = [
 	"ruyaml",
 	"httpx",
 	"simpleeval",
+	"transitions_aio",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
 	"mqttproto ~= 0.7.2.17",

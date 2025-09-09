@@ -81,6 +81,7 @@ class Notify:
 
                 async with self.link.d_watch(self.cfg.path,subtree=True,meta=True,state=None) as mon:
                     srv.set()
+                    breakpoint()
                     async for path,msg,meta in mon:
                         t = time.time()
                         if meta.timestamp < t-self.cfg.max_age:
@@ -108,7 +109,7 @@ class Notify:
         keep = self.cfg.keepalive
         ok_keep = keep.ok
 
-        timeout = keep.get("timeout",link.cfg.timeout.ping*1.5)
+        timeout = keep.get("timeout",link.cfg.timeout.ping.timeout)
 
         async with link.d_watch(P("host")/main_host, state=None) as mon:
             task_status.started()
@@ -118,7 +119,7 @@ class Notify:
                     msg = await anext(mon)
                 else:
                     try:
-                        with anyio.fail_after(timeout*2):
+                        with anyio.fail_after(timeout):
                             msg = await anext(mon)
                     except TimeoutError:
                         msg = None

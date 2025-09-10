@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import time
 import anyio
+from contextlib import nullcontext
 
 import asyncclick as click
 from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint, Path
@@ -190,8 +191,9 @@ async def delete(obj, before, recursive):
 @click.option("-n", "--min-length", type=int, help="Minimum path length")
 @click.option("-N", "--max-length", type=int, help="Maximum path length")
 @click.option("-a", "--max-age", type=int, help="Skip entries older than N seconds")
+@click.option("-t", "--timeout", type=int, help="Stop reading after N seconds")
 @click.pass_obj
-async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, min_length,max_length, max_age):
+async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, min_length,max_length, max_age, timeout):
     """Monitor a MoaT-Link subtree.
 
     The mode can be:
@@ -226,27 +228,28 @@ async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, m
                 return True
         return False
 
-    async with obj.conn.d_watch(obj.path, state=state,mark=mark,meta=True,subtree=subtree,max_length=max_length,min_length=min_length,age=max_age) as mon:
-        async for pdm in mon:
-            if pdm is None:
-                res = '*** Snapshot data ends ***'
-            else:
-                p,d,m = pdm
-                if pm(p):
-                    continue
-
-                m = MsgMeta.restore(m)
-                if only:
-                    res = d
-                elif path_only:
-                    res = p
-                elif obj.meta:
-                    res = [p,d,m]
+    with anyio.move_on_after(timeout) if timeout else nullcontext():
+        async with obj.conn.d_watch(obj.path, state=state,mark=mark,meta=True,subtree=subtree,max_length=max_length,min_length=min_length,age=max_age) as mon:
+            async for pdm in mon:
+                if pdm is None:
+                    res = '*** Snapshot data ends ***'
                 else:
-                    res = [p,d]
-            yprint(res, stream=obj.stdout)
-            print("---", file=obj.stdout)
-            obj.stdout.flush()
+                    p,d,m = pdm
+                    if pm(p):
+                        continue
+
+                    m = MsgMeta.restore(m)
+                    if only:
+                        res = d
+                    elif path_only:
+                        res = p
+                    elif obj.meta:
+                        res = [p,d,m]
+                    else:
+                        res = [p,d]
+                yprint(res, stream=obj.stdout)
+                print("---", file=obj.stdout)
+                obj.stdout.flush()
 
 
 @cli.command()

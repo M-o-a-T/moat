@@ -5,7 +5,7 @@ MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
 install:
 	mkdir -p $(PREFIX)/lib/systemd/system
-	cp systemd/*.udev $(PREFIX)/lib/systemd/system/
+	cp systemd/*.udev $(PREFIX)/lib/udev/rules.d
 
 
 ifneq ($(wildcard $(MAKEINCL)),)

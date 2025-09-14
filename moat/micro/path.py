@@ -18,10 +18,10 @@ import stat
 import sys
 from contextlib import suppress
 from pathlib import Path
-from subprocess import CalledProcessError
 
-from moat.util import attrdict
 from moat.lib.codec.errors import RemoteError
+from moat.util import attrdict
+from moat.util.exec import run, CalledProcessError
 
 logger = logging.getLogger(__name__)
 
@@ -761,12 +761,12 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
                     p = str(src)
                     if (pi := p.find("/_embed/lib/")) > 0:
                         p = p[pi + 12 :]
-                    data = await anyio.run_process([cross, str(src), "-s", p, "-o", "/dev/stdout"])
+                    data = await run(cross, str(src), "-s", p, "-o", "/dev/stdout", capture="raw")
                 except CalledProcessError as exc:
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     # copy this file unmodified
                 else:
-                    src = ABytes(src.with_suffix(".mpy"), data.stdout)
+                    src = ABytes(src.with_suffix(".mpy"), data)
                     wdst = wdst.with_suffix(".mpy")
                     with suppress(OSError, RemoteError):
                         if await f_eq(src,wdst):

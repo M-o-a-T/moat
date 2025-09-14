@@ -5,7 +5,7 @@ This module contains a helper for running subprocesses.
 from __future__ import annotations
 
 import io
-import subprocess
+from subprocess import PIPE,DEVNULL,STDOUT, CalledProcessError
 import anyio
 from pathlib import Path
 from codecs import getincrementaldecoder
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing import Literal, AsyncIterable
 
 
-__all__ = ["run"]
+__all__ = ["run", "CalledProcessError", "PIPE","DEVNULL","STDOUT"]
 
 @overload
 async def run(*a, name:str|None=None, echo:bool=False, echo_input:bool=False, capture=False,input:str|bytes|None=None,**kw) -> None:
@@ -39,12 +39,12 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
         print(name+"$",*a, *(("<",repr(kw["input"])) if echo_input and "input" in kw else ()))
     if input is None:
         if "stdin" not in kw:
-            kw["stdin"] = subprocess.DEVNULL
+            kw["stdin"] = DEVNULL
     else:
         if isinstance(input, str):
             input = input.encode("utf-8")
 
-    if capture and kw.get("stdout",subprocess.PIPE) != subprocess.PIPE:
+    if capture and kw.get("stdout",PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")
 
     if isinstance((cwd := kw.get("cwd", None)), (anyio.Path,Path)):
@@ -92,7 +92,7 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
         print("…")
 
     if proc.returncode != 0:
-        raise subprocess.CalledProcessError(cast(int, proc.returncode), a, None if out is None else out.getvalue(), None if err is None else err.getvalue())
+        raise CalledProcessError(cast(int, proc.returncode), a, None if out is None else out.getvalue(), None if err is None else err.getvalue())
 
     if capture:
         res = out.getvalue()

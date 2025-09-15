@@ -15,7 +15,7 @@ from collections.abc import Sequence
 
 import asyncclick as click
 
-from .main import load_subgroup
+from .main import load_subgroup, attr_args, process_args
 from .path import P, Path, path_eval, PathLongener,PathShortener
 from .times import humandelta, time_until
 from .yaml import yprint
@@ -125,10 +125,11 @@ y, yr   Year (2023–)
 @click.option("-s", "--stream", is_flag=True, help="Multiple messages")
 @click.option("-L", "--long", is_flag=True, help="Fix input paths")
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
-@click.option("-E", "--eval", "eval_", is_flag=True, help="Input line is a Python expr.")
-@click.option("-D", "--dump", "dump_", is_flag=True, help="Output line is a Python repr.")
-def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
-    """File conversion utility.
+@click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
+@click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
+@attr_args(with_var=False,with_eval='eval_',with_path=False)
+def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
+    """File conversion / mangling utility.
 
     Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
     """
@@ -147,7 +148,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
             self.codec = codec
 
         def __call__(self, buf):
-            if eval_:
+            if f_eval:
                 buf = eval(buf)
             self.codec.feed(buf)
             return iter(self.codec)
@@ -177,7 +178,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
             else:
 
                 def jdump(d):
-                    if dump_:
+                    if f_dump:
                         res = json.dumps(d, separators=(",", ":"), indent="")
                         return repr(res)
                     return json.dumps(d, indent="  ") + "\n"
@@ -192,7 +193,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
             from moat.util import yload
 
             def ypr(d, s):
-                if dump_:
+                if f_dump:
                     buf = io.StringIO()
                     yprint(d, buf)
                     print(repr(buf.getvalue()), file=s)
@@ -212,28 +213,28 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
 
             c = CBOR()
             d = CBOR()
-            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-cbor":
             from moat.util.cbor import StdCBOR
 
             c = StdCBOR()
             d = StdCBOR()
-            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "msgpack":
             from moat.lib.codec.msgpack import Codec as Msgpack
 
             c = Msgpack()
             d = Msgpack()
-            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-msgpack":
             from moat.util.msgpack import StdMsgpack
 
             c = StdMsgpack()
             d = StdMsgpack()
-            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         raise ValueError("unsupported codec")
 
@@ -242,12 +243,12 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
     if bd:
         pathi = pathi.buffer
     if be:
-        if dump_:
+        if f_dump:
             bt = io.BytesIO
         else:
             patho = patho.buffer
     else:
-        if dump_:
+        if f_dump:
             bt = io.StringIO
 
     if stream:
@@ -273,8 +274,9 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
                     d,p = short.short(p)
                     data = [d,p,*x]
 
+                data = process_args(data, **kw)
                 if cse:
-                    if dump_:
+                    if f_dump:
                         buf = bt()
                         enc(data, buf)
                         patho.write(repr(buf.getvalue()) + "\n")
@@ -282,7 +284,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
                         enc(data, patho)
                 else:
                     dat = enc(data)
-                    if dump_:
+                    if f_dump:
                         dat = repr(dat)
                     patho.write(dat)
     else:
@@ -291,8 +293,11 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
         else:
             data = pathi.read()
             data = dec(data)
+
+        data = process_args(data, **kw)
+
         if cse:
-            if dump_:
+            if f_dump:
                 buf = bt()
                 enc(data, buf)
                 patho.write(repr(buf.getvalue()) + "\n")
@@ -300,7 +305,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
                 enc(data, patho)
         else:
             data = enc(data)
-            if dump_:
+            if f_dump:
                 data = repr(data)
             patho.write(data)
     pathi.close()

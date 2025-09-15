@@ -76,27 +76,26 @@ def attr_args(
     """
     Add an option for setting possibly-hierarchical values to `click.command`.
 
-    New behavior (default): use ``-s``/``--set`` with prefix-tagged values:
+    ``-s``/``--set`` accepts these prefix-tagged values:
     * ~str
     * =value (``=-``/``=t``/``=f``/``=n`` for ``undefined``/`True`/`False`/`None`)
-    * .path (except for a single ``:`` for an empty path)
-    * :named_proxy
+    * .path (the leading dot is stripped)
+    * :path (the colon is not stripped)
+    * ^named_proxy
 
     These are enabled (rather, displayed) by passing ``True`` in
     ``with_val``, ``with_eval``, ``with_path``, and ``with_proxy``,
     respectively. The latter defaults to `False`, all others to `True`.
 
-    Old behavior (hidden in new mode): Adds separate
+    Legacy behavior (hidden unless `with_combined` is False): Adds separate
     ``-v``/``--var``, ``-e``/``--eval``, -p``/``--path, and
     ``-P``/``--proxy`` arguments.
 
-    Use `attr_args(with_path=False)` to skip path arguments. Ditto for
-    `with_eval`.
-
-    Use ``with_combined=False`` to get the old behavior.
+    Use ``with_combined=False`` to get legacy behavior.
     Use ``with_combined=LETTER`` to change the default from ``-s``.
 
-    Old-behavior long options are availabile, but hidden, in "new" mode.
+    In new mode, Legacy short options are not availabile;
+    long options are available but hidden.
     """
 
     def _proc(proc):
@@ -107,9 +106,9 @@ def attr_args(
             if with_eval:
                 ht.append("=value")
             if with_path:
-                ht.append(".path")
+                ht.append(".path, :path")
             if with_proxy:
-                ht.append(":name")
+                ht.append("^proxy")
             ht = "|".join(ht)
 
             args = ("--set",) + (
@@ -127,7 +126,7 @@ def attr_args(
                 hidden=not with_eval or not with_combined,
             )(proc)
 
-        args = ("--path",) + (("-p",) if with_path else ())
+        args = (f"--{with_path}" if isinstance(with_path,str) else "--path",) + (("-p",) if with_path else ())
         proc = click.option(
             *args,
             "path_",
@@ -138,7 +137,7 @@ def attr_args(
             hidden=not with_path or not with_combined,
         )(proc)
 
-        args = ("--eval",) + (("-e",) if with_eval else ())
+        args = (f"--{with_eval}" if isinstance(with_eval,str) else "--eval",) + (("-e",) if with_eval is True else ())
         proc = click.option(
             *args,
             "eval_",
@@ -149,7 +148,7 @@ def attr_args(
             hidden=not with_eval or not with_combined,
         )(proc)
 
-        args = ("--var",) + (("-v",) if with_var else ())
+        args = (f"--{with_var}" if isinstance(with_var,str) else "--var",) + (("-v",) if with_var is True else ())
         proc = click.option(
             *args,
             "vars_",
@@ -160,7 +159,7 @@ def attr_args(
             hidden=not with_var or not with_combined,
         )(proc)
 
-        args = ("--proxy",) + (("-P",) if with_proxy else ())
+        args = (f"--{with_proxy}" if isinstance(with_proxy,str) else "--proxy",) + (("-P",) if with_proxy is True else ())
         proc = click.option(
             *args,
             "proxy_",
@@ -216,11 +215,11 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                 v = None
             elif v[0] == "=":
                 v = eval(v[1:])  # pylint: disable=W0631
-            elif v == ":":
-                v = P(":")
+            elif v[0] == ":":
+                v = P(v)
             elif v[0] == ".":
                 v = P(v[1:])
-            elif v[0] == ":":
+            elif v[0] == "^":
                 v = Proxy(v[1:])
             else:
                 try:

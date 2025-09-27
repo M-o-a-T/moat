@@ -1,47 +1,70 @@
 toplevel: "moat"
 done: "/src/DONE"
 move:
+  prefix: "_mv_"
   src:
     api: github
     name: Github
-    branch: migrated  # killed
+    branch: migrated
     token: YOUR_API_KEY_HERE
     user: yourname
-    url: "https://github.com/{{user}}/{{repo}}"
-    parented: False
+    parented: false
   dst: 
     name: Codeberg
     api: forgejo
-    url: "https://codeberg.org/{{user}}/{{repo}}"
+    host: "codeberg.org"
     user: yourname
     token: YOUR_API_KEY_HERE
   local:
     name: Backup
-    url: "https://git.yourdomain.example/{{repo}}"
-  prefix: /src/mig
-  remote: origin
+    api: localgit
+    host: "git.yourdomain.example"
+    # ext_url: "https://git.yourdomain.example/NAME"
+    # git_url: "https://git.yourdomain.example/NAME.git"
+    # ssh_url: "git+ssh://git@git.yourdomain.example/NAME.git"
+    # git_user: "git"
+    # repo: Foo  # NAME
+    command: "false"
+  rad:
+    name: Radicle
+    api: radicle
+    gateway: rosa.radicle.xyz
+    web: app.radicle.xyz
+
+    private: false
+    seed: true
+
+  cache: /src/mig
   branch: main  # name of the default branch
   work:
-    rad: True
-    dst: True
-    local: True
-    kill: True
+    to:
+      rad: false
+      dst: true
+      local: true
+    kill: true  # remove from source repo
+    migrate: true  # generate a "migrated" README
     parallel: 1
+    main: true  # rename "master" branch
   readme: 
-    name: README.md
+    name: "README.md"  # use LOCATIONS.md if mot removing from source
     content: |
+      {% if work.to.src %}
+      # Archives of {{name}}
+
+      This repository is available at these locations:
+      {% else %}
       # Moving off {{src.name}}
-      
+
       This repository has moved.
-    
+
       New locations:
-      {% if add_rad -%}
-      * Radicle: {{ rad_uid }}
-      {% endif}
-      {% if add_dst -%}
-      * {{dst.name}}: {{ dst_url }}
-      {% endif}
-      {% if add_local -%}
-      * {{loc.name}}: {{ loc_url }}
-      {% endif}
+      {% endif %}
+      {% if work.to.src | default(False) -%}
+      * {{ repos.src.api.cfg.name}}: {{ repos.src.ext_url }}
+      {% endif -%}
+      {% for k,v in work.to.items() -%}
+      {% if k != "src" and v -%}
+      * {{repos[k].api.cfg.name}}: {{ repos[k].ext_url }}
+      {% endif -%}
+      {% endfor -%}
     

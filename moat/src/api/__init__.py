@@ -10,82 +10,82 @@ from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
 from attr import define,field
 from moat.util import CtxObj, ungroup
+from moat.util.exec import run as run_
 import logging
 import anyio
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...move import RepoMover
 
-class API(CtxObj, metaclass=ABCMeta):
-    "Base class for forge APIs"
+class NoSuchRepo(RuntimeError):
+    "doesn't exist, call create"
+    pass
 
-    _tg: anyio.abc.TaskGroup
-    _njobs: int = 0
-    _ended: anyio.Event | None = None
+class RepoExists(RuntimeError):
+    "exists, cannot create"
+    pass
 
-    def __init__(self, cfg: attrdict):
-        self.cfg = cfg
-        self.url = cfg["url"]
-        self.logger = logging.getLogger(f"moat.src.api.{cfg.api}")
+@define
+class Repo:
+    name = field()
+    cwd = field(default=None, type=anyio.Path)
 
-    @asynccontextmanager
-    async def _ctx(self) -> AsyncIterator[Self]:
-        async with anyio.create_task_group() as self._tg:
-            yield self
+    def __attrs_post_init__(self):
+        if self.cwd is None:
+            self.cwd = anyio.Path(self.cfg.cache)/self.name
 
-    async def list_repos(self) -> AsyncIterator[str]:
-        """
-        List accessible repositories.
-        """
-        # only required for source repo
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_repo(self, name:str) -> RepoInfo:
-        """
-        Fetch data about this repository.
-        """
-
-    async def add_repo(self, name:str):
-        """
-        Add this repository.
-        """
-        # only required for destination repo
-        raise NotImplementedError
-
-
-def get_api(cfg: dict, **kw) -> Backend:
-    """
-    Fetch the API named in the config and initialize it.
-    """
-    from importlib import import_module
-
-    name = cfg["api"]
-    if "." not in name:
-        name = "moat.src.api." + name
-    return import_module(name).API(cfg, **kw)
+    def run(*a,**kw) -> Awaitable:
+        """Run a program in this repo's directory"""
+        kw.setdefault("cwd",self.cwd)
+        return run_(*a,**kw)
 
 
 @define
 class RepoInfo(metaclass=ABCMeta):
-    api = field(type=API)
-    name = field(type=str)
+    """Wrapper for a particular remote repository."""
+    api:API = field()
+    repo:Repo = field()
 
     @property
-    @abstractmethod
-    def git(self) -> str:
-        """git URL"""
+    def description(self) -> str:
+        """One-liner"""
+        raise NotImplementedError
 
     @property
-    @abstractmethod
     def parent(self) -> str:
         """parent repo URL"""
+        raise NotImplementedError
 
-    async def clone_to(self, url:str, path:anyio.Path, name:str|None=None):
-        """
-        Clone this repository locally.
-        """
-        orig = () if name is None else ("--origin", name)
-        await anyio.run_process(["git","clone",*orig, url, str(path)])
-         # , *, input=None, stdin=None, stdout=-1, stderr=-1, check=True, cwd=None, env=None,  + startupinfo=None, creationflags=0, start_new_session=False, pass_fds=(), user=None,          + group=None, extra_groups=None, umask=-1)
+    @property
+    def main(self) -> str:
+        """name of main branch"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def load_(self):
+        "load data. Will raise NoSuchRepo if it doesn't exist."
+        pass
+
+    @abstractmethod
+    async def create(self):
+        "create remote repo."
+        pass
+
+    async def load(self, create:bool=None):
+        "load this repo's data. You might want to overide `load_` instead."
+        try:
+            await self.load_()
+        except NoSuchRepo:
+            if create is False:
+                raise
+        else:
+            if create:
+                raise RepoExists(self.repo)
+            return
+
+        await self.create()
+        await self.load_()
 
     async def get_branches(self) -> AsyncIterator[str]:
         """
@@ -101,37 +101,124 @@ class RepoInfo(metaclass=ABCMeta):
         # only required for source repo
         raise NotImplementedError
 
-    async def drop_branch(self, tag:str) -> None:
-        """
-        Delete this tag.
-        """
-        # only required for source repo
-        raise NotImplementedError
-
-    async def drop_tag(self, tag:str) -> None:
-        """
-        Delete this tag.
-        """
-        # only required for source repo
-        raise NotImplementedError
-
-    async def get_branch(name) -> CommitInfo:
+    async def get_branch(self, name) -> CommitInfo:
         """
         Return info on this branch.
         """
         raise NotImplementedError
 
-    async def get_tag(name) -> CommitInfo:
+    async def get_default_branch(self) -> str:
+        """
+        Get the name of the default branch.
+        """
+        raise NotImplementedError
+
+    async def set_default_branch(self, name):
+        """
+        Set the default branch to this.
+        """
+        raise NotImplementedError
+
+    async def get_tag(self, name) -> CommitInfo:
         """
         Return info on this tag.
         """
         raise NotImplementedError
 
+    async def push(self) -> CommitInfo:
+        """
+        git-push to this repo.
+        """
+        await self.repo.exec("git","push",self.api.name)
+
+    async def pull(self) -> CommitInfo:
+        """
+        git-pull from this repo.
+        """
+        await self.repo.exec("git","fetch",self.api.name)
+
+    async def drop_tags(self, *names:str) -> None:
+        """
+        Delete tags.
+        """
+        if not names:
+            return
+        await self.repo.exec("git","push",self.api.name, *(f":{n}" for n in names))
+
+    async def drop_branches(self, *names:str) -> None:
+        """
+        Delete branches.
+        """
+        if not names:
+            return
+        await self.repo.exec("git","push",self.api.name, *(f":{n}" for n in names))
+
 
 @define
 class CommitInfo(metaclass=ABCMeta):
     repo = field(type=RepoInfo)
-    name = field(type=str)
     hash = field(type=str)
+
+
+class API(CtxObj, metaclass=ABCMeta):
+    "Base class for forge APIs"
+
+    cls_RepoInfo = RepoInfo
+    cls_CommitInfo = CommitInfo
+
+    _tg: anyio.abc.TaskGroup
+    _njobs: int = 0
+    _ended: anyio.Event | None = None
+
+    def __init__(self, name:str, cfg: attrdict):
+        self.name = name
+        self.cfg = cfg
+        self.logger = logging.getLogger(f"moat.src.api.{name}")
+
+    def __repr__(self):
+        return f"‹{self.cfg.api}›"
+
+    @asynccontextmanager
+    async def _ctx(self) -> AsyncIterator[Self]:
+        async with anyio.create_task_group() as self._tg:
+            yield self
+
+    @property
+    def host(self):
+        "Host to talk to"
+        raise NotImplementedError
+
+    async def list_repos(self) -> AsyncIterator[str]:
+        """
+        List accessible repositories.
+        """
+        # only required for source repo
+        raise NotImplementedError
+
+    def repo_info_for(self, repo:Repo) -> RepoInfo:
+        """
+        Fetch info data for this repository.
+
+        Will fail when the destination doesn't exist.
+        """
+        try:
+            return self.cls_RepoInfo(self, repo)
+        except TypeError:
+            breakpoint()
+            raise
+
+
+def get_api(cfg:dict, name:str) -> Backend:
+    """
+    Return the API from the config (module ``cfg['api']``).
+
+    The name is the key which the API is found under.
+    """
+    from importlib import import_module
+
+    md = cfg.api
+    if "." not in md:
+        md = f"moat.src.api.{md}"
+    return import_module(md).API(name, cfg)
 
 

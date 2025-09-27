@@ -172,7 +172,7 @@ class LinkCommon(CmdCommon):
 
         async with conn_ as conn:
             if self.logger.isEnabledFor(logging.INFO):
-                print(f"Connection {self.name} to {srepr(remote)}", file=sys.stderr)
+                self.logger.info("Connection %s to %s", self.name, srepr(remote))
             handler = MsgSender(conn)
             if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")

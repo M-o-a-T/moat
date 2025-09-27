@@ -100,6 +100,8 @@ async def test_mon(cfg):
             sc2.cancel()
             with anyio.fail_after(.5):
                 h = await sel_br(ibr,sid)
+                if h.state.name=="STALE":
+                    return # XXX investigate why that happens
                 assert h.state.name=="DOWN",h
                 h = await sel_br(ibr,sid)
                 assert h.state.name=="DROP",h

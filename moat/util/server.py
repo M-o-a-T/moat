@@ -5,6 +5,7 @@ This module contains various helper functions and classes.
 from __future__ import annotations
 
 import anyio
+from anyio.abc import SocketAttribute
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -39,6 +40,8 @@ class _Server:
             listener = await anyio.create_tcp_listener(local_port=self.port)
         except Exception as exc:
             raise EnvironmentError(f"could not listen to port {self.port}") from exc
+        if not self.port:
+            self.port = listener.extra_attributes[SocketAttribute.local_address]()[1]
         if self._rdy is not None:
             self._rdy(listener)
         async with listener:

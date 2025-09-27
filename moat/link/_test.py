@@ -218,12 +218,15 @@ class Scaffold(CtxObj):
             yield li
 
     @asynccontextmanager
-    async def do_watch(self, path, exp=NotGiven, n=0, *a, **kw):
+    async def do_watch(self, path, exp=NotGiven, n=0, *a, **kw) -> AsyncIterator[ValueEvent]:
         """
-        Run a client that expects @xp and appends all non-exp
+        Run a client that expects @exp and appends all non-exp
         results to @rd.
 
         All other args+kw are forwarded to `Link.d_watch`.
+
+        The results are appended to a list that's posted to the event when
+        `do_watch` ends (for whatever reason).
         """
         async with anyio.create_task_group() as tg, self.client_() as c:
             evt = ValueEvent()
@@ -234,12 +237,14 @@ class Scaffold(CtxObj):
                 try:
                     async with c.d_watch(path,*a,**kw) as mon:
                         async for r in mon:
-                            if not kw.get("meta") and not kw.get("subtree"):
-                                r = (r,)
                             if kw.get("meta"):
                                 t = time.time()
                                 assert t - 1 < r[-1].timestamp < t
+                            elif not kw.get("subtree"):
+                                # neither meta nor subtree
+                                r = (r,)
                             if exp is not NotGiven and (not kw.get("subtree") or not len(r[0])) and r[kw.get("subtree",0)] == exp:
+                                # Skip if toplevel match
                                 return
                             res.append(r)
                             if len(res)==n:

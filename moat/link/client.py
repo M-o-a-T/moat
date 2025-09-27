@@ -840,7 +840,6 @@ class Watcher(CtxObj):
     min_length:type=field()
     max_length:type=field()
 
-    _qw=field(init=False,repr=False)
     _qr=field(init=False,repr=False)
     _tg=field(init=False,repr=False)
     _node=field(init=False,default=None)
@@ -850,7 +849,6 @@ class Watcher(CtxObj):
     def __attrs_post_init__(self):
         if self.mark and self.state is NotGiven:
             raise ValueError("MQTT doesn't send a mark. Sorry.")
-        self._qw,self._qr = anyio.create_memory_object_stream(99)
         if self.age is not None:
             self.age = time.time()-self.age
 
@@ -923,7 +921,6 @@ class Watcher(CtxObj):
             await qw.aclose()
             yield self
             tg.cancel_scope.cancel()
-            await self._qw.aclose()
             self._node=None
 
     def __aiter__(self):

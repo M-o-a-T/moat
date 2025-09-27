@@ -87,7 +87,10 @@ class Cmd(BaseCmd):
         log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
         if d is NotGiven:
-            del cur[k]
+            try:
+                del cur[k]
+            except KeyError:
+                pass
         elif isinstance(cur, list) and k is None:
             cur.append(d)
         else:

@@ -236,5 +236,5 @@ moat-util:
   deb: 0.57.10-1
   pkg: 1
   pypi: 0.57.13
-  rev: a30abed0890ff16b7867b25b59ae042e200163cb
-  tag: 0.59.0
+  rev: 252e3fdb19679234b9a4fa3b67e19df0a2907388
+  tag: 0.60.0

@@ -34,24 +34,24 @@ class RepoInfo(BaseRepoInfo):
         "URL used to pull with git"
         if "git_url" in self.api.cfg:
             return self.api.cfg.git_url.replace("{{repo}}",self.name)
-        return f"https://{self.api.host}/{self.api.cfg.user}/{self.repo.name}.git"
+        return f"https://{self.api.host}/{self.api.org}/{self.repo.name}.git"
 
     @property
     def ssh_url(self) -> str:
         "URL to write to the repository via git"
-        return f"git+ssh://git@{self.api.host}/{self.api.cfg.user}/{self.repo.name}.git"
+        return f"git+ssh://git@{self.api.host}/{self.api.org}/{self.repo.name}.git"
 
     @property
     def ext_url(self) -> str:
         "URL used to view the thing"
-        return f"https://{self.api.host}/{self.api.cfg.user}/{self.repo.name}"
+        return f"https://{self.api.host}/{self.api.org}/{self.repo.name}"
 
     @property
     def description(self) -> str:
         return self.data.description.strip().split("\n",1)[0]
 
     async def load_(self) -> RepoInfo:
-        url = f"repos/{self.api.cfg.user}/{self.repo.name}"
+        url = f"repos/{self.api.org}/{self.repo.name}"
         res = await self.api.http.get(url)
         if res.status_code == 404:
             raise NoSuchRepo(self)
@@ -128,14 +128,14 @@ class RepoInfo(BaseRepoInfo):
         """
         Set the default branch to this.
         """
-        url = f"repos/{self.api.cfg.user}/{self.repo.name}"
+        url = f"repos/{self.api.org}/{self.repo.name}"
         res = await self.api.http.patch(url, json=dict(default_branch=name))
 
     async def get_branch(self, name) -> CommitInfo:
         """
         Return info on this branch.
         """
-        url = f"repos/{self.api.cfg.user}/{self.repo.name}/branches/{name}"
+        url = f"repos/{self.api.org}/{self.repo.name}/branches/{name}"
         res = await self.api.http.get(url)
         res.raise_for_status()
         return self.cls_CommitInfo(self, res.json())
@@ -144,7 +144,7 @@ class RepoInfo(BaseRepoInfo):
         """
         List known branches.
         """
-        url = f"repos/{self.api.cfg.user}/{self.repo.name}/branches"
+        url = f"repos/{self.api.org}/{self.repo.name}/branches"
         res = await self.api.http.get(url)
         res.raise_for_status()
         for r in res.json():
@@ -155,7 +155,7 @@ class RepoInfo(BaseRepoInfo):
         """
         List known tags.
         """
-        url = f"repos/{self.api.cfg.user}/{self.repo.name}/tags"
+        url = f"repos/{self.api.org}/{self.repo.name}/tags"
         res = await self.api.http.get(url)
         res.raise_for_status()
         for r in res.json():
@@ -174,6 +174,11 @@ class API(BaseAPI):
     def host(self):
         "Host to talk to"
         return self.cfg.host
+
+    @property
+    def org(self):
+        "user/organization to use"
+        return self.cfg.get("org", self.cfg.user)
 
     async def list_repos(self) -> AsyncIterator[str]:
         """

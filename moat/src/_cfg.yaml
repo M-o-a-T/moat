@@ -9,12 +9,14 @@ move:
     token: YOUR_API_KEY_HERE
     user: yourname
     parented: false
+    # org: org-name
   dst: 
     name: Codeberg
     api: forgejo
     host: "codeberg.org"
     user: yourname
     token: YOUR_API_KEY_HERE
+    # org: org-name
   local:
     name: Backup
     api: localgit

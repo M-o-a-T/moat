@@ -25,10 +25,6 @@ class CommitInfo(BaseCommitInfo):
 class RepoInfo(BaseRepoInfo):
     cls_CommitInfo = CommitInfo
 
-#   @property
-#   def git(self) -> str:
-#       return self.data.git_url.replace("git://github.com/","git@github.com:")
-
     @property
     def parent(self) -> dict|None:
         "Return info about the parent repo, or None"
@@ -60,31 +56,4 @@ class API(BaseAPI):
     def host(self):
         "Host to talk to"
         return self.cfg.get("host","github.com")
-
-#   async def list_repos(self) -> AsyncIterator[str]:
-#       """
-#       List accessible repositories.
-#       """
-#       pg=None
-#       url = f"/users/{self.cfg.user}/repos"
-#       while url is not None:
-#           res = await self.http.get(url)
-#           res.raise_for_status()
-#           for k in res.json():
-#               yield k["name"]
-#           try:
-#               lh = res.headers["link"]
-#           except KeyError:
-#               return
-#           url = None
-#           for xh in lh.split(","):
-#               u,r = xh.split(";")
-#               if 'rel="next"' in r:
-#                   url = u.strip().lstrip("<").rstrip(">")
-#                   break
-
-#   async def get_repo(self, name) -> RepoInfo:
-#       url = f"/repos/{self.cfg.user}/{name}"
-#       res = await self.http.get(url)
-#       return RepoInfo(self, res.json())
 

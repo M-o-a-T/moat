@@ -4,7 +4,7 @@ This module contains various helper functions and classes for dictionaries.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableSequence
 from copy import deepcopy
 
 from . import NotGiven
@@ -43,6 +43,8 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     for kv in d:
         if kv is None:
             continue
+        if not isinstance(kv,dict):
+            breakpoint()
         for k, v in kv.items():
             if k not in keys:
                 keys[k] = []
@@ -174,7 +176,7 @@ class attrdict(dict):
             v[px] = value
         elif not isinstance(v, Mapping):
             raise ValueError((v,px))
-        elif px in v:
+        elif px in v and isinstance(v[px], (Mapping,MutableSequence)):
             v[px] = combine_dict(value, v[px], cls=type(self))
         else:
             v[px] = value

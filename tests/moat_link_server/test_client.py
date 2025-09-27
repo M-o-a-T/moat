@@ -53,8 +53,9 @@ async def test_get_flat_dyn(cfg):
         assert res == []
 
 
+@pytest.mark.parametrize("state", [None, NotGiven])
 @pytest.mark.anyio()
-async def test_get_flat_full(cfg):
+async def test_get_flat_full(cfg,state):
     "Check reading state plus dynamic updates"
     async with (
             Scaffold(cfg, use_servers=True) as sf,
@@ -67,7 +68,7 @@ async def test_get_flat_full(cfg):
 
         t=anyio.current_time()
         with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=None) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=state) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")

@@ -889,7 +889,7 @@ class Watcher(CtxObj):
                 task_status.started()
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
                 if self._chk(p,m):
-                    await self._qw.send((p,d,m))
+                    await qw.send((p,d,m))
             if self.mark:
                 await qw.send(None)
 

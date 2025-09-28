@@ -104,7 +104,7 @@ class GpioWatcher:
         sysfs_path: str = "/sys",
     ):
         self.interval = interval
-        self.gpio = open(  # pylint: disable=unspecified-encoding
+        self.gpio = open(  # pylint: disable=unspecified-encoding # noqa:SIM115
             os.path.join(debugfs_path, "gpio"),
         )
         self.targets = dict()  # chip > line > _GpioPin

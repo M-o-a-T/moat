@@ -96,7 +96,7 @@ class ADC(BaseCmd):
         )
         self.bias = 0
         try:
-            self.rand = random.Random(cfg["seed"] if "seed" in cfg else None)
+            self.rand = random.Random(cfg.get("seed", None))
         except AttributeError:
             from moat.util.random import Random  # noqa: PLC0415
 

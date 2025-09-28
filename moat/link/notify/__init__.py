@@ -19,22 +19,23 @@ __all__ = ["ntfy_bridge"]
 
 logger = logging.getLogger(__name__)
 
+
 class Notify:
     def __init__(self, cfg):
         self.cfg = cfg
 
-    async def run(self, link:Link):
+    async def run(self, link: Link):
         self.link = link
         async with AsyncExitStack() as ex:
             backend = self.cfg.backend
-            if isinstance(backend,str):
-                backend=(backend,)
+            if isinstance(backend, str):
+                backend = (backend,)
 
             self._backends = {}
             for name in backend:
-                cfg = self.cfg.get(name,attrdict())
+                cfg = self.cfg.get(name, attrdict())
                 try:
-                    notifier = await ex.enter_async_context(get_backend(name, link,cfg))
+                    notifier = await ex.enter_async_context(get_backend(name, link, cfg))
                 except Exception as exc:
                     logger.warning("Backend %r", name, exc_info=exc)
                 else:
@@ -47,29 +48,34 @@ class Notify:
                 await self._run()
             finally:
                 with anyio.move_on_after(2, shield=True):
-                    await self.send("error.notify",f"Backend stopped", "The backend terminated.", prio="fatal")
-
+                    await self.send(
+                        "error.notify", f"Backend stopped", "The backend terminated.", prio="fatal"
+                    )
 
     async def send(self, *a, **kw) -> None:
         """Send this notification to that topic."""
         bad = []
         dropped = []
-        for name,b_e in list(self._backends.items()):
+        for name, b_e in list(self._backends.items()):
             try:
-                await b_e.send(*a,**kw)
+                await b_e.send(*a, **kw)
             except Exception as exc:
                 logger.warning("Backend %r", name, exc_info=exc)
                 bad.append(b_e)
 
         for name in bad:
-            if self._backends.pop(name,None) is not None:
+            if self._backends.pop(name, None) is not None:
                 dropped.append(name)
         if not self._backends:
             raise RuntimeError("All backends failed.")
 
         for name in dropped:
-            await self.send("error.notify",f"Backend {name} error", "The backend errored and was removed.", prio="error")
-
+            await self.send(
+                "error.notify",
+                f"Backend {name} error",
+                "The backend errored and was removed.",
+                prio="error",
+            )
 
     async def _run(self) -> NoReturn:
         """
@@ -79,14 +85,16 @@ class Notify:
             try:
                 await srv.tg.start(self._keepalive)
 
-                async with self.link.d_watch(self.cfg.path,subtree=True,meta=True,state=None) as mon:
+                async with self.link.d_watch(
+                    self.cfg.path, subtree=True, meta=True, state=None
+                ) as mon:
                     srv.set()
                     breakpoint()
-                    async for path,msg,meta in mon:
+                    async for path, msg, meta in mon:
                         t = time.time()
-                        if meta.timestamp < t-self.cfg.max_age:
+                        if meta.timestamp < t - self.cfg.max_age:
                             continue
-                        if isinstance(msg,dict):
+                        if isinstance(msg, dict):
                             if "title" not in msg:
                                 title = str(path)
                             await self.send(topic=path, **msg)
@@ -96,10 +104,10 @@ class Notify:
                     # not reached, loop doesn't terminate
 
             except Exception as exc:
-                await self.send(topic=P("error.notify"),
-                    msg=repr(exc), prio="error",title="Gateway failure")
+                await self.send(
+                    topic=P("error.notify"), msg=repr(exc), prio="error", title="Gateway failure"
+                )
                 raise
-
 
     async def _keepalive(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> NoReturn:
         "Monitor the keepalive topic"
@@ -109,9 +117,9 @@ class Notify:
         keep = self.cfg.keepalive
         ok_keep = keep.ok
 
-        timeout = keep.get("timeout",link.cfg.timeout.ping.timeout)
+        timeout = keep.get("timeout", link.cfg.timeout.ping.timeout)
 
-        async with link.d_watch(P("host")/main_host, state=None) as mon:
+        async with link.d_watch(P("host") / main_host, state=None) as mon:
             task_status.started()
             mon = aiter(mon)
             while True:
@@ -124,8 +132,8 @@ class Notify:
                     except TimeoutError:
                         msg = None
 
-                if isinstance(msg,dict) and "id" in msg:
-                    async with link.d_watch(P("run.ping.id")/msg["id"]) as mon2:
+                if isinstance(msg, dict) and "id" in msg:
+                    async with link.d_watch(P("run.ping.id") / msg["id"]) as mon2:
                         mon2 = aiter(mon2)
                         while True:
                             try:
@@ -134,17 +142,16 @@ class Notify:
                                     if not msg.get("up", False):
                                         break
                                     if bad and "msg" in ok_keep:
-                                        await self.send(topic="error.notify",**ok_keep)
+                                        await self.send(topic="error.notify", **ok_keep)
                                         bad = False
                             except TimeoutError:
                                 break
 
                 res = await self.send(topic="error.notify", **keep)
-                bad=True
+                bad = True
 
 
-
-def get_backend(name:str, link:Link, cfg: dict) -> Backend:
+def get_backend(name: str, link: Link, cfg: dict) -> Backend:
     """
     Fetch the backend named in the config and initialize it.
     """
@@ -152,12 +159,13 @@ def get_backend(name:str, link:Link, cfg: dict) -> Backend:
 
     if "." not in name:
         name = "moat.link.notify." + name
-    return import_module(name).Notifier(link,cfg)
+    return import_module(name).Notifier(link, cfg)
+
 
 class Notifier(CtxObj, metaclass=ABCMeta):
     "Base class for notification backends"
 
-    def __init__(self, link:Link, cfg: attrdict):
+    def __init__(self, link: Link, cfg: attrdict):
         self.cfg = cfg
         self.link = link
 
@@ -166,5 +174,5 @@ class Notifier(CtxObj, metaclass=ABCMeta):
         yield self
 
     @abstractmethod
-    async def send(self, topic:str|Path, title:str, msg:str, **kw):
+    async def send(self, topic: str | Path, title: str, msg: str, **kw):
         """Send this notification to that topic."""

@@ -149,8 +149,8 @@ class ErrorEntry(AttrClientEntry):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.node, self.tock = self.subpath[-2:]
-        if isinstance(self.path,list):
-            self.path=Path.build(self.path)
+        if isinstance(self.path, list):
+            self.path = Path.build(self.path)
 
     def __repr__(self):
         return "<{}: {} {}: {}>".format(
@@ -408,7 +408,7 @@ class ErrorRoot(ClientRoot):
         must be filled and stored by the caller.
         """
 
-        path=Path.build(path)
+        path = Path.build(path)
         err = self._active[subsystem].get(path, None)
         if err is not None:
             return err
@@ -510,8 +510,8 @@ class ErrorRoot(ClientRoot):
         if not force and hasattr(rec, "severity") and rec.severity < severity:
             return rec
 
-        if isinstance(path,list):
-            path=Path.build(path)
+        if isinstance(path, list):
+            path = Path.build(path)
         rec.severity = severity
         rec.subsystem = subsystem
         rec.path = path
@@ -552,8 +552,8 @@ class ErrorRoot(ClientRoot):
             return
 
         path = entry.path
-        if isinstance(path,list):
-            path=Path.build(path)
+        if isinstance(path, list):
+            path = Path.build(path)
         with contextlib.suppress(KeyError):
             del (self._done if entry.resolved else self._active)[entry.subsystem][path]
 
@@ -566,7 +566,7 @@ class ErrorRoot(ClientRoot):
             self._latest.keep(entry)
         else:
             dest = self._active
-        path=entry.path
-        if isinstance(path,list):
-            path=Path.build(path)
+        path = entry.path
+        if isinstance(path, list):
+            path = Path.build(path)
         dest[entry.subsystem][path] = entry

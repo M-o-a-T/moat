@@ -76,6 +76,7 @@ async def msg_(obj, path):
             self._part_cache = dict()
 
     import moat.kv.server
+
     cfg = obj.cfg.kv
 
     _Unpack._unpack_multiple = moat.kv.server.Server._unpack_multiple

@@ -16,7 +16,7 @@ from collections.abc import Sequence
 import asyncclick as click
 
 from .main import load_subgroup, attr_args, process_args
-from .path import P, Path, path_eval, PathLongener,PathShortener
+from .path import P, Path, path_eval, PathLongener, PathShortener
 from .times import humandelta, time_until
 from .yaml import yprint
 
@@ -35,7 +35,9 @@ async def cli():
 @click.option("--now", "-n", is_flag=True, help="Don't advance on match")
 @click.option("--inv", "-i", is_flag=True, help="Time until no match")
 @click.option("--back", "-b", is_flag=True, help="Time since the last (non)-match")
-@click.option("--Human", "-H", "segments", type=int, default=None, help="Parts to print in 'human' mode")
+@click.option(
+    "--Human", "-H", "segments", type=int, default=None, help="Parts to print in 'human' mode"
+)
 @click.argument("args", nargs=-1)
 async def to_(args, sleep, human, now, inv, back, segments):
     """\
@@ -127,7 +129,7 @@ y, yr   Year (2023–)
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
-@attr_args(with_var=False,with_eval='eval_',with_path=False)
+@attr_args(with_var=False, with_eval="eval_", with_path=False)
 def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     """File conversion / mangling utility.
 
@@ -139,9 +141,9 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     if long and short:
         raise click.UsageError("Both Path mods together are a no-op")
     if long:
-        long=PathLongener()
+        long = PathLongener()
     if short:
-        long=PathShortener()
+        long = PathShortener()
 
     class IT:
         def __init__(self, codec):
@@ -265,14 +267,14 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
 
         for d in in_d():
             for data in dec(d):
-                if long and isinstance(data,Sequence):
-                    d,p,*x = data
-                    p = long.long(d,p)
-                    data = [p,*x]
-                if short and isinstance(data,Sequence):
-                    p,*x = data
-                    d,p = short.short(p)
-                    data = [d,p,*x]
+                if long and isinstance(data, Sequence):
+                    d, p, *x = data
+                    p = long.long(d, p)
+                    data = [p, *x]
+                if short and isinstance(data, Sequence):
+                    p, *x = data
+                    d, p = short.short(p)
+                    data = [d, p, *x]
 
                 data = process_args(data, **kw)
                 if cse:
@@ -361,6 +363,7 @@ async def cfg_(obj, path, yaml, empty, load):
     cfg = obj.cfg
     if load:
         from .config import ensure_cfg
+
         for ld in load:
             cfg = ensure_cfg(ld, cfg=cfg)
 

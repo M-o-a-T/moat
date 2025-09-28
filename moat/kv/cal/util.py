@@ -93,8 +93,8 @@ async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> Tuple(
 
 def next_start(v, now, zone=UTC):
     st = v.dtstart.value
-    if isinstance(st,date):
-        st=datetime.combine(st,time(0,0,0)).astimezone(zone)
+    if isinstance(st, date):
+        st = datetime.combine(st, time(0, 0, 0)).astimezone(zone)
     try:
         rule = rrulestr(v.rrule.value, dtstart=st)
     except AttributeError:

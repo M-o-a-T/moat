@@ -37,8 +37,8 @@ class Message[TData]:
     topic: Path = field()
     data: TData = field()
     meta: MsgMeta = field()
-    prop: dict[str,Any] = field()
-    retain: bool|None = field(default=False)
+    prop: dict[str, Any] = field()
+    retain: bool | None = field(default=False)
 
     raw: ClassVar[bool] = False
 
@@ -61,7 +61,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, cfg: attrdict, name: str, id:str):
+    def __init__(self, cfg: attrdict, name: str, id: str):
         self.cfg = cfg
         self.name = name
         self.id = id

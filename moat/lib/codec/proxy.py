@@ -62,6 +62,7 @@ as_proxy("_p", Proxy)
 as_proxy("_fp", FSPath)
 as_proxy("_fpa", AioPath)
 
+
 def _next(it, dfl=None):
     try:
         return next(it)

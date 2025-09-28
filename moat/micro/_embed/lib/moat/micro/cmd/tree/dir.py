@@ -152,7 +152,12 @@ class BaseSubCmd(BaseSuperCmd):
             return await sub.handle(msg, rcmd)
         return await super().handle(msg, rcmd, *prefix)
 
-    doc_dir_ = dict(_d="list cmd subdirectory", d="dict(str,name):sub-apps", c=["str:commands"], v="bool:show hidden")
+    doc_dir_ = dict(
+        _d="list cmd subdirectory",
+        d="dict(str,name):sub-apps",
+        c=["str:commands"],
+        v="bool:show hidden",
+    )
 
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
@@ -288,4 +293,3 @@ class Dispatch(DirCmd):
     def cfg_at(self):
         "config subcommand resolver"
         return self._sender.cfg_at
-

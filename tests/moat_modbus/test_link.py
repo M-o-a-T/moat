@@ -59,14 +59,16 @@ hostports:
 
 """
 
+
 async def mon(c):
-    async with c.monitor(P(':'),codec="std-cbor",subtree=True) as mo:
+    async with c.monitor(P(":"), codec="std-cbor", subtree=True) as mo:
         async for msg in mo:
             print("*****", msg)
 
+
 @pytest.mark.trio()
 async def test_kv_poll(autojump_clock, free_tcp_port):
-    autojump_clock.autojump_threshold = .2
+    autojump_clock.autojump_threshold = 0.2
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
     cfg1.server[0].port = free_tcp_port
@@ -74,6 +76,7 @@ async def test_kv_poll(autojump_clock, free_tcp_port):
     del cfg2.hostports.localhost.PORT
 
     from moat.util import CFG, ensure_cfg
+
     ensure_cfg("moat.link.server")
     cfg = copy.deepcopy(CFG)
 
@@ -84,7 +87,7 @@ async def test_kv_poll(autojump_clock, free_tcp_port):
         trio.open_nursery() as tg,
     ):
         # tg.start_soon(mon,c)
-        r=await c.d_get(P(":"))
+        r = await c.d_get(P(":"))
         assert r["value"] == 123
         assert (await c.d_get(P(":")))["value"] == 123
         await c.d_set(P("a.srv.src"), data=42)

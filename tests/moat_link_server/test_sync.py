@@ -149,7 +149,7 @@ async def test_lsy_switch_server_hard_break(cfg):
 
         await sf.server()
         n = 0
-        with pytest.raises(EOFError),ungroup:
+        with pytest.raises(EOFError), ungroup:
             async with c1.cmd(P("i.count")).stream_in() as st:
                 async for m in st:
                     n += 1

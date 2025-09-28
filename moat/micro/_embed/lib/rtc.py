@@ -16,26 +16,28 @@ except AttributeError:
     def mem(x=None):  # noqa:D103,ARG001
         return b""
 
-def at(*a,**kw):
+
+def at(*a, **kw):
     set_rtc("debug", (a, kw), fs=False)
+
 
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if not fs:
         try:
-            s = eval(mem().split(b'\0')[0].decode("utf-8"))
+            s = eval(mem().split(b"\0")[0].decode("utf-8"))
         except Exception as exc:
             if mem() != b"":
-                print("Memory decode problem:",mem(),repr(exc), file=sys.stderr)
+                print("Memory decode problem:", mem(), repr(exc), file=sys.stderr)
             s = {}
-        if s.get(attr,None) == value:
+        if s.get(attr, None) == value:
             return
         if value is Ellipsis:
             if attr in s:
                 del s[attr]
         else:
             s[attr] = value
-        mem(repr(s).encode("utf-8")+b'\0')
+        mem(repr(s).encode("utf-8") + b"\0")
         return
     if fs is False:
         raise ValueError("no RTC")
@@ -57,7 +59,7 @@ def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
     if not fs:
         try:
-            s = eval(mem().split(b'\0')[0].decode("utf-8"))
+            s = eval(mem().split(b"\0")[0].decode("utf-8"))
             return s[attr]
         except Exception:
             pass
@@ -76,7 +78,7 @@ def get_rtc(attr, fs=None, default=None):
 def all_rtc():
     "Iterate RTC update values"
     try:
-        s = eval(mem().split(b'\0')[0].decode("utf-8"))
+        s = eval(mem().split(b"\0")[0].decode("utf-8"))
     except (ValueError, KeyError, EOFError, SyntaxError):
         print("RTC: failed to eval", repr(mem()), file=sys.stderr)
     else:

@@ -67,7 +67,7 @@ class AnyioBuf(BaseBuf):
         try:
             self.s = await self.stream()
         except Exception as exc:
-            log("Problem: %s %r %r",type(self),getattr(self,"cfg","?"),exc)
+            log("Problem: %s %r %r", type(self), getattr(self, "cfg", "?"), exc)
             raise
 
     async def stream(self) -> anyio.abc.ByteStream:

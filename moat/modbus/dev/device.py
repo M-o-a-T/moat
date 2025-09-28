@@ -512,11 +512,11 @@ class ServerDevice(BaseDevice):
         self.getValues = self.unit.getValues
         self.setValues = self.unit.setValues
 
-    def async_getValues(self,*a,**kw):
-        return self.unit.async_getValues(*a,**kw)
+    def async_getValues(self, *a, **kw):
+        return self.unit.async_getValues(*a, **kw)
 
-    def async_setValues(self,*a,**kw):
-        return self.unit.async_setValues(*a,**kw)
+    def async_setValues(self, *a, **kw):
+        return self.unit.async_setValues(*a, **kw)
 
     async def load(self, path: str | None = None, data: dict | None = None):
         await super().load(path, data)

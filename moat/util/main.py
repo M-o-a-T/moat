@@ -126,7 +126,9 @@ def attr_args(
                 hidden=not with_eval or not with_combined,
             )(proc)
 
-        args = (f"--{with_path}" if isinstance(with_path,str) else "--path",) + (("-p",) if with_path else ())
+        args = (f"--{with_path}" if isinstance(with_path, str) else "--path",) + (
+            ("-p",) if with_path else ()
+        )
         proc = click.option(
             *args,
             "path_",
@@ -137,7 +139,9 @@ def attr_args(
             hidden=not with_path or not with_combined,
         )(proc)
 
-        args = (f"--{with_eval}" if isinstance(with_eval,str) else "--eval",) + (("-e",) if with_eval is True else ())
+        args = (f"--{with_eval}" if isinstance(with_eval, str) else "--eval",) + (
+            ("-e",) if with_eval is True else ()
+        )
         proc = click.option(
             *args,
             "eval_",
@@ -148,7 +152,9 @@ def attr_args(
             hidden=not with_eval or not with_combined,
         )(proc)
 
-        args = (f"--{with_var}" if isinstance(with_var,str) else "--var",) + (("-v",) if with_var is True else ())
+        args = (f"--{with_var}" if isinstance(with_var, str) else "--var",) + (
+            ("-v",) if with_var is True else ()
+        )
         proc = click.option(
             *args,
             "vars_",
@@ -159,7 +165,9 @@ def attr_args(
             hidden=not with_var or not with_combined,
         )(proc)
 
-        args = (f"--{with_proxy}" if isinstance(with_proxy,str) else "--proxy",) + (("-P",) if with_proxy is True else ())
+        args = (f"--{with_proxy}" if isinstance(with_proxy, str) else "--proxy",) + (
+            ("-P",) if with_proxy is True else ()
+        )
         proc = click.option(
             *args,
             "proxy_",
@@ -581,7 +589,7 @@ class Loader(click.Group):
         logger.debug("* List: %s.*.%s / %s.*.%s", sub_pre, sub_post, ext_pre, ext_post)
 
         if sub_pre:
-            logger.debug("Adding sub %s",sub_pre)
+            logger.debug("Adding sub %s", sub_pre)
             for _finder, name, _ispkg in _namespaces(sub_pre):
                 # ruff:noqa:PLW2901 # var overwritten
                 name = name.rsplit(".", 1)[1]
@@ -591,7 +599,7 @@ class Loader(click.Group):
                     rv.append(name)
 
         if ext_pre:
-            logger.debug("Adding ext %s",ext_pre)
+            logger.debug("Adding ext %s", ext_pre)
             for n, _ in list_ext(ext_pre):
                 if load_ext(ext_pre, n, *ext_post, err=ctx.obj.debug_loader):
                     rv.append(n)

@@ -27,9 +27,8 @@ async def cli(ctx):
     obj.conn = await ctx.with_async_resource(Link(cfg))
 
 
-
 @cli.command()
-@click.option("-b","--backend",type=str,multiple=True,help="Restrict to this backend")
+@click.option("-b", "--backend", type=str, multiple=True, help="Restrict to this backend")
 @click.pass_obj
 async def run(obj, backend):
     """
@@ -44,4 +43,3 @@ async def run(obj, backend):
     if backend:
         cfg.backends = backend
     await Notify(cfg).run(obj.conn)
-

@@ -8,23 +8,29 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
-from attr import define,field
+from attr import define, field
 from moat.util import CtxObj, ungroup
 from moat.util.exec import run as run_
 import logging
 import anyio
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from ...move import RepoMover
 
+
 class NoSuchRepo(RuntimeError):
     "doesn't exist, call create"
+
     pass
+
 
 class RepoExists(RuntimeError):
     "exists, cannot create"
+
     pass
+
 
 @define
 class Repo:
@@ -33,19 +39,20 @@ class Repo:
 
     def __attrs_post_init__(self):
         if self.cwd is None:
-            self.cwd = anyio.Path(self.cfg.cache)/self.name
+            self.cwd = anyio.Path(self.cfg.cache) / self.name
 
-    def run(*a,**kw) -> Awaitable:
+    def run(*a, **kw) -> Awaitable:
         """Run a program in this repo's directory"""
-        kw.setdefault("cwd",self.cwd)
-        return run_(*a,**kw)
+        kw.setdefault("cwd", self.cwd)
+        return run_(*a, **kw)
 
 
 @define
 class RepoInfo(metaclass=ABCMeta):
     """Wrapper for a particular remote repository."""
-    api:API = field()
-    repo:Repo = field()
+
+    api: API = field()
+    repo: Repo = field()
 
     @property
     def description(self) -> str:
@@ -72,7 +79,7 @@ class RepoInfo(metaclass=ABCMeta):
         "create remote repo."
         pass
 
-    async def load(self, create:bool=None):
+    async def load(self, create: bool = None):
         "load this repo's data. You might want to overide `load_` instead."
         try:
             await self.load_()
@@ -129,29 +136,29 @@ class RepoInfo(metaclass=ABCMeta):
         """
         git-push to this repo.
         """
-        await self.repo.exec("git","push",self.api.name)
+        await self.repo.exec("git", "push", self.api.name)
 
     async def pull(self) -> CommitInfo:
         """
         git-pull from this repo.
         """
-        await self.repo.exec("git","fetch",self.api.name)
+        await self.repo.exec("git", "fetch", self.api.name)
 
-    async def drop_tags(self, *names:str) -> None:
+    async def drop_tags(self, *names: str) -> None:
         """
         Delete tags.
         """
         if not names:
             return
-        await self.repo.exec("git","push",self.api.name, *(f":{n}" for n in names))
+        await self.repo.exec("git", "push", self.api.name, *(f":{n}" for n in names))
 
-    async def drop_branches(self, *names:str) -> None:
+    async def drop_branches(self, *names: str) -> None:
         """
         Delete branches.
         """
         if not names:
             return
-        await self.repo.exec("git","push",self.api.name, *(f":{n}" for n in names))
+        await self.repo.exec("git", "push", self.api.name, *(f":{n}" for n in names))
 
 
 @define
@@ -170,7 +177,7 @@ class API(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, name:str, cfg: attrdict):
+    def __init__(self, name: str, cfg: attrdict):
         self.name = name
         self.cfg = cfg
         self.logger = logging.getLogger(f"moat.src.api.{name}")
@@ -195,7 +202,7 @@ class API(CtxObj, metaclass=ABCMeta):
         # only required for source repo
         raise NotImplementedError
 
-    def repo_info_for(self, repo:Repo) -> RepoInfo:
+    def repo_info_for(self, repo: Repo) -> RepoInfo:
         """
         Fetch info data for this repository.
 
@@ -208,7 +215,7 @@ class API(CtxObj, metaclass=ABCMeta):
             raise
 
 
-def get_api(cfg:dict, name:str) -> Backend:
+def get_api(cfg: dict, name: str) -> Backend:
     """
     Return the API from the config (module ``cfg['api']``).
 
@@ -220,5 +227,3 @@ def get_api(cfg:dict, name:str) -> Backend:
     if "." not in md:
         md = f"moat.src.api.{md}"
     return import_module(md).API(name, cfg)
-
-

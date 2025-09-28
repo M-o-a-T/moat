@@ -17,22 +17,21 @@ from moat.link.node import Node
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
-@click.option("-m","--meta",is_flag=True,help="include metadata")
+@click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path,meta):
+async def cli(ctx, path, meta):
     """
     This subcommand accesses the data stored in the MoaT-Link server.
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
     obj.conn = await ctx.with_async_resource(Link(cfg))
-    obj.meta=meta
+    obj.meta = meta
     if ctx.invoked_subcommand is None:
-        res = await data_get(obj.conn,path, meta=obj.meta,out=obj.stdout, recursive=False)
+        res = await data_get(obj.conn, path, meta=obj.meta, out=obj.stdout, recursive=False)
     else:
         obj.path = path
-
 
 
 @cli.command()
@@ -169,12 +168,12 @@ async def delete(obj, before, recursive):
     """
     args = {}
     if recursive:
-        args["rec"]=recursive
+        args["rec"] = recursive
     if before:
-        args["ts"]=before
+        args["ts"] = before
     res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
-        res=dict(data=res[0],meta=MsgMeta.restore(res[1:]).repr())
+        res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:
         res = res[0]
     yprint(res, stream=obj.stdout)
@@ -193,7 +192,20 @@ async def delete(obj, before, recursive):
 @click.option("-a", "--max-age", type=int, help="Skip entries older than N seconds")
 @click.option("-t", "--timeout", type=int, help="Stop reading after N seconds")
 @click.pass_obj
-async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, min_length,max_length, max_age, timeout):
+async def monitor(
+    obj,
+    mode,
+    only,
+    path_only,
+    add_date,
+    ignore,
+    mark,
+    subtree,
+    min_length,
+    max_length,
+    max_age,
+    timeout,
+):
     """Monitor a MoaT-Link subtree.
 
     The mode can be:
@@ -206,17 +218,17 @@ async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, m
     cfg = obj.cfg.link
     seen = False
     data = Node()
-    plen=len(obj.path)+1
-    
+    plen = len(obj.path) + 1
+
     match mode:
-        case "c"|"current":
-            state=True
-        case "u"|"update":
-            state=False
-        case "s"|"stream":
-            state=None
-        case "m"|"mqtt":
-            state=NotGiven
+        case "c" | "current":
+            state = True
+        case "u" | "update":
+            state = False
+        case "s" | "stream":
+            state = None
+        case "m" | "mqtt":
+            state = NotGiven
         case _:
             raise click.UsageError("Mode must be current|update|stream|mqtt")
     if mark and state is not None:
@@ -224,17 +236,26 @@ async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, m
 
     def pm(p):
         for ip in ignore:
-            if len(p)>=len(ip) and p[:len(ip)] == ip:
+            if len(p) >= len(ip) and p[: len(ip)] == ip:
                 return True
         return False
 
     with anyio.move_on_after(timeout) if timeout else nullcontext():
-        async with obj.conn.d_watch(obj.path, state=state,mark=mark,meta=True,subtree=subtree,max_length=max_length,min_length=min_length,age=max_age) as mon:
+        async with obj.conn.d_watch(
+            obj.path,
+            state=state,
+            mark=mark,
+            meta=True,
+            subtree=subtree,
+            max_length=max_length,
+            min_length=min_length,
+            age=max_age,
+        ) as mon:
             async for pdm in mon:
                 if pdm is None:
-                    res = '*** Snapshot data ends ***'
+                    res = "*** Snapshot data ends ***"
                 else:
-                    p,d,m = pdm
+                    p, d, m = pdm
                     if pm(p):
                         continue
 
@@ -244,9 +265,9 @@ async def monitor(obj, mode, only, path_only, add_date, ignore, mark, subtree, m
                     elif path_only:
                         res = p
                     elif obj.meta:
-                        res = [p,d,m]
+                        res = [p, d, m]
                     else:
-                        res = [p,d]
+                        res = [p, d]
                 yprint(res, stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
@@ -260,9 +281,9 @@ async def update(obj, infile, codec):
     """Write a list of updates to a MoaT-Link subtree"""
     async with MsgReader(path="/dev/stdin" if infile == "-" else infile, codec=codec) as reader:
         async for msg in reader:
-            if isinstance(msg,dict):
+            if isinstance(msg, dict):
                 p = msg["path"]
                 v = msg["value"]
             else:
-                p,v,*_m = msg
+                p, v, *_m = msg
             await obj.conn.d_set(obj.path + p, v)

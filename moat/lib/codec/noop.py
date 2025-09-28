@@ -17,7 +17,7 @@ class Codec(_Codec):
     def encode(self, obj):
         "no-op encode"
         if not obj:
-            return b''
+            return b""
         if not isinstance(obj, (bytes, bytearray, memoryview)):
             raise ValueError(obj)  # noqa:TRY004
         return obj

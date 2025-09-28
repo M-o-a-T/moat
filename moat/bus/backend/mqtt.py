@@ -18,10 +18,10 @@ class Handler(BaseBusHandler):
 
     _mqtt = None
 
-    def __init__(self, cfg, name:str|None=None):
+    def __init__(self, cfg, name: str | None = None):
         super().__init__()
         self.cfg = cfg
-        self.name=name
+        self.name = name
 
     PARAMS = {
         "id": (

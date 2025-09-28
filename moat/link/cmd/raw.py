@@ -19,7 +19,7 @@ from mqttproto import MQTTException
 
 from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident, PathLongener
 from moat.util.path import set_root
-from moat.util.times import ts2iso,humandelta
+from moat.util.times import ts2iso, humandelta
 from moat.lib.codec import get_codec
 
 from moat.link.backend import RawMessage, get_backend
@@ -32,6 +32,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 @click.group
 @click.pass_context
 async def cli(ctx):
@@ -43,7 +44,7 @@ async def cli(ctx):
     obj = ctx.obj
     cfg = obj.cfg["link"]
     if not obj.name:
-        obj.name = "mon_"+gen_ident()
+        obj.name = "mon_" + gen_ident()
 
     set_root(cfg)
     obj.conn = await ctx.with_async_resource(get_backend(cfg, name=obj.name))
@@ -63,13 +64,14 @@ async def init(file):
     """
     from moat.link.meta import MsgMeta
     from moat.util.msg import MsgWriter
-    from moat.util.cbor import gen_start,gen_stop
+    from moat.util.cbor import gen_start, gen_stop
 
-    meta=MsgMeta(origin="init")
+    meta = MsgMeta(origin="init")
     async with MsgWriter(path=file, codec="std-cbor") as f:
-        await f(gen_start("Initial link data file",mode="init"))
-        await f([0,P(":"),dict(type="MoaT-Link data"),*meta.dump()])
+        await f(gen_start("Initial link data file", mode="init"))
+        await f([0, P(":"), dict(type="MoaT-Link data"), *meta.dump()])
         await f(gen_stop(mode="log_end"))
+
 
 @cli.command("test")
 @click.pass_obj
@@ -78,6 +80,7 @@ async def test(obj):
 
     lock = anyio.Lock()
     cfg = obj.cfg.link
+
     async def check_root():
         try:
             with anyio.fail_after(1) as sc:
@@ -94,7 +97,7 @@ async def test(obj):
     async def check_server():
         try:
             with anyio.fail_after(1) as sc:
-                async with back.monitor(cfg.root+P("run.service.main")) as mon:
+                async with back.monitor(cfg.root + P("run.service.main")) as mon:
                     async for msg in mon:
                         async with lock:
                             print("Server broadcast:")
@@ -104,11 +107,9 @@ async def test(obj):
         except TimeoutError:
             print(f"No retained root dataset on {cfg.root} found.")
 
-
-    async with get_backend(cfg) as back,back.connect(), anyio.create_task_group() as tg:
+    async with get_backend(cfg) as back, back.connect(), anyio.create_task_group() as tg:
         tg.start_soon(check_root)
         tg.start_soon(check_server)
-        
 
 
 def _get_message(args):
@@ -146,7 +147,9 @@ async def do_pub(client, args, cfg, codec):
         async with anyio.create_task_group() as tg:
             for message in _get_message(args):
                 logger.info("%s Publishing to '%s'", client.name, topic)
-                tg.start_soon(partial(client.send, topic, message, qos=qos, retain=retain, codec=codec))
+                tg.start_soon(
+                    partial(client.send, topic, message, qos=qos, retain=retain, codec=codec)
+                )
         logger.info("%s Disconnected from broker", client.name)
     except KeyboardInterrupt:
         logger.info("%s Disconnected from broker", client.name)
@@ -207,14 +210,15 @@ async def pub(obj, **args):
     async with anyio.create_task_group() as tg:
         await do_pub(obj.conn, args, cfg, codec)
 
+
 async def run_kvsub(client, topic, lock):
     """Monitor a MoaT-KV subtree"""
 
     if topic[-1] == "#":
         topic = topic.parent
-        depth=-1
+        depth = -1
     else:
-        depth=0
+        depth = 0
     async with client.watch(
         topic,
         nchain=2,
@@ -228,20 +232,21 @@ async def run_kvsub(client, topic, lock):
                 tm = time.time()
                 atm = anyio.current_time()
 
-                #if "value" in r:
+                # if "value" in r:
                 #    add_dates(r.value)
                 pl(r)
                 if r.get("state", "") == "uptodate":
                     continue
                 del r["seq"]
 
-                r["_prev"] = humandelta(atm-lock.tm,msec=6)
+                r["_prev"] = humandelta(atm - lock.tm, msec=6)
                 r["_time"] = ts2iso(tm, msec=6)
                 r["time"] = tm
 
                 yprint(r)
                 print("---")
-                lock.tm=atm
+                lock.tm = atm
+
 
 async def do_sub(client, args, cfg):
     "handle subscriptions"
@@ -253,11 +258,10 @@ async def do_sub(client, args, cfg):
                 tg.start_soon(run_sub, client, topic, args, cfg.link, lock)
             if args["kv_topic"]:
                 from moat.kv.client import open_client as kv_client
+
                 async with kv_client(**cfg.kv) as kvc:
                     for topic in args["kv_topic"]:
                         tg.start_soon(run_kvsub, kvc, topic, lock)
-
-
 
     except KeyboardInterrupt:
         pass
@@ -270,17 +274,22 @@ async def run_sub(client, topic, args, cfg, lock):
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
     count = 0
-    dcbor=get_codec("std-cbor")
-    dmsgpack=get_codec("std-msgpack")
+    dcbor = get_codec("std-cbor")
+    dmsgpack = get_codec("std-msgpack")
 
-    async with client.monitor(topic, qos=qos, codec=args.get("codec","noop")) as subscr:
+    async with client.monitor(topic, qos=qos, codec=args.get("codec", "noop")) as subscr:
         async for msg in subscr:
             async with lock:
                 if args["yaml"]:
                     tm = time.time()
                     atm = anyio.current_time()
 
-                    d = dict(topic = msg.topic, time=tm, _prev = humandelta(atm-lock.tm,msec=6),_time = ts2iso(tm, msec=6))
+                    d = dict(
+                        topic=msg.topic,
+                        time=tm,
+                        _prev=humandelta(atm - lock.tm, msec=6),
+                        _time=ts2iso(tm, msec=6),
+                    )
 
                     if isinstance(msg, RawMessage):
                         d["raw"] = msg.data
@@ -303,12 +312,12 @@ async def run_sub(client, topic, args, cfg, lock):
                     flags = ""
                     if msg.retain:
                         flags += "R"
-                    #if msg.qos > 0:
+                    # if msg.qos > 0:
                     #    flags += f"Q{int(msg.qos)}"
                     if flags:
                         d["_flags"] = flags
 
-                    lock.tm=atm
+                    lock.tm = atm
                     yprint(d)
                     print("---")
                 else:

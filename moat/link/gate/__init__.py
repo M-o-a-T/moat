@@ -5,7 +5,7 @@ Gateway to wherever
 from __future__ import annotations
 
 import anyio
-from attrs import define,field
+from attrs import define, field
 import logging
 
 from moat.link.node import Node
@@ -24,30 +24,33 @@ __all__ = ["Gate"]
 
 class GateVanished(RuntimeError):
     "internal error: gate got dropped, or driver changed"
+
     pass
+
 
 @define
 class GateNode(Node):
     """
     A gatewayed node. It stores the external value and metadata.
 
-    Data and meta 
+    Data and meta
     """
-    ext_meta:dict[str,Any]|None=field(init=False, default=None)
-    ext_data:Any=field(init=False, default=NotGiven)
-    lock:anyio.abc.Lock=field(init=False, factory=anyio.Lock)
 
-    todo:bool=field(init=False,default=False)
+    ext_meta: dict[str, Any] | None = field(init=False, default=None)
+    ext_data: Any = field(init=False, default=NotGiven)
+    lock: anyio.abc.Lock = field(init=False, factory=anyio.Lock)
+
+    todo: bool = field(init=False, default=False)
 
     @property
     def has_src(self):
         "Check whether source data is present"
-        return self.data_ is not NotGiven or self.meta not in (None,NotGiven)
+        return self.data_ is not NotGiven or self.meta not in (None, NotGiven)
 
     @property
     def has_dst(self):
         "Check whether destination data is present"
-        return self.ext_data is not NotGiven or self.ext_meta not in (None,NotGiven)
+        return self.ext_data is not NotGiven or self.ext_meta not in (None, NotGiven)
 
     @property
     def has_both(self):
@@ -87,18 +90,18 @@ class Gate:
     * newer_dst
     """
 
-    state:Node
-    src:Node
-    tg:anyio.abc.TaskGroup
-    codec:Codec
+    state: Node
+    src: Node
+    tg: anyio.abc.TaskGroup
+    codec: Codec
 
-    _src_done:anyio.Event
-    _dst_done:anyio.Event
+    _src_done: anyio.Event
+    _dst_done: anyio.Event
 
-    cfg:attrdict
-    cf:attrdict
+    cfg: attrdict
+    cf: attrdict
 
-    def __init__(self, cfg:dict[str,Any], cf:dict[str,Any], path:Path, link:Link):
+    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link):
         """
         Setup.
         @cfg: initial data for this gateway.
@@ -111,22 +114,23 @@ class Gate:
 
         self.link = link
         self.path = path
-        self.origin = str(Path("GATE")+(P(cf["name"]) if "name" in cf else self.path[1:]))
+        self.origin = str(Path("GATE") + (P(cf["name"]) if "name" in cf else self.path[1:]))
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
-    
     async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the internal data.
         """
-        async with self.link.d_watch(self.cf.src, subtree=True,state=None,meta=True,mark=True) as mon:
+        async with self.link.d_watch(
+            self.cf.src, subtree=True, state=None, meta=True, mark=True
+        ) as mon:
             task_status.started()
             async for pdm in mon:
                 if pdm is None:
                     self._src_done.set()
                     continue
-                p,d,m = pdm
+                p, d, m = pdm
                 if m is not None and m.origin == self.origin and self._src_done.is_set():
                     # mine, so skip
                     continue
@@ -134,20 +138,20 @@ class Gate:
                 node = self.data.get(p)
                 if self.running or node.has_src:
                     # self.logger.debug("S NOW %r %r %r",p,d,m)
-                    await self._set_dst(p,node,d,m)
+                    await self._set_dst(p, node, d, m)
                 else:
                     # self.logger.debug("S DLY %r %r %r",p,d,m)
-                    node.set_(p,d,m)
-                    node.todo=True
+                    node.set_(p, d, m)
+                    node.todo = True
 
-    async def _set_dst(self, path:Path,node:GateNode,data:Any,meta:MsgMeta):
-        node.ext_data=NotGiven
-        node.ext_meta=NotGiven
-        node.set_(path,data,meta)
-        node.todo=False
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta):
+        node.ext_data = NotGiven
+        node.ext_meta = NotGiven
+        node.set_(path, data, meta)
+        node.todo = False
 
         async with node.lock:
-            await self.set_dst(path,data,meta,node)
+            await self.set_dst(path, data, meta, node)
 
     def dst_is_current(self):
         self._dst_done.set()
@@ -165,8 +169,7 @@ class Gate:
         """
         raise NotImplementedError
 
-
-    async def set_src(self, path:Path, data:Any, aux:MsgMeta):
+    async def set_src(self, path: Path, data: Any, aux: MsgMeta):
         """
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
@@ -174,41 +177,41 @@ class Gate:
         node = self.data.get(path)
 
         if self.running or node.has_dst:
-            await self._set_src(self.cf.src+path,node,data,aux)
+            await self._set_src(self.cf.src + path, node, data, aux)
         else:
             node.ext_data = data
             node.ext_meta = aux or NotGiven
             node.todo = True
 
-    async def _set_src(self, path:Path,node:GateNode,data:Any,aux:MsgMeta):
+    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta):
         async with node.lock:
-            if not self.is_update(node,data,aux):
+            if not self.is_update(node, data, aux):
                 return
             meta = MsgMeta(origin=self.origin)
-            if aux not in (None,NotGiven):
+            if aux not in (None, NotGiven):
                 meta["gw"] = aux
 
-            await self.link.d_set(path,data,meta)
+            await self.link.d_set(path, data, meta)
 
-            node.set_((),NotGiven,NotGiven)
+            node.set_((), NotGiven, NotGiven)
             node.ext_data = data
             node.ext_meta = aux or NotGiven
             node.todo = False
 
-    async def set_dst(self, path:Path, data:Any, meta:MsgMeta, node:GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
         """
         Update destination state. @meta is the source metadata, in case
         it is useful in some way.
         """
         raise NotImplementedError
 
-    def is_update(self, node:GateNode, data:Any,aux:MsgMeta):
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):
         """
         Check whether this new destination data is an update.
         """
         return True
 
-    def newer_dst(self, node) -> bool|None:
+    def newer_dst(self, node) -> bool | None:
         """
         Test whether the destination data is newer, based on the node's
         metadata. Return `True` if the data should be copied to the source,
@@ -234,8 +237,8 @@ class Gate:
         while run:
             self.state = Node()
             self.data = GateNode()
-            self._src_done=anyio.Event()
-            self._dst_done=anyio.Event()
+            self._src_done = anyio.Event()
+            self._dst_done = anyio.Event()
             self.running = False
 
             try:
@@ -245,9 +248,8 @@ class Gate:
             except* GateVanished:
                 run = False
             else:
-                task_status=anyio.TASK_STATUS_IGNORED
+                task_status = anyio.TASK_STATUS_IGNORED
                 await anyio.sleep(1)
-
 
     async def _restart(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Restart the thing when the root changes."
@@ -261,7 +263,6 @@ class Gate:
                 self.cf = d
                 self.tg.cancel_scope.cancel()
                 return
-
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -280,7 +281,7 @@ class Gate:
         self.running = True
 
         # resolve any conflicts in the initial data
-        async def visit(path,node):
+        async def visit(path, node):
             if not node.todo:
                 return
 
@@ -291,36 +292,43 @@ class Gate:
                     return
 
                 # copy dest to source
-                d=True
+                d = True
 
             elif not node.has_dst:
                 # copy source to dest
-                d=False
+                d = False
 
             else:
                 # both are set. Ugh.
                 d = self.newer_dst(node)
 
             if d is False:
-                self.logger.debug("SRC %s %s %r/%r",self.path,path, node.data_,node.meta)
-                await self._set_dst(path,node,node.data_,node.meta)
+                self.logger.debug("SRC %s %s %r/%r", self.path, path, node.data_, node.meta)
+                await self._set_dst(path, node, node.data_, node.meta)
 
             elif d is True:
-                self.logger.debug("DST %s %s %r/%r",self.path,path, node.ext_data,node.ext_meta)
+                self.logger.debug("DST %s %s %r/%r", self.path, path, node.ext_data, node.ext_meta)
 
                 meta = MsgMeta(origin=self.origin)
                 if node.ext_meta:
                     meta["gw"] = node.ext_meta
-                await self.link.d_set(self.cf.src+path,node.ext_data,meta)
+                await self.link.d_set(self.cf.src + path, node.ext_data, meta)
 
             elif node.data_ != node.ext_data:
-                self.logger.warning("Conflict %s %s %r/%r vs %r/%r",self.path,path, node.data_,node.meta,node.ext_data,node.ext_meta)
+                self.logger.warning(
+                    "Conflict %s %s %r/%r vs %r/%r",
+                    self.path,
+                    path,
+                    node.data_,
+                    node.meta,
+                    node.ext_data,
+                    node.ext_meta,
+                )
 
         await self.data.walk(visit, force=True)
         task_status.started()
 
-
-    async def state_updater(self, mon:Watcher, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def state_updater(self, mon: Watcher, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Status update handler.
 
@@ -333,14 +341,16 @@ class Gate:
         # nothing further to do
 
 
-async def run_gate(cfg: dict, link:Link, cf:Path|str, *, task_status=anyio.TASK_STATUS_IGNORED):
+async def run_gate(
+    cfg: dict, link: Link, cf: Path | str, *, task_status=anyio.TASK_STATUS_IGNORED
+):
     """
     Run a gate in @link, described by @name.
     """
     from importlib import import_module
 
-    if isinstance(cf,str):
-        cf = P("gate")/cf
+    if isinstance(cf, str):
+        cf = P("gate") / cf
     path = cf
     cf = await link.d_get(path)
 

@@ -75,7 +75,7 @@ def test_bar():
 
     dec = get_codec("cbor")
     cd = dec.decode(cc)
-    assert isinstance(cd,Tag)
+    assert isinstance(cd, Tag)
     assert cd.tag == 32769
     bb = name2obj(cd.value)
     assert bb.x == 94

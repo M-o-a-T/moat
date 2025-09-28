@@ -16,6 +16,7 @@ class ConfigError(RuntimeError):
 class BaseAppCmd(BaseCmd):
     "App-specific command"
 
+
 #   def __init__(self, name, cfg, gcfg):
 #       super().__init__(cfg)
 #       self.name = name

@@ -6,11 +6,14 @@ from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
 from moat.util.exc import ExpKeyError, ExpAttrError
+
 try:
     from moat.lib.cmd.errors import RemoteError
 except ImportError:
+
     class RemoteError(RuntimeError):
         pass
+
 
 @as_proxy("_rErrS")
 class SilentRemoteError(RemoteError):

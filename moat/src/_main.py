@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
 ARCH = subprocess.check_output(["dpkg", "--print-architecture"]).decode("utf-8").strip()
-SRC=re.compile(r"^Source:\s+(\S+)\s*$",re.MULTILINE)
+SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
+
 
 def dash(n: str) -> str:
     """
@@ -106,7 +107,7 @@ class Package(_Common):
 
     @property
     def verstr(self):
-        v=self.vers
+        v = self.vers
         return f"{v.tag}-{v.pkg}"
 
     @property
@@ -186,10 +187,10 @@ class Package(_Common):
         except AttributeError:
             return True
         for d in head.diff(
-                self.last_commit if main else self._repo.last_tag,
-                paths=self.path if main else Path("packaging")/self.dash,
-            ):
-            pp=Path(d.b_path)
+            self.last_commit if main else self._repo.last_tag,
+            paths=self.path if main else Path("packaging") / self.dash,
+        ):
+            pp = Path(d.b_path)
             if pp.name == "changelog" and pp.parent.name == "debian":
                 continue
             if (
@@ -207,9 +208,9 @@ class Repo(git.Repo, _Common):
     moat_tag = None
     _last_tag = None
 
-    toplevel:str
+    toplevel: str
 
-    def __init__(self, toplevel:str, *a, **k):
+    def __init__(self, toplevel: str, *a, **k):
         self.toplevel = toplevel
 
         super().__init__(*a, **k)
@@ -228,7 +229,6 @@ class Repo(git.Repo, _Common):
         with open("versions.yaml") as f:
             self.versions = yload(f, attr=True)
         self.orig_versions = deepcopy(self.versions)
-
 
     def write_tags(self):
         if self.versions == self.orig_versions:
@@ -305,7 +305,7 @@ class Repo(git.Repo, _Common):
             self._add_repo(str(fn.name))
 
         res = subprocess.run(
-            [ "git","ls-files","-z","--exclude-standard" ],
+            ["git", "ls-files", "-z", "--exclude-standard"],
             check=True,
             stdout=subprocess.PIPE,
         )
@@ -379,9 +379,12 @@ class Repo(git.Repo, _Common):
         if tag is None:
             tag = self.last_tag
         head = self._repo.head.commit
-        print("StartDiff B",self,tag,head,file=sys.stderr)
+        print("StartDiff B", self, tag, head, file=sys.stderr)
         for d in head.diff(tag):
-            if self.repo_for(d.a_path, main) == self.toplevel and self.repo_for(d.b_path, main) == self.toplevel:
+            if (
+                self.repo_for(d.a_path, main) == self.toplevel
+                and self.repo_for(d.b_path, main) == self.toplevel
+            ):
                 continue
             return True
         return False
@@ -417,8 +420,8 @@ async def cli():
 
 
 @cli.command("rerepo")
-@click.option("-a","--all",is_flag=True,help="Move all your repositories.")
-@click.argument("names",type=str,nargs=-1)
+@click.option("-a", "--all", is_flag=True, help="Move all your repositories.")
+@click.argument("names", type=str, nargs=-1)
 @click.pass_obj
 async def move_repo(obj, **kw):
     """Move from forge A to forge B.
@@ -437,6 +440,7 @@ async def move_repo(obj, **kw):
     If the local copy is present, it will be refreshed via `git fetch`.
     """
     from .move import mv_repos
+
     await mv_repos(obj.cfg.src.move, **kw)
 
 
@@ -972,13 +976,13 @@ async def build(
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )
-                logger.debug("Changes: %s %s",r.name,r.verstr)
+                logger.debug("Changes: %s %s", r.name, r.verstr)
             elif r.has_changes(False):
                 r.vers.pkg += 1
                 r.vers.rev = repo.head.commit.hexsha
-                logger.debug("Build Changes: %s %s",r.name,r.verstr)
+                logger.debug("Build Changes: %s %s", r.name, r.verstr)
             else:
-                logger.debug("No Changes: %s %s",r.name,r.verstr)
+                logger.debug("No Changes: %s %s", r.name, r.verstr)
 
     elif not no_tag:
         err = set()
@@ -1063,21 +1067,23 @@ async def build(
 
         for r in repos:
             ltag = r.last_tag
-            if r.vers.get("deb","-") == f"{ltag}-{r.vers.pkg}":
+            if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
                 continue
             rd = PACK / r.dash
             p = rd / "debian"
             if not p.is_dir():
                 continue
-            if not (rd/"debian"/"changelog").exists():
+            if not (rd / "debian" / "changelog").exists():
                 subprocess.run(
                     [
                         "debchange",
                         "--create",
-                        "--newversion", f"{r.last_tag}-{r.vers.pkg}",
-                        "--package", r.mdash,
+                        "--newversion",
+                        f"{r.last_tag}-{r.vers.pkg}",
+                        "--package",
+                        r.mdash,
                         f"Initial release for {forcetag}",
-                     ],
+                    ],
                     cwd=rd,
                     check=True,
                     stdout=sys.stdout,
@@ -1091,7 +1097,7 @@ async def build(
                     check=True,
                     stdout=subprocess.PIPE,
                 )
-                tag,ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
+                tag, ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
                     subprocess.run(
@@ -1112,17 +1118,21 @@ async def build(
                     r.vers.pkg = ptag
 
                 changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-                if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag or test_chg and not changes.exists():
-
+                if (
+                    debversion.get(r.dash, "") != ltag
+                    or r.vers.pkg != ptag
+                    or test_chg
+                    and not changes.exists()
+                ):
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:
                 if not run:
                     print("*** Failure packaging", r.name, file=sys.stderr)
                 else:
                     print("Failure packaging", r.name, file=sys.stderr)
-                    no_commit=True
-                    no_deb=True
-                    no_pypi=True
+                    no_commit = True
+                    no_deb = True
+                    no_pypi = True
 
     # Step 5: build PyPI package
     if not no_pypi:
@@ -1135,7 +1145,7 @@ async def build(
                 continue
             tag = r.last_tag
             name = r.dash
-            if r.vers.get("pypi","-") == r.last_tag:
+            if r.vers.get("pypi", "-") == r.last_tag:
                 continue
 
             targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
@@ -1160,8 +1170,8 @@ async def build(
                 print("Build errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix and try again.", file=sys.stderr)
-                no_commit=True
-                no_deb=True
+                no_commit = True
+                no_deb = True
 
         # Step 6: upload PyPI package
         elif run:
@@ -1190,8 +1200,8 @@ async def build(
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix(?) and try again.", file=sys.stderr)
-                no_commit=True
-                no_deb=True
+                no_commit = True
+                no_deb = True
             else:
                 r.vers.pypi = r.last_tag
 
@@ -1202,7 +1212,7 @@ async def build(
             dput_opts = ["-u", "ext"]
         for r in repos:
             ltag = r.last_tag
-            if r.vers.get("deb","-") == f"{ltag}-{r.vers.pkg}":
+            if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
                 continue
             if not (PACK / r.dash / "debian").is_dir():
                 continue
@@ -1224,7 +1234,7 @@ async def build(
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)
             print("Please fix(?) and try again.", file=sys.stderr)
-            no_commit=True
+            no_commit = True
         else:
             r.vers.deb = f"{ltag}-{r.vers.pkg}"
 

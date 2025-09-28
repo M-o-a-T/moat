@@ -1,6 +1,7 @@
 """
 Command line for gatewaying
 """
+
 from __future__ import annotations
 
 import datetime
@@ -42,8 +43,9 @@ async def run(obj):
     """
     from moat.link.gate import run_gate
     from moat.util.systemd import as_service
+
     async with as_service(obj) as srv:
-        await srv.tg.start(run_gate, obj.cfg, obj.conn, P("gate")+obj.path)
+        await srv.tg.start(run_gate, obj.cfg, obj.conn, P("gate") + obj.path)
         srv.set()
         await anyio.sleep_forever()
 
@@ -56,11 +58,12 @@ async def list_(obj):
     """
     await _list(obj)
 
+
 async def _list(obj):
     if not obj.path:
         seen = False
-        async with obj.conn.d_walk(P("gate"),min_depth=1,max_depth=1) as mon:
-            async for p,d in mon:
+        async with obj.conn.d_walk(P("gate"), min_depth=1, max_depth=1) as mon:
+            async for p, d in mon:
                 seen = True
                 print(p[-1])
         if not seen and obj.debug:
@@ -71,7 +74,7 @@ async def _list(obj):
     k["recursive"] = True
     k["raw"] = True
     k["empty"] = True
-    await data_get(obj.conn, P("gate")+obj.path, **k)
+    await data_get(obj.conn, P("gate") + obj.path, **k)
 
 
 @cli.command("set", short_help="Add or update a gate entry")
@@ -80,7 +83,7 @@ async def _list(obj):
 @click.option("-D", "--dst", type=P, help="Destination (driver specific)")
 @click.option("-d", "--driver", type=str, help="Driver")
 @click.pass_obj
-async def set_(obj, src,dst,driver, **kw):
+async def set_(obj, src, dst, driver, **kw):
     """
     Add/change a gateway entry.
     """
@@ -93,7 +96,7 @@ async def set_(obj, src,dst,driver, **kw):
         kw["path_"] += ((P("src"), src),)
     if dst:
         kw["path_"] += ((P("dst"), dst),)
-    res = await node_attr(obj, P("gate")+obj.path, **kw)
+    res = await node_attr(obj, P("gate") + obj.path, **kw)
 
 
 class nstr:
@@ -126,13 +129,12 @@ async def delete(obj, before, recursive):
     """
     args = {}
     if recursive:
-        args["rec"]=recursive
+        args["rec"] = recursive
     if before:
-        args["ts"]=before
+        args["ts"] = before
     res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
-        res=dict(data=res[0],meta=MsgMeta.restore(res[1:]).repr())
+        res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:
         res = res[0]
     yprint(res, stream=obj.stdout)
-

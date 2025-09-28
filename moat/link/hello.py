@@ -83,7 +83,7 @@ class Hello(CmdCommon):
         if self.me_server and self.me is None:
             raise ValueError("A server must have a name")
 
-    async def handle(self, msg: Msg, rcmd: list[Key], *prefix:Key) -> None:
+    async def handle(self, msg: Msg, rcmd: list[Key], *prefix: Key) -> None:
         """
         Dispatch an incoming "hello" message
         """
@@ -177,7 +177,7 @@ class Hello(CmdCommon):
             if remote_name is None:
                 if self.them is None:
                     logger.error("No remote name")
-                    auth=False
+                    auth = False
                     raise StopIteration
                 aux_data["name"] = self.them
             elif self.them is None:
@@ -241,7 +241,7 @@ class Hello(CmdCommon):
             res = await am.chat(self, self.hello_kw.get(a, None))
             if res is None:
                 continue
-            if isinstance(res,dict):
+            if isinstance(res, dict):
                 aux_data.update(res)
             if res is False or not aux_data:
                 return res

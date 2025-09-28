@@ -30,10 +30,10 @@ async def test_watch_basic(cfg):
             c = await sf.client()
             evt = anyio.Event()
 
-            async with c.d_watch(P("test.here"),subtree=True,meta=True) as mon:
+            async with c.d_watch(P("test.here"), subtree=True, meta=True) as mon:
                 task_status.started(evt)
-                async for p,d,m in mon:
-                    print("GOT",p,d,m,file=sys.stderr)
+                async for p, d, m in mon:
+                    print("GOT", p, d, m, file=sys.stderr)
                     assert m.origin == "me!"
                     t = time.time()
                     assert t - 1 < m.timestamp < t
@@ -56,8 +56,6 @@ async def test_watch_basic(cfg):
         await evt.wait()
 
 
-
-
 @pytest.mark.anyio()
 async def test_watch_mon(cfg):
     evt = anyio.Event()
@@ -68,7 +66,7 @@ async def test_watch_mon(cfg):
             c = await sf.client()
             evt = anyio.Event()
 
-            async with c.d_watch(P("test.here"),subtree=True,meta=True) as mon:
+            async with c.d_watch(P("test.here"), subtree=True, meta=True) as mon:
                 node = await mon.get_node()
                 assert node["before"].data == "One"
                 assert node["both"].data == "Two"
@@ -91,7 +89,3 @@ async def test_watch_mon(cfg):
         await anyio.sleep(0.2)
 
         evt.set()
-
-
-
-

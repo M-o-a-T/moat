@@ -92,8 +92,10 @@ def log(s, *x, err=None):
     if err is not None:
         sys.print_exception(err, sys.stderr)
 
-def at(*a,**kw):
-    set_rtc("debug",a if not kw else kw if not a else (a,kw), fs=False)
+
+def at(*a, **kw):
+    set_rtc("debug", a if not kw else kw if not a else (a, kw), fs=False)
+
 
 async def idle():
     "sleep forever"

@@ -202,7 +202,7 @@ async def pub(obj, **args):
         cfg["keep_alive"] = args["keep_alive"]
 
     fix_will(args, cfg)
-    cfg.codec = args.get("codec","utf8")
+    cfg.codec = args.get("codec", "utf8")
 
     async with open_mqttclient(client_id=client_id, config=cfg) as C:
         await do_pub(C, args, cfg)
@@ -251,7 +251,7 @@ async def run_sub(client, topic, args, cfg):
                         data = "‹empty›"
                 print(message.topic, "R", data, sep="\t")
             else:
-                if isinstance(message.data,(bytes,bytearray)):
+                if isinstance(message.data, (bytes, bytearray)):
                     try:
                         d = message.data.decode("utf-8")
                     except Exception:

@@ -16,7 +16,7 @@ from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
 from functools import partial
-from attrs import define,field
+from attrs import define, field
 from collections.abc import Sequence
 from asyncactor import (
     Actor,
@@ -69,7 +69,7 @@ if TYPE_CHECKING:
     from moat.lib.cmd.msg import Msg
     from moat.link.backend import Message
 
-    PathType = anyio.Path|FSPath|str
+    PathType = anyio.Path | FSPath | str
 
 
 class BadFile(ValueError):
@@ -113,17 +113,18 @@ def cmp_n(a, b):
         b = -1
     return b - a
 
-def tag_check(tags:Sequence[Tag]) -> bool:
+
+def tag_check(tags: Sequence[Tag]) -> bool:
     """
     Check that these tags describe a complete dump
     """
     if len(tags) < 2:
         return False
-    t=tags[0]
+    t = tags[0]
     if t.tag != CBOR_TAG_MOAT_FILE_ID:
         return False
-    t=t.value[1]
-    if t.get("mode","") not in {"full","init"}:
+    t = t.value[1]
+    if t.get("mode", "") not in {"full", "init"}:
         return False
 
     t = tags[-1]
@@ -133,12 +134,13 @@ def tag_check(tags:Sequence[Tag]) -> bool:
     return True
 
 
-def _get_my_ip(ip6:bool=False):
+def _get_my_ip(ip6: bool = False):
     """
     Find my IP address
     :return:
     """
     import socket
+
     s = socket.socket(socket.AF_INET6 if ip6 else socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("2606:4700:4700::1111" if ip6 else "1.1.1.1", 53))
     ip = s.getsockname()[0]
@@ -168,7 +170,7 @@ class ServerClient(LinkCommon):
 
     _hello: Hello | None = None
     _auth_data: Any = None
-    is_server:bool = False
+    is_server: bool = False
     protocol_version: int = -1
     prefix: str
     name: str
@@ -181,17 +183,17 @@ class ServerClient(LinkCommon):
         # there sustained rate might be > 10 connections per second.
         # >100 requires rate limiting.
         global _client_nr
-        t = int(time.time()*100-175000000000)
+        t = int(time.time() * 100 - 175000000000)
         if t < 0:  # testing. Revert.
             t += 175000000000
         if _client_nr == 0 or _client_nr < t:
             _client_nr = t
         else:
             _client_nr += 1
-            if _client_nr > t+1000:
+            if _client_nr > t + 1000:
                 raise RuntimeError("The connection rate is too high!")
         self.client_nr = id2str(_client_nr)
-        self.name=f"{self.prefix}.C{self.client_nr}"
+        self.name = f"{self.prefix}.C{self.client_nr}"
 
         self.logger = logging.getLogger(f"moat.link.server.{prefix}.{self.client_nr}")
 
@@ -232,14 +234,16 @@ class ServerClient(LinkCommon):
                 them = self._hello.them
                 self.is_server = self._hello.they_server
                 try:
-                    self.server.rename_client(self,them)
+                    self.server.rename_client(self, them)
                 except ValueError:
                     self.logger.warning("Rename to %s failed", them)
 
                 if not self.is_server and "." not in them:
                     # announce fixed-name client
                     # The condition *must* match the 'vanish' message
-                    await self.server.backend.send(P(":R.run.service.main.client")/them,self.server.name, retain=True)
+                    await self.server.backend.send(
+                        P(":R.run.service.main.client") / them, self.server.name, retain=True
+                    )
                 self.protocol_version = self._hello.protocol_version
             finally:
                 del self._hello
@@ -313,17 +317,15 @@ class ServerClient(LinkCommon):
         "Local subcommand redirect for 's'"
         return self.handle(msg, rcmd, "s")
 
-
     doc_cl = dict(_d="Access to named clients")
 
     def sub_cl(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 'cl'"
-        return self.server.sub_cl(msg,rcmd)
+        return self.server.sub_cl(msg, rcmd)
 
-    def stream_cl(self, msg:Msg) -> Awaitable:
+    def stream_cl(self, msg: Msg) -> Awaitable:
         "Send the list of currently-known clients"
         return self.server.stream_cl(msg)
-
 
     doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
 
@@ -382,9 +384,11 @@ class ServerClient(LinkCommon):
         async with msg.stream_out():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
-    doc_d_set = dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change")
+    doc_d_set = dict(
+        _d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change"
+    )
 
-    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None, t:float|None=None):
+    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None, t: float | None = None):
         """Set a node's value.
 
         Arguments:
@@ -404,19 +408,20 @@ class ServerClient(LinkCommon):
         except ValueError:
             res = None
         else:
-            if t is not None and (node.meta is None or abs(node.meta.timestamp-t) > .001):
+            if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
                 raise OutOfDateError(node.meta)
             try:
-                res = node.data,*(node.meta.dump() if node.meta is not None
-                                  else ())
+                res = node.data, *(node.meta.dump() if node.meta is not None else ())
             except ValueError:
-                res = NotGiven,*(node.meta.dump() if node.meta is not None else ())
+                res = NotGiven, *(node.meta.dump() if node.meta is not None else ())
         self.server.maybe_update(path, value, meta)
         return res
 
-    doc_d_delete = dict(_d="delete value", _0="Path", _99="MsgMeta:optional", t="Time of+ last change")
+    doc_d_delete = dict(
+        _d="delete value", _0="Path", _99="MsgMeta:optional", t="Time of+ last change"
+    )
 
-    async def cmd_d_delete(self, path, meta=None, t:float|None=None):
+    async def cmd_d_delete(self, path, meta=None, t: float | None = None):
         """Delete a node's value.
 
         Arguments:
@@ -435,10 +440,10 @@ class ServerClient(LinkCommon):
             node = self.server.data[path]
             dv = node.data
             dm = node.meta
-        except (KeyError,ValueError):
+        except (KeyError, ValueError):
             node = None
         else:
-            if t is not None and abs(node.meta.timestamp-t) > .001:
+            if t is not None and abs(node.meta.timestamp - t) > 0.001:
                 raise OutOfDateError(node.meta)
             self.server.maybe_update(path, NotGiven, meta)
 
@@ -447,54 +452,54 @@ class ServerClient(LinkCommon):
         else:
             return dv, *dm.dump()
 
-    doc_e_exc = dict(_d="Report an exception",_0="path:Path", _1="exc:Error", _k="any")
+    doc_e_exc = dict(_d="Report an exception", _0="path:Path", _1="exc:Error", _k="any")
 
-    def stream_e_exc(self, msg:Msg) -> Awaitable:
+    def stream_e_exc(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
-            msg.kw['_args'] = msg.args[2:]
+            msg.kw["_args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_info = dict(_d="Report a non-exceptional anomaly",_0="path:Path", _k="any")
+    doc_e_info = dict(_d="Report a non-exceptional anomaly", _0="path:Path", _k="any")
 
-    def stream_e_info(self, msg:Msg) -> Awaitable:
+    def stream_e_info(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
-            msg.kw['_args'] = msg.args[2:]
+            msg.kw["_args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_ack = dict(_d="Acknowledge an error",_0="path:Path", _k="any",
-                     ack="None|bool|float:")
+    doc_e_ack = dict(_d="Acknowledge an error", _0="path:Path", _k="any", ack="None|bool|float:")
 
-    def stream_e_ack(self, msg:Msg) -> Awaitable:
+    def stream_e_ack(self, msg: Msg) -> Awaitable:
         """Acknowledge an error"""
         if len(msg.args) > 2:
-            msg.kw['_args'] = msg.args[2:]
-        msg.kw["_ack"]=True
+            msg.kw["_args"] = msg.args[2:]
+        msg.kw["_ack"] = True
         return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
 
     doc_e_ok = dict(_d="State is OK", _0="path:Path", _k="any")
 
-    def stream_e_ok(self, msg:Msg) -> Awaitable:
+    def stream_e_ok(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 1:
-            msg.kw['_args'] = msg.args[1:]
+            msg.kw["_args"] = msg.args[1:]
         return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
 
     doc_e_mon = dict(_d="Wrapper", _0="path:Path", _i="logging data", _k="any")
-    async def stream_e_mon(self, msg:Msg):
+
+    async def stream_e_mon(self, msg: Msg):
         path = msg[0]
         kw = msg.kw
         meta = MsgMeta(origin=self.name)
-        kw["_start"]=time.time()
+        kw["_start"] = time.time()
         kw["_log"] = log = []
         try:
             async with msg.stream_in() as mon:
                 async for msg in mon:
-                    if (a := msg.args):
+                    if a := msg.args:
                         if msg.kw:
                             a.append(msg.kw)
-                        elif isinstance(a[-1],dict):
+                        elif isinstance(a[-1], dict):
                             a.append({})
                         log.append(a)
                     elif msg.kw:
@@ -507,12 +512,11 @@ class ServerClient(LinkCommon):
         else:
             err = None
         finally:
-            kw["_stop"]=time.time()
+            kw["_stop"] = time.time()
             if err is not None:
                 kw["_exc"] = err
-            with anyio.move_on_after(2,shield=True):
-                await self.server.set_error(path,err,kw,MsgMeta(origin=self.name))
-
+            with anyio.move_on_after(2, shield=True):
+                await self.server.set_error(path, err, kw, MsgMeta(origin=self.name))
 
     doc_i_state = dict(_d="state", _r="MsgMeta:optional")
 
@@ -522,7 +526,7 @@ class ServerClient(LinkCommon):
 
     doc_i_error = dict(_d="last disconnect error", _r="Any:error")
 
-    def cmd_i_error(self, last_name: str|None = None) -> Any:
+    def cmd_i_error(self, last_name: str | None = None) -> Any:
         """Return some info about the reason my link got disconnected"""
         return self.server.get_cached_error(last_name or self.name)
 
@@ -553,7 +557,7 @@ class ServerClient(LinkCommon):
 
         async with msg.stream_w() if msg.can_stream else nullcontext() as ws:
 
-            async def _del(path:Path, entry:Node):
+            async def _del(path: Path, entry: Node):
                 if entry.data is NotGiven:
                     return
 
@@ -570,7 +574,6 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-
     doc_s_error = dict(_d="save error log", _0="str:filename", state="bool:include current state")
 
     async def cmd_s_error(self, path: str, *, state: bool = False):
@@ -582,7 +585,6 @@ class ServerClient(LinkCommon):
     async def cmd_s_log(self, path: str, *, state: bool = False):
         await self.server.run_saver(path, save_state=state)
         return True
-
 
     doc_s_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
 
@@ -603,9 +605,10 @@ class ClientStub:
     This is an entry in the client list that redirects to the server
     which this client is connected to.
     """
-    server:Server = field()
-    name:str = field()
-    client:str = field()
+
+    server: Server = field()
+    name: str = field()
+    client: str = field()
 
     @property
     def sender(self):
@@ -618,9 +621,9 @@ class ClientStub:
         srv = self.server.server_link(self.name)[1]
         if isinstance(srv, ClientStub):
             raise RuntimeError("Client dropped, try later")
-        rcmd.extend((self.client,"cl"))
-        return await srv.handle(msg,rcmd)
-    
+        rcmd.extend((self.client, "cl"))
+        return await srv.handle(msg, rcmd)
+
     async def aclose(self):
         pass
 
@@ -645,7 +648,7 @@ class Server(MsgHandler):
     # pylint: disable=no-member # mis-categorizing cfg as tuple
     data: Node
     name: str
-    backend:Backend
+    backend: Backend
 
     cfg: attrdict
 
@@ -657,33 +660,40 @@ class Server(MsgHandler):
     last_auth: str | None = None
     cur_auth: str
 
-    _syncing: dict[str,anyio.abc.CancelScope]
+    _syncing: dict[str, anyio.abc.CancelScope]
     _writing: set[str]
     _writing_done: anyio.Event
     _stopped: anyio.Event
 
     # Client ID > disconnect error
-    _error_cache: dict[str, Exception|str]
+    _error_cache: dict[str, Exception | str]
 
     # call to log errors
-    _err_log: Callable[tuple[Path,Any,MsgMeta],Awaitable]|None = None
-    _err_task: anyio.CancelScope=None
+    _err_log: Callable[tuple[Path, Any, MsgMeta], Awaitable] | None = None
+    _err_task: anyio.CancelScope = None
 
     _stamp_in: int = 0
     _stamp_out: int = 0
     _stamp_in_evt: anyio.Event
 
-    _ping_history:Sequence[str] = ()
+    _ping_history: Sequence[str] = ()
 
-    _server_link:dict[str,tuple[anyio.CancelScope,BasicLink]]
-    _server_link_add:anyio.Event
+    _server_link: dict[str, tuple[anyio.CancelScope, BasicLink]]
+    _server_link_add: anyio.Event
 
-    _f_load:anyio.Path|None=None
-    _f_save:anyio.Path|None=None
+    _f_load: anyio.Path | None = None
+    _f_save: anyio.Path | None = None
 
-    _downed:dict[str,float]
+    _downed: dict[str, float]
 
-    def __init__(self, cfg: dict, name: str, init: Any = NotGiven, load:anyio.Path|FSPath|str|None=None, save:anyio.Path|FSPath|str|None=None):
+    def __init__(
+        self,
+        cfg: dict,
+        name: str,
+        init: Any = NotGiven,
+        load: anyio.Path | FSPath | str | None = None,
+        save: anyio.Path | FSPath | str | None = None,
+    ):
         self.data = Node()
         self.name = name
         self.cfg = to_attrdict(cfg)
@@ -701,7 +711,7 @@ class Server(MsgHandler):
         self._downed = {}
 
         # connected clients
-        self._clients: dict[str,ServerClient|ClientStub] = dict()
+        self._clients: dict[str, ServerClient | ClientStub] = dict()
 
         if load is not None:
             self._f_load = anyio.Path(load)
@@ -709,13 +719,13 @@ class Server(MsgHandler):
             self._f_save = anyio.Path(save)
 
     @property
-    def clients(self) -> dict[str,ServerClient]:
+    def clients(self) -> dict[str, ServerClient]:
         return self._clients
-    
-    def server_link(self,name):
+
+    def server_link(self, name):
         return self._server_link[name]
 
-    def rename_client(self, client:ServerClient, name:str):
+    def rename_client(self, client: ServerClient, name: str):
         """
         Change a client name (result of protocol startup)
         """
@@ -727,7 +737,6 @@ class Server(MsgHandler):
         del self._clients[client.name]
         client.name = name
         self._clients[name] = client
-
 
     def refresh_auth(self):
         """
@@ -746,20 +755,20 @@ class Server(MsgHandler):
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path:Path, data:Any, meta:MsgMeta, local:bool=False):
+    def maybe_update(self, path: Path, data: Any, meta: MsgMeta, local: bool = False):
         """
         A data item arrives.
 
         Update our store if it's newer.
         """
-        if len(path) and path[0]=="run":
+        if len(path) and path[0] == "run":
             return False
         if res := self.data.set(path, data, meta):  # noqa:SIM102
             if not local:
                 self.write_monitor((path, data, meta))
         return res
 
-    async def _mon_run(self, topic:Path, msg:Message) -> bool:
+    async def _mon_run(self, topic: Path, msg: Message) -> bool:
         """
         Messages to run.* are skipped by the main monitor backend.
         """
@@ -796,18 +805,17 @@ class Server(MsgHandler):
                     continue
                 path = Path.build(topic)
 
-                if topic and (hdl := getattr(self,"_mon_{topic[0]}", None)) is not None:
+                if topic and (hdl := getattr(self, "_mon_{topic[0]}", None)) is not None:
                     if (await hdl(path, msg)) is False:
                         continue
 
                 if t_start is not None and not topic:
-                    if anyio.current_time()-t_start > 10:
-                        t_start=None
+                    if anyio.current_time() - t_start > 10:
+                        t_start = None
                     elif self.data and msg.data != self.data.data:
                         raise RuntimeError(f"Existing data? {msg} {self.data}")
 
                 self.maybe_update(path, msg.data, msg.meta)
-
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)
@@ -817,10 +825,12 @@ class Server(MsgHandler):
                 continue
             p, d, m = msg
             if not m.source:
-                m.source = '?'
+                m.source = "?"
             elif m.source == "Mon" or m.source[0] == "_":
                 continue
-            await self.backend.send(topic=P(":R") + p, data=d, meta=m, retain=(len(p) == 0 or p[0] != "run"))
+            await self.backend.send(
+                topic=P(":R") + p, data=d, meta=m, retain=(len(p) == 0 or p[0] != "run")
+            )
 
     async def _pinger(
         self,
@@ -931,19 +941,25 @@ class Server(MsgHandler):
         #  get all its data changed since timestamp-that-source-was-last-seen
         #  re-broadcast all data changed since timestamp-that-source-was-last-seen
 
-    async def set_error(self, path:Path, err:str|BaseException|None|NotGiven, kw:dict[str,Any], meta:MsgMeta):
+    async def set_error(
+        self,
+        path: Path,
+        err: str | BaseException | None | NotGiven,
+        kw: dict[str, Any],
+        meta: MsgMeta,
+    ):
         """
         Update error data.
         """
-        p = Path("error")+path
+        p = Path("error") + path
         try:
             dt = self.data.get(p, create=False if err is None else None)
         except KeyError:
             return  # no error exists
         if (dd := dt.data_) is NotGiven:
             dd = {}
-        elif not isinstance(dd,dict):
-            dd = {"_data":dd}
+        elif not isinstance(dd, dict):
+            dd = {"_data": dd}
         dd.update(kw)
 
         if err is None:
@@ -951,11 +967,10 @@ class Server(MsgHandler):
             dd["_ok"] = True
         elif err is not NotGiven:
             # count
-            dd["_n"] = dd.get("_n",0)+1
-
+            dd["_n"] = dd.get("_n", 0) + 1
 
         if self._err_log is not None:
-            await self._err_log(path,dd,meta)
+            await self._err_log(path, dd, meta)
 
         if err is None:
             dd = NotGiven
@@ -966,7 +981,6 @@ class Server(MsgHandler):
         # forcing is required because we just modified the dict in-place
         if dt.set(..., dd, meta, force=True):
             self.write_monitor((p, dd, meta))
-
 
     async def _save(
         self,
@@ -1037,7 +1051,7 @@ class Server(MsgHandler):
     def get_state(self):
         return dict()
 
-    async def save(self, path: str|anyio.Path, task_status=anyio.TASK_STATUS_IGNORED, **kw):
+    async def save(self, path: str | anyio.Path, task_status=anyio.TASK_STATUS_IGNORED, **kw):
         """Save the current state to ``path``."""
         shorter = PathShortener([])
         try:
@@ -1072,7 +1086,7 @@ class Server(MsgHandler):
         shorter = PathShortener([])
 
         with anyio.CancelScope() as scope:
-            spath=str(path)
+            spath = str(path)
             try:
                 if spath in self._writing:
                     raise RuntimeError(f"Already writing: {spath!r}")
@@ -1109,7 +1123,6 @@ class Server(MsgHandler):
                                 state=None if save_state else False,
                             )
                             await mw(msg)
-
 
                         if save_state:
                             tg.start_soon(
@@ -1165,15 +1178,18 @@ class Server(MsgHandler):
 
                 task_status.started()
 
-                async def cmd(p,d,m):
-                    n,p = shorter.short(p)
-                    await mw((n,p,d,*m.dump()))
+                async def cmd(p, d, m):
+                    n, p = shorter.short(p)
+                    await mw((n, p, d, *m.dump()))
 
                 with anyio.CancelScope() as scope:
                     if save_state:
-                        await self._save( mw, shorter, hdr=False,
-                                ftr=self.gen_hdr_change(state=False,mode="error"),
-                                path=Path("error"),
+                        await self._save(
+                            mw,
+                            shorter,
+                            hdr=False,
+                            ftr=self.gen_hdr_change(state=False, mode="error"),
+                            path=Path("error"),
                         )
 
                     if self._err_task is not None:
@@ -1222,7 +1238,7 @@ class Server(MsgHandler):
                 pass
             elif isinstance(msg, (list, tuple)):
                 path, data, meta = msg
-                if len(path) and path [0]=="run":
+                if len(path) and path[0] == "run":
                     continue
                 d, p = shorter.short(path)
                 await mw([d, p, data, *meta.dump()])
@@ -1286,22 +1302,21 @@ class Server(MsgHandler):
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         rewrite = 0
-        kw={}
+        kw = {}
         while True:
             now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
-            await self.run_saver(path=fn, save_state=rewrite==0, **kw)
-            
+            await self.run_saver(path=fn, save_state=rewrite == 0, **kw)
+
             task_status.started()
             task_status = anyio.TASK_STATUS_IGNORED
 
             await anyio.sleep(save.interval)
-            rewrite = (rewrite or save.rewrite)-1
-            kw["prev"]=str(fn)
+            rewrite = (rewrite or save.rewrite) - 1
+            kw["prev"] = str(fn)
 
-
-    async def run_saver(self, path: PathType|None, save_state: bool = True, **kw):
+    async def run_saver(self, path: PathType | None, save_state: bool = True, **kw):
         """
         Start a task that continually saves to disk.
 
@@ -1328,7 +1343,7 @@ class Server(MsgHandler):
         else:
             self.write_monitor(self.gen_hdr_stop(reason="log_end"))
 
-    async def run_errsaver(self, path: PathType|None, save_state: bool = True):
+    async def run_errsaver(self, path: PathType | None, save_state: bool = True):
         """
         Start a task that logs errors.
 
@@ -1357,7 +1372,6 @@ class Server(MsgHandler):
             self._err_task = None
             self._err_log = None
 
-
     async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
             task_status.started()
@@ -1377,7 +1391,7 @@ class Server(MsgHandler):
         This will terminate when `stop` is called (in another task).
         """
         will_data = attrdict(
-            topic=P(":R.run.service.main.server")/self.name,
+            topic=P(":R.run.service.main.server") / self.name,
             data=NotGiven,
             qos=1,
             retain=True,
@@ -1445,11 +1459,11 @@ class Server(MsgHandler):
                 await _tg.start(self._save_task)
 
             if self._init is not NotGiven:
-                self.maybe_update(Path(), self._init, MsgMeta(origin="INIT",source="INIT"))
+                self.maybe_update(Path(), self._init, MsgMeta(origin="INIT", source="INIT"))
 
             if self._f_save is not None:
                 await _tg.start(self.save, self._f_save)
-                self._f_save=None
+                self._f_save = None
 
             # let clients in
             # TODO config via database
@@ -1457,13 +1471,21 @@ class Server(MsgHandler):
             ports = []
             if "ports" in self.cfg.server:
                 for name, conn in self.cfg.server.ports.items():
-                    ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-{name}", conn))
+                    ports.append(
+                        await listen_tg.start(
+                            self._run_server, client_tg, f"{self.name}-{name}", conn
+                        )
+                    )
             if not ports:
-                conn = attrdict(host="0.0.0.0",port=self.cfg.server.port)
+                conn = attrdict(host="0.0.0.0", port=self.cfg.server.port)
                 ports.append(await listen_tg.start(self._run_server, client_tg, self.name, conn))
 
-            globals = {"0.0.0.0","::"}
-            link = [ {"host": _get_my_ip(hp[0] == "::") if hp[0] in globals else hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) ]
+            globals = {"0.0.0.0", "::"}
+            link = [
+                {"host": _get_my_ip(hp[0] == "::") if hp[0] in globals else hp[0], "port": hp[1]}
+                for hp in ports
+                if isinstance(hp, tuple)
+            ]
 
             if not link:
                 self.logger.warning("No external port")
@@ -1473,7 +1495,7 @@ class Server(MsgHandler):
             self.logger.info("Announcing to clients.")
 
             await self.backend.send(
-                P(":R.run.service.main.server")/self.name,
+                P(":R.run.service.main.server") / self.name,
                 {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
                 meta=MsgMeta(origin=self.name),
                 retain=True,
@@ -1509,7 +1531,6 @@ class Server(MsgHandler):
 
             await self._stop_flag.wait()
 
-
             # announce that we're going down
             await self.backend.send(
                 topic=P(":R.run.service.main.down"),
@@ -1536,7 +1557,6 @@ class Server(MsgHandler):
 
             # Stop the rest
             _tg.cancel_scope.cancel()
-
 
     async def _stop_writers(self):
         """Tell our writers to stop"""
@@ -1577,7 +1597,7 @@ class Server(MsgHandler):
             await anyio.sleep(900)
             self.refresh_auth()
             await self.backend.send(
-                P(":R.run.service.main.server")/self.name,
+                P(":R.run.service.main.server") / self.name,
                 {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
                 meta=MsgMeta(origin=self.name),
                 retain=True,
@@ -1587,17 +1607,17 @@ class Server(MsgHandler):
             await anyio.sleep(30)
             self.last_auth = None
 
-    async def _run_server_link(self,name,data, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _run_server_link(self, name, data, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Run a single client link to another server.
         """
         # TODO: There should be only one TCP link between server A and B, not two
         # (plus another for syncing).
 
-        backoff=0
+        backoff = 0
 
         with anyio.CancelScope() as sc:
-            self._server_link[name] = (sc,None)
+            self._server_link[name] = (sc, None)
             task_status.started()
 
             while True:
@@ -1606,7 +1626,7 @@ class Server(MsgHandler):
                         conn.add_sub("cl")
                         if self._server_link[name][0] is not sc:
                             return
-                        self._server_link[name] = (sc,conn)
+                        self._server_link[name] = (sc, conn)
                         self._server_link_add.set()
                         self._server_link_add = anyio.Event()
 
@@ -1617,14 +1637,14 @@ class Server(MsgHandler):
                                     cl = cl[0]
                                     if cl == name or cl == self.name:
                                         continue
-                                    if not isinstance(self.clients.get(cl,None), ServerClient):
-                                        self._clients[cl] = ClientStub(self,name,cl)
+                                    if not isinstance(self.clients.get(cl, None), ServerClient):
+                                        self._clients[cl] = ClientStub(self, name, cl)
 
                             await anyio.sleep(30)
-                            backoff=0
+                            backoff = 0
                             await anyio.sleep_forever()
 
-                except* (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
+                except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
                     self.logger.warning("Link to %s closed", name)
 
                 except* EnvironmentError:
@@ -1635,14 +1655,12 @@ class Server(MsgHandler):
 
                 finally:
                     if name in self._server_link and self._server_link[name][0] is sc:
-                        self._server_link[name] = (sc,None)
+                        self._server_link[name] = (sc, None)
                     else:
                         return
 
-                backoff = min(backoff*1.2+.1,30)
+                backoff = min(backoff * 1.2 + 0.1, 30)
                 await anyio.sleep(backoff)
-
-
 
     async def _watch_client(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1659,7 +1677,7 @@ class Server(MsgHandler):
 
             async for msg in mon:
                 name = msg.topic[-1]
-                rem = self._clients.get(name,None)
+                rem = self._clients.get(name, None)
                 if msg.data is NotGiven:
                     if rem is None:
                         continue
@@ -1668,14 +1686,13 @@ class Server(MsgHandler):
                         continue
                     del self._clients[name]
                 else:
-                    if isinstance(rem,ServerClient):
+                    if isinstance(rem, ServerClient):
                         # we have this connection, so don't listen to them
                         continue
                     if name == msg.data:
                         self.logger.warning("Got self-ref client: %r", name)
                         continue
-                    self._clients[name] = ClientStub(self,msg.data,name)
-
+                    self._clients[name] = ClientStub(self, msg.data, name)
 
     async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1690,25 +1707,25 @@ class Server(MsgHandler):
             async for msg in mon:
                 name = msg.topic[-1]
 
-                sl = self._server_link.pop(name,None)
+                sl = self._server_link.pop(name, None)
                 if sl is not None:
                     sl[0].cancel()
 
                 if msg.data is NotGiven:
-                    tg.start_soon(self._down_one,name)
+                    tg.start_soon(self._down_one, name)
                     continue
-                self._downed.pop(name,None)
+                self._downed.pop(name, None)
 
                 if name == self.name:
                     continue
                 if name in self._server_link:
                     continue
-                await tg.start(self._run_server_link,name,msg.data)
+                await tg.start(self._run_server_link, name, msg.data)
 
-    async def _down_one(self, name:str):
+    async def _down_one(self, name: str):
         # protect against repeats
         t = anyio.current_time()
-        if name in self._downed and t-self._downed[name] < self.cfg.server.ping.cycle:
+        if name in self._downed and t - self._downed[name] < self.cfg.server.ping.cycle:
             return
         self._downed[name] = t
 
@@ -1722,6 +1739,7 @@ class Server(MsgHandler):
             return  # not current
 
         async with anyio.create_task_group() as tg:
+
             @tg.start_soon
             async def changed():
                 async for msg in main:
@@ -1733,11 +1751,10 @@ class Server(MsgHandler):
             try:
                 n = self._ping_history.index(self.name)
             except ValueError:
-                await anyio.sleep(gap*(1.2+random.random()))
+                await anyio.sleep(gap * (1.2 + random.random()))
             else:
-                await anyio.sleep(gap*n/len(self._ping_history))
+                await anyio.sleep(gap * n / len(self._ping_history))
             await self.set_main_link()
-
 
     async def _watch_down(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1745,15 +1762,15 @@ class Server(MsgHandler):
         """
 
         async with (
-                self.backend.monitor(P(":R.run.service.main.down")) as mon,
-                anyio.create_task_group() as tg,
-            ):
+            self.backend.monitor(P(":R.run.service.main.down")) as mon,
+            anyio.create_task_group() as tg,
+        ):
             task_status.started()
             async for msg in mon:
                 name = msg.data
                 if name == self.name:
                     return
-                tg.start_soon(self._down_one,msg.data)
+                tg.start_soon(self._down_one, msg.data)
 
     async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1771,7 +1788,7 @@ class Server(MsgHandler):
         """
         Task to read our stamping channel
         """
-        async with self.backend.monitor(P(":R.run.service.main.stamp")/self.name) as mon:
+        async with self.backend.monitor(P(":R.run.service.main.stamp") / self.name) as mon:
             task_status.started()
             async for msg in mon:
                 self._stamp_in = msg.data
@@ -1792,7 +1809,10 @@ class Server(MsgHandler):
 
             try:
                 with anyio.fail_after(5):
-                    while name not in self._server_link or (conn := self._server_link[name][1]) is None:
+                    while (
+                        name not in self._server_link
+                        or (conn := self._server_link[name][1]) is None
+                    ):
                         await self._server_link_add.wait()
 
                 await self._sync_one(conn)
@@ -1833,7 +1853,7 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd,skp,tags = await self.load_file(fn=self._f_load)
+        upd, skp, tags = await self.load_file(fn=self._f_load)
         if not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):
@@ -1855,6 +1875,7 @@ class Server(MsgHandler):
             return
 
         async with anyio.create_task_group() as tg:
+
             @tg.start_soon
             async def trigger():
                 with anyio.fail_after(self.cfg.server.timeout.startup):
@@ -1882,14 +1903,14 @@ class Server(MsgHandler):
             self.logger.info("No saved data in %r", str(dest))
             return
 
-        done=set()
+        done = set()
         fs = []
         async for p, _d, f in dest.walk():
             for ff in f:
                 if ff.endswith(".moat"):
                     fs.append(p / ff)
         fs.sort()
-        fn=None
+        fn = None
 
         tupd = 0
         while fs:
@@ -1903,9 +1924,9 @@ class Server(MsgHandler):
             done.add(sfn)
 
             try:
-                upd,skp,tags = await self.load_file(fn=fn)
+                upd, skp, tags = await self.load_file(fn=fn)
             except Exception as exc:
-                self.logger.error("Failed to load %s",fn,exc_info=exc)
+                self.logger.error("Failed to load %s", fn, exc_info=exc)
                 await fn.rename(fn.with_suffix(".moat.bad"))
                 continue
 
@@ -1914,19 +1935,20 @@ class Server(MsgHandler):
             if not tag_check(tags):
                 # extract the first tag's value
                 tt = tags[0]
-                while isinstance(tt,Tag):
-                    tt=t=tt.value
-                if isinstance(tt,Sequence):
-                    tt=tt[1]
-                fn=tt.get("prev",None)
+                while isinstance(tt, Tag):
+                    tt = t = tt.value
+                if isinstance(tt, Sequence):
+                    tt = tt[1]
+                fn = tt.get("prev", None)
                 if fn is not None:
                     fn = anyio.Path(fn)
                 continue
             ready.set()
             return
 
-
-    async def load_file(self, fn:anyio.Path, prefix:Path=Path(), local:bool=False) -> tuple[int,int,list[Tag]]:
+    async def load_file(
+        self, fn: anyio.Path, prefix: Path = Path(), local: bool = False
+    ) -> tuple[int, int, list[Tag]]:
         """
         Load a file.
 
@@ -1939,7 +1961,7 @@ class Server(MsgHandler):
             upd, skp, tags = 0, 0, []
             ehdr = None
             async for msg in rdr:
-                self.logger.debug("Load %r",msg)
+                self.logger.debug("Load %r", msg)
                 if isinstance(msg, Tag) and msg.tag == CBOR_TAG_CBOR_LEADER:
                     msg = msg.value  # noqa:PLW2901
                 if isinstance(msg, Tag):
@@ -1980,7 +2002,7 @@ class Server(MsgHandler):
                 else:
                     skp += 1
 
-            self.logger.info("Loading from %r done: %d/%d", fn,upd,skp)
+            self.logger.info("Loading from %r done: %d/%d", fn, upd, skp)
             return upd, skp, tags
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
@@ -2000,7 +2022,7 @@ class Server(MsgHandler):
 
         pass
 
-    def get_cached_error(self, name) -> Exception|str|None:
+    def get_cached_error(self, name) -> Exception | str | None:
         return self._error_cache.pop(name, None)
 
     async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -2021,14 +2043,14 @@ class Server(MsgHandler):
             # Unix socket
             port = cfg.port
             if port.startswith("RUN/"):
-                port = os.environ["XDG_RUNTIME_DIR"]+port[3:]
+                port = os.environ["XDG_RUNTIME_DIR"] + port[3:]
             try:
                 listener = await anyio.create_unix_listener(port)
             except Exception as exc:
                 raise RuntimeError("Could not create socket", port, cfg) from exc
 
         else:
-            self.logger.error("No host/port in server cfg %s: %r",name,cfg)
+            self.logger.error("No host/port in server cfg %s: %r", name, cfg)
             task_status.started(None)
             return
 
@@ -2036,7 +2058,6 @@ class Server(MsgHandler):
             task_status.started(listener.extra(SocketAttribute.local_address))
             task_status = anyio.TASK_STATUS_IGNORED
             await listener.serve(partial(self._client_task, name), task_group=tg)
-
 
     async def _client_task(self, name, stream):
         """
@@ -2054,7 +2075,7 @@ class Server(MsgHandler):
             c = ServerClient(server=self, prefix=name, stream=stream)
             cnr = c.client_nr
             try:
-                oc = self._clients.get(c.name,None)
+                oc = self._clients.get(c.name, None)
                 self._clients[c.name] = c
                 if oc is not None:
                     await oc.aclose()
@@ -2062,14 +2083,19 @@ class Server(MsgHandler):
                 await c.run()
 
             finally:
-                if self._clients.get(c.name,None) is c:
+                if self._clients.get(c.name, None) is c:
                     del self._clients[c.name]
 
                     if not c.is_server and "." not in c.name:
                         # announce that client vanished
                         # The condition *must* match the announcement
-                        with anyio.move_on_after(2,shield=True):
-                            await self.backend.send(P(":R.run.service.main.client")/c.name,b'',codec=None,retain=True)
+                        with anyio.move_on_after(2, shield=True):
+                            await self.backend.send(
+                                P(":R.run.service.main.client") / c.name,
+                                b"",
+                                codec=None,
+                                retain=True,
+                            )
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:
@@ -2091,36 +2117,34 @@ class Server(MsgHandler):
                     self.logger.exception("Client connection %s killed", cnr, exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
-            self._error_cache[name] = cast(Exception,exc)
+            self._error_cache[name] = cast(Exception, exc)
             self.logger.debug("XX END XX %s", cnr)
 
         finally:
             with anyio.move_on_after(2, shield=True):
                 await stream.aclose()
 
-
     # server-to-server crosslinks
 
     async def sub_cl(self, msg: Msg, rcmd: list) -> None:
         "Local subcommand redirect for 'cl'"
         cl = self.clients[rcmd.pop()]
-        return await cl.sender.handle(msg,rcmd)
+        return await cl.sender.handle(msg, rcmd)
 
-    async def stream_cl(self, msg:Msg) -> None:
+    async def stream_cl(self, msg: Msg) -> None:
         """
         Send the list of currently-known clients.
         """
-# disabled
-#       if msg.args:
-#           srv = msg.args[0]
-#           async with msg.stream_in() as ml:
-#               async for mm in ml:
-#                   name = mm[0]
-#                   if not isinstance(self._clients.get(name,None), ServerClient):
-#                       self._clients[name] = ClientStub(self,srv)
-#           return
+        # disabled
+        #       if msg.args:
+        #           srv = msg.args[0]
+        #           async with msg.stream_in() as ml:
+        #               async for mm in ml:
+        #                   name = mm[0]
+        #                   if not isinstance(self._clients.get(name,None), ServerClient):
+        #                       self._clients[name] = ClientStub(self,srv)
+        #           return
         cl = list(self.clients.keys())
         async with msg.stream_out(len(cl)) as ml:
             for cn in cl:
                 await ml.send(cn)
-

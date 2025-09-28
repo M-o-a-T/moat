@@ -693,7 +693,7 @@ async def _nullcheck(p):
     return False
 
 
-async def f_eq(src,dst):
+async def f_eq(src, dst):
     """check whether twofiles are the same"""
     s1 = (await src.stat()).st_size
     try:
@@ -713,7 +713,9 @@ async def f_eq(src,dst):
     return s1 == s2
 
 
-async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=None, drop=None, cross=None):
+async def copytree(
+    src: APath, dst: MoatPath, wdst: MoatPath | None = None, check=None, drop=None, cross=None
+):
     """
     Copy a file or directory tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -769,7 +771,7 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
                     src = ABytes(src.with_suffix(".mpy"), data)
                     wdst = wdst.with_suffix(".mpy")
                     with suppress(OSError, RemoteError):
-                        if await f_eq(src,wdst):
+                        if await f_eq(src, wdst):
                             return 0
                         await wdst.unlink()
             else:
@@ -787,7 +789,7 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
             logger.info("Copy: %s: %s", "new" if new else "update", dst)
             return 1
 
-        if await f_eq(src,dst):
+        if await f_eq(src, dst):
             return 0
 
         await wdst.parent.mkdir(parents=True, exist_ok=True)
@@ -814,11 +816,18 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
             if check is not None and not await check(s):
                 continue
             d = dst / s.name
-            n += await copytree(s, d, check=check, cross=cross, drop=drop, wdst=None if wdst is dst else wdst/s.name)
+            n += await copytree(
+                s,
+                d,
+                check=check,
+                cross=cross,
+                drop=drop,
+                wdst=None if wdst is dst else wdst / s.name,
+            )
         return n
 
 
-async def copy_over(src, dst, cross=None, wdst:anyio.Path|None=None):
+async def copy_over(src, dst, cross=None, wdst: anyio.Path | None = None):
     """
     Transfer a file tree from @src to @dst.
 

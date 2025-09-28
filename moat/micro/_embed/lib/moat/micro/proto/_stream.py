@@ -37,7 +37,7 @@ class _CReader:
     A mix-in that processes incoming console data.
     """
 
-    def __init__(self, cons:bool|int):
+    def __init__(self, cons: bool | int):
         if cons is True:
             try:
                 import machine

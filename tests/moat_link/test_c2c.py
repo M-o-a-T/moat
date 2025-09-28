@@ -1,4 +1,3 @@
-
 "host tests"
 
 from __future__ import annotations
@@ -9,7 +8,7 @@ import time
 
 from moat.link._test import Scaffold
 from moat.link.meta import MsgMeta
-from moat.link.host import HostState,HostList
+from moat.link.host import HostState, HostList
 from moat.util import P
 
 
@@ -17,7 +16,7 @@ from moat.util import P
 async def test_simple(cfg):
     "simple client-to-client comm test"
     async with Scaffold(cfg, use_servers=False) as sf:
-        s=await sf.server(init="Foo")
+        s = await sf.server(init="Foo")
         # evt = await sf.tg.start(cl)
 
         c1 = await sf.client(name="Foom")

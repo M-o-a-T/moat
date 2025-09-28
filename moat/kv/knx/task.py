@@ -21,9 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def task(
-    client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False
-):  # pylint: disable=unused-argument
+async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # pylint: disable=unused-argument
     cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
     add = {}
     if local_ip is not None:
@@ -34,7 +32,7 @@ async def task(
             connection_type=ConnectionType.TUNNELING,
             gateway_ip=cfg["host"],
             gateway_port=cfg.get("port", 3671),
-            **add
+            **add,
         )
         async with xknx.XKNX().run(connection_config=ccfg) as srv:
             await server.set_server(srv, initial=initial)

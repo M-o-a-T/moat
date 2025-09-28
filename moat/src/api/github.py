@@ -1,10 +1,11 @@
 """
 Rudimentary Github API.
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from attr import define,field
+from attr import define, field
 from httpx import AsyncClient
 
 from moat.util import to_attrdict
@@ -22,17 +23,19 @@ class CommitInfo(BaseCommitInfo):
         self.data = to_attrdict(json)
         super().__init__(repo, self.data.commit.sha)
 
+
 class RepoInfo(BaseRepoInfo):
     cls_CommitInfo = CommitInfo
 
     @property
-    def parent(self) -> dict|None:
+    def parent(self) -> dict | None:
         "Return info about the parent repo, or None"
         if (par := self.data.get("parent", None)) is not None:
             return par
         if (par := self.data.get("source", None)) is not None:
             return par
         return None
+
 
 class API(BaseAPI):
     cls_RepoInfo = RepoInfo
@@ -45,7 +48,7 @@ class API(BaseAPI):
             "Accept": "application/vnd.github+json",
         }
         if "token" in self.cfg:
-            hdr["Authorization"] = "Bearer "+self.cfg["token"]
+            hdr["Authorization"] = "Bearer " + self.cfg["token"]
         async with (
             AsyncClient(base_url="https://api.github.com", headers=hdr) as self.http,
             super()._ctx(),
@@ -55,5 +58,4 @@ class API(BaseAPI):
     @property
     def host(self):
         "Host to talk to"
-        return self.cfg.get("host","github.com")
-
+        return self.cfg.get("host", "github.com")

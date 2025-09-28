@@ -535,7 +535,7 @@ class NodeEvent:
         "Deserialization for gatewaying to moat-link"
         if not msg:
             return None
-        node,tick,*msg = msg
+        node, tick, *msg = msg
         self = cls(node=Node(node, tick=tick, cache=cache), tick=tick)
         self.prev = cls.deserialize_link(msg, cache=cache)
         return self
@@ -1047,8 +1047,8 @@ class Watcher:
         self.full = full
         if q_len is not None:
             self.q_len = q_len
-        if self.q_len<100000:
-            self.q_len=100000
+        if self.q_len < 100000:
+            self.q_len = 100000
 
     async def __aenter__(self):
         if self.q is not None:

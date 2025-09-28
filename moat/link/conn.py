@@ -16,7 +16,14 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def TCPConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debug:bool=False, logger=None, **kw) -> AsyncGenerator[..., MsgSender]:
+async def TCPConn(
+    cmd: MsgSender | None,
+    *a,
+    codec: str | Codec = "std-cbor",
+    debug: bool = False,
+    logger=None,
+    **kw,
+) -> AsyncGenerator[..., MsgSender]:
     """
     Connection to a MoaT server.
 
@@ -35,8 +42,16 @@ async def TCPConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debu
     ):
         yield hdl
 
+
 @asynccontextmanager
-async def UnixConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debug:bool=False, logger=None, **kw) -> AsyncGenerator[..., MsgSender]:
+async def UnixConn(
+    cmd: MsgSender | None,
+    *a,
+    codec: str | Codec = "std-cbor",
+    debug: bool = False,
+    logger=None,
+    **kw,
+) -> AsyncGenerator[..., MsgSender]:
     """
     Connection to a MoaT server.
 

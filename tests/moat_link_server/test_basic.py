@@ -57,12 +57,12 @@ async def test_ls_basic(cfg):
 
         r, *m = await c.cmd(P("d.get"), P("test.here"))
         assert r == "Hello"
-        m=MsgMeta.restore(m)
+        m = MsgMeta.restore(m)
         assert m.origin == "me!"
 
         r, *m = await c.cmd(P("d.get"), P(":"))
         assert r["test"] == 123
-        m=MsgMeta.restore(m)
+        m = MsgMeta.restore(m)
         assert m.origin == "INIT"
 
         evt = anyio.Event()
@@ -151,7 +151,7 @@ async def test_ls_save(cfg, tmp_path):
         try:
             nn = await fetch(c, "a")
         except KeyError:
-            pass # not present
+            pass  # not present
         else:
             if nn.data_ is not NotGiven or list(nn.keys()):
                 raise ValueError("Data in node")
@@ -167,23 +167,21 @@ async def test_walk(cfg):
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
 
-        await c.d.set(P("a"),1)
-        await c.d.set(P("a.b"),12)
-        await c.d.set(P("a.b.c"),123)
-        await c.d.set(P("a.b.c.d"),1234)
-        await c.d.set(P("a.b.c.e"),1235)
+        await c.d.set(P("a"), 1)
+        await c.d.set(P("a.b"), 12)
+        await c.d.set(P("a.b.c"), 123)
+        await c.d.set(P("a.b.c.d"), 1234)
+        await c.d.set(P("a.b.c.e"), 1235)
 
-        async def chk(want,path,**kw):
+        async def chk(want, path, **kw):
             has = set()
-            async with c.d_walk(P(path),**kw) as mon:
-                async for p,d in mon:
+            async with c.d_walk(P(path), **kw) as mon:
+                async for p, d in mon:
                     has.add(d)
-            assert has==want,(path,has,want,kw)
+            assert has == want, (path, has, want, kw)
 
-        await chk({1,12,123,1234,1235},"a")
-        await chk({123,1234,1235},"a",min_depth=2)
-        await chk({1,12,123},"a",max_depth=2)
-        await chk({1,12},"a",max_depth=1)
-        await chk({12,123},"a.b",max_depth=1)
-
-
+        await chk({1, 12, 123, 1234, 1235}, "a")
+        await chk({123, 1234, 1235}, "a", min_depth=2)
+        await chk({1, 12, 123}, "a", max_depth=2)
+        await chk({1, 12}, "a", max_depth=1)
+        await chk({12, 123}, "a.b", max_depth=1)

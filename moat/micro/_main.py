@@ -103,7 +103,7 @@ async def cli(ctx, section, remote, path):
             section = Path("run")
     elif inv in ("setup", "install"):
         if remote is not None:
-            remote2,remote = remote,None
+            remote2, remote = remote, None
         else:
             remote2 = P("s")
         if path:
@@ -192,7 +192,7 @@ async def setup_(ctx, run_section=None, **kw):
         for k, v in kw.items()
         if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT
     }
-    param.pop("config",None)
+    param.pop("config", None)
 
     # teach the 'large' flag to be ternary
     if "large" in default:
@@ -324,8 +324,8 @@ async def boot(obj, state):
 
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
-@click.option("-t","--time", is_flag=True, help="Time the command")
-@click.option("-p","--parts", is_flag=True, help="Re-assemble a possibly-partial result")
+@click.option("-t", "--time", is_flag=True, help="Time the command")
+@click.option("-p", "--parts", is_flag=True, help="Re-assemble a possibly-partial result")
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=True, with_proxy=True)
 @catch_errors
@@ -340,7 +340,7 @@ async def cmd(obj, path, time, parts, **attrs):
     Use `-s :n:n XXX` to append to it.
     """
     cfg = obj.mcfg
-    val = process_args({None:[]}, no_path=True, **attrs)
+    val = process_args({None: []}, no_path=True, **attrs)
     args = val.pop(None, ())
     logger.debug(
         "Command: %s %s %s",
@@ -362,6 +362,7 @@ async def cmd(obj, path, time, parts, **attrs):
             cmd = cfr.sub_at(path)
             if parts:
                 from moat.micro.cmd.tree.dir import SubStore
+
                 res = await SubStore(cmd).get(*args, **val)
             else:
                 res = await cmd(*args, **val)
@@ -374,8 +375,7 @@ async def cmd(obj, path, time, parts, **attrs):
                 res = [msg.args, msg.kw]
             yprint(res, stream=obj.stdout)
     if time:
-        print(f"{humandelta(t3-t2)} (setup {humandelta(t2-t1)})")
-
+        print(f"{humandelta(t3 - t2)} (setup {humandelta(t2 - t1)})")
 
 
 @cli.command(short_help="Read a console")
@@ -399,7 +399,7 @@ async def cons(obj, path):
             try:
                 res = await crd()
             except RemoteError as err:
-                print(f"\nERR: {err !r}\n")
+                print(f"\nERR: {err!r}\n")
             else:
                 print(res.decode("utf-8", errors="replace"), end="")
 
@@ -481,8 +481,8 @@ async def cfg_(
     if read_client or write_client:
         from .path import MoatFSPath
 
-    p_cfg = cfg.path.get("cfg",P("cfg_"))
-    p_fs = cfg.path.get("fs",P("fs"))
+    p_cfg = cfg.path.get("cfg", P("cfg_"))
+    p_fs = cfg.path.get("fs", P("fs"))
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
@@ -563,11 +563,10 @@ async def rom(obj, path, device):
                 raise RuntimeError("Device does not have ROMFS.")
             raise RuntimeError("Device 0…{res-1} only.")
 
-        nblk,blksz = await sd.stat()
+        nblk, blksz = await sd.stat()
 
         if obj.debug:
             print("Building ROMFS.")
-
 
         await idle()
 

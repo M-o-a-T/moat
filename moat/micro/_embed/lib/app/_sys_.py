@@ -83,7 +83,7 @@ class Cmd(BaseCmd):
             self.cache["root"] = self.root
 
         if isinstance(x, str):
-            res = eval(x, self.cache) 
+            res = eval(x, self.cache)
         elif isinstance(x, (tuple, list, Path)):
             res = x[0]
             if isinstance(res, str):

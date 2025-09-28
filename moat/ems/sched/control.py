@@ -122,8 +122,7 @@ class Model:
             t -= t % t_slot
             if abs(t_now - t) > t_slot / 10:
                 raise ValueError(
-                    f"You're {humandelta(abs(t_now - t))} away "
-                    f"from {ts2iso(t)}",
+                    f"You're {humandelta(abs(t_now - t))} away from {ts2iso(t)}",
                 )
 
         elif t % (3600 / cfg.steps):

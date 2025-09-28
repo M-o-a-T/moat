@@ -19,7 +19,8 @@ from moat.util import (  # pylint:disable=no-name-in-module
     attrdict,
     combine_dict,
     NotGiven,
-    Path,P,
+    Path,
+    P,
     Root,
     ValueEvent,
 )
@@ -27,7 +28,7 @@ from moat.util import (  # pylint:disable=no-name-in-module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncIterator,Self
+    from typing import Any, AsyncIterator, Self
 
 ensure_cfg("moat.link")
 
@@ -46,35 +47,45 @@ async def run_broker(cfg, *, task_status):
 
     The task status returns the port we're listening on.
     """
-    #cfg  # noqa:B018  # pyright:ignore
-    #broker = AsyncMQTTBroker(("127.0.0.1", 0))
-    #await broker.serve(task_status=task_status)
+    # cfg  # noqa:B018  # pyright:ignore
+    # broker = AsyncMQTTBroker(("127.0.0.1", 0))
+    # await broker.serve(task_status=task_status)
     from anyio.pytest_plugin import FreePortFactory
     from socket import SOCK_STREAM
 
     port = FreePortFactory(SOCK_STREAM)()
 
     async with (
-            anyio.TemporaryDirectory() as td,
-            anyio.create_task_group() as tg,
-            ):
-        tf = anyio.Path(td)/"config"
-        await tf.write_text(f"""\
+        anyio.TemporaryDirectory() as td,
+        anyio.create_task_group() as tg,
+    ):
+        tf = anyio.Path(td) / "config"
+        await tf.write_text(
+            f"""\
 allow_anonymous true
 retained_messages_mode enabled_without_persistence
 thread_count 1
 
 listen {{
     protocol mqtt
-    port { port }
+    port {port}
     inet4_bind_address 127.0.0.1
 }}
-""")
+"""
+        )
 
-        tg.start_soon(partial(anyio.run_process,["flashmq","-c",str(tf)],stderr=sys.stderr,stdout=sys.stdout,env=dict(HOME=td)))
+        tg.start_soon(
+            partial(
+                anyio.run_process,
+                ["flashmq", "-c", str(tf)],
+                stderr=sys.stderr,
+                stdout=sys.stdout,
+                env=dict(HOME=td),
+            )
+        )
         for _ in range(20):
             try:
-                sock = await anyio.connect_tcp("127.0.0.1",port)
+                sock = await anyio.connect_tcp("127.0.0.1", port)
             except EnvironmentError:
                 await anyio.sleep(0.1)
             else:
@@ -90,7 +101,8 @@ class Scaffold(CtxObj):
     """
     Basic testcase runner for testing with an ephemeral MQTT server.
     """
-    tempdir:str|None
+
+    tempdir: str | None
 
     def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
         ensure_cfg("moat.link.server", cfg)
@@ -101,10 +113,10 @@ class Scaffold(CtxObj):
         self.cfg.backend.setdefault("codec", "std-cbor")
         self.cfg.backend.setdefault("keep_alive", 9999)
 
-        self.cfg.server.ping.cycle=.5
-        self.cfg.server.ping.gap=.15
-        self.cfg.server.ping.override=True
-        self.cfg.server.timeout.startup=3
+        self.cfg.server.ping.cycle = 0.5
+        self.cfg.server.ping.gap = 0.15
+        self.cfg.server.ping.override = True
+        self.cfg.server.timeout.startup = 3
 
         self._tempdir = tempdir
 
@@ -179,12 +191,12 @@ class Scaffold(CtxObj):
         await s.serve(task_status=task_status)
 
     @asynccontextmanager
-    async def server_(self, cfg:dict|None=None, **kw) -> None:
+    async def server_(self, cfg: dict | None = None, **kw) -> None:
         """
         Runs a basic MoaT-Link server. (async context manager)
         """
         async with anyio.create_task_group() as tg:
-            yield await tg.start(self._run_server,cfg,kw)
+            yield await tg.start(self._run_server, cfg, kw)
             tg.cancel_scope.cancel()
 
     async def client(self, *a, **kw):
@@ -201,7 +213,9 @@ class Scaffold(CtxObj):
             assert False  # noqa:B011,PT015
 
     @asynccontextmanager
-    async def client_(self, cfg:dict|None=None, cli:LinkCommon|None=None, name=None) -> Never:
+    async def client_(
+        self, cfg: dict | None = None, cli: LinkCommon | None = None, name=None
+    ) -> Never:
         """
         Start a client (async context manager)
         """
@@ -212,7 +226,7 @@ class Scaffold(CtxObj):
             _seq += 1
             name = f"C_{_seq}"
 
-            cli = Link(cfg,name)
+            cli = Link(cfg, name)
 
         async with cli as li:
             yield li
@@ -230,12 +244,13 @@ class Scaffold(CtxObj):
         """
         async with anyio.create_task_group() as tg, self.client_() as c:
             evt = ValueEvent()
-            got=0
+            got = 0
+
             @tg.start_soon
             async def work():
-                res=[]
+                res = []
                 try:
-                    async with c.d_watch(path,*a,**kw) as mon:
+                    async with c.d_watch(path, *a, **kw) as mon:
                         async for r in mon:
                             if kw.get("meta"):
                                 t = time.time()
@@ -243,16 +258,18 @@ class Scaffold(CtxObj):
                             elif not kw.get("subtree"):
                                 # neither meta nor subtree
                                 r = (r,)
-                            if exp is not NotGiven and (not kw.get("subtree") or not len(r[0])) and r[kw.get("subtree",0)] == exp:
+                            if (
+                                exp is not NotGiven
+                                and (not kw.get("subtree") or not len(r[0]))
+                                and r[kw.get("subtree", 0)] == exp
+                            ):
                                 # Skip if toplevel match
                                 return
                             res.append(r)
-                            if len(res)==n:
+                            if len(res) == n:
                                 return
                 finally:
                     evt.set(res)
+
             yield evt
             tg.cancel_scope.cancel()
-
-
-

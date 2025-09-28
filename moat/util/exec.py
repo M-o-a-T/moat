@@ -5,7 +5,7 @@ This module contains a helper for running subprocesses.
 from __future__ import annotations
 
 import io
-from subprocess import PIPE,DEVNULL,STDOUT, CalledProcessError
+from subprocess import PIPE, DEVNULL, STDOUT, CalledProcessError
 import anyio
 from pathlib import Path
 from codecs import getincrementaldecoder
@@ -16,19 +16,57 @@ if TYPE_CHECKING:
     from typing import Literal, AsyncIterable
 
 
-__all__ = ["run", "CalledProcessError", "PIPE","DEVNULL","STDOUT"]
+__all__ = ["run", "CalledProcessError", "PIPE", "DEVNULL", "STDOUT"]
+
 
 @overload
-async def run(*a, name:str|None=None, echo:bool=False, echo_input:bool=False, capture=False,input:str|bytes|None=None,**kw) -> None:
+async def run(
+    *a,
+    name: str | None = None,
+    echo: bool = False,
+    echo_input: bool = False,
+    capture=False,
+    input: str | bytes | None = None,
+    **kw,
+) -> None:
     "no data"
+
+
 @overload
-async def run(*a, name:str|None=None, echo:bool=False, echo_input:bool=False, capture="raw",input:str|bytes|None=None,**kw) -> bytes:
+async def run(
+    *a,
+    name: str | None = None,
+    echo: bool = False,
+    echo_input: bool = False,
+    capture="raw",
+    input: str | bytes | None = None,
+    **kw,
+) -> bytes:
     "raw data"
+
+
 @overload
-async def run(*a, name:str|None=None, echo:bool=False, echo_input:bool=False, capture=True,input:str|bytes|None=None,**kw) -> str:
+async def run(
+    *a,
+    name: str | None = None,
+    echo: bool = False,
+    echo_input: bool = False,
+    capture=True,
+    input: str | bytes | None = None,
+    **kw,
+) -> str:
     "string data"
 
-async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal["raw"]=False,input=None,**kw) -> None|str|bytes:
+
+async def run(
+    *a,
+    name=None,
+    echo=False,
+    echo_input=False,
+    capture: bool | Literal["raw"] = False,
+    input=None,
+    **kw,
+) -> None | str | bytes:
     """Helper to run an external program, tagging stdout/stderr"""
 
     if name is None:
@@ -36,7 +74,7 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
     else:
         name += " "
     if echo:
-        print(name+"$",*a, *(("<",repr(kw["input"])) if echo_input and "input" in kw else ()))
+        print(name + "$", *a, *(("<", repr(kw["input"])) if echo_input and "input" in kw else ()))
     if input is None:
         if "stdin" not in kw:
             kw["stdin"] = DEVNULL
@@ -44,16 +82,17 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
         if isinstance(input, str):
             input = input.encode("utf-8")
 
-    if capture and kw.get("stdout",PIPE) != PIPE:
+    if capture and kw.get("stdout", PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")
 
-    if isinstance((cwd := kw.get("cwd", None)), (anyio.Path,Path)):
+    if isinstance((cwd := kw.get("cwd", None)), (anyio.Path, Path)):
         kw["cwd"] = str(cwd)
 
-    frag=None
-    out=None
-    err=None
-    async def report(prefix:str, stream:AsyncIterable[bytes], buf:BytesIO):
+    frag = None
+    out = None
+    err = None
+
+    async def report(prefix: str, stream: AsyncIterable[bytes], buf: BytesIO):
         nonlocal frag
         utf = getincrementaldecoder("utf-8")()
         async for chunk in stream:
@@ -62,14 +101,14 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
                 continue
             chunk = utf.decode(chunk).split("\n")
             lch = chunk.pop()
-            if frag not in (None,stream):
+            if frag not in (None, stream):
                 print("…")
 
             for ch in chunk:
-                print(prefix,ch)
+                print(prefix, ch)
 
             if lch:
-                print(prefix,lch,end="")
+                print(prefix, lch, end="")
                 frag = stream
             else:
                 frag = None
@@ -79,11 +118,11 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
         anyio.create_task_group() as tg,
     ):
         if proc.stdout:
-            out=io.BytesIO()
-            tg.start_soon(report,name+">",proc.stdout, out)
+            out = io.BytesIO()
+            tg.start_soon(report, name + ">", proc.stdout, out)
         if proc.stderr:
-            err=io.BytesIO()
-            tg.start_soon(report,name+"⫸",proc.stderr, err)
+            err = io.BytesIO()
+            tg.start_soon(report, name + "⫸", proc.stderr, err)
         if input is not None:
             await proc.stdin.send(input)
             await proc.stdin.aclose()
@@ -92,7 +131,12 @@ async def run(*a, name=None, echo=False, echo_input=False, capture:bool|Literal[
         print("…")
 
     if proc.returncode != 0:
-        raise CalledProcessError(cast(int, proc.returncode), a, None if out is None else out.getvalue(), None if err is None else err.getvalue())
+        raise CalledProcessError(
+            cast(int, proc.returncode),
+            a,
+            None if out is None else out.getvalue(),
+            None if err is None else err.getvalue(),
+        )
 
     if capture:
         res = out.getvalue()

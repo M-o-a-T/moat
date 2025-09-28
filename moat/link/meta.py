@@ -86,9 +86,9 @@ class MsgMeta:
     def __repr__(self):
         res = f"‹{self.__class__.__name__} {self.a!r}"
         if self.kw:
-            res += ","+repr(self.kw)
+            res += "," + repr(self.kw)
         if self.source is not None:
-            res += " src="+self.source
+            res += " src=" + self.source
         res += "›"
         return res
 
@@ -126,6 +126,7 @@ class MsgMeta:
         m.kw = kw
         m.source = source
         return m
+
     _moat__restore = restore
 
     def __getitem__(self, k):
@@ -166,7 +167,7 @@ class MsgMeta:
             if not self.origin:
                 raise ValueError("You need to set a name")
         elif not self.origin:
-            assert isinstance(name,str)
+            assert isinstance(name, str)
             if not name.startswith("via:"):
                 name = f"via:{name}"
             self.origin = name
@@ -277,8 +278,9 @@ class MsgMeta:
         res._clean(name)  # noqa:SLF001
         return res
 
+
 def _meta_repr(dumper, data):
     return dumper.represent_scalar("!Meta", repr(data))
 
-SafeRepresenter.add_representer(MsgMeta, _meta_repr)
 
+SafeRepresenter.add_representer(MsgMeta, _meta_repr)

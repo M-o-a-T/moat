@@ -15,7 +15,7 @@ __all__ = ["AuthMethod", "TokenAuth", "AnonAuth", "NoAuth"]
 class AuthMethod:
     name: ClassVar[str]
 
-    async def hello_out(self) -> Any|None:
+    async def hello_out(self) -> Any | None:
         """
         Return data that should be included in the Hello message we
         send.
@@ -130,6 +130,6 @@ class NoAuth(AuthMethod):
         "reject"
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg, *prefix:Key):
+    async def handle(self, conn: MsgHandler, msg: Msg, *prefix: Key):
         "reject"
         return False

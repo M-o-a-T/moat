@@ -1,10 +1,11 @@
 """
 Rudimentary Github API.
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from attr import define,field
+from attr import define, field
 
 from moat.util import to_attrdict
 
@@ -17,15 +18,19 @@ from . import NoSuchRepo, RepoExists
 @define
 class CommitInfo(BaseCommitInfo):
     pass
+
+
 #   data = field(init=False)
 
 #   def __init__(self, repo, json):
 #       self.data = to_attrdict(json)
 #       super().__init__(repo, self.data.name, self.data.commit.sha)
 
+
 class RepoInfo(BaseRepoInfo):
-    """Remote repository data, """
-    def __init__(self, api:API, repo:Repo):
+    """Remote repository data,"""
+
+    def __init__(self, api: API, repo: Repo):
         self.data = None  # setup
         super().__init__(api, repo)
 
@@ -33,7 +38,7 @@ class RepoInfo(BaseRepoInfo):
     def git_url(self) -> str:
         "URL used to pull with git"
         if "git_url" in self.api.cfg:
-            return self.api.cfg.git_url.replace("{{repo}}",self.name)
+            return self.api.cfg.git_url.replace("{{repo}}", self.name)
         return f"https://{self.api.host}/{self.api.org}/{self.repo.name}.git"
 
     @property
@@ -48,7 +53,7 @@ class RepoInfo(BaseRepoInfo):
 
     @property
     def description(self) -> str:
-        return self.data.description.strip().split("\n",1)[0]
+        return self.data.description.strip().split("\n", 1)[0]
 
     async def load_(self) -> RepoInfo:
         url = f"repos/{self.api.org}/{self.repo.name}"
@@ -82,11 +87,13 @@ class RepoInfo(BaseRepoInfo):
         Set this remote's URL, and configure pushing
         """
         async with self.repo.git_lock:
-            await self.repo.exec("git","remote", "add", self.api.name, self.ssh_url)
-            await self.repo.exec("git","config","set","--append", f"remote.{self.api.name}.push", "refs/heads/*")
+            await self.repo.exec("git", "remote", "add", self.api.name, self.ssh_url)
+            await self.repo.exec(
+                "git", "config", "set", "--append", f"remote.{self.api.name}.push", "refs/heads/*"
+            )
 
     @property
-    def parent(self) -> dict|None:
+    def parent(self) -> dict | None:
         "Return info about the parent repo, or None"
         if (par := self.data.get("parent", None)) is not None:
             return par
@@ -103,20 +110,28 @@ class RepoInfo(BaseRepoInfo):
         """
         if await self.repo.cwd.exists():
             async with self.repo.git_lock:
-                await self.repo.exec("git","remote", "update")
+                await self.repo.exec("git", "remote", "update")
         else:
-            await self.repo.exec("git","clone","--bare", "--origin", self.api.name, self.ssh_url, str(self.repo.cwd), cwd="/tmp")
+            await self.repo.exec(
+                "git",
+                "clone",
+                "--bare",
+                "--origin",
+                self.api.name,
+                self.ssh_url,
+                str(self.repo.cwd),
+                cwd="/tmp",
+            )
 
             async for br in src_repo.get_branches():
                 br = br.data.name
-                await self.repo.exec("git","branch","--no-track",br,f"src/{br}")
+                await self.repo.exec("git", "branch", "--no-track", br, f"src/{br}")
 
-        desc = self.repo.cwd/"description"
+        desc = self.repo.cwd / "description"
         if self.description != await desc.read_text():
             await desc.write_text(self.description)
         if not self.repo.cfg.work.kill:
             await self.set_remote()
-
 
     async def get_default_branch(self) -> str:
         """
@@ -150,7 +165,6 @@ class RepoInfo(BaseRepoInfo):
         for r in res.json():
             yield self.cls_CommitInfo(self, r)
 
-
     async def get_tags(self) -> AsyncIterator[str]:
         """
         List known tags.
@@ -161,6 +175,7 @@ class RepoInfo(BaseRepoInfo):
         for r in res.json():
             yield r
 
+
 class API(BaseAPI):
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
@@ -168,7 +183,7 @@ class API(BaseAPI):
     @property
     def api_url(self) -> str:
         "URL used to view the thing"
-        return f"https://{self.cfg.get("api_host",self.cfg.host)}"
+        return f"https://{self.cfg.get('api_host', self.cfg.host)}"
 
     @property
     def host(self):
@@ -184,7 +199,7 @@ class API(BaseAPI):
         """
         List accessible repositories.
         """
-        pg=None
+        pg = None
         url = f"users/{self.cfg.user}/repos"
         while url is not None:
             res = await self.http.get(url)
@@ -197,8 +212,7 @@ class API(BaseAPI):
                 return
             url = None
             for xh in lh.split(","):
-                u,r = xh.split(";")
+                u, r = xh.split(";")
                 if 'rel="next"' in r:
                     url = u.strip().lstrip("<").rstrip(">")
                     break
-

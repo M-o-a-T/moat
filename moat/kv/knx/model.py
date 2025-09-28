@@ -1,6 +1,7 @@
 """
 MoaT-KV client data model for KNX
 """
+
 import anyio
 
 from moat.util import NotGiven

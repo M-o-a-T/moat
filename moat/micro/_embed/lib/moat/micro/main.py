@@ -49,17 +49,18 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
             merge(cfg.setdefault(k, {}), v)
 
     # Start the watchdog timer early
-    for k,v in cfg["apps"].items():
+    for k, v in cfg["apps"].items():
         if v != "wdt.Cmd":
             continue
-        k = cfg.get(k,{})
-        if k.get("hw",False):
-            machine.WDT(k.get("id",0), k.get("t",5000))
+        k = cfg.get(k, {})
+        if k.get("hw", False):
+            machine.WDT(k.get("id", 0), k.get("t", 5000))
 
     def cfg_network(n):
         import time
 
         import network
+
         at("MN1")
 
         network.hostname(n["name"])

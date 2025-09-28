@@ -44,7 +44,7 @@ class Backend(_Backend):
     The MQTT backend driver.
     """
 
-    client:AsyncMQTTClient
+    client: AsyncMQTTClient
 
     def __init__(
         self,
@@ -113,8 +113,8 @@ class Backend(_Backend):
         codec: str | Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
         subtree: bool = False,
-        mine:bool=True,
-        retained:bool=True,
+        mine: bool = True,
+        retained: bool = True,
         **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
@@ -131,18 +131,18 @@ class Backend(_Backend):
             if subtree:
                 tops += "/#"
         elif subtree:
-            tops="#"
+            tops = "#"
         else:
             raise ValueError("empty path")
         self.logger.debug("Monitor %s start", tops)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine
-        kw["retain_handling"] = RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
+        kw["retain_handling"] = (
+            RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
+        )
         try:
             async with self.client.subscribe(tops, **kw) as sub:
-
-
-                yield _SubGet(self,sub,codec,raw)
+                yield _SubGet(self, sub, codec, raw)
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
@@ -158,7 +158,7 @@ class Backend(_Backend):
         data: bytes | bytearray | memoryview,
         codec: Literal[None],
         meta: MsgMeta | bool | None = None,
-        retain: bool|None = None,
+        retain: bool | None = None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         ...
@@ -170,7 +170,7 @@ class Backend(_Backend):
         data: Any,
         codec: Codec | str | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
-        retain: bool|None=None,
+        retain: bool | None = None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         ...
@@ -181,7 +181,7 @@ class Backend(_Backend):
         data: Any,
         codec: Codec | str | None | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
-        retain: bool|None=None,
+        retain: bool | None = None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         """
@@ -203,11 +203,11 @@ class Backend(_Backend):
         if retain is None:
             raise ValueError("Need to set whether to retain or not")
 
-        if isinstance(data,str):
+        if isinstance(data, str):
             msg = data  # utf-8 is pass-thru in MQTT5
         elif data is NotGiven:
             # delete
-            msg = b''
+            msg = b""
         else:
             if codec is NotGiven:
                 codec = self.codec
@@ -228,8 +228,9 @@ class Backend(_Backend):
             **kw,
         )
 
+
 class _SubGet:
-    def __init__(self, back, sub, codec,raw):
+    def __init__(self, back, sub, codec, raw):
         self.back = back
         self.sub = sub
         self.codec = codec
@@ -239,7 +240,7 @@ class _SubGet:
         return self
 
     async def __anext__(self):
-        back=self.back
+        back = self.back
         err = None
         while True:
             msg = await anext(self.sub)
@@ -270,7 +271,7 @@ class _SubGet:
                 except Exception as exc:
                     back.logger.debug("Property Error", exc_info=exc)
                     await back.send(
-                        P(":R.error.link.mqtt.meta")+top,
+                        P(":R.error.link.mqtt.meta") + top,
                         dict(
                             topic=top,
                             val=oprop,
@@ -289,9 +290,16 @@ class _SubGet:
                         else:
                             raise ValueError("Unknown payload format {p_i}")
                     except Exception as exc:
-                        back.logger.warning("Decoding Error %s %s: %r %r", top,self.codec.__class__.__module__, msg.payload,exc, exc_info=exc)
+                        back.logger.warning(
+                            "Decoding Error %s %s: %r %r",
+                            top,
+                            self.codec.__class__.__module__,
+                            msg.payload,
+                            exc,
+                            exc_info=exc,
+                        )
                         await back.send(
-                            P(":R.error.link.mqtt.codec")+top,
+                            P(":R.error.link.mqtt.codec") + top,
                             dict(
                                 codec=type(self.codec).__name__,
                                 topic=top,
@@ -305,11 +313,15 @@ class _SubGet:
                         # everything OK
                         if back.trace:
                             back.logger.debug("R:%s %r", top, data)
-                        return Message(top, data, meta=prop, prop=msg.user_properties, retain=msg.retain)
+                        return Message(
+                            top, data, meta=prop, prop=msg.user_properties, retain=msg.retain
+                        )
                     continue
             if self.raw is False:
                 # don't forward undecodeable messages
                 continue
             if back.trace:
                 back.logger.info("R:%s R|%r", top, msg.payload)
-            return RawMessage(top, msg.payload, meta=prop, prop=msg.user_properties, exc=err, retain=msg.retain)
+            return RawMessage(
+                top, msg.payload, meta=prop, prop=msg.user_properties, exc=err, retain=msg.retain
+            )

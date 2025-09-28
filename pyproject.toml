@@ -123,13 +123,13 @@ ignore = [
     "PTH",
     "RET50",
     "RUF001", "RUF002", "RUF003", "RUF005", "RUF012",
-    "S101", "S307", # "S610",
+    "S101", "S307", "S610",
     "SIM103", "SIM108",
     "T2",
-    # "TC006",
+    "TC006",
     "TD",
     "TRY003", "TRY300", "TRY301", "TRY400",
-    "UP015", "UP038",
+    "UP015", # "UP038",
     ]
 explicit-preview-rules = true
 

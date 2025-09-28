@@ -131,7 +131,7 @@ async def data_get(
                         else:
                             continue
 
-                if isinstance(out,list):
+                if isinstance(out, list):
                     out.append(y)
                 else:
                     yprint([y], stream=out)
@@ -151,7 +151,7 @@ async def data_get(
                     return d
 
                 y = simplex(y)
-            if isinstance(out,list):
+            if isinstance(out, list):
                 return y
             yprint(y, stream=out)
         return  # end "if recursive"
@@ -163,8 +163,8 @@ async def data_get(
         try:
             res = res.value
         except AttributeError:
-#           if obj.debug:
-#               print("No data at", path, file=sys.stderr)
+            #           if obj.debug:
+            #               print("No data at", path, file=sys.stderr)
             return
 
     if out is False:

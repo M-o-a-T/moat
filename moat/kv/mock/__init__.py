@@ -75,6 +75,7 @@ class S:
 
     async def run(self, *args, do_stdout=True):
         from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module
+
         h = p = None
         for s in self.s:
             for h, p, *_ in s.ports:

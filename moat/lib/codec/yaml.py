@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._base import Codec as _Codec
 from moat.util.compat import byte2utf8
-from moat.util import yload,yprint
+from moat.util import yload, yprint
 
 
 class Codec(_Codec):
@@ -28,10 +28,9 @@ class Codec(_Codec):
         self._buf.extend(buffer)
 
     def __next__(self):
-        i = self._buf.find(b'\n---\n')
+        i = self._buf.find(b"\n---\n")
         if i < 0:
             raise StopIteration
-        res = yload(self._buf[0:i+1].decode("utf-8"))
-        self._buf[0:i+5] = b''
+        res = yload(self._buf[0 : i + 1].decode("utf-8"))
+        self._buf[0 : i + 5] = b""
         return res
-

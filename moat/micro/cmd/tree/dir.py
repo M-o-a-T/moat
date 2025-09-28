@@ -58,13 +58,15 @@ class Dispatch(_Dispatch):
         "returns a CfgStore object at this subpath"
         return CfgStore(self, p)
 
+
 class SubStore:
     """
     A helper class to retrieve a possibly-encoded object.
     """
+
     cfg: dict = None
 
-    def __init__(self, sd:MsgSender):
+    def __init__(self, sd: MsgSender):
         self.__sd = sd
 
     async def __aenter__(self):
@@ -81,7 +83,7 @@ class SubStore:
 
         async def _get(p):
             d = await self.__sd(*a, p=p, **kw)
-            if isinstance(d, (list,tuple)) and len(d) == 2:
+            if isinstance(d, (list, tuple)) and len(d) == 2:
                 d, s = d
                 for k in s:
                     d[k] = await _get(p + (k,))

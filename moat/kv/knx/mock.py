@@ -7,6 +7,7 @@ This code is here for support of testing. It does not talk to MoaT-KV.
 See ``tests/test_basic.py`` for code that does.
 
 """
+
 import os
 import anyio
 import tempfile
@@ -15,7 +16,6 @@ from contextlib import asynccontextmanager
 import xknx
 from xknx.io import ConnectionConfig, ConnectionType
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
-
 
 
 class Tester:

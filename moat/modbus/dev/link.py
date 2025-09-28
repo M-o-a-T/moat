@@ -90,15 +90,15 @@ class Register(BaseRegister):
             async for val in mon_:
                 if val is None:  # Link message
                     continue
-                if isinstance(val,tuple):  # Link client
+                if isinstance(val, tuple):  # Link client
                     logger.debug("%s W %r", self.path, val)
-                    val=val[0]
+                    val = val[0]
                 elif "value" not in val:  # KV message
                     logger.debug("%s Wx", self.path)
                     continue
                 else:
                     logger.debug("%s W %r", self.path, val)
-                    val=val.value
+                    val = val.value
                 await self._set(val)
 
     async def from_link_p(self, mon, slot):
@@ -124,7 +124,7 @@ class Register(BaseRegister):
             tg.start_soon(per)
             first = True
             async for val_ in mon_:
-                if isinstance(val,tuple):
+                if isinstance(val, tuple):
                     val = val[0]
                 else:
                     try:

@@ -44,7 +44,7 @@ class LostData(Exception):
 
 
 @define
-class BroadcastReader: ## TYPE [TData]:
+class BroadcastReader:  ## TYPE [TData]:
     """
     The read side of a broadcaster.
 
@@ -122,7 +122,7 @@ class BroadcastReader: ## TYPE [TData]:
 
 
 @define
-class Broadcaster: ## TYPE [TData]:
+class Broadcaster:  ## TYPE [TData]:
     """
     A simple broadcaster. Messages will be sent to all readers.
 
@@ -205,7 +205,7 @@ class Broadcaster: ## TYPE [TData]:
             r(cast("TData", self.value))
         return aiter(r)
 
-    def reader(self, length: int, send_last:bool|None=None) -> BroadcastReader[TData]:
+    def reader(self, length: int, send_last: bool | None = None) -> BroadcastReader[TData]:
         """Create a reader with an explicit queue length"""
         assert self._rdr is not None
 

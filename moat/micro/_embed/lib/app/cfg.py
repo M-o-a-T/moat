@@ -39,7 +39,7 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        p = msg.get("p",())
+        p = msg.get("p", ())
         try:
             res = enc_part(get_part(self._parent.cfg, p))
             if isinstance(res, (list, tuple)):

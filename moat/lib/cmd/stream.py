@@ -4,7 +4,19 @@ Message streaming.
 
 from __future__ import annotations
 from moat.util import Path, QueueFull, _add_obj
-from moat.util.compat import Queue, log, L, TaskGroup, ACM, AC_exit, Event, shield, ticks_ms, ticks_diff, sleep_ms
+from moat.util.compat import (
+    Queue,
+    log,
+    L,
+    TaskGroup,
+    ACM,
+    AC_exit,
+    Event,
+    shield,
+    ticks_ms,
+    ticks_diff,
+    sleep_ms,
+)
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
@@ -14,16 +26,17 @@ from moat.lib.cmd.msg import Msg, log_exc
 from typing import TYPE_CHECKING, overload, cast
 
 try:
-    from typing import Iterable,Sequence,Mapping
+    from typing import Iterable, Sequence, Mapping
 except ImportError:
     Iterable = object
-    Sequence = (list,tuple)
+    Sequence = (list, tuple)
     Mapping = dict
 
 if TYPE_CHECKING:
     from logging import Logger
     from typing import Sequence, Mapping
     from .base import OptDict
+
 
 def i_f2wire(id: int, flag: int) -> int:
     assert id != 0
@@ -71,13 +84,13 @@ class HandlerStream(MsgHandler):
     _tg: TaskGroup = None
     _id = 0
 
-    def __init__(self, sender: MsgSender | None, logger:Logger|None=None):
+    def __init__(self, sender: MsgSender | None, logger: Logger | None = None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._sender = sender
 
-        self._logger = getattr(logger,"debug",logger)
+        self._logger = getattr(logger, "debug", logger)
 
         self.reader_done = Event()
         self.writer_done = Event()
@@ -223,7 +236,7 @@ class HandlerStream(MsgHandler):
                 await self.send(link, [E_CANCEL], None, B_ERROR)
             return
 
-        rem = cast(Msg,link.remote)
+        rem = cast(Msg, link.remote)
         try:
             res = await self._sender.handle(rem, rem.rcmd)
             if res is not None:
@@ -272,29 +285,27 @@ class HandlerStream(MsgHandler):
 
         # Optimizing for CBOR integers
         if L:
-            self._dly_q.put_nowait((mid,ticks_ms()))
+            self._dly_q.put_nowait((mid, ticks_ms()))
         else:
             if mid < 6:
                 self._id1.add(mid)
             else:
                 self._id3.add(mid)
 
-
     async def _dly(self):
         "Delay for message IDs because we don't want to re-use them immediately."
         while True:
-            mid,t = await self._dly_q.get()
+            mid, t = await self._dly_q.get()
             tt = ticks_ms()
-            td = ticks_diff(tt,t)
+            td = ticks_diff(tt, t)
             if td < 1000:
-                await sleep_ms(1000-td)
+                await sleep_ms(1000 - td)
             if mid < 6:
                 self._id1.add(mid)
             elif mid < 64:
                 self._id2.add(mid)
             else:
                 self._id3.add(mid)
-
 
     async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
         if self.closing:
@@ -315,7 +326,7 @@ class HandlerStream(MsgHandler):
             kw = None
         elif kw is None:
             kw = {}
-        res:list[Any] = [i]
+        res: list[Any] = [i]
         res.extend(a)
         if kw is not None:
             res.append(kw)
@@ -335,7 +346,7 @@ class HandlerStream(MsgHandler):
     async def __aenter__(self):
         acm = ACM(self)
         try:
-            tg:TaskGroup = await acm(TaskGroup())
+            tg: TaskGroup = await acm(TaskGroup())
             self._tg = tg
             self._tgs = await acm(TaskGroup())
             self.closing = False

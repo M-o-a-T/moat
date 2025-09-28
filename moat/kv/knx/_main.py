@@ -77,11 +77,11 @@ async def attr_(obj, bus, group, vars_, eval_, path_):
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
- 
+
     res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
 
     if vars_ or eval_ or path_:
-        res = await node_attr(obj, cfg.prefix + path, vars_,eval_,path_, res=res)
+        res = await node_attr(obj, cfg.prefix + path, vars_, eval_, path_, res=res)
         if obj.meta:
             yprint(res, stream=obj.stdout)
     else:
@@ -89,12 +89,15 @@ async def attr_(obj, bus, group, vars_, eval_, path_):
             res = res.value
         yprint(res, stream=obj.stdout)
 
+
 def map_keys():
     try:
         return RemoteValueSensor.DPTMAP.keys()
     except AttributeError:
         from xknx.dpt import DPTBase
+
         return (cls.__name__[3:] for cls in DPTBase.__recursive_subclasses__())
+
 
 @cli.command(
     "addr",
@@ -176,12 +179,12 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         res.chain = None
     if eval_:
         if value is None:
-            pass ## value = res_delete(res, attr)
+            pass  ## value = res_delete(res, attr)
         else:
             value = path_eval(value)
             if isinstance(value, Mapping):
                 # replace
-                pass ## value = res_delete(res, attr)
+                pass  ## value = res_delete(res, attr)
                 value = value._update(attr, value=value)
             else:
                 value = res_update(res, attr, value=value)
@@ -195,9 +198,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             return
         value = res_update(res, attr, value=value)
 
-    res = await obj.client.set(
-        cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain
-    )
+    res = await obj.client.set(cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -255,6 +256,7 @@ async def monitor(obj, bus, server, local_ip, initial):
     """Stand-alone task to talk to a single server."""
     from .task import task
     from .model import KNXroot
+
     cfg = obj.cfg.kv.knx
 
     knx = await KNXroot.as_handler(obj.client)
@@ -268,6 +270,4 @@ async def monitor(obj, bus, server, local_ip, initial):
         server = server[0]
 
     async with as_service(obj) as srv:
-        await task(
-            obj.client, cfg, knx[bus][server], srv, local_ip=local_ip, initial=initial
-        )
+        await task(obj.client, cfg, knx[bus][server], srv, local_ip=local_ip, initial=initial)

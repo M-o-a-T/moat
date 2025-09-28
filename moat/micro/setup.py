@@ -40,7 +40,13 @@ async def do_update(dst, root, cross, hfn):
     await copytree(p / "main.py", root / "main.py", cross=None)
 
 
-async def do_copy(source:anyio.Path, dst:anyio.Path, dest:str|None, cross:str, wdst:anyio.Path|None=None):
+async def do_copy(
+    source: anyio.Path,
+    dst: anyio.Path,
+    dest: str | None,
+    cross: str,
+    wdst: anyio.Path | None = None,
+):
     """
     Copy from source to @dst/@dest.
 
@@ -68,21 +74,21 @@ def _clean_cfg(cfg):
 
 async def setup(
     cfg,
-    install:bool=False,
-    source:anyio.Path|None=None,
-    root:str=".",
-    dest:str="",
-    kill:bool=False,
-    large:bool|None=None,
-    run:bool|dict=False,
-    rom:bool=False,
-    reset:bool=False,
-    state:str|None=None,
-    config:dict|None=None,
-    cross:str|None=None,
-    update:bool=False,
-    mount:bool=False,
-    watch:bool=False,
+    install: bool = False,
+    source: anyio.Path | None = None,
+    root: str = ".",
+    dest: str = "",
+    kill: bool = False,
+    large: bool | None = None,
+    run: bool | dict = False,
+    rom: bool = False,
+    reset: bool = False,
+    state: str | None = None,
+    config: dict | None = None,
+    cross: str | None = None,
+    update: bool = False,
+    mount: bool = False,
+    watch: bool = False,
 ):
     """
     Given the serial link to a MicroPython board,
@@ -170,20 +176,20 @@ async def setup(
                 while True:
                     try:
                         with anyio.fail_after(3):
-                            m, = await dsp.cmd(P("s.crd"))
+                            (m,) = await dsp.cmd(P("s.crd"))
                         cons += m
                         if cons.endswith(b"\nOK\x04\x04>"):
                             break
                     except TimeoutError:
                         break
                 if cons:
-                    log("Console:\n%s",cons.decode("utf-8",errors="replace"))
+                    log("Console:\n%s", cons.decode("utf-8", errors="replace"))
                 async with dsp.sub_at(dsp.cfg.remote2) as sr:
                     try:
                         print(await sr.dir_())
                         await sr.s.ping()
                     except Exception as exc:
-                        logger.error("PROBLEM %r",exc)
+                        logger.error("PROBLEM %r", exc)
                     need_run = False
                     log("RUNNING.")
                     await idle()
@@ -239,7 +245,9 @@ async def setup(
         if not need_run:
             raise
 
-        logger.warning("Reset: caused %r", exc, exc_info=exc if logger.isEnabledFor(logging.DEBUG) else None)
+        logger.warning(
+            "Reset: caused %r", exc, exc_info=exc if logger.isEnabledFor(logging.DEBUG) else None
+        )
 
         await anyio.sleep(3)
         async with (

@@ -651,10 +651,10 @@ class SCmd_msg_monitor(StreamCommand):
                         res["data"] = codec.decode(resp.payload)
                     except Exception as exc:
                         self.client.server.logger.exception(
-                                "ERR %d: Client error on %s",
-                                self.client._client_nr,
-                                repr(exc),
-                            )
+                            "ERR %d: Client error on %s",
+                            self.client._client_nr,
+                            repr(exc),
+                        )
                         res["raw"] = resp.payload
                         res["error"] = repr(exc)
 
@@ -1251,12 +1251,12 @@ class ServerClient:
                         msg = {"error": str(exc)}
                         if isinstance(exc, ClientError):  # pylint doesn't seem to see this, so …:
                             msg["etype"] = exc.etype  # pylint: disable=no-member  ### YES IT HAS
-                        #else:
+                        # else:
                         self.logger.exception(
-                                "ERR %d: Client error on %s",
-                                self._client_nr,
-                                repr(msg),
-                            )
+                            "ERR %d: Client error on %s",
+                            self._client_nr,
+                            repr(msg),
+                        )
                         if seq is not None:
                             msg["seq"] = seq
                         await self.send(msg)

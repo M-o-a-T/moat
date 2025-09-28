@@ -11,6 +11,7 @@ _gc.collect()
 _fm = _gc.mem_free()
 _fa = _gc.mem_alloc()
 
+
 def go(state=None, cmd=True):
     """
     Start MoaT.
@@ -53,6 +54,7 @@ def go(state=None, cmd=True):
 
     # copy from moat.util.compat
     import sys as sys
+
     def log(s, *x, err=None):
         if x:
             s = s % x
@@ -61,14 +63,14 @@ def go(state=None, cmd=True):
             sys.print_exception(err, sys.stderr)
 
     states = [
-            ("flash","moat_fb.cfg"),
-            ("rom","moat_rom.cfg"),
-            ("std","moat.cfg"),
+        ("flash", "moat_fb.cfg"),
+        ("rom", "moat_rom.cfg"),
+        ("std", "moat.cfg"),
     ]
     if state is None:
         state = get_rtc("state")
     if state is None:
-        for st,fn in states:
+        for st, fn in states:
             try:
                 os.stat(fn)
             except OSError:
@@ -82,7 +84,7 @@ def go(state=None, cmd=True):
         new_state = "skip"
     else:
         try:
-            state,new_state = state.split(",",1)
+            state, new_state = state.split(",", 1)
         except ValueError:
             new_state = state
 
@@ -91,21 +93,21 @@ def go(state=None, cmd=True):
         log(state)
         return
 
-    fn = dict(states).get(state,"moat.cfg")
+    fn = dict(states).get(state, "moat.cfg")
 
     # no empty path
-    for p in ("","/",".","/lib",".frozen","/rom","/rom/lib"):
+    for p in ("", "/", ".", "/lib", ".frozen", "/rom", "/rom/lib"):
         try:
             sys.path.remove("")
         except ValueError:
             pass
 
     # build path
-    if state in ("norom","std"):
+    if state in ("norom", "std"):
         sys.path.append("/lib")
-    if state in ("rom","std"):
+    if state in ("rom", "std"):
         sys.path.append("/rom")
-    if state in ("flash","rom","norom","std"):
+    if state in ("flash", "rom", "norom", "std"):
         sys.path.append(".frozen")
     # keep the root in the path, but at the end
     sys.path.append("/")
@@ -118,34 +120,34 @@ def go(state=None, cmd=True):
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 
     if cmd:
-        at("main2",i)
+        at("main2", i)
         try:
             main(fn, i=i, fake_end=True)
         except ImportError:
-            print("PATH:",sys.path,file=sys.stderr)
+            print("PATH:", sys.path, file=sys.stderr)
             raise
         return
 
     try:
-        at("main1",i)
+        at("main1", i)
         main(fn, i=i)
 
     except ImportError:
-        print("PATH:",sys.path,file=sys.stderr)
+        print("PATH:", sys.path, file=sys.stderr)
         raise
 
     except KeyboardInterrupt:
-        at("main3",i)
+        at("main3", i)
         print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
-        at("main4",i)
+        at("main4", i)
         print("REBOOT to", new_state, file=sys.stderr)
         time.sleep_ms(100)
         machine.soft_reset()
 
     except BaseException as exc:
-        at("main5",i)
+        at("main5", i)
         del main
         sys.modules.clear()
 
@@ -161,7 +163,7 @@ def go(state=None, cmd=True):
         machine.soft_reset()
 
     else:
-        at("main6",i)
+        at("main6", i)
         log("MoaT Ended.")
         sys.exit(0)
 

@@ -21,7 +21,9 @@ class _MsgRW:
 
     _mode: str = None
 
-    def __init__(self, path:anyio.Path|FSPath|str|None=None, stream=None, codec:Codec|str=None):
+    def __init__(
+        self, path: anyio.Path | FSPath | str | None = None, stream=None, codec: Codec | str = None
+    ):
         if (path is None) == (stream is None):
             raise RuntimeError("You need to specify either path or stream")
 
@@ -29,9 +31,10 @@ class _MsgRW:
             raise ValueError("No default codec")
         if not isinstance(codec, Codec):
             from moat.util import get_codec
+
             codec = get_codec(codec)
 
-        if isinstance(path,anyio.Path):
+        if isinstance(path, anyio.Path):
             pass
         elif path is not None:
             path = anyio.Path(path)

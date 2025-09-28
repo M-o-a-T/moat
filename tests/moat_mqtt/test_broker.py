@@ -39,8 +39,9 @@ from . import anyio_run
 
 log = logging.getLogger(__name__)
 
+
 def _PUT():
-    PORT = FreePortFactory(SOCK_STREAM)() 
+    PORT = FreePortFactory(SOCK_STREAM)()
     URL = f"mqtt://127.0.0.1:{PORT}/"
     test_config = {
         "listeners": {
@@ -49,7 +50,7 @@ def _PUT():
         "sys_interval": 0,
         "auth": {"allow-anonymous": True},
     }
-    return PORT,URL,test_config
+    return PORT, URL, test_config
 
 
 class AsyncMock(MagicMock):
@@ -64,7 +65,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_start_stop(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -95,7 +96,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -116,7 +117,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect_will_flag(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            PORT,_,test_config = _PUT()
+            PORT, _, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -153,7 +154,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -176,7 +177,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe(self, MockPluginManager):
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -213,7 +214,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_twice(self, MockPluginManager):
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -256,7 +257,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_unsubscribe(self, MockPluginManager):
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -300,7 +301,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish(self, MockPluginManager):
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -332,7 +333,7 @@ class BrokerTest(unittest.TestCase):
     # @patch('moat.mqtt.broker.PluginManager', new_callable=AsyncMock)
     def test_client_publish_dup(self):
         async def test_coro():
-            PORT,_,test_config = _PUT()
+            PORT, _, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -373,7 +374,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -393,7 +394,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_big(self, MockPluginManager):
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -428,7 +429,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -454,7 +455,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -475,7 +476,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -509,7 +510,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_invalid(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -535,7 +536,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -563,7 +564,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -591,7 +592,7 @@ class BrokerTest(unittest.TestCase):
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
-            _,URL,test_config = _PUT()
+            _, URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",

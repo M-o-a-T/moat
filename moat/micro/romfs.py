@@ -111,7 +111,7 @@ class VfsRomWriter:
                     self.mkfile(name, src.read())
 
 
-async def make_romfs(src:anyio.Path, mpy_cross):
+async def make_romfs(src: anyio.Path, mpy_cross):
     vfs = VfsRomWriter()
 
     # Build the filesystem recursively.

@@ -46,8 +46,6 @@ def id2str(k, /, *, alphabet=al_unique):
     res = []
     la = len(alphabet)
     while k:
-        res.append(alphabet[k%la])
+        res.append(alphabet[k % la])
         k //= la
-    return ''.join(res)
-
-
+    return "".join(res)

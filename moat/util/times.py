@@ -69,16 +69,21 @@ units = (
 )  # seconds are handled explicitly, below
 
 
-def ts2iso(ts:float, delta=False, msec=1):
+def ts2iso(ts: float, delta=False, msec=1):
     """
     Convert a timestamp to a human-readable absolute-time string, optionally with delta.
     """
-    res = dt.datetime.fromtimestamp(ts,dt.UTC).astimezone().isoformat(sep=" ", timespec="milliseconds")
+    res = (
+        dt.datetime.fromtimestamp(ts, dt.UTC)
+        .astimezone()
+        .isoformat(sep=" ", timespec="milliseconds")
+    )
     if delta:
-        res += f" ({humandelta(ts-time.time(), ago=True, msec=msec)})"
+        res += f" ({humandelta(ts - time.time(), ago=True, msec=msec)})"
     return res
 
-def humandelta(delta: dt.timedelta, ago:bool=False, msec=1, segments=2) -> str:
+
+def humandelta(delta: dt.timedelta, ago: bool = False, msec=1, segments=2) -> str:
     """
     Convert a timedelta into a human-readable string.
 
@@ -101,12 +106,12 @@ def humandelta(delta: dt.timedelta, ago:bool=False, msec=1, segments=2) -> str:
             # right now this code only handles positive seconds
             # timedelta(0,-1) => timedelta(-1,24*60*60-1)
             if ago:
-                res2=" ago"
+                res2 = " ago"
             else:
                 res1 = "-"
             delta = -delta
         elif ago:
-            res1="in "
+            res1 = "in "
         delta = delta.days + 24 * 60 * 60 + delta.seconds + delta.microseconds / 1e6
     elif delta < 0:
         delta = -delta
@@ -121,20 +126,20 @@ def humandelta(delta: dt.timedelta, ago:bool=False, msec=1, segments=2) -> str:
         if delta > lim:
             res.append(f"{int(delta // lim)} {name}")
             delta %= lim
-            if lim>100:
-                msec=0
-            elif msec>1:
-                msec=1
+            if lim > 100:
+                msec = 0
+            elif msec > 1:
+                msec = 1
             done += 1
             if done == segments:
                 break
     if done < segments and delta >= 0.1**msec:
         if delta >= 1:
             res.append(f"{delta:.{msec}f} sec")
-        elif delta > .001:
-            res.append(f"{delta*1000:.{max(0,msec-3)}f} msec")
+        elif delta > 0.001:
+            res.append(f"{delta * 1000:.{max(0, msec - 3)}f} msec")
         else:
-            res.append(f"{delta*1000000:.{max(0,msec-6)}f} µsec")
+            res.append(f"{delta * 1000000:.{max(0, msec - 6)}f} µsec")
 
     if len(res) < 1:
         return "now"
@@ -208,7 +213,7 @@ def simple_time_delta(w):
     return s
 
 
-def collect_words(cur, w, back:bool=False):
+def collect_words(cur, w, back: bool = False):
     """\
         Build a data structure representing time offset from a specific
         start.
@@ -332,9 +337,11 @@ def collect_words(cur, w, back:bool=False):
             if 0 < val < 100:
                 val += p.now.year
             else:
-                if ((val < p.now.year-100 or val > p.now.year) if back
-                    else 
-                    (val < p.now.year or val >= p.now.year + 100)):
+                if (
+                    (val < p.now.year - 100 or val > p.now.year)
+                    if back
+                    else (val < p.now.year or val >= p.now.year + 100)
+                ):
                     raise ValueError(f"Year {val} would require a time machine.")
             p.yr = val
 

@@ -4,17 +4,17 @@ from moat.lib.priomap import PrioMap
 
 
 def test_initialization_min_heap():
-    h = PrioMap({'a': 5, 'b': 2, 'c': 8})
+    h = PrioMap({"a": 5, "b": 2, "c": 8})
     assert len(h) == 3
     # peek should return smallest key 'b'
     key, prio = h.peek()
-    assert key == 'b' and prio == 2
+    assert key == "b" and prio == 2
 
 
 def test_setitem_and_getitem():
     h = PrioMap()
-    h['x'] = 10
-    assert h['x'] == 10
+    h["x"] = 10
+    assert h["x"] == 10
     # # update via __setitem__ should update and reorder
     # h['x'] = 1
     # assert h['x'] == 1
@@ -22,11 +22,11 @@ def test_setitem_and_getitem():
 
 
 def test_pop_and_ordering():
-    h = PrioMap({'a': 3, 'b': 1, 'c': 2})
+    h = PrioMap({"a": 3, "b": 1, "c": 2})
     popped = []
     while not h.is_empty():
         popped.append(h.pop())
-    assert popped == [('b', 1), ('c', 2), ('a', 3)]
+    assert popped == [("b", 1), ("c", 2), ("a", 3)]
 
 
 def test_peek_empty():
@@ -42,55 +42,55 @@ def test_pop_empty():
 
 
 def test_delete_item():
-    h = PrioMap({'a': 1, 'b': 2})
-    del h['a']
-    assert 'a' not in h
+    h = PrioMap({"a": 1, "b": 2})
+    del h["a"]
+    assert "a" not in h
     # remaining is b
     assert len(h) == 1
-    assert h.peek() == ('b', 2)
+    assert h.peek() == ("b", 2)
 
 
 def test_pop_item():
-    h = PrioMap({'a': 1, 'b': 2})
-    assert h.pop('b') == 2
-    assert 'b' not in h
+    h = PrioMap({"a": 1, "b": 2})
+    assert h.pop("b") == 2
+    assert "b" not in h
     # remaining is b
     assert len(h) == 1
-    assert h.peek() == ('a', 1)
+    assert h.peek() == ("a", 1)
 
 
 def test_update():
-    h = PrioMap({'a': 5, 'b': 2})
-    h.update('a', 1)
-    assert h['a'] == 1
+    h = PrioMap({"a": 5, "b": 2})
+    h.update("a", 1)
+    assert h["a"] == 1
     # now a is smallest
-    assert h.peek() == ('a', 1)
+    assert h.peek() == ("a", 1)
     with pytest.raises(KeyError):
-        h.update('c', 10)
+        h.update("c", 10)
     with pytest.raises(TypeError):
-        h.update('a', 'bad')
+        h.update("a", "bad")
 
 
 def test_clear_and_is_empty():
-    h = PrioMap({'x': 1, 'y': 2})
+    h = PrioMap({"x": 1, "y": 2})
     h.clear()
     assert h.is_empty()
 
 
 def test_contains_and_len():
     h = PrioMap()
-    h['foo'] = 42
-    assert 'foo' in h
+    h["foo"] = 42
+    assert "foo" in h
     assert len(h) == 1
-    assert 'bar' not in h
+    assert "bar" not in h
 
 
 def test_keys_items_values_iteration_and_modification_error():
-    h = PrioMap({'a': 1, 'b': 2, 'c': 3})
+    h = PrioMap({"a": 1, "b": 2, "c": 3})
     keys = list(h.keys())
-    assert set(keys) == {'a', 'b', 'c'}
+    assert set(keys) == {"a", "b", "c"}
     items = list(h.items())
-    assert set(items) == {('a', 1), ('b', 2), ('c', 3)}
+    assert set(items) == {("a", 1), ("b", 2), ("c", 3)}
     values = list(h.values())
     assert set(values) == {1, 2, 3}
 
@@ -103,31 +103,31 @@ def test_keys_items_values_iteration_and_modification_error():
     it2 = iter(h)
     next(it2)
     with pytest.raises(RuntimeError):
-        h['d'] = 4
+        h["d"] = 4
         next(it2)
+
 
 @pytest.mark.anyio
 async def test_aiter():
     res = []
-    h = PrioMap({'a': 1, 'b': 2, 'c': 3})
+    h = PrioMap({"a": 1, "b": 2, "c": 3})
 
     async def reader():
-        async for k,_ in h:
+        async for k, _ in h:
             res.append(k)
             await anyio.sleep(0.05)
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(reader)
-        await anyio.sleep(.025)
-        assert h.peek()==("b",2)
-        h["y"]=2.5
-        h["x"]=1
+        await anyio.sleep(0.025)
+        assert h.peek() == ("b", 2)
+        h["y"] = 2.5
+        h["x"] = 1
         while h:
-            await anyio.sleep(.025)
+            await anyio.sleep(0.025)
         assert not h
-        h["z"]=0
-        await anyio.sleep(.11)
+        h["z"] = 0
+        await anyio.sleep(0.11)
         tg.cancel_scope.cancel()
 
     assert "".join(res) == "axbycz"
-

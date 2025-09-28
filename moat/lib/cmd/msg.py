@@ -17,6 +17,7 @@ from .errors import StreamError, Flow, NoStream, WantsStream
 from inspect import iscoroutine
 
 from typing import TYPE_CHECKING, overload, cast
+
 try:
     from typing import Iterable
 except ImportError:
@@ -29,7 +30,18 @@ except ImportError:
     MutableMapping = dict  # pyright:ignore
 
 if TYPE_CHECKING:
-    from typing import Self, Iterator, Any, Callable, AsyncContextManager, Sequence, KeysView,ValuesView,ItemsView,MutableSequence
+    from typing import (
+        Self,
+        Iterator,
+        Any,
+        Callable,
+        AsyncContextManager,
+        Sequence,
+        KeysView,
+        ValuesView,
+        ItemsView,
+        MutableSequence,
+    )
     from .base import OptDict
 
 
@@ -80,7 +92,7 @@ class MsgResult(Iterable):
         return self._a
 
     @property
-    def kw(self) -> dict[str,Any]:
+    def kw(self) -> dict[str, Any]:
         "Retrieve the keywords."
         if self._kw is None:
             return {}
@@ -170,7 +182,7 @@ class Msg(MsgLink, MsgResult):
     _flo_evt: Event | None = None
     warnings: list
 
-    _loaded:bool=False
+    _loaded: bool = False
 
     def __init__(self):
         """
@@ -181,7 +193,7 @@ class Msg(MsgLink, MsgResult):
         self.warnings = []  # TODO
 
     @property
-    def cmd(self) -> Path|None:
+    def cmd(self) -> Path | None:
         "Retrieve the command."
         return self._cmd
 
@@ -245,7 +257,7 @@ class Msg(MsgLink, MsgResult):
                 self._msg_in.set()
             await super().kill()
 
-    async def ml_send(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
+    async def ml_send(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
         """
         Sender of data to the other side.
         """
@@ -257,7 +269,7 @@ class Msg(MsgLink, MsgResult):
             self._stream_out = S_ON
         await super().ml_send(a, kw, flags)
 
-    async def ml_recv(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
         """
         Receiver for data from the other side.
         """
@@ -283,9 +295,9 @@ class Msg(MsgLink, MsgResult):
 
         elif flags & B_ERROR:
             if kw:
-                if not hasattr(a,"append"):
-                    a=list(a)
-                a=cast(list,a)
+                if not hasattr(a, "append"):
+                    a = list(a)
+                a = cast(list, a)
                 a.append(kw)
             exc = StreamError(a)
             if isinstance(exc, Flow):
@@ -334,7 +346,7 @@ class Msg(MsgLink, MsgResult):
     async def error(self, *a, **kw) -> None:
         await self.ml_send(a, kw, B_ERROR)
 
-    def _set_msg(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
+    def _set_msg(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
         """
         A message has arrived on this stream. Store and set an event.
         """
@@ -428,7 +440,7 @@ class Msg(MsgLink, MsgResult):
             return True
         if (rem := self.remote) is None:
             return False
-        if not isinstance(rem,Msg):
+        if not isinstance(rem, Msg):
             return False
         try:
             if rem._stream_in != S_NEW or rem._stream_out != S_NEW:
@@ -515,11 +527,11 @@ class Msg(MsgLink, MsgResult):
 
         await self.ml_send(a, kw, 0)
 
-    async def wait_replied(self, preload:bool=False) -> None:
+    async def wait_replied(self, preload: bool = False) -> None:
         """
         Wait for a (non-streamed) reply.
         """
-        loaded,self._loaded = self._loaded,preload
+        loaded, self._loaded = self._loaded, preload
         if loaded:
             return
 
@@ -597,7 +609,7 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf, a: Sequence, kw: OptDict|None, flag: int, initial: bool = False):
+    def __init__(self, slf, a: Sequence, kw: OptDict | None, flag: int, initial: bool = False):
         self.slf = slf
         self.a = a
         self.kw = kw
@@ -666,4 +678,3 @@ class _EnsureRemote:
         with shield():
             await self.m.kill()
             await self.slf.kill()
-

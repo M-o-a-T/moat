@@ -46,7 +46,9 @@ async def list_(obj):
 async def dump(obj, name, path, as_dict):
     """Dump a complete (or partial) ACL."""
     path = P(path)
-    await data_get(obj.client, Path("acl", name, path), internal=True, as_dict=as_dict, out=obj.stdout)
+    await data_get(
+        obj.client, Path("acl", name, path), internal=True, as_dict=as_dict, out=obj.stdout
+    )
 
 
 @cli.command()

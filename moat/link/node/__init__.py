@@ -34,7 +34,7 @@ class Node:
     _data: Any = field(init=False, default=NotGiven)
     _meta: MsgMeta | None = field(init=False, default=None)
 
-    _sub: dict[Key,Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
+    _sub: dict[Key, Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
 
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
@@ -51,10 +51,10 @@ class Node:
                 return False
             if not force and s._data == data:  # noqa:SLF001
                 return None
-        s.set_(item,data,meta)
+        s.set_(item, data, meta)
         return True
 
-    def set_(self, path:Path, data:Any, meta:MsgMeta):
+    def set_(self, path: Path, data: Any, meta: MsgMeta):
         "Low-level node data setter. The (sub)path is not stored by default."
         self._data = data
         self._meta = meta
@@ -153,7 +153,7 @@ class Node:
                 n._meta = m
 
     @property
-    def meta(self) -> MsgMeta|None:
+    def meta(self) -> MsgMeta | None:
         "return current metadata"
         return self._meta
 
@@ -264,7 +264,7 @@ class Node:
 
     async def walk(
         self,
-        proc: Callable[[Path, Node], Awaitable[bool|None]],
+        proc: Callable[[Path, Node], Awaitable[bool | None]],
         max_depth: int = 999999,
         min_depth: int = 0,
         timestamp: int | float = 0,
@@ -287,7 +287,9 @@ class Node:
                 for k, v in s._sub.items():
                     await _walk(v, p / k)
 
-            if min_depth <= len(p) and (force or (s.meta is not None and s.meta.timestamp >= timestamp)):
+            if min_depth <= len(p) and (
+                force or (s.meta is not None and s.meta.timestamp >= timestamp)
+            ):
                 if await proc(p, s) is False:
                     return
 
@@ -297,8 +299,7 @@ class Node:
 
         await _walk(self, Path())
 
-
-    def search(self, path:Path) -> Node:
+    def search(self, path: Path) -> Node:
         """
         Find the destination node of a path, including wildcards.
         """
@@ -342,7 +343,6 @@ class NodeFinder:
         self.steps = steps
 
     @property
-    def result(self) -> tuple[Path,Node]:
+    def result(self) -> tuple[Path, Node]:
         s = self.steps[0]
         return s[0]
-

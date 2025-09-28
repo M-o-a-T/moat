@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from types import EllipsisType
 
     Key = str | int | bool
-    OptDict = Mapping[str,Any]|None
+    OptDict = Mapping[str, Any] | None
 
 
 class MsgLink:
@@ -80,7 +80,7 @@ class MsgLink:
         Send an exception.
         """
         if self.end_here:
-            if isinstance(exc,Exception):
+            if isinstance(exc, Exception):
                 log("Err after end: %r %r", self, exc, err=exc)
             return
         try:
@@ -185,7 +185,12 @@ class Caller:
 
     _qlen = 0
 
-    def __init__(self, sender: MsgSender, data: tuple[str|Path, list | tuple, dict], _list:bool|EllipsisType|None=NotGiven):
+    def __init__(
+        self,
+        sender: MsgSender,
+        data: tuple[str | Path, list | tuple, dict],
+        _list: bool | EllipsisType | None = NotGiven,
+    ):
         """
         @sender: the MsgSender on which we call ``.handle`` to get the result.
         @data: (cmd,args,kw) tuple.
@@ -232,7 +237,7 @@ class Caller:
                 raise ValueError("has args", msg)
             return msg.kw
 
-        if (kw := msg.kw):
+        if kw := msg.kw:
             if msg.args:
                 # return the message if both kw and args are set
                 return msg
@@ -245,7 +250,6 @@ class Caller:
             return args[0]
         # otherwise return all of them (if any)
         return args
-
 
     async def __aenter__(self):
         acm = ACM(self)
@@ -322,7 +326,7 @@ class MsgSender(BaseMsgHandler):
     This class is the client-side API of the MoaT Command multiplexer.
     """
 
-    Caller_:type[Caller] = Caller
+    Caller_: type[Caller] = Caller
 
     def __init__(self, root: MsgHandler):
         """
@@ -344,7 +348,7 @@ class MsgSender(BaseMsgHandler):
     def set_root(self, root):
         if type(self) != MsgSender:
             raise RuntimeError("not in a subclass")
-        assert not isinstance(root,MsgSender)
+        assert not isinstance(root, MsgSender)
         self._root = root
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
@@ -385,18 +389,19 @@ class MsgSender(BaseMsgHandler):
         "returns a CfgStore object at this subpath"
 
         from moat.micro.cmd.tree.dir import CfgStore
+
         return CfgStore(self, p)
 
-    def add_sub(self, elem:str):
+    def add_sub(self, elem: str):
         """
         Ensures that `self.ELEM` is a SubMsgSender.
         """
-        if hasattr(self,elem):
-            sb = getattr(self,elem)
-            assert isinstance(sb,SubMsgSender)
+        if hasattr(self, elem):
+            sb = getattr(self, elem)
+            assert isinstance(sb, SubMsgSender)
         else:
             sb = self.sub_at(Path(elem))
-            setattr(self,elem,sb)
+            setattr(self, elem, sb)
         return sb
 
 
@@ -414,7 +419,7 @@ class SubMsgSender(MsgSender):
         self._rpath = list(path)
         self._rpath.reverse()
         if caller is not None:
-            self.Caller_=caller
+            self.Caller_ = caller
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         rcmd.extend(self._rpath)
@@ -444,7 +449,9 @@ class SubMsgSender(MsgSender):
     def stream_out(self, *a, **kw):
         return self.cmd((), *a, **kw).stream_out()
 
-    def __call__(self, *a: list[Any], _list: bool|EllipsisType|None = None, **kw: dict[Key, Any]) -> Caller:
+    def __call__(
+        self, *a: list[Any], _list: bool | EllipsisType | None = None, **kw: dict[Key, Any]
+    ) -> Caller:
         """
         Process a direct call.
 
@@ -454,7 +461,7 @@ class SubMsgSender(MsgSender):
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 
-    def sub_at(self, prefix: Path, may_stream:bool=False, caller=None) -> SubMsgSender:
+    def sub_at(self, prefix: Path, may_stream: bool = False, caller=None) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
@@ -464,6 +471,7 @@ class SubMsgSender(MsgSender):
         "returns a CfgStore object at this subpath"
 
         from moat.micro.cmd.tree.dir import CfgStore
+
         return CfgStore(self, p)
 
     def __getattr__(self, x):
@@ -480,7 +488,7 @@ class MsgHandler(BaseMsgHandler):
     Implement ``cmd(self, *a, *kw)`` and/or ``cmd_NAME(self, *a, *kw)``
     for simple method calls.
 
-    Implement ``stream(self, msg)`` and/or ``stream_NAME(self, 
+    Implement ``stream(self, msg)`` and/or ``stream_NAME(self,
     msg)`` for streamed calls.
 
     Use ``doc`` or ``doc_NAME`` for (too-)basic call introspection.
@@ -508,7 +516,7 @@ class MsgHandler(BaseMsgHandler):
         # Process requests for documentation.
         if len(rcmd) <= 2 and rcmd[0] == "doc_":
             if msg.args or msg.kw:
-                raise TypeError("doc",msg.args,msg.kw)
+                raise TypeError("doc", msg.args, msg.kw)
             if (
                 doc := getattr(
                     self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None
@@ -533,7 +541,7 @@ class MsgHandler(BaseMsgHandler):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
-        raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self,"sub") else ())
+        raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
 
     def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """

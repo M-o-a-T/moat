@@ -103,8 +103,9 @@ def _proxy_repr(dumper, data):
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
+
 def _dproxy_repr(dumper, data):
-    return dumper.represent_scalar("!DP", repr([data.name,data.a,data.k]))
+    return dumper.represent_scalar("!DP", repr([data.name, data.a, data.k]))
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
@@ -112,6 +113,7 @@ def _dproxy_repr(dumper, data):
 def read_env(loader, node):
     value = loader.construct_scalar(node)
     return os.environ[value]
+
 
 def _el_repr(dumper, data):
     return dumper.represent_scalar("!R", "...")
@@ -131,6 +133,7 @@ if DProxy is not None:
 
 def _name2obj(constructor, node):
     from moat.lib.codec.proxy import name2obj
+
     return name2obj(node.value)
 
 

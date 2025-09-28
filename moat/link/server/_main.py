@@ -9,7 +9,7 @@ from moat.util import as_service
 
 
 @click.command(short_help="Run the MoaT-Link data server.")  # pylint: disable=undefined-variable
-@click.option("-n","--name", type=str, help="Name of this server (default: hostname)")
+@click.option("-n", "--name", type=str, help="Name of this server (default: hostname)")
 @click.option(
     "-l",
     "--load",
@@ -59,6 +59,7 @@ async def cli(obj, load, save, init, name):
 
     if name is None:
         import platform
+
         name = platform.node()
 
     async with as_service(obj) as evt:

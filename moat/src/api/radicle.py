@@ -1,10 +1,11 @@
 """
 Rudimentary Github API.
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from attr import define,field
+from attr import define, field
 from httpx import AsyncClient
 import anyio
 import os
@@ -21,6 +22,8 @@ from . import NoSuchRepo
 @define
 class CommitInfo(BaseCommitInfo):
     pass
+
+
 #   data = field(init=False)
 
 #   def __init__(self, repo, json):
@@ -30,8 +33,8 @@ class CommitInfo(BaseCommitInfo):
 
 @define
 class RepoInfo(BaseRepoInfo):
-    rid:str|None = None
-    data:dict|None = None
+    rid: str | None = None
+    data: dict | None = None
 
     @property
     def git_url(self) -> str:
@@ -59,29 +62,40 @@ class RepoInfo(BaseRepoInfo):
 
     async def clone_from_remote(self):
         "Copy a remote repo."
-        await self.repo.exec("rad","clone",url,str(self.repo.cwd), cwd="/tmp")
+        await self.repo.exec("rad", "clone", url, str(self.repo.cwd), cwd="/tmp")
         await self.load_()
 
     async def load_(self):
         try:
-            self.rid = (await self.repo.exec("rad",".", capture=True)).strip()
+            self.rid = (await self.repo.exec("rad", ".", capture=True)).strip()
         except CalledProcessError:
             raise NoSuchRepo(self)
-        async with anyio.NamedTemporaryFile(mode="w",delete=False) as f, anyio.NamedTemporaryFile(mode="r") as g:
+        async with (
+            anyio.NamedTemporaryFile(mode="w", delete=False) as f,
+            anyio.NamedTemporaryFile(mode="r") as g,
+        ):
             try:
-                await f.write(f"""\
+                await f.write(
+                    f"""\
 #!/bin/sh
-exec cat <$1 >{g.name !r}
-""")
+exec cat <$1 >{g.name!r}
+"""
+                )
                 await f.aclose()
                 await anyio.Path(f.name).chmod(0o555)
-                await self.repo.exec("rad","id","update","--edit", env={"EDITOR":f.name,"HOME":os.environ["HOME"]})
+                await self.repo.exec(
+                    "rad",
+                    "id",
+                    "update",
+                    "--edit",
+                    env={"EDITOR": f.name, "HOME": os.environ["HOME"]},
+                )
                 import json
+
                 self.data = to_attrdict(json.loads(await g.read()))
             finally:
                 with anyio.CancelScope(shield=True):
                     await anyio.Path(f.name).unlink()
-
 
     async def get_default_branch(self):
         "Get the default branch."
@@ -93,28 +107,42 @@ exec cat <$1 >{g.name !r}
         """
         async with anyio.NamedTemporaryFile(delete=False) as f:
             try:
-                await f.write_text(f"""\
+                await f.write_text(
+                    f"""\
 #!/bin/sh
 T=$(mktemp)
-jq <$1 >$T f'setpath(["payload","xyz.radicle.project","defaultBranch"];{name !r})'
+jq <$1 >$T f'setpath(["payload","xyz.radicle.project","defaultBranch"];{name!r})'
 mv $T $1
-""")
+"""
+                )
                 await f.aclose()
                 await anyio.Path(f.name).chmod(0o555)
-                await self.repo.exec("rad","id","update","--edit", env={"EDITOR":strf.name,"HOME":os.environ["HOME"]})
+                await self.repo.exec(
+                    "rad",
+                    "id",
+                    "update",
+                    "--edit",
+                    env={"EDITOR": strf.name, "HOME": os.environ["HOME"]},
+                )
             finally:
                 with anyio.CancelScope(shield=True):
                     await anyio.Path(f.name).unlink()
         self.data.payload["xyz.radicle.project"].defaultBranch = name
 
-
     async def create(self):
-        await self.repo.exec("rad","init",
-            "--name", self.repo.name,
-            "--description", self.repo.description,
-            "--default-branch", self.repo.cfg.branch,
+        await self.repo.exec(
+            "rad",
+            "init",
+            "--name",
+            self.repo.name,
+            "--description",
+            self.repo.description,
+            "--default-branch",
+            self.repo.cfg.branch,
             "--private" if self.api.cfg.private else "--public",
-            *(() if self.api.cfg.seed else ("--no-seed",)))
+            *(() if self.api.cfg.seed else ("--no-seed",)),
+        )
+
 
 #   async def get_branch(self, name) -> CommitInfo:
 #       """
@@ -124,7 +152,7 @@ mv $T $1
 #       res = await self.api.http.get(url)
 #       res.raise_for_status()
 #       return CommitInfo(self, res.json())
-#   
+#
 #   async def get_branches(self) -> AsyncIterator[str]:
 #       """
 #       List known branches.
@@ -134,7 +162,7 @@ mv $T $1
 #       res.raise_for_status()
 #       for r in res.json():
 #           yield res
-#       
+#
 
 #   async def get_tags(self) -> AsyncIterator[str]:
 #       """
@@ -147,6 +175,7 @@ mv $T $1
 #       for r in res.json():
 #           yield res
 
+
 class API(BaseAPI):
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
@@ -155,7 +184,7 @@ class API(BaseAPI):
         """
         List accessible repositories.
         """
-        pg=None
+        pg = None
         url = f"/users/{self.cfg.user}/repos"
         while url is not None:
             res = await self.http.get(url)
@@ -168,7 +197,7 @@ class API(BaseAPI):
                 return
             url = None
             for xh in lh.split(","):
-                u,r = xh.split(";")
+                u, r = xh.split(";")
                 if 'rel="next"' in r:
                     url = u.strip().lstrip("<").rstrip(">")
                     break
@@ -178,4 +207,3 @@ class API(BaseAPI):
         res = await self.http.get(url)
         res.raise_for_status()
         return self.cls_RepoInfo(self, res.json())
-

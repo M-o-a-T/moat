@@ -18,8 +18,7 @@ if TYPE_CHECKING:
         """Protocol for annotating comparable types."""
 
         @abstractmethod
-        def __lt__(self: CT, other: CT, /) -> bool:
-            ...
+        def __lt__(self: CT, other: CT, /) -> bool: ...
 
     CT = TypeVar("CT", bound=Comparable)
     RT = TypeVar("RT")
@@ -47,7 +46,7 @@ class PrioMap(MutableMapping):
         """
         self.heap: list[HeapItem] = []
         self.position: dict[Key, int] = {}
-        self.evt:anyio.Event = anyio.Event()
+        self.evt: anyio.Event = anyio.Event()
 
         # Bulk initialize if provided
         if initial:
@@ -87,14 +86,13 @@ class PrioMap(MutableMapping):
         return self._create_iterator(False)
 
     @overload
-    def pop(self) -> tuple[Key, Priority]:
-        ...
+    def pop(self) -> tuple[Key, Priority]: ...
+
     @overload
-    def pop(self, key:Key) -> Priority:
-        ...
+    def pop(self, key: Key) -> Priority: ...
+
     @overload
-    def pop(self, key:Key, default:RT) -> Priority|RT:
-        ...
+    def pop(self, key: Key, default: RT) -> Priority | RT: ...
 
     def pop(self, *a):
         """
@@ -289,7 +287,7 @@ class PrioMap(MutableMapping):
         """
         return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
 
-    def _create_iterator(self, keys:bool|None=None):
+    def _create_iterator(self, keys: bool | None = None):
         """
         Internal: return iterator over keys, values, or items, detecting concurrent mods.
 
@@ -321,7 +319,7 @@ class PrioMap(MutableMapping):
                         return key
                     if self.keys is False:
                         return prio
-                    return (key,prio)
+                    return (key, prio)
                 raise StopIteration
 
         return SafeIterator(self, keys)
@@ -361,4 +359,3 @@ class PrioMap(MutableMapping):
         while not self.heap:
             await self.evt.wait()
         return self.heap[0][0], self.heap[0][1]
-

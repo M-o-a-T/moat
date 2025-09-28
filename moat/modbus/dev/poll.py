@@ -16,13 +16,14 @@ from .device import ServerDevice, ClientDevice, fixup
 from moat.modbus.server import create_server
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from moat.link.client import Link
 
 logger = logging.getLogger(__name__)
 
 
-async def dev_poll(cfg:dict, link:Link, *, task_status=anyio.TASK_STATUS_IGNORED):
+async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNORED):
     """
     Run a device task on this set of devices, as configured by the config.
 
@@ -57,6 +58,7 @@ async def dev_poll(cfg:dict, link:Link, *, task_status=anyio.TASK_STATUS_IGNORED
                 async with dev:
                     task_status.started(dev)
                     await anyio.sleep_forever()
+
             return await tg.start(task, dev)
 
         if link is None:

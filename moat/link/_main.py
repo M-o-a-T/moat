@@ -108,6 +108,7 @@ async def test(obj):
     lock = anyio.Lock()
     cfg = obj.cfg.link
     set_root(cfg)
+
     async def check_root():
         try:
             with anyio.fail_after(1) as sc:
@@ -134,9 +135,6 @@ async def test(obj):
         except TimeoutError:
             print(f"### No server link on {cfg.root}!")
 
-
-    async with get_backend(cfg) as back,back.connect(), anyio.create_task_group() as tg:
+    async with get_backend(cfg) as back, back.connect(), anyio.create_task_group() as tg:
         tg.start_soon(check_root)
         tg.start_soon(check_server)
-        
-

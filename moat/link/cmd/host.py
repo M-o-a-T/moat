@@ -19,7 +19,9 @@ from moat.link.node import Node
 from moat.link.host import cmd_host, HostMon
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 @click.group(short_help="Manage host services.")  # pylint: disable=undefined-variable
 @click.pass_context
@@ -35,10 +37,9 @@ async def cli(ctx):
         obj.conn = await ctx.with_async_resource(Link(cfg))
 
 
-
 @cli.command()
-@click.option("-m","--main", is_flag=True, help="Main server flag (override)")                 
-@click.option("-d","--debug", is_flag=True, help="Debug?")                                     
+@click.option("-m", "--main", is_flag=True, help="Main server flag (override)")
+@click.option("-d", "--debug", is_flag=True, help="Debug?")
 @click.pass_obj
 async def run(obj, main, debug):
     """
@@ -57,7 +58,7 @@ async def run(obj, main, debug):
 
 
 @cli.command()
-@click.option("-t","--timeout", type=float, help="Stop after this many seconds.")
+@click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
 @click.pass_obj
 async def list(obj, timeout):
     """
@@ -68,6 +69,6 @@ async def list(obj, timeout):
 
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with Broadcaster(100) as br, anyio.create_task_group() as tg:
-            tg.start_soon(HostMon(link=obj.conn, cfg=obj.cfg.link).run,br)
+            tg.start_soon(HostMon(link=obj.conn, cfg=obj.cfg.link).run, br)
             async for h in br:
-                print("    UPD  ",h.id,h.state.name,srepr(h.data))
+                print("    UPD  ", h.id, h.state.name, srepr(h.data))

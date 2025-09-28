@@ -277,7 +277,7 @@ class CodecEntry(Entry):
         if self._enc is not None:
             try:
                 value = self._enc(value, entry=entry, data=self._data, **kv)
-            except (TypeError,ValueError):
+            except (TypeError, ValueError):
                 pass
         return value
 
@@ -285,7 +285,7 @@ class CodecEntry(Entry):
         if self._dec is not None:
             try:
                 value = self._dec(value, entry=entry, data=self._data, **kv)
-            except (TypeError,ValueError):
+            except (TypeError, ValueError):
                 pass
         return value
 
@@ -305,8 +305,8 @@ class CodecEntry(Entry):
                     ) from exc
                 else:
                     pass  # float, list/tuple, and similar nonsense
-#                   if r != w:
-#                       raise ValueError(f"Decoding at {self.path}: {v!r} got {r!r}, not {w!r}")
+        #                   if r != w:
+        #                       raise ValueError(f"Decoding at {self.path}: {v!r} got {r!r}, not {w!r}")
 
         if value is not None and value.encode is not None:
             if not value["out"]:

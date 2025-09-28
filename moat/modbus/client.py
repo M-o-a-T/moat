@@ -81,8 +81,8 @@ class ModbusClient(CtxObj):
         """Run a TCP client in an AsyncScope."""
         if not port:
             port = 502
-        #return await scope.service(f"MC_{num2id(self)}:{addr}:{port}", self._host, addr, port)
-        return await self._tg.start(self._host,addr,port)
+        # return await scope.service(f"MC_{num2id(self)}:{addr}:{port}", self._host, addr, port)
+        return await self._tg.start(self._host, addr, port)
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""
@@ -492,7 +492,6 @@ class SerialHost(_HostCommon, CtxObj):
                 async with ungroup, Serial(port=self.port, **self.ser) as self.stream:
                     self._connected.set()
                     while True:
-
                         if data:
                             with anyio.fail_after(self.timeout):
                                 data += await self.stream.receive(4096)
@@ -554,7 +553,6 @@ class SerialHost(_HostCommon, CtxObj):
                 for req in t.values():
                     req._response_value.set_error(exc)
                 raise
-
 
     async def aclose(self):
         """Stop talking."""
@@ -622,7 +620,6 @@ class Unit(CtxObj):
             self._tg = None
             self._running = False
             self.host.units.pop(self.unit, None)
-
 
     def slot(self, slot, **kw):
         """

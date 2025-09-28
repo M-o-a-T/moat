@@ -17,16 +17,16 @@ from moat.lib.cmd import StreamError
 async def test_get_flat_simple(cfg):
     "Check reading the current state"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh")
         await c.i_sync()
 
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="HiLo", state=True) as res:
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="HiLo", state=True) as res:
                 res = await res.get()
         assert res == []
 
@@ -35,17 +35,17 @@ async def test_get_flat_simple(cfg):
 async def test_get_flat_dyn(cfg):
     "Check reading dynamic updates, no state"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t=anyio.current_time()
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=False) as res:
+        t = anyio.current_time()
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=False) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
@@ -55,20 +55,20 @@ async def test_get_flat_dyn(cfg):
 
 @pytest.mark.parametrize("state", [None, NotGiven])
 @pytest.mark.anyio()
-async def test_get_flat_full(cfg,state):
+async def test_get_flat_full(cfg, state):
     "Check reading state plus dynamic updates"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t=anyio.current_time()
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=state) as res:
+        t = anyio.current_time()
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=state) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
@@ -82,16 +82,16 @@ async def test_get_flat_full(cfg,state):
 async def test_get_tree_simple(cfg):
     "Check reading the current state of a tree"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh")
         await c.i_sync()
 
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="HiLo", state=True, subtree=True) as res:
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="HiLo", state=True, subtree=True) as res:
                 res = await res.get()
         assert res == []
 
@@ -100,16 +100,16 @@ async def test_get_tree_simple(cfg):
 async def test_get_tree_dyn(cfg):
     "Check reading a tree with dynamic updates, no state"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=False, subtree=True) as res:
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=False, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.i_sync()
@@ -124,16 +124,16 @@ async def test_get_tree_dyn(cfg):
 async def test_get_tree_full(cfg):
     "Check reading a tree with dynamic updates plus state"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.i_sync()
@@ -152,22 +152,22 @@ async def test_get_tree_full(cfg):
 async def test_get_tree_dyn_old(cfg):
     "Check that stale data gets ignored"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         old = MsgMeta(origin="old")
-        await anyio.sleep(.05)
+        await anyio.sleep(0.05)
 
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t=time.time()
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
+        t = time.time()
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
-                await c.d_set(P("test.here.too"), "dead",meta=old)
+                await c.d_set(P("test.here.too"), "dead", meta=old)
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.i_sync()
                 await c.d_set(P("test.here"), "End")
@@ -185,16 +185,16 @@ async def test_get_tree_dyn_old(cfg):
 async def test_get_tree_drop(cfg):
     "Check reading a tree where state gets removed"
     async with (
-            Scaffold(cfg, use_servers=True) as sf,
-            sf.server_(init={"Hello": "there!", "test": 123}),
-            sf.client_() as c,
-        ):
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(.2):
-            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
+        with anyio.fail_after(0.2):
+            async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), NotGiven)
                 await c.i_sync()
@@ -204,5 +204,3 @@ async def test_get_tree_drop(cfg):
         res = res[-1]
         assert res[0] == Path("too")
         assert res[1] is NotGiven
-
-

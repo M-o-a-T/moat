@@ -33,7 +33,7 @@ __all__ = ["Codec", "ExtraData", "Tag"]
 class Tag:
     "a random CBOR tag"
 
-    def __init__(self, tag:int, value:Any=None):
+    def __init__(self, tag: int, value: Any = None):
         self.tag = tag
         self.value = value
 

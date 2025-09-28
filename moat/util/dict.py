@@ -43,7 +43,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     for kv in d:
         if kv is None:
             continue
-        if not isinstance(kv,dict):
+        if not isinstance(kv, dict):
             breakpoint()
         for k, v in kv.items():
             if k not in keys:
@@ -170,13 +170,13 @@ class attrdict(dict):
                 v.append(value)
                 return val
             if px >= len(v):
-                if px>len(v)+10:
+                if px > len(v) + 10:
                     raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
-                v.extend([NotGiven]*(1 + px - len(v)))
+                v.extend([NotGiven] * (1 + px - len(v)))
             v[px] = value
         elif not isinstance(v, Mapping):
-            raise ValueError((v,px))
-        elif px in v and isinstance(v[px], (Mapping,MutableSequence)):
+            raise ValueError((v, px))
+        elif px in v and isinstance(v[px], (Mapping, MutableSequence)):
             v[px] = combine_dict(value, v[px], cls=type(self))
         else:
             v[px] = value

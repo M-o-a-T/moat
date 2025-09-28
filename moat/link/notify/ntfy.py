@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 __all__ = ["ntfy_bridge"]
 
 prio_map = {
-    "debug":1,
-    "info":2,
-    "warning":3,
-    "error":4,
-    "fatal":5,
+    "debug": 1,
+    "info": 2,
+    "warning": 3,
+    "error": 4,
+    "fatal": 5,
 }
 
 
@@ -35,14 +35,22 @@ class Notifier(BaseNotifier):
         ):
             yield self
 
-    async def send(self, topic:str|Path, title:str, msg:str, prio:str|None=None, tags:Sequence[str]=[], **kw):
+    async def send(
+        self,
+        topic: str | Path,
+        title: str,
+        msg: str,
+        prio: str | None = None,
+        tags: Sequence[str] = [],
+        **kw,
+    ):
         "Forward a message to NTFY"
 
         if "topic" in self.cfg:
             top = self.cfg.topic
         else:
-            if isinstance(topic,str):
-                topic=P(topic)
+            if isinstance(topic, str):
+                topic = P(topic)
             try:
                 top = topic[0]
             except IndexError:
@@ -50,7 +58,7 @@ class Notifier(BaseNotifier):
             else:
                 topic = Path.build(topic[1:])
 
-        url = self.cfg.url+"/"+top
+        url = self.cfg.url + "/" + top
         tags = list(tags)
         tags.append(str(topic))
 

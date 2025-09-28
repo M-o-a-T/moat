@@ -8,8 +8,9 @@ from . import libgpiod as gpio
 
 
 class _sock:
-    def __init__(self,fd):
+    def __init__(self, fd):
         self.fd = fd
+
     def fileno(self):
         return self.fd
 

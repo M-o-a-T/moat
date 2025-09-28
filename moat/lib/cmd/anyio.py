@@ -23,8 +23,13 @@ class AioStream(HandlerStream):
     __codec: Codec
 
     def __init__(
-        self, cmd: MsgSender, stream, debug: str|None=None, codec: str | Codec | None = None
-    , **kw):
+        self,
+        cmd: MsgSender,
+        stream,
+        debug: str | None = None,
+        codec: str | Codec | None = None,
+        **kw,
+    ):
         self.__s = stream
         self.__debug = debug
 
@@ -97,7 +102,11 @@ async def run(
 
     y = False
     try:
-        async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs:
+        async with (
+            ungroup,
+            stream,
+            AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs,
+        ):
             y = True
             yield hs
     except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):

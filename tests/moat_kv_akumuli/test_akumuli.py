@@ -33,7 +33,7 @@ async def test_basic(free_tcp_port_factory):  # no autojump
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
         st.client(0) as client,
-        AkumuliTester(free_tcp_port_factory(),free_tcp_port_factory()).run() as t,
+        AkumuliTester(free_tcp_port_factory(), free_tcp_port_factory()).run() as t,
     ):
         await st.run(f"akumuli test add -h 127.0.0.1 -p {t.TCP_PORT}")
         await client.set(P("test.one.two"), value=41)

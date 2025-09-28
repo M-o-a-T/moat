@@ -60,7 +60,8 @@ def set_root(cfg):
 
     Used for testing without a "proper" context.
     """
-    from moat.util.path import Root, S_Root,P_Root,Q_Root
+    from moat.util.path import Root, S_Root, P_Root, Q_Root
+
     Root.set(cfg.root)
 
 
@@ -129,8 +130,8 @@ class Path(collections.abc.Sequence):
     def __init__(self, *a, mark="", scan=False):
         if mark:
             warnings.warn("Marking a path is deprecated")
-        if any(isinstance(x,list) for x in a):
-            a=tuple(tuple(x) if isinstance(x,list) else x for x in a)
+        if any(isinstance(x, list) for x in a):
+            a = tuple(tuple(x) if isinstance(x, list) else x for x in a)
         if a and scan:
             i = 0
             while i < len(a):
@@ -155,7 +156,7 @@ class Path(collections.abc.Sequence):
             warnings.warn("Marking a path is deprecated")
         if isinstance(data, Path):
             return data
-        if not isinstance(data, tuple) or any(isinstance(x,list) for x in data):
+        if not isinstance(data, tuple) or any(isinstance(x, list) for x in data):
             return cls(*data)
         p = object.__new__(cls)
         p._data = tuple(data)  # noqa:SLF001
@@ -178,16 +179,16 @@ class Path(collections.abc.Sequence):
         "accessor for the path's mark"
         return self._mark
 
-    def startswith(self,path:Path|tuple|list):
+    def startswith(self, path: Path | tuple | list):
         """
         Prefix test
         """
-        if isinstance(path,Path):
-            path=path._data
-        if not isinstance(path,tuple):
-            path=tuple(path)
+        if isinstance(path, Path):
+            path = path._data
+        if not isinstance(path, tuple):
+            path = tuple(path)
 
-        return self._data[:len(path)] == path
+        return self._data[: len(path)] == path
 
     def with_mark(self, mark=""):
         """Returns the same path with a different mark"""
@@ -197,7 +198,7 @@ class Path(collections.abc.Sequence):
             raise ValueError("Use an empty mark, not 'None'")
         return type(self).build(self._data, mark=mark)
 
-    def __str__(self, slash:bool|Literal[2]=False):
+    def __str__(self, slash: bool | Literal[2] = False):
         """
         Stringify the path to a dotstring.
 
@@ -270,7 +271,7 @@ class Path(collections.abc.Sequence):
             elif isinstance(x, (Path, tuple)):
                 if len(x):
                     x = ",".join(repr(y) for y in x)  # noqa: PLW2901
-                    res.append(":" + _escol(x) + ("," if len(x)==1 else ""))
+                    res.append(":" + _escol(x) + ("," if len(x) == 1 else ""))
                 else:
                     x = "()"  # noqa: PLW2901
             else:
@@ -371,7 +372,7 @@ class Path(collections.abc.Sequence):
             if self.mark != mark:
                 return self.build(self._data, mark=mark)
             return self
-        if isinstance(other[0],Path):
+        if isinstance(other[0], Path):
             return type(self)(*self._data, *other[0], *other[1:], mark=mark)
         return type(self)(*self._data, *other, mark=mark)
 
@@ -582,7 +583,7 @@ class Path(collections.abc.Sequence):
                 elif p == ":":
                     pass
 
-                elif p[1] in (":","h","p"):
+                elif p[1] in (":", "h", "p"):
                     res.append(_decol(p))
                 elif p[1] == "b":
                     res.append(int(p[2:], 2))
@@ -631,8 +632,7 @@ class Path(collections.abc.Sequence):
         value = loader.construct_scalar(node)
         return cls.from_str(value)
 
-
-    def apply(self, path:Path) -> Path:
+    def apply(self, path: Path) -> Path:
         """
         Construct a new path that replaces pattern tuples in @path with
         the referred-to entries in @self.
@@ -649,13 +649,13 @@ class Path(collections.abc.Sequence):
 
         Elements are numbered starting from 1 (left) or -1 (right).
         """
-        if not any(isinstance(x,tuple) for x in self._data):
+        if not any(isinstance(x, tuple) for x in self._data):
             return self
 
         # We might want to cache this …
         res = []
         for p in self._data:
-            if not isinstance(p,tuple) or len(p) not in (1,2,3):
+            if not isinstance(p, tuple) or len(p) not in (1, 2, 3):
                 res.append(p)
                 continue
 
@@ -814,8 +814,8 @@ class PathShortener:
     Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix:Path|list|tuple=Path()):  # noqa:B008
-        self.prefix = prefix if isinstance(prefix,Path) else Path.build(prefix)
+    def __init__(self, prefix: Path | list | tuple = Path()):  # noqa:B008
+        self.prefix = prefix if isinstance(prefix, Path) else Path.build(prefix)
         self.depth = len(prefix)
         self.path = []
 
@@ -864,8 +864,8 @@ class PathLongener:
         if isinstance(prefix, Path):
             self.cls = type(prefix)
             prefix = prefix.raw
-        elif isinstance(prefix,list):
-            prefix=tuple(prefix)
+        elif isinstance(prefix, list):
+            prefix = tuple(prefix)
         self.depth = len(prefix)
         self.path = prefix
 
@@ -903,7 +903,7 @@ path_eval = _eval.eval
 
 # Here we declare our bunch of "root" variables.
 
-Root = ContextVar[Path|None]("Root", default=None)
+Root = ContextVar[Path | None]("Root", default=None)
 
 
 class RootPath(Path):
@@ -952,7 +952,7 @@ for _idx in "SPQ":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar(_name, default=None)
     _path = RootPath(_idx, _ctx, _name)
-    _ctx.set(Path("XXX",_idx,"XXX"))
+    _ctx.set(Path("XXX", _idx, "XXX"))
 
     globals()[_name] = _ctx
     __all__ += [_name]  # noqa:PLE0604

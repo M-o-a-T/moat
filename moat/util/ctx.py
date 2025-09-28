@@ -46,14 +46,13 @@ class CtxObj(ABC):
     __ctx: AbstractAsyncContextManager | None = None
 
     @abstractmethod
-    def _ctx(self) -> AsyncIterator[T_Ctx]:
-        ...
+    def _ctx(self) -> AsyncIterator[T_Ctx]: ...
 
     async def __aenter__(self) -> T_Ctx:
         if self.__ctx is not None:
             raise RuntimeError("Nested contexts")
         ctx = self._ctx()
-        if not hasattr(ctx,"__aenter__"):
+        if not hasattr(ctx, "__aenter__"):
             # DEPRECATED
             # legacy code for `_ctx` without @asynccm
             ctx = asynccontextmanager(self._ctx)()
@@ -98,24 +97,25 @@ class timed_ctx(CtxObj):
                 yield mgr
 
 
-class ContextMgr:#[CtxType]:
+class ContextMgr:  # [CtxType]:
     """
     This class manages a context for the caller.
 
     Useful when entering/leaving the context is triggered from state
     machine callbacks or similar event handlers.
     """
+
     @asynccontextmanager
     async def context(self, *args, **kwargs):
         raise NotImplemented("Override me!")
 
-    exc:Exception|None = None
-    ctx:CtxType|Literal[False]|None = None
-    stopper:anyio.Event=None
-    stopped:anyio.Event=None
+    exc: Exception | None = None
+    ctx: CtxType | Literal[False] | None = None
+    stopper: anyio.Event = None
+    stopped: anyio.Event = None
 
     def __init__(self):
-        self.qw,self.qr = anyio.create_memory_object_stream(0)
+        self.qw, self.qr = anyio.create_memory_object_stream(0)
 
     async def task(self):
         """
@@ -123,18 +123,18 @@ class ContextMgr:#[CtxType]:
 
         Start this once, when setting up your state machine.
         """
-        async for evt,args,kwargs in self.qr:
+        async for evt, args, kwargs in self.qr:
             self.stopper = anyio.Event()
             self.stopped = anyio.Event()
             self.exc = None
             try:
-                async with self.context(*args,**kwargs) as self.ctx:
+                async with self.context(*args, **kwargs) as self.ctx:
                     evt.set()
                     evt = self.stopped
                     await self.stopper.wait()
                     if self.exc is not None:
                         raise self.exc
-            except (CancelledError,Exception) as exc:
+            except (CancelledError, Exception) as exc:
                 self.exc = exc
             except BaseException as exc:
                 self.exc = CancelledError()
@@ -153,7 +153,6 @@ class ContextMgr:#[CtxType]:
             self.exc = CancelledError()
             self.stopper.set()
 
-
     async def start(self, *args, **kwargs):
         """
         Creates and starts your context, passing the given arguments.
@@ -164,24 +163,24 @@ class ContextMgr:#[CtxType]:
         if self.ctx is not None:
             raise RuntimeError("Context already entered")
         self.ctx = False
-        evt=anyio.Event()
-        await self.qw.send((evt,args,kwargs))
+        evt = anyio.Event()
+        await self.qw.send((evt, args, kwargs))
         try:
             await evt.wait()
         except BaseException:
             if self.exc is None:
                 self.exc = CancelledError()
             self.stopper.set()
-            with anyio.move_on_after(.5,shield=True):
+            with anyio.move_on_after(0.5, shield=True):
                 await self.stopped.wait()
             raise
 
         if self.exc is not None:
-            exc,self.exc = self.exc,None
+            exc, self.exc = self.exc, None
             raise exc
         return self.ctx
 
-    async def stop(self, exc:Exception|None=None):
+    async def stop(self, exc: Exception | None = None):
         """
         Stops your context.
 
@@ -200,8 +199,9 @@ class ContextMgr:#[CtxType]:
         if self.exc is exc:
             self.exc = None
         else:
-            exc,self.exc = self.exc,None
+            exc, self.exc = self.exc, None
             raise exc
+
 
 @define
 class ctx_as:
@@ -217,9 +217,9 @@ class ctx_as:
         assert x.get() is False  # or whatever
     """
 
-    var:ContextVar = field()
-    value:Any = field()
-    token:Token = field(default=None,init=False)
+    var: ContextVar = field()
+    value: Any = field()
+    token: Token = field(default=None, init=False)
 
     def __enter__(self) -> None:
         if self.token is not None:

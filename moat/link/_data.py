@@ -48,16 +48,16 @@ def add_dates(d):
 
 
 async def data_get(
-    conn:Link,
-    path:Path,
+    conn: Link,
+    path: Path,
     *,
-    meta:bool=False,
-    recursive:bool=True,
-    as_dict:str|None="_",
-    maxdepth:int=-1,
-    mindepth:int=0,
-    empty:bool=False,
-    raw:bool=False,
+    meta: bool = False,
+    recursive: bool = True,
+    as_dict: str | None = "_",
+    maxdepth: int = -1,
+    mindepth: int = 0,
+    empty: bool = False,
+    raw: bool = False,
     path_mangle=None,
     item_mangle=None,
     add_date=False,
@@ -86,7 +86,7 @@ async def data_get(
 
     if recursive:
         kw = {}
-        
+
         if maxdepth is not None and maxdepth >= 0:
             kw["max_depth"] = maxdepth
         if mindepth:
@@ -94,14 +94,14 @@ async def data_get(
         if empty:
             kw["empty"] = True
         y = {}
-        pl=PathLongener()
+        pl = PathLongener()
         async with conn.d.walk(path, **kw).stream_in() as res:
             async for r in res:
                 r = await item_mangle(r)
                 if r is None:
                     continue
-                n,p,d,*m = r
-                path=pl.long(n,p)
+                n, p, d, *m = r
+                path = pl.long(n, p)
                 path = path_mangle(path)
                 if path is None:
                     continue
@@ -110,11 +110,11 @@ async def data_get(
                     add_dates(d)
 
                 if meta:
-                    m=MsgMeta._moat__restore(m, NotGiven)
+                    m = MsgMeta._moat__restore(m, NotGiven)
 
                 if as_dict is not None:
                     if meta:
-                        d = dict(data=d,meta=m.repr())
+                        d = dict(data=d, meta=m.repr())
                     yy = y
                     for p in path:
                         yy = yy.setdefault(p, {})
@@ -127,10 +127,10 @@ async def data_get(
                     if raw:
                         y = path
                     elif meta:
-                        y = [path,d,m.repr()]
+                        y = [path, d, m.repr()]
                     else:
-                        y = [path,d]
-                    if isinstance(out,list):
+                        y = [path, d]
+                    if isinstance(out, list):
                         out.append(y)
                     else:
                         yprint(y, stream=out)
@@ -152,20 +152,19 @@ async def data_get(
 
                     y = simplex(y)
 
-            if isinstance(out,list):
+            if isinstance(out, list):
                 return y
             if as_dict is not None:
                 yprint(y, stream=out)
 
-            return out # end "if recursive"
+            return out  # end "if recursive"
 
-    
-    d,*m = await conn.d.get(path)
+    d, *m = await conn.d.get(path)
     if add_date:
         add_dates(d)
     if meta:
-        m=MsgMeta.restore(m)
-        d=dict(data=d,meta=m.repr())
+        m = MsgMeta.restore(m)
+        d = dict(data=d, meta=m.repr())
 
     if out is False:
         return d
@@ -179,19 +178,19 @@ async def data_get(
 
 
 async def backend_get(
-    conn:Link,
-    path:Path,
+    conn: Link,
+    path: Path,
     *,
-    meta:bool=False,
-    recursive:bool=True,
-    as_dict:str|None="_",
-    raw:bool=False,
+    meta: bool = False,
+    recursive: bool = True,
+    as_dict: str | None = "_",
+    raw: bool = False,
     path_mangle=None,
     item_mangle=None,
     add_date=False,
-    codec:Codec|None=None,
+    codec: Codec | None = None,
     out=None,
-    timeout:float=0.5,
+    timeout: float = 0.5,
 ):
     """Generic code to dump a backend subtree.
 
@@ -217,8 +216,8 @@ async def backend_get(
         out = []
 
     if recursive:
-        kw = {"codec":codec}
-        
+        kw = {"codec": codec}
+
         y = {}
         async with conn.monitor(path, subtree=True, **kw) as mon:
             while True:
@@ -231,8 +230,8 @@ async def backend_get(
                 r = await item_mangle(r)
                 if r is None:
                     continue
-                p,d,m = r.topic,r.data,r.meta
-                p=p[len(path):]
+                p, d, m = r.topic, r.data, r.meta
+                p = p[len(path) :]
                 p = path_mangle(p)
                 if p is None:
                     continue
@@ -240,8 +239,8 @@ async def backend_get(
                 if add_date:
                     add_dates(d)
                 if meta:
-                    m=MsgMeta._moat__restore(m, NotGiven)
-                    d = dict(data=d,meta=m.repr())
+                    m = MsgMeta._moat__restore(m, NotGiven)
+                    d = dict(data=d, meta=m.repr())
 
                 if as_dict is not None:
                     yy = y
@@ -264,18 +263,17 @@ async def backend_get(
                                 y[p] = None
                             else:
                                 continue
-                    if isinstance(out,list):
+                    if isinstance(out, list):
                         out.append(y)
                     else:
                         yprint([y], stream=out)
 
-            if isinstance(out,list):
+            if isinstance(out, list):
                 return y
             yprint(y, stream=out)
 
-            return out # end "if recursive"
+            return out  # end "if recursive"
 
-    
     async with conn.monitor(path, **kw) as mon:
         r = None
         with anyio.move_on_after(timeout):
@@ -283,12 +281,12 @@ async def backend_get(
         if r is None:
             raise KeyError(path)
 
-    d,m = r.data,r.meta
+    d, m = r.data, r.meta
     if add_date:
         add_dates(d)
     if meta:
-        m=MsgMeta.restore(m)
-        d=dict(data=d,meta=m.repr())
+        m = MsgMeta.restore(m)
+        d = dict(data=d, meta=m.repr())
 
     if out is False:
         return d
@@ -340,16 +338,16 @@ async def node_attr(obj, path, val=NotGiven, meta=NotGiven, **kw):
     """
     if val is NotGiven:
         try:
-            val,*m = await obj.conn.d.get(path)
+            val, *m = await obj.conn.d.get(path)
         except KeyError:
             pass
         else:
             meta = MsgMeta.restore(m)
     val = process_args(val, **kw)
-    t = {} if meta is NotGiven else {'t':meta.timestamp}
+    t = {} if meta is NotGiven else {"t": meta.timestamp}
     if val is NotGiven:
         res = await obj.conn.d.delete(path, **t)
     else:
         res = await obj.conn.d.set(path, val, **t)
-    res = res[0],MsgMeta.restore(res[1:])
+    res = res[0], MsgMeta.restore(res[1:])
     return res

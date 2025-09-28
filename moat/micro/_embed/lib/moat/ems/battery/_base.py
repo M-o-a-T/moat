@@ -201,7 +201,7 @@ class BaseCell(BaseCmd):
         """
         if f is not None:
             self.fdis = f
-        if v is not None:  # noqa:SIM102
+        if v is not None:
             if not self.fdis or f:
                 self.vdis = v
                 await self.set_dis()
@@ -230,7 +230,7 @@ class BaseCell(BaseCmd):
         """
         if f is not None:
             self.fchg = f
-        if v is not None:  # noqa:SIM102
+        if v is not None:
             if not self.fchg or f:
                 self.vchg = v
                 await self.set_chg()

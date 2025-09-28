@@ -833,7 +833,7 @@ async def copy_over(src, dst, cross=None, wdst: anyio.Path | None = None):
     This procedure verifies that the data arrived OK.
     """
     tn = 0
-    if await src.is_file():  # noqa:SIM102
+    if await src.is_file():
         if await dst.is_dir():
             dst /= src.name
     while n := await copytree(src, dst, cross=cross, wdst=wdst):

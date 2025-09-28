@@ -451,7 +451,7 @@ def time_until(args, t_now=None, invert=False, back=False):
                 else:
                     if rgoal > lim():
                         rgoal = beg
-            if force or goal is not None:  # noqa:SIM102
+            if force or goal is not None:
                 if real != rgoal:  # otherwise we clear fields for no reason
                     h = {ln: rgoal}
                     h.update(clear_fields)

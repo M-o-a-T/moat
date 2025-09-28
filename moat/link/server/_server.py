@@ -763,7 +763,7 @@ class Server(MsgHandler):
         """
         if len(path) and path[0] == "run":
             return False
-        if res := self.data.set(path, data, meta):  # noqa:SIM102
+        if res := self.data.set(path, data, meta):
             if not local:
                 self.write_monitor((path, data, meta))
         return res

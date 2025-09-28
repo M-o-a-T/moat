@@ -234,7 +234,7 @@ async def monitor(
 
     def pm(p):
         for ip in ignore:
-            if len(p) >= len(ip) and p[: len(ip)] == ip:  # noqa:SIM110
+            if len(p) >= len(ip) and p[: len(ip)] == ip:
                 return True
         return False
 

@@ -55,7 +55,7 @@ class NamedSerial(AnyioBuf):
 
         fl = p.get("flow", None)
         if fl:
-            if "R" not in fl or "C" not in fl:  # noqa:SIM102
+            if "R" not in fl or "C" not in fl:
                 if "R" in fl or "C" in fl:
                     raise ValueError("no support for partial flow control")
             uart_cfg["rtscts"] = True

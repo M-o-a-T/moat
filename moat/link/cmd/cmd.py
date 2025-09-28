@@ -33,7 +33,7 @@ async def cli(ctx, path, stream, raw, **kw):
             for k, v in list(val.items()):
                 if k.startswith("_"):
                     try:
-                        kk = int(k[1:])
+                        k = int(k[1:])  # noqa:PLW2901
                     except ValueError:
                         pass
                     else:

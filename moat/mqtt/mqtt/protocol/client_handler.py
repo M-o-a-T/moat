@@ -39,11 +39,10 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
         try:
             await super().stop()
         finally:
-            with anyio.fail_after(2, shield=True):
-                t, self._ping_task = self._ping_task, None
-                if t:
-                    self.logger.debug("Cancel ping task")
-                    t.cancel()
+            t, self._ping_task = self._ping_task, None
+            if t:
+                self.logger.debug("Cancel ping task")
+                t.cancel()
 
     def _build_connect_packet(self):
         vh = ConnectVariableHeader()

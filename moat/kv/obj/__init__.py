@@ -603,8 +603,7 @@ class MirrorRoot(ClientEntry):
             try:
                 yield self
             finally:
-                with anyio.fail_after(2, shield=True):
-                    tg.cancel_scope.cancel()
+                tg.cancel_scope.cancel()
             pass  # end of 'run', closing taskgroup
 
     async def cancel(self):

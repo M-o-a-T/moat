@@ -268,10 +268,9 @@ class Session:  # noqa: D101
                         retain=app_message.publish_packet.retain_flag,
                     )
         finally:
-            with anyio.fail_after(2, shield=True):
-                broker.logger.debug("%s finished message delivery", self.client_id)
-                self._delivery_task = None
-                self._delivery_stopped.set()
+            broker.logger.debug("%s finished message delivery", self.client_id)
+            self._delivery_task = None
+            self._delivery_stopped.set()
 
     @property
     def next_packet_id(self):  # noqa: D102

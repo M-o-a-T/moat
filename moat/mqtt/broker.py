@@ -685,8 +685,7 @@ class Broker:
                     client_id=client_session.client_id,
                 )
             finally:
-                with anyio.fail_after(2, shield=True):
-                    tg.cancel_scope.cancel()
+                tg.cancel_scope.cancel()
             pass  # end taskgroup
 
         self.logger.debug("%s Client disconnected", client_session.client_id)

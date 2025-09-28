@@ -2297,12 +2297,11 @@ class Server:
                 await self._run_send_missing(prio)
 
             finally:
-                with anyio.CancelScope(shield=True):
-                    # Protect against cleaning up when another recovery task has
-                    # been started (because we saw another merge)
-                    self.logger.debug("SplitRecover %d: finished @%d", t._id, t.tock)  # noqa: SLF001
-                    self.seen_missing = {}
-                    t.cancel()
+                # Protect against cleaning up when another recovery task has
+                # been started (because we saw another merge)
+                self.logger.debug("SplitRecover %d: finished @%d", t._id, t.tock)  # noqa: SLF001
+                self.seen_missing = {}
+                t.cancel()
 
     async def _send_missing(self, force=False):
         msg = dict()
@@ -2571,8 +2570,7 @@ class Server:
                     raise
                 done.set_error(err)
             finally:
-                with anyio.CancelScope(shield=True):
-                    sd.set()
+                sd.set()
 
     async def run_saver(
         self, path: str | None = None, stream=None, save_state=False, wait: bool = True

@@ -45,8 +45,7 @@ async def broker(obj):
         if as_service is not None:
             evt = await stack.enter_async_context(as_service())
             evt.set()
-        while True:
-            await anyio.sleep(99999)
+        await anyio.sleep_forever()
 
 
 def _gen_client_id():

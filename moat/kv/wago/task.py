@@ -83,8 +83,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             if evt is not None:
                 evt.set()
 
-            while True:
-                await anyio.sleep(99999)
+            await anyio.sleep_forever()
     except TimeoutError:
         raise
     except OSError as e:  # this would eat TimeoutError

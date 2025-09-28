@@ -480,8 +480,7 @@ class ClientDevice(CtxObj, BaseDevice):
         sl = self.unit.slots[slot]
         sl.start()
 
-        while True:
-            await anyio.sleep(99999)
+        await anyio.sleep_forever()
 
     async def poll(self, slots: set | None = None, *, task_status=None):
         """Task to periodically poll all slots"""
@@ -492,8 +491,7 @@ class ClientDevice(CtxObj, BaseDevice):
         if task_status is not None:
             task_status.started()
 
-        while True:
-            await anyio.sleep(99999)
+        await anyio.sleep_forever()
 
 
 class ServerDevice(BaseDevice):

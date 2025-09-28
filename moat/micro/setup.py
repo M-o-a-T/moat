@@ -349,7 +349,8 @@ async def install_(cfg, dest: Path = None):
         if not await df.exists():
             print(f"Waiting for RPI in {dest} ", end="")
             sys.stdout.flush()
-            while not await df.exists():
+            while not await df.exists():  # noqa:ASYNC110
+                # not going to import inotify just for this
                 await anyio.sleep(1)
             print("… found.")
 
@@ -362,7 +363,8 @@ async def install_(cfg, dest: Path = None):
     if port is not None and not await port.exists():
         print(f"Waiting for RPI in {dest} ", end="")
         sys.stdout.flush()
-        while not await port.exists():
+        while not await port.exists():  # noqa:ASYNC110
+            # not going to import inotify just for this
             await anyio.sleep(1)
         print("… found.")
 

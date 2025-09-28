@@ -124,7 +124,7 @@ async def test_aiter():  # noqa: D103
         assert h.peek() == ("b", 2)
         h["y"] = 2.5
         h["x"] = 1
-        while h:
+        while h:  # noqa:ASYNC110
             await anyio.sleep(0.025)
         assert not h
         h["z"] = 0

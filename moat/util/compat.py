@@ -182,8 +182,7 @@ def every(t, p, *a, **k):
 
 async def idle():
     "sleep forever"
-    while True:
-        await _anyio.sleep(60 * 60 * 12)  # half a day
+    await _anyio.sleep_forever()
 
 
 def ticks_add(a, b):

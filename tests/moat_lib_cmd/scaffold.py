@@ -56,7 +56,8 @@ class StreamGate(CtxObj):  # noqa: D101
             # await anyio.sleep(0.1)
             if not out.root.is_idle:
                 logger.warning("NOT IDLE: Error?")
-                while not out.root.is_idle:
+                while not out.root.is_idle:  # noqa:ASYNC110
+                    # TODO fix this?
                     await anyio.sleep(0.1)
                 logger.warning("NOT IDLE: OK")
             assert out.root.is_idle

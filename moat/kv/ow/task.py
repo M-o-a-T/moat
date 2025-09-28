@@ -88,5 +88,4 @@ async def task(client, cfg, server=None, evt=None):  # noqa: D103
             await ow.add_server(name=sname, **kw)
         if evt is not None:
             evt.set()
-        while True:
-            await anyio.sleep(99999)
+        await anyio.sleep_forever()

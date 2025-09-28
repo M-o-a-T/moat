@@ -36,7 +36,7 @@ class Notifier(BaseNotifier):
         title: str,
         msg: str,
         prio: str | None = None,
-        tags: Sequence[str] = [],
+        tags: Sequence[str] = (),
         **kw,
     ):
         "Forward a message to NTFY"

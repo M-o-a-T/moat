@@ -46,7 +46,7 @@ _defaults = {
 QSIZE = 100
 
 
-def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value  # noqa: D103
+def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value  # noqa: D103,B006
     if codec is NotGiven:
         codec = fallback
     if codec is NotGiven:
@@ -136,7 +136,7 @@ def mqtt_connected(func):
 
 
 @asynccontextmanager
-async def open_mqttclient(uri=None, client_id=None, config={}, codec=NotGiven):
+async def open_mqttclient(uri=None, client_id=None, config:dict|None=None, codec=NotGiven):
     # pylint: disable=dangerous-default-value
     """
     MQTT client implementation.
@@ -160,6 +160,8 @@ async def open_mqttclient(uri=None, client_id=None, config={}, codec=NotGiven):
                     print("%d:  %s => %s" % (i, packet.variable_header.topic_name, str(packet.payload.data)))
 
     """
+    if config is None:
+        config = {}
     async with anyio.create_task_group() as tg:
         if codec is NotGiven:
             codec = config.get("codec", NotGiven)
@@ -239,7 +241,7 @@ class MQTTClient:
         cafile=None,
         capath=None,
         cadata=None,
-        extra_headers={},
+        extra_headers:dict|None=None,
     ):
         # pylint: disable=dangerous-default-value
         """
@@ -257,7 +259,7 @@ class MQTTClient:
         :raise: :class:`moat.mqtt.client.ConnectException` if connection fails
         """
         self.session = self._initsession(uri, cleansession, cafile, capath, cadata)
-        self.extra_headers = extra_headers
+        self.extra_headers = extra_headers or {}
         self.logger.debug("Connect to: %s", uri)
 
         try:

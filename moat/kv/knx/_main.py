@@ -159,7 +159,7 @@ async def addr(obj, bus, group, typ, mode, attr):
             try:
                 v = int(v)  # noqa:PLW2901
             except ValueError:
-                try:  # noqa:SIM105
+                try:
                     v = float(v)  # noqa:PLW2901
                 except ValueError:
                     pass

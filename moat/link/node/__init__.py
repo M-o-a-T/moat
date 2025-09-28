@@ -325,13 +325,13 @@ class NodeFinder:
 
     def step(self, name, new=False):  # noqa: D102
         steps = []
-        for node, keep in self.steps:
+        for node, _keep in self.steps:
             if name in node:
                 steps.append((node.get(name), False))
-        for node, keep in self.steps:
+        for node, _keep in self.steps:
             if "+" in node:
                 steps.append((node.get("+"), False))
-        for node, keep in self.steps:
+        for node, _keep in self.steps:
             if "#" in node:
                 steps.append((node.get("#"), True))
         for node, keep in self.steps:

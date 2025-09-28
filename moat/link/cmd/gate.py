@@ -59,7 +59,7 @@ async def _list(obj):
     if not obj.path:
         seen = False
         async with obj.conn.d_walk(P("gate"), min_depth=1, max_depth=1) as mon:
-            async for p, d in mon:
+            async for p, _d in mon:
                 seen = True
                 print(p[-1])
         if not seen and obj.debug:

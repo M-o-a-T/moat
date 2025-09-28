@@ -79,7 +79,7 @@ class S:  # noqa:D101
 
         h = p = None
         for s in self.s:
-            for h, p, *_ in s.ports:
+            for h, p, *_ in s.ports:  # noqa:B007 # side effect!
                 if h[0] != ":":
                     break
             else:

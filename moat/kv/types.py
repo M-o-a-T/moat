@@ -299,6 +299,7 @@ class CodecEntry(Entry):
                 raise RuntimeError("Must have tests for decoding")
             dec = make_proc(value.decode, ("value",), self.path)
             for v, w in value["in"]:
+                w  # noqa:B018
                 try:
                     r = dec(v)
                 except Exception as exc:
@@ -314,7 +315,7 @@ class CodecEntry(Entry):
             if not value["out"]:
                 raise RuntimeError("Must have tests for encoding")
             enc = make_proc(value.encode, ("value",), self.path)
-            for v, w in value["out"]:
+            for v, _w in value["out"]:
                 try:
                     r = enc(v)
                 except Exception as exc:

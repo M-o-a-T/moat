@@ -56,7 +56,7 @@ def show_(obj):
 
     if obj.name is None:
         seen = False
-        with sess.execute(select(Box).where(Box.container is None)) as boxes:
+        with sess.execute(select(Box).where(Box.container == None)) as boxes:  # noqa:E711
             for (box,) in boxes:
                 seen = True
                 print(box.name)

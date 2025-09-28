@@ -64,11 +64,11 @@ def show_(obj, type_):
 
     sel = select(Thing)
     if type_ is None:
-        sel = sel.where(Thing.container is None)
+        sel = sel.where(Thing.container == None)  # noqa:E711
     else:
         ttyp = obj.session.one(ThingTyp, name=type_)
         sel = sel.where(Thing.thingtyp == ttyp)
-    with sess.execute(select(Thing).where(Thing.container is None)) as things:
+    with sess.execute(select(Thing).where(Thing.container == None)) as things:  # noqa:E711
         for (thing,) in things:
             print(thing.name, thing.descr)
 

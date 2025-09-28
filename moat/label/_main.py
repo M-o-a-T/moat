@@ -76,7 +76,7 @@ def show_(obj):
 
     if obj.text is None and obj.nr is None:
         seen = False
-        with sess.execute(sel(Label).where(Label.box == None)) as labels:
+        with sess.execute(sel(Label).where(Label.box == None)) as labels: # noqa:E711
             for (label,) in labels:
                 seen = True
                 print(label.text)
@@ -596,7 +596,7 @@ def sheet_show_(obj, labels):
 
     if obj.nr is None:
         seen = False
-        with sess.execute(sel(Sheet, Sheet.printed == False)) as sheets:
+        with sess.execute(sel(Sheet, Sheet.printed == False)) as sheets:  # noqa:E712
             for sh, *_ in sheets:
                 seen = True
                 print(sh.id, sh.labeltyp.name if sh.labeltyp else "*")
@@ -652,7 +652,7 @@ def sheet_add(obj, printed, unprinted, fill, **kw):
     if fill:
         with sess.execute(
             sel(Label)
-            .where(Label.sheet == None)
+            .where(Label.sheet == None)  # noqa:E711
             .where(Label.labeltyp == sh.labeltyp)
             .order_by(Label.text)
             .limit(sh.sheettyp.count),

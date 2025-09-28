@@ -96,7 +96,7 @@ async def data_get(
         pl = PathLongener()
         async with conn.d.walk(path, **kw).stream_in() as res:
             async for r in res:
-                r = await item_mangle(r)
+                r = await item_mangle(r)  # noqa:PLW2901
                 if r is None:
                     continue
                 n, p, d, *m = r

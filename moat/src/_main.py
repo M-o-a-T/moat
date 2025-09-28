@@ -312,7 +312,7 @@ class Repo(git.Repo, _Common):
         for fn in res.stdout.split(b"\0"):
             if not fn:
                 continue
-            fn = Path(fn.decode("utf-8"))
+            fn = Path(fn.decode("utf-8"))  # noqa:PLW2901
             if fn.name == ".gitignore":  # heh
                 continue
             sb = self.repo_for(fn, True)
@@ -450,7 +450,7 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     for i, dep in enumerate(deps):
         r = Requirement(dep)
         if r.name in tags:
-            dep = f"{r.name} ~= {tags[r.name]}"
+            dep = f"{r.name} ~= {tags[r.name]}"  # noqa:PLW2901
             if deps[i] != dep:
                 deps[i] = dep
                 work = True
@@ -550,18 +550,18 @@ def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> dict:
                 mod = True
             if va:
                 for vv in va:
-                    vv = repl(vv)
+                    vv = repl(vv)  # noqa:PLW2901
                     if vv not in vb:
                         vb.insert(0, vv)
                         mod = True
             if vc:
                 for vv in vc:
-                    vv = repl(vv)
+                    vv = repl(vv)  # noqa:PLW2901
                     if vv not in vb:
                         vb.insert(0, vv)
                         mod = True
         else:
-            v = repl(va) or vb or repl(vc)
+            v = repl(va) or vb or repl(vc)  # noqa:PLW2901
             if vb != v:
                 b[k] = v
                 mod = True
@@ -950,8 +950,8 @@ async def build(
     for name in PACK.iterdir():
         if name.suffix != ".changes":
             continue
-        name = name.stem
-        name, vers, _ = name.split("_")
+        name = name.stem  # noqa:PLW2901
+        name, vers, _ = name.split("_")  # noqa:PLW2901
         debversion[name] = vers.rsplit("-", 1)[0]
 
     # Step 0: basic check

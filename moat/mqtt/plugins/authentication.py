@@ -64,7 +64,7 @@ class FileAuthPlugin(BaseAuthPlugin):  # noqa: D101
         if password_file:
             with open(password_file) as f:  # pylint: disable=unspecified-encoding
                 for line in f:
-                    line = line.strip()
+                    line = line.strip()  # noqa:PLW2901
                     if not line.startswith("#"):  # Allow comments in files
                         username, pwd_hash = line.split(sep=":", maxsplit=1)
                         if username:

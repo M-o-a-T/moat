@@ -269,15 +269,15 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
         for d in in_d():
             for data in dec(d):
                 if long and isinstance(data, Sequence):
-                    d, p, *x = data
+                    d, p, *x = data  # noqa:PLW2901
                     p = long.long(d, p)
-                    data = [p, *x]
+                    data = [p, *x]  # noqa:PLW2901
                 if short and isinstance(data, Sequence):
                     p, *x = data
-                    d, p = short.short(p)
-                    data = [d, p, *x]
+                    d, p = short.short(p)  # noqa:PLW2901
+                    data = [d, p, *x]  # noqa:PLW2901
 
-                data = process_args(data, **kw)
+                data = process_args(data, **kw)  # noqa:PLW2901
                 if cse:
                     if f_dump:
                         buf = bt()

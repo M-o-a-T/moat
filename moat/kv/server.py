@@ -1059,7 +1059,7 @@ class ServerClient:
         nodes = msg.nodes
         deleted = NodeSet()
         for n, v in nodes.items():
-            n = Node(n, None, cache=self.server.node_cache)
+            n = Node(n, None, cache=self.server.node_cache)  # noqa:PLW2901
             r = RangeSet()
             r.__setstate__(v)
             for a, b in r:
@@ -1251,7 +1251,7 @@ class ServerClient:
                             self.tg.start_soon(self.process, msg, evt)
                             await evt.wait()
                     except Exception as exc:
-                        msg = {"error": str(exc)}
+                        msg = {"error": str(exc)}  # noqa:PLW2901
                         if isinstance(exc, ClientError):  # pylint doesn't seem to see this, so …:
                             msg["etype"] = exc.etype  # pylint: disable=no-member  ### YES IT HAS
                         # else:
@@ -1675,7 +1675,7 @@ class Server:
         self.logger.debug("PurgeDel: %r", deleted)
 
         for n, v in deleted.items():
-            n = Node(n, cache=self.node_cache)
+            n = Node(n, cache=self.node_cache)  # noqa:PLW2901
             n.purge_deleted(v)
 
     async def get_state(
@@ -1772,7 +1772,7 @@ class Server:
         ticks = msg.get("ticks", None)
         if ticks is not None:
             for n, t in ticks.items():
-                n = Node(n, cache=self.node_cache)
+                n = Node(n, cache=self.node_cache)  # noqa:PLW2901
                 n.tick = max_n(n.tick, t)
 
             # did this message pre-empt our own transmission?
@@ -1786,7 +1786,7 @@ class Server:
         if missing is not None:
             nn = 0
             for n, k in missing.items():
-                n = Node(n, cache=self.node_cache)
+                n = Node(n, cache=self.node_cache)  # noqa:PLW2901
                 r = RangeSet()
                 r.__setstate__(k)
                 nn += len(r)
@@ -1817,7 +1817,7 @@ class Server:
             superseded = msg.get("known", None)
         if superseded is not None:
             for n, k in superseded.items():
-                n = Node(n, cache=self.node_cache)
+                n = Node(n, cache=self.node_cache)  # noqa:PLW2901
                 r = RangeSet()
                 r.__setstate__(k)
                 r -= n.local_present
@@ -1827,7 +1827,7 @@ class Server:
         deleted = msg.get("deleted", None)
         if deleted is not None:
             for n, k in deleted.items():
-                n = Node(n, cache=self.node_cache)
+                n = Node(n, cache=self.node_cache)  # noqa:PLW2901
                 r = RangeSet()
                 r.__setstate__(k)
                 n.report_deleted(r, self)
@@ -1967,7 +1967,7 @@ class Server:
                     await self.spawn(self.fetch_data, msg.nodes)
 
                 elif isinstance(msg, RawMsgEvent):
-                    msg = msg.msg
+                    msg = msg.msg  # noqa:PLW2901
                     msg_node = msg.get("node", None)
                     if msg_node is None:
                         msg_node = msg.get("history", (None,))[0]
@@ -2111,7 +2111,7 @@ class Server:
                     )
                     async for r in res:
                         pl(r)
-                        r = UpdateEvent.deserialize(
+                        r = UpdateEvent.deserialize(  # noqa:PLW2901
                             self.root,
                             r,
                             cache=self.node_cache,
@@ -2130,7 +2130,7 @@ class Server:
                     )
                     async for r in res:
                         pl(r)
-                        r = UpdateEvent.deserialize(
+                        r = UpdateEvent.deserialize(  # noqa:PLW2901
                             self.root,
                             r,
                             cache=self.node_cache,
@@ -2187,12 +2187,12 @@ class Server:
 
         # nodes: list of known nodes and their max ticks
         for nn, t in msg.get("nodes", {}).items():
-            nn = Node(nn, cache=self.node_cache)
+            nn = Node(nn, cache=self.node_cache)  # noqa:PLW2901
             nn.tick = max_n(nn.tick, t)
 
         # known: per-node range of ticks that have been resolved
         for nn, k in msg.get("known", {}).items():
-            nn = Node(nn, cache=self.node_cache)
+            nn = Node(nn, cache=self.node_cache)  # noqa:PLW2901
             r = RangeSet()
             r.__setstate__(k)
             nn.report_superseded(r, local=True)
@@ -2200,15 +2200,15 @@ class Server:
         # deleted: per-node range of ticks that have been deleted
         deleted = msg.get("deleted", {})
         for nn, k in deleted.items():
-            nn = Node(nn, cache=self.node_cache)
+            nn = Node(nn, cache=self.node_cache)  # noqa:PLW2901
             r = RangeSet()
             r.__setstate__(k)
             nn.report_deleted(r, self)
 
         # remote_missing: per-node range of ticks that should be re-sent
         # This is used when loading data from a state file
-        for nn, k in msg.get("remote_missing", {}).items():
-            nn = Node(nn, cache=self.node_cache)
+        for nn, k in msg.get("remote_missing", {}).items():  # noqa:PLW2901
+            nn = Node(nn, cache=self.node_cache)  # noqa:PLW2901
             r = RangeSet()
             r.__setstate__(k)
             nn.report_missing(r)
@@ -2425,7 +2425,7 @@ class Server:
                         await self.tock_seen(m.tock)
                     else:
                         m.tock = self.tock
-                    m = UpdateEvent.deserialize(self.root, m, cache=self.node_cache, nulls_ok=True)
+                    m = UpdateEvent.deserialize(self.root, m, cache=self.node_cache, nulls_ok=True)  # noqa:PLW2901
                     await self.tock_seen(m.tock)
                     await m.entry.apply(m, server=self, root=self.paranoid_root, loading=True)
                 elif "info" in m:
@@ -2616,9 +2616,9 @@ class Server:
 
     async def _sigterm(self):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
-            async for s in r:
-                for s, sd in self._savers:
-                    s.cancel()
+            async for _s in r:
+                for sc, sd in self._savers:
+                    sc.cancel()
                     await sd.wait()
                 break
         os.kill(os.getpid(), signal.SIGTERM)
@@ -2742,7 +2742,7 @@ class Server:
             evts = []
             async with anyio.create_task_group() as tg:
                 for n, cfg in enumerate(cfgs):
-                    cfg = combine_dict(cfg, cfg_b, cls=attrdict)
+                    cfg = combine_dict(cfg, cfg_b, cls=attrdict)  # noqa:PLW2901
                     evt = anyio.Event()
                     evts.append(evt)
                     tg.start_soon(self._accept_clients, tg, cfg, n, evt)

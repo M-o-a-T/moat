@@ -880,7 +880,7 @@ class Broker:
                 for k_filter, subscriptions in self._subscriptions.items():
                     if match_topic(topic, k_filter):
                         for target_session, qos in subscriptions:
-                            qos = max(
+                            qos = max(  # noqa:PLW2901
                                 qos,
                                 broadcast.get("qos", QOS_0),
                                 targets.get(target_session, QOS_0),

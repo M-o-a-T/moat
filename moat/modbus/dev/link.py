@@ -93,13 +93,13 @@ class Register(BaseRegister):
                     continue
                 if isinstance(val, tuple):  # Link client
                     logger.debug("%s W %r", self.path, val)
-                    val = val[0]
+                    val = val[0]  # noqa:PLW2901
                 elif "value" not in val:  # KV message
                     logger.debug("%s Wx", self.path)
                     continue
                 else:
                     logger.debug("%s W %r", self.path, val)
-                    val = val.value
+                    val = val.value  # noqa:PLW2901
                 await self._set(val)
 
     async def from_link_p(self, mon, slot):

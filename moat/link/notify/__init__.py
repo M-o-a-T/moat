@@ -123,7 +123,7 @@ class Notify:
 
         async with link.d_watch(P("host") / main_host, state=None) as mon:
             task_status.started()
-            mon = aiter(mon)
+            mon = aiter(mon)  # noqa:PLW2901
             while True:
                 if bad:
                     msg = await anext(mon)
@@ -136,7 +136,7 @@ class Notify:
 
                 if isinstance(msg, dict) and "id" in msg:
                     async with link.d_watch(P("run.ping.id") / msg["id"]) as mon2:
-                        mon2 = aiter(mon2)
+                        mon2 = aiter(mon2)  # noqa:PLW2901
                         while True:
                             try:
                                 with anyio.fail_after(timeout):

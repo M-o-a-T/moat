@@ -124,8 +124,8 @@ class RepoInfo(BaseRepoInfo):
             )
 
             async for br in src_repo.get_branches():
-                br = br.data.name
-                await self.repo.exec("git", "branch", "--no-track", br, f"src/{br}")
+                brn = br.data.name
+                await self.repo.exec("git", "branch", "--no-track", brn, f"src/{brn}")
 
         desc = self.repo.cwd / "description"
         if self.description != await desc.read_text():

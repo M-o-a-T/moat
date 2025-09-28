@@ -32,7 +32,7 @@ async def get_host_tuple(obj):
         async for cg in anyio.Path("/proc/self/cgroup").readlines():
             for cge in cg.strip().split("/"):
                 if cge.endswith(".service"):
-                    cge = cge[:-8]
+                    cge = cge[:-8]  # noqa:PLW2901
                     hi = cge.split("@", 1)
                     if hi[0] == "user":
                         continue  # ignore

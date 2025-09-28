@@ -98,9 +98,9 @@ async def _server(host, port, debug, args):
             num = int(v)
         elif k in ("-v", "--val", "--value"):
             try:
-                v = int(v)
+                v = int(v)  # noqa:PLW2901
             except ValueError:
-                v = float(v)
+                v = float(v)  # noqa:PLW2901
             if unit is None:
                 unit = s.add_unit(1)
             for _ in range(num):

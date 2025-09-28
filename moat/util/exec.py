@@ -100,7 +100,7 @@ async def run(
             buf.write(chunk)
             if not echo:
                 continue
-            chunk = utf.decode(chunk).split("\n")
+            chunk = utf.decode(chunk).split("\n")  # noqa:PLW2901
             lch = chunk.pop()
             if frag not in (None, stream):
                 print("…")

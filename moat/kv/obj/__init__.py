@@ -591,12 +591,12 @@ class MirrorRoot(ClientEntry):
                             if self._seen.get(c.node, 0) < c.tick:
                                 self._seen[c.node] = c.tick
                             try:
-                                w = self._waiters[c.node]
+                                wt = self._waiters[c.node]
                             except KeyError:
                                 pass
                             else:
-                                while w and w[0][0] <= c.tick:
-                                    heapq.heappop(w)[1].set()
+                                while wt and wt[0][0] <= c.tick:
+                                    heapq.heappop(wt)[1].set()
                             c = c.get("prev", None)
 
             await tg.start(monitor)

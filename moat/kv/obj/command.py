@@ -146,11 +146,11 @@ def std_command(cli, *a, **kw):
                         for kk, vv in sorted(v):
                             if isinstance(vv, (tuple, list)):
                                 if vv:
-                                    vv = " ".join(str(x) for x in vv)
+                                    vv = " ".join(str(x) for x in vv)  # noqa:PLW2901
                                 else:
-                                    vv = "-"
+                                    vv = "-"  # noqa:PLW2901
                             elif isinstance(vv, dict):
-                                vv = " ".join(f"{x}={y}" for x, y in sorted(vv.items()))
+                                vv = " ".join(f"{x}={y}" for x, y in sorted(vv.items()))  # noqa:PLW2901
                             print(f"{k} {kk} {vv}", file=obj.stdout)
                     else:
                         print(f"{k} {v}", file=obj.stdout)
@@ -229,7 +229,7 @@ def std_command(cli, *a, **kw):
         for k, v in kw.items():
             if v:
                 if v == "-":
-                    v = None
+                    v = None  # noqa:PLW2901
                 try:
                     setattr(thing, k, v)
                 except AttributeError:

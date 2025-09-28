@@ -1633,7 +1633,7 @@ class Server(MsgHandler):
                             # ask it about its existing clients
                             async with conn.cl().stream_in() as cld:
                                 async for cl in cld:
-                                    cl = cl[0]
+                                    cl = cl[0]  # noqa:PLW2901
                                     if cl == name or cl == self.name:
                                         continue
                                     if not isinstance(self.clients.get(cl, None), ServerClient):

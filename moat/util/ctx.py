@@ -130,7 +130,7 @@ class ContextMgr:  # [CtxType]:
             try:
                 async with self.context(*args, **kwargs) as self.ctx:
                     evt.set()
-                    evt = self.stopped
+                    evt = self.stopped  # noqa:PLW2901
                     await self.stopper.wait()
                     if self.exc is not None:
                         raise self.exc

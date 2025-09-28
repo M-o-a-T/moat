@@ -104,7 +104,7 @@ class VfsRomWriter:  # noqa: D101
                             did_mpy = True
                             mpy_cross_run(src_name)
                 if did_mpy:
-                    name = name_mpy
+                    name = name_mpy  # noqa:PLW2901
                     src_name = src_name_mpy
                 with open(src_name, "rb") as src:
                     self.mkfile(name, src.read())

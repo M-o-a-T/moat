@@ -163,7 +163,7 @@ class GpioWatcher:
         base = None
 
         for line in self.gpio:
-            line = line.strip()
+            line = line.strip()  # noqa:PLW2901
             if not line:
                 chip = None
                 continue

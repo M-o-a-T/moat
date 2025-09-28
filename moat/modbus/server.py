@@ -276,7 +276,7 @@ def create_server(cfg):
                 if k == "units":
                     continue
                 if k == "host":
-                    k = "address"
+                    k = "address"  # noqa:PLW2901
                 kw[k] = v
         return ModbusServer(**kw)
     else:

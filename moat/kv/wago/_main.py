@@ -119,18 +119,18 @@ async def port_(obj, path, mode, attr):
     for k, v in attr:
         if k == "count":
             if v == "+":
-                v = True
+                v = True  # noqa:PLW2901
             elif v == "-":
-                v = False
+                v = False  # noqa:PLW2901
             elif v in "xX*":
-                v = None
+                v = None  # noqa:PLW2901
             else:
                 raise click.UsageError("'count' wants one of + - X")
         elif k == "rest":
             if v == "+":
-                v = True
+                v = True  # noqa:PLW2901
             elif v == "-":
-                v = False
+                v = False  # noqa:PLW2901
             else:
                 raise click.UsageError("'rest' wants one of + -")
         elif k in {"src", "dest", "state"} or "." in v or ":" in v:
@@ -138,10 +138,10 @@ async def port_(obj, path, mode, attr):
             continue
         else:
             try:
-                v = int(v)
+                v = int(v)  # noqa:PLW2901
             except ValueError:
                 with contextlib.suppress(ValueError):
-                    v = float(v)
+                    v = float(v)  # noqa:PLW2901
         val[k] = v
 
     res = await node_attr(obj, cfg.prefix + path, val, {}, val_p, res=res)

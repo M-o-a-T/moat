@@ -196,7 +196,7 @@ class DbusMonitor(CtxObj):
 
                 yield self
             finally:
-                self._tg = None
+                self._tg = None  # noqa:PLW2901
                 bus.remove_message_handler(self._dispatch)
 
     async def call_bus(self, *a, args=None, **k):

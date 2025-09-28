@@ -93,7 +93,7 @@ class Node:
         # Iterator that returns a serialization of this node tree.
         ps = PathShortener()
         for p, d, m in self._dump_x_(()):
-            s, p = ps.short(p)
+            s, p = ps.short(p)  # noqa:PLW2901
             yield (s, p, d, *(m.dump() if m is not None else ()))
 
     def _dump_x_(self, path):

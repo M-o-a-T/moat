@@ -79,7 +79,7 @@ def fixup_i(d, this_file=None):
                     f = this_file.parent / dd
                     df = f.open("r")
                 with df:
-                    dd = yload(df, attr=True)
+                    dd = yload(df, attr=True)  # noqa:PLW2901
                 inc[i] = fixup_i(dd, this_file=f)
             inc.reverse()
             d = combine_dict(d, *inc, cls=attrdict)
@@ -254,9 +254,9 @@ class Register:
         async for val in self.reg:
             if val is not None:
                 if self.factor != 1:
-                    val *= self.factor
+                    val *= self.factor  # noqa:PLW2901
                 if self.offset:
-                    val += self.offset
+                    val += self.offset  # noqa:PLW2901
             yield val
 
     @property
@@ -418,7 +418,7 @@ class ClientDevice(CtxObj, BaseDevice):
             return
         for k, v in self.data.slots.items():
             if v is None:
-                v = {}
+                v = {}  # noqa:PLW2901
             self.slots[k] = await self.unit.slot_scope(k, **v)
 
     async def add_registers(self):

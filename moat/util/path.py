@@ -659,7 +659,7 @@ class Path(collections.abc.Sequence):
                 res.append(p)
                 continue
 
-            p = list(p)
+            p = list(p)  # noqa:PLW2901
             if p[0] > 0:
                 p[0] -= 1
             if len(p) == 1:

@@ -255,7 +255,7 @@ class Scaffold(CtxObj):
                                 assert t - 1 < r[-1].timestamp < t
                             elif not kw.get("subtree"):
                                 # neither meta nor subtree
-                                r = (r,)
+                                r = (r,)  # noqa:PLW2901
                             if (
                                 exp is not NotGiven
                                 and (not kw.get("subtree") or not len(r[0]))

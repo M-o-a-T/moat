@@ -53,7 +53,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
     for k, v in cfg["apps"].items():
         if v != "wdt.Cmd":
             continue
-        k = cfg.get(k, {})
+        k = cfg.get(k, {})  # noqa:PLW2901
         if k.get("hw", False):
             machine.WDT(k.get("id", 0), k.get("t", 5000))
 

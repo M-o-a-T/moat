@@ -800,7 +800,7 @@ def sheet_place(obj, labels, numeric):
 
     for lab in labels:
         try:
-            lab = sess.one(Label, code=int(lab)) if numeric else sess.one(Label, text=lab)
+            lab = sess.one(Label, code=int(lab)) if numeric else sess.one(Label, text=lab)  # noqa:PLW2901
         except KeyError:
             print(f"Label {lab!r} not found. Skipped.")
         else:

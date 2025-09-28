@@ -192,17 +192,16 @@ class RepoMover:
                 async def drop_branches():
                     branches = []
                     async for br in src_repo.get_branches():
-                        br = br.data.name
-                        if br != cfg.src.get("branch", ""):
-                            branches.append(br)
+                        brn = br.data.name
+                        if brn != cfg.src.get("branch", ""):
+                            branches.append(brn)
                     await src_repo.drop_branches(*branches)
 
                 @tg.start_soon
                 async def drop_tags():
                     tags = []
                     async for ta in src_repo.get_tags():
-                        ta = ta["name"]
-                        tags.append(ta)
+                        tags.append(ta["name"])
                     await src_repo.drop_tags(*tags)
 
 

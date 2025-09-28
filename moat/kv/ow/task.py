@@ -84,8 +84,8 @@ async def task(client, cfg, server=None, evt=None):  # noqa: D103
         else:
             si = ((s, hd.server[s]) for s in server)
         for sname, s in si:
-            s = combine_dict(s.server, {"port": port})
-            await ow.add_server(name=sname, **s)
+            kw = combine_dict(s.server, {"port": port})
+            await ow.add_server(name=sname, **kw)
         if evt is not None:
             evt.set()
         while True:

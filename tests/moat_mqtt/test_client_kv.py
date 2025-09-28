@@ -80,35 +80,37 @@ def _PBD():
 @asynccontextmanager
 async def moat_kv_server(n, broker_config, test_config):  # noqa: D103
     msgs = []
-    async with anyio.create_task_group() as tg:
-        async with create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins"):
-            s = Server("test", cfg=broker_config["kv"], init="test")
+    async with (
+        anyio.create_task_group() as tg,
+        create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins"),
+    ):
+        s = Server("test", cfg=broker_config["kv"], init="test")
+        evt = anyio.Event()
+        tg.start_soon(partial(s.serve, ready_evt=evt))
+        await evt.wait()
+
+        async with open_client(**broker_config["kv"]) as cl:
+
+            async def msglog(evt):
+                try:
+                    async with cl._stream(  # noqa: SLF001
+                        "msg_monitor",
+                        topic="*",
+                    ) as mon:  # , topic=broker_config['kv']['topic']) as mon:
+                        log.info("Monitor Start")
+                        evt.set()
+                        async for m in mon:
+                            log.info("Monitor Msg %r", m.data)
+                            msgs.append(m.data)
+                except Exception:
+                    log.exception("DEAD")
+
             evt = anyio.Event()
-            tg.start_soon(partial(s.serve, ready_evt=evt))
+            await cl.scope.spawn(msglog, evt)
             await evt.wait()
-
-            async with open_client(**broker_config["kv"]) as cl:
-
-                async def msglog(evt):
-                    try:
-                        async with cl._stream(  # noqa: SLF001
-                            "msg_monitor",
-                            topic="*",
-                        ) as mon:  # , topic=broker_config['kv']['topic']) as mon:
-                            log.info("Monitor Start")
-                            evt.set()
-                            async for m in mon:
-                                log.info("Monitor Msg %r", m.data)
-                                msgs.append(m.data)
-                    except Exception:
-                        log.exception("DEAD")
-
-                evt = anyio.Event()
-                await cl.scope.spawn(msglog, evt)
-                await evt.wait()
-                yield s
-                cl.scope.cancel()
-            tg.cancel_scope.cancel()
+            yield s
+            cl.scope.cancel()
+        tg.cancel_scope.cancel()
     if len(msgs) != n:
         log.error("MsgCount %d %d", len(msgs), n)
     # assert len(msgs) == n, msgs
@@ -170,33 +172,39 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
         async def test_coro():
             broker_config, test_config = _PBD()
-            async with moat_kv_server(0, broker_config, test_config):
-                async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                    async with open_mqttclient(config=broker_config["broker"]) as client:
-                        assert client.session is not None
-                        ret = await client.subscribe([("test_topic", QOS_0)])
-                        assert ret[0] == QOS_0
-                        async with open_mqttclient(config=broker_config["broker"]) as client_pub:
-                            await client_pub.publish("test_topic", data, QOS_0, retain=False)
-                        with anyio.fail_after(0.5):
-                            message = await client.deliver_message()
-                        assert message is not None
-                        assert message.publish_packet is not None
-                        assert message.data == data
+            async with (
+                moat_kv_server(0, broker_config, test_config),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient(config=broker_config["broker"]) as client,
+            ):
+                assert client.session is not None
+                ret = await client.subscribe([("test_topic", QOS_0)])
+                assert ret[0] == QOS_0
+                async with open_mqttclient(config=broker_config["broker"]) as client_pub:
+                    await client_pub.publish("test_topic", data, QOS_0, retain=False)
+                with anyio.fail_after(0.5):
+                    message = await client.deliver_message()
+                assert message is not None
+                assert message.publish_packet is not None
+                assert message.data == data
 
         anyio_run(test_coro, backend="trio")
 
     def test_deliver_timeout(self):  # noqa: D102
         async def test_coro():
             broker_config, test_config = _PBD()
-            async with moat_kv_server(0, broker_config, test_config):
-                async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                    async with open_mqttclient(config=broker_config["broker"]) as client:
-                        assert client.session is not None
-                        ret = await client.subscribe([("test_topic", QOS_0)])
-                        assert ret[0] == QOS_0
-                        with pytest.raises(TimeoutError):
-                            with anyio.fail_after(2):
-                                await client.deliver_message()
+            async with (
+                moat_kv_server(0, broker_config, test_config),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient(config=broker_config["broker"]) as client,
+            ):
+                assert client.session is not None
+                ret = await client.subscribe([("test_topic", QOS_0)])
+                assert ret[0] == QOS_0
+                with (
+                    pytest.raises(TimeoutError),
+                    anyio.fail_after(2),
+                ):
+                    await client.deliver_message()
 
         anyio_run(test_coro, backend="trio")

@@ -75,6 +75,8 @@ async def client(mqtt_port: int | None = None, moat_kv_port: int | None = None):
     """
     An async context manager which creates a stand-alone MoaT-KV client.
     """
-    async with server(mqtt_port=mqtt_port, moat_kv_port=moat_kv_port) as s:
-        async with s.test_client() as c:
-            yield c
+    async with (
+        server(mqtt_port=mqtt_port, moat_kv_port=moat_kv_port) as s,
+        s.test_client() as c,
+    ):
+        yield c

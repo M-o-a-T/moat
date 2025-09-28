@@ -58,15 +58,17 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
         um = loader("_test", "user", make=False, server=False)
 
         async def mon(evt):
-            async with st.client(auth=um.build({"name": "std"})) as c:
-                async with c._stream("watch", path=P("inty")) as q:  # noqa: SLF001
-                    evt.set()
-                    pl = PathLongener(P("inty"))
-                    async for m in q:
-                        pl(m)
-                        del m["tock"]
-                        del m["seq"]
-                        recv.append(m)
+            async with (
+                st.client(auth=um.build({"name": "std"})) as c,
+                c._stream("watch", path=P("inty")) as q,  # noqa: SLF001
+            ):
+                evt.set()
+                pl = PathLongener(P("inty"))
+                async for m in q:
+                    pl(m)
+                    del m["tock"]
+                    del m["seq"]
+                    recv.append(m)
 
         evt = trio.Event()
         await scope.spawn(mon, evt)

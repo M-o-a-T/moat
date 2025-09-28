@@ -102,19 +102,21 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
 
         async def watch(*, task_status=trio.TASK_STATUS_IGNORED):
             nonlocal n_two
-            async with asyncserf.serf_client() as s:
-                async with s.stream("user:test.update") as sr:
-                    task_status.started()
-                    async for r in sr:
-                        msg = msgpack.unpackb(
-                            r.data,
-                            object_pairs_hook=attrdict,
-                            raw=False,
-                        )
-                        if msg.get("value", "") == "two":
-                            n_two += 1
+            async with (
+                asyncserf.serf_client() as s,
+                s.stream("user:test.update") as sr,
+            ):
+                task_status.started()
+                async for r in sr:
+                    msg = msgpack.unpackb(
+                        r.data,
+                        object_pairs_hook=attrdict,
+                        raw=False,
+                    )
+                    if msg.get("value", "") == "two":
+                        n_two += 1
 
-                    i.s()
+                i.s()
 
         st.tg.start_soon(watch)
         async with st.client(1) as ci:

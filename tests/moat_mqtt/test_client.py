@@ -94,82 +94,94 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
     def test_connect_ws(self):  # noqa: D102
         async def test_coro():
             _, WSPORT, _, _, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(f"ws://127.0.0.1:{WSPORT}/")
-                    assert client.session is not None
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(f"ws://127.0.0.1:{WSPORT}/")
+                assert client.session is not None
 
         anyio_run(test_coro, backend="trio")
 
     def test_reconnect_ws_retain_username_password(self):  # noqa: D102
         async def test_coro():
             _, WSPORT, _, _, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(f"ws://fred:password@127.0.0.1:{WSPORT}/")
-                    assert client.session is not None
-                    await client.reconnect()
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(f"ws://fred:password@127.0.0.1:{WSPORT}/")
+                assert client.session is not None
+                await client.reconnect()
 
-                    assert client.session.username is not None
-                    assert client.session.password is not None
+                assert client.session.username is not None
+                assert client.session.password is not None
 
         anyio_run(test_coro, backend="trio")
 
     def test_connect_ws_secure(self):  # noqa: D102
         async def test_coro():
             _, _, WSSPORT, _, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    ca = os.path.join(
-                        os.path.dirname(os.path.realpath(__file__)),
-                        "mosquitto.org.crt",
-                    )
-                    await client.connect(f"ws://127.0.0.1:{WSSPORT}/", cafile=ca)
-                    assert client.session is not None
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                ca = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "mosquitto.org.crt",
+                )
+                await client.connect(f"ws://127.0.0.1:{WSSPORT}/", cafile=ca)
+                assert client.session is not None
 
         anyio_run(test_coro, backend="trio")
 
     def test_ping(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(URI)
-                    assert client.session is not None
-                    await client.ping()
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(URI)
+                assert client.session is not None
+                await client.ping()
 
         anyio_run(test_coro, backend="trio")
 
     def test_subscribe(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(URI)
-                    assert client.session is not None
-                    ret = await client.subscribe(
-                        [
-                            ("$SYS/broker/uptime", QOS_0),
-                            ("$SYS/broker/uptime", QOS_1),
-                            ("$SYS/broker/uptime", QOS_2),
-                        ],
-                    )
-                    assert ret[0] == QOS_0
-                    assert ret[1] == QOS_1
-                    assert ret[2] == QOS_2
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(URI)
+                assert client.session is not None
+                ret = await client.subscribe(
+                    [
+                        ("$SYS/broker/uptime", QOS_0),
+                        ("$SYS/broker/uptime", QOS_1),
+                        ("$SYS/broker/uptime", QOS_2),
+                    ],
+                )
+                assert ret[0] == QOS_0
+                assert ret[1] == QOS_1
+                assert ret[2] == QOS_2
 
         anyio_run(test_coro, backend="trio")
 
     def test_unsubscribe(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(URI)
-                    assert client.session is not None
-                    ret = await client.subscribe([("$SYS/broker/uptime", QOS_0)])
-                    assert ret[0] == QOS_0
-                    await client.unsubscribe(["$SYS/broker/uptime"])
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(URI)
+                assert client.session is not None
+                ret = await client.subscribe([("$SYS/broker/uptime", QOS_0)])
+                assert ret[0] == QOS_0
+                await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")
 
@@ -178,34 +190,38 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(URI)
-                    assert client.session is not None
-                    ret = await client.subscribe([("test_topic", QOS_0)])
-                    assert ret[0] == QOS_0
-                    async with open_mqttclient() as client_pub:
-                        await client_pub.connect(URI)
-                        await client_pub.publish("test_topic", data, QOS_0)
-                    message = await client.deliver_message()
-                    assert message is not None
-                    assert message.publish_packet is not None
-                    assert message.data == data
-                    await client.unsubscribe(["$SYS/broker/uptime"])
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(URI)
+                assert client.session is not None
+                ret = await client.subscribe([("test_topic", QOS_0)])
+                assert ret[0] == QOS_0
+                async with open_mqttclient() as client_pub:
+                    await client_pub.connect(URI)
+                    await client_pub.publish("test_topic", data, QOS_0)
+                message = await client.deliver_message()
+                assert message is not None
+                assert message.publish_packet is not None
+                assert message.data == data
+                await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")
 
     def test_deliver_timeout(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
-            async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
-                async with open_mqttclient() as client:
-                    await client.connect(URI)
-                    assert client.session is not None
-                    ret = await client.subscribe([("test_topic", QOS_0)])
-                    assert ret[0] == QOS_0
-                    with pytest.raises(TimeoutError), anyio.fail_after(2):
-                        await client.deliver_message()
-                    await client.unsubscribe(["$SYS/broker/uptime"])
+            async with (
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                open_mqttclient() as client,
+            ):
+                await client.connect(URI)
+                assert client.session is not None
+                ret = await client.subscribe([("test_topic", QOS_0)])
+                assert ret[0] == QOS_0
+                with pytest.raises(TimeoutError), anyio.fail_after(2):
+                    await client.deliver_message()
+                await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")

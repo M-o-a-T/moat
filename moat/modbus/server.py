@@ -121,7 +121,7 @@ class BaseModbusServer(CtxObj):
 
     async def serve(self, opened=None):
         """The actual server. Override me."""
-        raise RuntimeError("You need to override .serve")
+        raise NotImplementedError("You need to override .serve")
 
     async def process_request(self, request):
         """Basic request processor"""
@@ -164,7 +164,7 @@ class SerialModbusServer(BaseModbusServer):
         )
 
         class Framer(ModbusRtuFramer):
-            def _validate_dev_id(self, unit, single):
+            def _validate_dev_id(self, unit, single):  # noqa: ARG002
                 return True
 
         self.decoder = DecodePDU(False)  # pylint: disable=no-value-for-parameter ## duh?

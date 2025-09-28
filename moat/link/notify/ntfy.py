@@ -37,7 +37,7 @@ class Notifier(BaseNotifier):
         msg: str,
         prio: str | None = None,
         tags: Sequence[str] = (),
-        **kw,
+        **kw,  # noqa: ARG002
     ):
         "Forward a message to NTFY"
 

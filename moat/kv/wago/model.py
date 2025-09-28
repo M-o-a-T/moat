@@ -209,6 +209,8 @@ class WAGOoutput(_WAGOnode):
 
         Also the value is mirrored to ``cur`` if that's set.
         """
+        preload  # noqa:B018
+
         await self.server.write_output(self.card, self.port, val != negate)
         if state is not None:
             await self.client.set(state, value=val)
@@ -272,6 +274,7 @@ class WAGOoutput(_WAGOnode):
 
         The state records the cycle ratio.
         """
+        preload  # noqa:B018
 
         async def work_pulse(task_status):
             nonlocal t_on
@@ -448,7 +451,7 @@ class WAGOroot(_WAGObase, ClientRoot):  # noqa: D101
 
         return acc
 
-    def child_type(self, name):  # noqa: D102
+    def child_type(self, name):  # noqa: ARG002, D102
         return WAGOserver
 
     async def update_server(self):  # noqa: D102

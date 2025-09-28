@@ -36,7 +36,7 @@ class SubackPayload(MQTTPayload):  # noqa: D101
     def __repr__(self):
         return type(self).__name__ + f"(return_codes={self.return_codes!r})"
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: D102
+    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: ARG002, D102
         out = b""
         for return_code in self.return_codes:
             out += int_to_bytes(return_code, 1)

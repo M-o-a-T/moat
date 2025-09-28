@@ -23,7 +23,7 @@ except AttributeError:
         # fake
         __val = False
 
-        def __new__(cls, **kw):
+        def __new__(cls, **kw):  # noqa: ARG004
             return object.__new__(cls)
 
         def __init__(self, **kw):

@@ -10,7 +10,7 @@ pytestmark = pytest.mark.skip
 
 
 @pytest.mark.trio
-async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
+async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001, D103
     async with stdtest(args={"init": 123}) as st:
         assert st is not None
         (s,) = st.s
@@ -39,7 +39,7 @@ async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument  
 
 
 @pytest.mark.trio
-async def test_52_passthru_bin(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
+async def test_52_passthru_bin(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001, D103
     async with stdtest(args={"init": 123}) as st:
         assert st is not None
         (s,) = st.s

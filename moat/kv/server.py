@@ -838,7 +838,7 @@ class ServerClient:
     async def cmd_delete_internal(self, msg):  # noqa: D102
         return await self.cmd_delete_value(msg, root=self.metaroot)
 
-    async def cmd_get_tock(self, msg):  # pylint: disable=unused-argument  # noqa: D102
+    async def cmd_get_tock(self, msg):  # noqa: ARG002, D102
         return {"tock": self.server.tock}
 
     async def cmd_test_acl(self, msg):

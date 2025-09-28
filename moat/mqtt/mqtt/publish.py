@@ -62,7 +62,7 @@ class PublishPayload(MQTTPayload):  # noqa: D101
         super().__init__()
         self.data = data
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: D102
+    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: ARG002, D102
         return self.data
 
     @classmethod

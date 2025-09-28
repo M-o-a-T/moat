@@ -116,7 +116,7 @@ def read_env(loader, node):
     return os.environ[value]
 
 
-def _el_repr(dumper, data):
+def _el_repr(dumper, data):  # noqa: ARG001
     return dumper.represent_scalar("!R", "...")
 
 
@@ -133,6 +133,8 @@ if DProxy is not None:
 
 
 def _name2obj(constructor, node):
+    constructor  # noqa:B018
+
     from moat.lib.codec.proxy import name2obj  # noqa: PLC0415
 
     return name2obj(node.value)

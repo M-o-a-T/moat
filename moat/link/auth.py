@@ -42,7 +42,7 @@ class AuthMethod:  # noqa: D101
 
         return False
 
-    async def chat(self, conn: Hello, data: Any):
+    async def chat(self, conn: Hello, data: Any):  # noqa: ARG002
         """
         The recipient of a Hello message whose ``auth`` member includes our
         name calls this method. It's supposed to call ``conn.cmd(i.auth.NAME), …)``
@@ -54,7 +54,7 @@ class AuthMethod:  # noqa: D101
         """
         return None
 
-    async def handle(self, conn: Hello, msg: Msg) -> None:
+    async def handle(self, conn: Hello, msg: Msg) -> None:  # noqa: ARG002
         """
         The dispatcher calls this method with an incoming ``i.auth.NAME`` message.
 
@@ -62,6 +62,8 @@ class AuthMethod:  # noqa: D101
 
         The default is to fail, because the remote shouldn't call us without reason.
         """
+        conn  # noqa:B018
+
         await msg.result(False)
 
 
@@ -93,10 +95,12 @@ class TokenAuth(AuthMethod):  # noqa: D101
         # wrong token: kick them off
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg):
+    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: ARG002
         """
         The client shouldn't send an `i.auth.token` message.
         """
+        conn  # noqa:B018
+
         await msg.result(False)
 
 
@@ -111,10 +115,11 @@ class AnonAuth(AuthMethod):
         return None
 
     async def chat(self, conn, data):  # noqa: D102
+        data  # noqa:B018
         conn.authorized(self)
         return True
 
-    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: D102
+    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: ARG002, D102
         return True
 
 
@@ -128,10 +133,10 @@ class NoAuth(AuthMethod):
     async def hello_out(self):  # noqa: D102
         return None
 
-    async def chat(self, conn, data):
+    async def chat(self, conn, data):  # noqa: ARG002
         "reject"
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg, *prefix: Key):
+    async def handle(self, conn: MsgHandler, msg: Msg, *prefix: Key):  # noqa: ARG002
         "reject"
         return False

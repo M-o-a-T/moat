@@ -146,7 +146,7 @@ class ModbusError(RuntimeError):
 class _HostCommon:
     stream = None
     framer = None  # overridden
-    _trace = lambda *x: None  # pylint:disable=unnecessary-lambda-assignment  #  overridden
+    _trace = lambda *x: None  # overridden  # noqa: ARG005
 
     def __init__(self, gate, timeout, cap):
         self.gate = gate

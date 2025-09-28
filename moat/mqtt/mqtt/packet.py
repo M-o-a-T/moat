@@ -155,7 +155,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):  # noqa: D101
         return out
 
     @classmethod
-    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: D102
+    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: ARG003, D102
         packet_id = await decode_packet_id(reader)
         return cls(packet_id)
 

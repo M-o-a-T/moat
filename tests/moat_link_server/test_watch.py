@@ -61,6 +61,8 @@ async def test_watch_mon(cfg):  # noqa: D103
         await sf.tg.start(_dump, sf)
 
         async def cl(end, *, task_status):
+            end  # noqa:B018
+
             c = await sf.client()
             evt = anyio.Event()
 

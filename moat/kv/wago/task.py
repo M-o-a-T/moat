@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 
 async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
+    client  # noqa:B018
+
     cfg = combine_dict(server.value_or({}, Mapping).get("server", {}), cfg["server_default"])
 
     async def present(s, p):

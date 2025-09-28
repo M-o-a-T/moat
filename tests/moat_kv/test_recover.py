@@ -64,7 +64,7 @@ async def send_evt(self, action: str, msg: dict):  # noqa: D103
 
 
 @pytest.mark.trio
-async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
+async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001
     """
     This test starts multiple servers at the same time and checks that
     dropping random messages ultimately recovers.

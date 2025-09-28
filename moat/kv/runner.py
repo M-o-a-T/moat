@@ -877,7 +877,7 @@ class StateRoot(MirrorRoot):
     _runner = None
 
     @classmethod
-    def child_type(cls, name):  # noqa: D102
+    def child_type(cls, name):  # noqa: ARG003, D102
         return StateEntry
 
     @property
@@ -957,7 +957,7 @@ class _BaseRunnerRoot(ClientRoot):
         self._x_subpath = _subpath
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: ARG003
         return RunnerEntry
 
     @classmethod
@@ -999,7 +999,7 @@ class _BaseRunnerRoot(ClientRoot):
         """my node name"""
         return self.client.client_name
 
-    def get_node(self, name):  # pylint: disable=unused-argument
+    def get_node(self, name):  # pylint: disable=unused-argument  # noqa: ARG002
         """
         If the runner keeps track of "foreign" nodes, allocate them
         """

@@ -616,7 +616,8 @@ class ClientStub:
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         "Handler that forwards to the remote server"
-        await anyio.sleep(1)
+        if prefix:
+            raise ValueError("doesn't work")
         srv = self.server.server_link(self.name)[1]
         if isinstance(srv, ClientStub):
             raise RuntimeError("Client dropped, try later")
@@ -767,7 +768,7 @@ class Server(MsgHandler):
                 self.write_monitor((path, data, meta))
         return res
 
-    async def _mon_run(self, topic: Path, msg: Message) -> bool:
+    async def _mon_run(self, topic: Path, msg: Message) -> bool:  # noqa: ARG002
         """
         Messages to run.* are skipped by the main monitor backend.
         """
@@ -1852,7 +1853,7 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd, skp, tags = await self.load_file(fn=self._f_load)
+        upd, skp, tags = await self.load_file(fn=fn)
         if not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):

@@ -43,7 +43,7 @@ class _InvSub:
         self.name_cb = name_cb or (lambda _c, _k, x: x)
         self.aux = aux
         self.short_help = short_help
-        self.postproc = postproc or (lambda _c, _t, x: None)
+        self.postproc = postproc or (lambda _c, _t, _x: None)
         self.long_name = long_name or name
         self.sub_base = sub_base
         self.prepare = prepare
@@ -214,7 +214,7 @@ def std_command(cli, *a, **kw):
 
     @typ.command(short_help="Delete a " + tinv.long_name)
     @click.pass_obj
-    async def delete(obj, **kw):  # pylint: disable=unused-argument,unused-variable
+    async def delete(obj, **kw):  # pylint: disable=unused-argument,unused-variable  # noqa: ARG001
         name = obj[tnname]
         n = this(obj).by_name(name)
         if n is not None:

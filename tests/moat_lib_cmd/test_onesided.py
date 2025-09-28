@@ -16,6 +16,7 @@ async def test_no_stream_in(no_s):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             if no_s:
@@ -45,6 +46,7 @@ async def test_no_stream_out(no_s):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             if no_s:
@@ -73,6 +75,7 @@ async def test_write_both():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             async with msg.stream_out("Takeme") as st:

@@ -62,6 +62,7 @@ class Cmd(BaseCmd):
 
         @n: ignored, used to distinguish calls during testing.
         """
+        n  # noqa:B018
         self.wdt.ping(force=f)
 
     doc_set = dict(_d="set timeout", t="int:timeout,msec")

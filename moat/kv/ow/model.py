@@ -29,7 +29,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
     watch_dest_chain = None
 
     @classmethod
-    def child_type(cls, name):  # noqa: D102
+    def child_type(cls, name):  # noqa: ARG003, D102
         return cls
 
     @property
@@ -205,7 +205,7 @@ class OWFSnode(ClientEntry):  # noqa: D101
         self.val = {}
 
     @classmethod
-    def child_type(cls, name):  # noqa: D102
+    def child_type(cls, name):  # noqa: ARG003, D102
         return OWFSattr
 
     @property
@@ -269,13 +269,13 @@ class ServerEntry(AttrClientEntry):  # noqa: D101
     ATTRS = ("server",)
 
     @classmethod
-    def child_type(cls, name):  # noqa: D102
+    def child_type(cls, name):  # noqa: ARG003, D102
         return ClientEntry
 
 
 class ServerRoot(ClientEntry):  # noqa: D101
     @classmethod
-    def child_type(cls, name):  # noqa: D102
+    def child_type(cls, name):  # noqa: ARG003, D102
         return ServerEntry
 
 

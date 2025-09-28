@@ -274,7 +274,7 @@ def find_p(prog: str):
     return None
 
 
-async def install_(cfg, dest: Path = None, upload: bool = False):
+async def install_(cfg, dest: Path = None):
     """
     Install our version of MicroPython to a device.
     """

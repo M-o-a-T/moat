@@ -24,6 +24,7 @@ async def test_basic(a_s, a_r, k_s, k_r):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == tuple(a_s)
             if not msg.kw:
@@ -50,6 +51,7 @@ async def test_basic_res():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             return {"C": msg.cmd, "R": tuple(msg.args)}
@@ -68,6 +70,7 @@ async def test_error():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             raise RuntimeError("Duh", msg.args)
 
     async with (
@@ -86,6 +89,7 @@ async def test_more():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == ["X"]
             await anyio.sleep(msg.args[0] / 10)
             return msg.args[0]
@@ -117,6 +121,7 @@ async def test_return():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             return ("Foo", 234)
@@ -135,6 +140,7 @@ async def test_return2():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             await msg.result("Foo", 234)
@@ -154,6 +160,7 @@ async def test_stream_in():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             res = []
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
@@ -182,6 +189,7 @@ async def test_stream_out():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
+            rcmd  # noqa:B018
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123, 456)
             assert msg.kw["answer"] == 42, msg.kw

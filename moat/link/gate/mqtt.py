@@ -59,6 +59,7 @@ class Gate(_Gate):  # noqa: D101
                 codec = self.codec
 
                 def conv(p, d):
+                    p  # noqa:B018
                     return d
 
             mon = await ex.enter_async_context(
@@ -116,11 +117,16 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = meta
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):
-        "update test"
+    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):
+        """
+        Test whether this is an update.
+
+        @data is currently ignored.
+        """
+        data  # noqa:B018
         # if the old metadata match the new, it's not an update.
         try:
-            if node.ext_meta.origin == aux.origin and node.ext_meta.timestamp == aux.timestamp:
+            if node.ext_meta.origin == meta.origin and node.ext_meta.timestamp == meta.timestamp:
                 return False
         except (AttributeError, KeyError):
             pass

@@ -207,7 +207,7 @@ class Gate:
         """
         raise NotImplementedError
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):  # noqa: ARG002
         """
         Check whether this new destination data is an update.
         """

@@ -29,7 +29,7 @@ def _skip_check(self):
 
 
 @pytest.mark.trio
-async def test_10_many(autojump_clock):  # pylint: disable=unused-argument
+async def test_10_many(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001
     """
     This test starts multiple servers at the same time and checks that
     final object deletion works.
@@ -95,6 +95,7 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
     """
     This test checks that re-joining a split network updates everything.
     """
+    autojump_clock  # noqa:B018
     n_two = 0
 
     async with stdtest(test_1={"init": 420}, n=N, tocks=1000) as st:

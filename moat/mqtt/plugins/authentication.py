@@ -14,7 +14,7 @@ class BaseAuthPlugin:  # noqa: D101
         except KeyError:
             self.context.logger.warning("'auth' section not found in context configuration")
 
-    async def authenticate(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
+    async def authenticate(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")

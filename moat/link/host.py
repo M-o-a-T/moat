@@ -250,7 +250,7 @@ class Host:
     def trigger(self, *args, **kwargs) -> Awaitable:
         return self.machine.trigger(*args, **kwargs)
 
-    async def on_enter_drop(self, ev):
+    async def on_enter_drop(self, ev):  # noqa: ARG002
         await self.mon.drop_cb(self)
 
     async def re_init(self, ev):

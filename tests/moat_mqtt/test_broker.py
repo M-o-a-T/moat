@@ -93,7 +93,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_connect(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_connect(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -114,7 +114,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_connect_will_flag(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_connect_will_flag(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             PORT, _, test_config = _PUT()
             async with create_broker(
@@ -151,7 +151,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -371,7 +371,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -426,7 +426,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_retain(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_publish_retain(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -452,7 +452,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -473,7 +473,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_publish(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_subscribe_publish(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -507,7 +507,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_invalid(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_subscribe_invalid(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -533,7 +533,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -561,7 +561,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(
@@ -589,7 +589,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
+    def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
             _, URL, test_config = _PUT()
             async with create_broker(

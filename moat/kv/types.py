@@ -229,13 +229,13 @@ class NullACL(ACLStepper):
     def allows(self, x):  # noqa: D102
         return x != "a"
 
-    def check(self, x):  # noqa: D102
+    def check(self, x):  # noqa: ARG002, D102
         return
 
     def block(self, c):  # noqa: D102
         pass
 
-    def step(self, name, new=None):  # noqa: D102
+    def step(self, name, new=None):  # noqa: ARG002, D102
         return self
 
 

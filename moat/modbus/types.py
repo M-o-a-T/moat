@@ -538,7 +538,7 @@ class DataBlock(dict, BaseModbusDataBlock):
         self[offset] = val
         val.block = self
 
-    def validate(self, address: int, count: int = 1):
+    def validate(self, address: int, count: int = 1):  # noqa: ARG002
         "does nothing. Compatibility with pymodbus 3.8"
         return True
 

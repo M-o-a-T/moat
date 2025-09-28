@@ -40,6 +40,9 @@ class Gate(_Gate):  # noqa: D101
 
     async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
         "Set KV data."
+
+        meta  # noqa:B018
+
         # XXX ideally we should have the previous value's external chain
         # available here, just to be able to complain when there's a conflict
         if data is NotGiven:
@@ -49,11 +52,12 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = res.chain
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):
+    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):
         "Check for update"
+        data  # noqa:B018
         # If the message is an echo of what we sent earlier, ignore it.
         try:
-            if aux.origin == node.ext_meta.node and aux["t"] == node.ext_meta.tick:
+            if meta.origin == node.ext_meta.node and meta["t"] == node.ext_meta.tick:
                 return False
         except (AttributeError, KeyError):
             pass

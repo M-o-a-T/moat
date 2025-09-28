@@ -122,12 +122,13 @@ async def set_(obj, last, new, **kw):
     If you update a value you can use "--last" to ensure that no other
     change arrived between reading and writing the entry.
 
-    When adding a new entry use "--new" to ensure that you don't
+    TODO: When adding a new entry use "--new" to ensure that you don't
     accidentally overwrite something.
 
     MoaT-KV entries typically are mappings. Use a colon as the path if you
     want to replace the top level.
     """
+    last, new  # noqa:B018
 
     res = await node_attr(obj, obj.path, **kw)
 
@@ -194,7 +195,7 @@ async def monitor(
     mode,
     only,
     path_only,
-    add_date,
+    add_date,  # noqa: ARG001
     ignore,
     mark,
     subtree,

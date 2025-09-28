@@ -113,7 +113,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         self.flags |= val << 3
 
     @classmethod
-    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: D102
+    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: ARG003, D102
         #  protocol name
         protocol_name = await decode_string(reader)
 
@@ -179,7 +179,7 @@ class ConnectPayload(MQTTPayload):  # noqa: D101
     async def from_stream(  # noqa: D102
         cls,
         reader: StreamAdapter,
-        fixed_header: MQTTFixedHeader,
+        fixed_header: MQTTFixedHeader,  # noqa: ARG003
         variable_header: ConnectVariableHeader,
     ):
         payload = cls()
@@ -219,7 +219,7 @@ class ConnectPayload(MQTTPayload):  # noqa: D101
 
         return payload
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: ConnectVariableHeader):  # noqa: D102
+    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: ConnectVariableHeader):  # noqa: ARG002, D102
         out = bytearray()
         # Client identifier
         out.extend(encode_string(self.client_id))

@@ -59,6 +59,7 @@ def _enc_path(codec, obj):
 
 @std_ext.encoder(4, Proxy)
 def _enc_proxy(codec, obj):
+    codec  # noqa:B018
     return obj.name.encode("utf-8")
 
 

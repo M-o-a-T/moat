@@ -148,7 +148,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
 
         URI = f"mqtt://127.0.0.1:{sf.cfg.backend.port}/"
 
-        async def mock_get_host_port(kvs, host):
+        async def mock_get_host_port(kvs, host):  # noqa: ARG001
             return "127.0.0.1", sf.cfg.backend.port
 
         ensure_cfg("moat.link")

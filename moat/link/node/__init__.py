@@ -57,6 +57,7 @@ class Node:
 
     def set_(self, path: Path, data: Any, meta: MsgMeta):
         "Low-level node data setter. The (sub)path is not stored by default."
+        path  # noqa:B018
         self._data = data
         self._meta = meta
 
@@ -314,8 +315,9 @@ class NodeFinder:
     """A generic object that can walk down a possibly-wildcard-equipped path.
 
     Example: given a path `one.two.three` and a root with subtree `*.three`,
-    `NodeFinder(root).step(one).step(two).step(three)` will return the node
-    at `*.three` (assuming that nothing more specific hangs off `the root`).
+    `NodeFinder(root).step(one).step(two).step(three).result` will return
+    the node at `*.three` (assuming that nothing more specific hangs off
+    the root).
 
     If nothing is found, raises `KeyError`.
     """
@@ -324,6 +326,13 @@ class NodeFinder:
         self.steps = ((src, False),)
 
     def step(self, name, new=False):  # noqa: D102
+        """
+        Walk a single hierarchy step, observing wildcards.
+
+        @new must not be true; it's here for override compatibility.
+        """
+        if new:
+            raise ValueError("I can't create new nodes.")
         steps = []
         for node, _keep in self.steps:
             if name in node:

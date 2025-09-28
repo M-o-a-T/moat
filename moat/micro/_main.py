@@ -549,6 +549,9 @@ async def run_(obj):
 @catch_errors
 async def rom(obj, path, device):
     """Send a file system to the device's ROM"""
+    path  # noqa:B018
+    raise NotImplementedError
+
     cfg = obj.mcfg
 
     async with (
@@ -564,12 +567,12 @@ async def rom(obj, path, device):
                 raise RuntimeError("Device does not have ROMFS.")
             raise RuntimeError("Device 0…{res-1} only.")
 
+
         nblk, blksz = await sd.stat()
 
         if obj.debug:
             print("Building ROMFS.")
 
-        await idle()
 
 
 @cli.command("path")

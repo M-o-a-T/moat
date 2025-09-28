@@ -51,7 +51,7 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
     async def handle_read_timeout(self):  # noqa: D102
         raise TimeoutError
 
-    async def _handle_disconnect(self, disconnect, wait=True):  # pylint: disable=arguments-differ
+    async def _handle_disconnect(self, disconnect, wait=True):  # pylint: disable=arguments-differ  # noqa: ARG002
         self.logger.debug("Client disconnecting")
         self.clean_disconnect = False  # depending on 'disconnect' (if set)
         with anyio.fail_after(2, shield=True):
@@ -65,7 +65,7 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
             self._disconnecting = True
             await self._handle_disconnect(None, wait=False)
 
-    async def handle_connect(self, connect: ConnectPacket):  # noqa: D102
+    async def handle_connect(self, connect: ConnectPacket):  # noqa: ARG002, D102
         # Broker handler shouldn't received CONNECT message during messages handling
         # as CONNECT messages are managed by the broker on client connection
         self.logger.error(
@@ -75,7 +75,7 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
         )
         await self.stop()
 
-    async def handle_pingreq(self, pingreq: PingReqPacket):  # noqa: D102
+    async def handle_pingreq(self, pingreq: PingReqPacket):  # noqa: ARG002, D102
         await self._send_packet(PingRespPacket.build())
 
     async def handle_subscribe(self, subscribe: SubscribePacket):  # noqa: D102

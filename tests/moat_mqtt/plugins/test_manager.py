@@ -25,14 +25,14 @@ class EventTestPlugin:  # noqa: D101
         self.test_flag = False
         self.coro_flag = False
 
-    async def on_test(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
+    async def on_test(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.test_flag = True
         self.context.logger.info("on_test")
 
-    async def test_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
+    async def test_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.coro_flag = True
 
-    async def ret_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
+    async def ret_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         return "TEST"
 
 

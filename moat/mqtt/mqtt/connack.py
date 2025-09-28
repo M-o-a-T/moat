@@ -31,7 +31,7 @@ class ConnackVariableHeader(MQTTVariableHeader):  # noqa: D101
         self.return_code = return_code
 
     @classmethod
-    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: D102
+    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: ARG003, D102
         data = await read_or_raise(reader, 2)
         session_parent = data[0] & 0x01
         return_code = data[1]
@@ -80,7 +80,7 @@ class ConnackPacket(MQTTPacket):  # noqa: D101
         self,
         fixed: MQTTFixedHeader = None,
         variable_header: ConnackVariableHeader = None,
-        payload=None,
+        payload=None,  # noqa: ARG002
     ):
         if fixed is None:
             header = MQTTFixedHeader(CONNACK, 0x00)

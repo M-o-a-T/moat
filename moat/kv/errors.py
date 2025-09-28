@@ -457,7 +457,7 @@ class ErrorRoot(ClientRoot):
         path,
         *,
         comment=None,
-                             data={},  # noqa:B006
+        data={},  # noqa:B006
         force=False,
     ):
         """This exception has been fixed.

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.trio
-async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
+async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001, D103
     async with stdtest(args={"init": 123}, tocks=200) as st:
         assert st is not None
         async with st.client() as c:

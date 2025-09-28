@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MetaEntry(Entry):  # noqa: D101
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self._metaroot = self.parent._metaroot
+        self._metaroot = self.parent._metaroot  # noqa: SLF001
 
     @property
     def metaroot(self):
@@ -169,7 +169,7 @@ class NodeFinder:
     @property
     def result(self):  # noqa: D102
         for node, _keep in self.steps:
-            if node._data is not NotGiven:
+            if node._data is not NotGiven:  # noqa: SLF001
                 return node
         return None
 
@@ -186,7 +186,7 @@ class ACLFinder(NodeFinder):
     def __init__(self, acl, blocked=None):
         if isinstance(acl, ACLFinder):
             if blocked is None:
-                blocked = acl._block
+                blocked = acl._block  # noqa: SLF001
             acl = acl.steps
         super().__init__(acl)
         if blocked is not None:
@@ -265,7 +265,7 @@ class MatchRoot(MetaPathEntry):
         match = self._find_node(entry)
         if match is None:
             return
-        typ = self.parent["type"].follow(match._data["type"])
+        typ = self.parent["type"].follow(match._data["type"])  # noqa: SLF001
         return typ.check_value(value, entry=entry, match=match, **kv)
 
 
@@ -406,7 +406,7 @@ class ConvName(MetaPathEntry):
         conv = self._find_node(entry)
         if conv is None:
             return value
-        codec = self.metaroot["codec"].follow(conv._data["codec"])
+        codec = self.metaroot["codec"].follow(conv._data["codec"])  # noqa: SLF001
         return codec.enc_value(value, entry=entry, conv=conv, **kv)
 
     def dec_value(self, value, entry, **kv):
@@ -414,7 +414,7 @@ class ConvName(MetaPathEntry):
         conv = self._find_node(entry)
         if conv is None:
             return value
-        codec = self.metaroot["codec"].follow(conv._data["codec"])
+        codec = self.metaroot["codec"].follow(conv._data["codec"])  # noqa: SLF001
         return codec.dec_value(value, entry=entry, conv=conv, **kv)
 
 

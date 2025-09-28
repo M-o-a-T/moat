@@ -107,7 +107,7 @@ class ProtocolHandler:
             self.session = None
         self.stream = None
         self.plugins_manager = plugins_manager
-        self._tg = plugins_manager._tg
+        self._tg = plugins_manager._tg  # noqa: SLF001
 
         self._reader_task = None
         self._sender_task = None

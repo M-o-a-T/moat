@@ -177,7 +177,7 @@ class DbusMonitor(CtxObj):
             bus.add_message_handler(self._dispatch)
 
             # enables name change signals
-            await bus._init_high_level_client()  # pylint: disable=protected-access
+            await bus._init_high_level_client()  # pylint: disable=protected-access  # noqa: SLF001
 
             # obj = await self.dbusConn.get_proxy_object(serviceName, objectPath)
             # intf = await obj.get_interface(ITEM_INTF)
@@ -210,7 +210,7 @@ class DbusMonitor(CtxObj):
 
     async def _dispatch(self, msg):
         # pylint: disable=protected-access
-        if msg._matches(
+        if msg._matches(  # noqa: SLF001
             sender="org.freedesktop.DBus",
             path="/org/freedesktop/DBus",
             interface="org.freedesktop.DBus",

@@ -32,7 +32,7 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
     """
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
-    sl._apply_default = True  # pylint:disable=protected-access
+    sl._apply_default = True  # pylint:disable=protected-access  # noqa: SLF001
     cfg = fixup(cfg)
 
     s = cfg.setdefault("src", attrdict())

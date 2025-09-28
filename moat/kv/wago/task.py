@@ -32,7 +32,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
     async def present(s, p):
         # Set the "present" attribute
         if s.val_d(None, "present") is not p:
-            await s.update(s.value_or(attrdict(), Mapping)._update(["present"], value=p))
+            await s.update(s.value_or(attrdict(), Mapping)._update(["present"], value=p))  # noqa: SLF001
 
     async def merge_ports(s_card, r):
         r = set(range(1, r + 1))
@@ -44,7 +44,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             await present(s_port, True)
 
         for s_port in s_card:
-            if s_port._name not in r:
+            if s_port._name not in r:  # noqa: SLF001
                 await present(s_port, False)
 
     async def merge_cards(s_type, r):
@@ -57,7 +57,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             await merge_ports(s_card, v)
 
         for s_card in s_type:
-            if s_card._name not in r:
+            if s_card._name not in r:  # noqa: SLF001
                 await present(s_card, False)
 
     async def merge_types(server, r):
@@ -70,7 +70,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             await merge_cards(s_type, v)
 
         for s_type in server:
-            if s_type._name not in r:
+            if s_type._name not in r:  # noqa: SLF001
                 await present(s_type, False)
 
     try:

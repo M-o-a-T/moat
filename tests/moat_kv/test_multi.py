@@ -44,7 +44,7 @@ async def test_10_many(autojump_clock):  # pylint: disable=unused-argument
             await ci.set(P("ping"), value="pong")
             await ci.set(P("delete.me"), value="later")
 
-            await ci._request(
+            await ci._request(  # noqa: SLF001
                 "set_internal",
                 path=P("actor.del"),
                 value={"nodes": "test_2 test_3 test_4".split()},
@@ -69,9 +69,9 @@ async def test_10_many(autojump_clock):  # pylint: disable=unused-argument
 
         await trio.sleep(1)
         NN = min(N - 1, 3)
-        for j in [0] + s._actor._rand.sample(range(1, N), NN):
+        for j in [0] + s._actor._rand.sample(range(1, N), NN):  # noqa: SLF001
             async with st.client(j) as c:
-                for i in s._actor._rand.sample(range(1, N), NN):
+                for i in s._actor._rand.sample(range(1, N), NN):  # noqa: SLF001
                     assert (await c.get(Path("foo", i))).value == 420 + i
 
         async with st.client(N - 1) as ci:

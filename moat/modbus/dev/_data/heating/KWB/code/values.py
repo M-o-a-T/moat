@@ -12,6 +12,6 @@ with open(sys.argv[1]) as f:
     next(r)  # heading
     for r in csv.reader(f, dialect=csv.excel_tab):
         e = {int(r[1]): r[2]}
-        d = d._update(Path("enum", r[0]), e)
+        d = d._update(Path("enum", r[0]), e)  # noqa: SLF001
 
 yprint(d)

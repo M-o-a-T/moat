@@ -24,10 +24,10 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
     if sniffio.current_async_library() == "asyncio":
         import asyncio
 
-        return anyio._backends._asyncio.SocketStream(
+        return anyio._backends._asyncio.SocketStream(  # noqa: SLF001
             *(
                 await asyncio.get_running_loop().create_connection(
-                    anyio._backends._asyncio.StreamProtocol,
+                    anyio._backends._asyncio.StreamProtocol,  # noqa: SLF001
                     sock=s,
                 )
             )
@@ -35,7 +35,7 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
     elif sniffio.current_async_library() == "trio":
         import trio
 
-        return anyio._backends._trio.SocketStream(trio.socket.from_stdlib_socket(s))
+        return anyio._backends._trio.SocketStream(trio.socket.from_stdlib_socket(s))  # noqa: SLF001
     else:
         raise RuntimeError("Which anyio backend are you using??")
 

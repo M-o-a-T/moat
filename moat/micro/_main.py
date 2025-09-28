@@ -208,10 +208,10 @@ async def setup_(ctx, run_section=None, **kw):
     run = st["run"]
     if run:
         if run_section is not None:
-            st["run"] = ctx.obj.cfg.micro._get(run_section)
+            st["run"] = ctx.obj.cfg.micro._get(run_section)  # noqa: SLF001
         else:
             try:
-                st["run"] = ctx.obj.cfg.micro._get(P("setup.run"))
+                st["run"] = ctx.obj.cfg.micro._get(P("setup.run"))  # noqa: SLF001
             except KeyError:
                 st["run"] = ctx.obj.cfg.micro["run"]
 

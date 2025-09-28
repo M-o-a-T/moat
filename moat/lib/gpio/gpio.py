@@ -135,7 +135,7 @@ class Line:
             raise OSError("This line is already in use")
         if self._state == _FREE:
             raise RuntimeError("You need to call .open() or .monitor()")
-        self._line = gpio.lib.gpiod_chip_get_line(self._chip._chip, self._offset)
+        self._line = gpio.lib.gpiod_chip_get_line(self._chip._chip, self._offset)  # noqa: SLF001
         if self._line == gpio.ffi.NULL:
             raise OSError("unable to get line")
 

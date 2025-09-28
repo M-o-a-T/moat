@@ -133,9 +133,9 @@ class BaseCmdMsg(BaseCmd):
             m2 = await self.cmd_dir_(v=msg.get("v", True))
             await msg.wait_replied(preload=True)
 
-            msg._kw["c"] = tuple(set(msg.get("c", ())) | set(m2.pop("c", ())))
-            msg._kw["s"] = tuple(set(msg.get("s", ())) | set(m2.pop("s", ())))
-            merge(msg._kw, m2)
+            msg._kw["c"] = tuple(set(msg.get("c", ())) | set(m2.pop("c", ())))  # noqa: SLF001
+            msg._kw["s"] = tuple(set(msg.get("s", ())) | set(m2.pop("s", ())))  # noqa: SLF001
+            merge(msg._kw, m2)  # noqa: SLF001
         return res
 
     doc_crd = dict(_d="read console", _0="int:len (64)")

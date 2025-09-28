@@ -138,7 +138,7 @@ class HandlerStream(MsgHandler):
         self.attach(link)
         args = [rcmd]
         args.extend(msg.args)
-        await self.send(link, args, msg._kw, B_STREAM if can_stream else 0)
+        await self.send(link, args, msg._kw, B_STREAM if can_stream else 0)  # noqa: SLF001
         if not can_stream:
             msg.set_end()
         # breakpoint()  # fwd

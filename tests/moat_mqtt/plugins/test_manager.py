@@ -41,7 +41,7 @@ class TestPluginManager(unittest.TestCase):  # noqa: D101
         async def coro():
             async with anyio.create_task_group() as tg:
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
-                assert len(manager._plugins) > 0
+                assert len(manager._plugins) > 0  # noqa: SLF001
 
         anyio_run(coro)
 

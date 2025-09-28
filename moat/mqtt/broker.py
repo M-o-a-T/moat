@@ -142,16 +142,16 @@ class BrokerContext(BaseContext):
 
     @property
     def sessions(self):  # noqa: D102
-        for session in self._broker_instance._sessions.values():
+        for session in self._broker_instance._sessions.values():  # noqa: SLF001
             yield session[0]
 
     @property
     def retained_messages(self):  # noqa: D102
-        return self._broker_instance._retained_messages
+        return self._broker_instance._retained_messages  # noqa: SLF001
 
     @property
     def subscriptions(self):  # noqa: D102
-        return self._broker_instance._subscriptions
+        return self._broker_instance._subscriptions  # noqa: SLF001
 
 
 @asynccontextmanager
@@ -461,7 +461,7 @@ class Broker:
 
         # Stop broadcast loop
         try:
-            buflen = len(self._broadcast_queue_s._state.buffer)
+            buflen = len(self._broadcast_queue_s._state.buffer)  # noqa: SLF001
             if buflen > 0:
                 self.logger.warning("%d messages not broadcast", buflen)
         except AttributeError:
@@ -497,7 +497,7 @@ class Broker:
         if not server:
             raise BrokerException("Invalid listener name '%s'" % listener_name)
 
-        async with server._client_limit():
+        async with server._client_limit():  # noqa: SLF001
             return await self.client_connected_(listener_name, adapter)
 
     async def client_connected_(self, listener_name, adapter: BaseAdapter):  # noqa: D102

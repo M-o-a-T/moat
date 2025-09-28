@@ -63,7 +63,7 @@ async def server(mqtt_port: int | None = None, moat_kv_port: int | None = None):
     s = Server(name="gpio_test", cfg=server_cfg, init="GPIO")
     async with create_broker(config=broker_cfg) as broker:
         evt = anyio.Event()
-        broker._tg.start_soon(partial(s.serve, ready_evt=evt))
+        broker._tg.start_soon(partial(s.serve, ready_evt=evt))  # noqa: SLF001
         await evt.wait()
 
         s.moat_kv_port = moat_kv_port  # pylint: disable=attribute-defined-outside-init

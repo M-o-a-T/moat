@@ -40,7 +40,7 @@ class _WAGObase(ClientEntry):
             return
         await self.setup()
         for k in self:
-            await k._update_server()
+            await k._update_server()  # noqa: SLF001
 
     async def setup(self):
         pass

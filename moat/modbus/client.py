@@ -232,7 +232,7 @@ class _HostCommon:
 
         # make the modbus request
         async with self.cap:
-            request._response_value = ValueEvent()
+            request._response_value = ValueEvent()  # noqa: SLF001
 
             await self._connected.wait()
 
@@ -240,7 +240,7 @@ class _HostCommon:
                 self._transactions[request.transaction_id] = request
                 await self.send(request)
                 with anyio.fail_after(self.timeout):
-                    res = await request._response_value.get()
+                    res = await request._response_value.get()  # noqa: SLF001
 
                 if res.isError():
                     raise ModbusError(res)
@@ -373,7 +373,7 @@ class Host(_HostCommon, CtxObj):
                 t, self._transactions = self._transactions, {}
                 if t:
                     for req in t.values():
-                        req._response_value.set_error(exc)
+                        req._response_value.set_error(exc)  # noqa: SLF001
                 else:
                     _logger.error(
                         "Read from %s:%d: %r (%d)",
@@ -398,7 +398,7 @@ class Host(_HostCommon, CtxObj):
 
                 t, self._transactions = self._transactions, {}
                 for req in t.values():
-                    req._response_value.set_error(exc)
+                    req._response_value.set_error(exc)  # noqa: SLF001
                 raise
 
             else:
@@ -409,13 +409,13 @@ class Host(_HostCommon, CtxObj):
                     except KeyError:
                         _logger.info("Unrequested message: %s", reply)
                     else:
-                        request._response_value.set(reply)
+                        request._response_value.set(reply)  # noqa: SLF001
 
     async def aclose(self):
         """Stop talking."""
         if self.gate is None:
             return
-        self.gate._del_host(self)  # pylint: disable=protected-access
+        self.gate._del_host(self)  # pylint: disable=protected-access  # noqa: SLF001
         self.gate = None
 
         u, self.units = self.units, None
@@ -525,7 +525,7 @@ class SerialHost(_HostCommon, CtxObj):
                                 except KeyError:
                                     _logger.info("Unrequested message: %s", reply)
                                 else:
-                                    request._response_value.set(reply)
+                                    request._response_value.set(reply)  # noqa: SLF001
 
             except (
                 IncompleteRead,
@@ -543,7 +543,7 @@ class SerialHost(_HostCommon, CtxObj):
 
                 t, self._transactions = self._transactions, {}
                 for req in t.values():
-                    req._response_value.set_error(exc)
+                    req._response_value.set_error(exc)  # noqa: SLF001
 
             except anyio.get_cancelled_exc_class():
                 raise
@@ -553,14 +553,14 @@ class SerialHost(_HostCommon, CtxObj):
 
                 t, self._transactions = self._transactions, {}
                 for req in t.values():
-                    req._response_value.set_error(exc)
+                    req._response_value.set_error(exc)  # noqa: SLF001
                 raise
 
     async def aclose(self):
         """Stop talking."""
         if self.gate is None:
             return
-        self.gate._del_host(self)  # pylint: disable=protected-access
+        self.gate._del_host(self)  # pylint: disable=protected-access  # noqa: SLF001
         self.gate = None
 
         u, self.units = self.units, None
@@ -652,7 +652,7 @@ class Unit(CtxObj):
         """
         if self.host is None:
             return
-        self.host._del_unit(self)  # pylint: disable=protected-access
+        self.host._del_unit(self)  # pylint: disable=protected-access  # noqa: SLF001
         self.host = None
 
         s, self.slots = self.slots, None

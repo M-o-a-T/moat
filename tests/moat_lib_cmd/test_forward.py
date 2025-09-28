@@ -36,10 +36,10 @@ async def test_basic(a_s, a_r, k_s, k_r):  # noqa: D103
         scaffold(EP(), None, "A") as (a, b),
         scaffold(Fwd(b), None, "C") as (c, d),
     ):
-        a._id = 9
-        b._id = 12
-        c._id = 15
-        d._id = 18
+        a._id = 9  # noqa: SLF001
+        b._id = 12  # noqa: SLF001
+        c._id = 15  # noqa: SLF001
+        d._id = 18  # noqa: SLF001
         res = await d.cmd("Test", *a_s, **k_s)
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r

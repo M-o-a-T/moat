@@ -114,7 +114,7 @@ class TestProtocolHandler:  # noqa: D101
             assert packet.qos == QOS_1
             assert packet.packet_id is not None
             assert packet.packet_id in self.session.inflight_out
-            assert packet.packet_id in self.handler._puback_waiters
+            assert packet.packet_id in self.handler._puback_waiters  # noqa: SLF001
             puback = PubackPacket.build(packet.packet_id)
             await puback.to_stream(stream)
 
@@ -142,12 +142,12 @@ class TestProtocolHandler:  # noqa: D101
             assert packet.qos == QOS_2
             assert packet.packet_id is not None
             assert packet.packet_id in self.session.inflight_out
-            assert packet.packet_id in self.handler._pubrec_waiters
+            assert packet.packet_id in self.handler._pubrec_waiters  # noqa: SLF001
             pubrec = PubrecPacket.build(packet.packet_id)
             await pubrec.to_stream(stream)
 
             await PubrelPacket.from_stream(stream)
-            assert packet.packet_id in self.handler._pubcomp_waiters
+            assert packet.packet_id in self.handler._pubcomp_waiters  # noqa: SLF001
             pubcomp = PubcompPacket.build(packet.packet_id)
             await pubcomp.to_stream(stream)
 
@@ -245,7 +245,7 @@ class TestProtocolHandler:  # noqa: D101
             pubrec = await PubrecPacket.from_stream(stream)
             assert pubrec is not None
             assert packet.packet_id == pubrec.packet_id
-            assert packet.packet_id in self.handler._pubrel_waiters
+            assert packet.packet_id in self.handler._pubrel_waiters  # noqa: SLF001
             pubrel = PubrelPacket.build(packet.packet_id)
             await pubrel.to_stream(stream)
             pubcomp = await PubcompPacket.from_stream(stream)
@@ -277,15 +277,15 @@ class TestProtocolHandler:  # noqa: D101
 
     async def stop_handler(self, handler, session):  # noqa: D102
         await handler.stop()
-        assert handler._reader_stopped
+        assert handler._reader_stopped  # noqa: SLF001
         self.check_empty_waiters(handler)
         self.check_no_message(session)
 
     def check_empty_waiters(self, handler):  # noqa: D102
-        assert not handler._puback_waiters
-        assert not handler._pubrec_waiters
-        assert not handler._pubrel_waiters
-        assert not handler._pubcomp_waiters
+        assert not handler._puback_waiters  # noqa: SLF001
+        assert not handler._pubrec_waiters  # noqa: SLF001
+        assert not handler._pubrel_waiters  # noqa: SLF001
+        assert not handler._pubcomp_waiters  # noqa: SLF001
 
     def check_no_message(self, session):  # noqa: D102
         assert not session.inflight_out
@@ -298,7 +298,7 @@ class TestProtocolHandler:  # noqa: D101
             assert packet.qos == QOS_1
             assert packet.packet_id is not None
             assert packet.packet_id in self.session.inflight_out
-            assert packet.packet_id in self.handler._puback_waiters
+            assert packet.packet_id in self.handler._puback_waiters  # noqa: SLF001
             puback = PubackPacket.build(packet.packet_id)
             await puback.to_stream(stream)
 
@@ -330,12 +330,12 @@ class TestProtocolHandler:  # noqa: D101
             assert packet.qos == QOS_2
             assert packet.packet_id is not None
             assert packet.packet_id in self.session.inflight_out
-            assert packet.packet_id in self.handler._pubrec_waiters
+            assert packet.packet_id in self.handler._pubrec_waiters  # noqa: SLF001
             pubrec = PubrecPacket.build(packet.packet_id)
             await pubrec.to_stream(stream)
 
             await PubrelPacket.from_stream(stream)
-            assert packet.packet_id in self.handler._pubcomp_waiters
+            assert packet.packet_id in self.handler._pubcomp_waiters  # noqa: SLF001
             pubcomp = PubcompPacket.build(packet.packet_id)
             await pubcomp.to_stream(stream)
 

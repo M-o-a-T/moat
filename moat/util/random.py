@@ -12,7 +12,7 @@ else:  # pragma: no cover
     except ImportError:
         import random
     else:
-        random = tcr._r
+        random = tcr._r  # noqa: SLF001
 
 # Intended to be unambiguous, no special characters
 al_unique = "bcdfghjkmnpqrstvwxyzBCDFGHJKMNPQRSTVWXYZ23456789"

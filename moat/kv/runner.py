@@ -154,10 +154,10 @@ class CallAdmin:
         self._data = data
         self._client = runner.root.client
         self._err = runner.root.err
-        self._q = runner._q
-        self._path = runner._path
+        self._q = runner._q  # noqa: SLF001
+        self._path = runner._path  # noqa: SLF001
         self._subpath = runner.subpath
-        self._logger = runner._logger
+        self._logger = runner._logger  # noqa: SLF001
 
     async def _run(self, code, data):
         while True:
@@ -172,7 +172,7 @@ class CallAdmin:
 
     async def _run2(self, code, data):
         """Called by the runner to actually execute the code."""
-        self._logger.debug("Start %s with %s", self._runner._path, self._runner.code)
+        self._logger.debug("Start %s with %s", self._runner._path, self._runner.code)  # noqa: SLF001
         async with (
             anyio.create_task_group() as tg,
             AsyncExitStack() as stack,
@@ -239,7 +239,7 @@ class CallAdmin:
         """
         self._state.backoff = 0
         await self._state.save()
-        await self._err.record_working("run", self._runner._path, **kw)
+        await self._err.record_working("run", self._runner._path, **kw)  # noqa: SLF001
 
     async def error(self, path=None, **kw):
         """
@@ -319,9 +319,9 @@ class CallAdmin:
                                 await slf.runner.send_event(chg)
 
                             elif msg.get("state", "") == "uptodate":
-                                slf.admin._n_watch_seen += 1
-                                if slf.admin._n_watch_seen == slf.admin._n_watch:
-                                    await slf.runner.send_event(ReadyMsg(slf.admin._n_watch_seen))
+                                slf.admin._n_watch_seen += 1  # noqa: SLF001
+                                if slf.admin._n_watch_seen == slf.admin._n_watch:  # noqa: SLF001
+                                    await slf.runner.send_event(ReadyMsg(slf.admin._n_watch_seen))  # noqa: SLF001
 
             def cancel(slf):
                 if slf.scope is None:
@@ -563,7 +563,7 @@ class RunnerEntry(AttrClientEntry):
                 if code.is_async:
                     data["_info"] = self._q = create_queue(QLEN)
                 data["_client"] = self.root.client
-                data["_cfg"] = self.root.client._cfg
+                data["_cfg"] = self.root.client._cfg  # noqa: SLF001
                 data["_cls"] = _CLASSES
                 data["_P"] = P
                 data["_Path"] = Path
@@ -578,7 +578,7 @@ class RunnerEntry(AttrClientEntry):
                     raise RuntimeError("Rudely taken away from us.", state.node, state.root.name)
 
                 data["_self"] = calls = CallAdmin(self, state, data)
-                res = await calls._run(code, data)
+                res = await calls._run(code, data)  # noqa: SLF001
 
             except BaseException as exc:
                 self._logger.info("Error: %r", exc)
@@ -745,12 +745,12 @@ class RunnerNode:
 
     def __new__(cls, root, name):  # noqa: D102
         try:
-            self = root._nodes[name]
+            self = root._nodes[name]  # noqa: SLF001
         except KeyError:
             self = object.__new__(cls)
             self.root = root
             self.name = name
-            root._nodes[name] = self
+            root._nodes[name] = self  # noqa: SLF001
         return self
 
     def __init__(self, *a, **k):
@@ -807,7 +807,7 @@ class StateEntry(AttrClientEntry):
         self.backoff = min(20, self.backoff + 1)
         await self.root.runner.err.record_error(
             "run",
-            self.runner._path,
+            self.runner._path,  # noqa: SLF001
             message="Runner restarted",
         )
         await self.save()
@@ -824,7 +824,7 @@ class StateEntry(AttrClientEntry):
         self.backoff = min(20, self.backoff + 2)
         await self.root.runner.err.record_error(
             "run",
-            self.runner._path,
+            self.runner._path,  # noqa: SLF001
             message="Runner killed: {node} {state}",
             data={"node": node, "state": "offline" if self.stopped else "stale"},
         )
@@ -853,7 +853,7 @@ class StateEntry(AttrClientEntry):
             return
         elif self.node is None or n == self.root.runner.name:
             # Owch. Our job got taken away from us.
-            run._comment = f"Cancel: Node set to {self.node!r}"
+            run._comment = f"Cancel: Node set to {self.node!r}"  # noqa: SLF001
             run.scope.cancel()
         elif n is not None:
             logger.warning(
@@ -964,9 +964,9 @@ class _BaseRunnerRoot(ClientRoot):
     async def as_handler(cls, client, subpath, cfg=None, **kw):  # pylint: disable=arguments-differ
         assert cls.SUB is not None
         if cfg is None:
-            cfg_ = client._cfg["runner"]
+            cfg_ = client._cfg["runner"]  # noqa: SLF001
         else:
-            cfg_ = combine_dict(cfg, client._cfg["runner"])
+            cfg_ = combine_dict(cfg, client._cfg["runner"])  # noqa: SLF001
         return await super().as_handler(client, subpath=subpath, _subpath=subpath, cfg=cfg_, **kw)
 
     async def run_starting(self):

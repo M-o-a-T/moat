@@ -69,10 +69,10 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
-                self.assertDictEqual(broker._sessions, {})
-                assert "default" in broker._servers
+                self.assertDictEqual(broker._sessions, {})  # noqa: SLF001
+                assert "default" in broker._servers  # noqa: SLF001
                 MockPluginManager.assert_has_calls(
                     [
                         call().fire_event(EVENT_BROKER_PRE_START),
@@ -100,16 +100,16 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
                     assert ret == 0
-                    assert len(broker._sessions) == 1
-                    assert client.session.client_id in broker._sessions
+                    assert len(broker._sessions) == 1  # noqa: SLF001
+                    assert client.session.client_id in broker._sessions  # noqa: SLF001
                 await anyio.sleep(0.1)  # let the broker task process the packet
             assert broker.transitions.is_stopped()
-            self.assertDictEqual(broker._sessions, {})
+            self.assertDictEqual(broker._sessions, {})  # noqa: SLF001
 
         anyio_run(test_coro)
 
@@ -121,7 +121,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
                 async with await anyio.connect_tcp("127.0.0.1", PORT) as conn:
@@ -146,7 +146,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     await disconnect.to_stream(stream)
 
             assert broker.transitions.is_stopped()
-            self.assertDictEqual(broker._sessions, {})
+            self.assertDictEqual(broker._sessions, {})  # noqa: SLF001
 
         anyio_run(test_coro, backend="trio")
 
@@ -158,7 +158,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient(
                     client_id="",
@@ -169,7 +169,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                         await client.connect(URL, cleansession=False)
                     return_code = ce.value.return_code
                     assert return_code == 2
-                    assert client.session.client_id not in broker._sessions
+                    assert client.session.client_id not in broker._sessions  # noqa: SLF001
 
         anyio_run(test_coro)
 
@@ -181,7 +181,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
@@ -189,7 +189,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
-                    subs = broker._subscriptions[("", "topic")]
+                    subs = broker._subscriptions[("", "topic")]  # noqa: SLF001
                     assert len(subs) == 1
                     (s, qos) = subs[0]
                     assert s == client.session
@@ -218,7 +218,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
@@ -226,7 +226,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
-                    subs = broker._subscriptions[("", "topic")]
+                    subs = broker._subscriptions[("", "topic")]  # noqa: SLF001
                     assert len(subs) == 1
                     (s, qos) = subs[0]
                     assert s == client.session
@@ -261,7 +261,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
@@ -269,14 +269,14 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
-                    subs = broker._subscriptions[("", "topic")]
+                    subs = broker._subscriptions[("", "topic")]  # noqa: SLF001
                     assert len(subs) == 1
                     (s, qos) = subs[0]
                     assert s == client.session
                     assert qos == QOS_0
 
                     await client.unsubscribe(["/topic"])
-                    assert broker._subscriptions["", "topic"] == []
+                    assert broker._subscriptions["", "topic"] == []  # noqa: SLF001
             assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
@@ -305,7 +305,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
@@ -313,7 +313,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
 
                     ret_message = await pub_client.publish("/topic", b"data", QOS_0)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                assert broker._retained_messages == {}
+                assert broker._retained_messages == {}  # noqa: SLF001
 
             assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
@@ -337,7 +337,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
                 async with await anyio.connect_tcp("127.0.0.1", PORT) as conn:
@@ -378,7 +378,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
@@ -398,7 +398,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
@@ -409,7 +409,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                         bytearray(b"\x99" * 256 * 1024),
                         QOS_2,
                     )
-                assert broker._retained_messages == {}
+                assert broker._retained_messages == {}  # noqa: SLF001
 
             assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
@@ -433,7 +433,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
                 async with open_mqttclient() as pub_client:
@@ -441,8 +441,8 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     assert ret == 0
                     await pub_client.publish("/topic", b"data", QOS_0, retain=True)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                assert "/topic" in broker._retained_messages
-                retained_message = broker._retained_messages["/topic"]
+                assert "/topic" in broker._retained_messages  # noqa: SLF001
+                retained_message = broker._retained_messages["/topic"]  # noqa: SLF001
                 assert retained_message.source_session == pub_client.session
                 assert retained_message.topic == "/topic"
                 assert retained_message.data == b"data"
@@ -459,7 +459,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
                 async with open_mqttclient() as pub_client:
@@ -467,7 +467,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     assert ret == 0
                     await pub_client.publish("/topic", b"", QOS_0, retain=True)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                assert "/topic" not in broker._retained_messages
+                assert "/topic" not in broker._retained_messages  # noqa: SLF001
             assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
@@ -480,7 +480,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
@@ -514,7 +514,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
@@ -540,7 +540,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
@@ -568,7 +568,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
-                broker.plugins_manager._tg = broker._tg
+                broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
@@ -597,7 +597,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 with anyio.fail_after(3):
-                    broker.plugins_manager._tg = broker._tg
+                    broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                     assert broker.transitions.is_started()
                     async with open_mqttclient() as sub_client:
                         await sub_client.connect(URL, cleansession=False)

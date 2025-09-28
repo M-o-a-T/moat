@@ -85,7 +85,7 @@ class WebSocketsAdapter(BaseAdapter):
         buffer = bytearray(self._buffer.read())
         while len(buffer) < n:
             try:
-                message = await self._websocket._next_event()
+                message = await self._websocket._next_event()  # noqa: SLF001
             except ClosedResourceError:
                 message = None
             if isinstance(message, CloseConnection):
@@ -105,7 +105,7 @@ class WebSocketsAdapter(BaseAdapter):
         await self._websocket.send(data)
 
     def get_peer_info(self):  # noqa: D102
-        res = self._websocket._sock.extra(anyio.abc.SocketAttribute.remote_address)
+        res = self._websocket._sock.extra(anyio.abc.SocketAttribute.remote_address)  # noqa: SLF001
         return res[0:2]
 
     async def close(self):  # noqa: D102

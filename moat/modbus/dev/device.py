@@ -40,7 +40,7 @@ class NotARegisterError(ValueError):
 
 def mark_orig(d):  # noqa: D103
     if isinstance(d, dict):
-        d._is_orig = True
+        d._is_orig = True  # noqa: SLF001
         for k, v in d.items():
             if k != "default":
                 mark_orig(v)
@@ -83,7 +83,7 @@ def fixup_i(d, this_file=None):
                 inc[i] = fixup_i(dd, this_file=f)
             inc.reverse()
             d = combine_dict(d, *inc, cls=attrdict)
-            d._root = True
+            d._root = True  # noqa: SLF001
 
     for k, v in d.items() if hasattr(d, "items") else enumerate(d):
         if isinstance(v, (Mapping, list, tuple)):
@@ -133,7 +133,7 @@ def fixup_(
                 if isinstance(refs, Path):
                     refs = [refs]
                 for i, p in enumerate(refs):
-                    refs[i] = root._get(p)  # pylint: disable=protected-access
+                    refs[i] = root._get(p)  # pylint: disable=protected-access  # noqa: SLF001
 
                 refs.reverse()
                 d = combine_dict(d, *refs, cls=attrdict)
@@ -369,7 +369,7 @@ class BaseDevice:
 
         Raises an error if there's no register there.
         """
-        dev = self.data._get(path)  # pylint: disable=protected-access
+        dev = self.data._get(path)  # pylint: disable=protected-access  # noqa: SLF001
         if not isinstance(dev, Register):
             raise NotARegisterError(path)
         return dev

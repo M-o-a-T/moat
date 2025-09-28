@@ -72,7 +72,7 @@ class BrokerSysPlugin:  # noqa: D101
                     sys_interval,
                 )
                 evt = anyio.Event()
-                self.context._broker_instance._tg.start_soon(
+                self.context._broker_instance._tg.start_soon(  # noqa: SLF001
                     self.broadcast_dollar_sys_topics_loop,
                     sys_interval,
                     evt,

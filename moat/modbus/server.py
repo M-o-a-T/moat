@@ -46,7 +46,7 @@ class UnitContext(ModbusDeviceContext):
         )
         if server:
             self.unit = unit
-            server._add_unit(self)
+            server._add_unit(self)  # noqa: SLF001
 
     def add(
         self,
@@ -86,7 +86,7 @@ class BaseModbusServer(CtxObj):
 
     def __init__(self, identity=None, response_manipulator=None):
         self.context = ModbusServerContext(single=False)
-        self.context._slaves = self.units = {}
+        self.context._slaves = self.units = {}  # noqa: SLF001
         self.control = ModbusControlBlock()
         self.broadcast_enable = False
         self.response_manipulator = response_manipulator

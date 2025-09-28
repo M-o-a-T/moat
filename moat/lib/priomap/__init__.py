@@ -304,7 +304,7 @@ class PrioMap(MutableMapping):
         class SafeIterator:
             def __init__(self, heap_dict, keys):
                 self.heap_dict = heap_dict
-                self.state = heap_dict._iterator_state
+                self.state = heap_dict._iterator_state  # noqa: SLF001
                 self.keys = keys
 
             def __iter__(self):

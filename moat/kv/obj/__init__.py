@@ -445,7 +445,7 @@ class MirrorRoot(ClientEntry):
         if cfg is not None:
             d.append(cfg)
 
-        defcfg = client._cfg.get(cls.CFG)
+        defcfg = client._cfg.get(cls.CFG)  # noqa: SLF001
         if not defcfg:
             # seems we didn't load the class' default config yet.
             import inspect
@@ -536,7 +536,7 @@ class MirrorRoot(ClientEntry):
             async def monitor(*, task_status):
                 pl = PathLongener(())
                 await self.run_starting()
-                async with self.client._stream(
+                async with self.client._stream(  # noqa: SLF001
                     "watch",
                     nchain=3,
                     path=self._path,

@@ -52,12 +52,12 @@ class ReplyIdentify(P.ReplyIdentify):
 
 class RequestTiming(P.RequestTiming):
     async def to_cell(self, _cell):
-        _cell._dp_t = self.timer
+        _cell._dp_t = self.timer  # noqa: SLF001
 
 
 class ReplyTiming(P.ReplyTiming):
     async def from_cell(self, _cell):
-        self.timer = _cell._dp_t
+        self.timer = _cell._dp_t  # noqa: SLF001
 
 
 class ReplyReadSettings(P.ReplyReadSettings):

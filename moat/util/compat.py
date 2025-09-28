@@ -331,10 +331,10 @@ def _doc(_c=None, **kw):
     the data. This is used to limit the max block size.
     """
     if _c is not None:
-        merge(kw, _c._moat__doc, replace=False)
+        merge(kw, _c._moat__doc, replace=False)  # noqa: SLF001
 
     def mod(fn):
-        fn._moat__doc = kw
+        fn._moat__doc = kw  # noqa: SLF001
         return fn
 
     return mod

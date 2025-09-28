@@ -12,10 +12,10 @@ class Instr(Instrument):
     exited = None
 
     def before_task_step(self, task):
-        print("BEF:", task, task._next_send, file=sys.stderr)
+        print("BEF:", task, task._next_send, file=sys.stderr)  # noqa: SLF001
 
     def after_task_step(self, task):
-        print("AFT:", task, task._next_send, file=sys.stderr)
+        print("AFT:", task, task._next_send, file=sys.stderr)  # noqa: SLF001
 
     def task_exited(self, task, outcome=None):
         print("EXIT", task, outcome, file=sys.stderr)

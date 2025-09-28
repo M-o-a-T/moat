@@ -239,7 +239,7 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
     with contextlib.suppress(AttributeError):
-        val._cbor_tag = CBOR_TAG_CBOR_FILEHEADER
+        val._cbor_tag = CBOR_TAG_CBOR_FILEHEADER  # noqa: SLF001
     return val
 
 
@@ -247,5 +247,5 @@ def _dec_file_cbor(codec, val):
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
     with contextlib.suppress(AttributeError):
-        val._cbor_tag = CBOR_TAG_CBOR_LEADER
+        val._cbor_tag = CBOR_TAG_CBOR_LEADER  # noqa: SLF001
     return val

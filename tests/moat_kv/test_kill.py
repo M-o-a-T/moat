@@ -35,21 +35,21 @@ async def test_11_kill(autojump_clock):  # pylint: disable=unused-argument
                 prev=dict(node="test_1", tick=2, prev=None),
             )
 
-            res = await c._request("enum_node", node="test_1", current=True)
+            res = await c._request("enum_node", node="test_1", current=True)  # noqa: SLF001
             assert res.result == []
 
-            res = await c._request("enum_node", node="test_1", current=False)
+            res = await c._request("enum_node", node="test_1", current=False)  # noqa: SLF001
             assert res.result == [1, 2]
 
-            res = await c._request("enum_node", node="test_2", current=True)
+            res = await c._request("enum_node", node="test_2", current=True)  # noqa: SLF001
             assert res.result == [1, 2]
 
             # error
             with raises(ServerError):
-                res = await c._request("kill_node", node="test_2", iter=False)
+                res = await c._request("kill_node", node="test_2", iter=False)  # noqa: SLF001
 
             # works
-            res = await c._request("kill_node", node="test_1")
+            res = await c._request("kill_node", node="test_1")  # noqa: SLF001
             await trio.sleep(2)
 
             res = await c.get(P("foo.bar"), nchain=3)

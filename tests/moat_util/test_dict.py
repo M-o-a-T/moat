@@ -19,7 +19,7 @@ def chkc(a, b, c):
 
 
 def chku(a, b, c, d):
-    r = attrdict._update(a, b, c)
+    r = attrdict._update(a, b, c)  # noqa: SLF001
     assert r == d
 
 

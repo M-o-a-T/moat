@@ -125,7 +125,7 @@ class Node:
             level += len(path)
             path = ()
         for k, v in self._sub.items():
-            it = iter(v._dump(path + (k,), level))
+            it = iter(v._dump(path + (k,), level))  # noqa: SLF001
             try:
                 d = next(it)
             except StopIteration:
@@ -150,8 +150,8 @@ class Node:
             p = pl.long(s, p)
             n = self.get(p)
             if force or n.meta is None or n.meta.timestamp < m.timestamp:
-                n._data = d
-                n._meta = m
+                n._data = d  # noqa: SLF001
+                n._meta = m  # noqa: SLF001
 
     @property
     def meta(self) -> MsgMeta | None:
@@ -171,7 +171,7 @@ class Node:
         """
         d = self._sub[item]
 
-        if d._sub or d.data is not NotGiven:
+        if d._sub or d.data is not NotGiven:  # noqa: SLF001
             raise ValueError(item)
         del self._sub[item]
 
@@ -218,7 +218,7 @@ class Node:
                         raise
                     s = s._add(k)  # noqa:SLF001
                 else:
-                    if create is True and n == len(item) - 1 and s._data is not NotGiven:
+                    if create is True and n == len(item) - 1 and s._data is not NotGiven:  # noqa: SLF001
                         raise KeyError(k)
             return s
 
@@ -229,7 +229,7 @@ class Node:
                 raise
             return self._add(item)
         else:
-            if create is True and res._data is not NotGiven:
+            if create is True and res._data is not NotGiven:  # noqa: SLF001
                 raise KeyError(item)
             return res
 
@@ -285,7 +285,7 @@ class Node:
 
         async def _walk(s, p):
             if depth_first and max_depth > len(p):
-                for k, v in s._sub.items():
+                for k, v in s._sub.items():  # noqa: SLF001
                     await _walk(v, p / k)
 
             if min_depth <= len(p) and (
@@ -295,7 +295,7 @@ class Node:
                     return
 
             if not depth_first and max_depth > len(p):
-                for k, v in list(s._sub.items()):
+                for k, v in list(s._sub.items()):  # noqa: SLF001
                     await _walk(v, p / k)
 
         await _walk(self, Path())

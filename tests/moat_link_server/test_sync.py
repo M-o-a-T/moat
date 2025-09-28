@@ -74,10 +74,10 @@ async def test_lsy_from_server(cfg):  # noqa: D103
 
         await sf.server()
 
-        if c1._link._last_link is None:
-            await c1._link._last_link_seen.wait()
+        if c1._link._last_link is None:  # noqa: SLF001
+            await c1._link._last_link_seen.wait()  # noqa: SLF001
 
-        async with BasicLink(cfg, "_test", c1._link._last_link.data) as c2:
+        async with BasicLink(cfg, "_test", c1._link._last_link.data) as c2:  # noqa: SLF001
             nn = await fetch(c2, "a")
 
             assert n.get(P("a")) == nn
@@ -98,7 +98,7 @@ async def test_lsy_from_file(cfg, tmp_path):  # noqa: D103
             n.set(p, v, MsgMeta(origin="Test"))
 
         await data(s)
-        fn = next(iter(srv1[0]._writing))
+        fn = next(iter(srv1[0]._writing))  # noqa: SLF001
         await srv1[0].stop()
 
     # check the file

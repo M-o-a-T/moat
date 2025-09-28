@@ -109,7 +109,7 @@ async def data_get(
                     add_dates(d)
 
                 if meta:
-                    m = MsgMeta._moat__restore(m, NotGiven)
+                    m = MsgMeta._moat__restore(m, NotGiven)  # noqa: SLF001
 
                 if as_dict is not None:
                     if meta:
@@ -238,7 +238,7 @@ async def backend_get(
                 if add_date:
                     add_dates(d)
                 if meta:
-                    m = MsgMeta._moat__restore(m, NotGiven)
+                    m = MsgMeta._moat__restore(m, NotGiven)  # noqa: SLF001
                     d = dict(data=d, meta=m.repr())
 
                 if as_dict is not None:
@@ -307,7 +307,7 @@ def res_get(res, attr: Path, **kw):  # pylint: disable=redefined-outer-name
     val = res.get("value", None)
     if val is None:
         return None
-    return val._get(attr, **kw)
+    return val._get(attr, **kw)  # noqa: SLF001
 
 
 def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-outer-name
@@ -320,7 +320,7 @@ def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-
     Returns the new value.
     """
     val = res.get("value", attrdict())
-    return val._update(attr, value=value, **kw)
+    return val._update(attr, value=value, **kw)  # noqa: SLF001
 
 
 async def node_attr(obj, path, val=NotGiven, meta=NotGiven, **kw):

@@ -91,7 +91,7 @@ async def moat_kv_server(n, broker_config, test_config):  # noqa: D103
 
                 async def msglog(evt):
                     try:
-                        async with cl._stream(
+                        async with cl._stream(  # noqa: SLF001
                             "msg_monitor",
                             topic="*",
                         ) as mon:  # , topic=broker_config['kv']['topic']) as mon:

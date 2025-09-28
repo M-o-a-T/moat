@@ -59,18 +59,18 @@ class Dbus(CtxObj):
 
     async def exporter(self, *a, **k):  # noqa: D102
         res = DbusItemExport(self._bus, *a, **k)
-        await res._start()  # pylint: disable=protected-access
+        await res._start()  # pylint: disable=protected-access  # noqa: SLF001
         return res
 
     async def importer(self, *a, **k):  # noqa: D102
         res = DbusItemImport(self._bus, *a, **k)
-        await res._start()  # pylint: disable=protected-access
+        await res._start()  # pylint: disable=protected-access  # noqa: SLF001
         return res
 
     @asynccontextmanager
     async def service(self, *a, **k):  # noqa: D102
         res = DbusService(self._bus, *a, **k)
-        await res._start()  # pylint: disable=protected-access
+        await res._start()  # pylint: disable=protected-access  # noqa: SLF001
         try:
             yield res
         finally:
@@ -174,7 +174,7 @@ class DbusService:  # noqa: D101
             gettextcallback,
             deletecallback=self._item_deleted,
         )
-        await item._start()  # pylint: disable=protected-access
+        await item._start()  # pylint: disable=protected-access  # noqa: SLF001
 
         spl = path.split("/")
         for i in range(2, len(spl)):
@@ -262,14 +262,14 @@ class ServiceContext:  # noqa: D101
         self.changes = {}
 
     async def set(self, var, newvalue):  # noqa: D102
-        c = await var._set_value(newvalue)  # pylint: disable=protected-access
+        c = await var._set_value(newvalue)  # pylint: disable=protected-access  # noqa: SLF001
         if c is not None:
-            self.changes[var._path] = c  # pylint: disable=protected-access
+            self.changes[var._path] = c  # pylint: disable=protected-access  # noqa: SLF001
 
     async def flush(self):  # noqa: D102
         if self.changes:
             # pylint: disable=protected-access
-            await self.parent._dbusnodes["/"].ItemsChanged(self.changes)
+            await self.parent._dbusnodes["/"].ItemsChanged(self.changes)  # noqa: SLF001
 
 
 class TrackerDict(defaultdict):
@@ -327,7 +327,7 @@ class DbusRootTracker:
 
             for i in self.importers.get(path, ()):
                 # pylint:disable=protected-access
-                await call(i._properties_changed_handler, {"Value": v, "Text": t})
+                await call(i._properties_changed_handler, {"Value": v, "Text": t})  # noqa: SLF001
 
 
 # Importing basics:
@@ -405,7 +405,7 @@ class DbusItemImport:  # noqa: D101
                 r = self._roots[self._serviceName]
             except KeyError:
                 r = DbusRootTracker(self._bus, self._serviceName)
-                await r._start()  # pylint:disable=protected-access
+                await r._start()  # pylint:disable=protected-access  # noqa: SLF001
                 self._roots[self._serviceName] = r
             r.add(self)
 
@@ -521,7 +521,7 @@ class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
         px = path
         if not px.endswith("/"):
             px += "/"
-        for p, item in self._service._dbusobjects.items():  # pylint:disable=protected-access
+        for p, item in self._service._dbusobjects.items():  # pylint:disable=protected-access  # noqa: SLF001
             if p.startswith(px):
                 v = (await item.get_text()) if get_text else item.get_value()
                 r[p[len(px) :]] = v
@@ -553,7 +553,7 @@ class DbusRootExport(DbusTreeExport):  # noqa: D101
                 "Value": wrap_dbus_value(item.get_value()),
                 "Text": wrap_dbus_value(await item.get_text()),
             }
-            for path, item in self._service._dbusobjects.items()  # pylint:disable=protected-access
+            for path, item in self._service._dbusobjects.items()  # pylint:disable=protected-access  # noqa: SLF001
         }
 
 

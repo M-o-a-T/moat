@@ -30,21 +30,21 @@ async def test_81_basic(autojump_clock):  # pylint: disable=unused-argument  # n
         async with st.client() as c:
             # TODO control what happens when stepping to where's no ACL
             # await c._request("set_internal", path=("acl", "foo"), value="x")
-            await c._request("set_internal", path=("acl", "foo", "one"), value="rxnc")
-            await c._request("set_internal", path=P("acl.foo.one.two"), value="rc")
+            await c._request("set_internal", path=("acl", "foo", "one"), value="rxnc")  # noqa: SLF001
+            await c._request("set_internal", path=P("acl.foo.one.two"), value="rc")  # noqa: SLF001
 
             um = loader("_test", "user", make=True, server=False)
             u = um.build({"name": "std"})
             await u.send(c)
             u = um.build({"name": "aclix"})
             await u.send(c)
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("auth._test.user.aclix.acl"),
                 value=dict(key="foo"),
                 iter=False,
             )
-            await c._request("set_auth_typ", typ="_test")
+            await c._request("set_auth_typ", typ="_test")  # noqa: SLF001
             # , "aux": {"acl": "foo"}})
 
         um = loader("_test", "user", make=False, server=False)

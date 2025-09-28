@@ -23,7 +23,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noq
             await ErrorRoot.as_handler(c)
             cr = await CodeRoot.as_handler(c)
             r = await AnyRunnerRoot.as_handler(c, subpath=(), code=cr)
-            c._test_evt = anyio.Event()
+            c._test_evt = anyio.Event()  # noqa: SLF001
             await cr.add(
                 P("forty.two"),
                 code="""\
@@ -46,7 +46,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noq
             logger.info("Start sleep")
             rs = ru.state
             with trio.fail_after(300):
-                await c._test_evt.wait()
+                await c._test_evt.wait()  # noqa: SLF001
                 await c.set(P("test:4242"), value=13)
                 await trio.sleep(2)
                 assert not rs.stopped
@@ -78,7 +78,7 @@ async def test_84_mqtt(autojump_clock):  # pylint: disable=unused-argument  # no
             await ErrorRoot.as_handler(c)
             cr = await CodeRoot.as_handler(c)
             r = await AnyRunnerRoot.as_handler(c, subpath=(), code=cr)
-            c._test_evt = anyio.Event()
+            c._test_evt = anyio.Event()  # noqa: SLF001
             await cr.add(
                 P("forty.three"),
                 code="""\
@@ -102,7 +102,7 @@ async def test_84_mqtt(autojump_clock):  # pylint: disable=unused-argument  # no
             rs = ru.state
             try:
                 with trio.fail_after(200):
-                    await c._test_evt.wait()
+                    await c._test_evt.wait()  # noqa: SLF001
                     await c.msg_send(P("test.abcd"), data=13)
                     await trio.sleep(2)
                     assert not rs.stopped

@@ -44,24 +44,24 @@ async def test_41_ssl_basic(autojump_clock):  # pylint: disable=unused-argument 
                 {"path": P("foo"), "value": "hello"},
                 {"path": P("foo.bar"), "value": "baz"},
             ]
-            async with c._stream("get_tree", path=P(":"), max_depth=2) as rr:
+            async with c._stream("get_tree", path=P(":"), max_depth=2) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
             exp.pop()
-            async with c._stream("get_tree", path=P(":"), iter=True, max_depth=1) as rr:
+            async with c._stream("get_tree", path=P(":"), iter=True, max_depth=1) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
             exp.pop()
-            async with c._stream("get_tree", path=P(":"), iter=True, max_depth=0) as rr:
+            async with c._stream("get_tree", path=P(":"), iter=True, max_depth=0) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
             r = await c.get(P("foo.bar"))
             assert r.value == "baz"
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -80,9 +80,9 @@ async def test_41_ssl_basic(autojump_clock):  # pylint: disable=unused-argument 
                 "remote_missing": {},
             }
 
-            assert (await c._request("get_value", node="test_0", tick=1)).value == 123
-            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"
-            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"
+            assert (await c._request("get_value", node="test_0", tick=1)).value == 123  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"  # noqa: SLF001
 
             r = await c.set(value=1234, nchain=3)
             assert r.prev == 123
@@ -90,14 +90,14 @@ async def test_41_ssl_basic(autojump_clock):  # pylint: disable=unused-argument 
 
             # does not yet exist
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=8)
+                await c._request("get_value", node="test_0", tick=8)  # noqa: SLF001
             # has been superseded
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=1)
+                await c._request("get_value", node="test_0", tick=1)  # noqa: SLF001
             # works
-            assert (await c._request("get_value", node="test_0", tick=4)).value == 1234
+            assert (await c._request("get_value", node="test_0", tick=4)).value == 1234  # noqa: SLF001
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,

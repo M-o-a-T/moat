@@ -26,7 +26,7 @@ def _hook(e):
     e.ns_time = int(time() * 1000000000)
 
 
-akumuli_model._test_hook = _hook
+akumuli_model._test_hook = _hook  # noqa: SLF001
 
 
 async def test_basic(free_tcp_port_factory):  # no autojump  # noqa: D103
@@ -39,8 +39,8 @@ async def test_basic(free_tcp_port_factory):  # no autojump  # noqa: D103
         await client.set(P("test.one.two"), value=41)
         await st.run("akumuli test at test.foo.bar add test.one.two whatever foo=bar")
         aki = await AkumuliRoot.as_handler(client)
-        aki._cfg.server_default.port = t.TCP_PORT
-        st.tg.start_soon(task, client, aki._cfg, aki["test"])
+        aki._cfg.server_default.port = t.TCP_PORT  # noqa: SLF001
+        st.tg.start_soon(task, client, aki._cfg, aki["test"])  # noqa: SLF001
         await anyio.sleep(1)
         await aki["test"].flush()
         await client.set(P("test.one.two"), value=42)

@@ -449,7 +449,7 @@ class Msg(MsgLink, MsgResult):
         if not isinstance(rem, Msg):
             return False
         try:
-            if rem._stream_in != S_NEW or rem._stream_out != S_NEW:
+            if rem._stream_in != S_NEW or rem._stream_out != S_NEW:  # noqa: SLF001
                 return True
         except AttributeError:
             pass
@@ -624,17 +624,17 @@ class _Stream:
 
     async def __aenter__(self):
         slf = self.slf
-        if slf._stream_out != S_NEW:
+        if slf._stream_out != S_NEW:  # noqa: SLF001
             raise RuntimeError(
-                "Simple command" if slf._stream_out == S_END else "Stream-out already set",
+                "Simple command" if slf._stream_out == S_END else "Stream-out already set",  # noqa: SLF001
             )
 
         # stream-in depends on what the remote side sent
         await slf.prep_stream(self.flag)
 
-        if slf._recv_qlen < 10:
-            slf._fli = 0
-            await slf.warn(slf._recv_qlen)
+        if slf._recv_qlen < 10:  # noqa: SLF001
+            slf._fli = 0  # noqa: SLF001
+            await slf.warn(slf._recv_qlen)  # noqa: SLF001
 
         if self.initial:
             await slf.wait_replied()
@@ -648,17 +648,17 @@ class _Stream:
         # case. Thus we don't need error handling here.
 
         slf = self.slf
-        if slf._stream_out != S_END:
+        if slf._stream_out != S_END:  # noqa: SLF001
             await slf.ml_send([None], {}, 0)
 
         await slf.wait_replied()
-        if slf._stream_in != S_END:
+        if slf._stream_in != S_END:  # noqa: SLF001
             raise RuntimeError("Stream not ended")
 
     async def __aexit__(self, c, e, t):
         try:
             slf = self.slf
-            if e is not None and slf._stream_out != S_END:
+            if e is not None and slf._stream_out != S_END:  # noqa: SLF001
                 await slf.ml_send_error(e)
             await self._close()
         finally:
@@ -672,9 +672,9 @@ class _EnsureRemote:
 
     async def __aenter__(self):
         slf = self.slf
-        if (m := slf._remote) is None:
-            m = Msg.Call(slf._cmd, slf._a, slf._kw)
-            slf._cmd, slf._a, slf._kw = None, (), {}
+        if (m := slf._remote) is None:  # noqa: SLF001
+            m = Msg.Call(slf._cmd, slf._a, slf._kw)  # noqa: SLF001
+            slf._cmd, slf._a, slf._kw = None, (), {}  # noqa: SLF001
             m.set_remote(slf)
             slf.set_remote(m)
         self.m = m

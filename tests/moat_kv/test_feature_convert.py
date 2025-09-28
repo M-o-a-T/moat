@@ -30,7 +30,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
     async with stdtest(args={"init": 123}, tocks=100) as st:
         assert st is not None
         async with st.client() as c:
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("codec.int"),
                 value={
@@ -40,26 +40,26 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     "decode": "assert isinstance(value,str); return int(value)",
                 },
             )
-            await c._request("set_internal", path=P("conv.foo.inty.#"), value={"codec": "int"})
+            await c._request("set_internal", path=P("conv.foo.inty.#"), value={"codec": "int"})  # noqa: SLF001
             um = loader("_test", "user", make=True, server=False)
             u = um.build({"name": "std"})
             await u.send(c)
             u = um.build({"name": "con"})
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("auth._test.user.con.conv"),
                 value=dict(key="foo"),
                 iter=False,
             )
             await u.send(c)
-            await c._request("set_auth_typ", typ="_test")
+            await c._request("set_auth_typ", typ="_test")  # noqa: SLF001
 
         recv = []
         um = loader("_test", "user", make=False, server=False)
 
         async def mon(evt):
             async with st.client(auth=um.build({"name": "std"})) as c:
-                async with c._stream("watch", path=P("inty")) as q:
+                async with c._stream("watch", path=P("inty")) as q:  # noqa: SLF001
                     evt.set()
                     pl = PathLongener(P("inty"))
                     async for m in q:

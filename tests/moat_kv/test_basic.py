@@ -85,22 +85,22 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument  # n
             r = await c.list(P("foo.bar"))
             assert r == []
 
-            async with c._stream("get_tree", path=(), max_depth=2) as rr:
+            async with c._stream("get_tree", path=(), max_depth=2) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
-            async with c._stream("get_tree", path=(), min_depth=1) as rr:
+            async with c._stream("get_tree", path=(), min_depth=1) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp[1:]
 
             exp.pop()
             exp.pop()
-            async with c._stream("get_tree", path=(), iter=True, max_depth=1) as rr:
+            async with c._stream("get_tree", path=(), iter=True, max_depth=1) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
             exp.pop()
-            async with c._stream("get_tree", path=(), iter=True, max_depth=0) as rr:
+            async with c._stream("get_tree", path=(), iter=True, max_depth=0) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert r == exp
 
@@ -108,7 +108,7 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument  # n
             assert r.value == "baz"
             assert r.tock == bart
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -131,9 +131,9 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                 "remote_missing": {},
             }
 
-            assert (await c._request("get_value", node="test_0", tick=1)).value == 123
-            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"
-            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"
+            assert (await c._request("get_value", node="test_0", tick=1)).value == 123  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"  # noqa: SLF001
 
             r = await c.set(P(":"), value=1234, nchain=3)
             assert r.prev == 123
@@ -141,18 +141,18 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument  # n
 
             # does not yet exist
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=8)
+                await c._request("get_value", node="test_0", tick=8)  # noqa: SLF001
             # has been superseded
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=1)
+                await c._request("get_value", node="test_0", tick=1)  # noqa: SLF001
             # works
-            assert (await c._request("get_value", node="test_0", tick=5)).value == 1234
+            assert (await c._request("get_value", node="test_0", tick=5)).value == 1234  # noqa: SLF001
 
             r = await c.set(P("foo.bar"), value="bazz")
             assert r.tock > bart
             bart = r.tock
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -201,7 +201,7 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument  # noq
             r = await st.run("data foo.bar")
             assert r.stdout == "'baz'\n"
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -224,9 +224,9 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument  # noq
                 "remote_missing": {},
             }
 
-            assert (await c._request("get_value", node="test_0", tick=1)).value == 123
-            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"
-            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"
+            assert (await c._request("get_value", node="test_0", tick=1)).value == 123  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=2)).value == "hello"  # noqa: SLF001
+            assert (await c._request("get_value", node="test_0", tick=3)).value == "baz"  # noqa: SLF001
 
             r = await c.set(P(":"), value=1234, nchain=3)
             assert r.prev == 123
@@ -234,14 +234,14 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument  # noq
 
             # does not yet exist
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=8)
+                await c._request("get_value", node="test_0", tick=8)  # noqa: SLF001
             # has been superseded
             with raises(ServerError):
-                await c._request("get_value", node="test_0", tick=1)
+                await c._request("get_value", node="test_0", tick=1)  # noqa: SLF001
             # works
-            assert (await c._request("get_value", node="test_0", tick=4)).value == 1234
+            assert (await c._request("get_value", node="test_0", tick=4)).value == 1234  # noqa: SLF001
 
-            r = await c._request(
+            r = await c._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -276,9 +276,9 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument  # n
     async with stdtest(test_1={"init": 125}, n=2, tocks=30) as st:
         assert st is not None
         async with st.client(1) as ci:
-            assert (await ci._request("get_value", path=())).value == 125
+            assert (await ci._request("get_value", path=())).value == 125  # noqa: SLF001
 
-            r = await ci._request(
+            r = await ci._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -372,7 +372,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument  # n
             # This waits for test_0 to be fully up and running.
             async with st.client(0) as c:
                 # At this point ci shall be fully integrated, and test_1 shall know this (mostly).
-                r = await ci._request(
+                r = await ci._request(  # noqa: SLF001
                     "get_state",
                     nodes=True,
                     known=True,
@@ -406,7 +406,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument  # n
                     "remote_missing": {},
                 }
 
-                assert (await c._request("get_value", path=())).value == 125
+                assert (await c._request("get_value", path=())).value == 125  # noqa: SLF001
 
                 r = await c.set(P(":"), value=126, nchain=3)
                 assert r.prev == 125
@@ -438,13 +438,13 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument  # n
                 await trio.sleep(1)
 
                 with raises(ServerError):
-                    await c._request("get_value", node="test_1", tick=1)
+                    await c._request("get_value", node="test_1", tick=1)  # noqa: SLF001
                 with raises(ServerError):
-                    await ci._request("get_value", node="test_1", tick=1)
+                    await ci._request("get_value", node="test_1", tick=1)  # noqa: SLF001
 
                 # Now test that the internal states match.
                 await trio.sleep(1)
-                r = await c._request(
+                r = await c._request(  # noqa: SLF001
                     "get_state",
                     nodes=True,
                     known=True,
@@ -474,7 +474,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument  # n
                     "remote_missing": {},
                 }
 
-            r = await ci._request(
+            r = await ci._request(  # noqa: SLF001
                 "get_state",
                 nodes=True,
                 known=True,
@@ -518,7 +518,7 @@ async def test_03_lots(autojump_clock):  # pylint: disable=unused-argument  # no
                 r = await c.set(P("foo") | n, value=n)
             r = await c.list(P("foo"))
             assert len(r) == 200, r
-            async with c._stream("get_tree", path=P("foo"), max_depth=2) as rr:
+            async with c._stream("get_tree", path=P("foo"), max_depth=2) as rr:  # noqa: SLF001
                 r = await collect(rr)
             assert len(r) == 200, r
 

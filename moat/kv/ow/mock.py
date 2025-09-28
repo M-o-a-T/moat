@@ -26,12 +26,12 @@ async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dang
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
         tg.start_soon(may_close)
 
-        cfg = {"kv": client._cfg}
+        cfg = {"kv": client._cfg}  # noqa: SLF001
         ensure_cfg("moat.kv.ow", cfg)
 
         await client.set(
-            client._cfg.ow.prefix + ("server", "127.0.0.1"),
+            client._cfg.ow.prefix + ("server", "127.0.0.1"),  # noqa: SLF001
             value=dict(server=dict(host="127.0.0.1", port=addr[1])),
         )
 
-        await task(client, client._cfg, "127.0.0.1", evt)
+        await task(client, client._cfg, "127.0.0.1", evt)  # noqa: SLF001

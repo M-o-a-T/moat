@@ -208,7 +208,7 @@ class StreamCommand:
                 msg["wseq"] = await self.dw.next_seq()
             await self.client.send(msg)
         except ClosedResourceError:
-            self.client.logger.info("OERR %d", self.client._client_nr)
+            self.client.logger.info("OERR %d", self.client._client_nr)  # noqa: SLF001
 
     async def __call__(self, **kw):  # noqa: D102
         msg = self.msg
@@ -227,7 +227,7 @@ class StreamCommand:
                     await self.send(**res)
             except Exception as exc:
                 if not isinstance(exc, ClientCancelledError):
-                    self.client.logger.exception("ERS%d %r", self.client._client_nr, self.msg)
+                    self.client.logger.exception("ERS%d %r", self.client._client_nr, self.msg)  # noqa: SLF001
                 try:
                     await self.send(error=repr(exc))
                 except Exception:
@@ -291,8 +291,8 @@ class SCmd_auth(StreamCommand):
         msg = self.msg
         client = self.client
 
-        if client._user is not None:
-            await client._user.auth_sub(msg)
+        if client._user is not None:  # noqa: SLF001
+            await client._user.auth_sub(msg)  # noqa: SLF001
             return
 
         root = msg.get("root", Path())
@@ -306,18 +306,18 @@ class SCmd_auth(StreamCommand):
 
         cls = loader(msg.typ, "user", server=True)
         user = cls.load(data)
-        client._user = user
+        client._user = user  # noqa: SLF001
         try:
             await user.auth(self, msg)
 
             if client.user is None:
-                client._chroot(root)
+                client._chroot(root)  # noqa: SLF001
                 client.user = user
 
                 client.conv = user.aux_conv(data, client.root)
                 client.acl = user.aux_acl(data, client.root)
         finally:
-            client._user = None
+            client._user = None  # noqa: SLF001
 
 
 class SCmd_auth_list(StreamCommand):
@@ -507,7 +507,7 @@ class SCmd_get_tree(StreamCommand):
         async def send_sub(entry, acl):
             if entry.data is NotGiven and not empty:
                 return
-            res = entry.serialize(chop_path=client._chop_path, nchain=nchain, conv=conv)
+            res = entry.serialize(chop_path=client._chop_path, nchain=nchain, conv=conv)  # noqa: SLF001
             if not acl.allows("r"):
                 res.pop("value", None)
             ps(res)
@@ -575,7 +575,7 @@ class SCmd_watch(StreamCommand):
                             return
                         if entry.tock < tock:
                             res = entry.serialize(
-                                chop_path=client._chop_path,
+                                chop_path=client._chop_path,  # noqa: SLF001
                                 nchain=nchain,
                                 conv=conv,
                             )
@@ -609,7 +609,7 @@ class SCmd_watch(StreamCommand):
                     a = a.step(p)
                 else:
                     res = m.entry.serialize(
-                        chop_path=client._chop_path,
+                        chop_path=client._chop_path,  # noqa: SLF001
                         nchain=nchain,
                         conv=conv,
                     )
@@ -655,7 +655,7 @@ class SCmd_msg_monitor(StreamCommand):
                     except Exception as exc:
                         self.client.server.logger.exception(
                             "ERR %d: Client error on %s",
-                            self.client._client_nr,
+                            self.client._client_nr,  # noqa: SLF001
                             repr(exc),
                         )
                         res["raw"] = resp.payload
@@ -797,7 +797,7 @@ class ServerClient:
         msg["tick"] = 0
         msg.pop("tock", None)
         self.logger.warning("Fake Info SEND %s", pformat(msg))
-        await self.server._send_event("info", msg)
+        await self.server._send_event("info", msg)  # noqa: SLF001
 
     async def cmd_auth_get(self, msg):  # noqa: D102
         class AuthGet(SingleMixin, SCmd_auth_get):
@@ -1047,7 +1047,7 @@ class ServerClient:
             msg,
             nulls_ok=self.nulls_ok,
             conv=self.conv,
-            cache=self.server._nodes,
+            cache=self.server._nodes,  # noqa: SLF001
         )
         res = await msg.entry.apply(msg, server=self, root=self.root)
         if res is None:
@@ -1067,7 +1067,7 @@ class ServerClient:
                     if t not in n:
                         deleted.add(n.name, t)
         if deleted:
-            await self.server._send_event("info", attrdict(deleted=deleted.serialize()))
+            await self.server._send_event("info", attrdict(deleted=deleted.serialize()))  # noqa: SLF001
 
     async def cmd_get_state(self, msg):
         """Return some info about this node's internal state"""
@@ -1308,25 +1308,25 @@ class _RecoverControl:
         self.local_history = local_history - sources
         self.sources = sources - local_history
         self.tock = server.tock
-        type(self)._id += 1
-        self._id = type(self)._id
+        type(self)._id += 1  # noqa: SLF001
+        self._id = type(self)._id  # noqa: SLF001
 
         self._waiters = {}
 
     async def _start(self):
         chk = set()
-        rt = self.server._recover_tasks
+        rt = self.server._recover_tasks  # noqa: SLF001
         for node in self.local_history:
             xrc = rt.get(node, None)
             if xrc is not None:
                 chk.add(xrc)
-            self.server._recover_tasks[node] = self
+            self.server._recover_tasks[node] = self  # noqa: SLF001
         for t in chk:
-            await t._check()
+            await t._check()  # noqa: SLF001
 
     async def _check(self):
         lh = []
-        rt = self.server._recover_tasks
+        rt = self.server._recover_tasks  # noqa: SLF001
         for n in self.local_history:
             if rt.get(n, None) is self:
                 lh.append(n)
@@ -1339,7 +1339,7 @@ class _RecoverControl:
 
     def cancel(self):
         self.scope.cancel()
-        rt = self.server._recover_tasks
+        rt = self.server._recover_tasks  # noqa: SLF001
         for node in self.local_history:
             if rt.get(node, None) is self:
                 del rt[node]
@@ -1612,7 +1612,7 @@ class Server:
 
         async def send_nodes():
             nonlocal nodes, n_nodes
-            await client._request(  # pylint: disable=cell-var-from-loop
+            await client._request(  # pylint: disable=cell-var-from-loop  # noqa: SLF001
                 "check_deleted",
                 iter=False,
                 nchain=-1,
@@ -2102,7 +2102,7 @@ class Server:
                     # TODO auth this client
 
                     pl = PathLongener(())
-                    res = await client._request(
+                    res = await client._request(  # noqa: SLF001
                         "get_tree",
                         iter=True,
                         from_server=self.node.name,
@@ -2121,7 +2121,7 @@ class Server:
                     await self.tock_seen(res.end_msg.tock)
 
                     pl = PathLongener((None,))
-                    res = await client._request(
+                    res = await client._request(  # noqa: SLF001
                         "get_tree_internal",
                         iter=True,
                         from_server=self.node.name,
@@ -2139,7 +2139,7 @@ class Server:
                         await r.entry.apply(r, server=self, root=self.paranoid_root)
                     await self.tock_seen(res.end_msg.tock)
 
-                    res = await client._request(
+                    res = await client._request(  # noqa: SLF001
                         "get_state",
                         nodes=True,
                         from_server=self.node.name,
@@ -2255,14 +2255,14 @@ class Server:
             t = _RecoverControl(self, cs, prio, local_history, sources)
             self.logger.debug(
                 "SplitRecover %d: start %d %s local=%r remote=%r",
-                t._id,
+                t._id,  # noqa: SLF001
                 prio,
                 replace,
                 local_history,
                 sources,
             )
             try:
-                await t._start()
+                await t._start()  # noqa: SLF001
                 clock = self.cfg.server.ping.cycle
 
                 # Step 1: send an info/ticks message
@@ -2300,7 +2300,7 @@ class Server:
                 with anyio.CancelScope(shield=True):
                     # Protect against cleaning up when another recovery task has
                     # been started (because we saw another merge)
-                    self.logger.debug("SplitRecover %d: finished @%d", t._id, t.tock)
+                    self.logger.debug("SplitRecover %d: finished @%d", t._id, t.tock)  # noqa: SLF001
                     self.seen_missing = {}
                     t.cancel()
 
@@ -2354,7 +2354,7 @@ class Server:
         while self.sending_missing:
             self.sending_missing = False
             nodes = list(self._nodes.values())
-            self._actor._rand.shuffle(nodes)
+            self._actor._rand.shuffle(nodes)  # noqa: SLF001
             known = {}
             deleted = {}
             for n in nodes:
@@ -2644,7 +2644,7 @@ class Server:
         """
         Start a task. We recycle the backend's taskgroup for convenience.
         """
-        self.backend._tg.start_soon(p, *a, **k)
+        self.backend._tg.start_soon(p, *a, **k)  # noqa: SLF001
 
     async def serve(self, log_path=None, log_inc=False, force=False, ready_evt=None):
         """Task that opens a backend connection and actually runs the server.
@@ -2775,7 +2775,7 @@ class Server:
             self._clients.add(c)
             await c.run()
         except (ClosedResourceError, anyio.EndOfStream):
-            self.logger.debug("XX %d closed", c._client_nr)
+            self.logger.debug("XX %d closed", c._client_nr)  # noqa: SLF001
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             if hasattr(exc, "split"):
@@ -2785,7 +2785,7 @@ class Server:
                 exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)
             if exc is not None and not isinstance(exc, CancelExc):
                 if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
-                    self.logger.debug("XX %d closed", c._client_nr)
+                    self.logger.debug("XX %d closed", c._client_nr)  # noqa: SLF001
                 else:
                     self.logger.exception("Client connection killed", exc_info=exc)
             if exc is None:

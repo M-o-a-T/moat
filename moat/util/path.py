@@ -184,7 +184,7 @@ class Path(collections.abc.Sequence):
         Prefix test
         """
         if isinstance(path, Path):
-            path = path._data
+            path = path._data  # noqa: SLF001
         if not isinstance(path, tuple):
             path = tuple(path)
 

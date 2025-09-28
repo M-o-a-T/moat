@@ -84,8 +84,8 @@ async def test_basic_scaffold(a_s, a_r, k_s, k_r):  # noqa: D103
             await msg.result(*a_r, **k_r)
 
     async with scaffold(EP, None) as (a, b):
-        a._id = 9
-        b._id = 12
+        a._id = 9  # noqa: SLF001
+        b._id = 12  # noqa: SLF001
         res = await b.cmd("Test", *a_s, **k_s)
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r
@@ -99,8 +99,8 @@ async def test_error_scaffold():  # noqa: D103
             raise RuntimeError("Duh")
 
     async with scaffold(EP(), None) as (a, b):
-        a._id = 9
-        b._id = 12
+        a._id = 9  # noqa: SLF001
+        b._id = 12  # noqa: SLF001
         with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Err")
             raise ValueError("No error", res.args, res.kw)

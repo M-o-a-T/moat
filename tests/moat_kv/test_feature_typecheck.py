@@ -30,7 +30,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
         assert st is not None
         async with st.client() as c:
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int"),
                     value={
@@ -41,7 +41,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     },
                 )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int"),
                     value={
@@ -51,7 +51,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     },
                 )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int"),
                     value={
@@ -61,7 +61,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     },
                 )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int"),
                     value={
@@ -71,7 +71,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     },
                 )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int"),
                     value={
@@ -80,7 +80,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                         "code": "if not isinstance(value,int): raise ValueError('not an int')",
                     },
                 )
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("type.int"),
                 value={
@@ -90,7 +90,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                 },
             )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int.percent"),
                     value={
@@ -100,7 +100,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                     },
                 )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("type.int.percent"),
                     value={
@@ -109,7 +109,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                         "code": "if not 0<=value<=100: raise ValueError('not a percentage')",
                     },
                 )
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("type.int.percent"),
                 value={
@@ -119,12 +119,12 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # n
                 },
             )
             with raises(ServerError):
-                await c._request(
+                await c._request(  # noqa: SLF001
                     "set_internal",
                     path=P("match.one.+.two"),
                     value={"tope": P("int.percent")},
                 )
-            await c._request(
+            await c._request(  # noqa: SLF001
                 "set_internal",
                 path=P("match.one.+.two"),
                 value={"type": P("int.percent")},

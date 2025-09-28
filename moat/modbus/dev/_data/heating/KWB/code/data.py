@@ -96,7 +96,7 @@ def main(info, fn, fo):  # noqa: D103
                 pp = P(info)
             else:
                 pp = P("regs")
-            d = d._update(pp + p, e)
+            d = d._update(pp + p, e)  # noqa: SLF001
 
         yprint(d, ff)
 

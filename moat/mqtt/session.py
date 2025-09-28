@@ -205,7 +205,7 @@ class Session:  # noqa: D101
             self._broker = broker
             if self._delivery_task is not None:
                 raise RuntimeError("Already running")
-            broker._tg.start_soon(self._delivery_loop)
+            broker._tg.start_soon(self._delivery_loop)  # noqa: SLF001
 
     async def stop(self):  # noqa: D102
         if self._delivery_task is not None:
@@ -214,7 +214,7 @@ class Session:  # noqa: D101
         self._broker = None  # break ref loop
 
     async def put_message(self, app_message):  # noqa: D102
-        if app_message.retain and self._broker is not None and not self._broker._do_retain:
+        if app_message.retain and self._broker is not None and not self._broker._do_retain:  # noqa: SLF001
             raise RuntimeError("The broker doesn't do retains", repr(app_message.__getstate__()))
         if not app_message.topic:
             self.logger.warning(

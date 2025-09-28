@@ -174,7 +174,7 @@ class MsgLink:
         """
         rem = self._remote
         if rem is not None:
-            rem._remote = None
+            rem._remote = None  # noqa: SLF001
             rem.set_end()
         self._remote = remote
 
@@ -271,7 +271,7 @@ class Caller:
             m2 = await acm(m1.ensure_remote())
             # m2 is the one with the command data
             tg.start_soon(self.sender.handle, m2, m2.rcmd)
-            await acm(m1._stream_call(self._dir))
+            await acm(m1._stream_call(self._dir))  # noqa: SLF001
             return m1
         except BaseException as exc:
             try:

@@ -484,14 +484,14 @@ class MQTTClient:
 
             async def __aenter__(self):
                 self._q = create_queue(QSIZE)
-                await self.client._subscribe(self)
+                await self.client._subscribe(self)  # noqa: SLF001
                 return self
 
             async def __aexit__(self, *tb):
                 self._q = None
                 try:
                     with anyio.move_on_after(2, shield=True):
-                        await self.client._unsubscribe(self)
+                        await self.client._unsubscribe(self)  # noqa: SLF001
                 except ClientException:
                     pass
 
@@ -561,13 +561,13 @@ class MQTTClient:
             if not match_topic(t, clients.topic):
                 continue
             for c in list(clients):
-                if c._q is None:
+                if c._q is None:  # noqa: SLF001
                     continue
-                if c._q.qsize() < QSIZE - 1:
-                    await c._q.put(msg)
+                if c._q.qsize() < QSIZE - 1:  # noqa: SLF001
+                    await c._q.put(msg)  # noqa: SLF001
                 else:
-                    await c._q.put(None)
-                    c._q = None
+                    await c._q.put(None)  # noqa: SLF001
+                    c._q = None  # noqa: SLF001
 
     async def _deliver_loop(self):
         """

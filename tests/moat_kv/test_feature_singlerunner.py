@@ -23,7 +23,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noq
             await ErrorRoot.as_handler(c)
             cr = await CodeRoot.as_handler(c)
             r = await SingleRunnerRoot.as_handler(c, subpath=(), code=cr)
-            c._test_evt = anyio.Event()
+            c._test_evt = anyio.Event()  # noqa: SLF001
             await cr.add(
                 P("forty.two"),
                 code="""\
@@ -41,7 +41,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument  # noq
             logger.info("Start sleep")
             try:
                 with trio.fail_after(200):
-                    await c._test_evt.wait()
+                    await c._test_evt.wait()  # noqa: SLF001
             finally:
                 with anyio.fail_after(2, shield=True):
                     await st.run("data : get -rd_", do_stdout=False)

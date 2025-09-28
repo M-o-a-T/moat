@@ -77,5 +77,5 @@ def test_basic():
     assert n.set(P("c.b.d"), 18, MsgMeta(origin="B"))
     assert n.set(P("c.b.f.g"), 19, MsgMeta(origin="B"))
     assert n.set(P("c.e.t"), 20, MsgMeta(origin="B"))
-    for a, b in zip_longest(n._dump_x(), n.dump()):
+    for a, b in zip_longest(n._dump_x(), n.dump()):  # noqa: SLF001
         assert a == b, (a, b)

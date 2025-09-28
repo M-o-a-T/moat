@@ -28,14 +28,14 @@ class CancelTracer:
         pass
 
     def skip(self, scope):  # noqa: D102
-        if scope._stack is None:
+        if scope._stack is None:  # noqa: SLF001
             return True
-        if scope._stack[5].f_code.co_name == "connect_tcp":
+        if scope._stack[5].f_code.co_name == "connect_tcp":  # noqa: SLF001
             return True
         return False
 
     def scope_entered(self, scope):  # noqa: D102
-        scope._stack = s = []
+        scope._stack = s = []  # noqa: SLF001
         f = inspect.currentframe().f_back
         while f:
             s.append(f)

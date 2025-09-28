@@ -67,7 +67,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
             self.watch_src = src
             self.watch_src_attr = src_attr
             if src is not None:
-                await self.root._tg.start(self._watch_src)
+                await self.root._tg.start(self._watch_src)  # noqa: SLF001
             else:
                 await self.root.err.record_working(
                     "owfs",
@@ -119,7 +119,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
                     nval = self.watch_dest_value
                     if not isinstance(nval, attrdict):
                         nval = attrdict()
-                    nval = nval._update(self.watch_dest_attr, val)
+                    nval = nval._update(self.watch_dest_attr, val)  # noqa: SLF001
                     try:
                         await self.client.set(self.watch_dest, nval, idem=self.watch_dest_idem)
                     except ClientChainError:
@@ -262,7 +262,7 @@ class OWFSfamily(ClientEntry):  # noqa: D101
     async def set_value(self, val):  # pylint: disable=arguments-differ  # noqa: D102
         await super().set_value(val)
         for c in self:
-            await c._update_value()
+            await c._update_value()  # noqa: SLF001
 
 
 class ServerEntry(AttrClientEntry):  # noqa: D101

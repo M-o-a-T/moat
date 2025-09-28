@@ -78,7 +78,7 @@ async def task(client, cfg, server=None, evt=None):  # noqa: D103
         await ow.add_task(mon, ow, hd)
         port = cfg.ow.port
         if not server:
-            si = ((s._name, s) for s in hd.server)
+            si = ((s._name, s) for s in hd.server)  # noqa: SLF001
         elif isinstance(server, str):
             si = ((server, hd.server[server]),)
         else:

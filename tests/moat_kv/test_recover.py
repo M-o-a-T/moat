@@ -23,14 +23,14 @@ if rs is None:
 else:
     import trio._core._run as tcr
 
-    random = tcr._r
+    random = tcr._r  # noqa: SLF001
 
 F1 = 0.05
 F2 = 0.05
 F3 = 0.05
 F4 = 0.2
 
-_asm = Actor._send_msg
+_asm = Actor._send_msg  # noqa: SLF001
 
 
 async def send_msg(self, msg):  # noqa: D103
@@ -52,7 +52,7 @@ async def queue_msg(self, msg):  # noqa: D103
     await _aqm(self, msg)
 
 
-_old_send = Server._send_event
+_old_send = Server._send_event  # noqa: SLF001
 
 
 async def send_evt(self, action: str, msg: dict):  # noqa: D103
@@ -95,7 +95,7 @@ async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
                         else:
                             logger.info("%d: old %r", s, r)
                     if c != N * NN:
-                        res = await ci._request("get_state", iter=False, missing=True)
+                        res = await ci._request("get_state", iter=False, missing=True)  # noqa: SLF001
                         logger.info("%d: missing %d %r", s, N * NN - c, res.missing)
                         missed = True
             if missed:

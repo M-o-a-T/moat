@@ -45,5 +45,5 @@ logging.basicConfig = _lbc
 import trio._core._run as tcr
 
 if "PYTHONHASHSEED" in os.environ:
-    tcr._ALLOW_DETERMINISTIC_SCHEDULING = True
-    tcr._r.seed(os.environ["PYTHONHASHSEED"])
+    tcr._ALLOW_DETERMINISTIC_SCHEDULING = True  # noqa: SLF001
+    tcr._r.seed(os.environ["PYTHONHASHSEED"])  # noqa: SLF001

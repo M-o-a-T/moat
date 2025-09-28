@@ -10,6 +10,6 @@ from moat.kv.exceptions import *
 
 MoaTLinkError = MoaTKVError
 
-class AuthError(MoaTLinkError):  # noqa: D101, D102
+class AuthError(MoaTLinkError):  # noqa: D101
     pass
 

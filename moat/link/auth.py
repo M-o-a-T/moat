@@ -54,7 +54,7 @@ class AuthMethod:  # noqa: D101
         """
         return None
 
-    async def handle(self, conn: Hello, msg: Msg) -> None:  # noqa: ARG002
+    async def handle(self, conn: Hello, msg: Msg) -> None:
         """
         The dispatcher calls this method with an incoming ``i.auth.NAME`` message.
 
@@ -95,7 +95,7 @@ class TokenAuth(AuthMethod):  # noqa: D101
         # wrong token: kick them off
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: ARG002
+    async def handle(self, conn: MsgHandler, msg: Msg):
         """
         The client shouldn't send an `i.auth.token` message.
         """

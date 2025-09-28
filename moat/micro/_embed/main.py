@@ -96,7 +96,7 @@ def go(state=None, cmd=True):
 
     fn = dict(states).get(state, "moat.cfg")
 
-    # clean upt default stuff from path 
+    # clean up default stuff from path
     for p in ("", "/", ".", "/lib", ".frozen", "/rom", "/rom/lib"):
         try:
             sys.path.remove(p)

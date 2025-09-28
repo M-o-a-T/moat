@@ -58,7 +58,7 @@ This is the main command handler for MoaT, the Master of all Things.
 
 @main_.command(short_help="Import the debugger")
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
-async def pdb(args):  # pylint: disable=unused-argument  # safe  # noqa: ARG001
+async def pdb(args):  # pylint: disable=unused-argument  # safe
     """
     This command imports PDB and continues to process arguments.
     """

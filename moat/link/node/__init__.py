@@ -325,7 +325,7 @@ class NodeFinder:
     def __init__(self, src):
         self.steps = ((src, False),)
 
-    def step(self, name, new=False):  # noqa: D102
+    def step(self, name, new=False):
         """
         Walk a single hierarchy step, observing wildcards.
 

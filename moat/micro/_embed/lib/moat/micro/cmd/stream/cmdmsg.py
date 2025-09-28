@@ -201,7 +201,7 @@ class SingleCmdMsg(BaseCmdMsg):
                             log("Err %s: %r", self.path, repr(a))
                         if b is None:
                             return
-                        raise b  # noqa:B904
+                        raise b
                     e = e.exceptions[0]
                     if not isinstance(e, BaseExceptionGroup):
                         raise e  # noqa:TRY201

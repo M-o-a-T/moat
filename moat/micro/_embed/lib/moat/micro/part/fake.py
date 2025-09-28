@@ -108,7 +108,7 @@ class ADC(BaseCmd):
         "read current value"
         b = self.bias + (self.rand.random() - 0.5) * self.step
         v = self.val + b
-        if v > self.border and b > 0:  # noqa:SIM114
+        if v > self.border and b > 0:
             b = 0
         elif v < -self.border and b < 0:
             b = 0

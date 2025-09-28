@@ -93,7 +93,6 @@ class Codec(_Codec):
 # cloned from https://github.com/msgpack/msgpack-python
 
 # Parts of this have been modified to be compatble with micropython.
-# ruff:noqa:B904
 
 
 class UnpackException(Exception):

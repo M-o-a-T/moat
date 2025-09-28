@@ -2207,7 +2207,7 @@ class Server:
 
         # remote_missing: per-node range of ticks that should be re-sent
         # This is used when loading data from a state file
-        for nn, k in msg.get("remote_missing", {}).items():  # noqa:PLW2901
+        for nn, k in msg.get("remote_missing", {}).items():
             nn = Node(nn, cache=self.node_cache)  # noqa:PLW2901
             r = RangeSet()
             r.__setstate__(k)

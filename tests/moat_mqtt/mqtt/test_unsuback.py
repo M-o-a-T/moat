@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -11,14 +11,14 @@ from moat.mqtt.mqtt.unsuback import UnsubackPacket
 from tests.moat_mqtt import anyio_run
 
 
-class UnsubackPacketTest(unittest.TestCase):
-    def test_from_stream(self):
+class UnsubackPacketTest(unittest.TestCase):  # noqa: D101
+    def test_from_stream(self):  # noqa: D102
         data = b"\xb0\x02\x00\x0a"
         stream = BufferAdapter(data)
         message = anyio_run(UnsubackPacket.from_stream, stream)
         assert message.variable_header.packet_id == 10
 
-    def test_to_stream(self):
+    def test_to_stream(self):  # noqa: D102
         variable_header = PacketIdVariableHeader(10)
         publish = UnsubackPacket(variable_header=variable_header)
         out = publish.to_bytes()

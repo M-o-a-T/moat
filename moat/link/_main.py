@@ -4,26 +4,18 @@ This module describes the MoaT data link.
 
 from __future__ import annotations
 
-import os
 import anyio
-from platform import uname
 
 # pylint: disable=missing-module-docstring
 import logging
 import sys
-from functools import partial
-from pathlib import Path as FSPath
-import time
 
 import asyncclick as click
 
-from mqttproto import MQTTException
-
-from moat.util import NotGiven, P, Path, load_subgroup, yprint, attrdict
+from moat.util import NotGiven, P, Path, load_subgroup, yprint
 from moat.util.path import set_root
 
-from .backend import RawMessage, get_backend
-from .client import Link
+from .backend import get_backend
 
 try:
     from mqttproto import MQTTPublishPacket

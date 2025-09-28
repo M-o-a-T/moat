@@ -4,8 +4,9 @@ Error classes et al. for moat-lib-cmd.
 
 from __future__ import annotations
 
-from moat.util.compat import CancelledError
 from moat.lib.codec.proxy import as_proxy
+from moat.util.compat import CancelledError
+
 from .const import *
 
 
@@ -30,8 +31,8 @@ class RemoteError(RuntimeError):
     pass
 
 
-class StreamError(RuntimeError):
-    def __new__(cls, msg=()):
+class StreamError(RuntimeError):  # noqa: D101
+    def __new__(cls, msg=()):  # noqa: D102
         if len(msg) != 1:
             pass
         elif isinstance((m := msg[0]), int):

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import anyio
 
-from moat.util.compat import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
+from moat.util.compat import AC_use, log
 
 # Typing
 

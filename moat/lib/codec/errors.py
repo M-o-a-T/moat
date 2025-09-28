@@ -5,13 +5,13 @@ FUSE operations for MoaT-micro-FS
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
-from moat.util.exc import ExpKeyError, ExpAttrError
+from moat.util.exc import ExpAttrError, ExpKeyError
 
 try:
     from moat.lib.cmd.errors import RemoteError
 except ImportError:
 
-    class RemoteError(RuntimeError):
+    class RemoteError(RuntimeError):  # noqa: D101
         pass
 
 

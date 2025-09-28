@@ -1,12 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import DISCONNECT, MQTTFixedHeader, MQTTPacket
 
 
-class DisconnectPacket(MQTTPacket):
+class DisconnectPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = None
     PAYLOAD = None
 

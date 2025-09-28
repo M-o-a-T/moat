@@ -24,17 +24,17 @@ class CodecNode(Node):
     _enc = field(init=False, default=None)
     _dec = field(init=False, default=None)
 
-    def enc_value(self, value, entry=None, **kv):
+    def enc_value(self, value, entry=None, **kv):  # noqa: D102
         if self._enc is not None:
             value = self._enc(value=value, entry=entry, data=self._data, **kv)
         return value
 
-    def dec_value(self, value, entry=None, **kv):
+    def dec_value(self, value, entry=None, **kv):  # noqa: D102
         if self._dec is not None:
             value = self._dec(value=value, entry=entry, data=self._data, **kv)
         return value
 
-    def set_(self, path: Path, data: Any, meta: MsgMeta):
+    def set_(self, path: Path, data: Any, meta: MsgMeta):  # noqa: D102
         super().set_(path, data, meta)
 
         enc = None

@@ -7,10 +7,13 @@ Does not limit anything, allows everything.
 
 from __future__ import annotations
 
+import contextlib
+
 import nacl.secret
 
 from moat.kv.client import Client, NoData
 from moat.kv.exceptions import AuthFailedError
+
 from . import (
     BaseClientAuth,
     BaseClientAuthMaker,
@@ -19,15 +22,15 @@ from . import (
     null_client_login,
     null_server_login,
 )
-import contextlib
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.kv.server import StreamCommand
     from moat.kv.model import Entry
+    from moat.kv.server import StreamCommand
 
 
-def load(typ: str, *, make: bool = False, server: bool):
+def load(typ: str, *, make: bool = False, server: bool):  # noqa:D103
     if typ == "client":
         if server:
             return null_server_login
@@ -50,7 +53,7 @@ def load(typ: str, *, make: bool = False, server: bool):
 async def pack_pwd(client, password, length):
     """Client side: encrypt password"""
     secret = await client.dh_secret(length=length)
-    from hashlib import sha256
+    from hashlib import sha256  # noqa:PLC0415
 
     pwd = sha256(password).digest()
     box = nacl.secret.SecretBox(secret)
@@ -68,17 +71,17 @@ async def unpack_pwd(client, password):
     # TODO check with Argon2
 
 
-class ServerUserMaker(BaseServerAuthMaker):
+class ServerUserMaker(BaseServerAuthMaker):  # noqa:D101
     _name = None
     _aux = None
     password: str = None
 
     @property
-    def ident(self):
+    def ident(self):  # noqa:D102
         return self._name
 
     @classmethod
-    async def recv(cls, cmd, data):
+    async def recv(cls, cmd, data):  # noqa:D102
         self = cls()
         self._name = data["ident"]
         self._aux = data.get("aux")
@@ -89,22 +92,22 @@ class ServerUserMaker(BaseServerAuthMaker):
         self.password = pwd
         return self
 
-    async def send(self, cmd):
+    async def send(self, cmd):  # noqa:D102,ARG002
         return  # nothing to do, we don't share the hash
 
     @classmethod
-    def load(cls, data):
+    def load(cls, data):  # noqa:D102
         self = super().load(data)
         self._name = data.path[-1]
         return self
 
-    def save(self):
+    def save(self):  # noqa:D102
         res = super().save()
         res["password"] = self.password
         return res
 
 
-class ServerUser(RootServerUser):
+class ServerUser(RootServerUser):  # noqa:D101
     @classmethod
     def load(cls, data: Entry):
         """Create a ServerUser object from existing stored data"""
@@ -122,7 +125,7 @@ class ServerUser(RootServerUser):
             raise AuthFailedError("Password hashes do not match", self._name)
 
 
-class ClientUserMaker(BaseClientAuthMaker):
+class ClientUserMaker(BaseClientAuthMaker):  # noqa:D101
     gen_schema = dict(
         type="object",
         additionalProperties=True,
@@ -143,13 +146,13 @@ class ClientUserMaker(BaseClientAuthMaker):
     _length = 1024
 
     @property
-    def ident(self):
+    def ident(self):  # noqa:D102
         return self._name
 
     # Overly-complicated methods of exchanging the user name
 
     @classmethod
-    def build(cls, user, _initial=True):
+    def build(cls, user, _initial=True):  # noqa:D102
         self = super().build(user, _initial=_initial)
         self._name = user["name"]
         if "password" in user:
@@ -159,7 +162,7 @@ class ClientUserMaker(BaseClientAuthMaker):
     @classmethod
     async def recv(cls, client: Client, ident: str, _kind: str = "user", _initial=True):
         """Read a record representing a user from the server."""
-        m = await client._request(
+        m = await client._request(  # noqa:SLF001
             action="auth_get",
             typ=cls._auth_method,
             kind=_kind,
@@ -179,10 +182,10 @@ class ClientUserMaker(BaseClientAuthMaker):
         if self._pass is not None:
             msg["password"] = await pack_pwd(client, self._pass, self._length)
 
-        await client._request(
+        await client._request(  # noqa:SLF001
             action="auth_set",
             ident=self._name,
-            typ=type(self)._auth_method,
+            typ=type(self)._auth_method,  # noqa:SLF001
             kind=_kind,
             chain=self._chain,
             **msg,
@@ -195,7 +198,7 @@ class ClientUserMaker(BaseClientAuthMaker):
         return res
 
 
-class ClientUser(BaseClientAuth):
+class ClientUser(BaseClientAuth):  # noqa:D101
     schema = dict(
         type="object",
         additionalProperties=True,
@@ -210,11 +213,11 @@ class ClientUser(BaseClientAuth):
     _length = 1024
 
     @property
-    def ident(self):
+    def ident(self):  # noqa:D102
         return self._name
 
     @classmethod
-    def build(cls, user):
+    def build(cls, user):  # noqa:D102
         self = super().build(user)
         self._name = user["name"]
         self._pass = user["password"].encode("utf-8")
@@ -224,9 +227,10 @@ class ClientUser(BaseClientAuth):
         """
         Authorizes this user with the server.
         """
+        chroot  # noqa:B018
         try:
             pw = await pack_pwd(client, self._pass, self._length)
-            await client._request(
+            await client._request(  # noqa:SLF001
                 action="auth",
                 typ=self._auth_method,
                 iter=False,

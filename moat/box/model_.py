@@ -6,15 +6,13 @@ from __future__ import annotations
 
 from sqlalchemy.orm import relationship
 
+from moat.util import NotGiven
 from moat.db.schema import Base
 from moat.db.util import session
-from moat.util import NotGiven
-
-
-from .model import Box, BoxTyp
 from moat.label.model import Label, LabelTyp
 from moat.thing.model import Thing
-from moat.db.schema import Base
+
+from .model import Box, BoxTyp
 
 BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
 Box.labels = relationship(Label, back_populates="box", collection_class=set)
@@ -22,6 +20,7 @@ Box.things = relationship(Thing, back_populates="container", collection_class=se
 
 
 def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw):
+    "?"
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -49,6 +48,7 @@ Box.apply = box_apply
 
 
 def boxtyp_apply(self, usable, unusable, parent=(), **kw):
+    "?"
     Base.apply(self, **kw)
     if usable:
         if unusable:

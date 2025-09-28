@@ -6,16 +6,16 @@ from __future__ import annotations
 
 import logging  # pylint: disable=wrong-import-position
 import sys
-from moat.util import load_subgroup, ensure_cfg, merge, option_ng, NotGiven, yprint
-from moat.db import database
-from .model import LabelTyp, Label, Sheet, SheetTyp, SheetTyp
-from sqlalchemy import select as sel
 from contextlib import nullcontext
 
 import asyncclick as click
+from sqlalchemy import select as sel
 
+from moat.util import NotGiven, ensure_cfg, load_subgroup, merge, option_ng, yprint
+from moat.db import database
+
+from .model import Label, LabelTyp, Sheet, SheetTyp
 from .pdf import Labels
-
 
 log = logging.getLogger()
 

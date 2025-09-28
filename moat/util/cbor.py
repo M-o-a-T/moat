@@ -9,6 +9,7 @@ An overly-simple CBOR packer/unpacker.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import re
 from ipaddress import (
@@ -23,10 +24,9 @@ from ipaddress import (
 # Typing
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag
 
-from ._cbor import std_ext, StdCBOR
-import contextlib
+from ._cbor import StdCBOR, std_ext
 
-__all__ = ["std_ext", "StdCBOR", "gen_start", "gen_stop"]
+__all__ = ["StdCBOR", "gen_start", "gen_stop", "std_ext"]
 
 CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'

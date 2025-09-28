@@ -14,12 +14,12 @@ from moat.lib.diffiehellman import DiffieHellman
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 
-class TestDiffieHellman(unittest.TestCase):
-    def setUp(self):
+class TestDiffieHellman(unittest.TestCase):  # noqa: D101
+    def setUp(self):  # noqa: D102
         self.alice = DiffieHellman()
         self.bob = DiffieHellman()
 
-    def test_equality_of_keys(self):
+    def test_equality_of_keys(self):  # noqa: D102
         self.alice.generate_public_key()
         self.bob.generate_public_key()
 
@@ -30,19 +30,19 @@ class TestDiffieHellman(unittest.TestCase):
             "There is a mismatch between two shared secrets. Both shared secrets should be the same. This is bad."
         )
 
-    def test_decorators_private_key(self):
+    def test_decorators_private_key(self):  # noqa: D102
         self.alice.generate_public_key()
         assert "_DiffieHellman__private_key" in self.alice.__dict__
 
-    def test_generate_private_key(self):
+    def test_generate_private_key(self):  # noqa: D102
         self.alice.generate_private_key()
         assert "_DiffieHellman__private_key" in self.alice.__dict__
 
-    def test_generate_public_key(self):
+    def test_generate_public_key(self):  # noqa: D102
         self.alice.generate_public_key()
         assert "public_key" in self.alice.__dict__
 
-    def test_verify_public_key(self):
+    def test_verify_public_key(self):  # noqa: D102
         self.alice.generate_public_key()
         self.bob.generate_public_key()
         assert self.alice.verify_public_key(self.bob.public_key)

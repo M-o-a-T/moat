@@ -4,23 +4,22 @@ Rudimentary Github API.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from attr import define, field
-from httpx import AsyncClient
 import anyio
 import os
-
-from moat.util import to_attrdict
 from subprocess import CalledProcessError
 
+from attr import define
+
+from moat.util import to_attrdict
+
 from . import API as BaseAPI
-from . import RepoInfo as BaseRepoInfo
 from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo
+from . import RepoInfo as BaseRepoInfo
 
 
 @define
-class CommitInfo(BaseCommitInfo):
+class CommitInfo(BaseCommitInfo):  # noqa: D101
     pass
 
 
@@ -32,7 +31,7 @@ class CommitInfo(BaseCommitInfo):
 
 
 @define
-class RepoInfo(BaseRepoInfo):
+class RepoInfo(BaseRepoInfo):  # noqa: D101
     rid: str | None = None
     data: dict | None = None
 
@@ -57,7 +56,7 @@ class RepoInfo(BaseRepoInfo):
         return self.data.payload["xyz.radicle.project"].description
 
     @property
-    def name(self) -> str:
+    def name(self) -> str:  # noqa: D102
         return self.data.payload["xyz.radicle.project"].name
 
     async def clone_from_remote(self):
@@ -65,7 +64,7 @@ class RepoInfo(BaseRepoInfo):
         await self.repo.exec("rad", "clone", url, str(self.repo.cwd), cwd="/tmp")
         await self.load_()
 
-    async def load_(self):
+    async def load_(self):  # noqa: D102
         try:
             self.rid = (await self.repo.exec("rad", ".", capture=True)).strip()
         except CalledProcessError:
@@ -129,7 +128,7 @@ mv $T $1
                     await anyio.Path(f.name).unlink()
         self.data.payload["xyz.radicle.project"].defaultBranch = name
 
-    async def create(self):
+    async def create(self):  # noqa: D102
         await self.repo.exec(
             "rad",
             "init",
@@ -176,7 +175,7 @@ mv $T $1
 #           yield res
 
 
-class API(BaseAPI):
+class API(BaseAPI):  # noqa: D101
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 
@@ -202,7 +201,7 @@ class API(BaseAPI):
                     url = u.strip().lstrip("<").rstrip(">")
                     break
 
-    async def get_repo(self, name) -> RepoInfo:
+    async def get_repo(self, name) -> RepoInfo:  # noqa: D102
         url = f"/repos/{self.cfg.user}/{name}"
         res = await self.http.get(url)
         res.raise_for_status()

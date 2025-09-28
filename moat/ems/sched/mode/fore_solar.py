@@ -28,7 +28,7 @@ class Loader(BaseLoader):
         """
 
         factor = cfg.data.fore_solar.factor
-        start = datetime.utcfromtimestamp(t - 3600).strftime("%H:%M")
+        start = datetime.fromtimestamp(t - 3600, tz=datetime.UTC).strftime("%H:%M")
         t_step = int(3600 / cfg.steps)
         cmp = a["compass"]
         if cmp > 180:
@@ -36,7 +36,7 @@ class Loader(BaseLoader):
 
         url = (
             f"{cfg.data.fore_solar.url}/{cfg.data.fore_solar.api}/estimate/"
-            + f"watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak'] * 1000)}"
+             f"watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak'] * 1000)}"
         )
         r = await session.get(
             url,
@@ -66,7 +66,7 @@ class Loader(BaseLoader):
         # is somewhat less accurate than theoretically possible. In
         # practice this should not matter too much..
         for k, v in r.json()["result"].items():
-            k = int(k)
+            k = int(k)  # noqa:PLW2901
             # must be ascending
             assert k > kx
             kx = k
@@ -93,6 +93,7 @@ class Loader(BaseLoader):
 
     @classmethod
     async def solar(cls, cfg, t):
+        "Collect solar input"
         async with asks.sessions.Session(connections=2) as s:
             a = [cls._solar(cfg, t, s, a) for a in cfg.solar.array]
             while True:

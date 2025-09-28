@@ -4,9 +4,8 @@ Inverter mode: turn the thing off
 
 from __future__ import annotations
 
-import logging
-
 import anyio
+import logging
 
 from . import InvModeBase
 
@@ -48,5 +47,4 @@ positive = inverter, negaive = charger.
         logger.info("SET inverter ZERO %.0f", self.power)
         for p in intf.p_set_:
             await p.set_value(-self.power / intf.n_phase)
-        while True:
-            await anyio.sleep(99999)
+        await anyio.sleep_forever()

@@ -1,10 +1,11 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
 from moat.mqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
 from moat.mqtt.errors import MoatMQTTException, MQTTException
+
 from .packet import (
     PUBLISH,
     MQTTFixedHeader,
@@ -12,14 +13,15 @@ from .packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import anyio
 
 
-class PublishVariableHeader(MQTTVariableHeader):
-    __slots__ = ("topic_name", "packet_id")
+class PublishVariableHeader(MQTTVariableHeader):  # noqa: D101
+    __slots__ = ("packet_id", "topic_name")
 
     def __init__(self, topic_name: str, packet_id: int | None = None):
         super().__init__()
@@ -35,7 +37,7 @@ class PublishVariableHeader(MQTTVariableHeader):
     def __repr__(self):
         return type(self).__name__ + f"(topic={self.topic_name}, packet_id={self.packet_id})"
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa: D102
         out = bytearray()
         out.extend(encode_string(self.topic_name))
         if self.packet_id is not None:
@@ -43,7 +45,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         return out
 
     @classmethod
-    async def from_stream(cls, reader: anyio.abc.ByteStream, fixed_header: MQTTFixedHeader):
+    async def from_stream(cls, reader: anyio.abc.ByteStream, fixed_header: MQTTFixedHeader):  # noqa: D102
         topic_name = await decode_string(reader)
         has_qos = (fixed_header.flags >> 1) & 0x03
         if has_qos:
@@ -53,18 +55,18 @@ class PublishVariableHeader(MQTTVariableHeader):
         return cls(topic_name, packet_id)
 
 
-class PublishPayload(MQTTPayload):
+class PublishPayload(MQTTPayload):  # noqa: D101
     __slots__ = ("data",)
 
     def __init__(self, data: bytes | None = None):
         super().__init__()
         self.data = data
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
+    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: D102
         return self.data
 
     @classmethod
-    async def from_stream(
+    async def from_stream(  # noqa: D102
         cls,
         reader: anyio.abc.ByteStream,
         fixed_header: MQTTFixedHeader,
@@ -83,7 +85,7 @@ class PublishPayload(MQTTPayload):
         return type(self).__name__ + f"(data={repr(self.data)!r})"
 
 
-class PublishPacket(MQTTPacket):
+class PublishPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = PublishVariableHeader
     PAYLOAD = PublishPayload
 
@@ -110,7 +112,7 @@ class PublishPacket(MQTTPacket):
         self.variable_header = variable_header
         self.payload = payload
 
-    def set_flags(self, dup_flag=False, qos=0, retain_flag=False):
+    def set_flags(self, dup_flag=False, qos=0, retain_flag=False):  # noqa: D102
         self.dup_flag = dup_flag
         self.retain_flag = retain_flag
         self.qos = qos
@@ -125,7 +127,7 @@ class PublishPacket(MQTTPacket):
         return bool(self.fixed_header.flags & mask)
 
     @property
-    def dup_flag(self) -> bool:
+    def dup_flag(self) -> bool:  # noqa: D102
         return self._get_header_flag(self.DUP_FLAG)
 
     @dup_flag.setter
@@ -133,7 +135,7 @@ class PublishPacket(MQTTPacket):
         self._set_header_flag(val, self.DUP_FLAG)
 
     @property
-    def retain_flag(self) -> bool:
+    def retain_flag(self) -> bool:  # noqa: D102
         return self._get_header_flag(self.RETAIN_FLAG)
 
     @retain_flag.setter
@@ -141,7 +143,7 @@ class PublishPacket(MQTTPacket):
         self._set_header_flag(val, self.RETAIN_FLAG)
 
     @property
-    def qos(self):
+    def qos(self):  # noqa: D102
         return (self.fixed_header.flags & self.QOS_FLAG) >> 1
 
     @qos.setter
@@ -150,7 +152,7 @@ class PublishPacket(MQTTPacket):
         self.fixed_header.flags |= val << 1
 
     @property
-    def packet_id(self):
+    def packet_id(self):  # noqa: D102
         return self.variable_header.packet_id
 
     @packet_id.setter
@@ -158,7 +160,7 @@ class PublishPacket(MQTTPacket):
         self.variable_header.packet_id = val
 
     @property
-    def data(self):
+    def data(self):  # noqa: D102
         return self.payload.data
 
     @data.setter
@@ -166,7 +168,7 @@ class PublishPacket(MQTTPacket):
         self.payload.data = data
 
     @property
-    def topic_name(self):
+    def topic_name(self):  # noqa: D102
         return self.variable_header.topic_name
 
     @topic_name.setter
@@ -174,7 +176,7 @@ class PublishPacket(MQTTPacket):
         self.variable_header.topic_name = name
 
     @classmethod
-    def build(cls, topic_name: str, message: bytes, packet_id: int, dup_flag, qos, retain):
+    def build(cls, topic_name: str, message: bytes, packet_id: int, dup_flag, qos, retain):  # noqa: D102
         v_header = PublishVariableHeader(topic_name, packet_id)
         payload = PublishPayload(message)
         packet = PublishPacket(variable_header=v_header, payload=payload)

@@ -24,7 +24,6 @@ interpolated into slashed Path representations.
 from __future__ import annotations
 
 import ast
-import collections.abc
 import logging
 import re
 import warnings
@@ -35,18 +34,21 @@ from functools import total_ordering
 import simpleeval
 
 from moat.lib.codec.proxy import as_proxy
+
 from . import NotGiven
 
+import collections.abc
+
 __all__ = [
-    "Path",
-    "P",
     "PS",
-    "logger_for",
-    "PathShortener",
+    "P",
+    "Path",
     "PathLongener",
-    "path_eval",
+    "PathShortener",
     "Root",
     "RootPath",
+    "logger_for",
+    "path_eval",
     "set_root",
 ]
 
@@ -60,8 +62,6 @@ def set_root(cfg):
 
     Used for testing without a "proper" context.
     """
-    from moat.util.path import Root, S_Root, P_Root, Q_Root
-
     Root.set(cfg.root)
 
 
@@ -814,7 +814,7 @@ class PathShortener:
     Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix: Path | list | tuple = Path()):  # noqa:B008
+    def __init__(self, prefix: Path | list | tuple = Path()):
         self.prefix = prefix if isinstance(prefix, Path) else Path.build(prefix)
         self.depth = len(prefix)
         self.path = []
@@ -959,5 +959,7 @@ for _idx in "SPQ":  # and R. Yes I know.
 
     _Roots[_idx] = _path
     as_proxy(f"_P{_idx}", _path)
+
+__all__ += ["P_Root", "Q_Root", "S_Root"]
 
 del _idx, _name, _ctx, _path

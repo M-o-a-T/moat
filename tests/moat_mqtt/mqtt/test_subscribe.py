@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -12,8 +12,8 @@ from moat.mqtt.mqtt.subscribe import SubscribePacket, SubscribePayload
 from tests.moat_mqtt import anyio_run
 
 
-class SubscribePacketTest(unittest.TestCase):
-    def test_from_stream(self):
+class SubscribePacketTest(unittest.TestCase):  # noqa: D101
+    def test_from_stream(self):  # noqa: D102
         data = b"\x80\x0e\x00\x0a\x00\x03a/b\x01\x00\x03c/d\x02"
         stream = BufferAdapter(data)
         message = anyio_run(SubscribePacket.from_stream, stream)
@@ -24,7 +24,7 @@ class SubscribePacketTest(unittest.TestCase):
         assert topic == "c/d"
         assert qos == QOS_2
 
-    def test_to_stream(self):
+    def test_to_stream(self):  # noqa: D102
         variable_header = PacketIdVariableHeader(10)
         payload = SubscribePayload([("a/b", QOS_1), ("c/d", QOS_2)])
         publish = SubscribePacket(variable_header=variable_header, payload=payload)

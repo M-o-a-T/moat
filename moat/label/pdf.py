@@ -7,7 +7,7 @@ from __future__ import annotations
 from fpdf import FPDF, ViewerPreferences
 
 
-class Labels(FPDF):
+class Labels(FPDF):  # noqa: D101
     def __init__(
         self,
         printer: attrdict,
@@ -28,11 +28,11 @@ class Labels(FPDF):
         self.set_display_mode("real")
         self.viewer_preferences = ViewerPreferences(display_doc_title=False)
 
-    def set_coord(self, cx: int, cy: int) -> None:
+    def set_coord(self, cx: int, cy: int) -> None:  # noqa: D102
         self.__cx = cx
         self.__cy = cy
 
-    def next_coord(self, format=None, label=None) -> tuple[int, int]:
+    def next_coord(self, format=None, label=None) -> tuple[int, int]:  # noqa: D102
         if format is not None:
             self.__fo = format
         if label is not None:
@@ -57,14 +57,14 @@ class Labels(FPDF):
 
         return cx, cy
 
-    def label_position(self, x: int, y: int) -> tuple[float, float]:
+    def label_position(self, x: int, y: int) -> tuple[float, float]:  # noqa: D102
         stp = self.__fo.stepping
         scl = self.__pr.scale
         pm = self.__pr.margin
         lm = self.__fo.margin
         return pm[0] + (lm[0] + x * stp[0]) * scl[0], pm[1] + (lm[1] + y * stp[1]) * scl[1]
 
-    def add_page(self, printer=None, format=None, label=None):
+    def add_page(self, printer=None, format=None, label=None):  # noqa: D102
         if printer is not None:
             self.__pr = printer
         if format is not None:

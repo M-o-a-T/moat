@@ -1,27 +1,30 @@
+# noqa:D100
 from __future__ import annotations
+
+import anyio
 import logging
 from contextlib import asynccontextmanager
 
-import anyio
-from moat.mqtt.client import MQTTClient
 from moat.util import NotGiven
+from moat.mqtt.client import MQTTClient
 
 from . import Backend
 
 logger = logging.getLogger(__name__)
 
 
-class MqttMessage:
+class MqttMessage:  # noqa:D101
     def __init__(self, topic, payload):
         self.topic = topic
         self.payload = payload
 
 
 class MqttBackend(Backend):
+    "MoaT-KV's MQTT backend."
     client = None
 
     @asynccontextmanager
-    async def connect(self, *a, **kw):
+    async def connect(self, *a, **kw):  # noqa:D102
         codec = kw.pop("codec", NotGiven)
         C = MQTTClient(self._tg, codec=codec)
         try:
@@ -35,7 +38,7 @@ class MqttBackend(Backend):
                 await C.disconnect()
 
     @asynccontextmanager
-    async def monitor(self, *topic, codec=NotGiven):
+    async def monitor(self, *topic, codec=NotGiven):  # noqa:D102
         topic = "/".join(str(x) for x in topic)
         logger.info("Monitor %s start", topic)
         try:
@@ -48,8 +51,8 @@ class MqttBackend(Backend):
                 yield sub_get(sub)
         except anyio.get_cancelled_exc_class():
             raise
-        except BaseException as exc:
-            logger.exception("Monitor %s end: %r", topic, exc)
+        except BaseException:
+            logger.exception("Monitor %s end", topic)
             raise
         else:
             logger.info("Monitor %s end", topic)
@@ -63,7 +66,7 @@ class MqttBackend(Backend):
 
 
 @asynccontextmanager
-async def connect(**kw):
+async def connect(**kw):  # noqa:D103
     async with anyio.create_task_group() as tg:
         c = MqttBackend(tg)
         async with c.connect(**kw):

@@ -9,9 +9,9 @@ only support one concurrent TCP connection.
 
 from __future__ import annotations
 
+import anyio
 import logging
 
-import anyio
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ServerDecoder
 from pymodbus.pdu import ExceptionResponse

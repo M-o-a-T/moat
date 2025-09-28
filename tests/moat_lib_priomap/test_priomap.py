@@ -1,9 +1,10 @@
+from __future__ import annotations  # noqa: D100
 import pytest
 import anyio
 from moat.lib.priomap import PrioMap
 
 
-def test_initialization_min_heap():
+def test_initialization_min_heap():  # noqa: D103
     h = PrioMap({"a": 5, "b": 2, "c": 8})
     assert len(h) == 3
     # peek should return smallest key 'b'
@@ -11,7 +12,7 @@ def test_initialization_min_heap():
     assert key == "b" and prio == 2
 
 
-def test_setitem_and_getitem():
+def test_setitem_and_getitem():  # noqa: D103
     h = PrioMap()
     h["x"] = 10
     assert h["x"] == 10
@@ -21,7 +22,7 @@ def test_setitem_and_getitem():
     # assert h.peek() == ('x', 1)
 
 
-def test_pop_and_ordering():
+def test_pop_and_ordering():  # noqa: D103
     h = PrioMap({"a": 3, "b": 1, "c": 2})
     popped = []
     while not h.is_empty():
@@ -29,19 +30,19 @@ def test_pop_and_ordering():
     assert popped == [("b", 1), ("c", 2), ("a", 3)]
 
 
-def test_peek_empty():
+def test_peek_empty():  # noqa: D103
     h = PrioMap()
     with pytest.raises(IndexError):
         h.peek()
 
 
-def test_pop_empty():
+def test_pop_empty():  # noqa: D103
     h = PrioMap()
     with pytest.raises(IndexError):
         h.pop()
 
 
-def test_delete_item():
+def test_delete_item():  # noqa: D103
     h = PrioMap({"a": 1, "b": 2})
     del h["a"]
     assert "a" not in h
@@ -50,7 +51,7 @@ def test_delete_item():
     assert h.peek() == ("b", 2)
 
 
-def test_pop_item():
+def test_pop_item():  # noqa: D103
     h = PrioMap({"a": 1, "b": 2})
     assert h.pop("b") == 2
     assert "b" not in h
@@ -59,7 +60,7 @@ def test_pop_item():
     assert h.peek() == ("a", 1)
 
 
-def test_update():
+def test_update():  # noqa: D103
     h = PrioMap({"a": 5, "b": 2})
     h.update("a", 1)
     assert h["a"] == 1
@@ -71,13 +72,13 @@ def test_update():
         h.update("a", "bad")
 
 
-def test_clear_and_is_empty():
+def test_clear_and_is_empty():  # noqa: D103
     h = PrioMap({"x": 1, "y": 2})
     h.clear()
     assert h.is_empty()
 
 
-def test_contains_and_len():
+def test_contains_and_len():  # noqa: D103
     h = PrioMap()
     h["foo"] = 42
     assert "foo" in h
@@ -85,7 +86,7 @@ def test_contains_and_len():
     assert "bar" not in h
 
 
-def test_keys_items_values_iteration_and_modification_error():
+def test_keys_items_values_iteration_and_modification_error():  # noqa: D103
     h = PrioMap({"a": 1, "b": 2, "c": 3})
     keys = list(h.keys())
     assert set(keys) == {"a", "b", "c"}
@@ -108,7 +109,7 @@ def test_keys_items_values_iteration_and_modification_error():
 
 
 @pytest.mark.anyio
-async def test_aiter():
+async def test_aiter():  # noqa: D103
     res = []
     h = PrioMap({"a": 1, "b": 2, "c": 3})
 

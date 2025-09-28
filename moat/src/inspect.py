@@ -27,14 +27,14 @@ class CancelTracer:
     def __init__(self):
         pass
 
-    def skip(self, scope):
+    def skip(self, scope):  # noqa: D102
         if scope._stack is None:
             return True
         if scope._stack[5].f_code.co_name == "connect_tcp":
             return True
         return False
 
-    def scope_entered(self, scope):
+    def scope_entered(self, scope):  # noqa: D102
         scope._stack = s = []
         f = inspect.currentframe().f_back
         while f:
@@ -46,20 +46,20 @@ class CancelTracer:
 
         debug("EnterCS %r", scope)
 
-    def scope_exited(self, scope):
+    def scope_exited(self, scope):  # noqa: D102
         if self.skip(scope):
             return
         debug("ExitCS %r", scope)
 
-    def scope_cancelled(self, scope, reason):
+    def scope_cancelled(self, scope, reason):  # noqa: D102
         if self.skip(scope):
             return
         #       if reason.value == 0:
         #           breakpoint()
         debug("KillCS %r %s", scope, reason.name)
 
-    def task_spawned(self, task):
+    def task_spawned(self, task):  # noqa: D102
         debug("EnterT %r", task)
 
-    def task_exited(self, task):
+    def task_exited(self, task):  # noqa: D102
         debug("ExitT %r", task)

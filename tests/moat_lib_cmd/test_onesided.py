@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import pytest
 import anyio
@@ -10,9 +10,9 @@ from moat.lib.cmd.base import MsgHandler
 # TODO no_s=False does no longer work for some reason
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 @pytest.mark.parametrize("no_s", [True])
-async def test_no_stream_in(no_s):
+async def test_no_stream_in(no_s):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -39,9 +39,9 @@ async def test_no_stream_in(no_s):
             assert tuple(st.args) == ("Nope",)
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 @pytest.mark.parametrize("no_s", [True])
-async def test_no_stream_out(no_s):
+async def test_no_stream_out(no_s):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -68,8 +68,8 @@ async def test_no_stream_out(no_s):
             print("DONE")
 
 
-@pytest.mark.anyio()
-async def test_write_both():
+@pytest.mark.anyio
+async def test_write_both():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):

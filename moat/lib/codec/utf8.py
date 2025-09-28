@@ -4,9 +4,9 @@ UTF-8 codec
 
 from __future__ import annotations
 
-from ._base import Codec as _Codec
-
 from moat.util.compat import byte2utf8
+
+from ._base import Codec as _Codec
 
 try:
     from codecs import lookup

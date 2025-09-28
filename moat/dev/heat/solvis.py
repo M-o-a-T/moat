@@ -8,15 +8,16 @@ See the accompanying .rst file for details.
 from __future__ import annotations
 
 import anyio
+import contextlib
 import io
 import logging
+import subprocess
 import sys
 import time
-import subprocess
 from enum import IntEnum, auto
 
-import asyncclick as click
 import aionotify
+import asyncclick as click
 
 from moat.util import (
     P,
@@ -32,7 +33,6 @@ from moat.util import (
 )
 from moat.kv.client import open_client
 from moat.lib.pid import CPID
-import contextlib
 
 FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -554,7 +554,7 @@ class Data:
 
         self.set_flow_pwm = set_flow_pwm
 
-    async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):  # noqa:D102
         flg = aionotify.Flags.CLOSE_WRITE | aionotify.Flags.MOVE_SELF
         async with aionotify.Watcher() as watcher:
             await watcher.awatch(path=cfgf, flags=flg)
@@ -566,8 +566,8 @@ class Data:
                         continue
                     break
                 print("*** RELOADING ***")
-                with open(cfgf, "r") as cff:
-                    self._cfg = combine_dict(yload(cff, attr=True), self.cfg, cls=attrdict)
+                cff = await anyio.Path(cfgf).read_text()
+                self._cfg = combine_dict(yload(cff, attr=True), self.cfg, cls=attrdict)
 
         pass
 
@@ -1598,9 +1598,9 @@ class Data:
             async with _lock:
                 if self.heat_dest is None:
                     print("t_cur OK")
-                import datetime
+                import datetime  # noqa:PLC0415
 
-                dt = datetime.datetime.now()
+                dt = datetime.datetime.now(tz=datetime.UTC).astimezone()
                 s1 = cf.night.start.wk if dt.weekday() < 5 else cf.night.start.we  # 5=sat
                 h = dt.hour + dt.minute / 60
                 if h < s1:
@@ -1934,6 +1934,7 @@ class Data:
             await fn.rename(f)
 
     async def run_solvis_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        "start a separate modbus poll process for the Solvis"
         again = anyio.Event()
         kick = anyio.Event()
         cfg = self.cfg.misc.mon_solvis
@@ -1968,8 +1969,8 @@ class Data:
                         continue
                     if not m.value:
                         continue
-                    m = await self.cl.get(cfg.err / 1 / "code")
-                    if m.value == 26:
+                    mm = await self.cl.get(cfg.err / 1 / "code")
+                    if mm.value == 26:
                         print("\nRESTART SOLVIS")
                         again.set()
                         again = anyio.Event()
@@ -1982,7 +1983,7 @@ class Data:
                             print("\nRESTART SOLVIS OK")
 
                     else:
-                        print("\nERROR SOLVIS", m.value, file=sys.stderr)
+                        print("\nERROR SOLVIS", mm.value, file=sys.stderr)
 
 
 class fake_cl:
@@ -2027,27 +2028,19 @@ async def cli(ctx, config):
     ctx.obj = attrdict()
     cfg = yload(CFG, attr=True)
     if config is not None:
-        with open(config, "r") as cff:
-            cfg = combine_dict(yload(cff, attr=True), cfg, cls=attrdict)
+        cff = anyio.Path(config).read_text()
+        cfg = combine_dict(yload(cff, attr=True), cfg, cls=attrdict)
     ctx.obj.cfg = cfg
     ctx.obj.cfgf = config
 
     global GPIO
     try:
-        import RPi.GPIO as GPIO
+        import RPi.GPIO as GPIO  # noqa:PLC0415
     except ImportError:
         pass
     else:
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
-
-
-@cli.command
-@click.pass_obj
-async def solvis_mon(obj):
-    async with open_client(**mcfg.kv) as cl:
-        d = Data(obj.cfg, cl, no_op=True)
-        await d.run_solvis_mon()
 
 
 @cli.command
@@ -2069,8 +2062,8 @@ async def run(obj, record, force_on, no_save):
                         except AttributeError:
                             state = None
                     else:
-                        with open(obj.cfg.state) as sf:
-                            state = yload(sf, attr=True)
+                        sf = await anyio.Path(obj.cfg.state).read_text()
+                        state = yload(sf, attr=True)
                 except OSError:
                     state = None
                 d = Data(obj.cfg, cl, record=record, no_op=no_save, state=state)
@@ -2085,7 +2078,7 @@ async def run(obj, record, force_on, no_save):
                 await tg.start(d.run_set_pellet)
                 if not no_save:
                     try:
-                        obj.cfg.misc.mon_solvis.err
+                        obj.cfg.misc.mon_solvis.err  # noqa:B018
                     except AttributeError:
                         pass
                     else:
@@ -2128,14 +2121,14 @@ async def pwm(obj):
             tg.start_soon(_run_pwm, cl, k, p)
 
 
-class t_iter:
+class t_iter:  # noqa:D101
     def __init__(self, interval):
         self.interval = interval
 
-    def time(self):
+    def time(self):  # noqa:D102
         return time.monotonic()
 
-    async def sleep(self, dt):
+    async def sleep(self, dt):  # noqa:D102
         await anyio.sleep(max(dt, 0))
 
     def __aiter__(self):
@@ -2261,7 +2254,7 @@ async def off(obj):
         tg.cancel_scope.cancel()
 
 
-def vt(tau, ti, cf):
+def vt(tau, ti, cf):  # noqa:D103
     if tau >= ti:
         return ti
     return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)

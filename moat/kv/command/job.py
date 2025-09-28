@@ -1,14 +1,14 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
+import anyio
 import sys
 import time
 from functools import partial
 
-import anyio
 import asyncclick as click
-from moat.util import P, Path, attr_args, attrdict, process_args, yprint
 
+from moat.util import P, Path, attr_args, attrdict, process_args, yprint
 from moat.kv.code import CodeRoot
 from moat.kv.data import add_dates, data_get
 from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
@@ -93,7 +93,7 @@ async def info_(obj):
 
 @at_cli.command("--help", hidden=True)
 @click.pass_context
-def help_(ctx):  # pylint:disable=unused-variable  # oh boy
+def help_(ctx):  # noqa:D103
     print(at_cli.get_help(ctx))
 
 
@@ -130,7 +130,7 @@ async def run(obj, nodes):
 
     This does not return.
     """
-    from moat.util import as_service
+    from moat.util import as_service  # noqa:PLC0415
 
     if obj.subpath[-1] == "-":
         raise click.UsageError("Group '-' can only be used for listing.")
@@ -156,7 +156,7 @@ async def _state_fix(obj, state, state_only, path, r):
     except AttributeError:
         return
     if state:
-        rs = await obj.client._request(
+        rs = await obj.client._request(  # noqa:SLF001
             action="get_value",
             path=state + r.path,
             iter=False,
@@ -202,7 +202,7 @@ async def list_(obj, state, state_only, table, as_dict):
         state = obj.statepath + path
 
     if table:
-        from moat.kv.errors import ErrorRoot
+        from moat.kv.errors import ErrorRoot  # noqa:PLC0415
 
         err = await ErrorRoot.as_handler(obj.client)
 
@@ -225,7 +225,7 @@ async def list_(obj, state, state_only, table, as_dict):
                         st = " | ".join(
                             "{} {}".format(
                                 Path.build(e.subpath)
-                                if e._path[-2] == ee._path[-1]
+                                if e._path[-2] == ee._path[-1]  # noqa:SLF001
                                 else Path.build(ee.subpath),
                                 getattr(ee, "message", None)
                                 or getattr(ee, "comment", None)
@@ -283,7 +283,7 @@ async def get(obj, state):
     if not path:
         raise click.UsageError("You need a non-empty path.")
 
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_value",
         path=obj.path + path,
         iter=False,
@@ -374,7 +374,7 @@ async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw):
         copy = P(copy)
     path = obj.path + P(path)
 
-    res = await obj.client._request(action="get_value", path=copy or path, iter=False, nchain=3)
+    res = await obj.client._request(action="get_value", path=copy or path, iter=False, nchain=3)  # noqa:SLF001
     if "value" not in res:
         if copy:
             raise click.UsageError("--copy: use the complete path to an existing entry")

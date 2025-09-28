@@ -1,27 +1,32 @@
 """
 KNX task for MoaT-KV
 """
+from __future__ import annotations
 
 import anyio
+
 import xknx
 from xknx.io import ConnectionConfig, ConnectionType
-import socket
 
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections.abc import Mapping
+
+import logging
 
 from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
-from .model import KNXserver
 
-import logging
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .model import KNXserver
 
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # pylint: disable=unused-argument
+async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # pylint: disable=unused-argument  # noqa:D103
+    client  # noqa:B018
     cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
     add = {}
     if local_ip is not None:
@@ -39,9 +44,8 @@ async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=
             if evt is not None:
                 evt.set()
 
-            while True:
-                await anyio.sleep(99999)
+            await anyio.sleep_forever()
     except TimeoutError:
         raise
-    except socket.error as e:  # this would eat TimeoutError
+    except OSError as e:  # this would eat TimeoutError
         raise ClientConnectionError(cfg["host"], cfg["port"]) from e

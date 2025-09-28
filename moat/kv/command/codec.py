@@ -1,7 +1,8 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import asyncclick as click
+
 from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
 
 
@@ -22,7 +23,7 @@ async def get(obj, path, script, encode, decode):
     path = P(path)
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=Path("codec") + path,
         iter=False,
@@ -43,7 +44,7 @@ async def get(obj, path, script, encode, decode):
 @click.argument("path", nargs=1)
 async def list_(obj, path):
     """List type information entries"""
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_tree_internal",
         path=Path("codec") + P(path),
         iter=True,
@@ -102,7 +103,7 @@ async def set_(obj, path, encode, decode, data, in_, out):
     if not msg["out"]:
         raise click.UsageError("Missing encode tests")
 
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="set_internal",
         value=msg,
         path=Path("codec") + path,
@@ -141,7 +142,7 @@ async def convert(obj, path, codec, name, delete, list_):
         if name == "-":
             if len(path):
                 raise click.UsageError("You can't use a path here.")
-            res = await obj.client._request(
+            res = await obj.client._request(  # noqa:SLF001
                 action="enum_internal",
                 path=Path("conv"),
                 iter=False,
@@ -152,7 +153,7 @@ async def convert(obj, path, codec, name, delete, list_):
                 print(r, file=obj.stdout)
 
         else:
-            res = await obj.client._request(
+            res = await obj.client._request(  # noqa:SLF001
                 action="get_tree_internal",
                 path=Path("conv", name) + path,
                 iter=True,
@@ -168,10 +169,10 @@ async def convert(obj, path, codec, name, delete, list_):
 
         return
     if delete:
-        res = await obj.client._request(action="delete_internal", path=Path("conv", name) + path)
+        res = await obj.client._request(action="delete_internal", path=Path("conv", name) + path)  # noqa:SLF001
     else:
         msg = {"codec": codec}
-        res = await obj.client._request(
+        res = await obj.client._request(  # noqa:SLF001
             action="set_internal",
             value=msg,
             path=Path("conv", name) + path,

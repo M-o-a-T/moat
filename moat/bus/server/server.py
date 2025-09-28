@@ -4,24 +4,19 @@ This module implements the basics for a bus server.
 
 from __future__ import annotations
 
-import trio
+import logging
 from contextlib import asynccontextmanager, contextmanager
+from functools import partial
 from weakref import ref
 
+import msgpack
+import trio
+
 from moat.bus.message import BusMessage
-from .obj import Obj
 from moat.bus.util import CtxObj, Dispatcher
 
-import msgpack
-from functools import partial
+from .obj import Obj
 
-packer = msgpack.Packer(
-    strict_types=False,
-    use_bin_type=True,  # default=_encode
-).pack
-unpacker = partial(msgpack.unpackb, raw=False)
-
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,21 +24,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+packer = msgpack.Packer(
+    strict_types=False,
+    use_bin_type=True,  # default=_encode
+).pack
+unpacker = partial(msgpack.unpackb, raw=False)
+
 # Errors
 
 
-class NoFreeID(RuntimeError):
+class NoFreeID(RuntimeError):  # noqa:D101
     pass
 
 
-class IDcollisionError(RuntimeError):
+class IDcollisionError(RuntimeError):  # noqa:D101
     pass
 
 
 # Events
 
 
-class ServerEvent:
+class ServerEvent:  # noqa:D101
     pass
 
 
@@ -80,7 +81,7 @@ class DropClientEvent(_ClientEvent):
     pass
 
 
-class ClientStore:
+class ClientStore:  # noqa:D101
     def __init__(self, server):
         self._server = ref(server)
         self._id2obj = dict()
@@ -90,7 +91,7 @@ class ClientStore:
         super().__init__()
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return self._server()
 
     def obj_serial(self, serial, create=None):
@@ -173,7 +174,7 @@ class ClientStore:
             pass
 
     @contextmanager
-    def watch(self):
+    def watch(self):  # noqa:D102
         q_w, q_r = trio.open_memory_channel(10)
         self._reporter.add(q_w.send)
         try:
@@ -181,7 +182,7 @@ class ClientStore:
         finally:
             self._reporter.remove(q_w.send)
 
-    async def report(self, evt):
+    async def report(self, evt):  # noqa:D102
         for q in self._reporter:
             await q(evt)
 
@@ -211,7 +212,7 @@ class Server(CtxObj, Dispatcher):
         super().__init__()
 
     @property
-    def my_id(self):
+    def my_id(self):  # noqa:D102
         return self.__id
 
     async def sync_in(self, client):
@@ -219,6 +220,7 @@ class Server(CtxObj, Dispatcher):
         Check if a sync message has arrived on the bus; if so, wait until
         the change described in it has arrived on the client
         """
+        client  # noqa:B018
         pass  # TODO
 
     async def sync_out(self, client, chain):
@@ -226,6 +228,7 @@ class Server(CtxObj, Dispatcher):
         Send a "this chain must have arrived at your node to proceed"
         message to the bus
         """
+        client  # noqa:B018
         msg = [chain.node.name, chain.tick]
         # XXX shorten this? the node should correspond to the other server's ID
 
@@ -251,7 +254,7 @@ class Server(CtxObj, Dispatcher):
         """Code zero"""
         return msg.code
 
-    async def send(self, src, dst, code, data=b"", prio=0):
+    async def send(self, src, dst, code, data=b"", prio=0):  # noqa:D102
         msg = BusMessage()
         msg.start_send()
         msg.src = src
@@ -261,10 +264,10 @@ class Server(CtxObj, Dispatcher):
         msg.add_data(data)
         await self.send_msg(msg)
 
-    async def send_msg(self, msg):
+    async def send_msg(self, msg):  # noqa:D102
         await self._back.send(msg)
 
-    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):
+    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):  # noqa:D102
         if src is None:
             src = msg.dst
         if dest is None:

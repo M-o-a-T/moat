@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from moat.util import NotGiven
-
 from moat.micro.cmd import BaseCmd
 
 

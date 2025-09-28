@@ -4,15 +4,17 @@ Connection and command helpers
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from moat.lib.cmd.anyio import run as run_stream
 import anyio
+from contextlib import asynccontextmanager
+
+from moat.lib.cmd.anyio import run as run_stream
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager
     from moat.lib.cmd import MsgSender
     from moat.lib.codec import Codec
+
 
 
 @asynccontextmanager

@@ -1,18 +1,11 @@
-# command line interface
+# command line interface  # noqa: D100
 from __future__ import annotations
 
-import datetime
-import time
-import anyio
 
 import asyncclick as click
-from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint, Path, process_args
-from moat.util.times import ts2iso, humandelta
 
+from moat.util import NotGiven, P, attr_args, process_args, yprint
 from moat.link.client import Link
-from moat.link._data import data_get, node_attr
-from moat.link.meta import MsgMeta
-from moat.link.node import Node
 
 
 @click.command(short_help="Send a command")
@@ -66,7 +59,7 @@ async def cli(ctx, path, stream, raw, **kw):
         yprint(rep_(res, raw), stream=obj.stdout)
 
 
-def rep_(res, raw=False):
+def rep_(res, raw=False):  # noqa: D103
     if raw:
         return res.args + [res.kw]
     if not res.args:

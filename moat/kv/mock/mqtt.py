@@ -1,19 +1,21 @@
+# noqa:D100
 from __future__ import annotations
+
+import anyio
 import copy
 import logging
-import os
 import time
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from functools import partial
-import anyio
 from unittest import mock
+
 import trio
 from asyncscope import main_scope, scope
-from moat.mqtt.broker import create_broker
-from moat.util import NotGiven, attrdict, combine_dict
 
+from moat.util import NotGiven, attrdict, combine_dict
 from moat.kv.mock import S
 from moat.kv.server import Server
+from moat.mqtt.broker import create_broker
 
 from . import CFG
 
@@ -23,7 +25,7 @@ otm = time.time
 
 
 @asynccontextmanager
-async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
+async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):  # noqa:D103
     C_OUT = CFG.get("_stdout", NotGiven)
     if C_OUT is not NotGiven:
         del CFG["_stdout"]
@@ -33,8 +35,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
     if C_OUT is not NotGiven:
         TESTCFG["_stdout"] = C_OUT
 
-    from anyio.pytest_plugin import FreePortFactory
-    from socket import SOCK_STREAM
+    from anyio.pytest_plugin import FreePortFactory  # noqa:PLC0415
+    from socket import SOCK_STREAM  # noqa:PLC0415
 
     PORT = FreePortFactory(SOCK_STREAM)()
     broker_cfg = {
@@ -45,9 +47,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
     URI = f"mqtt://127.0.0.1:{PORT}/"
 
     if ssl:
-        import ssl
-
-        import trustme
+        import ssl  # noqa:PLC0415
+        import trustme  # noqa:PLC0415
 
         ca = trustme.CA()
         cert = ca.issue_server_cert("127.0.0.1")
@@ -59,10 +60,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
         server_ctx = client_ctx = False
 
     clock = trio.lowlevel.current_clock()
-    try:
+    with suppress(Exception):
         clock.autojump_threshold = 0.02  # networking
-    except Exception:
-        pass  # test doesn't have autojump_clock fixture
 
     async def mock_get_host_port(st, host):
         i = int(host[host.rindex("_") + 1 :])
@@ -84,13 +83,13 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
 
     done = False
     async with main_scope("moat.kv.test.mqtt") as scp:
-        tg = scp._tg
+        tg = scp._tg  # noqa:SLF001
         st = S(tg, client_ctx)
         async with AsyncExitStack() as ex:
             st.ex = ex  # pylint: disable=attribute-defined-outside-init
             ex.enter_context(mock.patch("time.time", new=tm))
             ex.enter_context(mock.patch("time.monotonic", new=tm))
-            logging._startTime = tm()
+            logging._startTime = tm()  # noqa:SLF001
 
             async def run_broker(cfg):
                 async with create_broker(config=cfg) as srv:
@@ -100,8 +99,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
 
             async def with_broker(s, *a, **k):
                 await scope.service("moat.mqtt.broker", run_broker, broker_cfg)
-                s._scope = scope.get()
-                return await s._scoped_serve(*a, **k)
+                s._scope = scope.get()  # noqa:SLF001
+                return await s._scoped_serve(*a, **k)  # noqa:SLF001
 
             args_def = kw.get("args", attrdict())
             for i in range(n):
@@ -129,10 +128,12 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
                 args_def.pop("init", None)
                 s = Server(name, **args)
                 ex.enter_context(
-                    mock.patch.object(s, "_set_tock", new=partial(mock_set_tock, s, s._set_tock)),
+                        mock.patch.object(s, "_set_tock",
+                                          new=partial(mock_set_tock, s, s._set_tock)),  # noqa:SLF001
                 )
                 ex.enter_context(
-                    mock.patch.object(s, "_get_host_port", new=partial(mock_get_host_port, st)),
+                    mock.patch.object(s, "_get_host_port",
+                                      new=partial(mock_get_host_port, st)),
                 )
                 st.s.append(s)
 
@@ -151,8 +152,7 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
                 done = True
                 yield st
             finally:
-                with anyio.fail_after(2, shield=True):
-                    logger.info("Runtime: %s", clock.current_time())
-                    tg.cancel_scope.cancel()
+                logger.info("Runtime: %s", clock.current_time())
+                tg.cancel_scope.cancel()
     if not done:
         yield None

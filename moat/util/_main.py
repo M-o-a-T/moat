@@ -5,20 +5,21 @@ Basic tool support
 from __future__ import annotations
 
 import anyio
-import logging  # pylint: disable=wrong-import-position
 import io
+import logging  # pylint: disable=wrong-import-position
 import sys
 from datetime import datetime
 from functools import partial
 from time import time
-from collections.abc import Sequence
 
 import asyncclick as click
 
-from .main import load_subgroup, attr_args, process_args
-from .path import P, Path, path_eval, PathLongener, PathShortener
+from .main import attr_args, load_subgroup, process_args
+from .path import P, Path, PathLongener, PathShortener, path_eval
 from .times import humandelta, time_until
 from .yaml import yprint
+
+from collections.abc import Sequence
 
 log = logging.getLogger()
 

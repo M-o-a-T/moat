@@ -4,10 +4,10 @@ Test implementation of something that may or may not behave like a battery
 
 from __future__ import annotations
 
-import random
 import logging
+import random
 
-from moat.ems.battery._base import BaseBattery, BaseBalancer
+from moat.ems.battery._base import BaseBalancer, BaseBattery
 
 logger = logging.getLogger(__name__)
 

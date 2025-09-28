@@ -4,11 +4,11 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import combine_dict, import_, P
-from moat.util.compat import L
-from moat.lib.codec.errors import NoPathError
-from moat.lib.cmd.errors import ShortCommandError
+from moat.util import P, combine_dict, import_
 from moat.lib.cmd.base import MsgSender
+from moat.lib.cmd.errors import ShortCommandError
+from moat.lib.codec.errors import NoPathError
+from moat.util.compat import L
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part

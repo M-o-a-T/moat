@@ -9,16 +9,17 @@ from asyncactor import Actor
 from asyncactor.abc import MonitorStream, Transport
 
 __all__ = [
-    "ClientActor",
     "ActorState",
     "BrokenState",
+    "ClientActor",
+    "CompleteState",
     "DetachedState",
     "PartialState",
-    "CompleteState",
 ]
 
 
 class ClientActor(Actor):
+    "An actor that runs over a `ClientTranspport`"
     def __init__(self, client, *a, topic, **kw):
         super().__init__(ClientTransport(client, topic), *a, **kw)
 

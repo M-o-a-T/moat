@@ -1,12 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class UnsubackPacket(MQTTPacket):
+class UnsubackPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -30,6 +32,6 @@ class UnsubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id):
+    def build(cls, packet_id):  # noqa: D102
         variable_header = PacketIdVariableHeader(packet_id)
         return cls(variable_header=variable_header)

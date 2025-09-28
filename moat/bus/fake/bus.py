@@ -10,16 +10,17 @@ This is a simulated MoaT bus. It offers a Unix socket.
 from __future__ import annotations
 
 import anyio
-import asyncclick as click
-from contextlib import asynccontextmanager, suppress
-import time
 import os
+import time
+from contextlib import asynccontextmanager, suppress
 from random import random
+
+import asyncclick as click
 
 _seq = 0
 
 
-class Main:
+class Main:  # noqa:D101
     def __init__(self, **kw):
         self.clients = set()
         self.trigger = anyio.create_event()
@@ -27,10 +28,10 @@ class Main:
             setattr(self, k, v)
         self.t = None
 
-    def trigger_update(self):
+    def trigger_update(self):  # noqa:D102
         self.trigger.set()
 
-    def add(self, client):
+    def add(self, client):  # noqa:D102
         client.last_b = b""
         self.clients.add(client)
         if self.verbose:
@@ -38,7 +39,7 @@ class Main:
 
         self.trigger_update()
 
-    def remove(self, client):
+    def remove(self, client):  # noqa:D102
         try:
             self.clients.remove(client)
         except KeyError:
@@ -51,17 +52,17 @@ class Main:
             if not self.clients:
                 self.t = None
 
-    def report(self, n, val):
+    def report(self, n, val):  # noqa:D102
         if not self.verbose:
             return
         t = time.monotonic()
         self.t, t = t, (0 if self.t is None else t - self.t)
 
-        n = "%02d" % n if n else "--"
+        n = f"{n :%02d}" if n else "--"
 
         print(f"{t:6.3f} {n} {val:02x}")
 
-    async def run(self):
+    async def run(self):  # noqa:D102
         last = -1
         val = 0
         while True:
@@ -90,7 +91,7 @@ class Main:
 
             last = val
 
-    async def serve(self, client):
+    async def serve(self, client):  # noqa:D102
         global _seq
         _seq += 1
         n = _seq
@@ -120,18 +121,18 @@ class Main:
 
 
 @asynccontextmanager
-async def mainloop(tg, **kw):
+async def mainloop(tg, **kw):  # noqa:D103
     mc = Main(**kw)
     await tg.spawn(mc.run)
     yield mc
 
 
 @click.command()
-@click.option("-s", "--socket", "sockname", help="Socket to use", default="/tmp/moatbus")
+@click.option("-s", "--socket", "sockname", help="Socket to use", default="/run/moatbus")
 @click.option("-v", "--verbose", help="Report changes", is_flag=True)
 @click.option("-d", "--delay", type=int, help="fixed delay (msec)", default=0)
 @click.option("-D", "--max-delay", type=int, help="random delay (msec)", default=0)
-async def main(sockname, **kw):
+async def main(sockname, **kw):  # noqa:D103
     with suppress(OSError):
         os.unlink(sockname)
 

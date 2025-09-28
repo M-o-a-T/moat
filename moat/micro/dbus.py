@@ -7,10 +7,10 @@ from __future__ import annotations
 import anyio
 from contextlib import asynccontextmanager
 
-from moat.util import CtxObj
-
 from asyncdbus.constants import NameFlag
 from asyncdbus.service import ServiceInterface
+
+from moat.util import CtxObj
 
 INTF = "org.m_o_a_t"
 NAME = "org.m_o_a_t"

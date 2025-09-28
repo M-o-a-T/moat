@@ -13,7 +13,6 @@ from moat.micro._test import mpy_stack
 from moat.src.test import run
 from moat.lib.codec import get_codec
 
-import msgpack
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -97,7 +96,7 @@ micro:
 """
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)

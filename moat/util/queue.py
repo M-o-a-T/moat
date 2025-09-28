@@ -23,12 +23,12 @@ import logging  # isort:skip
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "Queue",
-    "QueueFull",
-    "QueueEmpty",
-    "create_queue",
-    "DelayedWrite",
     "DelayedRead",
+    "DelayedWrite",
+    "Queue",
+    "QueueEmpty",
+    "QueueFull",
+    "create_queue",
 ]
 
 QueueFull = anyio.WouldBlock

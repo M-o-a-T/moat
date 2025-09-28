@@ -1,16 +1,17 @@
 from __future__ import annotations
+
+import contextlib
 from functools import cached_property
 
 import asyncdbus.service as dbus
-from moat.conv.steinhart import celsius2thermistor, thermistor2celsius
-from moat.dbus import DbusInterface
-from moat.util import attrdict
 from victron.dbus.utils import wrap_dbus_dict, wrap_dbus_value
 
+from moat.util import attrdict
+from moat.conv.steinhart import celsius2thermistor, thermistor2celsius
+from moat.dbus import DbusInterface
 from moat.util.compat import sleep
 
 from .packet import *
-import contextlib
 
 
 def _t(x):

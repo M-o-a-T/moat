@@ -1,11 +1,11 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import sys
 
 import asyncclick as click
-from moat.util import P, Path, yprint
 
+from moat.util import P, Path, yprint
 from moat.kv.data import add_dates
 from moat.kv.errors import ErrorRoot
 
@@ -93,7 +93,7 @@ async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
             rn[rr.path[-1]] = rr if obj.meta else rr.value
 
         if verbose:
-            rs = await obj.client._request(
+            rs = await obj.client._request(  # noqa:SLF001
                 action="get_tree",
                 min_depth=1,
                 max_depth=1,

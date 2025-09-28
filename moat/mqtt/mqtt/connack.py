@@ -1,10 +1,13 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.codecs import read_or_raise
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTVariableHeader
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,8 +22,8 @@ NOT_AUTHORIZED = 0x05
 CLIENT_ERROR = 0x7F
 
 
-class ConnackVariableHeader(MQTTVariableHeader):
-    __slots__ = ("session_parent", "return_code")
+class ConnackVariableHeader(MQTTVariableHeader):  # noqa: D101
+    __slots__ = ("return_code", "session_parent")
 
     def __init__(self, session_parent=None, return_code=None):
         super().__init__()
@@ -28,13 +31,13 @@ class ConnackVariableHeader(MQTTVariableHeader):
         self.return_code = return_code
 
     @classmethod
-    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):
+    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: D102
         data = await read_or_raise(reader, 2)
         session_parent = data[0] & 0x01
         return_code = data[1]
         return cls(session_parent, return_code)
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa: D102
         out = bytearray(2)
         # Connect acknowledge flags
         if self.session_parent:
@@ -53,12 +56,12 @@ class ConnackVariableHeader(MQTTVariableHeader):
         )
 
 
-class ConnackPacket(MQTTPacket):
+class ConnackPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = ConnackVariableHeader
     PAYLOAD = None
 
     @property
-    def return_code(self):
+    def return_code(self):  # noqa: D102
         return self.variable_header.return_code
 
     @return_code.setter
@@ -66,7 +69,7 @@ class ConnackPacket(MQTTPacket):
         self.variable_header.return_code = return_code
 
     @property
-    def session_parent(self):
+    def session_parent(self):  # noqa: D102
         return self.variable_header.session_parent
 
     @session_parent.setter
@@ -92,7 +95,7 @@ class ConnackPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls, session_parent=None, return_code=None):
+    def build(cls, session_parent=None, return_code=None):  # noqa: D102
         v_header = ConnackVariableHeader(session_parent, return_code)
         packet = ConnackPacket(variable_header=v_header)
         return packet

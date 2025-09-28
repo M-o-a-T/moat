@@ -5,16 +5,18 @@ This code is *duplicated* in moat.micro:_embed/lib/moat/util/exc.py
 """
 
 from __future__ import annotations
+
 import os
 from anyio import get_cancelled_exc_class
+
 from sniffio import AsyncLibraryNotFoundError
 
 __all__ = [
+    "ExpAttrError",
+    "ExpKeyError",
+    "ExpectedError",
     "exc_iter",
     "ungroup",
-    "ExpectedError",
-    "ExpKeyError",
-    "ExpAttrError",
 ]
 
 

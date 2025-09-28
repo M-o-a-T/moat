@@ -7,7 +7,6 @@ The MoaT bus uses these for timeouts in messages.
 
 from __future__ import annotations
 
-
 # minifloat granularity
 MINI_F = 1 / 4
 

@@ -4,9 +4,10 @@ RTC access
 
 from __future__ import annotations
 
+import sys
+
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
-import sys
 
 
 class _NotGiven:
@@ -83,7 +84,7 @@ class Cmd(BaseCmd):
 
     doc_x = dict(_d="activate data")
 
-    async def cmd_x(self):  # noqa:ARG002
+    async def cmd_x(self):
         """
         Activate the possibly-mangled config.
 

@@ -1,18 +1,20 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 from moat.link import protocol_version
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import ClassVar, ReadOnly, Any
-    from moat.lib.cmd import MsgHandler, Msg, Key
+    from moat.lib.cmd import Key, Msg, MsgHandler
+
     from .hello import Hello
 
-__all__ = ["AuthMethod", "TokenAuth", "AnonAuth", "NoAuth"]
+    from typing import Any, ClassVar, ReadOnly
+
+__all__ = ["AnonAuth", "AuthMethod", "NoAuth", "TokenAuth"]
 
 
-class AuthMethod:
+class AuthMethod:  # noqa: D101
     name: ClassVar[str]
 
     async def hello_out(self) -> Any | None:
@@ -63,13 +65,13 @@ class AuthMethod:
         await msg.result(False)
 
 
-class TokenAuth(AuthMethod):
+class TokenAuth(AuthMethod):  # noqa: D101
     name: ClassVar[ReadOnly[str]] = "token"
 
     def __init__(self, *token: str):
         self._token = token
 
-    async def hello_out(self):
+    async def hello_out(self):  # noqa: D102
         return self._token[0] if self._token else None
 
     async def hello_in(self, conn, data):
@@ -105,14 +107,14 @@ class AnonAuth(AuthMethod):
 
     name: ClassVar[ReadOnly[str]] = "anon"
 
-    async def hello_out(self):
+    async def hello_out(self):  # noqa: D102
         return None
 
-    async def chat(self, conn, data):
+    async def chat(self, conn, data):  # noqa: D102
         conn.authorized(self)
         return True
 
-    async def handle(self, conn: MsgHandler, msg: Msg):
+    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: D102
         return True
 
 
@@ -123,7 +125,7 @@ class NoAuth(AuthMethod):
 
     name: ClassVar[ReadOnly[str]] = "no"
 
-    async def hello_out(self):
+    async def hello_out(self):  # noqa: D102
         return None
 
     async def chat(self, conn, data):

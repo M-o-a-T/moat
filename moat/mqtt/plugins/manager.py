@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 # Copyright (c) 2015 Nicolas JOUANIN
 #
@@ -6,25 +6,24 @@ from __future__ import annotations
 
 __all__ = ["BaseContext", "PluginManager"]
 
+import anyio
 import copy
 import logging
-from collections import namedtuple
 
-import anyio
+from collections import namedtuple
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager
 
-from importlib.metadata import entry_points
-
 from functools import partial
+from importlib.metadata import entry_points
 
 Plugin = namedtuple("Plugin", ["name", "ep", "object"])
 
 
-class BaseContext:
+class BaseContext:  # noqa: D101
     def __init__(self):
         self.config = {}  # compat
         self.logger = None
@@ -49,7 +48,7 @@ class PluginManager:
         self._load_plugins(namespace)
 
     @property
-    def app_context(self):
+    def app_context(self):  # noqa: D102
         return self.context
 
     def _load_plugins(self, namespace):

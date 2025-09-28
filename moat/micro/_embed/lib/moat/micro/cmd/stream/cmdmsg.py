@@ -4,24 +4,21 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
-import sys
 
-from moat.util import NotGiven, ValueEvent, merge
-from moat.lib.codec.proxy import obj2name
-from moat.micro.cmd.base import BaseCmd
+from moat.util import merge
 from moat.lib.cmd.stream import HandlerStream
-from moat.micro.cmd.util.valtask import ValueTask
-from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log, idle
-from moat.lib.codec.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
+from moat.lib.codec.errors import SilentRemoteError
+from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any
-    from collections.abc import Awaitable, Mapping
-
     from moat.micro.proto.stack import BaseMsg
+
+    from collections.abc import Awaitable
+    from typing import Any
 
 
 class MsgStream(HandlerStream):
@@ -118,7 +115,7 @@ class BaseCmdMsg(BaseCmd):
         """
         # Handle local commands (and documentation) locally
         if (
-            (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_")
+            (len(rcmd) == 1 or (len(rcmd) == 2 and rcmd[1] == "doc_"))
             and rcmd[0] != "dir_"
             and (hasattr(self, f"cmd_{rcmd[0]}") or hasattr(self, f"stream_{rcmd[0]}"))
         ):

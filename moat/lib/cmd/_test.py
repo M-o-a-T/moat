@@ -4,10 +4,10 @@ Test support
 
 from __future__ import annotations
 
-from moat.util.exc import ungroup
-from moat.util.compat import shield, log
+from moat.lib.cmd.const import B_FLAGSTR
 from moat.lib.cmd.stream import wire2i_f
-from moat.lib.cmd.const import B_STREAM, B_ERROR, B_FLAGSTR
+from moat.util.compat import log, shield
+from moat.util.exc import ungroup
 
 try:
     import anyio

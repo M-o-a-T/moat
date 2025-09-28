@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
@@ -7,9 +7,7 @@ import sys
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
-from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup
-from moat.lib.cmd import StreamError
+from moat.util import P
 
 
 async def _dump(sf, *, task_status):
@@ -20,8 +18,8 @@ async def _dump(sf, *, task_status):
             print(msg)
 
 
-@pytest.mark.anyio()
-async def test_watch_basic(cfg):
+@pytest.mark.anyio
+async def test_watch_basic(cfg):  # noqa: D103
     evt = anyio.Event()
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)
@@ -56,8 +54,8 @@ async def test_watch_basic(cfg):
         await evt.wait()
 
 
-@pytest.mark.anyio()
-async def test_watch_mon(cfg):
+@pytest.mark.anyio
+async def test_watch_mon(cfg):  # noqa: D103
     evt = anyio.Event()
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)

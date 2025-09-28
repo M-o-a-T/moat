@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import anyio
 from time import time
 
@@ -15,7 +15,7 @@ akumuli_model = load_ext("moat.kv.akumuli.model", err=True)
 AkumuliRoot = akumuli_model.AkumuliRoot
 
 try:
-    res = subprocess.run(["akumulid", "--help"])
+    res = subprocess.run(["akumulid", "--help"], check=False)
 except Exception:
     import pytest
 
@@ -29,7 +29,7 @@ def _hook(e):
 akumuli_model._test_hook = _hook
 
 
-async def test_basic(free_tcp_port_factory):  # no autojump
+async def test_basic(free_tcp_port_factory):  # no autojump  # noqa: D103
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
         st.client(0) as client,

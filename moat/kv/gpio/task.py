@@ -5,10 +5,10 @@ GPIO task for MoaT-KV
 from __future__ import annotations
 
 import anyio
+import logging
+
 import moat.lib.gpio as gpio
 
-
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(chip: GPIOchip, evt=None):
+async def task(chip: GPIOchip, evt=None):  # noqa:D103
     with gpio.open_chip(label=chip.name) as srv:
         try:
             async with anyio.create_task_group() as tg:
@@ -26,7 +26,6 @@ async def task(chip: GPIOchip, evt=None):
                 if evt is not None:
                     evt.set()
 
-                while True:
-                    await anyio.sleep(99999)
+                await anyio.sleep_forever()
         finally:
             chip.task_group = None

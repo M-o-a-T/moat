@@ -1,10 +1,11 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
 from moat.mqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
 from moat.mqtt.errors import MoatMQTTException, NoDataException
+
 from .packet import (
     SUBACK,
     MQTTFixedHeader,
@@ -13,13 +14,14 @@ from .packet import (
     MQTTVariableHeader,
     PacketIdVariableHeader,
 )
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.mqtt.adapters import StreamAdapter
 
 
-class SubackPayload(MQTTPayload):
+class SubackPayload(MQTTPayload):  # noqa: D101
     __slots__ = ("return_codes",)
 
     RETURN_CODE_00 = 0x00
@@ -34,14 +36,14 @@ class SubackPayload(MQTTPayload):
     def __repr__(self):
         return type(self).__name__ + f"(return_codes={self.return_codes!r})"
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
+    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: D102
         out = b""
         for return_code in self.return_codes:
             out += int_to_bytes(return_code, 1)
         return out
 
     @classmethod
-    async def from_stream(
+    async def from_stream(  # noqa: D102
         cls,
         reader: StreamAdapter,
         fixed_header: MQTTFixedHeader,
@@ -59,7 +61,7 @@ class SubackPayload(MQTTPayload):
         return cls(return_codes)
 
 
-class SubackPacket(MQTTPacket):
+class SubackPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubackPayload
 
@@ -83,7 +85,7 @@ class SubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id, return_codes):
+    def build(cls, packet_id, return_codes):  # noqa: D102
         variable_header = cls.VARIABLE_HEADER(packet_id)
         payload = cls.PAYLOAD(return_codes)
         return cls(variable_header=variable_header, payload=payload)

@@ -11,10 +11,10 @@ from moat.util.compat import ACM, AC_exit, Event, L, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Never
-    from collections.abc import Awaitable
-
     from moat.micro.proto.stack import BaseConn
+
+    from collections.abc import Awaitable
+    from typing import Never
 
 
 TEST_MAGIC = b"r:\x0dn:\x0arn:\x0d\x0a-\x00x\x0ce\x1b" + "🖖🏼".encode("utf-8") + b"!"

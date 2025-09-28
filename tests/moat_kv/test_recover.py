@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import logging
 import os
 
@@ -33,7 +33,7 @@ F4 = 0.2
 _asm = Actor._send_msg
 
 
-async def send_msg(self, msg):
+async def send_msg(self, msg):  # noqa: D103
     if random.random() < F1:
         logger.info("NoMSG %s %r", self._name, msg)
         return
@@ -44,7 +44,7 @@ async def send_msg(self, msg):
 _aqm = Actor.queue_msg
 
 
-async def queue_msg(self, msg):
+async def queue_msg(self, msg):  # noqa: D103
     if random.random() < F2:
         logger.info("NoQUM %s %r", self._name, msg)
         return
@@ -55,7 +55,7 @@ async def queue_msg(self, msg):
 _old_send = Server._send_event
 
 
-async def send_evt(self, action: str, msg: dict):
+async def send_evt(self, action: str, msg: dict):  # noqa: D103
     if random.random() < F3:
         logger.info("NoOUT %s %s %r", self.node.name, action, msg)
         return
@@ -63,7 +63,7 @@ async def send_evt(self, action: str, msg: dict):
     return await _old_send(self, action, msg)
 
 
-@pytest.mark.trio()
+@pytest.mark.trio
 async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
     """
     This test starts multiple servers at the same time and checks that

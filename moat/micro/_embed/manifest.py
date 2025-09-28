@@ -1,6 +1,4 @@
-# flake8: noqa
-
-import os
+# ruff:noqa:D100,F821,SLF001,I002
 
 freeze("$(PORT_DIR)/modules")
 
@@ -16,11 +14,10 @@ require("__future__")
 
 include("$(MPY_DIR)/extmod/asyncio")
 
+import moat.micro._embed.lib  # noqa:E402
+
 # TODO only if building with networking
 require("webrepl")
-
-
-import moat.micro._embed.lib
 
 for p in moat.micro._embed.lib.__path__:
     print(p)

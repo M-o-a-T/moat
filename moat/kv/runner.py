@@ -6,14 +6,14 @@ This module's job is to run code, resp. to keep it running.
 
 from __future__ import annotations
 
+import anyio
 import time
-from collections.abc import Mapping
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from weakref import ref
 
-import anyio
 import psutil
 from asyncactor import AuthPingEvent, NodeList, PingEvent, TagEvent, UntagEvent
+
 from moat.util import (
     NotGiven,
     P,
@@ -37,6 +37,8 @@ from .actor import (
 from .exceptions import ServerError
 from .obj import AttrClientEntry, ClientRoot, MirrorRoot
 
+from collections.abc import Mapping
+
 try:
     ClosedResourceError = anyio.exceptions.ClosedResourceError
 except AttributeError:
@@ -57,7 +59,7 @@ class NotSelected(RuntimeError):
     pass
 
 
-class ErrorRecorded(RuntimeError):
+class ErrorRecorded(RuntimeError):  # noqa: D101
     pass
 
 
@@ -254,7 +256,7 @@ class CallAdmin:
         await self._err.root.wait_chain(r.chain)
         raise ErrorRecorded
 
-    async def open_context(self, ctx):
+    async def open_context(self, ctx):  # noqa: D102
         return await self._stack.enter_async_context(ctx)
 
     async def watch(self, path, cls=ChangeMsg, **kw):
@@ -439,7 +441,7 @@ class CallAdmin:
         self._taskgroup.start_soon(w.run)
         return w
 
-    async def timer(self, delay, cls=TimerMsg):
+    async def timer(self, delay, cls=TimerMsg):  # noqa: D102
         class Timer:
             def __init__(self, runner, cls, tg):
                 self.runner = runner
@@ -537,10 +539,10 @@ class RunnerEntry(AttrClientEntry):
         return f"<{self.__class__.__name__} {self.subpath!r}:{self.code!r}>"
 
     @property
-    def state(self):
+    def state(self):  # noqa: D102
         return self.root.state.follow(self.subpath, create=None)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         if self.code is None:
             return  # nothing to do here
 
@@ -650,7 +652,7 @@ class RunnerEntry(AttrClientEntry):
             self._q = None
             self._logger.info("Discarding %r", evt)
 
-    async def seems_down(self):
+    async def seems_down(self):  # noqa: D102
         state = self.state
         state.node = None
         if not self._running:
@@ -673,7 +675,7 @@ class RunnerEntry(AttrClientEntry):
 
         await self.root.trigger_rescan()
 
-    async def seen_value(self):
+    async def seen_value(self):  # noqa: D102
         await super().seen_value()
         await self.root.trigger_rescan()
 
@@ -727,7 +729,7 @@ class RunnerEntry(AttrClientEntry):
         return self.subpath < other
 
     @property
-    def age(self):
+    def age(self):  # noqa: D102
         return time.time() - self.state.started
 
 
@@ -741,7 +743,7 @@ class RunnerNode:
     seen = 0
     load = 999
 
-    def __new__(cls, root, name):
+    def __new__(cls, root, name):  # noqa: D102
         try:
             self = root._nodes[name]
         except KeyError:
@@ -783,10 +785,10 @@ class StateEntry(AttrClientEntry):
     reason = ""
 
     @property
-    def runner(self):
+    def runner(self):  # noqa: D102
         return self.root.runner.follow(self.subpath, create=False)
 
-    async def startup(self):
+    async def startup(self):  # noqa: D102
         try:
             self.runner
         except KeyError:
@@ -810,13 +812,13 @@ class StateEntry(AttrClientEntry):
         )
         await self.save()
 
-    async def ping(self):
+    async def ping(self):  # noqa: D102
         if self.node != self.root.name:
             raise RuntimeError("Not our state!")
         self.pinged = time.time()
         await self.save()
 
-    async def stale(self):
+    async def stale(self):  # noqa: D102
         self.stopped = time.time()
         node, self.node = self.node, None
         self.backoff = min(20, self.backoff + 2)
@@ -828,7 +830,7 @@ class StateEntry(AttrClientEntry):
         )
         await self.save()
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa: D102
         n = self.node
 
         await super().set_value(value)
@@ -875,19 +877,19 @@ class StateRoot(MirrorRoot):
     _runner = None
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         return StateEntry
 
     @property
-    def name(self):
+    def name(self):  # noqa: D102
         return self.client.client_name
 
     @property
-    def runner(self):
+    def runner(self):  # noqa: D102
         return self._runner()
 
     @property
-    def runner_ready(self):
+    def runner_ready(self):  # noqa: D102
         r = self._runner
         if r is None:
             return False
@@ -896,10 +898,10 @@ class StateRoot(MirrorRoot):
             return False
         return r.ready
 
-    def set_runner(self, runner):
+    def set_runner(self, runner):  # noqa: D102
         self._runner = ref(runner)
 
-    async def runner_running(self):
+    async def runner_running(self):  # noqa: D102
         for n in self.all_children:
             await n.startup()
 
@@ -911,7 +913,7 @@ class StateRoot(MirrorRoot):
 
     _last_t = 0
 
-    async def ping(self):
+    async def ping(self):  # noqa: D102
         t = time.time()
         if t - self._last_t >= abs(self._cfg["ping"]):
             self._last_t = t
@@ -1104,7 +1106,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
             P(self.client.config.server["root"]) + P(self._cfg["name"]) | "any" | self._path[-1]
         )
 
-    def get_node(self, name):
+    def get_node(self, name):  # noqa: D102
         return RunnerNode(self, name)
 
     @property
@@ -1262,7 +1264,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
             | self._path[-1]
         )
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa: D102
         await super().set_value(value)
         try:
             cores = value["cores"]

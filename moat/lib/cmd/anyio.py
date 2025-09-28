@@ -5,21 +5,24 @@ Msghandler on top of anyio pipe
 from __future__ import annotations
 
 import anyio
-from contextlib import asynccontextmanager
-from moat.util.cbor import StdCBOR
-from moat.util import ungroup
-from typing import TYPE_CHECKING
-from .stream import HandlerStream
 import logging
+from contextlib import asynccontextmanager
+
+from moat.util import ungroup
+
+from .stream import HandlerStream
+
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .base import BaseMsgHandler
     from moat.lib.codec import Codec
+
+    from .base import BaseMsgHandler
 
 logger = logging.getLogger(__name__)
 
 
-class AioStream(HandlerStream):
+class AioStream(HandlerStream):  # noqa: D101
     __codec: Codec
 
     def __init__(
@@ -46,7 +49,7 @@ class AioStream(HandlerStream):
         self.__codec = codec
         super().__init__(cmd, **kw)
 
-    async def read_stream(self):
+    async def read_stream(self):  # noqa: D102
         conn = self.__s
         codec = self.__codec
         rd_ = conn.read if hasattr(conn, "read") else conn.receive
@@ -63,7 +66,7 @@ class AioStream(HandlerStream):
                     logger.debug("R%s %r", self.__debug, msg)
                 await self.msg_in(msg)
 
-    async def write_stream(self):
+    async def write_stream(self):  # noqa: D102
         conn = self.__s
         codec = self.__codec
         wr = conn.write if hasattr(conn, "write") else conn.send

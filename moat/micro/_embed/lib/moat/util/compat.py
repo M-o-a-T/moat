@@ -5,12 +5,13 @@ to something roughly equivalent.
 
 from __future__ import annotations
 
-import asyncio
 import sys
-from time import ticks_add, ticks_diff, ticks_ms
 from inspect import iscoroutine
+from time import ticks_add, ticks_diff, ticks_ms
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
+
+import asyncio
 from micropython import const
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -71,7 +72,7 @@ else:
 WouldBlock = (QueueFull, QueueEmpty)
 
 
-def byte2utf8(buf):
+def byte2utf8(buf):  # noqa: D103
     if not hasattr(buf, "decode"):
         buf = bytes(buf)
     return buf.decode("utf-8")
@@ -93,7 +94,7 @@ def log(s, *x, err=None):
         sys.print_exception(err, sys.stderr)
 
 
-def at(*a, **kw):
+def at(*a, **kw):  # noqa: D103
     set_rtc("debug", a if not kw else kw if not a else (a, kw), fs=False)
 
 
@@ -429,7 +430,7 @@ def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001
 
 
-def is_async(obj):
+def is_async(obj):  # noqa: D103
     if iscoroutine(obj) or hasattr(obj, "__iter__"):
         return True
     return False

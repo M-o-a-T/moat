@@ -1,15 +1,18 @@
+# noqa:D100
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from moat.util import P, Path
+
 import typing
-from moat.util import Path, P, al_lower
 
 if typing.TYPE_CHECKING:
     from moat.kv.client import Client
 
-from . import BaseBusHandler, UnknownParamError
 from moat.bus.message import BusMessage
+
+from . import BaseBusHandler, UnknownParamError
 
 
 class Handler(BaseBusHandler):
@@ -36,12 +39,12 @@ class Handler(BaseBusHandler):
     }
 
     @staticmethod
-    def check_config(cfg: dict):
+    def check_config(cfg: dict):  # noqa:D102
         for k, v in cfg.items():
             if k != "topic":
                 raise UnknownParamError(k)
             if not isinstance(v, Path):
-                raise RuntimeError(k, v)
+                raise TypeError(k, v)
 
     @asynccontextmanager
     async def _ctx(self):
@@ -68,10 +71,10 @@ class Handler(BaseBusHandler):
                 if id == self.id:
                     continue
                 msg = BusMessage(**msg)
-                msg._mqtt_id = id
+                msg._mqtt_id = id  # noqa:SLF001
                 return msg
 
-    async def send(self, msg):
-        data = {k: getattr(msg, k) for k in msg._attrs}
+    async def send(self, msg):  # noqa:D102
+        data = {k: getattr(msg, k) for k in msg._attrs}  # noqa:SLF001
         data["_id"] = getattr(msg, "_mqtt_id", self.id)
         await self._mqtt.msg_send(topic=self.topic, data=data)

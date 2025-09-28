@@ -4,13 +4,13 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-# Typing
-from typing import TYPE_CHECKING
-
 from moat.util import import_
 from moat.util.compat import L, TaskGroup, log
 
 from .dir import BaseSuperCmd
+
+# Typing
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .base import BaseCmd

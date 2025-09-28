@@ -4,24 +4,22 @@ Database schema for collecting things
 
 from __future__ import annotations
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.orm import relationship
 
-from moat.db.schema import Base
-from moat.db.util import session
 from moat.util import NotGiven
-
-
-from .model import Thing, ThingTyp
-from moat.label.model import Label
 from moat.box.model import Box
 from moat.db.schema import Base
+from moat.db.util import session
+from moat.label.model import Label
+
+from .model import Thing, ThingTyp
 
 Thing.labels = relationship(Label, back_populates="thing", collection_class=set)
 Thing.container = relationship(Box, back_populates="things")
 
 
-def thing_apply(self, label=NotGiven, container=NotGiven, thingtyp=NotGiven, **kw):
+def thing_apply(self, label=NotGiven, container=NotGiven, thingtyp=NotGiven, **kw):  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -61,7 +59,7 @@ def thing_apply(self, label=NotGiven, container=NotGiven, thingtyp=NotGiven, **k
 Thing.apply = thing_apply
 
 
-def thingtyp_apply(self, parent=NotGiven, abstract=False, real=False, **kw):
+def thingtyp_apply(self, parent=NotGiven, abstract=False, real=False, **kw):  # noqa: D103
     if abstract:
         if real:
             raise ValueError("A type can't be both 'abstract' and 'real'.")

@@ -1,12 +1,14 @@
 #!/usr/bin/python3
+"# noqa:D100"
 from __future__ import annotations
 
-import trio
 import socket
+
 import asyncclick as click
+import trio
 
 
-async def reader(sock, verbose):
+async def reader(sock, verbose):  # noqa:D103
     while True:
         b = await sock.recv(1)
         if not b:
@@ -28,13 +30,13 @@ step. Bits are numbered starting with 1, a zero is a no-op.
 The sequence repeats until `--loops`, if used, or interrupted.
 """,
 )
-@click.option("-s", "--socket", "sockname", help="Socket to use", default="/tmp/moatbus")
+@click.option("-s", "--socket", "sockname", help="Socket to use", default="/tmp/moatbus")  # noqa:S108
 @click.option("-d", "--delay", type=float, default=0.1, help="Delay(sec) until next flip")
 @click.option("-v", "--verbose", is_flag=True, help="Be verbose")
 @click.option("-i", "--init", type=int, default=0, help="Initial wire state")
 @click.option("-n", "--loops", type=int, default=-1, help="Stop after this many iterations")
 @click.argument("data", nargs=-1)
-async def run(sockname, delay, verbose, data, init, loops):
+async def run(sockname, delay, verbose, data, init, loops):  # noqa:D103
     if not data:
         if not init:
             raise click.UsageError("Need some data")

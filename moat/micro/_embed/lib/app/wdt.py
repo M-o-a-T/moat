@@ -21,8 +21,8 @@ There is one main "wdt" option which
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L
 from moat.micro.wdt import WDT, M
+from moat.util.compat import Event, L
 
 
 class Cmd(BaseCmd):

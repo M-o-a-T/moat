@@ -1,11 +1,11 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import pytest
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup
+from moat.util import P, PathLongener, ungroup
 from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
 from moat.lib.codec.cbor import Tag as CBORTag
@@ -25,7 +25,7 @@ async def _dump(sf, *, task_status):
             print(msg)
 
 
-async def data(s):
+async def data(s):  # noqa: D103
     await s("a.b.e", 10)
     await s("a.b.f", 11)
     await s("a.b.g.h", 12)
@@ -37,7 +37,7 @@ async def data(s):
     await s("a.b.d", 17)
 
 
-async def fetch(c, p):
+async def fetch(c, p):  # noqa: D103
     p = P(p)
     nn = Node()
     pl = PathLongener()
@@ -58,8 +58,8 @@ async def fetch(c, p):
         return nn
 
 
-@pytest.mark.anyio()
-async def test_lsy_from_server(cfg):
+@pytest.mark.anyio
+async def test_lsy_from_server(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
@@ -83,8 +83,8 @@ async def test_lsy_from_server(cfg):
             assert n.get(P("a")) == nn
 
 
-@pytest.mark.anyio()
-async def test_lsy_from_file(cfg, tmp_path):
+@pytest.mark.anyio
+async def test_lsy_from_file(cfg, tmp_path):  # noqa: D103
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
         (sf.tempdir / "data").mkdir()
 
@@ -124,8 +124,8 @@ async def test_lsy_from_file(cfg, tmp_path):
         assert n.get(P("a")) == nn
 
 
-@pytest.mark.anyio()
-async def test_lsy_switch_server_hard(cfg):
+@pytest.mark.anyio
+async def test_lsy_switch_server_hard(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
@@ -139,8 +139,8 @@ async def test_lsy_switch_server_hard(cfg):
         assert res == 123
 
 
-@pytest.mark.anyio()
-async def test_lsy_switch_server_hard_break(cfg):
+@pytest.mark.anyio
+async def test_lsy_switch_server_hard_break(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
@@ -160,8 +160,8 @@ async def test_lsy_switch_server_hard_break(cfg):
         assert res == 123
 
 
-@pytest.mark.anyio()
-async def test_lsy_switch_server_soft(cfg):
+@pytest.mark.anyio
+async def test_lsy_switch_server_soft(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()

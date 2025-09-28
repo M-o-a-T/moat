@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -8,9 +8,9 @@ import anyio
 from .broker import Broker
 
 try:
+    from moat.util import NotGiven, PathLongener
     from moat.kv.client import client_scope as moat_kv_client_scope
     from moat.kv.errors import ErrorRoot
-    from moat.util import NotGiven, PathLongener
 except ImportError:
     pass
 
@@ -21,10 +21,10 @@ class MoatKVbroker(Broker):
     """
 
     __slots__ = (
+        "_moat_kv_broker__base",
         "_moat_kv_broker__client",
         "_moat_kv_broker__topic",
         "_moat_kv_broker__tranparent",
-        "_moat_kv_broker__base",
     )
 
     def __init__(self, tg: anyio.abc.TaskGroup, config=None, plugin_namespace=None):
@@ -130,7 +130,7 @@ class MoatKVbroker(Broker):
                 )
                 await err.record_working("moat.mqtt", msg.path)
 
-    async def start(self):
+    async def start(self):  # noqa: D102
         cfg = self.config["kv"]
 
         await super().start()
@@ -143,7 +143,7 @@ class MoatKVbroker(Broker):
         self._tg.start_soon(self.__retain_reader, cfg, evt)
         await evt.wait()
 
-    async def broadcast_message(
+    async def broadcast_message(  # noqa: D102
         self,
         session,
         topic,

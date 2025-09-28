@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -14,8 +14,8 @@ from moat.mqtt.session import Session
 from tests.moat_mqtt import anyio_run
 
 
-class TestAnonymousAuthPlugin(unittest.TestCase):
-    def test_allow_anonymous(self):
+class TestAnonymousAuthPlugin(unittest.TestCase):  # noqa: D101
+    def test_allow_anonymous(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": True}}
@@ -29,7 +29,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_disallow_anonymous(self):
+    def test_disallow_anonymous(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
@@ -43,7 +43,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_allow_nonanonymous(self):
+    def test_allow_nonanonymous(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
@@ -58,8 +58,8 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
         anyio_run(coro)
 
 
-class TestFileAuthPlugin(unittest.TestCase):
-    def test_allow(self):
+class TestFileAuthPlugin(unittest.TestCase):  # noqa: D101
+    def test_allow(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -81,7 +81,7 @@ class TestFileAuthPlugin(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_wrong_password(self):
+    def test_wrong_password(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -103,7 +103,7 @@ class TestFileAuthPlugin(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_unknown_password(self):
+    def test_unknown_password(self):  # noqa: D102
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {

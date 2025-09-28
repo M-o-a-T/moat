@@ -1,15 +1,18 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
-import datetime
 import time
 
 import asyncclick as click
-from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint
-from moat.util.times import ts2iso
 
+from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint
 from moat.kv.client import StreamedRequest
 from moat.kv.data import add_dates, data_get, node_attr
+from moat.util.times import ts2iso
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
@@ -138,8 +141,12 @@ async def set_(obj, last, new, **kw):
 
 
 class nstr:
-    def __new__(cls, val):
-        if val is NotGiven:
+    """
+    A string, except that `None` and `NotGiven` are special (passed through
+    instead of stringified).
+    """
+    def __new__(cls, val:str|None|Literal[NotGiven]):  ## noqa:D102
+        if val is None or val is NotGiven:
             return val
         return str(val)
 

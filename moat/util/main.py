@@ -9,8 +9,6 @@ import logging
 import logging.config
 import os
 import sys
-from collections import defaultdict
-from collections.abc import Mapping
 from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial, wraps
@@ -18,11 +16,14 @@ from pathlib import Path as FSPath
 
 import asyncclick as click
 
+from . import NotGiven
+from .config import CFG, ensure_cfg
 from .dict import attrdict, to_attrdict
 from .exc import ungroup
-from . import NotGiven
 from .merge import merge
-from .config import CFG, ensure_cfg
+
+from collections import defaultdict
+from collections.abc import Mapping
 
 try:
     from moat.lib.codec.proxy import Proxy
@@ -34,23 +35,23 @@ from .yaml import yload
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+
     from typing import Awaitable  # noqa:UP035
-    from asyncclick import command
 
 logger = logging.getLogger("_loader")
 
 __all__ = [
-    "main_",
-    "read_cfg",
-    "load_cfg",
-    "wrap_main",
     "Loader",
-    "load_subgroup",
-    "list_ext",
-    "load_ext",
     "attr_args",
-    "process_args",
+    "list_ext",
+    "load_cfg",
+    "load_ext",
+    "load_subgroup",
+    "main_",
     "option_ng",
+    "process_args",
+    "read_cfg",
+    "wrap_main",
 ]
 
 this_load = ContextVar("this_load", default=None)
@@ -703,7 +704,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
         return
     ctx._moat_invoked = True  # pylint: disable=protected-access
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
-    if help or ctx.invoked_subcommand is None and not ctx.protected_args:
+    if help or (ctx.invoked_subcommand is None and not ctx.protected_args):
         print(ctx.get_help())
         ctx.exit()
 
@@ -948,5 +949,5 @@ def _ng(type_):
     return gen
 
 
-def option_ng(*a, type=str, **kw):
+def option_ng(*a, type=str, **kw):  # noqa: D103
     return click.option(*a, **kw, type=_ng(type), default=NotGiven)

@@ -7,11 +7,11 @@ This code is *duplicated* in `moat.util.exc`.
 from __future__ import annotations
 
 __all__ = [
+    "ExpAttrError",
+    "ExpKeyError",
+    "ExpectedError",
     "exc_iter",
     "ungroup",
-    "ExpectedError",
-    "ExpKeyError",
-    "ExpAttrError",
 ]
 
 

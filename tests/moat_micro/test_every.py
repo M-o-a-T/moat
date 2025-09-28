@@ -10,7 +10,7 @@ import time
 from moat.util.compat import every_ms
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_it():
     "'every' iterator test"
     nn = 0

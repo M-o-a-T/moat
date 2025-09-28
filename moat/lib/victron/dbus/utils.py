@@ -1,12 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python  # noqa: D100
 from __future__ import annotations
+
+import anyio
 import inspect
 import logging
 from contextlib import asynccontextmanager
 from os import statvfs
 from subprocess import CalledProcessError, check_output
 
-import anyio
 from asyncdbus.constants import NameFlag
 from asyncdbus.service import ServiceInterface
 from asyncdbus.signature import Variant
@@ -17,14 +18,14 @@ logger = logging.getLogger(__name__)
 VEDBUS_INVALID = Variant("ai", [])
 
 
-class NoVrmPortalIdError(Exception):
+class NoVrmPortalIdError(Exception):  # noqa: D101
     pass
 
 
 __vrm_portal_id = None
 
 
-def get_vrm_portal_id():
+def get_vrm_portal_id():  # noqa: D103
     # The original definition of the VRM Portal ID is that it is the mac
     # address of the onboard- ethernet port (eth0), stripped from its colons
     # (:) and lower case. This may however differ between platforms. On Venus
@@ -113,7 +114,7 @@ def get_vrm_portal_id():
 # 	return result
 
 
-def get_free_space(path):
+def get_free_space(path):  # noqa: D103
     result = -1
 
     try:
@@ -143,7 +144,7 @@ def _get_sysfs_machine_name():
 
 # Returns None if it cannot find a machine name. Otherwise returns the string
 # containing the name
-def get_machine_name():
+def get_machine_name():  # noqa: D103
     # First try calling the venus utility script
     try:
         return check_output("/usr/bin/product-name").strip().decode("UTF-8")
@@ -288,7 +289,7 @@ INTF = "org.m_o_a_t"
 NAME = "org.m_o_a_t"
 
 
-def reg_name(base, name):
+def reg_name(base, name):  # noqa: D103
     if name is None:
         name = NAME
     elif name[0] == "+":

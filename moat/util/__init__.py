@@ -15,8 +15,8 @@ _log = _logging.getLogger(__name__)
 
 NotGiven = Ellipsis
 
-from .dict import attrdict  # noqa: E402, F401
 from .config import CFG, ensure_cfg  # noqa: E402, F401
+from .dict import attrdict  # noqa: E402, F401
 
 from .alert import *  # noqa: F403, E402  # isort:skip
 from .impl import *  # noqa: F403, E402  # isort:skip
@@ -26,7 +26,7 @@ from .misc import *  # noqa: F403, E402  # isort:skip
 from .random import *  # noqa: F403, E402  # isort:skip
 from .inexact import *  # noqa: F403, E402  # isort:skip
 
-from moat.lib.codec.proxy import as_proxy  # noqa: F403, E402  # isort:skip
+from moat.lib.codec.proxy import as_proxy  # noqa: E402  # isort:skip
 
 as_proxy("_", NotGiven)
 

@@ -4,19 +4,20 @@ This module contains a helper for running subprocesses.
 
 from __future__ import annotations
 
-import io
-from subprocess import PIPE, DEVNULL, STDOUT, CalledProcessError
 import anyio
-from pathlib import Path
+import io
 from codecs import getincrementaldecoder
+from pathlib import Path
+from subprocess import DEVNULL, PIPE, STDOUT, CalledProcessError
 
-from typing import TYPE_CHECKING, overload, cast
+from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING:
-    from typing import Literal, AsyncIterable
+    from typing import Literal
+    from collections.abc import AsyncIterable
 
 
-__all__ = ["run", "CalledProcessError", "PIPE", "DEVNULL", "STDOUT"]
+__all__ = ["DEVNULL", "PIPE", "STDOUT", "CalledProcessError", "run"]
 
 
 @overload
@@ -85,7 +86,7 @@ async def run(
     if capture and kw.get("stdout", PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")
 
-    if isinstance((cwd := kw.get("cwd", None)), (anyio.Path, Path)):
+    if isinstance((cwd := kw.get("cwd")), (anyio.Path, Path)):
         kw["cwd"] = str(cwd)
 
     frag = None

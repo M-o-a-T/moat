@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import sys
 import anyio
 import trio
@@ -22,7 +22,7 @@ PinOH = Pin(True, True)
 PinOL = Pin(True, False)
 
 
-async def fwd_q(ts, queues):
+async def fwd_q(ts, queues):  # noqa: D103
     while True:
         msg = await ts.__anext__()
         await queues[msg.path[-1]].put(msg.value)
@@ -152,11 +152,11 @@ class _test_out(_test):
         await self.client.set(self.src, value=value)
 
 
-class test_one(_test_in):
+class test_one(_test_in):  # noqa: D101
     pin = 1
     prep = dict(mode="read")
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs()
 
@@ -171,11 +171,11 @@ class test_one(_test_in):
         await self.assertMsg()
 
 
-class test_one_uniq(_test_in):
+class test_one_uniq(_test_in):  # noqa: D101
     pin = 1
     prep = dict(mode="read", change=True)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs()
 
@@ -192,11 +192,11 @@ class test_one_uniq(_test_in):
         await self.assertMsg()
 
 
-class test_two(_test_in):
+class test_two(_test_in):  # noqa: D101
     pin = 2
     prep = dict(mode="count", interval=3, count=None)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs()
 
@@ -219,11 +219,11 @@ class test_two(_test_in):
         await self.assertMsg(timeout=5)
 
 
-class test_two_up(_test_in):
+class test_two_up(_test_in):  # noqa: D101
     pin = 2
     prep = dict(mode="count", interval=3, count=True)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs()
 
@@ -243,11 +243,11 @@ class test_two_up(_test_in):
         await self.assertMsg(timeout=5)
 
 
-class test_three(_test_in):
+class test_three(_test_in):  # noqa: D101
     pin = 3
     prep = dict(mode="button", t_idle=1, t_bounce=0.1)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs(timeout=1.2)
 
@@ -263,11 +263,11 @@ class test_three(_test_in):
         await self.assertMsg()
 
 
-class test_three_bounce(_test_in):
+class test_three_bounce(_test_in):  # noqa: D101
     pin = 3
     prep = dict(mode="button", t_idle=1, t_bounce=0.2)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs(timeout=1.2)
 
@@ -292,11 +292,11 @@ class test_three_bounce(_test_in):
         await self.assertMsg((6, 0), timeout=0.3, pick="seq")
 
 
-class test_three_bounce_only(_test_in):
+class test_three_bounce_only(_test_in):  # noqa: D101
     pin = 3
     prep = dict(mode="button", t_idle=1, t_bounce=0.2)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs(timeout=1.2)
 
@@ -312,11 +312,11 @@ class test_three_bounce_only(_test_in):
         await self.assertMsg(timeout=2)
 
 
-class test_three_bounce_skip(_test_in):
+class test_three_bounce_skip(_test_in):  # noqa: D101
     pin = 3
     prep = dict(mode="button", t_idle=1, t_bounce=0.2, skip=False)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         self.pin.set(False)
         await self.flushMsgs(timeout=1.2)
 
@@ -332,11 +332,11 @@ class test_three_bounce_skip(_test_in):
         await self.assertMsg((8, 0), timeout=2, pick="seq")
 
 
-class test_four(_test_out):
+class test_four(_test_out):  # noqa: D101
     pin = 4
     prep = dict(mode="write")
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         await self.set_src(False)
         await self.flushMsgs()
 
@@ -350,11 +350,11 @@ class test_four(_test_out):
         await self.assertMsg(False)
 
 
-class test_four_only(_test_out):
+class test_four_only(_test_out):  # noqa: D101
     pin = 4
     prep = dict(mode="write", change=True)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         await self.set_src(False)
         await self.flushMsgs()
 
@@ -374,11 +374,11 @@ class test_four_only(_test_out):
         await self.assertMsg(PinOL)
 
 
-class test_five(_test_out):
+class test_five(_test_out):  # noqa: D101
     pin = 5
     prep = dict(mode="oneshot", t_on=1)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         await self.set_src(False)
         await self.flushMsgs()
 
@@ -396,11 +396,11 @@ class test_five(_test_out):
         await self.assertMsg()
 
 
-class test_six(_test_out):
+class test_six(_test_out):  # noqa: D101
     pin = 6
     prep = dict(mode="pulse", t_on=1, t_off=3)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         await self.set_src(False)
         await self.flushMsgs()
 
@@ -430,7 +430,7 @@ class test_six(_test_out):
         await self.assertMsg()
 
 
-async def main(label="gpio-mockup-A", host="HosT"):
+async def main(label="gpio-mockup-A", host="HosT"):  # noqa: D103
     async with (
         test_client() as c,
         GpioWatcher(interval=0.05).run() as w,

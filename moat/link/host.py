@@ -1,30 +1,27 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
-import time
-from attrs import define, field
-from contextlib import nullcontext, AsyncExitStack, suppress, asynccontextmanager
-from enum import Enum, auto
-from moat.link import protocol_version
-from collections import deque
 import logging
+import time
+from contextlib import asynccontextmanager, suppress
+from enum import Enum, auto
 from functools import partial
 
+from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
-from transitions_aio.extensions.states import add_state_features
-from transitions_aio.extensions.asyncio import AsyncEventData, AsyncTransition, AsyncTimeout
 
-from moat.util import as_service, P, srepr, attrdict, NotGiven, CtxObj
-from moat.util.times import humandelta
-from moat.util.broadcast import Broadcaster
+from moat.util import CtxObj, NotGiven, P, as_service, attrdict, srepr
 from moat.lib.priomap import PrioMap
+from moat.util.broadcast import Broadcaster
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-    from moat.link.client import Link
     from transitions_aio import EventData
+
+    from moat.link.client import Link
+
+    from typing import NoReturn
 
 __all__ = ["HostMon", "cmd_host"]
 
@@ -222,9 +219,7 @@ class Host:
 
         if self.state in (HostState.ONLY_I, HostState.TIMEOUT):
             val = "stale"
-        elif self.state in (HostState.DOWN,):
-            val = "delete"
-        elif self.state in (HostState.STALE,):
+        elif self.state in (HostState.DOWN,) or self.state in (HostState.STALE,):
             val = "delete"
         else:
             val = "timeout"

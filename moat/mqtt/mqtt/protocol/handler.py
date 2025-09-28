@@ -1,22 +1,15 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
+import anyio
+import contextlib
 import itertools
 import logging
 
-import anyio
 from moat.util import create_queue
-
 from moat.mqtt.errors import InvalidStateError, MoatMQTTException, MQTTException, NoDataException
-from moat.mqtt.session import (
-    INCOMING,
-    OUTGOING,
-    IncomingApplicationMessage,
-    OutgoingApplicationMessage,
-    Session,
-)
-from moat.mqtt.utils import CancelledError, Future
 from moat.mqtt.mqtt import packet_class
 from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from moat.mqtt.mqtt.packet import (
@@ -41,22 +34,30 @@ from moat.mqtt.mqtt.puback import PubackPacket
 from moat.mqtt.mqtt.pubcomp import PubcompPacket
 from moat.mqtt.mqtt.pubrec import PubrecPacket
 from moat.mqtt.mqtt.pubrel import PubrelPacket
-import contextlib
+from moat.mqtt.session import (
+    INCOMING,
+    OUTGOING,
+    IncomingApplicationMessage,
+    OutgoingApplicationMessage,
+    Session,
+)
+from moat.mqtt.utils import CancelledError, Future
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
-    from moat.mqtt.mqtt.unsuback import UnsubackPacket
-    from moat.mqtt.mqtt.subscribe import SubscribePacket
-    from moat.mqtt.mqtt.suback import SubackPacket
-    from moat.mqtt.mqtt.publish import PublishPacket
-    from moat.mqtt.mqtt.pingresp import PingRespPacket
-    from moat.mqtt.mqtt.pingreq import PingReqPacket
-    from moat.mqtt.mqtt.disconnect import DisconnectPacket
-    from moat.mqtt.mqtt.connect import ConnectPacket
-    from moat.mqtt.mqtt.connack import ConnackPacket
-    from moat.mqtt.plugins.manager import PluginManager
     from moat.mqtt.adapters import StreamAdapter
+    from moat.mqtt.mqtt.connack import ConnackPacket
+    from moat.mqtt.mqtt.connect import ConnectPacket
+    from moat.mqtt.mqtt.disconnect import DisconnectPacket
+    from moat.mqtt.mqtt.pingreq import PingReqPacket
+    from moat.mqtt.mqtt.pingresp import PingRespPacket
+    from moat.mqtt.mqtt.publish import PublishPacket
+    from moat.mqtt.mqtt.suback import SubackPacket
+    from moat.mqtt.mqtt.subscribe import SubscribePacket
+    from moat.mqtt.mqtt.unsuback import UnsubackPacket
+    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
+    from moat.mqtt.plugins.manager import PluginManager
 
 try:
     ClosedResourceError = anyio.exceptions.ClosedResourceError
@@ -87,7 +88,7 @@ PACKET_TYPES = {
 }
 
 
-class ProtocolHandlerException(Exception):
+class ProtocolHandlerException(Exception):  # noqa: D101
     pass
 
 
@@ -132,7 +133,7 @@ class ProtocolHandler:
         if self.keepalive_timeout <= 0:
             self.keepalive_timeout = None
 
-    async def attach(self, session, stream: StreamAdapter):
+    async def attach(self, session, stream: StreamAdapter):  # noqa: D102
         if self.session:
             raise ProtocolHandlerException("Handler is already attached to a session")
         self._init_session(session)
@@ -141,14 +142,14 @@ class ProtocolHandler:
         self._tg.start_soon(self._sender_loop, evt)
         await evt.wait()
 
-    async def detach(self):
+    async def detach(self):  # noqa: D102
         self.session = None
         self.stream = None
 
     def _is_attached(self):
         return self.session is not None
 
-    async def start(self):
+    async def start(self):  # noqa: D102
         self._disconnect_waiter = anyio.Event()
         if not self._is_attached():
             raise ProtocolHandlerException("Handler is not attached to a stream")
@@ -171,7 +172,7 @@ class ProtocolHandler:
             # This can happen when stuff overlaps
             pass
 
-    async def stop(self):
+    async def stop(self):  # noqa: D102
         # Stop messages flow waiter
         self.logger.debug(
             "%s %s stopping",
@@ -600,40 +601,40 @@ class ProtocolHandler:
             self._sender_stopped.set()
             self._sender_task = None
 
-    async def handle_write_timeout(self):
+    async def handle_write_timeout(self):  # noqa: D102
         self.logger.debug("%s write timeout unhandled", self.session.client_id)
 
-    async def handle_read_timeout(self):
+    async def handle_read_timeout(self):  # noqa: D102
         self.logger.debug("%s read timeout unhandled", self.session.client_id)
 
-    async def handle_connack(self, connack: ConnackPacket):  # pylint: disable=unused-argument
+    async def handle_connack(self, connack: ConnackPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s CONNACK unhandled", self.session.client_id)
 
-    async def handle_connect(self, connect: ConnectPacket):  # pylint: disable=unused-argument
+    async def handle_connect(self, connect: ConnectPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s CONNECT unhandled", self.session.client_id)
 
-    async def handle_subscribe(self, subscribe: SubscribePacket):  # pylint: disable=unused-argument
+    async def handle_subscribe(self, subscribe: SubscribePacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s SUBSCRIBE unhandled", self.session.client_id)
 
-    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=unused-argument
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s UNSUBSCRIBE unhandled", self.session.client_id)
 
-    async def handle_suback(self, suback: SubackPacket):  # pylint: disable=unused-argument
+    async def handle_suback(self, suback: SubackPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s SUBACK unhandled", self.session.client_id)
 
-    async def handle_unsuback(self, unsuback: UnsubackPacket):  # pylint: disable=unused-argument
+    async def handle_unsuback(self, unsuback: UnsubackPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s UNSUBACK unhandled", self.session.client_id)
 
-    async def handle_pingresp(self, pingresp: PingRespPacket):  # pylint: disable=unused-argument
+    async def handle_pingresp(self, pingresp: PingRespPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s PINGRESP unhandled", self.session.client_id)
 
-    async def handle_pingreq(self, pingreq: PingReqPacket):  # pylint: disable=unused-argument
+    async def handle_pingreq(self, pingreq: PingReqPacket):  # pylint: disable=unused-argument  # noqa: D102
         self.logger.debug("%s PINGREQ unhandled", self.session.client_id)
 
     async def _handle_disconnect(self, disconnect: DisconnectPacket):  # pylint: disable=unused-argument
         self.logger.debug("%s DISCONNECT unhandled", self.session.client_id)
 
-    async def handle_disconnect(self, disconnect: DisconnectPacket):
+    async def handle_disconnect(self, disconnect: DisconnectPacket):  # noqa: D102
         if not self._disconnecting:
             self._disconnecting = True
             self._tg.start_soon(self._handle_disconnect, disconnect)
@@ -641,10 +642,10 @@ class ProtocolHandler:
             self.logger.debug("%s DISCONNECT ignored", self.session.client_id)
         raise StopAsyncIteration  # end of the line
 
-    async def handle_connection_closed(self):
+    async def handle_connection_closed(self):  # noqa: D102
         self.logger.debug("%s Connection closed unhandled", self.session.client_id)
 
-    async def handle_puback(self, puback: PubackPacket):
+    async def handle_puback(self, puback: PubackPacket):  # noqa: D102
         packet_id = puback.variable_header.packet_id
         try:
             waiter = self._puback_waiters[packet_id]
@@ -654,7 +655,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBACK waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubrec(self, pubrec: PubrecPacket):
+    async def handle_pubrec(self, pubrec: PubrecPacket):  # noqa: D102
         packet_id = pubrec.packet_id
         try:
             waiter = self._pubrec_waiters[packet_id]
@@ -667,7 +668,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBREC waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubcomp(self, pubcomp: PubcompPacket):
+    async def handle_pubcomp(self, pubcomp: PubcompPacket):  # noqa: D102
         packet_id = pubcomp.packet_id
         try:
             waiter = self._pubcomp_waiters[packet_id]
@@ -680,7 +681,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBCOMP waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubrel(self, pubrel: PubrelPacket):
+    async def handle_pubrel(self, pubrel: PubrelPacket):  # noqa: D102
         packet_id = pubrel.packet_id
         try:
             waiter = self._pubrel_waiters[packet_id]
@@ -693,7 +694,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBREL waiter with Id '%d' already done", packet_id)
 
-    async def handle_publish(self, publish_packet: PublishPacket):
+    async def handle_publish(self, publish_packet: PublishPacket):  # noqa: D102
         try:
             packet_id = publish_packet.variable_header.packet_id
             qos = publish_packet.qos
@@ -716,6 +717,6 @@ class ProtocolHandler:
         except CancelledError:
             pass
 
-    async def wait_disconnect(self):
+    async def wait_disconnect(self):  # noqa: D102
         if self._disconnect_waiter is not None:
             return await self._disconnect_waiter.wait()

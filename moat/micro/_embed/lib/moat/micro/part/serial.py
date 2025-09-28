@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.util.compat import AC_use, TimeoutError, log, sleep, wait_for_ms
-from moat.micro.stacks.file import FileBuf
 from moat.util import import_
+from moat.micro.stacks.file import FileBuf
+from moat.util.compat import AC_use, TimeoutError, log, sleep, wait_for_ms
 
 
 # Serial link driver
@@ -27,10 +27,10 @@ class NamedSerial(FileBuf):
     def __init__(self, cfg):
         super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
-    async def stream(self):
+    async def stream(self):  # noqa: D102
         return import_(self.cfg["port"], 1)
 
-    async def wr(self, buf):
+    async def wr(self, buf):  # noqa: D102
         if len(buf) == 64:
             buf = memoryview(buf)
             await super().wr(buf[:32])
@@ -46,7 +46,7 @@ class USBSerial(FileBuf):
     via a module name.
     """
 
-    async def stream(self):
+    async def stream(self):  # noqa: D102
         import moat
 
         return moat.SERIAL

@@ -1,24 +1,16 @@
-# command line interface
+# command line interface  # noqa: D100
 from __future__ import annotations
 
-import datetime
-import time
 import anyio
-
-import asyncclick as click
+import logging
 from contextlib import nullcontext
 
-from moat.util import P, attrdict, NotGiven, srepr
-from moat.util.times import ts2iso, humandelta
-from moat.util.broadcast import Broadcaster
+import asyncclick as click
 
+from moat.util import srepr
 from moat.link.client import Link
-from moat.link._data import data_get, node_attr
-from moat.link.meta import MsgMeta
-from moat.link.node import Node
-from moat.link.host import cmd_host, HostMon
-
-import logging
+from moat.link.host import HostMon, cmd_host
+from moat.util.broadcast import Broadcaster
 
 logger = logging.getLogger(__name__)
 

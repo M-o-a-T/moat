@@ -12,15 +12,13 @@ Extension types defined here:
 from __future__ import annotations
 
 import moat.lib.codec.msgpack as _msgpack
-
-from moat.lib.codec import Extension, NoCodecError
+from moat.lib.codec import Extension
 from moat.lib.codec.msgpack import Codec
-from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj, get_proxy
-from moat.util.compat import log
+from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
 
 from .path import Path
 
-__all__ = ["std_ext", "StdMsgpack"]
+__all__ = ["StdMsgpack", "std_ext"]
 
 
 std_ext = Extension()
@@ -40,7 +38,7 @@ Codec = StdMsgpack
 @std_ext.encoder(5, DProxy)
 def _enc_dproxy(codec, obj):
     a = obj.a[:]
-    if obj.k or a and isinstance(a[-1], dict):
+    if obj.k or (a and isinstance(a[-1], dict)):
         a.append(obj.k)
     return codec.encode(obj.name) + b"".join(codec.encode(x) for x in a)
 

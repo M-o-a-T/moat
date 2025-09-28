@@ -4,7 +4,7 @@ Access a satellite's Flash file system.
 
 from __future__ import annotations
 
-import os
+
 import vfs
 
 from moat.micro.cmd.base import BaseCmd
@@ -109,7 +109,7 @@ class Cmd(BaseCmd):
         self._dev_cache = dict()
         self._dev_pos = dict()
 
-    def dev(self, n):
+    def dev(self, n):  # noqa: D102
         try:
             return self._dev_cache[n].dev
         except KeyError:
@@ -149,7 +149,7 @@ class Cmd(BaseCmd):
         dev.seek(o)
         return dev.read(n)
 
-    async def stream_rd(self, msg):
+    async def stream_rd(self, msg):  # noqa: D102
         dev = self.dev(msg[0])
         off = msg[1] if len(msg) > 1 else 0
         blk = msg[2] if len(msg) > 2 else 64
@@ -169,7 +169,7 @@ class Cmd(BaseCmd):
         dev.seek(o)
         return dev.write(d)
 
-    async def stream_wr(self, msg):
+    async def stream_wr(self, msg):  # noqa: D102
         dev = self.dev(msg[0])
         off = msg[1] if len(msg) > 1 else 0
         dev.seek(off)

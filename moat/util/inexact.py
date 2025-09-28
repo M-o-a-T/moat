@@ -12,9 +12,9 @@ __all__ = ["InexactFloat"]
 class InexactFloat(float):
     """Float wrapper used for inexact comparison of float record elements."""
 
-    __slots__ = ("abs", "rel", "digits")
+    __slots__ = ("abs", "digits", "rel")
 
-    def __new__(cls, val, rel=1e-06, abs=1e-12, digits=3):
+    def __new__(cls, val, rel=1e-06, abs=1e-12, digits=3):  # noqa: D102
         res = super().__new__(cls, val)
         res.rel = rel
         res.abs = abs

@@ -9,7 +9,7 @@ from moat.util import yload
 import contextlib
 
 
-def load_cfg(cfg):  # pylint: disable=redefined-outer-name
+def load_cfg(cfg):  # pylint: disable=redefined-outer-name  # noqa: D103
     cfg = Path(cfg).absolute()
     if cfg.exists():
         pass

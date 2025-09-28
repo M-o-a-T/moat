@@ -1,6 +1,7 @@
 """
-Moat-Link is a moderately shallow library that distributes basic
-topic-based messaging between several connections or encodings.
+Moat-Link is a library that enhances MQTT messaging (other backends are
+possible) with structured data types, defined metadata (message source
+and timestamp), and 
 
 The point of this library is to support a minimal unified pub/sub messaging
 service.
@@ -8,36 +9,12 @@ service.
 Configuration looks like this:
 
     link:
-      dist:
-        hass:
-          prefix: !P hass
-          backend: mqtt
-          path: !P some.special.hass
-          chop: 1
-          codec: home_assistant
-
-        root:
-          prefix: !P dist.root
-          backend: mqtt
-          codec: cbor
-
-        special:
-          prefix: !P :
-          backend: mqtt
-          path: !P some.special.area
-          chop: 0
-          codec: cbor
-
-        storage:
-          prefix: !P :
-          chop: 0
-          backend: kv
-          codec: null
-          retained: true
-
       backend:
-        mqtt:
-          uri: mqtt://localhost:51883
+        driver: mqtt
+        host: localhost
+        port: 51883
+        codec: std-cbor
+      root: moat.org.example.test
 
 """
 

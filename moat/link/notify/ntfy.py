@@ -1,19 +1,14 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
-import anyio
-import httpx
-import time
 from contextlib import asynccontextmanager
-from moat.link import protocol_version
-from moat.util.misc import srepr
-from moat.util import as_service, P, Path, attrdict
 
-from typing import TYPE_CHECKING
+import httpx
+
+from moat.util import P, Path
+
 from . import Notifier as BaseNotifier
 
-if TYPE_CHECKING:
-    from typing import NoReturn
-    from moat.link.client import Link
+
 
 __all__ = ["ntfy_bridge"]
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from ssl import SSLContext
 
-__all__ = ["run_tcp_server", "gen_ssl"]
+__all__ = ["gen_ssl", "run_tcp_server"]
 
 
 class _Server:
@@ -39,7 +39,7 @@ class _Server:
         try:
             listener = await anyio.create_tcp_listener(local_port=self.port)
         except Exception as exc:
-            raise EnvironmentError(f"could not listen to port {self.port}") from exc
+            raise OSError(f"could not listen to port {self.port}") from exc
         if not self.port:
             self.port = listener.extra_attributes[SocketAttribute.local_address]()[1]
         if self._rdy is not None:

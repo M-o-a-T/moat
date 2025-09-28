@@ -7,13 +7,14 @@ Called from the root "main.py".
 from __future__ import annotations
 
 import sys
+
+from rtc import all_rtc
+
 import machine
 
 from moat.util import merge
-from moat.util.compat import L, TaskGroup, sleep_ms, at
-from rtc import all_rtc
-
 from moat.lib.codec.cbor import Codec as CBOR
+from moat.util.compat import L, TaskGroup, at, sleep_ms
 
 from typing import TYPE_CHECKING  # isort:skip
 

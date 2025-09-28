@@ -17,15 +17,15 @@ get a memoryview and must decode or copy it.
 
 from __future__ import annotations
 
-from ._base import Codec as _Codec
-from ._base import NoCodecError
-
 import struct
 import sys
 from io import BytesIO
 
-from moat.util import attrdict, OutOfData
+from moat.util import OutOfData, attrdict
 from moat.util.compat import byte2utf8, const
+
+from ._base import Codec as _Codec
+from ._base import NoCodecError
 
 from typing import TYPE_CHECKING, cast
 

@@ -7,9 +7,9 @@ from __future__ import annotations
 import errno
 import os
 
+from moat.lib.codec.errors import FileExistsError, FileNotFoundError
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import sleep_ms
-from moat.lib.codec.errors import FileExistsError, FileNotFoundError
 
 
 def _fty(s, **r):

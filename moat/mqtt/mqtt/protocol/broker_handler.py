@@ -1,15 +1,13 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
 
 import anyio
-from moat.util import create_queue
+import logging
 
+from moat.util import create_queue
 from moat.mqtt.errors import MQTTException, NoDataException
-from moat.mqtt.session import Session
-from moat.mqtt.utils import format_client_message
 from moat.mqtt.mqtt.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -22,20 +20,24 @@ from moat.mqtt.mqtt.connect import ConnectPacket
 from moat.mqtt.mqtt.pingresp import PingRespPacket
 from moat.mqtt.mqtt.suback import SubackPacket
 from moat.mqtt.mqtt.unsuback import UnsubackPacket
+from moat.mqtt.session import Session
+from moat.mqtt.utils import format_client_message
+
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT, ProtocolHandler
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
-    from moat.mqtt.mqtt.subscribe import SubscribePacket
-    from moat.mqtt.mqtt.pingreq import PingReqPacket
-    from moat.mqtt.plugins.manager import PluginManager
     from moat.mqtt.adapters import StreamAdapter
+    from moat.mqtt.mqtt.pingreq import PingReqPacket
+    from moat.mqtt.mqtt.subscribe import SubscribePacket
+    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
+    from moat.mqtt.plugins.manager import PluginManager
 
 logger = logging.getLogger(__name__)
 
 
-class BrokerProtocolHandler(ProtocolHandler):
+class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
     clean_disconnect = False
 
     def __init__(self, plugins_manager: PluginManager, session: Session = None):
@@ -43,10 +45,10 @@ class BrokerProtocolHandler(ProtocolHandler):
         self._pending_subscriptions = create_queue(9999)
         self._pending_unsubscriptions = create_queue(9999)
 
-    async def handle_write_timeout(self):
+    async def handle_write_timeout(self):  # noqa: D102
         pass
 
-    async def handle_read_timeout(self):
+    async def handle_read_timeout(self):  # noqa: D102
         raise TimeoutError
 
     async def _handle_disconnect(self, disconnect, wait=True):  # pylint: disable=arguments-differ
@@ -58,12 +60,12 @@ class BrokerProtocolHandler(ProtocolHandler):
                     await self._reader_stopped.wait()
             await self.stop()
 
-    async def handle_connection_closed(self):
+    async def handle_connection_closed(self):  # noqa: D102
         if not self._disconnecting:
             self._disconnecting = True
             await self._handle_disconnect(None, wait=False)
 
-    async def handle_connect(self, connect: ConnectPacket):
+    async def handle_connect(self, connect: ConnectPacket):  # noqa: D102
         # Broker handler shouldn't received CONNECT message during messages handling
         # as CONNECT messages are managed by the broker on client connection
         self.logger.error(
@@ -73,40 +75,40 @@ class BrokerProtocolHandler(ProtocolHandler):
         )
         await self.stop()
 
-    async def handle_pingreq(self, pingreq: PingReqPacket):
+    async def handle_pingreq(self, pingreq: PingReqPacket):  # noqa: D102
         await self._send_packet(PingRespPacket.build())
 
-    async def handle_subscribe(self, subscribe: SubscribePacket):
+    async def handle_subscribe(self, subscribe: SubscribePacket):  # noqa: D102
         subscription = {
             "packet_id": subscribe.variable_header.packet_id,
             "topics": subscribe.payload.topics,
         }
         await self._pending_subscriptions.put(subscription)
 
-    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=arguments-differ
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=arguments-differ  # noqa: D102
         unsubscription = {
             "packet_id": unsubscribe.variable_header.packet_id,
             "topics": unsubscribe.payload.topics,
         }
         await self._pending_unsubscriptions.put(unsubscription)
 
-    async def get_next_pending_subscription(self):
+    async def get_next_pending_subscription(self):  # noqa: D102
         subscription = await self._pending_subscriptions.get()
         return subscription
 
-    async def get_next_pending_unsubscription(self):
+    async def get_next_pending_unsubscription(self):  # noqa: D102
         unsubscription = await self._pending_unsubscriptions.get()
         return unsubscription
 
-    async def mqtt_acknowledge_subscription(self, packet_id, return_codes):
+    async def mqtt_acknowledge_subscription(self, packet_id, return_codes):  # noqa: D102
         suback = SubackPacket.build(packet_id, return_codes)
         await self._send_packet(suback)
 
-    async def mqtt_acknowledge_unsubscription(self, packet_id):
+    async def mqtt_acknowledge_unsubscription(self, packet_id):  # noqa: D102
         unsuback = UnsubackPacket.build(packet_id)
         await self._send_packet(unsuback)
 
-    async def mqtt_connack_authorize(self, authorize: bool):
+    async def mqtt_connack_authorize(self, authorize: bool):  # noqa: D102
         if authorize:
             connack = ConnackPacket.build(self.session.parent, CONNECTION_ACCEPTED)
         else:
@@ -157,10 +159,10 @@ class BrokerProtocolHandler(ProtocolHandler):
                 UNACCEPTABLE_PROTOCOL_VERSION,
             )  # [MQTT-3.2.2-4] session_parent=0
         elif (
-            not connect.username_flag
-            and connect.password_flag
-            or connect.username_flag
-            and not connect.password_flag
+            (not connect.username_flag
+            and connect.password_flag)
+            or (connect.username_flag
+            and not connect.password_flag)
         ):
             connack = ConnackPacket.build(0, BAD_USERNAME_PASSWORD)  # [MQTT-3.1.2-22]
         elif connect.username_flag and connect.username is None:

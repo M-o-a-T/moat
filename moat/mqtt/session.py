@@ -1,17 +1,20 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
-from collections import OrderedDict
 
 import anyio
-from moat.util import create_queue
+import logging
+
 from transitions import Machine
+
+from moat.util import create_queue
 
 from .errors import MoatMQTTException, MQTTException
 from .mqtt.constants import QOS_0
 from .mqtt.publish import PublishPacket
+
+from collections import OrderedDict
 
 OUTGOING = 0
 INCOMING = 1
@@ -27,16 +30,16 @@ class ApplicationMessage:
     """
 
     __slots__ = (
-        "packet_id",
-        "topic",
-        "qos",
         "data",
-        "retain",
-        "publish_packet",
+        "packet_id",
         "puback_packet",
+        "pubcomp_packet",
+        "publish_packet",
         "pubrec_packet",
         "pubrel_packet",
-        "pubcomp_packet",
+        "qos",
+        "retain",
+        "topic",
     )
 
     def __init__(self, packet_id, topic, qos, data, retain):
@@ -127,7 +130,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
         super().__init__(packet_id, topic, qos, data, retain)
 
 
-class Session:
+class Session:  # noqa: D101
     states = ["new", "connected", "disconnected"]
 
     def __init__(self, plugins_manager):
@@ -197,20 +200,20 @@ class Session:
         other = getattr(other, "client_id", other)
         return self.client_id == other
 
-    async def start(self, broker=None):
+    async def start(self, broker=None):  # noqa: D102
         if broker is not None:
             self._broker = broker
             if self._delivery_task is not None:
                 raise RuntimeError("Already running")
             broker._tg.start_soon(self._delivery_loop)
 
-    async def stop(self):
+    async def stop(self):  # noqa: D102
         if self._delivery_task is not None:
             self._delivery_task.cancel()
             await self._delivery_stopped.wait()
         self._broker = None  # break ref loop
 
-    async def put_message(self, app_message):
+    async def put_message(self, app_message):  # noqa: D102
         if app_message.retain and self._broker is not None and not self._broker._do_retain:
             raise RuntimeError("The broker doesn't do retains", repr(app_message.__getstate__()))
         if not app_message.topic:
@@ -271,7 +274,7 @@ class Session:
                 self._delivery_stopped.set()
 
     @property
-    def next_packet_id(self):
+    def next_packet_id(self):  # noqa: D102
         self._packet_id += 1
         if self._packet_id > 65535:
             self._packet_id = 1
@@ -286,15 +289,15 @@ class Session:
         return self._packet_id
 
     @property
-    def inflight_in_count(self):
+    def inflight_in_count(self):  # noqa: D102
         return len(self.inflight_in)
 
     @property
-    def inflight_out_count(self):
+    def inflight_out_count(self):  # noqa: D102
         return len(self.inflight_out)
 
     @property
-    def retained_messages_count(self):
+    def retained_messages_count(self):  # noqa: D102
         return self.retained_messages.qsize()
 
     def __repr__(self):

@@ -81,19 +81,20 @@ of this record.
 
 from __future__ import annotations
 
+import anyio
+import contextlib
 import logging
 import traceback
-from collections import defaultdict
 from time import time  # wall clock, intentionally
 from weakref import WeakValueDictionary
 
-import anyio
 from moat.util import Cache, NotGiven, Path
 from moat.lib.codec import get_codec
 
 from .exceptions import ServerError
 from .obj import AttrClientEntry, ClientEntry, ClientRoot
-import contextlib
+
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +112,14 @@ class ErrorSubEntry(AttrClientEntry):
 
     ATTRS = "seen tock trace str data comment message".split()
 
-    def child_type(self, name):  # pylint: disable=arguments-differ
+    def child_type(self, name):  # pylint: disable=arguments-differ  # noqa:D102
         logger.warning("Unknown entry type at %r: %s", self._path, name)
         return ClientEntry
 
     def __repr__(self):
-        return "‹%s %s %d›" % (
-            self.__class__.__name__,
-            self._path[-3:],
-            getattr(self, "tock", -1),
-        )
+        return f"‹{self.__class__.__name__} {self._path[-3:]} {getattr(self, 'tock', -1)}›"
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             p = self.parent
@@ -161,16 +158,16 @@ class ErrorEntry(AttrClientEntry):
         )
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return ErrorSubEntry
 
     @property
-    def real_entry(self):
+    def real_entry(self):  # noqa:D102
         while self._real_entry is not None:
-            self = self._real_entry  # pylint: disable=self-cls-assignment
+            self = self._real_entry  # pylint: disable=self-cls-assignment # noqa:PLW0642
         return self
 
-    async def check_move(self):
+    async def check_move(self):  # noqa:D102
         dest = self.real_entry
         if dest is not self:
             await self.root.add_clean(self)
@@ -264,7 +261,7 @@ class ErrorEntry(AttrClientEntry):
 
         This doesn't do anything locally, the watcher will get it.
         """
-        await self.root._pop(self)
+        await self.root._pop(self)  # noqa:SLF001
         try:
             return await super().delete(chain=False)
         except ServerError as exc:
@@ -306,7 +303,7 @@ class ErrorEntry(AttrClientEntry):
         Stores a pointer to the error in the root and keeps the records unique
         """
 
-        await self.root._pop(self)
+        await self.root._pop(self)  # noqa:SLF001
         if value is NotGiven:
             if self.value is NotGiven:
                 return
@@ -319,17 +316,17 @@ class ErrorEntry(AttrClientEntry):
 
         await super().set_value(value)
 
-        drop, keep = await self.root._unique(self)
+        drop, keep = await self.root._unique(self)  # noqa:SLF001
         # logger.debug("UNIQ %r %r %r %s/%s",self,drop,keep,
         # "x" if drop is None else drop.subpath[0],self.root.name)
         if drop is not None:
             # self.root._dropped(drop)
-            drop._real_entry = keep
+            drop._real_entry = keep  # noqa:SLF001
 
             if drop.subpath[0] == self.root.name:
                 await drop.move_to_real()
             # TODO remember to do it anyway, after next tick and when we're it
-        self.root._push(self.real_entry)
+        self.root._push(self.real_entry)  # noqa:SLF001
 
 
 class ErrorStep(ClientEntry):
@@ -338,7 +335,7 @@ class ErrorStep(ClientEntry):
     """
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return ErrorEntry
 
 
@@ -376,11 +373,12 @@ class ErrorRoot(ClientRoot):
         self._to_clean = set()
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return ErrorStep
 
-    async def add_clean(self, entry):
+    async def add_clean(self, entry):  # noqa:D102
         # self._to_clean.add(entry)
+        entry  # noqa:B018
         pass
         # TODO run cleanup code that consolidates these errors when we get a TagMessage
         # TODO use a weakset
@@ -459,7 +457,7 @@ class ErrorRoot(ClientRoot):
         path,
         *,
         comment=None,
-        data={},
+                             data={},  # noqa:B006
         force=False,
     ):
         """This exception has been fixed.
@@ -487,7 +485,7 @@ class ErrorRoot(ClientRoot):
         path,
         *,
         exc=None,
-        data={},
+        data={},  # noqa:B006
         severity=0,
         message=None,
         force: bool = False,

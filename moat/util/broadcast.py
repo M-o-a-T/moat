@@ -8,8 +8,8 @@ from weakref import WeakSet
 
 from attrs import define, field
 
-from .compat import EndOfStream, WouldBlock
 from . import NotGiven
+from .compat import EndOfStream, WouldBlock
 from .queue import Queue
 
 from typing import TYPE_CHECKING, cast
@@ -26,8 +26,8 @@ else:
     logger = logging.getLogger(__name__)
 
 __all__ = [
-    "Broadcaster",
     "BroadcastReader",
+    "Broadcaster",
     "LostData",
 ]
 

@@ -1,11 +1,11 @@
-# command line interface
+# command line interface  # noqa:D104
 from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Mapping
 
 import asyncclick as click
+
 from moat.util import (
     MsgWriter,
     P,
@@ -14,8 +14,9 @@ from moat.util import (
     yload,
     yprint,
 )
-
 from moat.util.msgpack import StdMsgpack
+
+from collections.abc import Mapping
 
 
 @load_subgroup(short_help="Local data mangling", sub_pre="dump")
@@ -69,18 +70,17 @@ async def msg_(obj, path):
     * update  data changes
     * del     nodes responsible for cleaning up deleted records
     """
-    from moat.kv.backend import get_backend
+    from moat.kv.backend import get_backend  # noqa:PLC0415
+    import moat.kv.server  # noqa:PLC0415
 
     class _Unpack:
         def __init__(self):
             self._part_cache = dict()
 
-    import moat.kv.server
-
     cfg = obj.cfg.kv
 
-    _Unpack._unpack_multiple = moat.kv.server.Server._unpack_multiple
-    _unpacker = _Unpack()._unpack_multiple
+    _Unpack._unpack_multiple = moat.kv.server.Server._unpack_multiple  # noqa:SLF001
+    _unpacker = _Unpack()._unpack_multiple  # noqa:SLF001
     unpacker = StdMsgpack().decode
 
     path = P(path)
@@ -101,7 +101,6 @@ async def msg_(obj, path):
             v = vars(msg)
             if isinstance(v.get("payload"), (bytearray, bytes)):
                 t = msg.topic
-                breakpoint()
                 v = unpacker(v["payload"])
                 v = _unpacker(v)
                 if v is None:
@@ -112,7 +111,7 @@ async def msg_(obj, path):
             else:
                 v["_type"] = type(msg).__name__
 
-            v["_timestamp"] = datetime.datetime.now().isoformat(
+            v["_timestamp"] = datetime.datetime.now(tz=datetime.UTC).isoformat(
                 sep=" ",
                 timespec="milliseconds",
             )
@@ -134,7 +133,7 @@ async def post_(obj, path):
     * update: data changes
     * del: sync: nodes responsible for cleaning up deleted records
     """
-    from moat.kv.backend import get_backend
+    from moat.kv.backend import get_backend  # noqa:PLC0415
 
     path = P(path)
     be = obj.cfg.server.backend

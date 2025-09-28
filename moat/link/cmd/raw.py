@@ -9,20 +9,17 @@ import anyio
 # pylint: disable=missing-module-docstring
 import logging
 import sys
-from functools import partial
-from pathlib import Path as FSPath
 import time
+from functools import partial
 
 import asyncclick as click
-
 from mqttproto import MQTTException
 
-from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident, PathLongener
-from moat.util.path import set_root
-from moat.util.times import ts2iso, humandelta
+from moat.util import NotGiven, P, PathLongener, gen_ident, yprint
 from moat.lib.codec import get_codec
-
 from moat.link.backend import RawMessage, get_backend
+from moat.util.path import set_root
+from moat.util.times import humandelta, ts2iso
 
 try:
     from mqttproto import MQTTPublishPacket
@@ -63,8 +60,8 @@ async def init(file):
     equivalent to running "moat kv server -i 'Initial data' <node>.
     """
     from moat.link.meta import MsgMeta
-    from moat.util.msg import MsgWriter
     from moat.util.cbor import gen_start, gen_stop
+    from moat.util.msg import MsgWriter
 
     meta = MsgMeta(origin="init")
     async with MsgWriter(path=file, codec="std-cbor") as f:
@@ -132,7 +129,7 @@ def _get_message(args):
         yield eval(message)  # pylint: disable=eval-used
 
 
-async def do_pub(client, args, cfg, codec):
+async def do_pub(client, args, cfg, codec):  # noqa: D103
     logger.info("%s Connected to broker", client.name)
     for k, v in args.items():
         if v is None or v is NotGiven:

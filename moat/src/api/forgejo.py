@@ -4,25 +4,26 @@ Rudimentary Github API.
 
 from __future__ import annotations
 
-from httpx import AsyncClient
 from contextlib import asynccontextmanager
+
+from httpx import AsyncClient
 
 from ._common import API as BaseAPI
 from ._common import CommitInfo as BaseCommitInfo
 from ._common import RepoInfo as BaseRepoInfo
 
 
-class CommitInfo(BaseCommitInfo):
+class CommitInfo(BaseCommitInfo):  # noqa: D101
     pass
 
 
-class RepoInfo(BaseRepoInfo):
+class RepoInfo(BaseRepoInfo):  # noqa: D101
     @property
-    def git(self) -> str:
+    def git(self) -> str:  # noqa: D102
         return self.data.git_url.replace("git://github.com/", "git@github.com:")
 
 
-class API(BaseAPI):
+class API(BaseAPI):  # noqa: D101
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 

@@ -4,11 +4,12 @@ Support code to connect to a TCP server.
 
 from __future__ import annotations
 
-import asyncio
 import select
 
-from moat.util.compat import AC_use, log, sleep, wait_for
+import asyncio
+
 from moat.micro.proto.stream import AIOBuf
+from moat.util.compat import AC_use, log, sleep, wait_for
 
 p = select.poll()
 

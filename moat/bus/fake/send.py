@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+"#  noqa:D100"
 from __future__ import annotations
 
 import asyncclick as click
@@ -7,7 +8,7 @@ from moatbus.message import BusMessage
 
 
 @click.command()
-@click.option("-s", "--socket", help="Socket to use", default="/tmp/moatbus")
+@click.option("-s", "--socket", help="Socket to use", default="/tmp/moatbus")  # noqa:S108
 @click.option("-b", "--bits", help="Number of bits", default=3)
 @click.option("-t", "--timeout", type=float, help="Timer A in msec", default=10)
 @click.option("-T", "--timerB", type=float, help="Timer B in msec", default=5)
@@ -16,7 +17,7 @@ from moatbus.message import BusMessage
 @click.option("-C", "--cmd", help="Command", default=0)
 @click.option("-v", "--verbose", is_flag=True, help="Be verbose")
 @click.argument("data", nargs=-1)
-async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose):
+async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose):  # noqa:D103
     async with Client(
         wires=bits,
         socket=socket,

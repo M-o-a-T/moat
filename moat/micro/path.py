@@ -19,9 +19,9 @@ import sys
 from contextlib import suppress
 from pathlib import Path
 
-from moat.lib.codec.errors import RemoteError
 from moat.util import attrdict
-from moat.util.exec import run, CalledProcessError
+from moat.lib.codec.errors import RemoteError
+from moat.util.exec import CalledProcessError, run
 
 logger = logging.getLogger(__name__)
 
@@ -188,8 +188,7 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
 
         Pattern match files on remote.
         """
-        if pattern.startswith("/"):
-            pattern = pattern[1:]  # XXX
+        pattern = pattern.removeprefix("/")  # XXX
         parts = pattern.split("/")
         # print('glob', self, pattern, parts)
         if not parts:

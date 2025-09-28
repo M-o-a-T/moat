@@ -16,14 +16,14 @@ class LongMessageError:
     pass
 
 
-class BusMessage:
+class BusMessage:  # noqa:D101
     dst: int = None
     src: int = None
 
     code: int = None
     prio: int = None
 
-    data: BitArray = None
+    _data: BitArray = None
 
     _attrs = tuple("src dst code data".split())
 
@@ -44,7 +44,8 @@ class BusMessage:
         self.prio = prio
         self._data = BitArray(data)
 
-    def decode(self, spec=None):
+    def decode(self, spec=None):  # noqa:D102
+        spec  # noqa:B018
         res = attrdict()
         if self.src == -4:
             res.src = "B"
@@ -221,7 +222,7 @@ class BusMessage:
 
     ## receiver
 
-    def start_add(self):
+    def start_add(self):  # noqa:D102
         assert self._data.length == 0
         assert self.code is None
 
@@ -301,7 +302,7 @@ class BusMessage:
         """
         return self._data.bytes
 
-    def align(self):
+    def align(self):  # noqa:D102
         n = self._data.length % 8
         if n:
             del self._data[-n:]

@@ -1,18 +1,17 @@
-from __future__ import annotations
-import os
+from __future__ import annotations  # noqa: D100
+
 import anyio
+import contextlib
 from functools import partial
 
-from anyio.abc import SocketAttribute
 from asyncowfs.mock import some_server
 
 from moat.util import ensure_cfg
 
 from .task import task
-import contextlib
 
 
-async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value
+async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value  # noqa: D103
     async with anyio.create_task_group() as tg:
         listener = await anyio.create_tcp_listener(
             local_host="127.0.0.1",

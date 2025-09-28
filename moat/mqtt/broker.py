@@ -1,14 +1,15 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
+import anyio
 import logging
 import socket
 import ssl
-from collections import deque
 from copy import deepcopy
 
-import anyio
+from collections import deque
 
 try:
     from contextlib import asynccontextmanager
@@ -28,6 +29,7 @@ from .mqtt.protocol.broker_handler import BrokerProtocolHandler
 from .plugins.manager import BaseContext, PluginManager
 from .session import EVENT_BROKER_MESSAGE_RECEIVED  # noqa: F401
 from .utils import Future, format_client_message, gen_client_id, match_topic
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -51,12 +53,12 @@ EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 
 
-class BrokerException(Exception):
+class BrokerException(Exception):  # noqa: D101
     pass
 
 
-class RetainedApplicationMessage:
-    __slots__ = ("source_session", "topic", "data", "qos")
+class RetainedApplicationMessage:  # noqa: D101
+    __slots__ = ("data", "qos", "source_session", "topic")
 
     def __init__(self, source_session, topic, data, qos=None):
         self.source_session = source_session
@@ -65,7 +67,7 @@ class RetainedApplicationMessage:
         self.qos = qos
 
 
-class Server:
+class Server:  # noqa: D101
     def __init__(self, listener_name, server_instance, max_connections=-1):
         self.logger = logging.getLogger(__name__)
         self.instance = server_instance
@@ -120,7 +122,7 @@ class Server:
                     self.conn_count,
                 )
 
-    async def close_instance(self):
+    async def close_instance(self):  # noqa: D102
         self.instance.cancel()
 
 
@@ -135,20 +137,20 @@ class BrokerContext(BaseContext):
         self._broker_instance = broker
         self.config = config
 
-    async def broadcast_message(self, topic, data, qos=None, retain=False):
+    async def broadcast_message(self, topic, data, qos=None, retain=False):  # noqa: D102
         await self._broker_instance.internal_message_broadcast(topic, data, qos, retain=retain)
 
     @property
-    def sessions(self):
+    def sessions(self):  # noqa: D102
         for session in self._broker_instance._sessions.values():
             yield session[0]
 
     @property
-    def retained_messages(self):
+    def retained_messages(self):  # noqa: D102
         return self._broker_instance._retained_messages
 
     @property
-    def subscriptions(self):
+    def subscriptions(self):  # noqa: D102
         return self._broker_instance._subscriptions
 
 
@@ -473,10 +475,10 @@ class Broker:
         await self.plugins_manager.fire_event(EVENT_BROKER_POST_SHUTDOWN)
         self.transitions.stopping_success()
 
-    async def internal_message_broadcast(self, topic, data, qos=None, retain=None):
+    async def internal_message_broadcast(self, topic, data, qos=None, retain=None):  # noqa: D102
         return await self.broadcast_message(None, topic, data, qos=qos, retain=retain)
 
-    async def ws_connected(self, conn, listener_name):
+    async def ws_connected(self, conn, listener_name):  # noqa: D102
         from asyncwebsockets import create_websocket_server
 
         async def subpro(req):
@@ -487,10 +489,10 @@ class Broker:
         websocket = await create_websocket_server(conn, filter=subpro)
         await self.client_connected(listener_name, WebSocketsAdapter(websocket))
 
-    async def stream_connected(self, conn, listener_name):
+    async def stream_connected(self, conn, listener_name):  # noqa: D102
         await self.client_connected(listener_name, StreamAdapter(conn))
 
-    async def client_connected(self, listener_name, adapter: BaseAdapter):
+    async def client_connected(self, listener_name, adapter: BaseAdapter):  # noqa: D102
         server = self._servers.get(listener_name, None)
         if not server:
             raise BrokerException("Invalid listener name '%s'" % listener_name)
@@ -498,7 +500,7 @@ class Broker:
         async with server._client_limit():
             return await self.client_connected_(listener_name, adapter)
 
-    async def client_connected_(self, listener_name, adapter: BaseAdapter):
+    async def client_connected_(self, listener_name, adapter: BaseAdapter):  # noqa: D102
         # Wait for connection available on listener
 
         remote_address, remote_port = adapter.get_peer_info()
@@ -773,7 +775,7 @@ class Broker:
         # If all plugins returned True, authentication is success
         return topic_result
 
-    def retain_message(self, source_session, topic_name, data, qos=None):
+    def retain_message(self, source_session, topic_name, data, qos=None):  # noqa: D102
         if not self._do_retain:
             raise RuntimeError("Support for retained messages is turned off")
         if data is not None and data != b"":
@@ -787,7 +789,7 @@ class Broker:
                 self.logger.debug("Retaining %s:‹deleted›", topic_name)
                 del self._retained_messages[topic_name]
 
-    async def add_subscription(self, subscription, session):
+    async def add_subscription(self, subscription, session):  # noqa: D102
         a_filter = subscription[0]
         if "#" in a_filter and not a_filter.endswith("#"):
             # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
@@ -920,7 +922,7 @@ class Broker:
                         )
                         await target_session.retained_messages.put(retained_message)
 
-    async def broadcast_message(
+    async def broadcast_message(  # noqa: D102
         self,
         session,
         topic,
@@ -941,7 +943,7 @@ class Broker:
         if retain:
             self.retain_message(session, topic, data, force_qos or qos)
 
-    async def publish_session_retained_messages(self, session):
+    async def publish_session_retained_messages(self, session):  # noqa: D102
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 "Publishing %d messages retained for session %s",
@@ -960,7 +962,7 @@ class Broker:
                     True,
                 )
 
-    async def publish_retained_messages_for_subscription(self, subscription, session):
+    async def publish_retained_messages_for_subscription(self, subscription, session):  # noqa: D102
         #       if self.logger.isEnabledFor(logging.DEBUG):
         #           self.logger.debug("Begin broadcasting messages retained due to subscription on '%s' from %s",
         #                             subscription[0], format_client_message(session=session))

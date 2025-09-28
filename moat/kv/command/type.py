@@ -1,11 +1,12 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
+import contextlib
 import json
 
 import asyncclick as click
+
 from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
-import contextlib
 
 
 @click.group()  # pylint: disable=undefined-variable
@@ -24,7 +25,7 @@ async def get(obj, path, script, schema, yaml_):
     """Read type checker information"""
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=Path("type") + path,
         iter=False,
@@ -99,7 +100,7 @@ async def set_(obj, path, good, bad, script, schema, yaml_, data):
     if not msg["bad"]:
         raise click.UsageError("Missing known-bad test values")
 
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="set_internal",
         value=msg,
         path=Path("type") + path,
@@ -124,7 +125,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
             raise click.UsageError("No options allowed when dumping the match tree..")
         y = {}
         pl = PathLongener()
-        async for r in await obj.client._request(
+        async for r in await obj.client._request(  # noqa:SLF001
             "get_tree_internal",
             path=Path("match") + path,
             iter=True,
@@ -146,7 +147,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
         raise click.UsageError("You can only print the raw path when reading a match.")
 
     if delete:
-        res = await obj.client._request(action="delete_internal", path=Path("type") + path)
+        res = await obj.client._request(action="delete_internal", path=Path("type") + path)  # noqa:SLF001
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -159,7 +160,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
         act = "delete_internal"
     else:
         act = "get_internal"
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action=act,
         value=msg,
         path=Path("match") + path,
@@ -177,12 +178,12 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
 @cli.command()
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def list(obj, path):  # pylint: disable=redefined-builtin
+async def list_(obj, path):  # pylint: disable=redefined-builtin
     """Dump type data"""
 
     y = {}
     pl = PathLongener()
-    async for r in await obj.client._request(
+    async for r in await obj.client._request(  # noqa:SLF001
         "get_tree_internal",
         path=Path("type") + path,
         iter=True,

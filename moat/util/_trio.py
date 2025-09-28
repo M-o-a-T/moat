@@ -1,11 +1,11 @@
 # Trio step monitors
 
 from __future__ import annotations
-from trio.abc import Instrument
-from trio import Cancelled
-from trio._core._instrumentation import Instruments
+
 import sys
-from outcome import Value, Error
+
+from trio._core._instrumentation import Instruments
+from trio.abc import Instrument
 
 
 class Instr(Instrument):

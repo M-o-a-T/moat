@@ -5,19 +5,19 @@ Moat-KV client data model for 1wire
 from __future__ import annotations
 
 import anyio
+import logging
 
-from moat.util import combine_dict, attrdict
-from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
+from moat.util import attrdict, combine_dict
 from moat.kv.errors import ErrorRoot
 from moat.kv.exceptions import ClientChainError
-from collections.abc import Mapping
+from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot
 
-import logging
+from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
 
-class OWFSattr(ClientEntry):
+class OWFSattr(ClientEntry):  # noqa: D101
     watch_src = None
     watch_src_attr = None
     watch_src_scope = None
@@ -29,15 +29,15 @@ class OWFSattr(ClientEntry):
     watch_dest_chain = None
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         return cls
 
     @property
-    def node(self):
+    def node(self):  # noqa: D102
         return self.parent.node
 
     @property
-    def attr(self):
+    def attr(self):  # noqa: D102
         return self.subpath[2:]  # without the device code
 
     async def set_value(self, val):  # pylint: disable=arguments-differ
@@ -47,7 +47,7 @@ class OWFSattr(ClientEntry):
         await super().set_value(val)
         await self._sync(False)
 
-    async def sync(self, force: bool):
+    async def sync(self, force: bool):  # noqa: D102
         for k in self:
             await k.sync(force)
         await self._sync(force)
@@ -197,7 +197,7 @@ class OWFSattr(ClientEntry):
                     self.watch_src_scope = None
 
 
-class OWFSnode(ClientEntry):
+class OWFSnode(ClientEntry):  # noqa: D101
     dev = None
 
     def __init__(self, *a, **k):
@@ -205,18 +205,18 @@ class OWFSnode(ClientEntry):
         self.val = {}
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         return OWFSattr
 
     @property
-    def node(self):
+    def node(self):  # noqa: D102
         return self
 
     @property
-    def family(self):
+    def family(self):  # noqa: D102
         return self._path[-2]
 
-    async def sync(self, force: bool = False):
+    async def sync(self, force: bool = False):  # noqa: D102
         for k in self:
             await k.sync(force)
 
@@ -248,54 +248,54 @@ class OWFSnode(ClientEntry):
         self.val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
 
 
-class OWFSfamily(ClientEntry):
+class OWFSfamily(ClientEntry):  # noqa: D101
     cls = OWFSnode
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         if not isinstance(name, int):
             return ClientEntry
         if name <= 0 or name > 16**12:
             return ClientEntry
         return cls.cls
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val):  # pylint: disable=arguments-differ  # noqa: D102
         await super().set_value(val)
         for c in self:
             await c._update_value()
 
 
-class ServerEntry(AttrClientEntry):
+class ServerEntry(AttrClientEntry):  # noqa: D101
     ATTRS = ("server",)
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         return ClientEntry
 
 
-class ServerRoot(ClientEntry):
+class ServerRoot(ClientEntry):  # noqa: D101
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         return ServerEntry
 
 
-class OWFSroot(ClientRoot):
+class OWFSroot(ClientRoot):  # noqa: D101
     cls = {}
     reg = {}
     CFG = "ow"
     err = None
 
-    async def run_starting(self):
+    async def run_starting(self):  # noqa: D102
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
     @property
-    def server(self):
+    def server(self):  # noqa: D102
         return self["server"]
 
     @classmethod
-    def register(cls, typ):
+    def register(cls, typ):  # noqa: D102
         def acc(kls):
             cls.reg[typ] = kls
             return kls
@@ -303,7 +303,7 @@ class OWFSroot(ClientRoot):
         return acc
 
     @classmethod
-    def child_type(kls, name):
+    def child_type(kls, name):  # noqa: D102
         if not isinstance(name, int):
             return ServerRoot
         if name < 0 or name > 255:
@@ -320,7 +320,7 @@ class OWFSroot(ClientRoot):
             return FamilyX
 
 
-class BrokenDict:
+class BrokenDict:  # noqa: D101
     def __getattr__(self, k, v=None):
         import pdb
 
@@ -329,15 +329,15 @@ class BrokenDict:
 
 
 @OWFSroot.register(0x10)
-class TempNode(OWFSnode):
+class TempNode(OWFSnode):  # noqa: D101
     CFG = BrokenDict()  # {"temperature": 30}
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         if name == "temperature":
             return OWFSattrTemp
         return OWFSattr
 
 
-class OWFSattrTemp(OWFSattr):
+class OWFSattrTemp(OWFSattr):  # noqa: D101
     pass

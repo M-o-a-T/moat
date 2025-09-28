@@ -5,28 +5,28 @@ Installation and setup.
 from __future__ import annotations
 
 import anyio
+import contextlib
 import logging
 import os
-import sys
 import shutil
+import sys
 from pprint import pformat
 
-from moat.util import merge, P
+import asyncclick as click
+
+from moat.util import P, merge
+from moat.lib.codec import get_codec
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.util import run_update
-from moat.lib.codec import get_codec
 from moat.util.compat import idle, log
-
-import asyncclick as click
-import contextlib
 
 logger = logging.getLogger(__name__)
 
 all = ["setup", "install", "do_update", "do_copy"]
 
 
-async def do_update(dst, root, cross, hfn):
+async def do_update(dst, root, cross, hfn):  # noqa: D103
     from moat.micro.path import copytree
 
     await run_update(dst / "lib", cross=cross, hash_fn=hfn)

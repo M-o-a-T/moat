@@ -7,11 +7,11 @@ from __future__ import annotations
 import io
 import logging
 import shlex
-import sys
 from contextlib import contextmanager
 
 from asyncscope import main_scope, scope
-from moat.util import OptCtx, attrdict, wrap_main, CFG  # pylint:disable=no-name-in-module
+
+from moat.util import CFG, OptCtx, attrdict, wrap_main  # pylint:disable=no-name-in-module
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
         CFG.pop("_stdout", None)
 
 
-class DidNotRaise(Exception):
+class DidNotRaise(Exception):  # noqa: D101
     pass
 
 

@@ -1,16 +1,17 @@
-# from asyncclick.testing import CliRunner
+# from asyncclick.testing import CliRunner  # noqa:D104
 from __future__ import annotations
+
 import logging
 import socket
 
 import attr
 from asyncscope import scope
+
 from moat.util import (  # pylint:disable=no-name-in-module
     CFG,
     combine_dict,
     ensure_cfg,
 )
-
 from moat.kv.client import _scoped_client
 
 logger = logging.getLogger(__name__)
@@ -23,14 +24,14 @@ ensure_cfg("moat.kv")
 
 
 @attr.s
-class S:
+class S:  # noqa:D101
     tg = attr.ib()
     client_ctx = attr.ib()
     s = attr.ib(factory=list)  # servers
     c = attr.ib(factory=list)  # clients
     _seq = 1
 
-    async def ready(self, i=None):
+    async def ready(self, i=None):  # noqa:D102
         if i is not None:
             await self.s[i].is_ready
             return self.s[i]
@@ -57,7 +58,7 @@ class S:
                 )
 
                 async def scc(s, **cfg):
-                    scope.requires(s._scope)
+                    scope.requires(s._scope)  # noqa:SLF001
                     return await _scoped_client(scope.name, **cfg)
 
                 async with scope.using_scope():
@@ -73,8 +74,8 @@ class S:
                 pass
         raise RuntimeError("Duh? no connection")
 
-    async def run(self, *args, do_stdout=True):
-        from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module
+    async def run(self, *args, do_stdout=True):  # noqa:D102
+        from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module # noqa:PLC0415
 
         h = p = None
         for s in self.s:

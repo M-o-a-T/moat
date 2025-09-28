@@ -12,7 +12,7 @@ from moat.micro.rtc import state as rtc_state
 from moat.util.compat import (
     Event,
     TaskGroup,
-    TimeoutError,
+    TimeoutError,  # noqa:A004
     log,
     sleep_ms,
     ticks_diff,
@@ -655,7 +655,7 @@ class BaseBalancer(BaseCmd):
 
     doc_u = dict(_d="V limits", h="float:max", l="float:min")
 
-    async def cmd_u(self, h: float | None = None, l: float | None = None):
+    async def cmd_u(self, h: float | None = None, l: float | None = None):  # noqa:E741
         "set desired voltage levels"
         if h is not None:
             self.uh = min(self.dis_max, max(self.dis_min, h))

@@ -1,15 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
+import anyio
 import copy
 import logging
 import ssl
 from functools import wraps
 from urllib.parse import urlparse, urlunparse
-
-import anyio
 
 try:
     from contextlib import asynccontextmanager
@@ -17,8 +16,11 @@ except ImportError:
     from async_generator import asynccontextmanager
 
 from asyncwebsockets import create_websocket
-from moat.util import create_queue, NotGiven
 from wsproto.utilities import ProtocolError
+
+from moat.util import NotGiven, create_queue
+from moat.lib.codec import Codec
+from moat.lib.codec import get_codec as _get_codec
 
 from .adapters import StreamAdapter, WebSocketsAdapter
 from .errors import NoDataException
@@ -29,7 +31,6 @@ from .mqtt.protocol.handler import ProtocolHandlerException
 from .plugins.manager import BaseContext, PluginManager
 from .session import Session
 from .utils import match_topic
-from moat.lib.codec import Codec, get_codec as _get_codec
 
 _defaults = {
     "keep_alive": 10,
@@ -45,7 +46,7 @@ _defaults = {
 QSIZE = 100
 
 
-def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value
+def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value  # noqa: D103
     if codec is NotGiven:
         codec = fallback
     if codec is NotGiven:
@@ -73,11 +74,11 @@ class _set(set):
     qos = None
 
 
-class ClientException(Exception):
+class ClientException(Exception):  # noqa: D101
     pass
 
 
-class ConnectException(ClientException):
+class ConnectException(ClientException):  # noqa: D101
     def __init__(self, text=None, return_code=CLIENT_ERROR):
         if text is None:
             text = self.__class__.__name__
@@ -87,7 +88,7 @@ class ConnectException(ClientException):
     pass
 
 
-class CodecError(ClientException):
+class CodecError(ClientException):  # noqa: D101
     def __init__(self, msg):
         self.msg = msg
 
@@ -750,7 +751,7 @@ class MQTTClient:
                     await adapter.close()
             raise
 
-    async def handle_connection_close(self, evt):
+    async def handle_connection_close(self, evt):  # noqa: D102
         def cancel_tasks():
             self._no_more_connections.set()
             if self.client_task:

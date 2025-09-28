@@ -5,17 +5,16 @@ Data access
 from __future__ import annotations
 
 import anyio
-import datetime
 import os
 import sys
 import time
-from collections.abc import Mapping
 
-from .node import Node
-from .meta import MsgMeta
-from moat.util import NotGiven, Path, attrdict, process_args, yprint, PathLongener
+from moat.util import NotGiven, Path, PathLongener, attrdict, process_args, yprint
 from moat.util.times import ts2iso
-import contextlib
+
+from .meta import MsgMeta
+
+from collections.abc import Mapping
 
 
 def add_dates(d):

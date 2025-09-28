@@ -1,16 +1,16 @@
 # command line interface
 from __future__ import annotations
 
+import logging
+
 import asyncclick as click
 from asyncakumuli import DS
 
-from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
-from moat.kv.data import node_attr, data_get
+from moat.util import NotGiven, P, as_service, attr_args, attrdict, yprint
+from moat.kv.data import data_get, node_attr
 from moat.kv.obj.command import std_command
 
 from .model import AkumuliRoot
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ cli = std_command(
 async def dump_(obj, one_line):
     """Emit a server's (sub)state as a list / YAML file."""
     if not one_line:
-        await data_get(obj.client, obj.server._path, recursive=True, out=obj.stdout)
+        await data_get(obj.client, obj.server._path, recursive=True, out=obj.stdout)  # noqa:SLF001
         return
     for n in obj.server.all_children:
         if n is obj.server:
@@ -58,7 +58,7 @@ async def at_cli(ctx, path):
     obj.subpath = path
     obj.node = obj.server.follow(path)
     if ctx.invoked_subcommand is None:
-        await data_get(obj.client, obj.server._path + obj.subpath, recursive=False, out=obj.stdout)
+        await data_get(obj.client, obj.server._path + obj.subpath, recursive=False, out=obj.stdout)  # noqa:SLF001
 
 
 @at_cli.command("--help", hidden=True)
@@ -73,7 +73,7 @@ def help(ctx):
 async def dump_at(obj, one_line):
     """Emit a subtree as a list / YAML file."""
     if one_line:
-        await data_get(obj.client, obj.server._path + obj.subpath, recursive=True, out=obj.stdout)
+        await data_get(obj.client, obj.server._path + obj.subpath, recursive=True, out=obj.stdout)  # noqa:SLF001
         return
     for n in obj.node.all_children:
         print(n, file=obj.stdout)
@@ -123,15 +123,15 @@ async def add_(obj, source, mode, attr, series, tags, force):
     try:
         res = (await obj.client.get(source)).value
         if attr:
-            res = attrdict._get(res, attr)
+            res = attrdict._get(res, attr)  # noqa:SLF001
         if not isinstance(res, (int, float)):
-            raise ValueError(res)
+            raise TypeError(res)
     except (AttributeError, KeyError):
         raise click.UsageError(f"The value at {source} does not exist.") from None
-    except ValueError:
+    except TypeError:
         raise click.UsageError(f"The value at {source} is not a number.") from None
 
-    res = await obj.client.set(obj.server._path + obj.subpath, val)
+    res = await obj.client.set(obj.server._path + obj.subpath, val)  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -147,7 +147,7 @@ async def delete_(obj):
     The data set is not physically deleted (with Akumuli that's
     impossible), but no new copying will happen.
     """
-    res = await obj.client.delete(obj.server._path + obj.subpath, nchain=obj.meta or 1)
+    res = await obj.client.delete(obj.server._path + obj.subpath, nchain=obj.meta or 1)  # noqa:SLF001
     if not res.chain:
         raise click.UsageError("This entry doesn't exist.")
     if obj.meta:
@@ -159,10 +159,10 @@ async def delete_(obj):
 @click.pass_obj
 async def attr_(obj, **kw):
     """Modify a given akumuli series (copier)."""
-    if not vars_ and not eval_ and not path_:
+    if all(x not in kw for x in "vars_ eval_ path_".split):
         return
 
-    res = await node_attr(obj, obj.server._path + obj.subpath, **kw)
+    res = await node_attr(obj, obj.server._path + obj.subpath, **kw)  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -172,8 +172,8 @@ async def attr_(obj, **kw):
 @click.argument("paths", nargs=-1, type=P)
 async def monitor(obj, paths):
     """Stand-alone task to monitor a single Akumuli tree"""
-    from .task import task
-    from .model import AkumuliRoot
+    from .model import AkumuliRoot  # noqa:PLC0415
+    from .task import task  # noqa:PLC0415
 
     server = await AkumuliRoot.as_handler(obj.client)
     await server.wait_loaded()
@@ -182,7 +182,7 @@ async def monitor(obj, paths):
         await task(
             obj.client,
             obj.cfg.kv.akumuli,
-            server[obj.server._name],
+            server[obj.server._name],  # noqa:SLF001
             evt=srv,
             paths=paths,
         )

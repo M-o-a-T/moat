@@ -1,10 +1,10 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-from datetime import datetime
 
 import anyio
+from datetime import datetime
 
 from moat.mqtt.codecs import int_to_bytes_str
 from moat.mqtt.mqtt.packet import PUBLISH
@@ -22,7 +22,7 @@ STAT_CLIENTS_CONNECTED = "clients_connected"
 STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
-class BrokerSysPlugin:
+class BrokerSysPlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
         # Broker statistics initialization
@@ -49,10 +49,10 @@ class BrokerSysPlugin:
     async def _broadcast_sys_topic(self, topic_basename, data):
         return await self.context.broadcast_message(topic_basename, data)
 
-    async def on_broker_pre_start(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_broker_pre_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self._clear_stats()
 
-    async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self._stats[STAT_START_TIME] = datetime.now()
         from moat.mqtt.version import get_version
 
@@ -84,12 +84,12 @@ class BrokerSysPlugin:
             pass
             # 'sys_internal' config parameter not found
 
-    async def on_broker_pre_stop(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_broker_pre_stop(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         # Stop $SYS topics broadcasting
         if self.sys_handle:
             await self.sys_handle.cancel()
 
-    async def broadcast_dollar_sys_topics_loop(self, interval, evt):
+    async def broadcast_dollar_sys_topics_loop(self, interval, evt):  # noqa: D102
         with anyio.CancelScope() as scope:
             self.sys_handle = scope
             await evt.set()
@@ -179,7 +179,7 @@ class BrokerSysPlugin:
             int_to_bytes_str(subscriptions_count),
         )
 
-    async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -188,7 +188,7 @@ class BrokerSysPlugin:
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_RECEIVED] += 1
 
-    async def on_mqtt_packet_sent(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_mqtt_packet_sent(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -197,13 +197,13 @@ class BrokerSysPlugin:
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_broker_client_connected(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
             self._stats[STAT_CLIENTS_MAXIMUM],
             self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_broker_client_disconnected(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

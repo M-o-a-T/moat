@@ -4,21 +4,18 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from functools import partial
 
-from moat.util import Path, import_, P
-from moat.micro.cmd.base import ACM_h, BaseCmd
-from moat.lib.cmd.errors import ShortCommandError
-from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
-from moat.lib.codec.errors import NoPathError
+from moat.util import Path, import_
 from moat.lib.cmd.base import MsgSender
+from moat.lib.cmd.errors import ShortCommandError
+from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager
     from collections.abc import Awaitable
 
 

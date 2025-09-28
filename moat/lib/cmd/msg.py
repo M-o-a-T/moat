@@ -4,45 +4,51 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.lib.codec.errors import SilentRemoteError
-from moat.util.compat import log, Event, Queue, ACM, AC_exit, is_async, shield
-from moat.util import Path, P, ExpectedError
-from moat.util import outcome
-from .base import MsgLink
-from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
-from .const import S_NEW, S_END, S_ON, S_OFF
-from .const import E_NO_STREAM, E_CANCEL, E_SKIP
-from .const import B_STREAM, B_ERROR
-from .errors import StreamError, Flow, NoStream, WantsStream
-from inspect import iscoroutine
 
-from typing import TYPE_CHECKING, overload, cast
+from moat.util import ExpectedError, P, Path, outcome
+from moat.lib.codec.errors import SilentRemoteError
+from moat.util.compat import Event, Queue, is_async, log, shield
+
+from .base import MsgLink
+from .const import (
+    B_ERROR,
+    B_STREAM,
+    E_CANCEL,
+    E_NO_STREAM,
+    E_SKIP,
+    S_END,
+    S_NEW,
+    S_OFF,
+    S_ON,
+    SD_BOTH,
+    SD_IN,
+    SD_NONE,
+    SD_OUT,
+)
+from .errors import Flow, NoStream, StreamError, WantsStream
+
+from typing import TYPE_CHECKING, cast
 
 try:
-    from typing import Iterable
+    from collections.abc import Iterable
 except ImportError:
     Iterable = object
 
 try:
-    from collections.abc import MutableSequence, MutableMapping
+    from collections.abc import MutableMapping, MutableSequence
 except ImportError:
     MutableSequence = list  # pyright:ignore
     MutableMapping = dict  # pyright:ignore
 
 if TYPE_CHECKING:
-    from typing import (
-        Self,
-        Iterator,
-        Any,
-        Callable,
-        AsyncContextManager,
-        Sequence,
-        KeysView,
-        ValuesView,
-        ItemsView,
-        MutableSequence,
-    )
     from .base import OptDict
+
+    from typing import (
+        Any,
+        AsyncContextManager,
+        Self,
+    )
+    from collections.abc import Callable, ItemsView, Iterator, KeysView, MutableSequence, Sequence, ValuesView
 
 
 try:
@@ -50,14 +56,14 @@ try:
 except ImportError:
     from moat.util.compat import print_exc
 
-    def log_exc(e, s, *a):
+    def log_exc(e, s, *a):  # noqa: D103
         log(s + ": %r", *a, e)
         print_exc(e)
 
 else:
     logger = logging.getLogger(__name__)
 
-    def log_exc(e, s, *a):
+    def log_exc(e, s, *a):  # noqa: D103
         logger.error(s, *a, exc_info=e)
 
 
@@ -222,7 +228,7 @@ class Msg(MsgLink, MsgResult):
         return s
 
     @property
-    def remote(self) -> MsgLink:
+    def remote(self) -> MsgLink:  # noqa: D102
         return self._remote
 
     def replace_with(self, link: MsgLink) -> None:
@@ -332,7 +338,7 @@ class Msg(MsgLink, MsgResult):
 
         await self._ended()
 
-    async def send(self, *a, **kw) -> None:
+    async def send(self, *a, **kw) -> None:  # noqa: D102
         if not self._dir & SD_OUT:
             raise RuntimeError("This stream is read only")
         if self._stream_out != S_ON:
@@ -340,10 +346,10 @@ class Msg(MsgLink, MsgResult):
         await self._skipped()
         await self.ml_send(a, kw, B_STREAM)
 
-    async def warn(self, *a, **kw) -> None:
+    async def warn(self, *a, **kw) -> None:  # noqa: D102
         await self.ml_send(a, kw, B_STREAM | B_ERROR)
 
-    async def error(self, *a, **kw) -> None:
+    async def error(self, *a, **kw) -> None:  # noqa: D102
         await self.ml_send(a, kw, B_ERROR)
 
     def _set_msg(self, a: Sequence, kw: OptDict | None, flags: int) -> None:

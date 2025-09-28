@@ -4,8 +4,9 @@ RTC support for main
 
 from __future__ import annotations
 
-import machine
 import sys
+
+import machine
 
 cfg = {}
 
@@ -18,6 +19,13 @@ except AttributeError:
 
 
 def at(*a, **kw):
+    """
+    Setter for debugging.
+
+    Usage: call ``at("something", or_other=42)`` at various places in your
+    code. After a crash the data from the last such call will be available
+    by calling ``get_rtc("debug")``.
+    """
     set_rtc("debug", (a, kw), fs=False)
 
 
@@ -30,7 +38,7 @@ def set_rtc(attr, value=None, fs=None):
             if mem() != b"":
                 print("Memory decode problem:", mem(), repr(exc), file=sys.stderr)
             s = {}
-        if s.get(attr, None) == value:
+        if s.get(attr) == value:
             return
         if value is Ellipsis:
             if attr in s:
@@ -61,7 +69,7 @@ def get_rtc(attr, fs=None, default=None):
         try:
             s = eval(mem().split(b"\0")[0].decode("utf-8"))
             return s[attr]
-        except Exception:
+        except Exception:  # noqa:S110
             pass
     if fs is not False:
         try:

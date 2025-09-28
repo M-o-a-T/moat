@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import logging
 
-log = logging.getLogger(__name__)
-
 from . import (
     BaseClientAuth,
     BaseClientAuthMaker,
@@ -19,10 +17,13 @@ from . import (
     null_client_login,
     null_server_login,
 )
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.kv.client import Client
+
+log = logging.getLogger(__name__)
 
 
 def load(typ: str, *, make: bool = False, server: bool):
@@ -55,7 +56,7 @@ class ServerUserMaker(BaseServerAuthMaker):
     # Overly-complicated methods of exchanging the user name
 
     @classmethod
-    async def recv(cls, cmd, data):
+    async def recv(cls, cmd, data):  # noqa:ARG003
         await cmd.send(step="GiveName")
         msg = await cmd.recv()
         assert msg.step == "HasName"
@@ -107,7 +108,7 @@ class ClientUserMaker(BaseClientAuthMaker):
     @classmethod
     async def recv(cls, client: Client, ident: str, _kind: str = "user", _initial=True):
         """Read a record representing a user from the server."""
-        async with client._stream(
+        async with client._stream(  # noqa:SLF001
             action="auth_get",
             typ=cls._auth_method,
             kind=_kind,
@@ -128,9 +129,9 @@ class ClientUserMaker(BaseClientAuthMaker):
 
     async def send(self, client: Client, _kind="user"):
         """Send a record representing this user to the server."""
-        async with client._stream(
+        async with client._stream(  # noqa:SLF001
             action="auth_set",
-            typ=type(self)._auth_method,
+            typ=type(self)._auth_method,  # noqa:SLF001
             kind=_kind,
             ident=self.ident,
             stream=True,

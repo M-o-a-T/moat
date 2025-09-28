@@ -7,19 +7,20 @@ from __future__ import annotations
 import time
 from base64 import b85decode, b85encode
 
-from attrs import define, field
 import ruyaml as yaml
+from attrs import define, field
 
-from moat.lib.codec.proxy import as_proxy
 from moat.util import NotGiven
+from moat.lib.codec.proxy import as_proxy
 from moat.util.cbor import StdCBOR
 from moat.util.times import ts2iso
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Self, Literal
     from types import EllipsisType
+
+    from typing import Any, Self
 
 _codec = StdCBOR()
 
@@ -96,7 +97,7 @@ class MsgMeta:
         """
         Emit this as an array, ready for sending.
         """
-        if self.kw or self.a and isinstance(self.a[-1], dict):
+        if self.kw or (self.a and isinstance(self.a[-1], dict)):
             return self.a + [self.kw]
         return self.a
 
@@ -111,7 +112,7 @@ class MsgMeta:
         return kw
 
     @classmethod
-    def restore(cls, a, kw=NotGiven):
+    def restore(cls, a, kw=NotGiven):  # noqa: D102
         m = object.__new__(cls)
         if kw is NotGiven:
             if a and isinstance(a[-1], dict):
@@ -274,8 +275,8 @@ class MsgMeta:
             ddec.append(d)
             encoded = next_enc
 
-        res._unmap(ddec)  # noqa:SLF001
-        res._clean(name)  # noqa:SLF001
+        res._unmap(ddec)
+        res._clean(name)
         return res
 
 

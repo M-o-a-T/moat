@@ -4,9 +4,8 @@ Adaptor for MicroPython streams.
 
 from __future__ import annotations
 
-from moat.util.compat import TimeoutError, wait_for_ms, _rdq, _wrq
-
 from moat.micro.proto.stack import BaseBuf
+from moat.util.compat import TimeoutError, _rdq, _wrq, wait_for_ms
 
 
 class FileBuf(BaseBuf):
@@ -46,7 +45,7 @@ class FileBuf(BaseBuf):
         "forwards to ``.read(into)``"
         n = 0
         m = memoryview(buf)
-        while len(m):
+        while m:
             if n == 0 or self.timeout is None:
                 await _rdq(self.rs)
             else:
@@ -65,7 +64,7 @@ class FileBuf(BaseBuf):
         "forwards to ``.write``, handles short writes"
         buf = memoryview(buf)
         t = len(buf)
-        while len(buf):
+        while buf:
             if not self.force_write:  # XXX *sigh*
                 await _wrq(self.ws)
             n = self.ws.write(buf)

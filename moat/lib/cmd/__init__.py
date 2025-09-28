@@ -9,4 +9,4 @@ from .errors import *  # noqa: F403
 from typing import TYPE_CHECKING as _TC
 
 if _TC:
-    from .base import Key, OptDict
+    from .base import Key as Key, OptDict as OptDict

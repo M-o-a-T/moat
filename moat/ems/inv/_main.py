@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Main code for inverter control
 """
@@ -33,15 +31,15 @@ Modes:
 for _i, _c in InvControl.MODES.items():
     # pylint:disable=protected-access
     _modes += "\b\n"
-    _modes += f"{_c._name:<15s} {_c.__doc__}\n\n\b\n"
+    _modes += f"{_c._name:<15s} {_c.__doc__}\n\n\b\n"  # noqa:SLF001
     _modes += (
         "   "
-        + _c._doc["_l"].replace("\n", "\n   ").replace("\n   \n", "\n\n\b\n").rstrip(" ")
+        + _c._doc["_l"].replace("\n", "\n   ").replace("\n   \n", "\n\n\b\n").rstrip(" ")  # noqa:SLF001
         + "\n\b\n"
     )
-    if len(_c._doc) > 1:
+    if len(_c._doc) > 1:  # noqa:SLF001
         _modes += "   Operational Variables:\n"
-    for _k, _v in _c._doc.items():
+    for _k, _v in _c._doc.items():  # noqa:SLF001
         if _k[0] == "_":
             continue
         _modes += f"   {_k:<15s} {_v.strip()}\n"
@@ -92,8 +90,7 @@ async def cli(debug, mode, no_op, param, config):
     op["fake"] = no_op
 
     for k, v in param:
-        v = float(v)
-        op[k] = v
+        op[k] = float(v)
 
     async with MessageBus(bus_type=BusType.SYSTEM).connect() as bus, InvControl(bus, cfg) as inv:
         await inv.run(mode)

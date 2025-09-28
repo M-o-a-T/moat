@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 
 @pytest.mark.anyio
-async def test_context():
+async def test_context():  # noqa: D103
     class Ctx(ContextMgr):
         i = 0
 
@@ -41,7 +41,7 @@ async def test_context():
 
 
 @pytest.mark.anyio
-async def test_context_timeout():
+async def test_context_timeout():  # noqa: D103
     class Ctx(ContextMgr):
         timeout = False
 
@@ -72,7 +72,7 @@ async def test_context_timeout():
         except TimeoutError as exc:
             await ctx.stop(exc)
         else:
-            assert False, "timeout not raised"
+            raise AssertionError("timeout not raised")
         assert ctx.ctx is None
         assert ctx.timeout
 
@@ -80,7 +80,7 @@ async def test_context_timeout():
 
 
 @pytest.mark.anyio
-async def test_context_as():
+async def test_context_as():  # noqa: D103
     v = ContextVar("v")
     with ctx_as(v, "yes"):
         assert v.get() == "yes"

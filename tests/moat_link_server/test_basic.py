@@ -1,9 +1,8 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
 import time
-import sys
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
@@ -20,8 +19,8 @@ async def _dump(sf, *, task_status):
             print(msg)
 
 
-@pytest.mark.anyio()
-async def test_ls_basic(cfg):
+@pytest.mark.anyio
+async def test_ls_basic(cfg):  # noqa: D103
     evt = anyio.Event()
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)
@@ -73,7 +72,7 @@ async def test_ls_basic(cfg):
             await evt.wait()
 
 
-async def data(s):
+async def data(s):  # noqa: D103
     await s("a.b.e", 10)
     await s("a.b.f", 11)
     await s("a.b.g.h", 12)
@@ -85,7 +84,7 @@ async def data(s):
     await s("a.b.d", 17)
 
 
-async def fetch(c, p):
+async def fetch(c, p):  # noqa: D103
     p = P(p)
     nn = Node()
     pl = PathLongener()
@@ -106,8 +105,8 @@ async def fetch(c, p):
         return nn
 
 
-@pytest.mark.anyio()
-async def test_ls_walk(cfg):
+@pytest.mark.anyio
+async def test_ls_walk(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
@@ -127,8 +126,8 @@ async def test_ls_walk(cfg):
         assert n.get(P("a")) != nn
 
 
-@pytest.mark.anyio()
-async def test_ls_save(cfg, tmp_path):
+@pytest.mark.anyio
+async def test_ls_save(cfg, tmp_path):  # noqa: D103
     fname = tmp_path / "test.moat"
 
     n = Node()
@@ -161,8 +160,8 @@ async def test_ls_save(cfg, tmp_path):
         assert nn == nnn
 
 
-@pytest.mark.anyio()
-async def test_walk(cfg):
+@pytest.mark.anyio
+async def test_walk(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()

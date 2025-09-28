@@ -5,14 +5,16 @@ import anyio
 try:
     from collections.abc import MutableMapping
 except ImportError:
-    from collections import MutableMapping
+    from collections.abc import MutableMapping
 
 # ==== Centralized type aliases ====
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from typing import Hashable, Optional, Union, Protocol
     from abc import abstractmethod
+
+    from typing import Optional, Protocol, Union
+    from collections.abc import Hashable
 
     class Comparable(Protocol):
         """Protocol for annotating comparable types."""

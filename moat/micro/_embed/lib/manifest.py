@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 # package("app/bms", opt=0)
 # package("moat/ems/battery", opt=0)

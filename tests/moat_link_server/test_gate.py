@@ -1,31 +1,26 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
 import time
-import sys
 from functools import partial
 from contextlib import AsyncExitStack
-import mock
+from unittest import mock
 import trio
 import copy
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
-from moat.link.node import Node
-from moat.link.client import Link
 from moat.link.gate import run_gate
 from moat.link._data import data_get, backend_get
-from moat.util import P, PathLongener, NotGiven, ungroup, yprint, combine_dict, CFG, ensure_cfg
-from moat.lib.cmd import StreamError
-from moat.lib.cmd.base import MsgSender
+from moat.util import P, combine_dict, CFG, ensure_cfg
 from moat.lib.codec import get_codec
 from moat.kv.server import Server as KVServer
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
 
 
-async def mon(c, *, task_status):
+async def mon(c, *, task_status):  # noqa: D103
     async with c.monitor(P(":"), codec="std-cbor", subtree=True, raw=True) as mo:
         task_status.started()
         c1 = get_codec("std-cbor")
@@ -51,8 +46,8 @@ async def mon(c, *, task_status):
             print("***** raw ", msg.topic, msg.data, msg.meta)
 
 
-@pytest.mark.anyio()
-async def test_gate_mqtt(cfg):
+@pytest.mark.anyio
+async def test_gate_mqtt(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         # await sf.tg.start(_dump, sf)
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -131,15 +126,15 @@ async def test_gate_mqtt(cfg):
 otm = time.time
 
 
-def tm():
+def tm():  # noqa: D103
     try:
         return trio.current_time()
     except RuntimeError:
         return otm()
 
 
-@pytest.mark.trio()
-async def test_gate_kv(cfg, autojump_clock):
+@pytest.mark.trio
+async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
     autojump_clock.autojump_threshold = 0.4
     async with AsyncExitStack() as ex:
         ex.enter_context(mock.patch("time.time", new=tm))
@@ -266,8 +261,8 @@ async def test_gate_kv(cfg, autojump_clock):
         )
 
 
-@pytest.mark.anyio()
-async def test_gate_codec(cfg):
+@pytest.mark.anyio
+async def test_gate_codec(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         # await sf.tg.start(_dump, sf)
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -362,7 +357,7 @@ async def test_gate_codec(cfg):
 otm = time.time
 
 
-def tm():
+def tm():  # noqa: D103
     try:
         return trio.current_time()
     except RuntimeError:

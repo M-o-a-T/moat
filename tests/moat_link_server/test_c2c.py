@@ -1,16 +1,11 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
-import time
-import sys
 
-from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
-from moat.link.node import Node
 from moat.link.client import Link
-from moat.util import P, PathLongener, NotGiven, ungroup
-from moat.lib.cmd import StreamError
+from moat.util import P
 from moat.lib.cmd.base import MsgSender
 
 
@@ -22,19 +17,19 @@ async def _dump(sf, *, task_status):
             print(msg)
 
 
-class Supi(Link):
-    async def cmd_supi(self):
+class Supi(Link):  # noqa: D101
+    async def cmd_supi(self):  # noqa: D102
         return "Yes"
 
-    async def stream_supa(self, msg):
+    async def stream_supa(self, msg):  # noqa: D102
         async with msg.stream_out() as s:
             await s.send(1)
             await s.send(2)
             await s.send(3)
 
 
-@pytest.mark.anyio()
-async def test_c2c_basic(cfg):
+@pytest.mark.anyio
+async def test_c2c_basic(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -60,9 +55,9 @@ async def test_c2c_basic(cfg):
         assert nn == [1, 2, 3]
 
 
-@pytest.mark.anyio()
-@pytest.mark.xfail()
-async def test_c2c_relay(cfg):
+@pytest.mark.anyio
+@pytest.mark.xfail
+async def test_c2c_relay(cfg):  # noqa: D103
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.tg.start(_dump, sf)
         s1, _d1 = await sf.server(init={"Hello": "there!", "test": 123})

@@ -11,13 +11,13 @@ try:
 except ImportError:
     from anyio.exceptions import ClosedResourceError
 
-from moat.util import PathLongener, NotGiven
-from moat.kv.obj import ClientEntry, ClientRoot
+import logging
+
+import moat.lib.gpio as gpio
+from moat.util import NotGiven, PathLongener
 from moat.kv.errors import ErrorRoot
 from moat.kv.exceptions import ServerError
-import moat.lib.gpio as gpio
-
-import logging
+from moat.kv.obj import ClientEntry, ClientRoot
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class _GPIObase(ClientEntry):
             return
         await self.setup()
         for k in self:
-            await k._update_chip()
+            await k._update_chip()  # noqa:SLF001
 
     async def setup(self):
         pass
@@ -104,7 +104,7 @@ class GPIOline(_GPIOnode):
         super().__init__(*a, **k)
         self.logger = logging.getLogger(".".join(("gpio", self._path[-2], str(self._path[-1]))))
 
-    async def set_value(self, value):  # pylint: disable=arguments-differ
+    async def set_value(self, value):  # pylint: disable=arguments-differ # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             await self._kill_task()
@@ -116,7 +116,7 @@ class GPIOline(_GPIOnode):
             self._task_scope = None
             self._task_done = None
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         if self.chip is None:
             return
@@ -225,7 +225,7 @@ class GPIOline(_GPIOnode):
 
                 def ts(a):
                     a = a.timestamp
-                    return "%03d.%05d" % (a[0] % 1000, a[1] / 10000)
+                    return f"{a[0] % 1000 :03d}.{a[1] / 10000 :05d}"
 
                 def inv(x):
                     nonlocal negate
@@ -540,7 +540,7 @@ class GPIOline(_GPIOnode):
 
                         if val in (False, True, 0, 1):
                             val = bool(val)
-                            if False and old_val is val:  # it's a command
+                            if False and old_val is val:  # it's a command  # noqa:SIM223
                                 continue
                             old_val = val
                             try:
@@ -566,7 +566,7 @@ class GPIOline(_GPIOnode):
                             await self.root.err.record_error(
                                 "gpio",
                                 self.subpath,
-                                comment="Bad value: %r" % (val,),
+                                comment=f"Bad value: {val !r}",
                             )
 
     async def _set_value(self, line, value, state, negate):
@@ -768,50 +768,50 @@ class GPIOline(_GPIOnode):
         await evt.wait()
 
 
-class GPIOchip(_GPIObase):
+class GPIOchip(_GPIObase):  # noqa:D101
     _chip = None
 
     @property
-    def chip(self):
+    def chip(self):  # noqa:D102
         return self._chip
 
     @property
-    def name(self):
+    def name(self):  # noqa:D102
         return self._path[-1]
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102
         if not isinstance(name, int):
             return None
         return GPIOline
 
-    async def update_chip(self):
+    async def update_chip(self):  # noqa:D102
         await self._update_chip()
 
-    async def set_chip(self, chip):
+    async def set_chip(self, chip):  # noqa:D102
         self._chip = chip
         await self._update_chip()
 
-    async def set_value(self, val):
+    async def set_value(self, val):  # noqa:D102
         await super().set_value(val)
         await self.update_chip()
 
 
-class GPIOhost(ClientEntry):
-    def child_type(self, name):
+class GPIOhost(ClientEntry):  # noqa:D101
+    def child_type(self, name):  # noqa:D102,ARG002
         return GPIOchip
 
 
-class GPIOroot(ClientRoot):
+class GPIOroot(ClientRoot):  # noqa:D101
     CFG = "gpio"
     err = None
     _chip = None
 
-    async def run_starting(self):
+    async def run_starting(self):  # noqa:D102
         self._chip = None
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
-    def child_type(self, name):
+    def child_type(self, name):  # noqa:D102,ARG002
         return GPIOhost

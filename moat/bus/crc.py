@@ -95,42 +95,43 @@ class _CRC(metaclass=_CRCmeta):
         return self.crc
 
 
-class CRC6(_CRC):
+class CRC6(_CRC):  # noqa:D101
     _poly = 0x2C
     _width = 6
 
 
-class CRC8(_CRC):
+class CRC8(_CRC):  # noqa:D101
     _poly = 0xA6
     _width = 8
 
 
-class CRC11(_CRC):
+class CRC11(_CRC):  # noqa:D101
     _poly = 0x583  # 0x64d # 0x571
     _width = 11
 
 
-class CRC16(_CRC):
+class CRC16(_CRC):  # noqa:D101
     _poly = 0xAC9A  # 0xBAAD
     _width = 16
     _depth = 8
 
 
-class CRC32(_CRC):
+class CRC32(_CRC):  # noqa:D101
     _poly = 0xEDB88320
     _width = 32
     _depth = 8
 
 
-class CRC32n(CRC32):
+class CRC32n(CRC32):  # noqa:D101
     _depth = 4
 
 
 if __name__ == "__main__":
     import re
+
     import click
 
-    def h_int(x):
+    def h_int(x):  # noqa:D103
         return int(x, 16)
 
     @click.command(
@@ -156,7 +157,7 @@ we reverse it for you.
         help="set parameters to MoaT standard for CRC8/11/16",
     )
     @click.argument("sample", nargs=-1)
-    def main(bits, depth, poly, t_c, t_p, sample, hexsample, std):
+    def main(bits, depth, poly, t_c, t_p, sample, hexsample, std):  # noqa:D103
         def pbd(p, b, d):
             nonlocal poly, bits, depth
             poly = poly or p
@@ -203,13 +204,13 @@ we reverse it for you.
 
         if t_p:
             print(f"uint{b}_t crc{bits}_{poly:0{lx}x}_{depth} = [")
-            for i, v in enumerate(C._table):
+            for i, v in enumerate(C._table):  # noqa:SLF001
                 print(f"0x{v:0{lx}x},", end=" " if (i + 1) % loglen else "\n")
             print("];")
 
         if t_c:
             print(f"uint{b}_t crc{bits}_{poly:0{lx}x}_{depth}[] = {{")
-            for i, v in enumerate(C._table):
+            for i, v in enumerate(C._table):  # noqa:SLF001
                 print(f"0x{v:0{lx}x},", end=" " if (i + 1) % loglen else "\n")
             print("};")
 
@@ -224,8 +225,7 @@ we reverse it for you.
                         for c in re.split("(..)", samp):
                             if c == "":
                                 continue
-                            c = int(c, 16)
-                            C.update_n(c, 8)
+                            C.update_n(int(c, 16), 8)
                 else:
                     for c in samp.encode("utf-8"):
                         C.update_n(c, 8)

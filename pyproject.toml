@@ -101,6 +101,7 @@ select = ["ALL"]
 ignore = [
     "A003",
     "ANN",
+    "ASYNC109",
     "B008", "B028",
     "BLE001",
     "C",
@@ -123,15 +124,23 @@ ignore = [
     "PTH",
     "RET50",
     "RUF001", "RUF002", "RUF003", "RUF005", "RUF012",
-    "S101", "S307", "S610",
-    "SIM103", "SIM108",
+    "S101", "S307", "S311", "S610", "S701",
+    "SIM103", "SIM108", "SIM114", "SIM905", "SIM910",
     "T2",
     "TC006",
     "TD",
     "TRY003", "TRY300", "TRY301", "TRY400",
-    "UP015", # "UP038",
+    "UP012", "UP015", # "UP038",
     ]
+    
+exclude = [
+    "moat/db/alembic/versions/*",
+    "**/OFF/**",
+]
 explicit-preview-rules = true
+
+[tool.ruff.lint.extend-per-file-ignores]
+"moat/micro/_embed/**" = ["SIM105","B904"]
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true

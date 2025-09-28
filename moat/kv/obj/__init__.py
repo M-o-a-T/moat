@@ -5,32 +5,34 @@ Object interface to moat.kv data
 
 from __future__ import annotations
 
+import anyio
 import heapq
 import weakref
-from collections.abc import Mapping
 from functools import partial
 
-import anyio
 from asyncscope import scope
+
+from collections.abc import Mapping
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager
 
+import contextlib
+
 from moat.util import (
+    CFG,
     NoLock,
     NotGiven,
     Path,
     PathLongener,
     combine_dict,
-    yload,
     ensure_cfg,
-    CFG,
+    yload,
 )
-import contextlib
 
-__all__ = ["ClientEntry", "AttrClientEntry", "ClientRoot"]
+__all__ = ["AttrClientEntry", "ClientEntry", "ClientRoot"]
 
 
 class NamedRoot:
@@ -49,7 +51,7 @@ class NamedRoot:
         if name is None:
             return None
         if not isinstance(name, str):
-            raise ValueError("No string: " + repr(name))
+            raise TypeError("No string: " + repr(name))
         return self.__named.get(name)
 
     def _add_name(self, obj):
@@ -78,7 +80,7 @@ class ClientEntry:
 
     def __init__(self, parent, name=None):
         self._init()
-        self._path = parent._path + (name,)
+        self._path = parent._path + (name,)  # noqa:SLF001
         self._name = name
         self._parent = weakref.ref(parent)
         self._root = weakref.ref(parent.root)
@@ -91,7 +93,7 @@ class ClientEntry:
         self._children = dict()
 
     @classmethod
-    def child_type(cls, name):  # pylint: disable=unused-argument
+    def child_type(cls, name):  # pylint: disable=unused-argument  # noqa:ARG003
         """Given a node, return the type which the child with that name should have.
         The default is "same as this class".
         """
@@ -144,23 +146,23 @@ class ClientEntry:
                 try:
                     val = val[kk]
                 except TypeError:
-                    raise TypeError(self.value, k, val, kk)
+                    raise TypeError((self.value, k, val, kk)) from None
             return val
         except KeyError:
             return self.parent.find_cfg(*k, default=default)
 
     @property
-    def parent(self):
+    def parent(self):  # noqa:D102
         return self._parent()
 
     @property
-    def root(self):
+    def root(self):  # noqa:D102
         return self._root()
 
     @property
     def subpath(self):
         """Return the path to this entry, starting with its :class:`ClientRoot` base."""
-        return self._path[len(self.root._path) :]
+        return self._path[len(self.root._path) :]  # noqa:SLF001
 
     @property
     def all_children(self):
@@ -210,9 +212,9 @@ class ClientEntry:
         ``.follow(path)``.
         """
         if isinstance(path, str):
-            raise RuntimeError("You seem to have used '*path' instead of 'path'.")
+            raise TypeError("You seem to have used '*path' instead of 'path'.")
         if not empty_ok and not len(path):
-            raise RuntimeError("Empty path")
+            raise ValueError("Empty path")
 
         node = self
         for n, elem in enumerate(path, start=1):
@@ -240,7 +242,7 @@ class ClientEntry:
     def __delitem__(self, name):
         del self._children[name]
 
-    def get(self, name):
+    def get(self, name):  # noqa:D102
         return self._children.get(name, None)
 
     def __iter__(self):
@@ -255,7 +257,7 @@ class ClientEntry:
 
     def __contains__(self, k):
         if isinstance(k, type(self)):
-            k = k._name
+            k = k._name  # noqa:SLF001
         return k in self._children
 
     async def update(self, value, _locked=False, wait=False):
@@ -350,7 +352,7 @@ class AttrClientEntry(ClientEntry):
 
     ATTRS = ()
 
-    async def update(self, value, **kw):  # pylint: disable=arguments-differ
+    async def update(self, value, **kw):  # pylint: disable=arguments-differ  # noqa: D102
         raise RuntimeError("Nope. Set attributes and call '.save()'.")
 
     async def set_value(self, value):

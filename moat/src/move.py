@@ -4,36 +4,17 @@ Code that migrates stuff from A to B.
 
 from __future__ import annotations
 
-import io
 import anyio
 import logging
 import subprocess
-import sys
-import re
-import httpx
-from collections import defaultdict, deque
-from configparser import RawConfigParser
-from contextlib import asynccontextmanager, AsyncExitStack
-from pathlib import Path
-from copy import deepcopy
-from packaging.version import Version
+from contextlib import AsyncExitStack, asynccontextmanager
 
-import asyncclick as click
-import git
-import tomlkit
-from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
-from packaging.requirements import Requirement
-from attrs import define, field
-from shutil import rmtree, copyfile, copytree
-from contextlib import suppress
 import jinja2
-from pprint import pprint
 
-from .api import get_api
+from moat.util import attrdict
 from moat.util.exec import run as run_proc
 
-from typing import TYPE_CHECKING
-from .api import API, RepoInfo
+from .api import API, RepoInfo, get_api
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +39,7 @@ class RepoMover:
         self.git_lock = anyio.Lock()
 
     @property
-    def description(self):
+    def description(self):  # noqa: D102
         return self.repos.src.description
 
     async def exec(self, *a, **kw):
@@ -78,7 +59,7 @@ class RepoMover:
         src = self.repos.src
 
         if not await self.cwd.exists():
-            logger.debug(f"Cloning %s", self.name)
+            logger.debug("Cloning %s", self.name)
             try:
                 await src.clone_from_remote()
                 try:
@@ -142,8 +123,8 @@ class RepoMover:
             # Add a standalone 'moved-away' branch with a short README.
             try:
                 await self.exec("git", "rev-parse", "--verify", cfg.src.branch)
-            except ProcErr as exc:
-                logger.debug(f"Creating exit branch %r", cfg.src.branch)
+            except ProcErr:
+                logger.debug("Creating exit branch %r", cfg.src.branch)
 
                 r = render(cfg.readme.content)
                 hash = await self.exec(

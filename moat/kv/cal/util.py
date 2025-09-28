@@ -1,18 +1,16 @@
+"Helpers for processing calendar entries"
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date, time, UTC
+import logging
+from datetime import UTC, date, datetime, time, timedelta
+
 from dateutil.rrule import rrulestr
 from vobject.icalendar import VAlarm, VEvent
-
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> Tuple(
-    VAlarm,
-    datetime,
-):
+async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> tuple[VAlarm, datetime]:
     """
     fetch the next alarm in the current calendar
 
@@ -24,8 +22,8 @@ async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> Tuple(
     ## to True when searching.  Here is a date search for events, with
     ## expand:
     events_fetched = await calendar.search(
-        start=datetime.now(),
-        end=datetime.now() + timedelta(days=future),
+        start=datetime.now(tz=UTC).astimezone(),
+        end=datetime.now(tz=UTC).astimezone() + timedelta(days=future),
         event=True,
         expand=False,
     )
@@ -91,7 +89,7 @@ async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> Tuple(
     return ev, ev_v, ev_t
 
 
-def next_start(v, now, zone=UTC):
+def next_start(v, now, zone=UTC):  # noqa:D103
     st = v.dtstart.value
     if isinstance(st, date):
         st = datetime.combine(st, time(0, 0, 0)).astimezone(zone)

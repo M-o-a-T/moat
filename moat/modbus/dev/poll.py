@@ -4,16 +4,16 @@ Poll code
 
 from __future__ import annotations
 
+import anyio
 import logging
 from functools import partial
 
-import anyio
-from asyncscope import scope
-from moat.util import attrdict, merge, to_attrdict
 
+from moat.util import attrdict, merge, to_attrdict
 from moat.modbus.client import ModbusClient
-from .device import ServerDevice, ClientDevice, fixup
 from moat.modbus.server import create_server
+
+from .device import ClientDevice, ServerDevice, fixup
 
 from typing import TYPE_CHECKING
 

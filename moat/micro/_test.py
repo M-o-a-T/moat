@@ -12,15 +12,15 @@ from pathlib import Path
 from random import random
 
 import moat.micro
-from moat.util import attrdict, combine_dict, yload, ctx_as
-from moat.micro.cmd.tree.dir import Dispatch
-from moat.util.compat import L, TaskGroup
+from moat.util import attrdict, combine_dict, ctx_as, yload
 from moat.lib.codec import get_codec
+from moat.micro.cmd.tree.dir import Dispatch
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
 from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 from moat.micro.proto.stream import ProcessBuf
+from moat.util.compat import L, TaskGroup
 
 from typing import TYPE_CHECKING  # isort:skip
 

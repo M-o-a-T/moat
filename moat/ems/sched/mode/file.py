@@ -4,9 +4,8 @@ Read data from a file
 
 from __future__ import annotations
 
-import sys
-
 import anyio
+import sys
 
 from . import BaseLoader
 
@@ -31,6 +30,7 @@ class Loader(BaseLoader):
         Config:
             data.file.price_buy: path to the data file.
         """
+        t  # noqa:B018 # XXX
         async for x in Loader._file(cfg, "price_buy"):
             yield float(x)
 
@@ -43,6 +43,7 @@ class Loader(BaseLoader):
         Config:
             data.file.price_sell: path to the data file.
         """
+        t  # noqa:B018 # XXX
         async for x in Loader._file(cfg, "price_sell"):
             yield float(x)
 
@@ -55,6 +56,7 @@ class Loader(BaseLoader):
         Config:
             data.file.solar: path to the data file.
         """
+        t  # noqa:B018 # XXX
         async for x in Loader._file(cfg, "solar"):
             yield float(x)
 
@@ -67,6 +69,7 @@ class Loader(BaseLoader):
         Config:
             data.file.load: path to the data file.
         """
+        t  # noqa:B018 # XXX
         async for x in Loader._file(cfg, "load"):
             yield float(x)
 
@@ -93,20 +96,31 @@ class Loader(BaseLoader):
         """
         f = cfg.data.format.result
         if f == "yaml":
-            from moat.util import yformat
+            from moat.util import yformat  # noqa:PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(yformat(kw))
-        elif f == "msgpack":
-            from moat.util import packer
 
+        elif f == "cbor":
+            from moat.util.cbor import StdCBOR  # noqa:PLC0415
+
+            packer = StdCBOR().encode
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(kw))
+
+        elif f == "msgpack":
+            from moat.util.msgpack import StdMsgpack  # noqa:PLC0415
+
+            packer = StdMsgpack().encode
+            async with await anyio.Path(cfg.data.file.result).open("wb") as f:
+                await f.write(packer(kw))
+
         elif f == "json":
-            import json
+            import json  # noqa:PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(kw))
+
         else:
             print(f"Unknown output format {f!r}. Use yaml/msgpack/json.")
             sys.exit(1)
@@ -121,26 +135,40 @@ class Loader(BaseLoader):
         """
         f = cfg.data.format.results
         if f == "yaml":
-            from moat.util import yformat
+            from moat.util import yformat  # noqa:PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 async for kw in it:
                     await f.write(yformat([kw]))
+
+        elif f == "cbor":
+            res = []
+            async for kw in it:
+                res.append(kw)
+            from moat.util.cbor import StdCBOR  # noqa:PLC0415
+            packer = StdCBOR.encode
+
+            async with await anyio.Path(cfg.data.file.result).open("wb") as f:
+                await f.write(packer(res))
+
         elif f == "msgpack":
             res = []
             async for kw in it:
                 res.append(kw)
-            from moat.util import packer
+            from moat.util.msgpack import StdMsgpack  # noqa:PLC0415
+            packer = StdMsgpack.encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(res))
+
         elif f == "json":
-            import json
+            import json  # noqa:PLC0415
 
             async for kw in it:
                 res.append(kw)
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(res))
+
         else:
             print(f"Unknown output format {f!r}. Use yaml/msgpack/json.")
             sys.exit(1)

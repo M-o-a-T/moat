@@ -8,15 +8,15 @@ so that it can be called easily.
 
 from __future__ import annotations
 
+import anyio
+import contextlib
 import logging
 import sys
 from functools import partial
 
-import anyio
 from moat.util import NotGiven, P, make_module, make_proc
 
 from .obj import ClientEntry, ClientRoot
-import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +42,11 @@ class ModuleRoot(ClientRoot):
     err: ErrorRoot = None  # noqa: F821
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return ModuleEntry
 
-    async def run_starting(self):
-        from .errors import ErrorRoot
+    async def run_starting(self):  # noqa:D102
+        from .errors import ErrorRoot  # noqa:PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
@@ -72,14 +72,14 @@ class ModuleRoot(ClientRoot):
         return await entry.delete()
 
 
-class ModuleEntry(ClientEntry):
+class ModuleEntry(ClientEntry):  # noqa:D101
     _module = None
 
     @property
-    def name(self):
+    def name(self):  # noqa:D102
         return ".".join(self.subpath)
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             self._module = None
@@ -90,7 +90,7 @@ class ModuleEntry(ClientEntry):
         try:
             c = self.value.code
             if not isinstance(c, str):
-                raise RuntimeError("Not a string, cannot compile")
+                raise TypeError("Not a string, cannot compile")
             m = make_module(c, self.subpath)
         except Exception as exc:
             self._module = None
@@ -143,11 +143,11 @@ class CodeRoot(ClientRoot):
     err = None
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return CodeEntry
 
-    async def run_starting(self):
-        from .errors import ErrorRoot
+    async def run_starting(self):  # noqa:D102
+        from .errors import ErrorRoot  # noqa:PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
@@ -175,6 +175,10 @@ class CodeRoot(ClientRoot):
         await self.wait_chain(r.chain)
 
     def __call__(self, name, *a, **kw):
+        """Call a (named) procedure below this.
+
+        Return: whatever it returns.
+        """
         if isinstance(name, str):
             name = name.split(".")
         c = self
@@ -185,7 +189,7 @@ class CodeRoot(ClientRoot):
         return c(*a, **kw)
 
 
-class CodeEntry(ClientEntry):
+class CodeEntry(ClientEntry):  # noqa:D101
     _code = None
     is_async = None
 
@@ -194,10 +198,10 @@ class CodeEntry(ClientEntry):
         super().__init__(*a, *kv)
 
     @property
-    def name(self):
+    def name(self):  # noqa:D102
         return P(self.subpath)
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             self._code = None
@@ -225,6 +229,10 @@ class CodeEntry(ClientEntry):
             self.reload_event = anyio.Event()
 
     def __call__(self, *a, **kw):
+        """Call this code block.
+
+        Return: whatever it returns.
+        """
         if self._code is None:
             raise EmptyCode(self._path)
         if self.is_async is False:

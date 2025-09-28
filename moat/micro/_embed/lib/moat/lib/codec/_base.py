@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Self
     from collections.abc import Callable
+    from typing import Any, Self
 
     ByteType = bytes | bytearray | memoryview
     VarByteType = bytearray | memoryview

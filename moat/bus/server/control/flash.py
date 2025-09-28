@@ -4,19 +4,14 @@ This module implements flashing new firmware via MoatBus.
 
 from __future__ import annotations
 
-import trio
-import msgpack
+import logging
 from functools import partial
 
-from moat.bus.util import byte2mini, Processor
+import msgpack
+import trio
 
-packer = msgpack.Packer(
-    strict_types=False,
-    use_bin_type=True,  # default=_encode
-).pack
-unpacker = partial(msgpack.unpackb, raw=False)
+from moat.bus.util import Processor, byte2mini
 
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -24,6 +19,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+packer = msgpack.Packer(
+    strict_types=False,
+    use_bin_type=True,  # default=_encode
+).pack
+unpacker = partial(msgpack.unpackb, raw=False)
+
+
+def build_aa_data(serial, code, timer):  # noqa:D103
+    raise NotImplementedError
 
 class FlashControl(Processor):
     """
@@ -44,7 +48,7 @@ class FlashControl(Processor):
         self.server = server
         super().__init__(server, code)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         await self.spawn(self._poller)
         await self.spawn(self._fwd)
@@ -105,17 +109,18 @@ class FlashControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        o = self.with_serial(s, msg.dest)
-        if o.__data is None:
-            await self.q_w.put(NewDevice(obj))
-        elif o.client_id != msg.dest:
-            await self.q_w.put(OldDevice(obj))
+        raise NotImplementedError
+#       m = msg.bytes
+#       mlen = (m[0] & 0xF) + 1
+#       m[0] >> 4
+#       if len(m) - 1 < mlen:
+#           self.logger.error("Short addr reply %r", msg)
+#           return
+#       o = self.with_serial(s, msg.dest)
+#       if o.__data is None:
+#           await self.q_w.put(NewDevice(obj))
+#       elif o.client_id != msg.dest:
+#           await self.q_w.put(OldDevice(obj))
 
     async def _process_request(self, serial, flags, timer):
         """
@@ -175,6 +180,7 @@ class FlashControl(Processor):
         """
         Client>server
         """
+        flags, timer  # noqa:B018
         objs = self.objs
         obj2 = None
         try:
@@ -184,13 +190,13 @@ class FlashControl(Processor):
         else:
             if obj1 is not None:
                 if obj1.serial == serial:
-                    obj2 == obj1
+                    obj2 = obj1
                 else:
                     self.logger.error(
                         "Conflicting serial: %d: new:%s known:%s",
                         client,
                         serial,
-                        obj.serial,
+                        obj1.serial,
                     )
                     await objs.deregister(obj1)
 
@@ -204,7 +210,7 @@ class FlashControl(Processor):
             self.logger.error(
                 "Conflicting IDs: new:%d known:%d: %s",
                 client,
-                obj.client_id,
+                obj2.client_id,
                 serial,
             )
             await objs.deregister(obj2)
@@ -234,7 +240,7 @@ class FlashControl(Processor):
         """
         await self.send(self.my_id, -4, 0, b"\x23\x14")
 
-    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):
+    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):  # noqa:D102
         if src is None:
             src = msg.dst
         if dest is None:
@@ -249,10 +255,11 @@ class FlashControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        self.get_serial(s, msg.dest)
+        raise NotImplementedError
+#       m = msg.bytes
+#       mlen = (m[0] & 0xF) + 1
+#       m[0] >> 4
+#       if len(m) - 1 < mlen:
+#           self.logger.error("Short addr reply %r", msg)
+#           return
+#       self.get_serial(s, msg.dest)

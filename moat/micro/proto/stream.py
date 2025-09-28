@@ -9,8 +9,8 @@ import sys
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
-from moat.util.compat import AC_use, log
 from moat.lib.codec import get_codec
+from moat.util.compat import AC_use, log
 
 from ._stream import _CBORMsgBlk, _CBORMsgBuf
 from .stack import BaseBuf
@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from moat.micro.cmd.tree.dir import SubDispatch
 
-# ruff:noqa:B904
 
 
 class ProcessDeadError(RuntimeError):

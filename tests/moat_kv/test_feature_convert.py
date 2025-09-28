@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import logging
 
 import pytest
@@ -14,7 +14,7 @@ from moat.kv.mock.mqtt import stdtest
 logger = logging.getLogger(__name__)
 
 
-async def collect(i, path=()):
+async def collect(i, path=()):  # noqa: D103
     res = []
     pl = PathLongener(path)
     async for r in i:
@@ -25,8 +25,8 @@ async def collect(i, path=()):
     return res
 
 
-@pytest.mark.trio()
-async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument
+@pytest.mark.trio
+async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
     async with stdtest(args={"init": 123}, tocks=100) as st:
         assert st is not None
         async with st.client() as c:

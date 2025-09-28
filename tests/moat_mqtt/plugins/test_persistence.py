@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -12,8 +12,8 @@ from moat.mqtt.plugins.manager import BaseContext
 from moat.mqtt.plugins.persistence import SQLitePlugin
 
 
-class TestSQLitePlugin(unittest.TestCase):
-    def test_create_tables(self):
+class TestSQLitePlugin(unittest.TestCase):  # noqa: D101
+    def test_create_tables(self):  # noqa: D102
         dbfile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")
         context = BaseContext()
         context.logger = logging.getLogger(__name__)

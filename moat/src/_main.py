@@ -2,25 +2,25 @@
 # pylint: disable=missing-module-docstring
 from __future__ import annotations
 
-import io
 import logging
+import re
 import subprocess
 import sys
-import re
-from collections import defaultdict, deque
-from configparser import RawConfigParser
-from pathlib import Path
+from contextlib import suppress
 from copy import deepcopy
-from packaging.version import Version
+from pathlib import Path
+from shutil import copyfile, copytree, rmtree
 
 import asyncclick as click
 import git
 import tomlkit
-from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
-from packaging.requirements import Requirement
 from attrs import define, field
-from shutil import rmtree, copyfile, copytree
-from contextlib import suppress
+from packaging.requirements import Requirement
+from packaging.version import Version
+
+from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
+
+from collections import defaultdict, deque
 
 logger = logging.getLogger(__name__)
 
@@ -1121,8 +1121,7 @@ async def build(
                 if (
                     debversion.get(r.dash, "") != ltag
                     or r.vers.pkg != ptag
-                    or test_chg
-                    and not changes.exists()
+                    or (test_chg and not changes.exists())
                 ):
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:

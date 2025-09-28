@@ -16,7 +16,7 @@ Modbus-TCP and Modbus-RTU (serial) are supported.
 
 from __future__ import annotations
 
-from .client import *  # noqa: 403
-from .server import *  # noqa: 403
+from .client import *  # noqa: F403
+from .server import *  # noqa: F403
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)  # noqa:F405

@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -14,30 +14,30 @@ from tests.moat_mqtt import anyio_run
 pytestmark = pytest.mark.skip
 
 
-class SimpleTestPlugin:
+class SimpleTestPlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
 
 
-class EventTestPlugin:
+class EventTestPlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
         self.test_flag = False
         self.coro_flag = False
 
-    async def on_test(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def on_test(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self.test_flag = True
         self.context.logger.info("on_test")
 
-    async def test_coro(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def test_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self.coro_flag = True
 
-    async def ret_coro(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def ret_coro(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         return "TEST"
 
 
-class TestPluginManager(unittest.TestCase):
-    def test_load_plugin(self):
+class TestPluginManager(unittest.TestCase):  # noqa: D101
+    def test_load_plugin(self):  # noqa: D102
         async def coro():
             async with anyio.create_task_group() as tg:
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
@@ -45,7 +45,7 @@ class TestPluginManager(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_fire_event(self):
+    def test_fire_event(self):  # noqa: D102
         async def fire_event(manager):
             await manager.fire_event("test")
             await anyio.sleep(1)
@@ -60,7 +60,7 @@ class TestPluginManager(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_fire_event_wait(self):
+    def test_fire_event_wait(self):  # noqa: D102
         async def fire_event(manager):
             await manager.fire_event("test", wait=True)
             await manager.close()
@@ -74,7 +74,7 @@ class TestPluginManager(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_map_coro(self):
+    def test_map_coro(self):  # noqa: D102
         async def call_coro(manager):
             await manager.map_plugin_coro("test_coro")
 
@@ -87,7 +87,7 @@ class TestPluginManager(unittest.TestCase):
 
         anyio_run(coro)
 
-    def test_map_coro_return(self):
+    def test_map_coro_return(self):  # noqa: D102
         async def call_coro(manager):
             return await manager.map_plugin_coro("ret_coro")
 

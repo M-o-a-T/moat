@@ -7,18 +7,19 @@ This code is here for support of testing. It does not talk to MoaT-KV.
 See ``tests/test_basic.py`` for code that does.
 
 """
+from __future__ import annotations
 
-import os
 import anyio
+import os
 import tempfile
 from contextlib import asynccontextmanager
 
 import xknx
+from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
 from xknx.io import ConnectionConfig, ConnectionType
-from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 
 
-class Tester:
+class Tester:  # noqa:D101
     _client = None
     _server = None
     _socket = None
@@ -31,7 +32,7 @@ class Tester:
         with tempfile.TemporaryDirectory() as d:
             cfg = os.path.join(d, "test.ini")
             self._socket = os.path.join(d, "test.sock")
-            with open(cfg, "w") as f:
+            with open(cfg, "w") as f:  # noqa:ASYNC230
                 # The TCP server is here just to signal something like readiness
                 print(
                     f"""\
@@ -87,34 +88,36 @@ trace-mask = 0x3ff
                 proc.kill()
 
     @asynccontextmanager
-    async def run(self):
+    async def run(self):  # noqa:D102
         ccfg = ConnectionConfig(
             connection_type=ConnectionType.TUNNELING,
             gateway_ip="127.0.0.1",
             gateway_port=self.TCP_PORT,
         )
-        async with self._daemon() as server:
-            async with xknx.XKNX().run(connection_config=ccfg) as client:
-                self._server = server
-                self._client = client
-                yield self
+        async with (
+            self._daemon() as server,
+            xknx.XKNX().run(connection_config=ccfg) as client,
+        ):
+            self._server = server
+            self._client = client
+            yield self
 
-    def switch(self, *a, **k):
+    def switch(self, *a, **k):  # noqa:D102
         res = Switch(self._client, *a, **k)
         self._client.devices.add(res)
         return res
 
-    def binary_sensor(self, *a, **k):
+    def binary_sensor(self, *a, **k):  # noqa:D102
         res = BinarySensor(self._client, *a, **k)
         self._client.devices.add(res)
         return res
 
-    def sensor(self, *a, **k):
+    def sensor(self, *a, **k):  # noqa:D102
         res = Sensor(self._client, *a, **k)
         self._client.devices.add(res)
         return res
 
-    def exposed_sensor(self, *a, **k):
+    def exposed_sensor(self, *a, **k):  # noqa:D102
         res = ExposeSensor(self._client, *a, **k)
         self._client.devices.add(res)
         return res

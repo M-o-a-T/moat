@@ -6,18 +6,20 @@ This is somewhat ad-hoc.
 
 from __future__ import annotations
 
+import anyio
+import logging
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
+
 from attr import define, field
+
 from moat.util import CtxObj, ungroup
 from moat.util.exec import run as run_
-import logging
-import anyio
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...move import RepoMover
+    from ...move import RepoMover as RepoMover
 
 
 class NoSuchRepo(RuntimeError):
@@ -33,7 +35,7 @@ class RepoExists(RuntimeError):
 
 
 @define
-class Repo:
+class Repo:  # noqa: D101
     name = field()
     cwd = field(default=None, type=anyio.Path)
 
@@ -162,7 +164,7 @@ class RepoInfo(metaclass=ABCMeta):
 
 
 @define
-class CommitInfo(metaclass=ABCMeta):
+class CommitInfo(metaclass=ABCMeta):  # noqa: D101
     repo = field(type=RepoInfo)
     hash = field(type=str)
 

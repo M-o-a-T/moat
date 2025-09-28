@@ -6,9 +6,8 @@ from __future__ import annotations
 
 from contextlib import suppress
 
-from moat.lib.codec.errors import ChannelClosed
-
 from moat.util import NotGiven, Queue, ValueEvent
+from moat.lib.codec.errors import ChannelClosed
 from moat.util.compat import (
     ACM,
     AC_exit,
@@ -23,6 +22,7 @@ from moat.util.compat import (
     ticks_ms,
     wait_for_ms,
 )
+
 from .stack import StackedMsg
 
 from typing import TYPE_CHECKING  # isort:skip

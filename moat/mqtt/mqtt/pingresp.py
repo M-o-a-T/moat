@@ -1,12 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import PINGRESP, MQTTFixedHeader, MQTTPacket
 
 
-class PingRespPacket(MQTTPacket):
+class PingRespPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = None
     PAYLOAD = None
 
@@ -24,5 +26,5 @@ class PingRespPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls):
+    def build(cls):  # noqa: D102
         return cls()

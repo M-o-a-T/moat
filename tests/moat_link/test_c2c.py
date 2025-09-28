@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import anyio
 import pytest
-import time
 
 from moat.link._test import Scaffold
-from moat.link.meta import MsgMeta
-from moat.link.host import HostState, HostList
-from moat.util import P
+from moat.link.host import HostList
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_simple(cfg):
     "simple client-to-client comm test"
     async with Scaffold(cfg, use_servers=False) as sf:

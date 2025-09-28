@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """
-Basic DistKV support
-
+Basic MoaT-KV support
 """
 
 from __future__ import annotations
@@ -9,8 +7,8 @@ from __future__ import annotations
 import logging
 
 import asyncclick as click
-from moat.util import attrdict, combine_dict, load_subgroup, CFG, ensure_cfg
 
+from moat.util import CFG, attrdict, combine_dict, ensure_cfg, load_subgroup
 from moat.kv.auth import gen_auth
 from moat.kv.client import client_scope
 
@@ -29,7 +27,7 @@ class NullObj:
     def __init__(self, exc):
         self._exc = exc
 
-    def __call__(self, *a, **kw):
+    def __call__(self, *a, **kw):  # noqa:ARG002
         raise self._exc
 
     def __await__(self):
@@ -74,7 +72,7 @@ async def cli(ctx, host, port, auth, metadata):
     if auth is not None:
         cfg.auth = gen_auth(auth)
         if obj.DEBUG:
-            cfg.auth._DEBUG = True
+            cfg.auth._DEBUG = True  # noqa:SLF001
 
     cfg = combine_dict(attrdict(kv=attrdict(conn=cfg)), obj.cfg, cls=attrdict)
 

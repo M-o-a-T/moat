@@ -1,17 +1,22 @@
+# noqa:D100
 from __future__ import annotations
-from collections import deque
-from moatbus.message import BusMessage
-from moatbus.crc import CRC11
-from enum import IntEnum
+
 import inspect
+from enum import IntEnum
 from random import random
+
+from moatbus.crc import CRC11
+from moatbus.message import BusMessage
+
+from collections import deque
 
 LEN = [None, None, 7, 5, 3, 3, 2]  # messages per chunk
 BITS = [None, None, 11, 14, 11, 14, 11]  # messages per header chunk (11 bits)
 N_END = [None, None, 3, 2, 1, 1, 1]  # flips at end
 
 
-class S(IntEnum):  # states
+class S(IntEnum):
+    "Bus states."
     # These wait for the bus to go idle. "settle" is ignored.
     ERROR = 0
     WAIT_IDLE = 1
@@ -31,6 +36,7 @@ class S(IntEnum):  # states
 
 
 class ERR(IntEnum):
+    "Bus errors."
     NOTHING = 1  # bus zero?
     COLLISION = -2  # will retry
     HOLDTIME = -11
@@ -44,6 +50,7 @@ class ERR(IntEnum):
 
 
 class RES(IntEnum):
+    "Message transmission results"
     SUCCESS = 0
     MISSING = 1
     ERROR = 2
@@ -51,6 +58,7 @@ class RES(IntEnum):
 
 
 class W(IntEnum):
+    "State machine"
     MORE = 0  # next: MORE/LAST/FINAL
     CRC = 1  # next: READ  # writing the CRC
     END = 2  # next: CRC   # writing the end marker
@@ -125,7 +133,8 @@ class BaseHandler:
         # set this to zero when .current is zeroed, None when .current is set to something else.
         # If not None, increment by the timer value whenever we set a timer.
         # When entering Idle, use a defined total time from IDLE_WAIT to IDLE (settle=True).
-        # Writing may start on IDLE(settle=False) which is the time that depends on back-off and whatnot.
+        # Writing may start on IDLE(settle=False) which is the time that depends
+        # on back-off and whatnot.
         self.flapping = 0
 
         self.state = S.WAIT_IDLE
@@ -136,7 +145,8 @@ class BaseHandler:
         """
         OVERRIDE: There's been a comm problem.
         """
-        raise RuntimeError("Override me")
+        typ, kw  # noqa:B018
+        raise NotImplementedError("Override me")
 
     def debug(self, msg, *a):
         """
@@ -149,33 +159,35 @@ class BaseHandler:
         OVERRIDE: Arrange to call .timeout after @timeout usecs. <0=off,
         zero=Timer B, anything else: Timer A.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def set_wire(self, bits):
         """
         OVERRIDE: Pull down these bits.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def get_wire(self):
         """
         OVERRIDE: Get the current wire state (pulled-low bits).
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def process(self, msg):
         """
         OVERRIDE: Process this message.
         Return True if it was for us and thus should be ACKd.
         """
-        raise RuntimeError("Override me")
+        msg  # noqa:B018
+        raise NotImplementedError("Override me")
 
     def transmitted(self, msg, res):
         """
         OVERRIDE: This message has been transmitted.
         @res is 0/1/2/-1 for OK/missed/error/fatal.
         """
-        raise RuntimeError("Override me")
+        msg,res  # noqa:B018
+        raise NotImplementedError("Override me")
 
     ########################################
 
@@ -373,7 +385,7 @@ class BaseHandler:
         else:
             raise RuntimeError("Unhandled state in timeout", self.state)
 
-    def retry(self, msg, res):
+    def retry(self, msg, res):  # noqa:D102
         self.debug("Retry:%d %s", res, msg)
         if res == RES.MISSING:
             r = 2
@@ -451,18 +463,15 @@ class BaseHandler:
 
     ########################################
 
-    def clear_sending(self):
+    def clear_sending(self):  # noqa:D102
         msg, self.sending = self.sending, None
         self.want_prio = None
         return msg
 
-    def start_reader(self):
-        """
-        Start reading.
-        """
+    def start_reader(self):  # noqa:D102
         self.set_state(S.READ_ACQUIRE)
 
-    def start_writer(self):
+    def start_writer(self):  # noqa:D102
         self.cur_chunk = ()
         self.settle = True
         self.sending.start_extract()
@@ -511,7 +520,7 @@ class BaseHandler:
                 res.append(p + 1)
                 n -= 1
             assert not val, val
-            self.debug("Split %d: %s", oval, " ".join("%d" % (x - 1) for x in res))
+            self.debug("Split %d: %s", oval, " ".join(f"{(x - 1) :d}" for x in res))
 
         self.cur_chunk = res
         return True
@@ -581,7 +590,7 @@ class BaseHandler:
             self.read_next(bits)
         self.no_backoff = True
 
-    def send_next(self):
+    def send_next(self):  # noqa:D102
         if self.sending is None:
             if self._prio_q:
                 self.sending = self._prio_q.popleft()
@@ -602,7 +611,7 @@ class BaseHandler:
         if self.state == S.IDLE and not self.settle:
             self.start_writer()
 
-    def read_done(self, crc_ok: bool):
+    def read_done(self, crc_ok: bool):  # noqa:D102
         self.no_backoff = False
         msg_in, self.msg_in = self.msg_in, None
         self.set_ack_mask()
@@ -621,7 +630,7 @@ class BaseHandler:
                 # The message is not for us
                 self.set_state(S.WAIT_IDLE)
 
-    def set_ack_mask(self):
+    def set_ack_mask(self):  # noqa:D102
         # This part is somewhat fragile. Cannot be helped.
         bits = self.last if self.settle else self.current
 
@@ -630,9 +639,10 @@ class BaseHandler:
             (0 if bits else 2) if self.WIRES == 2 else 4 if bits == 3 or bits == 1 else 2
         )
         self.ack_masks = self.ack_mask | self.nack_mask
-        # self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_mask,self.nack_mask,bits,self.settle)
+        # self.debug("AckBits %02x / %02x due to %02x/%d",
+        # self.ack_mask,self.nack_mask,bits,self.settle)
 
-    def read_next(self, bits):
+    def read_next(self, bits):  # noqa:D102
         bits ^= self.last
         # print("BIT",self.addr,bits-1)
         if not bits:
@@ -673,7 +683,7 @@ class BaseHandler:
         self.val = 0
         self.set_state(S.READ_CRC)
 
-    def error(self, typ):
+    def error(self, typ):  # noqa:D102
         if self.state == S.ERROR:
             return
         if typ == ERR.HOLDTIME and not self.current:
@@ -709,7 +719,7 @@ class BaseHandler:
         else:
             self.set_state(S.WAIT_IDLE)
 
-    def reset(self):
+    def reset(self):  # noqa:D102
         self.intended = None
 
         self.pos = None
@@ -723,7 +733,7 @@ class BaseHandler:
         self.nval = 0
         self.settle = False
 
-    def set_state(self, state):
+    def set_state(self, state):  # noqa:D102
         if state == self.state:
             return
 

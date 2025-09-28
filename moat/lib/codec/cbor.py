@@ -3,11 +3,14 @@ Wrapper for CBOR support
 """
 
 from __future__ import annotations
+
 import struct
 
 import ruyaml as yaml
-from ._cbor import Codec, Tag  # noqa:F401
+
 from moat.util.compat import const
+
+from ._cbor import Codec, Tag  # noqa:F401
 
 SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
 
@@ -19,7 +22,7 @@ def _tag_repr(dumper, data):
     return dumper.represent_list([XTag(data.tag), data.value])
 
 
-class XTag:
+class XTag:  # noqa: D101
     def __init__(self, tag):
         self.tag = tag
 

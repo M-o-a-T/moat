@@ -1,9 +1,10 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import sys
 
 import asyncclick as click
+
 from moat.util import (
     NotGiven,
     P,
@@ -40,7 +41,7 @@ async def get(obj, script):
     if not len(obj.codepath):
         raise click.UsageError("You need a non-empty path.")
 
-    res = await obj.client._request(action="get_value", path=obj.path, iter=False, nchain=obj.meta)
+    res = await obj.client._request(action="get_value", path=obj.path, iter=False, nchain=obj.meta)  # noqa:SLF001
     if "value" not in res:
         if obj.debug:
             print("No entry here.", file=sys.stderr)
@@ -142,7 +143,7 @@ async def get_mod(obj, path, script):
     path = P(path)
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_value",
         path=obj.cfg["kv"]["modules"]["prefix"] + path,
         iter=False,

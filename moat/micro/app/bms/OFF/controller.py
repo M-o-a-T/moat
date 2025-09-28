@@ -1,15 +1,17 @@
 #
 from __future__ import annotations
+
+import anyio
+import contextlib
 import logging
 from functools import cached_property
 from pprint import pformat
 
-import anyio
 import asyncdbus.service as _dbus
-from moat.dbus import DbusInterface, DbusName
-from moat.util import ValueEvent
 from victron.dbus.utils import wrap_dbus_dict
 
+from moat.util import ValueEvent
+from moat.dbus import DbusInterface, DbusName
 from moat.util.compat import (
     Event,
     Lock,
@@ -25,7 +27,6 @@ from . import MessageLost, SpuriousData
 from .battery import Battery
 from .packet import *
 from .victron import BatteryState
-import contextlib
 
 logger = logging.getLogger(__name__)
 

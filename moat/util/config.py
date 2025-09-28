@@ -7,9 +7,9 @@ from __future__ import annotations
 from importlib import import_module
 from pathlib import Path as FSPath
 
-from .yaml import yload
 from .dict import attrdict
 from .merge import merge
+from .yaml import yload
 
 from typing import TYPE_CHECKING
 

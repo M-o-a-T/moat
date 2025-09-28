@@ -1,27 +1,21 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import anyio
-from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
-from moat.lib.cmd.msg import Msg
+from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd._test import StreamLoop
-from moat.lib.cmd.stream import HandlerStream
-from moat.util import Path, CtxObj, ungroup
-from moat.util.compat import shield
+from moat.util import Path, CtxObj
 from contextlib import asynccontextmanager
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def res_akw(a, kw):
+def res_akw(a, kw):  # noqa: D103
     sa = "-" if not a else "|".join((str(x) if isinstance(x, Path) else repr(x)) for x in a)
     sk = "-" if not kw else "|".join(f"{k}={v!r}" for k, v in kw.items())
     return sa + " " + sk
 
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from moat.lib.cmd.msg import Msg
 
 
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
@@ -46,9 +40,8 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
         raise RuntimeError("Which anyio backend are you using??")
 
 
-class StreamGate(CtxObj):
+class StreamGate(CtxObj):  # noqa: D101
     def __init__(self, h: MsgHandler, so: Socket, s: str):
-        from moat.util.cbor import StdCBOR
 
         self.s = s
         self.so = so
@@ -57,7 +50,6 @@ class StreamGate(CtxObj):
     @asynccontextmanager
     async def _ctx(self):
         from moat.lib.cmd.anyio import run
-        from contextlib import nullcontext
 
         async with await _wrap_sock(self.so) as sock, run(self.h, sock, debug=self.s) as out:
             yield out
@@ -71,7 +63,7 @@ class StreamGate(CtxObj):
 
 
 @asynccontextmanager
-async def scaffold(ha, hb, key="", use_socket=False):
+async def scaffold(ha, hb, key="", use_socket=False):  # noqa: D103
     if use_socket:
         import socket
 

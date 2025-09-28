@@ -5,20 +5,22 @@ Akumuli task for MoaT-KV
 from __future__ import annotations
 
 import anyio
-import asyncakumuli as akumuli
 from pprint import pformat
+
+import asyncakumuli as akumuli
 
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections.abc import Mapping
 
+import logging
+
+from asyncakumuli import DS, Entry
+
 from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
 
-from asyncakumuli import Entry, DS
-
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -27,18 +29,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylint: disable=unused-argument
+async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylint: disable=unused-argument  # noqa:D103
     cfg = combine_dict(
         server.value_or({}, Mapping).get("server", {}),
         server.parent.value_or({}, Mapping).get("server", {}),
         cfg["server_default"],
     )
 
-    async def process_raw(self):
+    @staticmethod
+    async def process_raw():
         async with client.msg_monitor(server.topic) as mon:
             async for msg in mon:
                 try:
-                    msg = msg["data"]
+                    msg = msg["data"]  # noqa:PLW2901
                 except KeyError:
                     continue
                 try:
@@ -61,7 +64,7 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
             anyio.create_task_group() as tg,
             akumuli.connect(**cfg) as srv,
         ):
-            srv._distkv__tg = tg
+            srv._distkv__tg = tg  # noqa:SLF001 # used in .model
             server.set_paths(paths)
             await server.set_server(srv)
             if evt is not None:
@@ -69,8 +72,7 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
 
             if server.topic is not None:
                 await tg.start(process_raw)
-            while True:
-                await anyio.sleep(99999)
+            await anyio.sleep_forever()
     except TimeoutError:
         raise
     except OSError as e:  # this would eat TimeoutError

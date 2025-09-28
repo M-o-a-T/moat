@@ -8,7 +8,6 @@ from functools import partial
 
 from moat.modbus.types import (
     BitValue,
-    InvBitValue,
     ByteValue,
     Coils,
     DiscreteInputs,
@@ -17,6 +16,7 @@ from moat.modbus.types import (
     HoldingRegisters,
     InputRegisters,
     IntValue,
+    InvBitValue,
     LongValue,
     QuadValue,
     SignedIntValue,

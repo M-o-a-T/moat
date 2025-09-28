@@ -1,14 +1,15 @@
 # command line interface
-
-import asyncclick as click
-from collections.abc import Mapping
-
-from moat.kv.data import res_get, res_update, node_attr
-from moat.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval, attr_args
-
-from xknx.remote_value import RemoteValueSensor
+from __future__ import annotations
 
 import logging
+
+import asyncclick as click
+from xknx.remote_value import RemoteValueSensor
+
+from moat.util import NotGiven, P, Path, as_service, attr_args, attrdict, path_eval, yprint
+from moat.kv.data import node_attr, res_get, res_update
+
+from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def map_keys():
     try:
         return RemoteValueSensor.DPTMAP.keys()
     except AttributeError:
-        from xknx.dpt import DPTBase
+        from xknx.dpt import DPTBase  # noqa:PLC0415
 
         return (cls.__name__[3:] for cls in DPTBase.__recursive_subclasses__())
 
@@ -153,13 +154,13 @@ async def addr(obj, bus, group, typ, mode, attr):
         attr = (("mode", mode),) + attr
     for k, v in attr:
         if k in {"src", "dest"}:
-            v = P(v)
+            v = P(v)  # noqa:PLW2901
         else:
             try:
-                v = int(v)
+                v = int(v)  # noqa:PLW2901
             except ValueError:
-                try:
-                    v = float(v)
+                try:  # noqa:SIM105
+                    v = float(v)  # noqa:PLW2901
                 except ValueError:
                     pass
         val[k] = v
@@ -184,8 +185,8 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             value = path_eval(value)
             if isinstance(value, Mapping):
                 # replace
-                pass  ## value = res_delete(res, attr)
-                value = value._update(attr, value=value)
+                ## value = res_delete(res, attr)
+                value = value._update(attr, value=value)  # noqa:SLF001
             else:
                 value = res_update(res, attr, value=value)
     else:
@@ -254,8 +255,8 @@ async def server_(obj, bus, name, host, port, delete):
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip, initial):
     """Stand-alone task to talk to a single server."""
-    from .task import task
-    from .model import KNXroot
+    from .model import KNXroot  # noqa:PLC0415
+    from .task import task  # noqa:PLC0415
 
     cfg = obj.cfg.kv.knx
 

@@ -1,9 +1,8 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import logging
 
 import pytest
 import trio
-import os
 import copy
 from moat.util import P, yload
 
@@ -60,14 +59,14 @@ hostports:
 """
 
 
-async def mon(c):
+async def mon(c):  # noqa: D103
     async with c.monitor(P(":"), codec="std-cbor", subtree=True) as mo:
         async for msg in mo:
             print("*****", msg)
 
 
-@pytest.mark.trio()
-async def test_kv_poll(autojump_clock, free_tcp_port):
+@pytest.mark.trio
+async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
     autojump_clock.autojump_threshold = 0.2
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
@@ -122,13 +121,15 @@ async def test_kv_poll(autojump_clock, free_tcp_port):
 
         # explicit read
 
-        async with ModbusClient() as g:
-            async with g.host("localhost", free_tcp_port) as h:
-                async with h.unit(32) as u:
-                    async with u.slot("default") as s:
-                        s.add(HoldingRegisters, 12342, IntValue)
-                        res = await s.getValues()
-                        assert res[HoldingRegisters][12342].value == 44
+        async with (
+            ModbusClient() as g,
+            g.host("localhost", free_tcp_port) as h,
+            h.unit(32) as u,
+            u.slot("default") as s,
+        ):
+            s.add(HoldingRegisters, 12342, IntValue)
+            res = await s.getValues()
+            assert res[HoldingRegisters][12342].value == 44
 
         # terminate tasks
         tg.cancel_scope.cancel()

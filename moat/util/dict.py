@@ -4,12 +4,13 @@ This module contains various helper functions and classes for dictionaries.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableSequence
 from copy import deepcopy
 
 from . import NotGiven
 
-__all__ = ["combine_dict", "drop_dict", "attrdict", "to_attrdict"]
+from collections.abc import Mapping, MutableSequence
+
+__all__ = ["attrdict", "combine_dict", "drop_dict", "to_attrdict"]
 
 
 def combine_dict(*d, cls=dict, deep=False) -> dict:

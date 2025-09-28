@@ -4,15 +4,15 @@ Rudimentary Github API.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from attr import define, field
+
+from attr import define
 
 from moat.util import to_attrdict
 
 from . import API as BaseAPI
-from . import RepoInfo as BaseRepoInfo
 from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo, RepoExists
+from . import RepoInfo as BaseRepoInfo
 
 
 @define

@@ -5,20 +5,22 @@ OWFS task for DistKV
 from __future__ import annotations
 
 import anyio
+import logging
+
 from asyncowfs import OWFS
 from asyncowfs.event import (
     DeviceEvent,
+    DeviceException,
     DeviceLocated,
     DeviceNotFound,
     DeviceValue,
-    DeviceException,
 )
-from collections.abc import Mapping
 
-from moat.util import combine_dict, NotGiven, Path
+from moat.util import NotGiven, Path, combine_dict
+
 from .model import OWFSroot
 
-import logging
+from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ async def mon(ow, hd):
                 await node.root.err.record_working("onewire", Path.build(node.subpath) + attr)
 
 
-async def task(client, cfg, server=None, evt=None):
+async def task(client, cfg, server=None, evt=None):  # noqa: D103
     async with OWFS() as ow:
         hd = await OWFSroot.as_handler(client)
         await ow.add_task(mon, ow, hd)

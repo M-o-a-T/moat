@@ -6,19 +6,19 @@ from __future__ import annotations
 
 from sqlalchemy.orm import relationship
 
-from moat.label.model import LabelTyp, Sheet, Label, SheetTyp
+from moat.util import NotGiven, al_lower, gen_ident
 from moat.box.model import Box, BoxTyp
-from moat.thing.model import Thing
-from moat.util import NotGiven, gen_ident, al_lower
-from moat.db.util import session
 from moat.db.schema import Base
+from moat.db.util import session
+from moat.label.model import Label, LabelTyp, Sheet, SheetTyp
+from moat.thing.model import Thing
 
 LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp", collection_class=set)
 Label.box = relationship(Box, back_populates="labels")
 Label.thing = relationship(Thing, back_populates="labels")
 
 
-def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, sheet=NotGiven, **kw):
+def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, sheet=NotGiven, **kw):  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -54,7 +54,7 @@ def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, she
 Label.apply = label_apply
 
 
-def sheet_apply(self, sheettyp=NotGiven, force=False, **kw):
+def sheet_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -74,7 +74,7 @@ def sheet_apply(self, sheettyp=NotGiven, force=False, **kw):
 Sheet.apply = sheet_apply
 
 
-def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw):
+def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)

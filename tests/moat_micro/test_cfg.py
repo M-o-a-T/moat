@@ -6,10 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven, as_proxy, to_attrdict, P
+from moat.util import NotGiven, to_attrdict, P
 from moat.micro._test import mpy_stack
-import anyio
-from moat.util.compat import ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 

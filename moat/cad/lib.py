@@ -4,32 +4,35 @@ Collection of useful shortcuts for 3D modelling with build123d.
 
 from __future__ import annotations
 
+import math
+from pathlib import Path
+
 from build123d import (
-    Shape,
     Align,
     Axis,
     BuildLine,
-    Rot,
-    Matrix,
+    Cylinder,
     Intrinsic,
     JernArc,
+    Line,
     Location,
-    RegularPolygon,
+    Matrix,
     Part,
     Plane,
+    RegularPolygon,
+    Rot,
+    Shape,
     export_step,
     export_stl,
     import_step,
     import_stl,
-    Cylinder,
     loft,
+    mirror,
 )
-from pathlib import Path
-import math
+
 from moat.util import InexactFloat
 
 # from bd_warehouse.gear import InvoluteToothProfile, SpurGear, SpurGearPlan
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -40,30 +43,12 @@ import logging
 log = logging.getLogger("moat.d3")
 
 __all__ = [
-    "AMIN",
     "ACCM",
-    "Loc",
-    "LocR",
-    "Cyl",
-    "Up",
-    "D",
-    "ArcAt",
-    "RotAxis",
-    "RotateTo",
-    "PolyCap",
-    "sin",
-    "cos",
-    "tan",
-    "atan",
-    "stack",
-    "show",
-    "quarter",
-    "gear_turn",
-    "read_step",
-    "read_stl",
-    "pos",
-    "li",
-    "lto",
+    "AMIN",
+    "R0",
+    "R1",
+    "R2",
+    "R3",
     "RX",
     "RX1",
     "RX2",
@@ -76,10 +61,28 @@ __all__ = [
     "RZ1",
     "RZ2",
     "RZ3",
-    "R0",
-    "R1",
-    "R2",
-    "R3",
+    "ArcAt",
+    "Cyl",
+    "D",
+    "Loc",
+    "LocR",
+    "PolyCap",
+    "RotAxis",
+    "RotateTo",
+    "Up",
+    "atan",
+    "cos",
+    "gear_turn",
+    "li",
+    "lto",
+    "pos",
+    "quarter",
+    "read_step",
+    "read_stl",
+    "show",
+    "sin",
+    "stack",
+    "tan",
 ]
 
 AMIN = {"align": (Align.MIN, Align.MIN, Align.MIN)}
@@ -147,16 +150,19 @@ def PolyCap(d, n=6):
     return stack(RegularPolygon(d / 2, n, align=al), d / 4, RegularPolygon(d / 4, n, align=al))
 
 
-def RotateTo(thing, direction):
+def RotateTo(thing, direction):  # noqa:D103
     ax = Axis((0, 0, 0), (0, 0, 1) + direction.normalized())
     return thing.rotate(ax, 180)
 
 
 def RotAxis(axis, angle):
-    from transforms3d.euler import mat2euler
+    """
+    Rotation matrix for this angle around that axis.
+    """
+    from transforms3d.euler import mat2euler  # noqa:PLC0415
 
     rtm = Matrix()
-    breakpoint()
+    breakpoint()  # noqa:T100
     rtm.rotate(axis, angle)
     rtm = [[rtm[x, y] for y in range(3)] for x in range(3)]
     rtm = [a * 180 / math.pi for a in mat2euler(rtm, "szyx")]
@@ -205,7 +211,7 @@ def stack(*x: Sequence[int | float | Shape]):
             did_num = True
         elif did_num:
             if w is None:
-                w = last_shape
+                w = last_shape  # noqa:PLW2901
             else:
                 last_shape = w
             nd = Up(p) * w
@@ -237,7 +243,7 @@ def show(obj, name=None, dest=None):
 
     global s_o
     if s_o is Ellipsis:
-        import inspect
+        import inspect  # noqa:PLC0415
 
         f = inspect.currentframe()
         while f is not None and "show_object" not in f.f_globals:
@@ -278,20 +284,22 @@ def quarter(res):
 
 def gear_turn(n1, a1, n2, a2, minimize=True):
     """
-    Given gear1 with n1 teeth, turned to angle a1, and gear2 with n2 teeth positioned at angle a2 relative to gear 1:
-    how far do we turn gear2 so that its teeth mesh with gear1?
+    Given gear1 with n1 teeth, turned to angle a1, and gear2 with n2 teeth
+    positioned at angle a2 relative to gear 1: how far do we need to turn
+    gear2 so that its teeth mesh with gear1?
 
     This code assumes that 0° means the same thing for both gears (e.g. center of a tooth).
 
     If @minimize is true (the default), the resulting angle will be between 0 and 360/n2.
     """
-    # step 1, assume that gear 2 sits on top of gear 1: turn gear 2 by 180° plus half a tooth.
+    # step 1, place gear 2 on top of gear 1: we need to turn gear 2 by 180° plus half a tooth.
     res = 180 * (1 + 1 / n2)  # 180+360/n2/2
 
-    # step 2, turn gear 1 counterclockwise by a1, which turns gear 2 clockwise by the gear ratio.
-    res += a1 * (n1 / n2)
+    # step 2, turn gear 1 clockwise by a1, which turns gear 2 counterclockwise by the gear ratio.
+    res -= a1 * (n1 / n2)
 
-    # step 3, physically move gear2 around clockwise
+    # step 3, move gear 2 to its correct position clockwise, which causes it
+    # to turn clockwise by the gear ratio plus one.
     res += a2 * (1 + n1 / n2)
 
     # step 4, gear 2 is rotationally symmetric
@@ -311,7 +319,7 @@ def pos(x=None, y=None):
             raise
         res = None
     if y is not None:
-        ctx._mt_pos = (x, y)
+        ctx._mt_pos = (x, y)  # noqa:SLF001
     return res
 
 

@@ -1,20 +1,20 @@
 # command line interface
 from __future__ import annotations
 
+import anyio
 import logging
 import os
 import socket
 import sys
 from contextlib import AsyncExitStack
 
-import anyio
 import asyncclick as click
+
 from moat.util import attrdict, combine_dict, yload
+from moat.lib.codec import get_codec
 
 from .broker import create_broker
 from .client import CodecError, ConnectException, open_mqttclient
-from moat.lib.codec import get_codec
-from moat.util import NotGiven
 
 logger = logging.getLogger(__name__)
 

@@ -4,11 +4,10 @@ R/W access to configuration data.
 
 from __future__ import annotations
 
-from moat.util import NotGiven
+from moat.util import ExpKeyError, NotGiven
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.compat import log
-from moat.util import ExpKeyError
 
 
 class Cmd(BaseCmd):

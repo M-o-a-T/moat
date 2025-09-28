@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import anyio
+import logging
 import time
 from abc import ABCMeta, abstractmethod
 from contextlib import AsyncExitStack, asynccontextmanager
+
+from moat.util import CtxObj, P, Path, as_service, attrdict
 from moat.link import protocol_version
 from moat.util.misc import srepr
-from moat.util import as_service, P, Path, attrdict, CtxObj
-import logging
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import NoReturn
     from moat.link.client import Link
+
+    from typing import NoReturn
 
 __all__ = ["ntfy_bridge"]
 
@@ -49,7 +51,7 @@ class Notify:
             finally:
                 with anyio.move_on_after(2, shield=True):
                     await self.send(
-                        "error.notify", f"Backend stopped", "The backend terminated.", prio="fatal"
+                        "error.notify", "Backend stopped", "The backend terminated.", prio="fatal"
                     )
 
     async def send(self, *a, **kw) -> None:

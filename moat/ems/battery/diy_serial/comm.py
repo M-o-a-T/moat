@@ -9,20 +9,18 @@ import logging
 from pprint import pformat
 
 from moat.util import ValueEvent
-
+from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import (
     Lock,
-    TimeoutError,
+    TimeoutError,  # noqa:A004
     sleep_ms,
     ticks_diff,
     ticks_ms,
     wait_for_ms,
 )
 
-from moat.micro.cmd.base import BaseCmd
-
-from ..errors import MessageLost, MessageError, NoSuchCell
-from .packet import *
+from moat.ems.battery.errors import MessageError, MessageLost, NoSuchCell
+from .packet import PacketHeader, replyClass
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +45,11 @@ class BattComm(BaseCmd):
         self.rate = cfg.get("rate", 2400)
         self.n_cells = cfg.get("n", 16)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.comm = self.root.sub_at(self.cfg["comm"])
 
-    async def task(self):
+    async def task(self):  # noqa:D102
         self.set_ready()
         await self._read()
 
@@ -87,6 +85,7 @@ class BattComm(BaseCmd):
         # start=None requires broadcast.
         # end!=start and len(pkt)==1 requires broadcast IF the request packet
         # contains data.
+        end  # noqa:B018
 
         h = PacketHeader(start=start or 0, broadcast=broadcast)
 

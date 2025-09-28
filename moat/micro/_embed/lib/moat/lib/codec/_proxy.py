@@ -20,8 +20,8 @@ __all__ = [
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, overload, TypeVar
     from collections.abc import Callable
+    from typing import Any, TypeVar, overload
 
 _pkey = 1
 _CProxy = {}  # name > object
@@ -57,7 +57,7 @@ def get_proxy(obj):
     try:
         return _RProxy[id(obj)]
     except KeyError:
-        global _pkey  # noqa:PLW0603
+        global _pkey
         k = "p_" + str(_pkey)
         _pkey += 1
         _CProxy[k] = obj

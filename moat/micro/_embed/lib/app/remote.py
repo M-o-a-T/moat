@@ -4,19 +4,19 @@ Remote port access apps
 
 from __future__ import annotations
 
-from moat.util.compat import AC_use
 from moat.micro.stacks.console import console_stack
+from moat.util.compat import AC_use
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from most.micro.proto.stack import BaseBuf, BaseMsg
 
     from moat.micro.cmd.tree.dir import SubDispatch
 
-    from most.micro.proto.stack import BaseBuf, BaseMsg
+    from collections.abc import Awaitable
 
 
 def Raw(*a, **k):

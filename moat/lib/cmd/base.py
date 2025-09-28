@@ -3,22 +3,28 @@ Base classes for command handlers.
 """
 
 from __future__ import annotations
-from functools import partial
 
-from typing import TYPE_CHECKING
-from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit, shield
-from moat.util import Path, NotGiven
+
+from moat.util import NotGiven, Path
+from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
 from moat.util.exc import ungroup
+
 from .const import *
 from .errors import ShortCommandError
+
+from typing import TYPE_CHECKING
 
 _link_id = 0
 
 if TYPE_CHECKING:
-    from .msg import Msg
-    from moat.util import Path
-    from typing import Any, Awaitable, Callable, Sequence, Mapping
     from types import EllipsisType
+
+    from moat.util import Path
+
+    from .msg import Msg
+
+    from typing import Any
+    from collections.abc import Awaitable, Callable, Mapping, Sequence
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
@@ -103,23 +109,23 @@ class MsgLink:
                         pass
 
     @property
-    def end_both(self) -> bool:
+    def end_both(self) -> bool:  # noqa: D102
         if self._remote and not self._remote.end_here:
             return False
         return self._end
 
     @property
-    def end_here(self) -> bool:
+    def end_here(self) -> bool:  # noqa: D102
         return self._end
 
     @property
-    def end_there(self) -> bool:
+    def end_there(self) -> bool:  # noqa: D102
         if self._remote is None:
             return True
         return self._remote.end_here
 
     @property
-    def remote(self):
+    def remote(self):  # noqa: D102
         return self._remote
 
     def stream_detach(self):
@@ -157,7 +163,7 @@ class MsgLink:
             try:
                 with shield():
                     await rs.ml_recv([E_CANCEL], None, B_ERROR)
-            except Exception as exc:
+            except Exception:
                 pass
 
     def set_remote(self, remote: MsgLink):
@@ -342,10 +348,10 @@ class MsgSender(BaseMsgHandler):
         pass
 
     @property
-    def root(self):
+    def root(self):  # noqa: D102
         return self._root
 
-    def set_root(self, root):
+    def set_root(self, root):  # noqa: D102
         if type(self) != MsgSender:
             raise RuntimeError("not in a subclass")
         assert not isinstance(root, MsgSender)
@@ -373,11 +379,11 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd, a, kw))
 
-    def sub_at(self, prefix: Path, may_stream: bool = False, caller=None) -> MsgSender:
+    def sub_at(self, prefix: Path, caller=None) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
-        res = self.root.find_handler(prefix, may_stream)
+        res = self.root.find_handler(prefix)
         if isinstance(res, tuple):
             root, rem = res
             if rem:
@@ -421,7 +427,7 @@ class SubMsgSender(MsgSender):
         if caller is not None:
             self.Caller_ = caller
 
-    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:  # noqa: D102
         rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
 
@@ -440,13 +446,13 @@ class SubMsgSender(MsgSender):
         # The path is modified in .handle
         return Caller(self, (cmd, a, kw))
 
-    def stream(self, *a, **kw):
+    def stream(self, *a, **kw):  # noqa: D102
         return self.cmd((), *a, **kw).stream()
 
-    def stream_in(self, *a, **kw):
+    def stream_in(self, *a, **kw):  # noqa: D102
         return self.cmd((), *a, **kw).stream_in()
 
-    def stream_out(self, *a, **kw):
+    def stream_out(self, *a, **kw):  # noqa: D102
         return self.cmd((), *a, **kw).stream_out()
 
     def __call__(
@@ -461,7 +467,7 @@ class SubMsgSender(MsgSender):
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 
-    def sub_at(self, prefix: Path, may_stream: bool = False, caller=None) -> SubMsgSender:
+    def sub_at(self, prefix: Path, caller=None) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
@@ -495,7 +501,7 @@ class MsgHandler(BaseMsgHandler):
     """
 
     @property
-    def root(self):
+    def root(self):  # noqa: D102
         return self
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
@@ -543,7 +549,7 @@ class MsgHandler(BaseMsgHandler):
 
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
 
-    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
+    def find_handler(self, path) -> tuple[MsgHandler, Path] | Callable:
         """
         Do a path lookup and find a suitable subcommand.
 

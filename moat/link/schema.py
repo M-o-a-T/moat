@@ -4,10 +4,7 @@ Placeholder for data that does schema verification
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from moat.util import Path
 
 __all__ = ["Data", "Schema"]
 

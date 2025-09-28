@@ -4,28 +4,33 @@ Database support.
 
 from __future__ import annotations
 
-from pathlib import Path
-from moat.util import ensure_cfg, CFG, merge, ctx_as
-from importlib import import_module
+import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
+from importlib import import_module
+from pathlib import Path
 
 from sqlalchemy import create_engine, event, select
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import sessionmaker
 
+from moat.util import CFG, ctx_as, ensure_cfg, merge, attrdict
 
-import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.schema import MetaData
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Session", "session", "load", "database", "alembic_cfg"]
+__all__ = ["Session", "alembic_cfg", "database", "load", "session"]
 
 ensure_cfg("moat.db")
 
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
+    connection_record  # noqa:B018
     if "sqlite" not in dbapi_connection.__class__.__name__:
         return
     cursor = dbapi_connection.cursor()
@@ -41,9 +46,9 @@ session = ContextVar("session")
 _loaded = False
 
 
-def load(cfg: attrdict) -> metadata:
+def load(cfg: attrdict) -> MetaData:
     """Load database models as per config."""
-    from moat.db.schema import Base
+    from moat.db.schema import Base  # noqa:PLC0415
 
     merge(cfg, CFG.db, replace=False)
 
@@ -93,9 +98,9 @@ def database(cfg: attrdict) -> Session:
 
 def alembic_cfg(gcfg, sess):
     """Generate a config object for Alembic."""
-    from alembic.config import Config
-    from configparser import RawConfigParser
-    from moat import db
+    from configparser import RawConfigParser  # noqa:PLC0415
+    from alembic.config import Config  # noqa:PLC0415
+    from moat import db  # noqa:PLC0415
 
     cfg = gcfg.db
 

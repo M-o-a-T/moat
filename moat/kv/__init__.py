@@ -1,5 +1,6 @@
-# pylint: disable=W0703,C0103
+# pylint: disable=W0703,C0103  # noqa:D104
 from __future__ import annotations
+
 import contextlib
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)

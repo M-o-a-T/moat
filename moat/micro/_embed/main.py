@@ -1,11 +1,11 @@
 """
 Datellite main code.
 """
-# ruff: noqa:E402
 
 from __future__ import annotations
 
 import gc as _gc
+import os as _os
 
 _gc.collect()
 _fm = _gc.mem_free()
@@ -48,12 +48,13 @@ def go(state=None, cmd=True):
     moat_rom.cfg exists, else whatever is in "moat.cfg" ('mode' key)
     """
 
-    from rtc import get_rtc, set_rtc
-    import time
-    import machine
-
     # copy from moat.util.compat
-    import sys as sys
+    import sys as sys  # noqa:PLC0415
+    import time  # noqa:PLC0415
+
+    from rtc import get_rtc, set_rtc  # noqa:PLC0415
+
+    import machine  # noqa:PLC0415
 
     def log(s, *x, err=None):
         if x:
@@ -72,7 +73,7 @@ def go(state=None, cmd=True):
     if state is None:
         for st, fn in states:
             try:
-                os.stat(fn)
+                _os.stat(fn)
             except OSError:
                 pass
             else:
@@ -95,27 +96,28 @@ def go(state=None, cmd=True):
 
     fn = dict(states).get(state, "moat.cfg")
 
-    # no empty path
+    # clean upt default stuff from path 
     for p in ("", "/", ".", "/lib", ".frozen", "/rom", "/rom/lib"):
         try:
-            sys.path.remove("")
+            sys.path.remove(p)
         except ValueError:
             pass
 
     # build path
-    if state in ("norom", "std"):
+    print("*** STATE ***",state,"***", file=sys.stderr)
+    if state in ("norom", "std","once"):
         sys.path.append("/lib")
     if state in ("rom", "std"):
         sys.path.append("/rom")
-    if state in ("flash", "rom", "norom", "std"):
+    if state in ("flash", "rom", "norom", "std","once"):
         sys.path.append(".frozen")
     # keep the root in the path, but at the end
     sys.path.append("/")
 
     print("Start MoaT:", state, file=sys.stderr)
 
-    from moat.micro.main import main
-    from moat.util.compat import at
+    from moat.micro.main import main  # noqa:PLC0415
+    from moat.util.compat import at  # noqa:PLC0415
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 

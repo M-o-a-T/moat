@@ -1,12 +1,14 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
-from collections.abc import Mapping
+import contextlib
 
 import asyncclick as click
-from moat.util import P, PathLongener, yprint
 from range_set import RangeSet
-import contextlib
+
+from moat.util import P, PathLongener, yprint
+
+from collections.abc import Mapping
 
 
 @click.group(short_help="Control internal state.")  # pylint: disable=undefined-variable
@@ -48,7 +50,7 @@ async def state(obj, **flags):
         flags["deleted"] = True
         flags["missing"] = True
         flags["remote_missing"] = True
-    res = await obj.client._request("get_state", iter=False, **flags)
+    res = await obj.client._request("get_state", iter=False, **flags)  # noqa:SLF001
     k = res.pop("known", None)
     if k is not None:
         res["superseded"] = k
@@ -79,7 +81,7 @@ async def mark(obj, deleted, source, node, items, broadcast):
 
     k = "deleted" if deleted else "superseded"
     if not items:
-        r = await obj.client._request("get_state", iter=False, missing=True)
+        r = await obj.client._request("get_state", iter=False, missing=True)  # noqa:SLF001
         r = r["missing"]
         if node != "":
             r = {node: r[node]}
@@ -93,11 +95,11 @@ async def mark(obj, deleted, source, node, items, broadcast):
 
     msg = {k: r, "node": source}
 
-    await obj.client._request("fake_info", iter=False, **msg)
+    await obj.client._request("fake_info", iter=False, **msg)  # noqa:SLF001
     if broadcast:
-        await obj.client._request("fake_info_send", iter=False, **msg)
+        await obj.client._request("fake_info_send", iter=False, **msg)  # noqa:SLF001
 
-    res = await obj.client._request("get_state", iter=False, **{k: True})
+    res = await obj.client._request("get_state", iter=False, **{k: True})  # noqa:SLF001
     yprint(res, stream=obj.stdout)
 
 
@@ -121,7 +123,7 @@ async def deleter(obj, delete, nodes):
     - … deleter -d NODE… -- remove this node
     """
 
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=("actor", "del"),
         iter=False,
@@ -144,7 +146,7 @@ async def deleter(obj, delete, nodes):
         return
 
     val = {"nodes": list(val)}
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="set_internal",
         path=("actor", "del"),
         iter=False,
@@ -168,7 +170,7 @@ async def dump(obj, path):
     path = P(path)
     y = {}
     pl = PathLongener()
-    async for r in await obj.client._request("get_tree_internal", path=path, iter=True, nchain=0):
+    async for r in await obj.client._request("get_tree_internal", path=path, iter=True, nchain=0):  # noqa:SLF001
         pl(r)
         path = r["path"]
         yy = y
@@ -190,7 +192,7 @@ async def get(obj, node, tick):
     This looks up internal data.
     """
 
-    res = await obj.client._request("get_value", node=node, tick=tick, nchain=99)
+    res = await obj.client._request("get_value", node=node, tick=tick, nchain=99)  # noqa:SLF001
     if not obj.meta:
         res = res.value
     yprint(res, stream=obj.stdout)
@@ -215,13 +217,13 @@ async def enum(obj, node, num, current, copy):
     Increase verbosity to also show the oject paths.
     """
 
-    res = await obj.client._request("enum_node", node=node, max=num, current=current)
+    res = await obj.client._request("enum_node", node=node, max=num, current=current)  # noqa:SLF001
     if obj.meta and not copy and obj.debug <= 1:
         yprint(res, stream=obj.stdout)
     else:
         for k in res.result:
             if copy or obj.debug > 1:
-                res = await obj.client._request("get_value", node=node, tick=k, nchain=3)
+                res = await obj.client._request("get_value", node=node, tick=k, nchain=3)  # noqa:SLF001
                 if obj.debug > 1:
                     print(k, res.path)
                 else:
@@ -242,6 +244,6 @@ async def kill(obj, node):
     This command only works if this node does not have any current data in
     the system.
     """
-    res = await obj.client._request("kill_node", node=node)
+    res = await obj.client._request("kill_node", node=node)  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)

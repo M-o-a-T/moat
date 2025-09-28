@@ -1,19 +1,18 @@
 """
 MoaT-KV client data model for KNX
 """
+from __future__ import annotations
 
 import anyio
+import logging
+
+from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from xknx.remote_value import RemoteValueSensor
+from xknx.telegram import GroupAddress
 
 from moat.util import NotGiven
-from moat.kv.obj import ClientEntry, ClientRoot
 from moat.kv.errors import ErrorRoot
-
-from xknx.telegram import GroupAddress
-from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
-from xknx.remote_value import RemoteValueSensor
-
-
-import logging
+from moat.kv.obj import ClientEntry, ClientRoot
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ class _KNXbase(ClientEntry):
             return
         await self.setup(initial=initial)
         for k in self:
-            await k._update_server(initial=initial)
+            await k._update_server(initial=initial)  # noqa:SLF001
 
     async def setup(self, initial=False):
         pass
@@ -69,7 +68,7 @@ class _KNXnode(_KNXbase):
     def tg(self):
         return self.server.task_group
 
-    async def setup(self, initial=False):
+    async def setup(self, initial=False):  # noqa:ARG002
         await super().setup()
         if self.server is None:
             self._task = None
@@ -92,8 +91,7 @@ class _KNXnode(_KNXbase):
                 try:
                     await p(*a, **k)
                 finally:
-                    with anyio.CancelScope(shield=True):
-                        self._task_done.set()
+                    self._task_done.set()
 
         await self.tg.start(_spawn, p, a, k)
 
@@ -118,11 +116,13 @@ class KNXnode(_KNXnode):
             )
             if mode == "binary":
                 device = BinarySensor(**args)
-                get_val = lambda s: s.is_on()
+                def get_val(s):
+                    return s.is_on()
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = Sensor(value_type=mode, **args)
-                get_val = lambda s: s.sensor_value.value
+                def get_val(s):
+                    return s.sensor_value.value
             # TODO more of the same
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
@@ -217,7 +217,7 @@ class KNXnode(_KNXnode):
         finally:
             evt.set()
 
-    async def setup(self, initial=False):
+    async def setup(self, initial=False):  # noqa:D102
         await super().setup(initial=initial)
 
         if self.server is None:
@@ -260,72 +260,72 @@ class _KNXbaseNUM(_KNXbase):
         return None
 
 
-class KNXg2(_KNXbaseNUM):
+class KNXg2(_KNXbaseNUM):  # noqa:D101
     cls = KNXnode
     max_nr = 255
 
 
-class KNXg1(_KNXbaseNUM):
+class KNXg1(_KNXbaseNUM):  # noqa:D101
     cls = KNXg2
     max_nr = 7
 
 
-class KNXserver(_KNXbase):
-    async def set_server(self, server, initial=False):
+class KNXserver(_KNXbase):  # noqa:D101
+    async def set_server(self, server, initial=False):  # noqa:D102
         await self.parent.set_server(server, initial=initial)
 
 
-class KNXbus(_KNXbaseNUM):
+class KNXbus(_KNXbaseNUM):  # noqa:D101
     cls = KNXg1
     max_nr = 31
 
     _server = None
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102
         if isinstance(name, str):
             return KNXserver
         return super().child_type(name)
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # noqa:D102
         await super().set_value(value)
         await self.update_server()
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return self._server
 
-    async def set_server(self, server, initial=False):
+    async def set_server(self, server, initial=False):  # noqa:D102
         self._server = server
         await self._update_server(initial=initial)
 
 
-class KNXroot(_KNXbase, ClientRoot):
+class KNXroot(_KNXbase, ClientRoot):  # noqa:D101
     cls = {}
     reg = {}
     CFG = "knx"
     err = None
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return None
 
-    async def run_starting(self, server=None):  # pylint: disable=arguments-differ
+    async def run_starting(self, server=None):  # pylint: disable=arguments-differ  # noqa:D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
     @classmethod
-    def register(cls, typ):
+    def register(cls, typ):  # noqa:D102
         def acc(kls):
             cls.reg[typ] = kls
             return kls
 
         return acc
 
-    def child_type(self, name):
+    def child_type(self, name):  # noqa:D102,ARG002
         return KNXbus
 
-    async def update_server(self):
+    async def update_server(self):  # noqa:D102
         await self._update_server()

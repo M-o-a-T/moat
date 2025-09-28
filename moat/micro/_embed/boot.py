@@ -4,8 +4,8 @@
 # setup.run()
 from __future__ import annotations
 
-import sys
 import contextlib
+import sys
 
 with contextlib.suppress(ValueError):
     sys.path.remove("/lib")

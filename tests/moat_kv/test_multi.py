@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 from unittest import mock
 import msgpack
 import pytest
@@ -28,7 +28,7 @@ def _skip_check(self):
     return False
 
 
-@pytest.mark.trio()
+@pytest.mark.trio
 async def test_10_many(autojump_clock):  # pylint: disable=unused-argument
     """
     This test starts multiple servers at the same time and checks that
@@ -89,7 +89,7 @@ async def test_10_many(autojump_clock):  # pylint: disable=unused-argument
         pass  # server end
 
 
-@pytest.mark.trio()
+@pytest.mark.trio
 @pytest.mark.parametrize("tocky", [-10, -2, -1, 0, 1, 2, 10])
 async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argument
     """

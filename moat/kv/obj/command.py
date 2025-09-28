@@ -1,10 +1,11 @@
-# command line interface helpers for objects
+# command line interface helpers for objects  # noqa: D100
 from __future__ import annotations
 
 import logging
 import sys
 
 import asyncclick as click
+
 from moat.util import NotGiven
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 
-class BaseTopicPlugin:
+class BaseTopicPlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
         try:
@@ -10,19 +10,19 @@ class BaseTopicPlugin:
             self.context.logger.warning("'topic-check' section not found in context configuration")
             self.topic_config = None
 
-    async def topic_filtering(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def topic_filtering(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         if not self.topic_config:
             # auth config section not found
             return None
         return True
 
 
-class TopicTabooPlugin(BaseTopicPlugin):
+class TopicTabooPlugin(BaseTopicPlugin):  # noqa: D101
     def __init__(self, context):
         super().__init__(context)
         self._taboo = ["prohibited", "top-secret", "data/classified"]
 
-    async def topic_filtering(self, *args, **kwargs):
+    async def topic_filtering(self, *args, **kwargs):  # noqa: D102
         filter_result = await super().topic_filtering(*args, **kwargs)
         if filter_result:
             session = kwargs.get("session")
@@ -35,9 +35,9 @@ class TopicTabooPlugin(BaseTopicPlugin):
         return filter_result
 
 
-class TopicAccessControlListPlugin(BaseTopicPlugin):
+class TopicAccessControlListPlugin(BaseTopicPlugin):  # noqa: D101
     @staticmethod
-    def topic_ac(topic_requested, topic_allowed):
+    def topic_ac(topic_requested, topic_allowed):  # noqa: D102
         req_split = topic_requested.split("/")
         allowed_split = topic_allowed.split("/")
         ret = True
@@ -57,7 +57,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
                 break
         return ret
 
-    async def topic_filtering(self, *args, **kwargs):
+    async def topic_filtering(self, *args, **kwargs):  # noqa: D102
         if not self.topic_config:
             # auth config section not found
             return None

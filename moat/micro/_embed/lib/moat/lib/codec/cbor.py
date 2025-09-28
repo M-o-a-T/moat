@@ -5,11 +5,12 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
-from moat.util import NotGiven, OutOfData
+import struct
+
+from moat.util import OutOfData
+
 from ._base import Codec as _Codec
 from ._base import NoCodecError
-
-import struct
 
 # Typing
 from typing import cast, TYPE_CHECKING  # isort:skip
@@ -23,8 +24,9 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from ._base import ByteType, VarByteType
+
     from typing import Any
-    from ._base import VarByteType, ByteType
 
 
 __all__ = ["Codec", "ExtraData", "Tag"]

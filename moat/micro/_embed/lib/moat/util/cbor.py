@@ -10,14 +10,14 @@ An overly-simple CBOR packer/unpacker.
 from __future__ import annotations
 
 # Typing
-from moat.lib.codec import Extension, NoCodecError
+from moat.lib.codec import Extension
 from moat.lib.codec.cbor import Codec, Tag
-from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj, get_proxy
+from moat.lib.codec.proxy import DProxy, Proxy, get_proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
 from . import NotGiven
 from .path import Path
 
-__all__ = ["std_ext", "StdCBOR"]
+__all__ = ["StdCBOR", "std_ext"]
 
 std_ext = Extension()
 
@@ -30,7 +30,7 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def decode(self, data: bytes):
+    def decode(self, data: bytes):  # noqa: D102
         if data == b"":
             return NotGiven
         return super().decode(data)
@@ -43,7 +43,7 @@ Codec = StdCBOR
 def _enc_dpr(codec, obj):
     codec  # noqa:B018
     res = [obj.name] + obj.a
-    if obj.k or res and isinstance(res[-1], dict):
+    if obj.k or (res and isinstance(res[-1], dict)):
         res.append(obj.k)
     return res
 

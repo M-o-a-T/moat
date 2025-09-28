@@ -1,11 +1,12 @@
+# noqa:D100
 from __future__ import annotations
+
 from contextlib import asynccontextmanager
 
+from moat.util import NotGiven, P, StdCBOR
+from moat.bus.backend import BaseBusHandler, UnknownParamError
+from moat.bus.message import BusMessage
 from moat.link.backend.mqtt import Backend
-from moat.util import NotGiven, P
-
-from moatbus.backend import BaseBusHandler
-from moatbus.message import BusMessage
 
 
 class Handler(BaseBusHandler):
@@ -48,7 +49,7 @@ class Handler(BaseBusHandler):
     }
 
     @staticmethod
-    def check_config(cfg: dict):
+    def check_config(cfg: dict):  # noqa:D102
         for k, _v in cfg.items():
             if k not in ("id", "uri", "topic"):
                 raise UnknownParamError(k)
@@ -56,10 +57,12 @@ class Handler(BaseBusHandler):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with Backend(self.cfg.mqtt, name=self.name) as C:
-            async with C.monitor(self.cfg.topic, codec=StdCodec()) as CH:
-                self._mqtt = CH
-                yield self
+        async with (
+            Backend(self.cfg.mqtt, name=self.name) as C,
+            C.monitor(self.cfg.topic, codec=StdCBOR()) as CH,
+        ):
+            self._mqtt = CH
+            yield self
 
     def __aiter__(self):
         self._mqtt_it = self._mqtt.__aiter__()
@@ -77,10 +80,10 @@ class Handler(BaseBusHandler):
                 if id == self.id:
                     continue
                 msg = BusMessage(**msg)
-                msg._mqtt_id = id
+                msg._mqtt_id = id  # noqa:SLF001
                 return msg
 
-    async def send(self, msg):
-        data = {k: getattr(msg, k) for k in msg._attrs}
+    async def send(self, msg):  # noqa:D102
+        data = {k: getattr(msg, k) for k in msg._attrs}  # noqa:SLF001
         data["_id"] = getattr(msg, "_mqtt_id", self.id)
         await self._mqtt.send(topic=self.cfg.topic, message=data)

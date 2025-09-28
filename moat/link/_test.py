@@ -1,34 +1,32 @@
 from __future__ import annotations
 
 import anyio
-import time
-import os
 import sys
+import time
 from contextlib import asynccontextmanager, nullcontext
-from tempfile import TemporaryDirectory
-from pathlib import Path as FSPath
 from functools import partial
+from pathlib import Path as FSPath
+from tempfile import TemporaryDirectory
 
-from moat.link.client import Link
-from moat.link.server import Server
-from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
     CFG,  # noqa:F401
-    ensure_cfg,
     CtxObj,
-    attrdict,
-    combine_dict,
     NotGiven,
-    Path,
-    P,
     Root,
     ValueEvent,
+    attrdict,
+    combine_dict,
+    ensure_cfg,
 )
+from moat.link.backend import get_backend
+from moat.link.client import Link
+from moat.link.server import Server
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncIterator, Self
+    from typing import Self
+    from collections.abc import AsyncIterator
 
 ensure_cfg("moat.link")
 
@@ -47,7 +45,7 @@ async def run_broker(cfg, *, task_status):
 
     The task status returns the port we're listening on.
     """
-    # cfg  # noqa:B018  # pyright:ignore
+    # cfg  # pyright:ignore
     # broker = AsyncMQTTBroker(("127.0.0.1", 0))
     # await broker.serve(task_status=task_status)
     from anyio.pytest_plugin import FreePortFactory
@@ -86,7 +84,7 @@ listen {{
         for _ in range(20):
             try:
                 sock = await anyio.connect_tcp("127.0.0.1", port)
-            except EnvironmentError:
+            except OSError:
                 await anyio.sleep(0.1)
             else:
                 await sock.aclose()
@@ -164,7 +162,7 @@ class Scaffold(CtxObj):
         async with self.backend_(cfg, **kw) as bk:
             task_status.started(bk)
             await anyio.sleep_forever()
-            assert False  # noqa:B011,PT015
+            raise AssertionError
 
     async def server(self, cfg: dict | None = None, **kw) -> tuple[Server, list[dict]]:
         """
@@ -184,7 +182,7 @@ class Scaffold(CtxObj):
         cfg["server"]["port"] = 0
         if self.tempdir is not None:
             cfg["server"]["save"]["dir"] = self.tempdir / "data"
-        global _seq  # noqa:PLW0603
+        global _seq
         _seq += 1
 
         s = Server(cfg, f"S_{_seq}", **kw)
@@ -210,7 +208,7 @@ class Scaffold(CtxObj):
         async with self.client_(*a, **kw) as li:
             task_status.started(li)
             await anyio.sleep_forever()
-            assert False  # noqa:B011,PT015
+            raise AssertionError
 
     @asynccontextmanager
     async def client_(
@@ -222,7 +220,7 @@ class Scaffold(CtxObj):
         if cli is None:
             cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
 
-            global _seq  # noqa:PLW0603
+            global _seq
             _seq += 1
             name = f"C_{_seq}"
 

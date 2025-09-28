@@ -8,12 +8,14 @@ Support for boxes for storing things.
 from __future__ import annotations
 
 import sys
-from moat.util import load_subgroup, ensure_cfg, yprint, option_ng
-from moat.db import database
-from .model import Box, BoxTyp
-from sqlalchemy import select
 
 import asyncclick as click
+from sqlalchemy import select
+
+from moat.util import ensure_cfg, load_subgroup, option_ng, yprint
+from moat.db import database
+
+from .model import Box, BoxTyp
 
 ensure_cfg("moat.db")
 
@@ -54,7 +56,7 @@ def show_(obj):
 
     if obj.name is None:
         seen = False
-        with sess.execute(select(Box).where(Box.container == None)) as boxes:
+        with sess.execute(select(Box).where(Box.container is None)) as boxes:
             for (box,) in boxes:
                 seen = True
                 print(box.name)
@@ -100,7 +102,7 @@ def add(obj, **kw):
 @one.command(epilog="Use '-in -' to drop the parent box, -x/-y/-z 0 to clear a position.")
 @opts
 @click.pass_obj
-def set(obj, **kw):
+def set(obj, **kw):  # noqa:A001
     """
     Modify a box.
     """
@@ -192,6 +194,8 @@ def typ_add(obj, parent, **kw):
     """
     Add a box type.
     """
+    parent  # noqa:B018
+
     if obj.name is None:
         raise click.UsageError("The box type needs a name!")
 

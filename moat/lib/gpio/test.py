@@ -5,15 +5,16 @@ This module contains helpers for testing async gpio, via the Linux kernel's
 
 from __future__ import annotations
 
+import anyio
 import errno
 import logging
 import os
 import re
-from collections import namedtuple
 from contextlib import asynccontextmanager
 
-import anyio
 from moat.util import Queue
+
+from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 

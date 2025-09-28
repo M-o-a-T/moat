@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 from passlib.apps import custom_app_context as pwd_context
 
 
-class BaseAuthPlugin:
+class BaseAuthPlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
         try:
@@ -14,7 +14,7 @@ class BaseAuthPlugin:
         except KeyError:
             self.context.logger.warning("'auth' section not found in context configuration")
 
-    async def authenticate(self, *args, **kwargs):  # pylint: disable=unused-argument
+    async def authenticate(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")
@@ -22,8 +22,8 @@ class BaseAuthPlugin:
         return True
 
 
-class AnonymousAuthPlugin(BaseAuthPlugin):
-    async def authenticate(self, *args, **kwargs):
+class AnonymousAuthPlugin(BaseAuthPlugin):  # noqa: D101
+    async def authenticate(self, *args, **kwargs):  # noqa: D102
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
             allow_anonymous = self.auth_config.get(
@@ -53,7 +53,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
         return authenticated
 
 
-class FileAuthPlugin(BaseAuthPlugin):
+class FileAuthPlugin(BaseAuthPlugin):  # noqa: D101
     def __init__(self, context):
         super().__init__(context)
         self._users = dict()
@@ -77,7 +77,7 @@ class FileAuthPlugin(BaseAuthPlugin):
         else:
             self.context.logger.warning("Configuration parameter 'password_file' not found")
 
-    async def authenticate(self, *args, **kwargs):
+    async def authenticate(self, *args, **kwargs):  # noqa: D102
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
             session = kwargs.get("session")

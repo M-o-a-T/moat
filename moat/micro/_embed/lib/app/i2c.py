@@ -11,8 +11,9 @@ try:
 except ImportError:
     from moat.micro._test import machine
 
-from moat.micro.cmd.base import BaseCmd
 import contextlib
+
+from moat.micro.cmd.base import BaseCmd
 
 
 class Cmd(BaseCmd):

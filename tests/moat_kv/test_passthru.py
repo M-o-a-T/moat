@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import pytest
 import trio
 from moat.util import P
@@ -9,8 +9,8 @@ from moat.util.compat import CancelledError
 pytestmark = pytest.mark.skip
 
 
-@pytest.mark.trio()
-async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument
+@pytest.mark.trio
+async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
     async with stdtest(args={"init": 123}) as st:
         assert st is not None
         (s,) = st.s
@@ -38,8 +38,8 @@ async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument
     pass  # closing server
 
 
-@pytest.mark.trio()
-async def test_52_passthru_bin(autojump_clock):  # pylint: disable=unused-argument
+@pytest.mark.trio
+async def test_52_passthru_bin(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
     async with stdtest(args={"init": 123}) as st:
         assert st is not None
         (s,) = st.s

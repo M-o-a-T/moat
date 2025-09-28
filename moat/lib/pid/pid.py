@@ -7,9 +7,10 @@ Created on Wed Jun 22 20:06:38 2022
 
 from __future__ import annotations
 
-from warnings import warn
 from math import exp
 from time import monotonic as time
+from warnings import warn
+
 from moat.util import attrdict
 
 
@@ -34,7 +35,7 @@ class PID:
         self.set_output_limits(None, None)
         self.reset()
 
-    def reset(self):
+    def reset(self):  # noqa: D102
         self.set_initial_value(None, None, None)
 
     def __call__(self, t, e):
@@ -272,7 +273,7 @@ class CPID(PID):
             self.i0 = o + i * self.Kp
             self.e0 = i
 
-    def __call__(self, i, t=None, split=False):
+    def __call__(self, i, t=None, split=False):  # noqa: D102
         if t is None:
             t = time()
         res = super().integrate(t, e=self.state.setpoint - i, split=split)

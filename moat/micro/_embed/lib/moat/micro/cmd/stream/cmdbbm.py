@@ -11,9 +11,9 @@ from moat.util.compat import ACM, AC_exit, L, Lock
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
-
     from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
+
+    from collections.abc import Awaitable
 
 
 class BaseCmdBBM(BaseCmd):

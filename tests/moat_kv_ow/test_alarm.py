@@ -4,7 +4,6 @@ Test program cloned from asyncowfs, but using MoaT-KV for end-to-semi-end testin
 
 from __future__ import annotations
 
-import sys
 import anyio
 from copy import deepcopy
 from functools import partial
@@ -12,7 +11,7 @@ from functools import partial
 from asyncowfs.mock import structs
 from moat.kv.mock.mqtt import stdtest
 
-from moat.util import attrdict, Path, P, load_ext
+from moat.util import Path, P, load_ext
 from moat.kv.data import data_get
 
 owfs_mock = load_ext("moat.kv.ow.mock")
@@ -41,7 +40,7 @@ basic_tree = {
 }
 
 
-async def test_alarm(mock_clock):
+async def test_alarm(mock_clock):  # noqa: D103
     mock_clock.autojump_threshold = 0.1
     my_tree = deepcopy(basic_tree)
     dt = my_tree["bus.0"]["10.345678.90"]

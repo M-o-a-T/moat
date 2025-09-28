@@ -21,11 +21,11 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.meta import MsgMeta
 
-    from typing import Any, Self, ClassVar
     from collections.abc import AsyncIterator
+    from typing import Any, ClassVar, Self
 
 
-__all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
+__all__ = ["Backend", "Message", "RawMessage", "get_backend", "get_codec"]
 
 
 @define

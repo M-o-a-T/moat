@@ -6,10 +6,11 @@ which is used to clean up the list of deleted nodes.
 from __future__ import annotations
 
 import weakref
-from collections import deque
 
 from asyncactor import Actor, PingEvent, TagEvent
 from asyncactor.backend import get_transport
+
+from collections import deque
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 TAGS = 4
 
 
-class DeleteActor:
+class DeleteActor:  # noqa:D101
     _enabled = None
 
     def __init__(self, server):
@@ -33,7 +34,7 @@ class DeleteActor:
         self.n_nodes = 0
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return self._server()
 
     async def tock_me(self):

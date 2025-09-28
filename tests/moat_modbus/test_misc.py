@@ -11,7 +11,7 @@ from moat.modbus.server import ModbusServer
 from moat.modbus.types import FloatValue, HoldingRegisters, LongValue, StringValue
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_rw():
     """Your basic client/server read/write test"""
     async with ModbusServer(address="127.0.0.1", port=0) as srv:

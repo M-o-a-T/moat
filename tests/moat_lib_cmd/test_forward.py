@@ -1,27 +1,26 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import pytest
 import anyio
-from moat.lib.cmd.errors import StreamError
 from tests.moat_lib_cmd.scaffold import scaffold
 from moat.lib.cmd.base import MsgHandler
 from moat.util import P
 
 
-class Fwd:
+class Fwd:  # noqa: D101
     def __init__(self, dest: MsgHandler):
         self._dest = dest
 
-    async def handle(self, msg: Msg, rcmd: list):
+    async def handle(self, msg: Msg, rcmd: list):  # noqa: D102
         return await self._dest.handle(msg, rcmd)
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 @pytest.mark.parametrize("a_s", [(), (None,), ("foo"), (12, 34)])
 @pytest.mark.parametrize("a_r", [(), (None,), ("bar"), (2, 3)])
 @pytest.mark.parametrize("k_s", [{}, dict(a=42)])
 @pytest.mark.parametrize("k_r", [{}, dict(b=21)])
-async def test_basic(a_s, a_r, k_s, k_r):
+async def test_basic(a_s, a_r, k_s, k_r):  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -46,8 +45,8 @@ async def test_basic(a_s, a_r, k_s, k_r):
         assert res.kw == k_r
 
 
-@pytest.mark.anyio()
-async def test_basic_res():
+@pytest.mark.anyio
+async def test_basic_res():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -64,8 +63,8 @@ async def test_basic_res():
         assert res == {"C": P("Test"), "R": (123,)}
 
 
-@pytest.mark.anyio()
-async def test_error():
+@pytest.mark.anyio
+async def test_error():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -82,8 +81,8 @@ async def test_error():
         assert err.match("Duh")
 
 
-@pytest.mark.anyio()
-async def test_more():
+@pytest.mark.anyio
+async def test_more():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -113,8 +112,8 @@ async def test_more():
         assert r == [1, 2, 3, 4, 5]
 
 
-@pytest.mark.anyio()
-async def test_return():
+@pytest.mark.anyio
+async def test_return():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -131,8 +130,8 @@ async def test_return():
         assert res[0] == ("Foo", 234)
 
 
-@pytest.mark.anyio()
-async def test_return2():
+@pytest.mark.anyio
+async def test_return2():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -150,8 +149,8 @@ async def test_return2():
         print("DONE")
 
 
-@pytest.mark.anyio()
-async def test_stream_in():
+@pytest.mark.anyio
+async def test_stream_in():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -178,8 +177,8 @@ async def test_stream_in():
         print("DONE")
 
 
-@pytest.mark.anyio()
-async def test_stream_out():
+@pytest.mark.anyio
+async def test_stream_out():  # noqa: D103
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):

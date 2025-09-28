@@ -4,17 +4,18 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from collections import deque
 from operator import attrgetter
 from pprint import pprint
 
 import asyncclick as click
-from moat.kv.data import data_get
-from moat.kv.obj.command import std_command
-from moat.util import P, attrdict
 from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
 
+from moat.util import P, attrdict
+from moat.kv.data import data_get
 from moat.kv.inv.model import Host, InventoryRoot, Wire
+from moat.kv.obj.command import std_command
+
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ std_command(
 
 
 def rev_name(ctx, param, value, *, delim=".", rev=True):  # pylint: disable=unused-argument
+    ctx, param  # noqa:B018
     value = value.split(delim)
     if len(value) < 3:
         raise click.BadParameter("need more than two labels")
@@ -63,6 +65,7 @@ def rev_name(ctx, param, value, *, delim=".", rev=True):  # pylint: disable=unus
 
 
 def rev_wire(ctx, param, value):
+    ctx  # noqa:B018
     return rev_name(ctx, param, value, delim="-", rev=False)
 
 
@@ -96,12 +99,14 @@ def host_post(obj, h, values):
 
 
 def get_net(ctx, attr, val):  # pylint: disable=unused-argument
+    ctx, attr  # noqa:B018
     if val in (None, "-"):
         return val
     return val
 
 
 def get_net_name(ctx, attr, val):  # pylint: disable=unused-argument
+    ctx, attr  # noqa:B018
     if val is None:
         return None
     n = ctx.obj.data.net.by_name(val)
@@ -111,17 +116,20 @@ def get_net_name(ctx, attr, val):  # pylint: disable=unused-argument
 
 
 def get_net_tuple(ctx, attr, val):  # pylint: disable=unused-argument
+    ctx, attr  # noqa:B018
     val = IPNetwork(val)
     return val.prefixlen, val.value
 
 
 def get_mac(ctx, attr, val):  # pylint: disable=unused-argument
+    ctx, attr  # noqa:B018
     if val in (None, "-"):
         return val
     return EUI(val)
 
 
 def net_apply(obj, n, kw):  # pylint:disable=unused-argument
+    obj  # noqa:B018
     seen = 0
     val = kw.pop("virt", None)
     if val is not None:
@@ -214,7 +222,7 @@ async def host_port(ctx, name):
         if ctx.invoked_subcommand is not None:
             raise click.BadParameter("The name '-' triggers a list and precludes subcommands.")
         for k, v in h.ports.items():
-            p = h._ports[k]
+            p = h._ports[k]  # noqa:SLF001
             print(k, v, file=obj.stdout)
     elif ctx.invoked_subcommand is None:
         p = h.port[name]
@@ -243,7 +251,7 @@ async def host_template(obj, dump, template):
             ports  a list of the host's ports
             vlans  the VLANs attached to this host
         """
-    import jinja2
+    import jinja2  # noqa:PLC0415
 
     if len(template) != 1 - dump:
         if dump:
@@ -271,7 +279,7 @@ async def host_template(obj, dump, template):
             none = vl
         nport[vl] = 0
 
-    for p in h._ports.values():
+    for p in h._ports.values():  # noqa:SLF001
         ports[p.name] = pn = attrdict(
             port=p,
             untagged=None,
@@ -366,8 +374,8 @@ async def host_find(obj, dest):
                         todo.append((c, wp + (p, c)))
 
     if dest == "-":
-        for hp, _ in work():
-            pass
+        for _hp, _ in work():
+            pass  # XXX
         for hp in obj.data.host.all_children:
             if hp not in seen:
                 print(hp, file=obj.stdout)
@@ -572,7 +580,7 @@ async def hp_link(obj, dest, a_end, b_end, force):
         """
     h = obj.host
     port = obj.thing_port
-    if len(dest) > 2 or ((dest and dest[0] == "-" or a_end or b_end) and len(dest) > 1):
+    if len(dest) > 2 or (((dest and dest[0] == "-") or a_end or b_end) and len(dest) > 1):
         raise click.BadParameter("Too many destination params")
     try:
         p = h.port[port]

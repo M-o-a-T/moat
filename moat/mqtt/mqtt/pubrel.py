@@ -1,17 +1,19 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import PUBREL, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class PubrelPacket(MQTTPacket):
+class PubrelPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
     @property
-    def packet_id(self):
+    def packet_id(self):  # noqa: D102
         return self.variable_header.packet_id
 
     @packet_id.setter
@@ -36,6 +38,6 @@ class PubrelPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls, packet_id):
+    def build(cls, packet_id):  # noqa: D102
         variable_header = PacketIdVariableHeader(packet_id)
         return PubrelPacket(variable_header=variable_header)

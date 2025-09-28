@@ -4,17 +4,19 @@ Common parts
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 import anyio
 
 from moat.lib.cmd.base import MsgHandler
 
+from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from typing import Awaitable
     from moat.lib.cmd import Msg
 
+    from collections.abc import Awaitable
 
-class NotAuthorized(RuntimeError):
+
+class NotAuthorized(RuntimeError):  # noqa: D101
     pass
 
 

@@ -6,14 +6,14 @@ from __future__ import annotations
 
 import anyio
 
-from moat.link.client import LinkCommon
-from . import Gate as _Gate
-from moat.util import Path, CFG, NotGiven, PathLongener
-from moat.link.meta import MsgMeta
+from moat.util import NotGiven, Path, PathLongener
 from moat.kv.client import Client, open_client
+from moat.link.meta import MsgMeta
+
+from . import Gate as _Gate
 
 
-class Gate(_Gate):
+class Gate(_Gate):  # noqa: D101
     kv: Client
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -21,7 +21,7 @@ class Gate(_Gate):
         async with open_client("moat.link.gate.kv", **self.cfg["kv"]) as self.kv:
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):  # noqa: D102
         pl = PathLongener()
         # This chops the `self.cf.dst` prefix off the resulting path
         async with self.kv.watch(self.cf.dst, fetch=True, long_path=False, nchain=2) as mon:
@@ -59,7 +59,7 @@ class Gate(_Gate):
             pass
         return True
 
-    def newer_dst(self, node):
+    def newer_dst(self, node):  # noqa: D102
         # If the internal message has a copy of the outside metadata, it
         # should be either unmodified or older. Test the data to be sure.
         # Otherwise compare the chains.

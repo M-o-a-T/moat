@@ -1,19 +1,15 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
 import time
-import sys
-from contextlib import asynccontextmanager
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
-from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup, Path
-from moat.lib.cmd import StreamError
+from moat.util import P, NotGiven, Path
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_flat_simple(cfg):
     "Check reading the current state"
     async with (
@@ -31,7 +27,7 @@ async def test_get_flat_simple(cfg):
         assert res == []
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_flat_dyn(cfg):
     "Check reading dynamic updates, no state"
     async with (
@@ -54,7 +50,7 @@ async def test_get_flat_dyn(cfg):
 
 
 @pytest.mark.parametrize("state", [None, NotGiven])
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_flat_full(cfg, state):
     "Check reading state plus dynamic updates"
     async with (
@@ -78,7 +74,7 @@ async def test_get_flat_full(cfg, state):
         assert res[0] == "HiLo"
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_tree_simple(cfg):
     "Check reading the current state of a tree"
     async with (
@@ -96,7 +92,7 @@ async def test_get_tree_simple(cfg):
         assert res == []
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_tree_dyn(cfg):
     "Check reading a tree with dynamic updates, no state"
     async with (
@@ -120,7 +116,7 @@ async def test_get_tree_dyn(cfg):
         assert res[0][1] == "Ugh3"
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_tree_full(cfg):
     "Check reading a tree with dynamic updates plus state"
     async with (
@@ -148,7 +144,7 @@ async def test_get_tree_full(cfg):
         assert res[2][1] == "Ugh3"
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_tree_dyn_old(cfg):
     "Check that stale data gets ignored"
     async with (
@@ -181,7 +177,7 @@ async def test_get_tree_dyn_old(cfg):
         assert res[2][1] == "Ugh3"
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_get_tree_drop(cfg):
     "Check reading a tree where state gets removed"
     async with (

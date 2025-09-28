@@ -7,18 +7,18 @@ from __future__ import annotations
 import anyio
 from contextlib import AsyncExitStack
 
-from moat.link.client import LinkCommon
-from . import Gate as _Gate
-from moat.util import Path, CFG, NotGiven, P
+from moat.util import NotGiven, P, Path
 from moat.link.meta import MsgMeta
 
-from typing import TYPE_CHECKING, overload
+from . import Gate as _Gate
+
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.link.node.codec import CodecNode
 
 
-class Gate(_Gate):
+class Gate(_Gate):  # noqa: D101
     codecs: CodecNode | None = None
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -36,7 +36,7 @@ class Gate(_Gate):
 
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):  # noqa: D102
         async with AsyncExitStack() as ex:
             if self.codecs is not None:
                 codec = "noop"
@@ -92,7 +92,7 @@ class Gate(_Gate):
                         continue
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):  # noqa: D102
         meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
             await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
@@ -100,7 +100,7 @@ class Gate(_Gate):
             try:
                 vd = self.codec_vecs.search(path)
                 cd = self.codecs.get(Path.build(vd.data["codec"]))
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError):
                 self.logger.error("No codec: %s %r", path, data)
                 return
             res = cd.enc_value(data)
@@ -126,7 +126,7 @@ class Gate(_Gate):
             pass
         return True
 
-    def newer_dst(self, node):
+    def newer_dst(self, node):  # noqa: D102
         # If the external message has no metadata, it can't be from us,
         # thus assume it's newer.
         if not node.ext_meta:

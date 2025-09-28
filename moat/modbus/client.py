@@ -4,25 +4,27 @@ The MoaT Modbus client and its sub-objects (excluding individual bus values).
 
 from __future__ import annotations
 
+import anyio
 import logging
 import socket
 import struct
+from anyio import ClosedResourceError, IncompleteRead
+from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, suppress
 from functools import partial
 from pathlib import Path
-from typing import Any
 
-import anyio
-from anyio import ClosedResourceError, IncompleteRead
-from anyio.abc import SocketAttribute
 from anyio_serial import Serial
-from moat.util import CtxObj, Queue, ValueEvent, num2id
-from moat.util.exc import ungroup
 from pymodbus.exceptions import ModbusIOException
-from pymodbus.pdu import DecodePDU, ExceptionResponse
 from pymodbus.framer import FramerRTU, FramerSocket
+from pymodbus.pdu import DecodePDU, ExceptionResponse
 
-from .types import BaseValue, DataBlock, TypeCodec, MAX_REQ_LEN
+from moat.util import CtxObj, Queue, ValueEvent
+from moat.util.exc import ungroup
+
+from .types import MAX_REQ_LEN, BaseValue, DataBlock, TypeCodec
+
+from typing import Any
 
 _logger = logging.getLogger(__name__)
 

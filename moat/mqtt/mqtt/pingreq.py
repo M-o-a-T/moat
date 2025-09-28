@@ -1,12 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .packet import PINGREQ, MQTTFixedHeader, MQTTPacket
 
 
-class PingReqPacket(MQTTPacket):
+class PingReqPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = None
     PAYLOAD = None
 

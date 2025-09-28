@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Support code for controlling a multiphase inverter.
 
@@ -8,16 +6,17 @@ Victron MultiPlus only, for now.
 """
 
 # pylint: disable=too-many-lines
+
 from __future__ import annotations
 
+import anyio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 
-import anyio
 from asyncdbus import DBusError
 from asyncdbus.service import method
+
 from moat.lib.victron.dbus import Dbus
 from moat.lib.victron.dbus.monitor import DbusMonitor
 from moat.lib.victron.dbus.utils import (
@@ -31,6 +30,8 @@ from moat.lib.victron.dbus.utils import (
 from moat.util.times import time_until
 
 from ._util import balance
+
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -93,37 +94,37 @@ class InvInterface(DbusInterface):
         super().__init__(ctrl.bus, "/Control", "inv")
 
     @method()
-    async def GetModes(self) -> "as":
+    async def GetModes(self) -> "as":  # noqa:F722
         """
         Return a list of available methods.
         name => (ident#, descr)
         """
-        return [m._name for m in InvControl.MODES.values()]
+        return [m._name for m in InvControl.MODES.values()]  # noqa:SLF001
 
     @method()
-    async def GetModeInfo(self, mode: s) -> "a{ss}":
+    async def GetModeInfo(self, mode: "s") -> "a{ss}":  # noqa:F722,UP037,F821
         """
         Return information on a specific method
         """
         m = InvControl.MODES[mode]
-        return m._doc
+        return m._doc  # noqa:SLF001
 
     @method()
-    async def SetMode(self, mode: s, args: "a{sv}") -> b:
+    async def SetMode(self, mode: "s", args: "a{sv}") -> b:  # noqa:F722,UP037,F821
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: s, value: v) -> b:
+    async def SetModeParam(self, param: "s", value: "v") -> b:  # noqa:UP037,F821
         """
         Set a specific parameter
         """
         return await self.ctrl.change_mode_param(param, unwrap_dbus_value(value))
 
     @method()
-    async def GetState(self) -> "a{sv}":
+    async def GetState(self) -> "a{sv}":  # noqa:F722
         """
         Return the state of the current inverter controller.
         """
@@ -259,9 +260,9 @@ class InvControl(BusVars):
         """Register an inverter control method"""
         # pylint: disable=protected-access
 
-        if target._name in cls.MODES:
-            raise RuntimeError(f"Mode {target._mode} already known: {cls.MODES[target._mode]}")
-        cls.MODES[target._name] = target
+        if target._name in cls.MODES:  # noqa:SLF001
+            raise RuntimeError(f"Mode {target._mode} already known: {cls.MODES[target._mode]}")  # noqa:SLF001
+        cls.MODES[target._name] = target  # noqa:SLF001
         return target
 
     MON = {
@@ -303,7 +304,7 @@ class InvControl(BusVars):
             try:
                 vv = getattr(self, k)
                 if not isinstance(vv, (type(None), int, float, str)):
-                    raise RuntimeError
+                    raise TypeError(vv)
             except AttributeError:
                 logger.error("System param unknown: %r", k)
             except RuntimeError:
@@ -334,8 +335,7 @@ class InvControl(BusVars):
             self.p_cons_ = []
             self.p_cur_ = []
 
-            for i in range(self.n_phase):
-                i += 1
+            for i in range(1, self.n_phase+1):
                 self.p_grid_.append(
                     await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power"),
                 )
@@ -434,8 +434,7 @@ class InvControl(BusVars):
         ).value
         self.p_set_ = []
         self.p_run_ = []
-        for i in range(self.n_phase):
-            i += 1
+        for i in range(1,self.n_phase+1):
             self.p_set_.append(
                 await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint"),
             )
@@ -539,7 +538,7 @@ class InvControl(BusVars):
     #   async def _change_mode(self, path, value):
     #       await self.change_mode(value)
 
-    async def change_mode(self, mode: str, data={}):  # pylint:disable=dangerous-default-value
+    async def change_mode(self, mode: str, data={}):  # pylint:disable=dangerous-default-value # noqa:B006
         "Switch mode to @mode, set config to @data"
         if self._mode is None or self._mode != mode:
             if self._change_mode_evt is None:
@@ -562,7 +561,7 @@ class InvControl(BusVars):
     async def change_mode_param(self, param: str, value: Any) -> bool:
         "Update a mode parameter"
         # pylint:disable=protected-access
-        if not param or param[0] == "_" or param not in self.MODES[self._mode]._doc:
+        if not param or param[0] == "_" or param not in self.MODES[self._mode]._doc:  # noqa:SLF001
             raise DBusError("org.m_o_a_t.inv.unknown", f"unknown parameter for {self._mode}")
         self.op[param] = value
         return True
@@ -576,11 +575,11 @@ class InvControl(BusVars):
             with anyio.CancelScope() as self._mode_task:
                 m = self.MODES[self._mode]
                 self.clear_state()
-                self.set_state("mode", [m._name, self.op])
+                self.set_state("mode", [m._name, self.op])  # noqa:SLF001
                 self.op.update(self.cfg["modes"].get(self._mode, {}))
                 await m(self).run()
         finally:
-            logger.debug("MODE STOP %s", m._name)
+            logger.debug("MODE STOP %s", m._name)  # noqa:SLF001
             self._mode_task = None
             self._mode_task_stopped.set()
 
@@ -597,7 +596,8 @@ class InvControl(BusVars):
                     power = val.value
             t = anyio.current_time()
             t_sol = t + 5
-            mt = (min(time_until((n, "min")) for n in range(0, 60, 15)) - datetime.now()).seconds
+            mt = (min(time_until((n, "min")) for n in range(0, 60, 15))
+                  - datetime.now(tz=datetime.UTC)).seconds
             print(mt)
             while True:
                 n = 0
@@ -649,15 +649,14 @@ class InvControl(BusVars):
 
         # TODO use a service scope instead
         # pylint: disable=import-outside-toplevel
-        from distkv.client import open_client as distkv_client
+        from moat.kv.client import open_client as distkv_client  # noqa:PLC0415
 
         try:
             async with distkv_client(**self.cfg["distkv"]) as dkv:
                 self._dkv = dkv
                 self.distkv_prefix = self.cfg["distkv"]["root"]
                 self._dkv_evt.set()
-                while True:
-                    await anyio.sleep(99999)
+                await anyio.sleep_forever()
         finally:
             self._dkv = None
 
@@ -727,7 +726,7 @@ class InvControl(BusVars):
                 self._tg.start_soon(self._solar_log)
             async with DbusName(
                 self.bus,
-                f"org.m_o_a_t.inv.{self.cfg.get('name', 'fake' if self.op.get('fake', False) else 'main')}",  # pylint:disable=line-too-long
+                f"org.m_o_a_t.inv.{self.cfg.get('name', 'fake' if self.op.get('fake', False) else 'main')}",  # pylint:disable=line-too-long  # noqa:E501
             ):
                 while True:
                     await self._change_mode_evt.wait()
@@ -1195,7 +1194,7 @@ class InvModeBase:
                 # p_cons = -intf.p_cons_[i].value
                 p_min = self.ps_min[i]
                 p_max = self.ps_max[i]
-                # logger.debug("%.0f %.0f %.0f %.0f %.0f %.0f", p_set,p_cur,p_run,p_cons,p_min,p_max)  # pylint:disable=line-too-long
+                # logger.debug("%.0f %.0f %.0f %.0f %.0f %.0f", p_set,p_cur,p_run,p_cons,p_min,p_max)  # pylint:disable=line-too-long  # noqa:E501
 
                 if p_set < 0:
                     if p_set < p_run - 20:
@@ -1316,11 +1315,11 @@ class InvModeBase:
 def _loader(path, cls, reg):
     "Load submodule"
     # pylint: disable=import-outside-toplevel
-    from importlib import import_module
-    from pathlib import Path
+    from importlib import import_module  # noqa:PLC0415
+    from pathlib import Path  # noqa:PLC0415
 
     def _imp(name):
-        m = import_module("." + name, package=_loader.__module__)
+        m = import_module("." + name, package=_loader.__module__)  # noqa:F821
         for n in m.__all__:
             c = getattr(m, n)
             if isinstance(c, type) and issubclass(c, cls) and hasattr(c, "_name"):

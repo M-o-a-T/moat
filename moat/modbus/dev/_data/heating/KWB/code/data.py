@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3  # noqa: D100
 from __future__ import annotations
 
 import csv
@@ -15,7 +15,7 @@ import click
 @click.option("-i", "--info")
 @click.argument("fn")
 @click.argument("fo")
-def main(info, fn, fo):
+def main(info, fn, fo):  # noqa: D103
     d = attrdict()
     if not info:
         d.include = [

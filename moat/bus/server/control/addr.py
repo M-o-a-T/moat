@@ -4,19 +4,21 @@ This module implements a basic MoatBus address controller.
 
 from __future__ import annotations
 
-import trio
+import logging
 from dataclasses import dataclass
 
-from moat.bus.message import BusMessage, LongMessageError
-from moat.bus.util import byte2mini, Processor
+import trio
 
-import logging
+from moat.bus.message import BusMessage, LongMessageError
+from moat.bus.util import Processor, byte2mini
 
 logger = logging.getLogger(__name__)
 
+def build_aa_data(serial, code, timer):  # noqa:D103
+    raise NotImplementedError
 
 @dataclass
-class aa_record:
+class aa_record:  # noqa:D101
     serial: bytes = None
     flags: int = 0
     t_continue: int = 0
@@ -24,7 +26,7 @@ class aa_record:
     t_sleep: int = 0
 
     @classmethod
-    def unpack(cls, msg, logger):
+    def unpack(cls, msg, logger):  # noqa:D102
         self = cls()
 
         d = msg.data
@@ -58,10 +60,10 @@ class aa_record:
         return self
 
     @property
-    def packet(self):
+    def packet(self):  # noqa:D102
         ls = len(self.serial) - 1
         if not 0 <= ls <= 0x0F:
-            raise RuntimeError(f"Serial too long: {serial!r}")
+            raise RuntimeError(f"Serial too long: {self.serial!r}")
         ls <<= 4
         more = []
         flags = self.flags
@@ -102,11 +104,12 @@ class AddrControl(Processor):
     CODE = 0
 
     def __init__(self, server, dkv, timeout=5.0):
+        dkv  # noqa:B018
         self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.timeout = timeout
         super().__init__(server, 0)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         await self.spawn(self._fwd)
 
@@ -153,17 +156,18 @@ class AddrControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        o = self.with_serial(s, msg.dest)
-        if o.__data is None:
-            await self.q_w.put(NewDevice(obj))
-        elif o.client_id != msg.dest:
-            await self.q_w.put(OldDevice(obj))
+        raise NotImplementedError
+        # m = msg.bytes
+        # mlen = (m[0] & 0xF) + 1
+        # m[0] >> 4
+        # if len(m) - 1 < mlen:
+        #     self.logger.error("Short addr reply %r", msg)
+        #     return
+        # o = self.with_serial(s, msg.dest)
+        # if o.__data is None:
+        #     await self.q_w.put(NewDevice(obj))
+        # elif o.client_id != msg.dest:
+        #     await self.q_w.put(OldDevice(obj))
 
     async def _process_request(self, aa):
         """
@@ -224,7 +228,7 @@ class AddrControl(Processor):
         """
         Client>server
         """
-        serial, flags, timer = aa.serial, aa.flags, aa.t_continue
+        serial, _flags, _timer = aa.serial, aa.flags, aa.t_continue
 
         objs = self.objs
         obj2 = None
@@ -235,13 +239,13 @@ class AddrControl(Processor):
         else:
             if obj1 is not None:
                 if obj1.serial == serial:
-                    obj2 == obj1
+                    obj2 = obj1
                 else:
                     self.logger.error(
                         "Conflicting serial: %d: new:%s known:%s",
                         client,
                         serial,
-                        obj.serial,
+                        obj1.serial,
                     )
                     await objs.deregister(obj1)
 
@@ -255,7 +259,7 @@ class AddrControl(Processor):
             self.logger.error(
                 "Conflicting IDs: new:%d known:%d: %s",
                 client,
-                obj.client_id,
+                obj2.client_id,
                 serial,
             )
             await objs.deregister(obj2)
@@ -276,10 +280,11 @@ class AddrControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        self.get_serial(s, msg.dest)
+        raise NotImplementedError
+        # m = msg.bytes
+        # mlen = (m[0] & 0xF) + 1
+        # m[0] >> 4
+        # if len(m) - 1 < mlen:
+        #     self.logger.error("Short addr reply %r", msg)
+        #     return
+        # self.get_serial(s, msg.dest)

@@ -26,7 +26,7 @@ al_ascii = bytes(x for x in range(33, 127) if x != 92).decode("ascii")
 # lowercase letters only
 al_az = "abcdefghijklmnopqrstuvwxyz"
 
-__all__ = ["id2str", "gen_ident", "al_unique", "al_lower", "al_ascii", "al_az"]
+__all__ = ["al_ascii", "al_az", "al_lower", "al_unique", "gen_ident", "id2str"]
 
 
 def gen_ident(k=10, /, *, alphabet=al_unique):

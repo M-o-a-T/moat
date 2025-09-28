@@ -8,16 +8,16 @@ from ._proxy import *
 from ._proxy import _CProxy, _RProxy  # noqa:F401
 
 __all__ = [
-    "Proxy",
     "DProxy",
     "NoProxyError",
+    "Proxy",
     "as_proxy",
+    "drop_proxy",
+    "get_proxy",
     "name2obj",
     "obj2name",
-    "get_proxy",
-    "drop_proxy",
-    "wrap_obj",
     "unwrap_obj",
+    "wrap_obj",
 ]
 
 

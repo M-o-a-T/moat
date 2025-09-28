@@ -3,30 +3,32 @@ Message streaming.
 """
 
 from __future__ import annotations
-from moat.util import Path, QueueFull, _add_obj
-from moat.util.compat import (
-    Queue,
-    log,
-    L,
-    TaskGroup,
-    ACM,
-    AC_exit,
-    Event,
-    shield,
-    ticks_ms,
-    ticks_diff,
-    sleep_ms,
-)
+
 from functools import partial
-from moat.lib.cmd.base import MsgLink, MsgHandler
+
+from moat.util import Path, QueueFull
+from moat.lib.cmd.base import MsgHandler, MsgLink
 from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
+from moat.util.compat import (
+    ACM,
+    AC_exit,
+    Event,
+    L,
+    Queue,
+    TaskGroup,
+    log,
+    shield,
+    sleep_ms,
+    ticks_diff,
+    ticks_ms,
+)
 
-from typing import TYPE_CHECKING, overload, cast
+from typing import TYPE_CHECKING, cast
 
 try:
-    from typing import Iterable, Sequence, Mapping
+    from collections.abc import Iterable, Mapping, Sequence
 except ImportError:
     Iterable = object
     Sequence = (list, tuple)
@@ -34,11 +36,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from logging import Logger
-    from typing import Sequence, Mapping
+
     from .base import OptDict
 
+    from collections.abc import Sequence
 
-def i_f2wire(id: int, flag: int) -> int:
+
+def i_f2wire(id: int, flag: int) -> int:  # noqa: D103
     assert id != 0
     assert 0 <= flag <= 3
     if id > 0:
@@ -46,7 +50,7 @@ def i_f2wire(id: int, flag: int) -> int:
     return (id << 2) | flag
 
 
-def wire2i_f(id: int) -> tuple[int, int]:
+def wire2i_f(id: int) -> tuple[int, int]:  # noqa: D103
     f = id & 3
     id >>= 2
     if id >= 0:
@@ -102,7 +106,7 @@ class HandlerStream(MsgHandler):
         self._id3: set[int] = set()
 
     @property
-    def is_idle(self) -> bool:
+    def is_idle(self) -> bool:  # noqa: D102
         if self._msgs:
             return False
         if self._send_q.qsize():
@@ -307,7 +311,7 @@ class HandlerStream(MsgHandler):
             else:
                 self._id3.add(mid)
 
-    async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
+    async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:  # noqa: D102
         if self.closing:
             raise EOFError
         assert isinstance(a, (list, tuple)), a
@@ -315,7 +319,7 @@ class HandlerStream(MsgHandler):
         # log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
         await self._send_q.put((link, a, kw, flag))
 
-    async def msg_out(self) -> list:
+    async def msg_out(self) -> list:  # noqa: D102
         link, a, kw, flag = await self._send_q.get()
         i = i_f2wire(link.id, flag)
 
@@ -337,7 +341,7 @@ class HandlerStream(MsgHandler):
             self._logger("OUT: %r", res)
         return res
 
-    def start(self, cmd, *a, **kw) -> None:
+    def start(self, cmd, *a, **kw) -> None:  # noqa: D102
         if kw:
             self._tg.start_soon(partial(cmd, *a, *kw))
         else:
@@ -443,7 +447,7 @@ class StreamLink(MsgLink):
         assert 0 <= flags <= 3, flags
         await super().ml_send(a, kw, flags)
 
-    def stream_detach(self) -> None:
+    def stream_detach(self) -> None:  # noqa: D102
         if self.__stream is not None:
             self.__stream.detach(self)
             self.__stream = None

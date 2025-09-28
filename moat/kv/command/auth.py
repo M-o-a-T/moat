@@ -1,9 +1,9 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import asyncclick as click
-from moat.util import NotGiven, Path, split_arg, yprint
 
+from moat.util import NotGiven, Path, split_arg, yprint
 from moat.kv.auth import gen_auth, loader
 
 
@@ -12,7 +12,7 @@ from moat.kv.auth import gen_auth, loader
 @click.pass_obj
 async def cli(obj, method):
     """Manage authorization. Usage: … auth METHOD command…. Use '.' for 'all methods'."""
-    a = await obj.client._request(action="auth_info")
+    a = await obj.client._request(action="auth_info")  # noqa:SLF001
     a = a.get("value", None)
     if a is not None:
         a = a["current"]
@@ -31,7 +31,7 @@ async def enum_auth(obj):
         yield obj.auth
         return
     # TODO create a method for this
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="enum_internal",
         path=Path("auth"),
         iter=False,
@@ -62,7 +62,7 @@ async def enum_typ(obj, kind="user", ident=None, nchain=0):
     """List all known auth entries of a kind."""
     async for auth in enum_auth(obj):
         if ident is not None:
-            res = await obj.client._request(
+            res = await obj.client._request(  # noqa:SLF001
                 action="auth_list",
                 typ=auth,
                 kind=kind,
@@ -72,7 +72,7 @@ async def enum_typ(obj, kind="user", ident=None, nchain=0):
             )
             yield res
         else:
-            async with obj.client._stream(
+            async with obj.client._stream(  # noqa:SLF001
                 action="auth_list",
                 typ=auth,
                 kind=kind,
@@ -98,7 +98,7 @@ async def init(obj, switch):
     if obj.auth_current is not None and not switch:
         raise click.UsageError("Authentication is already set up")
 
-    await obj.client._request(action="set_auth_typ", typ=obj.auth)
+    await obj.client._request(action="set_auth_typ", typ=obj.auth)  # noqa:SLF001
     if obj.debug >= 0:
         if obj.auth:
             print("Authorization switched to", obj.auth, file=obj.stdout)
@@ -139,7 +139,7 @@ async def get(obj, ident):
     """Retrieve a user (processed)."""
     lv = loader(await one_auth(obj), "user", make=True, server=False)
     if obj.DEBUG:
-        lv._length = 16
+        lv._length = 16  # noqa:SLF001
 
     u = await lv.recv(obj.client, ident, _initial=False)
     yprint(u.export(), stream=obj.stdout)
@@ -150,7 +150,7 @@ async def get(obj, ident):
 @click.pass_obj
 async def add(obj, args):
     """Add a user."""
-    await add_mod_user(obj, args, None)
+    await _add_mod_user(obj, args, None)
 
 
 @user.command()
@@ -160,14 +160,14 @@ async def add(obj, args):
 @click.argument("key", nargs=1)
 @click.argument("args", nargs=-1)
 @click.pass_obj
-async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-builtin
+async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-builtin # noqa:A002
     """Set user parameters for auth, conversion, etc."""
     auth = await one_auth(obj)
     u = loader(auth, "user", make=True, server=False)
     if obj.DEBUG:
-        u._length = 16
+        u._length = 16  # noqa:SLF001
     # ou = await u.recv(obj.client, ident, _initial=False)  # unused
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=("auth", auth, "user", ident, type),
         iter=False,
@@ -181,7 +181,7 @@ async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-
     if key == "-":
         if args:
             raise click.UsageError("You can't set params when deleting")
-        res = await obj.client._request(
+        res = await obj.client._request(  # noqa:SLF001
             action="delete_internal",
             path=("auth", auth, "user", ident, type),
             iter=False,
@@ -194,7 +194,7 @@ async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-
         for a in args:
             split_arg(a, kw)
 
-        res = await obj.client._request(
+        res = await obj.client._request(  # noqa:SLF001
             action="set_internal",
             path=("auth", auth, "user", ident, type),
             iter=False,
@@ -215,14 +215,14 @@ async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-
 @click.pass_obj
 async def mod(obj, ident, args):
     """Change a user."""
-    await add_mod_user(obj, args, ident)
+    await _add_mod_user(obj, args, ident)
 
 
-async def add_mod_user(obj, args, modify):
+async def _add_mod_user(obj, args, modify):
     auth = await one_auth(obj)
     u = loader(auth, "user", make=True, server=False)
     if obj.DEBUG:
-        u._length = 16
+        u._length = 16  # noqa:SLF001
     if modify:
         ou = await u.recv(obj.client, modify, _initial=False)
         kw = ou.export()
@@ -233,9 +233,9 @@ async def add_mod_user(obj, args, modify):
 
     u = u.build(kw, _initial=False)
     if modify is None or u.ident != modify:
-        u._chain = None  # new user
+        u._chain = None  # new user  # noqa:SLF001
     else:
-        u._chain = ou._chain
+        u._chain = ou._chain  # noqa:SLF001
     res = await u.send(obj.client)
     if obj.meta:
         res.ident = u.ident

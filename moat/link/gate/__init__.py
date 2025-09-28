@@ -5,19 +5,21 @@ Gateway to wherever
 from __future__ import annotations
 
 import anyio
-from attrs import define, field
 import logging
 
-from moat.link.node import Node
-from moat.link.meta import MsgMeta
-from moat.lib.codec import get_codec
+from attrs import define, field
+
 from moat.util import NotGiven, P, Path, to_attrdict
+from moat.lib.codec import get_codec
+from moat.link.meta import MsgMeta
+from moat.link.node import Node
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .client import Watcher
     from moat.lib.codec import Codec
+
+    from .client import Watcher
 
 __all__ = ["Gate"]
 
@@ -153,7 +155,7 @@ class Gate:
         async with node.lock:
             await self.set_dst(path, data, meta, node)
 
-    def dst_is_current(self):
+    def dst_is_current(self):  # noqa: D102
         self._dst_done.set()
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):

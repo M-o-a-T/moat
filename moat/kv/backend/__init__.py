@@ -1,17 +1,22 @@
+# noqa:D104
 from __future__ import annotations
+
+import anyio
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
 
-import anyio
-
-__all__ = ["get_backend", "Backend"]
+__all__ = ["Backend", "get_backend"]
 
 
 class Backend(metaclass=ABCMeta):
+    """
+    Abstract superclass for MoaT-KV transport backends.
+    """
     def __init__(self, tg):
         self._tg = tg
         self._njobs = 0
         self._ended = None
+        # TODO drop the _ended dance.
 
     @abstractmethod
     @asynccontextmanager
@@ -30,6 +35,9 @@ class Backend(metaclass=ABCMeta):
                 await self._ended.wait()
 
     async def spawn(self, p, *a, **kw):
+        """
+        Helper that starts a job.
+        """
         async def _run(p, a, kw, *, task_status):
             if self._ended is None:
                 self._ended = anyio.Event()
@@ -60,7 +68,12 @@ class Backend(metaclass=ABCMeta):
 
 
 def get_backend(name):
-    from importlib import import_module
+    """
+    Fetch the named backend class.
+
+    Returns its `connect` method.
+    """
+    from importlib import import_module  # noqa:PLC0415
 
     if "." not in name:
         name = "moat.kv.backend." + name

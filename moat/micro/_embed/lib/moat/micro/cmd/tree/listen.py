@@ -14,10 +14,10 @@ from .layer import BaseLayerCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Never
-
     from moat.micro.proto.stack import BaseBuf, BaseMsg
     from moat.micro.stacks.util import BaseConnIter
+
+    from typing import Never
 
 
 class BaseListenOneCmd(BaseLayerCmd):

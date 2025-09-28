@@ -6,11 +6,12 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Mapping, Sequence
 
 import ruyaml as yaml
 
 from .dict import attrdict
+
+from collections.abc import Mapping, Sequence
 
 try:
     from moat.lib.codec.proxy import DProxy, Proxy
@@ -21,13 +22,13 @@ except ImportError:
 from .path import Path
 
 __all__ = [
-    "yload",
-    "yprint",
-    "yformat",
-    "yaml_repr",
-    "yaml_parse",
     "add_repr",
     "load_ansible_repr",
+    "yaml_parse",
+    "yaml_repr",
+    "yformat",
+    "yload",
+    "yprint",
 ]
 
 SafeRepresenter = yaml.representer.SafeRepresenter

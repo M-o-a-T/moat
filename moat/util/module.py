@@ -8,7 +8,7 @@ import sys
 from functools import partial
 from types import ModuleType
 
-__all__ = ["make_proc", "Module", "make_module"]
+__all__ = ["Module", "make_module", "make_proc"]
 
 
 def _call_proc(code, variables, *a, **kw):

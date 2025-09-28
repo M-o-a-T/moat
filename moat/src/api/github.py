@@ -5,18 +5,19 @@ Rudimentary Github API.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+
 from attr import define, field
 from httpx import AsyncClient
 
 from moat.util import to_attrdict
 
 from ._common import API as BaseAPI
-from ._common import RepoInfo as BaseRepoInfo
 from ._common import CommitInfo as BaseCommitInfo
+from ._common import RepoInfo as BaseRepoInfo
 
 
 @define
-class CommitInfo(BaseCommitInfo):
+class CommitInfo(BaseCommitInfo):  # noqa: D101
     data = field(init=False)
 
     def __init__(self, repo, json):
@@ -24,7 +25,7 @@ class CommitInfo(BaseCommitInfo):
         super().__init__(repo, self.data.commit.sha)
 
 
-class RepoInfo(BaseRepoInfo):
+class RepoInfo(BaseRepoInfo):  # noqa: D101
     cls_CommitInfo = CommitInfo
 
     @property
@@ -37,7 +38,7 @@ class RepoInfo(BaseRepoInfo):
         return None
 
 
-class API(BaseAPI):
+class API(BaseAPI):  # noqa: D101
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 

@@ -5,24 +5,24 @@ seamlessly to an async context management method.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from attrs import define, field
-from concurrent.futures import CancelledError  # intentionally not asynio/anyio.Cancelled
-from contextlib import asynccontextmanager
 import anyio
+from abc import ABC, abstractmethod
+from concurrent.futures import CancelledError  # intentionally not asynio/anyio.Cancelled
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
+from attrs import define, field
 
-from typing import TYPE_CHECKING, overload, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable
-    from types import TracebackType
-    from typing import Literal
     from contextvars import ContextVar, Token
+    from types import TracebackType
+
+    from collections.abc import AsyncIterator, Awaitable
+    from typing import Literal
 
 
-__all__ = ["CtxObj", "timed_ctx", "ctx_as"]
+__all__ = ["CtxObj", "ctx_as", "timed_ctx"]
 
 T_Ctx = TypeVar("T_Ctx")
 
@@ -107,7 +107,7 @@ class ContextMgr:  # [CtxType]:
 
     @asynccontextmanager
     async def context(self, *args, **kwargs):
-        raise NotImplemented("Override me!")
+        raise NotImplementedError("Override me!")
 
     exc: Exception | None = None
     ctx: CtxType | Literal[False] | None = None
@@ -136,7 +136,7 @@ class ContextMgr:  # [CtxType]:
                         raise self.exc
             except (CancelledError, Exception) as exc:
                 self.exc = exc
-            except BaseException as exc:
+            except BaseException:
                 self.exc = CancelledError()
                 raise
             finally:

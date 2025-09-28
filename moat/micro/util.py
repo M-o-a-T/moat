@@ -64,10 +64,8 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         # XXX we might want to ask git which files differ,
         # it's supposed to have a cache for that
         dn = str(dst)[:-3].replace("/", ".").lstrip(".")
-        if dn.startswith("lib."):
-            dn = dn[4:]
-        if dn.endswith(".__init__"):
-            dn = dn[:-9]
+        dn = dn.removeprefix("lib.")
+        dn = dn.removesuffix(".__init__")
         try:
             res = await hash_fn(dn)
             if res is None:

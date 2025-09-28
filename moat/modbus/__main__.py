@@ -6,12 +6,12 @@ Basic "modbus" tool: network client and server, serial client
 
 from __future__ import annotations
 
+import anyio
 import logging  # pylint: disable=wrong-import-position
 from getopt import getopt
 from pprint import pprint
 
 import asyncclick as click
-import anyio
 
 from .typemap import get_type, map_kind, map_type
 from .types import InputRegisters, IntValue

@@ -1,10 +1,11 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
 
 import anyio
+import logging
+
 import attr
 
 from .errors import InvalidStateError
@@ -12,7 +13,7 @@ from .errors import InvalidStateError
 logger = logging.getLogger(__name__)
 
 
-def format_client_message(session=None, address=None, port=None):
+def format_client_message(session=None, address=None, port=None):  # noqa: D103
     if session:
         return "(client id=%s)" % session.client_id
     elif address is not None and port is not None:
@@ -38,7 +39,7 @@ def gen_client_id():
 # utility code
 
 
-class CancelledError(RuntimeError):
+class CancelledError(RuntimeError):  # noqa: D101
     # This intentionally does not descend from any toolkit's cancellation exception
     # (much less from all of them)
     pass

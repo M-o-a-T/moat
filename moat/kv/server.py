@@ -1,16 +1,18 @@
-# Local server
+# Local server  # noqa: D100
 from __future__ import annotations
 
+import anyio
 import os
 import signal
 import time
-from collections.abc import Mapping
-
-import anyio
 from anyio.abc import SocketAttribute
+
 from asyncscope import scope
+
 from moat.util import DelayedRead, DelayedWrite, create_queue, ensure_cfg
 from moat.lib.codec import get_codec
+
+from collections.abc import Mapping
 
 try:
     from contextlib import asynccontextmanager
@@ -20,7 +22,6 @@ except ImportError:
 import logging
 from functools import partial
 from pprint import pformat
-from typing import Any, TYPE_CHECKING
 
 from asyncactor import (
     Actor,
@@ -32,6 +33,8 @@ from asyncactor import (
     UntagEvent,
 )
 from asyncactor.backend import get_transport
+from range_set import RangeSet
+
 from moat.util import (
     MsgReader,
     MsgWriter,
@@ -49,7 +52,6 @@ from moat.util import (
     num2byte,
     run_tcp_server,
 )
-from range_set import RangeSet
 
 from . import _version_tuple
 from . import client as moat_kv_client  # needs to be mock-able
@@ -67,7 +69,8 @@ from .exceptions import (
 )
 from .model import Node, NodeEvent, NodeSet, UpdateEvent, Watcher
 from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
-import contextlib
+
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import io
@@ -79,7 +82,7 @@ ClosedResourceError = anyio.ClosedResourceError
 _client_nr = 0
 
 
-def max_n(a, b):
+def max_n(a, b):  # noqa: D103
     if a is None:
         return b
     elif b is None:
@@ -90,7 +93,7 @@ def max_n(a, b):
         return a
 
 
-def cmp_n(a, b):
+def cmp_n(a, b):  # noqa: D103
     if a is None:
         a = -1
     if b is None:
@@ -106,12 +109,12 @@ class HelloProc:
     def __init__(self, client):
         self.client = client
 
-    async def received(self, msg):
+    async def received(self, msg):  # noqa: D102
         qlen = msg.get("qlen", 0)
         self.client.qlen = min(qlen, self.client.server.cfg.server.buffer)
         del self.client.in_stream[0]
 
-    async def aclose(self):
+    async def aclose(self):  # noqa: D102
         self.client.in_stream.pop(0, None)
 
 
@@ -136,7 +139,7 @@ class StreamCommand:
     qr = None
     dw = None
 
-    def __new__(cls, client, msg):
+    def __new__(cls, client, msg):  # noqa: D102
         if cls is StreamCommand:
             cls = globals()["SCmd_" + msg.action]  # pylint: disable=self-cls-assignment
             return cls(client, msg)
@@ -180,11 +183,11 @@ class StreamCommand:
         elif not err:
             await self.qr.put(msg)
 
-    async def aclose(self):
+    async def aclose(self):  # noqa: D102
         self.client.in_stream.pop(self.seq, None)
         self.qr.close_sender()
 
-    async def recv(self):
+    async def recv(self):  # noqa: D102
         msg = await self.qr.get()
 
         if "error" in msg:
@@ -207,7 +210,7 @@ class StreamCommand:
         except ClosedResourceError:
             self.client.logger.info("OERR %d", self.client._client_nr)
 
-    async def __call__(self, **kw):
+    async def __call__(self, **kw):  # noqa: D102
         msg = self.msg
         if msg.get("state") != "start":
             # single message
@@ -249,7 +252,7 @@ class StreamCommand:
             res["seq"] = self.seq
             await self.send(**res)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         raise RuntimeError("Do implement me!")
 
 
@@ -259,7 +262,7 @@ class SingleMixin:
 
     multiline = -1
 
-    async def __call__(self, **kw):
+    async def __call__(self, **kw):  # noqa: D102
         await self.aclose()
         return await super().__call__(**kw)
 
@@ -282,7 +285,7 @@ class SCmd_auth(StreamCommand):
     multiline = True
     noAuth = True
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         from .auth import loader
 
         msg = self.msg
@@ -329,7 +332,7 @@ class SCmd_auth_list(StreamCommand):
 
     multiline = True
 
-    async def send_one(self, data, nchain=-1):
+    async def send_one(self, data, nchain=-1):  # noqa: D102
         from .auth import loader
 
         typ, kind, ident = data.path[-3:]
@@ -344,7 +347,7 @@ class SCmd_auth_list(StreamCommand):
 
         await self.send(**res)
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         msg = self.msg
         client = self.client
         if not client.user.can_auth_read:
@@ -366,7 +369,7 @@ class SCmd_auth_list(StreamCommand):
             for data in d.values():
                 await self.send_one(data, nchain=nchain)
 
-    async def __call__(self, **kw):
+    async def __call__(self, **kw):  # noqa: D102
         # simplify for single-value result
         msg = self.msg
         self.multiline = "ident" not in msg
@@ -388,7 +391,7 @@ class SCmd_auth_get(StreamCommand):
 
     multiline = False
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         from .auth import loader
 
         msg = self.msg
@@ -428,7 +431,7 @@ class SCmd_auth_set(StreamCommand):
 
     multiline = True
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         from .auth import loader
 
         msg = self.msg
@@ -470,7 +473,7 @@ class SCmd_get_tree(StreamCommand):
 
     multiline = True
 
-    async def run(self, root=None):  # pylint: disable=arguments-differ
+    async def run(self, root=None):  # pylint: disable=arguments-differ  # noqa: D102
         msg = self.msg
         client = self.client
 
@@ -521,7 +524,7 @@ class SCmd_get_tree(StreamCommand):
 class SCmd_get_tree_internal(SCmd_get_tree):
     """Get a subtree (internal data)."""
 
-    async def run(self):  # pylint: disable=arguments-differ
+    async def run(self):  # pylint: disable=arguments-differ  # noqa: D102
         return await super().run(root=self.client.metaroot)
 
 
@@ -540,7 +543,7 @@ class SCmd_watch(StreamCommand):
 
     multiline = True
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         msg = self.msg
         client = self.client
         conv = client.conv
@@ -625,7 +628,7 @@ class SCmd_msg_monitor(StreamCommand):
 
     multiline = True
 
-    async def run(self):
+    async def run(self):  # noqa: D102
         codec = get_codec("std-msgpack")
         msg = self.msg
         raw = msg.get("raw", False)
@@ -689,7 +692,7 @@ class ServerClient:
         self.logger = server.logger
 
     @property
-    def nulls_ok(self):
+    def nulls_ok(self):  # noqa: D102
         if self.is_chroot:
             return False
         if None not in self.root:
@@ -758,7 +761,7 @@ class ServerClient:
         self.is_chroot = True
         self._chop_path += len(root)
 
-    async def cmd_diffie_hellman(self, msg):
+    async def cmd_diffie_hellman(self, msg):  # noqa: D102
         if self._dh_key:
             raise RuntimeError("Can't call dh twice")
         from moat.lib.diffiehellman import DiffieHellman
@@ -778,43 +781,43 @@ class ServerClient:
     cmd_diffie_hellman.noAuth = True
 
     @property
-    def dh_key(self):
+    def dh_key(self):  # noqa: D102
         if self._dh_key is None:
             raise RuntimeError("The client has not executed DH key exchange")
         return self._dh_key
 
-    async def cmd_fake_info(self, msg):
+    async def cmd_fake_info(self, msg):  # noqa: D102
         msg["node"] = ""
         msg["tick"] = 0
         self.logger.warning("Fake Info LOCAL %s", pformat(msg))
         await self.server.user_info(msg)
 
-    async def cmd_fake_info_send(self, msg):
+    async def cmd_fake_info_send(self, msg):  # noqa: D102
         msg["node"] = ""
         msg["tick"] = 0
         msg.pop("tock", None)
         self.logger.warning("Fake Info SEND %s", pformat(msg))
         await self.server._send_event("info", msg)
 
-    async def cmd_auth_get(self, msg):
+    async def cmd_auth_get(self, msg):  # noqa: D102
         class AuthGet(SingleMixin, SCmd_auth_get):
             pass
 
         return await AuthGet(self, msg)()
 
-    async def cmd_auth_set(self, msg):
+    async def cmd_auth_set(self, msg):  # noqa: D102
         class AuthSet(SingleMixin, SCmd_auth_set):
             pass
 
         return await AuthSet(self, msg)()
 
-    async def cmd_auth_list(self, msg):
+    async def cmd_auth_list(self, msg):  # noqa: D102
         class AuthList(SingleMixin, SCmd_auth_list):
             pass
 
         return await AuthList(self, msg)()
 
-    async def cmd_auth_info(self, msg):
+    async def cmd_auth_info(self, msg):  # noqa: D102
         msg["path"] = Path(None, "auth")
         return await self.cmd_get_internal(msg)
 
@@ -823,19 +826,19 @@ class ServerClient:
         self._chroot(msg.path)
         return self.root.serialize(chop_path=self._chop_path, conv=self.conv)
 
-    async def cmd_get_internal(self, msg):
+    async def cmd_get_internal(self, msg):  # noqa: D102
         return await self.cmd_get_value(msg, root=self.metaroot, _nulls_ok=True)
 
-    async def cmd_set_internal(self, msg):
+    async def cmd_set_internal(self, msg):  # noqa: D102
         return await self.cmd_set_value(msg, root=self.metaroot, _nulls_ok=True)
 
-    async def cmd_enum_internal(self, msg):
+    async def cmd_enum_internal(self, msg):  # noqa: D102
         return await self.cmd_enum(msg, root=self.metaroot, _nulls_ok=True)
 
-    async def cmd_delete_internal(self, msg):
+    async def cmd_delete_internal(self, msg):  # noqa: D102
         return await self.cmd_delete_value(msg, root=self.metaroot)
 
-    async def cmd_get_tock(self, msg):  # pylint: disable=unused-argument
+    async def cmd_get_tock(self, msg):  # pylint: disable=unused-argument  # noqa: D102
         return {"tock": self.server.tock}
 
     async def cmd_test_acl(self, msg):
@@ -906,14 +909,14 @@ class ServerClient:
 
     cmd_enumerate = cmd_enum  # backwards compat: XXX remove
 
-    async def cmd_enum_node(self, msg):
+    async def cmd_enum_node(self, msg):  # noqa: D102
         n = msg.get("max", 0)
         cur = msg.get("current", False)
         node = Node(msg["node"], None, cache=self.server.node_cache, create=False)
         res = list(node.enumerate(n=n, current=cur))
         return {"result": res}
 
-    async def cmd_kill_node(self, msg):
+    async def cmd_kill_node(self, msg):  # noqa: D102
         node = msg["node"]
         node = Node(msg["node"], None, cache=self.server.node_cache, create=False)
         for k in node.enumerate(current=True):
@@ -1052,7 +1055,7 @@ class ServerClient:
         else:
             return res.serialize(chop_path=self._chop_path, conv=self.conv)
 
-    async def cmd_check_deleted(self, msg):
+    async def cmd_check_deleted(self, msg):  # noqa: D102
         nodes = msg.nodes
         deleted = NodeSet()
         for n, v in nodes.items():
@@ -1070,7 +1073,7 @@ class ServerClient:
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
-    async def cmd_msg_send(self, msg):
+    async def cmd_msg_send(self, msg):  # noqa: D102
         topic = msg.topic
         if isinstance(topic, str):
             topic = (topic,)
@@ -1135,17 +1138,17 @@ class ServerClient:
         else:
             return {"changed": res}
 
-    async def cmd_log(self, msg):
+    async def cmd_log(self, msg):  # noqa: D102
         await self.server.run_saver(path=msg.path, save_state=msg.get("fetch", False))
         return True
 
-    async def cmd_save(self, msg):
+    async def cmd_save(self, msg):  # noqa: D102
         full = msg.get("full", False)
         await self.server.save(path=msg.path, full=full)
 
         return True
 
-    async def cmd_stop(self, msg):
+    async def cmd_stop(self, msg):  # noqa: D102
         try:
             t = self.tasks[msg.task]
         except KeyError:
@@ -1153,7 +1156,7 @@ class ServerClient:
         t.cancel()
         return True
 
-    async def cmd_set_auth_typ(self, msg):
+    async def cmd_set_auth_typ(self, msg):  # noqa: D102
         if not self.user.is_super_root:
             raise RuntimeError("You're not allowed to do that")
         a = self.root.follow(Path(None, "auth"), nulls_ok=True)
@@ -1172,7 +1175,7 @@ class ServerClient:
         msg.path = (None, "auth")
         return await self.cmd_set_value(msg, _nulls_ok=True)
 
-    async def send(self, msg):
+    async def send(self, msg):  # noqa: D102
         self.logger.debug("OUT%d %s", self._client_nr, msg)
         if self._send_lock is None:
             return
@@ -1190,7 +1193,7 @@ class ServerClient:
                 self._send_lock = None
                 raise
 
-    async def send_result(self, seq, res):
+    async def send_result(self, seq, res):  # noqa: D102
         res["seq"] = seq
         if "tock" in res:
             await self.server.tock_seen(res["tock"])
@@ -1278,10 +1281,10 @@ class ServerClient:
 
             tg.cancel_scope.cancel()
 
-    def drop_old_event(self, evt, old_evt=NotGiven):
+    def drop_old_event(self, evt, old_evt=NotGiven):  # noqa: D102
         return self.server.drop_old_event(evt, old_evt)
 
-    def mark_deleted(self, node, tick):
+    def mark_deleted(self, node, tick):  # noqa: D102
         return self.server.mark_deleted(node, tick)
 
 
@@ -2059,7 +2062,7 @@ class Server:
             self.seen_missing = {}
             if not n:  # nothing more to do
                 break
-            if not len(msg):  # others already did the work, this time
+            if not msg:  # others already did the work, this time
                 continue
             msg = attrdict(missing=msg)
             self.logger.warning("Missing data: %r", msg)
@@ -2214,7 +2217,7 @@ class Server:
         for nn in msg.get("node_drop", ()):
             self._dropped_node(nn)
 
-    async def drop_node(self, name):
+    async def drop_node(self, name):  # noqa: D102
         self._dropped_node(name)
         await self._send_event("info", attrdict(node_drop=[name]))
 

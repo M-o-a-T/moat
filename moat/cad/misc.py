@@ -9,10 +9,10 @@ try:
 except ImportError:
     cq = None
 
-__all__ = ["Slider", "Mount", "Ridge", "WoodScrew"]
+__all__ = ["Mount", "Ridge", "Slider", "WoodScrew"]
 
-from math import tan, pi
 import contextlib
+from math import pi, tan
 
 with contextlib.suppress(ImportError):
     from .things import Cone

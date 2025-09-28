@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import weakref
-from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 
 import asyncdbus.service as dbus
@@ -12,6 +11,8 @@ from asyncdbus.errors import DBusError
 from asyncdbus.message_bus import MessageBus
 
 from .utils import CtxObj, call, unwrap_dbus_value, wrap_dbus_value
+
+from collections import defaultdict
 
 BUSITEM_INTF = "com.victronenergy.BusItem"
 
@@ -50,24 +51,24 @@ class Dbus(CtxObj):
             yield self
 
     @property
-    def bus(self):
+    def bus(self):  # noqa: D102
         return self._bus
 
-    async def request_name(self, name):
+    async def request_name(self, name):  # noqa: D102
         await self._bus.request_name(name, NameFlag.DO_NOT_QUEUE)
 
-    async def exporter(self, *a, **k):
+    async def exporter(self, *a, **k):  # noqa: D102
         res = DbusItemExport(self._bus, *a, **k)
         await res._start()  # pylint: disable=protected-access
         return res
 
-    async def importer(self, *a, **k):
+    async def importer(self, *a, **k):  # noqa: D102
         res = DbusItemImport(self._bus, *a, **k)
         await res._start()  # pylint: disable=protected-access
         return res
 
     @asynccontextmanager
-    async def service(self, *a, **k):
+    async def service(self, *a, **k):  # noqa: D102
         res = DbusService(self._bus, *a, **k)
         await res._start()  # pylint: disable=protected-access
         try:
@@ -115,7 +116,7 @@ class Dbus(CtxObj):
 
 
 # Export ourselves as a D-Bus service.
-class DbusService:
+class DbusService:  # noqa: D101
     def __init__(self, bus, servicename):
         # dict containing the DbusItemExport objects, with their path as the key.
         self._dbusobjects = {}
@@ -137,12 +138,12 @@ class DbusService:
         self._dbusnodes["/"] = r = DbusRootExport(self, "/")
         await bus.export("/", r)
 
-    async def setup_done(self):
+    async def setup_done(self):  # noqa: D102
         bus = self._dbusconn
         self._dbusname = await bus.request_name(self._servicename, NameFlag.DO_NOT_QUEUE)
         logging.info("registered ourselves on D-Bus as %s", self._servicename)
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         bus = self._dbusconn
         await bus.unexport("/", self._dbusnodes["/"])
         await bus.release_name(self._servicename)
@@ -151,7 +152,7 @@ class DbusService:
     # @param callbackonchange	function that will be called when this value is changed. First parameter will
     # 							is the path of the object, second the new value. This callback should return
     # 							True to accept the change, False to reject it.
-    async def add_path(
+    async def add_path(  # noqa: D102
         self,
         path,
         value,
@@ -186,7 +187,7 @@ class DbusService:
         return item
 
     # Add the mandatory paths, as per victron dbus api doc
-    async def add_mandatory_paths(
+    async def add_mandatory_paths(  # noqa: D102
         self,
         processname,
         processversion,
@@ -234,10 +235,10 @@ class DbusService:
     def __getitem__(self, path):
         return self._dbusobjects[path].get_value()
 
-    async def setitem(self, path, newvalue):
+    async def setitem(self, path, newvalue):  # noqa: D102
         await self._dbusobjects[path].set_value(newvalue)
 
-    async def delitem(self, path):
+    async def delitem(self, path):  # noqa: D102
         await self._dbusobjects[path].close()  # Invalidates and then removes the object path
         assert path not in self._dbusobjects
 
@@ -255,17 +256,17 @@ class DbusService:
         await self._ratelimiters.pop().flush()
 
 
-class ServiceContext:
+class ServiceContext:  # noqa: D101
     def __init__(self, parent):
         self.parent = parent
         self.changes = {}
 
-    async def set(self, var, newvalue):
+    async def set(self, var, newvalue):  # noqa: D102
         c = await var._set_value(newvalue)  # pylint: disable=protected-access
         if c is not None:
             self.changes[var._path] = c  # pylint: disable=protected-access
 
-    async def flush(self):
+    async def flush(self):  # noqa: D102
         if self.changes:
             # pylint: disable=protected-access
             await self.parent._dbusnodes["/"].ItemsChanged(self.changes)
@@ -297,14 +298,14 @@ class DbusRootTracker:
         self._intf = await obj.get_interface(BUSITEM_INTF)
         await self._intf.on_items_changed(self._items_changed_handler)
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         await self._intf.off_items_changed(self._items_changed_handler)
         self._intf = None
 
-    def add(self, i):
+    def add(self, i):  # noqa: D102
         self.importers[i.path].add(i)
 
-    def remove(self, i):
+    def remove(self, i):  # noqa: D102
         self.importers[i.path].remove(i)
         # TODO we might want to close up the tracker
         # if the list of importers becomes empty
@@ -351,14 +352,14 @@ class DbusRootTracker:
 # because that takes care of all of that for you.
 
 
-class DbusItemImport:
+class DbusItemImport:  # noqa: D101
     _roots = {}
     _proxy = None
     _interface = None
     _cachedvalue = None
     _exists = None
 
-    def __new__(cls, bus, serviceName, path, eventCallback=None, createsignal=True):
+    def __new__(cls, bus, serviceName, path, eventCallback=None, createsignal=True):  # noqa: D102
         serviceName, path, eventCallback  # pylint:disable=pointless-statement
         instance = object.__new__(cls)
 
@@ -412,7 +413,7 @@ class DbusItemImport:
         # None, same as when a value is invalid
         await self.refresh()
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         try:
             r = self._roots[self._serviceName]
         except KeyError:
@@ -426,7 +427,7 @@ class DbusItemImport:
         self._proxy = None
         self._interface = None
 
-    async def refresh(self):
+    async def refresh(self):  # noqa: D102
         try:
             v = await self._interface.call_get_value()
         except DBusError:
@@ -439,27 +440,27 @@ class DbusItemImport:
 
     ## Returns the path as a string, for example '/AC/L1/V'
     @property
-    def path(self):
+    def path(self):  # noqa: D102
         return self._path
 
     ## Returns the dbus service name as a string, for example com.victronenergy.vebus.ttyO1
     @property
-    def serviceName(self):
+    def serviceName(self):  # noqa: D102
         return self._serviceName
 
     ## Returns the value of the dbus-item.
     # the type will be a dbus variant, for example dbus.Int32(0, variant_level=1)
     # this is not a property to keep the name consistant with the com.victronenergy.busitem interface
     # returns None when the property is invalid
-    def get_value(self):
+    def get_value(self):  # noqa: D102
         return self._cachedvalue
 
     @property
-    def value(self):
+    def value(self):  # noqa: D102
         return self._cachedvalue
 
     ## Writes a new value to the dbus-item
-    async def set_value(self, newvalue):
+    async def set_value(self, newvalue):  # noqa: D102
         r = await self._interface.call_set_value(wrap_dbus_value(newvalue))
 
         # instead of just saving the value, go to the dbus and get it. So we have the right type etc.
@@ -469,7 +470,7 @@ class DbusItemImport:
         return r
 
     ## Resets the item to its default value
-    async def set_default(self):
+    async def set_default(self):  # noqa: D102
         await self._interface.call_set_default()
         await self.refresh()
 
@@ -479,19 +480,19 @@ class DbusItemImport:
     # would return a float, 12.0Volt, and GetText could return 12 VDC.
     #
     # Note that this depends on how the dbus-producer has implemented this.
-    async def get_text(self):
+    async def get_text(self):  # noqa: D102
         return await self._interface.call_get_text()
 
     ## Returns true of object path exists, and false if it doesn't
     @property
-    def exists(self):
+    def exists(self):  # noqa: D102
         # TODO: do some real check
         return self._exists
 
     ## callback for the trigger-event.
     # @param eventCallback the event-callback-function.
     @property
-    def eventCallback(self):
+    def eventCallback(self):  # noqa: D102
         return self._eventCallback
 
     @eventCallback.setter
@@ -507,7 +508,7 @@ class DbusItemImport:
             await call(self._eventCallback, self._serviceName, self._path, changes)
 
 
-class DbusTreeExport(dbus.ServiceInterface):
+class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
     def __init__(self, service, path):
         super().__init__(BUSITEM_INTF)
         self._service = service
@@ -527,26 +528,26 @@ class DbusTreeExport(dbus.ServiceInterface):
         return r
 
     @dbus.method()
-    async def GetValue(self) -> v:
+    async def GetValue(self) -> v:  # noqa: D102
         value = await self._get_value_handler(self._path)
         return wrap_dbus_value(value)
 
     @dbus.method()
-    async def GetText(self) -> v:
+    async def GetText(self) -> v:  # noqa: D102
         value = await self._get_value_handler(self._path, True)
         return wrap_dbus_value(value)
 
-    def get_value(self):
+    def get_value(self):  # noqa: D102
         return self._get_value_handler(self._path)
 
 
-class DbusRootExport(DbusTreeExport):
+class DbusRootExport(DbusTreeExport):  # noqa: D101
     @dbus.signal()
-    def ItemsChanged(self, changes) -> "a{sa{sv}}":
+    def ItemsChanged(self, changes) -> "a{sa{sv}}":  # noqa: D102
         return changes
 
     @dbus.method()
-    async def GetItems(self) -> "a{sa{sv}}":
+    async def GetItems(self) -> "a{sa{sv}}":  # noqa: D102
         return {
             path: {
                 "Value": wrap_dbus_value(item.get_value()),
@@ -556,7 +557,7 @@ class DbusRootExport(DbusTreeExport):
         }
 
 
-class DbusItemExport(dbus.ServiceInterface):
+class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     ## Constructor of DbusItemExport
     #
     # Use this object to export (publish), values on the dbus
@@ -595,7 +596,7 @@ class DbusItemExport(dbus.ServiceInterface):
         await self._bus.export(self._path, self)
 
     # To force immediate deregistering of this dbus object, explicitly call close().
-    async def close(self):
+    async def close(self):  # noqa: D102
         await self._bus.unexport(self._path, self)
         await call(self._deletecallback, self._path)
         await self.set_value(None)
@@ -605,7 +606,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # will be emitted to the dbus. This function is to be used in the python code that
     # is using this class to export values to the dbus.
     # set value to None to indicate that it is Invalid
-    async def set_value(self, newvalue):
+    async def set_value(self, newvalue):  # noqa: D102
         changes = await self._set_value(newvalue)
         if changes is not None:
             await self.PropertiesChanged(changes)
@@ -620,11 +621,11 @@ class DbusItemExport(dbus.ServiceInterface):
             "Text": wrap_dbus_value(await self.get_text()),
         }
 
-    def get_value(self):
+    def get_value(self):  # noqa: D102
         return self._value
 
     @property
-    def value(self):
+    def value(self):  # noqa: D102
         return self._value
 
     # ==== ALL FUNCTIONS BELOW THIS LINE WILL BE CALLED BY OTHER PROCESSES OVER THE DBUS ====
@@ -635,7 +636,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # @param value The new value.
     # @return completion-code When successful a 0 is return, and when not a -1 is returned.
     @dbus.method()
-    async def SetValue(self, newvalue: v) -> i:
+    async def SetValue(self, newvalue: v) -> i:  # noqa: D102
         if not self._writeable:
             return 1  # NOT OK
 
@@ -658,7 +659,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # @param length Lenght of the language string.
     # @return description
     @dbus.method()
-    def GetDescription(self, language: s, length: i) -> s:
+    def GetDescription(self, language: s, length: i) -> s:  # noqa: D102
         language, length  # pylint:disable=pointless-statement
         return self._description if self._description is not None else "No description given"
 
@@ -666,17 +667,17 @@ class DbusItemExport(dbus.ServiceInterface):
     # Returns the value.
     # @return the value when valid, and otherwise an empty array
     @dbus.method()
-    def GetValue(self) -> v:
+    def GetValue(self) -> v:  # noqa: D102
         return wrap_dbus_value(self._value)
 
     ## Dbus exported method GetText
     # Returns the value as string of the dbus-object-path.
     # @return text A text-value. '---' when local value is invalid
     @dbus.method()
-    def GetText(self) -> s:
+    def GetText(self) -> s:  # noqa: D102
         return self.get_text()
 
-    async def get_text(self):
+    async def get_text(self):  # noqa: D102
         if self._value is None:
             return "---"
 
@@ -692,7 +693,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # Other processes connected to this BusItem object will have subscribed to the
     # event when they want to track our state.
     @dbus.signal()
-    def PropertiesChanged(self, changes) -> "a{sv}":
+    def PropertiesChanged(self, changes) -> "a{sv}":  # noqa: D102
         return changes
 
 

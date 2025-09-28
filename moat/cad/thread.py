@@ -108,6 +108,7 @@ class ISO228_Thread(TrapezoidalThread):
     @classmethod
     def parse_size(cls, x):
         "not called here. Yes we're duck typing."
+        x  # noqa:B018
         raise RuntimeError("Not applicable")
 
     def __init__(

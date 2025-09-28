@@ -1,22 +1,24 @@
-#!/usr/bin/python3
+# noqa:D100
 from __future__ import annotations
 
-import trio
-from moatbus.handler import BaseHandler, ERR
-from contextlib import asynccontextmanager
-import time
-import sys
 import errno
+import socket
+import sys
+import time
+from contextlib import asynccontextmanager
+
+import trio
 from distmqtt.utils import Queue
+from moatbus.handler import ERR, BaseHandler
 
 
-class Client(BaseHandler):
+class Client(BaseHandler):  # noqa:D101
     def __init__(
         self,
         wires,
         timeout=0.01,
         timeout2=0.005,
-        socket="/tmp/moatbus",
+        socket="/tmp/moatbus",  # noqa:S108
         verbose=False,
         dest=None,
     ):
@@ -35,7 +37,7 @@ class Client(BaseHandler):
 
         super().__init__(wires=wires)
 
-    async def main(self, task_status):
+    async def main(self, task_status):  # noqa:D102
         task_status.started()
         while True:
             if self.__t is not None:
@@ -82,7 +84,7 @@ class Client(BaseHandler):
                     self.__t = None
                     self.timeout()
 
-    async def send(self, msg):
+    async def send(self, msg):  # noqa: D102
         mi = id(msg)
         if mi in self.__evt:
             raise RuntimeError("Already sending")
@@ -91,16 +93,16 @@ class Client(BaseHandler):
         await ev.wait()
         return self.__evt.pop(mi)
 
-    def get_wire(self):
+    def get_wire(self):  # noqa: D102
         return self.__wire_in
 
-    def set_wire(self, wire):
+    def set_wire(self, wire):  # noqa: D102
         self.debug("OUT! %s", wire)
         self.__wire_out = wire
         if self.__c is not None:
             self.__c.cancel()
 
-    def transmitted(self, msg, res):
+    def transmitted(self, msg, res):  # noqa: D102
         msg.res = res
         self.debug("SENT %r %s", msg, res)
         mi = id(msg)
@@ -108,7 +110,7 @@ class Client(BaseHandler):
         self.__evt[mi] = res
         ev.set()
 
-    def process(self, msg):
+    def process(self, msg):  # noqa: D102
         self.debug("RCVD %r", msg)
         if self.__dest is not None and self.__dest == msg.dst:
             self.__msg = msg
@@ -116,7 +118,7 @@ class Client(BaseHandler):
         elif self.__dest is None:
             self.__msg = msg
 
-    def report_error(self, typ, **kw):
+    def report_error(self, typ, **kw):  # noqa: D102
         if kw:
             self.debug("ERROR %s %s", typ, kw, v=True)
         else:
@@ -124,14 +126,14 @@ class Client(BaseHandler):
         if typ == ERR.COLLISION:
             print("COLL", kw)
 
-    def debug(self, msg, *a, v=False):
+    def debug(self, msg, *a, v=False):  # noqa: D102
         if not v and not self.__v:
             return
         if a:
             msg %= a
         print(msg)
 
-    def set_timeout(self, t):
+    def set_timeout(self, t):  # noqa: D102
         if t < 0:
             self.debug("TIME --")
         elif t == 0:
@@ -148,7 +150,7 @@ class Client(BaseHandler):
             self.__t = self.__timeout2
 
     @asynccontextmanager
-    async def run(self):
+    async def run(self):  # noqa: D102
         async with trio.open_nursery() as tg:
             with trio.socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 await sock.connect(self.__socket)

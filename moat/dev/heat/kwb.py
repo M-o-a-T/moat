@@ -61,9 +61,9 @@ async def cli(ctx, cfg, host, port, unit):
     obj = ctx.obj
     if "link" in obj.cfg:
         # pylint: disable=import-outside-toplevel
-        from moat.link.client import Link
+        from moat.link.client import Link  # noqa:PLC0415
 
-        ln_ctx = Link(opj.cfg.link)
+        ln_ctx = Link(obj.cfg.link)
     else:
         ln_ctx = nullcontext(None)
 

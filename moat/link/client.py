@@ -6,74 +6,71 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
-import sys
 import os
-from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
-from contextvars import ContextVar
-from traceback import format_exception
 import platform
+import time
+from contextlib import asynccontextmanager, nullcontext, suppress
+from contextvars import ContextVar
 from functools import partial
+from traceback import format_exception
 
 import outcome
 from attrs import define, field
+from mqttproto import QoS, RetainHandling
 
-from mqttproto import RetainHandling, QoS
-from moat.lib.cmd.base import MsgSender, Caller
 from moat.util import (
     CtxObj,
-    P,
-    Root,
-    ValueEvent,
-    timed_ctx,
-    gen_ident,
-    ungroup,
     NotGiven,
+    P,
     Path,
     PathLongener,
-    srepr,
+    Root,
+    ValueEvent,
     attrdict,
     ctx_as,
+    gen_ident,
+    srepr,
+    timed_ctx,
+    ungroup,
 )
+from moat.lib.cmd.base import Caller, MsgSender
 from moat.util.random import al_unique
 
+from .auth import AnonAuth, TokenAuth
 from .common import CmdCommon
 from .conn import TCPConn, UnixConn
-from .auth import AnonAuth, TokenAuth
+from .exceptions import ClientCancelledError, AuthError
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
-from .exceptions import ClientCancelledError
 
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from typing import Any
     from moat.link.node.codec import CodecNode
+
+    from moat.lib.cmd.base import MsgHandler
+    from moat.lib.cmd.msg import Msg
+
+    from .backend import Message
+    from .schema import Data
+    from .schema import SchemaName as S
+
+    from collections.abc import Awaitable
+    from typing import Any, Literal
+    from contextlib import AbstractAsyncContextManager
+    from collections.abc import AsyncIterator
 
 
 class _Requeue(Exception):
     pass
 
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable
-    from typing import AsyncContextManager, AsyncIterator
-
-    from moat.lib.cmd.base import MsgHandler
-    from moat.lib.cmd.msg import Msg
-
-    from .schema import Data
-    from .schema import SchemaName as S
-    from .backend import Message
-
-
-__all__ = ["Link", "LinkCommon", "BasicLink", "get_link"]
+__all__ = ["BasicLink", "Link", "LinkCommon", "get_link"]
 
 _the_link = ContextVar("_the_link")
 
+local_addrs = {"localhost", "127.0.0.1", "::1"}
 
 def get_link() -> Link | None:
     """
@@ -166,7 +163,7 @@ class LinkCommon(CmdCommon):
         return super().handle(msg, rpath, *add)
 
     @property
-    def id(self):
+    def id(self):  # noqa:D102
         return self._id
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -214,9 +211,9 @@ class LinkCommon(CmdCommon):
             raise EOFError
 
 
-class ClientCaller(Caller):
+class ClientCaller(Caller):  # nqa:D102
     def __init__(self, sender, *a, **kw):
-        self._link = sender._link
+        self._link = sender._link  # noqa:SLF001
         super().__init__(sender, *a, **kw)
 
     @asynccontextmanager
@@ -229,7 +226,7 @@ class ClientCaller(Caller):
         "helper for __await__ that calls the remote handler"
         link = await self._link.get_link()
         cmd, a, kw = self.data
-        return await link.root._sender.cmd(cmd, *a, **kw)
+        return await link.root._sender.cmd(cmd, *a, **kw)  # noqa:SLF001
 
 
 class _Sender(MsgSender):
@@ -271,7 +268,7 @@ class _Sender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
+    def find_handler(self, path) -> tuple[MsgHandler, Path]:
         """
         Standard sub-dispatcher redirector, no-op.
         """
@@ -371,7 +368,7 @@ class _Sender(MsgSender):
         meta: Literal[False],
         subtree: Literal[False],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[Any]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[Any]]: ...
 
     @overload
     def d_watch(
@@ -381,7 +378,7 @@ class _Sender(MsgSender):
         meta: Literal[True],
         subtree: Literal[False],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
 
     @overload
     def d_watch(
@@ -391,7 +388,7 @@ class _Sender(MsgSender):
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
     def d_watch(
@@ -401,7 +398,7 @@ class _Sender(MsgSender):
         meta: Literal[False],
         subtree: Literal[True],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
 
     @overload
     def d_watch(
@@ -411,7 +408,7 @@ class _Sender(MsgSender):
         meta: Literal[True],
         subtree: Literal[False],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
 
     @overload
     def d_watch(
@@ -421,7 +418,7 @@ class _Sender(MsgSender):
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
     def d_watch(
@@ -431,7 +428,7 @@ class _Sender(MsgSender):
         meta: Literal[False],
         subtree: Literal[True],
         state: bool | None = None,
-    ) -> AsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
+    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
 
     def d_watch(
         self,
@@ -444,7 +441,7 @@ class _Sender(MsgSender):
         min_length: int | None = None,
         max_length: int | None = None,
         cls: type = Node,
-    ) -> AsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]:
+    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]:
         """
         Monitor a node or subtree.
 
@@ -515,7 +512,7 @@ class _Sender(MsgSender):
             yield mon
             await mon.send(True)
 
-    def monitor(self, path: Path, *a, **kw) -> AsyncContextManager[AsyncIterator[Message]]:
+    def monitor(self, path: Path, *a, **kw) -> AbstractAsyncContextManager[AsyncIterator[Message]]:
         """
         Watch this path.
 
@@ -571,7 +568,7 @@ class _Sender(MsgSender):
         if self._codec_tree is None:
             self._codec_tree = evt = anyio.Event()
 
-            from moat.link.node.codec import CodecNode
+            from moat.link.node.codec import CodecNode  # noqa:PLC0415
 
             self._codec_tree = await self._link.tg.start(
                 partial(
@@ -604,7 +601,8 @@ class Link(LinkCommon, CtxObj):
     _state: str = "init"
     _common: bool = False
 
-    def __new__(cls, cfg, name: str | None = None, common: bool = False):
+    def __new__(cls, cfg, name: str | None = None, common: bool = False):  # noqa:D102
+        cfg, name  # noqa:B018
         if common and (link := _the_link.get(NotGiven)) is not NotGiven:
             return link
         return super().__new__(cls)
@@ -696,7 +694,7 @@ class Link(LinkCommon, CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        from .backend import get_backend
+        from .backend import get_backend  # noqa:PLC0415
 
         will = attrdict(
             data=dict(
@@ -855,22 +853,21 @@ class Link(LinkCommon, CtxObj):
             link = (link,)
 
         local_ok = srv.data.get("node", "localhost")
-        locals = {"localhost", "127.0.0.1", "::1"}
 
         for remote in link:
             if local_ok:
                 pass
             elif "host" not in remote:
                 continue
-            elif remote["host"] in locals:
+            elif remote["host"] in local_addrs:
                 continue
             try:
                 async with timed_ctx(
                     self.cfg.client.init_timeout, self._connect_one(remote, srv.data)
                 ) as rem:
                     await self._connect_run(rem, task_status=task_status)
-            except EnvironmentError as exc:
-                self.logger.warning("Link failed: %r", remote)
+            except OSError as exc:
+                self.logger.warning("Link failed: %r (%r)", remote, exc)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
@@ -1056,7 +1053,7 @@ class Watcher(CtxObj):
             try:
                 msg = await self._qr.receive()
             except anyio.EndOfStream:
-                raise StopAsyncIteration
+                raise StopAsyncIteration from None
             if msg is None:
                 return None
             p, d, m = msg

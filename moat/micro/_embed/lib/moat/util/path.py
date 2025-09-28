@@ -9,7 +9,7 @@ import re
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
 
-def P(s):
+def P(s):  # noqa: D103
     return Path.from_str(s)
 
 

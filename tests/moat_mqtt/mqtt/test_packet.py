@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -12,8 +12,8 @@ from tests.moat_mqtt import anyio_run
 import pytest
 
 
-class TestMQTTFixedHeaderTest(unittest.TestCase):
-    def test_from_bytes(self):
+class TestMQTTFixedHeaderTest(unittest.TestCase):  # noqa: D101
+    def test_from_bytes(self):  # noqa: D102
         data = b"\x10\x7f"
         stream = BufferAdapter(data)
         header = anyio_run(MQTTFixedHeader.from_stream, stream)
@@ -23,7 +23,7 @@ class TestMQTTFixedHeaderTest(unittest.TestCase):
         assert not header.flags & 1
         assert header.remaining_length == 127
 
-    def test_from_bytes_with_length(self):
+    def test_from_bytes_with_length(self):  # noqa: D102
         data = b"\x10\xff\xff\xff\x7f"
         stream = BufferAdapter(data)
         header = anyio_run(MQTTFixedHeader.from_stream, stream)
@@ -33,18 +33,18 @@ class TestMQTTFixedHeaderTest(unittest.TestCase):
         assert not header.flags & 1
         assert header.remaining_length == 268435455
 
-    def test_from_bytes_ko_with_length(self):
+    def test_from_bytes_ko_with_length(self):  # noqa: D102
         data = b"\x10\xff\xff\xff\xff\x7f"
         stream = BufferAdapter(data)
         with pytest.raises(MQTTException):
             anyio_run(MQTTFixedHeader.from_stream, stream)
 
-    def test_to_bytes(self):
+    def test_to_bytes(self):  # noqa: D102
         header = MQTTFixedHeader(CONNECT, 0x00, 0)
         data = header.to_bytes()
         assert data == b"\x10\x00"
 
-    def test_to_bytes_2(self):
+    def test_to_bytes_2(self):  # noqa: D102
         header = MQTTFixedHeader(CONNECT, 0x00, 268435455)
         data = header.to_bytes()
         assert data == b"\x10\xff\xff\xff\x7f"

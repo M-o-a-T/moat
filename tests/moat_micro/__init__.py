@@ -6,7 +6,7 @@ from pathlib import Path
 from subprocess import run
 
 
-def make_upy(force: bool = False):
+def make_upy(force: bool = False):  # noqa: D103
     p = Path("ext/micropython/ports/unix")
     upy = p / "build-standard/micropython"
     if not force and upy.exists():

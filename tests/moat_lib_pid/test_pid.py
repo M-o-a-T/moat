@@ -13,8 +13,8 @@ from moat.lib.pid import PID
 import unittest
 
 
-class TestStringMethods(unittest.TestCase):
-    def test_init_set_gains(self):
+class TestStringMethods(unittest.TestCase):  # noqa: D101
+    def test_init_set_gains(self):  # noqa: D102
         # Set gains
         Kp, Ki, Kd, Tf = 1.0, 2.0, 3.0, 4.0
         # Create PID controller and get gains
@@ -26,7 +26,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(Kd, _Kd)
         self.assertAlmostEqual(Tf, _Tf)
 
-    def test_set_gains(self):
+    def test_set_gains(self):  # noqa: D102
         # Set gains
         Kp, Ki, Kd, Tf = 1.0, 2.0, 3.0, 4.0
         # Create PID controller and set gains
@@ -40,7 +40,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(Kd, _Kd)
         self.assertAlmostEqual(Tf, _Tf)
 
-    def test_set_output_limits(self):
+    def test_set_output_limits(self):  # noqa: D102
         # Set output limits
         lower, upper = -4.0, 4.0
         # Create PID controller and set output limits
@@ -52,7 +52,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(lower, _lower)
         self.assertAlmostEqual(upper, _upper)
 
-    def test_set_initial_value(self):
+    def test_set_initial_value(self):  # noqa: D102
         # Set initial values
         t0, e0, i0 = 5.0, 6.0, 7.0
         # Create PID controller and set initial values
@@ -65,7 +65,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(e0, _e)
         self.assertAlmostEqual(i0, _i)
 
-    def test_integrate_only_p(self):
+    def test_integrate_only_p(self):  # noqa: D102
         # Set Kp gain
         Kp = 2.0
         # Create PID controller
@@ -84,7 +84,7 @@ class TestStringMethods(unittest.TestCase):
         # Check
         assert allclose(Kp * error, output, rtol=0.0, atol=1e-08)
 
-    def test_integrate_only_i(self):
+    def test_integrate_only_i(self):  # noqa: D102
         # Set Ki gain
         Ki = 2.0
         # Set simulation time step
@@ -106,7 +106,7 @@ class TestStringMethods(unittest.TestCase):
         expected = Ki * dt * error.cumsum()
         assert allclose(expected, output, rtol=0.0, atol=1e-08)
 
-    def test_integrate_only_d(self):
+    def test_integrate_only_d(self):  # noqa: D102
         # Set Kd and Tf gains
         Kd, Tf = 3.2, 0.05
         # Set simulation time step
@@ -128,7 +128,7 @@ class TestStringMethods(unittest.TestCase):
         expected = (1 / dt) * insert(diff(error), 0, 0)
         assert allclose(expected, output, rtol=0.0, atol=0.1)
 
-    def test_integrate_one(self):
+    def test_integrate_one(self):  # noqa: D102
         # Set gains
         Kp, Ki, Kd, Tf = 2.0, 2.0, 2.0, 0.05
         # Set simulation time step
@@ -151,7 +151,7 @@ class TestStringMethods(unittest.TestCase):
         expected = Kp * error + Ki * dt * (error.cumsum() - error[0])
         assert allclose(expected, output, rtol=0.0, atol=1e-08)
 
-    def test_integrate_anti_windup(self):
+    def test_integrate_anti_windup(self):  # noqa: D102
         # Set Ki gain
         Ki = 2.0
         # Set output limits

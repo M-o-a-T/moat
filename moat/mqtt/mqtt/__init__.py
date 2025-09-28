@@ -2,7 +2,9 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 from moat.mqtt.errors import MoatMQTTException
+
 from .connack import ConnackPacket
 from .connect import ConnectPacket
 from .disconnect import DisconnectPacket
@@ -53,7 +55,7 @@ packet_dict = {
 }
 
 
-def packet_class(fixed_header: MQTTFixedHeader):
+def packet_class(fixed_header: MQTTFixedHeader):  # noqa: D103
     try:
         cls = packet_dict[fixed_header.packet_type]
         return cls

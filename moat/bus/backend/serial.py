@@ -5,8 +5,9 @@ Send bus messages to a Trio stream
 
 from __future__ import annotations
 
-from anyio_serial import Serial
 from contextlib import asynccontextmanager
+
+from anyio_serial import Serial
 
 from ._stream import StreamHandler
 
@@ -50,7 +51,7 @@ class Handler(StreamHandler):
         self.baudrate = baudrate
 
     @classmethod
-    def repr(cls, cfg):
+    def repr(cls, cfg):  # noqa:D102
         return cfg["port"]
 
     @asynccontextmanager

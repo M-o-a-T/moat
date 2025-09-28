@@ -36,7 +36,7 @@ class ThingTyp(Base):
     children: Mapped[set[ThingTyp]] = relationship("ThingTyp", back_populates="parent")
     things: Mapped[set[Thing]] = relationship(back_populates="thingtyp")
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         if self.parent:
             res["parent"] = self.parent.name
@@ -66,7 +66,7 @@ class Thing(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         res.pop("pos_x", None)
         res.pop("pos_y", None)
@@ -84,7 +84,7 @@ class Thing(Base):
 
 @event.listens_for(Thing, "before_insert")
 @event.listens_for(Thing, "before_update")
-def validate_thing_coords(mapper, connection, model):
+def validate_thing_coords(mapper, connection, model):  # noqa: D103
     par = model.container
     if par is not None:
         par = par.boxtyp

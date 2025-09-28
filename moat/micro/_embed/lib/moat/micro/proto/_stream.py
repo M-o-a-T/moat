@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 from moat.lib.codec.proxy import as_proxy
-
 from moat.util.compat import Event, Lock, log
+
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
 # Typing
@@ -11,8 +11,8 @@ from .stack import BaseBuf, StackedBlk, StackedMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any
     from collections.abc import Awaitable
+    from typing import Any
 
 
 as_proxy("_", NotGiven)

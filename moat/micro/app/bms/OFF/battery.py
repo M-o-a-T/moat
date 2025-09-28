@@ -1,15 +1,16 @@
 #
 from __future__ import annotations
+
+import anyio
 import logging
 from functools import cached_property
 
-import anyio
 import asyncdbus.service as dbus
 from asyncdbus.signature import Variant
-from moat.dbus import DbusInterface
-from moat.util import attrdict, combine_dict
 from victron.dbus.utils import wrap_dbus_dict
 
+from moat.util import attrdict, combine_dict
+from moat.dbus import DbusInterface
 from moat.util.compat import (
     Event,
     TaskGroup,
@@ -798,29 +799,29 @@ class Battery:
             if c.voltage is not None:
                 if c.voltage >= ucmax:
                     if not c.msg_hi:
-                        logger.warning(f"{c} voltage high, no charging")
+                        logger.warning("%s voltage high, no charging", c)
                         c.msg_hi = True
                 elif c.msg_hi and c.voltage < ucmax2:
-                    logger.warning(f"{c} voltage no longer high")
+                    logger.warning("%s voltage no longer high", c)
                     c.msg_hi = False
                 if c.msg_hi:
                     chg_ok = False
 
                 if c.voltage >= c.cfg.u.max:
                     if not c.msg_vhi:
-                        logger.error(f"{c} overvoltage, turned off")
+                        logger.error("%s overvoltage, turned off", c)
                         c.msg_vhi = True
                     off = True
                 elif c.msg_vhi:
-                    logger.error(f"{c} overvoltage fixed")
+                    logger.error("%s overvoltage fixed", c)
                     c.msg_vhi = False
 
                 if c.voltage <= ucmin:
                     if not c.msg_lo:
-                        logger.warning(f"{c} voltage low, no discharging")
+                        logger.warning("%s voltage low, no discharging", c)
                         c.msg_lo = True
                 elif c.msg_lo and c.voltage > ucmin2:
-                    logger.warning(f"{c} voltage no longer low")
+                    logger.warning("%s voltage no longer low", c)
                     c.msg_lo = False
                 if c.msg_lo:
                     dis_ok = False
@@ -828,10 +829,10 @@ class Battery:
                 if c.voltage <= c.cfg.u.min:
                     off = True
                     if not c.msg_vlo:
-                        logger.error(f"{c} undervoltage, turned off")
+                        logger.error("%s undervoltage, turned off", c)
                         c.msg_vlo = True
                 elif c.msg_vlo:
-                    logger.error(f"{c} undervoltage fixed")
+                    logger.error("%s undervoltage fixed", c)
                     c.msg_vlo = False
 
         if off:

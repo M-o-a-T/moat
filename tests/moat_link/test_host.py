@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import anyio
 import pytest
-import time
 import os
 
 from moat.link._test import Scaffold
-from moat.link.meta import MsgMeta
-from moat.link.host import HostState, HostMon
-from moat.util import P, ensure_cfg, yload, merge, to_attrdict, as_service, Path
-from moat.util.broadcast import Broadcaster
+from moat.link.host import HostMon
+from moat.util import ensure_cfg, yload, merge, to_attrdict, as_service, Path
 
 from typing import TYPE_CHECKING
 
@@ -67,7 +64,7 @@ async def sel_br(ibr: BroadcastReader, id: str):
             return hs
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_mon(cfg):
     "host monitoring test"
 
@@ -110,4 +107,4 @@ async def test_mon(cfg):
                 assert h.state.name == "DROP", h
             with anyio.move_on_after(0.5):
                 h = await sel_br(ibr, sid)
-                assert False, h
+                raise AssertionError(h)

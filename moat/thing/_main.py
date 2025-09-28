@@ -8,12 +8,14 @@ Support for things.
 from __future__ import annotations
 
 import sys
-from moat.util import load_subgroup, ensure_cfg, yprint, option_ng
-from moat.db import database
-from .model import Thing, ThingTyp
-from sqlalchemy import select
 
 import asyncclick as click
+from sqlalchemy import select
+
+from moat.util import ensure_cfg, load_subgroup, option_ng, yprint
+from moat.db import database
+
+from .model import Thing, ThingTyp
 
 ensure_cfg("moat.db")
 

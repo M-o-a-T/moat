@@ -4,18 +4,14 @@ Command line for gatewaying
 
 from __future__ import annotations
 
-import datetime
-import time
 import anyio
 
 import asyncclick as click
-from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint, Path
-from moat.util.times import ts2iso, humandelta
 
-from moat.link.client import Link
+from moat.util import NotGiven, P, attr_args, yprint
 from moat.link._data import data_get, node_attr
+from moat.link.client import Link
 from moat.link.meta import MsgMeta
-from moat.link.node import Node
 
 
 @click.group(short_help="Manage gateways.", invoke_without_command=True)
@@ -99,8 +95,8 @@ async def set_(obj, src, dst, driver, **kw):
     res = await node_attr(obj, P("gate") + obj.path, **kw)
 
 
-class nstr:
-    def __new__(cls, val):
+class nstr:  # noqa: D101
+    def __new__(cls, val):  # noqa: D102
         if val is NotGiven:
             return val
         return str(val)

@@ -1,11 +1,11 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import sys
 
 import asyncclick as click
-from moat.util import P, Path, yprint
 
+from moat.util import P, Path, yprint
 from moat.kv.data import data_get
 
 ACL = set("rwdcxena")
@@ -22,7 +22,7 @@ async def cli():
 @click.pass_obj
 async def list_(obj):
     """List ACLs."""
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="enum_internal",
         path=("acl",),
         iter=False,
@@ -63,7 +63,7 @@ async def get(obj, name, path):
     path = P(path)
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=("acl", name) + path,
         iter=False,
@@ -106,7 +106,7 @@ async def set_(obj, acl, name, path):
     if acl - ACL:
         raise click.UsageError(f"You're trying to set an unknown ACL flag: {acl - ACL!r}")
 
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
         path=("acl", name) + path,
         iter=False,
@@ -117,7 +117,7 @@ async def set_(obj, acl, name, path):
         print(f"Warning: original ACL contains unknown: {ov - acl!r}", file=sys.stderr)
 
     if mode == "-" and not acl:
-        res = await obj.client._request(
+        res = await obj.client._request(  # noqa:SLF001
             action="delete_internal",
             path=("acl", name) + path,
             iter=False,
@@ -132,7 +132,7 @@ async def set_(obj, acl, name, path):
             v = ov - acl
         else:
             v = acl
-        res = await obj.client._request(
+        res = await obj.client._request(  # noqa:SLF001
             action="set_internal",
             path=("acl", name) + path,
             value="".join(v),
@@ -166,7 +166,7 @@ async def test(obj, path, acl, mode):
 
     if mode is not None and len(mode) != 1:
         raise click.UsageError("Mode must be one letter.")
-    res = await obj.client._request(
+    res = await obj.client._request(  # noqa:SLF001
         action="test_acl",
         path=path,
         iter=False,

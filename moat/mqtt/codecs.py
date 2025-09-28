@@ -1,10 +1,10 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-from struct import pack, unpack
 
 import anyio
+from struct import pack, unpack
 
 from .errors import NoDataException
 
@@ -83,11 +83,11 @@ async def decode_data_with_length(reader) -> bytes:
     return data
 
 
-def encode_string(string: str) -> bytes:
+def encode_string(string: str) -> bytes:  # noqa: D103
     return encode_data_with_length(string.encode("utf-8"))
 
 
-def encode_data_with_length(data: bytes) -> bytes:
+def encode_data_with_length(data: bytes) -> bytes:  # noqa: D103
     data_length = len(data)
     return int_to_bytes(data_length, 2) + data
 

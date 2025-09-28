@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -41,9 +41,9 @@ def _PUB():
     return PORT, WSPORT, WSSPORT, URI, broker_config
 
 
-class MQTTClientTest(unittest.TestCase):
-    @pytest.mark.skip()
-    def test_connect_tcp(self):
+class MQTTClientTest(unittest.TestCase):  # noqa: D101
+    @pytest.mark.skip
+    def test_connect_tcp(self):  # noqa: D102
         async def test_coro():
             async with open_mqttclient() as client:
                 await client.connect("mqtt://test.mosquitto.org/")
@@ -54,8 +54,8 @@ class MQTTClientTest(unittest.TestCase):
         except ConnectException:
             log.error("Broken by server")
 
-    @pytest.mark.skip()
-    def test_connect_tcp_secure(self):
+    @pytest.mark.skip
+    def test_connect_tcp_secure(self):  # noqa: D102
         async def test_coro():
             async with open_mqttclient(config={"check_hostname": False}) as client:
                 ca = os.path.join(os.path.dirname(os.path.realpath(__file__)), "mosquitto.org.crt")
@@ -68,7 +68,7 @@ class MQTTClientTest(unittest.TestCase):
         except ConnectException:
             log.error("Broken by server")
 
-    def test_connect_tcp_failure(self):
+    def test_connect_tcp_failure(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
             with pytest.raises(ConnectException), ungroup:
@@ -78,8 +78,8 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro)
 
-    @pytest.mark.skip()
-    def test_uri_supplied_early(self):
+    @pytest.mark.skip
+    def test_uri_supplied_early(self):  # noqa: D102
         config = {"auto_reconnect": False}
 
         async def test_coro():
@@ -91,7 +91,7 @@ class MQTTClientTest(unittest.TestCase):
         except ConnectException:
             log.error("Broken by server")
 
-    def test_connect_ws(self):
+    def test_connect_ws(self):  # noqa: D102
         async def test_coro():
             _, WSPORT, _, _, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -101,7 +101,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_reconnect_ws_retain_username_password(self):
+    def test_reconnect_ws_retain_username_password(self):  # noqa: D102
         async def test_coro():
             _, WSPORT, _, _, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -115,7 +115,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_connect_ws_secure(self):
+    def test_connect_ws_secure(self):  # noqa: D102
         async def test_coro():
             _, _, WSSPORT, _, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -129,7 +129,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_ping(self):
+    def test_ping(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -140,7 +140,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_subscribe(self):
+    def test_subscribe(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -160,7 +160,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_unsubscribe(self):
+    def test_unsubscribe(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -173,7 +173,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver(self):
+    def test_deliver(self):  # noqa: D102
         data = b"data"
 
         async def test_coro():
@@ -195,7 +195,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_timeout(self):
+    def test_deliver_timeout(self):  # noqa: D102
         async def test_coro():
             _, _, _, URI, broker_config = _PUB()
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):

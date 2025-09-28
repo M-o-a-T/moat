@@ -1,10 +1,9 @@
-# MIT license; Copyright (c) 2022 Damien P. George
+# MIT license; Copyright (c) 2022 Damien P. George  # noqa: D100
 # © 2025 Matthias Urlichs
+from __future__ import annotations
 
-import struct
-import sys
-import os
 import anyio
+import os
 
 try:
     from mpy_cross import run as mpy_cross_run
@@ -12,7 +11,7 @@ except ImportError:
     mpy_cross_run = None
 
 
-class VfsRomWriter:
+class VfsRomWriter:  # noqa: D101
     ROMFS_HEADER = b"\xd2\xcd\x31"
 
     ROMFS_RECORD_KIND_UNUSED = 0
@@ -42,7 +41,7 @@ class VfsRomWriter:
         buf.extend(data)
         return len(buf)
 
-    def finalise(self):
+    def finalise(self):  # noqa: D102
         _, data = self._dir_stack.pop()
         encoded_kind = VfsRomWriter.ROMFS_HEADER
         encoded_len = self._encode_uint(len(data))
@@ -51,21 +50,21 @@ class VfsRomWriter:
         data = encoded_kind + encoded_len + data
         return data
 
-    def opendir(self, dirname):
+    def opendir(self, dirname):  # noqa: D102
         self._dir_stack.append((dirname, bytearray()))
 
-    def closedir(self):
+    def closedir(self):  # noqa: D102
         dirname, dirdata = self._dir_stack.pop()
         dirdata = self._encode_uint(len(dirname)) + bytes(dirname, "utf-8") + dirdata
         self._extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DIRECTORY, dirdata))
 
-    def mkdata(self, data):
+    def mkdata(self, data):  # noqa: D102
         assert len(self._dir_stack) == 1
         return self._extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DATA_VERBATIM, data)) - len(
             data
         )
 
-    def mkfile(self, filename, filedata):
+    def mkfile(self, filename, filedata):  # noqa: D102
         filename = bytes(filename, "utf-8")
         payload = self._encode_uint(len(filename))
         payload += filename
@@ -77,10 +76,10 @@ class VfsRomWriter:
             payload += self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DATA_VERBATIM, filedata)
         self._dir_stack[-1][1].extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_FILE, payload))
 
-    async def copy_in():
+    async def copy_in():  # noqa: D102
         pass
 
-    async def copy_recursively(self, src_dir):
+    async def copy_recursively(self, src_dir):  # noqa: D102
         DIR = 1 << 14
         mpy_cross_missed = 0
         dir_contents = sorted(os.listdir(src_dir))
@@ -111,7 +110,7 @@ class VfsRomWriter:
                     self.mkfile(name, src.read())
 
 
-async def make_romfs(src: anyio.Path, mpy_cross):
+async def make_romfs(src: anyio.Path, mpy_cross):  # noqa: D103
     vfs = VfsRomWriter()
 
     # Build the filesystem recursively.

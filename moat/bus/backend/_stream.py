@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import anyio
 from contextlib import asynccontextmanager
+from weakref import ref
+
+from moat.bus.serial import SerBus
 
 from . import BaseBusHandler
-from moat.bus.serial import SerBus
-from weakref import ref
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -23,19 +25,19 @@ class _Bus(SerBus):
         super().__init__()
 
     def report_error(self, typ, **kw):
-        self.stream()._report_error(typ, **kw)
+        self.stream()._report_error(typ, **kw)  # noqa:SLF001
 
     def set_timeout(self, flag):
-        self.stream()._set_timeout(flag)
+        self.stream()._set_timeout(flag)  # noqa:SLF001
 
     def data_out(self, bits):
-        self.stream()._data_out(bits)
+        self.stream()._data_out(bits)  # noqa:SLF001
 
     def process(self, msg):
-        self.stream()._process(msg)
+        self.stream()._process(msg)  # noqa:SLF001
 
     def process_ack(self):
-        self.stream()._process_ack()
+        self.stream()._process_ack()  # noqa:SLF001
 
 
 class StreamHandler(BaseBusHandler):

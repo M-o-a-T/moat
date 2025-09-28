@@ -1,9 +1,9 @@
+# noqa:D100
 from __future__ import annotations
 
-import trio
-
-
 import logging
+
+import trio
 
 logger = logging.getLogger(__name__)
 
@@ -26,18 +26,18 @@ class Gateway:
         self.mqtt = mqtt
         self.prefix = prefix
 
-    async def run(self):
+    async def run(self):  # noqa:D102
         async with trio.open_nursery() as n:
             n.start_soon(self.serial2mqtt)
             n.start_soon(self.mqtt2serial)
 
-    async def serial2mqtt(self):
+    async def serial2mqtt(self):  # noqa:D102
         async for msg in self.serial:
             await self.mqtt.send(msg)
 
-    async def mqtt2serial(self):
+    async def mqtt2serial(self):  # noqa:D102
         async for msg in self.mqtt:
-            if self.prefix and msg._mqtt_id.startswith(self.prefix):
+            if self.prefix and msg._mqtt_id.startswith(self.prefix):  # noqa:SLF001
                 continue
             try:
                 await self.serial.send(msg)

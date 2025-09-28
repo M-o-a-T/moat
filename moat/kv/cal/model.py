@@ -4,11 +4,10 @@ Moat-KV client data model for calendars
 
 from __future__ import annotations
 
-
-from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from moat.kv.errors import ErrorRoot
-
 import logging
+
+from moat.kv.errors import ErrorRoot
+from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class CalEntry(AttrClientEntry):
     ATTRS = ("summary", "start", "duration", "alarms", "src")
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102
         if isinstance(name, int):
             return CalAlarm
         return ClientEntry
@@ -60,29 +59,29 @@ class CalBase(AttrClientEntry):
     ATTRS = ("url", "username", "password", "freq", "days", "dst", "src")
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa:D102
         if isinstance(name, int):
             return CalAlarm
         return CalEntry
 
 
-class CalRoot(ClientRoot):
+class CalRoot(ClientRoot):  # noqa:D101
     cls = {}
     reg = {}
     CFG = "cal"
     err = None
 
-    async def run_starting(self):
+    async def run_starting(self):  # noqa:D102
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return self["server"]
 
     @classmethod
-    def register(cls, typ):
+    def register(cls, typ):  # noqa:D102
         def acc(kls):
             cls.reg[typ] = kls
             return kls
@@ -90,5 +89,5 @@ class CalRoot(ClientRoot):
         return acc
 
     @classmethod
-    def child_type(kls, name):
+    def child_type(cls, name):  # noqa:D102,ARG003
         return CalBase

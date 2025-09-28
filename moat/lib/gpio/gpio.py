@@ -1,8 +1,8 @@
-from __future__ import annotations
-import datetime
-import sys
+from __future__ import annotations  # noqa: D100
 
 import anyio
+import datetime
+import sys
 
 from . import libgpiod as gpio
 
@@ -188,7 +188,7 @@ class Line:
             raise RuntimeError("Line is not open", self)
 
     @property
-    def value(self):
+    def value(self):  # noqa: D102
         self._is_open()
         return gpio.lib.gpiod_line_get_value(self._line)
 
@@ -198,39 +198,39 @@ class Line:
         gpio.lib.gpiod_line_set_value(self._line, value)
 
     @property
-    def direction(self):
+    def direction(self):  # noqa: D102
         if self._line is None:
             return self._direction
         return gpio.lib.gpiod_line_direction(self._line)
 
     @property
-    def active_state(self):
+    def active_state(self):  # noqa: D102
         self._is_open()
         return gpio.lib.gpiod_line_active_state(self._line)
 
     @property
-    def is_open_drain(self):
+    def is_open_drain(self):  # noqa: D102
         self._is_open()
         return gpio.lib.gpiod_line_is_open_drain(self._line)
 
     @property
-    def is_open_source(self):
+    def is_open_source(self):  # noqa: D102
         self._is_open()
         return gpio.lib.gpiod_line_is_open_source(self._line)
 
     @property
-    def is_used(self):
+    def is_used(self):  # noqa: D102
         self._is_open()
         return gpio.lib.gpiod_line_is_used(self._line)
 
     @property
-    def offset(self):
+    def offset(self):  # noqa: D102
         if self._line is None:
             return self._offset
         return gpio.lib.gpiod_line_offset(self._line)
 
     @property
-    def name(self):
+    def name(self):  # noqa: D102
         self._is_open()
         n = gpio.lib.gpiod_line_name(self._line)
         if n == gpio.ffi.NULL:
@@ -238,7 +238,7 @@ class Line:
         return n
 
     @property
-    def consumer(self):
+    def consumer(self):  # noqa: D102
         if self._line is None:
             return self._consumer
         n = gpio.lib.gpiod_line_consumer(self._line)

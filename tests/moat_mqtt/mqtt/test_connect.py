@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -11,8 +11,8 @@ from moat.mqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 from tests.moat_mqtt import anyio_run
 
 
-class ConnectPacketTest(unittest.TestCase):
-    def test_decode_ok(self):
+class ConnectPacketTest(unittest.TestCase):  # noqa: D101
+    def test_decode_ok(self):  # noqa: D102
         data = b"\x10\x3e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
@@ -31,7 +31,7 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.payload.username == "user"
         assert message.payload.password == "password"
 
-    def test_decode_ok_will_flag(self):
+    def test_decode_ok_will_flag(self):  # noqa: D102
         data = (
             b"\x10\x26\x00\x04MQTT\x04\xca\x00\x00\x00\x0a0123456789\x00\x04user\x00\x08password"
         )
@@ -52,37 +52,37 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.payload.username == "user"
         assert message.payload.password == "password"
 
-    def test_decode_fail_reserved_flag(self):
+    def test_decode_fail_reserved_flag(self):  # noqa: D102
         data = b"\x10\x3e\x00\x04MQTT\x04\xcf\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
         assert message.variable_header.reserved_flag
 
-    def test_decode_fail_miss_clientId(self):
+    def test_decode_fail_miss_clientId(self):  # noqa: D102
         data = b"\x10\x0a\x00\x04MQTT\x04\xce\x00\x00"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
         assert message.payload.client_id is not None
 
-    def test_decode_fail_miss_willtopic(self):
+    def test_decode_fail_miss_willtopic(self):  # noqa: D102
         data = b"\x10\x16\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
         assert message.payload.will_topic is None
 
-    def test_decode_fail_miss_username(self):
+    def test_decode_fail_miss_username(self):  # noqa: D102
         data = b"\x10\x2e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
         assert message.payload.username is None
 
-    def test_decode_fail_miss_password(self):
+    def test_decode_fail_miss_password(self):  # noqa: D102
         data = b"\x10\x34\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
         assert message.payload.password is None
 
-    def test_encode(self):
+    def test_encode(self):  # noqa: D102
         header = MQTTFixedHeader(CONNECT, 0x00, 0)
         variable_header = ConnectVariableHeader(0xCE, 0, "MQTT", 4)
         payload = ConnectPayload("0123456789", "WillTopic", b"WillMessage", "user", "password")
@@ -93,7 +93,7 @@ class ConnectPacketTest(unittest.TestCase):
             == b"\x10>\x00\x04MQTT\x04\xce\x00\x00\x00\n0123456789\x00\tWillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         )
 
-    def test_getattr_ok(self):
+    def test_getattr_ok(self):  # noqa: D102
         data = b"\x10\x3e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)

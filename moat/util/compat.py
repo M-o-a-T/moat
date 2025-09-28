@@ -13,44 +13,45 @@ import os
 import sys
 import time as _time
 import traceback as _traceback
-from concurrent.futures import CancelledError
-from contextlib import suppress, AsyncExitStack
-from inspect import currentframe, iscoroutinefunction, iscoroutine
 from codecs import utf_8_decode
+from concurrent.futures import CancelledError
+from contextlib import AsyncExitStack, suppress
+from inspect import currentframe, iscoroutine, iscoroutinefunction
+
+from moat.util.merge import merge
 
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
-from moat.util.merge import merge
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "is_async",
-    "doc",
-    "log",
-    "at",
-    "const",
     "CancelScope",
+    "Event",
+    "L",
+    "Lock",
     "Queue",
-    "print_exc",
-    "ticks_ms",
-    "sleep_ms",
-    "wait_for",
-    "wait_for_ms",
-    "every_ms",
-    "every",
-    "idle",
-    "ticks_add",
-    "ticks_diff",
-    "run",
-    "byte2utf8",
     "TaskGroup",
+    "WouldBlock",
+    "at",
+    "byte2utf8",
+    "const",
+    "doc",
+    "every",
+    "every_ms",
+    "idle",
+    "is_async",
+    "log",
+    "print_exc",
+    "run",
     "run_server",
     "shield",
-    "Event",
-    "Lock",
-    "L",
-    "WouldBlock",
+    "sleep_ms",
+    "ticks_add",
+    "ticks_diff",
+    "ticks_ms",
+    "wait_for",
+    "wait_for_ms",
 ]
 
 
@@ -80,7 +81,7 @@ Pin_IN = 0
 Pin_OUT = 1
 
 
-def byte2utf8(buf: bytes | bytearray | memoryview) -> str:
+def byte2utf8(buf: bytes | bytearray | memoryview) -> str:  # noqa: D103
     res, n = utf_8_decode(buf)
     if n != len(buf):
         raise ValueError("incomplete utf8")
@@ -125,7 +126,7 @@ def log(s, *x, err=None, nback=1):
         breakpoint()  # noqa:T100 pylint:disable=forgotten-debug-statement
 
 
-def at(*a, **kw):
+def at(*a, **kw):  # noqa: D103
     log_.debug("%r %r", a, kw)
 
 
@@ -207,7 +208,7 @@ _tgt = None
 def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
 
-    global _tg, _tgt  # noqa:PLW0603 pylint:disable=global-statement
+    global _tg, _tgt
     if "pytest" in sys.modules or _tgt is None:
         tgt = type(_anyio.create_task_group())
     else:
@@ -421,7 +422,7 @@ async def AC_exit(obj, *exc):
     return await obj._AC_.pop().__aexit__(*exc)
 
 
-def is_async(obj):
+def is_async(obj):  # noqa: D103
     if hasattr(obj, "__await__"):
         return True
     return False

@@ -1,19 +1,20 @@
 # command line interface
 from __future__ import annotations
 
-import asyncclick as click
+import anyio
+import logging
+from datetime import UTC, datetime, timedelta
 from functools import partial
-from moat.util import P, Path
-from moat.kv.data import data_get
-from .model import CalRoot
-from .util import find_next_alarm
-from datetime import datetime, timedelta, UTC
+
+import aiocaldav as caldav
+import asyncclick as click
 import pytz
 
-import anyio
-import aiocaldav as caldav
+from moat.util import P, Path
+from moat.kv.data import data_get
 
-import logging
+from .model import CalRoot
+from .util import find_next_alarm
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ async def cli(obj):
 @click.pass_obj
 async def run_(obj):
     """Process calendar alarms"""
-    from moat.kv.client import client_scope
+    from moat.kv.client import client_scope  # noqa:PLC0415
 
     kv = await client_scope(**obj.cfg.kv)
     cal_cfg = (await kv.get(P("calendar.test"))).value
@@ -112,7 +113,7 @@ async def list_(obj):
         elif not isinstance(p[0], int):
             return None
         elif len(p) == 1:
-            return Path("%02x" % p[0])
+            return Path(f"{p[0]:02x}")
         else:
             return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
 

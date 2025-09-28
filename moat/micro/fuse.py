@@ -9,10 +9,8 @@ import errno
 import logging
 import os
 import stat
-from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import PosixPath as Path
-from moat.util.compat import print_exc
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -22,6 +20,10 @@ from pyfuse3 import (  # pylint: disable=E0611
     FileInfo,
     FUSEError,
 )
+
+from moat.util.compat import print_exc
+
+from collections import defaultdict
 
 # Typing
 

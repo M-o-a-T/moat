@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Basic tool support
 
@@ -8,9 +7,11 @@ from __future__ import annotations
 
 import logging
 import time
+import anyio
 from textwrap import dedent as _dedent
 
 import asyncclick as click
+
 from moat.util import (
     attr_args,
     list_ext,
@@ -58,9 +59,9 @@ async def cli(obj, config, **attrs):
 
     cfg = obj.cfg.bms.sched
     if config:
-        with open(config) as f:
-            cc = yload(f)
-            merge(cfg, cc)
+        f = await anyio.Path(config).read_text()
+        cc = yload(f)
+        merge(cfg, cc)
     obj.cfg.bms.sched = process_args(cfg, **attrs)
 
 
@@ -106,10 +107,10 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
         if m == "T":
             print("T:")
             ml = max(len(x) for x in dir(BaseLoader) if not x.startswith("_"))
-            for m in dir(BaseLoader):
-                if m.startswith("_"):
+            for mm in dir(BaseLoader):
+                if mm.startswith("_"):
                     continue
-                doc = dedent(getattr(BaseLoader, m).__doc__).split("\n", 1)[0]
+                doc = dedent(getattr(BaseLoader, mm).__doc__).split("\n", 1)[0]
                 print(f"{m:{ml}s}  {doc}")
             continue
         if m.startswith("T."):
@@ -121,9 +122,9 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
                 mo = getattr(mo, aa)
             doc = dedent(mo.__doc__)
         else:
-            m = Loader(m)
-            doc = dedent(m.__doc__)
-            doc += "\nImplements: " + " ".join(x for x in m.__dict__ if not x.startswith("_"))
+            mm = Loader(m)
+            doc = dedent(mm.__doc__)
+            doc += "\nImplements: " + " ".join(x for x in mm.__dict__ if not x.startswith("_"))
 
         print(
             f"""\

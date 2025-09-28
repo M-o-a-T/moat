@@ -6,14 +6,15 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from .path import P, Path  # noqa:F401
-from moat.util.compat import Event, log
-from .exc import ExpKeyError, ExpAttrError, ExpectedError
-
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
+from moat.util.compat import Event, log
 
-class OutOfData(EOFError):
+from .exc import ExpAttrError as ExpAttrError, ExpectedError as ExpectedError, ExpKeyError as ExpKeyError
+from .path import P, Path  # noqa:F401
+
+
+class OutOfData(EOFError):  # noqa: D101
     pass
 
 

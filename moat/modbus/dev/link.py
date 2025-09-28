@@ -4,11 +4,12 @@ Support values on MoaT-KV
 
 from __future__ import annotations
 
+import anyio
 import logging
 
+from moat.util import NotGiven, Path
+
 from .device import Register as BaseRegister
-from moat.util import Path, NotGiven
-import anyio
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class Register(BaseRegister):
                     logger.warning("%s:%s: no source/destination", self.unit, self.path)
             return
 
-    async def start(self):
+    async def start(self):  # noqa: D102
         await super().start()
 
         # logger.info("%s:%s: Polling", self.unit, self.path)
@@ -65,14 +66,14 @@ class Register(BaseRegister):
                 tg.start_soon(self.from_link_p, mon, self.slot.write_delay)
 
     @property
-    def src(self):
+    def src(self):  # noqa: D102
         return self.data.get("src")
 
     @property
-    def dest(self):
+    def dest(self):  # noqa: D102
         return self.data.get("dest")
 
-    def set(self, val):
+    def set(self, val):  # noqa: D102
         self.reg.set(val)
 
     async def to_link(self, dest):

@@ -6,16 +6,16 @@ from __future__ import annotations
 
 import sys
 
-from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L, Queue, log, wait_for_ms, sleep_ms, log
 from moat.lib.cmd.errors import NoStream
+from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import Event, L, Queue, log, sleep_ms, wait_for_ms
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any
     from collections.abc import Awaitable
+    from typing import Any
 
 
 class Cmd(BaseCmd):
@@ -144,7 +144,7 @@ class Cons(BaseCmd):
             else:
                 buf[d : d + len(b)] = b
                 d += len(b)
-            if d == len(buf) or d > 0 and (timed or buf[d - 1] == 10):  # lf
+            if d == len(buf) or (d > 0 and (timed or buf[d - 1] == 10)):  # lf
                 p = self.cfg.get("prefix", None)
                 if p is None:
                     self.q.put(buf[:d])

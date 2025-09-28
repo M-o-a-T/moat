@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import anyio
-import asyncclick as click
-from collections.abc import Mapping
-
-from moat.util import yprint, attrdict, as_service, P, attr_args
-from moat.kv.data import res_get, res_update, node_attr
-
-import logging
 import contextlib
+import logging
+
+import asyncclick as click
+
+from moat.util import P, as_service, attr_args, attrdict, yprint
+from moat.kv.data import node_attr, res_get, res_update
+
+from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -137,28 +138,28 @@ async def port(obj, path, typ, mode, attr):
     for k, v in attr:
         if k == "count":
             if v == "+":
-                v = True
+                v = True  # noqa:PLW2901
             elif v == "-":
-                v = False
+                v = False  # noqa:PLW2901
             elif v in "xX*":
-                v = None
+                v = None  # noqa:PLW2901
             else:
                 raise click.UsageError(f"'{k}' wants one of + - X")
         elif k in ("low", "skip", "flow"):
             if v == "+":
-                v = True
+                v = True  # noqa:PLW2901
             elif v == "-":
-                v = False
+                v = False  # noqa:PLW2901
             else:
                 raise click.UsageError(f"'{k}' wants one of + -")
         elif k in {"src", "dest"}:
-            v = P(v)
+            v = P(v)  # noqa:PLW2901
         else:
             try:
-                v = int(v)
+                v = int(v)  # noqa:PLW2901
             except ValueError:
                 with contextlib.suppress(ValueError):
-                    v = float(v)
+                    v = float(v)  # noqa:PLW2901
         val[k] = v
 
     await _attr(obj, (), val, path, False, res)
@@ -182,7 +183,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             if isinstance(value, Mapping):
                 # replace
                 # value = res_delete(res, attr)
-                value = value._update(attr, value=value)
+                value = value._update(attr, value=value)  # noqa:SLF001
             else:
                 value = res_update(res, attr, value=value)
     else:
@@ -208,8 +209,8 @@ async def monitor(obj, name, controller):
 
     The first argument must be the local host name.
     """
-    from .task import task
-    from .model import GPIOroot
+    from .model import GPIOroot  # noqa:PLC0415
+    from .task import task  # noqa:PLC0415
 
     server = await GPIOroot.as_handler(obj.client)
     await server.wait_loaded()

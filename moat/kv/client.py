@@ -1,19 +1,21 @@
 """
-Client code.
+Client code for MoaT-KV.
 
 Main entry point: :func:`open_client`.
+
+Note: MoaT-KV is deprecated. Use MoaT-Link instead.
 """
 
 from __future__ import annotations
 
+import anyio
 import logging
 import socket
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from inspect import iscoroutine
 
-import anyio
 from asyncscope import Scope, main_scope, scope
-from moat.lib.codec import get_codec
+
 from moat.util import (  # pylint: disable=no-name-in-module
     CFG,
     DelayedRead,
@@ -22,21 +24,22 @@ from moat.util import (  # pylint: disable=no-name-in-module
     OptCtx,
     PathLongener,
     ValueEvent,
+    al_lower,
     attrdict,
     byte2num,
     combine_dict,
     create_queue,
     ensure_cfg,
-    gen_ssl,
     gen_ident,
-    al_lower,
+    gen_ssl,
     num2byte,
 )
+from moat.lib.codec import get_codec
 
 from .exceptions import (
-    ClientCancelledError,
     ClientAuthMethodError,
     ClientAuthRequiredError,
+    ClientCancelledError,
     ServerClosedError,
     ServerConnectionError,
     ServerError,
@@ -47,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 ClosedResourceError = anyio.ClosedResourceError
 
-__all__ = ["NoData", "ManyData", "open_client", "client_scope", "StreamedRequest"]
+__all__ = ["ManyData", "NoData", "StreamedRequest", "client_scope", "open_client"]
 
 
 class NoData(ValueError):
@@ -75,7 +78,7 @@ async def _scoped_client(_name=None, **cfg):
     AsyncScope service for a client connection.
     """
     client = Client(cfg)
-    async with client._connected() as client:
+    async with client._connected() as client:  # noqa:SLF001
         scope.register(client)
         await scope.wait_no_users()
 
@@ -129,7 +132,7 @@ class StreamedRequest:
         self._client = client
         self.seq = seq
         self._open = False
-        self._client._handlers[seq] = self
+        self._client._handlers[seq] = self  # noqa:SLF001
         self._reply_stream = None
         self.n_msg = 0
         self._report_start = report_start
@@ -148,7 +151,7 @@ class StreamedRequest:
     async def _send_ack(self, seq):
         msg = dict(seq=self.seq, state="ack", ack=seq)
         self._client.logger.debug("Send %s", msg)
-        await self._client._send(**msg)
+        await self._client._send(**msg)  # noqa:SLF001
 
     async def set(self, msg):
         """Called by the read loop to process a command's result"""
@@ -161,8 +164,8 @@ class StreamedRequest:
                 cls = ServerError
             try:
                 await self.qr.put_error(cls(msg.error))
-            except anyio.BrokenResourceError:
-                raise cls(msg.error)
+            except anyio.BrokenResourceError as exc:
+                raise cls(msg.error) from exc
             return
         self._client.logger.debug("Reply %s", msg)
         state = msg.get("state", "")
@@ -227,13 +230,13 @@ class StreamedRequest:
         try:
             res = await self.qr.get()
         except (anyio.EndOfStream, anyio.ClosedResourceError, EOFError):
-            raise StopAsyncIteration
+            raise StopAsyncIteration from None
         except ClientCancelledError:
-            raise StopAsyncIteration  # just terminate
+            raise StopAsyncIteration from None  # just terminate
         self._path_long(res)
         return res
 
-    async def send(self, **msg):
+    async def send(self, **msg):  # noqa:D102
         # self._client.logger.debug("Send %s", msg)
         if not self._open:
             if self._stream:
@@ -246,12 +249,12 @@ class StreamedRequest:
             msg["wseq"] = await self.dw.next_seq()
         msg["seq"] = self.seq
         self._client.logger.debug("Send %s", msg)
-        await self._client._send(**msg)
+        await self._client._send(**msg)  # noqa:SLF001
 
-    async def recv(self):
+    async def recv(self):  # noqa:D102
         return await self.__anext__()
 
-    async def cancel(self):
+    async def cancel(self):  # noqa:D102
         try:
             await self.qr.put_error(ClientCancelledError())
         except (anyio.BrokenResourceError, anyio.ClosedResourceError, EOFError):
@@ -260,20 +263,20 @@ class StreamedRequest:
             with suppress(ServerClosedError):
                 await self.aclose()
 
-    async def wait_started(self):
+    async def wait_started(self):  # noqa:D102
         await self._started.wait()
 
-    async def aclose(self):
+    async def aclose(self):  # noqa:D102
         try:
             if self._stream:
                 msg = dict(seq=self.seq, state="end")
                 # self._client.logger.debug("SendE %s", msg)
-                await self._client._send(**msg)
+                await self._client._send(**msg)  # noqa:SLF001
             if self._open:
                 msg = dict(action="stop", task=self.seq)
                 # self._client.logger.debug("SendC %s", msg)
                 with suppress(ServerClosedError, anyio.BrokenResourceError):
-                    await self._client._request(**msg, _async=True)
+                    await self._client._request(**msg, _async=True)  # noqa:SLF001
                 # ignore the reply
         finally:
             self.qr.close_sender()
@@ -324,7 +327,7 @@ class ClientConfig:
 
     _changed = None  # pylint
 
-    def __init__(self, client, *a, **k):  # pylint: disable=unused-argument
+    def __init__(self, client, *a, **k):  # pylint: disable=unused-argument # noqa:ARG002
         self._init(client)
 
     def _init(self, client):
@@ -338,20 +341,20 @@ class ClientConfig:
         v = self._current.get(k, NotGiven)
         if v is NotGiven:
             try:
-                v = self._client._cfg[k]
+                v = self._client._cfg[k]  # noqa:SLF001
             except KeyError:
                 raise AttributeError(k) from None
         return v
 
     def __contains__(self, k):
-        return k in self._current or k in self._client._cfg
+        return k in self._current or k in self._client._cfg  # noqa:SLF001
 
     async def _update(self, k, v):
         """
         Update this config entry. The new data is combined with the static
         configuration; the old data is discarded.
         """
-        self._current[k] = combine_dict(v, self._client._cfg.get(k, {}))
+        self._current[k] = combine_dict(v, self._client._cfg.get(k, {}))  # noqa:SLF001
         c, self._changed = self._changed, anyio.Event()
         c.set()
 
@@ -450,7 +453,7 @@ class Client:
     async def dh_secret(self, length=1024):
         """Exchange a diffie-hellman secret with the server"""
         if self._dh_key is None:
-            from moat.lib.diffiehellman import DiffieHellman
+            from moat.lib.diffiehellman import DiffieHellman  # noqa:PLC0415
 
             def gen_key():
                 k = DiffieHellman(key_length=length, group=(5 if length < 32 else 14))
@@ -501,11 +504,11 @@ class Client:
                     try:
                         buf = await self._socket.receive(4096)
                     except anyio.EndOfStream:
-                        raise ServerClosedError("Connection closed by peer")
+                        raise ServerClosedError("Connection closed by peer") from None
                     except ClosedResourceError:
                         return  # closed by us
                     if len(buf) == 0:  # Connection was closed.
-                        raise ServerClosedError("Connection closed by peer")
+                        raise ServerClosedError("Connection closed by peer") from None
                     self.codec.feed(buf)
 
             except BaseException as exc:
@@ -522,7 +525,7 @@ class Client:
                         except ClosedResourceError:
                             pass
 
-    async def _request(self, action, iter=None, seq=None, _async=False, **params):  # pylint: disable=redefined-builtin  # iter
+    async def _request(self, action, iter=None, seq=None, _async=False, **params):  # pylint: disable=redefined-builtin  # noqa:A002
         """Send a request. Wait for a reply.
 
         Args:
@@ -628,7 +631,7 @@ class Client:
             raise ClosedResourceError("Closed already")
         res = StreamedRequest(self, seq, stream=stream)
         if "path" in params and params.get("long_path", False):
-            res._path_long = PathLongener(params["path"])
+            res._path_long = PathLongener(params["path"])  # noqa:SLF001
         await res.send(action=action, **params)
         await res.wait_started()
         try:
@@ -651,14 +654,14 @@ class Client:
         if not sa or not sa[0]:
             # no auth required
             if auth:
-                logger.info("Tried to use auth=%s, but not required.", auth._auth_method)
+                logger.info("Tried to use auth=%s, but not required.", auth._auth_method)  # noqa:SLF001
             return
         if not auth:
             raise ClientAuthRequiredError("You need to log in using:", sa[0])
-        if auth._auth_method != sa[0]:
-            raise ClientAuthMethodError(f"You cannot use {auth._auth_method!r} auth", sa)
+        if auth._auth_method != sa[0]:  # noqa:SLF001
+            raise ClientAuthMethodError(f"You cannot use {auth._auth_method!r} auth", sa)  # noqa:SLF001
         if getattr(auth, "_DEBUG", False):
-            auth._length = 16
+            auth._length = 16  # noqa:SLF001
         await auth.auth(self)
 
     @asynccontextmanager
@@ -675,7 +678,7 @@ class Client:
         port = cfg["port"]
         auth = cfg["auth"]
         if auth is not None:
-            from .auth import gen_auth
+            from .auth import gen_auth  # noqa:PLC0415
 
             auth = gen_auth(auth)
         init_timeout = cfg["init_timeout"]
@@ -684,16 +687,16 @@ class Client:
         # self.logger.debug("Conn %s %s",self.host,self.port)
         try:
             ctx = await anyio.connect_tcp(host, port)
-        except socket.gaierror:
-            raise ServerConnectionError(host, port)
+        except socket.gaierror as exc:
+            raise ServerConnectionError(host, port) from exc
         if ssl:
             raise NotImplementedError("XXX TODO fix SSL")
             # ctx = await anyio.streams.tls.TLSStream(ctx, ssl_context=ssl, server_side=False)
         try:
-            async with ctx as stream, AsyncExitStack() as ex:
+            async with ctx as stream, AsyncExitStack() as exc:
                 self.scope = scope.get()
                 # self.tg = tg  # TODO might not be necessary
-                self.exit_stack = ex
+                self.exit_stack = exc
 
                 try:
                     self._socket = stream
@@ -708,7 +711,7 @@ class Client:
                             await self._send(seq=0, qlen=self.qlen)
                         await self._run_auth(auth)
 
-                    from .config import ConfigRoot
+                    from .config import ConfigRoot  # noqa:PLC0415
 
                     self._config = await ConfigRoot.as_handler(self, require_client=False)
 
@@ -749,7 +752,7 @@ class Client:
             nchain: set to retrieve the node's chain tag, for later updates.
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         return self._request(action="get_value", path=path, iter=False, nchain=nchain)
 
     def set(
@@ -777,9 +780,9 @@ class Client:
             idem: if True, no-op if the value doesn't change
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         if value is NotGiven:
-            raise RuntimeError("You need to supply a value, or call 'delete'")
+            raise ValueError("You need to supply a value, or call 'delete'")
 
         kw = {}
         if prev is not NotGiven:
@@ -814,7 +817,7 @@ class Client:
                 ``chain`` and/or ``prev``.
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         kw = {}
         if prev is not NotGiven:
             kw["prev"] = prev
@@ -840,7 +843,7 @@ class Client:
             with_data is not set.
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         if empty is None:
             empty = not with_data
         res = await self._request(action="enum", path=path, with_data=with_data, empty=empty, **kw)
@@ -869,7 +872,7 @@ class Client:
 
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         if long_path:
             lp = PathLongener()
         async for r in await self._request(
@@ -892,7 +895,7 @@ class Client:
         number of deleted nodes.
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         return self._request(action="delete_tree", path=path, nchain=nchain)
 
     def stop(self, seq: int):
@@ -929,7 +932,7 @@ class Client:
         old cached state with the newly-arrived data.
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         return self._stream(action="watch", path=path, iter=True, long_path=long_path, **kw)
 
     def mirror(self, path, *, root_type=None, **kw):
@@ -954,9 +957,9 @@ class Client:
 
         """
         if isinstance(path, str):
-            raise RuntimeError("You need a path, not a string")
+            raise TypeError("You need a path, not a string")
         if root_type is None:
-            from .obj import MirrorRoot
+            from .obj import MirrorRoot  # noqa:PLC0415
 
             root_type = MirrorRoot
         root = root_type(self, path, **kw)

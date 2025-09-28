@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
@@ -11,8 +11,8 @@ from moat.mqtt.mqtt.suback import SubackPacket, SubackPayload
 from tests.moat_mqtt import anyio_run
 
 
-class SubackPacketTest(unittest.TestCase):
-    def test_from_stream(self):
+class SubackPacketTest(unittest.TestCase):  # noqa: D101
+    def test_from_stream(self):  # noqa: D102
         data = b"\x90\x06\x00\x0a\x00\x01\x02\x80"
         stream = BufferAdapter(data)
         message = anyio_run(SubackPacket.from_stream, stream)
@@ -21,7 +21,7 @@ class SubackPacketTest(unittest.TestCase):
         assert message.payload.return_codes[2] == SubackPayload.RETURN_CODE_02
         assert message.payload.return_codes[3] == SubackPayload.RETURN_CODE_80
 
-    def test_to_stream(self):
+    def test_to_stream(self):  # noqa: D102
         variable_header = PacketIdVariableHeader(10)
         payload = SubackPayload(
             [

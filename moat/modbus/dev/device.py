@@ -4,19 +4,20 @@ Types that describe a modbus device, as read from file
 
 from __future__ import annotations
 
+import anyio
 import logging
-from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path as FSPath
 
-import anyio
 from asyncscope import scope
-from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
 
+from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
+from moat.modbus.server import UnitContext
 from moat.modbus.typemap import get_kind, get_type2
 from moat.modbus.types import Coils, DiscreteInputs, InputRegisters
-from moat.modbus.server import UnitContext
+
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -37,7 +38,7 @@ class NotARegisterError(ValueError):
     pass
 
 
-def mark_orig(d):
+def mark_orig(d):  # noqa: D103
     if isinstance(d, dict):
         d._is_orig = True
         for k, v in d.items():
@@ -243,7 +244,7 @@ class Register:
         self.offset = self.data.get("offset", 0)
         self.path = path
 
-    async def start(self):
+    async def start(self):  # noqa: D102
         pass
 
     def __aiter__(self):
@@ -407,7 +408,7 @@ class ClientDevice(CtxObj, BaseDevice):
             scope.register(self)
             await scope.no_more_dependents()
 
-    async def add_slots(self):
+    async def add_slots(self):  # noqa: D102
         return
 
     async def add_slots(self):
@@ -512,13 +513,13 @@ class ServerDevice(BaseDevice):
         self.getValues = self.unit.getValues
         self.setValues = self.unit.setValues
 
-    def async_getValues(self, *a, **kw):
+    def async_getValues(self, *a, **kw):  # noqa: D102
         return self.unit.async_getValues(*a, **kw)
 
-    def async_setValues(self, *a, **kw):
+    def async_setValues(self, *a, **kw):  # noqa: D102
         return self.unit.async_setValues(*a, **kw)
 
-    async def load(self, path: str | None = None, data: dict | None = None):
+    async def load(self, path: str | None = None, data: dict | None = None):  # noqa: D102
         await super().load(path, data)
         self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_registers()

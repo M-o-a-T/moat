@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 import logging
 from functools import partial
 
@@ -16,8 +16,8 @@ from moat.kv.mock.mqtt import stdtest
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.trio()
-async def test_22_auth_basic(autojump_clock):  # pylint: disable=unused-argument
+@pytest.mark.trio
+async def test_22_auth_basic(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
     async with stdtest(args={"init": 123}, tocks=50) as st:
         assert st is not None
         (s,) = st.s
@@ -67,8 +67,8 @@ typ: root
         )
 
 
-@pytest.mark.trio()
-async def test_23_auth_test(autojump_clock):  # pylint: disable=unused-argument
+@pytest.mark.trio
+async def test_23_auth_test(autojump_clock):  # pylint: disable=unused-argument  # noqa: D103
     async with stdtest(args={"init": 123}, tocks=120) as st:
         assert st is not None
         (s,) = st.s
@@ -110,8 +110,8 @@ typ: _test
         assert res.stdout == "'there'\n"
 
 
-@pytest.mark.trio()
-async def test_24_auth_password(autojump_clock):
+@pytest.mark.trio
+async def test_24_auth_password(autojump_clock):  # noqa: D103
     async with stdtest(args={"init": 123}, tocks=99) as st:
         assert st is not None
         (s,) = st.s

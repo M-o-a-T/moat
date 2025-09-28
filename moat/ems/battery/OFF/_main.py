@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import logging
 
+import asyncclick as click
+
 from moat.util import merge, yload, yprint
 from moat.micro.main import get_link  # pylint: disable=E0401,E0611
 from moat.micro.proto.stack import RemoteError  # pylint: disable=E0401,E0611
 from moat.util.main import load_subgroup
-
-import asyncclick as click
 
 logger = logging.getLogger(__name__)
 

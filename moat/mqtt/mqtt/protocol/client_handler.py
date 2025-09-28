@@ -1,29 +1,32 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import anyio
-from moat.util import create_queue
 
-from moat.mqtt.utils import Future
+import anyio
+
+from moat.util import create_queue
 from moat.mqtt.mqtt.connack import ConnackPacket
 from moat.mqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from moat.mqtt.mqtt.disconnect import DisconnectPacket
 from moat.mqtt.mqtt.pingreq import PingReqPacket
 from moat.mqtt.mqtt.subscribe import SubscribePacket
 from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
+from moat.mqtt.utils import Future
+
 from .handler import EVENT_MQTT_PACKET_RECEIVED, ProtocolHandler
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.mqtt.mqtt.unsuback import UnsubackPacket
-    from moat.mqtt.mqtt.suback import SubackPacket
     from moat.mqtt.mqtt.pingresp import PingRespPacket
-    from moat.mqtt.session import Session
+    from moat.mqtt.mqtt.suback import SubackPacket
+    from moat.mqtt.mqtt.unsuback import UnsubackPacket
     from moat.mqtt.plugins.manager import PluginManager
+    from moat.mqtt.session import Session
 
 
-class ClientProtocolHandler(ProtocolHandler):
+class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
     def __init__(self, plugins_manager: PluginManager, session: Session = None):
         super().__init__(plugins_manager, session)
         self._ping_task = None
@@ -32,7 +35,7 @@ class ClientProtocolHandler(ProtocolHandler):
         self._unsubscriptions_waiter = dict()
         self._disconnect_waiter = None
 
-    async def stop(self):
+    async def stop(self):  # noqa: D102
         try:
             await super().stop()
         finally:
@@ -73,7 +76,7 @@ class ClientProtocolHandler(ProtocolHandler):
         packet = ConnectPacket(vh=vh, payload=payload)
         return packet
 
-    async def mqtt_connect(self):
+    async def mqtt_connect(self):  # noqa: D102
         connect_packet = self._build_connect_packet()
         await self._send_packet(connect_packet)
         connack = await ConnackPacket.from_stream(self.stream)
@@ -85,7 +88,7 @@ class ClientProtocolHandler(ProtocolHandler):
         )
         return connack.return_code
 
-    async def handle_write_timeout(self):
+    async def handle_write_timeout(self):  # noqa: D102
         try:
             if self.session is not None and not self._ping_task:
                 self.logger.debug("Scheduling Ping")
@@ -96,7 +99,7 @@ class ClientProtocolHandler(ProtocolHandler):
             self.logger.debug("Exception in ping task: %r", be)
             raise
 
-    async def handle_read_timeout(self):
+    async def handle_read_timeout(self):  # noqa: D102
         pass
 
     async def mqtt_subscribe(self, topics, packet_id):
@@ -119,7 +122,7 @@ class ClientProtocolHandler(ProtocolHandler):
             del self._subscriptions_waiter[packet_id]
         return return_codes
 
-    async def handle_suback(self, suback: SubackPacket):
+    async def handle_suback(self, suback: SubackPacket):  # noqa: D102
         packet_id = suback.variable_header.packet_id
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
@@ -147,7 +150,7 @@ class ClientProtocolHandler(ProtocolHandler):
         finally:
             del self._unsubscriptions_waiter[packet_id]
 
-    async def handle_unsuback(self, unsuback: UnsubackPacket):
+    async def handle_unsuback(self, unsuback: UnsubackPacket):  # noqa: D102
         packet_id = unsuback.variable_header.packet_id
         try:
             waiter = self._unsubscriptions_waiter.get(packet_id)
@@ -159,11 +162,11 @@ class ClientProtocolHandler(ProtocolHandler):
                 packet_id,
             )
 
-    async def mqtt_disconnect(self):
+    async def mqtt_disconnect(self):  # noqa: D102
         disconnect_packet = DisconnectPacket()
         await self._send_packet(disconnect_packet)
 
-    async def mqtt_ping(self, evt=None):
+    async def mqtt_ping(self, evt=None):  # noqa: D102
         with anyio.CancelScope() as scope:
             self._ping_task = scope
             if evt is not None:
@@ -177,10 +180,10 @@ class ClientProtocolHandler(ProtocolHandler):
             finally:
                 self._ping_task = None
 
-    async def handle_pingresp(self, pingresp: PingRespPacket):
+    async def handle_pingresp(self, pingresp: PingRespPacket):  # noqa: D102
         await self._pingresp_queue.put(pingresp)
 
-    async def handle_connection_closed(self):
+    async def handle_connection_closed(self):  # noqa: D102
         self.logger.debug("Broker closed connection")
         if self._disconnect_waiter:
             self._disconnect_waiter.set()

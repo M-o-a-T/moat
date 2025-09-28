@@ -1,21 +1,22 @@
 # command line interface
 from __future__ import annotations
 
+import logging
 import os
+import anyio
+
 import asyncclick as click
 
 from moat.util import (
-    attrdict,
-    combine_dict,
     NotGiven,
     P,
     Path,
-    yload,
     attr_args,
+    attrdict,
+    combine_dict,
     process_args,
+    yload,
 )
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -99,28 +100,28 @@ async def setup_conv(obj, user):
     """
     n = 0
 
-    with open(os.path.join(os.path.dirname(__file__), "schema.yaml")) as f:
-        cfg = yload(f)
+    f = await (anyio.Path(os.path.dirname(__file__))/"schema.yaml").read_file()
+    cfg = yload(f)
     for k, v in cfg["codec"].items():
-        k = k.split(" ")
-        r = await obj.client._request(action="get_internal", path=["codec"] + k)
+        k = k.split(" ")  # noqa:PLW2901
+        r = await obj.client._request(action="get_internal", path=["codec"] + k)  # noqa:SLF001
         if r.get("value", {}) != v:
             print("codec", *k)
-            await obj.client._request(action="set_internal", path=["codec"] + k, value=v)
+            await obj.client._request(action="set_internal", path=["codec"] + k, value=v)  # noqa:SLF001
             n += 1
 
     ppa = Path("conv", user) + obj.hass_name
     for k, v in cfg["conv"].items():
         for kk, vv in v.items():
-            vv = dict(codec=vv)
+            vv = dict(codec=vv)  # noqa:PLW2901
             if k == "+":
                 p = (*ppa, "#", *kk.split("/"))
             else:
                 p = (*ppa, k, "#", *kk.split("/"))
-            r = await obj.client._request(action="get_internal", path=p)
+            r = await obj.client._request(action="get_internal", path=p)  # noqa:SLF001
             if r.get("value", {}) != vv:
                 print(*p)
-                await obj.client._request(action="set_internal", path=p, value=vv)
+                await obj.client._request(action="set_internal", path=p, value=vv)  # noqa:SLF001
                 n += 1
     return n
 
@@ -276,12 +277,12 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
             t = _types[typ].copy()
             tp = _types_plus.get(typ, {})
         except KeyError:
-            raise click.UsageError("I don't know this type.")
+            raise click.UsageError("I don't know this type.") from None
         for p in plus:
             try:
-                p = tp[p]
+                p = tp[p]  # noqa:PLW2901
             except KeyError:
-                raise click.UsageError("There are no options for '%s'.")
+                raise click.UsageError("There are no options for '%s'.") from None
             else:
                 t.update(p)
 
@@ -347,7 +348,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
         elif isinstance(v, dict):
             continue  # plus option
         elif not force and k not in t:
-            logger.warning(f"Key {k!r} may be unknown. Skipping.")
+            logger.warning("Key %r may be unknown. Skipping.", k)
             continue
         vv = i[k]
         #       try:
@@ -368,7 +369,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
     v = combine_dict(val, d)
     v = {k: v for k, v in v.items() if v is not None}
     if "unique_id" not in v:
-        import base64
+        import base64  # noqa:PLC0415
 
         tock = await obj.client.get_tock()
         tock = str(base64.b32encode(tock.to_bytes((tock.bit_length() + 7) // 8)), "ascii").rstrip(
@@ -403,14 +404,14 @@ set_.__doc__ = """
 async def get(obj, typ, path, cmd):
     path = P(path)
     if typ == "-":
-        res = await obj.client._request(action="enumerate", path=obj.hass_name, empty=True)
+        res = await obj.client._request(action="enumerate", path=obj.hass_name, empty=True)  # noqa:SLF001
         for r in res.result:
             print(r, file=obj.stdout)
         return
     try:
         t = _types[typ]
     except KeyError:
-        raise click.UsageError("I don't know this type.")
+        raise click.UsageError("I don't know this type.") from None
 
     if cmd:
         tt = {}

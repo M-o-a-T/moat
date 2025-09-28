@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ._base import Codec as _Codec
-from moat.util.compat import byte2utf8
 from moat.util import yload, yprint
+
+from ._base import Codec as _Codec
 
 
 class Codec(_Codec):
@@ -24,7 +24,7 @@ class Codec(_Codec):
         "basic decoder"
         return yload(data.decode("utf-8"))
 
-    def feed(self, buffer):
+    def feed(self, buffer):  # noqa: D102
         self._buf.extend(buffer)
 
     def __next__(self):

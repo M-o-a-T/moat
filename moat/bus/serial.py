@@ -1,19 +1,22 @@
-## Code to (de)serialize bus messages
+"""
+Code to (de)serialize bus messages
+"""
 from __future__ import annotations
 
-from enum import IntEnum
-import trio
-import sys
-
-from .message import BusMessage
-from .crc import CRC16
-
 import logging
+import sys
+from enum import IntEnum
+
+import trio
+
+from .crc import CRC16
+from .message import BusMessage
 
 logger = logging.getLogger(__name__)
 
 
 class S(IntEnum):
+    "State machine"
     IDLE = 0
     INIT = 1
     LEN = 2
@@ -26,6 +29,7 @@ class S(IntEnum):
 
 
 class ERR(IntEnum):
+    "Errors"
     OVERFLOW = 1
     LOST = 2
     SPURIOUS = 3
@@ -77,34 +81,34 @@ class SerBus:
         """
         OVERRIDE: There's been a comm problem.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def set_timeout(self, flag):
         """
         OVERRIDE: Arrange to periodically call .timeout, or not,
         depending on whether @fag is True, or not.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def process(self, msg):
         """
         OVERRIDE: Process this message.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def process_ack(self):
         """
         OVERRIDE: Process this incoming ACK.
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
     def data_out(self, data: bytes):
         """
         OVERRIDE: Send these serial data
         """
-        raise RuntimeError("Override me")
+        raise NotImplementedError("Override me")
 
-    def alloc_in(self):
+    def alloc_in(self):  # noqa:D102
         self.m_in = BusMessage()
         self.crc_in = CRC16()
         self.m_in.start_add()
@@ -121,7 +125,7 @@ class SerBus:
         """
         self.data_out(b"\x06")
 
-    def dump_log_buf(self):
+    def dump_log_buf(self):  # noqa:D102
         if not self.log_buf:
             return
         try:
@@ -137,7 +141,7 @@ class SerBus:
         self.log_buf = b""
 
     @staticmethod
-    def now():
+    def now():  # noqa:D102
         return trio.current_time()
 
     def char_in(self, ci: int):
@@ -220,7 +224,7 @@ class SerBus:
         Generate chunk of bytes to send for this message.
         """
         res = bytearray()
-        res.append(prio_data[msg.get("prio", 1)])
+        res.append(self.prio_data[msg.get("prio", 1)])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
             res.append(0x80 | (n_b >> 8))
@@ -244,7 +248,7 @@ class SerBus:
         res.append(crc & 0xFF)
         return res
 
-    def recv(self, prio=0):
+    def recv(self):
         """
         Did we receive a message? if so, return it.
         """
@@ -283,26 +287,26 @@ class SerBusDump(SerBus):
 
     _n = 0
 
-    def report_error(self, typ, **kw):
+    def report_error(self, typ, **kw):  # noqa:D102
         print("ERROR", typ, kw)
 
-    def set_timeout(self, flag):
+    def set_timeout(self, flag):  # noqa:D102
         pass
 
-    def process(self, msg):
+    def process(self, msg):  # noqa:D102
         print("MSG IN", msg)
 
-    def process_ack(self):
+    def process_ack(self):  # noqa:D102
         print("ACK")
 
-    def data_out(self, data: bytes):
+    def data_out(self, data: bytes):  # noqa:D102
         print("SEND", repr(data))
 
-    def now(self):
+    def now(self):  # noqa:D102
         self._n += 1
         return self._n
 
-    def dump_log_buf(self):
+    def dump_log_buf(self):  # noqa:D102
         if not self.log_buf:
             return
         try:

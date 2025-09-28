@@ -4,10 +4,19 @@ Various types
 
 from __future__ import annotations
 
+import anyio
 import struct
 
-import anyio
-
+from pymodbus.pdu.bit_message import (
+    ReadCoilsRequest,
+    ReadCoilsResponse,
+    ReadDiscreteInputsRequest,
+    ReadDiscreteInputsResponse,
+    WriteMultipleCoilsRequest,
+    WriteMultipleCoilsResponse,
+    WriteSingleCoilRequest,
+    WriteSingleCoilResponse,
+)
 from pymodbus.pdu.register_message import (
     ReadHoldingRegistersRequest,
     ReadHoldingRegistersResponse,
@@ -17,16 +26,6 @@ from pymodbus.pdu.register_message import (
     WriteMultipleRegistersResponse,
     WriteSingleRegisterRequest,
     WriteSingleRegisterResponse,
-)
-from pymodbus.pdu.bit_message import (
-    ReadCoilsRequest,
-    ReadCoilsResponse,
-    ReadDiscreteInputsRequest,
-    ReadDiscreteInputsResponse,
-    WriteSingleCoilRequest,
-    WriteSingleCoilResponse,
-    WriteMultipleCoilsRequest,
-    WriteMultipleCoilsResponse,
 )
 
 MAX_REQ_LEN = 30
@@ -79,11 +78,11 @@ class BaseValue:
         return self._value
 
     @value.setter
-    def value(self, val: int | float):
+    def value(self, val: float):
         "sets the value that's read from the bus"
         self._value = self._constrain(val)
 
-    def set(self, val: int | float, idem: bool = False):
+    def set(self, val: float, idem: bool = False):
         """Set the value-to-be-written.
 
         Triggers a write unless @idem is set (default: it is not).

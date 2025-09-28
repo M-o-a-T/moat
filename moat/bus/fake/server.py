@@ -1,19 +1,18 @@
 #!/usr/bin/python3
-#
-# implements a bus server for our fake bus
+"implements a bus server for our fake bus"
 from __future__ import annotations
 
 import sys
-import trio
-import asyncclick as click
 from subprocess import PIPE
 
+import asyncclick as click
+import trio
 from moatbus.backend.stream import StreamBusHandler
 from moatbus.server import Server
 
 
 @click.command()
-async def main():
+async def main():  # noqa:D103
     try:
         async with await trio.open_process(
             ["bin/fake_serialbus"],

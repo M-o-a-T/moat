@@ -1,10 +1,16 @@
+# noqa:D100
 from __future__ import annotations
-from moat.util import attrdict as ad, srepr
-from moat.mqtt.client import open_mqttclient, QOS_1
-from moat.modbus.types import HoldingRegisters as H, IntValue as I, SignedIntValue as S
-from moat.modbus.client import ModbusClient
+
 import anyio
 import logging
+
+from moat.util import attrdict as ad
+from moat.util import srepr
+from moat.modbus.client import ModbusClient
+from moat.modbus.types import HoldingRegisters as H
+from moat.modbus.types import IntValue as I
+from moat.modbus.types import SignedIntValue as S
+from moat.mqtt.client import QOS_1, open_mqttclient
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +43,8 @@ class _Run:
             def want(reg, val, txt):
                 if reg.value != val:
                     logger.warning(
-                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d} from {reg.value} to {val} ({txt})",
+                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d}"  # noqa:G004
+                        f" from {reg.value} to {val} ({txt})",
                     )
                     reg.set(val)
 
@@ -156,7 +163,7 @@ class _Run:
     async def run(self):
         cfg = self.cfg
 
-        from moat.mqtt.client import open_mqttclient
+        from moat.mqtt.client import open_mqttclient  # noqa:PLC0415
 
         modbus = cfg["modbus"]
         async with (
@@ -193,6 +200,6 @@ async def run(*a, **kw):
     await _Run(*a, **kw).run()
 
 
-async def set(cfg, val):
+async def set_val(cfg, val):
     async with open_mqttclient(config=cfg["mqtt"]) as bus:
         await bus.publish("/".join(cfg["power"]), val, QOS_1, False)

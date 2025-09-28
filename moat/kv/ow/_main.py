@@ -1,21 +1,23 @@
 # command line interface
 from __future__ import annotations
 
+import logging
+
 import asyncclick as click
+
 from moat.util import (
-    yprint,
-    attrdict,
     NotGiven,
     P,
     Path,
     as_service,
     attr_args,
+    attrdict,
     ensure_cfg,
+    yprint,
 )
 from moat.kv.data import data_get, node_attr
-from .model import OWFSroot
 
-import logging
+from .model import OWFSroot
 
 logger = logging.getLogger(__name__)
 

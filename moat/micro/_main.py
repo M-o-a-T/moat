@@ -10,6 +10,8 @@ import logging
 import sys
 from functools import wraps
 
+import asyncclick as click
+
 from moat.util import (
     NotGiven,
     P,
@@ -22,16 +24,14 @@ from moat.util import (
     yload,
     yprint,
 )
+from moat.lib.cmd.msg import Msg
+from moat.lib.codec import get_codec
+from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
-from moat.lib.codec.errors import NoPathError, RemoteError
-from moat.lib.cmd.msg import Msg
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.util.compat import idle
 from moat.util.main import load_subgroup
-from moat.lib.codec import get_codec
-
-import asyncclick as click
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +238,7 @@ async def sync_(ctx, **kw):
 
     """
     from .path import MoatFSPath
-    from .setup import do_update, do_copy
+    from .setup import do_copy, do_update
 
     obj = ctx.obj
     cfg = obj.mcfg
@@ -350,6 +350,7 @@ async def cmd(obj, path, time, parts, **attrs):
     )
 
     from time import monotonic as tm
+
     from moat.util.times import humandelta
 
     t1 = tm()

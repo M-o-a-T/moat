@@ -12,10 +12,10 @@ from re import sub as re_sub
 from uuid import uuid4
 from warnings import warn
 
+from httpx import AsyncClient
 from jmespath import search as j_search
 from magic import from_buffer, from_file
 from packaging.version import parse as version_parse
-from httpx import AsyncClient
 
 
 def bytearray_to_rfc_2397_data_url(byte_array: bytearray):

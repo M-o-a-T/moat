@@ -5,11 +5,13 @@ Base class for sending MoaT messages on a Trio system
 
 from __future__ import annotations
 
-import asyncclick as click
 from contextlib import asynccontextmanager
+
+import asyncclick as click
 from distkv.util import P
 
 from moat.bus.util import CtxObj
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,10 +19,12 @@ if TYPE_CHECKING:
 
 
 class UnknownParamError(RuntimeError):
+    "Don't know this"
     pass
 
 
 class MissingParamError(RuntimeError):
+    "Want to know this"
     pass
 
 
@@ -44,25 +48,26 @@ class BaseBusHandler(CtxObj):
     # name: type checker default
 
     @classmethod
-    def repr(cls, cfg: dict):
+    def repr(cls, cfg: dict):  # noqa:D102
+        cfg # noqa:B018
         return " ".join(f"{k}:{v}" for k, v in dict.items())
 
     @classmethod
-    def check_config(cls, cfg: dict):
+    def check_config(cls, cfg: dict):  # noqa:D102
         for k, v in cfg.items():
             try:
                 x = cls.PARAMS[k]
             except KeyError:
-                raise UnknownParamError(k)
+                raise UnknownParamError(k) from None
             else:
-                t, i, c, d, m = x
+                t, _i, c, d, m = x
                 if not c(v):
                     raise RuntimeError(f"Wrong parameter {k}: {m}")
 
         for n, x in cls.PARAMS.items():
             if n in cfg:
                 continue
-            t, i, c, d, m = x
+            t, _i, c, d, m = x
             if d is None:
                 tn = "Path" if t is P else t.__name__
                 raise click.MissingParameter(param_hint="", param_type=f"{tn} parameter: {n}")
@@ -76,7 +81,8 @@ class BaseBusHandler(CtxObj):
     async def _ctx(self):
         yield self
 
-    async def send(self, msg: BusMessage):
+    async def send(self, msg: BusMessage):  # noqa:D102
+        msg  # noqa:B018
         raise RuntimeError("Override @send!")
 
     def __aiter__(self):

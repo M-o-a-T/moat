@@ -1,13 +1,13 @@
 # command line interface
 from __future__ import annotations
 
+import contextlib
+import logging
+
 import asyncclick as click
 
-from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
+from moat.util import NotGiven, P, as_service, attr_args, attrdict, yprint
 from moat.kv.data import node_attr
-
-import logging
-import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -207,8 +207,8 @@ async def server_(obj, name, host, port, delete):
 @click.pass_obj
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller."""
-    from .task import task
     from .model import WAGOroot
+    from .task import task
 
     server = await WAGOroot.as_handler(obj.client)
     await server.wait_loaded()

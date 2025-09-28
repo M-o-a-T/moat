@@ -21,20 +21,19 @@ may fail.
 
 from __future__ import annotations
 
-from moat.lib.codec.proxy import as_proxy
+from moat.lib.cmd.base import MsgHandler
 from moat.micro.cmd.util import wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
-from moat.util.compat import AC_use, Event, L, idle
-from moat.lib.cmd.base import MsgHandler
 from moat.micro.proto.stack import Base
+from moat.util.compat import AC_use, Event, L, idle
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager
-    from collections.abc import AsyncIterator, Awaitable, Callable
-
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
+
+    from collections.abc import Awaitable, Callable
+    from typing import AsyncContextManager
 
 
 class ACM_h:
@@ -106,7 +105,7 @@ class BaseCmd(Base):
         "See `MsgHandler.handle`."
         ...
 
-    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
+    def find_handler(self, path) -> tuple[MsgHandler, Path] | Callable:
         "See `MsgHandler.find_handler`."
         ...
 

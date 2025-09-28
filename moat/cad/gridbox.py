@@ -1,4 +1,6 @@
-# reimplementation of basic gridfinity box design by Zack Freedman
+"""
+reimplementation of basic gridfinity box design by Zack Freedman
+"""
 # this revision is dated 2022-05-18
 # designed in CadQuery and CQ-Editor both checked out from github on 2022-04-13
 
@@ -7,11 +9,12 @@
 # License: CC 4.0 Attribution
 from __future__ import annotations
 
-import cadquery as cq
 import math
 
+import cadquery as cq
 
-def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True):
+
+def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True):  # noqa:D103
     # adjust these three variables to change the grid size
 
     # box stackability is implemented!

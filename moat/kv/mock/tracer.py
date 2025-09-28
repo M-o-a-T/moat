@@ -1,4 +1,6 @@
+# noqa:D100
 from __future__ import annotations
+
 import traceback
 
 import trio
@@ -6,15 +8,15 @@ from outcome import Error
 
 import moat
 
-moat.kill = False
-
 import logging
+
+moat.kill = False
 
 logger = logging.getLogger("TRACE")
 e = logger.error
 
 
-class Tracer(trio.abc.Instrument):
+class Tracer(trio.abc.Instrument):  # noqa:D101
     def __init__(self):
         super().__init__()
         self.etasks = set()
@@ -28,34 +30,34 @@ class Tracer(trio.abc.Instrument):
         else:
             e("%s: %s", msg, task.name)
 
-    def nursery_end(self, task, exception):
+    def nursery_end(self, task, exception):  # noqa:D102
         if isinstance(exception, Exception):
             self.etasks.add(task)
             self._print_with_task("*** task excepted", task, exception)
 
-    def before_task_step(self, task):
-        if isinstance(task._next_send, Error) and isinstance(task._next_send.error, Exception):
-            self._print_with_task("*** step resume ERROR", task, task._next_send.error)
+    def before_task_step(self, task):  # noqa:D102
+        if isinstance(task._next_send, Error) and isinstance(task._next_send.error, Exception):  # noqa:SLF001
+            self._print_with_task("*** step resume ERROR", task, task._next_send.error)  # noqa:SLF001
             self.etasks.add(task)
         elif moat.kill:  # pylint: disable=c-extension-no-member  # OH COME ON
             self._print_with_task("*** step resume", task)
 
-    def task_scheduled(self, task):
+    def task_scheduled(self, task):  # noqa:D102
         e("SCHED %r", task)
 
-    def task_exited(self, task):
+    def task_exited(self, task):  # noqa:D102
         self._print_with_task("*** task exited", task)
         self.etasks.discard(task)
 
-    def before_io_wait(self, timeout):
+    def before_io_wait(self, timeout):  # noqa:D102
         if timeout > 10000 and self.etasks:
             e("\n\n\n\n\n\n\n\n\n\n")
             e("*** ERROR: lock-out, killing off error tasks")
             e("\n\n\n\n")
             for t in self.etasks:
-                if t._next_send_fn is None:
+                if t._next_send_fn is None:  # noqa:SLF001
                     self._print_with_task("!!! Killing", t)
-                    t._runner.reschedule(t, Error(RuntimeError("*** Locked ***")))
+                    t._runner.reschedule(t, Error(RuntimeError("*** Locked ***")))  # noqa:SLF001
                 else:
                     self._print_with_task("??? already scheduled", t)
 

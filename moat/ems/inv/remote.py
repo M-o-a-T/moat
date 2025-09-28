@@ -4,13 +4,13 @@ Inverter mode: remote control
 
 from __future__ import annotations
 
+import anyio
+import contextlib
 import logging
 
-import anyio
 from moat.util import attrdict
 
 from . import InvModeBase
-import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +276,7 @@ Set to -1 to clear.
             elif self.mode == 3 and soc <= self.soc_high_ok:
                 self.mode = 0
 
-            if self.mode == 1 or self.mode == 2 and not self.low_grid:
+            if self.mode == 1 or (self.mode == 2 and not self.low_grid):
                 ip = -self.power_low
             elif self.mode == 2:
                 ip = min(intf.solar_p, -intf.p_cons)

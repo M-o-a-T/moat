@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Basic tool support
 
@@ -6,11 +5,13 @@ Basic tool support
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+import sys
 import logging  # pylint: disable=wrong-import-position
+from contextlib import asynccontextmanager
 
 import asyncclick as click
-from moat.util import load_subgroup, P, Path, yprint
+
+from moat.util import P, Path, load_subgroup, yprint
 from moat.micro.cmd.tree.dir import Dispatch
 
 log = logging.getLogger()
@@ -28,13 +29,13 @@ async def cli(obj, bat):
         except KeyError:
             raise click.UsageError(
                 "No default battery. Set config 'ems.battery.paths.std' or use '--batt'.",
-            )
+            ) from None
     if len(bat) == 1:
         try:
             bat = cfg.ems.battery.paths["bat[0]"]
         except KeyError:
             p = P("ems.battery.paths") / bat[0]
-            raise click.UsageError(f"Couldn't find path at {bat} / {p}")
+            raise click.UsageError(f"Couldn't find path at {bat} / {p}") from None
         else:
             if not isinstance(bat, Path):
                 raise click.UsageError(
@@ -76,9 +77,3 @@ async def cfg(obj):
     async with _bat(obj) as bat:
         c = bat.sub_at(obj.cell)
         await c.foo()
-
-
-@cli.command
-@click.pass_obj
-async def state(obj):
-    pass

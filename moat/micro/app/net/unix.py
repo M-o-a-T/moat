@@ -4,9 +4,9 @@ Apps for Unix socket connectivity
 
 from __future__ import annotations
 
-from moat.util.compat import AC_use
 from moat.micro.proto.unix import Link as UnixLink
 from moat.micro.stacks.console import console_stack
+from moat.util.compat import AC_use
 
 # Typing
 

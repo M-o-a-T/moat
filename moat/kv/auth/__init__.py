@@ -61,20 +61,21 @@ The server process is:
 
 from __future__ import annotations
 
+import contextlib
 from importlib import import_module
 
 import jsonschema
-from moat.util import NotGiven, Path, attrdict, split_arg, yload
 
+from moat.util import NotGiven, Path, attrdict, split_arg, yload
 from moat.kv.client import Client, NoData
 from moat.kv.exceptions import NoAuthModuleError
 from moat.kv.types import ACLFinder, NullACL
-import contextlib
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.kv.server import ServerClient, StreamCommand
     from moat.kv.model import Entry
+    from moat.kv.server import ServerClient, StreamCommand
 
 # Empty schema
 null_schema = {"type": "object", "additionalProperties": False}
@@ -96,7 +97,7 @@ add_schema = {
 }
 
 
-def loader(method: str, typ: str, *a, **k):
+def loader(method: str, typ: str, *a, **k):  # noqa:D103
     m = method
     if "." not in m:
         m = "moat.kv.auth." + m
@@ -148,11 +149,11 @@ def load(typ: str, *, make: bool = False, server: bool):
     raise NotImplementedError("You need to implement me")  # pragma: no cover
 
 
-async def null_server_login(stream):
+async def null_server_login(stream):  # noqa:D103
     return stream
 
 
-async def null_client_login(stream, user: BaseClientAuth):  # pylint: disable=unused-argument
+async def null_client_login(stream, user: BaseClientAuth):  # pylint: disable=unused-argument  # noqa:D103,ARG001
     return stream
 
 
@@ -215,7 +216,7 @@ class BaseClientAuth(_AuthLoaded):
         Authorizes this record with the server.
         """
         with contextlib.suppress(NoData):
-            await client._request(
+            await client._request(  # noqa:SLF001
                 action="auth",
                 typ=self._auth_method,
                 iter=False,
@@ -281,7 +282,7 @@ class BaseClientAuthMaker(_AuthLoaded):
         Sample code …
         """
         # pragma: no cover
-        res = await client._request(
+        res = await client._request(  # noqa:SLF001
             "auth_get",
             typ=cls._auth_method,
             kind=_kind,
@@ -295,17 +296,17 @@ class BaseClientAuthMaker(_AuthLoaded):
     async def send(self, client: Client, _kind="user"):
         """Send this user to the server."""
         with contextlib.suppress(NoData):
-            await client._request(
+            await client._request(  # noqa:SLF001
                 "auth_set",
                 iter=False,
-                typ=type(self)._auth_method,
+                typ=type(self)._auth_method,  # noqa:SLF001
                 kind=_kind,
                 ident=self.ident,
                 chain=self._chain,
                 data=self.send_data(),
             )
 
-    def send_data(self):
+    def send_data(self):  # noqa:D102
         return {}
 
 
@@ -324,7 +325,7 @@ class BaseServerAuth(_AuthLoaded):
     can_auth_read = False
     can_auth_write = False
 
-    def __init__(self, data: dict = {}):  # pylint: disable=dangerous-default-value
+    def __init__(self, data: dict = {}):  # pylint: disable=dangerous-default-value # noqa:B006
         if data:
             for k, v in data.items():
                 setattr(self, k, v)
@@ -334,12 +335,12 @@ class BaseServerAuth(_AuthLoaded):
         """Create a ServerAuth object from existing stored data"""
         return cls(data.data)
 
-    async def auth(self, cmd: StreamCommand, data):  # pylint: disable=unused-argument
+    async def auth(self, cmd: StreamCommand, data):  # pylint: disable=unused-argument  # noqa:ARG002
         """Verify that @data authenticates this user."""
         jsonschema.validate(instance=data.get("data", {}), schema=type(self).schema)
 
-    def aux_conv(self, data: Entry, root: Entry):
-        from moat.kv.types import ConvNull
+    def aux_conv(self, data: Entry, root: Entry):  # noqa:D102
+        from moat.kv.types import ConvNull  # noqa:PLC0415
 
         try:
             data = data["conv"].data["key"]
@@ -348,7 +349,7 @@ class BaseServerAuth(_AuthLoaded):
         except (KeyError, AttributeError):
             return ConvNull
 
-    def aux_acl(self, data: Entry, root: Entry):
+    def aux_acl(self, data: Entry, root: Entry):  # noqa:D102
         try:
             data = data["acl"].data["key"]
             if data == "*":
@@ -367,13 +368,13 @@ class BaseServerAuth(_AuthLoaded):
         """
         return {}
 
-    async def check_read(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument
+    async def check_read(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument # noqa:ARG002
         """Check that this user may read the element at this location.
         This method may modify the data.
         """
         return data
 
-    async def check_write(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument
+    async def check_write(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument # noqa:ARG002
         """Check that this user may write the element at this location.
         This method may modify the data.
         """
@@ -417,8 +418,8 @@ class BaseServerAuthMaker(_AuthLoaded):
     @classmethod
     async def recv(
         cls,
-        cmd: StreamCommand,
-        data: attrdict,  # pylint: disable=unused-argument
+        cmd: StreamCommand,  # pylint: disable=unused-argument # noqa:ARG003
+        data: attrdict,
     ) -> BaseServerAuthMaker:
         """Create/update a new user by reading the record from the client"""
         dt = data.get("data", None) or {}
@@ -436,7 +437,7 @@ class BaseServerAuthMaker(_AuthLoaded):
         # does NOT contain "ident" or "chain"!
         return {}
 
-    async def send(self, cmd: StreamCommand):  # pylint: disable=unused-argument
+    async def send(self, cmd: StreamCommand):  # pylint: disable=unused-argument # noqa:ARG002
         """Send a record to the client, possibly multi-step / secured / whatever"""
         res = {}
         res["chain"] = self._chain.serialize() if self._chain else None

@@ -4,15 +4,15 @@ Data access
 
 from __future__ import annotations
 
-import datetime
+import contextlib
 import os
 import sys
 import time
-from collections.abc import Mapping
 
 from moat.util import NotGiven, Path, attrdict, process_args, yprint
 from moat.util.times import ts2iso
-import contextlib
+
+from collections.abc import Mapping
 
 
 def add_dates(d):
@@ -94,11 +94,11 @@ async def data_get(
             kw.setdefault("nchain", meta)
         y = {}
         if internal:
-            res = await conn._request(action="get_tree_internal", path=path, iter=True, **kw)
+            res = await conn._request(action="get_tree_internal", path=path, iter=True, **kw)  # noqa:SLF001
         else:
             res = conn.get_tree(path, **kw)
         async for r in res:
-            r = await item_mangle(r)
+            r = await item_mangle(r)  # noqa:PLW2901
             if r is None:
                 continue
             r.pop("seq", None)
@@ -168,7 +168,7 @@ async def data_get(
             return
 
     if out is False:
-        return d
+        return res
     if not raw:
         yprint(res, stream=out)
     elif isinstance(res, bytes):
@@ -187,7 +187,7 @@ def res_get(res, attr: Path, **kw):  # pylint: disable=redefined-outer-name
     val = res.get("value", None)
     if val is None:
         return None
-    return val._get(attr, **kw)
+    return val._get(attr, **kw)  # noqa:SLF001
 
 
 def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-outer-name
@@ -200,7 +200,7 @@ def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-
     Returns the new value.
     """
     val = res.get("value", attrdict())
-    return val._update(attr, value=value, **kw)
+    return val._update(attr, value=value, **kw)  # noqa:SLF001
 
 
 async def node_attr(obj, path, res=None, chain=None, **kw):

@@ -14,10 +14,9 @@ try:
 except ImportError:
     RTC = None
 from moat.util import merge
+from moat.lib.codec.cbor import Codec as CBOR
 from moat.micro.cmd.util.pt import del_p, get_p, set_p
 from moat.util.compat import log
-
-from moat.lib.codec.cbor import Codec as CBOR
 
 _pack = CBOR().encode
 _unpack = CBOR().decode

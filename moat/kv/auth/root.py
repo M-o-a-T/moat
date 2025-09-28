@@ -17,7 +17,7 @@ from . import (
 )
 
 
-def load(typ: str, *, make: bool = False, server: bool):
+def load(typ: str, *, make: bool = False, server: bool):  # noqa:D103
     if typ == "client":
         if server:
             return null_server_login
@@ -37,22 +37,22 @@ def load(typ: str, *, make: bool = False, server: bool):
             return ClientUser
 
 
-class ServerUserMaker(BaseServerAuthMaker):
+class ServerUserMaker(BaseServerAuthMaker):  # noqa:D101
     schema = {"type": "object", "additionalProperties": False}
 
 
-class ServerUser(RootServerUser):
+class ServerUser(RootServerUser):  # noqa:D101
     schema = {"type": "object", "additionalProperties": False}
 
 
-class ClientUserMaker(BaseClientAuthMaker):
+class ClientUserMaker(BaseClientAuthMaker):  # noqa:D101
     gen_schema = {"type": "object", "additionalProperties": False}
     mod_schema = {"type": "object", "additionalProperties": False}
 
     @property
-    def ident(self):
+    def ident(self):  # noqa:D102
         return "*"
 
 
-class ClientUser(BaseClientAuth):
+class ClientUser(BaseClientAuth):  # noqa:D101
     schema = {"type": "object", "additionalProperties": False}

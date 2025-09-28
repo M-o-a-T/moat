@@ -1,3 +1,6 @@
+"""
+Random funky cadquery math
+"""
 from __future__ import annotations
 
 try:

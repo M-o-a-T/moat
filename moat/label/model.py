@@ -25,7 +25,7 @@ class SheetTyp(Base):
     labeltypes: Mapped[set[LabelTyp]] = relationship(back_populates="sheettyp")
     sheets: Mapped[set[Sheet]] = relationship(back_populates="sheettyp")
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         if self.labeltypes:
             res["labeltypes"] = [lt.name for lt in self.labeltypes]
@@ -56,7 +56,7 @@ class LabelTyp(Base):
 
     labels: Mapped[set[Label]] = relationship(back_populates="labeltyp")
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         if self.labels:
             res["labels"] = len(self.labels)
@@ -104,7 +104,7 @@ class Sheet(Base):
     labels: Mapped[set[Label]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         if self.labeltyp is not None:
             res["typ"] = self.labeltyp.name
@@ -148,7 +148,7 @@ class Label(Base):
     labeltyp: Mapped[LabelTyp] = relationship(back_populates="labels")
     sheet: Mapped[Sheet] = relationship(back_populates="labels")
 
-    def dump(self):
+    def dump(self):  # noqa: D102
         res = super().dump()
         if self.labeltyp is not None:
             res["typ"] = self.labeltyp.name

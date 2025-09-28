@@ -6,24 +6,24 @@ Modbus server classes for serial(RTU) and TCP.
 
 from __future__ import annotations
 
+import anyio
 import logging
 import socket
+import time
+from anyio.abc import SocketAttribute
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
-import time
 
-import anyio
-from anyio.abc import SocketAttribute
 from moat.util import CtxObj
 
 try:
-    from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
+    from pymodbus.datastore import ModbusDeviceContext, ModbusServerContext
 except ImportError:
     from pymodbus.datastore import ModbusServerContext
     from pymodbus.datastore import ModbusSlaveContext as ModbusDeviceContext
 from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
-from pymodbus.pdu import ExceptionResponse, DecodePDU
+from pymodbus.pdu import DecodePDU, ExceptionResponse
 from pymodbus.utilities import hexlify_packets
 
 from moat.modbus.types import BaseValue, DataBlock, TypeCodec
@@ -170,7 +170,7 @@ class SerialModbusServer(BaseModbusServer):
         self.decoder = DecodePDU(False)  # pylint: disable=no-value-for-parameter ## duh?
         self.Framer = Framer
 
-    async def serve(self, opened=None):
+    async def serve(self, opened=None):  # noqa: D102
         from anyio_serial import Serial  # pylint: disable=import-outside-toplevel
 
         async with Serial(**self.args) as ser:

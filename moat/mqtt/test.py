@@ -4,21 +4,19 @@ This module contains code that helps with MoaT-KV testing.
 
 from __future__ import annotations
 
-import os
+import anyio
+from anyio.pytest_plugin import FreePortFactory
 from contextlib import asynccontextmanager
 from functools import partial
+from socket import SOCK_STREAM
 
-import anyio
 from moat.kv.client import client_scope, open_client
 from moat.kv.server import Server as _Server
-
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
 
 from .broker import create_broker
 
 
-class Server(_Server):
+class Server(_Server):  # noqa: D101
     @asynccontextmanager
     async def test_client(self, name=None):
         """
@@ -30,7 +28,7 @@ class Server(_Server):
         ) as c:
             yield c
 
-    async def test_client_scope(self, name=None):
+    async def test_client_scope(self, name=None):  # noqa: D102
         return await client_scope(conn=dict(host="127.0.0.1", port=self.moat_kv_port, name=name))
 
 

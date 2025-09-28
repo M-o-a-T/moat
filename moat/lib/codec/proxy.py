@@ -17,13 +17,11 @@ __all__ = [
     "obj2name",
 ]
 
-from pathlib import Path as FSPath
 from anyio import Path as AioPath
+from pathlib import Path as FSPath
 
-from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
-from ._proxy import _CProxy, NotGiven
-import moat.lib.codec.errors as _err  # noqa:F401
+from ._proxy import NotGiven, Proxy, _CProxy, as_proxy, drop_proxy, get_proxy, name2obj, obj2name
 
 
 class NoProxyError(ValueError):

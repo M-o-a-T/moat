@@ -1,1 +1,1 @@
-# empty
+# empty  # noqa:D104

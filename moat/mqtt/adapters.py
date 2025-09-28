@@ -1,14 +1,16 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import io
-import logging
 
 import anyio
 import anyio.streams.buffered
+import io
+import logging
 from anyio.abc import SocketAttribute
+
 from wsproto.events import BytesMessage, CloseConnection
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -67,10 +69,10 @@ class WebSocketsAdapter(BaseAdapter):
         self._buffer = io.BytesIO(b"")
 
     @property
-    def raw_socket(self):
+    def raw_socket(self):  # noqa: D102
         return self._websocket.raw_socket
 
-    async def read(self, n=-1) -> bytes:
+    async def read(self, n=-1) -> bytes:  # noqa: D102
         await self._feed_buffer(n)
         data = self._buffer.read(n)
         return data
@@ -102,11 +104,11 @@ class WebSocketsAdapter(BaseAdapter):
         """
         await self._websocket.send(data)
 
-    def get_peer_info(self):
+    def get_peer_info(self):  # noqa: D102
         res = self._websocket._sock.extra(anyio.abc.SocketAttribute.remote_address)
         return res[0:2]
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         await self._websocket.close()
 
 
@@ -123,24 +125,24 @@ class StreamAdapter(BaseAdapter):
         self._rstream = anyio.streams.buffered.BufferedByteReceiveStream(stream)
 
     @property
-    def raw_socket(self):
+    def raw_socket(self):  # noqa: D102
         return self._stream.extra(SocketAttribute.raw_socket)
 
-    async def read(self, n=-1) -> bytes:
+    async def read(self, n=-1) -> bytes:  # noqa: D102
         if n == -1:
             data = await self._rstream.receive(4096)
         else:
             data = await self._rstream.receive_exactly(n)
         return data
 
-    async def write(self, data):
+    async def write(self, data):  # noqa: D102
         await self._stream.send(data)
 
-    def get_peer_info(self):
+    def get_peer_info(self):  # noqa: D102
         res = self._stream.extra(anyio.abc.SocketAttribute.remote_address)
         return res[0:2]
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         try:
             try:
                 await self._stream.close()
@@ -160,7 +162,7 @@ class BufferAdapter(BaseAdapter):
         self._rstream = io.BytesIO(buffer)
         self._wstream = io.BytesIO(b"")
 
-    async def read(self, n=-1) -> bytes:
+    async def read(self, n=-1) -> bytes:  # noqa: D102
         return self._rstream.read(n)
 
     async def write(self, data):
@@ -169,12 +171,12 @@ class BufferAdapter(BaseAdapter):
         """
         await self._wstream.write(data)
 
-    def get_buffer(self):
+    def get_buffer(self):  # noqa: D102
         return self._wstream.getvalue()
 
-    def get_peer_info(self):
+    def get_peer_info(self):  # noqa: D102
         return "BufferWriter", 0
 
-    async def close(self):
+    async def close(self):  # noqa: D102
         self._rstream.close()
         self._wstream.close()

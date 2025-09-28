@@ -4,17 +4,16 @@ Basic "moat modbus" tool: network client and server, serial client
 
 from __future__ import annotations
 
+import anyio
 import sys
 import traceback
 
-import anyio
 import asyncclick as click
-from moat.util import load_subgroup
+from pymodbus.pdu.register_message import WriteSingleRegisterRequest
 
+from moat.util import load_subgroup
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import RelayServer, SerialModbusServer
-
-from pymodbus.pdu.register_message import WriteSingleRegisterRequest
 
 from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 

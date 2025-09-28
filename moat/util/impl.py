@@ -6,27 +6,28 @@ from __future__ import annotations
 
 import logging
 import sys
-from collections import deque
 from contextlib import nullcontext, suppress
 from getpass import getpass
 from math import log10
 
+from collections import deque
+
 __all__ = [
-    "NoneType",
-    "singleton",
-    "TimeOnlyFormatter",
-    "count",
-    "acount",
     "Cache",
     "NoLock",
+    "NoneType",
     "OptCtx",
-    "digits",
-    "num2byte",
+    "TimeOnlyFormatter",
+    "acount",
     "byte2num",
-    "split_arg",
-    "num2id",
+    "count",
+    "digits",
     "import_",
     "load_from_cfg",
+    "num2byte",
+    "num2id",
+    "singleton",
+    "split_arg",
 ]
 
 NoneType = type(None)

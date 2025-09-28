@@ -18,10 +18,7 @@ try:
 except ImportError:
     notify = None
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from .path import Path
 
 
 async def get_host_tuple(obj):
@@ -58,7 +55,6 @@ async def as_service(obj=None):
     trigger a ``READY=1`` mesage to systemd.
     """
 
-    from moat.util import Path
 
     async def run_keepalive(usec):
         usec /= 1_500_000  # 2/3rd of usec ⇒ sec

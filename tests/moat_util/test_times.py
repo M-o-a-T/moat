@@ -14,7 +14,7 @@ lnp = None
 err = 0
 now = None
 
-# ruff:noqa:PLW0603 # update global var
+# update global var
 
 
 def chk(iso, a, invert=False, back=False):

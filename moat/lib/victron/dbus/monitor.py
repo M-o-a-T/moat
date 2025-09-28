@@ -1,4 +1,4 @@
-## @package dbus.monitor
+## @package dbus.monitor  # noqa: D100
 # This code takes care of the D-Bus interface (not all of below is implemented yet):
 # - on startup it scans the dbus for services we know. For each known service found, it searches for
 #   objects/paths we know. Everything we find is stored in items{}, and an event is registered: if a
@@ -13,18 +13,18 @@
 # Code is used by the vrmLogger, and also the pubsub code. Both are other modules in the dbus_vrm repo.
 from __future__ import annotations
 
+import anyio
 import logging
-from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from functools import partial
 
-import anyio
 from asyncdbus import BusType, DBusError, Message, MessageBus, MessageType
 
 # our own packages
-from .utils import CtxObj
+from .utils import CtxObj, unwrap_dbus_value, wrap_dbus_value
 from .utils import call as _call
-from .utils import unwrap_dbus_value, wrap_dbus_value
+
+from collections import defaultdict
 
 notfound = object()  # For lookups where None is a valid result
 
@@ -33,7 +33,7 @@ ITEM_INTF = "com.victronenergy.BusItem"
 logger = logging.getLogger(__name__)
 
 
-class MonitoredValue:
+class MonitoredValue:  # noqa: D101
     def __init__(self, value, text, options):
         super().__init__()
         self.value = value
@@ -45,7 +45,7 @@ class MonitoredValue:
         return iter((self.value, self.text, self.options))
 
 
-class Service:
+class Service:  # noqa: D101
     whentologoptions = {
         "configChange",
         "onIntervalAlwaysAndOnEvent",
@@ -80,14 +80,14 @@ class Service:
         except AttributeError:
             raise KeyError(key) from None
 
-    def set_seen(self, path):
+    def set_seen(self, path):  # noqa: D102
         self._seen.add(path)
 
-    def seen(self, path):
+    def seen(self, path):  # noqa: D102
         return path in self._seen
 
     @property
-    def service_class(self):
+    def service_class(self):  # noqa: D102
         return ".".join(self.name.split(".")[:3])
 
 
@@ -230,7 +230,7 @@ class DbusMonitor(CtxObj):
     # 				path='/'):
     # 			return await _call(self.handler_item_changes, msg, senderId=msg.sender.name)
 
-    def dbus_name_owner_changed(self, msg):
+    def dbus_name_owner_changed(self, msg):  # noqa: D102
         name, oldowner, newowner = msg.body
         if not name.startswith("com.victronenergy."):
             return
@@ -280,8 +280,8 @@ class DbusMonitor(CtxObj):
         # for vebus.ttyO1, this is workaround, since VRM Portal expects the main vebus
         # devices at instance 0. Not sure how to fix this yet.
         if (
-            serviceName == "com.victronenergy.vebus.ttyO1"
-            and self.vebusDeviceInstance0
+            (serviceName == "com.victronenergy.vebus.ttyO1"
+            and self.vebusDeviceInstance0)
             or serviceName == "com.victronenergy.settings"
             or serviceName.startswith("com.victronenergy.vecan.")
         ):
@@ -360,7 +360,7 @@ class DbusMonitor(CtxObj):
 
         return True
 
-    def handler_item_changes(self, service, items):
+    def handler_item_changes(self, service, items):  # noqa: D102
         for path, changes in items.items():
             try:
                 v = unwrap_dbus_value(changes["Value"])
@@ -435,7 +435,7 @@ class DbusMonitor(CtxObj):
     # 2. When the path asked for isn't being monitored.
     # 3. When the path exists, but has dbus-invalid, ie an empty byte array.
     # 4. When the path asked for is being monitored, but doesn't exist for that service.
-    def get_value(self, serviceName, objectPath, default_value=None):
+    def get_value(self, serviceName, objectPath, default_value=None):  # noqa: D102
         service = self.servicesByName.get(serviceName, None)
         if service is None:
             return default_value
@@ -448,7 +448,7 @@ class DbusMonitor(CtxObj):
 
     # returns if a dbus exists now, by doing a blocking dbus call.
     # Typically seen will be sufficient and doesn't need access to the dbus.
-    async def exists(self, serviceName, objectPath):
+    async def exists(self, serviceName, objectPath):  # noqa: D102
         try:
             await self.call_bus(serviceName, objectPath, None, "GetValue")
             return True
@@ -462,7 +462,7 @@ class DbusMonitor(CtxObj):
     # practice. If a service really wants to reconfigure itself typically it should
     # reconnect to the dbus which causes it to be rescanned and seen will be updated.
     # If it is really needed to know if a path still exists, use exists.
-    def seen(self, serviceName, objectPath):
+    def seen(self, serviceName, objectPath):  # noqa: D102
         try:
             return self.servicesByName[serviceName].seen(objectPath)
         except KeyError:
@@ -471,7 +471,7 @@ class DbusMonitor(CtxObj):
     # Sets the value for a certain servicename and path, returns the return value of the D-Bus SetValue
     # method. If the underlying item does not exist (the service does not exist, or the objectPath was not
     # registered) the function will return -1
-    async def set_value(self, serviceName, objectPath, value):
+    async def set_value(self, serviceName, objectPath, value):  # noqa: D102
         # Check if the D-Bus object referenced by serviceName and objectPath is registered. There is no
         # necessity to do this, but it is in line with previous implementations which kept VeDbusItemImport
         # objects for registers items only.
@@ -493,7 +493,7 @@ class DbusMonitor(CtxObj):
     # returns a dictionary, keys are the servicenames, value the instances
     # optionally use the classfilter to get only a certain type of services, for
     # example com.victronenergy.battery.
-    def get_service_list(self, classfilter=None):
+    def get_service_list(self, classfilter=None):  # noqa: D102
         if classfilter is None:
             return {
                 servicename: service.deviceInstance
@@ -507,7 +507,7 @@ class DbusMonitor(CtxObj):
             service.name: service.deviceInstance for service in self.servicesByClass[classfilter]
         }
 
-    def get_device_instance(self, serviceName):
+    def get_device_instance(self, serviceName):  # noqa: D102
         return self.servicesByName[serviceName].deviceInstance
 
     # Parameter categoryfilter is to be a list, containing the categories you want (configChange,

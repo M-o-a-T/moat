@@ -3,11 +3,11 @@ Server-side dir support
 """
 
 from __future__ import annotations
-import sys
 
+import sys
 from itertools import chain
 
-from moat.util import NotGiven, attrdict, Path
+from moat.util import NotGiven, Path
 
 from ._dir import Dispatch as _Dispatch  # isort:skip
 from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd  # noqa:F401
@@ -104,7 +104,7 @@ class CfgStore(SubStore):
         self.sd = dispatch.sub_at(path)
         super().__init__(self.sd.r)
 
-    async def get(self, again=False):
+    async def get(self, again=False):  # noqa: D102
         self.cfg = await super().get()
         if self.cfg and not again:
             return self.cfg

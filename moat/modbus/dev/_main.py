@@ -8,6 +8,7 @@ import logging
 from pathlib import Path as FSPath
 
 import asyncclick as click
+
 from moat.util import yload, yprint
 
 from .device import fixup

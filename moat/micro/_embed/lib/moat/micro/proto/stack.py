@@ -18,17 +18,17 @@ exception is the `Reliable` module, which limits this to commands.
 
 from __future__ import annotations
 
-from moat.util.compat import ACM, AC_exit, AC_use, log
+from moat.lib.cmd.const import B_FLAGSTR
 from moat.lib.cmd.stream import wire2i_f
-from moat.lib.cmd.const import B_ERROR, B_STREAM, B_FLAGSTR
+from moat.util.compat import ACM, AC_exit, AC_use, log
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncContextManager, Buffer
     from collections.abc import Awaitable
+    from typing import Any, AsyncContextManager, Buffer
 
 
 class _NullCtx:

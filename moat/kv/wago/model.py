@@ -5,12 +5,11 @@ MoaT-KV client data model for Wago
 from __future__ import annotations
 
 import anyio
+import logging
 
 from moat.util import Path
-from moat.kv.obj import ClientEntry, ClientRoot
 from moat.kv.errors import ErrorRoot
-
-import logging
+from moat.kv.obj import ClientEntry, ClientRoot
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +111,7 @@ class WAGOinput(_WAGOnode):
                 async for val in mon:
                     await self.client.set(dest, value=val + delta)
 
-    async def setup(self):
+    async def setup(self):  # noqa: D102
         await super().setup()
 
         if self.server is None:
@@ -325,7 +324,7 @@ class WAGOoutput(_WAGOnode):
             else:
                 await self._set_value(False, None, state, negate)
 
-    async def setup(self):
+    async def setup(self):  # noqa: D102
         await super().setup()
         if self.server is None:
             return
@@ -380,19 +379,19 @@ class _WAGObaseNUM(_WAGObase):
         return None
 
 
-class WAGOinputCARD(_WAGObaseNUM):
+class WAGOinputCARD(_WAGObaseNUM):  # noqa: D101
     cls = WAGOinput
 
 
-class WAGOoutputCARD(_WAGObaseNUM):
+class WAGOoutputCARD(_WAGObaseNUM):  # noqa: D101
     cls = WAGOoutput
 
 
-class WAGOinputBase(_WAGObaseNUM):
+class WAGOinputBase(_WAGObaseNUM):  # noqa: D101
     cls = WAGOinputCARD
 
 
-class WAGOoutputBase(_WAGObaseNUM):
+class WAGOoutputBase(_WAGObaseNUM):  # noqa: D101
     cls = WAGOoutputCARD
 
 
@@ -402,11 +401,11 @@ class _WAGObaseSERV(_WAGObase):
         await self.update_server()
 
 
-class WAGOserver(_WAGObaseSERV):
+class WAGOserver(_WAGObaseSERV):  # noqa: D101
     _server = None
 
     @classmethod
-    def child_type(cls, name):
+    def child_type(cls, name):  # noqa: D102
         if name == "input":
             return WAGOinputBase
         if name == "output":
@@ -414,14 +413,14 @@ class WAGOserver(_WAGObaseSERV):
         return None
 
     @property
-    def server(self):
+    def server(self):  # noqa: D102
         return self._server
 
-    async def set_server(self, server):
+    async def set_server(self, server):  # noqa: D102
         self._server = server
         await self._update_server()
 
-    async def setup(self):
+    async def setup(self):  # noqa: D102
         await super().setup()
         s = self.server
         if s is not None:
@@ -429,28 +428,28 @@ class WAGOserver(_WAGObaseSERV):
             await s.set_ping_freq(self.find_cfg("ping"))
 
 
-class WAGOroot(_WAGObase, ClientRoot):
+class WAGOroot(_WAGObase, ClientRoot):  # noqa: D101
     cls = {}
     reg = {}
     CFG = "wago"
     err = None
 
-    async def run_starting(self, server=None):  # pylint: disable=arguments-differ
+    async def run_starting(self, server=None):  # pylint: disable=arguments-differ  # noqa: D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
     @classmethod
-    def register(cls, typ):
+    def register(cls, typ):  # noqa: D102
         def acc(kls):
             cls.reg[typ] = kls
             return kls
 
         return acc
 
-    def child_type(self, name):
+    def child_type(self, name):  # noqa: D102
         return WAGOserver
 
-    async def update_server(self):
+    async def update_server(self):  # noqa: D102
         await self._update_server()

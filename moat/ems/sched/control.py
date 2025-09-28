@@ -4,15 +4,15 @@ Charge/discharge optimizer.
 
 from __future__ import annotations
 
-import datetime
+import anyio
 import logging
 import time
 from contextlib import nullcontext
 
-import anyio
+from ortools.linear_solver import pywraplp
+
 from moat.util import attrdict
 from moat.util.times import humandelta, ts2iso
-from ortools.linear_solver import pywraplp
 
 from .mode import Loader
 

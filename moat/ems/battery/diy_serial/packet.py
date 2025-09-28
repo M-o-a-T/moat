@@ -15,26 +15,55 @@ from __future__ import annotations
 #  unsigned int cells:5;
 #  unsigned int sequence:3;
 # } __attribute__((packed));
-
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
 from struct import Struct
-from typing import ClassVar
 
 from moat.util import as_proxy
-from ..errors import MessageError
+
+from moat.ems.battery.errors import MessageError
+
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "PacketType",
-    "PacketHeader",
-    "requestClass",
-    "replyClass",
     "MAXCELLS",
+    "PacketHeader",
+    "PacketType",
+    "ReplyBalanceCurrentCounter",
+    "ReplyBalanceLevel",
+    "ReplyBalancePower",
+    "ReplyConfig",
+    "ReplyCounters",
+    "ReplyIdentify",
+    "ReplyReadPIDconfig",
+    "ReplyReadSettings",
+    "ReplyResetBalanceCurrentCounter",
+    "ReplyResetCounters",
+    "ReplyTemperature",
+    "ReplyTiming",
+    "ReplyVoltages",
+    "ReplyWritePIDconfig",
+    "RequestBalanceCurrentCounter",
+    "RequestBalanceLevel",
+    "RequestBalancePower",
+    "RequestConfig",
+    "RequestCounters",
+    "RequestIdentify",
+    "RequestReadPIDconfig",
+    "RequestReadSettings",
+    "RequestResetBalanceCurrentCounter",
+    "RequestResetCounters",
+    "RequestTemperature",
+    "RequestTiming",
+    "RequestVoltages",
+    "RequestWritePIDconfig",
+    "replyClass",
+    "requestClass",
 ]
-# more exports added at the end
+
 
 MAXCELLS = 32
 
@@ -53,6 +82,7 @@ def _dc(name):
 
 
 class PacketType(IntEnum):
+    "Type of BMS packet"
     ResetCounters = 0
     ReadVoltages = 1
     Identify = 2
@@ -71,6 +101,7 @@ class PacketType(IntEnum):
 
 @_dc("hdr")
 class PacketHeader:
+    "Packet header"
     start: int = 0
     broadcast: bool = False
     seen: bool = False
@@ -84,7 +115,7 @@ class PacketHeader:
 
     def __post_init__(self, *a, **k):
         if not isinstance(self.start, int):
-            breakpoint()
+            raise TypeError(self.start)
 
     @classmethod
     def decode(cls, msg: bytes):
@@ -119,7 +150,7 @@ class PacketHeader:
             raise MessageError(bytes(msg))
         return pkt
 
-    def encode(self):
+    def encode(self):  # noqa:D102
         return self.to_bytes()
 
     def encode_all(self, pkt: list[_Request] | _Request, end=None):
@@ -140,14 +171,14 @@ class PacketHeader:
             self.cells = end - self.start
             if pkt[0].S.size > 0 and len(pkt) != self.cells + 1:
                 raise ValueError(
-                    "Wrong packet count, %d vs %d for %s" % (len(pkt), self.cells + 1, pkt[0]),
+                    f"Wrong packet count, {len(pkt)} vs {self.cells+1} for {pkt[0]}"
                 )
         else:
             self.cells = len(pkt) - 1
         return self.to_bytes() + b"".join(p.to_bytes() for p in pkt)
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         self.start, bsc, self.hops, cs = self.S.unpack(data)
         self.broadcast = bool(bsc & 0x20)
@@ -158,15 +189,15 @@ class PacketHeader:
         return self
 
     def __setstate__(self, data):
-        breakpoint()
-        self.start = data.get("s", 0)
-        self.sequence = data.get("i", None)
-        self.cells = data.get("n", 0)
-        self.seen = data.get("v", False)
-        self.broadcast = data.get("bc", False)
-        self.command = data["a"]
+        raise NotImplementedError
+#       self.start = data.get("s", 0)
+#       self.sequence = data.get("i", None)
+#       self.cells = data.get("n", 0)
+#       self.seen = data.get("v", False)
+#       self.broadcast = data.get("bc", False)
+#       self.command = data["a"]
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa:D102
         return self.S.pack(
             self.start,
             (self.broadcast << 5) | (self.seen << 4) | (self.command & 0x0F),
@@ -202,9 +233,12 @@ class NullData:
 class _Request(NullData):
     @classmethod
     def from_cell(cls, cell):
+        "Build from cell data"
+        cell  # noqa:B018
         return cls()
 
     def to_bytes(self):
+        "return serialized data"
         return b""
 
     def __setstate__(self, data):
@@ -217,12 +251,15 @@ class _Request(NullData):
 class _Reply(NullData):
     @classmethod
     def from_bytes(cls, data):
+        "Build from serialized data"
         self = cls()
         if len(data):
             raise RuntimeError("I expect empty data")
         return self
 
     def to_cell(self, cell):
+        "build cell data"
+        cell  # noqa:B018
         return False
 
     def __setstate__(self, data):
@@ -234,7 +271,7 @@ class _Reply(NullData):
 
 
 @_dc("cfg>")
-class RequestConfig:
+class RequestConfig:  # noqa:D101
     voltageCalibration: float = 0
     bypassTempRaw: int = None
     bypassVoltRaw: int = None
@@ -243,14 +280,14 @@ class RequestConfig:
     T: ClassVar = PacketType.WriteSettings
 
     @classmethod
-    def from_cell(cls, cell):
+    def from_cell(cls, cell):  # noqa:D102
         self = cls()
         self.voltageCalibration = cell.v_calibration
         self.bypassTempRaw = cell.load_maxtemp_raw
         self.bypassVoltRaw = cell.balance_config_threshold_raw
         return self
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa:D102
         vc = self.voltageCalibration.u
         return self.S.pack(vc, self.bypassTempRaw or 0, self.bypassVoltRaw or 0)
 
@@ -264,7 +301,7 @@ class RequestConfig:
 
 
 @_dc("pidc>")
-class RequestWritePIDconfig:
+class RequestWritePIDconfig:  # noqa:D101
     p: int = None
     i: int = None
     d: int = None
@@ -272,7 +309,7 @@ class RequestWritePIDconfig:
     S: ClassVar = Struct("<III")
     T: ClassVar = PacketType.WritePIDconfig
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa:D102
         return self.S.pack(self.kp, self.ki, self.kd)
 
     def __setstate__(self, m):
@@ -285,7 +322,7 @@ class RequestWritePIDconfig:
 
 
 @_dc("v<")
-class ReplyVoltages(_Reply):
+class ReplyVoltages(_Reply):  # noqa:D101
     voltRaw: int = None
     bypassRaw: int = None
 
@@ -293,12 +330,12 @@ class ReplyVoltages(_Reply):
     T: ClassVar = PacketType.ReadVoltages
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         self.voltRaw, self.bypassRaw = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         cell.m_volt(self)
 
     def __setstate__(self, m):
@@ -321,7 +358,7 @@ class ReplyVoltages(_Reply):
 
 
 @_dc("tm<")
-class ReplyTemperature(_Reply):
+class ReplyTemperature(_Reply):  # noqa:D101
     intRaw: int = None
     extRaw: int = None
 
@@ -329,14 +366,14 @@ class ReplyTemperature(_Reply):
     T: ClassVar = PacketType.ReadTemperature
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         b1, b2, b3 = self.S.unpack(data)
         self.intRaw = b1 | ((b2 & 0x0F) << 8)
         self.extRaw = (b2 >> 4) | (b3 << 4)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         cell.m_temp(self)
 
     def __setstate__(self, m):
@@ -353,7 +390,7 @@ class ReplyTemperature(_Reply):
 
 
 @_dc("c<")
-class ReplyCounters(_Reply):
+class ReplyCounters(_Reply):  # noqa:D101
     received: int = None
     bad: int = None
 
@@ -361,12 +398,12 @@ class ReplyCounters(_Reply):
     T: ClassVar = PacketType.ReadCounters
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         self.received, self.bad = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         cell.packets_in = self.received
         cell.packets_bad = self.bad
 
@@ -374,12 +411,12 @@ class ReplyCounters(_Reply):
         self.received = m.get("nr", 0)
         self.bad = m.get("nb", 0)
 
-    def __getstate__(cls):
+    def __getstate__(self):
         return dict(nr=self.received, nb=self.bad)
 
 
 @_dc("set<")
-class ReplyReadSettings(_Reply):
+class ReplyReadSettings(_Reply):  # noqa:D101
     gitVersion: int = None
     boardVersion: int = None
     dataVersion: int = None
@@ -397,7 +434,7 @@ class ReplyReadSettings(_Reply):
     T: ClassVar = PacketType.ReadSettings
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         (
             self.gitVersion,
@@ -444,19 +481,19 @@ class ReplyReadSettings(_Reply):
 
 
 @_dc("ti<")
-class RequestTiming:
+class RequestTiming:  # noqa:D101
     timer: int = None
 
     S: ClassVar = Struct("<H")
     T: ClassVar = PacketType.Timing
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         (self.timer,) = self.S.unpack(data)
         return self
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa:D102
         return self.S.pack(self.timer & 0xFFFF)
 
     def __setstate__(self, m):
@@ -467,24 +504,24 @@ class RequestTiming:
 
 
 @_dc("ti>")
-class ReplyTiming(RequestTiming):
+class ReplyTiming(RequestTiming):  # noqa:D101
     pass
 
 
 @_dc("bcc<")
-class ReplyBalanceCurrentCounter(_Reply):
+class ReplyBalanceCurrentCounter(_Reply):  # noqa:D101
     counter: int = None
 
     S: ClassVar = Struct("<I")
     T: ClassVar = PacketType.ReadBalanceCurrentCounter
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         (self.counter,) = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         cell.balance_current_count = self.counter
 
     def __setstate__(self, m):
@@ -495,7 +532,7 @@ class ReplyBalanceCurrentCounter(_Reply):
 
 
 @_dc("pid<")
-class ReplyReadPIDconfig(_Reply):
+class ReplyReadPIDconfig(_Reply):  # noqa:D101
     kp: int = None
     ki: int = None
     kd: int = None
@@ -504,12 +541,12 @@ class ReplyReadPIDconfig(_Reply):
     T: ClassVar = PacketType.ReadPIDconfig
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         self.kp, self.ki, self.kd = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         cell.m_pid(self)
 
     def __setstate__(self, m):
@@ -522,19 +559,19 @@ class ReplyReadPIDconfig(_Reply):
 
 
 @_dc("bal>")
-class RequestBalanceLevel:
+class RequestBalanceLevel:  # noqa:D101
     levelRaw: int = None
 
     S: ClassVar = Struct("<H")
     T: ClassVar = PacketType.WriteBalanceLevel
 
-    async def from_cell(self, cell):
+    async def from_cell(self, cell):  # noqa:D102
         await cell.bal()
         await cell.v2raw()
 
         self.levelRaw = cell.balance_threshold_raw
 
-    def to_bytes(self):
+    def to_bytes(self):  # noqa:D102
         return self.S.pack(self.levelRaw or 0)
 
     def __setstate__(self, m):
@@ -545,19 +582,19 @@ class RequestBalanceLevel:
 
 
 @_dc("bal<")
-class ReplyBalancePower(_Reply):
+class ReplyBalancePower(_Reply):  # noqa:D101
     pwm: int = None
 
     S: ClassVar = Struct("B")
     T: ClassVar = PacketType.ReadBalancePower
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data):  # noqa:D102
         self = cls()
         (self.pwm,) = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell):  # noqa:D102
         chg = False
         pwm = self.pwm / 255
         if cell.balance_pwm != pwm:
@@ -573,82 +610,82 @@ class ReplyBalancePower(_Reply):
 
 
 @_dc("set>")
-class RequestReadSettings(_Request):
+class RequestReadSettings(_Request):  # noqa:D101
     T = PacketType.ReadSettings
 
 
 @_dc("ct>")
-class RequestTemperature(_Request):
+class RequestTemperature(_Request):  # noqa:D101
     T = PacketType.ReadTemperature
 
 
 @_dc("bcc>")
-class RequestBalanceCurrentCounter(_Request):
+class RequestBalanceCurrentCounter(_Request):  # noqa:D101
     T = PacketType.ReadBalanceCurrentCounter
 
 
 @_dc("pc>")
-class RequestCounters(_Request):
+class RequestCounters(_Request):  # noqa:D101
     T = PacketType.ReadCounters
 
 
 @_dc("bp>")
-class RequestBalancePower(_Request):
+class RequestBalancePower(_Request):  # noqa:D101
     T = PacketType.ReadBalancePower
 
 
 @_dc("rpc>")
-class RequestResetCounters(_Request):
+class RequestResetCounters(_Request):  # noqa:D101
     T = PacketType.ResetCounters
 
 
 @_dc("rpcc>")
-class RequestResetBalanceCurrentCounter(_Request):
+class RequestResetBalanceCurrentCounter(_Request):  # noqa:D101
     T = PacketType.ResetBalanceCurrentCounter
 
 
 @_dc("cv>")
-class RequestVoltages(_Request):
+class RequestVoltages(_Request):  # noqa:D101
     T = PacketType.ReadVoltages
 
 
 @_dc("id>")
-class RequestIdentify(_Request):
+class RequestIdentify(_Request):  # noqa:D101
     T = PacketType.Identify
 
 
 @_dc("rpid>")
-class RequestReadPIDconfig(_Request):
+class RequestReadPIDconfig(_Request):  # noqa:D101
     T = PacketType.ReadPIDconfig
 
 
 @_dc("cfg<")
-class ReplyConfig(_Reply):
+class ReplyConfig(_Reply):  # noqa:D101
     T = PacketType.WriteSettings
 
 
 @_dc("rbcc<")
-class ReplyResetBalanceCurrentCounter(_Reply):
+class ReplyResetBalanceCurrentCounter(_Reply):  # noqa:D101
     T = PacketType.ResetBalanceCurrentCounter
 
 
 @_dc("rpc<")
-class ReplyResetCounters(_Reply):
+class ReplyResetCounters(_Reply):  # noqa:D101
     T = PacketType.ResetCounters
 
 
 @_dc("bl<")
-class ReplyBalanceLevel(_Reply):
+class ReplyBalanceLevel(_Reply):  # noqa:D101
     T = PacketType.WriteBalanceLevel
 
 
 @_dc("id<")
-class ReplyIdentify(_Reply):
+class ReplyIdentify(_Reply):  # noqa:D101
     T = PacketType.Identify
 
 
 @_dc("wpid<")
-class ReplyWritePIDconfig(_Reply):
+class ReplyWritePIDconfig(_Reply):  # noqa:D101
     T = PacketType.WritePIDconfig
 
 
@@ -690,8 +727,3 @@ replyClass = [
     NullData,  # 15
 ]
 
-_k = None
-for _k in globals():
-    if _k.startswith(("Request", "Reply")):
-        __all__.append(_k)
-del _k

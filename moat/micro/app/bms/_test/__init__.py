@@ -7,12 +7,10 @@ from __future__ import annotations
 import logging
 from functools import partial
 
-from moat.util.compat import TaskGroup
 from moat.util import attrdict
-from moat.util.compat import Queue
-from moat.micro.cmd.base import BaseCmd
-
 from moat.micro.app.bms._test.diy_packet import PacketHeader, replyClass
+from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import Queue, TaskGroup
 
 logger = logging.getLogger(__name__)
 

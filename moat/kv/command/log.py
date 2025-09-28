@@ -1,7 +1,8 @@
-# command line interface
+# command line interface  # noqa:D100
 from __future__ import annotations
 
 import asyncclick as click
+
 from moat.util import yprint
 
 
@@ -24,7 +25,7 @@ async def dest(obj, path, incremental):
     Any previously open log (on the server you talk to) is closed as soon
     as the new one is opened and ready.
     """
-    res = await obj.client._request("log", path=path, fetch=not incremental)
+    res = await obj.client._request("log", path=path, fetch=not incremental)  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -37,7 +38,7 @@ async def save(obj, path, full):
     """
     Write the server's current state to a file.
     """
-    res = await obj.client._request("save", path=path, full=full)
+    res = await obj.client._request("save", path=path, full=full)  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -48,6 +49,6 @@ async def stop(obj):
     """
     Stop logging changes.
     """
-    res = await obj.client._request("log")  # no path == stop
+    res = await obj.client._request("log")  # no path == stop  # noqa:SLF001
     if obj.meta:
         yprint(res, stream=obj.stdout)

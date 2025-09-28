@@ -1,9 +1,8 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
 import logging
-import os
 import unittest
 
 import anyio
@@ -79,7 +78,7 @@ def _PBD():
 
 
 @asynccontextmanager
-async def moat_kv_server(n, broker_config, test_config):
+async def moat_kv_server(n, broker_config, test_config):  # noqa: D103
     msgs = []
     async with anyio.create_task_group() as tg:
         async with create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -115,8 +114,8 @@ async def moat_kv_server(n, broker_config, test_config):
     # assert len(msgs) == n, msgs
 
 
-class MQTTClientTest(unittest.TestCase):
-    def test_deliver(self):
+class MQTTClientTest(unittest.TestCase):  # noqa: D101
+    def test_deliver(self):  # noqa: D102
         data = b"data 123 a"
 
         async def test_coro():
@@ -141,7 +140,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_transparent(self):
+    def test_deliver_transparent(self):  # noqa: D102
         data = b"data 123 t"
 
         async def test_coro():
@@ -166,7 +165,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_direct(self):
+    def test_deliver_direct(self):  # noqa: D102
         data = b"data 123 b"
 
         async def test_coro():
@@ -187,7 +186,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_timeout(self):
+    def test_deliver_timeout(self):  # noqa: D102
         async def test_coro():
             broker_config, test_config = _PBD()
             async with moat_kv_server(0, broker_config, test_config):

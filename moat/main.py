@@ -4,14 +4,15 @@ This module contains the entry point to the MOAT command line interface
 
 from __future__ import annotations
 
+import anyio
 import os
 import sys
-import anyio
+
 import asyncclick as click
 from asyncscope import main_scope
-from moat.util import attrdict, main_, exc_iter, ungroup
+
+from moat.util import attrdict, exc_iter, main_, ungroup
 from moat.util.exc import ExpectedError
-from contextlib import nullcontext
 
 
 def cmd(backend="trio"):

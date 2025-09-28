@@ -4,13 +4,14 @@ This module implements a basic MoatBus address controller.
 
 from __future__ import annotations
 
-import trio
+import logging
 from dataclasses import dataclass
 
-from moat.bus.message import BusMessage, LongMessageError
-from moat.bus.util import byte2mini, mini2byte, Processor
+import trio
 
-import logging
+from moat.bus.message import BusMessage, LongMessageError
+from moat.bus.server.control.addr import aa_record, build_aa_data
+from moat.bus.util import Processor, byte2mini, mini2byte
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class poll_cp_record:
     t_sleep: int = 0
 
     @classmethod
-    def unpack(cls, msg, logger):
+    def unpack(cls, msg, logger):  # noqa:D102
         self = cls()
 
         d = msg.data
@@ -48,10 +49,10 @@ class poll_cp_record:
         return self
 
     @property
-    def packet(self):
+    def packet(self):  # noqa:D102
         ls = len(self.serial) - 1
         if not 0 <= ls <= 0x0F:
-            raise RuntimeError(f"Serial too long: {serial!r}")
+            raise RuntimeError(f"Serial too long: {self.serial!r}")
         ls <<= 4
         more = []
         flags = self.flags
@@ -93,12 +94,13 @@ class PollControl(Processor):
     CODE = 1
 
     def __init__(self, server, dkv, interval=100, timeout=5):
+        dkv  # noqa:B018
         self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.interval = interval
         self.timeout = timeout
         super().__init__(server, 0)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         await self.spawn(self._poller)
         await self.spawn(self._fwd)
@@ -134,7 +136,7 @@ class PollControl(Processor):
             if msg.dst == -4:  # broadcast
                 await self._process_client_nack(msg)
             elif msg.dst == self.my_id:  # server N
-                await self._process_client_reply(msg.src, serial, flags, timer)
+                await self._process_client_reply(msg.src, self.serial, 0, 0) # XXX flags, timer
             elif msg.dst < 0:  # server N
                 await self._process_client_reply_mon(msg)
             else:  # client
@@ -146,17 +148,18 @@ class PollControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        o = self.with_serial(s, msg.dest)
-        if o.__data is None:
-            await self.q_w.put(NewDevice(obj))
-        elif o.client_id != msg.dest:
-            await self.q_w.put(OldDevice(obj))
+        raise NotImplementedError
+#       m = msg.bytes
+#       mlen = (m[0] & 0xF) + 1
+#       m[0] >> 4
+#       if len(m) - 1 < mlen:
+#           self.logger.error("Short addr reply %r", msg)
+#           return
+#       o = self.with_serial(s, msg.dest)
+#       if o.__data is None:
+#           await self.q_w.put(NewDevice(obj))
+#       elif o.client_id != msg.dest:
+#           await self.q_w.put(OldDevice(obj))
 
     async def _process_request(self, aa):
         """
@@ -217,6 +220,7 @@ class PollControl(Processor):
         """
         Client>server
         """
+        flags, timer  # noqa:B018
         objs = self.objs
         obj2 = None
         try:
@@ -226,13 +230,13 @@ class PollControl(Processor):
         else:
             if obj1 is not None:
                 if obj1.serial == serial:
-                    obj2 == obj1
+                    obj2 = obj1
                 else:
                     self.logger.error(
                         "Conflicting serial: %d: new:%s known:%s",
                         client,
                         serial,
-                        obj.serial,
+                        obj1.serial,
                     )
                     await objs.deregister(obj1)
 
@@ -246,7 +250,7 @@ class PollControl(Processor):
             self.logger.error(
                 "Conflicting IDs: new:%d known:%d: %s",
                 client,
-                obj.client_id,
+                obj2.client_id,
                 serial,
             )
             await objs.deregister(obj2)
@@ -282,10 +286,11 @@ class PollControl(Processor):
 
         TODO.
         """
-        m = msg.bytes
-        mlen = (m[0] & 0xF) + 1
-        m[0] >> 4
-        if len(m) - 1 < mlen:
-            self.logger.error("Short addr reply %r", msg)
-            return
-        self.get_serial(s, msg.dest)
+        raise NotImplementedError
+#       m = msg.bytes
+#       mlen = (m[0] & 0xF) + 1
+#       m[0] >> 4
+#       if len(m) - 1 < mlen:
+#           self.logger.error("Short addr reply %r", msg)
+#           return
+#       self.get_serial(s, msg.dest)

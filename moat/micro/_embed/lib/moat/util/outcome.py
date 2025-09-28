@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 
 def capture(sync_fn, *args, **kwargs):
@@ -32,7 +32,7 @@ class Value(Outcome):
     def __repr__(self):
         return f"Value({self.value!r})"
 
-    def unwrap(self):
+    def unwrap(self):  # noqa: D102
         return self.value
 
 
@@ -45,7 +45,7 @@ class Error(Outcome):
     def __repr__(self):
         return f"Error({self.error!r})"
 
-    def unwrap(self):
+    def unwrap(self):  # noqa: D102
         captured_error = self.error
         try:
             raise captured_error

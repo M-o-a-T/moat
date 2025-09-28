@@ -7,10 +7,11 @@ Create Date: 2025-03-05 20:19:53.269117+00:00
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

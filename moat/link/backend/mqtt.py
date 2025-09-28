@@ -9,11 +9,11 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType, RetainHandling
+from mqttproto.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
 
-from moat.link.meta import MsgMeta
-from moat.lib.codec.noop import Codec as NoopCodec
 from moat.util import NotGiven, attrdict, get_codec
+from moat.lib.codec.noop import Codec as NoopCodec
+from moat.link.meta import MsgMeta
 from moat.util.path import PS, P, Path
 
 from . import Backend as _Backend
@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
 
-    from collections.abc import AsyncIterator, Awaitable, Literal, Any
+    from collections.abc import Any, AsyncIterator, Awaitable, Literal
 
 
 class MqttMessage:

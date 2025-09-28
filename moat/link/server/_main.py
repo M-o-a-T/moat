@@ -1,11 +1,12 @@
 # command line interface
 from __future__ import annotations
 
+import anyio
+
 import asyncclick as click
 
-import anyio
-from moat.link.server import Server
 from moat.util import as_service
+from moat.link.server import Server
 
 
 @click.command(short_help="Run the MoaT-Link data server.")  # pylint: disable=undefined-variable

@@ -1,14 +1,15 @@
 from __future__ import annotations
-import logging
 
 import anyio
-from moat.util import Queue, attrdict
+import contextlib
+import logging
+
 from victron.dbus import Dbus
 
+from moat.util import Queue, attrdict
 from moat.util.compat import (
     Event,
 )
-import contextlib
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,8 @@
-# encapsulates one bus participant
+"encapsulates one bus participant"
 from __future__ import annotations
 
 from weakref import ref
+
 import trio
 
 
@@ -27,20 +28,20 @@ class BaseObj:
     Override this.
     """
 
-    server = None
     client_id = None
     serial = None
     working_until = None
     polled: bool = False  # poll bit (in address request) is set
 
     def __init__(self, serial, create=None):
+        create  # noqa:B018
         if self.serial is not None:
             return  # already done
 
         if not isinstance(serial, bytes):
-            l = serial.bit_length()
-            l = (l + 7) / 8
-            serial = serial.to_bytes(l, "big")
+            ln = serial.bit_length()
+            ln = (ln + 7) / 8
+            serial = serial.to_bytes(ln, "big")
 
         self.serial = serial
         self.is_ready = trio.Event()
@@ -52,14 +53,14 @@ class BaseObj:
             return f"<{self.__class__.__name__}: {self.serial}>"
 
     @property
-    def working(self):
+    def working(self):  # noqa:D102
         if self.working_until is None:
             return True
         else:
             return self.working_until > trio.current_time()
 
     @property
-    def server(self):
+    def server(self):  # noqa:D102
         return self._server()
 
     async def attach(self, server):
@@ -77,6 +78,7 @@ class BaseObj:
 
         If you override this: MUST be idempotent, MUST call superclass.
         """
+        server  # noqa:B018
         self._server = None
 
     async def msg_in(self, cmd: int, broadcast: bool, data: bytes):
@@ -102,9 +104,9 @@ class BaseObj:
         if self.client_id is None:
             raise NoClientError
 
-        if src is none:
+        if src is None:
             src = m.id
-        if dst is none:
+        if dst is None:
             dst = self.client_id
         await m.send(src=src, dst=dst, code=code, data=data)
 

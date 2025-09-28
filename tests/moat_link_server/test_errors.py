@@ -1,20 +1,16 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
 import time
-import sys
-from contextlib import asynccontextmanager
 
-from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
-from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup, Path
+from moat.util import P, NotGiven, Path
 from moat.util.msg import MsgReader
-from moat.lib.cmd import StreamError, RemoteError
+from moat.lib.cmd import RemoteError
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_simple(cfg):
     "Check sending an info text"
     async with (
@@ -35,7 +31,7 @@ async def test_simple(cfg):
         assert t1 < m.timestamp < t2
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_exc(cfg):
     "Check sending+acking an exception"
     async with (
@@ -74,7 +70,7 @@ async def test_exc(cfg):
         assert m.timestamp < m2.timestamp < t2
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_exc_np(cfg):
     "Check sending an un-proxied exception"
     async with (
@@ -102,7 +98,7 @@ async def test_exc_np(cfg):
         assert t1 < m.timestamp < t2
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_exc_clear(cfg):
     "Check clearing an exception"
     async with (
@@ -144,7 +140,7 @@ async def test_exc_clear(cfg):
             await c.d_get(P("error.test.here"))
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_wrap_ok(cfg):
     "Check wrapping success"
     async with (
@@ -170,7 +166,7 @@ async def test_wrap_ok(cfg):
             await c.d_get(P("error.test.here"))
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_wrap_bad(cfg, tmp_path):
     "Check wrapping an exception (and clearing it the same way)"
     epath = tmp_path / "errs"
@@ -191,7 +187,7 @@ async def test_wrap_bad(cfg, tmp_path):
             except* RuntimeError:
                 await anyio.sleep(0.2)
             else:
-                assert False, "did not pass exception"
+                raise AssertionError("did not pass exception")
 
             d, m = await c.d_get(P("error.test.here"), meta=True)
             assert d["help"] == "me?"

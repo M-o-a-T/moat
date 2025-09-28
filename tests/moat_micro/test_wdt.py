@@ -9,7 +9,6 @@ import pytest
 from moat.util import NotGiven, P
 from moat.micro._test import mpy_stack
 from moat.util.compat import log, sleep_ms
-from moat.lib.codec.errors import StoppedError
 from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio

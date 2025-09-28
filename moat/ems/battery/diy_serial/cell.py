@@ -4,10 +4,21 @@ A serially-connected cell.
 
 from __future__ import annotations
 
+from moat.ems.battery._base import BaseCell
+from moat.ems.battery.conv.steinhart import celsius2thermistor, thermistor2celsius
 from moat.util import attrdict
-from .._base import BaseCell
-from ..conv.steinhart import thermistor2celsius, celsius2thermistor
-from .packet import RequestVoltages, RequestReadSettings, RequestTemperature
+
+from .packet import (
+    RequestReadSettings,
+    RequestTemperature,
+    RequestVoltages,
+    RequestWritePIDconfig,
+    RequestReadPIDconfig,
+    RequestConfig,
+    RequestBalanceCurrentCounter,
+    RequestBalanceLevel,
+    RequestBalancePower,
+)
 
 
 class Cell(BaseCell):
@@ -61,11 +72,11 @@ class Cell(BaseCell):
             (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
         )
 
-    def m_temp(self, msg):
+    def m_temp(self, msg):  # noqa:D102
         self.batt_temp = thermistor2celsius(self.b_coeff_ext, msg.extRaw)
         self.load_temp = thermistor2celsius(self.b_coeff_bal, msg.intRaw)
 
-    def m_settings(self, msg):
+    def m_settings(self, msg):  # noqa:D102
         self.code_version = msg.gitVersion
         self.board_version = msg.boardVersion
         self.b_coeff_ext = msg.BCoeffInternal
@@ -80,7 +91,7 @@ class Cell(BaseCell):
 
     doc_param = dict(_d="read params", _r="dict[dict]:various parameters")
 
-    async def cmd_param(self):
+    async def cmd_param(self):  # noqa:D102
         return dict(
             typ="diy",
             v=dict(c=self.code_version, b=self.board_version),
@@ -89,7 +100,7 @@ class Cell(BaseCell):
             pid=self.cfg.pid,
         )
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.comm = self.root.sub_at(self.cfg["comm"])
         res = (await self.comm(p=RequestReadSettings(), s=self.cfg.pos))[0]
@@ -104,7 +115,7 @@ class Cell(BaseCell):
         res = (await self.comm(p=RequestVoltages(), s=self.cfg.pos))[0]
         return self._raw2volt(res.voltRaw & 0x1FFF)
 
-    def m_volt(self, msg):
+    def m_volt(self, msg):  # noqa:D102
         self.in_balance = bool(msg.voltRaw & 0x8000)
         self.balance_over_temp = bool(msg.voltRaw & 0x4000)
         vRaw = msg.voltRaw & 0x1FFF
@@ -128,7 +139,7 @@ class Cell(BaseCell):
             res.to_cell(self)
         return self.batt_temp
 
-    def m_pid(self, msg):
+    def m_pid(self, msg):  # noqa:D102
         self.cfg.pid.p = msg.kp
         self.cfg.pid.i = msg.ki
         self.cfg.pid.d = msg.kd
@@ -137,7 +148,7 @@ class Cell(BaseCell):
         _d="Calibrate (read if no data)", _r="dict:current data", vcal="float:degC", t=""
     )
 
-    async def cmd_calib(self, vcal=None, t=None, v=None):
+    async def cmd_calib(self, vcal=None, t=None, v=None):  # noqa:D102
         if vcal is not None:
             self.v_calibration = vcal
         if t is not None:
@@ -156,7 +167,7 @@ class Cell(BaseCell):
                 s=self.cfg.pos,
             )
 
-    doc_pid = doct(
+    doc_pid = dict(
         _d="r/w PID values", _r="dict:current data", p="float:P", i="float:I", d="float:D"
     )
 
@@ -186,8 +197,8 @@ class Cell(BaseCell):
             self.m_bal_power(res)
         return dict(p=self.bal_power, thr=self.bal_level)
 
-    def m_bal_power(self, msg):
-        self.bal_power = res.pwm / 255
+    def m_bal_power(self, msg):  # noqa:D102
+        self.bal_power = msg.pwm / 255
 
     doc_bd_sum = dict(_d="balance sum", _r="int:charge count")
 

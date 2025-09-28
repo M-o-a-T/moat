@@ -8,8 +8,9 @@ import anyio
 
 # pylint: disable=missing-module-docstring
 import logging
-import asyncclick as click
 from pathlib import Path as FSPath
+
+import asyncclick as click
 
 from moat.util import load_subgroup
 
@@ -43,25 +44,27 @@ async def edit_(obj, files):
 
     if len(files) > 1:
         raise click.UsageError("Max one file")
-    import moat
-    import sys
-    import os
-    from tempfile import SpooledTemporaryFile
+
+    import os  # noqa:PLC0415
+    import sys  # noqa:PLC0415
+    from tempfile import SpooledTemporaryFile  # noqa:PLC0415
+
+    import moat  # noqa:PLC0415
 
     cfg = obj.cfg
     env = os.environ.copy()
 
-    buf = SpooledTemporaryFile(mode="w+")
-    await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
-        stdout=buf,
-    )
-    buf.seek(0)
-    pypath = (
-        cfg.cad.paths
-        + eval(buf.read())
-        + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
-    )
+    with SpooledTemporaryFile(mode="w+") as buf:
+        await anyio.run_process(
+            [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+            stdout=buf,
+        )
+        buf.seek(0)
+        pypath = (
+            cfg.cad.paths
+            + eval(buf.read())
+            + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
+        )
     env["PYTHONPATH"] = os.pathsep.join(pypath)
     await anyio.run_process(
         [f"{cfg.cad.base}/bin/python3", "-mcq_editor"] + list(files),
@@ -88,25 +91,26 @@ async def edit_(obj, files):
 async def run_(obj, file, args):
     "Run a script."
 
-    import moat
-    import sys
-    import os
-    from tempfile import SpooledTemporaryFile
+    import os  # noqa:PLC0415
+    import sys  # noqa:PLC0415
+    from tempfile import SpooledTemporaryFile  # noqa:PLC0415
+
+    import moat  # noqa:PLC0415
 
     cfg = obj.cfg
     env = os.environ.copy()
 
-    buf = SpooledTemporaryFile(mode="w+")
-    res = await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
-        stdout=buf,
-    )
-    buf.seek(0)
-    pypath = (
-        cfg.cad.paths
-        + eval(buf.read())
-        + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
-    )
+    with SpooledTemporaryFile(mode="w+") as buf:
+        res = await anyio.run_process(
+            [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+            stdout=buf,
+        )
+        buf.seek(0)
+        pypath = (
+            cfg.cad.paths
+            + eval(buf.read())
+            + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
+        )
     env["PYTHONPATH"] = os.pathsep.join(pypath)
     res = await anyio.open_process(
         [f"{cfg.cad.base}/bin/python3", file] + list(args),
@@ -131,8 +135,9 @@ async def run_(obj, file, args):
 @click.option("-p", "--printer", type=str, default="xl")
 async def gcode(printer):
     "Emit gcode template"
-    from jinja2 import Environment, PackageLoader
-    from anyio import Path
+    from anyio import Path  # noqa:PLC0415
+
+    from jinja2 import Environment  # noqa:PLC0415
 
     f = Path(__file__).parent / "_templates" / f"{printer}.gcode.jinja"
     env = Environment(

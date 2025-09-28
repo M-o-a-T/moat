@@ -8,11 +8,11 @@ import moat.ems.battery.diy_serial.packet as P
 from moat.micro.conv.steinhart import celsius2thermistor
 
 __all__ = [
-    "PacketType",
-    "PacketHeader",
-    "requestClass",
-    "replyClass",
     "MAXCELLS",
+    "PacketHeader",
+    "PacketType",
+    "replyClass",
+    "requestClass",
 ]
 
 PacketType = P.PacketType

@@ -7,19 +7,21 @@ TODO: message chains should be refactored to arrays: much lower overhead.
 from __future__ import annotations
 
 import weakref
-from collections import defaultdict
 from logging import getLogger
-from typing import Any
 
-from moat.util import NotGiven, Path, attrdict, create_queue
 from range_set import RangeSet
 
+from moat.util import NotGiven, Path, attrdict, create_queue
+
 from .exceptions import ACLError
+
+from collections import defaultdict
+from typing import Any
 
 logger = getLogger(__name__)
 
 
-class NodeDataSkipped(Exception):
+class NodeDataSkipped(Exception):  # noqa:D101
     def __init__(self, node):
         super().__init__()
         self.node = node
@@ -44,7 +46,8 @@ class Node:
     entries: dict = None
     tock: int = 0  # tock when node was last observed
 
-    def __new__(cls, name, tick=None, cache=None, create=True):
+    def __new__(cls, name, tick=None, cache=None, create=True):  # noqa:D102
+        name  # noqa:B018
         try:
             self = cache[name]
         except KeyError:
@@ -66,6 +69,7 @@ class Node:
 
     # pylint: disable=unused-argument
     def __init__(self, name, tick=None, cache=None, create=True):
+        name,tick,cache,create  # noqa:B018
         return
 
     def __hash__(self):
@@ -79,7 +83,7 @@ class Node:
     def __getitem__(self, item):
         return self.entries[item]
 
-    def get(self, item, default=None):
+    def get(self, item, default=None):  # noqa:D102
         return self.entries.get(item, default)
 
     def enumerate(self, n: int = 0, current: bool = False):
@@ -309,7 +313,7 @@ class NodeSet(defaultdict):
         if encoded is not None:
             assert cache is not None
             for n, v in encoded.items():
-                n = Node(n, cache=cache)
+                n = Node(n, cache=cache)  # noqa:PLW2901
                 r = RangeSet()
                 r.__setstate__(v)
                 self[n] = r
@@ -320,7 +324,7 @@ class NodeSet(defaultdict):
     def __bool__(self):
         return any(v for v in self.values())
 
-    def serialize(self):
+    def serialize(self):  # noqa:D102
         d = dict()
         for k, v in self.items():
             assert not hasattr(k, "name")
@@ -328,7 +332,7 @@ class NodeSet(defaultdict):
         return d
 
     @classmethod
-    def deserialize(cls, state):
+    def deserialize(cls, state):  # noqa:D102
         self = cls()
         for k, v in state.items():
             r = RangeSet()
@@ -336,14 +340,14 @@ class NodeSet(defaultdict):
             self[k] = v
         return self
 
-    def copy(self):
+    def copy(self):  # noqa:D102
         res = type(self)()
         for k, v in self.items():
             if v:
                 res[k] = v.copy()
         return res
 
-    def add(self, node, tick):
+    def add(self, node, tick):  # noqa:D102
         assert not hasattr(node, "name")
         self[node].add(tick)
 
@@ -355,7 +359,7 @@ class NodeSet(defaultdict):
             r -= v
 
 
-class NodeEvent:
+class NodeEvent:  # noqa:PLW1641 ## no __hash__
     """Represents any event originating at a node.
 
     Args:
@@ -386,7 +390,7 @@ class NodeEvent:
         tk = self.tick or "-"
         pr = f"{self.node.name}:{tk}"
         if self.prev is not None:
-            pr += " " + self.prev._repr_chain()
+            pr += " " + self.prev._repr_chain()  # noqa:SLF001
         return pr
 
     def __repr__(self):
@@ -444,7 +448,7 @@ class NodeEvent:
         if self == other:
             return False
         while self.node != other.node:
-            self = self.prev  # pylint: disable=self-cls-assignment
+            self = self.prev  # pylint: disable=self-cls-assignment # noqa:PLW0642
             if self is None:
                 return False
         return self.tick >= other.tick
@@ -469,7 +473,7 @@ class NodeEvent:
             if self.node == node:
                 return res
             res += 1
-            self = self.prev  # pylint: disable=self-cls-assignment
+            self = self.prev  # pylint: disable=self-cls-assignment  # noqa:PLW0642
         return None
 
     def filter(self, node, server=None):
@@ -491,7 +495,7 @@ class NodeEvent:
             return self
         return NodeEvent(node=self.node, tick=self.tick, prev=prev)
 
-    def serialize(self, nchain=-1) -> dict:
+    def serialize(self, nchain=-1) -> dict:  # noqa:D102
         if not nchain:
             raise RuntimeError("A chopped-off NodeEvent must not be sent")
         res = attrdict(node=self.node.name)
@@ -516,7 +520,7 @@ class NodeEvent:
         return res
 
     @classmethod
-    def deserialize(cls, msg, cache):
+    def deserialize(cls, msg, cache):  # noqa:D102
         if msg is None:
             return None
         msg = msg.get("chain", msg)
@@ -545,7 +549,7 @@ class NodeEvent:
         if prev is not None:
             prev = prev.filter(self.node, server=server)
         if self.prev is not None or prev is not None:
-            self = NodeEvent(  # pylint: disable=self-cls-assignment
+            self = NodeEvent(  # pylint: disable=self-cls-assignment # noqa:PLW0642
                 node=self.node,
                 tick=self.tick,
                 prev=prev,
@@ -583,12 +587,12 @@ class UpdateEvent:
             repr(self.new_value),
         )
 
-    def serialize(self, chop_path=0, nchain=-1, with_old=False, conv=None):
+    def serialize(self, chop_path=0, nchain=-1, with_old=False, conv=None):  # noqa:D102
         if conv is None:
             # pylint: disable=redefined-outer-name
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull
+                from .types import ConvNull  # noqa:PLC0415
             conv = ConvNull
         res = self.event.serialize(nchain=nchain)
         res.path = self.entry.path[chop_path:]
@@ -603,12 +607,12 @@ class UpdateEvent:
         return res
 
     @classmethod
-    def deserialize(cls, root, msg, cache, nulls_ok=False, conv=None):
+    def deserialize(cls, root, msg, cache, nulls_ok=False, conv=None):  # noqa:D102
         if conv is None:
             # pylint: disable=redefined-outer-name
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull
+                from .types import ConvNull  # noqa:PLC0415
             conv = ConvNull
         entry = root.follow(msg.path, create=True, nulls_ok=nulls_ok)
         event = NodeEvent.deserialize(msg, cache=cache)
@@ -661,18 +665,18 @@ class Entry:
             other = other.name
         return self.name == other
 
-    def chain_links(self):
+    def chain_links(self):  # noqa:D102
         c = self.chain
         if c is not None:
             yield from iter(c)
 
-    def keys(self):
+    def keys(self):  # noqa:D102
         return self._sub.keys()
 
-    def values(self):
+    def values(self):  # noqa:D102
         return self._sub.values()
 
-    def items(self):
+    def items(self):  # noqa:D102
         return self._sub.items()
 
     def __len__(self):
@@ -685,7 +689,7 @@ class Entry:
         return key in self._sub
 
     @property
-    def path(self):
+    def path(self):  # noqa:D102
         if self._path is None:
             parent = self.parent
             if parent is None:
@@ -714,12 +718,13 @@ class Entry:
 
         Returns a (node, acl) tuple.
         """
+        nulls_ok  # noqa:B018
 
         # KEEP IN SYNC with `follow`, below!
         if acl is None:
             global NullACL
             if NullACL is None:
-                from .types import NullACL  # pylint: disable=redefined-outer-name
+                from .types import NullACL  # pylint: disable=redefined-outer-name # noqa:PLC0415
             acl = NullACL
 
         first = True
@@ -741,7 +746,7 @@ class Entry:
             except KeyError:
                 raise ACLError(acl.result, name) from None
             first = False
-            self = child  # pylint: disable=self-cls-assignment
+            self = child  # pylint: disable=self-cls-assignment  # noqa:PLW0642
 
         # If the caller doesn't know if the node exists, help them out.
         if acl_key == "W":
@@ -754,6 +759,7 @@ class Entry:
         As :meth:`follow_acl`, but isn't interested in ACLs and only returns the node.
         """
         # KEEP IN SYNC with `follow_acl`, above!
+        nulls_ok  # noqa:B018
 
         for name in path:
             child = self._sub.get(name, None) if self is not None else None
@@ -765,14 +771,14 @@ class Entry:
                     if child is None:
                         raise ValueError(f"Cannot add {name} to {self}")
                     child = child(name, self, tock=self.tock)
-            self = child  # pylint: disable=self-cls-assignment
+            self = child  # pylint: disable=self-cls-assignment  # noqa:PLW0642
         return self
 
     def __getitem__(self, name):
         return self._sub[name]
 
     @property
-    def root(self):
+    def root(self):  # noqa:D102
         root = self._root
         if root is not None:
             root = root()
@@ -787,11 +793,11 @@ class Entry:
         self._root = weakref.ref(root)
         return root
 
-    async def set(self, value):
+    async def set(self, value):  # noqa:D102
         self._data = value
 
     @property
-    def parent(self):
+    def parent(self):  # noqa:D102
         parent = self._parent
         if parent is None:
             return None
@@ -813,7 +819,7 @@ class Entry:
         return res
 
     @property
-    def data(self):
+    def data(self):  # noqa:D102
         return self._data
 
     def mark_deleted(self, server):
@@ -852,10 +858,10 @@ class Entry:
             p = p()
             if p is None:
                 return
-            p._sub.pop(this.name, None)
-            if p._sub:
+            p._sub.pop(this.name, None)  # noqa:SLF001
+            if p._sub:  # noqa:SLF001
                 return
-            this, p = p, p._parent
+            this, p = p, p._parent  # noqa:SLF001
 
     async def set_data(self, event: NodeEvent, data: Any, server=None, tock=None):
         """This entry is updated by that event.
@@ -886,7 +892,7 @@ class Entry:
             raise RuntimeError("huh?")
 
         if evt.event == self.chain:
-            if False and self._data != evt.new_value:
+            if False and self._data != evt.new_value:  # noqa:SIM223
                 # codec diffs due to wrong accurracy
                 logger.error(
                     "Diff %r: has\n%r\nbut should have\n%r\n",
@@ -977,7 +983,7 @@ class Entry:
         if conv is None:
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # pylint: disable=redefined-outer-name
+                from .types import ConvNull  # pylint: disable=redefined-outer-name # noqa:PLC0415
             conv = ConvNull
         res = attrdict()
         if self._data is not NotGiven:
@@ -998,15 +1004,15 @@ class Entry:
         while True:
             bad = set()
             for q in list(node.monitors):
-                if q._moat.kv__free is None or q._moat.kv__free > 1:
-                    if q._moat.kv__free is not None:
-                        q._moat.kv__free -= 1
+                if q._moat.kv__free is None or q._moat.kv__free > 1:  # noqa:SLF001
+                    if q._moat.kv__free is not None:  # noqa:SLF001
+                        q._moat.kv__free -= 1  # noqa:SLF001
                     await q.put(event)
                 else:
                     bad.add(q)
             for q in bad:
                 try:
-                    if q._moat.kv__free > 0:
+                    if q._moat.kv__free > 0:  # noqa:SLF001
                         await q.put(None)
                     node.monitors.remove(q)
                 except KeyError:
@@ -1021,7 +1027,7 @@ class Entry:
     _counter = 0
 
     @property
-    def counter(self):
+    def counter(self):  # noqa:D102
         self._counter += 1
         return self._counter
 
@@ -1054,7 +1060,7 @@ class Watcher:
         if self.q is not None:
             raise RuntimeError("You cannot enter this context more than once")
         self.q = create_queue(self.q_len)
-        self.q._moat.kv__free = self.q_len or None  # pylint:disable=no-member
+        self.q._moat.kv__free = self.q_len or None  # pylint:disable=no-member  # noqa:SLF001
         self.root.monitors.add(self.q)
         return self
 
@@ -1072,8 +1078,8 @@ class Watcher:
             raise RuntimeError("Aborted. Queue filled?")
         while True:
             res = await self.q.get()
-            if self.q._moat.kv__free is not None:  # pylint:disable=no-member
-                self.q._moat.kv__free += 1  # pylint:disable=no-member
+            if self.q._moat.kv__free is not None:  # pylint:disable=no-member  # noqa:SLF001
+                self.q._moat.kv__free += 1  # pylint:disable=no-member  # noqa:SLF001
             if res is None:
                 raise RuntimeError("Aborted. Queue filled?")
             if len(res.entry.path) and res.entry.path[0] is None and not self.full:

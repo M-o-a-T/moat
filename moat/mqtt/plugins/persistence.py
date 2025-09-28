@@ -1,12 +1,13 @@
-# Copyright (c) 2015 Nicolas JOUANIN
+# Copyright (c) 2015 Nicolas JOUANIN  # noqa: D100
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 import pickle
 import sqlite3
 
 
-class SQLitePlugin:
+class SQLitePlugin:  # noqa: D101
     def __init__(self, context):
         self.context = context
         self.conn = None
@@ -18,7 +19,7 @@ class SQLitePlugin:
         except KeyError:
             self.context.logger.warning("'persistence' section not found in context configuration")
 
-    def init_db(self):
+    def init_db(self):  # noqa: D102
         self.db_file = self.persistence_config.get("file", None)
         if not self.db_file:
             self.context.logger.warning("'file' persistence parameter not found")
@@ -39,7 +40,7 @@ class SQLitePlugin:
                 "CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)",
             )
 
-    async def save_session(self, session):
+    async def save_session(self, session):  # noqa: D102
         if self.cursor:
             dump = pickle.dumps(session)
             try:
@@ -52,7 +53,7 @@ class SQLitePlugin:
                 self.context.logger.error("Failed saving session '%s': %s", session, e)
                 raise
 
-    async def find_session(self, client_id):
+    async def find_session(self, client_id):  # noqa: D102
         if self.cursor:
             row = self.cursor.execute(
                 "SELECT data FROM session where client_id=?",
@@ -63,12 +64,12 @@ class SQLitePlugin:
             else:
                 return None
 
-    async def del_session(self, client_id):
+    async def del_session(self, client_id):  # noqa: D102
         if self.cursor:
             self.cursor.execute("DELETE FROM session where client_id=?", (client_id,))
             self.conn.commit()
 
-    async def on_broker_post_shutdown(self):
+    async def on_broker_post_shutdown(self):  # noqa: D102
         if self.conn:
             self.conn.close()
             self.context.logger.info("Database file '%s' closed", self.db_file)

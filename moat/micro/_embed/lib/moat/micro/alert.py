@@ -12,17 +12,17 @@ Alarm conditions are subclasses of exceptions.
 
 from __future__ import annotations
 
-from moat.util import merge, Path
-from moat.util.compat import Event, Queue, WouldBlock, AC_use, TaskGroup
+from moat.util import Path, merge
+from moat.util.compat import AC_use, Event, Queue, TaskGroup, WouldBlock
 
 from .cmd.base import BaseCmd
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from moat.util import Path
+
+    from collections.abc import Iterator
 
 
 __all__ = [

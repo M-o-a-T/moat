@@ -5,27 +5,27 @@ The main MoaT-Link Server
 from __future__ import annotations
 
 import anyio
+import anyio.abc
 import logging
+import os
+import random
 import signal
 import time
-import anyio.abc
-import random
-import os
-from platform import uname
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
 from functools import partial
-from attrs import define, field
-from collections.abc import Sequence
+from platform import uname
+
 from asyncactor import (
     Actor,
     GoodNodeEvent,
+    PingEvent,
     RecoverEvent,
     TagEvent,
-    PingEvent,
 )
 from asyncactor.backend import get_transport
+from attrs import define, field
 from mqttproto import QoS
 
 from moat.util import (
@@ -39,14 +39,14 @@ from moat.util import (
     Root,
     attrdict,
     gen_ident,
-    to_attrdict,
     id2str,
+    to_attrdict,
 )
-from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
+from moat.lib.cmd.base import MsgHandler, MsgSender
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.link.auth import AnonAuth
-from moat.link.backend import get_backend, Backend
+from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
 from moat.link.exceptions import ClientError
 from moat.link.hello import Hello
@@ -61,13 +61,16 @@ from moat.util.cbor import (
 from moat.util.exc import exc_iter
 
 from collections import defaultdict
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
     from pathlib import Path as FSPath
+
     from moat.lib.cmd.msg import Msg
     from moat.link.backend import Message
+
+    from collections.abc import Awaitable, Callable
 
     PathType = anyio.Path | FSPath | str
 
@@ -89,10 +92,6 @@ Stream = anyio.abc.ByteStream
 ClosedResourceError = anyio.ClosedResourceError
 
 _client_nr = 0
-
-
-class AuthError(RuntimeError):
-    pass
 
 
 def max_n(a, b):
@@ -1647,7 +1646,7 @@ class Server(MsgHandler):
                 except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
                     self.logger.warning("Link to %s closed", name)
 
-                except* EnvironmentError:
+                except* OSError:
                     self.logger.warning("Link to %s died", name)
 
                 except* Exception as exc:
@@ -1843,7 +1842,7 @@ class Server(MsgHandler):
             async for msg in feed:
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
-                meta = MsgMeta.restore(mt)  # noqa:SLF001
+                meta = MsgMeta.restore(mt)
                 meta.source = "_Load"
                 if self.maybe_update(prefix + path, data, meta):
                     upd += 1
@@ -1993,7 +1992,7 @@ class Server(MsgHandler):
                 # Any other problems just raise the exception
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
-                meta = MsgMeta.restore(mt)  # noqa:SLF001
+                meta = MsgMeta.restore(mt)
                 meta.source = "_file"
                 if self.maybe_update(path, data, meta, local=local):
                     # Entries that have been deleted don't count as updates

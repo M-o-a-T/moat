@@ -16,9 +16,10 @@ from ..meta import MsgMeta
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.cmd import Key
+
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any
-    from moat.lib.cmd import Key
 
 logger = getLogger(__name__)
 
@@ -71,10 +72,10 @@ class Node:
         "return current data, returns NotGiven if empty"
         return self._data
 
-    def keys(self):
+    def keys(self):  # noqa: D102
         return self._sub.keys()
 
-    def items(self):
+    def items(self):  # noqa: D102
         return self._sub.items()
 
     def __bool__(self) -> bool:
@@ -267,7 +268,7 @@ class Node:
         proc: Callable[[Path, Node], Awaitable[bool | None]],
         max_depth: int = 999999,
         min_depth: int = 0,
-        timestamp: int | float = 0,
+        timestamp: float = 0,
         depth_first: bool = False,
         force: bool = False,
     ):
@@ -322,7 +323,7 @@ class NodeFinder:
     def __init__(self, src):
         self.steps = ((src, False),)
 
-    def step(self, name, new=False):
+    def step(self, name, new=False):  # noqa: D102
         steps = []
         for node, keep in self.steps:
             if name in node:
@@ -343,6 +344,6 @@ class NodeFinder:
         self.steps = steps
 
     @property
-    def result(self) -> tuple[Path, Node]:
+    def result(self) -> tuple[Path, Node]:  # noqa: D102
         s = self.steps[0]
         return s[0]

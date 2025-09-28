@@ -7,9 +7,12 @@ TODO add CBOR.
 from __future__ import annotations
 
 import anyio
-from pathlib import Path as FSPath
 
 from moat.lib.codec import Codec
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path as FSPath
 
 __all__ = ["MsgReader", "MsgWriter"]
 

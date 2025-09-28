@@ -19,7 +19,6 @@ _link_id = 0
 if TYPE_CHECKING:
     from types import EllipsisType
 
-    from moat.util import Path
 
     from .msg import Msg
 

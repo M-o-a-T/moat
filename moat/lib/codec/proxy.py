@@ -78,7 +78,7 @@ def wrap_obj(obj, name=None):
             res = (name, (), p)
         elif hasattr(p[0], "__name__"):  # grah
             if p[0].__name__ == "_reconstructor":
-                _, o, ak = p
+                _, _o, ak = p
                 if len(ak) == 1:
                     k = ak
                     a = []

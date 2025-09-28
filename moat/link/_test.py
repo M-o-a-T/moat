@@ -242,7 +242,6 @@ class Scaffold(CtxObj):
         """
         async with anyio.create_task_group() as tg, self.client_() as c:
             evt = ValueEvent()
-            got = 0
 
             @tg.start_soon
             async def work():

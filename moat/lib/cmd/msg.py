@@ -48,7 +48,7 @@ if TYPE_CHECKING:
         AsyncContextManager,
         Self,
     )
-    from collections.abc import Callable, ItemsView, Iterator, KeysView, MutableSequence, Sequence, ValuesView
+    from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
 
 
 try:
@@ -543,7 +543,7 @@ class Msg(MsgLink, MsgResult):
 
         if self._msg is None:
             if self._stream_in == S_END:
-                raise NoStream()
+                raise NoStream
             await self._msg_in.wait()
             self._msg_in = Event()
         msg = self._msg

@@ -380,7 +380,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != CONNECT:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for ConnectPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for ConnectPacket init",
                 )
             header = fixed
         super().__init__(header)

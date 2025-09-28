@@ -9,7 +9,8 @@ def test_initialization_min_heap():  # noqa: D103
     assert len(h) == 3
     # peek should return smallest key 'b'
     key, prio = h.peek()
-    assert key == "b" and prio == 2
+    assert key == "b"
+    assert prio == 2
 
 
 def test_setitem_and_getitem():  # noqa: D103
@@ -98,7 +99,8 @@ def test_keys_items_values_iteration_and_modification_error():  # noqa: D103
     # test iteration returning both key and priority
     it = iter(h)
     first = next(it)
-    assert isinstance(first, tuple) and len(first) == 2
+    assert isinstance(first, tuple)
+    assert len(first) == 2
 
     # test modification during iteration raises
     it2 = iter(h)

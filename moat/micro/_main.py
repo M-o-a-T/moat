@@ -567,11 +567,12 @@ async def rom(obj, path, device):
                 raise RuntimeError("Device does not have ROMFS.")
             raise RuntimeError("Device 0…{res-1} only.")
 
-
-        nblk, blksz = await sd.stat()
+        _nblk, _blksz = await sd.stat()
 
         if obj.debug:
             print("Building ROMFS.")
+
+        # TODO
 
 
 

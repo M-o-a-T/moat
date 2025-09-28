@@ -22,7 +22,7 @@ timeout:
   delete: 100000
 
   # Ping messages every … seconds
-  ping: 
+  ping:
     every: .1
     timeout: .2  # no ping received
     delete: .4  # still no ping received
@@ -75,7 +75,7 @@ async def test_mon(cfg):
     merge(cfg.link, ctim)
 
     async with Scaffold(cfg, use_servers=True) as sf:
-        s = await sf.server(init="TEST")
+        await sf.server(init="TEST")
 
         cl = await sf.client()
         sc2, sid = await sf.tg.start(run_service, sf, dict(debug=False, dbg_host=("a", "b")))

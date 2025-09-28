@@ -80,7 +80,7 @@ async def test(obj):
 
     async def check_root():
         try:
-            with anyio.fail_after(1) as sc:
+            with anyio.fail_after(1):
                 async with back.monitor(cfg.root) as mon:
                     async for msg in mon:
                         async with lock:
@@ -93,7 +93,7 @@ async def test(obj):
 
     async def check_server():
         try:
-            with anyio.fail_after(1) as sc:
+            with anyio.fail_after(1):
                 async with back.monitor(cfg.root + P("run.service.main")) as mon:
                     async for msg in mon:
                         async with lock:
@@ -195,7 +195,6 @@ async def pub(obj, **args):
     if args["msg_stdin"] + args["msg_stdin_lines"] + args["msg_stdin_eval"] > 1:
         raise click.UsageError("You can only read from stdin once")
     cfg = obj.cfg.link
-    name = args["name"] or cfg.get("name", None)
     codec = get_codec(args["codec"])
 
     if args["keep_alive"]:
@@ -204,8 +203,7 @@ async def pub(obj, **args):
     if not obj.name:
         raise UsageError("You must supply a client name")
 
-    async with anyio.create_task_group() as tg:
-        await do_pub(obj.conn, args, cfg, codec)
+    await do_pub(obj.conn, args, cfg, codec)
 
 
 async def run_kvsub(client, topic, lock):
@@ -356,8 +354,6 @@ async def sub(obj, **args):
     working MoaT-Link server.
     """
     cfg = obj.cfg
-
-    name = args["name"] or cfg.link.get("id", None)
 
     if args["keep_alive"]:
         cfg.link["keep_alive"] = args["keep_alive"]

@@ -20,7 +20,6 @@ from .cmd.base import BaseCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.util import Path
 
     from collections.abc import Iterator
 

@@ -18,7 +18,7 @@ class PingReqPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != PINGREQ:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for PingReqPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for PingReqPacket init",
                 )
             header = fixed
         super().__init__(header)

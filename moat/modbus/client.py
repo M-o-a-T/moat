@@ -146,7 +146,8 @@ class ModbusError(RuntimeError):
 class _HostCommon:
     stream = None
     framer = None  # overridden
-    _trace = lambda *x: None  # overridden  # noqa: ARG005
+    def _trace(*x):
+        return None  # overridden
 
     def __init__(self, gate, timeout, cap):
         self.gate = gate
@@ -301,7 +302,7 @@ class Host(_HostCommon, CtxObj):
 
     @property
     def _gate_key(self):
-        key = (self.addr, self.port)
+        return (self.addr, self.port)
 
     # reader task #
 
@@ -475,7 +476,7 @@ class SerialHost(_HostCommon, CtxObj):
 
     @property
     def _gate_key(self):
-        key = self.port
+        return self.port
 
     # reader task #
 

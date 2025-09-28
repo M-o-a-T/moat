@@ -148,7 +148,6 @@ async def test_wrap_ok(cfg):
         sf.server_(init={"Hello": "there!", "test": 123}),
         sf.client_() as c,
     ):
-        t1 = time.time()
         async with (
             sf.do_watch(Path("error"), meta=True, subtree=True) as r,
             c.e_wrap(P("test.here"), help="me?") as mon,
@@ -159,7 +158,6 @@ async def test_wrap_ok(cfg):
             await anyio.sleep(0.2)
 
         r = await r.get()
-        t2 = time.time()
         assert len(r) == 0
 
         with pytest.raises(KeyError):

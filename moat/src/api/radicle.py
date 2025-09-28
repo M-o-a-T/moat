@@ -183,7 +183,6 @@ class API(BaseAPI):  # noqa: D101
         """
         List accessible repositories.
         """
-        pg = None
         url = f"/users/{self.cfg.user}/repos"
         while url is not None:
             res = await self.http.get(url)

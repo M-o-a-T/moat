@@ -139,12 +139,13 @@ class RepoInfo(BaseRepoInfo):
         """
         return self.data.default_branch
 
-    async def set_default_branch(self, name):
+    async def set_default_branch(self, name) -> None:
         """
         Set the default branch to this.
         """
         url = f"repos/{self.api.org}/{self.repo.name}"
         res = await self.api.http.patch(url, json=dict(default_branch=name))
+        res.raise_for_status()
 
     async def get_branch(self, name) -> CommitInfo:
         """
@@ -199,7 +200,6 @@ class API(BaseAPI):
         """
         List accessible repositories.
         """
-        pg = None
         url = f"users/{self.cfg.user}/repos"
         while url is not None:
             res = await self.http.get(url)

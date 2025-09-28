@@ -182,9 +182,7 @@ class Package(_Common):
         between the head and the @tag commit
         """
         head = self._repo.head.commit
-        try:
-            lc = self.last_commit
-        except AttributeError:
+        if not hasattr(self, "last_commit"):
             return True
         for d in head.diff(
             self.last_commit if main else self._repo.last_tag,

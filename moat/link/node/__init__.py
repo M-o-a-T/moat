@@ -11,7 +11,7 @@ from attrs import define, field
 from moat.util import NotGiven, Path, PathLongener, PathShortener
 from moat.util.exc import ExpKeyError
 
-from ..meta import MsgMeta
+from moat.link.meta import MsgMeta
 
 from typing import TYPE_CHECKING
 

@@ -2,8 +2,11 @@
 # © 2025 Matthias Urlichs
 from __future__ import annotations
 
-import anyio
 import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anyio
 
 try:
     from mpy_cross import run as mpy_cross_run
@@ -81,7 +84,6 @@ class VfsRomWriter:  # noqa: D101
 
     async def copy_recursively(self, src_dir):  # noqa: D102
         DIR = 1 << 14
-        mpy_cross_missed = 0
         dir_contents = sorted(os.listdir(src_dir))
         for name in dir_contents:
             src_name = src_dir / name
@@ -95,7 +97,6 @@ class VfsRomWriter:  # noqa: D101
             else:
                 # A file.
                 did_mpy = False
-                name_extra = ""
                 if self.cross and name.endswith(".py"):
                     name_mpy = name[:-3] + ".mpy"
                     src_name_mpy = src_dir / name_mpy

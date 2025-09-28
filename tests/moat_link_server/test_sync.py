@@ -135,7 +135,7 @@ async def test_lsy_switch_server_hard(cfg):  # noqa: D103
         await sf.server()
         await srv1[0].cancel()
 
-        res, *meta = await c1.cmd(P("d.get"), P("test.one"))
+        res, *_meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123
 
 
@@ -151,12 +151,12 @@ async def test_lsy_switch_server_hard_break(cfg):  # noqa: D103
         n = 0
         with pytest.raises(EOFError), ungroup:
             async with c1.cmd(P("i.count")).stream_in() as st:
-                async for m in st:
+                async for _m in st:
                     n += 1
                     if n == 3:
                         await srv1[0].cancel()
         assert n == 3
-        res, *meta = await c1.d.get(P("test.one"))
+        res, *_meta = await c1.d.get(P("test.one"))
         assert res == 123
 
 
@@ -171,5 +171,5 @@ async def test_lsy_switch_server_soft(cfg):  # noqa: D103
         await sf.server()
         await srv1[0].stop()
 
-        res, *meta = await c1.cmd(P("d.get"), P("test.one"))
+        res, *_meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123

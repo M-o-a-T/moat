@@ -39,7 +39,6 @@ async def test_get_flat_dyn(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t = anyio.current_time()
         with anyio.fail_after(0.2):
             async with sf.do_watch(P("test.here"), exp="End", state=False) as res:
                 await c.i_sync()
@@ -62,7 +61,6 @@ async def test_get_flat_full(cfg, state):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t = anyio.current_time()
         with anyio.fail_after(0.2):
             async with sf.do_watch(P("test.here"), exp="End", state=state) as res:
                 await c.i_sync()
@@ -159,7 +157,6 @@ async def test_get_tree_dyn_old(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        t = time.time()
         with anyio.fail_after(0.2):
             async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()

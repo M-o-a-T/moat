@@ -13,13 +13,13 @@ from contextlib import asynccontextmanager
 
 from attr import define, field
 
-from moat.util import CtxObj, ungroup
+from moat.util import CtxObj
 from moat.util.exec import run as run_
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...move import RepoMover as RepoMover
+    from moat.src.move import RepoMover as RepoMover
 
 
 class NoSuchRepo(RuntimeError):
@@ -81,7 +81,7 @@ class RepoInfo(metaclass=ABCMeta):
         "create remote repo."
         pass
 
-    async def load(self, create: bool = None):
+    async def load(self, create: bool | None = None):
         "load this repo's data. You might want to overide `load_` instead."
         try:
             await self.load_()

@@ -155,7 +155,7 @@ async def test_ls_save(cfg, tmp_path):  # noqa: D103
             if nn.data_ is not NotGiven or list(nn.keys()):
                 raise ValueError("Data in node")
 
-        res = await c.cmd(P("s.load"), str(fname))
+        await c.cmd(P("s.load"), str(fname))
         nn = await fetch(c, "a")
         assert nn == nnn
 
@@ -175,7 +175,7 @@ async def test_walk(cfg):  # noqa: D103
         async def chk(want, path, **kw):
             has = set()
             async with c.d_walk(P(path), **kw) as mon:
-                async for p, d in mon:
+                async for _p, d in mon:
                     has.add(d)
             assert has == want, (path, has, want, kw)
 

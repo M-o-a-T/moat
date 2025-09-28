@@ -70,7 +70,7 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_connect_tcp_failure(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            _, _, _, URI, _broker_config = _PUB()
             with pytest.raises(ConnectException), ungroup:
                 config = {"auto_reconnect": False}
                 async with open_mqttclient(config=config) as client:

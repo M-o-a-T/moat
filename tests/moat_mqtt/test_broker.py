@@ -64,7 +64,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_start_stop(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            _, _URL, test_config = _PUT()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -499,7 +499,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
                     for qos in [QOS_0, QOS_1, QOS_2]:
                         message = await sub_client.deliver_message()
                         assert message is not None
-                        assert message.topic == "/qos%s" % qos
+                        assert message.topic == f"/qos{qos}"
                         assert message.data == b"data"
                         assert message.qos == qos
             assert broker.transitions.is_stopped()

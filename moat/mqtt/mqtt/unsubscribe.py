@@ -69,7 +69,7 @@ class UnsubscribePacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != UNSUBSCRIBE:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for UnsubscribePacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for UnsubscribePacket init",
                 )
             header = fixed
 

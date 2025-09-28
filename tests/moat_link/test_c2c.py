@@ -13,10 +13,10 @@ from moat.link.host import HostList
 async def test_simple(cfg):
     "simple client-to-client comm test"
     async with Scaffold(cfg, use_servers=False) as sf:
-        s = await sf.server(init="Foo")
+        await sf.server(init="Foo")
         # evt = await sf.tg.start(cl)
 
-        c1 = await sf.client(name="Foom")
+        await sf.client(name="Foom")
         c2 = await sf.client()
 
         @sf.tg.start_soon

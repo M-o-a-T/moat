@@ -14,7 +14,8 @@ try:
 except ImportError:
     import asyncio
 
-    cancelled_class = lambda: asyncio.CancelledError
+    def cancelled_class():
+        return asyncio.CancelledError
 else:
     cancelled_class = anyio.get_cancelled_exc_class
 

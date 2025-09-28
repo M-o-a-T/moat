@@ -253,7 +253,7 @@ class Cmd(BaseCmd):
         if x is None:
             os.rename(p, q)
         else:
-            r = self._fsp(x)
+            x = self._fsp(x)
             # exchange contents, via third file
             try:
                 _efix(os.stat, x)

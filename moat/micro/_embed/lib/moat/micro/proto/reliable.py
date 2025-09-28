@@ -202,7 +202,7 @@ class ReliableMsg(StackedMsg):
             ntx = None if self.t_recv is None else ticks_diff(self.t_recv, t)
             nk = None
             for k, mte in self.m_send.items():
-                m, tx, e = mte
+                _m, tx, _e = mte
                 if tx is None or tx is False:
                     continue
                 txd = ticks_diff(tx, t)

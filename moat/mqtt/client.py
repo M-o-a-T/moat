@@ -817,7 +817,7 @@ class MQTTClient:
 
         for key in ["uri"]:
             if broker_conf.get(key, None) is None:
-                raise ClientException("Missing connection parameter '%s'" % key)
+                raise ClientException(f"Missing connection parameter {key !r}")
 
         s = Session(self.plugins_manager)
         s.broker_uri = broker_conf["uri"]

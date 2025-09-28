@@ -92,7 +92,7 @@ async def set_(obj, src, dst, driver, **kw):
         kw["path_"] += ((P("src"), src),)
     if dst:
         kw["path_"] += ((P("dst"), dst),)
-    res = await node_attr(obj, P("gate") + obj.path, **kw)
+    await node_attr(obj, P("gate") + obj.path, **kw)
 
 
 class nstr:  # noqa: D101

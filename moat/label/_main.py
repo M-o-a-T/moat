@@ -293,7 +293,7 @@ def print_sheet(obj, sheets, test):
                 _testpage(p, fmt)
             p.set_line_width(0.5)
 
-            xm, ym = fmt.extent
+            xm, _ym = fmt.extent
             p.set_coord(sh.start % xm, sh.start // xm)
             w, h = fmt.size
 

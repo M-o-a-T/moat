@@ -172,7 +172,6 @@ class SignalClient:
             "recipient": "recipientAddress.number",
         }
         timestamps = {}
-        unknown = []  # pylint: disable=unused-variable
         contacts = []
         groups = []
         attachments = []
@@ -181,7 +180,7 @@ class SignalClient:
             attachments_as_bytes,
         )
         try:
-            unknown, contacts, groups = await self.get_recipients(recipients)
+            _unknown, contacts, groups = await self.get_recipients(recipients)
             params = {
                 "account": self._account,
                 "message": message,

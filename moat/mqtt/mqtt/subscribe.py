@@ -81,7 +81,7 @@ class SubscribePacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != SUBSCRIBE:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for SubscribePacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for SubscribePacket init",
                 )
             header = fixed
 

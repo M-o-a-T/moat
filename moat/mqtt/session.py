@@ -222,8 +222,7 @@ class Session:  # noqa: D101
                 self.client_id,
             )
             raise MQTTException(
-                "[MQTT-4.7.3-1] - %s invalid TOPIC sent in PUBLISH message,closing connection"
-                % self.client_id,
+                f"[MQTT-4.7.3-1] - {self.client_id} invalid TOPIC sent in PUBLISH message,closing connection",
             )
         if "#" in app_message.topic or "+" in app_message.topic:
             self.logger.warning(
@@ -231,8 +230,7 @@ class Session:  # noqa: D101
                 self.client_id,
             )
             raise MQTTException(
-                "[MQTT-3.3.2-2] - %s invalid TOPIC sent in PUBLISH message, closing connection"
-                % self.client_id,
+                f"[MQTT-3.3.2-2] - {self.client_id} invalid TOPIC sent in PUBLISH message, closing connection",
             )
         if app_message.qos == QOS_0 and self._delivered_message_queue.qsize() >= 9999:
             self.logger.warning("delivered messages queue full. QOS_0 message discarded")

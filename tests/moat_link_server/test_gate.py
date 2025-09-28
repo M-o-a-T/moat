@@ -77,8 +77,8 @@ async def test_gate_mqtt(cfg):  # noqa: D103
                 async for m in mon:
                     got.append((m.path, m.data))
 
-        d_src = await sf.tg.start(mon_src)
-        d_dst = await sf.tg.start(mon_dst)
+        await sf.tg.start(mon_src)
+        await sf.tg.start(mon_dst)
 
         await c.d_set(
             P("gate.test"),
@@ -156,7 +156,6 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         TESTCFG = copy.deepcopy(CFG["kv"])
         TESTCFG.server.port = None
         TESTCFG.root = "test"
-        server_ctx = client_ctx = False
 
         clock = trio.lowlevel.current_clock()
         try:
@@ -217,8 +216,8 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
                 async for m in mon:
                     got.append((m.path, m.value))
 
-        d_src = await sf.tg.start(mon_src)
-        d_dst = await sf.tg.start(mon_dst)
+        await sf.tg.start(mon_src)
+        await sf.tg.start(mon_dst)
 
         await c.d_set(
             P("gate.test"),
@@ -296,8 +295,8 @@ async def test_gate_codec(cfg):  # noqa: D103
                 async for m in mon:
                     got.append((m.path, m.data))
 
-        d_src = await sf.tg.start(mon_src)
-        d_dst = await sf.tg.start(mon_dst)
+        await sf.tg.start(mon_src)
+        await sf.tg.start(mon_dst)
 
         await c.d_set(
             P("gate.tester"),

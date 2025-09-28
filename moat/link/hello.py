@@ -10,16 +10,16 @@ import logging
 from attrs import define, field
 
 from moat.util import P
-from moat.lib.cmd.base import MsgSender
 
 from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min
-from .auth import AuthMethod
 from .common import CmdCommon
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from .auth import AuthMethod
+    from moat.lib.cmd.base import MsgSender
     from moat.lib.cmd import Key
     from moat.lib.cmd.msg import Msg
 

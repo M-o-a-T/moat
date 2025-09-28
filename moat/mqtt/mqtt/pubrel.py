@@ -30,7 +30,7 @@ class PubrelPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != PUBREL:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for PubrelPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for PubrelPacket init",
                 )
             header = fixed
         super().__init__(header)

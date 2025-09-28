@@ -204,10 +204,9 @@ async def setup(
             dst = MoatDevPath(root).connect_repl(repl)
             if source:
                 if rom:
-                    async with anyio.TemporaryDirectory() as wdst:
-                        await do_copy(source, dst, dest, cross, wdst=tf)
-                        rom = await make_romfs(tf)
-                        await write_rom(tf)
+                    await do_copy(source, dst, dest, cross, wdst=tf)
+                    rom = await make_romfs(tf)
+                    await write_rom(tf)
                 else:
                     await do_copy(source, dst, dest, cross)
             if state and not watch:

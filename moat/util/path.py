@@ -586,7 +586,7 @@ class Path(collections.abc.Sequence):
                 elif p[1] in (":", "h", "p"):
                     res.append(_decol(p))
                 elif p[1] == "b":
-                    res.append(int(p[2:], 2))
+                    res.append(int(p[2:], 2))  # noqa:FURB166  # buggy
                 elif p[1] == "e":
                     pass
                 elif p[1] == "f":
@@ -601,6 +601,8 @@ class Path(collections.abc.Sequence):
                 elif p[1] == "n":
                     if len(p) == 2:
                         res.append(None)
+                elif p[1] == "o":
+                    res.append(int(p[2:], 8))  # noqa:FURB166  # buggy
                 elif p[1] == "s":
                     res.append(b64decode(_decol(p[2:]).encode("ascii")))
                 elif p[1] == "t":
@@ -609,7 +611,7 @@ class Path(collections.abc.Sequence):
                 elif p[1] == "v":
                     res.append(_decol(p[2:]).encode("ascii"))
                 elif p[1] == "x":
-                    res.append(int(p[2:], 16))
+                    res.append(int(p[2:], 16))  # noqa:FURB166  # buggy
                 elif p[1] == "y":
                     res.append(bytes.fromhex(p[2:]))
 

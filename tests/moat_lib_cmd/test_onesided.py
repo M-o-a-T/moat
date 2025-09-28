@@ -26,7 +26,7 @@ async def test_no_stream_in(no_s):  # noqa: D103
             await msg.result("Nope")
 
     with OptCtx(pytest.raises(NoStream) if no_s else None):
-        async with ungroup, scaffold(EP(), None) as (a, b):
+        async with ungroup, scaffold(EP(), None) as (_a, b):
             async with b.cmd("Test", 123).stream_out() as st:
                 assert tuple(st.args) == ("Nope",)
                 await anyio.sleep(0.05)
@@ -56,7 +56,7 @@ async def test_no_stream_out(no_s):  # noqa: D103
             await msg.result("Nope")
 
     with OptCtx(pytest.raises(NoStream) if no_s else None):
-        async with ungroup, scaffold(EP(), None) as (a, b):
+        async with ungroup, scaffold(EP(), None) as (_a, b):
             n = 0
             async with b.cmd("Test", 123).stream_in() as st:
                 assert tuple(st.args) == ("Nope",)
@@ -87,7 +87,7 @@ async def test_write_both():  # noqa: D103
                 await msg.result("OK", 4)
 
     with pytest.raises(NoStream):
-        async with ungroup, scaffold(EP(), None) as (a, b):
+        async with ungroup, scaffold(EP(), None) as (_a, b):
             async with b.cmd("Test", 123).stream_out() as st:
                 assert tuple(st.args) == ("Takeme",)
                 await st.send(1, "a")

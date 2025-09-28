@@ -7,8 +7,6 @@ from abc import ABCMeta, abstractmethod
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from moat.util import CtxObj, P, Path, as_service, attrdict
-from moat.link import protocol_version
-from moat.util.misc import srepr
 
 from typing import TYPE_CHECKING
 
@@ -98,7 +96,7 @@ class Notify:
                             continue
                         if isinstance(msg, dict):
                             if "title" not in msg:
-                                title = str(path)
+                                msg["title"] = str(path)
                             await self.send(topic=path, **msg)
                         else:
                             await self.send(topic=path, title="?", msg=str(msg))
@@ -149,7 +147,7 @@ class Notify:
                             except TimeoutError:
                                 break
 
-                res = await self.send(topic="error.notify", **keep)
+                await self.send(topic="error.notify", **keep)
                 bad = True
 
 

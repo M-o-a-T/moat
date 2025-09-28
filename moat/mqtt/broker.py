@@ -315,7 +315,7 @@ class Broker:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
             self.logger.warning("[WARN-0001] Invalid method call at this moment: %r", exc)
             raise BrokerException(  # pylint:disable=W0707 # noqa:B904
-                "Broker instance can't be started: %s" % exc,
+                f"Broker instance can't be started: {exc}",
             )
 
         await self.plugins_manager.fire_event(EVENT_BROKER_PRE_START)
@@ -353,7 +353,7 @@ class Broker:
                             sc.verify_mode = ssl.CERT_OPTIONAL
                         except KeyError as ke:
                             raise BrokerException(  # pylint:disable=W0707 # noqa:B904
-                                "'certfile' or 'keyfile' configuration parameter missing: %s" % ke,
+                                f"'certfile' or 'keyfile' configuration parameter missing: {ke}",
                             )
                         except FileNotFoundError as fnfe:
                             raise BrokerException(  # pylint:disable=W0707 # noqa:B904
@@ -368,7 +368,7 @@ class Broker:
                         port = int(s_port)
                     except ValueError:
                         raise BrokerException(  # pylint:disable=W0707 # noqa:B904
-                            "Invalid port value in bind value: %s" % listener["bind"],
+                            "Invalid port value in bind value: {listener['bind']}"
                         )
 
                     async def server_task(evt, cb, address, port, ssl_context):
@@ -495,7 +495,7 @@ class Broker:
     async def client_connected(self, listener_name, adapter: BaseAdapter):  # noqa: D102
         server = self._servers.get(listener_name, None)
         if not server:
-            raise BrokerException("Invalid listener name '%s'" % listener_name)
+            raise BrokerException(f"Invalid listener name '{listener_name}'")
 
         async with server._client_limit():  # noqa: SLF001
             return await self.client_connected_(listener_name, adapter)

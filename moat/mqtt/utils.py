@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def format_client_message(session=None, address=None, port=None):  # noqa: D103
     if session:
-        return "(client id=%s)" % session.client_id
+        return f"(client id={session.client_id})"
     elif address is not None and port is not None:
         return "(client @=%s:%d)" % (address, port)
     else:

@@ -62,8 +62,8 @@ async def test_basic_error():
 
     ep = EP()
     ms = MsgSender(ep)
-    with pytest.raises(RuntimeError) as err:
-        res = await ms.cmd("Err")
+    with pytest.raises(RuntimeError):
+        await ms.cmd("Err")
 
 
 @pytest.mark.anyio
@@ -123,7 +123,7 @@ async def test_basic_res():  # noqa: D103
             ncall += 1
             await msg.result({"C": msg.cmd, "R": tuple(msg.args)})
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None) as (_a, b):
         # note the comma
         res = await b.cmd("Test", 123)  # fmt:skip  ## (res,) = …
         (res,) = res
@@ -139,7 +139,7 @@ async def test_error():  # noqa: D103
             rcmd  # noqa:B018
             raise RuntimeError("Duh", msg.args)
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None) as (_a, b):
         with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Test", 123)
             print(f"OWCH: result is {res!r}")
@@ -157,7 +157,7 @@ async def test_more():  # noqa: D103
             await anyio.sleep(msg.args[0] / 10)
             await msg.result(msg[0])
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None) as (_a, b):
         # note the comma
         r = []
         async with anyio.create_task_group() as tg:
@@ -186,7 +186,7 @@ async def test_return():  # noqa: D103
             assert tuple(msg.args) == (123,)
             await msg.result(("Foo", 234))
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None) as (_a, b):
         res = await b.cmd("Test", 123)
         # note the index
         assert res[0] == ("Foo", 234)
@@ -202,7 +202,7 @@ async def test_return2():  # noqa: D103
             assert tuple(msg.args) == (123,)
             await msg.result("Foo", 234)
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None) as (_a, b):
         # neither a comma nor an index here
         res = await b.cmd("Test", 123)
         assert res.args == ["Foo", 234]
@@ -227,7 +227,7 @@ async def test_stream_in(use_socket):  # noqa: D103
                 await msg.result("OK", len(res) + 1)
             assert res == [1, 3, 2]
 
-    async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
         async with b.cmd("Test", 123).stream_out() as st:
             assert tuple(st.args) == ("LetsGo",)
             await st.send(1, "a")
@@ -253,7 +253,7 @@ async def test_stream_out(use_socket):  # noqa: D103
                 await st.send(2, "bc")
                 await msg.result({})
 
-    async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
         n = 0
         async with b.cmd("Test", 123, 456, answer=42).stream_in() as st:
             assert tuple(st.args) == ("Takeme",)

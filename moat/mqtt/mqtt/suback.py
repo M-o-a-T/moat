@@ -76,7 +76,7 @@ class SubackPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != SUBACK:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for SubackPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for SubackPacket init",
                 )
             header = fixed
 

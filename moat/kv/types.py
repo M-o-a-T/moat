@@ -301,7 +301,7 @@ class CodecEntry(Entry):
             for v, w in value["in"]:
                 w  # noqa:B018
                 try:
-                    r = dec(v)
+                    dec(v)
                 except Exception as exc:
                     raise ValueError(
                         f"failed decoder at {self.path} on {v!r} with {exc!r}",
@@ -317,7 +317,7 @@ class CodecEntry(Entry):
             enc = make_proc(value.encode, ("value",), self.path)
             for v, _w in value["out"]:
                 try:
-                    r = enc(v)
+                    enc(v)
                 except Exception as exc:
                     raise ValueError(
                         f"failed encoder at {self.path} on {v!r} with {exc!r}",

@@ -30,7 +30,7 @@ class PubcompPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != PUBCOMP:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for PubcompPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for PubcompPacket init",
                 )
             header = fixed
         super().__init__(header)

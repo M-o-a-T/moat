@@ -18,7 +18,7 @@ class DisconnectPacket(MQTTPacket):  # noqa: D101
         else:
             if fixed.packet_type != DISCONNECT:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for DisconnectPacket init" % fixed.packet_type,
+                    f"Invalid fixed packet type {fixed.packet_type} for DisconnectPacket init",
                 )
             header = fixed
         super().__init__(header)

@@ -57,8 +57,8 @@ async def test_basic_res():  # noqa: D103
             return {"C": msg.cmd, "R": tuple(msg.args)}
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         # note the comma
         (res,) = await b.cmd("Test", 123)  # fmt: skip  ## (res,) = …
@@ -74,8 +74,8 @@ async def test_error():  # noqa: D103
             raise RuntimeError("Duh", msg.args)
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Test", 123)
@@ -95,8 +95,8 @@ async def test_more():  # noqa: D103
             return msg.args[0]
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         # note the comma
         r = []
@@ -127,8 +127,8 @@ async def test_return():  # noqa: D103
             return ("Foo", 234)
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         res = await b.cmd("Test", 123)
         # note the index
@@ -146,8 +146,8 @@ async def test_return2():  # noqa: D103
             await msg.result("Foo", 234)
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         # neither a comma nor an index here
         res = await b.cmd("Test", 123)
@@ -172,8 +172,8 @@ async def test_stream_in():  # noqa: D103
             assert res == [1, 3, 2]
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         async with b.cmd("Test", 123).stream_out() as st:
             assert tuple(st.args) == ()
@@ -200,8 +200,8 @@ async def test_stream_out():  # noqa: D103
                 await msg.result({})
 
     async with (
-        scaffold(EP(), None, "A") as (a, x),
-        scaffold(Fwd(x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (_a, x),
+        scaffold(Fwd(x), None, "C") as (_y, b),
     ):
         n = 0
         async with b.cmd("Test", 123, 456, answer=42).stream_in() as st:

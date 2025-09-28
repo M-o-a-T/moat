@@ -67,7 +67,7 @@ async def list_(obj, device, family):
             elif not isinstance(p[0], int):
                 return None
             elif len(p) == 1:
-                return Path("%02x" % p[0])
+                return Path(f"{p[0]:02x}")
             else:
                 return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
 

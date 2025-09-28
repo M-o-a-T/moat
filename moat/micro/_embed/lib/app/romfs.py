@@ -155,6 +155,7 @@ class Cmd(BaseCmd):
         blk = msg[2] if len(msg) > 2 else 64
         nblk = dev.buf_sz * dev.buf_n
         nblk = (nblk + blk - 1) // blk
+        off  # noqa:B018
         async with msg.stream_out() as st:
             while nblk > 0:
                 nblk -= 1

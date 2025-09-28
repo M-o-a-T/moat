@@ -489,7 +489,6 @@ class ServerClient(LinkCommon):
     async def stream_e_mon(self, msg: Msg):
         path = msg[0]
         kw = msg.kw
-        meta = MsgMeta(origin=self.name)
         kw["_start"] = time.time()
         kw["_log"] = log = []
         try:
@@ -1630,19 +1629,18 @@ class Server(MsgHandler):
                         self._server_link_add.set()
                         self._server_link_add = anyio.Event()
 
-                        async with anyio.create_task_group() as tg:
-                            # ask it about its existing clients
-                            async with conn.cl().stream_in() as cld:
-                                async for cl in cld:
-                                    cl = cl[0]  # noqa:PLW2901
-                                    if cl == name or cl == self.name:
-                                        continue
-                                    if not isinstance(self.clients.get(cl, None), ServerClient):
-                                        self._clients[cl] = ClientStub(self, name, cl)
+                        # ask it about its existing clients
+                        async with conn.cl().stream_in() as cld:
+                            async for cl in cld:
+                                cl = cl[0]  # noqa:PLW2901
+                                if cl == name or cl == self.name:
+                                    continue
+                                if not isinstance(self.clients.get(cl, None), ServerClient):
+                                    self._clients[cl] = ClientStub(self, name, cl)
 
-                            await anyio.sleep(30)
-                            backoff = 0
-                            await anyio.sleep_forever()
+                        await anyio.sleep(30)
+                        backoff = 0
+                        await anyio.sleep_forever()
 
                 except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
                     self.logger.warning("Link to %s closed", name)
@@ -1853,7 +1851,7 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd, skp, tags = await self.load_file(fn=fn)
+        upd, _skp, tags = await self.load_file(fn=fn)
         if not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):
@@ -1912,7 +1910,6 @@ class Server(MsgHandler):
         fs.sort()
         fn = None
 
-        tupd = 0
         while fs:
             if fn is None:
                 fn = fs.pop()
@@ -1924,7 +1921,7 @@ class Server(MsgHandler):
             done.add(sfn)
 
             try:
-                upd, skp, tags = await self.load_file(fn=fn)
+                upd, _skp, tags = await self.load_file(fn=fn)
             except Exception as exc:
                 self.logger.error("Failed to load %s", fn, exc_info=exc)
                 await fn.rename(fn.with_suffix(".moat.bad"))
@@ -1936,7 +1933,7 @@ class Server(MsgHandler):
                 # extract the first tag's value
                 tt = tags[0]
                 while isinstance(tt, Tag):
-                    tt = t = tt.value
+                    tt = tt.value
                 if isinstance(tt, Sequence):
                     tt = tt[1]
                 fn = tt.get("prev", None)

@@ -63,7 +63,7 @@ def Fwd(*a, **k):
             b = StreamLoop(None, log + "<")
             a.attach_remote(b)
             b.attach_remote(a)
-            xa = await AC_use(self, a)
+            await AC_use(self, a)
             xb = await AC_use(self, b)
             self.sd = MsgSender(xb)
 

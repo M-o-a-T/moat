@@ -127,7 +127,7 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
         try:
             connect = await ConnectPacket.from_stream(stream)
         except NoDataException:
-            raise MQTTException("Client closed the connection")  # pylint:disable=W0707
+            raise MQTTException("Client closed the connection")  # pylint:disable=W0707 # noqa:B904
         logger.debug("< B %r", connect)
         await plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connect)
         # this shouldn't be required anymore since broker generates for each client a random client_id if not provided

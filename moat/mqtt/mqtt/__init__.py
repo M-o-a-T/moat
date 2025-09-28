@@ -60,6 +60,6 @@ def packet_class(fixed_header: MQTTFixedHeader):  # noqa: D103
         cls = packet_dict[fixed_header.packet_type]
         return cls
     except KeyError:
-        raise MoatMQTTException(  # pylint:disable=W0707
+        raise MoatMQTTException(  # pylint:disable=W0707 # noqa:B904
             "Unexpected packet Type '%s'" % fixed_header.packet_type,
         )

@@ -61,8 +61,8 @@ class TypeEntry(Entry):
                         jsonschema.validate(instance=v, schema=schema)
                     if code is not None:
                         code(v, entry=None)
-                except Exception:
-                    raise ValueError(f"failed on good value {v!r}")
+                except Exception as exc:
+                    raise ValueError(f"failed on good value {v!r}") from exc
             for v in value["bad"]:
                 self.parent.check_value(v)
                 try:
@@ -117,7 +117,7 @@ class MatchEntry(MetaEntry):
             self.metaroot["type"].follow(value.type, create=False)
         except KeyError:
             logger.exception("Type %r doesn't exist", value.type)
-            raise ClientError("This type does not exist")
+            raise ClientError("This type does not exist") from None
         # crashes if nonexistent
         await super().set(value)
 

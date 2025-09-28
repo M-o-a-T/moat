@@ -334,7 +334,7 @@ class MQTTClient:
                     self.logger.error(
                         "Maximum number of connection attempts reached. Reconnection aborted",
                     )
-                    raise ConnectException(  # pylint: disable=W0707
+                    raise ConnectException(  # pylint: disable=W0707 # noqa:B904
                         "Too many connection attempts failed",
                     )
                 exp = 2**nb_attempt
@@ -714,7 +714,7 @@ class MQTTClient:
                 return_code = await self._handler.mqtt_connect()
             except NoDataException:
                 self.logger.warning("Connection broken by broker")
-                raise ConnectException("Connection broken by broker")  # pylint: disable=W0707
+                raise ConnectException("Connection broken by broker")  # pylint: disable=W0707 # noqa:B904
             if return_code != CONNECTION_ACCEPTED:
                 self.session.transitions.disconnect()
                 self.logger.warning("Connection rejected with code '%s'", return_code)

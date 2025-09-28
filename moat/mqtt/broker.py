@@ -314,7 +314,7 @@ class Broker:
         except (MachineError, ValueError) as exc:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
             self.logger.warning("[WARN-0001] Invalid method call at this moment: %r", exc)
-            raise BrokerException(  # pylint:disable=W0707
+            raise BrokerException(  # pylint:disable=W0707 # noqa:B904
                 "Broker instance can't be started: %s" % exc,
             )
 
@@ -352,11 +352,11 @@ class Broker:
                             sc.load_cert_chain(listener["certfile"], listener["keyfile"])
                             sc.verify_mode = ssl.CERT_OPTIONAL
                         except KeyError as ke:
-                            raise BrokerException(  # pylint:disable=W0707
+                            raise BrokerException(  # pylint:disable=W0707 # noqa:B904
                                 "'certfile' or 'keyfile' configuration parameter missing: %s" % ke,
                             )
                         except FileNotFoundError as fnfe:
-                            raise BrokerException(  # pylint:disable=W0707
+                            raise BrokerException(  # pylint:disable=W0707 # noqa:B904
                                 "Can't read cert files '{}' or '{}' : {}".format(
                                     listener["certfile"], listener["keyfile"], fnfe
                                 ),
@@ -367,7 +367,7 @@ class Broker:
                     try:
                         port = int(s_port)
                     except ValueError:
-                        raise BrokerException(  # pylint:disable=W0707
+                        raise BrokerException(  # pylint:disable=W0707 # noqa:B904
                             "Invalid port value in bind value: %s" % listener["bind"],
                         )
 

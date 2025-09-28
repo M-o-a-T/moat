@@ -60,7 +60,7 @@ class MQTTFixedHeader:  # noqa: D101
             packet_type = (self.packet_type << 4) | self.flags
             out.append(packet_type)
         except OverflowError:
-            raise CodecException(  # pylint:disable=W0707
+            raise CodecException(  # pylint:disable=W0707 # noqa:B904
                 "packet_type encoding exceed 1 byte length: value=%d" % (packet_type,),
             )
 

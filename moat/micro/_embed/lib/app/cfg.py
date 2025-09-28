@@ -46,7 +46,7 @@ class Cmd(BaseCmd):
             else:
                 await msg.result(res)
         except KeyError as exc:
-            raise ExpKeyError(*exc.args)
+            raise ExpKeyError(*exc.args) from None
 
     doc_w = dict(_d="write cfg", p="Path:subpart", d="any:Data")
 

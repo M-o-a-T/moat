@@ -186,7 +186,7 @@ class Node:
                 try:
                     s = s._sub[k]  # noqa:SLF001
                 except KeyError:
-                    raise ExpKeyError(k)
+                    raise ExpKeyError(k) from None
         else:
             s = self._sub[item]
 

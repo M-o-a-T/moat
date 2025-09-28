@@ -605,7 +605,7 @@ class Msg(MsgLink, MsgResult):
         try:
             res = await self._recv_q.get()
         except EOFError:
-            raise StopAsyncIteration
+            raise StopAsyncIteration # noqa:B904
 
         await self._qsize()
         return MsgResult(*res)

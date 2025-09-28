@@ -49,8 +49,8 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         try:
             async with self.repo.git_lock:
                 await self.repo.exec("git", "remote", "get-url", self.api.name, capture=True)
-        except CalledProcessError:
-            raise NoSuchRepo(self)
+        except CalledProcessError as exc:
+            raise NoSuchRepo(self) from exc
 
         self.data = attrdict()
 

@@ -36,7 +36,7 @@ try:
 
     rng = RAND_bytes
 except (AttributeError, ImportError):
-    raise RNGError  # pylint: disable=raise-missing-from
+    raise RNGError  # pylint: disable=raise-missing-from # noqa:B904
 
 
 class DiffieHellman:

@@ -78,7 +78,7 @@ class AlertIter:
             try:
                 a, p, d = await self.q.get()
             except EOFError:
-                raise StopAsyncIteration
+                raise StopAsyncIteration  # noqa:B904
         res = {"a": a, "p": p}
         if d is not None:
             res["d"] = d

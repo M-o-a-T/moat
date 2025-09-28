@@ -67,8 +67,8 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
     async def load_(self):  # noqa: D102
         try:
             self.rid = (await self.repo.exec("rad", ".", capture=True)).strip()
-        except CalledProcessError:
-            raise NoSuchRepo(self)
+        except CalledProcessError as exc:
+            raise NoSuchRepo(self) from exc
         async with (
             anyio.NamedTemporaryFile(mode="w", delete=False) as f,
             anyio.NamedTemporaryFile(mode="r") as g,

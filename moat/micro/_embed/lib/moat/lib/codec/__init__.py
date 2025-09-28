@@ -19,7 +19,7 @@ def get_codec(codec: str, **kw) -> Codec:
     """
     Loads and initializes the named codec.
     """
-    from moat.util import import_
+    from moat.util import import_  # noqa: PLC0415
 
     if "." not in codec:
         if codec.startswith("std-"):

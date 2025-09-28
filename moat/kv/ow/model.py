@@ -322,7 +322,7 @@ class OWFSroot(ClientRoot):  # noqa: D101
 
 class BrokenDict:  # noqa: D101
     def __getattr__(self, k, v=None):
-        import pdb
+        import pdb  # noqa: PLC0415
 
         pdb.set_trace()
         return object.__getattribute__(self, k, v)

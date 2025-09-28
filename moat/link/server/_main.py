@@ -59,7 +59,7 @@ async def cli(obj, load, save, init, name):
         kw["save"] = save
 
     if name is None:
-        import platform
+        import platform  # noqa: PLC0415
 
         name = platform.node()
 

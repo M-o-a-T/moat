@@ -184,7 +184,7 @@ async def test_eval(tmp_path, cons):
     "test proxying"
     cf2 = {} if cons is None else {"l": {"link": {"cons": cons}}}
     async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
-        from pprint import pprint  # pylint:disable=import-outside-toplevel
+        from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
         dr = await d.cmd("l.dir_")
         pprint(dr.kw)
@@ -216,7 +216,7 @@ async def test_eval(tmp_path, cons):
 async def test_msgpack(tmp_path):
     "test proxying"
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
-        from pprint import pprint  # pylint:disable=import-outside-toplevel
+        from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
         dr = await d.cmd("r.dir_")
         pprint(dr.kw)

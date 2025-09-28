@@ -54,7 +54,7 @@ class BrokerSysPlugin:  # noqa: D101
 
     async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: D102
         self._stats[STAT_START_TIME] = datetime.now()
-        from moat.mqtt.version import get_version
+        from moat.mqtt.version import get_version  # noqa: PLC0415
 
         version = "MoaT-MQTT version " + get_version()
         await self.context.broadcast_message(

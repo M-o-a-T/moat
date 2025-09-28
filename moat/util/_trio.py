@@ -23,7 +23,7 @@ class Instr(Instrument):
 
 def hookup(runner=None):
     if runner is None:
-        import inspect as i
+        import inspect as i  # noqa: PLC0415
 
         f = i.currentframe().f_back
         while "runner" not in f.f_locals:

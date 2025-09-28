@@ -155,7 +155,7 @@ def _pad(buf, n):
 @std_ext.decoder(52)
 def _dec_ip4address(codec, buf) -> IPv4Address | IPv4Network | IPv4Interface:
     codec  # noqa:B018
-    from ipaddress import IPv4Address, IPv4Interface, IPv4Network
+    from ipaddress import IPv4Address, IPv4Interface, IPv4Network  # noqa: PLC0415
 
     if isinstance(buf, (bytes, bytearray, memoryview)):
         return IPv4Address(_pad(buf, 4))
@@ -172,7 +172,7 @@ def _dec_ip4address(codec, buf) -> IPv4Address | IPv4Network | IPv4Interface:
 @std_ext.decoder(54)
 def _dec_ip6address(codec, buf) -> IPv6Address | IPv6Network | IPv6Interface:
     codec  # noqa:B018
-    from ipaddress import IPv6Address, IPv6Interface, IPv6Network
+    from ipaddress import IPv6Address, IPv6Interface, IPv6Network  # noqa: PLC0415
 
     if isinstance(buf, (bytes, bytearray, memoryview)):
         return IPv6Address(_pad(buf, 16))

@@ -59,9 +59,9 @@ async def init(file):
     Using this command, followed by "moat kv server -l <outfile> <node>", is
     equivalent to running "moat kv server -i 'Initial data' <node>.
     """
-    from moat.link.meta import MsgMeta
-    from moat.util.cbor import gen_start, gen_stop
-    from moat.util.msg import MsgWriter
+    from moat.link.meta import MsgMeta  # noqa: PLC0415
+    from moat.util.cbor import gen_start, gen_stop  # noqa: PLC0415
+    from moat.util.msg import MsgWriter  # noqa: PLC0415
 
     meta = MsgMeta(origin="init")
     async with MsgWriter(path=file, codec="std-cbor") as f:
@@ -254,7 +254,7 @@ async def do_sub(client, args, cfg):
             for topic in args["topic"]:
                 tg.start_soon(run_sub, client, topic, args, cfg.link, lock)
             if args["kv_topic"]:
-                from moat.kv.client import open_client as kv_client
+                from moat.kv.client import open_client as kv_client  # noqa: PLC0415
 
                 async with kv_client(**cfg.kv) as kvc:
                     for topic in args["kv_topic"]:

@@ -166,7 +166,7 @@ class DProxy(Proxy):
             try:
                 return self.a[i]
             except TypeError:
-                from moat.util.compat import log
+                from moat.util.compat import log  # noqa: PLC0415
 
                 log("*ERR %r", self.k)
                 raise KeyError(i) from None

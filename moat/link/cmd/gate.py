@@ -37,8 +37,8 @@ async def run(obj):
     """
     Run a gateway setup.
     """
-    from moat.link.gate import run_gate
-    from moat.util.systemd import as_service
+    from moat.link.gate import run_gate  # noqa: PLC0415
+    from moat.util.systemd import as_service  # noqa: PLC0415
 
     async with as_service(obj) as srv:
         await srv.tg.start(run_gate, obj.cfg, obj.conn, P("gate") + obj.path)

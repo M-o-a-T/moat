@@ -686,8 +686,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         # pylint: disable=import-outside-toplevel
-        import sys
-        import traceback
+        import sys  # noqa: PLC0415
+        import traceback  # noqa: PLC0415
 
         code = []
         for threadId, frame in sys._current_frames().items():  # noqa:SLF001 pylint:disable=protected-access

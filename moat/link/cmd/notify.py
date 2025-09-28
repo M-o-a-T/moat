@@ -28,7 +28,7 @@ async def run(obj, backend):
     This command monitors the 'notify' subpath and forwards messages to
     your ntfy.sh instance.
     """
-    from moat.link.notify import Notify
+    from moat.link.notify import Notify  # noqa: PLC0415
 
     cfg = obj.cfg.link.notify
     if backend:

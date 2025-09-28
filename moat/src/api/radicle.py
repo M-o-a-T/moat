@@ -89,7 +89,7 @@ exec cat <$1 >{g.name!r}
                     "--edit",
                     env={"EDITOR": f.name, "HOME": os.environ["HOME"]},
                 )
-                import json
+                import json  # noqa: PLC0415
 
                 self.data = to_attrdict(json.loads(await g.read()))
             finally:

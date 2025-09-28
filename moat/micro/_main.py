@@ -180,7 +180,7 @@ async def setup_(ctx, run_section=None, **kw):
     MoaT must not currently run on the target. If it does,
     send `` TBD `` commmands.
     """
-    from .setup import setup
+    from .setup import setup  # noqa: PLC0415
 
     default = {
         k: v
@@ -237,8 +237,8 @@ async def sync_(ctx, **kw):
     Sync of MoaT code on a running MicroPython device.
 
     """
-    from .path import MoatFSPath
-    from .setup import do_copy, do_update
+    from .path import MoatFSPath  # noqa: PLC0415
+    from .setup import do_copy, do_update  # noqa: PLC0415
 
     obj = ctx.obj
     cfg = obj.mcfg
@@ -349,9 +349,9 @@ async def cmd(obj, path, time, parts, **attrs):
         "-" if not val else " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
 
-    from time import monotonic as tm
+    from time import monotonic as tm  # noqa: PLC0415
 
-    from moat.util.times import humandelta
+    from moat.util.times import humandelta  # noqa: PLC0415
 
     t1 = tm()
     async with (
@@ -362,7 +362,7 @@ async def cmd(obj, path, time, parts, **attrs):
             t2 = tm()
             cmd = cfr.sub_at(path)
             if parts:
-                from moat.micro.cmd.tree.dir import SubStore
+                from moat.micro.cmd.tree.dir import SubStore  # noqa: PLC0415
 
                 res = await SubStore(cmd).get(*args, **val)
             else:
@@ -480,7 +480,7 @@ async def cfg_(
         return
 
     if read_client or write_client:
-        from .path import MoatFSPath
+        from .path import MoatFSPath  # noqa: PLC0415
 
     p_cfg = cfg.path.get("cfg", P("cfg_"))
     p_fs = cfg.path.get("fs", P("fs"))
@@ -579,17 +579,17 @@ async def rom(obj, path, device):
 async def path_(obj, manifest):
     """Path to the embedded system's files"""
 
-    import pathlib
+    import pathlib  # noqa: PLC0415
 
-    import moat.micro
+    import moat.micro  # noqa: PLC0415
 
     if manifest:
-        import moat.micro._embed._tag as m
+        import moat.micro._embed._tag as m  # noqa: PLC0415
 
         print(m.__file__.replace("_tag", "manifest"), file=obj.stdout)
         return
 
-    import moat.micro._embed
+    import moat.micro._embed  # noqa: PLC0415
 
     for p in moat.micro._embed.__path__:  # noqa:SLF001
         p = pathlib.Path(p) / "lib"  # noqa:PLW2901

@@ -166,12 +166,12 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
 
     def get_codec(n):
         if n == "python":
-            from pprint import pformat
+            from pprint import pformat  # noqa: PLC0415
 
             return eval, pformat, False, False
 
         if n == "json":
-            import simplejson as json
+            import simplejson as json  # noqa: PLC0415
 
             if stream:
 
@@ -189,11 +189,11 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return json.loads, jdump, False, False
 
         if n == "yaml":
-            import ruyaml as yaml
+            import ruyaml as yaml  # noqa: PLC0415
 
             y = yaml.YAML(typ="safe")
             y.default_flow_style = True, False
-            from moat.util import yload
+            from moat.util import yload  # noqa: PLC0415
 
             def ypr(d, s):
                 if f_dump:
@@ -212,28 +212,28 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             )
 
         if n == "cbor":
-            from moat.lib.codec.cbor import Codec as CBOR
+            from moat.lib.codec.cbor import Codec as CBOR  # noqa: PLC0415
 
             c = CBOR()
             d = CBOR()
             return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-cbor":
-            from moat.util.cbor import StdCBOR
+            from moat.util.cbor import StdCBOR  # noqa: PLC0415
 
             c = StdCBOR()
             d = StdCBOR()
             return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "msgpack":
-            from moat.lib.codec.msgpack import Codec as Msgpack
+            from moat.lib.codec.msgpack import Codec as Msgpack  # noqa: PLC0415
 
             c = Msgpack()
             d = Msgpack()
             return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-msgpack":
-            from moat.util.msgpack import StdMsgpack
+            from moat.util.msgpack import StdMsgpack  # noqa: PLC0415
 
             c = StdMsgpack()
             d = StdMsgpack()
@@ -359,11 +359,11 @@ async def cfg_(obj, path, yaml, empty, load):
 
     Dump the whole config with "moat util cfg :".
     """
-    from .exc import ungroup
+    from .exc import ungroup  # noqa: PLC0415
 
     cfg = obj.cfg
     if load:
-        from .config import ensure_cfg
+        from .config import ensure_cfg  # noqa: PLC0415
 
         for ld in load:
             cfg = ensure_cfg(ld, cfg=cfg)

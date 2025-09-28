@@ -211,7 +211,7 @@ class MQTTClient:
         if client_id is not None:
             self.client_id = client_id
         else:
-            from moat.mqtt.utils import gen_client_id
+            from moat.mqtt.utils import gen_client_id  # noqa: PLC0415
 
             self.client_id = gen_client_id()
             self.logger.debug("Using generated client ID : %s", self.client_id)

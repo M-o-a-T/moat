@@ -46,7 +46,7 @@ class Path(tuple):  # noqa:SLOT001
                 if all(32 <= b < 127 for b in x):
                     res.append(":v" + _escol(x.decode("ascii")))
                 else:
-                    from base64 import b64encode
+                    from base64 import b64encode  # noqa: PLC0415
 
                     res.append(":s" + b64encode(x).decode("ascii"))
                     # no hex

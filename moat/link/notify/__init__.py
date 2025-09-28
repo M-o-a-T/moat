@@ -157,7 +157,7 @@ def get_backend(name: str, link: Link, cfg: dict) -> Backend:
     """
     Fetch the backend named in the config and initialize it.
     """
-    from importlib import import_module
+    from importlib import import_module  # noqa: PLC0415
 
     if "." not in name:
         name = "moat.link.notify." + name

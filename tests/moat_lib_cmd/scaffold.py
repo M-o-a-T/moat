@@ -19,10 +19,10 @@ def res_akw(a, kw):  # noqa: D103
 
 
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
-    import sniffio
+    import sniffio  # noqa: PLC0415
 
     if sniffio.current_async_library() == "asyncio":
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         return anyio._backends._asyncio.SocketStream(  # noqa: SLF001
             *(
@@ -33,7 +33,7 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
             )
         )
     elif sniffio.current_async_library() == "trio":
-        import trio
+        import trio  # noqa: PLC0415
 
         return anyio._backends._trio.SocketStream(trio.socket.from_stdlib_socket(s))  # noqa: SLF001
     else:
@@ -49,7 +49,7 @@ class StreamGate(CtxObj):  # noqa: D101
 
     @asynccontextmanager
     async def _ctx(self):
-        from moat.lib.cmd.anyio import run
+        from moat.lib.cmd.anyio import run  # noqa: PLC0415
 
         async with await _wrap_sock(self.so) as sock, run(self.h, sock, debug=self.s) as out:
             yield out
@@ -65,7 +65,7 @@ class StreamGate(CtxObj):  # noqa: D101
 @asynccontextmanager
 async def scaffold(ha, hb, key="", use_socket=False):  # noqa: D103
     if use_socket:
-        import socket
+        import socket  # noqa: PLC0415
 
         sa, sb = socket.socketpair()
         a = StreamGate(ha, sa, key + ">")

@@ -212,7 +212,7 @@ async def server_(obj, name, host, port, delete):
 @click.argument("server", nargs=-1)
 async def monitor(obj, server):
     """Stand-alone task to monitor one or more OWFS servers."""
-    from .task import task
+    from .task import task  # noqa: PLC0415
 
     async with as_service(obj) as srv:
         await task(obj.client, obj.cfg.kv, server, srv)

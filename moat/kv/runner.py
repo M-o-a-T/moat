@@ -970,8 +970,8 @@ class _BaseRunnerRoot(ClientRoot):
         return await super().as_handler(client, subpath=subpath, _subpath=subpath, cfg=cfg_, **kw)
 
     async def run_starting(self):
-        from .code import CodeRoot
-        from .errors import ErrorRoot
+        from .code import CodeRoot  # noqa: PLC0415
+        from .errors import ErrorRoot  # noqa: PLC0415
 
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)

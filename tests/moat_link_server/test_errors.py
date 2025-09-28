@@ -221,7 +221,7 @@ async def test_wrap_bad(cfg, tmp_path):
         with pytest.raises(KeyError):
             await c.d_get(P("error.test.here"))
 
-    from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_CHANGE
+    from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_CHANGE  # noqa: PLC0415
 
     async with MsgReader(epath, codec="std-cbor") as rd:
         rdr = aiter(rd)

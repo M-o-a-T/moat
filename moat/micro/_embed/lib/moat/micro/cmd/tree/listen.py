@@ -45,7 +45,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         By default, use `console_stack`.
         """
         # pylint:disable=import-outside-toplevel
-        from moat.micro.stacks.console import console_stack
+        from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
         return console_stack(conn, self.cfg)
 
@@ -61,7 +61,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.micro.cmd.stream.cmdmsg import (
+        from moat.micro.cmd.stream.cmdmsg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 
@@ -114,7 +114,7 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.micro.cmd.stream.cmdmsg import (
+        from moat.micro.cmd.stream.cmdmsg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 

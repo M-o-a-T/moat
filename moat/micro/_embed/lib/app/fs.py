@@ -179,7 +179,7 @@ class Cmd(BaseCmd):
         """
         Hash the contents of @p, sha256
         """
-        import hashlib
+        import hashlib  # noqa: PLC0415
 
         _h = hashlib.sha256()
         _mem = memoryview(bytearray(512))

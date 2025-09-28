@@ -40,7 +40,7 @@ class _CReader:
     def __init__(self, cons: bool | int):
         if cons is True:
             try:
-                import machine
+                import machine  # noqa: PLC0415
             except ImportError:
                 cons = 32768
             else:
@@ -213,7 +213,7 @@ class SerialPackerBlkBuf(StackedBlk):
     def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
         super().__init__(None)
 
-        from serialpacker import SerialPacker
+        from serialpacker import SerialPacker  # noqa: PLC0415
 
         self.s = stream
         self.p = SerialPacker(**frame)

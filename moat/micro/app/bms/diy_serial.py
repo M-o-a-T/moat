@@ -12,7 +12,7 @@ def Comm(cfg):
     This app accepts control packets, encodes and forwards them
     to the link, and returns the reply packets.
     """
-    from moat.ems.battery.diy_serial.comm import BattComm
+    from moat.ems.battery.diy_serial.comm import BattComm  # noqa: PLC0415
 
     return BattComm(cfg)
 
@@ -26,6 +26,6 @@ def Cell(cfg):
 
     This BaseCell translates commands to Comm requests.
     """
-    from moat.ems.battery.diy_serial.cell import Cell
+    from moat.ems.battery.diy_serial.cell import Cell  # noqa: PLC0415
 
     return Cell(cfg)

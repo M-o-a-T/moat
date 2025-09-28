@@ -27,13 +27,13 @@ all = ["setup", "install", "do_update", "do_copy"]
 
 
 async def do_update(dst, root, cross, hfn):  # noqa: D103
-    from moat.micro.path import copytree
+    from moat.micro.path import copytree  # noqa: PLC0415
 
     await run_update(dst / "lib", cross=cross, hash_fn=hfn)
 
     # do not use "/". Running micropython tests locally requires
     # all satellite paths to be relative.
-    import moat.micro._embed
+    import moat.micro._embed  # noqa: PLC0415
 
     p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
     await copytree(p / "boot.py", root / "boot.py", cross=None)
@@ -54,7 +54,7 @@ async def do_copy(
 
     @cross is the path of the mpy-cross executable.
     """
-    from .path import copy_over
+    from .path import copy_over  # noqa: PLC0415
 
     if not dest:
         dest = str(source)
@@ -106,9 +106,9 @@ async def setup(
         await install_(cfg, dest=dest)
         print("Firmware installation done.", file=sys.stderr)
 
-    from .direct import DirectREPL
-    from .path import ABytes, MoatDevPath, copy_over
-    from .proto.stream import RemoteBufAnyio
+    from .direct import DirectREPL  # noqa: PLC0415
+    from .path import ABytes, MoatDevPath, copy_over  # noqa: PLC0415
+    from .proto.stream import RemoteBufAnyio  # noqa: PLC0415
 
     codec = get_codec("std-cbor")
 
@@ -154,7 +154,7 @@ async def setup(
                     sys.stderr.buffer.flush()
 
             if mount:
-                from moat.micro.fuse import wrap
+                from moat.micro.fuse import wrap  # noqa: PLC0415
 
                 async with (
                     dsp.sub_at(cfg["path"] / f) as fs,
@@ -318,7 +318,7 @@ async def install_(cfg, dest: Path = None, upload: bool = False):
         if board is None:
             board = "rpi_pico"
 
-    import moat.micro._embed._tag as m
+    import moat.micro._embed._tag as m  # noqa: PLC0415
 
     manifest = m.__file__.replace("_tag", "manifest")
 

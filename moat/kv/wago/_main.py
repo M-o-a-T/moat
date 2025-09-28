@@ -207,8 +207,8 @@ async def server_(obj, name, host, port, delete):
 @click.pass_obj
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller."""
-    from .model import WAGOroot
-    from .task import task
+    from .model import WAGOroot  # noqa: PLC0415
+    from .task import task  # noqa: PLC0415
 
     server = await WAGOroot.as_handler(obj.client)
     await server.wait_loaded()

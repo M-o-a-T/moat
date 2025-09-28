@@ -24,9 +24,9 @@ class Cmd(BaseCmd):
 
     def __init__(self, cfg):
         if cfg.get("fake", False):
-            from moat.micro.test.rtc import state
+            from moat.micro.test.rtc import state  # noqa: PLC0415
         else:
-            from moat.micro.rtc import state
+            from moat.micro.rtc import state  # noqa: PLC0415
         self.st = state
 
         super().__init__(cfg)

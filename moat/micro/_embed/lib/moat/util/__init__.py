@@ -217,7 +217,7 @@ def exc_iter(exc):
     """
     iterate over all non-exceptiongroup parts of an exception(group)
     """
-    from moat.util.compat import BaseExceptionGroup, ExceptionGroup
+    from moat.util.compat import BaseExceptionGroup, ExceptionGroup  # noqa: PLC0415
 
     if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
         for e in exc.exceptions:

@@ -138,7 +138,7 @@ def _get_my_ip(ip6: bool = False):
     Find my IP address
     :return:
     """
-    import socket
+    import socket  # noqa: PLC0415
 
     s = socket.socket(socket.AF_INET6 if ip6 else socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("2606:4700:4700::1111" if ip6 else "1.1.1.1", 53))
@@ -1022,7 +1022,7 @@ class Server(MsgHandler):
 
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
-        from moat.util.cbor import gen_start
+        from moat.util.cbor import gen_start  # noqa: PLC0415
 
         fn = anyio.Path(name).name
         mstr = f"MoaT-Link {mode} {fn!r}"
@@ -1035,14 +1035,14 @@ class Server(MsgHandler):
 
     def gen_hdr_stop(self, **kw):
         """Return the CBOR tag for an end-of-file record"""
-        from moat.util.cbor import gen_stop
+        from moat.util.cbor import gen_stop  # noqa: PLC0415
 
         kw["time"] = datetime.now(UTC)
         return gen_stop(**kw)
 
     def gen_hdr_change(self, **kw):
         """Return the CBOR tag that describes a change"""
-        from moat.util.cbor import gen_change
+        from moat.util.cbor import gen_change  # noqa: PLC0415
 
         kw["time"] = datetime.now(UTC)
         return gen_change(**kw)

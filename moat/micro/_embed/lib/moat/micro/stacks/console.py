@@ -30,7 +30,7 @@ def console_stack(stream, cfg, cons=False):
     log_rel = cfg.get("log_rel", None)
 
     if log_raw is not None:
-        from moat.micro.proto.stack import LogMsg
+        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
 
         stream = LogMsg(stream, log_raw)
 
@@ -38,12 +38,12 @@ def console_stack(stream, cfg, cons=False):
         raise NotImplementedError("CBOR")
     else:
         if isinstance(frame, dict):
-            from moat.micro.proto.stream import CBORMsgBlk, SerialPackerBlkBuf
+            from moat.micro.proto.stream import CBORMsgBlk, SerialPackerBlkBuf  # noqa: PLC0415
 
             stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
             stream = CBORMsgBlk(stream, cfg)
         else:
-            from moat.micro.proto.stream import CBORMsgBuf
+            from moat.micro.proto.stream import CBORMsgBuf  # noqa: PLC0415
 
             stream = CBORMsgBuf(stream, dict(msg_prefix=frame, console=cons))
 
@@ -52,17 +52,17 @@ def console_stack(stream, cfg, cons=False):
     if lossy:
         if lossy is True:
             lossy = {}
-        from moat.micro.proto.reliable import ReliableMsg
+        from moat.micro.proto.reliable import ReliableMsg  # noqa: PLC0415
 
         if log_rel is not None:
-            from moat.micro.proto.stack import LogMsg
+            from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
 
             stream = LogMsg(stream, log_rel)
 
         stream = ReliableMsg(stream, lossy)
 
     if log is not None:
-        from moat.micro.proto.stack import LogMsg
+        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
 
         stream = LogMsg(stream, log)
 

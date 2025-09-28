@@ -30,7 +30,7 @@ class _MsgRW:
         if codec is None:
             raise ValueError("No default codec")
         if not isinstance(codec, Codec):
-            from moat.util import get_codec
+            from moat.util import get_codec  # noqa: PLC0415
 
             codec = get_codec(codec)
 

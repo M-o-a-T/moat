@@ -29,7 +29,7 @@ class Cmd(_Cmd):
         """
         Set/return a MoaT state var.
         """
-        from rtc import get_rtc, set_rtc
+        from rtc import get_rtc, set_rtc  # noqa: PLC0415
 
         if v is not None:
             set_rtc(k, v, fs=fs)
@@ -74,7 +74,7 @@ class Cmd(_Cmd):
         """
         Get the hash for a built-in module.
         """
-        import _hash
+        import _hash  # noqa: PLC0415
 
         res = _hash.hash.get(p, None)
         if l is not None:

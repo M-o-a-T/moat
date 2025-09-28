@@ -286,7 +286,7 @@ class SCmd_auth(StreamCommand):
     noAuth = True
 
     async def run(self):  # noqa: D102
-        from .auth import loader
+        from .auth import loader  # noqa: PLC0415
 
         msg = self.msg
         client = self.client
@@ -333,7 +333,7 @@ class SCmd_auth_list(StreamCommand):
     multiline = True
 
     async def send_one(self, data, nchain=-1):  # noqa: D102
-        from .auth import loader
+        from .auth import loader  # noqa: PLC0415
 
         typ, kind, ident = data.path[-3:]
         cls = loader(typ, kind, server=True, make=False)
@@ -392,7 +392,7 @@ class SCmd_auth_get(StreamCommand):
     multiline = False
 
     async def run(self):  # noqa: D102
-        from .auth import loader
+        from .auth import loader  # noqa: PLC0415
 
         msg = self.msg
         client = self.client
@@ -432,7 +432,7 @@ class SCmd_auth_set(StreamCommand):
     multiline = True
 
     async def run(self):  # noqa: D102
-        from .auth import loader
+        from .auth import loader  # noqa: PLC0415
 
         msg = self.msg
         client = self.client
@@ -764,7 +764,7 @@ class ServerClient:
     async def cmd_diffie_hellman(self, msg):  # noqa: D102
         if self._dh_key:
             raise RuntimeError("Can't call dh twice")
-        from moat.lib.diffiehellman import DiffieHellman
+        from moat.lib.diffiehellman import DiffieHellman  # noqa: PLC0415
 
         def gen_key():
             length = msg.get("length", 1024)
@@ -1233,7 +1233,7 @@ class ServerClient:
                 auths.insert(0, a)
                 msg["auth"] = auths
             if a is None:
-                from .auth import RootServerUser
+                from .auth import RootServerUser  # noqa: PLC0415
 
                 self.user = RootServerUser()
             await self.send(msg)
@@ -1396,7 +1396,7 @@ class Server:
     def __init__(self, name: str, cfg: dict | None = None, init: Any = NotGiven):
         self.codec = get_codec("std-msgpack")
         self.root = RootEntry(self, tock=self.tock)
-        from moat.util import CFG
+        from moat.util import CFG  # noqa: PLC0415
 
         ensure_cfg("moat.kv")
         CFG = CFG["kv"]
@@ -1630,7 +1630,7 @@ class Server:
                     cls=attrdict,
                 )
                 auth = cfg.get("auth", None)
-                from .auth import gen_auth
+                from .auth import gen_auth  # noqa: PLC0415
 
                 cfg["auth"] = gen_auth(auth)
 
@@ -1743,7 +1743,7 @@ class Server:
 
         if debugger:
             try:
-                import pdb_clone as pdb
+                import pdb_clone as pdb  # noqa: PLC0415
             except ImportError:
                 res["debugger"] = "Import error"
             else:
@@ -2092,7 +2092,7 @@ class Server:
                     cls=attrdict,
                 )
                 auth = cfg.get("auth", None)
-                from .auth import gen_auth
+                from .auth import gen_auth  # noqa: PLC0415
 
                 cfg["auth"] = gen_auth(auth)
 

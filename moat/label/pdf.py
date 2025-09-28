@@ -98,7 +98,7 @@ class Labels(FPDF):  # noqa: D101
 
         buf = self.output()
 
-        from subprocess import run
+        from subprocess import run  # noqa: PLC0415
 
         args = [
             "lpr",

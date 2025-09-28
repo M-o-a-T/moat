@@ -47,7 +47,7 @@ class USBSerial(FileBuf):
     """
 
     async def stream(self):  # noqa: D102
-        import moat
+        import moat  # noqa: PLC0415
 
         return moat.SERIAL
 

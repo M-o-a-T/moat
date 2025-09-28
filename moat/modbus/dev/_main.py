@@ -48,7 +48,7 @@ async def poll(ctx, path):
 
     if "link" in obj.cfg:
         # pylint: disable=import-outside-toplevel
-        from moat.link.client import Link
+        from moat.link.client import Link  # noqa: PLC0415
 
         ln_ctx = Link(opj.cfg.link)
     else:

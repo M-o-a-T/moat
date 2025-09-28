@@ -221,7 +221,7 @@ class Caller:
 
     async def _call(self):
         "helper for __await__ that calls the remote side"
-        from .msg import Msg
+        from .msg import Msg  # noqa: PLC0415
 
         msg = Msg.Call(*self.data)
 
@@ -263,7 +263,7 @@ class Caller:
             if not self._dir:
                 self._dir = SD_BOTH
 
-            from .msg import Msg
+            from .msg import Msg  # noqa: PLC0415
 
             m1 = Msg.Call(*self.data)
 
@@ -394,7 +394,7 @@ class MsgSender(BaseMsgHandler):
     def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"
 
-        from moat.micro.cmd.tree.dir import CfgStore
+        from moat.micro.cmd.tree.dir import CfgStore  # noqa: PLC0415
 
         return CfgStore(self, p)
 
@@ -476,7 +476,7 @@ class SubMsgSender(MsgSender):
     def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"
 
-        from moat.micro.cmd.tree.dir import CfgStore
+        from moat.micro.cmd.tree.dir import CfgStore  # noqa: PLC0415
 
         return CfgStore(self, p)
 

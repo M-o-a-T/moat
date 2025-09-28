@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 def MpyCmd(*a, **k):
     """MoaT link to a local micropython process"""
-    from moat.micro._test import MpyBuf
-    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-    from moat.micro.stacks.console import console_stack
+    from moat.micro._test import MpyBuf  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg  # noqa: PLC0415
+    from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _MpyCmd(BaseCmdMsg):
         async def stream(self):
@@ -33,8 +33,8 @@ def MpyCmd(*a, **k):
 
 def MpyRaw(*a, **k):
     """stdio of a local micropython process"""
-    from moat.micro._test import MpyBuf
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro._test import MpyBuf  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _MpyRaw(BaseCmdBBM):
         async def stream(self):
@@ -45,9 +45,9 @@ def MpyRaw(*a, **k):
 
 def LoopCmd(*a, **k):
     """Full-stack Loopback. This goes through CBOR."""
-    from moat.micro._test import Loopback
-    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-    from moat.micro.stacks.console import console_stack
+    from moat.micro._test import Loopback  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg  # noqa: PLC0415
+    from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _LoopCmd(BaseCmdMsg):
         async def stream(self):
@@ -58,7 +58,7 @@ def LoopCmd(*a, **k):
                 if "pack" in li and len(li) == 1:
                     s = CBORMsgBlk(s, li)
                     if (log := self.cfg.get("log", None)) is not None:
-                        from moat.micro.proto.stack import LogMsg
+                        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
 
                         s = LogMsg(s, log)
                     s = await AC_use(self, s)
@@ -75,8 +75,8 @@ def LoopMsg(*a, **k):
     This app tests the LoopBBM back-end. Thus it needs to connect to a LoopLink
     that uses queues for both directions.
     """
-    from moat.micro._test import LoopBBM
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro._test import LoopBBM  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _LoopMsg(BaseCmdBBM):
         async def stream(self):
@@ -106,7 +106,7 @@ def LoopLink(*a, **k):
     Requests use a queue if it exists. Otherwise the request is forwarded
     to the external end of the remote queue.
     """
-    from moat.micro.cmd.base import BaseCmd
+    from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
 
     class _LoopLink(BaseCmd):  # duck-typed to BaseCmdBBM
         # q_ATX.

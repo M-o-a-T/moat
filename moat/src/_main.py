@@ -439,7 +439,7 @@ async def move_repo(obj, **kw):
 
     If the local copy is present, it will be refreshed via `git fetch`.
     """
-    from .move import mv_repos
+    from .move import mv_repos  # noqa: PLC0415
 
     await mv_repos(obj.cfg.src.move, **kw)
 

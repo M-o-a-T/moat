@@ -62,12 +62,12 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
             return await tg.start(task, dev)
 
         if link is None:
-            from .device import Register as Reg  # pylint: disable=import-outside-toplevel
+            from .device import Register as Reg  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
             RegS = Reg
         else:
             # The MoaT-Link client must live longer than the taskgroup
-            from .link import Register  # pylint: disable=import-outside-toplevel
+            from .link import Register  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
             Reg = partial(Register, link=link, tg=tg)
             RegS = partial(Register, link=link, tg=tg, is_server=True)

@@ -56,7 +56,7 @@ objs = (
 @pytest.mark.parametrize("obj", objs)
 def test_json(obj):
     "basic json tests"
-    import json
+    import json  # noqa: PLC0415
 
     c = get_codec("json")
 
@@ -67,7 +67,7 @@ def test_json(obj):
 @pytest.mark.parametrize("obj", objs)
 def test_msgpack(obj):
     "basic msgpack tests"
-    import msgpack
+    import msgpack  # noqa: PLC0415
 
     c = get_codec("msgpack")
 
@@ -78,7 +78,7 @@ def test_msgpack(obj):
 @pytest.mark.parametrize("obj", objs)
 def test_cbor(obj):
     "basic CBOR tests"
-    import cbor2
+    import cbor2  # noqa: PLC0415
 
     c = get_codec("cbor")
 

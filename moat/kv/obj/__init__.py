@@ -448,8 +448,8 @@ class MirrorRoot(ClientEntry):
         defcfg = client._cfg.get(cls.CFG)  # noqa: SLF001
         if not defcfg:
             # seems we didn't load the class' default config yet.
-            import inspect
-            from pathlib import Path as _Path
+            import inspect  # noqa: PLC0415
+            from pathlib import Path as _Path  # noqa: PLC0415
 
             md = inspect.getmodule(cls)
             ensure_cfg("moat.kv")

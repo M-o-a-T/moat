@@ -223,7 +223,7 @@ def get_api(cfg: dict, name: str) -> Backend:
 
     The name is the key which the API is found under.
     """
-    from importlib import import_module
+    from importlib import import_module  # noqa: PLC0415
 
     md = cfg.api
     if "." not in md:

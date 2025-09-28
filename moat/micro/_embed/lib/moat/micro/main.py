@@ -58,9 +58,9 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
             machine.WDT(k.get("id", 0), k.get("t", 5000))
 
     def cfg_network(n):
-        import time
+        import time  # noqa: PLC0415
 
-        import network
+        import network  # noqa: PLC0415
 
         at("MN1")
 
@@ -112,10 +112,10 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
 
     async def _main():
         at("MA1")
-        import sys
+        import sys  # noqa: PLC0415
 
-        from moat.micro.cmd.tree.dir import Dispatch
-        from moat.util.compat import idle
+        from moat.micro.cmd.tree.dir import Dispatch  # noqa: PLC0415
+        from moat.util.compat import idle  # noqa: PLC0415
 
         at("MA2")
         async with Dispatch(cfg, i=i) as dsp, TaskGroup() as tg:
@@ -135,7 +135,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
             await idle()
 
     at("M5")
-    from moat.util.compat import run
+    from moat.util.compat import run  # noqa: PLC0415
 
     at("M6")
     run(_main)

@@ -349,7 +349,7 @@ async def run_gate(
     """
     Run a gate in @link, described by @name.
     """
-    from importlib import import_module
+    from importlib import import_module  # noqa: PLC0415
 
     if isinstance(cf, str):
         cf = P("gate") / cf

@@ -24,7 +24,7 @@ def _KS(cfg):
     if not isinstance(p, str):
         pass
     elif p == "USB":
-        from moat.micro.part.serial import USBSerial
+        from moat.micro.part.serial import USBSerial  # noqa: PLC0415
 
         Ser = USBSerial
     else:
@@ -34,7 +34,7 @@ def _KS(cfg):
 
 def Raw(*a, **k):
     """Sends/receives raw bytes off a serial port"""
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
         max_idle = 100
@@ -48,8 +48,8 @@ def Raw(*a, **k):
 
 def Msg(*a, **k):
     """snd/rcv: packetized data, via SerialPacker"""
-    from moat.micro.cmd.proto.stream import SerialPackerBlkBuf
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro.cmd.proto.stream import SerialPackerBlkBuf  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Msg(BaseCmdBBM):
         async def stream(self):
@@ -67,8 +67,8 @@ def Msg(*a, **k):
 
 def Link(*a, **k):
     """r/w: exchange MoaT messages, possibly framed"""
-    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-    from moat.micro.stacks.console import console_stack
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg  # noqa: PLC0415
+    from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _Link(BaseCmdMsg):
         async def stream(self):

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 def Raw(*a, **k):
     """Sends/receives raw data"""
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
         def stream(self) -> Awaitable:
@@ -31,7 +31,7 @@ def Link(*a, **k):
     """
     An app that connects to a remote socket.
     """
-    from moat.micro.cmd.stream.cmdmsg import CmdMsg
+    from moat.micro.cmd.stream.cmdmsg import CmdMsg  # noqa: PLC0415
 
     class _Link(CmdMsg):
         def __init__(self, cfg):
@@ -48,8 +48,8 @@ def LinkIn(*a, **k):
     New connections may or may not supersede existing ones, depending on the
     "replace" config item.
     """
-    from moat.micro.cmd.tree.listen import BaseListenOneCmd
-    from moat.micro.stacks.unix import UnixIter
+    from moat.micro.cmd.tree.listen import BaseListenOneCmd  # noqa: PLC0415
+    from moat.micro.stacks.unix import UnixIter  # noqa: PLC0415
 
     class _LinkIn(BaseListenOneCmd):
         def listener(self):
@@ -62,8 +62,8 @@ def Port(*a, **k):
     """
     An app that accepts multiple Unix connections.
     """
-    from moat.micro.cmd.tree.listen import BaseListenCmd
-    from moat.micro.stacks.unix import UnixIter
+    from moat.micro.cmd.tree.listen import BaseListenCmd  # noqa: PLC0415
+    from moat.micro.stacks.unix import UnixIter  # noqa: PLC0415
 
     class _Port(BaseListenCmd):
         def listener(self):

@@ -36,7 +36,7 @@ async def broker(obj):
     A basic MQTT broker that supports plug-ins and can use MoaT-KV as backend.
     """
     try:
-        from moat.util import as_service
+        from moat.util import as_service  # noqa: PLC0415
     except ImportError:
         as_service = None
 

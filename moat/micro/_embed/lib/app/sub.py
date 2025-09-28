@@ -18,7 +18,7 @@ def Tree(*a, **k):
     """
     Structured subcommands.
     """
-    from moat.micro.cmd.tree.dir import DirCmd
+    from moat.micro.cmd.tree.dir import DirCmd  # noqa: PLC0415
 
     class _Tree(DirCmd):
         pass
@@ -30,7 +30,7 @@ def Array(*a, **k):
     """
     List of mostly-same things.
     """
-    from moat.micro.cmd.array import ArrayCmd
+    from moat.micro.cmd.array import ArrayCmd  # noqa: PLC0415
 
     class _Array(ArrayCmd):
         pass
@@ -61,7 +61,7 @@ def Err(*a, **k):
     TODO: exponential back-off
     """
 
-    from moat.micro.cmd.tree.layer import BaseFwdCmd
+    from moat.micro.cmd.tree.layer import BaseFwdCmd  # noqa: PLC0415
 
     class _Err(BaseFwdCmd):
         _wait = True

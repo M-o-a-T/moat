@@ -40,8 +40,8 @@ class Dispatch(_Dispatch):
         if self.sig:
 
             async def sig_handler():
-                import anyio
-                import signal  # pylint:disable=import-outside-toplevel
+                import anyio  # noqa: PLC0415
+                import signal  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
                 with anyio.open_signal_receiver(
                     signal.SIGINT,

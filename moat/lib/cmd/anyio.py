@@ -37,12 +37,12 @@ class AioStream(HandlerStream):  # noqa: D101
         self.__debug = debug
 
         if codec is None:
-            from moat.util.cbor import StdCBOR
+            from moat.util.cbor import StdCBOR  # noqa: PLC0415
 
             codec = StdCBOR()
 
         elif isinstance(codec, str):
-            from moat.lib.codec import get_codec
+            from moat.lib.codec import get_codec  # noqa: PLC0415
 
             codec = get_codec(codec)
 

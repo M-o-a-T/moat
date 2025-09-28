@@ -40,7 +40,7 @@ async def run_update(*a, **kw):
     its file system. It might however be there as a left-over artefact from
     a previous online update. Thus we delete it.
     """
-    import moat.micro._embed.lib as emb
+    import moat.micro._embed.lib as emb  # noqa: PLC0415
 
     for p in emb.__path__:
         src = APath(p)

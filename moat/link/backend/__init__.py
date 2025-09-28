@@ -145,7 +145,7 @@ def get_backend(cfg: dict, **kw) -> Backend:
     """
     Fetch the backend named in the config and initialize it.
     """
-    from importlib import import_module
+    from importlib import import_module  # noqa: PLC0415
 
     cfg = cfg["backend"]
     name = cfg["driver"]

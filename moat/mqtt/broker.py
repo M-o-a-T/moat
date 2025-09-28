@@ -169,7 +169,7 @@ async def create_broker(config=None, plugin_namespace=None):
 
     async with anyio.create_task_group() as tg:
         if "kv" in (config or {}):
-            from .moat_kv_broker import MoatKVbroker
+            from .moat_kv_broker import MoatKVbroker  # noqa: PLC0415
 
             B = MoatKVbroker
         else:
@@ -479,7 +479,7 @@ class Broker:
         return await self.broadcast_message(None, topic, data, qos=qos, retain=retain)
 
     async def ws_connected(self, conn, listener_name):  # noqa: D102
-        from asyncwebsockets import create_websocket_server
+        from asyncwebsockets import create_websocket_server  # noqa: PLC0415
 
         async def subpro(req):
             if "mqtt" not in req.subprotocols:

@@ -41,9 +41,9 @@ SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
 
 def load_ansible_repr():
     "Call me if you're using `moat.util` in conjunction with Ansible."
-    from ansible.parsing.yaml.objects import AnsibleUnicode
-    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
-    from ansible.vars.hostvars import HostVars, HostVarsVars
+    from ansible.parsing.yaml.objects import AnsibleUnicode  # noqa: PLC0415
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText  # noqa: PLC0415
+    from ansible.vars.hostvars import HostVars, HostVarsVars  # noqa: PLC0415
 
     SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
     SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)
@@ -133,7 +133,7 @@ if DProxy is not None:
 
 
 def _name2obj(constructor, node):
-    from moat.lib.codec.proxy import name2obj
+    from moat.lib.codec.proxy import name2obj  # noqa: PLC0415
 
     return name2obj(node.value)
 
@@ -234,7 +234,7 @@ def yformat(data, compact=None):
     :param stream: the file to write to, defaults to stdout.
     :param compact: Write single lines if possible, default False.
     """
-    from io import StringIO  # pylint: disable=import-outside-toplevel
+    from io import StringIO  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
     s = StringIO()
     yprint(data, compact=compact, stream=s)

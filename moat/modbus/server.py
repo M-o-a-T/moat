@@ -159,7 +159,7 @@ class SerialModbusServer(BaseModbusServer):
         self.args = args
         self.timeout = timeout
 
-        from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel
+        from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
             ModbusRtuFramer,
         )
 
@@ -171,7 +171,7 @@ class SerialModbusServer(BaseModbusServer):
         self.Framer = Framer
 
     async def serve(self, opened=None):  # noqa: D102
-        from anyio_serial import Serial  # pylint: disable=import-outside-toplevel
+        from anyio_serial import Serial  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         async with Serial(**self.args) as ser:
             self._serial = ser
@@ -330,7 +330,7 @@ class ModbusServer(BaseModbusServer):
     def __init__(self, identity=None, address=None, port=None):
         super().__init__(identity=identity)
 
-        from pymodbus.framer.socket import (  # pylint: disable=import-outside-toplevel
+        from pymodbus.framer.socket import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
             FramerSocket,
         )
 

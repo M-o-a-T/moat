@@ -27,7 +27,7 @@ def gen_client_id():
     Generates random client ID
     :return:
     """
-    import random
+    import random  # noqa: PLC0415
 
     gen_id = "moat-mqtt-"
 

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 def Raw(*a, **k):
     """Sends/receives raw data"""
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
-    from moat.micro.proto.tcp import Link as TcpLink
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
+    from moat.micro.proto.tcp import Link as TcpLink  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
         def stream(self) -> Awaitable:
@@ -30,9 +30,9 @@ def Link(*a, **k):
     """
     An app that connects to a remote socket.
     """
-    from moat.micro.cmd.stream.cmdmsg import CmdMsg
-    from moat.micro.proto.tcp import Link as TcpLink
-    from moat.micro.stacks.console import console_stack
+    from moat.micro.cmd.stream.cmdmsg import CmdMsg  # noqa: PLC0415
+    from moat.micro.proto.tcp import Link as TcpLink  # noqa: PLC0415
+    from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _Link(CmdMsg):
         def __init__(self, cfg):
@@ -56,8 +56,8 @@ def LinkIn(*a, **k):
     New connections may or may not supersede existing ones, depending on the
     "replace" config item.
     """
-    from moat.micro.cmd.tree.listen import BaseListenOneCmd
-    from moat.micro.stacks.tcp import TcpIter
+    from moat.micro.cmd.tree.listen import BaseListenOneCmd  # noqa: PLC0415
+    from moat.micro.stacks.tcp import TcpIter  # noqa: PLC0415
 
     class _LinkIn(BaseListenOneCmd):
         def listener(self):
@@ -70,8 +70,8 @@ def Port(*a, **k):
     """
     An app that accepts multiple TCP connections.
     """
-    from moat.micro.cmd.tree.listen import BaseListenCmd
-    from moat.micro.stacks.tcp import TcpIter
+    from moat.micro.cmd.tree.listen import BaseListenCmd  # noqa: PLC0415
+    from moat.micro.stacks.tcp import TcpIter  # noqa: PLC0415
 
     class _Port(BaseListenCmd):
         def listener(self):

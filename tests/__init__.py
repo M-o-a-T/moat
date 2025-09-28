@@ -23,7 +23,7 @@ def load_cfg(cfg):  # pylint: disable=redefined-outer-name  # noqa: D103
     with cfg.open("r", encoding="utf-8") as f:
         cfg = yload(f)
 
-    from logging.config import dictConfig
+    from logging.config import dictConfig  # noqa: PLC0415
 
     cfg["disable_existing_loggers"] = False
     with contextlib.suppress(ValueError):

@@ -13,8 +13,8 @@ class OutOfData(EOFError):  # noqa: D101
 
 def get_codec(name: str | Codec):
     "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    from moat.lib.codec import Codec
-    from moat.lib.codec import get_codec as _get_codec
+    from moat.lib.codec import Codec  # noqa: PLC0415
+    from moat.lib.codec import get_codec as _get_codec  # noqa: PLC0415
 
     if isinstance(name, Codec):
         return name

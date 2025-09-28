@@ -64,10 +64,10 @@ def get_vrm_portal_id():  # noqa: D103
     # Fall back to getting our id using a syscall. Assume we are on linux.
     # Allow the user to override what interface is used using an environment
     # variable.
-    import fcntl
-    import os
-    import socket
-    import struct
+    import fcntl  # noqa: PLC0415
+    import os  # noqa: PLC0415
+    import socket  # noqa: PLC0415
+    import struct  # noqa: PLC0415
 
     iface = os.environ.get("VRM_IFACE", "eth0").encode("ascii")
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -25,7 +25,7 @@ def Raw(*a, **k):
 
     This app forwards read/write requests to somewhere else.
     """
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
         async def stream(self) -> BaseBuf:
@@ -41,7 +41,7 @@ def Fwd(*a, **k):
 
     This app forwards to somewhere else.
     """
-    from moat.micro.cmd.base import BaseCmd
+    from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
 
     class _Fwd(BaseCmd):
         sd: SubDispatch = None
@@ -56,8 +56,8 @@ def Fwd(*a, **k):
                 self.sd = self.root.sub_at(self.cfg["path"])
                 return
 
-            from moat.lib.cmd._test import StreamLoop
-            from moat.lib.cmd.base import MsgSender
+            from moat.lib.cmd._test import StreamLoop  # noqa: PLC0415
+            from moat.lib.cmd.base import MsgSender  # noqa: PLC0415
 
             a = StreamLoop(self.root, log + ">")
             b = StreamLoop(None, log + "<")
@@ -79,8 +79,8 @@ def Link(*a, **k):
     """
     Connects to a `BaseCmdBBM` object exporting a `BaseBuf`.
     """
-    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-    from moat.micro.cmd.stream.xcmd import BufCmd
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg  # noqa: PLC0415
+    from moat.micro.cmd.stream.xcmd import BufCmd  # noqa: PLC0415
 
     class _Link(BaseCmdMsg):
         async def stream(self) -> BaseMsg:

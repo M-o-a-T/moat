@@ -60,7 +60,7 @@ NoneType = type(None)
 
 
 def _no_config(*a, **k):  # noqa:ARG001
-    import warnings
+    import warnings  # noqa: PLC0415
 
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
@@ -374,7 +374,7 @@ def load_cfg(name):
 
 
 def _namespaces(name):
-    import pkgutil  # pylint: disable=import-outside-toplevel
+    import pkgutil  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
     try:
         ext = importlib.import_module(name)
@@ -788,7 +788,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         opts["name"] = name
 
     if sub_pre is True:
-        import inspect  # pylint: disable=import-outside-toplevel
+        import inspect  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         sub_pre = inspect.currentframe().f_back.f_globals["__package__"]
     elif sub_pre is None:
@@ -850,7 +850,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.DEBUG = debug
 
     # Don't forget to import toplevel config files
-    import moat
+    import moat  # noqa: PLC0415
 
     try:
         p = moat.__path__

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 def _l():
-    import os
+    import os  # noqa: PLC0415
 
     try:
         os.stat("moat.lrg")
@@ -200,7 +200,7 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None) -> Nev
 
     The optional event is set when the socket is listening.
     """
-    import socket
+    import socket  # noqa: PLC0415
 
     # Create and bind server socket.
     host = socket.getaddrinfo(host, port)[0]  # TODO this is blocking!
@@ -223,7 +223,7 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None) -> Nev
 
 
 async def _run_server(tg, s, cb):
-    from asyncio import core as _core
+    from asyncio import core as _core  # noqa: PLC0415
 
     while True:
         if DEBUG:

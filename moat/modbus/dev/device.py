@@ -218,16 +218,16 @@ class Register:
                 raise RuntimeError(f"Coils/Discretes must be BitValue, at {path}")
 
         try:
-            l = d.len
+            ln = d.len
         except AttributeError:
             if s in {"bit", "invbit", "int", "uint"}:
-                l = 1
+                ln = 1
             elif s == "float":
-                l = 2
+                ln = 2
             else:
                 raise BadRegisterError("no length") from None
 
-        self.reg = get_type2(s, l)()
+        self.reg = get_type2(s, ln)()
 
         self.register = d.register
 

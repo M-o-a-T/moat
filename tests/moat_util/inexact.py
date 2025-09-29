@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.util import InexactFloat
 
 
-def I(val):  # noqa: D103
+def I(val):  # noqa: D103,E743
     return InexactFloat(val, 0.1, 0.5)  # rel, abs
 
 

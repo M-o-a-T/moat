@@ -49,7 +49,7 @@ class ABytes(io.BytesIO):
         "return the current buffer"
         return self.getbuffer()
 
-    async def sha256(self, l: int | None = None):
+    async def sha256(self, l: int | None = None):  # noqa: E741
         "hash the current buffer"
         _h = hashlib.sha256()
         _h.update(self.getbuffer())
@@ -87,7 +87,7 @@ class ABytes(io.BytesIO):
 class APath(anyio.Path):
     "anyio.Path, enhanced with a couple of our methods"
 
-    async def sha256(self, l=None) -> bytes:
+    async def sha256(self, l=None) -> bytes:  # noqa: E741
         """
         :returns: hash over file contents
 
@@ -430,7 +430,7 @@ class MoatDevPath(MoatPath):
 
     # custom extension methods
 
-    async def sha256(self, l: int | None = None) -> bytes:
+    async def sha256(self, l: int | None = None) -> bytes:  # noqa: E741
         """
         :returns: hash over file contents
 
@@ -652,7 +652,7 @@ class MoatFSPath(MoatPath):
             yield self / n
             # TODO add stat
 
-    async def sha256(self, l: int | None = None) -> bytes:
+    async def sha256(self, l: int | None = None) -> bytes:  # noqa: E741
         """
         :returns: hash over file contents
 
@@ -661,7 +661,7 @@ class MoatFSPath(MoatPath):
         return await self._req("hash", self.as_posix(), l=l)
 
 
-async def sha256(p, l: int | None = None):
+async def sha256(p, l: int | None = None):  # noqa: E741
     """
     Calculate a SHA256 of the file contents at @p.
     """

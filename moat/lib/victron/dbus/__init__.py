@@ -250,9 +250,9 @@ class DbusService:  # noqa: D101
         return path in self._dbusobjects
 
     async def __aenter__(self):
-        l = ServiceContext(self)
-        self._ratelimiters.append(l)
-        return l
+        sc = ServiceContext(self)
+        self._ratelimiters.append(sc)
+        return sc
 
     async def __aexit__(self, *exc):
         # pop off the top one and flush it. If with statements are nested

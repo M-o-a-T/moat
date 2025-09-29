@@ -109,7 +109,7 @@ class Sheet(Base):
         if self.labeltyp is not None:
             res["typ"] = self.labeltyp.name
         if self.labels:
-            res["labels"] = [f"{l.code}:{l.text}" for l in self.labels]
+            res["labels"] = [f"{lab.code}:{lab.text}" for lab in self.labels]
         return res
 
     # Sheet -1 is the printed-but-not-on-a-sheet ID.

@@ -69,7 +69,7 @@ def get_type(s):
         return map_type[s]
 
 
-def get_type2(s, l):
+def get_type2(s, l):  # noqa:E741
     """Return the type from longname and length (like 'int' '2')"""
     IntMap = [
         [

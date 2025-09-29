@@ -70,7 +70,7 @@ class Cmd(_Cmd):
 
     doc_hash = dict(_d="module hash", _0="str:name", l="int:shortened length", _r="str:hash val")
 
-    async def cmd_hash(self, p: str, l: int | None = None):
+    async def cmd_hash(self, p: str, l: int | None = None):  # noqa:E741
         """
         Get the hash for a built-in module.
         """

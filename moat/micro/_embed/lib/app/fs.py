@@ -175,7 +175,7 @@ class Cmd(BaseCmd):
 
     doc_hash = dict(_d="hash file", _0="str:path", l="int:prefixlen", _r="bytes:hash")
 
-    async def cmd_hash(self, p: str, l: int | None = None):
+    async def cmd_hash(self, p: str, l: int | None = None):  # noqa: E741
         """
         Hash the contents of @p, sha256
         """

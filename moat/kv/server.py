@@ -1640,7 +1640,7 @@ class Server:
                     # TODO auth this client
                     n_nodes = 0
 
-                    async def add(event, nodes):
+                    async def add(event):
                         nonlocal nodes, n_nodes
                         c = event.chain
                         if c is None:

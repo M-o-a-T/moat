@@ -246,7 +246,7 @@ class Line:
             return None
         return gpio.ffi.string(n).decode("utf-8")
 
-    def monitor(self, type=gpio.REQUEST_EVENT_RISING_EDGE, flags=0):  # pylint: disable=redefined-builtin
+    def monitor(self, type=gpio.REQUEST_EVENT_RISING_EDGE, flags=0):  # pylint: disable=redefined-builtin  # noqa: A002
         """
         Monitor events.
 

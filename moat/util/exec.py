@@ -67,7 +67,7 @@ async def run(
     echo=False,
     echo_input=False,
     capture: bool | Literal["raw"] = False,
-    input=None,
+    input=None,  # noqa: A002
     **kw,
 ) -> None | str | bytes:
     """Helper to run an external program, tagging stdout/stderr"""
@@ -83,7 +83,7 @@ async def run(
             kw["stdin"] = DEVNULL
     else:
         if isinstance(input, str):
-            input = input.encode("utf-8")
+            input = input.encode("utf-8")  # noqa: A001
 
     if capture and kw.get("stdout", PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")

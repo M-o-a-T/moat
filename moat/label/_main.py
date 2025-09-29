@@ -140,7 +140,7 @@ def add(obj, **kw):
 @one.command()
 @opts
 @click.pass_obj
-def set(obj, **kw):
+def set(obj, **kw):  # noqa: A001
     """
     Change a label.
     """

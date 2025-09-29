@@ -111,7 +111,7 @@ def add(obj, **kw):
 @one.command(epilog="Use '-x/-y/-z 0' to clear a position, '--in -' to remove the location.")
 @opts
 @click.pass_obj
-def set(obj, **kw):
+def set(obj, **kw):  # noqa: A001
     """
     Modify a thing.
     """

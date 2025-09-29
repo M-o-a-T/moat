@@ -948,5 +948,5 @@ def _ng(type_):
     return gen
 
 
-def option_ng(*a, type=str, **kw):  # noqa: D103
+def option_ng(*a, type=str, **kw):  # noqa: A002, D103
     return click.option(*a, **kw, type=_ng(type), default=NotGiven)

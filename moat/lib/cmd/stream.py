@@ -7,8 +7,8 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, QueueFull
-from moat.lib.cmd.base import MsgHandler, MsgLink
-from moat.lib.cmd.const import *
+from moat.lib.cmd.base import MsgHandler, MsgLink, MsgSender
+from moat.lib.cmd.const import B_ERROR, B_STREAM, E_CANCEL, E_NO_CMD, E_NO_STREAM, E_SKIP
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
 from moat.util.compat import (
@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from .base import OptDict
 
     from collections.abc import Sequence
+    from typing import Any
 
 
 def i_f2wire(id: int, flag: int) -> int:  # noqa: D103
@@ -272,7 +273,7 @@ class HandlerStream(MsgHandler):
         Attach a link.
         """
         if proc.id in self._msgs:
-            raise ValueError(f"MID {mid} already known")
+            raise ValueError(f"MID {proc.id} already known")
         self._msgs[proc.id] = proc
 
     def detach(self, link: StreamLink) -> None:

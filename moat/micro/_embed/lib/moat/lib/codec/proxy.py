@@ -4,8 +4,18 @@ A hacked-up copy of some parts of `moat.util`.
 
 from __future__ import annotations
 
-from ._proxy import *
-from ._proxy import _CProxy, _RProxy  # noqa:F401
+from ._proxy import (  # noqa:F401
+    DProxy,
+    NoProxyError,
+    Proxy,
+    _CProxy,
+    _RProxy,
+    as_proxy,
+    drop_proxy,
+    get_proxy,
+    name2obj,
+    obj2name,
+)
 
 __all__ = [
     "DProxy",

@@ -88,7 +88,7 @@ class RepoMover:
         cf.name = self.name
         self.cf = cf
 
-        def render(template, vars=cf):
+        def render(template, vars=cf):  # noqa: A002
             return self._je.from_string(template).render(vars)
 
         # Move the master-or-whatever branch to "main"
@@ -115,7 +115,7 @@ class RepoMover:
         cfg = self.cfg
         src_repo = self.repos.src
 
-        def render(template, vars=self.cf):
+        def render(template, vars=self.cf):  # noqa: A002
             return self._je.from_string(template).render(vars)
 
         if cfg.work.migrate:
@@ -126,16 +126,16 @@ class RepoMover:
                 logger.debug("Creating exit branch %r", cfg.src.branch)
 
                 r = render(cfg.readme.content)
-                hash = await self.exec(
+                hash = await self.exec(  # noqa: A001
                     "git", "hash-object", "-w", "--stdin", input=r, capture=True
                 )
-                hash = await self.exec(
+                hash = await self.exec(  # noqa: A001
                     "git",
                     "mktree",
                     input=f"100644 blob {hash.strip()}\t{cfg.readme.name}\n",
                     capture=True,
                 )
-                hash = await self.exec(
+                hash = await self.exec(  # noqa: A001
                     "git", "commit-tree", hash.strip(), input="Migration README\n", capture=True
                 )
                 await self.exec("git", "branch", cfg.src.branch, hash.strip())
@@ -155,7 +155,7 @@ class RepoMover:
             else:
                 # check whether we're updating the README
                 r = render(cfg.readme.content)
-                hash = await self.exec("git", "hash-object", "--stdin", input=r, capture=True)
+                hash = await self.exec("git", "hash-object", "--stdin", input=r, capture=True)  # noqa: A001
                 hash2 = await self.exec(
                     "git", "ls-tree", cfg.src.branch, cfg.readme.name, capture=True
                 )
@@ -163,13 +163,13 @@ class RepoMover:
                 hash2 = hash2.split(" ", 2)[2]
                 if hash.strip() != hash2:
                     await self.exec("git", "hash-object", "-w", "--stdin", input=r, capture=True)
-                    hash = await self.exec(
+                    hash = await self.exec(  # noqa: A001
                         "git",
                         "mktree",
                         input=f"100644 blob {hash.strip()}\t{cfg.readme.name}\n",
                         capture=True,
                     )
-                    hash = await self.exec(
+                    hash = await self.exec(  # noqa: A001
                         "git",
                         "commit-tree",
                         hash.strip(),
@@ -222,7 +222,7 @@ async def _mv_repo(cfg: dict, a_src: API, a_dst: list[API], name: str):
 
 
 async def _mv_arepo(
-    cfg: dict, a_src: API, a_dst: list[API], lim: anyio.CapacityLimiter, name: str, filter: bool
+    cfg: dict, a_src: API, a_dst: list[API], lim: anyio.CapacityLimiter, name: str, filter: bool  # noqa: A002
 ):
     # move, then release the capacity limiter
     srci = None
@@ -255,7 +255,7 @@ async def apis(cfg) -> list[RepoInfo]:
         yield res
 
 
-async def mv_repos(cfg: dict, all: bool = False, names: list[str] = ()):
+async def mv_repos(cfg: dict, all: bool = False, names: list[str] = ()):  # noqa: A002
     """Move many repos off Github.
 
     @all: if False, don't touch repos that have a parent.

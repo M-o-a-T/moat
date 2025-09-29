@@ -14,7 +14,7 @@ class InexactFloat(float):
 
     __slots__ = ("abs", "digits", "rel")
 
-    def __new__(cls, val, rel=1e-06, abs=1e-12, digits=3):  # noqa: D102
+    def __new__(cls, val, rel=1e-06, abs=1e-12, digits=3):  # noqa: A002, D102
         res = super().__new__(cls, val)
         res.rel = rel
         res.abs = abs

@@ -46,8 +46,8 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 
 
-ExceptionGroup = asyncio.ExceptionGroup
-BaseExceptionGroup = asyncio.BaseExceptionGroup
+ExceptionGroup = asyncio.ExceptionGroup  # noqa: A001
+BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa: A001
 
 DEBUG = const(False)
 

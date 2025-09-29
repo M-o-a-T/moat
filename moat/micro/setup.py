@@ -23,7 +23,7 @@ from moat.util.compat import idle, log
 
 logger = logging.getLogger(__name__)
 
-all = ["setup", "install", "do_update", "do_copy"]
+all = ["setup", "install", "do_update", "do_copy"]  # noqa: A001
 
 
 async def do_update(dst, root, cross, hfn):  # noqa: D103

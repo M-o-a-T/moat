@@ -34,14 +34,14 @@ class MsgStream(HandlerStream):
 
     async def read_stream(self):
         "Background stream reader. Started from the HandlerStream context manager."
-        str = self.__stream
+        str = self.__stream  # noqa: A001
         while True:
             msg = await str.recv()
             await self.msg_in(msg)
 
     async def write_stream(self):
         "Background stream writer. Started from the HandlerStream context manager."
-        str = self.__stream
+        str = self.__stream  # noqa: A001
         while True:
             msg = await self.msg_out()
             await str.send(msg)

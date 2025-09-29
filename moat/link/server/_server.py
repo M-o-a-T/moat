@@ -1479,7 +1479,7 @@ class Server(MsgHandler):
                 conn = attrdict(host="0.0.0.0", port=self.cfg.server.port)
                 ports.append(await listen_tg.start(self._run_server, client_tg, self.name, conn))
 
-            globals = {"0.0.0.0", "::"}
+            globals = {"0.0.0.0", "::"}  # noqa: A001
             link = [
                 {"host": _get_my_ip(hp[0] == "::") if hp[0] in globals else hp[0], "port": hp[1]}
                 for hp in ports

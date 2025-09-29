@@ -7,7 +7,16 @@ from __future__ import annotations
 from moat.lib.codec.proxy import as_proxy
 from moat.util.compat import CancelledError
 
-from .const import *
+from .const import (
+    E_CANCEL,
+    E_ERROR,
+    E_MUST_STREAM,
+    E_NO_CMD,
+    E_NO_CMDS,
+    E_NO_STREAM,
+    E_SKIP,
+    E_UNSPEC,
+)
 
 
 @as_proxy("_SCmdErr")

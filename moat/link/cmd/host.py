@@ -52,7 +52,7 @@ async def run(obj, main, debug):
 @cli.command()
 @click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
 @click.pass_obj
-async def list(obj, timeout):
+async def list(obj, timeout):  # noqa: A001
     """
     Host list.
 

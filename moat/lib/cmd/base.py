@@ -8,7 +8,7 @@ from moat.util import NotGiven, Path
 from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
 from moat.util.exc import ungroup
 
-from .const import *
+from .const import B_ERROR, B_STREAM, E_CANCEL, E_ERROR, SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import ShortCommandError
 
 from typing import TYPE_CHECKING
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .msg import Msg
 
     from collections.abc import Awaitable, Callable, Mapping, Sequence
-    from typing import Any
+    from typing import Any, Self
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
@@ -514,7 +514,7 @@ class MsgHandler(BaseMsgHandler):
         if not rcmd:
             if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
                 return await msg.call_simple(cmd)
-            elif (str := getattr(self, f"stream{pref}", None)) is not None:
+            elif (str := getattr(self, f"stream{pref}", None)) is not None:  # noqa: A001
                 return await msg.call_stream(self.stream)
             else:
                 raise ShortCommandError(msg.cmd)

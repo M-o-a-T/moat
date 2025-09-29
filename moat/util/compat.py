@@ -36,7 +36,6 @@ __all__ = [
     "at",
     "byte2utf8",
     "const",
-    "doc",
     "every",
     "every_ms",
     "idle",
@@ -66,8 +65,8 @@ EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001
-ExceptionGroup = ExceptionGroup  # noqa: PLW0127
-BaseExceptionGroup = BaseExceptionGroup  # noqa: PLW0127
+ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
+BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 
 
 def const(_x):

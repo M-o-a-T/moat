@@ -5,8 +5,9 @@ A command that accesses a row of mostly-identical subcommands
 from __future__ import annotations
 
 from moat.util import P, combine_dict, import_
-from moat.lib.cmd import Msg, MsgSender
+from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError
+from moat.lib.cmd.msg import Msg
 from moat.lib.codec.errors import NoPathError
 from moat.util.compat import L, TaskGroup
 

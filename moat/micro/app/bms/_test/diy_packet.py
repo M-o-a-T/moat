@@ -22,6 +22,7 @@ __all__ = [
 ]
 
 PacketType = P.PacketType
+MAXCELLS=P.MAXCELLS
 
 
 class PacketHeader(P.PacketHeader):

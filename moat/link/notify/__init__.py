@@ -15,16 +15,22 @@ if TYPE_CHECKING:
 
     from typing import AsyncIterator, NoReturn, Self
 
-__all__ = ["ntfy_bridge"]
+__all__ = ["get_backend","Notifier","Notify"]
 
 logger = logging.getLogger(__name__)
 
 
 class Notify:
+    """
+    Notification runner.
+    """
     def __init__(self, cfg):
         self.cfg = cfg
 
     async def run(self, link: Link):
+        """
+        Task that reads notifications from MoaT-Link and posts them.
+        """
         self.link = link
         async with AsyncExitStack() as ex:
             backend = self.cfg.backend

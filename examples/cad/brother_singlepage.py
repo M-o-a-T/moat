@@ -1,6 +1,24 @@
-from moat.d3 import *
-from build123d import *
-from math import sqrt
+"""
+A single-page feeder extension for my Brother printer
+"""
+from __future__ import annotations
+
+from math import atan, tan
+
+from build123d import (
+    Align,
+    Axis,
+    Box,
+    BuildLine,
+    BuildSketch,
+    Plane,
+    extrude,
+    fillet,
+    make_face,
+    mirror,
+)
+
+from moat.d3 import RX1, RY3, Loc, Rot, li, lto, pos, show
 
 ACM=(Align.CENTER,Align.CENTER,Align.MIN)
 
@@ -44,12 +62,15 @@ with BuildSketch() as frame:
         li(x=-inset_l-wall)
         li(y=-2*wall-slot_y)
         lto(0,0)
-        
+
     make_face()
 
 frame=extrude(frame,slot_z)
-frame=fillet(frame.edges().filter_by(Axis.Z).filter_by(lambda p:abs((p@0).X) != slot_x/2  and (p@0).Y > 0),wall/2.5)
-frame -= Rot(angle,0,0)*Box(2*slot_x,2*slot_y,2*slot_z,align=(Align.CENTER,Align.MIN,Align.MAX))
+frame=fillet(frame.edges().filter_by(Axis.Z)
+             .filter_by(lambda p:abs((p@0).X) != slot_x/2  and (p@0).Y > 0),
+             wall/2.5)
+frame -= Rot(angle,0,0)*Box(2*slot_x,2*slot_y,2*slot_z,
+                            align=(Align.CENTER,Align.MIN,Align.MAX))
 
 with BuildSketch(Plane.YZ) as gbar:
     with BuildLine() as lines:
@@ -59,7 +80,7 @@ with BuildSketch(Plane.YZ) as gbar:
         li(-hold_y,0)
         lto(0,0)
     make_face()
-    
+
 gbar=RY3*extrude(gbar,hold_x)
 gbar=fillet(gbar.edges().filter_by(Axis.X).group_by(Axis.Y)[0],min(hold_y,hold_z)/5)
 
@@ -67,7 +88,7 @@ frame += Loc(hold_x/2,0,0)*gbar + Loc(slot_x/2-wall+hold_x,0,0)*gbar + Loc(-slot
 
 # subtract guides
 gd = Box(edge_x,edge_y,slot_z, align=(Align.MIN,Align.MIN,Align.MIN))
-frame -= Loc(slot_x/2-edge_x,wall+slot_y,0)*gd + Loc(-slot_x/2,wall+slot_y,0)*gd 
+frame -= Loc(slot_x/2-edge_x,wall+slot_y,0)*gd + Loc(-slot_x/2,wall+slot_y,0)*gd
 
 # shift it over
 frame = Loc((inset_r-inset_l)/2,-wall-slot_yt,-slot_z)*frame
@@ -83,7 +104,12 @@ with BuildSketch(Plane.YZ) as pbar:
 
 pbar = RY3*extrude(pbar,guide_x)
 
-frame += Loc(guide_x/2,0,0)*pbar+Loc(guide_x/2+paper_w/4,0,0)*pbar+Loc(guide_x/2+paper_w/2,0,0)*pbar+Loc(guide_x/2-paper_w/4,0,0)*pbar+Loc(guide_x/2-paper_w/2,0,0)*pbar
+frame += (Loc(guide_x/2,0,0)*pbar
+          +Loc(guide_x/2+paper_w/4,0,0)*pbar
+          +Loc(guide_x/2+paper_w/2,0,0)*pbar
+          +Loc(guide_x/2-paper_w/4,0,0)*pbar
+          +Loc(guide_x/2-paper_w/2,0,0)*pbar
+          )
 
 side=Box(guide_x/2,guide_y,total_z,align=(Align.MIN,Align.MIN,Align.MIN))
 frame += Loc(paper_w/2,0,0)*side + Loc(-paper_w/2-guide_x/2,0,0)*side

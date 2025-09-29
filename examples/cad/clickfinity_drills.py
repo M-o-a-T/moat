@@ -1,25 +1,15 @@
-from moat.d3 import *
-from build123d import *
-from math import sqrt
+"""
+A drill holder
+"""
+from __future__ import annotations
 
 # from moat.d3.gridbox import gridbox
-
-import sys, os
-from build123d import *
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-from subprocess import run as spawn, DEVNULL
-
-os.chdir("/src/buildscad")
-
-if "/src/buildscad/src" not in sys.path:
-    sys.path.insert(0,"/src/buildscad/src")
-if "/src/buildscad" not in sys.path:
-    sys.path.insert(0,"/src/buildscad")
+from math import sqrt
 
 import buildscad.main as scq
+from build123d import Align, Axis, Box, Circle, Cylinder, Polygon, Rectangle, chamfer, make_face
 
-
+from moat.d3 import R2, R3, RX2, RY1, Cyl, Loc, stack
 
 ### basic grid parameters, Gridfinity standard
 grid=42
@@ -61,25 +51,9 @@ screw_h = 1.5
 slant=True
 
 def LG(x,y):
+    "Locate XY"
     return Loc(grid*x,grid*y,0)
 
-def RZ(x):
-    return Rot(0,0,90*x)
-R0=RZ(0)
-R1=RZ(1)
-R2=RZ(2)
-R3=RZ(3)
-def RX(x):
-    return Rot(90*x,0,0)
-RX1=RX(1)
-RX2=RX(2)
-RX3=RX(3)
-def RY(x):
-    return Rot(0,90*x,0)
-RY1=RY(1)
-RY2=RY(2)
-RY3=RY(3)
-    
 AL=(Align.CENTER,Align.CENTER,Align.MIN)
 
 def screw():
@@ -87,31 +61,38 @@ def screw():
     The hole for a screw.
     """
     if slant:
-        return stack(Circle(screw_d/2),screw_h,None,(screw_head_d-screw_d)/2,Circle(screw_head_d/2),bar_h,None)
+        return stack(Circle(screw_d/2),
+                     screw_h,None,
+                     (screw_head_d-screw_d)/2,
+                     Circle(screw_head_d/2),
+                     bar_h,None)
     return stack(Circle(screw_d/2),screw_h,None,Circle(screw_head_d/2),bar_h,None)
 
 def bar():
+    "A bar"
     b=Box(bar_l,bar_w,bar_h,align=AL)
     c = Cylinder(.8,5,align=AL)
     b=b-c-Loc(125,0,0)*c-Loc(-125,0,0)*c
-    for l in (10,):
-        b -= Loc(-l,0,bar_h)*RX2*screw() 
+    for loc in (10,):
+        b -= Loc(-loc,0,bar_h)*RX2*screw()
     return b
 
 d_out=2
 d_in=1.8
 tw=42*2-10
 def drills(a,b,d1=None,d2=None):
+    "main"
     w=a+2*d_out
     base=RY1*stack(Rectangle(a*7,w,align=(Align.MAX,Align.MIN)),tw,Rectangle(5*a-20,w,align=(Align.MAX,Align.MIN)))
     base=chamfer(base.edges().filter_by(
         lambda e:
-            abs((e@0).Y-(e@1).Y)+abs((e@0).Z-(e@1).Z)<.1 and e.center().Z<0.1).group_by(Axis.Z)[0].sort_by(Axis.Y)[0 if a>7 else -1],5)
+            abs((e@0).Y-(e@1).Y)+abs((e@0).Z-(e@1).Z)<.1
+            and e.center().Z<0.1).group_by(Axis.Z)[0].sort_by(Axis.Y)[0 if a>7 else -1],5)
     prev=None
     ppx = 0
     for d in range(int(a*2),int(b*2)-1,-1):
         back=(d&1)
-        d /= 2
+        d /= 2  # noqa:PLW2901
         if prev is None:
             px=d/2+d_out
         else:
@@ -122,8 +103,8 @@ def drills(a,b,d1=None,d2=None):
             dx=sqrt(h*h-dy*dy) if dy<h else 0
             ppx = px
             px = max(pmin,px+dx)
-        l=50+10*d
-        cyl = Loc(px,d_out+d/2 if back else w-d_out-d/2,10*back/sqrt(d)+3.5)*Cyl(d+.2,l)
+        loc=50+10*d
+        cyl = Loc(px,d_out+d/2 if back else w-d_out-d/2,10*back/sqrt(d)+3.5)*Cyl(d+.2,loc)
         base -= cyl
         if d1 is not None:
             d1 -= cyl
@@ -164,6 +145,5 @@ x,y,z = 2,2,2
 #s.set_var("compartZCount",x)
 #s.set_var("compartXCount",y)
 #s.set_var("compartYCount",z)
-breakpoint()
 obj=s.mod("basic_cup",1,2,3)
 

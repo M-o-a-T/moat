@@ -177,7 +177,7 @@ class LinkCommon(CmdCommon):
         if isinstance(remote, dict):
             with suppress(KeyError):
                 auth_out.append(TokenAuth(data["auth"]["token"]))
-            conn_ = TCPConn(self, remote_host=remote["host"], remote_port=remote["port"])
+            conn_ = TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger)
         else:
             conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
 

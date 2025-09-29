@@ -568,7 +568,7 @@ def sheettyp_set(obj, **kw):
 
 @sheettyp.command(name="delete")
 @click.pass_obj
-def typ_delete(obj):
+def sheettyp_delete(obj):
     """
     Delete a label type.
     """

@@ -408,9 +408,6 @@ class ClientDevice(CtxObj, BaseDevice):
             scope.register(self)
             await scope.no_more_dependents()
 
-    async def add_slots(self):  # noqa: D102
-        return
-
     async def add_slots(self):
         """Add configured slots to this instance"""
         if "slots" not in self.data:

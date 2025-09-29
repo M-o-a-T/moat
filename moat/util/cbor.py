@@ -22,7 +22,7 @@ from ipaddress import (
 )
 
 # Typing
-from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag
+from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
 
 from ._cbor import StdCBOR, std_ext
 

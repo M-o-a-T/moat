@@ -23,9 +23,9 @@ repository = "https://github.com/M-o-a-T/moat"
 
 [project.optional-dependencies]
 dev = [
-    "pytest ~= 8.0"
-    "pook ~= 1.4"
-    "pytest-cov ~= 4.1"
+    "pytest ~= 8.0",
+    "pook ~= 1.4",
+    "pytest-cov ~= 4.1",
 ]
 docs = [
     "furo ~= 2024.1.29",

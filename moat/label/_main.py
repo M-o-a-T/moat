@@ -697,7 +697,7 @@ def sheet_set(obj, printed, unprinted, **kw):
 )
 @click.option("--typ", "-t", type=str, help="Label type; this flag creates a new sheet.")
 @click.pass_obj
-def sheet_place(obj, pattern, file, start, count, typ):
+def sheet_gen(obj, pattern, file, start, count, typ):
     """
     Generate new labels, filling a sheet.
 

@@ -85,24 +85,8 @@ async def data(s):  # noqa: D103
 
 
 async def fetch(c, p):  # noqa: D103
-    p = P(p)
-    nn = Node()
-    pl = PathLongener()
-    async with ungroup, c.cmd(P("d.walk"), p).stream_in() as msgs:
-        try:
-            it = aiter(msgs)
-        except StreamError as exc:
-            try:
-                if exc.args[0][0] == "KeyError":
-                    return nn  # empty
-            except Exception:
-                pass
-            raise exc from None
-
-        async for pr, p, d, *m in it:
-            p = pl.long(pr, p)
-            nn.set(p, d, MsgMeta.restore(m))
-        return nn
+    async with c.d_watch(p, subtree=True, meta=True, state=True) as mon:
+        return await mon.get_node()
 
 
 @pytest.mark.anyio
@@ -120,7 +104,6 @@ async def test_ls_walk(cfg):  # noqa: D103
 
         await data(s)
         nn = await fetch(c, "a")
-
         assert n.get(P("a")) == nn
         await s("a.b.x", 90)
         assert n.get(P("a")) != nn

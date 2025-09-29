@@ -23,7 +23,7 @@ async def get_host_tuple(obj):
     if hasattr(obj, "dbg_host"):
         return obj.dbg_host
     host = [obj.host if hasattr(obj, "host") else platform.node()]
-    if (srv := s.environ.get("MOAT_SERVICE", None)) is not None:
+    if (srv := os.environ.get("MOAT_SERVICE", None)) is not None:
         host.extend(srv.split("|"))
         return host
     if int(os.environ.get("SYSTEMD_EXEC_PID", "0")) == os.getpid():

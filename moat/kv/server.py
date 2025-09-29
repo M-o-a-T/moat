@@ -654,9 +654,9 @@ class SCmd_msg_monitor(StreamCommand):
                         res["data"] = codec.decode(resp.payload)
                     except Exception as exc:
                         self.client.server.logger.exception(
-                            "ERR %d: Client error on %s",
+                            "ERR %d: Client error: %r",
                             self.client._client_nr,  # noqa: SLF001
-                            repr(exc),
+                            repr(exc),  # noqa:TRY401
                         )
                         res["raw"] = resp.payload
                         res["error"] = repr(exc)
@@ -984,7 +984,7 @@ class ServerClient:
             except ClientError:
                 raise
             except Exception as exc:
-                self.logger.exception("Err %s: %r", exc, msg)
+                self.logger.exception("Err %r: %r", exc, msg)  # noqa: TRY401
                 raise ClientError(repr(exc)) from None
                 # TODO pass exceptions to the client
 
@@ -1607,7 +1607,7 @@ class Server:
         of the Delete nodes.
         """
 
-        nodes: NodeSet = None
+        nodes: NodeSet = NodeSet()
         n_nodes: int = None
 
         async def send_nodes():
@@ -1638,10 +1638,9 @@ class Server:
                 async with scope.using_scope(f"moat.kv.sync.{self.node.name}"):
                     client = await moat_kv_client.client_scope(conn=cfg)
                     # TODO auth this client
-                    nodes = NodeSet()
                     n_nodes = 0
 
-                    async def add(event):
+                    async def add(event, nodes):
                         nonlocal nodes, n_nodes
                         c = event.chain
                         if c is None:
@@ -1917,7 +1916,7 @@ class Server:
             # self.logger.warning("Cancelled %s", action)
             raise
         except BaseException as exc:
-            self.logger.exception("Died %s: %r", action, exc)
+            self.logger.exception("Died %s: %r", action, exc)  # noqa: TRY401
             raise
         else:
             self.logger.info("Stream ended %s", action)

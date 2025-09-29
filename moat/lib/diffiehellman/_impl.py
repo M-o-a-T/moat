@@ -57,7 +57,8 @@ class DiffieHellman:
 
     def generate_private_key(self):
         """
-        Generates a private key of key_length bits and attaches it to the object as the __private_key variable.
+        Generates a private key of key_length bits and attaches it to the
+        object as the __private_key variable.
 
         :return: void
         :rtype: void

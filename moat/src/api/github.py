@@ -15,6 +15,7 @@ from ._common import API as BaseAPI
 from ._common import CommitInfo as BaseCommitInfo
 from ._common import RepoInfo as BaseRepoInfo
 
+from typing import Self,AsyncIterator
 
 @define
 class CommitInfo(BaseCommitInfo):  # noqa: D101

@@ -28,7 +28,8 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         try:
             return self.api.cfg.ssh_url
         except AttributeError:
-            return f"git+ssh://{self.api.cfg.get('git_user', 'git')}@{self.api.host}/{self.api.cfg.get('repo', self.name + '.git')}"
+            return (f"git+ssh://{self.api.cfg.get('git_user', 'git')}@"
+                    f"{self.api.host}/{self.api.cfg.get('repo', self.name + '.git')}")
 
     @property
     def git_url(self) -> str:  # noqa: D102
@@ -82,26 +83,26 @@ class API(BaseAPI):  # noqa: D101
         """
         raise NotImplementedError
 
-    #   async def list_repos(self) -> AsyncIterator[str]:
-    #       """
-    #       List accessible repositories.
-    #       """
-    #       url = f"/users/{self.cfg.user}/repos"
-    #       while url is not None:
-    #           res = await self.http.get(url)
-    #           res.raise_for_status()
-    #           for k in res.json():
-    #               yield k
-    #           try:
-    #               lh = res.headers["link"]
-    #           except KeyError:
-    #               return
-    #           url = None
-    #           for xh in lh.split(","):
-    #               u,r = xh.split(";")
-    #               if 'rel="next"' in r:
-    #                   url = u.strip().lstrip("<").rstrip(">")
-    #                   break
+    #async def list_repos(self) -> AsyncIterator[str]:
+    #   """
+    #   List accessible repositories.
+    #   """
+    #   url = f"/users/{self.cfg.user}/repos"
+    #   while url is not None:
+    #       res = await self.http.get(url)
+    #       res.raise_for_status()
+    #       for k in res.json():
+    #           yield k
+    #       try:
+    #           lh = res.headers["link"]
+    #       except KeyError:
+    #           return
+    #       url = None
+    #       for xh in lh.split(","):
+    #           u,r = xh.split(";")
+    #           if 'rel="next"' in r:
+    #               url = u.strip().lstrip("<").rstrip(">")
+    #               break
 
     async def get_repo(self, name) -> RepoInfo:  # noqa: D102
         return self.cls_RepoInfo(self, name)

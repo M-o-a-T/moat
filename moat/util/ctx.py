@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from collections.abc import AsyncIterator, Awaitable
-    from typing import Literal
+    from typing import Literal, Any
 
 
 __all__ = ["CtxObj", "ctx_as", "timed_ctx"]
@@ -97,7 +97,7 @@ class timed_ctx(CtxObj):
                 yield mgr
 
 
-class ContextMgr:  # [CtxType]:
+class ContextMgr[T_CtxType]:
     """
     This class manages a context for the caller.
 
@@ -110,7 +110,7 @@ class ContextMgr:  # [CtxType]:
         raise NotImplementedError("Override me!")
 
     exc: Exception | None = None
-    ctx: CtxType | Literal[False] | None = None
+    ctx: T_Ctx | Literal[False] | None = None
     stopper: anyio.Event = None
     stopped: anyio.Event = None
 

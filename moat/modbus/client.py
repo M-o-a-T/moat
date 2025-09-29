@@ -396,7 +396,7 @@ class Host(_HostCommon, CtxObj):
                 raise
 
             except BaseException as exc:
-                _logger.exception("Error: %r", exc)
+                _logger.exception("Error: %r", exc)  # noqa: TRY401
 
                 t, self._transactions = self._transactions, {}
                 for req in t.values():
@@ -551,7 +551,7 @@ class SerialHost(_HostCommon, CtxObj):
                 raise
 
             except BaseException as exc:
-                _logger.exception("Error: %r", exc)
+                _logger.exception("Error: %r", exc)  # noqa: TRY401
 
                 t, self._transactions = self._transactions, {}
                 for req in t.values():
@@ -669,7 +669,7 @@ class Unit(CtxObj):
         try:
             response = await self.host.execute(request)
         except Exception as exc:
-            logger.exception("Handler for %d: %r", unit_id, exc)
+            logger.exception("Handler for %d: %r", unit_id, exc)  # noqa: TRY401
             response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
 
         return response

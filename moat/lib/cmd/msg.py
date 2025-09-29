@@ -610,7 +610,9 @@ class Msg(MsgLink, MsgResult):
         return MsgResult(*res)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}: {' ' + str(self._cmd) if self._cmd else ''} {self._a} {self._kw}>"
+        return (f"<{self.__class__.__name__}:L{self.link_id} "
+                f"r{'=L' + str(self._remote.link_id) if self._remote else '-'}: "
+                f" {' ' + str(self._cmd) if self._cmd else ''} {self._a} {self._kw}>")
 
 
 class _Stream:

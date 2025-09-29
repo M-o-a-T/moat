@@ -282,7 +282,8 @@ def print_sheet(obj, sheets, test):
             continue
         if sh.sheettyp.count > (nlab := fmt.extent[0] * fmt.extent[1]):
             print(
-                f"Labeltype {sh.labeltyp.name} wants {sh.sheettyp.count} labels but config supports {nlab}.",
+                f"Labeltype {sh.labeltyp.name} wants {sh.sheettyp.count} labels "
+                f"but config supports {nlab}.",
                 file=sys.stderr,
             )
             continue
@@ -300,7 +301,9 @@ def print_sheet(obj, sheets, test):
             for lbl in sorted(sh.labels, key=lambda x: x.text):
                 if lbl.labeltyp.sheettyp != sh.sheettyp:
                     raise ValueError(
-                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name!r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}",
+                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name!r} "
+                        f"label and wants format {lbl.labeltyp.sheettyp.name} "
+                        f"not {sh.sheettyp.name}",
                     )
 
                 if lab is None or lbl.labeltyp.name != lab.name_:
@@ -811,7 +814,8 @@ def sheet_place(obj, labels, numeric):
                     print(f"Label {lab.code}:{lab.text} is on sheet {lab.sheet_id}. Skipped.")
             elif lab.labeltyp != sh.labeltyp:
                 print(
-                    f"Label {lab.code}:{lab.text} has type {lab.labeltyp.name}, not {sh.labeltyp.name}. Skipped.",
+                    f"Label {lab.code}:{lab.text} has type {lab.labeltyp.name}, "
+                    f"not {sh.labeltyp.name}. Skipped.",
                 )
             else:
                 lab.sheet = sh

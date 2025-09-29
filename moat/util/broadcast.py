@@ -12,10 +12,13 @@ from . import NotGiven
 from .compat import EndOfStream, WouldBlock
 from .queue import Queue
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing import Literal, Self
+    from typing import Literal, Self, TypeVar
+
+TData = TypeVar("TData")
+
 
 # TODO build something nicer
 try:

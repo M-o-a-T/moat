@@ -25,15 +25,15 @@ BUSITEM_INTF = "com.victronenergy.BusItem"
 
 class Dbus(CtxObj):
     """\
-		This is a context manager for connecting to the system/session DBus.
+        This is a context manager for connecting to the system/session DBus.
 
-		It supplies generators for exporting and importing values, and a
-		context manager for creating a service.
+        It supplies generators for exporting and importing values, and a
+        context manager for creating a service.
 
-		Importers and exporters are not context managers. You need to
-		control their lifetimes explicitly by calling their `close`
-		method if they need to be destroyed before the bus context ends.
-		"""
+        Importers and exporters are not context managers. You need to
+        control their lifetimes explicitly by calling their `close`
+        method if they need to be destroyed before the bus context ends.
+        """
 
     def __init__(self, bus=None):
         self._bus = bus
@@ -79,9 +79,9 @@ class Dbus(CtxObj):
 
 # TODOS
 # 1 check for datatypes, it works now, but not sure if all is compliant with
-# 	com.victronenergy.BusItem interface definition. See also the files in
-# 	tests_and_examples. And see 'if type(v) == dbus.Byte:' on line 102. Perhaps
-# 	something similar should also be done in DbusBusItemExport?
+#     com.victronenergy.BusItem interface definition. See also the files in
+#     tests_and_examples. And see 'if type(v) == dbus.Byte:' on line 102. Perhaps
+#     something similar should also be done in DbusBusItemExport?
 # 2 Shouldn't DbusBusItemExport inherit dbus.service.Object?
 # 7 Make hard rules for services exporting data to the D-Bus, in order to make tracking
 #   changes possible. Does everybody first invalidate its data before leaving the bus?
@@ -130,7 +130,8 @@ class DbusService:  # noqa: D101
         # Connect to session bus whenever present, else use the system bus
         self._dbusconn = bus
 
-        # make the dbus connection available to outside, could make this a true property instead, but ach..
+        # make the dbus connection available to outside, could make this a
+        # true property instead, but ach..
         self._servicename = servicename
 
     async def _start(self):
@@ -149,9 +150,11 @@ class DbusService:  # noqa: D101
         await bus.release_name(self._servicename)
         del self._dbusnodes["/"]
 
-    # @param callbackonchange	function that will be called when this value is changed. First parameter will
-    # 							is the path of the object, second the new value. This callback should return
-    # 							True to accept the change, False to reject it.
+    # @param callbackonchange function that will be called when this
+    #                         value is changed. First parameter will is the
+    #                         path of the object, second the new value.
+    #                         This callback should return True to accept
+    #                         the change, False to reject it.
     async def add_path(  # noqa: D102
         self,
         path,
@@ -213,8 +216,9 @@ class DbusService:  # noqa: D101
         await self.add_path("/Connected", connected)
         await self.add_path("/Serial", serial)
 
-    # Callback function that is called from the DbusItemExport objects when a value changes. This function
-    # maps the change-request to the onchangecallback given to us for this specific path.
+    # Callback function that is called from the DbusItemExport objects when
+    # a value changes. This function maps the change-request to the
+    # onchangecallback given to us for this specific path.
     def _value_changed(self, path, newvalue):
         if path not in self._onchangecallbacks:
             return True
@@ -331,25 +335,31 @@ class DbusRootTracker:
 
 
 # Importing basics:
-# 	- If when we power up, the D-Bus service does not exist, or it does exist and the path does not
-# 	  yet exist, still subscribe to a signal: as soon as it comes online it will send a signal with its
-# 	  initial value, which DbusItemImport will receive and use to update local cache. And, when set,
-# 	  call the eventCallback.
-# 	- If when we power up, save it
-# 	- When using get_value, know that there is no difference between services (or object paths) that don't
-# 	  exist and paths that are invalid (= empty array, see above). Both will return None. In case you do
-# 	  really want to know if a path exists or not, use the exists property.
-# 	- When a D-Bus service leaves the D-Bus, it will first invalidate all its values, and send signals
-# 	  with that update, and only then leave the D-Bus. (or do we need to subscribe to the NameOwnerChanged-
-# 	  signal!?!) To be discussed and make sure. Not really urgent, since all existing code that uses this
-# 	  class already subscribes to the NameOwnerChanged signal, and subsequently removes instances of this
-# 	  class.
+#     - If when we power up, the D-Bus service does not exist, or it does
+#       exist and the path does not yet exist, still subscribe to a signal:
+#       as soon as it comes online it will send a signal with its initial
+#       value, which DbusItemImport will receive and use to update local
+#       cache. And, when set, call the eventCallback.
+#     - If when we power up, save it
+#     - When using get_value, know that there is no difference between
+#       services (or object paths) that don't exist and paths that are
+#       invalid (= empty array, see above). Both will return None. In case
+#       you do really want to know if a path exists or not, use the exists
+#       property.
+#     - When a D-Bus service leaves the D-Bus, it will first invalidate all
+#       its values, and send signals with that update, and only then leave
+#       the D-Bus. (or do we need to subscribe to the NameOwnerChanged-
+#       signal!?!) To be discussed and make sure. Not really urgent, since
+#       all existing code that uses this class already subscribes to the
+#       NameOwnerChanged signal, and subsequently removes instances of this
+#       class.
 #
 # Read when using this class:
-# Note that when a service leaves that D-Bus without invalidating all its exported objects first, for
-# example because it is killed, DbusItemImport doesn't have a clue. So when using DbusItemImport,
-# make sure to also subscribe to the NamerOwnerChanged signal on bus-level. Or just use dbusmonitor,
-# because that takes care of all of that for you.
+# Note that when a service leaves that D-Bus without invalidating all its
+# exported objects first, for example because it is killed, DbusItemImport
+# doesn't have a clue. So when using DbusItemImport, make sure to also
+# subscribe to the NamerOwnerChanged signal on bus-level. Or just use
+# dbusmonitor, because that takes care of all of that for you.
 
 
 class DbusItemImport:  # noqa: D101
@@ -371,7 +381,8 @@ class DbusItemImport:  # noqa: D101
 
     ## Constructor
     # @param bus            the bus-object (SESSION or SYSTEM).
-    # @param serviceName    the dbus-service-name (string), for example 'com.victronenergy.battery.ttyO1'
+    # @param serviceName    the dbus-service-name (string),
+    #                       for example 'com.victronenergy.battery.ttyO1'
     # @param path           the object-path, for example '/Dc/0/V'
     # @param eventCallback  function that you want to be called on a value change
     # @param createSignal   only set this to False if you use this function to one-time
@@ -450,8 +461,8 @@ class DbusItemImport:  # noqa: D101
 
     ## Returns the value of the dbus-item.
     # the type will be a dbus variant, for example dbus.Int32(0, variant_level=1)
-    # this is not a property to keep the name consistant with the com.victronenergy.busitem interface
-    # returns None when the property is invalid
+    # this is not a property to keep the name consistant with the
+    # com.victronenergy.busitem interface returns None when the property is invalid
     def get_value(self):  # noqa: D102
         return self._cachedvalue
 
@@ -463,7 +474,8 @@ class DbusItemImport:  # noqa: D101
     async def set_value(self, newvalue):  # noqa: D102
         r = await self._interface.call_set_value(wrap_dbus_value(newvalue))
 
-        # instead of just saving the value, go to the dbus and get it. So we have the right type etc.
+        # instead of just saving the value, go to the dbus and get it. So
+        # we have the right type etc.
         if r == 0:
             await self.refresh()
 
@@ -562,14 +574,19 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     #
     # Use this object to export (publish), values on the dbus
     # Creates the dbus-object under the given dbus-service-name.
-    # @param bus		  The dbus object.
-    # @param objectPath	  The dbus-object-path.
-    # @param value		  Value to initialize ourselves with, defaults to None which means Invalid
-    # @param description  String containing a description. Can be called over the dbus with GetDescription()
-    # @param writeable	  what would this do!? :).
-    # @param callback	  Function that will be called when someone else changes the value of this VeBusItem
-    #                     over the dbus. First parameter passed to callback will be our path, second the new
-    # 					  value. This callback should return True to accept the change, False to reject it.
+    # @param bus          The dbus object.
+    # @param objectPath   The dbus-object-path.
+    # @param value        Value to initialize ourselves with,
+    #                     defaults to None which means Invalid
+    # @param description  String containing a description.
+    #                     Can be called over the dbus with GetDescription()
+    # @param writeable    what would this do!? :).
+    # @param callback     Function that will be called when someone else
+    #                     changes the value of this VeBusItem over the
+    #                     dbus. First parameter passed to callback will be
+    #                     our path, second the new value. This callback
+    #                     should return True to accept the change, False
+    #                     to reject it.
     def __init__(
         self,
         bus,

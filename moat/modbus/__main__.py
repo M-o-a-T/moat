@@ -285,7 +285,7 @@ async def _serclient(
                 res = await s.getValues()  # pylint:disable=protected-access  ## TODO
                 pprint(res)
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception("Problem: %r", exc)
+            log.exception("Problem: %r", exc)  # noqa: TRY401
 
 
 def add_serial_cfg(c):

@@ -17,6 +17,7 @@ from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo
 from . import RepoInfo as BaseRepoInfo
 
+from typing import AsyncIterator
 
 @define
 class CommitInfo(BaseCommitInfo):  # noqa: D101
@@ -61,7 +62,7 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
 
     async def clone_from_remote(self):
         "Copy a remote repo."
-        await self.repo.exec("rad", "clone", url, str(self.repo.cwd), cwd="/tmp")
+        await self.repo.exec("rad", "clone", self.rad_urn, str(self.repo.cwd), cwd="/tmp")
         await self.load_()
 
     async def load_(self):  # noqa: D102
@@ -121,7 +122,7 @@ mv $T $1
                     "id",
                     "update",
                     "--edit",
-                    env={"EDITOR": strf.name, "HOME": os.environ["HOME"]},
+                    env={"EDITOR": f.name, "HOME": os.environ["HOME"]},
                 )
             finally:
                 with anyio.CancelScope(shield=True):

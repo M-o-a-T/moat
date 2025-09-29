@@ -154,9 +154,12 @@ class SignalClient:
             message (str): Message to be sent.
             recipients (list): List of recipients.
             mention (str, optional): Mention string (`start:end:recipientNumber`).
-            attachments_as_files: (list, optional): List of `str` w/ files to send as attachment(s).
-            attachments_as_bytes (list, optional): List of `bytearray` to send as attachment(s).
-            cleanup_attachments (bool, optional): Wether to remove files in `attachments_as_files`
+            attachments_as_files: (list, optional):
+                List of `str` w/ files to send as attachment(s).
+            attachments_as_bytes (list, optional):
+                List of `bytearray` to send as attachment(s).
+            cleanup_attachments (bool, optional):
+                Wether to remove files in `attachments_as_files`
                 after message(s) has been sent. Defaults to False.
             **kwargs: Arbitrary keyword arguments passed to
                 :meth:`._jsonrpc`.

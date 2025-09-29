@@ -229,9 +229,10 @@ def wrap_dbus_value(value):
         return Variant("ay", value)
     if isinstance(value, (list, tuple)):
         if len(value) == 0:
-            # If the list is empty we cannot infer the type of the contents. So assume unsigned integer.
-            # A (signed) integer is dangerous, because an empty list of signed integers is used to encode
-            # an invalid value.
+            # If the list is empty we cannot infer the type of the contents.
+            # So assume unsigned integer.
+            # A (signed) integer is dangerous, because an empty list of
+            # signed integers is used to encode an invalid value.
             return Variant("au", [])
         return Variant("av", [wrap_dbus_value(x) for x in value])
     if isinstance(value, dict):

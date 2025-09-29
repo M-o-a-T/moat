@@ -4,6 +4,10 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from moat.lib.codec import Codec
+
 __all__ = ["OutOfData", "_add_obj", "get_codec", "pos2val", "srepr", "val2pos"]
 
 

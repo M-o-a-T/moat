@@ -1,16 +1,20 @@
 ## @package dbus.monitor  # noqa: D100
-# This code takes care of the D-Bus interface (not all of below is implemented yet):
-# - on startup it scans the dbus for services we know. For each known service found, it searches for
-#   objects/paths we know. Everything we find is stored in items{}, and an event is registered: if a
-#   value changes we'll be notified and can pass that on to our owner. For example the vrmLogger.
+# This code takes care of the D-Bus interface (not all of below is
+# implemented yet): - on startup it scans the dbus for services we know.
+# For each known service found, it searches for objects/paths we know.
+# Everything we find is stored in items{}, and an event is registered: if a
+# value changes we'll be notified and can pass that on to our owner. For
+# example the vrmLogger.
 #
 # - after startup, it continues to monitor the dbus:
-# 		1) when services are added we do the same check on that
-# 		2) when services are removed, we remove any items that we had that referred to that service
-# 		3) if an existing services adds paths we update ourselves as well: on init, we make a
-# 		   VeDbusItemImport for a non-, or not yet existing objectpaths as well1
+#         1) when services are added we do the same check on that
+#         2) when services are removed, we remove any items that we had
+#            that referred to that service
+#         3) if an existing services adds paths we update ourselves as well: on init, we make a
+#            VeDbusItemImport for a non-, or not yet existing objectpaths as well1
 #
-# Code is used by the vrmLogger, and also the pubsub code. Both are other modules in the dbus_vrm repo.
+# Code is used by the vrmLogger, and also the pubsub code. Both are other
+# modules in the dbus_vrm repo.
 from __future__ import annotations
 
 import anyio
@@ -115,9 +119,10 @@ class DbusMonitor(CtxObj):
         deviceRemovedCallback=None,
         vebusDeviceInstance0=False,
     ):
-        # valueChangedCallback is the callback that we call when something has changed.
-        # def value_changed_on_dbus(dbusServiceName, dbusPath, options, changes, deviceInstance):
-        # in which `changes` is a tuple with GetText() and GetValue()
+        # valueChangedCallback is the callback that we call when something
+        # has changed. def value_changed_on_dbus(dbusServiceName, dbusPath,
+        # options, changes, deviceInstance): in which `changes` is a tuple
+        # with GetText() and GetValue()
         #
         # `dbusTree` is a service>pathlist dict. The path list can be anything iterable
         # (list, set, dict (we ignore the values)).
@@ -130,8 +135,9 @@ class DbusMonitor(CtxObj):
         self.dbusTree = dbusTree
         self.vebusDeviceInstance0 = vebusDeviceInstance0
 
-        # Lists all tracked services. Stores name, id, device instance, value per path, and whenToLog info
-        # indexed by service name (eg. com.victronenergy.settings).
+        # Lists all tracked services. Stores name, id, device instance,
+        # value per path, and whenToLog info indexed by service name (eg.
+        # com.victronenergy.settings).
         self.servicesByName = {}
 
         # Same values as self.servicesByName, but indexed by service id (eg. :1.30)
@@ -219,16 +225,17 @@ class DbusMonitor(CtxObj):
             return await _call(self.dbus_name_owner_changed, msg)
 
     #
-    # 		if msg._matches(
-    # 				interface=ITEM_INTF,
-    # 				member='PropertiesChanged'):
-    # 			return await _call(self.handler_value_changes, msg, senderId=msg.sender.name, path=msg.path.str)
+    #   if msg._matches(
+    #           interface=ITEM_INTF,
+    #           member='PropertiesChanged'):
+    #       return await _call(self.handler_value_changes, msg,
+    #                          senderId=msg.sender.name, path=msg.path.str)
     #
-    # 		if msg._matches(
-    # 				interface=ITEM_INTF,
-    # 				member='ItemsChanged',
-    # 				path='/'):
-    # 			return await _call(self.handler_item_changes, msg, senderId=msg.sender.name)
+    #   if msg._matches(
+    #           interface=ITEM_INTF,
+    #           member='ItemsChanged',
+    #           path='/'):
+    #       return await _call(self.handler_item_changes, msg, senderId=msg.sender.name)
 
     def dbus_name_owner_changed(self, msg):  # noqa: D102
         name, oldowner, newowner = msg.body
@@ -272,8 +279,9 @@ class DbusMonitor(CtxObj):
         logger.info("Found: %s, scanning and storing items", serviceName)
         serviceId = await self.dbusConn.get_name_owner(serviceName)
 
-        # we should never be notified to add a D-Bus service that we already have. If this assertion
-        # raises, check process_name_owner_changed, and D-Bus workings.
+        # we should never be notified to add a D-Bus service that we
+        # already have. If this assertion raises, check
+        # process_name_owner_changed, and D-Bus workings.
         assert serviceName not in self.servicesByName
         assert serviceId not in self.servicesById
 
@@ -290,12 +298,12 @@ class DbusMonitor(CtxObj):
                 di = await self.call_bus(serviceName, "/DeviceInstance", None, "GetValue")
             except DBusError:
                 logger.info(
-                    "	   %s was skipped because it has no device instance",
+                    "       %s was skipped because it has no device instance",
                     serviceName,
                 )
                 return False  # Skip it
 
-        logger.info("	   %s has device instance %s", serviceName, di)
+        logger.info("       %s has device instance %s", serviceName, di)
         service = Service(serviceId, serviceName, di)
 
         # Hook up the signals
@@ -372,20 +380,20 @@ class DbusMonitor(CtxObj):
                 t = str(v)
             self._handler_value_changes(service, path, v, t)
 
-    # 	def handler_value_changes(self, service, msg):
-    # 		breakpoint()
-    # 		pass # changes, path, senderId):
-    # 		# If this properyChange does not involve a value, our work is done.
-    # 		if 'Value' not in changes:
-    # 			return
+    #     def handler_value_changes(self, service, msg):
+    #         breakpoint()
+    #         pass # changes, path, senderId):
+    #         # If this properyChange does not involve a value, our work is done.
+    #         if 'Value' not in changes:
+    #             return
     #
-    # 		v = unwrap_dbus_value(changes['Value'])
-    # 		# Some services don't send Text with their PropertiesChanged events.
-    # 		try:
-    # 			t = changes['Text']
-    # 		except KeyError:
-    # 			t = str(v)
-    # 		self._handler_value_changes(service, path, v, t)
+    #         v = unwrap_dbus_value(changes['Value'])
+    #         # Some services don't send Text with their PropertiesChanged events.
+    #         try:
+    #             t = changes['Text']
+    #         except KeyError:
+    #             t = str(v)
+    #         self._handler_value_changes(service, path, v, t)
 
     def _handler_value_changes(self, service, path, value, text):
         try:
@@ -467,19 +475,23 @@ class DbusMonitor(CtxObj):
         except KeyError:
             return False
 
-    # Sets the value for a certain servicename and path, returns the return value of the D-Bus SetValue
-    # method. If the underlying item does not exist (the service does not exist, or the objectPath was not
+    # Sets the value for a certain servicename and path, returns the return
+    # value of the D-Bus SetValue method. If the underlying item does not
+    # exist (the service does not exist, or the objectPath was not
     # registered) the function will return -1
+
     async def set_value(self, serviceName, objectPath, value):  # noqa: D102
-        # Check if the D-Bus object referenced by serviceName and objectPath is registered. There is no
-        # necessity to do this, but it is in line with previous implementations which kept VeDbusItemImport
-        # objects for registers items only.
+        # Check if the D-Bus object referenced by serviceName and
+        # objectPath is registered. There is no necessity to do this, but
+        # it is in line with previous implementations which kept
+        # VeDbusItemImport objects for registers items only.
         service = self.servicesByName.get(serviceName, None)
         if service is None:
             return -1
         if objectPath not in service.paths:
             return -1
-        # We do not catch D-Bus exceptions here, because the previous implementation did not do that either.
+        # We do not catch D-Bus exceptions here, because the previous
+        # implementation did not do that either.
         return await self.call_bus(
             serviceName,
             objectPath,
@@ -511,42 +523,43 @@ class DbusMonitor(CtxObj):
 
     # Parameter categoryfilter is to be a list, containing the categories you want (configChange,
     # onIntervalAlways, etc).
-    # Returns a dictionary, keys are codes + instance, in VRM querystring format. For example vvt[0]. And
-    # values are the value.
-    # used only in vrmlogger
-    # 	def get_values(self, categoryfilter, converter=None):
+    # Returns a dictionary, keys are codes + instance, in VRM querystring format.
+    # For example vvt[0]. And values are the value. used only in vrmlogger
+    #     def get_values(self, categoryfilter, converter=None):
     #
-    # 		result = {}
+    #         result = {}
     #
-    # 		for serviceName in self.servicesByName:
-    # 			result.update(self.get_values_for_service(categoryfilter, serviceName, converter))
+    #         for serviceName in self.servicesByName:
+    #             result.update(self.get_values_for_service(categoryfilter,
+    #                                                       serviceName, converter))
     #
-    # 		return result
+    #         return result
     #
-    ##	# same as get_values above, but then for one service only
-    # 	def get_values_for_service(self, categoryfilter, servicename, converter=None):
-    # 		deviceInstance = self.get_device_instance(servicename)
-    # 		result = {}
+    ##    # same as get_values above, but then for one service only
+    #    def get_values_for_service(self, categoryfilter, servicename, converter=None):
+    #         deviceInstance = self.get_device_instance(servicename)
+    #         result = {}
     #
-    # 		service = self.servicesByName[servicename]
+    #         service = self.servicesByName[servicename]
     #
-    # 		for category in categoryfilter:
+    #         for category in categoryfilter:
     #
-    # 			for path in service[category]:
+    #             for path in service[category]:
     #
-    # 				value, text, options = service.paths[path]
+    #                 value, text, options = service.paths[path]
     #
-    # 				if value is not None:
+    #                 if value is not None:
     #
-    # 					value = value if converter is None else converter.convert(path, options['code'], value, text)
+    #                     value = value if converter is None else\
+    #                        converter.convert(path, options['code'], value, text)
     #
-    # 					precision = options.get('precision')
-    # 					if precision:
-    # 						value = round(value, precision)
+    #                     precision = options.get('precision')
+    #                     if precision:
+    #                         value = round(value, precision)
     #
-    # 					result[options['code'] + "[" + str(deviceInstance) + "]"] = value
+    #                     result[options['code'] + "[" + str(deviceInstance) + "]"] = value
     #
-    # 		return result
+    #         return result
     #
     async def track_value(self, serviceName, objectPath, callback, *args, **kwargs):
         """

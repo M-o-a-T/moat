@@ -10,7 +10,9 @@ from __future__ import annotations
 
 class MalformedPublicKey(BaseException):
     """
-    The public key is malformed as it does not meet the Legendre symbol criterion. The key might have been tampered with or might have been damaged in transit.
+    The public key is malformed as it does not meet the Legendre symbol
+    criterion. The key might have been tampered with or might have been
+    damaged in transit.
     """
 
     def __str__(self):

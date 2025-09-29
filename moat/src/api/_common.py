@@ -13,6 +13,7 @@ from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo, RepoExists
 from . import RepoInfo as BaseRepoInfo
 
+from typing import Self,AsyncIterator
 
 @define
 class CommitInfo(BaseCommitInfo):
@@ -122,7 +123,7 @@ class RepoInfo(BaseRepoInfo):
                 cwd="/tmp",
             )
 
-            async for br in src_repo.get_branches():
+            async for br in self.get_branches():
                 brn = br.data.name
                 await self.repo.exec("git", "branch", "--no-track", brn, f"src/{brn}")
 

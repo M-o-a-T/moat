@@ -127,7 +127,7 @@ def log(s, *x, err=None, nback=1):
 
 
 def at(*a, **kw):  # noqa: D103
-    log_.debug("%r %r", a, kw)
+    log.debug("%r %r", a, kw)
 
 
 def print_exc(exc, file=None):

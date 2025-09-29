@@ -67,7 +67,7 @@ class RepoMover:
                     pass
                 else:
                     raise RuntimeError(
-                        f"{name}: The migration branch {self.cfg.src.branch!r} already exists."
+                        f"{self.name}: The migration branch {self.cfg.src.branch!r} already exists."
                     )
 
             except BaseException:
@@ -81,7 +81,7 @@ class RepoMover:
             and not await (self.cwd / "objects").exists()
         ):
             # repository may be bare … or not
-            raise RuntimeError(f"Incomplete clone of {name}")
+            raise RuntimeError(f"Incomplete clone of {self.name}")
 
         cf = attrdict(**self.cfg)
         cf.repos = self.repos  # for templating
@@ -97,7 +97,7 @@ class RepoMover:
             # already gone. Do nothing.
             pass
         elif self.cfg.work.main and defbr != "main":
-            logger.debug(f"{name} : Renaming the {src_repo.main} branch to 'main'", name)
+            logger.debug(f"{self.name} : Renaming the {defbr} branch to 'main'")
             await self.exec("git", "branch", "-m", defbr, "main")
             await self.exec("git", "push", "src", "main")
             if not self.cfg.work.moved:

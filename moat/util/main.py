@@ -448,7 +448,7 @@ def load_subgroup(
     ext_pre=None,
     ext_post=None,
     **kw,
-) -> Command:
+) -> click.Command:
     """
     A decorator like click.group, enabling loading of subcommands
 
@@ -854,7 +854,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     try:
         p = moat.__path__
     except AttributeError:
-        p = (str(FSPath(ext.__file__).parent),)
+        p = (str(FSPath(moat.__file__).parent),)
     for fp in p:
         try:
             with (FSPath(fp) / "_cfg.yaml").open("r") as f:

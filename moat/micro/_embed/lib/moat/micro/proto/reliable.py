@@ -460,7 +460,7 @@ class ReliableMsg(StackedMsg):
 
     async def _dispatch(self, msg):
         if not isinstance(msg, (tuple, list)):
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if msg[0] < 0:  # protocol error / reset sequence
             n = -1 - msg[0]

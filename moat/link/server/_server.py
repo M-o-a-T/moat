@@ -619,7 +619,7 @@ class ClientStub:
             raise ValueError("doesn't work")
         srv = self.server.server_link(self.name)[1]
         if isinstance(srv, ClientStub):
-            raise RuntimeError("Client dropped, try later")
+            raise RuntimeError("Client dropped, try later")  # noqa:TRY004
         rcmd.extend((self.client, "cl"))
         return await srv.handle(msg, rcmd)
 

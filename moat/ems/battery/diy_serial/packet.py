@@ -82,6 +82,7 @@ def _dc(name):
 
 class PacketType(IntEnum):
     "Type of BMS packet"
+
     ResetCounters = 0
     ReadVoltages = 1
     Identify = 2
@@ -101,6 +102,7 @@ class PacketType(IntEnum):
 @_dc("hdr")
 class PacketHeader:
     "Packet header"
+
     start: int = 0
     broadcast: bool = False
     seen: bool = False
@@ -170,7 +172,7 @@ class PacketHeader:
             self.cells = end - self.start
             if pkt[0].S.size > 0 and len(pkt) != self.cells + 1:
                 raise ValueError(
-                    f"Wrong packet count, {len(pkt)} vs {self.cells+1} for {pkt[0]}"
+                    f"Wrong packet count, {len(pkt)} vs {self.cells + 1} for {pkt[0]}"
                 )
         else:
             self.cells = len(pkt) - 1
@@ -189,12 +191,13 @@ class PacketHeader:
 
     def __setstate__(self, data):
         raise NotImplementedError
-#       self.start = data.get("s", 0)
-#       self.sequence = data.get("i", None)
-#       self.cells = data.get("n", 0)
-#       self.seen = data.get("v", False)
-#       self.broadcast = data.get("bc", False)
-#       self.command = data["a"]
+
+    #   self.start = data.get("s", 0)
+    #   self.sequence = data.get("i", None)
+    #   self.cells = data.get("n", 0)
+    #   self.seen = data.get("v", False)
+    #   self.broadcast = data.get("bc", False)
+    #   self.command = data["a"]
 
     def to_bytes(self):  # noqa:D102
         return self.S.pack(
@@ -725,4 +728,3 @@ replyClass = [
     NullData,  # 14
     NullData,  # 15
 ]
-

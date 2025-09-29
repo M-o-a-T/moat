@@ -14,8 +14,10 @@ from moat.bus.util import Processor, byte2mini
 
 logger = logging.getLogger(__name__)
 
+
 def build_aa_data(serial, code, timer):  # noqa:D103
     raise NotImplementedError
+
 
 @dataclass
 class aa_record:  # noqa:D101

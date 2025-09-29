@@ -20,11 +20,13 @@ if TYPE_CHECKING:
 
 class UnknownParamError(RuntimeError):
     "Don't know this"
+
     pass
 
 
 class MissingParamError(RuntimeError):
     "Want to know this"
+
     pass
 
 
@@ -49,7 +51,7 @@ class BaseBusHandler(CtxObj):
 
     @classmethod
     def repr(cls, cfg: dict):  # noqa:D102
-        cfg # noqa:B018
+        cfg  # noqa:B018
         return " ".join(f"{k}:{v}" for k, v in dict.items())
 
     @classmethod

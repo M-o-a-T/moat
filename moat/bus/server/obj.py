@@ -1,4 +1,5 @@
 "encapsulates one bus participant"
+
 from __future__ import annotations
 
 from weakref import ref

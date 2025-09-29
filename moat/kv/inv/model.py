@@ -1359,7 +1359,7 @@ class WireRoot(NamedRoot, ClientEntry):  # noqa:D101
         super().__init__(*a, **k)
 
     @classmethod
-    def child_type(cls, name):   # noqa:D102,ARG003
+    def child_type(cls, name):  # noqa:D102,ARG003
         return Wire
 
     def by_domain(self, name, create=None):  # noqa:D102

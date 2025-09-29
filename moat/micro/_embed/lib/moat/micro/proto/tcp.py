@@ -31,7 +31,7 @@ class Link(AIOBuf):
         async def _conn1():
             rs, ws = await asyncio.open_connection(self.host, self.port)
             if rs is not ws:
-                raise RuntimeError(f"SingleSockOnly {rs !r} {ws !r}")
+                raise RuntimeError(f"SingleSockOnly {rs!r} {ws!r}")
 
             # This dance is required because open_connection doesn't check
             p.register(rs.s, select.POLLIN)

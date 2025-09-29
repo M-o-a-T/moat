@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 "implements a bus server for our fake bus"
+
 from __future__ import annotations
 
 import sys

@@ -69,7 +69,7 @@ class Node:
 
     # pylint: disable=unused-argument
     def __init__(self, name, tick=None, cache=None, create=True):
-        name,tick,cache,create  # noqa:B018
+        name, tick, cache, create  # noqa:B018
         return
 
     def __hash__(self):

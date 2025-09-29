@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 "#  noqa:D100"
+
 from __future__ import annotations
 
 import asyncclick as click

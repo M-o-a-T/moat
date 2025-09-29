@@ -1,6 +1,7 @@
 """
 MoaT-KV client data model for KNX
 """
+
 from __future__ import annotations
 
 import anyio
@@ -116,13 +117,16 @@ class KNXnode(_KNXnode):
             )
             if mode == "binary":
                 device = BinarySensor(**args)
+
                 def get_val(s):
                     return s.is_on()
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = Sensor(value_type=mode, **args)
+
                 def get_val(s):
                     return s.sensor_value.value
+
             # TODO more of the same
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)

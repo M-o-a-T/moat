@@ -1,6 +1,7 @@
 """
 Code to (de)serialize bus messages
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class S(IntEnum):
     "State machine"
+
     IDLE = 0
     INIT = 1
     LEN = 2
@@ -30,6 +32,7 @@ class S(IntEnum):
 
 class ERR(IntEnum):
     "Errors"
+
     OVERFLOW = 1
     LOST = 2
     SPURIOUS = 3

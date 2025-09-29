@@ -146,6 +146,7 @@ class ModbusError(RuntimeError):
 class _HostCommon:
     stream = None
     framer = None  # overridden
+
     def _trace(*x):
         return None  # overridden
 

@@ -12,6 +12,7 @@ class Backend(metaclass=ABCMeta):
     """
     Abstract superclass for MoaT-KV transport backends.
     """
+
     def __init__(self, tg):
         self._tg = tg
         self._njobs = 0
@@ -38,6 +39,7 @@ class Backend(metaclass=ABCMeta):
         """
         Helper that starts a job.
         """
+
         async def _run(p, a, kw, *, task_status):
             if self._ended is None:
                 self._ended = anyio.Event()

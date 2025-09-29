@@ -575,7 +575,6 @@ async def rom(obj, path, device):
         # TODO
 
 
-
 @cli.command("path")
 @click.pass_obj
 @click.option("-m", "--manifest", is_flag=True, help="main manifest")

@@ -67,7 +67,7 @@ class BoxTyp(Base):
 
     boxes: Mapped[set[Box]] = relationship(back_populates="boxtyp")
 
-    def dump(self) -> dict[str,Any]:
+    def dump(self) -> dict[str, Any]:
         "Standard info dump"
         res = super().dump()
         res.pop("pos_x", None)
@@ -103,7 +103,7 @@ class Box(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-    def dump(self) -> dict[str,Any]:
+    def dump(self) -> dict[str, Any]:
         "Standard info dump"
         res = super().dump()
         res.pop("pos_x", None)
@@ -126,7 +126,7 @@ class Box(Base):
 @event.listens_for(Box, "before_update")
 def validate_box_coords(mapper, connection, model):
     "Validator for box position"
-    mapper,connection  # noqa:B018
+    mapper, connection  # noqa:B018
     par = model.container
     if par is not None:
         par = par.boxtyp

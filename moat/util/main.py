@@ -35,7 +35,6 @@ from .yaml import yload
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-
     from typing import Awaitable  # noqa:UP035
 
 logger = logging.getLogger("_loader")

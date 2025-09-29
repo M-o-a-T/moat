@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Fake receiver utility."""
+
 from __future__ import annotations
 
 import asyncclick as click

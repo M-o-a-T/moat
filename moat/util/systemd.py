@@ -19,8 +19,6 @@ except ImportError:
     notify = None
 
 
-
-
 async def get_host_tuple(obj):
     if hasattr(obj, "dbg_host"):
         return obj.dbg_host
@@ -54,7 +52,6 @@ async def as_service(obj=None):
     The CM yields a (duck-typed) event whose ``set`` method will
     trigger a ``READY=1`` mesage to systemd.
     """
-
 
     async def run_keepalive(usec):
         usec /= 1_500_000  # 2/3rd of usec ⇒ sec

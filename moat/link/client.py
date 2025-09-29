@@ -71,6 +71,7 @@ _the_link = ContextVar("_the_link")
 
 local_addrs = {"localhost", "127.0.0.1", "::1"}
 
+
 def get_link() -> Link | None:
     """
     Return the global Link instance, if one exists.
@@ -176,7 +177,9 @@ class LinkCommon(CmdCommon):
         if isinstance(remote, dict):
             with suppress(KeyError):
                 auth_out.append(TokenAuth(data["auth"]["token"]))
-            conn_ = TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger)
+            conn_ = TCPConn(
+                self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger
+            )
         else:
             conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
 

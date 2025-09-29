@@ -76,7 +76,7 @@ def show_(obj):
 
     if obj.text is None and obj.nr is None:
         seen = False
-        with sess.execute(sel(Label).where(Label.box == None)) as labels: # noqa:E711
+        with sess.execute(sel(Label).where(Label.box == None)) as labels:  # noqa:E711
             for (label,) in labels:
                 seen = True
                 print(label.text)

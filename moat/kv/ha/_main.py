@@ -100,7 +100,7 @@ async def setup_conv(obj, user):
     """
     n = 0
 
-    f = await (anyio.Path(os.path.dirname(__file__))/"schema.yaml").read_file()
+    f = await (anyio.Path(os.path.dirname(__file__)) / "schema.yaml").read_file()
     cfg = yload(f)
     for k, v in cfg["codec"].items():
         k = k.split(" ")  # noqa:PLW2901

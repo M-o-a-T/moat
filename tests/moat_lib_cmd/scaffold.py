@@ -17,9 +17,6 @@ def res_akw(a, kw):  # noqa: D103
     return sa + " " + sk
 
 
-
-
-
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
     import sniffio  # noqa: PLC0415
 
@@ -44,7 +41,6 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
 
 class StreamGate(CtxObj):  # noqa: D101
     def __init__(self, h: MsgHandler, so: Socket, s: str):
-
         self.s = s
         self.so = so
         self.h = h

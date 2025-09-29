@@ -136,7 +136,7 @@ class PollControl(Processor):
             if msg.dst == -4:  # broadcast
                 await self._process_client_nack(msg)
             elif msg.dst == self.my_id:  # server N
-                await self._process_client_reply(msg.src, self.serial, 0, 0) # XXX flags, timer
+                await self._process_client_reply(msg.src, self.serial, 0, 0)  # XXX flags, timer
             elif msg.dst < 0:  # server N
                 await self._process_client_reply_mon(msg)
             else:  # client
@@ -149,17 +149,18 @@ class PollControl(Processor):
         TODO.
         """
         raise NotImplementedError
-#       m = msg.bytes
-#       mlen = (m[0] & 0xF) + 1
-#       m[0] >> 4
-#       if len(m) - 1 < mlen:
-#           self.logger.error("Short addr reply %r", msg)
-#           return
-#       o = self.with_serial(s, msg.dest)
-#       if o.__data is None:
-#           await self.q_w.put(NewDevice(obj))
-#       elif o.client_id != msg.dest:
-#           await self.q_w.put(OldDevice(obj))
+
+    #   m = msg.bytes
+    #   mlen = (m[0] & 0xF) + 1
+    #   m[0] >> 4
+    #   if len(m) - 1 < mlen:
+    #       self.logger.error("Short addr reply %r", msg)
+    #       return
+    #   o = self.with_serial(s, msg.dest)
+    #   if o.__data is None:
+    #       await self.q_w.put(NewDevice(obj))
+    #   elif o.client_id != msg.dest:
+    #       await self.q_w.put(OldDevice(obj))
 
     async def _process_request(self, aa):
         """
@@ -287,6 +288,8 @@ class PollControl(Processor):
         TODO.
         """
         raise NotImplementedError
+
+
 #       m = msg.bytes
 #       mlen = (m[0] & 0xF) + 1
 #       m[0] >> 4

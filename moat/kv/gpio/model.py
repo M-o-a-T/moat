@@ -225,7 +225,7 @@ class GPIOline(_GPIOnode):
 
                 def ts(a):
                     a = a.timestamp
-                    return f"{a[0] % 1000 :03d}.{a[1] / 10000 :05d}"
+                    return f"{a[0] % 1000:03d}.{a[1] / 10000:05d}"
 
                 def inv(x):
                     nonlocal negate
@@ -566,7 +566,7 @@ class GPIOline(_GPIOnode):
                             await self.root.err.record_error(
                                 "gpio",
                                 self.subpath,
-                                comment=f"Bad value: {val !r}",
+                                comment=f"Bad value: {val!r}",
                             )
 
     async def _set_value(self, line, value, state, negate):

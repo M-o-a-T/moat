@@ -136,7 +136,7 @@ def mqtt_connected(func):
 
 
 @asynccontextmanager
-async def open_mqttclient(uri=None, client_id=None, config:dict|None=None, codec=NotGiven):
+async def open_mqttclient(uri=None, client_id=None, config: dict | None = None, codec=NotGiven):
     # pylint: disable=dangerous-default-value
     """
     MQTT client implementation.
@@ -241,7 +241,7 @@ class MQTTClient:
         cafile=None,
         capath=None,
         cadata=None,
-        extra_headers:dict|None=None,
+        extra_headers: dict | None = None,
     ):
         # pylint: disable=dangerous-default-value
         """
@@ -817,7 +817,7 @@ class MQTTClient:
 
         for key in ["uri"]:
             if broker_conf.get(key, None) is None:
-                raise ClientException(f"Missing connection parameter {key !r}")
+                raise ClientException(f"Missing connection parameter {key!r}")
 
         s = Session(self.plugins_manager)
         s.broker_uri = broker_conf["uri"]

@@ -20,6 +20,7 @@ __all__ = [
 
 class ClientActor(Actor):
     "An actor that runs over a `ClientTranspport`"
+
     def __init__(self, client, *a, topic, **kw):
         super().__init__(ClientTransport(client, topic), *a, **kw)
 

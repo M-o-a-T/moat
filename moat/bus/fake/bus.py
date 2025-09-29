@@ -58,7 +58,7 @@ class Main:  # noqa:D101
         t = time.monotonic()
         self.t, t = t, (0 if self.t is None else t - self.t)
 
-        n = f"{n :%02d}" if n else "--"
+        n = f"{n:%02d}" if n else "--"
 
         print(f"{t:6.3f} {n} {val:02x}")
 

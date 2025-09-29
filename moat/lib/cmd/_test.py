@@ -16,6 +16,7 @@ except ImportError:
 
     def cancelled_class():
         return asyncio.CancelledError
+
 else:
     cancelled_class = anyio.get_cancelled_exc_class
 

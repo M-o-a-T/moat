@@ -335,7 +335,7 @@ class InvControl(BusVars):
             self.p_cons_ = []
             self.p_cur_ = []
 
-            for i in range(1, self.n_phase+1):
+            for i in range(1, self.n_phase + 1):
                 self.p_grid_.append(
                     await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power"),
                 )
@@ -434,7 +434,7 @@ class InvControl(BusVars):
         ).value
         self.p_set_ = []
         self.p_run_ = []
-        for i in range(1,self.n_phase+1):
+        for i in range(1, self.n_phase + 1):
             self.p_set_.append(
                 await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint"),
             )
@@ -596,8 +596,10 @@ class InvControl(BusVars):
                     power = val.value
             t = anyio.current_time()
             t_sol = t + 5
-            mt = (min(time_until((n, "min")) for n in range(0, 60, 15))
-                  - datetime.now(tz=datetime.UTC)).seconds
+            mt = (
+                min(time_until((n, "min")) for n in range(0, 60, 15))
+                - datetime.now(tz=datetime.UTC)
+            ).seconds
             print(mt)
             while True:
                 n = 0

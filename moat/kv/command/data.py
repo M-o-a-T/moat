@@ -146,7 +146,8 @@ class nstr:
     A string, except that `None` and `NotGiven` are special (passed through
     instead of stringified).
     """
-    def __new__(cls, val:str|None|Literal[NotGiven]):  ## noqa:D102
+
+    def __new__(cls, val: str | None | Literal[NotGiven]):  ## noqa:D102
         if val is None or val is NotGiven:
             return val
         return str(val)

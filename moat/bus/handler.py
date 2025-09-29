@@ -17,6 +17,7 @@ N_END = [None, None, 3, 2, 1, 1, 1]  # flips at end
 
 class S(IntEnum):
     "Bus states."
+
     # These wait for the bus to go idle. "settle" is ignored.
     ERROR = 0
     WAIT_IDLE = 1
@@ -37,6 +38,7 @@ class S(IntEnum):
 
 class ERR(IntEnum):
     "Bus errors."
+
     NOTHING = 1  # bus zero?
     COLLISION = -2  # will retry
     HOLDTIME = -11
@@ -51,6 +53,7 @@ class ERR(IntEnum):
 
 class RES(IntEnum):
     "Message transmission results"
+
     SUCCESS = 0
     MISSING = 1
     ERROR = 2
@@ -59,6 +62,7 @@ class RES(IntEnum):
 
 class W(IntEnum):
     "State machine"
+
     MORE = 0  # next: MORE/LAST/FINAL
     CRC = 1  # next: READ  # writing the CRC
     END = 2  # next: CRC   # writing the end marker
@@ -186,7 +190,7 @@ class BaseHandler:
         OVERRIDE: This message has been transmitted.
         @res is 0/1/2/-1 for OK/missed/error/fatal.
         """
-        msg,res  # noqa:B018
+        msg, res  # noqa:B018
         raise NotImplementedError("Override me")
 
     ########################################
@@ -520,7 +524,7 @@ class BaseHandler:
                 res.append(p + 1)
                 n -= 1
             assert not val, val
-            self.debug("Split %d: %s", oval, " ".join(f"{(x - 1) :d}" for x in res))
+            self.debug("Split %d: %s", oval, " ".join(f"{(x - 1):d}" for x in res))
 
         self.cur_chunk = res
         return True

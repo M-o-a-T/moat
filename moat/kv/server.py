@@ -141,7 +141,7 @@ class StreamCommand:
 
     def __new__(cls, client, msg):  # noqa: D102
         if cls is StreamCommand:
-            cls = globals()["SCmd_" + msg.action]  # pylint: disable=self-cls-assignment
+            cls = globals()["SCmd_" + msg.action]  # pylint: disable=self-cls-assignment  # noqa: PLW0642
             return cls(client, msg)
         else:
             return object.__new__(cls)

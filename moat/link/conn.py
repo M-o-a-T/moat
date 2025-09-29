@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
 
 
-
 @asynccontextmanager
 async def TCPConn(
     cmd: MsgSender | None,

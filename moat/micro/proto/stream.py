@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from moat.micro.cmd.tree.dir import SubDispatch
 
 
-
 class ProcessDeadError(RuntimeError):
     """Process has died"""
 

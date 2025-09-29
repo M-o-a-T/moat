@@ -7,6 +7,7 @@ This code is here for support of testing. It does not talk to MoaT-KV.
 See ``tests/test_basic.py`` for code that does.
 
 """
+
 from __future__ import annotations
 
 import anyio

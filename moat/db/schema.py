@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+
 class Base(DeclarativeBase):
     """Base class which provides automated table name
     and surrogate primary key column.
@@ -23,7 +24,7 @@ class Base(DeclarativeBase):
 
     id = Column(Integer, primary_key=True)
 
-    def dump(self) -> dict[str,Any]:  # noqa:D102
+    def dump(self) -> dict[str, Any]:  # noqa:D102
         res = dict()
         for k in self.__table__.c:
             if k.name == "id" or k.name.endswith("_id"):

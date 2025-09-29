@@ -21,6 +21,7 @@ class MqttMessage:  # noqa:D101
 
 class MqttBackend(Backend):
     "MoaT-KV's MQTT backend."
+
     client = None
 
     @asynccontextmanager

@@ -104,12 +104,12 @@ def go(state=None, cmd=True):
             pass
 
     # build path
-    print("*** STATE ***",state,"***", file=sys.stderr)
-    if state in ("norom", "std","once"):
+    print("*** STATE ***", state, "***", file=sys.stderr)
+    if state in ("norom", "std", "once"):
         sys.path.append("/lib")
     if state in ("rom", "std"):
         sys.path.append("/rom")
-    if state in ("flash", "rom", "norom", "std","once"):
+    if state in ("flash", "rom", "norom", "std", "once"):
         sys.path.append(".frozen")
     # keep the root in the path, but at the end
     sys.path.append("/")

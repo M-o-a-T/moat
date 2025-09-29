@@ -29,6 +29,7 @@ unpacker = partial(msgpack.unpackb, raw=False)
 def build_aa_data(serial, code, timer):  # noqa:D103
     raise NotImplementedError
 
+
 class FlashControl(Processor):
     """
     Firmware flasher.
@@ -110,17 +111,18 @@ class FlashControl(Processor):
         TODO.
         """
         raise NotImplementedError
-#       m = msg.bytes
-#       mlen = (m[0] & 0xF) + 1
-#       m[0] >> 4
-#       if len(m) - 1 < mlen:
-#           self.logger.error("Short addr reply %r", msg)
-#           return
-#       o = self.with_serial(s, msg.dest)
-#       if o.__data is None:
-#           await self.q_w.put(NewDevice(obj))
-#       elif o.client_id != msg.dest:
-#           await self.q_w.put(OldDevice(obj))
+
+    #   m = msg.bytes
+    #   mlen = (m[0] & 0xF) + 1
+    #   m[0] >> 4
+    #   if len(m) - 1 < mlen:
+    #       self.logger.error("Short addr reply %r", msg)
+    #       return
+    #   o = self.with_serial(s, msg.dest)
+    #   if o.__data is None:
+    #       await self.q_w.put(NewDevice(obj))
+    #   elif o.client_id != msg.dest:
+    #       await self.q_w.put(OldDevice(obj))
 
     async def _process_request(self, serial, flags, timer):
         """
@@ -256,6 +258,8 @@ class FlashControl(Processor):
         TODO.
         """
         raise NotImplementedError
+
+
 #       m = msg.bytes
 #       mlen = (m[0] & 0xF) + 1
 #       m[0] >> 4

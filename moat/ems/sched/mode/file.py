@@ -146,6 +146,7 @@ class Loader(BaseLoader):
             async for kw in it:
                 res.append(kw)
             from moat.util.cbor import StdCBOR  # noqa: PLC0415
+
             packer = StdCBOR.encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
@@ -156,6 +157,7 @@ class Loader(BaseLoader):
             async for kw in it:
                 res.append(kw)
             from moat.util.msgpack import StdMsgpack  # noqa: PLC0415
+
             packer = StdMsgpack.encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:

@@ -280,8 +280,7 @@ class DbusMonitor(CtxObj):
         # for vebus.ttyO1, this is workaround, since VRM Portal expects the main vebus
         # devices at instance 0. Not sure how to fix this yet.
         if (
-            (serviceName == "com.victronenergy.vebus.ttyO1"
-            and self.vebusDeviceInstance0)
+            (serviceName == "com.victronenergy.vebus.ttyO1" and self.vebusDeviceInstance0)
             or serviceName == "com.victronenergy.settings"
             or serviceName.startswith("com.victronenergy.vecan.")
         ):

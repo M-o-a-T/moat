@@ -318,7 +318,7 @@ class Repo(git.Repo, _Common):
                 continue
             sb = dash(sb)
             if sb not in self._repos:
-                breakpoint()
+                raise RuntimeError(f"Inconsistent repo data: {sb} not found")
             self._repos[sb].files.add(fn)
 
     def repo_for(self, path: Path | str, main: bool | None) -> str:

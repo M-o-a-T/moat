@@ -89,7 +89,6 @@ class Notify:
                     self.cfg.path, subtree=True, meta=True, state=None
                 ) as mon:
                     srv.set()
-                    breakpoint()
                     async for path, msg, meta in mon:
                         t = time.time()
                         if meta.timestamp < t - self.cfg.max_age:

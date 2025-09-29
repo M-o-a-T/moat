@@ -210,11 +210,7 @@ class API(CtxObj, metaclass=ABCMeta):
 
         Will fail when the destination doesn't exist.
         """
-        try:
-            return self.cls_RepoInfo(self, repo)
-        except TypeError:
-            breakpoint()
-            raise
+        return self.cls_RepoInfo(self, repo)
 
 
 def get_api(cfg: dict, name: str) -> Backend:

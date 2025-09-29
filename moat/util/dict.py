@@ -45,7 +45,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
         if kv is None:
             continue
         if not isinstance(kv, dict):
-            breakpoint()
+            raise TypeError
         for k, v in kv.items():
             if k not in keys:
                 keys[k] = []

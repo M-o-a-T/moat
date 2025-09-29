@@ -112,7 +112,6 @@ ignore = [
     "ERA",
     "FBT",
     "FIX",
-    "I001",
     "INP001",
     "N",
     "PERF",
@@ -136,12 +135,16 @@ ignore = [
 exclude = [
     "moat/db/alembic/versions/*",
     "**/OFF/**",
+    "TODO/**",
+    "packaging/**",
+    "ext/**",
 ]
 explicit-preview-rules = true
 
 [tool.ruff.lint.extend-per-file-ignores]
 "moat/micro/_embed/**" = ["SIM105","B904"]
 "tests/**" = ["S110"]
+"examples/**" = ["S108"]
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true

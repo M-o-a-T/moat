@@ -31,7 +31,7 @@ async def test_81_basic(autojump_clock):  # pylint: disable=unused-argument  # n
             async with st.client() as cx:
                 ex = await ErrorRoot.as_handler(cx)
                 try:
-                    1 / 0
+                    1 / 0  # noqa: B018
                 except Exception as exc:
                     await ex.record_error("tester", P("here.or.there"), exc=exc)
                 await trio.sleep(1)

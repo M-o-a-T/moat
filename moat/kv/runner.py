@@ -790,7 +790,7 @@ class StateEntry(AttrClientEntry):
 
     async def startup(self):  # noqa: D102
         try:
-            self.runner
+            self.runner  # noqa:B018
         except KeyError:
             # The code entry doesn't exist any more.
             await self.delete()

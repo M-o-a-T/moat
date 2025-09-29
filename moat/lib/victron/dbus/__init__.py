@@ -360,7 +360,7 @@ class DbusItemImport:  # noqa: D101
     _exists = None
 
     def __new__(cls, bus, serviceName, path, eventCallback=None, createsignal=True):  # noqa: D102
-        serviceName, path, eventCallback  # pylint:disable=pointless-statement
+        serviceName, path, eventCallback  # pylint:disable=pointless-statement  # noqa: B018
         instance = object.__new__(cls)
 
         # If signal tracking should be done, also add to root tracker
@@ -660,7 +660,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # @return description
     @dbus.method()
     def GetDescription(self, language: s, length: i) -> s:  # noqa: D102
-        language, length  # pylint:disable=pointless-statement
+        language, length  # pylint:disable=pointless-statement  # noqa: B018
         return self._description if self._description is not None else "No description given"
 
     ## Dbus exported method GetValue

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.trio
 async def test_21_load_save(autojump_clock, tmpdir):
     """also used to check watching"""
-    autojump_clock  # B018
+    autojump_clock  # noqa: B018
     path = tmpdir.join("foo")
     logger.debug("START")
     msgs = []

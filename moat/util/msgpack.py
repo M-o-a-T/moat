@@ -12,8 +12,6 @@ Extension types defined here:
 
 from __future__ import annotations
 
-from moat.lib.codec.msgpack import Codec
-
 from ._msgpack import StdMsgpack, std_ext
 
 __all__ = ["StdMsgpack", "std_ext"]

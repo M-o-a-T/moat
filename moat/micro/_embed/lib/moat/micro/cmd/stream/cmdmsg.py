@@ -14,6 +14,7 @@ from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.cmd import MsgSender
     from moat.micro.proto.stack import BaseMsg
 
     from collections.abc import Awaitable

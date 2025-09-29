@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.link.client import Link
 
-    from typing import NoReturn
+    from typing import AsyncIterator, NoReturn, Self
 
 __all__ = ["ntfy_bridge"]
 
@@ -150,7 +150,7 @@ class Notify:
                 bad = True
 
 
-def get_backend(name: str, link: Link, cfg: dict) -> Backend:
+def get_backend(name: str, link: Link, cfg: dict) -> Notify:
     """
     Fetch the backend named in the config and initialize it.
     """

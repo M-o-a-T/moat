@@ -8,7 +8,7 @@ except ImportError:
     from collections.abc import MutableMapping
 
 # ==== Centralized type aliases ====
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 if TYPE_CHECKING:
     from abc import abstractmethod
@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
     Priority = CT
     Key = Hashable
-    InitialData = Optional[Dict[Key, Priority]]
-    HeapItem = List[Union[Key, Priority]]  # Each heap item is [key, priority]
+    InitialData = dict[Key, Priority] | None
+    HeapItem = list[Key | Priority]  # Each heap item is [key, priority]
 
 
 class PrioMap(MutableMapping):

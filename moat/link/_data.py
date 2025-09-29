@@ -15,6 +15,11 @@ from moat.util.times import ts2iso
 from .meta import MsgMeta
 
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.codec import Codec
+    from moat.link.client import Link
 
 
 def add_dates(d):
@@ -182,6 +187,7 @@ async def backend_get(
     *,
     meta: bool = False,
     recursive: bool = True,
+    empty: bool = False,
     as_dict: str | None = "_",
     raw: bool = False,
     path_mangle=None,
@@ -292,7 +298,7 @@ async def backend_get(
     if not raw:
         yprint(d, stream=out)
     elif isinstance(d, bytes):
-        os.write(out.fileno(), res)
+        os.write(out.fileno(), d)
     else:
         out.write(str(d))
     pass  # end get

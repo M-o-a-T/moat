@@ -13,9 +13,10 @@ from subprocess import DEVNULL, PIPE, STDOUT, CalledProcessError
 from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING:
+    from io import BytesIO
+
     from collections.abc import AsyncIterable
     from typing import Literal
-    from io import BytesIO
 
 
 __all__ = ["DEVNULL", "PIPE", "STDOUT", "CalledProcessError", "run"]

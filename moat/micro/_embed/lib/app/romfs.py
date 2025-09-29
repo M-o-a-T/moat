@@ -79,7 +79,7 @@ class Dev:
         np = self.pos % len(self.buf)
         if np + n > len(self.buf):
             raise ValueError("crosses block boundary")
-        self.pos += ld
+        self.pos += n
         return memoryview(self.buf)[np : np + n]
 
     def rdb(self):
@@ -136,7 +136,7 @@ class Cmd(BaseCmd):
 
     async def cmd_cl(self, dev: int):
         "'close' device N"
-        dev = self._dev_cache.pop(n)
+        dev = self._dev_cache.pop(dev)
         dev.close()
         return
 

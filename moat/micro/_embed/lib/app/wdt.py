@@ -24,6 +24,11 @@ from moat.micro.cmd.base import BaseCmd
 from moat.micro.wdt import WDT, M
 from moat.util.compat import Event, L
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 class Cmd(BaseCmd):
     """

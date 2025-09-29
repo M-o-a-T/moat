@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from moat.lib.cmd import MsgSender
     from moat.lib.codec import Codec
 
+    from typing import AsyncGenerator
+
 
 @asynccontextmanager
 async def TCPConn(

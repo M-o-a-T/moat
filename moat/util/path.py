@@ -38,8 +38,8 @@ from moat.lib.codec.proxy import as_proxy
 from . import NotGiven
 
 import collections.abc
-
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal
 
@@ -966,6 +966,6 @@ for _idx in "SPQ":  # and R. Yes I know.
     _Roots[_idx] = _path
     as_proxy(f"_P{_idx}", _path)
 
-__all__ += ["P_Root", "Q_Root", "S_Root"]
+__all__ += ["P_Root", "Q_Root", "S_Root"]  # noqa:F822
 
 del _idx, _name, _ctx, _path

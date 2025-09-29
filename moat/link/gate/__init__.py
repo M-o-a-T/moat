@@ -17,9 +17,12 @@ from moat.link.node import Node
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.util import attrdict
     from moat.lib.codec import Codec
 
-    from .client import Watcher
+    from .client import Link, Watcher
+
+    from typing import Any
 
 __all__ = ["Gate"]
 

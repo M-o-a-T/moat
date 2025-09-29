@@ -70,7 +70,7 @@ async def as_service(obj=None):
         pid = os.getpid()
         epid = int(os.environ.get("WATCHDOG_PID", pid))
         if pid == epid:
-            return int(os.environ.get("WATCHDOG_USEC", 0))
+            return int(os.environ.get("WATCHDOG_USEC", "0"))
         return 0
 
     class RunMsg:

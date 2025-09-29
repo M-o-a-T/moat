@@ -21,6 +21,10 @@ from packaging.version import Version
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 
 from collections import defaultdict, deque
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -46,14 +50,14 @@ def undash(n: str) -> str:
 
 
 class ChangedError(RuntimeError):
-    def __init__(subsys, tag, head):
+    def __init__(self, subsys, tag, head):
         self.subsys = subsys
         self.tag = tag
         self.head = head
 
     def __str__(self):
         s = self.subsys or "Something"
-        if head is None:
+        if (head := self.head) is None:
             head = "HEAD"
         else:
             head = head.hexsha[:9]
@@ -238,7 +242,7 @@ class Repo(git.Repo, _Common):
         return True
 
     @property
-    def last_tag(self) -> Tag | None:
+    def last_tag(self) -> git.Tag | None:
         """
         Return the most-recent tag for this repo
         """
@@ -278,7 +282,7 @@ class Repo(git.Repo, _Common):
     def parts(self):
         return self._repos.values()
 
-    def tags_of(self, c: Commit) -> Sequence[Tag]:
+    def tags_of(self, c: git.Commit) -> Sequence[git.Tag]:
         return self._commit_tags[c]
 
     def _add_repo(self, name):
@@ -387,7 +391,7 @@ class Repo(git.Repo, _Common):
             return True
         return False
 
-    def tagged(self, c: Commit = None) -> Tag | None:
+    def tagged(self, c: git.Commit = None) -> git.Tag | None:
         """Return a commit's tag name.
         Defaults to the head commit.
         Returns None if no tag, raises ValueError if more than one is found.
@@ -403,8 +407,6 @@ class Repo(git.Repo, _Common):
         if not tt:
             return None
         if len(tt) > 1:
-            if subsys is not None:
-                raise ValueError(f"Multiple tags for {subsys}: {tt}")
             raise ValueError(f"Multiple tags: {tt}")
         return tt[0].name
 

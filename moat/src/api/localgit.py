@@ -28,8 +28,10 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         try:
             return self.api.cfg.ssh_url
         except AttributeError:
-            return (f"git+ssh://{self.api.cfg.get('git_user', 'git')}@"
-                    f"{self.api.host}/{self.api.cfg.get('repo', self.name + '.git')}")
+            return (
+                f"git+ssh://{self.api.cfg.get('git_user', 'git')}@"
+                f"{self.api.host}/{self.api.cfg.get('repo', self.name + '.git')}"
+            )
 
     @property
     def git_url(self) -> str:  # noqa: D102
@@ -83,7 +85,7 @@ class API(BaseAPI):  # noqa: D101
         """
         raise NotImplementedError
 
-    #async def list_repos(self) -> AsyncIterator[str]:
+    # async def list_repos(self) -> AsyncIterator[str]:
     #   """
     #   List accessible repositories.
     #   """

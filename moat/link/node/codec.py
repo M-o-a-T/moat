@@ -14,6 +14,13 @@ from . import Node
 
 logger = getLogger(__name__)
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.link.meta import MsgMeta
+
+    from typing import Any
+
 
 @define
 class CodecNode(Node):

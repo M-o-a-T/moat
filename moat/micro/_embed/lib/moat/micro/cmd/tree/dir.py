@@ -15,6 +15,8 @@ from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.cmd import Msg
+
     from collections.abc import Awaitable
 
 

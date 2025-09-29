@@ -5,6 +5,7 @@ Device file handling, with a basic multi-device client
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
 from pathlib import Path as FSPath
 
 import asyncclick as click
@@ -50,7 +51,7 @@ async def poll(ctx, path):
         # pylint: disable=import-outside-toplevel
         from moat.link.client import Link  # noqa: PLC0415
 
-        ln_ctx = Link(opj.cfg.link)
+        ln_ctx = Link(obj.cfg.link)
     else:
         ln_ctx = nullcontext(None)
 

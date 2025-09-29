@@ -5,10 +5,10 @@ A command that accesses a row of mostly-identical subcommands
 from __future__ import annotations
 
 from moat.util import P, combine_dict, import_
-from moat.lib.cmd.base import MsgSender
+from moat.lib.cmd import Msg, MsgSender
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.codec.errors import NoPathError
-from moat.util.compat import L
+from moat.util.compat import L, TaskGroup
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part
@@ -195,7 +195,7 @@ class ArrayCmd(BaseSuperCmd):
             await st.send(i, *res.args, **res.kw)
 
         async with msg.stream_out() as st, TaskGroup() as tg:
-            for i, app in enumerate(self.apps[s:e]):
+            for i, app in enumerate(self.apps):
                 tg.start_soon(_reply, i, app, st)
 
         await msg.result()

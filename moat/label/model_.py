@@ -26,7 +26,7 @@ def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, she
         if randstr is not NotGiven:
             if randlen is not NotGiven:
                 raise ValueError("Either randomly or explicitly. Not both.")
-            self.rand = ranstr
+            self.rand = randstr
         elif randlen is not NotGiven:
             if randlen is None or randlen == 0:
                 randlen = Label.rand.property.columns[0].type.length

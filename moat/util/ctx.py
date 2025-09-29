@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from collections.abc import AsyncIterator, Awaitable
-    from typing import Literal, Any
+    from typing import Any, Literal
 
 
 __all__ = ["CtxObj", "ctx_as", "timed_ctx"]

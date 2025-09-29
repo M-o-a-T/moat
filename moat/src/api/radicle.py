@@ -17,7 +17,8 @@ from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo
 from . import RepoInfo as BaseRepoInfo
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+
 
 @define
 class CommitInfo(BaseCommitInfo):  # noqa: D101

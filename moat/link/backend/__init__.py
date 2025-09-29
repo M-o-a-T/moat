@@ -18,11 +18,13 @@ from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict, get_code
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from mqttproto import QoS
+
     from moat.lib.codec import Codec
     from moat.link.meta import MsgMeta
 
     from collections.abc import AsyncIterator
-    from typing import Any, ClassVar, Self
+    from typing import Any, ClassVar, Literal, Self
 
 
 __all__ = ["Backend", "Message", "RawMessage", "get_backend", "get_codec"]

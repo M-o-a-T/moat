@@ -20,6 +20,11 @@ except ImportError:
 from functools import partial
 from importlib.metadata import entry_points
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pkg_resources
+
 Plugin = namedtuple("Plugin", ["name", "ep", "object"])
 
 

@@ -19,9 +19,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from transitions_aio import EventData
 
+    from moat.util import Path
     from moat.link.client import Link
 
-    from typing import NoReturn
+    from typing import Awaitable, NoReturn
 
 __all__ = ["HostMon", "cmd_host"]
 

@@ -13,7 +13,13 @@ from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo, RepoExists
 from . import RepoInfo as BaseRepoInfo
 
-from typing import Self,AsyncIterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from . import Repo
+
+    from collections.abc import AsyncIterator
+
 
 @define
 class CommitInfo(BaseCommitInfo):

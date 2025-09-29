@@ -11,6 +11,8 @@ from .stack import BaseBuf, StackedBlk, StackedMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.codec import Codec
+
     from collections.abc import Awaitable
     from typing import Any
 

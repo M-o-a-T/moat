@@ -134,6 +134,7 @@ ignore = [
     
 exclude = [
     "moat/db/alembic/versions/*",
+    "moat/micro/_embed/**/manifest.py",
     "**/OFF/**",
     "TODO/**",
     "packaging/**",

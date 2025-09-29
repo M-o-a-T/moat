@@ -479,7 +479,7 @@ class ReliableMsg(StackedMsg):
                 else:
                     self.reset(2)
 
-                    await self.error(RuntimeError(e or "ext reset"))
+                    await self.error(RuntimeError("ext reset"))
                 self._update_config(msg[1:])
                 await self.send_reset()
                 return

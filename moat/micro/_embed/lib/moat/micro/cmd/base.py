@@ -30,6 +30,8 @@ from moat.util.compat import AC_use, Event, L, idle
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.util import Path
+    from moat.lib.cmd import Msg
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
     from collections.abc import Awaitable, Callable

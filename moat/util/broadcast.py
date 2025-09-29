@@ -12,7 +12,7 @@ from . import NotGiven
 from .compat import EndOfStream, WouldBlock
 from .queue import Queue
 
-from typing import TYPE_CHECKING, cast, Generic, TypeVar
+from typing import TYPE_CHECKING, TypeVar, cast
 
 if TYPE_CHECKING:
     from typing import Literal, Self, TypeVar

@@ -15,7 +15,12 @@ from ._common import API as BaseAPI
 from ._common import CommitInfo as BaseCommitInfo
 from ._common import RepoInfo as BaseRepoInfo
 
-from typing import Self,AsyncIterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from typing import Self
+
 
 @define
 class CommitInfo(BaseCommitInfo):  # noqa: D101

@@ -17,6 +17,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.link.node.codec import CodecNode
 
+    from . import GateNode
+
+    from typing import Any
+
 
 class Gate(_Gate):  # noqa: D101
     codecs: CodecNode | None = None

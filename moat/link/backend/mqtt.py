@@ -249,7 +249,7 @@ class _SubGet:
             except Exception as exc:
                 await back.send(
                     P(":R.error.link.mqtt.topic"),
-                    dict(val=msg.topic, pattern=tops, msg=repr(exc)),
+                    dict(val=msg.topic, msg=repr(exc)),
                     retain=False,
                 )
                 # workaround for undecodeability

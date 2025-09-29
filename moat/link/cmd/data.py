@@ -10,7 +10,6 @@ from moat.util import MsgReader, NotGiven, P, attr_args, yprint
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
-from moat.link.node import Node
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable

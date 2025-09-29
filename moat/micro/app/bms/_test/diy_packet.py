@@ -5,7 +5,13 @@ Packet handler for diyBMS-serial mock battery
 from __future__ import annotations
 
 import moat.ems.battery.diy_serial.packet as P
+from moat.ems.battery.errors import MessageError
 from moat.micro.conv.steinhart import celsius2thermistor
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.ems.battery.diy_serial.packet import _Reply
 
 __all__ = [
     "MAXCELLS",

@@ -201,7 +201,7 @@ async def pub(obj, **args):
         cfg["keep_alive"] = args["keep_alive"]
 
     if not obj.name:
-        raise UsageError("You must supply a client name")
+        raise click.UsageError("You must supply a client name")
 
     await do_pub(obj.conn, args, cfg, codec)
 

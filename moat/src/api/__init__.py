@@ -19,7 +19,10 @@ from moat.util.exec import run as run_
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.util import attrdict
     from moat.src.move import RepoMover as RepoMover
+
+    from typing import AsyncIterator, Awaitable, Self
 
 
 class NoSuchRepo(RuntimeError):
@@ -43,7 +46,7 @@ class Repo:  # noqa: D101
         if self.cwd is None:
             self.cwd = anyio.Path(self.cfg.cache) / self.name
 
-    def run(*a, **kw) -> Awaitable:
+    def run(self, *a, **kw) -> Awaitable:
         """Run a program in this repo's directory"""
         kw.setdefault("cwd", self.cwd)
         return run_(*a, **kw)
@@ -213,7 +216,7 @@ class API(CtxObj, metaclass=ABCMeta):
         return self.cls_RepoInfo(self, repo)
 
 
-def get_api(cfg: dict, name: str) -> Backend:
+def get_api(cfg: dict, name: str) -> API:
     """
     Return the API from the config (module ``cfg['api']``).
 

@@ -669,7 +669,7 @@ class Unit(CtxObj):
         try:
             response = await self.host.execute(request)
         except Exception as exc:
-            logger.exception("Handler for %d: %r", unit_id, exc)  # noqa: TRY401
+            _logger.exception("Handler for %d: %r", self.unit, exc)  # noqa: TRY401
             response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
 
         return response

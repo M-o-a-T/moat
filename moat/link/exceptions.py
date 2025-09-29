@@ -13,3 +13,7 @@ MoaTLinkError = MoaTKVError
 
 class AuthError(MoaTLinkError):  # noqa: D101
     pass
+
+
+class OutOfDateError(MoaTLinkError):  # noqa: D101
+    pass

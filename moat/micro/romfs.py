@@ -94,7 +94,7 @@ class VfsRomWriter:  # noqa: D101
                 # A directory, enter it and copy its contents recursively.
                 self.opendir(name)
                 await self.copy_recursively(src_name)
-                vfs.closedir()
+                self.closedir()
             else:
                 # A file.
                 did_mpy = False
@@ -116,5 +116,9 @@ async def make_romfs(src: anyio.Path, mpy_cross):  # noqa: D103
     vfs = VfsRomWriter()
 
     # Build the filesystem recursively.
-    await copy_recursively(vfs, src, mpy_cross)
+    await vfs.copy_recursively(src, mpy_cross)
     return vfs.finalise()
+
+
+async def write_romfs(dst, src: anyio.File):  # noqa: D103
+    raise NotImplementedError

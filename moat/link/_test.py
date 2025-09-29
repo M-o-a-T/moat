@@ -25,8 +25,11 @@ from moat.link.server import Server
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.link.backend import Backend
+    from moat.link.client import LinkCommon
+
     from collections.abc import AsyncIterator
-    from typing import Self
+    from typing import Never, Self
 
 ensure_cfg("moat.link")
 

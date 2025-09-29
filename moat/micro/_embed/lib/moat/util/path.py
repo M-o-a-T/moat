@@ -8,6 +8,8 @@ import re
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
+b64decode = None
+
 
 def P(s):  # noqa: D103
     return Path.from_str(s)
@@ -66,6 +68,8 @@ class Path(tuple):  # noqa:SLOT001
         """
         Constructor to build a Path from its string representation.
         """
+        global b64decode
+
         res = []
         part: None | bool | str = False
         # non-empty string: accept colon-eval or dot (inline)
@@ -106,6 +110,9 @@ class Path(tuple):  # noqa:SLOT001
                         elif eval_ == -2:
                             part = part.encode("ascii")
                         elif eval_ == -3:
+                            if b64decode is None:
+                                from base64 import b64decode
+
                             part = b64decode(part.encode("ascii"))
                         elif eval_ > 1:
                             part = int(part, eval_)
@@ -184,7 +191,7 @@ class Path(tuple):  # noqa:SLOT001
                     pos += 1
                     continue
                 elif part is True:
-                    raise Err(path, pos)
+                    err()
                 else:
                     add(e)
             pos += len(e)

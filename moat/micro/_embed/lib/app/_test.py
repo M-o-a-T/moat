@@ -14,6 +14,8 @@ from moat.util.compat import Event, L, Queue, log, sleep_ms, wait_for_ms
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.cmd import Msg
+
     from collections.abc import Awaitable
     from typing import Any
 

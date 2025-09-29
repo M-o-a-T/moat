@@ -6,6 +6,11 @@ from __future__ import annotations
 
 from fpdf import FPDF, ViewerPreferences
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.util import attrdict
+
 
 class Labels(FPDF):  # noqa: D101
     def __init__(

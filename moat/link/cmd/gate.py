@@ -5,6 +5,7 @@ Command line for gatewaying
 from __future__ import annotations
 
 import anyio
+import sys
 
 import asyncclick as click
 

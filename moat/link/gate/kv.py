@@ -12,6 +12,13 @@ from moat.link.meta import MsgMeta
 
 from . import Gate as _Gate
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.link.gate import GateNode
+
+    from typing import Any
+
 
 class Gate(_Gate):  # noqa: D101
     kv: Client

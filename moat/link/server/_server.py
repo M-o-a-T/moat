@@ -48,7 +48,7 @@ from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.link.auth import AnonAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
-from moat.link.exceptions import ClientError
+from moat.link.exceptions import ClientError, OutOfDateError
 from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node

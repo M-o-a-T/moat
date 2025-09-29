@@ -11,11 +11,25 @@ from contextlib import nullcontext
 import asyncclick as click
 from sqlalchemy import select as sel
 
-from moat.util import NotGiven, al_lower, ensure_cfg, load_subgroup, merge, option_ng, yprint
+from moat.util import (
+    NotGiven,
+    al_lower,
+    ensure_cfg,
+    gen_ident,
+    load_subgroup,
+    merge,
+    option_ng,
+    yprint,
+)
 from moat.db import database
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
 from .pdf import Labels
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.util import attrdict
 
 log = logging.getLogger()
 
@@ -759,7 +773,7 @@ def sheet_gen(obj, pattern, file, start, count, typ):
 
             lab = Label(code=code, labeltyp=sh.labeltyp, text=seq)
             if sh.labeltyp.url is not None:
-                self.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
+                sh.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
 
             sh.labels.add(lab)
             code += 1

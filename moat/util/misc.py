@@ -5,6 +5,7 @@ This module contains various helper functions and classes.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
 

@@ -373,7 +373,7 @@ async def cmd(obj, path, time, parts, **attrs):
         else:
             t3 = tm()
             if isinstance(res, Msg):
-                res = [msg.args, msg.kw]
+                res = [res.args, res.kw]
             yprint(res, stream=obj.stdout)
     if time:
         print(f"{humandelta(t3 - t2)} (setup {humandelta(t2 - t1)})")

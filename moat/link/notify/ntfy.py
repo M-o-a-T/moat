@@ -8,6 +8,11 @@ from moat.util import P, Path
 
 from . import Notifier as BaseNotifier
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Sequence
+
 __all__ = ["ntfy_bridge"]
 
 prio_map = {

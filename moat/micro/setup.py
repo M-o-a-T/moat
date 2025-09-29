@@ -14,7 +14,7 @@ from pprint import pformat
 
 import asyncclick as click
 
-from moat.util import P, merge
+from moat.util import P, Path, merge
 from moat.lib.codec import get_codec
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
@@ -204,9 +204,12 @@ async def setup(
             dst = MoatDevPath(root).connect_repl(repl)
             if source:
                 if rom:
-                    await do_copy(source, dst, dest, cross, wdst=tf)
-                    rom = await make_romfs(tf)
-                    await write_rom(tf)
+                    from .romfs import make_romfs, write_rom
+
+                    async with anyio.TemporaryDirectory() as tf:
+                        await do_copy(source, dst, dest, cross, wdst=tf)
+                        rom = await make_romfs(tf)
+                        await write_rom(sd, tf)
                 else:
                     await do_copy(source, dst, dest, cross)
             if state and not watch:

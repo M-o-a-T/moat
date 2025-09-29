@@ -8,6 +8,7 @@ import sys
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
+from moat.util.exc import ExpKeyError
 
 
 class _NotGiven:

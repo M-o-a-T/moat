@@ -96,27 +96,27 @@ class Loader(BaseLoader):
         """
         f = cfg.data.format.result
         if f == "yaml":
-            from moat.util import yformat  # noqa:PLC0415
+            from moat.util import yformat  # noqa: PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(yformat(kw))
 
         elif f == "cbor":
-            from moat.util.cbor import StdCBOR  # noqa:PLC0415
+            from moat.util.cbor import StdCBOR  # noqa: PLC0415
 
             packer = StdCBOR().encode
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(kw))
 
         elif f == "msgpack":
-            from moat.util.msgpack import StdMsgpack  # noqa:PLC0415
+            from moat.util.msgpack import StdMsgpack  # noqa: PLC0415
 
             packer = StdMsgpack().encode
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(kw))
 
         elif f == "json":
-            import json  # noqa:PLC0415
+            import json  # noqa: PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(kw))
@@ -135,7 +135,7 @@ class Loader(BaseLoader):
         """
         f = cfg.data.format.results
         if f == "yaml":
-            from moat.util import yformat  # noqa:PLC0415
+            from moat.util import yformat  # noqa: PLC0415
 
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 async for kw in it:
@@ -145,7 +145,7 @@ class Loader(BaseLoader):
             res = []
             async for kw in it:
                 res.append(kw)
-            from moat.util.cbor import StdCBOR  # noqa:PLC0415
+            from moat.util.cbor import StdCBOR  # noqa: PLC0415
             packer = StdCBOR.encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
@@ -155,14 +155,14 @@ class Loader(BaseLoader):
             res = []
             async for kw in it:
                 res.append(kw)
-            from moat.util.msgpack import StdMsgpack  # noqa:PLC0415
+            from moat.util.msgpack import StdMsgpack  # noqa: PLC0415
             packer = StdMsgpack.encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(res))
 
         elif f == "json":
-            import json  # noqa:PLC0415
+            import json  # noqa: PLC0415
 
             async for kw in it:
                 res.append(kw)

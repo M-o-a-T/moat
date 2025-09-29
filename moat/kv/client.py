@@ -453,7 +453,7 @@ class Client:
     async def dh_secret(self, length=1024):
         """Exchange a diffie-hellman secret with the server"""
         if self._dh_key is None:
-            from moat.lib.diffiehellman import DiffieHellman  # noqa:PLC0415
+            from moat.lib.diffiehellman import DiffieHellman  # noqa: PLC0415
 
             def gen_key():
                 k = DiffieHellman(key_length=length, group=(5 if length < 32 else 14))
@@ -678,7 +678,7 @@ class Client:
         port = cfg["port"]
         auth = cfg["auth"]
         if auth is not None:
-            from .auth import gen_auth  # noqa:PLC0415
+            from .auth import gen_auth  # noqa: PLC0415
 
             auth = gen_auth(auth)
         init_timeout = cfg["init_timeout"]
@@ -711,7 +711,7 @@ class Client:
                             await self._send(seq=0, qlen=self.qlen)
                         await self._run_auth(auth)
 
-                    from .config import ConfigRoot  # noqa:PLC0415
+                    from .config import ConfigRoot  # noqa: PLC0415
 
                     self._config = await ConfigRoot.as_handler(self, require_client=False)
 
@@ -959,7 +959,7 @@ class Client:
         if isinstance(path, str):
             raise TypeError("You need a path, not a string")
         if root_type is None:
-            from .obj import MirrorRoot  # noqa:PLC0415
+            from .obj import MirrorRoot  # noqa: PLC0415
 
             root_type = MirrorRoot
         root = root_type(self, path, **kw)

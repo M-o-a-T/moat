@@ -49,12 +49,12 @@ def go(state=None, cmd=True):
     """
 
     # copy from moat.util.compat
-    import sys as sys  # noqa:PLC0415
-    import time  # noqa:PLC0415
+    import sys as sys  # noqa: PLC0415
+    import time  # noqa: PLC0415
 
-    from rtc import get_rtc, set_rtc  # noqa:PLC0415
+    from rtc import get_rtc, set_rtc  # noqa: PLC0415
 
-    import machine  # noqa:PLC0415
+    import machine  # noqa: PLC0415
 
     def log(s, *x, err=None):
         if x:
@@ -116,8 +116,8 @@ def go(state=None, cmd=True):
 
     print("Start MoaT:", state, file=sys.stderr)
 
-    from moat.micro.main import main  # noqa:PLC0415
-    from moat.util.compat import at  # noqa:PLC0415
+    from moat.micro.main import main  # noqa: PLC0415
+    from moat.util.compat import at  # noqa: PLC0415
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 

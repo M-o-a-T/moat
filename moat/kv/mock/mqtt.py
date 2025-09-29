@@ -35,8 +35,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):  # noqa:D103
     if C_OUT is not NotGiven:
         TESTCFG["_stdout"] = C_OUT
 
-    from anyio.pytest_plugin import FreePortFactory  # noqa:PLC0415
-    from socket import SOCK_STREAM  # noqa:PLC0415
+    from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
+    from socket import SOCK_STREAM  # noqa: PLC0415
 
     PORT = FreePortFactory(SOCK_STREAM)()
     broker_cfg = {
@@ -47,8 +47,8 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):  # noqa:D103
     URI = f"mqtt://127.0.0.1:{PORT}/"
 
     if ssl:
-        import ssl  # noqa:PLC0415
-        import trustme  # noqa:PLC0415
+        import ssl  # noqa:PLC0415,I001
+        import trustme  # noqa: PLC0415
 
         ca = trustme.CA()
         cert = ca.issue_server_cert("127.0.0.1")

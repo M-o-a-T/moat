@@ -75,7 +75,7 @@ class S:  # noqa:D101
         raise RuntimeError("Duh? no connection")
 
     async def run(self, *args, do_stdout=True):  # noqa:D102
-        from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module # noqa:PLC0415
+        from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module # noqa:PLC0415,I001
 
         h = p = None
         for s in self.s:

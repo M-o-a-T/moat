@@ -73,7 +73,7 @@ def get_backend(name):
 
     Returns its `connect` method.
     """
-    from importlib import import_module  # noqa:PLC0415
+    from importlib import import_module  # noqa: PLC0415
 
     if "." not in name:
         name = "moat.kv.backend." + name

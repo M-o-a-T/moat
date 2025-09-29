@@ -48,7 +48,7 @@ _loaded = False
 
 def load(cfg: attrdict) -> MetaData:
     """Load database models as per config."""
-    from moat.db.schema import Base  # noqa:PLC0415
+    from moat.db.schema import Base  # noqa: PLC0415
 
     merge(cfg, CFG.db, replace=False)
 
@@ -98,9 +98,9 @@ def database(cfg: attrdict) -> Session:
 
 def alembic_cfg(gcfg, sess):
     """Generate a config object for Alembic."""
-    from configparser import RawConfigParser  # noqa:PLC0415
-    from alembic.config import Config  # noqa:PLC0415
-    from moat import db  # noqa:PLC0415
+    from configparser import RawConfigParser  # noqa:PLC0415,I001
+    from alembic.config import Config  # noqa: PLC0415
+    from moat import db  # noqa: PLC0415
 
     cfg = gcfg.db
 

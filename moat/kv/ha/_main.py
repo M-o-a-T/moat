@@ -369,7 +369,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
     v = combine_dict(val, d)
     v = {k: v for k, v in v.items() if v is not None}
     if "unique_id" not in v:
-        import base64  # noqa:PLC0415
+        import base64  # noqa: PLC0415
 
         tock = await obj.client.get_tock()
         tock = str(base64.b32encode(tock.to_bytes((tock.bit_length() + 7) // 8)), "ascii").rstrip(

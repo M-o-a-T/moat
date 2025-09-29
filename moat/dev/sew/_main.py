@@ -18,7 +18,7 @@ log = logging.getLogger()
 @click.option("--sub", "-s", type=P, default=P("dev.sew"), help="SEW sub-config")
 async def cli(obj, sub):
     """Device Manager for SEW MOVITRAC motor controllers"""
-    from moat.mqtt.client import get_codec  # noqa:PLC0415
+    from moat.mqtt.client import get_codec  # noqa: PLC0415
 
     obj.sub = sub
     obj.sew = combine_dict(obj.cfg._get(sub), obj.cfg["dev"]["sew"])  # noqa:SLF001
@@ -54,7 +54,7 @@ async def run_(obj):
     """
     cfg = obj.sew
 
-    from .control import run  # noqa:PLC0415
+    from .control import run  # noqa: PLC0415
 
     await run(cfg, name="moat." + str(obj.sub))
 
@@ -68,6 +68,6 @@ async def set_(obj, value):
         log.error("Value must be between -1 and 1")
         return
 
-    from .control import set_val  # noqa:PLC0415
+    from .control import set_val  # noqa: PLC0415
 
     await set_val(cfg, value)

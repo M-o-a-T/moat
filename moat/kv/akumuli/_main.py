@@ -172,8 +172,8 @@ async def attr_(obj, **kw):
 @click.argument("paths", nargs=-1, type=P)
 async def monitor(obj, paths):
     """Stand-alone task to monitor a single Akumuli tree"""
-    from .model import AkumuliRoot  # noqa:PLC0415
-    from .task import task  # noqa:PLC0415
+    from .model import AkumuliRoot  # noqa: PLC0415
+    from .task import task  # noqa: PLC0415
 
     server = await AkumuliRoot.as_handler(obj.client)
     await server.wait_loaded()

@@ -209,8 +209,8 @@ async def monitor(obj, name, controller):
 
     The first argument must be the local host name.
     """
-    from .model import GPIOroot  # noqa:PLC0415
-    from .task import task  # noqa:PLC0415
+    from .model import GPIOroot  # noqa: PLC0415
+    from .task import task  # noqa: PLC0415
 
     server = await GPIOroot.as_handler(obj.client)
     await server.wait_loaded()

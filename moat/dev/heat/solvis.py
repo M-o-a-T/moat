@@ -1598,7 +1598,7 @@ class Data:
             async with _lock:
                 if self.heat_dest is None:
                     print("t_cur OK")
-                import datetime  # noqa:PLC0415
+                import datetime  # noqa: PLC0415
 
                 dt = datetime.datetime.now(tz=datetime.UTC).astimezone()
                 s1 = cf.night.start.wk if dt.weekday() < 5 else cf.night.start.we  # 5=sat
@@ -2035,7 +2035,7 @@ async def cli(ctx, config):
 
     global GPIO
     try:
-        import RPi.GPIO as GPIO  # noqa:PLC0415
+        import RPi.GPIO as GPIO  # noqa: PLC0415
     except ImportError:
         pass
     else:

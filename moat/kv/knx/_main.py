@@ -95,7 +95,7 @@ def map_keys():
     try:
         return RemoteValueSensor.DPTMAP.keys()
     except AttributeError:
-        from xknx.dpt import DPTBase  # noqa:PLC0415
+        from xknx.dpt import DPTBase  # noqa: PLC0415
 
         return (cls.__name__[3:] for cls in DPTBase.__recursive_subclasses__())
 
@@ -255,8 +255,8 @@ async def server_(obj, bus, name, host, port, delete):
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip, initial):
     """Stand-alone task to talk to a single server."""
-    from .model import KNXroot  # noqa:PLC0415
-    from .task import task  # noqa:PLC0415
+    from .model import KNXroot  # noqa: PLC0415
+    from .task import task  # noqa: PLC0415
 
     cfg = obj.cfg.kv.knx
 

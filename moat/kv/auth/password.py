@@ -53,7 +53,7 @@ def load(typ: str, *, make: bool = False, server: bool):  # noqa:D103
 async def pack_pwd(client, password, length):
     """Client side: encrypt password"""
     secret = await client.dh_secret(length=length)
-    from hashlib import sha256  # noqa:PLC0415
+    from hashlib import sha256  # noqa: PLC0415
 
     pwd = sha256(password).digest()
     box = nacl.secret.SecretBox(secret)

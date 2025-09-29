@@ -163,7 +163,7 @@ class _Run:
     async def run(self):
         cfg = self.cfg
 
-        from moat.mqtt.client import open_mqttclient  # noqa:PLC0415
+        from moat.mqtt.client import open_mqttclient  # noqa: PLC0415
 
         modbus = cfg["modbus"]
         async with (

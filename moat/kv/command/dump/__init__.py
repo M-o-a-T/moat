@@ -70,8 +70,8 @@ async def msg_(obj, path):
     * update  data changes
     * del     nodes responsible for cleaning up deleted records
     """
-    from moat.kv.backend import get_backend  # noqa:PLC0415
-    import moat.kv.server  # noqa:PLC0415
+    from moat.kv.backend import get_backend  # noqa:PLC0415,I001
+    import moat.kv.server  # noqa: PLC0415
 
     class _Unpack:
         def __init__(self):
@@ -133,7 +133,7 @@ async def post_(obj, path):
     * update: data changes
     * del: sync: nodes responsible for cleaning up deleted records
     """
-    from moat.kv.backend import get_backend  # noqa:PLC0415
+    from moat.kv.backend import get_backend  # noqa: PLC0415
 
     path = P(path)
     be = obj.cfg.server.backend

@@ -340,7 +340,7 @@ class BaseServerAuth(_AuthLoaded):
         jsonschema.validate(instance=data.get("data", {}), schema=type(self).schema)
 
     def aux_conv(self, data: Entry, root: Entry):  # noqa:D102
-        from moat.kv.types import ConvNull  # noqa:PLC0415
+        from moat.kv.types import ConvNull  # noqa: PLC0415
 
         try:
             data = data["conv"].data["key"]

@@ -35,7 +35,7 @@ async def cli(obj):
 @click.pass_obj
 async def run_(obj):
     """Process calendar alarms"""
-    from moat.kv.client import client_scope  # noqa:PLC0415
+    from moat.kv.client import client_scope  # noqa: PLC0415
 
     kv = await client_scope(**obj.cfg.kv)
     cal_cfg = (await kv.get(P("calendar.test"))).value

@@ -251,7 +251,7 @@ async def host_template(obj, dump, template):
             ports  a list of the host's ports
             vlans  the VLANs attached to this host
         """
-    import jinja2  # noqa:PLC0415
+    import jinja2  # noqa: PLC0415
 
     if len(template) != 1 - dump:
         if dump:

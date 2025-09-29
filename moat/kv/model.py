@@ -592,7 +592,7 @@ class UpdateEvent:
             # pylint: disable=redefined-outer-name
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # noqa:PLC0415
+                from .types import ConvNull  # noqa: PLC0415
             conv = ConvNull
         res = self.event.serialize(nchain=nchain)
         res.path = self.entry.path[chop_path:]
@@ -612,7 +612,7 @@ class UpdateEvent:
             # pylint: disable=redefined-outer-name
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # noqa:PLC0415
+                from .types import ConvNull  # noqa: PLC0415
             conv = ConvNull
         entry = root.follow(msg.path, create=True, nulls_ok=nulls_ok)
         event = NodeEvent.deserialize(msg, cache=cache)
@@ -724,7 +724,7 @@ class Entry:
         if acl is None:
             global NullACL
             if NullACL is None:
-                from .types import NullACL  # pylint: disable=redefined-outer-name # noqa:PLC0415
+                from .types import NullACL  # pylint: disable=redefined-outer-name # noqa:PLC0415,I001
             acl = NullACL
 
         first = True
@@ -983,7 +983,7 @@ class Entry:
         if conv is None:
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # pylint: disable=redefined-outer-name # noqa:PLC0415
+                from .types import ConvNull  # pylint: disable=redefined-outer-name # noqa:PLC0415,I001
             conv = ConvNull
         res = attrdict()
         if self._data is not NotGiven:

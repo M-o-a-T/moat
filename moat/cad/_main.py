@@ -45,11 +45,11 @@ async def edit_(obj, files):
     if len(files) > 1:
         raise click.UsageError("Max one file")
 
-    import os  # noqa:PLC0415
-    import sys  # noqa:PLC0415
-    from tempfile import SpooledTemporaryFile  # noqa:PLC0415
+    import os  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+    from tempfile import SpooledTemporaryFile  # noqa: PLC0415
 
-    import moat  # noqa:PLC0415
+    import moat  # noqa: PLC0415
 
     cfg = obj.cfg
     env = os.environ.copy()
@@ -91,11 +91,11 @@ async def edit_(obj, files):
 async def run_(obj, file, args):
     "Run a script."
 
-    import os  # noqa:PLC0415
-    import sys  # noqa:PLC0415
-    from tempfile import SpooledTemporaryFile  # noqa:PLC0415
+    import os  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+    from tempfile import SpooledTemporaryFile  # noqa: PLC0415
 
-    import moat  # noqa:PLC0415
+    import moat  # noqa: PLC0415
 
     cfg = obj.cfg
     env = os.environ.copy()
@@ -135,9 +135,9 @@ async def run_(obj, file, args):
 @click.option("-p", "--printer", type=str, default="xl")
 async def gcode(printer):
     "Emit gcode template"
-    from anyio import Path  # noqa:PLC0415
+    from anyio import Path  # noqa: PLC0415
 
-    from jinja2 import Environment  # noqa:PLC0415
+    from jinja2 import Environment  # noqa: PLC0415
 
     f = Path(__file__).parent / "_templates" / f"{printer}.gcode.jinja"
     env = Environment(

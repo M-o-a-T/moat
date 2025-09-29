@@ -130,7 +130,7 @@ async def run(obj, nodes):
 
     This does not return.
     """
-    from moat.util import as_service  # noqa:PLC0415
+    from moat.util import as_service  # noqa: PLC0415
 
     if obj.subpath[-1] == "-":
         raise click.UsageError("Group '-' can only be used for listing.")
@@ -202,7 +202,7 @@ async def list_(obj, state, state_only, table, as_dict):
         state = obj.statepath + path
 
     if table:
-        from moat.kv.errors import ErrorRoot  # noqa:PLC0415
+        from moat.kv.errors import ErrorRoot  # noqa: PLC0415
 
         err = await ErrorRoot.as_handler(obj.client)
 

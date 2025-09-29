@@ -11,7 +11,7 @@ from contextlib import nullcontext
 import asyncclick as click
 from sqlalchemy import select as sel
 
-from moat.util import NotGiven, ensure_cfg, load_subgroup, merge, option_ng, yprint
+from moat.util import NotGiven, al_lower, ensure_cfg, load_subgroup, merge, option_ng, yprint
 from moat.db import database
 
 from .model import Label, LabelTyp, Sheet, SheetTyp

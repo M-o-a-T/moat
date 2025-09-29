@@ -568,7 +568,7 @@ class _Sender(MsgSender):
         if self._codec_tree is None:
             self._codec_tree = evt = anyio.Event()
 
-            from moat.link.node.codec import CodecNode  # noqa:PLC0415
+            from moat.link.node.codec import CodecNode  # noqa: PLC0415
 
             self._codec_tree = await self._link.tg.start(
                 partial(
@@ -694,7 +694,7 @@ class Link(LinkCommon, CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        from .backend import get_backend  # noqa:PLC0415
+        from .backend import get_backend  # noqa: PLC0415
 
         will = attrdict(
             data=dict(

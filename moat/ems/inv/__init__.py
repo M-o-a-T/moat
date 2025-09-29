@@ -649,7 +649,7 @@ class InvControl(BusVars):
 
         # TODO use a service scope instead
         # pylint: disable=import-outside-toplevel
-        from moat.kv.client import open_client as distkv_client  # noqa:PLC0415
+        from moat.kv.client import open_client as distkv_client  # noqa: PLC0415
 
         try:
             async with distkv_client(**self.cfg["distkv"]) as dkv:
@@ -1315,8 +1315,8 @@ class InvModeBase:
 def _loader(path, cls, reg):
     "Load submodule"
     # pylint: disable=import-outside-toplevel
-    from importlib import import_module  # noqa:PLC0415
-    from pathlib import Path  # noqa:PLC0415
+    from importlib import import_module  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
 
     def _imp(name):
         m = import_module("." + name, package=_loader.__module__)  # noqa:F821

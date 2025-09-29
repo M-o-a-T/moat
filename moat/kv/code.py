@@ -46,7 +46,7 @@ class ModuleRoot(ClientRoot):
         return ModuleEntry
 
     async def run_starting(self):  # noqa:D102
-        from .errors import ErrorRoot  # noqa:PLC0415
+        from .errors import ErrorRoot  # noqa: PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
@@ -147,7 +147,7 @@ class CodeRoot(ClientRoot):
         return CodeEntry
 
     async def run_starting(self):  # noqa:D102
-        from .errors import ErrorRoot  # noqa:PLC0415
+        from .errors import ErrorRoot  # noqa: PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()

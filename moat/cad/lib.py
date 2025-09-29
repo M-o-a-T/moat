@@ -159,7 +159,7 @@ def RotAxis(axis, angle):
     """
     Rotation matrix for this angle around that axis.
     """
-    from transforms3d.euler import mat2euler  # noqa:PLC0415
+    from transforms3d.euler import mat2euler  # noqa: PLC0415
 
     rtm = Matrix()
     breakpoint()  # noqa:T100
@@ -243,7 +243,7 @@ def show(obj, name=None, dest=None):
 
     global s_o
     if s_o is Ellipsis:
-        import inspect  # noqa:PLC0415
+        import inspect  # noqa: PLC0415
 
         f = inspect.currentframe()
         while f is not None and "show_object" not in f.f_globals:

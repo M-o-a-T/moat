@@ -1,6 +1,8 @@
 from __future__ import annotations  # noqa: D100
-import pytest
+
 import anyio
+import pytest
+
 from moat.lib.priomap import PrioMap
 
 

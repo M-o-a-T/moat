@@ -4,7 +4,6 @@ Rudimentary Github API.
 
 from __future__ import annotations
 
-
 from attr import define
 
 from moat.util import to_attrdict

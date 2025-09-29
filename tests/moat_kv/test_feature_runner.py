@@ -1,12 +1,13 @@
 from __future__ import annotations  # noqa: D100
-import logging
-import time
 
 import anyio
+import logging
 import pytest
-import trio
-from moat.util import P
+import time
 
+import trio
+
+from moat.util import P
 from moat.kv.code import CodeRoot
 from moat.kv.errors import ErrorRoot
 from moat.kv.mock.mqtt import stdtest

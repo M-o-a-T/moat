@@ -8,8 +8,6 @@ from moat.util import P, Path
 
 from . import Notifier as BaseNotifier
 
-
-
 __all__ = ["ntfy_bridge"]
 
 prio_map = {

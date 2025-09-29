@@ -3,10 +3,10 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from moat.link._test import Scaffold
-from moat.link.client import Link
 from moat.util import P
 from moat.lib.cmd.base import MsgSender
+from moat.link._test import Scaffold
+from moat.link.client import Link
 
 
 async def _dump(sf, *, task_status):

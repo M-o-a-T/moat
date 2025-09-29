@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import yload, P
+from moat.util import P, yload
 from moat.micro._test import mpy_stack
 
 CFGW = """

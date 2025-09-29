@@ -39,7 +39,7 @@ from moat.util.random import al_unique
 from .auth import AnonAuth, TokenAuth
 from .common import CmdCommon
 from .conn import TCPConn, UnixConn
-from .exceptions import ClientCancelledError, AuthError
+from .exceptions import AuthError, ClientCancelledError
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
@@ -47,19 +47,18 @@ from .node import Node
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from moat.link.node.codec import CodecNode
+    from contextlib import AbstractAsyncContextManager
 
     from moat.lib.cmd.base import MsgHandler
     from moat.lib.cmd.msg import Msg
+    from moat.link.node.codec import CodecNode
 
     from .backend import Message
     from .schema import Data
     from .schema import SchemaName as S
 
-    from collections.abc import Awaitable
+    from collections.abc import AsyncIterator, Awaitable
     from typing import Any, Literal
-    from contextlib import AbstractAsyncContextManager
-    from collections.abc import AsyncIterator
 
 
 class _Requeue(Exception):

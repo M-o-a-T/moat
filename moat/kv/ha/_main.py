@@ -1,9 +1,9 @@
 # command line interface
 from __future__ import annotations
 
+import anyio
 import logging
 import os
-import anyio
 
 import asyncclick as click
 

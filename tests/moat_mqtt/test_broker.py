@@ -2,12 +2,14 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
-import unittest
-from unittest.mock import MagicMock, call, patch
 
 import anyio
+import logging
 import pytest
+import unittest
+from anyio.pytest_plugin import FreePortFactory
+from socket import SOCK_STREAM
+from unittest.mock import MagicMock, call, patch
 
 from moat.mqtt.adapters import StreamAdapter
 from moat.mqtt.broker import (
@@ -31,8 +33,6 @@ from moat.mqtt.mqtt import (
 )
 from moat.mqtt.mqtt.connect import ConnectPayload, ConnectVariableHeader
 from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
 
 from . import anyio_run
 

@@ -5,7 +5,7 @@ Some rudimentary tests for merge and combine_dict
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
-from moat.util import NotGiven, combine_dict, merge, attrdict, P
+from moat.util import NotGiven, P, attrdict, combine_dict, merge
 
 
 def chkm(a, b, c, drop=False):

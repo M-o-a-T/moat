@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import logging
 import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-from moat.util import yload
 import contextlib
+
+from moat.util import yload
 
 
 def load_cfg(cfg):  # pylint: disable=redefined-outer-name  # noqa: D103

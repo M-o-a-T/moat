@@ -6,9 +6,9 @@ import pytest
 import time
 from itertools import zip_longest
 
+from moat.util import NotGiven, P, PathLongener
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
-from moat.util import NotGiven, P, PathLongener
 
 
 def dump(n):

@@ -8,9 +8,9 @@ import os
 import pytest
 
 from moat.micro._test import Loopback
+from moat.micro.proto.reliable import EphemeralMsg, ReliableMsg
+from moat.micro.proto.stack import LogMsg, StackedMsg
 from moat.util.compat import Event, TaskGroup
-from moat.micro.proto.reliable import ReliableMsg, EphemeralMsg
-from moat.micro.proto.stack import StackedMsg, LogMsg
 
 pytestmark = pytest.mark.anyio
 

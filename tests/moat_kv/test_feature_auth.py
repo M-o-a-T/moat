@@ -1,17 +1,17 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
+import pytest
 from functools import partial
 
 import jsonschema
-import pytest
-from moat.src.test import raises
-from moat.util import P
 
+from moat.util import P
 from moat.kv.auth import gen_auth
 from moat.kv.client import ServerError
 from moat.kv.exceptions import ClientAuthMethodError, ClientAuthRequiredError
-from moat.src.test import run
 from moat.kv.mock.mqtt import stdtest
+from moat.src.test import raises, run
 
 logger = logging.getLogger(__name__)
 

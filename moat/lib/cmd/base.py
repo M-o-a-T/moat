@@ -4,7 +4,6 @@ Base classes for command handlers.
 
 from __future__ import annotations
 
-
 from moat.util import NotGiven, Path
 from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
 from moat.util.exc import ungroup
@@ -19,11 +18,10 @@ _link_id = 0
 if TYPE_CHECKING:
     from types import EllipsisType
 
-
     from .msg import Msg
 
-    from typing import Any
     from collections.abc import Awaitable, Callable, Mapping, Sequence
+    from typing import Any
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None

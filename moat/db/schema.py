@@ -7,6 +7,7 @@ from sqlalchemy.orm import DeclarativeBase, declared_attr
 from moat.util import NotGiven
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Any
 

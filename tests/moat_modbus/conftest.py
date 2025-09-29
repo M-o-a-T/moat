@@ -1,5 +1,6 @@
 # pylint: disable=missing-module-docstring,missing-function-docstring  # noqa: D100
 from __future__ import annotations
+
 import pytest
 
 

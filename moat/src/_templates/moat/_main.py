@@ -4,7 +4,6 @@ MoaT sub-tool template
 
 from __future__ import annotations
 
-
 from moat.util import load_subgroup
 
 

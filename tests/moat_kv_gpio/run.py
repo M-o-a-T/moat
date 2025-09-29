@@ -1,18 +1,18 @@
 from __future__ import annotations  # noqa: D100
-import sys
+
 import anyio
+import logging
+import sys
+
 import trio
 import trio.testing
 
-from moat.mqtt.test import test_client
-from moat.lib.gpio.test import GpioWatcher, Pin
-
 from moat.util import Path
-from moat.kv.gpio.task import task as GPIOtask
-from moat.kv.gpio.model import GPIOroot
 from moat.kv.gpio.config import CFG
-
-import logging
+from moat.kv.gpio.model import GPIOroot
+from moat.kv.gpio.task import task as GPIOtask
+from moat.lib.gpio.test import GpioWatcher, Pin
+from moat.mqtt.test import test_client
 
 logger = logging.getLogger(__name__)
 

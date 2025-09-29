@@ -1,10 +1,12 @@
 from __future__ import annotations  # noqa: D100
+
 import anyio
-from moat.lib.cmd.base import MsgSender, MsgHandler
-from moat.lib.cmd._test import StreamLoop
-from moat.util import Path, CtxObj
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
+
+from moat.util import CtxObj, Path
+from moat.lib.cmd._test import StreamLoop
+from moat.lib.cmd.base import MsgHandler, MsgSender
 
 logger = logging.getLogger(__name__)
 

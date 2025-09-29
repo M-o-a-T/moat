@@ -1,6 +1,9 @@
 from __future__ import annotations  # noqa: D100
+
 import pytest
+
 import trio
+
 from moat.util import P
 from moat.kv.mock.mqtt import stdtest
 from moat.util.compat import CancelledError

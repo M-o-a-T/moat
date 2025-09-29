@@ -2,11 +2,13 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
+import anyio
 import logging
 import random
 from functools import partial
 
-import anyio
+from tests.moat_mqtt import anyio_run
 
 from moat.mqtt.adapters import StreamAdapter
 from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
@@ -22,8 +24,6 @@ from moat.mqtt.session import (
     OutgoingApplicationMessage,
     Session,
 )
-
-from tests.moat_mqtt import anyio_run
 
 log = logging.getLogger(__name__)
 

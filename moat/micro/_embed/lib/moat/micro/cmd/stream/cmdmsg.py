@@ -4,7 +4,6 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
-
 from moat.util import merge
 from moat.lib.cmd.stream import HandlerStream
 from moat.lib.codec.errors import SilentRemoteError

@@ -21,7 +21,6 @@ from enum import IntEnum
 from struct import Struct
 
 from moat.util import as_proxy
-
 from moat.ems.battery.errors import MessageError
 
 from typing import ClassVar

@@ -2,6 +2,7 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 import unittest
 
 from moat.mqtt.adapters import BufferAdapter

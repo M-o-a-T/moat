@@ -5,8 +5,9 @@ exec
 from __future__ import annotations
 
 import pytest
-from moat.util.exec import run
 import subprocess
+
+from moat.util.exec import run
 
 
 @pytest.mark.anyio

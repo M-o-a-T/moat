@@ -4,10 +4,10 @@ import anyio
 import pytest
 import time
 
-from moat.link._test import Scaffold
-from moat.util import P, NotGiven, Path
-from moat.util.msg import MsgReader
+from moat.util import NotGiven, P, Path
 from moat.lib.cmd import RemoteError
+from moat.link._test import Scaffold
+from moat.util.msg import MsgReader
 
 
 @pytest.mark.anyio

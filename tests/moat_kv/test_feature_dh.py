@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
-import logging
 
+import logging
 import pytest
 
 from moat.kv.mock.mqtt import stdtest

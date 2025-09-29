@@ -12,7 +12,7 @@ from weakref import WeakSet, WeakValueDictionary, ref
 
 from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
 
-from moat.util import NotGiven, Path, attrdict, yaml_repr, srepr
+from moat.util import NotGiven, Path, attrdict, srepr, yaml_repr
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot, NamedRoot
 

@@ -10,7 +10,9 @@ from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
 from moat.util.compat import Event, log
 
-from .exc import ExpAttrError as ExpAttrError, ExpectedError as ExpectedError, ExpKeyError as ExpKeyError
+from .exc import ExpAttrError as ExpAttrError
+from .exc import ExpectedError as ExpectedError
+from .exc import ExpKeyError as ExpKeyError
 from .path import P, Path  # noqa:F401
 
 

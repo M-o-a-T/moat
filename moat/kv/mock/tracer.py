@@ -1,14 +1,13 @@
 # noqa:D100
 from __future__ import annotations
 
+import logging
 import traceback
 
 import trio
 from outcome import Error
 
 import moat
-
-import logging
 
 moat.kill = False
 

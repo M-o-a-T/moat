@@ -2,20 +2,19 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
-import os
-import unittest
 
 import anyio
+import logging
+import os
 import pytest
-
-from moat.mqtt.broker import create_broker
-from moat.util import ungroup
-from moat.mqtt.client import ConnectException, open_mqttclient
-from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-
+import unittest
 from anyio.pytest_plugin import FreePortFactory
 from socket import SOCK_STREAM
+
+from moat.util import ungroup
+from moat.mqtt.broker import create_broker
+from moat.mqtt.client import ConnectException, open_mqttclient
+from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 from . import anyio_run
 

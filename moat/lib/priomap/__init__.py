@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
     from abc import abstractmethod
 
-    from typing import Optional, Protocol, Union
     from collections.abc import Hashable
+    from typing import Optional, Protocol, Union
 
     class Comparable(Protocol):
         """Protocol for annotating comparable types."""

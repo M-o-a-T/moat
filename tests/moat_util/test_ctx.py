@@ -4,12 +4,12 @@ More util functions
 
 from __future__ import annotations
 
-from contextvars import ContextVar
-from moat.util.ctx import ContextMgr, ctx_as
-import pytest
 import anyio
-
+import pytest
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
+
+from moat.util.ctx import ContextMgr, ctx_as
 
 
 @pytest.mark.anyio

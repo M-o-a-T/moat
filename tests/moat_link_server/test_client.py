@@ -4,9 +4,9 @@ import anyio
 import pytest
 import time
 
-from moat.link.meta import MsgMeta
+from moat.util import NotGiven, P, Path
 from moat.link._test import Scaffold
-from moat.util import P, NotGiven, Path
+from moat.link.meta import MsgMeta
 
 
 @pytest.mark.anyio

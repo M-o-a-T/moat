@@ -2,12 +2,12 @@ from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
-import time
 import sys
+import time
 
-from moat.link.meta import MsgMeta
-from moat.link._test import Scaffold
 from moat.util import P
+from moat.link._test import Scaffold
+from moat.link.meta import MsgMeta
 
 
 async def _dump(sf, *, task_status):

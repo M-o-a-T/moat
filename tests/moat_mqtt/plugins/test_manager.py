@@ -2,14 +2,14 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import unittest
 
 import anyio
 import pytest
-
-from moat.mqtt.plugins.manager import PluginManager
+import unittest
 
 from tests.moat_mqtt import anyio_run
+
+from moat.mqtt.plugins.manager import PluginManager
 
 pytestmark = pytest.mark.skip
 

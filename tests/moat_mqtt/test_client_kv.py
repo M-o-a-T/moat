@@ -2,24 +2,24 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import logging
-import unittest
 
 import anyio
+import logging
 import pytest
+import unittest
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager
 
+from anyio.pytest_plugin import FreePortFactory
+from socket import SOCK_STREAM
+
+from moat.util import gen_ident
 from moat.mqtt.broker import create_broker
 from moat.mqtt.client import open_mqttclient
 from moat.mqtt.mqtt.constants import QOS_0
-from moat.util import gen_ident
-
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
 
 try:
     from moat.kv.client import open_client

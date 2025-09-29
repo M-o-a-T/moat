@@ -4,10 +4,10 @@ Basic codec tests
 
 from __future__ import annotations
 
-from moat.lib.codec import get_codec
-from moat.util import NotGiven, OutOfData
-
 import pytest
+
+from moat.util import NotGiven, OutOfData
+from moat.lib.codec import get_codec
 
 
 def test_noop():

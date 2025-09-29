@@ -9,10 +9,10 @@ from copy import deepcopy
 from functools import partial
 
 from asyncowfs.mock import structs
-from moat.kv.mock.mqtt import stdtest
 
-from moat.util import Path, P, load_ext
+from moat.util import P, Path, load_ext
 from moat.kv.data import data_get
+from moat.kv.mock.mqtt import stdtest
 
 owfs_mock = load_ext("moat.kv.ow.mock")
 

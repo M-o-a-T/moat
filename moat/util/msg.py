@@ -9,6 +9,7 @@ from __future__ import annotations
 import anyio
 
 from moat.lib.codec import Codec
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

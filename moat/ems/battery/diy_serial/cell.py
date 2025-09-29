@@ -4,20 +4,20 @@ A serially-connected cell.
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.ems.battery._base import BaseCell
 from moat.ems.battery.conv.steinhart import celsius2thermistor, thermistor2celsius
-from moat.util import attrdict
 
 from .packet import (
+    RequestBalanceCurrentCounter,
+    RequestBalanceLevel,
+    RequestBalancePower,
+    RequestConfig,
+    RequestReadPIDconfig,
     RequestReadSettings,
     RequestTemperature,
     RequestVoltages,
     RequestWritePIDconfig,
-    RequestReadPIDconfig,
-    RequestConfig,
-    RequestBalanceCurrentCounter,
-    RequestBalanceLevel,
-    RequestBalancePower,
 )
 
 

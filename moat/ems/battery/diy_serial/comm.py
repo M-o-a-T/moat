@@ -9,6 +9,7 @@ import logging
 from pprint import pformat
 
 from moat.util import ValueEvent
+from moat.ems.battery.errors import MessageError, MessageLost, NoSuchCell
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import (
     Lock,
@@ -19,7 +20,6 @@ from moat.util.compat import (
     wait_for_ms,
 )
 
-from moat.ems.battery.errors import MessageError, MessageLost, NoSuchCell
 from .packet import PacketHeader, replyClass
 
 logger = logging.getLogger(__name__)

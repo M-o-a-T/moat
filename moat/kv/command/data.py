@@ -11,6 +11,7 @@ from moat.kv.data import add_dates, data_get, node_attr
 from moat.util.times import ts2iso
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal
 

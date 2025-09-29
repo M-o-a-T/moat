@@ -1,18 +1,17 @@
 from __future__ import annotations  # noqa: D100
 
+import logging
 import pytest
 
-from moat.link.meta import MsgMeta
-from moat.link._test import Scaffold
-from moat.link.node import Node
 from moat.util import P, PathLongener, ungroup
-from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
 from moat.lib.codec.cbor import Tag as CBORTag
-from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
+from moat.link._test import Scaffold
 from moat.link.client import BasicLink
-
-import logging
+from moat.link.meta import MsgMeta
+from moat.link.node import Node
+from moat.util.cbor import CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_FILE_ID
+from moat.util.msg import MsgReader
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,11 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
-
 import pytest
-import trio
-from moat.util import P, PathLongener
 
+import trio
+
+from moat.util import P, PathLongener
 from moat.kv.errors import ErrorRoot
 from moat.kv.mock.mqtt import stdtest
 

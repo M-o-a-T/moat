@@ -2,12 +2,13 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
+
 import unittest
+
+from tests.moat_mqtt import anyio_run
 
 from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.pubrec import PacketIdVariableHeader, PubrecPacket
-
-from tests.moat_mqtt import anyio_run
 
 
 class PubrecPacketTest(unittest.TestCase):  # noqa: D101

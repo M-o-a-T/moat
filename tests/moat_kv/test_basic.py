@@ -1,16 +1,16 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
+import pytest
 from time import time
 
 import asyncclick as click
-import pytest
 import trio
-from moat.src.test import raises
-from moat.util import P, PathLongener
 
+from moat.util import P, PathLongener
 from moat.kv.client import ServerError
-from moat.src.test import run
 from moat.kv.mock.mqtt import stdtest
+from moat.src.test import raises, run
 
 logger = logging.getLogger(__name__)
 

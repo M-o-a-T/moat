@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import as_proxy, P
+from moat.util import P, as_proxy
 from moat.micro._test import mpy_stack
 from moat.util.compat import ticks_diff, ticks_ms
 

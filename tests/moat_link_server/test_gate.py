@@ -1,23 +1,24 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
+import copy
 import pytest
 import time
-from functools import partial
 from contextlib import AsyncExitStack
+from functools import partial
 from unittest import mock
-import trio
-import copy
 
-from moat.link.meta import MsgMeta
-from moat.link._test import Scaffold
-from moat.link.gate import run_gate
-from moat.link._data import data_get, backend_get
-from moat.util import P, combine_dict, CFG, ensure_cfg
-from moat.lib.codec import get_codec
-from moat.kv.server import Server as KVServer
+import trio
+
+from moat.util import CFG, P, combine_dict, ensure_cfg
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
+from moat.kv.server import Server as KVServer
+from moat.lib.codec import get_codec
+from moat.link._data import backend_get, data_get
+from moat.link._test import Scaffold
+from moat.link.gate import run_gate
+from moat.link.meta import MsgMeta
 
 
 async def mon(c, *, task_status):  # noqa: D103

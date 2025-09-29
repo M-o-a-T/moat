@@ -1,15 +1,16 @@
 from __future__ import annotations  # noqa: D100
-import logging
 
 import anyio
+import logging
 import pytest
+
 import trio
 from asyncscope import scope
-from moat.src.test import raises
-from moat.util import P, PathLongener
 
+from moat.util import P, PathLongener
 from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
+from moat.src.test import raises
 
 logger = logging.getLogger(__name__)
 

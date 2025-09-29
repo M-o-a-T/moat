@@ -16,7 +16,6 @@ from moat.util.exec import run as run_proc
 
 from .api import API, RepoInfo, get_api
 
-
 logger = logging.getLogger(__name__)
 
 ProcErr = subprocess.CalledProcessError

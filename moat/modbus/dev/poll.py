@@ -8,7 +8,6 @@ import anyio
 import logging
 from functools import partial
 
-
 from moat.util import attrdict, merge, to_attrdict
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import create_server

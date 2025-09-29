@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from subprocess import CalledProcessError
 
-
 from moat.util import attrdict
 
 from . import NoSuchRepo

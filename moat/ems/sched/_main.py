@@ -5,9 +5,9 @@ Basic tool support
 
 from __future__ import annotations
 
+import anyio
 import logging
 import time
-import anyio
 from textwrap import dedent as _dedent
 
 import asyncclick as click

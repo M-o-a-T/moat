@@ -8,11 +8,10 @@ import anyio
 import pytest
 from pathlib import Path
 
-from moat.util import yload, yprint, P, ensure_cfg
+from moat.util import P, ensure_cfg, yload, yprint
+from moat.lib.codec import get_codec
 from moat.micro._test import mpy_stack
 from moat.src.test import run
-from moat.lib.codec import get_codec
-
 
 from typing import TYPE_CHECKING  # isort:skip
 

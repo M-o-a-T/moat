@@ -4,7 +4,6 @@ Basic message block
 
 from __future__ import annotations
 
-
 from moat.util import ExpectedError, P, Path, outcome
 from moat.lib.codec.errors import SilentRemoteError
 from moat.util.compat import Event, Queue, is_async, log, shield
@@ -43,12 +42,12 @@ except ImportError:
 if TYPE_CHECKING:
     from .base import OptDict
 
+    from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
     from typing import (
         Any,
         AsyncContextManager,
         Self,
     )
-    from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
 
 
 try:

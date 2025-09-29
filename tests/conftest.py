@@ -1,4 +1,5 @@
 from __future__ import annotations  # noqa: D100
+
 import sys
 
 sys.path.insert(0, "../mqttproto/src")

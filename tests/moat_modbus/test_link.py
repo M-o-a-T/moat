@@ -1,15 +1,16 @@
 from __future__ import annotations  # noqa: D100
-import logging
 
-import pytest
-import trio
 import copy
-from moat.util import P, yload
+import logging
+import pytest
 
+import trio
+
+from moat.util import P, yload
 from moat.link._test import Scaffold
+from moat.modbus.client import ModbusClient
 from moat.modbus.dev.poll import dev_poll
 from moat.modbus.types import HoldingRegisters, IntValue
-from moat.modbus.client import ModbusClient
 
 _lg = logging.getLogger("moat.mqtt.mqtt.protocol.handler")
 _lg.level = logging.WARNING

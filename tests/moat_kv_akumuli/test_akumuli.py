@@ -1,13 +1,13 @@
 from __future__ import annotations  # noqa: D100
-import anyio
-from time import time
 
-from moat.util import P, load_ext
-from moat.kv.mock.mqtt import stdtest
+import anyio
+import subprocess
+from time import time
 
 from asyncakumuli.mock import AkumuliTester
 
-import subprocess
+from moat.util import P, load_ext
+from moat.kv.mock.mqtt import stdtest
 
 task = akumuli_task = load_ext("moat.kv.akumuli.task", "task", err=True)
 

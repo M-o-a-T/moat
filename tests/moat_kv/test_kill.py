@@ -1,13 +1,14 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
-
 import pytest
-import trio
-from moat.src.test import raises
-from moat.util import P
 
+import trio
+
+from moat.util import P
 from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
+from moat.src.test import raises
 
 logger = logging.getLogger(__name__)
 

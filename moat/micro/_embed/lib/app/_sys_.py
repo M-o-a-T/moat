@@ -4,7 +4,6 @@ System access app
 
 from __future__ import annotations
 
-
 from moat.util import Path
 from moat.lib.codec.proxy import Proxy, drop_proxy
 from moat.micro.cmd.base import BaseCmd

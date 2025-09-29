@@ -4,8 +4,7 @@ Support code for tests
 
 from __future__ import annotations
 
-
-from moat.util import yload, merge
+from moat.util import merge, yload
 
 
 def as_attr(d, **kw):  # noqa:D103

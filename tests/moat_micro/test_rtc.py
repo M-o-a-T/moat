@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven, attrdict, to_attrdict, P
+from moat.util import NotGiven, P, attrdict, to_attrdict
 from moat.micro._test import mpy_stack
 
 pytestmark = pytest.mark.anyio

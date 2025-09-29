@@ -13,8 +13,8 @@ from subprocess import DEVNULL, PIPE, STDOUT, CalledProcessError
 from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING:
-    from typing import Literal
     from collections.abc import AsyncIterable
+    from typing import Literal
 
 
 __all__ = ["DEVNULL", "PIPE", "STDOUT", "CalledProcessError", "run"]

@@ -4,7 +4,6 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-
 from moat.util import Path, import_
 from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError

@@ -1,7 +1,6 @@
 # command line interface  # noqa: D100
 from __future__ import annotations
 
-
 import asyncclick as click
 
 from moat.util import NotGiven, P, attr_args, process_args, yprint

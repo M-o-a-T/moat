@@ -1,9 +1,9 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
-
 import pytest
-from moat.util import P
 
+from moat.util import P
 from moat.kv.mock.mqtt import stdtest
 
 logger = logging.getLogger(__name__)

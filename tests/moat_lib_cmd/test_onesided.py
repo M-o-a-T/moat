@@ -1,11 +1,13 @@
 from __future__ import annotations  # noqa: D100
 
-import pytest
 import anyio
+import pytest
+
 from tests.moat_lib_cmd.scaffold import scaffold
-from moat.util import ungroup, OptCtx, P
-from moat.lib.cmd.errors import NoStream
+
+from moat.util import OptCtx, P, ungroup
 from moat.lib.cmd.base import MsgHandler
+from moat.lib.cmd.errors import NoStream
 
 # TODO no_s=False does no longer work for some reason
 

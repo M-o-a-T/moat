@@ -1,11 +1,13 @@
 from __future__ import annotations  # noqa: D100
-from unittest import mock
-import msgpack
+
 import pytest
+from unittest import mock
+
+import msgpack
 import trio
+
 from moat.util import P, Path, attrdict
 from moat.kv.mock.mqtt import stdtest
-
 
 # doesn't yet work with MQTT because we can't split
 pytestmark = pytest.mark.skip

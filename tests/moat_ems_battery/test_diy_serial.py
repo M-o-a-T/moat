@@ -1,16 +1,16 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
+import contextlib
 import os
 import pytest
 import time
 
+from moat.ems.battery.diy_serial.packet import RequestTiming
 from moat.micro._test import mpy_stack
 from moat.util.compat import log
-from moat.ems.battery.diy_serial.packet import RequestTiming
 
 from .support import CF, as_attr
-import contextlib
 
 pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 

@@ -7,10 +7,12 @@ Created on Mon Jun 20 19:45:34 2022
 
 from __future__ import annotations
 
-from numpy import arange, zeros_like, allclose, diff, insert
-from math import sin, cos, pi
-from moat.lib.pid import PID
 import unittest
+from math import cos, pi, sin
+
+from numpy import allclose, arange, diff, insert, zeros_like
+
+from moat.lib.pid import PID
 
 
 class TestStringMethods(unittest.TestCase):  # noqa: D101

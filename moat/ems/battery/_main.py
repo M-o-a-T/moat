@@ -5,8 +5,8 @@ Basic tool support
 
 from __future__ import annotations
 
-import sys
 import logging  # pylint: disable=wrong-import-position
+import sys
 from contextlib import asynccontextmanager
 
 import asyncclick as click

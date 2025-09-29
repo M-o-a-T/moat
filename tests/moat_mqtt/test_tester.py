@@ -1,9 +1,11 @@
 from __future__ import annotations  # noqa: D100
+
 import pytest
+
 import trio  # noqa: F401
 from asyncscope import main_scope
-from moat.util import P
 
+from moat.util import P
 from moat.mqtt.test import client, server
 
 

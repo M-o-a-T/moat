@@ -4,11 +4,11 @@ import anyio
 import pytest
 import time
 
-from moat.link.meta import MsgMeta
-from moat.link._test import Scaffold
-from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup
+from moat.util import NotGiven, P, PathLongener, ungroup
 from moat.lib.cmd import StreamError
+from moat.link._test import Scaffold
+from moat.link.meta import MsgMeta
+from moat.link.node import Node
 
 
 async def _dump(sf, *, task_status):

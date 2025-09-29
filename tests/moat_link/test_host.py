@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import anyio
-import pytest
 import os
+import pytest
 
+from moat.util import Path, as_service, ensure_cfg, merge, to_attrdict, yload
 from moat.link._test import Scaffold
 from moat.link.host import HostMon
-from moat.util import ensure_cfg, yload, merge, to_attrdict, as_service, Path
 
 from typing import TYPE_CHECKING
 

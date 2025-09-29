@@ -1,13 +1,14 @@
 from __future__ import annotations  # noqa: D100
+
 import logging
 import os
-
-from unittest import mock
 import pytest
+from unittest import mock
+
 import trio
 from asyncactor.actor import Actor
-from moat.util import P, Path
 
+from moat.util import P, Path
 from moat.kv.mock.mqtt import stdtest
 from moat.kv.server import Server
 

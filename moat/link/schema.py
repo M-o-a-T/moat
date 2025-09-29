@@ -4,8 +4,6 @@ Placeholder for data that does schema verification
 
 from __future__ import annotations
 
-
-
 __all__ = ["Data", "Schema"]
 
 

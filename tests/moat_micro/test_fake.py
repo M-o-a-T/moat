@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from moat.micro._test import mpy_stack
 from moat.util import P
+from moat.micro._test import mpy_stack
 
 CFG = """
 apps:

@@ -5,14 +5,14 @@ Basic test using a MicroPython subtask
 from __future__ import annotations
 
 import anyio
+import contextlib
 import os
 import pytest
 
 from moat.micro._test import mpy_stack
 from moat.util.compat import log
 
-from .support import as_attr, CF
-import contextlib
+from .support import CF, as_attr
 
 pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 

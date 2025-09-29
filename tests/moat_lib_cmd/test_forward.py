@@ -1,10 +1,12 @@
 from __future__ import annotations  # noqa: D100
 
-import pytest
 import anyio
+import pytest
+
 from tests.moat_lib_cmd.scaffold import scaffold
-from moat.lib.cmd.base import MsgHandler
+
 from moat.util import P
+from moat.lib.cmd.base import MsgHandler
 
 
 class Fwd:  # noqa: D101

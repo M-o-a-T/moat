@@ -18,10 +18,11 @@ from .common import CmdCommon
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .auth import AuthMethod
-    from moat.lib.cmd.base import MsgSender
     from moat.lib.cmd import Key
+    from moat.lib.cmd.base import MsgSender
     from moat.lib.cmd.msg import Msg
+
+    from .auth import AuthMethod
 
     from typing import Any
 

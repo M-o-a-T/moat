@@ -7,11 +7,11 @@ import logging
 import os
 import unittest
 
+from tests.moat_mqtt import anyio_run
+
 from moat.mqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
 from moat.mqtt.plugins.manager import BaseContext
 from moat.mqtt.session import Session
-
-from tests.moat_mqtt import anyio_run
 
 
 class TestAnonymousAuthPlugin(unittest.TestCase):  # noqa: D101

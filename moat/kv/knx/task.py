@@ -19,6 +19,7 @@ from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .model import KNXserver
 

@@ -9,9 +9,8 @@ from logging import getLogger
 from attrs import define, field
 
 from moat.util import NotGiven, Path, PathLongener, PathShortener
-from moat.util.exc import ExpKeyError
-
 from moat.link.meta import MsgMeta
+from moat.util.exc import ExpKeyError
 
 from typing import TYPE_CHECKING
 

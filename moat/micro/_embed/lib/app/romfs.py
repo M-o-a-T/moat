@@ -115,7 +115,7 @@ class Cmd(BaseCmd):
         except KeyError:
             try:
                 vfs.umount("/rom")
-            except Exception:
+            except Exception:  # noqa:S110
                 pass
             self._dev_cache[n] = dev = vfs.rom_ioctl(2, n)
             return dev

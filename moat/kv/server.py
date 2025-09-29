@@ -230,13 +230,13 @@ class StreamCommand:
                     self.client.logger.exception("ERS%d %r", self.client._client_nr, self.msg)  # noqa: SLF001
                 try:
                     await self.send(error=repr(exc))
-                except Exception:
+                except Exception:  # noqa:S110
                     pass
             finally:
                 with anyio.move_on_after(2, shield=True):
                     try:
                         await self.send(state="end")
-                    except Exception:
+                    except Exception:  # noqa:S110
                         pass
 
         else:

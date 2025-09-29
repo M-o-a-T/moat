@@ -103,8 +103,8 @@ class MsgLink:
                     try:
                         # oh well, just send a naked error indication
                         await self.ml_send([E_ERROR], None, B_ERROR)
-                    except Exception:
-                        # Give up.
+                    except Exception as ex:
+                        log("Unable to send: %r %r / %r", self, exc, ex)
                         pass
 
     @property
@@ -162,7 +162,7 @@ class MsgLink:
             try:
                 with shield():
                     await rs.ml_recv([E_CANCEL], None, B_ERROR)
-            except Exception:
+            except Exception:  # noqa:S110
                 pass
 
     def set_remote(self, remote: MsgLink):

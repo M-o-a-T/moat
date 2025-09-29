@@ -141,6 +141,7 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.extend-per-file-ignores]
 "moat/micro/_embed/**" = ["SIM105","B904"]
+"tests/**" = ["S110"]
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true

@@ -70,7 +70,7 @@ class TypeEntry(Entry):
                         jsonschema.validate(instance=v, schema=schema)
                     if code is not None:
                         code(v, entry=None)
-                except Exception:
+                except Exception:  # noqa:S110
                     pass
                 else:
                     raise ValueError(f"did not fail on {v!r}")

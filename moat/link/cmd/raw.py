@@ -296,12 +296,14 @@ async def run_sub(client, topic, args, cfg, lock):
 
                     try:
                         d["data_cbor"] = dcbor.decode(msg.data)
-                    except Exception:
+                    except Exception:  # noqa:S110
+                        # not a valid CBOR message, which is OK
                         pass
 
                     try:
                         d["data_msgpack"] = dmsgpack.decode(msg.data)
-                    except Exception:
+                    except Exception:  # noqa:S110
+                        # not a valid msgpack message, which is OK
                         pass
 
                     flags = ""

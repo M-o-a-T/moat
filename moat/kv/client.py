@@ -327,7 +327,7 @@ class ClientConfig:
 
     _changed = None  # pylint
 
-    def __init__(self, client, *a, **k):  # pylint: disable=unused-argument # noqa:ARG002
+    def __init__(self, client, *a, **k):  # noqa:ARG002
         self._init(client)
 
     def _init(self, client):
@@ -525,7 +525,7 @@ class Client:
                         except ClosedResourceError:
                             pass
 
-    async def _request(self, action, iter=None, seq=None, _async=False, **params):  # pylint: disable=redefined-builtin  # noqa:A002
+    async def _request(self, action, iter=None, seq=None, _async=False, **params):  # noqa:A002
         """Send a request. Wait for a reply.
 
         Args:

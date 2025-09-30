@@ -437,7 +437,7 @@ class WAGOroot(_WAGObase, ClientRoot):  # noqa: D101
     CFG = "wago"
     err = None
 
-    async def run_starting(self, server=None):  # pylint: disable=arguments-differ  # noqa: D102
+    async def run_starting(self, server=None):  # noqa: D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)

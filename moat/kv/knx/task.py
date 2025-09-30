@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # pylint: disable=unused-argument  # noqa:D103
+async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # noqa:D103
     client  # noqa:B018
     cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
     add = {}

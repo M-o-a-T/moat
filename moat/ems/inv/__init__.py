@@ -538,7 +538,7 @@ class InvControl(BusVars):
     #   async def _change_mode(self, path, value):
     #       await self.change_mode(value)
 
-    async def change_mode(self, mode: str, data={}):  # pylint:disable=dangerous-default-value # noqa:B006
+    async def change_mode(self, mode: str, data={}):  # noqa:B006
         "Switch mode to @mode, set config to @data"
         if self._mode is None or self._mode != mode:
             if self._change_mode_evt is None:
@@ -728,7 +728,7 @@ class InvControl(BusVars):
                 self._tg.start_soon(self._solar_log)
             async with DbusName(
                 self.bus,
-                f"org.m_o_a_t.inv.{self.cfg.get('name', 'fake' if self.op.get('fake', False) else 'main')}",  # pylint:disable=line-too-long  # noqa:E501
+                f"org.m_o_a_t.inv.{self.cfg.get('name', 'fake' if self.op.get('fake', False) else 'main')}",  # noqa:E501
             ):
                 while True:
                     await self._change_mode_evt.wait()
@@ -1196,7 +1196,7 @@ class InvModeBase:
                 # p_cons = -intf.p_cons_[i].value
                 p_min = self.ps_min[i]
                 p_max = self.ps_max[i]
-                # logger.debug("%.0f %.0f %.0f %.0f %.0f %.0f", p_set,p_cur,p_run,p_cons,p_min,p_max)  # pylint:disable=line-too-long  # noqa:E501
+                # logger.debug("%.0f %.0f %.0f %.0f %.0f %.0f", p_set,p_cur,p_run,p_cons,p_min,p_max)  # noqa:E501
 
                 if p_set < 0:
                     if p_set < p_run - 20:

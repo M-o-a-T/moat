@@ -112,7 +112,7 @@ class ErrorSubEntry(AttrClientEntry):
 
     ATTRS = "seen tock trace str data comment message".split()
 
-    def child_type(self, name):  # pylint: disable=arguments-differ  # noqa:D102
+    def child_type(self, name):  # noqa:D102
         logger.warning("Unknown entry type at %r: %s", self._path, name)
         return ClientEntry
 
@@ -164,7 +164,7 @@ class ErrorEntry(AttrClientEntry):
     @property
     def real_entry(self):  # noqa:D102
         while self._real_entry is not None:
-            self = self._real_entry  # pylint: disable=self-cls-assignment # noqa:PLW0642
+            self = self._real_entry  # noqa:PLW0642
         return self
 
     async def check_move(self):  # noqa:D102

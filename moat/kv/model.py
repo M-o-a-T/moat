@@ -448,7 +448,7 @@ class NodeEvent:  ## no __hash__
         if self == other:
             return False
         while self.node != other.node:
-            self = self.prev  # pylint: disable=self-cls-assignment # noqa:PLW0642
+            self = self.prev  # noqa:PLW0642
             if self is None:
                 return False
         return self.tick >= other.tick
@@ -473,7 +473,7 @@ class NodeEvent:  ## no __hash__
             if self.node == node:
                 return res
             res += 1
-            self = self.prev  # pylint: disable=self-cls-assignment  # noqa:PLW0642
+            self = self.prev  # noqa:PLW0642
         return None
 
     def filter(self, node, server=None):
@@ -549,7 +549,7 @@ class NodeEvent:  ## no __hash__
         if prev is not None:
             prev = prev.filter(self.node, server=server)
         if self.prev is not None or prev is not None:
-            self = NodeEvent(  # pylint: disable=self-cls-assignment # noqa:PLW0642
+            self = NodeEvent(  # noqa:PLW0642
                 node=self.node,
                 tick=self.tick,
                 prev=prev,
@@ -724,7 +724,7 @@ class Entry:
         if acl is None:
             global NullACL
             if NullACL is None:
-                from .types import NullACL  # pylint: disable=redefined-outer-name # noqa:PLC0415,I001
+                from .types import NullACL  # noqa:PLC0415,I001
             acl = NullACL
 
         first = True
@@ -746,7 +746,7 @@ class Entry:
             except KeyError:
                 raise ACLError(acl.result, name) from None
             first = False
-            self = child  # pylint: disable=self-cls-assignment  # noqa:PLW0642
+            self = child  # noqa:PLW0642
 
         # If the caller doesn't know if the node exists, help them out.
         if acl_key == "W":
@@ -771,7 +771,7 @@ class Entry:
                     if child is None:
                         raise ValueError(f"Cannot add {name} to {self}")
                     child = child(name, self, tock=self.tock)
-            self = child  # pylint: disable=self-cls-assignment  # noqa:PLW0642
+            self = child  # noqa:PLW0642
         return self
 
     def __getitem__(self, name):
@@ -983,7 +983,7 @@ class Entry:
         if conv is None:
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # pylint: disable=redefined-outer-name # noqa:PLC0415,I001
+                from .types import ConvNull  # noqa:PLC0415,I001
             conv = ConvNull
         res = attrdict()
         if self._data is not NotGiven:
@@ -1060,7 +1060,7 @@ class Watcher:
         if self.q is not None:
             raise RuntimeError("You cannot enter this context more than once")
         self.q = create_queue(self.q_len)
-        self.q._moat.kv__free = self.q_len or None  # pylint:disable=no-member  # noqa:SLF001
+        self.q._moat.kv__free = self.q_len or None  # noqa:SLF001
         self.root.monitors.add(self.q)
         return self
 
@@ -1078,8 +1078,8 @@ class Watcher:
             raise RuntimeError("Aborted. Queue filled?")
         while True:
             res = await self.q.get()
-            if self.q._moat.kv__free is not None:  # pylint:disable=no-member  # noqa:SLF001
-                self.q._moat.kv__free += 1  # pylint:disable=no-member  # noqa:SLF001
+            if self.q._moat.kv__free is not None:  # noqa:SLF001
+                self.q._moat.kv__free += 1  # noqa:SLF001
             if res is None:
                 raise RuntimeError("Aborted. Queue filled?")
             if len(res.entry.path) and res.entry.path[0] is None and not self.full:

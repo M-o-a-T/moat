@@ -141,7 +141,7 @@ class StreamCommand:
 
     def __new__(cls, client, msg):  # noqa: D102
         if cls is StreamCommand:
-            cls = globals()["SCmd_" + msg.action]  # pylint: disable=self-cls-assignment  # noqa: PLW0642
+            cls = globals()["SCmd_" + msg.action]  # noqa: PLW0642
             return cls(client, msg)
         else:
             return object.__new__(cls)
@@ -473,7 +473,7 @@ class SCmd_get_tree(StreamCommand):
 
     multiline = True
 
-    async def run(self, root=None):  # pylint: disable=arguments-differ  # noqa: D102
+    async def run(self, root=None):  # noqa: D102
         msg = self.msg
         client = self.client
 
@@ -524,7 +524,7 @@ class SCmd_get_tree(StreamCommand):
 class SCmd_get_tree_internal(SCmd_get_tree):
     """Get a subtree (internal data)."""
 
-    async def run(self):  # pylint: disable=arguments-differ  # noqa: D102
+    async def run(self):  # noqa: D102
         return await super().run(root=self.client.metaroot)
 
 
@@ -1612,7 +1612,7 @@ class Server:
 
         async def send_nodes():
             nonlocal nodes, n_nodes
-            await client._request(  # pylint: disable=cell-var-from-loop  # noqa: SLF001
+            await client._request(  # noqa: SLF001
                 "check_deleted",
                 iter=False,
                 nchain=-1,

@@ -999,7 +999,7 @@ class _BaseRunnerRoot(ClientRoot):
         """my node name"""
         return self.client.client_name
 
-    def get_node(self, name):  # pylint: disable=unused-argument  # noqa: ARG002
+    def get_node(self, name):  # noqa: ARG002
         """
         If the runner keeps track of "foreign" nodes, allocate them
         """

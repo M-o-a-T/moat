@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylint: disable=unused-argument  # noqa:D103
+async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # noqa:D103
     cfg = combine_dict(
         server.value_or({}, Mapping).get("server", {}),
         server.parent.value_or({}, Mapping).get("server", {}),

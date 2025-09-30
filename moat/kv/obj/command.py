@@ -214,7 +214,7 @@ def std_command(cli, *a, **kw):
 
     @typ.command(short_help="Delete a " + tinv.long_name)
     @click.pass_obj
-    async def delete(obj, **kw):  # pylint: disable=unused-argument,unused-variable  # noqa: ARG001
+    async def delete(obj, **kw):  # noqa: ARG001
         name = obj[tnname]
         n = this(obj).by_name(name)
         if n is not None:

@@ -104,7 +104,7 @@ class GPIOline(_GPIOnode):
         super().__init__(*a, **k)
         self.logger = logging.getLogger(".".join(("gpio", self._path[-2], str(self._path[-1]))))
 
-    async def set_value(self, value):  # pylint: disable=arguments-differ # noqa:D102
+    async def set_value(self, value):  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             await self._kill_task()

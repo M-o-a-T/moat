@@ -153,7 +153,7 @@ async def null_server_login(stream):  # noqa:D103
     return stream
 
 
-async def null_client_login(stream, user: BaseClientAuth):  # pylint: disable=unused-argument  # noqa:D103,ARG001
+async def null_client_login(stream, user: BaseClientAuth):  # noqa:D103,ARG001
     return stream
 
 
@@ -325,7 +325,7 @@ class BaseServerAuth(_AuthLoaded):
     can_auth_read = False
     can_auth_write = False
 
-    def __init__(self, data: dict = {}):  # pylint: disable=dangerous-default-value # noqa:B006
+    def __init__(self, data: dict = {}):  # noqa:B006
         if data:
             for k, v in data.items():
                 setattr(self, k, v)
@@ -335,7 +335,7 @@ class BaseServerAuth(_AuthLoaded):
         """Create a ServerAuth object from existing stored data"""
         return cls(data.data)
 
-    async def auth(self, cmd: StreamCommand, data):  # pylint: disable=unused-argument  # noqa:ARG002
+    async def auth(self, cmd: StreamCommand, data):  # noqa:ARG002
         """Verify that @data authenticates this user."""
         jsonschema.validate(instance=data.get("data", {}), schema=type(self).schema)
 
@@ -368,13 +368,13 @@ class BaseServerAuth(_AuthLoaded):
         """
         return {}
 
-    async def check_read(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument # noqa:ARG002
+    async def check_read(self, *path, client: ServerClient, data=None):  # noqa:ARG002
         """Check that this user may read the element at this location.
         This method may modify the data.
         """
         return data
 
-    async def check_write(self, *path, client: ServerClient, data=None):  # pylint: disable=unused-argument # noqa:ARG002
+    async def check_write(self, *path, client: ServerClient, data=None):  # noqa:ARG002
         """Check that this user may write the element at this location.
         This method may modify the data.
         """
@@ -418,7 +418,7 @@ class BaseServerAuthMaker(_AuthLoaded):
     @classmethod
     async def recv(
         cls,
-        cmd: StreamCommand,  # pylint: disable=unused-argument # noqa:ARG003
+        cmd: StreamCommand,  # noqa:ARG003
         data: attrdict,
     ) -> BaseServerAuthMaker:
         """Create/update a new user by reading the record from the client"""
@@ -437,7 +437,7 @@ class BaseServerAuthMaker(_AuthLoaded):
         # does NOT contain "ident" or "chain"!
         return {}
 
-    async def send(self, cmd: StreamCommand):  # pylint: disable=unused-argument # noqa:ARG002
+    async def send(self, cmd: StreamCommand):  # noqa:ARG002
         """Send a record to the client, possibly multi-step / secured / whatever"""
         res = {}
         res["chain"] = self._chain.serialize() if self._chain else None

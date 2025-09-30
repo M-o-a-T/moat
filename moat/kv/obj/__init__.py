@@ -93,7 +93,7 @@ class ClientEntry:
         self._children = dict()
 
     @classmethod
-    def child_type(cls, name):  # pylint: disable=unused-argument  # noqa:ARG003
+    def child_type(cls, name):  # noqa:ARG003
         """Given a node, return the type which the child with that name should have.
         The default is "same as this class".
         """
@@ -352,7 +352,7 @@ class AttrClientEntry(ClientEntry):
 
     ATTRS = ()
 
-    async def update(self, value, **kw):  # pylint: disable=arguments-differ  # noqa: ARG002, D102
+    async def update(self, value, **kw):  # noqa: ARG002, D102
         raise RuntimeError("Nope. Set attributes and call '.save()'.")
 
     async def set_value(self, value):

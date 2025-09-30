@@ -62,7 +62,7 @@ async def pdb(args):  # pylint: disable=unused-argument  # safe
     """
     This command imports PDB and continues to process arguments.
     """
-    breakpoint()  # pylint: disable=forgotten-debug-statement  # noqa:T100
+    breakpoint()  # noqa:T100
     if not args:
         return
     return await main_.main(args)

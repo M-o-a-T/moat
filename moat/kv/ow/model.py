@@ -259,7 +259,7 @@ class OWFSfamily(ClientEntry):  # noqa: D101
             return ClientEntry
         return cls.cls
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ  # noqa: D102
+    async def set_value(self, val):  # noqa: D102
         await super().set_value(val)
         for c in self:
             await c._update_value()  # noqa: SLF001

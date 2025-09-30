@@ -11,7 +11,7 @@ from moat.util import ensure_cfg
 from .task import task
 
 
-async def server(client, tree: dict | None = None, options: dict | None = None, evt=None):  # pylint: disable=dangerous-default-value  # noqa: D103
+async def server(client, tree: dict | None = None, options: dict | None = None, evt=None):  # noqa: D103
     async with anyio.create_task_group() as tg:
         listener = await anyio.create_tcp_listener(
             local_host="127.0.0.1",

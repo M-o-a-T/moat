@@ -183,7 +183,7 @@ class DbusMonitor(CtxObj):
             bus.add_message_handler(self._dispatch)
 
             # enables name change signals
-            await bus._init_high_level_client()  # pylint: disable=protected-access  # noqa: SLF001
+            await bus._init_high_level_client()  # noqa: SLF001
 
             # obj = await self.dbusConn.get_proxy_object(serviceName, objectPath)
             # intf = await obj.get_interface(ITEM_INTF)

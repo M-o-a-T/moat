@@ -160,7 +160,7 @@ async def add(obj, args):
 @click.argument("key", nargs=1)
 @click.argument("args", nargs=-1)
 @click.pass_obj
-async def param(obj, new, ident, type, key, args):  # pylint: disable=redefined-builtin # noqa:A002
+async def param(obj, new, ident, type, key, args):  # noqa:A002
     """Set user parameters for auth, conversion, etc."""
     auth = await one_auth(obj)
     u = loader(auth, "user", make=True, server=False)

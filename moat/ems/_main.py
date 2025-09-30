@@ -18,4 +18,4 @@ log = logging.getLogger()
 @click.pass_obj
 async def cli(obj):
     """Energy Management System"""
-    obj  # pylint: disable=pointless-statement  # noqa:B018
+    obj  # noqa:B018

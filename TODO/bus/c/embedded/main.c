@@ -136,4 +136,3 @@ void setup_addr_done()
 {
     // we have an address, do whatever else might be required
 }
-

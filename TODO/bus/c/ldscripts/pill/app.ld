@@ -135,7 +135,7 @@ SECTIONS
   _app_data_source = LOADADDR(.data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : 
+  .data :
   {
     . = ALIGN(4);
     _app_data_start = .;
@@ -146,7 +146,7 @@ SECTIONS
     _app_data_end = .;
   } >RAM AT> FLASH
 
-  
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
@@ -180,5 +180,3 @@ SECTIONS
   } >RAM
 
 }
-
-

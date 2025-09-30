@@ -9,4 +9,3 @@ forth only definitions
 class: mfloat
 __data
 __
-

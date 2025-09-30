@@ -146,9 +146,7 @@ async def get_link(obj, use_port=False, **kw):
                 yield link
     else:
         try:
-            t, b = await console_stack(
-                UAStream(sock), log=obj.verbose > 2, reliable=True, **kw
-            )
+            t, b = await console_stack(UAStream(sock), log=obj.verbose > 2, reliable=True, **kw)
             async with TaskGroup() as tg:
                 task = await tg.spawn(b.run)
                 yield t

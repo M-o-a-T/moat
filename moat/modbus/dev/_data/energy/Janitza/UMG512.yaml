@@ -19,6 +19,19 @@ regs:
       reactive:
         register: 19036
         type: float
+    sum3:
+      active:
+        register: 19026
+        type: float
+        unit: W
+      apparent:
+        register: 19034
+        type: float
+        unit: VA
+      reactive:
+        register: 19042
+        type: float
+        unit: var
   thd:
     voltage:
       register: 19110
@@ -68,20 +81,6 @@ regs:
     voltage:
       register: 19114
       type: float
-  power:
-    sum3:
-      active:
-        register: 19026
-        type: float
-        unit: W
-      apparent:
-        register: 19034
-        type: float
-        unit: VA
-      reactive:
-        register: 19042
-        type: float
-        unit: var
   sum3:
     active:
       register: 19060

@@ -259,8 +259,7 @@ class Controller:
             h.cells = end - start
             if pkt[0].S.size > 0 and len(pkt) != h.cells + 1:
                 raise ValueError(
-                    "Wrong packet count, %d vs %d for %s"
-                    % (len(pkt), h.cells + 1, pkt[0])
+                    "Wrong packet count, %d vs %d for %s" % (len(pkt), h.cells + 1, pkt[0])
                 )
         else:
             h.cells = len(pkt) - 1

@@ -217,7 +217,7 @@ stored as integers::
           _: 13
           yep:
             _: 99
-    
+
 
 The above is the server content at the end of the testcase
 ``tests/test_feature_convert.py::test_71_basic``, when
@@ -241,4 +241,3 @@ There are some caveats:
 * You need to verify that the two trees match when you start up, and decide
   which is more correct. (The ``tock`` stamp will help you here.) Don't
   accidentally overwrite changes that arrive while you do that.
-

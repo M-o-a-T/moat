@@ -149,7 +149,7 @@ void setup_polled()
     in_q = NULL;
 #if !defined(MOAT_WIRES) || MOAT_WIRES<2 || MOAT_WIRES>4
 #error "MOAT_WIRES must be 2..4"
-#endif 
+#endif
 
 #ifndef MOAT_WIRE_1
 #error "You ned to define MOAT_WIRE_1 as a port alias"
@@ -216,5 +216,3 @@ void send_bus_msg(BusMessage msg)
     logger("BusSend %s", msg_info(msg));
     hdl_send(BH, msg);
 }
-
-

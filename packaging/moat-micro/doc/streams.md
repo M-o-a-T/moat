@@ -70,7 +70,7 @@ Defined in ``moat.micro.proto.stack``.
 ##### FileBuf
 
 Base implementation for translation of MoaT to a "normal" MicroPython file
-object, socket, or whatever. 
+object, socket, or whatever.
 
 (On CPython, MoaT does not use sync streams.)
 
@@ -266,4 +266,3 @@ crd
 ---
 
 Read up to ``n`` console bytes (default 64).
-

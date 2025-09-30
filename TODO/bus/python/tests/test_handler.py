@@ -205,9 +205,7 @@ class Handler(BaseHandler):
         self.server.report(self.addr, msg, *a)
 
     def report_error(self, typ, **kw):
-        self.debug(
-            "Error %d: %s", typ, " ".join("%s=%s" % (k, v) for k, v in kw.items())
-        )
+        self.debug("Error %d: %s", typ, " ".join("%s=%s" % (k, v) for k, v in kw.items()))
         self.errors.append(typ)
 
     def set_timeout(self, timeout):
@@ -260,13 +258,7 @@ def gen_data(client):
     msg = BusMessage()
     msg.src = client.addr
     msg.dst = -3 if client.addr != -3 else -1
-    msg.code = (
-        1
-        if msg.src < 0 and msg.dst < 0
-        else 210
-        if msg.src >= 0 and msg.dst >= 0
-        else 23
-    )
+    msg.code = 1 if msg.src < 0 and msg.dst < 0 else 210 if msg.src >= 0 and msg.dst >= 0 else 23
     msg.start_send()
     msg.add_data(b"%d!" % client.addr)
     client.send(msg)

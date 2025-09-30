@@ -12,7 +12,7 @@ else that runs Linux and has three 3.3V serial ports and lots of free GPIO
 pins: you need two GPIOs per pill to program and reset them. Another two
 are very useful for debugging, but not strictly required.
 
-The following assumes that you have a Pi and a "real" computer for testing. 
+The following assumes that you have a Pi and a "real" computer for testing.
 Compiling the firmware may be annoyingly slow on the Pi, so we'll
 do that on something faster. Unless you have a Pi 4 and/or decide not to
 bother; asjust as appropriate.
@@ -30,7 +30,7 @@ Set up DistKV. Both your development machine and the pi will want to talk
 to it.
 
 On your build machine, install Meson+Ninja and run "make.sh". You now have
-a ``.pio/build/moat_gate/firmware.bin`` file. 
+a ``.pio/build/moat_gate/firmware.bin`` file.
 
 The following commands use ``mb`` as an alias for ``distkv client
 moatbus`` and ``mbv`` for ``distkv -v …``. You shoud teach your shell to
@@ -61,4 +61,3 @@ NB: keep in mind that the Flash storage on the Pills can't be reprogrammed
 infinitely often. 10'000 cycles are OK for a year or so if you do 30 tests
 per day (which on average you probably won't), but if you run the tests in
 an endless loop you'll be disappointed a lot sooner than that.
-

@@ -28,4 +28,3 @@ change this format, you must only use strictly incrementing values: month
 numbers and Y-M-D format is OK but M-D-Y or month/day names is not. See
 ``man date`` for details. You may use slashes in the format to subdivide
 the files further.
-

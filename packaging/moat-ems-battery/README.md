@@ -54,7 +54,7 @@ Add a "BMS" app to the "moat.micro" configuration::
     bat1:
       …
 
-The "bat1" section (or however you want to name it) is described in 
+The "bat1" section (or however you want to name it) is described in
 `moat/ems/battery/_cfg.yaml`. More extensive documentation is TODO.
 
 Start the client and multiplexer normally; the MoaT BMS will run as part of
@@ -85,5 +85,3 @@ It controls
 
 Also, it sends the battery's SoC and its voltage and current limits to
 whichever program requires them, as well as displaying them to the user.
-
-

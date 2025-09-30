@@ -41,9 +41,7 @@ def run_pre():
         # We need to insert the gate addresses after the actual objects
         # so that we won't override them.
         env.Replace(
-            LINKCOM=[
-                env["LINKCOM"].replace(" $_LIBDIRFLAGS ", " $LDAUXFLAGS $_LIBDIRFLAGS ")
-            ]
+            LINKCOM=[env["LINKCOM"].replace(" $_LIBDIRFLAGS ", " $LDAUXFLAGS $_LIBDIRFLAGS ")]
         )
         f = os.path.join(".pio", "build", base, "firmware.elf")
         env.Replace(LDAUXFLAGS=["-Wl,-R," + f])

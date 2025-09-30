@@ -62,7 +62,7 @@ The following types are defined:
 
   If bit 1 is set, the recipient shall send a reply. The sender won't
   actually reboot until it receives a command to do so.
-  
+
   If bit 2 is set, the device's address shall/will be cleared.
 
   If bit 3 is set, devices shall deep-sleep, i.e. use as little power as
@@ -223,7 +223,7 @@ A broadcasting client signals that it is awake. This should trigger
 delivering all outstanding messages for it.
 
 
-Console 
+Console
 =======
 
 This message type is used for debugging, error messages, and other text
@@ -439,4 +439,3 @@ first message each side sends to the other has a counter of 1. Clients must
 store at least one message for repetition and *should* wait until the
 earliest message is acknowledged instead of directly reporting an overflow.
 Servers *must* wait.
-

@@ -134,4 +134,3 @@ u_int32_t mcrc32_update(u_int32_t crc, u_int8_t byte)
     return crc;
 }
 #endif
-

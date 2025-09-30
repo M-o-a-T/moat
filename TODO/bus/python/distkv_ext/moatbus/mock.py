@@ -19,11 +19,11 @@ from xknx.io import ConnectionConfig, ConnectionType
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 
 
-
 class Tester:
     _client = None
     _server = None
     _socket = None
+
     def __init__(self):
         self.TCP_PORT = free_tcp_port()
 

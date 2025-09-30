@@ -23,7 +23,7 @@ A small helper to change whichever subvolume is next booted from.
 
 ### recv\_image
 
-Download a new version of Venus to 
+Download a new version of Venus to
 
 
 ## Venus

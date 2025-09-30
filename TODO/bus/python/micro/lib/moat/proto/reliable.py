@@ -51,9 +51,7 @@ class Reliable(_Stacked):
     def reset(self, level=1):
         self.s_send_head = 0  # next to be transmitted
         self.s_send_tail = 0  # no open messages before this point
-        self.s_recv_head = (
-            0  # next expected message. Messages before this are out of sequence
-        )
+        self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
         self.s_recv_tail = 0  # messages before this have been processed
         self.s_q = []
         self.m_send = {}
@@ -110,11 +108,7 @@ class Reliable(_Stacked):
                     ntx = txd
                     nk = k
 
-            if (
-                self.s_q
-                and (self.s_send_head - self.s_send_tail) % self.window
-                < self.window // 2
-            ):
+            if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
                 pass
                 # print(f"R {self.parent.txt}: tx")
             elif ntx is None:
@@ -136,11 +130,7 @@ class Reliable(_Stacked):
                 return
 
             # process pending-send queue
-            if (
-                self.s_q
-                and (self.s_send_head - self.s_send_tail) % self.window
-                < self.window // 2
-            ):
+            if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
                 seq = self.s_send_head
                 msg, evt = self.s_q.pop(0)
                 nseq = (seq + 1) % self.window

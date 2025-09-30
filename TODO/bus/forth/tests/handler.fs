@@ -65,7 +65,7 @@ __seal
     true
   then
 ;
-  
+
 : ?timer ( who hdl -- )
   dup __ timer_out @ if
     0 over __ timer_out !

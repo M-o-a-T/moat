@@ -10,4 +10,3 @@ a Datamatrix code that contains an arbitrary link.
 
 Labels are printed on sheets, then attached to boxes and/or things. A label
 can be on one box and/or one thing.
-

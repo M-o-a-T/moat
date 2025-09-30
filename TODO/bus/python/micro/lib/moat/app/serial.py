@@ -5,6 +5,7 @@ from moat.proto.stream import AsyncStream
 
 import machine as M
 
+
 # Serial packet forwarder
 # cfg:
 # uart: N

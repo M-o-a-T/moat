@@ -102,4 +102,3 @@ Publish temperature information to localhost with QoS 1 over mqtt encapsulated i
 
 
 .. _mosquitto_pub : http://mosquitto.org/man/mosquitto_pub-1.html
-

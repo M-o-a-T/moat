@@ -57,13 +57,13 @@ char fc_connect(FakeClient fc, const char *sockname)
 
     if(fc->socket_fd >= 0)
         return 0;
-    
+
     socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
     memset(&address, 0, sizeof(struct sockaddr_un));
     address.sun_family = AF_UNIX;
     strncpy(address.sun_path, sockname, sizeof(address.sun_path)-1);
-    if(connect(socket_fd, 
-               (struct sockaddr *) &address, 
+    if(connect(socket_fd,
+               (struct sockaddr *) &address,
                sizeof(struct sockaddr_un)) != 0) {
         fprintf(stderr,"connect() failed\n");
         return 0;
@@ -126,7 +126,7 @@ static void fcb_set_wire(void *ref, u_int8_t bits)
         return;
     if(write(fc->socket_fd, &bits, 1) != 1) {
         perror("write");
-        close(fc->socket_fd);                           
+        close(fc->socket_fd);
         fc->socket_fd = -1;
     }
     if(fc->verbose > 1)

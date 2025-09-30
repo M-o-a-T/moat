@@ -32,4 +32,3 @@ probe:
 # TODO Port configuration uses the database.
 # port: 0
 port: 27587
-

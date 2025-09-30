@@ -81,7 +81,7 @@ size_y=sz_y;
 // DIN rail
 brim=35.1;
 rail_height=1.1;
-    
+
 // DIN rail hook
 spring_l=15;
 spring_d=2.5;
@@ -111,7 +111,7 @@ if(mode == "top") {
     color([0.4,0.8,0,0.2])
         translate([0,0,wall])
         din_box_up_hood(size_y,size_x,size_z, wall=wall);
-    color([0,0.8,0.4,0.4]) 
+    color([0,0.8,0.4,0.4])
         translate([-_d1,(size_x-hook_width)/2+hook_width-hook_offset,0])
         rotate([90,0,0])
         rail_hook(hook_width, ridge=wall, dw=0.12);
@@ -132,10 +132,10 @@ if(mode == "top") {
         ? [[0,0],[0,spring_l],[(sz_y-rc_x)/2+rco_x-dx,size_z],[sz_y,size_z],[brim-spring_slot,0]]
         : [[0,0],[0,spring_l],[(sz_y-rc_x)/2+rco_x-dx,size_z],[sz_y,size_z],[sz_y,(size_z-rc_y)/2+rco_y-dy],[brim-spring_slot,0]]
         ;
-    
+
     difference() {
         union() {
-            
+
             translate([-_d1,-_d1,0])
             linear_extrude(hook_width) polygon(base);
 //            cube([sz_y,size_z,sz_x]);
@@ -160,16 +160,16 @@ module din_box_up_hood(x,y,z, wall) {
         union() {
             translate([-wall,-wall,z-_d])
             cube([x+2*wall,y+2*wall,wall]);
-            
+
             translate([-wall,y,-wall])
             cube([x+2*wall,wall,z+wall]);
 
             translate([-wall,-wall,-wall])
             cube([x+2*wall,wall,z+wall]);
-            
+
             translate([x-_d,0,0])
             cube([wall,y,z]);
-            
+
             translate([x,0,-wall]) mirror([1,0,0]) carrier_c(slope=3,bottom=false);
             translate([x,y,-wall]) mirror([0,1,0]) mirror([1,0,0]) carrier_c(slope=3,bottom=false);
         }
@@ -205,7 +205,7 @@ module bar_poly(ax, wall, dw) {
 module carrier_c(slope=0, wall=slide_w, top=true, bottom=true, sidetop=true) {
     zwall = wall*tan(slide_a);
     sh3=slide_h3*(1+(slope==3?tan(slide_a):0));
-    
+
     if(slide_d && slide_h1) difference() {
         translate([-_d1,-_d1,-_d1]) {
             //cube([_d1,slide_d,slide_h1+slide_h2+sh3]);
@@ -240,7 +240,7 @@ module carrier_c(slope=0, wall=slide_w, top=true, bottom=true, sidetop=true) {
         }
         if(slope == 2) {
             // upper, bottom
-            
+
             translate([-_d1,-_d1,slide_h1+slide_h2-_d2]) intersection() {
                 if(sidetop) translate([-_d1,0,0]) rotate([0,90,0])
                 linear_extrude(wall+_d2, convexity=10)
@@ -277,7 +277,7 @@ module carrier_c(slope=0, wall=slide_w, top=true, bottom=true, sidetop=true) {
             translate([_d1,wall,sh123+_d1]) rotate([-90,0,0])
             linear_extrude(slide_d-wall+_d, convexity=10)
             polygon([[0,0],[wall,0],[wall,zwall]]);
-            
+
             if(!bottom) {
                 translate([slide_d,_d1,slide_h1+slide_h2+wall/2-_d2])
                 rotate([-90,0,0])
@@ -298,35 +298,35 @@ module din_box_up(x,y,z, wallThick=1, dw=0) {
         translate([-wallThick,0,-wallThick]) union() {
             cube([max(37,x+wallThick)+wallThick,y,wallThick]);
             translate([0,0,0])cube([wallThick,y,z+wallThick]);
- 
+
             translate([wallThick,0,0]) carrier_c(slope=2,sidetop=false);
             translate([wallThick,y,0]) mirror([0,1,0]) carrier_c(slope=2,sidetop=false);
 
             translate([wallThick+x,0,0]) mirror([1,0,0]) carrier_c(slope=2,top=false);
             translate([wallThick+x,y,0]) mirror([1,1,0]) carrier_c(slope=2,top=false);
-            
+
             // x1
             rotate([0,90,0])
             linear_extrude(x+wallThick, convexity=20)
             polygon([[dw,_d],[-wallThick-dw,_d],[-wallThick/2,-wallThick/2-dw]]);
-            
+
             // x2
             translate([0,y,0])
             rotate([0,90,0])
             linear_extrude(x+wallThick, convexity=20)
             polygon([[dw,-_d],[-wallThick-dw,-_d],[-wallThick/2,wallThick/2+dw]]);
-        
+
             translate([-_d,0,z+wallThick-_d2]) rotate([-90,0,0])rotate([0,0,180])
             bar_poly(y,wallThick,dw);
- 
+
         // z1
             translate([-_d1,_d2,-dw])
             rotate([0,0,180])
             bar_poly(z,wallThick,dw);
-        
+
         // z2
         translate([-_d1,y-_d2,0])
-            rotate([0,0,180]) 
+            rotate([0,0,180])
             mirror([0,1,0])
             bar_poly(z,wallThick,dw);
 
@@ -374,11 +374,11 @@ module din_box_side(x,y, depth, wallThick=1) {
     difference() {
           translate([0,0,wallThick]) box(x-2*wallThick,y-2*wallThick,depth-2*wallThick, wallThick, z2=false);
 //        box1(x,y,depth, lidStyle = LSNONE, bottomFill=DEFAULTFILL, boxThick=wallThick);
-        
+
         wobble(_d2*5) translate([-_d1,-_d1,depth+_d1])
             mirror([0,0,1])
             din_box_side_lid(x,y,wallThick=wallThick,dw=0,dxl=5*wallThick,cut=wallThick);
-                
+
         translate([-wallThick*3/2,-wallThick*3/2,depth-wallThick])
             cube([wallThick*2,wallThick*2,wallThick*2]);
         translate([-wallThick*2,y-wallThick*7/2,depth-wallThick])
@@ -394,22 +394,22 @@ module din_box_side_lid(x,y, wallThick=4, dw=0,dxl=0,cut=0) {
         rotate([0,180,0])
         translate([-x+wallThick+_d1,-wallThick,-wallThick])
         cube([x,y,wallThick]);
-  
+
 //        lid1(x,y, lidThick=wallThick, boxThick = wallThick, lidStyle = LSNONE, bottomFill=DEFAULTFILL);
-        
+
         // low Y side
         translate([0,-wallThick/2-dw,wallThick/2])
         rotate([135,0,0])
         translate([brim2,-wallThick,0])
         cube([x-brim2,wallThick*2,wallThick]);
-              
+
         translate([0,-wallThick/2-dw,wallThick/2])
         rotate([135+90,0,0])
         translate([brim2,-wallThick,-wallThick])
         cube([x-brim2+_d,wallThick*2,wallThick]);
-        
+
         // high Y side
-     
+
         difference() {
             union() {
         translate([-_d1,y-wallThick*3/2+dw,wallThick/2])
@@ -421,13 +421,13 @@ module din_box_side_lid(x,y, wallThick=4, dw=0,dxl=0,cut=0) {
         rotate([180+135,0,0])
         translate([-_d,-wallThick/2,0])
         cube([x+_d2,wallThick*2,wallThick]);
-            
+
                 }
             translate([0,y-2*wallThick-dw,-wallThick/2])
             rotate([0,0,45])
             cube([2*wallThick,2*wallThick,2*wallThick]);
         }
-        
+
         // high X side
         translate([x-wallThick*3/2+dw,-wallThick/2-_d1,wallThick/2])
         rotate([0,180-45,0])
@@ -438,7 +438,7 @@ module din_box_side_lid(x,y, wallThick=4, dw=0,dxl=0,cut=0) {
         rotate([0,45,0])
         translate([-wallThick/2,0,0])
         cube([wallThick*2,y+wallThick+_d2,wallThick]);
-    }    
+    }
 }
 
 module wobble(x) {
@@ -478,14 +478,14 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     x2=dw;
     x3=dw-ridge/2;
     x5=brim-spring_slot;
-    x6=brim+aux-spring_slot+dw;    
+    x6=brim+aux-spring_slot+dw;
     x8=brim-(spring_slot+bar_width);
     x7=brim-2-(spring_slot+bar_width);
     x10=-bar_width;
     x12=-spring_slot-bar_width;
     x14=2.5-(spring_slot+3);
     x15=2.5-(spring_d+spring_slot+bar_width);
-    
+
     y1=0.5-(bar_width+hook+rail_height);
     y2=spring_l+dw;
     y4=dw+_d2;
@@ -497,12 +497,12 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     y11=spring_l-bar_width;
     y13=-rail_height-bar_width;
     y12=-rail_height-bar_width-0.2;
-    
+
     rk=ridge/3;
     hsd=1; // hole slot depth
     hh=2; // height
     hw=.6; // hole's wall strength
-    
+
     hd=hw+hsd;
     hws=hw*(1+sin(45));
     hdf=hws+(hd-hw);
@@ -530,7 +530,7 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
         [x12,y13],
         [x14,y12],
         [x15,y1]
-    
+
     ];
         difference() {
             union() {
@@ -555,34 +555,34 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
                 rotate([0,90,0])
                 linear_extrude(x6+_d1, convexity=20)
                     polygon([[-_d1-dw,_d1-rk],[ridge-rk-2*dw,-ridge+dw],[-_d1-dw,-ridge+dw]]);
-  
+
                 translate([x3-ridge/2,y2-ridge/2,0])
                 rotate([0,0,0])
                 linear_extrude(depth+_d1, convexity=20)
                     polygon([[-dw,ridge/2+_d2+dw],[ridge/2+_d2,ridge/2+_d2+dw],[ridge/2+_d2+dw,_d1-dw]]);
-    
+
                 translate([x6-ridge,-ridge,0])
                 linear_extrude(depth+_d1, convexity=20)
                     polygon([[rk+dw,dw],[ridge+_d2,ridge-rk-dw],[ridge+_d2,dw]]);
-    
+
             }
             if(cut) {
                 translate([_d1,0,+_d1])
                 rotate([0,90,0])
                 linear_extrude(x6+cut+_d1+ridge, convexity=20)
                     polygon([[-_d3,dw],[cut/2,cut*2/5+dw],[cut-dw,dw],[cut-dw,cut+_d3],[-_d3,cut+_d3]]);
-                
+
                 translate([_d1-cut,0,depth-cut+_d])
                     rotate([-90,-90,0])
                     linear_extrude(y2+cut+_d1, convexity=20)
                     polygon([[-_d3,dw],[cut/2,cut*2/5+dw],[cut-dw,dw],[cut-dw,cut+_d3],[-_d3,cut+_d3]]);
-                
+
                 intersection() {
                 translate([-cut,-cut,depth])
                 rotate([0,90,0])
                 linear_extrude(cut, convexity=20)
                     polygon([[-_d3,dw],[cut/2,cut*2/5+dw],[cut-dw,dw],[cut-dw,cut+_d3],[-_d3,cut+_d3]]);
-                
+
                 translate([-cut,-cut,depth-cut])
                     rotate([-90,-90,0])
                     linear_extrude(cut, convexity=20)

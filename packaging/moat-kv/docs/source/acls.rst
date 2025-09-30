@@ -72,9 +72,8 @@ back. However, any other access is not possible::
       _: 10
       two:
         _: 11
-    
+
 
 The above is the server content at the end of the testcase
 ``tests/test_feature_acls.py::test_81_basic``, when
 dumped with the command ``moat kv : get -rd_``.
-

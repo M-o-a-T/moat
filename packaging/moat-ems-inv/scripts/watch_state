@@ -3,5 +3,3 @@
 watch "\
     dbus -y org.m_o_a_t.inv.main /Control GetState 2>/dev/null;
 "
-
-

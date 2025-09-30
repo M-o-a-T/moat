@@ -18,4 +18,3 @@ Recommends:
   moat-kv (>= 0.32),
   python3-trio (>= 0.17),
 Description: MoaT module for handling MoaT-related packaging
-

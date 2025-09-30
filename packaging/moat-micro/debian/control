@@ -24,7 +24,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
 Recommends:
   python3-trio (>= 0.22),
 Description: talk to MoaT satellites running MicroPython
-  Satellites run a main task which loads some applications. These apps  
+  Satellites run a main task which loads some applications. These apps
   might do something locally, e.g. let a LED blink or poll a button, provide
   a link to a remote system, or call other apps for high-level functions.
   .

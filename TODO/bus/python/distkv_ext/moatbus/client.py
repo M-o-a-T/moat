@@ -71,9 +71,7 @@ def typ_(obj, type_):
         type_ = []
         print("Known connection types:", file=obj.stdout)
         ext = importlib.import_module("moatbus.backend")
-        for finder, name, ispkg in pkgutil.iter_modules(
-            ext.__path__, ext.__name__ + "."
-        ):
+        for finder, name, ispkg in pkgutil.iter_modules(ext.__path__, ext.__name__ + "."):
             n = name.rsplit(".")[-1]
             if n[0] == "_":
                 continue
@@ -106,14 +104,12 @@ def typ_(obj, type_):
 async def monitor(obj):
     """Watch bus messages."""
     if obj.bus is None:
-        raise click.BadParameterError(f"Bus {obj.n_bus !r} doesn't exist")
+        raise click.BadParameterError(f"Bus {obj.n_bus!r} doesn't exist")
     async with obj.client.msg_monitor(obj.bus.topic) as mon:
         print("---", file=obj.stdout)
         async for msg in mon:
             msg["time"] = time.time()
-            msg["_time"] = datetime.datetime.now().isoformat(
-                sep=" ", timespec="milliseconds"
-            )
+            msg["_time"] = datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")
             mid = msg.data.pop("_id", None)
             if mid is not None:
                 msg["_id"] = mid
@@ -136,7 +132,9 @@ def set_conn(obj, kw):
     host_ = kw.get("host")
 
     type_ = type_ or obj.typ
-    params = process_args(obj.params, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
+    params = process_args(
+        obj.params, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_
+    )
     obj.check_config(type_, host_ or obj.host, params)
     obj.typ = type_
     obj.params = params
@@ -148,12 +146,8 @@ cmd_conn = std_command(
     long_name="bus connection",
     id_name=None,
     aux=(
-        click.option(
-            "-t", "--type", "type_", type=str, default=None, help="Connection type"
-        ),
-        click.option(
-            "-h", "--host", type=str, default=None, help="Node this may run on"
-        ),
+        click.option("-t", "--type", "type_", type=str, default=None, help="Connection type"),
+        click.option("-h", "--host", type=str, default=None, help="Node this may run on"),
         attr_args,
     ),
     sub_base="bus",
@@ -170,12 +164,6 @@ async def run(obj, force):
     from distkv_ext.moatbus.task import gateway
     from distkv_ext.moatbus.model import conn_backend
 
-    if (
-        not force
-        and obj.conn.host is not None
-        and obj.client.client_name != obj.conn.host
-    ):
-        raise RuntimeError(
-            f"Runs on {obj.conn.host} but this is {obj.client.client_name}"
-        )
+    if not force and obj.conn.host is not None and obj.client.client_name != obj.conn.host:
+        raise RuntimeError(f"Runs on {obj.conn.host} but this is {obj.client.client_name}")
     await gateway(obj.conn)

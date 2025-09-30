@@ -44,4 +44,3 @@ not recommended.
 
 In this documentation's protocol examples, Paths are shown as ``P('some.string')``
 for readability.
-

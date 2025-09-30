@@ -7,7 +7,7 @@
         relative = True
         noprefix = True
 [alias]
-        ls = ls-files 
+        ls = ls-files
         lso = ls-files --others --exclude-standard
         lsd = ! git --no-pager diff --cached --name-only && git --no-pager ls-files --modified
 [pull]

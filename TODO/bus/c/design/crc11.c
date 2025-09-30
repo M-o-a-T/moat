@@ -20,4 +20,3 @@ u_int16_t crc11_update(u_int16_t crc, u_int8_t byte)
     crc = table11[(byte ^ crc) & 0xFF] ^ (crc>>8);
     return crc;
 }
-

@@ -18,7 +18,7 @@ slots:
   15sec:
     time: 15
     align: null
-  write: 
+  write:
     write_delay: 0.1
 
 server:
@@ -75,9 +75,9 @@ hosts:
             dest: !P heat.s.pellets.energy
             slot: 5min
           modbus:
-#           lifetick: 
+#           lifetick:
 #             src: !P :mr.temp.heat.s.pellets.tick.out
-            commit_lifetick: 
+            commit_lifetick:
 #             dest: !P :mr.temp.heat.s.pellets.tick.in
               slot: 15sec
             kesselanforderung:
@@ -93,4 +93,3 @@ hosts:
           pelletsverbrauch:
             dest: !P heat.s.pellets.used
             slot: 5min
-

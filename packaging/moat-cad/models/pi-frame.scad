@@ -10,7 +10,7 @@ w_f=4.5;
 // squeeze factor for better roundness
 edge_r=0.7;
 // additional roundness at the edges (distance the edges stay away from the center of the corner).
-edge_d=1.3; 
+edge_d=1.3;
 // Top edge recess
 edge_f=0.7;
 
@@ -31,7 +31,7 @@ board_z=1.5;
 // peg diameter, less .25mm or so
 d_h=2.5;
 // reduced diameter on top of cone
-d_hx=0.3; 
+d_hx=0.3;
 // additional space in hollow parts
 d_d=0.7;
 
@@ -88,7 +88,7 @@ cl_skip_y2b=false;
 /* [Battery] */
 // add a battery to the side?
 with_bat=true;
-// battery width. 
+// battery width.
 bat_y=21.5;
 // distance bottom of battery to bottom of circuit board
 bat_z=6.8;
@@ -176,7 +176,7 @@ pib_y=pi_y+bat_y_+fr_side;
 // echo("HT",h_total,pi_z,bat_z_,h_f,bat_top);
 
 // translate([pi_x,pi_y*n_pi,0]) rotate(180)
-if(on_rail && upright_rail) 
+if(on_rail && upright_rail)
 rail_bottom();
 else bottom();
 
@@ -221,7 +221,7 @@ module mpcarrier() {
 }
 
 module rail_bottom(d=0) {
-    
+
     difference() {
         union() {
             bottom();
@@ -233,7 +233,7 @@ module rail_bottom(d=0) {
 module rail_poly(d=0) {
     translate([-_d,-_d,hfk]) rotate([0,90,0]) rotate([0,0,90]) linear_extrude(rail_width+_d2)
                 polygon([[0,-hfk-d],[0,hfk+d],[hfk+d,0]]);
-    
+
     translate([-_d,rail_brim+_d,hfk]) rotate([0,90,0]) rotate([0,0,-90]) linear_extrude(rail_width+_d2)
                 polygon([[-hf2,-hf2-hfk-d],[-hfk*2-hf2*1.41,hfk],[0,hfk+d],[hfk+d,0]]);
 }
@@ -317,26 +317,26 @@ module f_base() {
 module f_base_top() {
     // The inset at the corners, trimmed for good interlock
     em=edge_dm+edge_top;
-    
+
     dd = edge_dm;//h_f*edge_r/2;
     //dd = w_f/2-c_w;
     a=45;
     ed=dd*(1-1*cos(a));
     eds=dd*sin(a);
-    
+
     module ci() { // corner insert
-        translate([edge_dm,0,h_f/2]) rotate_extrude(angle=45,$fn=48) 
+        translate([edge_dm,0,h_f/2]) rotate_extrude(angle=45,$fn=48)
         difference() {
                 translate([-edge_dm,0]) union() {
                     translate([-edge_dx,-h_f/2]) square([edge_dx*2,h_f]);
-            
+
                     translate([-edge_dx,0]) scale([edge_r,1]) circle(d=h_f,$fn=12);
                     translate([edge_dx,0]) scale([edge_r,1]) circle(d=h_f,$fn=12);
                 }
                 translate([0,-w_f/2]) square([h_f,w_f]);
             }
     }
-    
+
     d = w_f/2-c_w;
     difference() {
         union() {
@@ -357,7 +357,7 @@ module f_base_top_i() {
     eds=dd*cos(22.5);
     module ci(n=0) {
         translate([0,0,h_f/2])
-        rotate_extrude(angle=45*(n+1),$fn=48) 
+        rotate_extrude(angle=45*(n+1),$fn=48)
         // basic wedge, c_w+edge_dm
         translate([-d-edge_dm-n*(c_w+edge_dm/2),0])
         union() {
@@ -465,7 +465,7 @@ module frame(top=false) {
                 if(!dh_hide_tl)xline(m_x1,m_y1+x*pi_y,    -fr_side,x*pi_y);
             }
         }
-        
+
     } else {
         if(!dh_hide_bl)xline(m_x2,(dh_center_bot&&dh_hide_br) ? pi_y/2 : m_y1,pi_x+fr_side,    -fr_side);
         if(!dh_hide_tl) xline(m_x1,m_y1,    -fr_side,    -fr_side);
@@ -562,7 +562,7 @@ module top() {
     if (edge_top) {
         bases() f_base_top();
         bases_i() f_base_top_i();
-    } else 
+    } else
         bases() f_base();
     if (!with_clamp) top_pins(); else if(cl_top) all_clamps() clamp();
     if (with_bat) bat_pins();
@@ -624,7 +624,7 @@ module bat_pins() {
     x1=pi_x-bat_x1;
     x2=pi_x-bat_x2;
     off=bat_x1+fr_side;
-    
+
     h_b=bat_top;
     _bat_pins() {
         _pin(d=w_f,dt=d_hb,h=h_b-h_f/2, off=h_f/2);

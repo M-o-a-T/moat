@@ -53,4 +53,3 @@ Any message beginning with a byte >= 0x20 is a console message. It must not
 contain any bytes between \x00 and \x06 and should end with a line feed
 (``\n``, 0x0A). Any content must be valid UTF-8 and should be limited to
 ASCII.
-

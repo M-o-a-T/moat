@@ -79,7 +79,7 @@ C macros
   Transfer messages received on A to B and vice versa.
 
   This implements an addressed gateway.
-  
+
   Not yet implemented.
 
 * DEBUG_ADDR
@@ -102,7 +102,7 @@ Low-level bus simulation
 ------------------------
 
 The state of the bus wires is encoded to a byte; that byte is sent to a
-daemon on a Unix socket which reads it, ORs it to the latest bytes from 
+daemon on a Unix socket which reads it, ORs it to the latest bytes from
 all other clients, and then sends the updated bus state to them, applying a
 variable delay to simulate bus latency.
 
@@ -243,5 +243,4 @@ runs the serial/MQTT gateway).
 You should now see some messages as the three pills try to acquire
 a MoaT bus address.
 
-Start 
-
+Start

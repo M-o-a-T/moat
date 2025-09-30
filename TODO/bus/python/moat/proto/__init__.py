@@ -17,6 +17,7 @@ except ImportError:
 
     class BrokenResourceError(Exception):
         pass
+
 else:
     EndOfStream = anyio.EndOfStream
     BrokenResourceError = anyio.BrokenResourceError

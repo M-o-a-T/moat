@@ -13,4 +13,3 @@ Boxes are labelled. A box can have an arbitrary number of labels, though
 most of the time it'll have one, or at most two: one with a barcode and a
 box number, one with a text that describes the content, or at least reminds
 the owner of it.
-

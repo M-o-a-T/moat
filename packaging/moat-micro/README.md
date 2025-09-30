@@ -23,12 +23,12 @@ This does include the ESP8266, if barely.
 
 On most MCUs there is not enough RAM to load the MoaT support code.
 Thus, you need to build a version of MicroPython that includes the MoaT
-modules in Flash. The installer script uses MoaT's MicroPython fork 
+modules in Flash. The installer script uses MoaT's MicroPython fork
 to build the required binaries.
 
 ## Principle of Operation
 
-Each controller runs a main task which loads some applications. These apps  
+Each controller runs a main task which loads some applications. These apps
 might do something locally, e.g. let a LED blink or poll a button, provide
 a link to a remote system, or call other apps for high-level functions.
 
@@ -58,7 +58,7 @@ contains a couple of improvements:
   as their parent modules.
 
 * We include a ``_hash`` module, which contains a mapping of hashes for the
-  source code of the modules included in Flash. 
+  source code of the modules included in Flash.
 
 The latter two changes allow you to selectively update single packages, while
 the rest of the system continues to run from code "frozen" into flash. This
@@ -210,4 +210,3 @@ the `fs` module is loaded. It can also be mounted on the server.
 If you write to the client, be aware that some programs do not buffer their
 data; writing in single bytes does take a long(ish) time. Most notably, this
 applies to `mpy-cross`.
-

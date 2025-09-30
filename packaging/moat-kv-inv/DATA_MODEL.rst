@@ -34,5 +34,3 @@ vlan
 ====
 
 A VLAN has a name and a number.
-
-

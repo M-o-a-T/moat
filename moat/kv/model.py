@@ -724,7 +724,7 @@ class Entry:
         if acl is None:
             global NullACL
             if NullACL is None:
-                from .types import NullACL  # noqa:PLC0415,I001
+                from .types import NullACL  # noqa: PLC0415
             acl = NullACL
 
         first = True
@@ -983,7 +983,7 @@ class Entry:
         if conv is None:
             global ConvNull
             if ConvNull is None:
-                from .types import ConvNull  # noqa:PLC0415,I001
+                from .types import ConvNull  # noqa: PLC0415
             conv = ConvNull
         res = attrdict()
         if self._data is not NotGiven:

@@ -44,7 +44,7 @@ module indent(c) {
 }
 
 module bottom() {
-   hull() { 
+   hull() {
         translate([-w,0,0]) cube([x+w,y,_d1]);
         translate([-w,w,-w]) cube([x,y-2*w,_d1]);
     }
@@ -66,14 +66,14 @@ module bottom() {
     // indents on side
     translate([-w,0,chh]) rotate([90,0,0]) indent((z-chh)/2);
     translate([0,y,chh]) rotate([90,0,180]) indent((z-chh)/2);
-    
+
 }
-module side_top() { 
+module side_top() {
     rotate([90,0,0]) linear_extrude(w) polygon([
         // top and right sides
         [-w,z+w], [x+w,z+w], [x+w,-w],
         // hole
-        [x/2+cw/2+cso,-w], [x/2+cw/2+cso,chh], [-w,chh], 
+        [x/2+cw/2+cso,-w], [x/2+cw/2+cso,chh], [-w,chh],
     ]);
 }
 module _top() {
@@ -106,7 +106,7 @@ module top() {
         translate([-w,_d2,chh-_d2]) rotate([90,0,0]) indent((z-chh)/2);
         translate([0,y-_d2,chh-_d2]) rotate([90,0,180]) indent((z-chh)/2);
         // cut odd top and bottom a bit
-        translate([-w-_d1,-w-_d1,-w-_d1]) cube([x+2*w+_d3,y+2*w+_d3,w/4]);       
+        translate([-w-_d1,-w-_d1,-w-_d1]) cube([x+2*w+_d3,y+2*w+_d3,w/4]);
     }
 }
 

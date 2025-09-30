@@ -80,7 +80,7 @@ hook_base_depth = hook_base;
  * The pieces are joined with a couple of fancy hooks, the parameters for which require some explaining.
 
 This is the groove which the hook joins:
- 
+
      |   |
      |   |
      |   |
@@ -104,7 +104,7 @@ The hook, below, moves up and joins with the groove:
       \
        \
 _______/ - 1/2 miter
-^ ^ ^ 
+^ ^ ^
 | |  \---- width: hook_edge_depth
 |  \------ width: hook_depth
  \-------- width: hook_base_depth
@@ -157,7 +157,7 @@ function circle_intersect_y(a,x) = sqrt(a*a-x*x);
 
 axes = [side_z,side_x,side_y,
         side_z,side_x,side_y,
-        side_z,side_x,side_y]; 
+        side_z,side_x,side_y];
 
 // The edges are numbered so that edge N doesn't touch axis N
 function _edge(n) = distance(axes[n+1], axes[n+2]);
@@ -194,7 +194,7 @@ angles2 = [top_angle(0),top_angle(1),top_angle(2),
 module chamfer1(n) {
     translate([0,0,wall_side])
         rotate(a=[0,90,0])
-            linear_extrude(height=axes[n], center=false) 
+            linear_extrude(height=axes[n], center=false)
                 polygon([[0,0],[wall_side,0],[0,wall_side]]);
 }
 
@@ -211,7 +211,7 @@ module chamfer2(n) {
     translate([0,axes[n+1],wall_side])
         rotate([0,0,angles1[n+2]+180])
             rotate([-90,0,0])
-                linear_extrude(height=edges[n+2], center=false) 
+                linear_extrude(height=edges[n+2], center=false)
                     polygon([[0,0],[wall_side/tan(ac),0],[0,wall_side]]);
 }
 
@@ -293,7 +293,7 @@ module poly_hook_groove(n) {
         x_tip = y_tip*tan(90-a_wall); // avoid dividing by infinity
         x_edge = x_tip+hc(n,H_EDGE_DEPTH);
         y_edge = y_tip-hc(n,H_EDGE);
-    
+
         // start at tip, counterclockwisewall_top*cos(angles2[n])
         rotate(atan2(x_tip,y_tip))
         if (x_edge/tan(a_chamfer) > y_edge)
@@ -309,7 +309,7 @@ module hook_pos_wall(n,off=0) {
     n_h = hc(-1-n,N_HOOKS);
     n_h_lim = n_h + hook_off_edge+0.5;
     for(x=[1:n_h])
-        let(xx=(off?-0.5:0)+x) 
+        let(xx=(off?-0.5:0)+x)
         translate([0,0,axes[n]*(off?n_h_lim-xx:xx)/n_h_lim])
         linear_extrude(hc(-1-n,H_G_WIDTH), center=true)
             children();
@@ -359,10 +359,10 @@ module hole_ring() {
 module hole_pos(n) {
     // Start position
     inner = hole_edge+wall_side;
-    
+
     // how close to the lid edge may we get?
     c_offset = wall_side/tan(angle_c(angles2[n], wall_top, wall_side)) + hole_outer/2 + hole_height/tan(angles2[n]);
-    
+
     // Here we figure the corresponding max offsets. The first subtracted term gets us to the place we'd be if the holes were at the outer edge, but of course they aren't.
     lim_1 = axes[n+1] - c_offset / sin(90-angles1[n]) - inner*tan(angles1[n]);
     lim_2 = axes[n+2] - c_offset / sin(angles1[n]) - inner/tan(angles1[n]);
@@ -382,7 +382,7 @@ module make_holes(n) {
     difference() {
         union() {
             hole_pos(n) hole_ring();
-        
+
             children();
         }
         hole_pos(n) hole_bore();
@@ -394,14 +394,14 @@ module side(n) {
 
     union() {
         difference() {
-            linear_extrude(height=wall_side, center=false) 
+            linear_extrude(height=wall_side, center=false)
                 polygon([[0,0],[axes[n+1],0],[0,axes[n+2]]]);
             chamfer_side(n+1);
         }
-        
+
         translate([wall_side,0,wall_side]) rotate([0,-90,-90]) grooves_wall(n+2,0);
         translate([axes[n+1],wall_side,wall_side]) rotate([-90,-90,90]) grooves_wall(n+1,1);
-        
+
         // Yes this can be simplified, but then it'll be unreadable.
         translate([0,axes[n+2],wall_side]) rotate(angles1[n]-90) translate([0,-wall_side/tan(a_chamfer),0]) rotate([0,90,0]) rotate([0,0,180]) grooves_edge(n);
         translate([0,wall_side,wall_side]) rotate([0,90,0]) rotate([0,0,90])        hooks_wall(n+1,0);
@@ -417,7 +417,7 @@ module to_next_side() {
 // One outer edge chamfer.
 module mitered_edge(n) {
     //translate([0,0,wall_side])
-            linear_extrude(height=axes[n], center=false) 
+            linear_extrude(height=axes[n], center=false)
                 polygon([[0,0],[edge_miter,0],[0,edge_miter]]);
 }
 
@@ -461,10 +461,10 @@ module from_top() {
 module uncut_top() {
     union() {
         difference() {
-            linear_extrude(height=wall_top, center=false) 
+            linear_extrude(height=wall_top, center=false)
                 polygon([[0,0],[edges[2],0],[x2,y2]]);
             chamfer_top();
-    
+
         }
         hooks_edge(2);
         translate([x2,y2,0]) rotate([0,0,180+angle3(1)]) hooks_edge(0);

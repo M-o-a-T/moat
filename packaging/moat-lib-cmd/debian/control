@@ -17,4 +17,3 @@ Description: A simple command/stream multiplexer
   This library implements a bidirectional RPC architecture that supports
   streaming messages and flow control.
   .
-

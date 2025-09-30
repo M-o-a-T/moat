@@ -85,7 +85,7 @@ Runners
 +++++++
 
 The distributed nature of MoaT-KV lends itself to running arbitrary code on
-any node that can accomodate it. 
+any node that can accomodate it.
 
 ============
 Runner types
@@ -100,7 +100,7 @@ system which group to use. If you don't use this option, the default group
 is named ``default``.
 
 All groups and all runners are distinct. Which nodes actually execute the
-code you enter into MoaT-KV is determined solely by running ``moat kv 
+code you enter into MoaT-KV is determined solely by running ``moat kv
 run all`` on them, with the appropriate options.
 
 ++++++++++++++++++
@@ -338,4 +338,3 @@ don't recognize.
 The ``…State`` messages can be useful to determine what level of redundancy
 you currently have in the system. One application would be to send a
 warning to the operator that some nodes might be down.
-

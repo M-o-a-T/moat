@@ -50,7 +50,7 @@ avoided. Thus, each time slot can transmit log2(2^n-2) bits of information.
 A two-wire system transmits one bit per slot.
 
 On three- and four-wire systems, messages are chopped into 5- or 7-bit
-chunks that get encoded to a dual bit-change mask. 
+chunks that get encoded to a dual bit-change mask.
 
 Encoding
 ++++++++
@@ -66,11 +66,11 @@ the transmitted signal is in the interval ``[1;2^n-1] \ {wire_state}``.
 		chunks = chunk_up(next_msg)
 		prio = 1+next_msg_prio
 		set_timeout()
-	
+
 	xmit(state):
 		if prio:
 			if state:
-				return 0 
+				return 0
 			res = 1<<(prio-1)
 			prio = 0
 			return res
@@ -112,7 +112,7 @@ The decoder runs alongside the sender.
 			t2 = t
 			return
 		if sx and t2-t < BITRATE/3:  # collision
-			if s2 != 
+			if s2 !=
 
 		t = t2
 		if s0 == s1:
@@ -123,23 +123,23 @@ The decoder runs alongside the sender.
 			bits = s0 ^ s1
 			bits -= 1 + (s0 < s1)
 			received(bits)
-		
+
 		s0 = s1
 		s1 = s2
 		if sending or s2 == 0:
 			set_timeout()
 
 	timeout:
-		
+
 		if sending:
 			wire_state = sx = xmit(s1)
-			
+
 		if s0 != 0 and s0 != s1:
 			bits = s0 ^ s1
 			bits -= 1 + (s0 < s1)
 			received(bits)
 			# TODO: send ACK/NAK, if our message
-			
+
 		s0 = s1 = s2 = 0
 
 
@@ -178,4 +178,3 @@ There's no point in catering for more than ~100 devices on a bus: among
 other reasons, they all need to be powered. The MoaT bus thus limits its
 client addresses to 7-bit integers. Server systems get two bits: up to
 three servers, and broadcast.
-

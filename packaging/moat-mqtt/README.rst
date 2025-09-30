@@ -82,4 +82,3 @@ A MoaT-MQTT server can hook into MoaT-KV so that some messages are persisted,
 translated (i.e. store msgpack messages encoding `True` and `False`, instead of
 the strings "on" and "off" (or "ON" and "OFF" or "1" and "0" or …)), filtered
 (e.g. the client can only modify existing messages but not add any), et al..
-

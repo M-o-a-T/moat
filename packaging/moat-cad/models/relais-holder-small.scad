@@ -25,7 +25,7 @@ hook_width=12; // [9:0.5:20]
 // DIN rail
 brim=35.1;
 rail_height=1.1;
-    
+
 // DIN rail hook
 spring_l=15;
 spring_d=2.5;
@@ -89,16 +89,16 @@ hull() {
 translate([_d1-wall,0,_d1-wall]) {
 linear_extrude(wall)
     polygon([[0,-spring_off],[0,mod_y+wall],[mod_x+wall,mod_y+wall],[mod_x+wall,0],[brim-spring_slot,-spring_off]]);
-    
+
 translate([0,-spring_off,0])
     rail_hook(10);
 }
 
-translate([conn_x,mod_y+wall,1]) 
+translate([conn_x,mod_y+wall,1])
 rotate([0,-90,0]) rotate([-90,0,0]) linear_extrude(0.5)
 text("Coil",5);
 
-translate([conn_x+25,mod_y+wall,1]) 
+translate([conn_x+25,mod_y+wall,1])
 rotate([0,-90,0]) rotate([-90,0,0]) linear_extrude(0.5)
 text("Bat",5);
 
@@ -110,14 +110,14 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     x2=dw;
     x3=dw-ridge/2;
     x5=brim-spring_slot;
-    x6=brim+aux-spring_slot+dw;    
+    x6=brim+aux-spring_slot+dw;
     x8=brim-(spring_slot+bar_width);
     x7=brim-2-(spring_slot+bar_width);
     x10=-bar_width;
     x12=-spring_slot-bar_width;
     x14=2.5-(spring_slot+3);
     x15=2.5-(spring_d+spring_slot+bar_width);
-    
+
     y1=0.5-(bar_width+hook+rail_height);
     y2=spring_l+dw;
     y4=dw+_d2;
@@ -129,12 +129,12 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     y11=spring_l-bar_width;
     y13=-rail_height-bar_width;
     y12=-rail_height-bar_width-0.2;
-    
+
     rk=ridge/3;
     hsd=1; // hole slot depth
     hh=2; // height
     hw=.6; // hole's wall strength
-    
+
     hd=hw+hsd;
     hws=hw*(1+sin(45));
     hdf=hws+(hd-hw);
@@ -162,7 +162,7 @@ module rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
         [x12,y13],
         [x14,y12],
         [x15,y1]
-    
+
     ];
         difference() {
             union() {

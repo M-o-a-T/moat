@@ -80,9 +80,7 @@ class MOATnode(_MOATbase):
         if dev is None or dev.bus is None:
             return
 
-        self.val = combine_dict(
-            self.value_or({}, Mapping), self.parent.value_or({}, Mapping)
-        )
+        self.val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
 
     async def setup(self, initial=False):
         await super().setup()

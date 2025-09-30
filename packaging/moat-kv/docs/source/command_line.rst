@@ -73,7 +73,7 @@ it from the default of ``27589``, or use a configuration file.
    Use ``moat kv log dest -i`` in production.
 
 A network of servers needs to contain some data before it becomes
-operational. When starting the first server, you can use an initial 
+operational. When starting the first server, you can use an initial
 
 .. option:: -I, --init <value>
 
@@ -351,7 +351,7 @@ options may not work. Use ``-m root`` as a workaround.  XXX TODO
 
    MoaT-KV supports multiple authorization methods. The default is the one
    that has been changed to with ``moat kv auth init``.
-   
+
    If you want to do anything with authorization, you'll need to use this
    flag to set up the initial users.
 
@@ -599,7 +599,7 @@ Retrieve information about a codec, including its scripts.
 
    The MoaT-KV entry that would be affected. Path elements '+' and '#' match
    exactly-one and one-or-more subpaths. The most specific path wins.
-   
+
 
 .. program:: moat kv codec set
 
@@ -629,7 +629,7 @@ tempfile, then restore with ``moat kv codec set -d <tempfile> <path>…``.
 .. option:: -D, --data <file>
 
    The YAML file which contains any other data.
-   
+
    Required: two arrays "in" and "out" containing tuples with before/after
    values for the decoder and encoder, respectively.
 
@@ -1184,4 +1184,3 @@ Decodes MsgPack messages. Display as YAML.
    * ``+NAME``, to monitor this sub-stream instead
    * ``+`` to monitor all sub-streams (recursively; does not work with the
      Serf backend)
-

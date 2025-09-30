@@ -22,4 +22,3 @@ for f in input/*.csv; do
     $P code/data.py $f $n.yaml
 done
 test -t 0 && echo "done.                      "
-

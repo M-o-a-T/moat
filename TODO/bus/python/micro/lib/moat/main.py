@@ -98,9 +98,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
                     async with TaskGroup() as tg:
                         async for t, b in network_stack_iter(multiple=True, port=mp):
-                            t = t.stack(
-                                StdBase, fallback=fallback, state=state, cfg=cfg
-                            )
+                            t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
                             cfg_setup(t, apps)
                             return await tg.spawn(b.run)
 

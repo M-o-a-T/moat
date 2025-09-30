@@ -33,5 +33,3 @@ ext
 Flag to *not* poke the watchdog. This mode depends on periodic external
 calls to cmd.``x``. thus rebooting the system whenever there is a
 communication problem.
-
-

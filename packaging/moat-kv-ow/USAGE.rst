@@ -26,7 +26,7 @@ The main entry point for this extension.
 
 Print the current state of your 1wire devices.
 
-This command does not access the device or show on which bus it is; this is 
+This command does not access the device or show on which bus it is; this is
 solely for displaying the configuration of its interaction with DistKV.
 
 .. option:: family
@@ -97,4 +97,3 @@ code.
 .. option:: <name>…
 
    The attribute name to set. Use more than once for accessing sub-dicts.
-

@@ -52,7 +52,7 @@ All numbers are big-endian.
   version number or string (length-1 byte plus byte sequence).
   If there is no current firmware or it could not be verified the CRC must
   be all-1; in this case the version is missing.
-  
+
 * 1
   Bootloader version
   Return the boot loader interface magic number and CRC (two 32-bit integers).
@@ -108,7 +108,7 @@ All numbers are big-endian.
   9: boot flash
   10: RAM
   11: EEPROM
-  
+
 * 12-15
   Checksum Range
   As 'Read', but the reply contains just the checksum.

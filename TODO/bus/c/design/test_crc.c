@@ -56,7 +56,7 @@ int check(unsigned int n_faults, const char **args)
         u_int off = strtol(args[d],NULL,10);
         data[off/DATA_SIZE] ^= 1<<(off%DATA_SIZE);
     }
-    
+
     crc_t crc=0;
     ALL(i) crc = CRC_ADD(crc,data[i]);
     printf("CRC=x%x\n",crc);

@@ -116,9 +116,7 @@ class CellInterface(DbusInterface):
         c = c.cell
         adj = data - c.cfg.u.offset
         cfg = attrdict()
-        await c.req.send(
-            ["sys", "cfg"], attrdict()._update(c.cfgpath | "u", {"offset": data})
-        )
+        await c.req.send(["sys", "cfg"], attrdict()._update(c.cfgpath | "u", {"offset": data}))
 
         # TODO move this to a config update handler
         c.voltage += adj
@@ -225,9 +223,7 @@ class Cell:
         self.gcfg = gcfg
 
     def __repr__(self):
-        return (
-            f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage :.3f}›"
-        )
+        return f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage:.3f}›"
 
     async def config_updated(self):
         pass
@@ -350,19 +346,13 @@ class Cell:
         if val is None or self.n_samples is None:
             return 0
         return int(
-            (val - self.cfg.u.offset)
-            / self.v_per_ADC
-            * self.n_samples
-            / self.v_calibration
+            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration
         )
 
     def _raw2volt(self, val):
         if val is None or self.cfg.u.samples is None or val == 0:
             return None
-        return (
-            val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration
-            + self.cfg.u.offset
-        )
+        return val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration + self.cfg.u.offset
 
     @property
     def balance_threshold_raw(self):

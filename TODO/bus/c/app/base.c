@@ -23,11 +23,11 @@ extern void (*__app_fini_array_end []) (void) __attribute__((weak));
 
 static void init_array() {
     size_t count, i;
-    
+
     count = __app_preinit_array_end - __app_preinit_array_start;
     for (i = 0; i < count; i++)
         __app_preinit_array_start[i]();
-    
+
     count = __app_init_array_end - __app_init_array_start;
     for (i = 0; i < count; i++)
         __app_init_array_start[i]();
@@ -35,7 +35,7 @@ static void init_array() {
 
 static void fini_array() {
     size_t count, i;
-    
+
     count = __app_fini_array_end - __app_fini_array_start;
     for (i = count - 1; i >= 0; i--)
         __app_fini_array_start[i]();
@@ -67,4 +67,3 @@ IN_C bool _default_process(BusMessage msg) { return false; }
 IN_C void stop() __attribute__((weak, alias("_default_stop")));
 IN_C void loop() __attribute__((weak, alias("_default_loop")));
 IN_C bool process(BusMessage msg) __attribute__((weak, alias("_default_process")));
-

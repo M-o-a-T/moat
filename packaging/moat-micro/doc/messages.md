@@ -87,7 +87,7 @@ The result is a dict with these keys:
 
   A flag; if set, the target can be called as a stream.
 
-  
+
 
 ### upd\_
 

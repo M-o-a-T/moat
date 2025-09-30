@@ -98,7 +98,7 @@ High-priority status should be given to
 An additional set of lower priority levels is available simply by waiting
 longer for a free bus. These should be used for
 
-* address arbitration 
+* address arbitration
 
 * long-term measurement data
 
@@ -177,7 +177,7 @@ Point-to-Point links
 
 MoaT messages can be transmitted on point-to-point links, e.g. a TTL serial
 connection to a microcontroller. These links typically are somewhat
-unreliable. 
+unreliable.
 
 Data dictionary
 ===============
@@ -521,7 +521,7 @@ Saving space
 If you do not have enough space in your ROM for all of this fancy directory
 handling, the root directory might have the name of your device. The only
 visible directory entry might be a file named "v" which contains the
-firmware version number. The server can 
+firmware version number. The server can
 
 Even more radically, most or even all feaures of your device might be
 accessible via the shortcut mechanism. You don't need to actually implement
@@ -539,4 +539,3 @@ addresses. The MoaT bus does not use message sequence numbers. There should
 not be more than one outstanding read request. In fact, after setting up
 everything there should be no read requests whatsoever – any periodic
 reading should be done by a timer on the client.
-

@@ -53,5 +53,3 @@ void drop_log_line()
     logbuf = lp->next;
     free(lp);
 }
-
-

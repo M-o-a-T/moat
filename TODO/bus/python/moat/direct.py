@@ -86,9 +86,7 @@ class DirectREPL:
                 elif err_num == 19:
                     raise OSError(err_num, "No Such Device Error")
                 elif err_num:
-                    raise OSError(
-                        err_num, os_error_mapping.get(err_num, (None, "OSError"))[1]
-                    )
+                    raise OSError(err_num, os_error_mapping.get(err_num, (None, "OSError"))[1])
             m = re_exceptions.match(lines[-1])
             if m:
                 raise getattr(builtins, m.group(1))(m.group(2))

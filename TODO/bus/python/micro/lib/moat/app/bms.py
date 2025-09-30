@@ -167,9 +167,7 @@ class BMS:
             return s / n
 
         self.val_u = sa(self.adc_u) * self.adc_u_scale + self.adc_u_offset
-        self.val_i = (
-            sa(self.adc_i) - sa(self.adc_ir)
-        ) * self.adc_i_scale + self.adc_i_offset
+        self.val_i = (sa(self.adc_i) - sa(self.adc_ir)) * self.adc_i_scale + self.adc_i_offset
 
         self.sw_ok = False
 
@@ -248,13 +246,13 @@ class BMSCmd(BaseCmd):
         await super().config_updated()
         await self.bms.config_updated()
 
-    async def cmd_rly(self, msg:Message):
+    async def cmd_rly(self, msg: Message):
         """
         Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
         """
         if not len(msg):
             return self.bms.relay.value(), self.bms.relay_force
-        st:bool=msg[0]
+        st: bool = msg[0]
         await self.bms.set_relay_force(st)
 
     async def cmd_info(self, gen=-1, r=False):

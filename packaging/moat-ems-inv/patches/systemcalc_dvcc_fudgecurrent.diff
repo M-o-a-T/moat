@@ -22,6 +22,6 @@ the correct way is to limit the charge voltage.
  					# less than our capacity
 -					self._distribute_current(chargers, max_charge_current)
 +					self._distribute_current(chargers, max_charge_current*0.95)
- 
+
  		# Return flags of what we did
  		return voltage_written, int(network_mode_written and max_charge_current is not None)

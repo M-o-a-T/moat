@@ -243,7 +243,7 @@ You need to enable the ESS assistant. How to do that is documented elsewhere.
 
 * Settings/ESS: set to "External Control".
 
-* Settings/DVCC: turn on. 
+* Settings/DVCC: turn on.
 
 
 ### Tell the system what to do
@@ -256,4 +256,3 @@ the result to display a reasonable SoC (State of Charge), as relying on cell vol
 be notoriously wrong.
 
 Normal use is `-m gridsetpoint`, which tells your inverter to hold your grid power at zero if possible.
-

@@ -119,7 +119,7 @@ __seal
   swap x-end r> !  ( len' |R: msg )
   r> __ pos !
 ;
-  
+
 : align ( msg -- )
 \ go to the next byte boundary
   dup __ pos @ $7 and ?dup if
@@ -142,7 +142,7 @@ __seal
   r> __ data @ + ( fb bpos adr )
   @ x-end -rot ( val fb bpos )
   over swap + ( val fb fb-bpos )
-  32 swap - ( val fb sft ) 
+  32 swap - ( val fb sft )
   rot swap rshift ( vb val> )
   swap _mask and ( val' )
 ;
@@ -158,7 +158,7 @@ __seal
 #endif
   ( fb xbits )
   2dup > if
-    \ asked for more bits than are present. 
+    \ asked for more bits than are present.
     tuck -
   else
     drop 0
@@ -190,7 +190,7 @@ __seal
 ;
 
 
-\ 
+\
 \ read
 \
 : >recv ( msg -- )
@@ -267,7 +267,7 @@ __seal
     _mask
     r> 1- dup >r c@ and ( res shift data )
     swap lshift or
-    over _mask 2 pick lshift 
+    over _mask 2 pick lshift
   else
     drop
   then ( res )
@@ -320,7 +320,7 @@ __seal
 
 \
 \ retrieve header data
-\ 
+\
 
 : adr@ ( msg -- adr )
   1 over __ @b if \ server
@@ -334,7 +334,7 @@ __seal
   8 over __ pos @ $7 and -
   swap __ @b
 ;
-  
+
 : hdr@ ( msg -- src dst code )
   dup >r adr@ r@ adr@ swap r> code@
 ;
@@ -359,7 +359,7 @@ __seal
     8 rot __ !b
   then
 ;
- 
+
 : !code ( code msg -- )
   8 over __ pos @ 7 and -  ( code msg bits )
 #if-flag debug
@@ -367,7 +367,7 @@ __seal
 #endif
   swap __ !b
 ;
-  
+
 : hdr! ( src dst code msg -- )
 \ writes a message header and sets initial length
 \ this calls >write
@@ -381,7 +381,7 @@ __seal
 : s! ( data len msg -- )
 \ append data to the message
   dup align
-  dup >r __ pos @ 3 rshift 
+  dup >r __ pos @ 3 rshift
   ( data len pos )
   2dup +
 #if-flag debug
@@ -397,7 +397,7 @@ __seal
   dup align
   dup >r __ data @  r@ __ pos @ 3 rshift ( adr pos )
   r> __ len @ over - ( adr pos rest )
-  -rot + swap 
+  -rot + swap
 ;
 
 : pos+ ( len msg -- )
@@ -411,7 +411,7 @@ __seal
 
 : ! ( byte msg -- )
 \ append a byte to the message
-  dup >r __ pos @ 7 + 3 rshift 
+  dup >r __ pos @ 7 + 3 rshift
 #if-flag debug
   dup 1+ r@ __ len_chk
 #endif

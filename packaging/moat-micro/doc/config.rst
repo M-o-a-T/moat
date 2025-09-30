@@ -78,7 +78,7 @@ Consider this example::
           wdt: wdt.Cmd
           r: serial.Link
           f: fs.Cmd
-        r: 
+        r:
           port: 2
           mode: *rs
           frame: 0xc1
@@ -262,7 +262,7 @@ fatal
 Flag whether to raise an exception if the link closes (and is not
 re-established within ``wait`` seconds, if that is not `False`).
 
-Commands 
+Commands
 ++++++++
 
 None so far.
@@ -422,7 +422,7 @@ Open a file. Returns a file handle.
   File mode. 'r or 'w', or possibly 'a'.
 
   Files are always opened in binary mode.
-  
+
 rd
 --
 
@@ -514,7 +514,7 @@ hash
 
 Return the ``sha256`` of a file's contents.
 
-* p 
+* p
 
   The path to the file to be hashed.
 
@@ -751,7 +751,7 @@ w
 
 Update part of the configuration.
 
-This afects only the in-memory config data. The satellite's nonvolatile config 
+This afects only the in-memory config data. The satellite's nonvolatile config
 is stored on its file system an can be accessed using the ``fs`` module.
 
 p
@@ -1039,10 +1039,10 @@ persist
 Mark the link as persistent: a link error will cause reconnecton
 attempts.
 
-If set and not `True`, the value is interpreted as the number of seconds 
+If set and not `True`, the value is interpreted as the number of seconds
 until a failure is deemed to be permanent.
 
-Loss protection 
+Loss protection
 
 
 frame

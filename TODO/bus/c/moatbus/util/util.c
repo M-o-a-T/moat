@@ -120,4 +120,3 @@ u_int8_t mf_random(u_int16_t lo, u_int16_t hi)
     x.vh = v>>8;
     return mf_get(&x);
 }
-

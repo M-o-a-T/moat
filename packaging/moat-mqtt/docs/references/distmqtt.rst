@@ -66,7 +66,7 @@ Configuration example
             port: 27586
         topic: [test, mqtt]
         base: [test, dist]
-        transparent:             
+        transparent:
           - transp
           - also/transp
 

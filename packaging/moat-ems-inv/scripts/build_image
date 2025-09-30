@@ -39,7 +39,7 @@ cleanup() {
 	set -e
 
 	# unmount in reverse order
-	n=${#mpt[@]}   
+	n=${#mpt[@]}
 	while [ "$n" -gt 0 ] ; do
 		n=$(($n - 1))
 		if ! umount -f "${mpt[$n]}" ; then

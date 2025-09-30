@@ -67,4 +67,3 @@ TODO
 * create a page for showcase-ing subprojects (knx owfs akumuli …)
 
 * improve Home Assistant integration
-

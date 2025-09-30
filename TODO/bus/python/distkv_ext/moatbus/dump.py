@@ -1,7 +1,7 @@
 import asyncclick as click
 import random
 from moatbus.backend.mqtt import MqttBusHandler
-from moat.util import gen_ident,al_lower
+from moat.util import gen_ident, al_lower
 
 
 @click.group(short_help="Display MoatBUS messages", invoke_without_command=True)
@@ -22,8 +22,6 @@ async def cli(ctx, ident):
 
     if ctx.invoked_subcommand is not None:
         return
-    async with MqttBusHandler(
-        id=ident, uri=cfg.server.mqtt["uri"], topic=cfg.moatbus.topic
-    ) as M:
+    async with MqttBusHandler(id=ident, uri=cfg.server.mqtt["uri"], topic=cfg.moatbus.topic) as M:
         async for msg in M:
             print(msg)

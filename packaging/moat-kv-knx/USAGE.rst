@@ -259,4 +259,3 @@ code.
 .. option:: <name>…
 
    The attribute name to set. Use more than once for accessing sub-dicts.
-

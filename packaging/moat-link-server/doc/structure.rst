@@ -112,4 +112,3 @@ The ``--list`` flag enumerates known subdocuments.
 
 The ``--raw`` flag emits the current text without metadata. Combinded with
 ``--edit`` it also reads the new text from standard input.
-

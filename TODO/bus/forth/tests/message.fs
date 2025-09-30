@@ -77,7 +77,7 @@ vm hdr@
 
 compiletoram
 : mcpy ( bits -- )
-  begin 
+  begin
     dup vm @bf  ( bits flag val )
 	2 pick wm !b
 	if 0 else vm more?b 0= then
@@ -108,4 +108,3 @@ forth definitions only
 
 \ SPDX-License-Identifier: GPL-3.0-only
 #ok depth 0=
-

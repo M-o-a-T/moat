@@ -62,8 +62,8 @@ int main(int argc, char * const* argv)
     address.sun_family = AF_UNIX;
     strcpy(address.sun_path, sockname);
 
-    if(connect(socket_fd, 
-               (struct sockaddr *) &address, 
+    if(connect(socket_fd,
+               (struct sockaddr *) &address,
                sizeof(struct sockaddr_un)) != 0)
     {
         printf("connect() failed\n");

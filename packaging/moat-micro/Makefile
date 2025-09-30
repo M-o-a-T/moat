@@ -17,4 +17,3 @@ else
 	@echo "Please fix 'python3 -mmoat src path'."
 	@exit 1
 endif
-

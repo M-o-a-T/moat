@@ -35,7 +35,7 @@ __seal
 : emit-char
   __ other @
   __ recv
-  if 
+  if
     ." C:" h.2 space
   then
 ;

@@ -12,6 +12,7 @@ from msgpack import Packer, Unpacker, OutOfData, ExtType
 
 from . import _Stacked
 
+
 class _Base(_Stacked):
     def __init__(self, stream):
         super().__init__(None)
@@ -83,7 +84,6 @@ class MsgpackStream(_Base):
 
     async def recv(self):
         if isinstance(self.console, int) and not isinstance(self.console, bool):
-
             while True:
                 b = bytearray(1)
                 while True:

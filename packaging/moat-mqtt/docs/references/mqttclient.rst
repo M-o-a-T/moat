@@ -19,7 +19,7 @@ The example below shows how to write a simple MQTT client which subscribes a top
 
     from moat.mqtt.client import open_mqttclient, ClientException
     from moat.mqtt.mqtt.constants import QOS_1, QOS_2
-    
+
     logger = logging.getLogger(__name__)
 
     async def uptime_coro():
@@ -86,7 +86,7 @@ For the purposes of the test, each message is published with a different Quality
     from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
     logger = logging.getLogger(__name__)
-    
+
     async def test_coro():
         """Publish in parallel"""
         async with open_mqttclient(uri='mqtt://test.mosquitto.org/') as C:

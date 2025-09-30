@@ -80,4 +80,3 @@ most likely due to a network outage between that node and the closest Delete
 member. Since the records are now gone, the node will connect to one of the
 Delete group members and send a list of each entry's last-change chain links.
 The recipient will re-broadcast any misses as "new" deletions.
-

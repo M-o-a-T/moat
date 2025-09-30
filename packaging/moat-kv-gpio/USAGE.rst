@@ -271,7 +271,7 @@ and runs polls and monitors.
 
 .. option:: name
 
-   The system's name, i.e. the server name you've been using in "… gpio 
+   The system's name, i.e. the server name you've been using in "… gpio
    server.
 
 .. option:: controller…
@@ -279,5 +279,3 @@ and runs polls and monitors.
    The controller[s] to connect to. You can't run this more than once for
    any given controller. Default: all controllers; note that new
    controllers are not picked up automatically. (TODO.)
-
-

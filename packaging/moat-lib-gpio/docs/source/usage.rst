@@ -35,7 +35,7 @@ a program which enumerates GPIO users can display who currently uses the pin in 
 Referring to a line
 -------------------
 
-Via the chip object, you can refer to single GPIO lines. 
+Via the chip object, you can refer to single GPIO lines.
 
 You need to refer to your hardware's documentation to discover which line to use.
 
@@ -135,4 +135,3 @@ Therefore, it's better to let the kernel signal changes to a GPIO device::
 
    The kernel will send an initial message with the line's current state, thus even when you
    request e.g. only notifications for rising edges, the initial event may have a zero value.
-

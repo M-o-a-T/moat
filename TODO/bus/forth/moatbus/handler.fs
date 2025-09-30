@@ -49,7 +49,7 @@ moat handler ignore
 moat msg also
 
 \ XXX only works on little endian machines
-: _P <builds 
+: _P <builds
 #[if] defined c,
   >r >r -rot swap c, c, c, r> c, r> c,
 #else
@@ -205,7 +205,7 @@ __data
 __seal
 
 : ? ( hdl -- )
-  ." Hdl:" dup hex. 
+  ." Hdl:" dup hex.
   dup __ state @ ~s .name space
   dup __ state @ ~s write >= if
     ." WS:" dup __ write_state @ ~w .name space
@@ -318,11 +318,11 @@ __seal
 \ ." SW C " .s
   r@ __ sending @ %msg >send
 \ ." SW D " .s
-  r@ __ want_prio @ r@ dup __ \set_wire @ 
+  r@ __ want_prio @ r@ dup __ \set_wire @
 dup ." SW X " .word .s
   execute
 \ ." SW E " .s
-  ~s write_acquire r@ dup __ \set_state @ 
+  ~s write_acquire r@ dup __ \set_state @
 dup ." SW Y " .word .s
   execute
 \ ." SW F " .s
@@ -400,7 +400,7 @@ dup ." SW Y " .word .s
     r@ __ state !
     true r@ __ settle !
 
-    ~t break 1+ 
+    ~t break 1+
     r@ __ no_backoff @ r@ __ sending @ 0<> and if 0 else r@ __ backoff @ then +
     r@ dup __ \set_timeout @ execute
 
@@ -413,10 +413,10 @@ dup ." SW Y " .word .s
     else r@ __ state @ ~s error = if
       ~t error
     else
-      ~t zero 
+      ~t zero
     then then
     r@ dup __ \set_timeout @ execute
-    
+
   else
     r@ __ state !
   then then
@@ -461,7 +461,7 @@ dup ." SW Y " .word .s
     then
   then
   r@ __ set_state
-  rdrop 
+  rdrop
 ;
 
 : error ( err hdl -- )
@@ -665,7 +665,7 @@ dup ." SW Y " .word .s
 
   r@ __ cur_pos @ 1- dup r@ __ cur_pos !
   r@ __ cur_chunk + c@
-#if-flag debug_wire           
+#if-flag debug_wire
   dup r@ __ max @ > abort" chunk too big"
 #endif
   r@ __ last @ xor r@ __ intended !
@@ -719,7 +719,7 @@ dup ." SW Y " .word .s
 ." WRK A " .s
   swap dup 1- not and r@ __ want_prio !
   ( settled )
-#if-flag debug_wire   
+#if-flag debug_wire
   ." WColl " over h.1 dup . cr
 #endif
 ." WRK B " .s
@@ -791,7 +791,7 @@ dup ." SW Y " .word .s
     then then then then
 ." TS O " .s
 rdrop ;
- 
+
 : timeout_settle ( hdl -- )
 \ process a timeout
   >r
@@ -864,7 +864,7 @@ rdrop ;
     else
       drop
       ~s write_end r@ __ set_state
-    then then 
+    then then
     endof
   ~s write_end of
     ~err cannot r@ __ error drop
@@ -926,8 +926,8 @@ rdrop ;
 ." NS A " dup ~s .name space .s
   dup ~s idle < if drop
     over if
-      ~err holdtime r@ __ error 
-    else 
+      ~err holdtime r@ __ error
+    else
       dup if ~t off else ~t zero then r@ dup __ \set_timeout @ execute
     then
   else dup ~s idle = if drop
@@ -1020,7 +1020,7 @@ rdrop ;
 
 
 : setup ( hdl -- )
-  \ 
+  \
   >r
   r@ __ writeq >setup
   r@ __ readq >setup

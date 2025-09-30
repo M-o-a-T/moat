@@ -11,4 +11,3 @@ debian/moat-kv-knx@.service: systemd/moat-kv-knx@.service
 
 override_dh_auto_install: debian/moat-kv-knx@.service
 	dh_auto_install
-

@@ -44,7 +44,7 @@ lets you easily change more than one at a time.
 .. option:: -m, --metric METRIC
 
    Set the metric to use in this subtree.
-   
+
    This option cannot be used on top or server level.
 
 .. option:: -k, --key name=value
@@ -89,4 +89,3 @@ Displays the data at a node.
 .. option:: path
 
    The path to the node to be shown.
-

@@ -88,7 +88,7 @@ codec:
       - !!binary |
         LTM=
 
-  
+
 conv:
   +:
     config: [json, bin]
@@ -108,4 +108,3 @@ conv:
   lock:
     cmd: [bool, onoff, bin]
     state: [bool, onoff, bin]
-

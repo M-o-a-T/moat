@@ -31,7 +31,7 @@ The internal load, in kW.
 Source: You should extrapolate from past system behavior. This is where a
 neural network might be a good idea.
 
-.. Note:: time-of-day and day-of-week inputs to a neural net should be cyclic, 
+.. Note:: time-of-day and day-of-week inputs to a neural net should be cyclic,
    i.e. instead of one input you use two, with sin(X*2*pi) and cos(X*2*pi)
    as X goes from 0 to 1.
 
@@ -51,7 +51,7 @@ price_sell
 ----------
 
 Price you get per kW you sell to the grid. Depending on your contract
-this value might be fixed, set some time in advance, or maybe you need to 
+this value might be fixed, set some time in advance, or maybe you need to
 extrapolate from past prices.
 
 One value per interval.
@@ -265,4 +265,3 @@ the scheduler to avoid that.
 Some batteries need regular balancing. We want the scheduler to prefer to
 fully charge the battery weekly, and force it to do so every 20 days.
 (Numbers are an example.)
-

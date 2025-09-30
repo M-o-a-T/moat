@@ -38,4 +38,3 @@ spam
 ----
 
 A very simple hack that introduces random bus signals.
-

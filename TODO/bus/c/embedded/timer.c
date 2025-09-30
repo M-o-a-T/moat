@@ -163,4 +163,3 @@ IN_C void mtimer_cancel(MTIMER mt)
     }
     mt->delay = 0;
 }
-

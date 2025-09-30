@@ -10,7 +10,7 @@ move:
     user: yourname
     parented: false
     # org: org-name
-  dst: 
+  dst:
     name: Codeberg
     api: forgejo
     host: "codeberg.org"
@@ -47,7 +47,7 @@ move:
     migrate: true  # generate a "migrated" README
     parallel: 1
     main: true  # rename "master" branch
-  readme: 
+  readme:
     name: "README.md"  # use LOCATIONS.md if mot removing from source
     content: |
       {% if work.to.src %}
@@ -69,4 +69,3 @@ move:
       * {{repos[k].api.cfg.name}}: {{ repos[k].ext_url }}
       {% endif -%}
       {% endfor -%}
-    

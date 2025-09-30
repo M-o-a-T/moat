@@ -15,7 +15,7 @@ installsystemd:
 installscript:
 	mkdir -p $(PREFIX)/usr/lib/moat/link
 	cp scripts/* $(PREFIX)/usr/lib/moat/link/
-	
+
 	# sigh
 	mkdir -p $(PREFIX)/lib/systemd/system
 	cp systemd/*@.service $(PREFIX)/lib/systemd/system/
@@ -30,4 +30,3 @@ else
 	@echo "Please fix 'python3 -mmoat src path'."
 	@exit 1
 endif
-

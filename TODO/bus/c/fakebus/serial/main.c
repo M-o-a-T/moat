@@ -79,7 +79,7 @@ int main(int argc, char* const* argv)
     fc->verbose = verbose;
 
     sb = sb_alloc();
-    
+
     if(!fc_connect(fc, sockname))
         return 1;
 

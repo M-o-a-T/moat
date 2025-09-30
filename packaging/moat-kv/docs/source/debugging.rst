@@ -42,7 +42,7 @@ somewhat like this::
       test2: 1
     remote_missing: {}  # used in recovery
     tock: 82  # MoaT-KV's global event counter
-    
+
 This is not healthy: The ``missing`` element contains data. You can
 manually mark the offending data as stale::
 
@@ -67,4 +67,3 @@ not just the one you're a client of.
 This action will allow the bad record to re-surface when the node that has
 the record reconnects, assuming that there is one. You can use the ``mark``
 command's ``--deleted`` flag to ensure that it will be discarded instead.
-

@@ -452,5 +452,3 @@ Retrieving this tree with ``moat kv test get -rd ':val'`` would print::
         bar:
           :val: 1
           baz: {':val': 1}
-
-

@@ -9,7 +9,7 @@ dev:
     sys:
       type:
         register: 10
-        reg_type: h 
+        reg_type: h
         type: float
         names:
           1: 1p2w
@@ -17,16 +17,16 @@ dev:
     auth:
       code:
         register: 14
-        reg_type: h 
+        reg_type: h
         type: float
       password:
         register: 24
-        reg_type: h 
+        reg_type: h
         type: float
     bus:
       format:
         register: 18
-        reg_type: h 
+        reg_type: h
         type: float
         values:
           0: n1
@@ -35,7 +35,7 @@ dev:
           3: n2
       rate:
         register: 28
-        reg_type: h 
+        reg_type: h
         type: float
         values:
           0: 2400
@@ -45,7 +45,7 @@ dev:
           5: 1200
       addr:
         register: 20
-        reg_type: h 
+        reg_type: h
         type: float
 
     relay:
@@ -55,7 +55,7 @@ dev:
         type: float
         unit: sec
         scale: -3
-    serial: 
+    serial:
       register: 64512
       reg_type: h
       type: uint

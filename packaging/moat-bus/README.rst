@@ -94,7 +94,7 @@ total transmission rate depends on bus topology and needs to be discovered empir
 
 On a four-wire bus, perfect efficiency would be achieved using ten
 transactions (39.068 bits); however, this is much too large: encoding would
-require 64-bit division. Supporting small CPUs requires limiting 
+require 64-bit division. Supporting small CPUs requires limiting
 
 struggle with 16-bit division. would require a >16-bit division or a
 large lookup table. As both are too much overhead for cheap 8-bit
@@ -202,4 +202,3 @@ MicroPython but complex enough that running an interactive interpreter on
 them makes sense.
 
 Some work to support a Mecrisp Stellaris-based client has been done.
-

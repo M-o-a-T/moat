@@ -48,7 +48,7 @@ bool flash_erase(void *start, u_int32_t len)
 	.NbPages = (len-1) / FLASH_PAGE_SIZE +1,
     };
     HAL_FLASHEx_Erase(&FLASH_EraseInitStruct,&error);
-    
+
     HAL_FLASH_Lock();
     return false;
 }
@@ -211,7 +211,7 @@ char process_control_flash(BusMessage msg, u_int8_t *data, msglen_t len)
             if(flash_ok)
                 (*AppHdr.stop)();
             flash_ok = false;
-            
+
             if(!flash_erase(&AppHdr, nr*FLASH_BLOCK)) {
                 estr = logger("Erase failed");
                 goto err;
@@ -283,7 +283,7 @@ char process_control_flash(BusMessage msg, u_int8_t *data, msglen_t len)
         m = NULL;
         break;
     }
-        
+
     if(m) {
         msg_add_byte(m, (1<<5)|typ);
         send_msg(m);
@@ -346,4 +346,3 @@ void loop_flash() {
     if(flash_ok)
         (*AppHdr.loop)();
 }
-

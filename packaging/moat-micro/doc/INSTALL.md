@@ -8,6 +8,3 @@ build a patched version of MicroPython that includes the *moat.micro* core.
 
 The script ``scripts/install`` does this for you. It needs a configuration
 file. The ``deploy`` subdirectory contains some examples.
-
-
-

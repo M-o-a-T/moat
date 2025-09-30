@@ -10,7 +10,7 @@ import anyio
 import copy
 import logging
 
-from typing import NamedTuple, Any
+from typing import Any, NamedTuple
 
 try:
     from contextlib import asynccontextmanager
@@ -18,8 +18,7 @@ except ImportError:
     from async_generator import asynccontextmanager
 
 from functools import partial
-from importlib.metadata import entry_points, EntryPoint
-from importlib import import_module
+from importlib.metadata import EntryPoint, entry_points
 
 
 class Plugin(NamedTuple):

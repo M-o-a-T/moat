@@ -241,9 +241,7 @@ class BatteryState:
             self.bus.non = await srv.add_path("/System/NrOfModulesOnline", 1)
             self.bus.noff = await srv.add_path("/System/NrOfModulesOffline", 0)
             self.bus.nbc = await srv.add_path("/System/NrOfModulesBlockingCharge", None)
-            self.bus.nbd = await srv.add_path(
-                "/System/NrOfModulesBlockingDischarge", None
-            )
+            self.bus.nbd = await srv.add_path("/System/NrOfModulesBlockingDischarge", None)
             self.bus.cap = await srv.add_path("/Capacity", 4.0)
             self.bus.capi = await srv.add_path("/InstalledCapacity", 5.0)
             self.bus.cons = await srv.add_path("/ConsumedAmphours", 12.3)

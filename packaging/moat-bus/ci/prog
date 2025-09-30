@@ -12,4 +12,3 @@ elif [ -s "${BUILD}$CODE.bin" ] ; then
 else
 	exec $F $DEV
 fi
-

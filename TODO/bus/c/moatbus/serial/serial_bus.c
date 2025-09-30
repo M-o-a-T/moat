@@ -278,4 +278,3 @@ u_int8_t sb_recv_ack(SerBus sb)
     sb->ack_in = 0;
     return c;
 }
-

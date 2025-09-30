@@ -47,7 +47,7 @@ translate([0,20,0]) intersection() {
 
 module hole() {
         module edge() {
-            // cylinder(h=22,d=2,center=true,$fn=16); 
+            // cylinder(h=22,d=2,center=true,$fn=16);
             cube([sx,sx,22], center=true);
         }
     difference() {
@@ -61,10 +61,10 @@ module hole() {
         translate([0,-sxe,0]) rotate(90) edge();
         translate([0,sxe,0]) rotate(-90) edge();
     }
-    
+
     if(ds1) {
     translate([0,0,d_h/2]) rotate([0,-90,0]) cylinder(h=d1/2,d=ds1,$fn=5);
     translate([d1/2-d2,0,d_h/2]) rotate([0,-90,0]) cylinder(h=d1/2,d=ds2);
     }
-    
+
 }

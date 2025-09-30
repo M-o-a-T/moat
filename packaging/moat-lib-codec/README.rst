@@ -57,4 +57,3 @@ objects (as in cbor).
 
 Extensions get the codec as their first argument. They can use it to store
 data, e.g. references. The extension object is available as ``codec.ext``.
-

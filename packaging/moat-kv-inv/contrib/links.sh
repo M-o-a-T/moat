@@ -12,7 +12,7 @@ set -ex
 #(Pdb) pp data['ports'][4]['port'].network.vlan
 #'secure_wire'
 #data['ports'][4]['port'].netaddr[-2]
-## set adr = n.port.netaddr[-2] ~ "/" ~ n.port.netaddr.prefixlen 
+## set adr = n.port.netaddr[-2] ~ "/" ~ n.port.netaddr.prefixlen
 
 {% for n in ports %}
 {%- if n.port.network is defined and n.port.network.vlan is defined %}
@@ -33,4 +33,3 @@ ip addr add {{ n.net6 }} dev {{ name }} || true
 {%- endfor %}
 
 ### END ###
-

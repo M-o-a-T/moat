@@ -64,4 +64,3 @@ Message Encoding
 MoaT-Link supports various encodings, most notably CBOR and msgpack. Its
 native default is CBOR because, unlike msgpack, CBOR's extensions are
 simply normal (but tagged) data structures and thus are introspectable.
-

@@ -45,7 +45,7 @@ enum HDL_ERR {
 #define REFN NULL,
 #define REFN1 NULL
 #else
-#define REF 
+#define REF
 #define REF1
 #define REFN
 #define REFN1

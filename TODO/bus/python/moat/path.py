@@ -104,9 +104,7 @@ class MoatDevPath(_MoatPath):
         to speed up operations.
         """
         if getattr(self, "_stat_cache", None) is None:
-            st = await self._repl.evaluate(
-                f"import os; print(os.stat({self.as_posix()!r}))"
-            )
+            st = await self._repl.evaluate(f"import os; print(os.stat({self.as_posix()!r}))")
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
 
@@ -167,9 +165,7 @@ class MoatDevPath(_MoatPath):
         Create new directory.
         """
         try:
-            return await self._repl.evaluate(
-                f"import os; print(os.mkdir({self.as_posix()!r}))"
-            )
+            return await self._repl.evaluate(f"import os; print(os.mkdir({self.as_posix()!r}))")
         except FileExistsError as e:
             if exist_ok:
                 pass
@@ -232,9 +228,7 @@ class MoatDevPath(_MoatPath):
         """
         self._stat_cache = None
         if not isinstance(data, (bytes, bytearray, memoryview)):
-            raise TypeError(
-                f"contents must be bytes/bytearray, got {type(data)} instead"
-            )
+            raise TypeError(f"contents must be bytes/bytearray, got {type(data)} instead")
         await self._repl.exec(
             f'from ubinascii import a2b_base64 as a2b; _f = open({self.as_posix()!r}, "wb")'
         )
@@ -244,9 +238,7 @@ class MoatDevPath(_MoatPath):
                 block = local_file.read(512)
                 if not block:
                     break
-                await self._repl.exec(
-                    f"_f.write(a2b({binascii.b2a_base64(block).rstrip()!r}))"
-                )
+                await self._repl.exec(f"_f.write(a2b({binascii.b2a_base64(block).rstrip()!r}))")
         await self._repl.exec("_f.close(); del _f, a2b")
         return len(data)
 
@@ -257,9 +249,7 @@ class MoatDevPath(_MoatPath):
         Return iterator over items in given remote path.
         """
         if not self.is_absolute():
-            raise ValueError(
-                f'only absolute paths are supported (beginning with "/"): {self!r}'
-            )
+            raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
         # simple version
         # remote_paths = self._repl.evaluate(f'import os; print(os.listdir({self.as_posix()!r}))')
         # return [(self / p).connect_repl(self._repl) for p in remote_paths]
@@ -474,9 +464,7 @@ class MoatFSPath(_MoatPath):
         Return iterator over items in given remote path.
         """
         if not self.is_absolute():
-            raise ValueError(
-                f'only absolute paths are supported (beginning with "/"): {self!r}'
-            )
+            raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
         d = await self._req("dir", p=self.as_posix())
         for n in d:
             yield self / n
@@ -540,9 +528,7 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
         ):
             if cross:
                 try:
-                    data = await anyio.run_process(
-                        [cross, str(src), "-o", "/dev/stdout"]
-                    )
+                    data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
                 except CalledProcessError as exc:
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     pass

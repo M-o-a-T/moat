@@ -17,5 +17,5 @@ vars:
 
 # Whenever the value at 'src', changes, this code multiplies it by
 # 'factor', adds 'offset', and writes it to 'dst'.
-# 
+#
 # This takes ~0.025 seconds, end-to-end, on a Raspberry Pi 3.

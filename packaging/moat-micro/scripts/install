@@ -7,7 +7,7 @@ if [ $# == 0 ] ; then
     exit 1
 fi
 
-if [ -x "./mt" ] ; then 
+if [ -x "./mt" ] ; then
     M=./mt
     MPY=ext/micropython
     export PYTHONPATH="$(pwd)"
@@ -94,4 +94,3 @@ echo "Installing MoaT. Hold tight."
 echo ""
 
 $M -VVV ${cmd[@]} micro setup -c cfg.r -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
-

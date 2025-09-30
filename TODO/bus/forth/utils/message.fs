@@ -8,7 +8,7 @@ moat msg also
 %msg definitions
 : ? ( msg -- )
   dup __ prio @ ?dup if ." Prio:" . then
-  dup __ pos @ dup 3 rshift ." Pos:" u.0 
+  dup __ pos @ dup 3 rshift ." Pos:" u.0
   7 and ?dup if [char] + emit u.0 then
   space
   dup __ len @ ." Len:" .

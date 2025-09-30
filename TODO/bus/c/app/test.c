@@ -43,5 +43,3 @@ void stop()
 {
     logger("APP stop");
 }
-
-

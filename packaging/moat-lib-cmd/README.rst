@@ -54,7 +54,7 @@ No transport
                 return "OK nice"
 
         raise ValueError(f"Unknown: {msg !r}")
-        
+
     srv=Called()
     client=MsgSender(srv)
 
@@ -65,7 +65,7 @@ No transport
         async for nr, in st:
             print(nr)  # 5, 6, .. 14
         assert st.a[0] == "OK I'm done"
-        
+
     async with client.cmd("alive").stream_out() as st:
         for i in range(3):
             await st.send(i)
@@ -82,7 +82,7 @@ API Specification
 
 TODO
 
-    
+
 Transport Specification
 =======================
 
@@ -358,4 +358,3 @@ S E D Data
 - - - that's all
 - - + thx
 = = = ====
-

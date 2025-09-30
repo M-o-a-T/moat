@@ -54,7 +54,7 @@ static void send_serial(int8_t dst, u_int8_t code, u_int8_t flag, u_int8_t timer
     msg_add_data(m, cpu_serial, cpu_serial_len);
     if (flag)
         msg_add_byte(m, flag);
-    if (timer) 
+    if (timer)
         msg_add_byte(m, timer);
     m->src = (my_addr == 0xff) ? -4 : my_addr;
     m->dst = dst;
@@ -273,7 +273,7 @@ static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
 static char process_control(BusMessage msg)
 {
     msglen_t len = msg_length(msg);
-    if (len < 1) 
+    if (len < 1)
         return 0;
     u_int8_t *data = msg_start(msg);
     switch(*data >> 5) {
@@ -300,5 +300,3 @@ IN_C char process_msg_in(BusMessage msg)
     msg_free(msg);
     return res;
 }
-
-

@@ -37,7 +37,7 @@ You can now retrieve the root value::
    "Testing"
    $
 
-As the purpose of MoaT-KV is to be a *distributed* key-value storage, 
+As the purpose of MoaT-KV is to be a *distributed* key-value storage,
 you can start another server on a different host::
 
    two $ moat kv -C server.mqtt.uri=mqtt://your-server:1883 server $(hostname)
@@ -110,7 +110,7 @@ hierarchically, (among other reasons) for ease of retrieval::
         four:
           _: 1234
           five:
-            _: 
+            _:
               one: 1
               two: 2
     $
@@ -178,14 +178,14 @@ printed in decimal form. While you also could use ``:0x…`` in place of
    this feature without a very good reason. "My key consists of three
    random integers and I want to avoid the overhead of storing a lot of
    intermediate entries" would be an example of a good reason.
-   
+
    MoaT-KV also allows you to use both ``False``, an integer zero, and a
    floating-point zero as path elements. This is dangerous because Python's
    comparison and hashing operators treat them as being equal. (Same for
    ``True`` and 1; same for floating point numbers without fractions and
    the corresponding integers.)
 
-   Floating point numbers are also dangerous for a different reason: floats 
+   Floating point numbers are also dangerous for a different reason: floats
    that are not a fractional power of two, such as 1/3, are inexact.
    Thus you might end up with five different entries for what was meant to
    be ``1/3``.
@@ -651,7 +651,7 @@ with the codec list named ``floatval``. As not every user needs stringified
 numbers, we also need to tell MoaT-KV which users to apply this codec to::
 
     $ mkv auth user modify --aux codec=floatval name=joe
-	
+
 Thus, Joe will read and write ``value`` entries as strings::
 
     $ mkv data monitor.a.b.c.value set -v : 99.5

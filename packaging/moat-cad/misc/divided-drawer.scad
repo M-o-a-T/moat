@@ -46,7 +46,7 @@ drawBackSpace = 0.2;
 /* [Your Printer Settings] */
 //the layer width that you print with
 layerWidth=0.45;
-//the layer height that you print with 
+//the layer height that you print with
 layerHeight=0.3;
 //first layer height
 firstLayerHeight=0.35;
@@ -88,14 +88,14 @@ module Drawer()
 {
     y = -drawDepth/2;
     z = drawHeight/2;
-    
+
     startX = -drawWidth/2 + drawOutsideWidth + compartWidth/2;
     startY = -drawDepth/2 + drawOutsideWidth + compartDepth/2 + drawFrontExtraDepth;
     stepX = compartWidth + drawDividerWidth;
     stepY = compartDepth + drawDividerWidth;
     indentWidth = drawWidth - drawOutsideWidth*2;
     indentDepth = drawDepth - drawOutsideWidth*2;
-    
+
     difference()
     {
         DrawerBase();
@@ -108,12 +108,12 @@ module Drawer()
             DrawerBase(spaced=1);
     }
 
-    translate([0,y,0]) HandleThin();    
+    translate([0,y,0]) HandleThin();
 }
 
 module DrawerTongue()
 {
-    if(tongueHeight) 
+    if(tongueHeight)
     translate([0,drawDepth/2,0])
     hull() {
         translate([tongueWidth/2-smoothRadius,0,tongueHeight-smoothRadius]) rotate([90,0,0]) cylinder(h=drawOutsideWidth,d=smoothRadius*2);
@@ -127,7 +127,7 @@ module DrawerSpace()
     if(tongueHeight)
         translate([-drawHorSpace,drawDepth/2-drawHorSpace-_d1,0])
         hull() {
-            translate([-tongueWidth/2,-drawOutsideWidth,tongueHeight+drawOutsideWidth*sqrt(2)]) 
+            translate([-tongueWidth/2,-drawOutsideWidth,tongueHeight+drawOutsideWidth*sqrt(2)])
                 rotate([45,0,0])
                 cube([tongueWidth+drawHorSpace*2,(drawOutsideWidth+drawHorSpace+_d2)*sqrt(2),_d1]);
             translate([-tongueWidth/2,-drawOutsideWidth-_d1,-tongueHeight-smoothRadius])
@@ -167,7 +167,7 @@ module HandleThin()
                 translate([-(startDiam+middleDiam)/2,-startDiam/2,0]) cube([startDiam+middleDiam,startDiam/2,height]);
                 translate([-(startDiam+middleDiam)/2,-startDiam/2,-_d1]) cylinder(d=startDiam, h=height+_d2, $fn=32);
                 translate([(startDiam+middleDiam)/2,-startDiam/2,-_d1]) cylinder(d=startDiam, h=height+_d2, $fn=32);
-                translate([0,handleWidth+_d1+layerWidth,0]) 
+                translate([0,handleWidth+_d1+layerWidth,0])
                     cube([handleWidth*2, handleWidth*2, height*2.1], center=true);
             }
             translate([0,-length,0]) cylinder(d=endDiam, h=height, $fn=32);
@@ -179,13 +179,13 @@ module HandleThin()
                 translate([0,-length,-_d1]) cylinder(d=endDiam+layerWidth*3, h=layerHeight+_d2, $fn=32);
                 translate([-(endDiam+layerWidth*(ringPasses+4))/2,-length+firstLayerWidth/2,-_d1]) cube([endDiam+layerWidth*(ringPasses+4),(endDiam+layerWidth*(ringPasses+3))/2+.01,layerHeight+_d2]);
             }
-            for(x=[0,1,2,3,4]) 
+            for(x=[0,1,2,3,4])
             translate([0,-length,0]) rotate(45*x) translate([-endDiam+5*layerWidth,-firstLayerWidth/2,0]) cube([4*layerWidth,firstLayerWidth,layerHeight]);
         }
-        if(0)translate([0,endDiam/2-cubeSize/sqrt(2)-length,-_d1]) 
+        if(0)translate([0,endDiam/2-cubeSize/sqrt(2)-length,-_d1])
         rotate([45,0,0])
             cube([cubeSize,cubeSize,cubeSize], center=true);
-        if(0)translate([0,layerWidth,cubeSize*(1+1/sqrt(2))-endDiam/sqrt(2)-layerWidth]) 
+        if(0)translate([0,layerWidth,cubeSize*(1+1/sqrt(2))-endDiam/sqrt(2)-layerWidth])
         rotate([-45,0,0])
             cube([cubeSize,cubeSize,cubeSize], center=true);
         translate([-cubeSize/2,-smoothRadius*tan(slope)-layerWidth,-0.01])
@@ -195,13 +195,13 @@ module HandleThin()
         translate([0,-length,knobPlus]) sphere(d=endDiam-layerWidth*5, $fn=32);
         if(0) translate([0,-lengthOld,0]) sphere(d=endDiamOld-layerWidth*2, $fn=32);
     }
-   
-     
+
+
 }
 
 module CenterCube(size)
 {
-    translate([0,0,size[2]/2]) 
+    translate([0,0,size[2]/2])
         cube(size=size,center=true);
 }
 
@@ -210,14 +210,14 @@ module SmoothCube(size)
     sr2 = smoothRadius*2;
     hull()
     {
-        
+
         translate([0,0,size[2]/2])
         {
             cube([size[0], size[1]-sr2, size[2]-sr2], center=true);
             cube([size[0]-sr2, size[1], size[2]-sr2], center=true);
             cube([size[0]-sr2, size[1]-sr2, size[2]], center=true);
         }
-        
+
         for (x=[-1,1]) for (y=[-1,1])
         {
             translate([x*(size[0]/2-smoothRadius), y*(size[1]/2-smoothRadius), smoothRadius])
@@ -228,7 +228,7 @@ module SmoothCube(size)
             translate([x*(size[0]/2-smoothRadius), y*(size[1]/2-smoothRadius), size[2]])
                 cylinder(r=smoothRadius, h=_d1, $fn=smoothQuality);
         }
-        
+
     }
 }
 
@@ -248,6 +248,6 @@ module SmoothCubeS(hs,sx,sy,sz)
             translate([x*(sx/2-smoothRadius), y*(sy/2-smoothRadius), sz])
                 cylinder(r=smoothRadius, h=_d1, $fn=smoothQuality);
         }
-        
+
     }
 }

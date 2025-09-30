@@ -66,4 +66,3 @@ reset inputs.
 MoaT hardware designs support this with an USB plug with external power
 control inputs, as well as a small hub that includes a GPIO chip if the
 test host doesn't supply 3.3V pins.
-

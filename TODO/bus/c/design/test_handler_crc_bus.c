@@ -219,7 +219,7 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
         msg_read_header(mm);
         if(msg_len+msg->hdr_len == msg_length(mm))
             assert(memcmp(msg_start(msg)-msg->hdr_len,msg_start(mm)-mm->hdr_len,msg_len+msg->hdr_len));
-            
+
         // Owch
         u_int onf = bad[N][n_faults];
 

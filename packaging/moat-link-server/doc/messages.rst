@@ -72,4 +72,3 @@ Argument: Path.
 
 Reply: the dataset at this path, consisting of the actual data and the
 metadata.
-

@@ -2,14 +2,15 @@
 
 import sys
 import os
-sys.path.insert(0,os.curdir)
+
+sys.path.insert(0, os.curdir)
 
 from moat.util import CFG, yload, merge, ensure_cfg
 
 from moat.db import database
-from moat.label.model import LabelTyp,Label
-from moat.box.model import BoxTyp,Box
-from moat.thing.model import ThingTyp,Thing
+from moat.label.model import LabelTyp, Label
+from moat.box.model import BoxTyp, Box
+from moat.thing.model import ThingTyp, Thing
 from moat.util import yload
 from pathlib import Path
 from sqlalchemy import select
@@ -17,73 +18,76 @@ import click
 
 ensure_cfg("moat.db")
 
+
 @click.command
 @click.argument("config")
 def main(config):
-    p=Path(config)
-    merge(CFG,yload(p.read_text(), attr=True), replace=True)
-    data=yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
-    
+    p = Path(config)
+    merge(CFG, yload(p.read_text(), attr=True), replace=True)
+    data = yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
+
     with database(CFG) as db:
-        for k,v in data.items():
+        for k, v in data.items():
             if "t" not in v:
                 continue
             with db.begin() as s:
-                if v.t%10 == 4:
-                    typ="tray4"
-                    n=270
-                elif v.t%10 == 2:
-                    typ="tray2"
-                    n=80
+                if v.t % 10 == 4:
+                    typ = "tray4"
+                    n = 270
+                elif v.t % 10 == 2:
+                    typ = "tray2"
+                    n = 80
                 else:
-                    typ="tray1"
-                    n=80
+                    typ = "tray1"
+                    n = 80
 
                 try:
-                    typ=db.one(LabelTyp,name=typ)
+                    typ = db.one(LabelTyp, name=typ)
                 except KeyError:
-                    typ=LabelTyp(name=typ,code=1000 if v.t%10==4 else 100000, count=n)
+                    typ = LabelTyp(name=typ, code=1000 if v.t % 10 == 4 else 100000, count=n)
                     db.add(typ)
                     db.flush()
 
                 try:
                     if "code" in v:
-                        lab=db.one(Label,labeltyp=typ,code=v.code)
+                        lab = db.one(Label, labeltyp=typ, code=v.code)
                     else:
-                        lab=db.one(Label,labeltyp=typ,text=str(k))
+                        lab = db.one(Label, labeltyp=typ, text=str(k))
                 except KeyError:
-                    lab=Label(labeltyp=typ,text=str(k),sheet_id=-1)
-                    lab.code=v.code if "code" in v else typ.next_code()
+                    lab = Label(labeltyp=typ, text=str(k), sheet_id=-1)
+                    lab.code = v.code if "code" in v else typ.next_code()
                     db.add(lab)
                     db.flush()
 
                 par = f"mag_{v.t}"
                 cld = f"mag_{v.t}_c"
                 try:
-                    par=db.one(BoxTyp,name=par)
+                    par = db.one(BoxTyp, name=par)
                 except KeyError:
-                    par = BoxTyp(name=par, pos_x=v.t//100, pos_y=(v.t//10)%10, pos_z=1, labeltyp=typ)
+                    par = BoxTyp(
+                        name=par, pos_x=v.t // 100, pos_y=(v.t // 10) % 10, pos_z=1, labeltyp=typ
+                    )
                     db.add(par)
                     db.flush()
 
-                    if v.t//10 != 11:
-                        par.usable=False
+                    if v.t // 10 != 11:
+                        par.usable = False
                         cld = BoxTyp(name=cld)
                         cld.parents.add(par)
                         db.add(cld)
                         db.flush()
                 else:
-                    if v.t//10 != 11:
-                        cld = db.one(BoxTyp,name=cld)
+                    if v.t // 10 != 11:
+                        cld = db.one(BoxTyp, name=cld)
 
-                if v.t//10 == 11:
-                    cld=par
-                
-                box=f"mag_{k}"
+                if v.t // 10 == 11:
+                    cld = par
+
+                box = f"mag_{k}"
                 try:
-                    box=db.one(Box,name=box)
+                    box = db.one(Box, name=box)
                 except KeyError:
-                    box=Box(name=box,boxtyp=par)
+                    box = Box(name=box, boxtyp=par)
                     db.add(box)
                 if lab is not None:
                     lab.box = box
@@ -91,58 +95,58 @@ def main(config):
 
         try:
             with db.begin() as s:
-                thp = db.one(ThingTyp,name="Bauteil")
+                thp = db.one(ThingTyp, name="Bauteil")
         except KeyError:
             print("No type 'Bauteil'. Not imported.")
             thp = None
-        
-        for k,v in data.items():
+
+        for k, v in data.items():
             if "t" not in v:
                 continue
             with db.begin() as s:
-                box=db.one(Box,name=f"mag_{k}")
-                if v.t==111:
-                    bx=box
+                box = db.one(Box, name=f"mag_{k}")
+                if v.t == 111:
+                    bx = box
                     pass  # already did everything
                 else:
-                    ctyp=db.one(BoxTyp,name=f"mag_{v.t}_c")
-                    for x in range(1,box.boxtyp.pos_x+1):
-                        vs=v[x] if box.boxtyp.pos_x>1 else v
+                    ctyp = db.one(BoxTyp, name=f"mag_{v.t}_c")
+                    for x in range(1, box.boxtyp.pos_x + 1):
+                        vs = v[x] if box.boxtyp.pos_x > 1 else v
 
-                        for y in range(1,box.boxtyp.pos_y+1):
+                        for y in range(1, box.boxtyp.pos_y + 1):
                             try:
-                                vr=vs[y] if box.boxtyp.pos_y>1 else vs
+                                vr = vs[y] if box.boxtyp.pos_y > 1 else vs
                             except KeyError:
                                 continue
                             except IndexError:
                                 breakpoint()
                                 continue
 
-                            if v.t//10==11:
-                                bx=box
+                            if v.t // 10 == 11:
+                                bx = box
                             else:
                                 bx = f"mag_{k}_{x}{y}"
                                 try:
-                                    bx=db.one(Box,name=bx,container=box)
+                                    bx = db.one(Box, name=bx, container=box)
                                 except KeyError:
-                                    bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
+                                    bx = Box(name=bx, container=box, boxtyp=ctyp, pos_x=x, pos_y=y)
                                     db.add(bx)
                                 else:
-                                    bx.pos_x=x
-                                    bx.pos_y=y
+                                    bx.pos_x = x
+                                    bx.pos_y = y
                                 db.flush()
-                            
+
                             if thp is not None:
                                 if v.t == 111:
-                                    vr=v[1]
-                                if not isinstance(vr,str):
+                                    vr = v[1]
+                                if not isinstance(vr, str):
                                     breakpoint()
                                 elif vr[0] != "_":
-                                    nn=f"c_{k}" if vr is v else f"c_{k}_{x}{y}"
+                                    nn = f"c_{k}" if vr is v else f"c_{k}_{x}{y}"
                                     try:
-                                        th=db.one(Thing,name=nn)
+                                        th = db.one(Thing, name=nn)
                                     except KeyError:
-                                        th=Thing(name=nn, thingtyp=thp, container=bx, descr=vr)
+                                        th = Thing(name=nn, thingtyp=thp, container=bx, descr=vr)
                                         db.add(th)
 
 

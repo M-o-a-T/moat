@@ -78,7 +78,7 @@ Setup
     plugins: ['auth_anonymous']
     auth:
         allow-anonymous: true
-    
+
   If you have devices that use MQTT directly, modify the
   ``transparent`` list to include your current MQTT prefixes.
 
@@ -107,7 +107,7 @@ Setup
 * Run ``moat kv ha add light foo bar``.
 
   A new light should show up in the Home Assistant GUI.
-  
+
   You can try to turn it on, but it will go off by itself a second or two
   later because there's no device yet.
 
@@ -120,4 +120,3 @@ Setup
 * Adding an actual device that monitors the light's MoaT-KV command entry / its
   [MoaT-KV-]MQTT command topic, actually affects the hardware, and changes the
   state, is your job.
-

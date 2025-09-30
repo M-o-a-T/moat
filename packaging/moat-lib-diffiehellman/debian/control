@@ -15,4 +15,3 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),
 Description: A Pythonic implementation of the Diffie-Hellman key exchange protocol
   The Python Diffie-Hellman key exchange library.
-

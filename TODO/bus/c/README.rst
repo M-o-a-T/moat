@@ -65,4 +65,3 @@ Definitions
 * MOAT_SER_INBUF_SIZE
 
   buffer for incoming non-message data, enables `sb_getchar`.
-

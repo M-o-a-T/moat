@@ -21,4 +21,3 @@ This allows you to
    * display which VLANs need to be configured on a switch port
    * generate a network link path from A to B
    * auto-update DNS entries when hosts are added, moved, or modified
-

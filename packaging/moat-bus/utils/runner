@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage: runner unixpipe cmd args…
-# 
+#
 
 if test $# -lt 2 ; then
     echo Usage: $0 unixpipe cmd args…
@@ -28,4 +28,3 @@ while read a ; do
         PID=
     fi
 done < "$PN"
-

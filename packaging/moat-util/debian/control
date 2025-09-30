@@ -21,4 +21,3 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-systemd,
 Description: Utilities for MoaT
  This package contains a heap of utility code used by the rest of the MoaT system.
-

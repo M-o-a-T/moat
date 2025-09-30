@@ -71,4 +71,3 @@ static inline bool mf_is_stopped(minifloat *m) { return m->m == 0; }
 IN_C u_int8_t mf_random(u_int16_t lo, u_int16_t hi);
 
 #endif
-

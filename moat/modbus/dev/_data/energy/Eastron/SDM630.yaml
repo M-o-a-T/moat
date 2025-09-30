@@ -6,13 +6,13 @@ dev:
     demand:
       time:
         register: 0
-        reg_type: h 
+        reg_type: h
         type: float
         unit: min
       period:
         register: 2
         type: float
-        reg_type: h 
+        reg_type: h
         unit: min
         names:
           0: now
@@ -25,17 +25,17 @@ dev:
     sys:
       voltage:
         register: 6
-        reg_type: h 
+        reg_type: h
         unit: V
         type: float
       current:
         register: 8
-        reg_type: h 
+        reg_type: h
         unit: A
         type: float
       type:
         register: 10
-        reg_type: h 
+        reg_type: h
         type: float
         names:
           1: 1p2w
@@ -44,12 +44,12 @@ dev:
     relay:
       1:
         pulse_width:
-    serial: 
+    serial:
       register: 42
       reg_type: h
       type: uint
       len: 2
-      
+
 
   limit:
     regs: 40

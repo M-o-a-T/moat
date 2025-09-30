@@ -25,4 +25,3 @@ Description: An async modbus client/server library
  with arbitrary length and encapsulating its encoding and decoding rules.
  .
  This module was previously named "asyncmodbus".
-

@@ -33,4 +33,3 @@ Then, add these items as appropriate::
       runner:
         prefix: !P :.distkv.run
         state: !P :.distkv.state
-    

@@ -70,6 +70,6 @@ struct mtick {
 };
 
 // Setup data and add to chain. The minifloat is untouched.
-IN_C void mtick_init(MTICK mt, mtick_proc proc);    
+IN_C void mtick_init(MTICK mt, mtick_proc proc);
 
 #endif

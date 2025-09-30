@@ -74,4 +74,3 @@ tool:
       - black
       - pylint
       - pytest
-

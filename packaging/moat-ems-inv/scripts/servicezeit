@@ -34,7 +34,7 @@ CFG = dict(
 @click.option("-c","--config", type=click.File("r"), help="config file")
 @click.option("-d","--debug", is_flag=True, help="debug me?")
 async def run(config, debug):
-    """ 
+    """
     A Modbus server for the ServiceZeit/IntegraSun interconnect.
     Implements "integrasun Datenpunktliste Modbus kurz".
     """
@@ -151,7 +151,7 @@ class Server:
             for x in range(65536):
                 wd.value = x
                 await anyio.sleep(0.25)
-    
+
 
 if __name__ == "__main__":
     run(_anyio_backend="trio")

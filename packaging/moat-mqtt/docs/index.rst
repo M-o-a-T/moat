@@ -63,4 +63,3 @@ News and updates are listed in the :doc:`changelog`.
    changelog
    references/index
    license
-

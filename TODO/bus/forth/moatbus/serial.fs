@@ -117,7 +117,7 @@ __data
 __seal
 
 : ? ( hdl -- )
-  ." Ser:" dup hex. 
+  ." Ser:" dup hex.
   dup __ state @ ~s .name space
   dup __ writeq empty? 0= if ." WriteQ " dup __ writeq ? then
   dup __ readq empty? 0= if ." ReadQ " dup __ readq ? then
@@ -353,7 +353,7 @@ task subtask class: _t_timeout
         1 r@ in_crc_err +!
 #endif
       else
-        r@ __ msg_in @ 
+        r@ __ msg_in @
         0 r@ __ msg_in !
         dup %msg >read
         dup %msg reduce

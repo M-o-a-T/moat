@@ -63,5 +63,3 @@ The data dictionary specifies addressable data items. It doesn't say
 whether to store them in the ``data``, ``control``, or ``state``
 subhierarchies, nor whether to collate entries to dictionaries or spread
 them to distinct nodes.
-
-

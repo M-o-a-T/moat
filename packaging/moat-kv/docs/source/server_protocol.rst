@@ -4,7 +4,7 @@ MoaT-KV's server protocol
 
 MoaT-KV instances broadcast messages via `MQTT <https://mqtt.org>`.
 The payload is encoded with `msgpack
-<https://github.com/msgpack/msgpack/blob/master/spec.md>` and sent 
+<https://github.com/msgpack/msgpack/blob/master/spec.md>` and sent
 to topics (MQTT) with a configurable prefix.
 
 
@@ -42,7 +42,7 @@ Chain
 A chain, in MoaT-KV, is a bounded list of ordered ``(node, tick)`` pairs.
 
 * ``node`` is the node that effected a change.
-  
+
 * ``tick`` is a node-specific counter which increments by one when any
   entry on that node is changed.
 
@@ -78,7 +78,7 @@ sacrificing reliability.
 The default chain length should be two larger than the maximum of
 
 * the number of partitions a MoaT-KV system might break up into,
-  
+
 * the number of hosts within one partition that might change any single entry.
   Ideally, this number should be two: one for the host that does it as a
   matter of fact, e.g. a measurement system, and one for any manual intercession.
@@ -106,7 +106,7 @@ message with a ``tock`` higher than its own, the local ``tock`` is set to
 the incoming message's ``tock`` value.
 
 The main purpose of this value is to establish rough temporal consistency
-(in the absence of network splits). Secondarily, when a split is healed, 
+(in the absence of network splits). Secondarily, when a split is healed,
 their ``tock`` value resolves the resulting Actor conflict. (The tie
 breaker is the name of the current group leaders.)
 
@@ -256,7 +256,7 @@ This message's change chain refers to the ``ping`` it replies to.
 ticks
 -----
 
-This element contains a map of (node ⇒ last_tick_seen), sent to verify that 
+This element contains a map of (node ⇒ last_tick_seen), sent to verify that
 
 missing
 -------
@@ -337,7 +337,7 @@ affect the regular ``ping`` interval, on nodes that already participate in
 the protocol. A new node, however, may assume that the ``ping`` message it
 sees is authoritative (unless the "new"  ``ping`` is followed by one with a
 non-empty chain). In case of multiple nodes joining a new network, the last
-``ping`` seen shall be the next entry in the chain. 
+``ping`` seen shall be the next entry in the chain.
 
 The new node is required to contact a node in the (non-empty) ping chain it
 attaches to, in order to download its current set of entries, before
@@ -447,4 +447,3 @@ readable.
 
 ``!bin`` encodes binary data as ASCII, i.e. a simple YAML string. YAML's
 default is ``base64`` which cannot be easily edited.
-

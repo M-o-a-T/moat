@@ -14,4 +14,3 @@ Description: node-red files for MoaT
  This module contains MoaT support modules for node-red.
  .
  Usage: "npm install /usr/share/moat/nodered/*"
-

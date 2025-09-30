@@ -57,7 +57,7 @@ void loop_serial()
 
 void *msg_writer(void *arg)
 {
-       
+
     while (true) {
 #ifdef MOAT_SERIAL
         while (SB->s_out != S_IDLE) {

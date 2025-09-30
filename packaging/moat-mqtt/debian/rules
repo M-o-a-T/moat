@@ -9,5 +9,5 @@ export PYBUILD_NAME=moat-mqtt
 execute_after_dh_install:
 	$(MAKE) install PREFIX=debian/moat-mqtt
 
-override_dh_auto_test: 
+override_dh_auto_test:
 	: no test

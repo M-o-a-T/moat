@@ -34,7 +34,7 @@ timeout:
   delete: 100000
 
   # Ping messages every … seconds
-  ping: 
+  ping:
     every: 10
     timeout: 22  # no ping received
     delete: 1800  # still no ping received
@@ -43,7 +43,7 @@ timeout:
     min: 20  # answering old messages. Should be > ping timeout
 
   # client reconnect
-  connect: 
+  connect:
     initial: 5
     max: 30
     factor: 1.3
@@ -75,11 +75,8 @@ notify:
     - ntfy
   ntfy:
     # See https://docs.nfty.sh/
-    
+
     url: https://ntfy.sh.example/
     # token: tk_whatever
     # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
     # topic: my_secret_topic
-
-
-

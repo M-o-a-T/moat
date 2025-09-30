@@ -11,7 +11,7 @@ device is described by a YAML file.
 The "include" key contains a list of other device description files to
 include. Later values supersede earlier ones.
 
-The "regs" key contains a hierarchy of register descriptions. 
+The "regs" key contains a hierarchy of register descriptions.
 
 The "dev" key describes the device.
 

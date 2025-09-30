@@ -3,7 +3,7 @@
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from moat.mqtt.codecs import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
 from moat.mqtt.errors import CodecException, MQTTException, NoDataException

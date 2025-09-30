@@ -14,4 +14,3 @@ config timeserver 'ntp'
 	list server 'a.rock.smurf.noris.de'
 	list server 'bed.s.smurf.noris.de'
 	option use_dhcp '0'
-

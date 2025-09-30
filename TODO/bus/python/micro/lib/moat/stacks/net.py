@@ -36,9 +36,7 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
             while True:
                 n += 1
                 if srv is None:
-                    srv = await tg.spawn(
-                        uasyncio.run_server, make_stack, self.host, self.port
-                    )
+                    srv = await tg.spawn(uasyncio.run_server, make_stack, self.host, self.port)
 
                 s = await q.get()
                 if not multiple:

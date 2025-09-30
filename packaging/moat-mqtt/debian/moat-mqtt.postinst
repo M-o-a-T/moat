@@ -1,4 +1,3 @@
 #!/bin/sh
 
 systemd-sysusers --no-pager /usr/lib/sysusers.d/moat-mqtt.conf
-

@@ -29,7 +29,7 @@ static bool stream_timer(MTICK tick)
 	MoatStream str = (MoatStream)tick;
 	if(!str->sendq_len)
 		return false;
-	
+
 }
 
 void stream_send(MoatStream str, BusMessage m)
@@ -902,7 +902,7 @@ x75_T3 (MoatStream state)
 
 /*
  * "OOPS" time. The other side sent a bad frame.
- * 
+ *
  * There are some differences between X.25, X.75 and Q.921 in this area,
  * but given a conforming implementation on the other side this code
  * should not be executed anyway. (Yeah, right...)
@@ -1041,7 +1041,7 @@ x75_check_pending (MoatStream state, char fromLow)
 	/*
 	 * Send an ack packet if we didn't do it implicitly with a data frame,
 	 * above.
-	 * 
+	 *
 	 * TODO: Delay the ack if we can determine that an immediate ack is
 	 * not needed, i.e. if the line delay is lower than (k-1) times the
 	 * average(?) frame length.
@@ -1136,7 +1136,7 @@ pull_up (MoatStream state, uchar_t n_r)
 
 /*
  * Process incoming frames.
- * 
+ *
  * This one's a biggie. Annex B of Q.921 is very helpful if you try to wade
  * through it all. Turning optimization on (having a compiler with a correct
  * optimizer may be necessary...) is a good way to make sure that the kernel
@@ -1937,7 +1937,7 @@ x75_recv (MoatStream state, char cmd, mblk_t * mb)
 		case L2_XID:			  /* TODO: Do something about XID frames. */
 			break;
 		case L2_FRMR:
-		case L2_FRMR | L2__CMD:	/* technically an invalid frame, but replying with 
+		case L2_FRMR | L2__CMD:	/* technically an invalid frame, but replying with
 									FRMR here is _bad_ */
 			printf("%sERR_D 3\n",KERN_INFO );
 			err2 = msg_up (state, MDL_ERROR_IND, ERR_D);
@@ -1973,7 +1973,7 @@ x75_recv (MoatStream state, char cmd, mblk_t * mb)
 int
 x75_send (MoatStream state, char isUI, mblk_t * mb)
 {
-	if (msgdsize(mb) <= 0) 
+	if (msgdsize(mb) <= 0)
 		freemsg(mb);
 	else if (isUI)
 		S_enqueue (&state->UI, mb);

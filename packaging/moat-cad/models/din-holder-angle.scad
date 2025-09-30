@@ -16,7 +16,7 @@ hook_off=2; // [0:0.5:5]
 // DIN rail
 brim=35.1;
 rail_height=1.1;
-    
+
 // DIN rail hook
 spring_l=15;
 spring_d=2.5;
@@ -40,7 +40,7 @@ translate([_d1,0,_d1-wall]) {
     translate([0,-rail_length,0])
         cube([brim,rail_length,wall*2.5+hook_off]);
 //    polygon([[0,-rail_length],[0,0],[brim,0],[brim,-rail_length]]);
-    
+
 translate([0,-rail_length,hook_off])
     din_rail_hook(hook_strength);
 }
@@ -61,7 +61,7 @@ module rail(depth, dy=7.5, miter=1, edge=0, edge_p=0.75, d=0, w2=0) {
     offx=5;
     ww=w2?w2:w;
     miterw=w2?miter*w/w2:miter;
-    
+
     linear_extrude(depth)
     polygon([[0,0],[0,offx],[dy-ww,offx+miterw*offx],[dy-ww,dx-offx-(miterw*offx)],
         [0,dx-offx],[0,dx],[w,dx],[w,dx-offx+w+miter*(offx-2*w)],[dy-edge,dx-offx+w+d],[dy+d,dx-offx+w+edge*edge_p+d],

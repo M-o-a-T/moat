@@ -30,7 +30,7 @@ KNX is a serial bus for building control.
 `moat.kv-knx <https://github.com/M-o-a-T/distknx>`__ connects values stored
 in moat.kv to devices on the KNX bus.
 
- 
+
 1wire
 =====
 
@@ -85,5 +85,3 @@ Wago I/O controllers
 
 The German company `WAGO Kontakttechnik <https://www.wago.com>`__ makes the
 ``750-*`` line of extensible rugged controllers with various modules.
-
-

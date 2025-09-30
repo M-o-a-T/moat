@@ -270,7 +270,7 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off)
 }
 
 
-// prepare a buffer for sending    
+// prepare a buffer for sending
 void msg_start_extract(BusMessage msg)
 {
     msg_add_header(msg);
@@ -476,10 +476,9 @@ void msg_fill_crc(BusMessage msg, u_int8_t frame_bits, u_int16_t crc, u_int8_t c
     u_int16_t bits = m_bits+1+crc_bits;
     bits = ((bits-1)/frame_bits+1)*frame_bits; // round up to frame_bits
     bits -= m_bits+1+crc_bits;
-    
+
     if(bits)
         msg_add_chunk(msg, 0, bits);
     msg_add_chunk(msg, (bits>7), 1);
     msg_add_chunk(msg, crc, crc_bits);
 }
-

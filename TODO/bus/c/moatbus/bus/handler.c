@@ -668,7 +668,7 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     h->want_prio = bits & ~(bits-1);
     // this leaves the lowest-numbered bit turned on
     // thus we separate our prio from the other sender's
-    
+
     // serves no purpose except for logging
     // h_report_error(h, ERR_COLLISION);
     h_debug(h,"WColl x%x %c",bits, settled?'y':'n');

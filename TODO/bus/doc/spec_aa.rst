@@ -130,7 +130,7 @@ reason instead. See below.
 
 
 * bit 4: address is random / connection is temporary.
-  
+
   A client should set this bit if it has created a random serial# and uses
   it to register for the first time. The server *must* NACK the address
   if this bit is set and it has ever seen the address before.
@@ -188,7 +188,7 @@ impossible).
 Data Problem: Reason codes
 --------------------------
 
-These 
+These
 
 * 0: unspecified
 
@@ -218,5 +218,3 @@ Server S1  12   0  38 12 34 56 78 01 0A
                    [ 2.5 seconds pass ]
 ---------------------------------------
 Client 12  S0   1  01
-
-

@@ -28,5 +28,3 @@ modes:
     soc_low: 0.25
     soc_low_zero: 0.2
     soc_low_ok: 0.3
-
-

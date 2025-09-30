@@ -48,4 +48,3 @@ config interface '{{ name }}'
 {%- endif %}
 	option delegate '0'
 {% endfor %}
-

@@ -5,11 +5,11 @@ index 19589f5..e9e6214 100644
 --- delegates/dvcc.py
 +++ delegates/dvcc.py
 @@ -650,7 +650,7 @@ class Multi(object):
- 
+
  	@property
  	def hub_voltage(self):
 -		return self.monitor.get_value(self.service, '/Hub/ChargeVoltage')
 +		return self.monitor.get_value(self.service, '/Hub/ChargeVoltage') or None
- 
+
  	@property
  	def maxchargecurrent(self):

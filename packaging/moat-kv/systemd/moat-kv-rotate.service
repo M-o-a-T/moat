@@ -17,4 +17,3 @@ EnvironmentFile=-/etc/moat/kv.env
 
 User=MoaT-KV
 Group=MoaT
-

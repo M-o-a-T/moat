@@ -4,7 +4,7 @@ printer:
   _default:
     scale: [1,1]
     page: [0,0,0]  # Printer margins. left top right
-    margin: [0,0] # left and top offset between the printer margin and 
+    margin: [0,0] # left and top offset between the printer margin and
     slot: Manual
   a4:
     size: a4
@@ -68,4 +68,3 @@ label:
       margin: [0,10,0,1]
     inset: [17,2]
     base: 100000  # start numbering here
-

@@ -83,8 +83,8 @@ battery:
 inverter:
   # charge/discharge limit, in A
   max:
-    charge: 10   
-    discharge: 10   
+    charge: 10
+    discharge: 10
 
   efficiency:
     # of converting to DC / to AC at average load.

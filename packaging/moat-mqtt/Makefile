@@ -19,4 +19,3 @@ install:
 	mkdir -p $(PREFIX)/lib/systemd/system
 	cp systemd/*.service $(PREFIX)/lib/systemd/system/
 	cp systemd/sysusers $(PREFIX)/usr/lib/sysusers.d/moat-mqtt.conf
-

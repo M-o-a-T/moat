@@ -91,7 +91,7 @@ int main(int argc, char* const* argv)
     fc->timeout1 = timerA;
     fc->timeout2 = timerB;
     fc->verbose = verbose;
-    
+
     if(!fc_connect(fc, sockname))
         return 1;
 

@@ -14,14 +14,14 @@ doc: |2
 items:
   title: Undocumented error. Fix me!
 ---
-path: !P error.link.mqtt.codec:
+path: !P error.link.mqtt.codec
 title: incompatible data
 doc: |2
   The content of an incoming message could not be decoded.
   .
   This problem converts the message to raw data, for obvious reasons.
 ---
-path: !P error.link.mqtt.meta:
+path: !P error.link.mqtt.meta
 title: incompatible metadata
 doc: |2
   The metadata of an incoming message could not be decoded.
@@ -30,7 +30,7 @@ doc: |2
   This problem converts the message to raw data because otherwise
   there is no guarantee of it not causing a cycle or similar.
 ---
-path: !P error.link.mqtt.topic:
+path: !P error.link.mqtt.topic
 title: incompatible topic
 doc: |2
   The topic of an incoming message could not be parsed by moat.util.Path,
@@ -39,7 +39,7 @@ doc: |2
   .
   This problem does not convert the message to raw data.
 ---
-path: !P error.run.service.conn.*:
+path: !P error.run.service.conn.*
 title: Backend link failed
 doc: |2
   The sending client got an error talking to backend [-1].
@@ -81,7 +81,7 @@ items:
 path: !P run
 title: Runtime data and related structures
 doc: |2
-  Runtime data is by 
+  Runtime data is by
 ---
 _path: !P run.service
 title: Hierarchy for service addresses

@@ -26,7 +26,7 @@ type: object
 properties:
   title: string
   doc: string
-  ext: 
+  ext:
     $ref: _/ext
   items:
     type: object
@@ -34,7 +34,7 @@ properties:
     properties:
       title: string
       doc: string
-      ext: 
+      ext:
         $ref: _/ext
     required:
     - title
@@ -211,7 +211,7 @@ properties:
     type: string
   level:
     default: 0
-    title: error level. Zero: clear it.
+    title: "error level. Zero: clear it."
     type: integer
   data:
     title: value that triggered the error
@@ -250,7 +250,7 @@ properties:
     title: node that created the message
 ---
 _path: !P _.link.server.i.hello.req
-title: "Hello" sent to the server, initial message
+title: "'Hello' sent to the server, initial message"
 type: array
 prefixItems:
   - type: array
@@ -272,7 +272,7 @@ prefixItems:
         description: supported auth methods
     - type: string
       title: auth token
-      deacription: Client: from broadcast; Server: use this method
+      deacription: "Client: from broadcast; Server: use this method"
     - type: bool
       title: authorized
       description: |2
@@ -338,4 +338,3 @@ prefixItems:
     type: number
   - type: object
     title: optionally, random key/value data
-

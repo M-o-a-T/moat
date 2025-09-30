@@ -42,4 +42,3 @@ if !  btrfs subvolume set-default "/mnt/$DIR" ; then
 fi
 
 echo "Done. Reboot ('shutdown -r now') to use the new image." >&2
-

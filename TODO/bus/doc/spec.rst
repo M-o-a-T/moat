@@ -50,11 +50,11 @@ The MoaT bus is designed to be a simple-to-implement, mostly-self-timing,
 collision-resistant, error-resistant, multi-master bus system.
 
 "Collision resistant" means that while the system tries to avoid
-collisions, that is not always possible. However, the senders involved  
+collisions, that is not always possible. However, the senders involved
 in a collision know how to resolve the problem so that one may proceed
-quickly. Exponential back-off helps to prevent bus gridlock.  
+quickly. Exponential back-off helps to prevent bus gridlock.
 
-"Error resistant" means that every packet is CRC-checked and must be 
+"Error resistant" means that every packet is CRC-checked and must be
 acknowledged by the receiver.
 
 "Multi-master" is a misnomer because there are no non-master systems on the
@@ -63,7 +63,7 @@ MoaTbus. Every node may send data to any other node when it wants to.
 "Simple to implement": you only need a microcontroller with some free
 open-collector binary ports and a somewhat-accurate timer. That's it.
 Port change interrupts are optional; the timer doesn't need to trigger an
-interrupt either. Messages are usually buffered but can be de/encoded on   
+interrupt either. Messages are usually buffered but can be de/encoded on
 the fly – though the decoder must wait for the CRC before acting on any
 message.
 
@@ -77,7 +77,7 @@ On the other hand, a serial line is implicitly-clocked: both sender and
 receiver need to send / receive the next bit with an accurracy of 5% or
 better. If sender or receiver have higher latency than that and can't use a
 hardware UART, you're out of luck.
-                                                                            
+
 The MoaT bus takes the middle road. While there is a nominal baud rate,
 the tolerance required for the timer is about 50%. The limiting factor is
 the bus impedance.

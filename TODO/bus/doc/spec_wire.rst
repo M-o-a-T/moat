@@ -500,7 +500,7 @@ state, the others the actual bus values.
 ..
    These tables collect various results of generating minimal message
    lengths for a given CRC polynomial / error count.
-   
+
    CRC-16:
         2    3    4    5    6    7    8    9   10   11   <- min len @ errors
      8002    0  125   37   28   19   19   20   20   17   baad  2048/4
@@ -508,9 +508,9 @@ state, the others the actual bus values.
       152    0  153    0   22    0   17    0   18    0   c86c  135/6
     16384  380   36   41   37   25   21   17   19   19   968b  19/7
     32768    0   68    0   32    0   18    0   19    0   8fdb  15/8
-    
+
     32768    0   17    0   21    0   18    0   21    0   8408  CCITT
-   
+
    CRC-11:
         2    3    4    5    6    7    8    9   10   11   <- min len @ errors
        24    0   25    0   26   12   13   24   24   15   571  12/7
@@ -519,14 +519,14 @@ state, the others the actual bus values.
      1023    0   18    0   12    0   13    0   14    0   591
      1024    0   29    0   12    0   14    0   15    0   583  1012/4
      2048  143   18   22   15   12   13   15   16   16   64d  2036/3
-   
+
    CRC-8:
        18    0   19    9   10   13   9c    9/5
       128    0   12    0    9    0   97  119/4
       256   24   15    9   11   11   a6  247/3
-  
+
       128    0    9    0   10    0   8c  Maxim
-  
+
    CRC-6:
        64    7    8    9   21
        32    0    7    0   2c

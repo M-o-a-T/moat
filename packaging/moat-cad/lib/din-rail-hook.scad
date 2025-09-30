@@ -4,7 +4,7 @@ module din_rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     // Din-Rail - Hutschiene 35m
     brim=rail_brim;
     rail_height=1.1;
-    
+
     // DIN rail hook
     spring_l=15;
     spring_d=2.5;
@@ -23,14 +23,14 @@ module din_rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     x2=dw;
     x3=dw-ridge/2;
     x5=brim-spring_slot;
-    x6=brim+aux-spring_slot+dw;    
+    x6=brim+aux-spring_slot+dw;
     x8=brim-(spring_slot+bar_width);
     x7=brim-2-(spring_slot+bar_width);
     x10=-bar_width;
     x12=-spring_slot-bar_width;
     x14=2.5-(spring_slot+3);
     x15=2.5-(spring_d+spring_slot+bar_width);
-    
+
     y1=0.5-(bar_width+hook+rail_height);
     y2=spring_l+dw;
     y4=dw+_d2;
@@ -42,12 +42,12 @@ module din_rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
     y11=spring_l-bar_width;
     y13=-rail_height-bar_width;
     y12=-rail_height-bar_width-0.2;
-    
+
     rk=ridge/3;
     hsd=1.1; // hole slot depth
     hh=2; // height
     hw=depth/10; // hole's wall strength
-    
+
     hd=hw+hsd;
     hws=hw*(1+sin(45));
     hdf=hws+(hd-hw);
@@ -75,14 +75,14 @@ module din_rail_hook(depth, len=0, ridge=0, dw=0, cut=0, slot=false){
         [x12,y13],
         [x14,y12],
         [x15,y1]
-    
+
     ];
     difference() {
         union() {
             translate([0,0,-dw])
                 linear_extrude(mass+2*dw, convexity=20)
                 polygon(points);
-            translate([_d2,0,0]) rotate([0,-90,0])  
+            translate([_d2,0,0]) rotate([0,-90,0])
                 linear_extrude(ridge/2+dw+_d2, convexity=20)
                     polygon([[0,0],[depth,0],[depth/2,depth/1.4]]);
 

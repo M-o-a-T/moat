@@ -73,7 +73,7 @@ class BatteryInterface(DbusInterface):
 		return self.batt.get_soc()
 
 	@dbus.method()
-	def SetSoC(self, soc: 'd') -> 'b'
+	def SetSoC(self, soc: 'd') -> 'b':
 		self.batt.set_soc(soc)
 		return True
 

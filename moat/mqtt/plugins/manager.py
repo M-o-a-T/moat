@@ -10,7 +10,7 @@ import anyio
 import copy
 import logging
 
-from collections import namedtuple
+from typing import NamedTuple, Any
 
 try:
     from contextlib import asynccontextmanager
@@ -18,14 +18,13 @@ except ImportError:
     from async_generator import asynccontextmanager
 
 from functools import partial
-from importlib.metadata import entry_points
+from importlib.metadata import entry_points, EntryPoint
+from importlib import import_module
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import pkg_resources
-
-Plugin = namedtuple("Plugin", ["name", "ep", "object"])
+class Plugin(NamedTuple):
+    name: str
+    ep: EntryPoint
+    object: Any
 
 
 class BaseContext:  # noqa: D101
@@ -66,10 +65,10 @@ class PluginManager:
             self._plugins.append(plugin)
             self.logger.debug(" Plugin %s ready", plugin.ep.name)
 
-    def _load_plugin(self, ep: pkg_resources.EntryPoint):
+    def _load_plugin(self, ep: EntryPoint):
         try:
             self.logger.debug(" Loading plugin %s", ep)
-            plugin = ep.load(require=True)
+            plugin = ep.load()
             self.logger.debug(" Initializing plugin %s", ep)
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
@@ -77,9 +76,7 @@ class PluginManager:
             return Plugin(ep.name, ep, obj)
         except ImportError as ie:
             self.logger.warning("Plugin %r import failed: %s", ep, ie)
-        except pkg_resources.DistributionNotFound as ue:
-            self.logger.warning("Plugin %r dependencies resolution failed: %s", ep, ue)
-        except pkg_resources.UnknownExtra as ue:
+        except ModuleNotFoundError as ue:
             self.logger.warning("Plugin %r dependencies resolution failed: %s", ep, ue)
 
     def get_plugin(self, name):

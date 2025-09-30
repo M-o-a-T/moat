@@ -132,7 +132,7 @@ ignore = [
     "TRY003", "TRY300", "TRY301", "TRY400",
     "UP012", "UP015", # "UP038",
     ]
-    
+
 exclude = [
     "moat/db/alembic/versions/*",
     "moat/micro/_embed/**/manifest.py",
@@ -203,5 +203,3 @@ exclude_also = [
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",
     ]
-
-

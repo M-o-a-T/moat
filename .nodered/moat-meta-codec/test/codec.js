@@ -59,4 +59,3 @@ describe('MoaT Decoder', function () {
     });
   });
 });
-

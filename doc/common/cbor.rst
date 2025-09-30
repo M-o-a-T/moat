@@ -72,7 +72,7 @@ Object Proxy
     Contact         Christopher_Head
     =============== =============================
 
-This tag is specified as "external object reference". In MoaT it is used 
+This tag is specified as "external object reference". In MoaT it is used
 as an object proxy, in two different but related ways.
 
 MoaT pre-defines some proxy objects, mainly for classes whose instances can
@@ -100,7 +100,7 @@ CBOR Sequence
     Data Item       array
     Semantics       Labeled CBOR Sequence
     Reference       https://www.rfc-editor.org/rfc/rfc9277.html
-    Contact         
+    Contact
     =============== =============================
 
 
@@ -139,9 +139,9 @@ This way, ``file`` can show basic data about the file, using these magic entries
 
     0        string/3b  \xd9\xd9\xf7     CBOR
     >3       string/5b  \xdaMoaT         MoaT file
-    >>8      string/2b  \x82\x78         
+    >>8      string/2b  \x82\x78
     >>>10    pstring    >\0              %s
-    >>8      string/2b  \x82\x79         
+    >>8      string/2b  \x82\x79
     >>>10    pstring/H  >\0              %s
 
 Shorter descriptive strings would require 24 additional entries in ``file``'s
@@ -184,4 +184,3 @@ When this tag is not the last CBOR data item in a file, it MUST be followed
 with a tag 55799+1299145044 with matching continuation IDs ("cont") in its
 map part. MoaT uses this element to verify that multiple files have been
 concatenated correctly.
-

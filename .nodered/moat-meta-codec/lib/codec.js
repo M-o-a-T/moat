@@ -4,16 +4,16 @@ const cbor = require('cbor');
 function decode(data) {
     /**
      * Decode a string to a MsgMeta object.
-     * 
+     *
      * Reverses the effect of encode.
      */
     const ddec = [];
-    
+
     let encoded = false;
     while (data) {
         let nextEnc;
         let cc;
-        
+
         const c1 = data.indexOf("/");
         const c2 = data.indexOf("\\");
         if (c1 === -1) {
@@ -26,7 +26,7 @@ function decode(data) {
             cc = Math.min(c1, c2);
             nextEnc = cc === c2;
         }
-        
+
         let d;
         if (cc === -1) {
             d = data;
@@ -35,7 +35,7 @@ function decode(data) {
             d = data.substring(0, cc);
             data = data.substring(cc + 1);
         }
-        
+
         if (encoded) {
             if (d !== "") {
                 d = cbor.decode(base85.decode(Buffer.from(d),"btoa"));
@@ -43,7 +43,7 @@ function decode(data) {
         } else if (d === "") {
             d = null;
         }
-        
+
         ddec.push(d);
         encoded = nextEnc;
     }
@@ -53,24 +53,24 @@ function decode(data) {
 function encode(data) {
     /**
      * Encode this object to a string.
-     * 
+     *
      * Elements are either UTF-8 strings, introduced by `/`, or
      * some other data, introduced by `\`. Strings that include
      * either of these characters are treated as "other data".
-     * 
+     *
      * Empty strings are encoded as zero-length "other data" elements.
      * A value of `None` is encoded as an empty string.
-     * 
+     *
      * The first item is not marked explicitly.
      * It must be a non-empty string.
-     * 
+     *
      * Other data are encoded to CBOR, then base85-encoded
      * (btoa alphabet).
-     * 
+     *
      * The last element may be a dict with free-form content.
      */
     const res = [];
-    
+
     for (const d of data) {
         if (typeof d === 'string' && d !== "" && !d.includes("/") && !d.includes("\\")) {
             if (!d && res.length === 0) {
@@ -84,7 +84,7 @@ function encode(data) {
             }
             continue;
         }
-        
+
         if (res.length === 0) {
             throw new Error("No non-string origins");
         }

@@ -50,10 +50,10 @@
   * implement start/stop/restart of subsystems more cleanly
   * teach a subdispatcher to refresh themselves if their destination
     terminates / restarts
-  
+
   * link path. Right now an app doesn't know where it itself is.
     Does it need to?
-  
+
   * implement (and test) all the fancy pin and relay features
-  
+
   * NamedSerial should open a device if running on Unix-µPy

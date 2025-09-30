@@ -6,10 +6,10 @@ set -ex
 
 D="$(pwd)"
 cd modbus/moat/modbus/dev/_data/heating/KWB
-sh code/rebuild.sh 
+sh code/rebuild.sh
 cd "$D"
 
-# get the dependencies' latest versions 
+# get the dependencies' latest versions
 
 if test -d .venv ; then
 	. .venv/bin/activate
@@ -31,4 +31,3 @@ else  # patches to adapt to other distributions welcome
 	echo "I don't know how to install Python requirements. Please do so manually." >&2
 	exit 1
 fi
-

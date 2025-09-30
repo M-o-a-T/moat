@@ -18,9 +18,7 @@ async def uptime_coro():
     async with open_mqttclient() as C:
         await C.connect("mqtt://test.mosquitto.org/")
         try:
-            await C.subscribe(
-                [("$SYS/broker/uptime", QOS_1), ("$SYS/broker/load/#", QOS_2)]
-            )
+            await C.subscribe([("$SYS/broker/uptime", QOS_1), ("$SYS/broker/load/#", QOS_2)])
             logger.info("Subscribed")
             for i in range(1, 100):
                 message = await C.deliver_message()

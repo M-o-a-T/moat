@@ -18,9 +18,7 @@ config = {}
 async def test_coro():
     async with open_mqttclient(config=config) as sub_client:
         await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
-        await sub_client.subscribe(
-            [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
-        )
+        await sub_client.subscribe([("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)])
         await sub_client.disconnect()
         await anyio.sleep(0.1)
 
@@ -44,9 +42,7 @@ async def _client_publish(topic, data, qos, retain=False):
 
 
 if __name__ == "__main__":
-    formatter = (
-        "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    )
+    formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     # formatter = "%(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     anyio.run(test_coro)

@@ -374,7 +374,7 @@ class ModbusServer(BaseModbusServer):
                     break
                 if _logger.isEnabledFor(logging.DEBUG):
                     _logger.debug(  # pylint: disable=logging-not-lazy
-                        "Handling data: " + hexlify_packets(data), # noqa:G003
+                        "Handling data: " + hexlify_packets(data),  # noqa:G003
                     )
 
                 reqs = []

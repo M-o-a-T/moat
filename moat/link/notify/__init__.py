@@ -29,6 +29,7 @@ class Notify:
     """
     Notification runner.
     """
+
     def __init__(self, cfg):
         self.cfg = cfg
 

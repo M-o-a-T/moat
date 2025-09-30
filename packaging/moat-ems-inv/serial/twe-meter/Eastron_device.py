@@ -39,9 +39,7 @@ class ModbusDevice(device.ModbusDevice):
         latency = time.time() - now
 
         if rr.isError():
-            log.error(
-                "Error reading registers %#04x-%#04x: %s", start, start + count - 1, rr
-            )
+            log.error("Error reading registers %#04x-%#04x: %s", start, start + count - 1, rr)
             raise Exception(rr)
 
         for reg in regs:

@@ -56,9 +56,7 @@ class MassSpringDamper:
         spring_acceleration = (self.spring_const / self.mass) * position
         damper_acceleration = (self.damping_const / self.mass) * velocity
         external_acceleration = (1.0 / self.mass) * self.external_force
-        acceleration = (
-            -spring_acceleration - damper_acceleration + external_acceleration
-        )
+        acceleration = -spring_acceleration - damper_acceleration + external_acceleration
         dxdt = [velocity, acceleration]
         return dxdt
 

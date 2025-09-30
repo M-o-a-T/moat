@@ -19,15 +19,13 @@ async def uptime_coro():
         await C.connect("mqtt://test:test@0.0.0.0:1883")
         # Subscribe to '$SYS/broker/uptime' with QOS=1
         try:
-            await C.subscribe(
-                [
-                    ("data/memes", QOS_1),  # Topic allowed
-                    ("data/classified", QOS_1),  # Topic forbidden
-                    ("repositories/mqtt/master", QOS_1),  # Topic allowed
-                    ("repositories/mqtt/devel", QOS_1),  # Topic forbidden
-                    ("calendar/mqtt/releases", QOS_1),  # Topic allowed
-                ]
-            )
+            await C.subscribe([
+                ("data/memes", QOS_1),  # Topic allowed
+                ("data/classified", QOS_1),  # Topic forbidden
+                ("repositories/mqtt/master", QOS_1),  # Topic allowed
+                ("repositories/mqtt/devel", QOS_1),  # Topic forbidden
+                ("calendar/mqtt/releases", QOS_1),  # Topic allowed
+            ])
             logger.info("Subscribed")
             for i in range(1, 100):
                 message = await C.deliver_message()

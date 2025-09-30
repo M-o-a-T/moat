@@ -11,9 +11,7 @@ def mon(*a):
 
 async def main():
     async with Dbus() as bus, bus.service("test.victron.sender") as srv:
-        v = await srv.add_path(
-            "/Some/Value", None, description="Test", onchangecallback=mon
-        )
+        v = await srv.add_path("/Some/Value", None, description="Test", onchangecallback=mon)
         await srv.add_mandatory_paths(
             processname=__file__,
             processversion="0.1",

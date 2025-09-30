@@ -329,8 +329,9 @@ class Event:
     @property
     def time(self):
         """Return the event's proper datetime"""
-        return datetime.datetime.fromtimestamp(self._ts_sec + self._ts_nsec / 1000000000,
-                                               tz=datetime.UTC)
+        return datetime.datetime.fromtimestamp(
+            self._ts_sec + self._ts_nsec / 1000000000, tz=datetime.UTC
+        )
 
     def __repr__(self):
         return f"<{self.value} @{self.time}>"

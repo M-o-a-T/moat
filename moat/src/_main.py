@@ -30,8 +30,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
-ARCH = subprocess.check_output(["/usr/bin/dpkg",
-                                "--print-architecture"]).decode("utf-8").strip()
+ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode("utf-8").strip()
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
@@ -1089,7 +1088,11 @@ async def build(
 
             try:
                 res = await run_(
-                    "dpkg-parsechangelog", "-l", "debian/changelog", "-S", "version",
+                    "dpkg-parsechangelog",
+                    "-l",
+                    "debian/changelog",
+                    "-S",
+                    "version",
                     cwd=rd,
                     check=True,
                     capture=True,
@@ -1181,7 +1184,10 @@ async def build(
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:
                     await run_(
-                        "twine", "upload", str(targz), str(whl),
+                        "twine",
+                        "upload",
+                        str(targz),
+                        str(whl),
                         cwd=rd,
                         check=True,
                     )

@@ -352,4 +352,3 @@ async def test_gate_codec(cfg):  # noqa: D103
                 "three": {"zaz": {"_": "ThReE"}},
             },
         }
-

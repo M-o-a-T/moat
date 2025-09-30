@@ -36,14 +36,12 @@ data = [
     F(0.25, 1.0, 0.0),  # 23
 ]
 
-b = Hardware(
-    capacity=14, batt_max_chg=5, batt_max_dis=8, inv_max_dis=10, inv_max_chg=10
-)
+b = Hardware(capacity=14, batt_max_chg=5, batt_max_dis=8, inv_max_dis=10, inv_max_chg=10)
 soc = 0.3
 msum = 0
 for n in range(100):
     grid, soc, money = Model(b, data).propose(soc)
-    print(f"{n :2d} {grid :5.0f} {soc :.3f} {money :6.2f}")
+    print(f"{n:2d} {grid:5.0f} {soc:.3f} {money:6.2f}")
     if soc < 0.06:
         soc = 0.06
     elif soc > 0.94:
@@ -51,4 +49,4 @@ for n in range(100):
     msum += money
 
     data = data[1:] + data[:1]
-print(f"{msum :6.2f}")
+print(f"{msum:6.2f}")

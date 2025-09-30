@@ -178,9 +178,7 @@ class Client(object):
         self.dbusconn = private_bus()
 
         log.info("Waiting for localsettings")
-        self.settings = SettingsDevice(
-            self.dbusconn, SETTINGS, self.setting_changed, timeout=10
-        )
+        self.settings = SettingsDevice(self.dbusconn, SETTINGS, self.setting_changed, timeout=10)
 
         self.update_devlist("", self.settings["devices"])
 
@@ -247,9 +245,7 @@ class NetClient(Client):
 
         svcname = "com.victronenergy.modbusclient.%s" % self.name
         self.svc = VeDbusService(svcname, self.dbusconn)
-        self.svc.add_path(
-            "/Scan", False, writeable=True, onchangecallback=self.set_scan
-        )
+        self.svc.add_path("/Scan", False, writeable=True, onchangecallback=self.set_scan)
         self.svc.add_path("/ScanProgress", None, gettextcallback=percent)
 
         self.mdns = mdns.MDNS()
@@ -294,9 +290,7 @@ class SerialClient(Client):
 
 def main():
     parser = ArgumentParser(add_help=True)
-    parser.add_argument(
-        "-d", "--debug", help="enable debug logging", action="store_true"
-    )
+    parser.add_argument("-d", "--debug", help="enable debug logging", action="store_true")
     parser.add_argument("-f", "--force-scan", action="store_true")
     parser.add_argument("-m", "--mode", choices=["ascii", "rtu"], default="rtu")
     parser.add_argument("-r", "--rate", type=int, action="append")

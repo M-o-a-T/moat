@@ -17,9 +17,10 @@ async def pling(line):
 async def main():
     async with anyio.create_task_group() as n:
         with gpio.Chip(0) as c:
-            with c.line(19).open(direction=gpio.DIRECTION_OUTPUT) as out_, c.line(
-                20
-            ).open(direction=gpio.DIRECTION_INPUT) as in_:
+            with (
+                c.line(19).open(direction=gpio.DIRECTION_OUTPUT) as out_,
+                c.line(20).open(direction=gpio.DIRECTION_INPUT) as in_,
+            ):
                 await n.spawn(pling, out_)
                 while True:
                     print(in_.value)

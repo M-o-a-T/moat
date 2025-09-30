@@ -1,6 +1,7 @@
 """
 Priority mapping library
 """
+
 from __future__ import annotations
 
 import anyio

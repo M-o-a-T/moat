@@ -223,7 +223,12 @@ async def _mv_repo(cfg: dict, a_src: API, a_dst: list[API], name: str):
 
 
 async def _mv_arepo(
-    cfg: dict, a_src: API, a_dst: list[API], lim: anyio.CapacityLimiter, name: str, filter: bool  # noqa: A002
+    cfg: dict,
+    a_src: API,
+    a_dst: list[API],
+    lim: anyio.CapacityLimiter,
+    name: str,
+    filter: bool,  # noqa: A002
 ):
     # move, then release the capacity limiter
     srci = None

@@ -7,9 +7,7 @@ from moat.kv.client import open_client
 
 async def mod_owfs():
     async with open_client() as c:
-        async for r in c.get_tree(
-            P(":.distkv.onewire"), min_depth=2, max_depth=2, nchain=2
-        ):
+        async for r in c.get_tree(P(":.distkv.onewire"), min_depth=2, max_depth=2, nchain=2):
             try:
                 at = r.value.pop("attr")
             except KeyError:

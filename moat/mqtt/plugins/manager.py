@@ -21,6 +21,7 @@ from functools import partial
 from importlib.metadata import entry_points, EntryPoint
 from importlib import import_module
 
+
 class Plugin(NamedTuple):
     name: str
     ep: EntryPoint

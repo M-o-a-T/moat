@@ -33,7 +33,6 @@ as_proxy("_ip6i", IPv6Interface)
 class Bar:
     "A proxied object"
 
-
     def __init__(self, x):
         self.x = x
 

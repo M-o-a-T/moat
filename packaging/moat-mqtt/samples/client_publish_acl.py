@@ -20,9 +20,7 @@ async def test_coro():
             await C.publish("data/classified", b"TOP SECRET", qos=0x01)
             await C.publish("data/memes", b"REAL FUN", qos=0x01)
             await C.publish("repositories/mqtt/master", b"NEW STABLE RELEASE", qos=0x01)
-            await C.publish(
-                "repositories/mqtt/devel", b"THIS NEEDS TO BE CHECKED", qos=0x01
-            )
+            await C.publish("repositories/mqtt/devel", b"THIS NEEDS TO BE CHECKED", qos=0x01)
             await C.publish("calendar/mqtt/releases", b"NEW RELEASE", qos=0x01)
             logger.info("messages published")
     except ConnectException as ce:
@@ -30,9 +28,7 @@ async def test_coro():
 
 
 if __name__ == "__main__":
-    formatter = (
-        "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    )
+    formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     formatter = "%(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     anyio.run(test_coro)

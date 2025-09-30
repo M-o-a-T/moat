@@ -36,6 +36,7 @@ def almost_equal(first, second, places=None, delta=None):
 
     return False
 
+
 class TestStringMethods(unittest.TestCase):  # noqa: D101
     def test_init_set_gains(self):  # noqa: D102
         # Set gains

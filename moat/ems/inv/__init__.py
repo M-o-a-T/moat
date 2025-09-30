@@ -110,14 +110,14 @@ class InvInterface(DbusInterface):
         return m._doc  # noqa:SLF001
 
     @method()
-    async def SetMode(self, mode: "s", args: "a{sv}") -> b:  # noqa:F722,UP037,F821
+    async def SetMode(self, mode: "s", args: "a{sv}") -> "b":  # noqa:F722,UP037,F821
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: "s", value: "v") -> b:  # noqa:UP037,F821
+    async def SetModeParam(self, param: "s", value: "v") -> "b":  # noqa:UP037,F821
         """
         Set a specific parameter
         """

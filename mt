@@ -11,3 +11,5 @@ import os
 
 if os.path.exists("configs/mt.cfg"):
     os.environ["MOAT_CFG"] = "configs/mt.cfg"
+
+import moat.__main__  ## noqa:F401,I001,RUF100

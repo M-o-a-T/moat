@@ -8,7 +8,7 @@ from moat.util import merge
 from moat.lib.cmd.stream import HandlerStream
 from moat.lib.codec.errors import SilentRemoteError
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log
+from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -201,7 +201,7 @@ class SingleCmdMsg(BaseCmdMsg):
                             log("Err %s: %r", self.path, repr(a))
                         if b is None:
                             return
-                        raise b
+                        raise b  # noqa:B904,RUF100
                     e = e.exceptions[0]
                     if not isinstance(e, BaseExceptionGroup):
                         raise e  # noqa:TRY201

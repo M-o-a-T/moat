@@ -149,12 +149,12 @@ async def test_72_cmd(autojump_clock, tmpdir):  # pylint: disable=unused-argumen
         (s,) = st.s
         async with st.client() as c:
             h = p = None  # pylint
-            for h, p, *_ in s.ports:
+            for h, p, *_ in s.ports:  # noqa:B007
                 if h[0] != ":":
                     break
             rr = partial(run, "kv", "-h", h, "-p", p, do_stdout=False)
             path = tmpdir.join("foo")
-            with open(path, "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:  # noqa:ASYNC230
                 f.write(
                     """\
 good:
@@ -168,7 +168,7 @@ code: "if not isinstance(value,int): raise ValueError('not an int')"
                 )
             await rr("type", "set", "-d", str(path), "int")
 
-            with open(path, "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:  # noqa:ASYNC230
                 f.write("if not 0<=value<=100: raise ValueError('not a percentage')\n")
 
             with raises(ServerError):

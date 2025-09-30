@@ -126,7 +126,7 @@ class RepoInfo(BaseRepoInfo):
                 self.api.name,
                 self.ssh_url,
                 str(self.repo.cwd),
-                cwd="/tmp",
+                cwd="/tmp",  # noqa:S108
             )
 
             async for br in self.get_branches():

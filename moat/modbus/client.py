@@ -147,7 +147,7 @@ class _HostCommon:
     stream = None
     framer = None  # overridden
 
-    def _trace(*x):
+    def _trace(*_x):
         return None  # overridden
 
     def __init__(self, gate, timeout, cap):

@@ -874,7 +874,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     if wrap:
         pass
     elif hasattr(logging.root, "_MoaT"):
-        logging.debug("Logging already set up")
+        logging.debug("Logging already set up")  # noqa:LOG015
     else:
         # Configure logging. This is a somewhat arcane art.
         lcfg = obj.cfg.setdefault("logging", {})

@@ -30,12 +30,13 @@ from moat.util.compat import AC_use, Event, L, idle
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
     from moat.util import Path
     from moat.lib.cmd import Msg
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
     from collections.abc import Awaitable, Callable
-    from typing import AsyncContextManager
 
 
 class ACM_h:
@@ -49,7 +50,7 @@ class ACM_h:
     __aenter__ call.
     """
 
-    _cm: AsyncContextManager = None
+    _cm: AbstractAsyncContextManager = None
 
     def __init__(self, p: Callable, *a, **k):
         self.p = p

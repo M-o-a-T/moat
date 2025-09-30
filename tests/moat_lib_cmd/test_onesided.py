@@ -88,7 +88,7 @@ async def test_write_both():  # noqa: D103
                 await st.send(2, "bc")
                 await msg.result("OK", 4)
 
-    with pytest.raises(NoStream):
+    with pytest.raises(NoStream):  # noqa:PT012
         async with ungroup, scaffold(EP(), None) as (_a, b):
             async with b.cmd("Test", 123).stream_out() as st:
                 assert tuple(st.args) == ("Takeme",)

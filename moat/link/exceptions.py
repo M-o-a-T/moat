@@ -6,7 +6,9 @@ Currently this is (mostly) a re-import of moat.kv.exceptions.
 
 from __future__ import annotations
 
-from moat.kv.exceptions import ClientCancelledError, ClientError, MoaTKVError
+from moat.kv.exceptions import MoaTKVError
+from moat.kv.exceptions import ClientCancelledError as ClientCancelledError
+from moat.kv.exceptions import ClientError as ClientError
 
 MoaTLinkError = MoaTKVError
 

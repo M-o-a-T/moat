@@ -5,6 +5,7 @@ Test program cloned from asyncowfs, but using MoaT-KV for end-to-semi-end testin
 from __future__ import annotations
 
 import anyio
+import logging
 from copy import deepcopy
 from functools import partial
 
@@ -14,11 +15,9 @@ from moat.util import P, Path, load_ext
 from moat.kv.data import data_get
 from moat.kv.mock.mqtt import stdtest
 
-owfs_mock = load_ext("moat.kv.ow.mock")
-
-import logging
-
 logger = logging.getLogger(__name__)
+
+owfs_mock = load_ext("moat.kv.ow.mock")
 
 # We can just use 'async def test_*' to define async tests.
 # This also uses a virtual clock fixture, so time passes quickly and

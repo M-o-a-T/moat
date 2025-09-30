@@ -5,7 +5,7 @@ Helpers for MoaT command interpreters et al.
 from __future__ import annotations
 
 from moat.util.compat import (
-    TimeoutError,  # pylint: disable=redefined-builtin
+        TimeoutError,  # pylint: disable=redefined-builtin # noqa:A004
     log,
     wait_for_ms,
 )

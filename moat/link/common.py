@@ -34,7 +34,7 @@ class CmdCommon(MsgHandler):
         return self.handle(msg, rcmd, "i")
 
     doc_i_ping = dict(_d="Ping, echo", _r="Any: sends all args and keys back")
-    doc_i_乒 = doc_i_ping
+    doc_i_乒 = doc_i_ping  # noqa:PLC2401
 
     async def stream_i_ping(self, msg: Msg) -> bool | None:
         """
@@ -47,7 +47,7 @@ class CmdCommon(MsgHandler):
         """
         await msg.result("乓", *msg.args, **msg.kw)
 
-    stream_i_乒 = stream_i_ping
+    stream_i_乒 = stream_i_ping  # noqa:PLC2401
 
     doc_i_count = dict(
         _d="count", _o="int:numbers", s="int:start", d="int:delta", e="int:end", t="float:interval"

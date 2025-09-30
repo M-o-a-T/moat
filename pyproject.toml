@@ -112,6 +112,7 @@ ignore = [
     "ERA",
     "FBT",
     "FIX",
+    "G004",
     "INP001",
     "N",
     "PERF",
@@ -119,7 +120,7 @@ ignore = [
     "PIE790",
     "PLC0414",
     "PLR",
-    "PLW0603", "PLW1514",
+    "PLW0603", "PLW1514", "PLW1641",
     "PTH",
     "RET50",
     "RUF001", "RUF002", "RUF003", "RUF005", "RUF012",
@@ -144,8 +145,9 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.extend-per-file-ignores]
 "moat/micro/_embed/**" = ["SIM105","B904"]
-"moat/mqtt/**" = ["E501"]
-"tests/**" = ["E501","S110"]
+"moat/mqtt/**" = ["E501","UP031"]
+"tests/moat_mqtt/**" = ["PT"]
+"tests/**" = ["D104","E501","PLW2901","RUF040","S105","S110","S607"]
 "examples/**" = ["S108"]
 
 [tool.ruff.lint.flake8-comprehensions]

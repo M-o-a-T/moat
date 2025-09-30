@@ -17,7 +17,10 @@ from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo
 from . import RepoInfo as BaseRepoInfo
 
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @define
@@ -63,7 +66,7 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
 
     async def clone_from_remote(self):
         "Copy a remote repo."
-        await self.repo.exec("rad", "clone", self.rad_urn, str(self.repo.cwd), cwd="/tmp")
+        await self.repo.exec("rad", "clone", self.rad_urn, str(self.repo.cwd), cwd="/tmp")  # noqa:S108
         await self.load_()
 
     async def load_(self):  # noqa: D102

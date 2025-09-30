@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.src.move import RepoMover as RepoMover
 
-    from typing import AsyncIterator, Awaitable, Self
+    from collections.abc import AsyncIterator, Awaitable
+    from typing import Self
 
 
 class NoSuchRepo(RuntimeError):
@@ -167,7 +168,7 @@ class RepoInfo(metaclass=ABCMeta):
 
 
 @define
-class CommitInfo(metaclass=ABCMeta):  # noqa: D101
+class CommitInfo(metaclass=ABCMeta):  # noqa: D101,B024
     repo = field(type=RepoInfo)
     hash = field(type=str)
 

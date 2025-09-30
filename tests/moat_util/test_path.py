@@ -158,7 +158,7 @@ def test_valid_spaths2(a, b):
 
 @pytest.mark.filterwarnings("ignore")
 @pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
-def test_valid_spaths2(a, b, m):
+def test_valid_spaths3(a, b, m):
     b, xb = b
     assert str(Path(*a, mark=m)) == xb
     assert a == tuple(Path.from_slashed(b))

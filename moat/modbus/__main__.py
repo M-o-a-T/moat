@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Basic "modbus" tool: network client and server, serial client
 

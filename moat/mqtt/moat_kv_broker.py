@@ -8,7 +8,7 @@ import anyio
 from .broker import Broker
 
 try:
-    from moat.util import NotGiven, PathLongener
+    from moat.util import PathLongener
     from moat.kv.client import client_scope as moat_kv_client_scope
     from moat.kv.errors import ErrorRoot
 except ImportError:

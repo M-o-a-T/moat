@@ -1,3 +1,7 @@
+"""
+Notification package
+"""
+
 from __future__ import annotations
 
 import anyio
@@ -13,9 +17,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.link.client import Link
 
-    from typing import AsyncIterator, NoReturn, Self
+    from collections.abc import AsyncIterator
+    from typing import NoReturn, Self
 
-__all__ = ["get_backend","Notifier","Notify"]
+__all__ = ["Notifier", "Notify", "get_backend"]
 
 logger = logging.getLogger(__name__)
 

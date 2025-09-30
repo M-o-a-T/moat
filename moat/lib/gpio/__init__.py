@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 from .gpio import Chip, Event, Line  # noqa: F401
-from .libgpiod import *  # noqa
+from .libgpiod import *  # noqa:F403 # XXX
 
 
 def open_chip(num=None, label=None, consumer=sys.argv[0]):

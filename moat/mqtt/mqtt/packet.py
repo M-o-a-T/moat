@@ -3,7 +3,7 @@
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, UTC
 
 from moat.mqtt.codecs import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
 from moat.mqtt.errors import CodecException, MQTTException, NoDataException
@@ -200,7 +200,7 @@ class MQTTPacket:  # noqa: D101
 
     async def to_stream(self, writer: anyio.abc.ByteStream):  # noqa: D102
         await writer.write(self.to_bytes())
-        self.protocol_ts = datetime.now()
+        self.protocol_ts = datetime.now(tz=UTC)
 
     def to_bytes(self) -> bytes:  # noqa: D102
         if self.variable_header:
@@ -234,7 +234,7 @@ class MQTTPacket:  # noqa: D101
             instance = cls(fixed_header, variable_header)
         else:
             instance = cls(fixed_header)
-        instance.protocol_ts = datetime.now()
+        instance.protocol_ts = datetime.now(tz=UTC)
         return instance
 
     @property

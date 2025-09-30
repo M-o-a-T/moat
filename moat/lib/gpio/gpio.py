@@ -40,7 +40,7 @@ class Chip:
 
     def __repr__(self):
         if self._label is None:
-            return "%s(%d)" % (self.__class__.__name__, self._num)
+            return f"{self.__class__.__name__}({self._num})"
         else:
             return f"{self.__class__.__name__}({self._label})"
 
@@ -99,7 +99,7 @@ class Line:
         self.__consumer = gpio.ffi.new("char[]", self._consumer)
 
     def __repr__(self):
-        return "<%s %s:%d %s=%d>" % (
+        return "<%s %s:%d %s=%d>" % (  # noqa:UP031
             self.__class__.__name__,
             self._chip,
             self._offset,
@@ -329,7 +329,8 @@ class Event:
     @property
     def time(self):
         """Return the event's proper datetime"""
-        return datetime.datetime.fromtimestamp(self._ts_sec + self._ts_nsec / 1000000000)
+        return datetime.datetime.fromtimestamp(self._ts_sec + self._ts_nsec / 1000000000,
+                                               tz=datetime.UTC)
 
     def __repr__(self):
         return f"<{self.value} @{self.time}>"

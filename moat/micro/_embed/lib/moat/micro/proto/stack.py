@@ -27,8 +27,10 @@ from moat.util.compat import ACM, AC_exit, AC_use, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
     from collections.abc import Awaitable
-    from typing import Any, AsyncContextManager, Buffer
+    from typing import Any, Buffer
 
 
 class _NullCtx:
@@ -65,7 +67,7 @@ class Base:
     def __init__(self, cfg):
         self.cfg = cfg
 
-    def wrap(self) -> AsyncContextManager:
+    def wrap(self) -> AbstractAsyncContextManager:
         """
         Async context manager for holding a cross-connection context.
 

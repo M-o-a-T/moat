@@ -53,7 +53,7 @@ class BrokerSysPlugin:  # noqa: D101
         self._clear_stats()
 
     async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
-        self._stats[STAT_START_TIME] = datetime.now()
+        self._stats[STAT_START_TIME] = datetime.now(tz=datetime.UTC)
         from moat.mqtt.version import get_version  # noqa: PLC0415
 
         version = "MoaT-MQTT version " + get_version()
@@ -104,7 +104,7 @@ class BrokerSysPlugin:  # noqa: D101
         """
 
         # Update stats
-        uptime = datetime.now() - self._stats[STAT_START_TIME]
+        uptime = datetime.now(tz=datetime.UTC) - self._stats[STAT_START_TIME]
         client_connected = self._stats[STAT_CLIENTS_CONNECTED]
         client_disconnected = self._stats[STAT_CLIENTS_DISCONNECTED]
         inflight_in = 0
@@ -136,7 +136,7 @@ class BrokerSysPlugin:  # noqa: D101
             "messages/sent",
             int_to_bytes_str(self._stats[STAT_MSG_SENT]),
         )
-        await self._broadcast_sys_topic("time", str(datetime.now()).encode("utf-8"))
+        await self._broadcast_sys_topic("time", str(datetime.now(tz=datetime.UTC)).encode("utf-8"))
         await self._broadcast_sys_topic("uptime", int_to_bytes_str(int(uptime.total_seconds())))
         await self._broadcast_sys_topic("uptime/formated", str(uptime).encode("utf-8"))
         await self._broadcast_sys_topic("clients/connected", int_to_bytes_str(client_connected))

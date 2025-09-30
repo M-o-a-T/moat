@@ -43,7 +43,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
         return res
     except SystemExit as exc:
         res = exc
-        assert exc.code == expect_exit, exc.code
+        assert exc.code == expect_exit, exc.code  # noqa:PT017
         return exc
     except Exception as exc:
         while isinstance(exc, ExceptionGroup) and len(exc.exceptions) == 1:

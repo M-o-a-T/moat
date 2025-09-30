@@ -359,7 +359,7 @@ class NodeSet(defaultdict):
             r -= v
 
 
-class NodeEvent:  # noqa:PLW1641 ## no __hash__
+class NodeEvent:  ## no __hash__
     """Represents any event originating at a node.
 
     Args:

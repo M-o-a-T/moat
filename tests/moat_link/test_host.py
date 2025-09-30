@@ -34,7 +34,7 @@ timeout:
 
 async def run_service(
     sf: Scaffold, kw: dict, evt=None, *, task_status
-) -> Tuple[anyio.CancelScope, str]:
+) -> tuple[anyio.CancelScope, str]:
     """
     Task that opens a client and runs an `as_service` context.
     The task then sleeps until it's cancelled.

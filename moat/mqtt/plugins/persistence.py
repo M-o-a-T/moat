@@ -60,7 +60,7 @@ class SQLitePlugin:  # noqa: D101
                 (client_id,),
             ).fetchone()
             if row:
-                return pickle.loads(row[0])
+                return pickle.loads(row[0])  # noqa:S301
             else:
                 return None
 

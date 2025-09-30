@@ -43,7 +43,7 @@ class _Run:
             def want(reg, val, txt):
                 if reg.value != val:
                     logger.warning(
-                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d}"  # noqa:G004
+                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d}"
                         f" from {reg.value} to {val} ({txt})",
                     )
                     reg.set(val)

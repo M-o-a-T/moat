@@ -204,7 +204,7 @@ async def setup(
             dst = MoatDevPath(root).connect_repl(repl)
             if source:
                 if rom:
-                    from .romfs import make_romfs, write_rom
+                    from .romfs import make_romfs, write_rom  # noqa:PLC0415
 
                     async with anyio.TemporaryDirectory() as tf:
                         await do_copy(source, dst, dest, cross, wdst=tf)

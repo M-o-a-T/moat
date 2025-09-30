@@ -419,7 +419,7 @@ def shield():
 
 # "await" for stream read/write-ability
 
-from asyncio import core
+from asyncio import core  # noqa:E402
 
 
 def _rdq(s):  # async

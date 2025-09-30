@@ -353,12 +353,3 @@ async def test_gate_codec(cfg):  # noqa: D103
             },
         }
 
-
-otm = time.time
-
-
-def tm():  # noqa: D103
-    try:
-        return trio.current_time()
-    except RuntimeError:
-        return otm()

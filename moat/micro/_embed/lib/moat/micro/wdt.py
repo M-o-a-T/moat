@@ -25,7 +25,7 @@ import sys
 import machine
 
 import moat.micro.main as M
-from moat.util.compat import Event, TimeoutError, wait_for_ms
+from moat.util.compat import Event, TimeoutError, wait_for_ms  # noqa:A004
 
 from typing import TYPE_CHECKING  # isort:skip
 

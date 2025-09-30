@@ -2,7 +2,6 @@ from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
-import time
 
 from moat.util import NotGiven, P, Path
 from moat.link._test import Scaffold

@@ -4,7 +4,11 @@ A hacked-up copy of some parts of `moat.util`.
 
 from __future__ import annotations
 
-NotGiven = ...  # from moat.util import NotGiven
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any, TypeVar, overload
 
 __all__ = [
     "DProxy",
@@ -17,11 +21,8 @@ __all__ = [
     "obj2name",
 ]
 
-from typing import TYPE_CHECKING
+NotGiven = ...  # from moat.util import NotGiven
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any, TypeVar, overload
 
 _pkey = 1
 _CProxy = {}  # name > object

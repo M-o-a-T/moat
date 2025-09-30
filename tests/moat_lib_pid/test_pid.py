@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Created on Mon Jun 20 19:45:34 2022
 
@@ -15,6 +14,28 @@ from numpy import allclose, arange, diff, insert, zeros_like
 from moat.lib.pid import PID
 
 
+def almost_equal(first, second, places=None, delta=None):
+    "almost-equal"
+    if first == second:
+        # shortcut
+        return True
+    if delta is not None and places is not None:
+        raise TypeError("specify delta or places not both")
+
+    diff = abs(first - second)
+    if delta is not None:
+        if diff <= delta:
+            return True
+
+    else:
+        if places is None:
+            places = 7
+
+        if round(diff, places) == 0:
+            return True
+
+    return False
+
 class TestStringMethods(unittest.TestCase):  # noqa: D101
     def test_init_set_gains(self):  # noqa: D102
         # Set gains
@@ -23,10 +44,10 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         pid = PID(Kp=Kp, Ki=Ki, Kd=Kd, Tf=Tf)
         _Kp, _Ki, _Kd, _Tf = pid.get_gains()
         # Check
-        self.assertAlmostEqual(Kp, _Kp)
-        self.assertAlmostEqual(Ki, _Ki)
-        self.assertAlmostEqual(Kd, _Kd)
-        self.assertAlmostEqual(Tf, _Tf)
+        assert almost_equal(Kp, _Kp)
+        assert almost_equal(Ki, _Ki)
+        assert almost_equal(Kd, _Kd)
+        assert almost_equal(Tf, _Tf)
 
     def test_set_gains(self):  # noqa: D102
         # Set gains
@@ -37,10 +58,10 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Get PID gains
         _Kp, _Ki, _Kd, _Tf = pid.get_gains()
         # Check
-        self.assertAlmostEqual(Kp, _Kp)
-        self.assertAlmostEqual(Ki, _Ki)
-        self.assertAlmostEqual(Kd, _Kd)
-        self.assertAlmostEqual(Tf, _Tf)
+        assert almost_equal(Kp, _Kp)
+        assert almost_equal(Ki, _Ki)
+        assert almost_equal(Kd, _Kd)
+        assert almost_equal(Tf, _Tf)
 
     def test_set_output_limits(self):  # noqa: D102
         # Set output limits
@@ -51,8 +72,8 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         pid.set_output_limits(lower=lower, upper=upper)
         _lower, _upper = pid.get_output_limits()
         # Check
-        self.assertAlmostEqual(lower, _lower)
-        self.assertAlmostEqual(upper, _upper)
+        assert almost_equal(lower, _lower)
+        assert almost_equal(upper, _upper)
 
     def test_set_initial_value(self):  # noqa: D102
         # Set initial values
@@ -63,9 +84,9 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Get PID initial values
         _t, _e, _i = pid.get_initial_value()
         # Check
-        self.assertAlmostEqual(t0, _t)
-        self.assertAlmostEqual(e0, _e)
-        self.assertAlmostEqual(i0, _i)
+        assert almost_equal(t0, _t)
+        assert almost_equal(e0, _e)
+        assert almost_equal(i0, _i)
 
     def test_integrate_only_p(self):  # noqa: D102
         # Set Kp gain
@@ -182,10 +203,10 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             error[idx] = e
             output[idx] = u
         # Check
-        self.assertAlmostEqual(lower, output.min())
-        self.assertAlmostEqual(upper, output.max())
-        self.assertAlmostEqual(lower, integral.min())
-        self.assertAlmostEqual(upper, integral.max())
+        assert almost_equal(lower, output.min())
+        assert almost_equal(upper, output.max())
+        assert almost_equal(lower, integral.min())
+        assert almost_equal(upper, integral.max())
 
 
 if __name__ == "__main__":

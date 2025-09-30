@@ -5,8 +5,10 @@ Various types
 from __future__ import annotations
 
 import anyio
+import logging
 import struct
 
+from pymodbus.datastore.store import BaseModbusDataBlock
 from pymodbus.pdu.bit_message import (
     ReadCoilsRequest,
     ReadCoilsResponse,
@@ -29,10 +31,6 @@ from pymodbus.pdu.register_message import (
 )
 
 MAX_REQ_LEN = 30
-
-import logging
-
-from pymodbus.datastore.store import BaseModbusDataBlock
 
 logger = logging.getLogger(__name__)
 

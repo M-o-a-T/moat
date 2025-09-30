@@ -78,7 +78,7 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
 
     async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as cl, d.cfg_at(P("s.c")) as cr:
         if remote_first:
-            cl, cr = cr, cl  # noqa:PLW2901
+            cl, cr = cr, cl
 
         await (set_server if server_first else set_client)(cl)
         log("Wait before starting the %s", "client" if server_first else "server")

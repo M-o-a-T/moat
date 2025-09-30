@@ -2,12 +2,8 @@
 # © 2025 Matthias Urlichs
 from __future__ import annotations
 
+import anyio
 import os
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import anyio
 
 try:
     from mpy_cross import run as mpy_cross_run
@@ -108,8 +104,8 @@ class VfsRomWriter:  # noqa: D101
                 if did_mpy:
                     name = name_mpy  # noqa:PLW2901
                     src_name = src_name_mpy
-                with open(src_name, "rb") as src:
-                    self.mkfile(name, src.read())
+                src = await anyio.Path(src_name).read_bytes()
+                self.mkfile(name, src)
 
 
 async def make_romfs(src: anyio.Path, mpy_cross):  # noqa: D103

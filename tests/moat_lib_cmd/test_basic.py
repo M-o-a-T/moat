@@ -105,7 +105,7 @@ async def test_error_scaffold():  # noqa: D103
     async with scaffold(EP(), None) as (a, b):
         a._id = 9  # noqa: SLF001
         b._id = 12  # noqa: SLF001
-        with pytest.raises(RuntimeError) as err:
+        with pytest.raises(RuntimeError) as err:  # noqa:PT012
             res = await b.cmd("Err")
             raise ValueError("No error", res.args, res.kw)
         assert err.value.args == ("Duh",), err.value
@@ -142,7 +142,7 @@ async def test_error():  # noqa: D103
             raise RuntimeError("Duh", msg.args)
 
     async with scaffold(EP(), None) as (_a, b):
-        with pytest.raises(RuntimeError) as err:
+        with pytest.raises(RuntimeError) as err:  # noqa:PT012
             res = await b.cmd("Test", 123)
             print(f"OWCH: result is {res!r}")
         assert err.match("123")

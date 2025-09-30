@@ -126,4 +126,4 @@ class Labels(FPDF):  # noqa: D101
             args.append("InputSlot=" + self.__pr.slot)
         args.append(f"-P{self.__pr.name}")
 
-        run(args, input=buf, check=True)
+        run(args, input=buf, check=True)  # noqa:S603

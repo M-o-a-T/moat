@@ -42,7 +42,7 @@ class _CReader:
     def __init__(self, cons: bool | int):
         if cons is True:
             try:
-                import machine  # noqa: PLC0415
+                import machine  # noqa: PLC0415,F401
             except ImportError:
                 cons = 32768
             else:

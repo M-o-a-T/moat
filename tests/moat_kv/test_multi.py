@@ -10,10 +10,10 @@ from moat.util import P, Path, attrdict
 from moat.kv.mock.mqtt import stdtest
 
 # doesn't yet work with MQTT because we can't split
+# requires asyncserf which is dead
 pytestmark = pytest.mark.skip
 
 N = 10
-
 
 def _skip_check(self):
     if getattr(self._client, "prefix", "") != "test.core":
@@ -106,7 +106,7 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
         async def watch(*, task_status=trio.TASK_STATUS_IGNORED):
             nonlocal n_two
             async with (
-                asyncserf.serf_client() as s,
+                    asyncserf.serf_client() as s,  # noqa:F821
                 s.stream("user:test.update") as sr,
             ):
                 task_status.started()

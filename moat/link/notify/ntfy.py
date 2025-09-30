@@ -1,4 +1,8 @@
-from __future__ import annotations  # noqa: D100
+"""
+This module forwards notifications to NTFY.
+"""
+
+from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
@@ -11,7 +15,7 @@ from . import Notifier as BaseNotifier
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Sequence
+    from collections.abc import Sequence
 
 __all__ = ["Notifier"]
 
@@ -24,7 +28,7 @@ prio_map = {
 }
 
 
-class Notifier(BaseNotifier):
+class Notifier(BaseNotifier):  # noqa:D101
     @asynccontextmanager
     async def _ctx(self):
         async with (

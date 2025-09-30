@@ -68,8 +68,6 @@ class Path(tuple):  # noqa:SLOT001
         """
         Constructor to build a Path from its string representation.
         """
-        global b64decode
-
         res = []
         part: None | bool | str = False
         # non-empty string: accept colon-eval or dot (inline)
@@ -110,8 +108,9 @@ class Path(tuple):  # noqa:SLOT001
                         elif eval_ == -2:
                             part = part.encode("ascii")
                         elif eval_ == -3:
+                            global b64decode
                             if b64decode is None:
-                                from base64 import b64decode
+                                from base64 import b64decode  # noqa:PLC0415
 
                             part = b64decode(part.encode("ascii"))
                         elif eval_ > 1:

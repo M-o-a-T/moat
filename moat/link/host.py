@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from moat.util import Path
     from moat.link.client import Link
 
-    from typing import Awaitable, NoReturn
+    from collections.abc import Awaitable
+    from typing import NoReturn
 
 __all__ = ["HostMon", "cmd_host"]
 

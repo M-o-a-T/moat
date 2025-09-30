@@ -1,3 +1,6 @@
+"""
+Priority mapping library
+"""
 from __future__ import annotations
 
 import anyio
@@ -14,7 +17,7 @@ if TYPE_CHECKING:
     from abc import abstractmethod
 
     from collections.abc import Hashable
-    from typing import Optional, Protocol, Union
+    from typing import Protocol
 
     class Comparable(Protocol):
         """Protocol for annotating comparable types."""

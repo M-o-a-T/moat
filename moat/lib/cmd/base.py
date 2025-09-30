@@ -352,7 +352,7 @@ class MsgSender(BaseMsgHandler):
         return self._root
 
     def set_root(self, root):  # noqa: D102
-        if type(self) != MsgSender:
+        if type(self) is not MsgSender:
             raise RuntimeError("not in a subclass")
         assert not isinstance(root, MsgSender)
         self._root = root
@@ -514,7 +514,7 @@ class MsgHandler(BaseMsgHandler):
         if not rcmd:
             if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
                 return await msg.call_simple(cmd)
-            elif (str := getattr(self, f"stream{pref}", None)) is not None:  # noqa: A001
+            elif getattr(self, f"stream{pref}", None) is not None:
                 return await msg.call_stream(self.stream)
             else:
                 raise ShortCommandError(msg.cmd)

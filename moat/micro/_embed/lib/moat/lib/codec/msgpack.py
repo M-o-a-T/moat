@@ -381,7 +381,7 @@ class Unpacker:
         try:
             return self.unpack()
         except OutOfData:
-            raise StopIteration
+            raise StopIteration  # noqa:B904,RUF100
 
 
 class Packer:
@@ -589,5 +589,5 @@ def unpackb(packed, **kwargs):
             raise ExtraData
         return res
     except OutOfData:
-        raise OutOfData("incomplete")
+        raise OutOfData("incomplete") from None
     raise RuntimeError("No way")

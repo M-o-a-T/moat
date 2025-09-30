@@ -71,8 +71,7 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
         async def test_coro():
             _, _, _, URI, _broker_config = _PUB()
             with pytest.raises(ConnectException), ungroup:
-                config = {"auto_reconnect": False}
-                async with open_mqttclient(config=config) as client:
+                async with open_mqttclient(config={"auto_reconnect": False}) as client:
                     await client.connect(URI)
 
         anyio_run(test_coro)

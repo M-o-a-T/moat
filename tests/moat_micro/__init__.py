@@ -1,5 +1,3 @@
-# noqa:D104 pylint:disable=missing-module-docstring
-
 # We need to ensure that the test interpreter exists
 from __future__ import annotations
 

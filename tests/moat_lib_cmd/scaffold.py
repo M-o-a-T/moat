@@ -8,6 +8,11 @@ from moat.util import CtxObj, Path
 from moat.lib.cmd._test import StreamLoop
 from moat.lib.cmd.base import MsgHandler, MsgSender
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from socket import socket
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +22,7 @@ def res_akw(a, kw):  # noqa: D103
     return sa + " " + sk
 
 
-async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
+async def _wrap_sock(s: socket) -> anyio.abc.ByteStream:
     import sniffio  # noqa: PLC0415
 
     if sniffio.current_async_library() == "asyncio":
@@ -40,7 +45,7 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
 
 
 class StreamGate(CtxObj):  # noqa: D101
-    def __init__(self, h: MsgHandler, so: Socket, s: str):
+    def __init__(self, h: MsgHandler, so: socket, s: str):
         self.s = s
         self.so = so
         self.h = h

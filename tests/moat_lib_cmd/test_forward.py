@@ -8,6 +8,11 @@ from tests.moat_lib_cmd.scaffold import scaffold
 from moat.util import P
 from moat.lib.cmd.base import MsgHandler
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.cmd.msg import Msg
+
 
 class Fwd:  # noqa: D101
     def __init__(self, dest: MsgHandler):
@@ -79,7 +84,7 @@ async def test_error():  # noqa: D103
         scaffold(EP(), None, "A") as (_a, x),
         scaffold(Fwd(x), None, "C") as (_y, b),
     ):
-        with pytest.raises(RuntimeError) as err:
+        with pytest.raises(RuntimeError) as err:  # noqa:PT012
             res = await b.cmd("Test", 123)
             print(f"OWCH: result is {res!r}")
         assert err.match("123")

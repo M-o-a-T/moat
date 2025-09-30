@@ -17,7 +17,7 @@ def format_client_message(session=None, address=None, port=None):  # noqa: D103
     if session:
         return f"(client id={session.client_id})"
     elif address is not None and port is not None:
-        return "(client @=%s:%d)" % (address, port)
+        return f"(client @={address}:{port})"
     else:
         return "(unknown client)"
 

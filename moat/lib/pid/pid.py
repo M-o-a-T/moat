@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
 """
-Created on Wed Jun 22 20:06:38 2022
+PID controller library
+"""
 
-@author: eadali
-"""
+#Created on Wed Jun 22 20:06:38 2022
+#
+#@author: eadali
 
 from __future__ import annotations
 

@@ -107,8 +107,8 @@ def test_keys_items_values_iteration_and_modification_error():  # noqa: D103
     # test modification during iteration raises
     it2 = iter(h)
     next(it2)
+    h["d"] = 4
     with pytest.raises(RuntimeError):
-        h["d"] = 4
         next(it2)
 
 

@@ -107,7 +107,7 @@ async def test_lsy_from_file(cfg, tmp_path):  # noqa: D103
         assert isinstance(msg, CBORTag)
         assert getattr(msg, "_cbor_tag", None)
         assert msg.tag == CBOR_TAG_MOAT_FILE_ID
-        async for msg in rdr:
+        async for _msg in rdr:
             pass
         assert isinstance(msg, CBORTag)
         assert msg.tag == CBOR_TAG_MOAT_FILE_END
@@ -148,7 +148,7 @@ async def test_lsy_switch_server_hard_break(cfg):  # noqa: D103
 
         await sf.server()
         n = 0
-        with pytest.raises(EOFError), ungroup:
+        with pytest.raises(EOFError), ungroup:  # noqa:PT012
             async with c1.cmd(P("i.count")).stream_in() as st:
                 async for _m in st:
                     n += 1

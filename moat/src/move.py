@@ -67,7 +67,8 @@ class RepoMover:
                     pass
                 else:
                     raise RuntimeError(
-                        f"{self.name}: The migration branch {self.cfg.src.branch!r} already exists."
+                        f"{self.name}: The migration branch "
+                        f"{self.cfg.src.branch!r} already exists."
                     )
 
             except BaseException:

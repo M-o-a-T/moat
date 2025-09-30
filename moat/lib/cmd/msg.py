@@ -40,14 +40,12 @@ except ImportError:
     MutableMapping = dict  # pyright:ignore
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
     from .base import OptDict
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
-    from typing import (
-        Any,
-        AsyncContextManager,
-        Self,
-    )
+    from typing import Any, Self
 
 
 try:
@@ -412,25 +410,25 @@ class Msg(MsgLink, MsgResult):
 
     # Stream reply helpers
 
-    def stream_in(self, *a, **kw) -> AsyncContextManager[Msg]:
+    def stream_in(self, *a, **kw) -> AbstractAsyncContextManager[Msg]:
         """
         Reply to a stream, read-only.
         """
         return self._stream(a, kw, SD_IN)
 
-    def stream_out(self, *a, **kw) -> AsyncContextManager[Msg]:
+    def stream_out(self, *a, **kw) -> AbstractAsyncContextManager[Msg]:
         """
         Reply to a stream, write-only.
         """
         return self._stream(a, kw, SD_OUT)
 
-    def stream(self, *a, **kw) -> AsyncContextManager[Msg]:
+    def stream(self, *a, **kw) -> AbstractAsyncContextManager[Msg]:
         """
         Reply to a stream, bidirectional.
         """
         return self._stream(a, kw, SD_BOTH)
 
-    def _stream_call(self, flag: int) -> AsyncContextManager[Msg]:
+    def _stream_call(self, flag: int) -> AbstractAsyncContextManager[Msg]:
         """
         Stream startup on the sending side.  Don't call this.
         """

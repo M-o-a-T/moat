@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 
 from moat.util import Queue
 
-from collections import namedtuple
+from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ _r_chip = re.compile(
 )
 _r_pin = re.compile("^gpio-(?P<pin>[0-9]+) \\(.*\\) (?P<dir>in|out) +(?P<val>hi|lo)")
 
-Pin = namedtuple("Pin", ["out", "level"])
+Pin = NamedTuple("Pin", ["out", "level"])
 
 
 class _GpioPin:

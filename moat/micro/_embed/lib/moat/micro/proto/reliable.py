@@ -13,7 +13,7 @@ from moat.util.compat import (
     AC_exit,
     Event,
     TaskGroup,
-    TimeoutError,
+    TimeoutError,  # noqa:A004
     idle,
     log,
     sleep_ms,
@@ -329,7 +329,7 @@ class ReliableMsg(StackedMsg):
 
                 await idle()
 
-        except Exception:
+        except Exception:  # noqa:TRY203
             # if not self.persist:
             raise
             # log("Reliable", err=exc)

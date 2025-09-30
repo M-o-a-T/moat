@@ -30,7 +30,7 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def decode(self, data: bytes):
+    def decode(self, data: bytes):  # noqa:D102
         if data == b"":
             return NotGiven
         return super().decode(data)

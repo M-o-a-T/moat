@@ -19,17 +19,19 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
+from moat.util.exec import run as run_
 
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Sequence
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
-ARCH = subprocess.check_output(["dpkg", "--print-architecture"]).decode("utf-8").strip()
+ARCH = subprocess.check_output(["/usr/bin/dpkg",
+                                "--print-architecture"]).decode("utf-8").strip()
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
@@ -307,7 +309,7 @@ class Repo(git.Repo, _Common):
             self._add_repo(str(fn.name))
 
         res = subprocess.run(
-            ["git", "ls-files", "-z", "--exclude-standard"],
+            ["/usr/bin/git", "ls-files", "-z", "--exclude-standard"],
             check=True,
             stdout=subprocess.PIPE,
         )
@@ -378,8 +380,7 @@ class Repo(git.Repo, _Common):
         Test whether any subsystem changed since the "tagged" commit
 
         """
-        if tag is None:
-            tag = self.last_tag
+        tag = self.last_tag
         head = self._repo.head.commit
         print("StartDiff B", self, tag, head, file=sys.stderr)
         for d in head.diff(tag):
@@ -471,8 +472,8 @@ def run_tests(pkg: str | None, *opts) -> bool:
         return True
     try:
         print("\n*** Testing:", pkg)
-        subprocess.run(
-            ["python3", "-mpytest", *opts, tests],
+        subprocess.run(  # noqa:S603
+            ["/usr/bin/python3", "-mpytest", *opts, tests],
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -913,7 +914,7 @@ async def build(
     if g_done is not None:
         g_done = Path(g_done)
     else:
-        g_done = Path("/tmp/nonexistent")
+        g_done = Path("/tmp/nonexistent")  # noqa:S108
     repo = Repo(cfg.src.toplevel, None)
 
     tags = dict(version)
@@ -1074,41 +1075,35 @@ async def build(
             if not p.is_dir():
                 continue
             if not (rd / "debian" / "changelog").exists():
-                subprocess.run(
-                    [
-                        "debchange",
-                        "--create",
-                        "--newversion",
-                        f"{r.last_tag}-{r.vers.pkg}",
-                        "--package",
-                        r.mdash,
-                        f"Initial release for {forcetag}",
-                    ],
+                await run_(
+                    "debchange",
+                    "--create",
+                    "--newversion",
+                    f"{r.last_tag}-{r.vers.pkg}",
+                    "--package",
+                    r.mdash,
+                    f"Initial release for {forcetag}",
                     cwd=rd,
                     check=True,
-                    stdout=sys.stdout,
-                    stderr=sys.stderr,
                 )
 
             try:
-                res = subprocess.run(
-                    ["dpkg-parsechangelog", "-l", "debian/changelog", "-S", "version"],
+                res = await run_(
+                    "dpkg-parsechangelog", "-l", "debian/changelog", "-S", "version",
                     cwd=rd,
                     check=True,
-                    stdout=subprocess.PIPE,
+                    capture=True,
                 )
-                tag, ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
+                tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
-                    subprocess.run(
-                        [
-                            "debchange",
-                            "--distribution",
-                            "unstable",
-                            "--newversion",
-                            f"{ltag}-{r.vers.pkg}",
-                            f"New release for {forcetag}",
-                        ],
+                    await run_(
+                        "debchange",
+                        "--distribution",
+                        "unstable",
+                        "--newversion",
+                        f"{ltag}-{r.vers.pkg}",
+                        f"New release for {forcetag}",
                         cwd=rd,
                         check=True,
                     )
@@ -1123,7 +1118,7 @@ async def build(
                     or r.vers.pkg != ptag
                     or (test_chg and not changes.exists())
                 ):
-                    subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
+                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:
                 if not run:
                     print("*** Failure packaging", r.name, file=sys.stderr)
@@ -1156,7 +1151,7 @@ async def build(
                 up.add(r)
             else:
                 try:
-                    subprocess.run(["python3", "-mbuild", "-snw"], cwd=rd, check=True)
+                    await run_("python3", "-mbuild", "-snw", cwd=rd, check=True)
                 except subprocess.CalledProcessError:
                     err.add(r.name)
                 else:
@@ -1185,8 +1180,8 @@ async def build(
                 targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:
-                    res = subprocess.run(
-                        ["twine", "upload", str(targz), str(whl)],
+                    await run_(
+                        "twine", "upload", str(targz), str(whl),
                         cwd=rd,
                         check=True,
                     )
@@ -1224,7 +1219,7 @@ async def build(
                 if gdone.exists():
                     continue
             try:
-                subprocess.run(["dput", *dput_opts, str(changes)], check=True)
+                await run_("dput", *dput_opts, str(changes))
             except subprocess.CalledProcessError:
                 err.add(r.name)
             else:

@@ -7,7 +7,7 @@ from __future__ import annotations
 import errno
 import os
 
-from moat.lib.codec.errors import FileExistsError, FileNotFoundError
+from moat.lib.codec.errors import FileExistsError, FileNotFoundError  # noqa:A004
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import sleep_ms
 
@@ -185,7 +185,7 @@ class Cmd(BaseCmd):
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        with open(p, "rb") as _f:
+        with open(p, "rb") as _f:  # noqa:ASYNC230
             while True:
                 n = _f.readinto(_mem)
                 if not n:

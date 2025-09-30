@@ -17,9 +17,9 @@ def test_noop():
     assert c.decode(b"foo\0\ff") == b"foo\0\ff"
     c.feed(b"foo\0\ff")
     assert next(c) == b"foo\0\ff"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa:PT011
         c.encode("bar")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa:PT011
         c.encode(42)
 
 
@@ -34,9 +34,9 @@ def test_utf8():
     c.feed(b"\xaby!")
     assert next(c) == "ëy!"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa:PT011
         c.encode(b"bar")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa:PT011
         c.encode(42)
 
 

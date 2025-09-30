@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
-import contextlib
-
 from moat.util import yload
+
+logger = logging.getLogger(__name__)
 
 
 def load_cfg(cfg):  # pylint: disable=redefined-outer-name  # noqa: D103
@@ -44,7 +43,7 @@ cfg = load_cfg(os.environ.get("LOG_CFG", "logging.cfg"))
 logging.basicConfig = _lbc
 
 
-import trio._core._run as tcr
+import trio._core._run as tcr  # noqa:E402
 
 if "PYTHONHASHSEED" in os.environ:
     tcr._ALLOW_DETERMINISTIC_SCHEDULING = True  # noqa: SLF001

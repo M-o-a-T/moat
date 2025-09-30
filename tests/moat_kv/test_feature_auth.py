@@ -22,7 +22,7 @@ async def test_22_auth_basic(autojump_clock):  # pylint: disable=unused-argument
         assert st is not None
         (s,) = st.s
         h = p = None
-        for h, p, *_ in s.ports:
+        for h, p, *_ in s.ports:  # noqa:B007
             if h[0] != ":":
                 break
         run_c = partial(run, "-D", "kv", "-h", h, "-p", p)
@@ -73,7 +73,7 @@ async def test_23_auth_test(autojump_clock):  # pylint: disable=unused-argument 
         assert st is not None
         (s,) = st.s
         h = p = None
-        for h, p, *_ in s.ports:
+        for h, p, *_ in s.ports:  # noqa:B007
             if h[0] != ":":
                 break
         run_c = partial(run, "-D", "kv", "-h", h, "-p", p)
@@ -117,7 +117,7 @@ async def test_24_auth_password(autojump_clock):  # noqa: D103
         (s,) = st.s
         autojump_clock.autojump_threshold = 1
         h = p = None
-        for h, p, *_ in s.ports:
+        for h, p, *_ in s.ports:  # noqa:B007
             if h[0] != ":":
                 break
         run_c = partial(run, "-D", "kv", "-h", h, "-p", p)

@@ -31,6 +31,8 @@ repos:
     rev: v1.1.405
     hooks:
     - id: pyright
-      files: "moat.util.path.py"
+      files: "moat/util/path.py|tests/moat_util/test_path.py"
       additional_dependencies:
         - simpleeval
+        - pytest
+        - anyio

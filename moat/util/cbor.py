@@ -23,8 +23,7 @@ from ipaddress import (
 
 # Typing
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
-
-from ._cbor import StdCBOR, std_ext
+from moat.util._cbor import StdCBOR, std_ext
 
 __all__ = ["StdCBOR", "gen_start", "gen_stop", "std_ext"]
 

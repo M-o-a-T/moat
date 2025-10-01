@@ -10,6 +10,8 @@ import pytest
 from moat.util import P, Path, yformat, yload
 from moat.lib.codec import get_codec
 
+from typing import cast
+
 _valid = (
     (("a", "b", "c"), "a.b.c"),
     (("a", 2, "c"), "a:2.c"),
@@ -258,7 +260,7 @@ def test_root():
 
     Root.set(P("duddy"))
     pp = c.decode(pc)
-    assert pp.slashed == "duddy/d/::a/e"
+    assert cast(Path, pp).slashed == "duddy/d/::a/e"
     assert p == pp
 
 

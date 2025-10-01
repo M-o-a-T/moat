@@ -267,6 +267,7 @@ def test_root():
 _apply = (
     ("x:(3,).y", "x.c.y"),
     ("x.zzz.y", "x.zzz.y"),
+    ("x:(1,-3).y", "x.a.b.c.y"),
     ("x:(3,4).y", "x.c.d.y"),
     ("x:(-3,-2).y", "x.c.d.y"),
     ("x:(-4,-2).y", "x.b.c.d.y"),

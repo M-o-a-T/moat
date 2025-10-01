@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import PS, P, Path, yformat, yload
+from moat.util import P, Path, yformat, yload
 from moat.lib.codec import get_codec
 
 _valid = (
@@ -241,32 +241,25 @@ def test_root():
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))
     p = P(":R.d.::a.e")
-    p2 = P("yes:Q.d.::a.e")
-    c = StdCBOR()
+    with pytest.raises(ValueError) as err:  # noqa:PT011,F841,RUF100
+        P("yes:Q.d.::a.e")
+    with pytest.raises(ValueError) as err:  # noqa:PT011,F841,RUF100
+        P("yes.no:Q.d.::a.e")
+
     assert p.slashed == "abba/c/d/::a/e"
     assert str(p) == ":R.d.::a.e"
+
+    c = StdCBOR()
     pc = c.encode(p)
-    p2c = c.encode(p2)
     assert b"abba" not in pc
-    assert b"queue" not in p2c
 
     assert b":a" in pc
     assert b"::a" not in pc
 
     Root.set(P("duddy"))
-    Q_Root.set(P("fuddy"))
     pp = c.decode(pc)
-    pp2 = c.decode(p2c)
     assert pp.slashed == "duddy/d/::a/e"
-    assert pp2.slashed == "yes/fuddy/d/::a/e"
     assert p == pp
-    assert p2 == pp2
-    assert p != p2
-
-    assert "yes" in pp2
-    assert "fuddy" not in pp2
-
-    assert pp2 == PS("yes/fuddy/d/::a/e")
 
 
 _apply = (

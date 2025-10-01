@@ -799,7 +799,7 @@ class Server(MsgHandler):
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
                 msg.meta.source = "Mon"
-                topic = msg.topic[1:]
+                topic = msg.topic
                 if len(topic) and topic[0] == "run":
                     continue
                 path = Path.build(topic)

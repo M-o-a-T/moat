@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict, get_codec
+from moat.util import CtxObj, NotGiven, Path, Root, attrdict, get_codec
 
 from typing import TYPE_CHECKING
 
@@ -125,7 +125,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         """
         Send a somewhat-free-form error message.
         """
-        if not isinstance(subpath[0], RootPath):
+        if subpath.prefix is None:
             subpath = Root.get() / "error" + subpath
         if msg:
             kw["msg"] = msg

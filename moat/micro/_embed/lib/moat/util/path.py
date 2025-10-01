@@ -57,7 +57,7 @@ class Path(tuple):  # noqa:SLOT001
         return "".join(res)
 
     @classmethod
-    def build(cls, arr):
+    def build(cls, arr, decoded=False):  # noqa:ARG003
         """
         Constructor to build a Path from an existing list.
         """

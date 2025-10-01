@@ -3,7 +3,6 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import copy
 import pytest
-import time
 from contextlib import AsyncExitStack
 from functools import partial
 from unittest import mock
@@ -22,7 +21,7 @@ from moat.link.meta import MsgMeta
 
 
 async def mon(c, *, task_status):  # noqa: D103
-    async with c.monitor(P(":"), codec="std-cbor", subtree=True, raw=True) as mo:
+    async with c.monitor(P(":"), subtree=True, raw=True) as mo:
         task_status.started()
         c1 = get_codec("std-cbor")
         c2 = get_codec("std-msgpack")
@@ -124,23 +123,10 @@ async def test_gate_mqtt(cfg):  # noqa: D103
         )
 
 
-otm = time.time
-
-
-def tm():  # noqa: D103
-    try:
-        return trio.current_time()
-    except RuntimeError:
-        return otm()
-
-
 @pytest.mark.trio
 async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
     autojump_clock.autojump_threshold = 0.4
     async with AsyncExitStack() as ex:
-        ex.enter_context(mock.patch("time.time", new=tm))
-        ex.enter_context(mock.patch("time.monotonic", new=tm))
-
         sf = await ex.enter_async_context(Scaffold(cfg, use_servers=True))
         await sf.server(init={"Hello": "there!", "test": 123})
 

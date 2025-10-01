@@ -126,7 +126,7 @@ class Backend(_Backend):
         @mine: send my own messages back to me.
         """
 
-        if len(topic):
+        if not topic.is_empty:
             tops = topic.slashed
             if subtree:
                 tops += "/#"

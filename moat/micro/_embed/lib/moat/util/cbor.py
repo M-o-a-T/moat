@@ -30,7 +30,7 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def decode(self, data: bytes):  # noqa:D102
+    def decode(self, data: bytes):  # noqa:D102,RUF100
         if data == b"":
             return NotGiven
         return super().decode(data)
@@ -86,7 +86,7 @@ def _dec_path(codec, val):
     codec  # noqa:B018
     if not isinstance(val, (list, tuple)):
         return Tag(39, val)  # not decodable
-    return Path.build(val)
+    return Path.build(val, decoded=True)
 
 
 @std_ext.encoder(None, object)

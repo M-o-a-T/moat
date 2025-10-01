@@ -992,7 +992,7 @@ class Watcher(CtxObj):
 
     async def _updates(self, qw, *, task_status):
         "get updates from MQTT"
-        plen = 1 + len(self.path)  # add the root tag
+        plen = len(self.path)  # ignores the root prefix
         async with self.link.monitor(
             Root.get() + self.path, subtree=self.subtree, retained=(self.state is NotGiven)
         ) as mon:

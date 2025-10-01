@@ -53,8 +53,8 @@ def _enc_exttype(codec, obj):
 @std_ext.encoder(None, Path)
 def _enc_path(codec, obj):
     if obj.mark:
-        return 6, codec.encode(obj.mark) + b"".join(codec.encode(x) for x in obj)
-    return 3, b"".join(codec.encode(x) for x in obj)
+        return 6, codec.encode(obj.mark) + b"".join(codec.encode(x) for x in obj.raw)
+    return 3, b"".join(codec.encode(x) for x in obj.raw)
 
 
 @std_ext.encoder(4, Proxy)
@@ -94,7 +94,7 @@ def _dec_path(codec, data):
     codec  # noqa:B018
     s = Codec()
     s.feed(data)
-    return Path(*iter(s))
+    return Path(*iter(s), decoded=True)
 
 
 @std_ext.decoder(4)

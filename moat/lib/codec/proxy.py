@@ -20,8 +20,17 @@ __all__ = [
 from anyio import Path as AioPath
 from pathlib import Path as FSPath
 
-from ._proxy import DProxy as _DProxy
-from ._proxy import NotGiven, Proxy, _CProxy, as_proxy, drop_proxy, get_proxy, name2obj, obj2name
+from moat.lib.codec._proxy import DProxy as _DProxy
+from moat.lib.codec._proxy import (
+    NotGiven,
+    Proxy,
+    _CProxy,
+    as_proxy,
+    drop_proxy,
+    get_proxy,
+    name2obj,
+    obj2name,
+)
 
 
 class NoProxyError(ValueError):

@@ -40,11 +40,9 @@ async def cli(ctx):
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
-    if not obj.name:
-        obj.name = "mon_" + gen_ident()
 
     set_root(cfg)
-    obj.conn = await ctx.with_async_resource(get_backend(cfg, name=obj.name))
+    obj.conn = await ctx.with_async_resource(get_backend(cfg, name="mon_" + gen_ident()))
 
 
 @cli.command()

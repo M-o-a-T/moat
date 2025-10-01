@@ -107,7 +107,7 @@ async def test_lsy_from_file(cfg, tmp_path):  # noqa: D103
         assert isinstance(msg, CBORTag)
         assert getattr(msg, "_cbor_tag", None)
         assert msg.tag == CBOR_TAG_MOAT_FILE_ID
-        async for _msg in rdr:
+        async for msg in rdr:  # noqa:B007
             pass
         assert isinstance(msg, CBORTag)
         assert msg.tag == CBOR_TAG_MOAT_FILE_END

@@ -533,7 +533,7 @@ class HostPort(Cleaner):  # noqa:D101
 
         m = self.mac
         if m is not None:
-            m = struct.unpack(f">{len(m) / 2}H", m)
+            m = struct.unpack(f">{len(m) // 2}H", m)
             mm = 0
             for m_ in m:
                 mm = (mm << 16) + m_
@@ -903,7 +903,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
 
         m = self.mac
         if m is not None:
-            m = struct.unpack(f">{len(m) / 2}H", m)
+            m = struct.unpack(f">{len(m) // 2}H", m)
             mm = 0
             for m_ in m:
                 mm = (mm << 16) + m_

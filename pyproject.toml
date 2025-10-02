@@ -95,6 +95,13 @@ dev = [
 	"passlib",
 	"pytest-trio",
 ]
+doc = [
+    "sphinx",
+    "sphinx-immaterial",
+    "myst-parser",
+    "sphinx-design",
+    "sphinx-last-updated-by-git",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]

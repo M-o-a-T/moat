@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 PACKAGE = moat
 MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 

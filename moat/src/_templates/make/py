@@ -13,7 +13,7 @@ TESTS ?= tests/
 CODE ?= $(subst -,/,$(PACKAGE))
 
 BUILD_DIR ?= build
-INPUT_DIR ?= docs/source
+INPUT_DIR ?= docs
 
 RQ := grep -qs tool.ruff pyproject.toml
 

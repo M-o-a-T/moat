@@ -147,6 +147,7 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "ext/**",
+    "docs/**",
 ]
 explicit-preview-rules = true
 

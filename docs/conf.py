@@ -15,36 +15,39 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+from __future__ import annotations
 
-import inspect
 import os
-import re
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath("."))
-sys.path.insert(0, os.path.abspath(".."))
+if Path("_static").exists():
+    docs_dir = Path(".")
+    sys.path.insert(0, os.path.abspath(".."))
+else:
+    docs_dir = Path("docs")
+    sys.path.insert(0, os.path.abspath("."))
 
-# Need to build docs with Python 3.8 or higher for proper typing annotations, including from __future__ import annotations
-assert sys.version_info.major == 3 and sys.version_info.minor >= 8
+# get the current version
+import subprocess
+
+version = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
 
 # Assign a build variable to the builtin module that inerts the @set_module decorator. This is done because set_module
-# confuses Sphinx when parsing overloaded functions. When not building the documentation, the @set_module("galois")
+# confuses Sphinx when parsing overloaded functions. When not building the documentation, the @set_module("moat")
 # decorator works as intended.
 import builtins
 
-setattr(builtins, "__sphinx_build__", True)
+builtins.__sphinx_build__ = True
 
-import numpy
 import sphinx
-
-import galois
 
 # -- Project information -----------------------------------------------------
 
-project = "galois"
-copyright = "2020-2025, Matt Hostetter"
-author = "Matt Hostetter"
-version = galois.__version__
+project = "moat"
+copyright = "2018-2025, Matthias Urlichs"
+author = "Matthias Urlichs"
+# version: see above
 
 
 # -- General configuration ---------------------------------------------------
@@ -55,17 +58,15 @@ version = galois.__version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx.ext.mathjax",
+    #   "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx_last_updated_by_git",
     "sphinx_immaterial",
     "sphinx_immaterial.apidoc.python.apigen",
-    "sphinx_math_dollar",
+    "sphinx_immaterial.theme_result",
+    #   "sphinx_design",
+    "sphinx_favicon",
     "myst_parser",
-    "sphinx_design",
-    "IPython.sphinxext.ipython_console_highlighting",
-    "IPython.sphinxext.ipython_directive",
-    "ipython_with_reprs",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -73,7 +74,10 @@ templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = [".rst", ".md", ".ipynb"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 # Tell sphinx that ReadTheDocs will create an index.rst file as the main file,
 # not the default of contents.rst.
@@ -105,6 +109,7 @@ html_theme = "sphinx_immaterial"
 html_static_path = ["_static"]
 
 html_css_files = [
+    "basic.css",
     "extra.css",
 ]
 
@@ -118,30 +123,35 @@ rst_prolog = """
 # Sets the default role of `content` to :python:`content`, which uses the custom Python syntax highlighting inline literal
 default_role = "python"
 
-html_title = "galois"
-html_favicon = "../logo/galois-favicon-color.png"
-html_logo = "../logo/galois-favicon-white.png"
+favicons = [
+    {"href": "MoaT.svg"},  # => use `_static/icon.svg`
+    {"href": "MoaT.16.png"},
+    {"href": "MoaT.32.png"},
+    {"href": "MoaT.128.png"},
+    {
+        "rel": "apple-touch-icon",
+        "href": "MoaT.180.png",
+    },
+]
+html_title = "The Master of all Things"
+html_logo = "MoaT.svg"
 
 # Sphinx Immaterial theme options
 html_theme_options = {
     "icon": {
         "repo": "fontawesome/brands/github",
     },
-    "site_url": "https://galois.readthedocs.io/",
-    "repo_url": "https://github.com/mhostetter/galois",
-    "repo_name": "mhostetter/galois",
+    "site_url": "https://moat.readthedocs.io/",
+    "repo_url": "https://github.com/M-o-a-T/moat",
+    "repo_name": "M-o-a-T/moat",
     "social": [
         {
             "icon": "fontawesome/brands/github",
-            "link": "https://github.com/mhostetter/galois",
+            "link": "https://github.com/M-o-a-T/moat",
         },
         {
             "icon": "fontawesome/brands/python",
-            "link": "https://pypi.org/project/galois/",
-        },
-        {
-            "icon": "fontawesome/brands/twitter",
-            "link": "https://twitter.com/galois_py",
+            "link": "https://pypi.org/project/moat/",
         },
     ],
     "edit_uri": "",
@@ -164,7 +174,7 @@ html_theme_options = {
         {
             "media": "(prefers-color-scheme: light)",
             "scheme": "default",
-            "primary": "indigo",
+            "primary": "light-blue",
             "accent": "indigo",
             "toggle": {
                 "icon": "material/weather-night",
@@ -174,7 +184,7 @@ html_theme_options = {
         {
             "media": "(prefers-color-scheme: dark)",
             "scheme": "slate",
-            "primary": "black",
+            "primary": "grey",
             "accent": "indigo",
             "toggle": {
                 "icon": "material/weather-sunny",
@@ -223,30 +233,11 @@ autodoc_type_aliases = {
     "PolyLike": "~typing.PolyLike",
 }
 
-ipython_execlines = ["import math", "import numpy as np", "import galois"]
-
-myst_enable_extensions = ["dollarmath"]
-
-mathjax_config = {
-    "tex2jax": {
-        "inlineMath": [["\\(", "\\)"]],
-        "displayMath": [["\\[", "\\]"]],
-    },
-}
-mathjax3_config = {
-    "tex": {
-        "inlineMath": [["\\(", "\\)"]],
-        "displayMath": [["\\[", "\\]"]],
-    }
-}
-
-
 # -- Sphinx Immaterial configs -------------------------------------------------
 
 # Python apigen configuration
 python_apigen_modules = {
-    "galois": "api/galois.",
-    "galois.typing": "api/galois.typing.",
+    "moat": "api/moat.",
 }
 python_apigen_default_groups = [
     ("class:.*", "Classes"),
@@ -416,7 +407,7 @@ def autodoc_skip_member(app, what, name, obj, skip, options):
         return True
     elif (
         hasattr(obj, "__qualname__")
-        and getattr(obj, "__qualname__").split(".")[0] == "FieldArray"
+        and obj.__qualname__.split(".")[0] == "FieldArray"
         and hasattr(numpy.ndarray, name)
     ):
         if name in ["__repr__", "__str__"]:
@@ -453,59 +444,6 @@ def autodoc_process_bases(app, name, obj, options, bases):
         bases.remove(base)
 
 
-# Only during Sphinx builds, monkey-patch the metaclass properties into this class as "class properties". In Python 3.9 and greater,
-# class properties may be created using `@classmethod @property def foo(cls): return "bar"`. In earlier versions, they must be created
-# in the metaclass, however Sphinx cannot find or document them. Adding this workaround allows Sphinx to document them.
-
-
-def classproperty(obj):
-    ret = classmethod(obj)
-    ret.__doc__ = obj.__doc__
-    return ret
-
-
-ArrayMeta_properties = [
-    member for member in dir(galois.Array) if inspect.isdatadescriptor(getattr(type(galois.Array), member, None))
-]
-for p in ArrayMeta_properties:
-    # Fetch the class properties from the private metaclasses
-    ArrayMeta_property = getattr(galois._domains._meta.ArrayMeta, p)
-
-    # Temporarily delete the class properties from the private metaclasses
-    delattr(galois._domains._meta.ArrayMeta, p)
-
-    # Add a Python 3.9 style class property to the public class
-    setattr(galois.Array, p, classproperty(ArrayMeta_property))
-
-    # Add back the class properties to the private metaclasses
-    setattr(galois._domains._meta.ArrayMeta, p, ArrayMeta_property)
-
-
-FieldArrayMeta_properties = [
-    member
-    for member in dir(galois.FieldArray)
-    if inspect.isdatadescriptor(getattr(type(galois.FieldArray), member, None))
-]
-for p in FieldArrayMeta_properties:
-    # Fetch the class properties from the private metaclasses
-    if p in ArrayMeta_properties:
-        ArrayMeta_property = getattr(galois._domains._meta.ArrayMeta, p)
-    FieldArrayMeta_property = getattr(galois._fields._meta.FieldArrayMeta, p)
-
-    # Temporarily delete the class properties from the private metaclasses
-    if p in ArrayMeta_properties:
-        delattr(galois._domains._meta.ArrayMeta, p)
-    delattr(galois._fields._meta.FieldArrayMeta, p)
-
-    # Add a Python 3.9 style class property to the public class
-    setattr(galois.FieldArray, p, classproperty(FieldArrayMeta_property))
-
-    # Add back the class properties to the private metaclasses
-    if p in ArrayMeta_properties:
-        setattr(galois._domains._meta.ArrayMeta, p, ArrayMeta_property)
-    setattr(galois._fields._meta.FieldArrayMeta, p, FieldArrayMeta_property)
-
-
 def autodoc_process_signature(app, what, name, obj, options, signature, return_annotation):
     signature = modify_type_hints(signature)
     return_annotation = modify_type_hints(return_annotation)
@@ -520,9 +458,9 @@ def modify_type_hints(signature):
 
     See https://github.com/jbms/sphinx-immaterial/issues/161
     """
-    if signature:
-        signature = re.sub(r"(?<!~)np\.", "~numpy.", signature)
-        signature = re.sub(r"(?<!~)galois\.", "~galois.", signature)
+    #   if signature:
+    #       signature = re.sub(r"(?<!~)np\.", "~numpy.", signature)
+    #       signature = re.sub(r"(?<!~)galois\.", "~galois.", signature)
     return signature
 
 
@@ -551,9 +489,17 @@ def monkey_patch_parse_see_also():
     sphinx.ext.napoleon.GoogleDocstring._parse_see_also_section = _parse_see_also_section
 
 
+def gen_icons():
+    src = docs_dir / "_static" / "MoaT.svg"
+    for sz in (16, 32, 128, 160, 180, 256):
+        dest = docs_dir / "_static" / f"MoaT.{sz}.png"
+        if not dest.exists():
+            subprocess.check_call(["inkscape", "-o", str(dest), "-w", str(sz), str(src)])
+
+
 def setup(app):
     monkey_patch_parse_see_also()
     app.connect("autodoc-skip-member", autodoc_skip_member)
     app.connect("autodoc-process-bases", autodoc_process_bases)
     app.connect("autodoc-process-signature", autodoc_process_signature)
-
+    gen_icons()

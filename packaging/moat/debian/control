@@ -6,6 +6,15 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13),
   dh-sequence-installsysusers,
   python3-setuptools,
   python3-wheel,
+  librsvg2-bin,
+  inkscape,
+  python3-sphinx,
+  python3-sphinx-immaterial,
+  python3-sphinx-tabs,
+  python3-sphinxcontrib.trio,
+  python3-sphinx-last-updated-by-git,
+  python3-sphinx-jinja,
+  python3-sphinx-favicon,
 Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
 X-DH-Compat: 13
@@ -19,6 +28,10 @@ Depends: ${misc:Depends}, ${python3:Depends},
 Conflicts: python3-moat-main, moat-main
 Replaces: moat-main
 Description: The command line for MoaT
-  # MoaT main
-  .
   This module contains the command line for (all of) MoaT.
+
+Package: moat-doc
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+Description: The documentationfor MoaT
+  This module contains the documentation for the MoaT system.

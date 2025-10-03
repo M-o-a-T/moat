@@ -705,7 +705,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
     if help or (ctx.invoked_subcommand is None and not ctx.protected_args):
         print(ctx.get_help())
-        ctx.exit()
+        await ctx.aexit()
 
 
 def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements

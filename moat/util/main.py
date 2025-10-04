@@ -703,7 +703,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
         return
     ctx._moat_invoked = True  # pylint: disable=protected-access
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
-    if help or (ctx.invoked_subcommand is None and not ctx.protected_args):
+    if help or (ctx.invoked_subcommand is None and not ctx.args):
         print(ctx.get_help())
         await ctx.aexit()
 

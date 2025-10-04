@@ -78,7 +78,7 @@ def _dec_obj(codec, val):
 @std_ext.encoder(39, Path)
 def _enc_path(codec, val):
     codec  # noqa:B018
-    return val.raw
+    return val.raw_rooted
 
 
 @std_ext.decoder(39)

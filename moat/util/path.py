@@ -218,9 +218,24 @@ class Path(Sequence[PathElem]):
 
     @property
     def raw(self) -> PathTuple:
-        """as tuple"""
+        """
+        Return the path as a tuple of its elements.
+
+        The prefix, if any, is expanded.
+        """
         if self._prefix is not None:
             return self._prefix.raw + self._data
+        return self._data
+
+    @property
+    def raw_rooted(self) -> tuple[Path | PathElem, ...] | PathTuple:
+        """
+        Return the path as a tuple of its elements.
+
+        If the path has a prefix, it is returned in the tuple's first element.
+        """
+        if self._prefix is not None:
+            return (self._prefix,) + self._data
         return self._data
 
     @property
@@ -1007,6 +1022,9 @@ class RootPath(Path):
     def __init__(self, key: str, var: ContextVar):
         self._key = key
         self._var = var
+
+    def __repr__(self):
+        return f"{self._key}={super().__repr__()}"
 
     @property
     def name(self) -> str:

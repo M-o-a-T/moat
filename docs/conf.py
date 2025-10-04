@@ -210,7 +210,6 @@ html_domain_indices = True
 # Create hyperlinks to other documentation
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 autodoc_default_options = {
@@ -379,14 +378,15 @@ sphinx_immaterial_custom_admonitions = [
 
 # -- Monkey-patching ---------------------------------------------------------
 
-SPECIAL_MEMBERS = [
+SPECIAL_MEMBERS = {
+    "__init__",
     "__repr__",
     "__str__",
     "__int__",
     "__call__",
     "__len__",
     "__eq__",
-]
+}
 
 
 def autodoc_skip_member(app, what, name, obj, skip, options):
@@ -396,27 +396,6 @@ def autodoc_skip_member(app, what, name, obj, skip, options):
     if skip:
         # Continue skipping things Sphinx already wants to skip
         return skip
-
-    if name == "__init__":
-        return False
-    elif hasattr(obj, "__objclass__"):
-        # This is a NumPy method, don't include docs
-        return True
-    elif getattr(obj, "__qualname__", None) in ["FunctionMixin.dot", "Array.astype"]:
-        # NumPy methods that were overridden, don't include docs
-        return True
-    elif (
-        hasattr(obj, "__qualname__")
-        and obj.__qualname__.split(".")[0] == "FieldArray"
-        and hasattr(numpy.ndarray, name)
-    ):
-        if name in ["__repr__", "__str__"]:
-            # Specifically allow these methods to be documented
-            return False
-        else:
-            # This is a NumPy method that was overridden in one of our ndarray subclasses. Also don't include
-            # these docs.
-            return True
 
     if name in SPECIAL_MEMBERS:
         # Don't skip members in "special-members"

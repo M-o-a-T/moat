@@ -46,7 +46,8 @@ class Path(tuple):  # noqa:SLOT001
                 res.append(":n")
             elif isinstance(x, (bytes, bytearray, memoryview)):
                 if all(32 <= b < 127 for b in x):
-                    res.append(":v" + _escol(x.decode("ascii")))
+                    res.append(":v" + _escol(x.decode("ascii")))  # type:ignore
+                    ## The memoryview must be of bytes, thus it supports "decode"
                 else:
                     from base64 import b64encode  # noqa: PLC0415
 
@@ -69,7 +70,7 @@ class Path(tuple):  # noqa:SLOT001
         Constructor to build a Path from its string representation.
         """
         res = []
-        part: None | bool | str = False
+        part: None | bool | str | int | bytes = False
         # non-empty string: accept colon-eval or dot (inline)
         # True: require dot or colon-eval (after :t)
         # False: accept only colon-eval (start)

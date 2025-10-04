@@ -325,7 +325,7 @@ async def boot(obj, state):
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
 @click.option("-t", "--time", is_flag=True, help="Time the command")
-@click.option("-p", "--parts", is_flag=True, help="Re-assemble a possibly-partial result")
+@click.option("-a", "--parts", is_flag=True, help="Retrieve a possibly-partial result")
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=True, with_proxy=True)
 @catch_errors
@@ -410,9 +410,9 @@ async def cons(obj, path):
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
 @click.option("-R", "--read-client", help="Read config file from the client")
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
-@click.option("-S", "--stdout", is_flag=True, hidden=True)
+@click.option("--stdout", is_flag=True, hidden=True)
 @click.option("-W", "--write-client", help="Write config file to the client")
-@click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
+@click.option("-S", "--sync", is_flag=True, help="Sync the client after writing")
 @click.option(
     "-c",
     "--client",
@@ -460,7 +460,7 @@ async def cfg_(
     these paths with ``… cfg -P fs ‹path›`` and ``… cfg -P cfg ‹path›``.
     """
     if write and stdout:
-        raise click.UsageError("no -S and -w")
+        raise click.UsageError("no --stdout and --write")
     if stdout:
         write = obj.stdout
 

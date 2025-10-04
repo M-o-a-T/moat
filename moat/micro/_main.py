@@ -584,8 +584,6 @@ async def path_(obj, manifest):
 
     import pathlib  # noqa: PLC0415
 
-    import moat.micro  # noqa: PLC0415
-
     if manifest:
         import moat.micro._embed._tag as m  # noqa: PLC0415
 

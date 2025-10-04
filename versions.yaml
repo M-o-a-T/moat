@@ -189,8 +189,8 @@ moat-micro:
   deb: 0.16.4-1
   pkg: 1
   pypi: 0.16.9
-  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
-  tag: 0.16.11
+  rev: b1ad488062f7950bafbf254813323a166860714a
+  tag: 0.17.0
 moat-modbus:
   deb: 0.8.5-2
   pkg: 2

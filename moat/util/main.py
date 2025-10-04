@@ -844,6 +844,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         merge(cfg, read_cfg(name, fn), replace=False)
 
     obj.cfg = cfg = to_attrdict(cfg)
+    if cfg.env.in_test:
+        cfg.env.in_test(cfg)
 
     obj.debug = verbose
     obj.DEBUG = debug

@@ -1,5 +1,6 @@
 env:
   timezone: UTC
+  in_test: False
 logging:
   loggers:
     moat.mqtt:

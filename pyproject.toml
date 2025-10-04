@@ -81,19 +81,23 @@ line-length = 99
 addopts = "-x"
 log_cli_level = "DEBUG"
 pythonpath = [
-  ".",
+    ".",
 ]
 testpaths = [
-  "tests",
+    "tests",
 ]
 asyncio_default_fixture_loop_scope = "function"
 
 [project.optional-dependencies]
 dev = [
-	"cbor2",
-        "numpy",
-	"passlib",
-	"pytest-trio",
+    "asnycowfs ~= 0.15",
+    "asyncactor ~= 0.27",
+    "asyncscope ~= 0.11",
+    "cbor2",
+    "mqttproto ~= 0.7.2.21",
+    "passlib",
+    "pytest-trio",
+    "range_set ~= 0.3",
 ]
 doc = [
     "sphinx",

@@ -17,6 +17,11 @@ from moat.lib.codec.proxy import DProxy, Proxy, get_proxy, name2obj, obj2name, u
 from . import NotGiven
 from .path import Path
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.codec import ByteType
+
 __all__ = ["StdCBOR", "std_ext"]
 
 std_ext = Extension()
@@ -30,7 +35,7 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def decode(self, data: bytes):  # noqa:D102,RUF100
+    def decode(self, data: ByteType):  # noqa:D102,RUF100
         if data == b"":
             return NotGiven
         return super().decode(data)

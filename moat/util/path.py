@@ -144,15 +144,41 @@ class Path(Sequence[PathElem]):
     representation. That way, specific paths are encoded in a root-free
     form. Thus, if you rename the root or move data from one MoaT-Link
     setup to another, everything still works.
+
+    Matching a path works. Note that due to the way Python's matching
+    algorithm works you need to use double parentheses.
+
+        p=Path("a","b","c")
+        match p:
+            case Path((x,y)):
+                print("Yes")
+
     """
 
     _prefix: RootPath | None = None
     _mark: str = ""
     _data: PathTuple
 
+    __match_args__ = ("raw_rooted",)
+
     def __init__(
         self, *a: PathElem, mark: str = "", scan: bool = False, prefix=None, decoded: bool = False
     ):
+        """
+        Create a path from the given elements.
+
+        Args:
+            prefix: Use this prefix directly.
+            scan: Check whether the path starts with one of the
+                  roots. If so, set that root as prefix.
+            decoded: Check if the first element is a `RootPath`.
+                     If so, set it as the prefix.
+            mark: Mark that path with the given string.
+                  Deprecated; use prefixes.
+
+        Both ``scan`` and ``decoded`` default to `False`.
+        """
+
         if mark:
             warnings.warn("Marking a path is deprecated")
 
@@ -168,9 +194,11 @@ class Path(Sequence[PathElem]):
                     continue
 
                 if len(a) >= len(proxy) and a[: len(proxy)] == proxy:
-                    prefix = proxy
-                    a = a[len(proxy) :]
-                    break
+                    if prefix is None or len(prefix) < len(proxy):
+                        prefix = proxy
+
+            if prefix is not None:
+                a = a[len(prefix) :]
 
         self._prefix = prefix
         self._data = a
@@ -331,7 +359,7 @@ class Path(Sequence[PathElem]):
             elif x is None:
                 res.append(":n")
 
-            elif isinstance(x, (bytes, bytearray, memoryview)):
+            elif isinstance(x, (bytes, bytearray)):
                 if all(32 <= b < 127 for b in x):
                     res.append(":v" + _escol(cast(bytes, x).decode("ascii"), True))
                 elif hex:
@@ -378,6 +406,16 @@ class Path(Sequence[PathElem]):
         """
 
         return self.__str__(slash=2)
+
+    def __getattr__(self, i):
+        # While this incidentally makes Path().0 and things like it work,
+        # the main reason it exists is matching a Path positionally.
+        if i.isdigit():
+            try:
+                return self._d[int(i)]
+            except Exception:  # noqa:S110
+                pass
+        return super().__getattribute__(i)
 
     @overload
     def __getitem__(self, x: int) -> PathElem: ...

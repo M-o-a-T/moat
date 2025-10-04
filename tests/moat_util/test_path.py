@@ -280,3 +280,21 @@ _apply = (
 def test_apply(a, b):
     p = P("a.b.c.d.e")
     assert P(a).apply(p) == P(b), (P(a), P(b), P(a).apply(p))
+
+
+_match = (
+    ("x.y", "2 x y"),
+    ("x.y.z", "3:x.y.z"),
+)
+
+
+@pytest.mark.parametrize("a,b", _match)  # noqa:PT006
+def test_match(a, b):
+    p = P(a)
+    match p:
+        case Path((x, y, z)):  # noqa:F841
+            assert b == f"3:{p}"
+        case Path((x, y)):
+            assert b == f"2 {x} {y}"
+        case _:
+            assert False, (p, b)  # noqa:PT015,B011

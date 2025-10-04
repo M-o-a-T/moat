@@ -6,8 +6,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Self
 
-    ByteType = bytes | bytearray | memoryview
-    VarByteType = bytearray | memoryview
+    ByteType = bytes | bytearray | memoryview[bytes]
+    VarByteType = bytearray | memoryview[bytes]
 
 
 class NoCodecError(ValueError):

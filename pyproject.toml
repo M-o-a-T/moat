@@ -228,6 +228,8 @@ ignore = []
 #defineConstant = { DEBUG = true }
 #stubPath = "src/stubs"
 
+disableBytesTypePromotions = false
+
 reportMissingImports = "error"
 reportMissingTypeStubs = false
 

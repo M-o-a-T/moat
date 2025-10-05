@@ -228,7 +228,7 @@ class ServerClient(LinkCommon):
                 if await self._hello.run(MsgSender(cmd)) is False or not (
                     auth := self._hello.auth_data
                 ):
-                    self.logger.debug("NO %s", self.client_nr)
+                    self.logger.debug("NO C_%s", self.client_nr)
                     return
                 them = self._hello.them
                 self.is_server = self._hello.they_server
@@ -2105,7 +2105,7 @@ class Server(MsgHandler):
                                 retain=True,
                             )
         except (ClosedResourceError, anyio.EndOfStream):
-            self.logger.debug("XX %d closed", cnr)
+            self.logger.debug("Client C_%s closed", cnr)
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             if hasattr(exc, "split"):
@@ -2118,15 +2118,15 @@ class Server(MsgHandler):
 
             if exc is not None and not isinstance(exc, CancelExc):
                 if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
-                    self.logger.debug("Client %s closed", cnr)
+                    self.logger.debug("Client C_%s closed", cnr)
                 elif isinstance(exc, TimeoutError):
-                    self.logger.warning("Client %s timed out", cnr)
+                    self.logger.warning("Client C_%s timed out", cnr)
                 else:
-                    self.logger.exception("Client connection %s killed", cnr, exc_info=exc)
+                    self.logger.exception("Client connection C_%s killed", cnr, exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
             self._error_cache[name] = cast(Exception, exc)
-            self.logger.debug("XX END XX %s", cnr)
+            self.logger.debug("End Client C_%s", cnr)
 
         finally:
             with anyio.move_on_after(2, shield=True):

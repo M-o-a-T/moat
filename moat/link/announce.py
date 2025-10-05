@@ -5,8 +5,11 @@ MoaT-Link services announce themselves with defined names.
 from __future__ import annotations
 
 import anyio
+import logging
 import os
 import platform
+import warnings
+import weakref
 from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
@@ -14,7 +17,7 @@ from moat.util import CFG, NotGiven, P, Path, attrdict
 from moat.util import as_service as _as_service
 
 from .client import Link
-from .exceptions import ServiceNotFound, ServiceSupplanted
+from .exceptions import ServiceNotFound, ServiceNotStarted, ServiceSupplanted
 
 from typing import TYPE_CHECKING
 
@@ -26,6 +29,8 @@ if TYPE_CHECKING:
     from typing import Any
 
 __all__ = ["announcing"]
+
+logger = logging.getLogger(__name__)
 
 
 async def get_service_path(host: Path | str | bool):
@@ -60,14 +65,23 @@ async def get_service_path(host: Path | str | bool):
 class SetReady(TaskStatus):
     """A fake event/TaskStatus to signal readiness"""
 
-    value: Any
+    value: Any = None
 
-    def __init__(self):
+    def __init__(self, ann: anyio.Event):
         self.evt = anyio.Event()
+        self.ann = ann
 
     def set(self):  # pylint:disable=missing-function-docstring
         "Set the event."
         self.evt.set()
+
+    async def announce(self, value: Any = None):
+        """
+        Store the value if any, set the event, wait for the announcement to
+        be transmitted.
+        """
+        self.started(value)
+        await self.ann.wait()
 
     def started(self, value: Any = None):
         """
@@ -76,6 +90,36 @@ class SetReady(TaskStatus):
         """
         self.value = value
         self.set()
+
+    def __del__(self):
+        """
+        Complain if the SR was unused.
+        """
+        try:
+            if not self.evt.is_set():
+                warnings.warn("event freed before announcing", ServiceNotStarted)
+        except Exception:  # noqa:S110
+            pass
+
+
+class _csr:
+    # This object caches a SetReady until it is called.
+    # The idea is to be able to atomically yield *and* delete our reference to a SR.
+
+    def __init__(self, sr: SetReady):
+        self.sr = sr
+
+    def __call__(self):
+        sr = self.sr
+        del self.sr
+        return sr
+
+    def __del__(self):
+        try:
+            # Don't worry if any of these no longer work.
+            self.sr.evt.set()
+        except Exception:  # noqa:S110
+            pass
 
 
 @asynccontextmanager
@@ -97,8 +141,8 @@ async def announcing(
         path: Command path on the server
         force: Flag to override an existing server
 
-    The CM yields a SetReady object. You must call its ``.set`` method to
-    start the announcement.
+    The CM yields a SetReady object. You must call one of its ``.set``,
+    ``annonce`` or ``started`` methods to start the announcement.
 
     Services are declared by a host prefix and a service path.
 
@@ -123,15 +167,33 @@ async def announcing(
     MoaT-Link client.
     """
 
-    async def run_announce(srv: Path, rm: SetReady) -> None:
+    async def run_announce(srv: Path, sr: SetReady, rdy: anyio.Event) -> None:
         # Send our announcement when ready
-        await rm.evt.wait()
+        evt = sr.evt
+        csr = weakref.ref(sr)
+        del sr
+
+        try:
+            await evt.wait()
+        except BaseException:
+            # If we're cancelled (or whatever), set the event. The SR will
+            # still be referenced at this point, because the frame that
+            # called "announcing" is somewhere in the exception chain, thus
+            # this is guaranteed to run before SR.__del__.
+            evt.set()
+            raise
+
         data: dict[str, Any] = {"id": link.id}
         if path and len(path):
             data["path"] = path
-        if rm.value is not None:
-            data["val"] = rm.value
+
+        # if it's already gone, don't worry.
+        sr = csr()
+        if sr is not None and sr.value is not None:
+            data["val"] = sr.value
         await link.d_set(srv, data, retain=True)
+        await link.i_sync()
+        rdy.set()
 
     async def monitor_service(srv: Path):
         # Watch for others
@@ -142,12 +204,29 @@ async def announcing(
 
     async with anyio.create_task_group() as tg:
         try:
-            rm = SetReady()
+            rdy = anyio.Event()
+            tm = anyio.current_time()
+            sr = SetReady(rdy)
+            csr = _csr(sr)
+            evt = sr.evt
             srv = P("run.host") + ((await get_service_path(host)) if service is None else service)
             tg.start_soon(monitor_service, srv)
-            tg.start_soon(run_announce, srv, rm)
+            tg.start_soon(run_announce, srv, sr, rdy)
+            del sr
+
             await link.i_sync()
-            yield rm
+
+            yield csr()
+            if not evt.is_set():
+                evt.set()
+                logger.warning("Service %s on %s did not starting", service, host)
+
+        except ServiceSupplanted:
+            logger.warning("Service %s on %s already exists", service, host)
+            raise
+        except BaseException:
+            if anyio.current_time() - tm > 5 and not evt.is_set():
+                logger.warning("Service %s on %s did not starting", service, host)
         finally:
             tg.cancel_scope.cancel()
 

@@ -27,3 +27,7 @@ class ServiceSupplanted(MoaTLinkError):  # noqa: D101
 
 class ServiceNotFound(MoaTLinkError):  # noqa: D101
     pass
+
+
+class ServiceNotStarted(UserWarning):  # noqa: D101
+    pass

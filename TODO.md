@@ -1,3 +1,7 @@
+---
+hero: Any spare days that are not in the calendar?
+---
+
 * moat.ALL
   * ruff it all
   * pyright?
@@ -30,8 +34,9 @@
   * monitor
     * watch for data that doesn't change, create errors
 
-  * recovery from network split
-    * see TODO in moat.link.server.\_server:Server.recover\_split
+  * [recovery from network split]{#todo-link-mqtt}
+    * replay data that MQTT has replaced with older versions;
+      see TODO in moat.link.server.\_server:Server.recover\_split
 
 * moat.micro
   * app for multiplexed I/O

@@ -32,6 +32,8 @@ __all__ = ["announcing"]
 
 logger = logging.getLogger(__name__)
 
+# TODO when to warn vs. when to log a warning
+
 
 async def get_service_path(host: Path | str | bool):
     path: list[PathElem]
@@ -67,9 +69,11 @@ class SetReady(TaskStatus):
 
     value: Any = None
 
-    def __init__(self, ann: anyio.Event):
+    def __init__(self, ann: anyio.Event, host, service):
         self.evt = anyio.Event()
         self.ann = ann
+        self.host = host
+        self.service = service
 
     def set(self):  # pylint:disable=missing-function-docstring
         "Set the event."
@@ -97,9 +101,15 @@ class SetReady(TaskStatus):
         """
         try:
             if not self.evt.is_set():
-                warnings.warn("event freed before announcing", ServiceNotStarted)
+                warnings.warn(
+                    f"event {self.service} on {self.host} freed before announcing",
+                    ServiceNotStarted,
+                )
         except Exception:  # noqa:S110
             pass
+
+    def warn(self, s: str):
+        logger.warning("Service %s on %s %s", self.service, self.host, s)
 
 
 class _csr:
@@ -202,16 +212,26 @@ async def announcing(
                 if msg["id"] != link.id and await link.i_checkid(msg["id"]):
                     raise ServiceSupplanted(srv)
 
+    async def wait_sr(sr: SetReady):
+        csr = weakref.ref(sr)
+        del sr
+        await anyio.sleep(5)
+        try:
+            csr().warn("did not start")
+        except Exception:  # noqa:S110
+            pass
+
     async with anyio.create_task_group() as tg:
         try:
             rdy = anyio.Event()
             tm = anyio.current_time()
-            sr = SetReady(rdy)
+            sr = SetReady(rdy, host, service)
             csr = _csr(sr)
             evt = sr.evt
             srv = P("run.host") + ((await get_service_path(host)) if service is None else service)
             tg.start_soon(monitor_service, srv)
             tg.start_soon(run_announce, srv, sr, rdy)
+            tg.start_soon(wait_sr, sr)
             del sr
 
             await link.i_sync()
@@ -219,7 +239,7 @@ async def announcing(
             yield csr()
             if not evt.is_set():
                 evt.set()
-                logger.warning("Service %s on %s did not starting", service, host)
+                logger.warning("Service %s on %s did not start", service, host)
 
         except ServiceSupplanted:
             logger.warning("Service %s on %s already exists", service, host)
@@ -227,6 +247,7 @@ async def announcing(
         except BaseException:
             if anyio.current_time() - tm > 5 and not evt.is_set():
                 logger.warning("Service %s on %s did not starting", service, host)
+            raise
         finally:
             tg.cancel_scope.cancel()
 

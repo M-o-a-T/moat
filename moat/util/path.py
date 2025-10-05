@@ -175,6 +175,7 @@ class Path(Sequence[PathElem]):
                      If so, set it as the prefix.
             mark: Mark that path with the given string.
                   Deprecated; use prefixes.
+            fixup: support arrays.
 
         Both ``scan`` and ``decoded`` default to `False`.
         """
@@ -227,6 +228,15 @@ class Path(Sequence[PathElem]):
                 raise ValueError("Can't combine prefixes")
             data = data.raw
 
+        if isinstance(data, list):
+
+            def _fixup(d):
+                for i, v in enumerate(d):
+                    if isinstance(v, list):
+                        d[i] = _fixup(v)
+                return tuple(d)
+
+            data = _fixup(data)
         if scan or not isinstance(data, tuple):
             return cls(*data, decoded=decoded)
         p = object.__new__(cls)

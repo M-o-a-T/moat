@@ -432,7 +432,7 @@ class ErrorRoot(ClientRoot):
         not depend on which node it is running on or which entry arrives
         first.
         """
-        other = await self.get_error_record(entry.subsystem, entry.path, create=False)
+        other = await self.get_error_record(entry.subsystem, Path.build(entry.path), create=False)
         if other is None or other is entry:
             return None, None
 

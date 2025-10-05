@@ -1,15 +1,12 @@
 """
-This module contains various helper functions and classes.
+This module contains the systemd service helper.
 """
 
 from __future__ import annotations
 
 import anyio
 import os
-import platform
 from contextlib import asynccontextmanager
-
-from .path import P
 
 __all__ = ["as_service"]
 
@@ -19,25 +16,29 @@ except ImportError:
     notify = None
 
 
-async def get_host_tuple(obj):
-    if hasattr(obj, "dbg_host"):
-        return obj.dbg_host
-    host = [obj.host if hasattr(obj, "host") else platform.node()]
-    if (srv := os.environ.get("MOAT_SERVICE", None)) is not None:
-        host.extend(srv.split("|"))
-        return host
-    if int(os.environ.get("SYSTEMD_EXEC_PID", "0")) == os.getpid():
-        async for cg in anyio.Path("/proc/self/cgroup").readlines():
-            for cge in cg.strip().split("/"):
-                if cge.endswith(".service"):
-                    cge = cge[:-8]  # noqa:PLW2901
-                    hi = cge.split("@", 1)
-                    if hi[0] == "user":
-                        continue  # ignore
-                    if len(hi) != 1 or hi[0] != "moat-link-host":
-                        host.extend(hi)
-                    return host
-    return ()
+class RunMsg(anyio.abc.TaskStatus):
+    """A helper to signal readiness or status updates to systemd.
+
+    It also duck-types as :class:`anyio.abc.TaskStatus.`
+    """
+
+    def __init__(self, tg, obj):
+        self.tg = tg
+        self.obj = obj
+        self.evt = anyio.Event()
+
+    def set(self):  # pylint:disable=missing-function-docstring
+        self.evt.set()
+        if notify is not None:
+            notify("READY=1")
+        if self.obj is not None and self.obj.debug:
+            print("Running.")
+
+    def started(self, value: anyio.abc.T_Contra | None = None):
+        "mock task_status.started"
+        if value is not None:
+            raise ValueError("value is ignored")
+        self.set()
 
 
 @asynccontextmanager
@@ -49,8 +50,8 @@ async def as_service(obj=None):
     Arguments:
         obj: command context. Needs a ``debug`` attribute.
 
-    The CM yields a (duck-typed) event whose ``set`` method will
-    trigger a ``READY=1`` mesage to systemd.
+    The ACM yields a (duck-typed) event whose ``set`` method will
+    trigger the ``READY=1`` mesage to systemd.
     """
 
     async def run_keepalive(usec):
@@ -61,48 +62,20 @@ async def as_service(obj=None):
                 notify("WATCHDOG=1")
             await anyio.sleep(usec)
 
-    async def run_announce(link, srv, rm):
-        await rm.evt.wait()
-        if srv:
-            await link.d_set(P("run.host") + srv, dict(id=link.id), retain=True)
-
     def need_keepalive():
         pid = os.getpid()
         epid = int(os.environ.get("WATCHDOG_PID", pid))
         if pid == epid:
+            # prevent the watchdog from restarting / running concurrently
+            os.environ["WATCHDOG_PID"] = "0"
             return int(os.environ.get("WATCHDOG_USEC", "0"))
         return 0
 
-    class RunMsg:
-        """A fake event that signals readiness"""
-
-        def __init__(self, tg, obj):
-            self.tg = tg
-            self.obj = obj
-            self.evt = anyio.Event()
-
-        def set(self):  # pylint:disable=missing-function-docstring
-            self.evt.set()
-            if notify is not None:
-                notify("READY=1")
-            if self.obj is not None and self.obj.debug:
-                print("Running.")
-
-        def started(self, data=None):
-            "mock task_status.started"
-            if data is not None:
-                raise ValueError("data is ignored")
-            self.set()
-
     async with anyio.create_task_group() as tg:
-        link = getattr(obj, "link", None)
         usec = need_keepalive()
         if usec:
             tg.start_soon(run_keepalive, usec)
         try:
-            rm = RunMsg(tg, obj)
-            if link is not None and (host := await get_host_tuple(obj)):
-                tg.start_soon(run_announce, link, host, rm)
-            yield rm
+            yield RunMsg(tg, obj)
         finally:
             tg.cancel_scope.cancel()

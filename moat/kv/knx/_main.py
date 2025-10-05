@@ -6,8 +6,9 @@ import logging
 import asyncclick as click
 from xknx.remote_value import RemoteValueSensor
 
-from moat.util import NotGiven, P, Path, as_service, attr_args, attrdict, path_eval, yprint
+from moat.util import NotGiven, P, Path, attr_args, attrdict, path_eval, yprint
 from moat.kv.data import node_attr, res_get, res_update
+from moat.link.announce import as_service
 
 from collections.abc import Mapping
 

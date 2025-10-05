@@ -19,3 +19,11 @@ class AuthError(MoaTLinkError):  # noqa: D101
 
 class OutOfDateError(MoaTLinkError):  # noqa: D101
     pass
+
+
+class ServiceSupplanted(MoaTLinkError):  # noqa: D101
+    pass
+
+
+class ServiceNotFound(MoaTLinkError):  # noqa: D101
+    pass

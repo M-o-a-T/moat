@@ -44,7 +44,7 @@ class Bar:
 
 
 # needs "replace" because testing re-imports
-@as_proxy("fu_c")
+@as_proxy("foo_c")
 class Foo(Bar):
     "A proxied class"
 
@@ -67,11 +67,11 @@ def test_basic():
 def test_bar():
     codec = StdCBOR()
     b = Bar(95)
-    as_proxy("b_c", b)
+    as_proxy("bar95_c", b)
     c = codec.decode(codec.encode(b))
     assert b == c
-    cc = codec.encode(Bar(94))
 
+    cc = codec.encode(Bar(94))
     dec = get_codec("cbor")
     cd = dec.decode(cc)
     assert isinstance(cd, Tag)

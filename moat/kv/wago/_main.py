@@ -6,8 +6,9 @@ import logging
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, as_service, attr_args, attrdict, yprint
+from moat.util import NotGiven, P, attr_args, attrdict, yprint
 from moat.kv.data import node_attr
+from moat.link.announce import as_service
 
 logger = logging.getLogger(__name__)
 

@@ -85,7 +85,7 @@ async def cli(obj, name, load, save, init, incremental, eval_, auth, force, node
     elif init is not None:
         kw["init"] = init
 
-    from moat.util import as_service  # noqa: PLC0415
+    from moat.link.announce import as_service  # noqa: PLC0415
 
     if load and nodes:
         raise click.UsageError("Either read from a file or fetch from a node. Not both.")

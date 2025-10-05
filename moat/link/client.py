@@ -231,7 +231,7 @@ class ClientCaller(Caller):  # nqa:D102
         return await link.root._sender.cmd(cmd, *a, **kw)  # noqa:SLF001
 
 
-class _Sender(MsgSender):
+class LinkSender(MsgSender):
     """
     This is the client-side front-end to a "standard" MoaT-Link connection.
 
@@ -298,12 +298,24 @@ class _Sender(MsgSender):
         return res[0], MsgMeta.restore(res[1:])
 
     @overload
-    def d_set(
-        self, path: Path, t: float | None = None, meta: Literal[True] = True
+    async def d_set(
+        self,
+        path: Path,
+        data: Any = NotGiven,
+        t: float | None = None,
+        meta: Literal[True] = True,
+        retain: bool | None = None,
     ) -> tuple[Any, MsgMeta]: ...
 
     @overload
-    def d_set(self, path: Path, t: float | None = None) -> None: ...
+    async def d_set(
+        self,
+        path: Path,
+        data: Any = NotGiven,
+        t: float | None = None,
+        meta: Literal[False] = False,
+        retain: bool | None = None,
+    ) -> None: ...
 
     async def d_set(
         self,
@@ -366,20 +378,20 @@ class _Sender(MsgSender):
     def d_watch(
         self,
         path: Path,
-        mark: bool,
-        meta: Literal[False],
-        subtree: Literal[False],
-        state: bool | None = None,
+        mark: bool = False,
+        meta: Literal[False] = False,
+        subtree: Literal[False] = False,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[Any]]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
-        mark: Literal[False],
-        meta: Literal[True],
-        subtree: Literal[False],
-        state: bool | None = None,
+        mark: Literal[False] = False,
+        meta: Literal[True] = True,
+        subtree: Literal[False] = False,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
 
     @overload
@@ -389,17 +401,17 @@ class _Sender(MsgSender):
         mark: Literal[False],
         meta: Literal[True],
         subtree: Literal[True],
-        state: bool | None = None,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
-        mark: Literal[False],
-        meta: Literal[False],
-        subtree: Literal[True],
-        state: bool | None = None,
+        mark: Literal[False] = False,
+        meta: Literal[False] = False,
+        subtree: Literal[True] = True,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
 
     @overload
@@ -408,8 +420,8 @@ class _Sender(MsgSender):
         path: Path,
         mark: Literal[True],
         meta: Literal[True],
-        subtree: Literal[False],
-        state: bool | None = None,
+        subtree: Literal[False] = False,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
 
     @overload
@@ -419,7 +431,7 @@ class _Sender(MsgSender):
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[True],
-        state: bool | None = None,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
@@ -427,9 +439,9 @@ class _Sender(MsgSender):
         self,
         path: Path,
         mark: Literal[True],
-        meta: Literal[False],
-        subtree: Literal[True],
-        state: bool | None = None,
+        meta: Literal[False] = False,
+        subtree: Literal[True] = True,
+        state: bool | Literal[NotGiven] | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
 
     def d_watch(
@@ -556,6 +568,13 @@ class _Sender(MsgSender):
         (st,) = await self.cmd(P("i.stamp"))
         await self.send(P(":R.run.service.main.stamp") / self._link.server_name, st, retain=False)
         await self.cmd(P("i.sync"), st)
+
+    async def i_checkid(self, id: str) -> bool:
+        """
+        Check whether the given client ID is still valid.
+        """
+        (st,) = await self.cmd(P("i.checkid"), id)
+        return st
 
     async def _get_tree(self, path, *, task_status, **kw):
         async with self.d_watch(path, **kw) as w:
@@ -718,7 +737,7 @@ class Link(LinkCommon, CtxObj):
                 if self.cfg.client.init_timeout:
                     # connect to the main server
                     await self.tg.start(self._run_server_link)
-                sdr = _Sender(self)
+                sdr = LinkSender(self)
             sdr.add_sub("cl")
             sdr.add_sub("d")
             sdr.add_sub("e")

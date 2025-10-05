@@ -5,7 +5,6 @@ import logging
 import sys
 
 import trio
-import trio.testing
 
 from moat.util import Path
 from moat.kv.gpio.config import CFG

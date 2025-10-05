@@ -166,3 +166,24 @@ async def test_walk(cfg):  # noqa: D103
         await chk({1, 12, 123}, "a", max_depth=2)
         await chk({1, 12}, "a", max_depth=1)
         await chk({12, 123}, "a.b", max_depth=1)
+
+
+@pytest.mark.anyio
+async def test_id(cfg):
+    "check that the client id test works"
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+
+        async def cl(*, task_status):
+            c = await sf.client()
+            await c.i_sync()
+            evt = anyio.Event()
+            task_status.started((evt, c.id))
+            await evt.wait()
+
+        evt, id = await sf.tg.start(cl)
+        c = await sf.client()
+        assert not await c.i_checkid("FooBar")
+        assert await c.i_checkid(id)
+        assert await c.i_checkid(c.id)
+        evt.set()

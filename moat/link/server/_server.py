@@ -540,6 +540,12 @@ class ServerClient(LinkCommon):
         """wait until the server received this stamp#"""
         return self.server.wait_stamp(stamp)
 
+    doc_i_checkid = dict(_d="probe client ID", _0="str:id of the client")
+
+    async def cmd_i_checkid(self, id: str) -> bool:
+        """wait until the server received this stamp#"""
+        return id in self.server.known_ids
+
     doc_d_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
 
     async def stream_d_deltree(self, msg):
@@ -654,6 +660,7 @@ class Server(MsgHandler):
     service_monitor: Broadcaster[Message]
     write_monitor: Broadcaster[Tag | tuple[Path, Any, MsgMeta]]
 
+    known_ids: set[str]
     logger: logging.Logger
 
     last_auth: str | None = None
@@ -698,6 +705,8 @@ class Server(MsgHandler):
         self.cfg = to_attrdict(cfg)
 
         self._init = init
+
+        self.known_ids = set()
 
         self.logger = logging.getLogger("moat.link.server." + name)
         self._writing = set()
@@ -1411,6 +1420,8 @@ class Server(MsgHandler):
             anyio.create_task_group() as _tg,
         ):
             self._tg = _tg
+
+            await _tg.start(self._monitor_ids)
 
             # Semi-detached taskgroups for clients and listeners
 
@@ -2145,3 +2156,20 @@ class Server(MsgHandler):
         async with msg.stream_out(len(cl)) as ml:
             for cn in cl:
                 await ml.send(cn)
+
+    async def _monitor_ids(self, *, task_status):
+        async with self.backend.monitor(
+            P(":R.run.id"),
+            raw=False,
+            qos=QoS.AT_LEAST_ONCE,
+            no_local=False,
+            subtree=True,
+        ) as mon:
+            task_status.started()
+
+            async for msg in mon:
+                name = msg.topic[-1]
+                if msg.data is NotGiven:
+                    self.known_ids.discard(name)
+                else:
+                    self.known_ids.add(name)

@@ -9,13 +9,13 @@ from moat.util import (
     NotGiven,
     P,
     Path,
-    as_service,
     attr_args,
     attrdict,
     ensure_cfg,
     yprint,
 )
 from moat.kv.data import data_get, node_attr
+from moat.link.announce import as_service
 
 from .model import OWFSroot
 

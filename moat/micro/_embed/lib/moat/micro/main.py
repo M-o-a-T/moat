@@ -13,26 +13,34 @@ from rtc import all_rtc
 import machine
 
 from moat.util import merge
-from moat.lib.codec.cbor import Codec as CBOR
-from moat.util.compat import L, TaskGroup, at, sleep_ms
+from moat.util.cbor import Codec as CBOR
+from moat.util.compat import Event, L, TaskGroup, at, sleep_ms
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from asyncio import Task
+
     from moat.util import attrdict
 
 WDT = None
 
 
-def main(cfg: str | dict, i: attrdict, fake_end=False):
+def main(cfg: str | dict, i: attrdict, fake_end=False, split: Event = None) -> Task | None:
     """
     The MoaT.micro satellite's main entry point.
 
-    If @cfg is a string, it's the name of the config file.
+    If @cfg is a string, it's the name of the config file, with the config
+    stored in CBOR.
 
     @fake_end sends a fake MicroPython prompt to trick the setup code into
     thinking that the current command has concluded, so it can cleanly
     terminate / start the local dispatcher.
+
+    If @split is set to an event, the event loop returns when the event is
+    set. This is (will be) used for terminal multiplexing.
+
+    Returns the main task (if @split), otherwise `None`.
     """
     at("M1")
     if isinstance(cfg, str):
@@ -138,4 +146,11 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
     from moat.util.compat import run  # noqa: PLC0415
 
     at("M6")
+    if split:
+        from asyncio import create_task, run_until_complete  # noqa: PLC0415
+
+        task = create_task(_main())
+        run_until_complete(split.wait())
+        return task
+
     run(_main)

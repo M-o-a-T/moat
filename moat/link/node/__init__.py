@@ -161,7 +161,7 @@ class Node:
     @meta.deleter
     def meta(self) -> None:
         "Clear metadata"
-        del self._meta
+        self._meta = None
 
     def __delitem__(self, item) -> None:
         """

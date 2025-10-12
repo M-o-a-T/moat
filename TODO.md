@@ -7,6 +7,10 @@ hero: Any spare days that are not in the calendar?
   * pyright?
   * test coverage?
 
+* moat.lib.cmd
+  * Add classes for tunneling a command pipe
+  * Refactor dispatching to use active hook-in of subpaths
+
 * moat.bms
   * get it to work, dammit
 
@@ -42,8 +46,10 @@ hero: Any spare days that are not in the calendar?
   * app for multiplexed I/O
   * app for Triac control
 
+  * hook the MoaT loop into dupterm
+
   * create a separate library for MoaT streams
-    * clean  up etc
+    * clean-up etc
 
   * test console data
     * write an app for it
@@ -53,7 +59,7 @@ hero: Any spare days that are not in the calendar?
   * more flex build of stream structure?
   * security, esp. for specific subtrees / apps
   * implement start/stop/restart of subsystems more cleanly
-  * teach a subdispatcher to refresh themselves if their destination
+  * teach a subdispatcher to refresh itself if their destination
     terminates / restarts
 
   * link path. Right now an app doesn't know where it itself is.

@@ -260,7 +260,9 @@ class Msg(MsgLink, MsgResult):
                 self._msg_in.set()
             await super().kill()
 
-    async def ml_send(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
+    async def ml_send(
+        self, a: Sequence, kw: OptDict | None, flags: int, initial: bool | None = None
+    ) -> None:
         """
         Sender of data to the other side.
         """
@@ -268,8 +270,11 @@ class Msg(MsgLink, MsgResult):
             return
         if not flags & B_STREAM:
             self._stream_out = S_END
-        elif self._stream_out == S_NEW and not flags & B_ERROR:
-            self._stream_out = S_ON
+        else:
+            if self._stream_out == S_NEW and not flags & B_ERROR:
+                self._stream_out = S_ON
+            if initial is False and self._stream_in == S_NEW:
+                self._stream_in = S_ON
         await super().ml_send(a, kw, flags)
 
     async def ml_recv(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
@@ -640,8 +645,7 @@ class _Stream:
         if self.initial:
             await slf.wait_replied()
         else:
-            await slf.ml_send(self.a, self.kw, B_STREAM)
-            # intentionally not async
+            await slf.ml_send(self.a, self.kw, B_STREAM, self.initial)
         return slf
 
     async def _close(self):

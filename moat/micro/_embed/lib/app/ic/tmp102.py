@@ -48,7 +48,7 @@ class Cmd(BaseCmd):
             raise RuntimeError("No conv")
         res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
         (t,) = struct.unpack(">h", res)
-        assert t & 1, (res,t)
+        assert t & 1, (res, t)
         t -= 1
         return t
 
@@ -56,19 +56,21 @@ class Cmd(BaseCmd):
         "Wait for change if @o (old value) is not None"
         t = msg.get("t", 10000)
         o = msg.get("o", None)
-        d = int(msg.get("d", 0)*128)
+        if o is not None:
+            o = int(o * 128)
+        d = int(msg.get("d", 0) * 128)
         if msg.can_stream:
             async with msg.stream_out() as m:
                 while True:
                     val = await self._rd()
-                    if o is None or abs(val-o)>d:
-                        await msg.send(val/128)
+                    if o is None or abs(val - o) > d:
+                        await m.send(val / 128)
                         if o is not None:
                             o = val
                     await sleep_ms(t)
 
         val = await self._rd()
-        while o is not None and abs(val-o)>d:
+        while o is not None and abs(val - o) <= d:
             await sleep_ms(t)
             val = await self._rd()
-        await msg.result(val/128)
+        await msg.result(val / 128)

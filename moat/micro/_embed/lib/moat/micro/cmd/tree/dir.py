@@ -4,7 +4,7 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util import Path, import_
+from moat.util import NotGiven, Path, import_
 from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError
 from moat.micro.cmd.base import BaseCmd
@@ -218,6 +218,8 @@ class DirCmd(BaseSubCmd):
         # First, setup the app data structures
         for name, v in apps.items():
             if name in self.sub:
+                continue
+            if v is NotGiven:
                 continue
 
             cfg = gcfg.get(name, {})

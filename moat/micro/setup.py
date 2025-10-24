@@ -5,21 +5,25 @@ Installation and setup.
 from __future__ import annotations
 
 import anyio
-import contextlib
 import logging
 import os
-import shutil
 import sys
+from anyio import Path as FSPath
+from contextlib import suppress
 from pprint import pformat
+from shutil import copy as copy_fs
+from shutil import copytree as copytree_fs
+from shutil import rmtree
 
 import asyncclick as click
 
-from moat.util import P, Path, merge
+from moat.util import P, Path, merge, ungroup
 from moat.lib.codec import get_codec
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.util import run_update
 from moat.util.compat import idle, log
+from moat.util.exec import run as run_cmd
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,8 @@ async def do_update(dst, root, cross, hfn):  # noqa: D103
 
     p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
     await copytree(p / "boot.py", root / "boot.py", cross=None)
-    await copytree(p / "main.py", root / "main.py", cross=None)
+    if not await (root / "main.py").exists():
+        await copytree(p / "main.py", root / "main.py", cross=None)
 
 
 async def do_copy(
@@ -89,6 +94,7 @@ async def setup(
     update: bool = False,
     mount: bool = False,
     watch: bool = False,
+    main: str = False,
 ):
     """
     Given the serial link to a MicroPython board,
@@ -126,11 +132,16 @@ async def setup(
             await repl.reset()
         await anyio.sleep(2)
 
+    need_run = False
+
+    if main == "-":
+        main = None
+    elif main is None:
+        main = cfg.install.main
+
     # The following dance is necessary because a reset may or may not kill
     # the whole stack. Fixing this, i.e. making individual apps fault
     # tolerant, is somewhere on the TODO list.
-
-    need_run = False
 
     async def part_two():
         nonlocal need_run
@@ -225,6 +236,13 @@ async def setup(
                 f = ABytes(name="moat.cfg", data=codec.encode(config))
                 await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
+            if main:
+                from moat.micro.path import copytree  # noqa: PLC0415
+
+                await copytree(
+                    anyio.Path(main), MoatDevPath(".").connect_repl(repl) / "main.py", cross=None
+                )
+
             if update:
 
                 async def hfn(p):
@@ -281,23 +299,53 @@ async def install_(cfg, dest: Path = None):
     Install our version of MicroPython to a device.
     """
     device = cfg.install.port
+    board = cfg.install.get("board", None)
+    variant = cfg.install.get("variant", None)
+
+    mydir = FSPath(__file__).parent.parent.parent
+    mpydir = mydir / "ext" / "micropython"
+    portdir = mpydir / "ports" / device
+
+    boardp = f"{board or 'generic'}{f'-{variant}' if variant else ''}"
+
+    board_dir = FSPath(__file__).parent / "_embed" / "boards" / device / board
+    if await board_dir.exists():
+        board_arg = f"{device}_moat{os.getpid()}"
+        board_tmp = portdir / "boards" / board_arg
+    else:
+        board_tmp = None
+        board_dir = board_arg = boardp
+        if not await (portdir / board_dir).exists():
+            board_dir = None
+    board_arg = str(anyio.Path("boards") / board_arg)
+
+    try:
+        raise OSError("doesn't work")
+        build_dir = FSPath(cfg.install.build)
+        if not await build_dir.exists():
+            await build_dir.mkdir()
+
+        buildp = f"build-{os.getpid()}"
+        build_tmp = portdir / buildp
+    except OSError:
+        buildp = f"build-{boardp}"
+        build_dir = buildp
+        build_tmp = None
+
     try:
         port = anyio.Path(get_part(cfg, cfg.install.serial))
     except AttributeError:
         port = None
-    with contextlib.suppress(AttributeError):
-        pass
     try:
         rate = cfg.install.rate
     except AttributeError:
         rate = None
-    try:
-        board = cfg.install.board
-    except AttributeError:
-        board = None
 
     if device == "rp2" and dest is None:
         raise ValueError("Installing to Raspberry Pi Pico requires a 'dest' directory")
+
+    args = []
+
     if device == "esp32":
         idf = find_p("idf.py")
         if idf is None:
@@ -306,43 +354,58 @@ async def install_(cfg, dest: Path = None):
                     "'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh",
                 )
             idf = os.environ["ESP"] + os.sep + "idf.py"
-        goal = "deploy"
-        if board is None:
-            board = "esp32_generic"
 
-    elif device == "esp8266":
+    if device in ("esp32", "esp8266"):
         goal = "deploy"
-        if board is None:
-            board = "esp8266_generic"
+        args.append("ESPTOOL=esptool")
 
     else:
         goal = "all"
-        if board is None:
-            board = "rpi_pico"
+        # if board is None:
+        #     board = "rpi_pico"
 
     import moat.micro._embed._tag as m  # noqa: PLC0415
 
     manifest = m.__file__.replace("_tag", "manifest")
 
-    mpydir = anyio.Path("ext") / "micropython"
-    portdir = mpydir / "ports" / device
-    await anyio.run_process(
-        [
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(await anyio.Path.absolute(mydir))
+
+    try:
+        if build_tmp:
+            await (build_tmp).symlink_to(build_dir)
+        if board_tmp:
+            await anyio.to_thread.run_sync(copytree_fs, str(board_dir), str(board_tmp))
+
+        await run_cmd(
             "make",
             "-j",
-            "ESPTOOL=esptool",
+            cwd=str(mpydir / "mpy-cross"),
+            echo=True,
+        )
+        await run_cmd(
+            "make",
+            "-j",
             "PORT=" + str(port),
             "BAUD=" + str(rate),
-            "BOARD=" + board.upper(),
+            "BOARD=" + board,
+            "BOARD_DIR=" + board_arg,
+            "BUILD=" + buildp,
             "FROZEN_MANIFEST=" + manifest,
+            *args,
             goal,
-        ],
-        cwd=portdir,
-        check=True,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-        env={"PYTHONPATH": await anyio.Path.cwd()},
-    )
+            cwd=portdir,
+            env=env,
+            echo=True,
+        )
+    finally:
+        with anyio.move_on_after(2, shield=True):
+            if build_tmp:
+                with suppress(OSError), ungroup:
+                    await (portdir / build_tmp).unlink()
+            if board_tmp:
+                with suppress(OSError), ungroup:
+                    await anyio.to_thread.run_sync(rmtree, str(board_tmp))
 
     if device == "rp2":
         if isinstance(dest, str):
@@ -357,7 +420,7 @@ async def install_(cfg, dest: Path = None):
             print("… found.")
 
         await anyio.to_thread.run_sync(
-            shutil.copy,
+            copy_fs,
             portdir / "build-RPI_PICO/" / "firmware.uf2",
             dest,
         )

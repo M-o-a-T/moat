@@ -92,7 +92,7 @@ def go(state=None, cmd=True):
     set_rtc("state", new_state)
     if state == "skip":
         log(state)
-        return
+        return True
 
     fn = dict(states).get(state, "moat.cfg")
 
@@ -173,7 +173,3 @@ def go(state=None, cmd=True):
 def g():
     "shortcut for ``go('once')``"
     go("once")
-
-
-if __name__ == "__main__":
-    go(cmd=False)

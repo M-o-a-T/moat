@@ -1,3 +1,5 @@
 # There are no defaults in this file.
 # See our packaged deployment config files for examples.
 run: {}
+install:
+  main: None

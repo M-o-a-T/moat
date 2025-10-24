@@ -1,14 +1,23 @@
-"MoaT satellite boot script"
+"""
+MoaT satellite boot script.
+
+This file adds some essential setup.
+
+Local code should go in "boot_local.py".
+This file may be overwritten by a MoaT update.
+"""
 
 # from moat import setup
 # setup.run()
 from __future__ import annotations
 
-import contextlib
+import os
 import sys
 
-with contextlib.suppress(ValueError):
+try:
     sys.path.remove("/lib")
+except ValueError:
+    pass
 sys.path.insert(0, "/lib")
 
 import moat  # just for the namespace
@@ -30,6 +39,21 @@ if not hasattr(moat, "SERIAL"):
             del usb
 
     except Exception as exc:
-        print("No SERIAL; USB failed:", exc, file=sys.stderr)
+        moat.SERIAL_EXC = exc
 
 print("\n*** MoaT ***\n", file=sys.stderr)
+
+# One line for handling boot_local, ten for not doing it. Fits.
+try:
+    from boot_local import *  # noqa:F403
+except Exception:
+    for ext in ("py", "mpy"):
+        try:
+            os.stat(f"boot_local.{ext}")
+        except OSError:
+            pass
+        else:
+            exc = None
+            break
+    if exc is not None and (not isinstance(exc, ImportError) or "boot_local" not in repr(exc)):
+        sys.print_exception(exc)

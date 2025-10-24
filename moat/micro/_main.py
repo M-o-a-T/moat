@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import os
 import sys
 from functools import wraps
 
@@ -53,7 +54,7 @@ def catch_errors(fn):
         except Exception as e:
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
-            if type(e) in skip_exc:
+            if type(e) in skip_exc and "MOAT_TB" not in os.environ:
                 raise click.ClickException(repr(e))  # noqa:B904
             raise
 
@@ -172,13 +173,18 @@ async def cli(ctx, section, remote, path):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@click.option(
+    "-m",
+    "--main",
+    type=click.Path(dir_okay=False, readable=True, exists=True),
+    help="file to use as main_.py",
+)
 @catch_errors
 async def setup_(ctx, run_section=None, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
 
-    MoaT must not currently run on the target. If it does,
-    send `` TBD `` commmands.
+    MoaT must not currently run on the target.
     """
     from .setup import setup  # noqa: PLC0415
 
@@ -234,7 +240,7 @@ async def setup_(ctx, run_section=None, **kw):
 @catch_errors
 async def sync_(ctx, **kw):
     """
-    Sync of MoaT code on a running MicroPython device.
+    Sync of MoaT code to a running MicroPython device.
 
     """
     from .path import MoatFSPath  # noqa: PLC0415

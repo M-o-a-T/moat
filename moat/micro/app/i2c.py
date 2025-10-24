@@ -4,14 +4,7 @@ Access a satellite's i²c bus.
 
 from __future__ import annotations
 
-from functools import partial
-
-try:
-    import machine
-except ImportError:
-    from moat.micro._test import machine
-
-import contextlib
+from smbus3 import SMBus, i2c_msg
 
 from moat.micro.cmd.base import BaseCmd
 
@@ -25,12 +18,8 @@ class Cmd(BaseCmd):
 
     Config::
 
-        id: None  # use soft i2c
-        c: 3  # pin# of control
-        d: 4  # pin# of data
-        cx: {}  # additional machine.Pin params for control pin
-        dx: {}  # additional machine.Pin params for data pin
-        f: 100000  # frequency, Hz
+        id: bus ID (no soft i2c here)
+        # f: 100000  # frequency, Hz
         t: 1000 # bus timeout, msec
     """
 
@@ -51,15 +40,10 @@ class Cmd(BaseCmd):
 
     def _setup(self):
         cfg = self.cfg
-        c = machine.Pin(cfg["c"], **cfg.get("cx", {}))
-        d = machine.Pin(cfg["d"], **cfg.get("dx", {}))
-        f = cfg.get("f", 100000)
+        # f = cfg.get("f", 100000)
         t = cfg.get("t", 1000) * 1000
-        if (i := cfg.get("id", None)) is None:
-            cls = machine.SoftI2C
-        else:
-            cls = partial(machine.I2C, i)
-        self._bus = cls(scl=c, sda=d, freq=f, timeout=t)
+        self._bus = b = SMBus(cfg.id)
+        b.set_timeout(int(t * 100))
 
     async def teardown(self):
         "shutdown"
@@ -69,20 +53,19 @@ class Cmd(BaseCmd):
     def _teardown(self):
         b, self._bus = self._bus, None
         if b is not None:
-            with contextlib.suppress(AttributeError):
-                b.deinit()
+            b.close()
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
     async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"
-        return self._bus.readfrom(i, n)
+        return bytes(self._bus.i2c_rd(i, n))
 
     doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
 
-    async def cmd_wr(self, i, buf):
+    async def cmd_wr(self, i: int, buf: bytes):
         "write @buf to bus @cd at address @i"
-        return self._bus.writeto(i, buf)
+        return self._bus.i2c_wr(i, list(buf)).len
 
     doc_wrrd = dict(
         _d="write+read",
@@ -99,14 +82,25 @@ class Cmd(BaseCmd):
         Returns -x if only x bytes could be written.
         """
         bus = self._bus
-        d = self._bus.writeto(i, buf, False)
-        if d < len(buf):
-            bus.stop()
-            return d
-        return self._bus.readfrom(i, n)
+        wr = i2c_msg.write(i, list(buf))
+        rd = i2c_msg.read(i, n)
+
+        bus.i2c_rdwr(wr, rd)
+        return bytes(rd)
 
     doc_scan = dict(_d="bus scan")
 
     async def cmd_scan(self):
         "scan the bus"
-        return self._bus.scan()
+        res = []
+        for i in range(0x08, 0x78):
+            try:
+                if i >> 4 in (3, 5):
+                    self._bus.read_byte(i)
+                else:
+                    self._bus.write_quick(i)
+            except OSError:
+                pass
+            else:
+                res.append(i)
+        return res

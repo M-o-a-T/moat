@@ -547,6 +547,28 @@ async def run_(obj):
         await idle()
 
 
+@cli.command("mount")
+@click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
+@click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
+@click.pass_obj
+@catch_errors
+async def mount_(obj, path, blocksize):
+    """Mount a controller's file system on the host"""
+    from moat.micro.fuse import wrap  # noqa: PLC0415
+
+    cfg = obj.mcfg
+
+    async with (
+        Dispatch(cfg, run=True, sig=True) as dsp,
+        dsp.sub_at(cfg.remote) as cfr,
+        cfr.sub_at(cfg.path.fs) as sd,
+        wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
+    ):
+        if obj.debug:
+            print("Mounted.")
+        await idle()
+
+
 @cli.command("rom")
 @click.option("-d", "--device", type=int, help="ROMFS segment to use", default=0)
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)

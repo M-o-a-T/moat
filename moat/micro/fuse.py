@@ -21,8 +21,6 @@ from pyfuse3 import (  # pylint: disable=E0611
     FUSEError,
 )
 
-from moat.util.compat import print_exc
-
 from collections import defaultdict
 
 # Typing
@@ -104,7 +102,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
     def raise_error(self, err, inode=None):
         "translate generic exception to FUSE exception"
-        print_exc(err)
+        logger.warning("Error: %r", err)
         if isinstance(err, FileNotFoundError):
             if inode is not None:
                 self.i_del(inode)

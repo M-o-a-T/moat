@@ -1,0 +1,17 @@
+
+# This partition table is for devices with 8MiB or more of flash and OTA support.
+# The first 5056kiB is used for bootloader, nvs, phy_init and firmware.
+# The remaining flash is for the user filesystem.
+
+# OTA is on the TODO list.
+
+# Notes: the offset of the partition table itself is set in
+# $IDF_PATH/components/partition_table/Kconfig.projbuild.
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     ,   0x4000,
+#otadata,  data, ota,     ,   0x2000,
+phy_init, data, phy,     ,   0x1000,
+factory,  app,  factory, ,  0x270000,
+#ota_0,    app,  ota_0,   ,  0x270000,
+#ota_1,    app,  ota_1,   , 0x270000,
+romfs,    data, 0x8f,    , 0x20000,

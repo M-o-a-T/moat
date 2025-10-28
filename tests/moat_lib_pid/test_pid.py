@@ -81,7 +81,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         t0, e0, i0 = 5.0, 6.0, 7.0
         # Create PID controller and set initial values
         pid = PID(Kp=1.0, Ki=2.0, Kd=3.0, Tf=4.0)
-        pid.set_state(t0=t0, e0=e0, i0=i0)
+        pid.set_state(t=t0, e=e0, i=i0)
         # Get PID initial values
         _t, _e, _i = pid.get_state()
         # Check

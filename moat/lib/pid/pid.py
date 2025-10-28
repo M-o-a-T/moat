@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from math import exp
 from time import monotonic as time
-from warnings import warn
 
 from moat.util import attrdict
 
@@ -33,7 +32,18 @@ class PID:
 
     """
 
-    def __init__(self, Kp, Ki, Kd, Tf, t: float | None = None):
+    t: int | float | None  # current time
+    e: float | None  # current error
+    i: float  # current integral
+
+    Kp: float  # proportional gain
+    Ki: float  # integral gain
+    Kd: float  # differential gain
+    Tf: float | None  # time constant for derivative filter
+
+    def __init__(
+        self, Kp: float, Ki: float, Kd: float, Tf: float | None = None, t: float | None = None
+    ):
         self.set_gains(Kp, Ki, Kd, Tf)
         self.set_output_limits(None, None)
         self.reset(t)
@@ -42,15 +52,13 @@ class PID:
         self.set_state(t, None, None)
 
     def __call__(self, e: float, t: float | None = None):
-        """Call integrate method.
+        """Run a PID step.
 
         Args:
             e: Error signal.
             t: Current time.
 
-        Returns
-        -------
-        float
+        Returns:
             Control signal.
 
         """
@@ -60,24 +68,22 @@ class PID:
         "Sum the values and apply limit"
         return min(max(sum(args), self.lower), self.upper)
 
-    def set_gains(self, Kp, Ki, Kd, Tf):
+    def set_gains(self, Kp: float, Ki: float, Kd: float, Tf: float | None = None):
         """Set PID controller gains.
 
-        Parameters
-        ----------
-        Kp : float
-            Proportional gain.
-        Ki: float
-            Integral gain.
-        Kd : float
-            Derivative gain.
-        Tf : float
-            Time constant of the first-order derivative filter.
+        Args:
+            Kp: Proportional gain.
+            Ki: Integral gain.
+            Kd: Derivative gain.
+            Tf: Time constant of the first-order derivative filter.
 
         """
-        self.Kp, self.Ki, self.Kd, self.Tf = Kp, Ki, Kd, Tf
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.Tf = Tf or None  # if zero
 
-    def get_gains(self):
+    def get_gains(self) -> tuple[float, float, float, float | None]:
         """Get PID controller gains.
 
         Returns
@@ -105,42 +111,41 @@ class PID:
         if upper is None:
             self.upper = +float("inf")
 
-    def get_output_limits(self):
+    def get_output_limits(self) -> tuple[float, float]:
         """Get PID controller output limits for anti-windup.
 
-        Returns
-        -------
-        tuple
+        Return:
             Output limits (lower, upper).
 
         """
         return self.lower, self.upper
 
-    def set_state(self, t0, e0, i0):
+    def set_state(self, t: float | None = None, e: float | None = None, i: float = 0) -> None:
         """Set PID controller states.
 
-        Parameters
-        ----------
-        t0 : float or None
-            Initial time. None will reset time.
-        e0 : float or None
-            Initial error. None will reset error.
-        i0 : float or None
-            Inital integral. None will reset integral.
+        Args:
+            t0:
+                Current time. If ``None``, calls `time`.
+            e0:
+                Current error.
+            i0:
+                Current integral.
 
         """
-        self.t0, self.e0, self.i0 = t0, e0, i0
+        if t is None:
+            t = time()
+        self.t = t
+        self.e = e
+        self.i = i or 0
 
-    def get_state(self):
+    def get_state(self) -> tuple[int | float, float]:
         """Get PID controller states.
 
-        Returns
-        -------
-        tuple
-            Initial states of PID controller (t0, e0, i0)
+        Returns:
+            State of the PID controller (t0, e0, i0)
 
         """
-        return self.t0, self.e0, self.i0
+        return self.t, self.e, self.i
 
     def __set_none_value(self, t, e):
         """Set None states for first cycle."""
@@ -155,33 +160,27 @@ class PID:
             i0 = 0.0
         self.set_state(t0, e0, i0)
 
-    def __check_monotonic_timestamp(self, t0, t):
-        """Check timestamp is monotonic."""
-        if t < t0:
-            msg = "Current timestamp is smaller than initial timestamp."
-            warn(msg, RuntimeWarning)
-            return False
-        return True
-
     def integrate(self, e: float, t: float | None = None):
         """Calculates PID controller output.
 
         Args:
-        ----------
             e: Error signal.
             t: Current time.
 
-        Returns
-        -------
-        p,i,d
-            Control signal (in parts), *not* limited.
+        Returns:
+            p,i,d: Control signal (in parts), *not* limited.
 
         """
-        self.__set_none_value(t, e)
         t0, e0, i0 = self.get_state()
-        # Check monotonic timestamp
-        if not self.__check_monotonic_timestamp(t0, t):
+
+        # Check timestamp
+        if t0 is None:
             t0 = t
+        elif t0 > t:
+            raise ValueError("Time went backwards")
+
+        if e0 is None:
+            e0 = e
         # Calculate time step
         dt = t - t0
         # Calculate proportional term
@@ -192,8 +191,8 @@ class PID:
         i = min(max(i, self.lower - p), self.upper - p)
         # Calculate derivative term
         d = 0.0
-        if self.Kd != 0.0:
-            if self.Tf > 0.0:
+        if self.Kd and dt:
+            if self.Tf is not None:
                 Kn = 1.0 / self.Tf
                 x = -Kn * self.Kd * e0
                 x = exp(-Kn * dt) * x - Kn * (1.0 - exp(-Kn * dt)) * self.Kd * e
@@ -252,7 +251,7 @@ class CPID(PID):
         """
         if self.state.setpoint == setpoint:
             return
-        i = self.i0
+        i = self.i
         if i is None:
             i = 0
         osp = self.state.setpoint
@@ -260,7 +259,7 @@ class CPID(PID):
             i -= osp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
         self.state.setpoint = nsp = setpoint
         i += nsp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
-        self.i0 = i
+        self.i = i
 
     def move_to(self, i, o, t=None):
         """
@@ -268,20 +267,39 @@ class CPID(PID):
         """
         if t is None:
             t = time()
-        self.t0 = t
+        self.t = t
         if self.state.setpoint is not None:
             i -= self.state.setpoint
-            self.i0 = o + i * self.Kp
-            self.e0 = i
+            self.i = o + i * self.Kp
+            self.e = i
 
-    def __call__(self, i, t=None) -> float:  # noqa: D102
+    def __call__(self, i: float, t=None) -> float:
+        """
+        Run a PID step.
+
+        Args:
+            i: the current output.
+            t: current time, or `None` for monotonicity.
+        Returns:
+            the new input.
+        """
         if t is None:
             t = time()
         res = super()(e=self.state.setpoint - i, t=t)
         self._update_state()
         return res
 
-    def integrate(self, i, t=None) -> tuple[float, float, float]:  # noqa: D102
+    def integrate(self, i, t=None) -> tuple[float, float, float]:
+        """
+        Run a PID step.
+
+        Args:
+            i: the current output.
+            t: current time, or `None` for monotonicity.
+        Returns:
+            the p,i,d control variables.
+            Call :meth:`sum` to get the new input.
+        """
         if t is None:
             t = time()
         res = super().integrate(e=self.state.setpoint - i, t=t)

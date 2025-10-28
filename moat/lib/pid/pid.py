@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 
 try:
     # MicroPython. Use milliseconds.
-    from time import ticks_ms as time
+    from time import ticks_ms as time  # pyright:ignore[reportAttributeAccessIssue]
 
     PID_TC = 1000
-    MAX_VAL = 2**32
+    MAX_VAL = 2**31 - 1
 
 except ImportError:
     # Standard Python
@@ -49,17 +49,17 @@ class PID:
 
     """
 
-    t: int | float | None  # current time
-    e: int | float | None  # current error
+    t: float | None  # current time
+    e: float | None  # current error
     i: float  # current integral
 
-    Kp: int | float  # proportional gain
-    Ki: int | float | None  # integral gain
-    Kd: int | float | None  # differential gain
-    Tf: int | float | None  # time constant for derivative filter
+    Kp: float  # proportional gain
+    Ki: float | None  # integral gain
+    Kd: float | None  # differential gain
+    Tf: float | None  # time constant for derivative filter
 
-    lower: int | float  # lower output limit
-    upper: int | float  # upper output limit
+    lower: float  # lower output limit
+    upper: float  # upper output limit
 
     def __init__(
         self,
@@ -79,7 +79,7 @@ class PID:
     def reset(self, t: float | None = None):  # noqa: D102
         self.set_state(t, None, None)
 
-    def __call__(self, e: float, t: float | None = None):
+    def __call__(self, e: float, t: float | None = None) -> float:
         """Run a PID step.
 
         Args:
@@ -92,7 +92,7 @@ class PID:
         """
         return self.sum(self.integrate(e, t))
 
-    def sum(self, args: Sequence[int | float]) -> int | float:
+    def sum(self, args: Sequence[float]) -> float:
         "Sum the values and apply limit"
         return min(max(sum(args), self.lower), self.upper)
 
@@ -112,7 +112,9 @@ class PID:
             self.Tf / PID_TC if self.Tf else None,
         )
 
-    def set_gains(self, Kp: float, Ki: float, Kd: float, Tf: float | None = None):
+    def set_gains(
+        self, Kp: float | None, Ki: float | None, Kd: float | None, Tf: float | None = None
+    ):
         """Set PID controller gains.
 
         Args:
@@ -122,12 +124,12 @@ class PID:
             Tf: Time constant of the first-order derivative filter.
 
         """
-        self.Kp = Kp
+        self.Kp = Kp or 0
         self.Ki = Ki / PID_TC if Ki else None
         self.Kd = Kd * PID_TC if Kd else None
         self.Tf = Tf * PID_TC if Tf else None
 
-    def set_output_limits(self, lower: float = -MAX_VAL, upper: float = MAX_VAL):
+    def set_output_limits(self, lower: float | None = -MAX_VAL, upper: float | None = MAX_VAL):
         """Set PID controller output limits for anti-windup.
 
         Parameters
@@ -138,10 +140,10 @@ class PID:
             Upper limit for anti-windup.
 
         """
-        self.lower = lower
-        self.upper = upper
+        self.lower = -MAX_VAL if lower is None else lower
+        self.upper = +MAX_VAL if upper is None else upper
 
-    def get_output_limits(self) -> tuple[int | float, int | float]:
+    def get_output_limits(self) -> tuple[float, float]:
         """Get PID controller output limits for anti-windup.
 
         Return:
@@ -150,7 +152,9 @@ class PID:
         """
         return self.lower, self.upper
 
-    def set_state(self, t: float | None = None, e: float | None = None, i: float = 0) -> None:
+    def set_state(
+        self, t: float | None = None, e: float | None = None, i: float | None = None
+    ) -> None:
         """Set PID controller states.
 
         Args:
@@ -168,7 +172,7 @@ class PID:
         self.e = e
         self.i = i or 0
 
-    def get_state(self) -> tuple[int | float, int | float, int | float]:
+    def get_state(self) -> tuple[float | None, float | None, float]:
         """Get PID controller states.
 
         Returns:
@@ -177,7 +181,7 @@ class PID:
         """
         return self.t, self.e, self.i
 
-    def integrate(self, e: float, t: float | None = None):
+    def integrate(self, e: float, t: float | None = None) -> tuple[float, float, float]:
         """Calculates PID controller output.
 
         Args:
@@ -251,7 +255,7 @@ class CPID(PID):
             state: foo
     """
 
-    def __init__(self, cfg: dict, state: attrdict | None = None, t: float | None = None):
+    def __init__(self, cfg: attrdict, state: attrdict | None = None, t: float | None = None):
         """
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
@@ -312,7 +316,7 @@ class CPID(PID):
         self._update_state()
         return res
 
-    def integrate(self, i, t=None) -> tuple[int | float, int | float, int | float]:
+    def integrate(self, i, t=None) -> tuple[float, float, float]:  # pyright:ignore
         """
         Run a PID step.
 

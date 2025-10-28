@@ -13,6 +13,8 @@ from numpy import allclose, arange, array, diff, insert, zeros_like
 
 from moat.lib.pid import PID, PID_TC
 
+from typing import cast
+
 if True:
     # Hack to test non-second time intervals
     from moat.lib.pid import pid as _pid
@@ -109,6 +111,7 @@ def test_integrate_only_p():  # noqa:D103
     time = arange(0, 10, 0.1)
     error, output = zeros_like(time), zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         e = sin(0.5 * pi * t)
         # Get PID output signal
@@ -131,6 +134,7 @@ def test_integrate_only_i():  # noqa:D103
     time = arange(0, 10, dt)
     error, output = zeros_like(time), zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         e = sin(0.5 * pi * t)
         # Get PID output
@@ -154,6 +158,7 @@ def test_integrate_only_d():  # noqa:D103
     time = arange(0, 10, dt)
     error, output = zeros_like(time), zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         e = cos(0.5 * pi * t)
         # Get PID output
@@ -186,6 +191,7 @@ def test_integrate_full(Kp, Ki, Kd, Tf, ok):  # noqa:D103
     time = arange(0, 10, dt)
     error, output = zeros_like(time), zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         e = cos(0.5 * pi * t)
         # Get PID output
@@ -313,6 +319,7 @@ def test_integrate_one():  # noqa:D103
     time = arange(0, 10, dt)
     error, output = zeros_like(time), zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         e = 1
         # Get PID output
@@ -342,6 +349,7 @@ def test_integrate_anti_windup():  # noqa:D103
     # Create PID internal integral array
     integral = zeros_like(time)
     for idx, t in enumerate(time):
+        t = cast(float, t)
         # Calculate error signal
         if t < (sim_time / 2.0):
             e = +1.0

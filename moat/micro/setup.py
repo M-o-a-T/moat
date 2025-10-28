@@ -332,10 +332,13 @@ async def install_(cfg, dest: Path = None):
         build_dir = buildp
         build_tmp = None
 
-    try:
-        port = anyio.Path(get_part(cfg, cfg.install.serial))
-    except AttributeError:
-        port = None
+    if isinstance(cfg.install.serial, str):
+        port = anyio.Path(cfg.install.serial)
+    else:
+        try:
+            port = anyio.Path(get_part(cfg, cfg.install.serial))
+        except AttributeError:
+            port = None
     try:
         rate = cfg.install.rate
     except AttributeError:

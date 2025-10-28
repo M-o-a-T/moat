@@ -1,5 +1,8 @@
 """
-More common code
+"Slow" PWM handler.
+
+This is intended for slow devices like a thermically controlled heating
+valve, where switching every five seconds or so works perfectly well.
 """
 
 from __future__ import annotations
@@ -23,8 +26,12 @@ class PWM(BaseCmd):
     - ratio: on/off, between zero (all off) and one (all on).
     - min: Minimum time between switching
     - max: Maximum time between switching
+    - base: the maximum value for the switching ratio.
 
     If the ratio exceeds min/2/max, it is set zo zero. Likewise for max.
+
+    If the value is an integer, this code will perform integer division.
+    Otherwise it uses floating point.
     """
 
     t_last = 0
@@ -67,7 +74,13 @@ class PWM(BaseCmd):
             finally:
                 await self.ps.send(False)
 
-    async def _measure(self, now: int) -> int:
+    async def _measure(self, now: int) -> int | None:
+        """
+        Check whether it's time to switch.
+
+        Returns: delay until the next switch, or ``None`` for
+        "until the value is changed".
+        """
         td = ticks_diff(now, self.t_last)
 
         async def _sw(state: bool) -> int:
@@ -95,7 +108,10 @@ class PWM(BaseCmd):
             dly = await _sw(True) if td >= self.t_off else self.t_off - td
         return dly
 
-    async def _delay(self, dly: int) -> None:
+    async def _delay(self, dly: int | None) -> None:
+        """
+        Delay for @dly milliseconds, or until the event is set.
+        """
         if dly is None:
             await self.evt.wait()
             self.evt = Event()
@@ -107,8 +123,14 @@ class PWM(BaseCmd):
             else:
                 self.evt = Event()
 
-    def calc_ratio(self, val: int) -> tuple[int, int]:
-        "Calculate ratio"
+    def calc_times(self, val: int) -> tuple[int, int]:
+        """
+        Calculate the t_on/t_off tuple so that
+        ``t_on/(t_on+t_off) == val/base`` and ``min <= t_{on,off} <= max``.
+
+        If that ratio falls below ``min/(min+max)``, switch off entirely
+        (t_on=0). Likewise, turn on when the ratio is too high.
+        """
         rev = False
 
         a = self.min
@@ -125,17 +147,23 @@ class PWM(BaseCmd):
             a = 0
         else:
             # a/(a+b) == val/base; solve for b
-            b = min(b, a * (base - val) // val)
+            r = a * (base - val)
+            if isinstance(val, int):
+                r //= val
+            else:
+                r /= val
+
+            b = min(b, r)
 
         return (b, a) if rev else (a, b)
 
     doc_w = dict(_d="change", _0="float:new value")
 
-    async def cmd_w(self, v: int):
+    async def cmd_w(self, val: int):
         """
-        Change on/off ratio.
+        Change the on/off ratio to approximate ``v/base``.
         """
-        t_on, t_off = self.calc_ratio(v)
+        t_on, t_off = self.calc_times(val)
         self.t_on = t_on
         self.t_off = t_off
 
@@ -143,19 +171,24 @@ class PWM(BaseCmd):
         if td >= (t_on if self.is_on else t_off):
             self.evt.set()
 
-    async def cmd_r(self):
-        """
-        Returns the current state, as a mapping.
+    doc_s = dict(
+        _d="read state",
+        _r=dict(
+            a="int:t_on",
+            b="int:t_off",
+            p="bool:state",
+            t="int:time since last change",
+        ),
+    )
 
-        v: currently set value
-        f: currently forced value
-        d: delay until next change (msec) or None
-        p: actual pin state
+    async def cmd_s(self):
         """
-        p = await self.pin.r()
+        Returns the current state.
+        """
+        p = await self.is_on
         return dict(
-            v=self.value,
-            f=self.force,
+            a=self.t_on,
+            b=self.t_off,
             p=p,
-            d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
+            t=ticks_diff(ticks_ms(), self.t_last),
         )

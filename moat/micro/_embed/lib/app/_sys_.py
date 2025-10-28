@@ -81,7 +81,11 @@ class Cmd(BaseCmd):
             self.cache["root"] = self.root
 
         if isinstance(x, str):
-            res = eval(x, self.cache)
+            try:
+                res = eval(x, self.cache)
+            except SyntaxError:
+                exec(x, self.cache)  # noqa:S102
+                res = None
         elif isinstance(x, (tuple, list, Path)):
             res = x[0]
             if isinstance(res, str):

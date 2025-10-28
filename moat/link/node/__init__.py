@@ -171,7 +171,7 @@ class Node:
         """
         d = self._sub[item]
 
-        if d._sub or d.data is not NotGiven:  # noqa: SLF001
+        if d._sub or d.data_ is not NotGiven:  # noqa: SLF001
             raise ValueError(item)
         del self._sub[item]
 

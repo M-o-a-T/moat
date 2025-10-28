@@ -9,11 +9,28 @@ PID controller library
 from __future__ import annotations
 
 from math import exp
-from time import monotonic as time
 
 from moat.util import attrdict
+from moat.util.compat import ticks_diff
 
-PID_TC = 1
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+try:
+    # MicroPython. Use milliseconds.
+    from time import ticks_ms as time
+
+    PID_TC = 1000
+    MAX_VAL = 2**32
+
+except ImportError:
+    # Standard Python
+    from time import monotonic as time
+
+    PID_TC = 1
+    MAX_VAL = float("inf")
 
 
 class PID:
@@ -21,31 +38,42 @@ class PID:
 
     Parameters
     ----------
-    Kp : float
+    Kp: float
         Proportional gain.
     Ki: float
-        Integral gain.
-    Kd : float
-        Derivative gain.
-    Tf : float
+        Integral time constant.
+    Kd: float
+        Derivative time constant.
+    Tf: float
         Time constant of the first-order derivative filter.
 
     """
 
     t: int | float | None  # current time
-    e: float | None  # current error
+    e: int | float | None  # current error
     i: float  # current integral
 
-    Kp: float  # proportional gain
-    Ki: float  # integral gain
-    Kd: float  # differential gain
-    Tf: float | None  # time constant for derivative filter
+    Kp: int | float  # proportional gain
+    Ki: int | float | None  # integral gain
+    Kd: int | float | None  # differential gain
+    Tf: int | float | None  # time constant for derivative filter
+
+    lower: int | float  # lower output limit
+    upper: int | float  # upper output limit
 
     def __init__(
-        self, Kp: float, Ki: float, Kd: float, Tf: float | None = None, t: float | None = None
+        self,
+        Kp: float | None = None,
+        Ki: float | None = None,
+        Kd: float | None = None,
+        Tf: float | None = None,
+        t: float | None = None,
     ):
+        """
+        Setup. Legacy call, using gain constants, not times, for the i and d terms.
+        """
         self.set_gains(Kp, Ki, Kd, Tf)
-        self.set_output_limits(None, None)
+        self.set_output_limits()
         self.reset(t)
 
     def reset(self, t: float | None = None):  # noqa: D102
@@ -64,9 +92,25 @@ class PID:
         """
         return self.sum(self.integrate(e, t))
 
-    def sum(self, args):
+    def sum(self, args: Sequence[int | float]) -> int | float:
         "Sum the values and apply limit"
         return min(max(sum(args), self.lower), self.upper)
+
+    def get_gains(self) -> tuple[float, float | None, float | None, float | None]:
+        """Get PID controller gains.
+
+        Returns
+        -------
+        tuple
+            Gains of PID controller (Kp, Ki, Kd, Tf).
+
+        """
+        return (
+            self.Kp,
+            self.Ki * PID_TC if self.Ki else None,
+            self.Kd / PID_TC if self.Kd else None,
+            self.Tf / PID_TC if self.Tf else None,
+        )
 
     def set_gains(self, Kp: float, Ki: float, Kd: float, Tf: float | None = None):
         """Set PID controller gains.
@@ -79,22 +123,11 @@ class PID:
 
         """
         self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.Tf = Tf or None  # if zero
+        self.Ki = Ki / PID_TC if Ki else None
+        self.Kd = Kd * PID_TC if Kd else None
+        self.Tf = Tf * PID_TC if Tf else None
 
-    def get_gains(self) -> tuple[float, float, float, float | None]:
-        """Get PID controller gains.
-
-        Returns
-        -------
-        tuple
-            Gains of PID controller (Kp, Ki, Kd, Tf).
-
-        """
-        return self.Kp, self.Ki, self.Kd, self.Tf
-
-    def set_output_limits(self, lower, upper):
+    def set_output_limits(self, lower: float = -MAX_VAL, upper: float = MAX_VAL):
         """Set PID controller output limits for anti-windup.
 
         Parameters
@@ -105,13 +138,10 @@ class PID:
             Upper limit for anti-windup.
 
         """
-        self.lower, self.upper = lower, upper
-        if lower is None:
-            self.lower = -float("inf")
-        if upper is None:
-            self.upper = +float("inf")
+        self.lower = lower
+        self.upper = upper
 
-    def get_output_limits(self) -> tuple[float, float]:
+    def get_output_limits(self) -> tuple[int | float, int | float]:
         """Get PID controller output limits for anti-windup.
 
         Return:
@@ -138,7 +168,7 @@ class PID:
         self.e = e
         self.i = i or 0
 
-    def get_state(self) -> tuple[int | float, float]:
+    def get_state(self) -> tuple[int | float, int | float, int | float]:
         """Get PID controller states.
 
         Returns:
@@ -146,19 +176,6 @@ class PID:
 
         """
         return self.t, self.e, self.i
-
-    def __set_none_value(self, t, e):
-        """Set None states for first cycle."""
-        t0, e0, i0 = self.get_state()
-        if t0 is None:
-            if t is None:
-                t = time()
-            t0 = t
-        if e0 is None:
-            e0 = e
-        if i0 is None:
-            i0 = 0.0
-        self.set_state(t0, e0, i0)
 
     def integrate(self, e: float, t: float | None = None):
         """Calculates PID controller output.
@@ -172,6 +189,8 @@ class PID:
 
         """
         t0, e0, i0 = self.get_state()
+        if t is None:
+            t = time()
 
         # Check timestamp
         if t0 is None:
@@ -182,24 +201,28 @@ class PID:
         if e0 is None:
             e0 = e
         # Calculate time step
-        dt = t - t0
+        dt = ticks_diff(t, t0)
         # Calculate proportional term
         p = self.Kp * e
         # Calculate integral term
-        i = i0 + dt * self.Ki * e
-        # anti-windup
-        i = min(max(i, self.lower - p), self.upper - p)
+        if self.Ki:
+            i = i0 + dt * self.Ki * e
+            # anti-windup
+            i = min(max(i, self.lower - p), self.upper - p)
+        else:
+            i = 0
         # Calculate derivative term
         d = 0.0
-        if self.Kd and dt:
-            if self.Tf is not None:
-                Kn = 1.0 / self.Tf
-                x = -Kn * self.Kd * e0
-                x = exp(-Kn * dt) * x - Kn * (1.0 - exp(-Kn * dt)) * self.Kd * e
-                d = x + Kn * self.Kd * e
-                e = -(self.Tf / self.Kd) * x
+        if dt and (Kd := self.Kd):
+            if (Tf := self.Tf) is not None:
+                Tdf = Tf / Kd
+                x = -e0 / Tdf
+                ex = exp(-dt / Tf)
+                y = ex * x - (1.0 - ex) / Tdf * e
+                d = y + e / Tdf
+                e = -Tdf * y
             else:
-                d = self.Kd * (e - e0) / dt
+                d = (e - e0) * Kd / dt
         # Set initial value for next cycle
         self.set_state(t, e, i)
 
@@ -228,7 +251,7 @@ class CPID(PID):
             state: foo
     """
 
-    def __init__(self, cfg, state=None, t=None):
+    def __init__(self, cfg: dict, state: attrdict | None = None, t: float | None = None):
         """
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
@@ -245,7 +268,7 @@ class CPID(PID):
         self.set_state(s.get("t", t or time()), s.get("e", 0), s.get("i", 0))
         s.setdefault("setpoint", None)
 
-    def setpoint(self, setpoint):
+    def setpoint(self, setpoint: float):
         """
         Adjust the setpoint.
         """
@@ -261,7 +284,7 @@ class CPID(PID):
         i += nsp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
         self.i = i
 
-    def move_to(self, i, o, t=None):
+    def move_to(self, i: float, o: float, t=None):
         """
         Tell the controller that this input shall result in that output.
         """
@@ -273,7 +296,7 @@ class CPID(PID):
             self.i = o + i * self.Kp
             self.e = i
 
-    def __call__(self, i: float, t=None) -> float:
+    def __call__(self, i: float, t: float | None = None) -> float:
         """
         Run a PID step.
 
@@ -289,7 +312,7 @@ class CPID(PID):
         self._update_state()
         return res
 
-    def integrate(self, i, t=None) -> tuple[float, float, float]:
+    def integrate(self, i, t=None) -> tuple[int | float, int | float, int | float]:
         """
         Run a PID step.
 

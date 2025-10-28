@@ -351,7 +351,7 @@ async def install_(cfg, dest: Path = None):
         if idf is None:
             if "ESP" not in os.environ:
                 raise click.UsageError(
-                    "'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh",
+                    "'idf.py' not found: Source $ESP/export.sh and try again.",
                 )
             idf = os.environ["ESP"] + os.sep + "idf.py"
 

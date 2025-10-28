@@ -17,7 +17,7 @@ from shutil import rmtree
 
 import asyncclick as click
 
-from moat.util import P, Path, merge, ungroup
+from moat.util import NotGiven, P, Path, merge, ungroup
 from moat.lib.codec import get_codec
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
@@ -137,7 +137,13 @@ async def setup(
     if main == "-":
         main = None
     elif main is None:
-        main = cfg.install.main
+        main = cfg.install.get("main", None)
+        if main is NotGiven:
+            main = None
+        else:
+            import moat.micro._embed  # noqa: PLC0415
+
+            main = cfg.install.get("main", anyio.Path(moat.micro._embed.__path__[0]) / "main.py")  # noqa:SLF001
 
     # The following dance is necessary because a reset may or may not kill
     # the whole stack. Fixing this, i.e. making individual apps fault

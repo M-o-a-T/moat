@@ -11,7 +11,7 @@ from math import cos, pi, sin
 
 from numpy import allclose, arange, diff, insert, zeros_like
 
-from moat.lib.pid import PID
+from moat.lib.pid import PID, PID_TC
 
 
 def almost_equal(first, second, places=None, delta=None):
@@ -76,14 +76,14 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         assert almost_equal(lower, _lower)
         assert almost_equal(upper, _upper)
 
-    def test_set_initial_value(self):  # noqa: D102
+    def test_set_state(self):  # noqa: D102
         # Set initial values
         t0, e0, i0 = 5.0, 6.0, 7.0
         # Create PID controller and set initial values
         pid = PID(Kp=1.0, Ki=2.0, Kd=3.0, Tf=4.0)
-        pid.set_initial_value(t0=t0, e0=e0, i0=i0)
+        pid.set_state(t0=t0, e0=e0, i0=i0)
         # Get PID initial values
-        _t, _e, _i = pid.get_initial_value()
+        _t, _e, _i = pid.get_state()
         # Check
         assert almost_equal(t0, _t)
         assert almost_equal(e0, _e)
@@ -93,7 +93,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Set Kp gain
         Kp = 2.0
         # Create PID controller
-        pid = PID(Kp=Kp, Ki=0.0, Kd=0.0, Tf=0.05)
+        pid = PID(Kp=Kp, Ki=0.0, Kd=0.0, Tf=0.05, t=0)
         # Create simulation time array, error and output array
         time = arange(0, 10, 0.1)
         error, output = zeros_like(time), zeros_like(time)
@@ -101,7 +101,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             # Calculate error signal
             e = sin(0.5 * pi * t)
             # Get PID output signal
-            u = pid.integrate(t, e)
+            u = pid(e, t=t * PID_TC)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
@@ -114,7 +114,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Set simulation time step
         dt = 0.1
         # Create PID controller
-        pid = PID(Kp=0.0, Ki=Ki, Kd=0.0, Tf=0.05)
+        pid = PID(Kp=0.0, Ki=Ki, Kd=0.0, Tf=0.05, t=0)
         # Create simulation time array, error and output array
         time = arange(0, 10, dt)
         error, output = zeros_like(time), zeros_like(time)
@@ -122,7 +122,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             # Calculate error signal
             e = sin(0.5 * pi * t)
             # Get PID output
-            u = pid.integrate(t, e)
+            u = pid(e, t=t * PID_TC)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
@@ -136,7 +136,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Set simulation time step
         dt = 0.1
         # Create PID controller
-        pid = PID(Kp=0.0, Ki=0.0, Kd=Kd, Tf=Tf)
+        pid = PID(Kp=0.0, Ki=0.0, Kd=Kd, Tf=Tf, t=0)
         # Create simulation time array, error and output array
         time = arange(0, 10, dt)
         error, output = zeros_like(time), zeros_like(time)
@@ -144,7 +144,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             # Calculate error signal
             e = cos(0.5 * pi * t)
             # Get PID output
-            u = pid.integrate(t, e)
+            u = pid(e, t=t * PID_TC)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
@@ -158,7 +158,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Set simulation time step
         dt = 0.1
         # Create PID controller
-        pid = PID(Kp=Kp, Ki=Ki, Kd=Kd, Tf=Tf)
+        pid = PID(Kp=Kp, Ki=Ki, Kd=Kd, Tf=Tf, t=0)
         # Create simulation time array, error and output array
         time = arange(0, 10, dt)
         error, output = zeros_like(time), zeros_like(time)
@@ -166,7 +166,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             # Calculate error signal
             e = 1
             # Get PID output
-            u = pid.integrate(t, e)
+            u = pid(e, t=t * PID_TC)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
@@ -183,7 +183,7 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
         # Set simulation time step
         sim_time, dt = 10, 0.1
         # Create PID controller and set output limits
-        pid = PID(Kp=0.0, Ki=Ki, Kd=0.0, Tf=0.05)
+        pid = PID(Kp=0.0, Ki=Ki, Kd=0.0, Tf=0.05, t=0)
         pid.set_output_limits(lower=lower, upper=upper)
         # Create simulation time array, error and output array
         time = arange(0, sim_time, dt)
@@ -197,8 +197,8 @@ class TestStringMethods(unittest.TestCase):  # noqa: D101
             else:
                 e = -1.0
             # Get PID output
-            u = pid.integrate(t, e)
-            i = pid.get_initial_value()[2]
+            u = pid(e, t=t * PID_TC)
+            i = pid.get_state()[2]
             # Record error and output signal
             integral[idx] = i
             error[idx] = e

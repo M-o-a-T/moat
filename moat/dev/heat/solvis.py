@@ -478,10 +478,16 @@ class APID(CPID):
         with contextlib.suppress(AttributeError):
             await self.data.cl.set(self.cfg.log.setpoint, value=val, idem=True)
 
-    async def __call__(self, val, **kw):
+    async def __call__(self, val, split: bool = False, **kw):
         "run the PID and log the result"
+        if split:
+            p_i_d = super().integrate(val, **kw)
+            res = self.sum(p_i_d)
+            await self.log_value(res)
+            return res, p_i_d
+
         res = super().__call__(val, **kw)
-        await self.log_value(res[0] if isinstance(res, tuple) else res)
+        await self.log_value(res)
         return res
 
     async def log_value(self, res):

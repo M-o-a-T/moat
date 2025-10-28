@@ -46,7 +46,7 @@ print("\n*** MoaT ***\n", file=sys.stderr)
 # One line for handling boot_local, ten for not doing it. Fits.
 try:
     from boot_local import *  # noqa:F403
-except Exception:
+except Exception as exc:  # noqa:F841  # SIGH
     for ext in ("py", "mpy"):
         try:
             os.stat(f"boot_local.{ext}")

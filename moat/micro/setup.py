@@ -136,7 +136,7 @@ async def setup(
 
     if main == "-":
         main = None
-    elif main is None:
+    elif main is None and "install" in cfg:
         main = cfg.install.get("main", None)
         if main is NotGiven:
             main = None

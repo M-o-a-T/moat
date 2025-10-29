@@ -201,7 +201,7 @@ def test_integrate_full(Kp, Ki, Kd, Tf, ok):  # noqa:D103
         output[idx] = u
 
     # Check.
-    exp = """ [
+    exp = """[
          0.00,  0.13,  0.14,  0.05, -0.12, -0.36, -0.64, -0.96, -1.28, -1.61,
         -1.93, -2.22, -2.47, -2.67, -2.83, -2.92, -2.96, -2.93, -2.83, -2.67,
         -2.45, -2.17, -1.85, -1.48, -1.08, -0.66, -0.23,  0.20,  0.63,  1.04,
@@ -214,7 +214,7 @@ def test_integrate_full(Kp, Ki, Kd, Tf, ok):  # noqa:D103
         -1.63, -1.97, -2.27, -2.51, -2.69, -2.81, -2.87, -2.85, -2.77, -2.62,
     ]
     """
-    expected = array(eval(exp))
+    expected = array(eval(exp.strip()))
     assert ok == allclose(expected, output, rtol=0.0, atol=0.1)
     if ok:
         assert pid.get_gains() == (0, 2.0, 3.2, 0.5)

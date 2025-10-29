@@ -4,6 +4,21 @@ Random parts
 
 from __future__ import annotations
 
-from moat.micro.part.pin import Pin  # noqa:F401 pylint:disable=unused-import
-from moat.micro.part.pwm import PWM  # noqa:F401 pylint:disable=unused-import
-from moat.micro.part.relay import Relay  # noqa:F401 pylint:disable=unused-import
+_attrs = {
+    "PID": "pid",
+    "Pin": "pin",
+    "PWM": "pwm",
+    "Relay": "relay",
+}
+
+
+# Lazy loader, effectively does:
+#   global attr
+#   from .mod import attr
+def __getattr__(attr):
+    mod = _attrs.get(attr, None)
+    if mod is None:
+        raise AttributeError(attr)
+    value = getattr(__import__(f"moat.micro.part.{mod}", globals(), None, True, 0), attr)
+    globals()[attr] = value
+    return value

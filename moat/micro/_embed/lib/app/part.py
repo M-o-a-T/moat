@@ -9,6 +9,7 @@ _attrs = {
     "Pin": "pin",
     "PWM": "pwm",
     "Relay": "relay",
+    "Transfer": "transfer",
 }
 
 

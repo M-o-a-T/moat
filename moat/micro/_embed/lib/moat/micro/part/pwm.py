@@ -18,6 +18,21 @@ if TYPE_CHECKING:
     from moat.lib.cmd.msg import Msg
 
 
+class _Send:
+    # A null context that delegates its .send method to the wrapped destination
+    def __init__(self, dest):
+        self.dest = dest
+
+    def send(self, *a, **kw):
+        return self.dest(*a, **kw)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *tb):
+        return None
+
+
 class PWM(BaseCmd):
     """
     A PWM is an output pin that changes periodically.
@@ -62,7 +77,9 @@ class PWM(BaseCmd):
             raise StoppedError("pin")
 
     async def run(self):  # noqa:D102
-        async with self.pin.w.stream_out() as self.ps:
+        async with (
+            _Send(self.pin.cmd_w) if hasattr(self.pin, "cmd_w") else self.pin.w.stream_out()
+        ) as self.ps:
             try:
                 self.t_last = ticks_ms()
                 self.is_on = False
@@ -157,9 +174,7 @@ class PWM(BaseCmd):
 
         return (b, a) if rev else (a, b)
 
-    doc_w = dict(_d="change", _0="float:new value")
-
-    async def cmd_w(self, val: int):
+    def set_times(self, val: int):
         """
         Change the on/off ratio to approximate ``v/base``.
         """
@@ -170,6 +185,21 @@ class PWM(BaseCmd):
         td = ticks_diff(ticks_ms(), self.t_last)
         if td >= (t_on if self.is_on else t_off):
             self.evt.set()
+
+    doc_w = dict(_d="change", _0="float:new value", _i=dict(_0="float:new value"))
+
+    async def stream_w(self, msg: Msg):
+        "change ratio"
+        if msg.can_stream():
+            async with msg.stream_in() as md:
+                async for m in md:
+                    self.set_times(m[0])
+        else:
+            self.set_times(msg[0])
+
+    async def cmd_w(self, val: int):
+        "change ratio"
+        self.set_times(val)
 
     doc_s = dict(
         _d="read state",

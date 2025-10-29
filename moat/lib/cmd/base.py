@@ -379,11 +379,11 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd, a, kw))
 
-    def sub_at(self, prefix: Path, caller=None) -> MsgSender:
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
-        res = self.root.find_handler(prefix)
+        res = self.root.find_handler(prefix, cmd=cmd)
         if isinstance(res, tuple):
             root, rem = res
             if rem:
@@ -549,7 +549,7 @@ class MsgHandler(BaseMsgHandler):
 
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
 
-    def find_handler(self, path) -> tuple[MsgHandler, Path] | Callable:
+    def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """
         Do a path lookup and find a suitable subcommand.
 
@@ -557,4 +557,5 @@ class MsgHandler(BaseMsgHandler):
         tuple or something that's callable directly. Implementing the
         latter for streams is TODO.
         """
+        cmd  # noqa:B018
         return self, path

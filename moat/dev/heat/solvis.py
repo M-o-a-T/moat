@@ -465,7 +465,11 @@ class APID(CPID):
     "a PID that logs asynchronously"
 
     def __init__(self, data, name, cfg):
-        super().__init__(cfg, data.state)
+        if "state" in cfg:
+            state = data.state.setdefault(cfg.state, attrdict())
+        else:
+            state = attrdict()
+        super().__init__(cfg, state)
         self.data = data
         self.name = name
 

@@ -108,7 +108,7 @@ class BaseCmd(Base):
         "See `MsgHandler.handle`."
         ...
 
-    def find_handler(self, path) -> tuple[MsgHandler, Path] | Callable:
+    def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:
         "See `MsgHandler.find_handler`."
         ...
 

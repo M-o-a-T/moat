@@ -270,10 +270,11 @@ class LinkSender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def find_handler(self, path) -> tuple[MsgHandler, Path]:
+    def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path]:
         """
         Standard sub-dispatcher redirector, no-op.
         """
+        cmd  # noqa:B018
         return self, path
 
     @overload

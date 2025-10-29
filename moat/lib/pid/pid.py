@@ -264,13 +264,11 @@ class CPID(PID):
         self.cfg = cfg
         self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
 
-        if "state" in cfg and state is not None:
-            s = state.setdefault(cfg.state, attrdict())
-        else:
-            s = attrdict()
-        self.state = s
-        self.set_state(s.get("t", t or time()), s.get("e", 0), s.get("i", 0))
-        s.setdefault("setpoint", None)
+        if state is None:
+            state = attrdict()
+        self.state = state
+        self.set_state(state.get("t", t or time()), state.get("e", 0), state.get("i", 0))
+        state.setdefault("setpoint", None)
 
     def setpoint(self, setpoint: float):
         """

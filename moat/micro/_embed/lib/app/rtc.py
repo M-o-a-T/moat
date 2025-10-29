@@ -49,6 +49,8 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
+        # This is a stream command because it returns the enc_part output
+        # as multi-element return values.
         p = msg.get("p", ())
         print("*** GET", self.st.data, p, file=sys.stderr)
 

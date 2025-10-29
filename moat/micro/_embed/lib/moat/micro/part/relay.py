@@ -34,12 +34,12 @@ class Relay(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
+        self.pin = self.root.sub_at(self.cfg.pin)
         if await self.pin.rdy_():
             raise StoppedError("pin")
         await self.cmd_w()
 
     async def run(self):  # noqa:D102
-        self.pin = self.root.sub_at(self.cfg.pin)
         async with TaskGroup() as self.__tg:
             await super().run()
 

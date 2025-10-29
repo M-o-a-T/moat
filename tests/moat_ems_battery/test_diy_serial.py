@@ -40,7 +40,8 @@ async def test_cell1(tmp_path):
     def tm():
         return int(time.monotonic() * 100000) & 0xFFFF
 
-    async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s"), d.sub_at("bc") as bc:
+    async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
+        s  # noqa:B018
         p = RequestTiming(timer=tm())
         x = (await bc(p=p, s=0))[0]
         td = (tm() - x.timer) & 0xFFFF

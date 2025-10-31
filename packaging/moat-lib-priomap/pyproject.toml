@@ -20,7 +20,7 @@ name = "moat-lib-priomap"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A map with priority values'
 readme = "README.md"
-version = "0.6.2"
+version = "0.1.1"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

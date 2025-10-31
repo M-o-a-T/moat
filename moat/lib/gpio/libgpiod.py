@@ -316,7 +316,7 @@ const char *gpiod_version_string(void);
 )
 
 try:
-    lib = ffi.dlopen("libgpiod.so.2")
+    lib = ffi.dlopen("libgpiod.so.3")
 except OSError:
     lib = ffi.dlopen("c")  # workaround if we're only building docs
 

@@ -309,7 +309,7 @@ class Repo(git.Repo, _Common):
 
         res = subprocess.run(
             ["/usr/bin/git", "ls-files", "-z", "--exclude-standard"],
-            check=True,
+            check=False,
             stdout=subprocess.PIPE,
         )
         for fn in res.stdout.split(b"\0"):
@@ -473,10 +473,10 @@ def run_tests(pkg: str | None, *opts) -> bool:
         print("\n*** Testing:", pkg)
         subprocess.run(  # noqa:S603
             ["/usr/bin/python3", "-mpytest", *opts, tests],
+            check=False,
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
-            check=True,
         )
     except subprocess.CalledProcessError:
         return False
@@ -1083,7 +1083,6 @@ async def build(
                     r.mdash,
                     f"Initial release for {forcetag}",
                     cwd=rd,
-                    check=True,
                 )
 
             try:
@@ -1094,7 +1093,6 @@ async def build(
                     "-S",
                     "version",
                     cwd=rd,
-                    check=True,
                     capture=True,
                 )
                 tag, ptag = res.strip().rsplit("-", 1)
@@ -1108,7 +1106,6 @@ async def build(
                         f"{ltag}-{r.vers.pkg}",
                         f"New release for {forcetag}",
                         cwd=rd,
-                        check=True,
                     )
                     repo.index.add(p / "changelog")
 
@@ -1121,7 +1118,7 @@ async def build(
                     or r.vers.pkg != ptag
                     or (test_chg and not changes.exists())
                 ):
-                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd, check=True)
+                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd)
             except subprocess.CalledProcessError:
                 if not run:
                     print("*** Failure packaging", r.name, file=sys.stderr)
@@ -1154,7 +1151,7 @@ async def build(
                 up.add(r)
             else:
                 try:
-                    await run_("python3", "-mbuild", "-snw", cwd=rd, check=True)
+                    await run_("python3", "-mbuild", "-snw", cwd=rd)
                 except subprocess.CalledProcessError:
                     err.add(r.name)
                 else:
@@ -1189,7 +1186,6 @@ async def build(
                         str(targz),
                         str(whl),
                         cwd=rd,
-                        check=True,
                     )
                 except subprocess.CalledProcessError:
                     err.add(r.name)

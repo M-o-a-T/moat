@@ -1,5 +1,5 @@
 """
-Basic test using a MicroPython subtask
+Test our (fake) RTC
 """
 
 from __future__ import annotations

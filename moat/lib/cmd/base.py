@@ -204,6 +204,7 @@ class Caller:
           - NotGiven: return the message object
           - True: return a list
           - False: return a dict
+          - None: best effort (single/map/list/message object)
         """
         self.data = data
         self.sender = sender
@@ -245,7 +246,7 @@ class Caller:
 
         if kw := msg.kw:
             if msg.args:
-                # return the message if both kw and args are set
+                # return the message object if both kw and args are set
                 return msg
             # return a dict if only kw is set
             return kw

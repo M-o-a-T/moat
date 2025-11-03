@@ -1,3 +1,9 @@
+moat-lib-cmd (0.4.1-1) unstable; urgency=medium
+
+  * New release for 25.5.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 31 Oct 2025 22:28:58 +0100
+
 moat-lib-cmd (0.3.9-1) unstable; urgency=medium
 
   * New release for 25.3.28

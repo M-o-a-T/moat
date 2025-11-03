@@ -5,6 +5,7 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 from moat.util import merge
+from moat.lib.cmd.errors import NotReadyError
 from moat.lib.cmd.stream import HandlerStream
 from moat.lib.codec.errors import SilentRemoteError
 from moat.micro.cmd.base import BaseCmd
@@ -121,6 +122,9 @@ class BaseCmdMsg(BaseCmd):
         ):
             return await super().handle(msg, rcmd)
 
+        if rcmd and rcmd[0] == "rdy_":
+            if await self.wait_ready(wait=True):
+                raise NotReadyError(msg.cmd, rcmd)
         if self.__stream is None:
             raise EOFError
 

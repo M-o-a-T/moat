@@ -9,7 +9,7 @@ from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
 from moat.util.exc import ungroup
 
 from .const import B_ERROR, B_STREAM, E_CANCEL, E_ERROR, SD_BOTH, SD_IN, SD_NONE, SD_OUT
-from .errors import ShortCommandError
+from .errors import NotReadyError, ShortCommandError
 
 from typing import TYPE_CHECKING
 
@@ -427,6 +427,13 @@ class SubMsgSender(MsgSender):
         if caller is not None:
             self.Caller_ = caller
 
+    async def __aenter__(self):
+        "Ensure that the called object is ready for service"
+        msg = await self.cmd(["rdy_"])
+        if msg[0]:
+            raise NotReadyError(self)
+        return await super().__aenter__()
+
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:  # noqa: D102
         rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
@@ -540,7 +547,13 @@ class MsgHandler(BaseMsgHandler):
             if (cmd := getattr(self, f"stream{pref}_{rcmd[0]}", None)) is not None:
                 return await msg.call_stream(cmd)
 
-        # Neither of the above: find a subcommand.
+        # Neither of the above.
+        # First check if it's a readiness check.
+        if rcmd[0] == "rdy_":
+            if await self.wait_ready(wait=True):
+                raise NotReadyError(msg.cmd, rcmd)
+
+        # Find a subcommand.
         scmd = rcmd.pop()
         if (sub := getattr(self, f"sub{pref}_{scmd}", None)) is not None:
             if hasattr(sub, "handle"):

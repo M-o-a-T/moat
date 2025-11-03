@@ -19,6 +19,13 @@ from .const import (
 )
 
 
+@as_proxy("_NRdyErr")
+class NotReadyError(RuntimeError):
+    "An element of the command path was not ready"
+
+    pass
+
+
 @as_proxy("_SCmdErr")
 class ShortCommandError(ValueError):
     "The command path was too short"

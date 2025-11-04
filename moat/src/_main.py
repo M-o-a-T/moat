@@ -1108,7 +1108,7 @@ async def build(
                         cwd=rd,
                         capture=True,
                     )
-                    if f"New release for {forcetag}\n" in res[-1]:
+                    if res[-1].strip().endswith(f" for {forcetag}"):
                         # New version for the same tag.
                         # Restore the previous version before continuing
                         # so we don't end up with duplicates.

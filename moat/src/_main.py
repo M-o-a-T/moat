@@ -1118,7 +1118,7 @@ async def build(
                     or r.vers.pkg != ptag
                     or (test_chg and not changes.exists())
                 ):
-                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd)
+                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=obj.debug > 1)
             except subprocess.CalledProcessError:
                 if not run:
                     print("*** Failure packaging", r.name, file=sys.stderr)

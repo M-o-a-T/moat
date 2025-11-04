@@ -69,11 +69,11 @@ class SetReady(TaskStatus):
 
     value: Any = None
 
-    def __init__(self, ann: anyio.Event, host, service):
+    def __init__(self, ann: anyio.Event, host, name):
         self.evt = anyio.Event()
         self.ann = ann
         self.host = host
-        self.service = service
+        self.name = name
 
     def set(self):  # pylint:disable=missing-function-docstring
         "Set the event."
@@ -102,14 +102,14 @@ class SetReady(TaskStatus):
         try:
             if not self.evt.is_set():
                 warnings.warn(
-                    f"event {self.service} on {self.host} freed before announcing",
+                    f"event {self.name} on {self.host} freed before announcing",
                     ServiceNotStarted,
                 )
         except Exception:  # noqa:S110
             pass
 
     def warn(self, s: str):
-        logger.warning("Service %s on %s %s", self.service, self.host, s)
+        logger.warning("Service %s on %s %s", self.name, self.host, s)
 
 
 class _csr:
@@ -135,26 +135,26 @@ class _csr:
 @asynccontextmanager
 async def announcing(
     link: LinkSender,
-    service: Path | None = None,
+    name: Path | None = None,
     *,
     path: Path | None = None,
     force: bool = False,
     host: Path | str | bool = True,
 ):
     """
-    This async context manager broadcasts the availability of a service.
+    This async context manager broadcasts the availability of a named service.
 
     Arguments:
         link: the link to use.
         host: a way to override the discovered service name.
-        service: additional elements on the announcement
+        name: additional elements on the announcement
         path: Command path on the server
         force: Flag to override an existing server
 
     The CM yields a SetReady object. You must call one of its ``.set``,
     ``annonce`` or ``started`` methods to start the announcement.
 
-    Services are declared by a host prefix and a service path.
+    Services are declared by a host prefix and a named path.
 
     ``host`` can be
     * ``True``: Use the hostname of the system the service runs on.
@@ -163,18 +163,18 @@ async def announcing(
       Used for services that should run once in an installation.
     * ``False``: Don't add a hostname. This should not normally be done.
 
-    If ``service`` is `None`, the service will be auto-discovered from
+    If ``name`` is `None`, it will be auto-discovered from
     the current systemd unit, by selecting service entries in
     ``/proc/self/cgroups``. It is an error for the result to be empty.
     This requires the ``SYSTEMD_EXEC_PID`` environment variable to
     contain the PID of the current process.
 
     A :class:`ServiceSupplanted` exception will be raised if/when there is
-    a duplicate of the service on the link (or one appears).
+    a duplicate of the named service on the link (or one appears).
 
     The ``force`` flag is intended for replacing an existing service. It
-    does not ignore a subsequent service announcement by some other
-    MoaT-Link client.
+    does not ignore a subsequent announcement by some other MoaT-Link
+    client.
     """
 
     async def run_announce(srv: Path, sr: SetReady, rdy: anyio.Event) -> None:
@@ -225,10 +225,10 @@ async def announcing(
         try:
             rdy = anyio.Event()
             tm = anyio.current_time()
-            sr = SetReady(rdy, host, service)
+            sr = SetReady(rdy, host, name)
             csr = _csr(sr)
             evt = sr.evt
-            srv = P("run.host") + ((await get_service_path(host)) if service is None else service)
+            srv = P("run.host") + ((await get_service_path(host)) if name is None else name)
             tg.start_soon(monitor_service, srv)
             tg.start_soon(run_announce, srv, sr, rdy)
             tg.start_soon(wait_sr, sr)
@@ -239,14 +239,14 @@ async def announcing(
             yield csr()
             if not evt.is_set():
                 evt.set()
-                logger.warning("Service %s on %s did not start", service, host)
+                logger.warning("Service %s on %s did not start", name, host)
 
         except ServiceSupplanted:
-            logger.warning("Service %s on %s already exists", service, host)
+            logger.warning("Service %s on %s already exists", name, host)
             raise
         except BaseException:
             if anyio.current_time() - tm > 5 and not evt.is_set():
-                logger.warning("Service %s on %s did not starting", service, host)
+                logger.warning("Service %s on %s did not starting", name, host)
             raise
         finally:
             tg.cancel_scope.cancel()
@@ -256,7 +256,7 @@ async def announcing(
 async def as_service(obj: attrdict | None = None):
     """
     This is a replacement for the legacy :func:`moat.util.as_service`
-    helper that also registers the service with MoaT-Link.
+    helper that also registers the named service with MoaT-Link.
     """
     if obj is None:
         obj = attrdict()

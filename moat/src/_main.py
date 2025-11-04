@@ -1100,6 +1100,19 @@ async def build(
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
+                    res = await run_(
+                        "dpkg-parsechangelog",
+                        "-n1",
+                        "-s",
+                        "Changes",
+                        cwd=rd,
+                        capture=True,
+                    )
+                    if f"New release for {forcetag}\n" in res[-1]:
+                        # New version for the same tag.
+                        # Restore the previous version before continuing
+                        # so we don't end up with duplicates.
+                        await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
                     await run_(
                         "debchange",
                         "--distribution",

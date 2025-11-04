@@ -1,3 +1,9 @@
+moat-link-server (0.3.10-1) unstable; urgency=medium
+
+  * New release for 25.5.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 04 Nov 2025 17:27:34 +0100
+
 moat-link-server (0.3.9-1) unstable; urgency=medium
 
   * New release for 25.5.2

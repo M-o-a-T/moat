@@ -7,6 +7,7 @@ import gc
 import pytest
 
 from moat.util import P, ungroup
+from moat.lib.cmd.base import MsgHandler
 from moat.link._test import Scaffold
 from moat.link.announce import announcing
 from moat.link.exceptions import ServiceNotStarted, ServiceSupplanted
@@ -93,3 +94,35 @@ async def test_warning(cfg):
                     gc.collect()
 
             await anyio.sleep(0.2)
+
+
+@pytest.mark.anyio
+async def test_call(cfg):
+    "service call test"
+
+    class CmdI(MsgHandler):
+        async def cmd_yes(self, yeah):
+            return yeah * 2
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+
+        c1 = await sf.client()
+        c2 = await sf.client()
+        evt = anyio.Event()
+        evt2 = anyio.Event()
+        async with anyio.create_task_group() as tg:
+
+            @tg.start_soon
+            async def ann1():
+                async with announcing(c1, P("foo.bar"), service=CmdI()) as s:
+                    await s.announce()
+                    evt.set()
+                    await evt2.wait()
+
+            await evt.wait()
+            await c1.i_sync()
+            res = await c2.get_service(P("foo.bar"))
+            d = await res.yes(22)
+            assert d[0] == 44
+            evt2.set()

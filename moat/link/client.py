@@ -252,6 +252,10 @@ class LinkSender(MsgSender):
         return self
 
     @property
+    def link(self):
+        return self._link
+
+    @property
     def name(self) -> str:
         return self._link.name
 
@@ -603,6 +607,10 @@ class LinkSender(MsgSender):
             await self._codec_tree.wait()
 
         return self._codec_tree
+
+    async def get_service(self, srv: Path) -> MsgHandler:
+        res = await self.d_get(P("run.host") + srv)
+        return self.sub_at(P("cl") / res["id"] + res["path"])
 
 
 class Link(LinkCommon, CtxObj):

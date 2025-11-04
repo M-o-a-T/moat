@@ -13,7 +13,7 @@ import weakref
 from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
-from moat.util import CFG, NotGiven, P, Path, attrdict
+from moat.util import CFG, NotGiven, P, Path, attrdict, gen_ident
 from moat.util import as_service as _as_service
 
 from .client import Link
@@ -22,6 +22,7 @@ from .exceptions import ServiceNotFound, ServiceNotStarted, ServiceSupplanted
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.cmd.base import MsgSender
     from moat.util.path import PathElem
 
     from .client import LinkSender
@@ -137,9 +138,9 @@ async def announcing(
     link: LinkSender,
     name: Path | None = None,
     *,
-    path: Path | None = None,
-    force: bool = False,
     host: Path | str | bool = True,
+    force: bool = False,
+    service: MsgSender | None = None,
 ):
     """
     This async context manager broadcasts the availability of a named service.
@@ -148,7 +149,7 @@ async def announcing(
         link: the link to use.
         host: a way to override the discovered service name.
         name: additional elements on the announcement
-        path: Command path on the server
+        service: Service to delegate to
         force: Flag to override an existing server
 
     The CM yields a SetReady object. You must call one of its ``.set``,
@@ -177,6 +178,9 @@ async def announcing(
     client.
     """
 
+    if service is not None:
+        path = Path(gen_ident(12))
+
     async def run_announce(srv: Path, sr: SetReady, rdy: anyio.Event) -> None:
         # Send our announcement when ready
         evt = sr.evt
@@ -194,7 +198,7 @@ async def announcing(
             raise
 
         data: dict[str, Any] = {"id": link.id}
-        if path and len(path):
+        if service:
             data["path"] = path
 
         # if it's already gone, don't worry.
@@ -221,6 +225,11 @@ async def announcing(
         except Exception:  # noqa:S110
             pass
 
+    async def _delegate(path, service, *, task_status: anyio.TASK_STATUS_IGNORED):
+        with link.link.delegate(path, service):
+            task_status.started()
+            await anyio.sleep_forever()
+
     async with anyio.create_task_group() as tg:
         try:
             rdy = anyio.Event()
@@ -229,6 +238,8 @@ async def announcing(
             csr = _csr(sr)
             evt = sr.evt
             srv = P("run.host") + ((await get_service_path(host)) if name is None else name)
+            if service:
+                await tg.start(_delegate, path, service)
             tg.start_soon(monitor_service, srv)
             tg.start_soon(run_announce, srv, sr, rdy)
             tg.start_soon(wait_sr, sr)

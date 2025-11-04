@@ -234,11 +234,11 @@ class Host:
     def updated(self, evt):
         self.mon.updated(self, evt)
 
-    def drop_id(self):
-        self.mon.drop_id(self)
+    def drop_id(self) -> Awaitable[None]:
+        return self.mon.drop_id(self)
 
-    def drop_host(self):
-        self.mon.drop_host(self)
+    def drop_host(self) -> Awaitable[None]:
+        return self.mon.drop_host(self)
 
     @property
     def last(self):
@@ -488,9 +488,11 @@ class HostMon(HostList):
         """
         if "h" in host.data:
             await self.link.d_set(P("run.id") / host.id, retain=True)
+        await super().drop_id(host)
 
     async def drop_host(self, host):
         """
         Send a message to delete this host entry.
         """
         await self.link.d_set(P("run.host") + host.path, retain=True)
+        await super().drop_host(host)

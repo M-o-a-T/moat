@@ -4,4 +4,4 @@
 /*.debhelper-build-stamp
 /*.substvars
 /debhelper-build-stamp
-/python3-moat-lib-pid
+/python3-moat-lib-priomap

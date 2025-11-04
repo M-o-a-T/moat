@@ -1,3 +1,15 @@
+moat-micro (0.17.2-3) unstable; urgency=medium
+
+  * New release for 25.5.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 04 Nov 2025 17:31:09 +0100
+
+moat-micro (0.17.2-2) unstable; urgency=medium
+
+  * New release for 25.5.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 04 Nov 2025 17:29:23 +0100
+
 moat-micro (0.17.2-1) unstable; urgency=medium
 
   * New release for 25.5.4

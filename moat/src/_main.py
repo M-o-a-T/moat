@@ -864,7 +864,9 @@ it is dropped when you use '--dput'.
 )
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
-@click.option("-G", "--test-chg", is_flag=True, help="rebuild if changes file doesn't exist")
+@click.option(
+    "-G", "--no-test-chg", is_flag=True, help="don't rebuild if changes file doesn't exist"
+)
 @click.option("-o", "--pytest", "pytest_opts", type=str, multiple=True, help="Options for pytest")
 @click.option("-d", "--deb", "deb_opts", type=str, multiple=True, help="Options for debuild")
 @click.option("-p", "--dput", "dput_opts", type=str, multiple=True, help="Options for dput")
@@ -895,7 +897,7 @@ async def build(
     pytest_opts,
     deb_opts,
     run,
-    test_chg,
+    no_test_chg,
     version,
     no_version,
     no_deb,
@@ -1114,9 +1116,9 @@ async def build(
 
                 changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
                 if (
-                    debversion.get(r.dash, "") != ltag
+                    debversion.get(r.srcname, "") != ltag
                     or r.vers.pkg != ptag
-                    or (test_chg and not changes.exists())
+                    or not (no_test_chg or changes.exists())
                 ):
                     await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=obj.debug > 1)
             except subprocess.CalledProcessError:

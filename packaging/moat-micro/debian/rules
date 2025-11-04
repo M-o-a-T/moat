@@ -9,7 +9,7 @@ export LOG_CFG=$(shell pwd)/tests/logging.cfg
 
 execute_after_dh_install:
 	# $(MAKE) install PREFIX=debian/moat-micro
-	dh-installudev --priority=51
+	dh_installudev --priority=51
 
 override_dh_auto_test:
 	: skip

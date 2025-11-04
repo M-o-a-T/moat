@@ -561,6 +561,10 @@ class MsgHandler(BaseMsgHandler):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
+        # Not found. Add workaround.
+        if rcmd[0] == "rdy_":
+            return await msg.result(None)
+
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
 
     def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:

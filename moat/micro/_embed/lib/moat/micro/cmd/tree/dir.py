@@ -89,22 +89,13 @@ class BaseSubCmd(BaseSuperCmd):
 
             Returns True if all sub-apps are stopped.
             """
-            await super().wait_ready(wait=wait)
-            again = True
-            res = False
-            while again:
-                again = False
-                if res:
-                    # if all apps were dead, maybe they are not now
-                    res = False
-                for app in list(self.sub.values()):
-                    if (w := await app.wait_ready(wait=wait)) is None:
-                        if not wait:
-                            return None
-                        again = True
-                        res = None
-                    elif res is not None:
-                        res &= w
+            res = await super().wait_ready(wait=wait)
+            if res is None:
+                return None
+            for app in list(self.sub.values()):
+                if (w := await app.wait_ready(wait=wait)) is None:
+                    return None
+                res &= w
             return res
 
     async def attach(self, name, app) -> None:

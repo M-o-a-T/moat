@@ -4,6 +4,8 @@ Base classes for command handlers.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 from moat.util import NotGiven, Path
 from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
 from moat.util.exc import ungroup
@@ -16,6 +18,7 @@ from typing import TYPE_CHECKING
 _link_id = 0
 
 if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
     from types import EllipsisType
 
     from .msg import Msg
@@ -512,6 +515,34 @@ class MsgHandler(BaseMsgHandler):
     def root(self):  # noqa: D102
         return self
 
+    @contextmanager
+    def delegate(self, path: Path, service: MsgHandler) -> AbstractContextManager[Self]:
+        """
+        Tell this handler to delegate messages that start with this path
+        to that handler.
+
+        Args:
+            path: the prefix to delegate
+            service: the service to call
+
+        This is a context manager.
+        """
+        if len(path) == 0:
+            raise RuntimeError(f"{path}: cannot be empty")
+        name = f"sub_{path[0]}"
+        if hasattr(self, name):
+            raise RuntimeError(f"{name}: already known")
+        if len(path) > 1:
+            sub = getattr(self, name)  # must exist
+            with sub.delegate(name[1:], service):
+                yield self
+        else:
+            setattr(self, name, service)
+            try:
+                yield self
+            finally:
+                delattr(self, name)
+
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         """
         Process the message.
@@ -573,7 +604,7 @@ class MsgHandler(BaseMsgHandler):
 
         This is a shortcut finder that returns either a subroot+prefix
         tuple or something that's callable directly. Implementing the
-        latter for streams is TODO.
+        latter is TODO.
         """
         cmd  # noqa:B018
         return self, path

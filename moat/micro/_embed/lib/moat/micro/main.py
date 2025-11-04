@@ -108,7 +108,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False, split: Event = None) -> T
                 print(" - no connection", file=sys.stderr)
                 raise RuntimeError("no network link")
             n += 1
-            time.sleep(0.1)
+            time.sleep_ms(100)
             print(".", end="", file=sys.stderr)
         at("MN12")
         print(" -", wlan.ifconfig()[0], file=sys.stderr)

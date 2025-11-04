@@ -289,7 +289,12 @@ class ServerClient(LinkCommon):
         * data
         * metadata
         """
-        d = self.server.data[msg[0]]
+        path = msg[0]
+        if len(path) and path[0] == "run":
+            data = self.server.rdata
+        else:
+            data = self.server.data
+        d = data[msg[0]]
         await msg.result(d.data, *d.meta.dump())
 
     doc_d = dict(_d="Data access commands")
@@ -658,6 +663,7 @@ class Server(MsgHandler):
 
     # pylint: disable=no-member # mis-categorizing cfg as tuple
     data: Node
+    rdata: Node
     name: str
     backend: Backend
 
@@ -707,6 +713,7 @@ class Server(MsgHandler):
         save: anyio.Path | FSPath | str | None = None,
     ):
         self.data = Node()
+        self.rdata = Node()
         self.name = name
         self.cfg = to_attrdict(cfg)
 
@@ -782,10 +789,13 @@ class Server(MsgHandler):
                 self.write_monitor((path, data, meta))
         return res
 
-    async def _mon_run(self, topic: Path, msg: Message) -> bool:  # noqa: ARG002
+    async def _mon_run(self, topic: Path, msg: Message) -> bool:
         """
         Messages to run.* are skipped by the main monitor backend.
         """
+        if msg.retain:
+            # We remember retained messages but we don't store them.
+            self.rdata.set(topic, msg.data, msg.meta)
         return False
 
     async def _backend_monitor(
@@ -815,11 +825,9 @@ class Server(MsgHandler):
                 self.logger.debug("Recv: %r", msg)
                 msg.meta.source = "Mon"
                 topic = msg.topic
-                if len(topic) and topic[0] == "run":
-                    continue
                 path = Path.build(topic)
 
-                if topic and (hdl := getattr(self, "_mon_{topic[0]}", None)) is not None:
+                if len(path) > 0 and (hdl := getattr(self, f"_mon_{path[0]}", None)) is not None:
                     if (await hdl(path, msg)) is False:
                         continue
 

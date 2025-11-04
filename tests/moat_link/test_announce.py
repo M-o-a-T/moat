@@ -69,11 +69,11 @@ async def test_force(cfg):
                 await evt.wait()
                 async with announcing(c2, P("foo.bar"), force=True) as s:
                     await s.announce()
-                    await anyio.sleep(0.1)
+                    await anyio.sleep(0.2)
                     evt2.set()
 
             await evt2.wait()
-            await anyio.sleep(0.1)
+            await anyio.sleep(0.15)
 
 
 @pytest.mark.anyio

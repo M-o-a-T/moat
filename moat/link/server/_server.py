@@ -540,10 +540,16 @@ class ServerClient(LinkCommon):
         """wait until the server received this stamp#"""
         return self.server.wait_stamp(stamp)
 
-    doc_i_checkid = dict(_d="probe client ID", _0="str:id of the client")
+    doc_i_checkid = dict(_d="probe client ID", _0="str:id of the client", t="retry delay")
 
-    async def cmd_i_checkid(self, id: str) -> bool:
+    async def cmd_i_checkid(self, id: str, t: float = 0.1) -> bool:
         """wait until the server received this stamp#"""
+        await anyio.sleep(0.1)
+        if id in self.server.known_ids:
+            return True
+        if not t:
+            return False
+        await anyio.sleep(t)
         return id in self.server.known_ids
 
     doc_d_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")

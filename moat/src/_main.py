@@ -1151,7 +1151,7 @@ async def build(
                 up.add(r)
             else:
                 try:
-                    await run_("python3", "-mbuild", "-snw", cwd=rd)
+                    await run_("python3", "-mbuild", "-snw", cwd=rd, echo=obj.debug > 1)
                 except subprocess.CalledProcessError:
                     err.add(r.name)
                 else:
@@ -1186,6 +1186,7 @@ async def build(
                         str(targz),
                         str(whl),
                         cwd=rd,
+                        echo=obj.debug > 1,
                     )
                 except subprocess.CalledProcessError:
                     err.add(r.name)
@@ -1221,7 +1222,7 @@ async def build(
                 if gdone.exists():
                     continue
             try:
-                await run_("dput", *dput_opts, str(changes))
+                await run_("dput", *dput_opts, str(changes), echo=obj.debug > 1)
             except subprocess.CalledProcessError:
                 err.add(r.name)
             else:

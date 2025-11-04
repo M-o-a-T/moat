@@ -2150,7 +2150,12 @@ class Server(MsgHandler):
 
     async def sub_cl(self, msg: Msg, rcmd: list) -> None:
         "Local subcommand redirect for 'cl'"
-        cl = self.clients[rcmd.pop()]
+        name = rcmd.pop()
+        try:
+            cl = self.clients[name]
+        except KeyError:
+            cln = self.rdata.get(Path("run", "id", name)).meta.origin
+            cl = self.clients[cln]
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:

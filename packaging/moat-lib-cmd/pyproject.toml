@@ -20,7 +20,7 @@ name = "moat-lib-cmd"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple command/stream multiplexer'
 readme = "README.rst"
-version = "0.4.2"
+version = "0.4.3"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

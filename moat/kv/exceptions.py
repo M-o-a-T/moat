@@ -5,21 +5,15 @@ This module affords all MoaT-KV exceptions.
 # pylint: disable=unnecessary-pass
 from __future__ import annotations
 
+from moat.link.exceptions import ClientError as _ClientError
+from moat.link.exceptions import MoaTLinkError as MoaTKVError
+
 error_types = {}
 
 
 def _typed(cls):
     error_types[cls.etype] = cls
     return cls
-
-
-class MoaTKVError(RuntimeError):
-    """Superclass of all MoaT-KV errors.
-
-    Abstract class.
-    """
-
-    pass
 
 
 class ServerError(MoaTKVError):
@@ -31,7 +25,7 @@ class ServerError(MoaTKVError):
     pass
 
 
-class ClientError(MoaTKVError):
+class ClientError(_ClientError):
     """Generic client error.
 
     Abstract class.

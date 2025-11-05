@@ -23,6 +23,7 @@ dependencies = [
 	"transitions_aio",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
+	"moat-lib-priomap ~= 0.0.0",
 	"mqttproto ~= 0.7.2.17",
 	]
 version = "0.2.24"

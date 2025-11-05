@@ -12,5 +12,10 @@ override_dh_usrlocal:
 		mv debian/python3-moat/usr/local/bin/* debian/python3-moat/usr/bin; \
 	fi
 
+execute_after_dh_auto_install:
+	install -m 755 -d debian/moat/usr/bin
+	install -m 755 bin/moat debian/moat/usr/bin/
+
+
 override_dh_auto_test:
 	: skip

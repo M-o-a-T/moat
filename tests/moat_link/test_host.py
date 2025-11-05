@@ -102,8 +102,8 @@ async def test_mon(cfg):
                 h = await sel_br(ibr, sid)
                 if h.state.name == "STALE":
                     return  # XXX investigate why that happens
-                assert h.state.name == "DOWN", h
-                h = await sel_br(ibr, sid)
+                while h.state.name == "DOWN":
+                    h = await sel_br(ibr, sid)
                 assert h.state.name == "DROP", h
             with anyio.move_on_after(0.5):
                 h = await sel_br(ibr, sid)

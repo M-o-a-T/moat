@@ -3,7 +3,7 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import logging
 import time
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager, nullcontext, suppress
 from enum import Enum, auto
 from functools import partial
 
@@ -12,6 +12,7 @@ from transitions_aio.extensions.factory import MachineFactory
 
 from moat.util import CtxObj, NotGiven, P, as_service, attrdict, srepr
 from moat.lib.priomap import PrioMap
+from moat.link.announce import announcing
 from moat.util.broadcast import Broadcaster
 
 from typing import TYPE_CHECKING
@@ -41,10 +42,11 @@ async def cmd_host(link: Link, cfg: dict, main: bool = False, *, debug=False) ->
     It tells MoaT-Link that a particular host is up.
     """
 
-    async with as_service(attrdict(debug=debug, link=link)) as srv:
-        if main:
-            await srv.tg.start(HostMon(cfg=cfg, link=link, debug=debug).run)
-
+    async with (
+        as_service(attrdict(debug=debug, link=link)) as srv,
+        announcing(link, host=not main, via=srv.evt),
+        HostMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
+    ):
         srv.started()
         await anyio.sleep_forever()
 

@@ -124,13 +124,13 @@ class Notify:
         "Monitor the keepalive topic"
         bad = True
         link = self.link
-        main_host = link.cfg.main
         keep = self.cfg.keepalive
         ok_keep = keep.ok
 
         timeout = keep.get("timeout", link.cfg.timeout.ping.timeout)
 
-        async with link.d_watch(P("host") / main_host, state=None) as mon:
+        # The main host watcher publishes on the empty path
+        async with link.d_watch(P("run.host"), state=None) as mon:
             task_status.started()
             mon = aiter(mon)  # noqa:PLW2901
             while True:

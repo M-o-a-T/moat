@@ -1,8 +1,8 @@
 moat:
   deb: 0.11.1-1
-  pkg: 3
+  pkg: 4
   pypi: 0.11.1
-  rev: 10a47e33a7ea70100cc865ef60857d8011f5fff1
+  rev: a5b64519c6a1a45aaa62c0c90e39313798f71674
   tag: 0.11.4
 moat-battery:
 - 0.2.5

@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import anyio
-from platform import uname
 
 import asyncclick as click
 
-from moat.util import as_service, attrdict
+from moat.util import as_service
 from moat.link.announce import announcing
-from moat.link.client import BasicLink
+from moat.link.client import Link
 from moat.link.server import Server
 
 
@@ -84,11 +83,7 @@ async def cli(obj, load, save, init, name):
         evt.set()
         ev.set()
         async with (
-            BasicLink(
-                obj.cfg.link,
-                "self",
-                attrdict(node=uname().node, link=s.link_data, auth={"token": s.cur_auth}),
-            ) as li,
+            Link(obj.cfg.link) as li,
             announcing(li) as ann,
         ):
             if ann is not None:

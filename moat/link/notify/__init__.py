@@ -33,7 +33,7 @@ class Notify:
     def __init__(self, cfg):
         self.cfg = cfg
 
-    async def run(self, link: Link):
+    async def run(self, link: Link, evt: anyio.Event | None = None):
         """
         Task that reads notifications from MoaT-Link and posts them.
         """
@@ -57,7 +57,7 @@ class Notify:
                 raise RuntimeError("No backend worked.")
 
             try:
-                await self._run()
+                await self._run(evt)
             finally:
                 with anyio.move_on_after(2, shield=True):
                     await self.send(
@@ -89,7 +89,7 @@ class Notify:
                 prio="error",
             )
 
-    async def _run(self) -> NoReturn:
+    async def _run(self, evt) -> NoReturn:
         """
         A bridge that monitors the MoaT-Link notify subtree.
         """
@@ -101,6 +101,8 @@ class Notify:
                     self.cfg.path, subtree=True, meta=True, state=None
                 ) as mon:
                     srv.set()
+                    if evt is not None:
+                        evt.set()
                     async for path, msg, meta in mon:
                         t = time.time()
                         if meta.timestamp < t - self.cfg.max_age:

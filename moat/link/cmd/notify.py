@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncclick as click
 
+from moat.link.announce import announcing
 from moat.link.client import Link
 
 
@@ -32,4 +33,5 @@ async def run(obj, backend):
     cfg = obj.cfg.link.notify
     if backend:
         cfg.backends = backend
-    await Notify(cfg).run(obj.conn)
+    async with announcing(obj.conn) as ann:
+        await Notify(cfg).run(obj.conn, evt=ann)

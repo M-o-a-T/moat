@@ -1840,11 +1840,7 @@ class Server(MsgHandler):
 
                 await self._sync_one(conn)
             except OSError as exc:
-                self.logger.warning(
-                    "No sync %r: %r",
-                    data,
-                    exc,
-                )
+                self.logger.warning("No sync %r: %r", data, exc)
                 return False
             except Exception as exc:
                 self.logger.warning(

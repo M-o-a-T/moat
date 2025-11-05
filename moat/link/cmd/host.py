@@ -43,8 +43,6 @@ async def run(obj, main, debug):
     """
 
     cfg = obj.cfg.link
-    if obj.name is not None:
-        raise click.UsageError("'moat link host' uses the hostname.")
     async with Link(cfg) as link:
         await cmd_host(link, cfg, main=main, debug=debug)
 

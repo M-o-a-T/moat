@@ -6,6 +6,8 @@ import anyio
 import asyncclick as click
 
 from moat.util import as_service
+from moat.link.announce import announcing
+from moat.link.client import BasicLink
 from moat.link.server import Server
 
 
@@ -80,4 +82,9 @@ async def cli(obj, load, save, init, name):
         await evt.tg.start(s.serve)
         evt.set()
         ev.set()
-        await anyio.sleep_forever()
+        async with (
+            BasicLink(obj.cfg.link) as li,
+            announcing(li) as ann,
+        ):
+            ann.set()
+            await anyio.sleep_forever()

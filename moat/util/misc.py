@@ -4,6 +4,8 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
+from . import NotGiven
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -77,7 +79,7 @@ def pos2val(a: float, b: float, c: float, /, clamp: bool = False):
     return a + b * (c - a)
 
 
-def drepr(k, v):
+def drepr(k, v, skip=None):
     k = str(k)
     if v is None:
         return "?" + k
@@ -85,28 +87,34 @@ def drepr(k, v):
         return "!" + k
     if v is True:
         return k
-    return f"{k}={srepr(v)}"
+    return f"{k}={srepr(v, skip=skip)}"
 
 
-def srepr(x):
+def srepr(x, skip=None):
     "short repr of possibly-complex objects"
+    if skip is None:
+        skip = {}
     if isinstance(x, set):
         if not x:
             return "∅"
         else:
-            return "⊕".join(srepr(v) for v in x)
+            return "⊕".join(srepr(v, skip=skip) for v in x)
     if isinstance(x, tuple):
-        return "(" + ",".join(srepr(v) for v in x) + ")"
+        return "(" + ",".join(srepr(v, skip=skip) for v in x) + ")"
     if isinstance(x, list):
-        return "(" + ",".join(srepr(v) for v in x) + ")"
+        return "(" + ",".join(srepr(v, skip=skip) for v in x) + ")"
     if isinstance(x, dict):
-        return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
+        return (
+            "{"
+            + ",".join(drepr(k, v, skip=skip) for k, v in x.items() if skip.get(k, NotGiven) != v)
+            + "}"
+        )
     try:
         d = vars(x)
     except TypeError:
         return str(x)
     else:
-        return f"{type(x).__name__}{srepr(d)}"
+        return f"{type(x).__name__}{srepr(d, skip=skip)}"
 
 
 def _add_obj(a, b):

@@ -58,7 +58,6 @@ async def list(obj, timeout):  # noqa: A001
     """
 
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
-        async with Broadcaster(100) as br, anyio.create_task_group() as tg:
-            tg.start_soon(HostMon(link=obj.conn, cfg=obj.cfg.link).run, br)
-            async for h in br:
-                print("    UPD  ", h.id, h.state.name, srepr(h.data))
+        async with HostMon(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
+            async for h in mq:
+                print("    UPD  ", h.id, h.state.name, srepr(h.data, skip={"id": h.id}))

@@ -201,7 +201,7 @@ async def pub(obj, **args):
     await do_pub(obj.conn, args, cfg, codec)
 
 
-async def run_kvsub(client, topic, lock):
+async def run_kvsub(client, topic, lock, skip):
     """Monitor a MoaT-KV subtree"""
 
     if topic[-1] == "#":
@@ -225,6 +225,14 @@ async def run_kvsub(client, topic, lock):
                 # if "value" in r:
                 #    add_dates(r.value)
                 pl(r)
+                sk = False
+                if "path" in r:
+                    for s in skip:
+                        if r.path.startswith(s):
+                            sk = True
+                            break
+                if sk:
+                    continue
                 if r.get("state", "") == "uptodate":
                     continue
                 del r["seq"]
@@ -242,16 +250,18 @@ async def do_sub(client, args, cfg):
     "handle subscriptions"
     lock = anyio.Lock()
     lock.tm = anyio.current_time()
+
+    skip = args["skip"]
     try:
         async with anyio.create_task_group() as tg:
             for topic in args["topic"]:
-                tg.start_soon(run_sub, client, topic, args, cfg.link, lock)
+                tg.start_soon(run_sub, client, topic, args, cfg.link, lock, skip)
             if args["kv_topic"]:
                 from moat.kv.client import open_client as kv_client  # noqa: PLC0415
 
                 async with kv_client(**cfg.kv) as kvc:
                     for topic in args["kv_topic"]:
-                        tg.start_soon(run_kvsub, kvc, topic, lock)
+                        tg.start_soon(run_kvsub, kvc, topic, lock, skip)
 
     except KeyboardInterrupt:
         pass
@@ -259,7 +269,7 @@ async def do_sub(client, args, cfg):
         logger.fatal("connection to '%s' failed: %r", args["uri"], ce)
 
 
-async def run_sub(client, topic, args, cfg, lock):
+async def run_sub(client, topic, args, cfg, lock, skip):
     "handle a single subscription"
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
@@ -269,6 +279,13 @@ async def run_sub(client, topic, args, cfg, lock):
 
     async with client.monitor(topic, qos=qos, codec=args.get("codec", "noop")) as subscr:
         async for msg in subscr:
+            sk = False
+            for s in skip:
+                if msg.topic.startswith(s):
+                    sk = True
+                    break
+            if sk:
+                continue
             async with lock:
                 if args["yaml"]:
                     tm = time.time()
@@ -342,6 +359,7 @@ async def run_sub(client, topic, args, cfg, lock):
 )
 @click.option("-n", "--n_msg", type=int, default=0, help="Number of messages to read (per topic)")
 @click.option("-k", "--keep-alive", type=float, help="Keep-alive timeout (seconds)")
+@click.option("-s", "--skip", type=P, multiple=True, help="Skip this path prefix")
 @click.pass_obj
 async def sub(obj, **args):
     """

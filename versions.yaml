@@ -77,8 +77,8 @@ moat-kv:
   deb: 0.71.11-2
   pkg: 1
   pypi: 0.71.16
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
-  tag: 0.71.19
+  rev: d047b1a4c0e7128fbbae810a77253b0f66c20d89
+  tag: 0.71.20
 moat-kv-akumuli:
   deb: 0.8.6-7
   pkg: 1
@@ -179,8 +179,8 @@ moat-link:
   deb: 0.2.5-1
   pkg: 1
   pypi: 0.2.27
-  rev: 8552eb041c55dc67b3d8e9b505210e51e8c36b10
-  tag: 0.2.27
+  rev: d047b1a4c0e7128fbbae810a77253b0f66c20d89
+  tag: 0.2.28
 moat-link-server:
   deb: 0.2.3-1
   pkg: 2
@@ -237,6 +237,6 @@ moat-thing:
 moat-util:
   deb: 0.57.10-1
   pkg: 1
-  pypi: 0.60.4
-  rev: d258476a5183a61466969f109810eea8f2b7c3b9
-  tag: 0.60.4
+  pypi: 0.60.5
+  rev: d047b1a4c0e7128fbbae810a77253b0f66c20d89
+  tag: 0.60.5

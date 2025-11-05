@@ -50,6 +50,10 @@ async def get_service_path(host: Path | str | bool):
         case _:
             raise TypeError("Host must be bool/path/str, not {host !r}.")
 
+    if (fake := os.environ.get("MT_FAKE_SERVICE", None)) is not None:
+        path.extend(P(fake))
+        return path
+
     if int(os.environ.get("SYSTEMD_EXEC_PID", "0")) == os.getpid():
         async with await anyio.Path("/proc/self/cgroup").open("r") as cgf:
             async for cg in cgf:

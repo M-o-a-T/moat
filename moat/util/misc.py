@@ -5,6 +5,7 @@ This module contains various helper functions and classes.
 from __future__ import annotations
 
 from . import NotGiven
+from .path import Path
 
 from typing import TYPE_CHECKING
 
@@ -99,6 +100,8 @@ def srepr(x, skip=None):
             return "∅"
         else:
             return "⊕".join(srepr(v, skip=skip) for v in x)
+    if isinstance(x, Path):
+        return str(x)
     if isinstance(x, tuple):
         return "(" + ",".join(srepr(v, skip=skip) for v in x) + ")"
     if isinstance(x, list):

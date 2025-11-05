@@ -281,6 +281,13 @@ class Path(Sequence[PathElem]):
         "accessor for the path's mark"
         return self._mark
 
+    @property
+    def parent(self) -> Path:
+        "parent node"
+        if not len(self._data):
+            raise ValueError("Path is empty")
+        return Path.build(self._data[:-1])
+
     def startswith(self, path: Sequence[PathElem]) -> bool:
         """
         Prefix test

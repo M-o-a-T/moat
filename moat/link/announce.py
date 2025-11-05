@@ -53,6 +53,7 @@ async def get_service_path(host: Path | str | bool):
     if int(os.environ.get("SYSTEMD_EXEC_PID", "0")) == os.getpid():
         async with await anyio.Path("/proc/self/cgroup").open("r") as cgf:
             async for cg in cgf:
+                logger.info("Control Group: %s", cg)
                 for cge in cg.strip().split("/"):
                     if cge.endswith(".service"):
                         cge = cge[:-8]  # noqa:PLW2901
@@ -60,7 +61,9 @@ async def get_service_path(host: Path | str | bool):
                         if hi[0] == "user":
                             continue  # ignore
                         if len(hi) != 1 or hi[0] != "moat-link-host":
-                            path.extend(hi)
+                            for h in hi:
+                                path.extend(h.split("-"))
+                        logger.info("Control Path: %s", path)
                         return path
     raise ServiceNotFound
 
@@ -141,6 +144,7 @@ async def announcing(
     host: Path | str | bool = True,
     force: bool = False,
     service: MsgSender | None = None,
+    via: anyio.Event | None = None,
 ):
     """
     This async context manager broadcasts the availability of a named service.
@@ -230,6 +234,10 @@ async def announcing(
             task_status.started()
             await anyio.sleep_forever()
 
+    async def wait_evt(evt: anyio.Event):
+        await via.wait()
+        evt.set()
+
     async with anyio.create_task_group() as tg:
         try:
             rdy = anyio.Event()
@@ -237,12 +245,19 @@ async def announcing(
             sr = SetReady(rdy, host, name)
             csr = _csr(sr)
             evt = sr.evt
-            srv = P("run.host") + ((await get_service_path(host)) if name is None else name)
+            try:
+                srv = P("run.host") + ((await get_service_path(host)) if name is None else name)
+            except ServiceNotFound:
+                logger.warning("Not running in a service CGroup. Host not set.")
+                yield None
+                return
             if service:
                 await tg.start(_delegate, path, service)
             tg.start_soon(monitor_service, srv)
             tg.start_soon(run_announce, srv, sr, rdy)
             tg.start_soon(wait_sr, sr)
+            if via:
+                tg.start_soon(wait_evt, evt)
             del sr
 
             await link.i_sync()
@@ -277,6 +292,6 @@ async def as_service(obj: attrdict | None = None):
     async with (
         _as_service(obj) as mon,
         Link(cfg.link, common=True) as mon.link,
-        announcing(mon.link),
+        announcing(mon.link, via=mon.evt),
     ):
         yield mon

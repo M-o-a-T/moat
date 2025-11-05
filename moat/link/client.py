@@ -727,10 +727,7 @@ class Link(LinkCommon, CtxObj):
         from .backend import get_backend  # noqa: PLC0415
 
         will = attrdict(
-            data=dict(
-                up=False,
-                state="disconnected",
-            ),
+            data=NotGiven,
             topic=P(":R") + self._id_path,
             retain=True,
             qos=QoS.AT_LEAST_ONCE,
@@ -760,13 +757,19 @@ class Link(LinkCommon, CtxObj):
                     yield sdr
             finally:
                 del self.sdr
-            self.tg.cancel_scope.cancel()
             await self.backend.send(
                 Root.get() + self._ping_path,
                 data=dict(up=False, state="closed"),
                 retain=False,
                 meta=False,
             )
+            await self.backend.send(
+                Root.get() + self._id_path,
+                data=NotGiven,
+                retain=True,
+                meta=False,
+            )
+            self.tg.cancel_scope.cancel()
 
     def cancel(self):
         "Stop me"

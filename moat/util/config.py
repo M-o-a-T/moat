@@ -38,7 +38,7 @@ def ensure_cfg(path: str | Path, cfg=CFG) -> dict:
         for d in p:
             fn = FSPath(d) / "_cfg.yaml"
             if fn.is_file():
-                merge(cfg, yload(fn, attr=True))
+                merge(cfg, yload(fn, attr=True), replace=False)
 
     try:
         EXT = cfg.setdefault("ext", attrdict())

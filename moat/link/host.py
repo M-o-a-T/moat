@@ -351,10 +351,14 @@ class HostList(CtxObj):
                     if msg is NotGiven:  # host deleted
                         with suppress(KeyError, AttributeError):
                             h = self.hsi.pop(p)
-                            del h.data.h
+                            h.data.h.discard(p)
+                            if not h.data.h.path:
+                                del h.data.h
+
                         continue
 
                     id = msg["id"]
+                    msg.setdefault("path", set()).add(p)
 
                     # now points to another host? drop it from the other entry
                     with suppress(KeyError, AttributeError):

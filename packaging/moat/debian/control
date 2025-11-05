@@ -21,17 +21,26 @@ X-DH-Compat: 13
 
 Package: moat
 Architecture: all
+Depends: python3-moat (= ${binary:Version}),
+Description: The command line for MoaT
+ This module contains the command line for (all of) MoaT.
+ .
+ This package is used for naming.
+
+Package: python3-moat
+Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  python3-anyio (>= 3.0),
+  moat (= ${binary:Version}),
+  python3-anyio (>= 4.8),
   moat-util,
   python3-trio (>= 0.30),
 Conflicts: python3-moat-main, moat-main
 Replaces: moat-main
 Description: The command line for MoaT
-  This module contains the command line for (all of) MoaT.
+ This module contains the command line for (all of) MoaT.
 
 Package: moat-doc
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
 Description: The documentationfor MoaT
-  This module contains the documentation for the MoaT system.
+ This module contains the documentation for the MoaT system.

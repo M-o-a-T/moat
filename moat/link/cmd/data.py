@@ -31,6 +31,7 @@ async def cli(ctx, path, meta):
 
 
 @cli.command()
+@click.option("-r", "--recursive", is_flag=True, help="Read a complete subtree")
 @click.option(
     "-d",
     "--as-dict",
@@ -52,7 +53,6 @@ async def cli(ctx, path, meta):
     default=None,
     help="Starting depth. Default: whole tree",
 )
-@click.option("-r", "--recursive", is_flag=True, help="Read a complete subtree")
 @click.option("-e", "--empty", is_flag=True, help="Include empty nodes")
 @click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")

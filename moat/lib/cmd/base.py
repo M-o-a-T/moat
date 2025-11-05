@@ -593,7 +593,7 @@ class MsgHandler(BaseMsgHandler):
             return await sub(msg, rcmd)
 
         # Not found. Add workaround.
-        if rcmd[0] == "rdy_":
+        if rcmd and rcmd[0] == "rdy_":
             return await msg.result(None)
 
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())

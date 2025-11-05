@@ -177,9 +177,9 @@ moat-lib-victron:
   tag: 0.1.4
 moat-link:
   deb: 0.2.5-1
-  pkg: 1
+  pkg: 2
   pypi: 0.2.20
-  rev: 24324402965e9e93a87bf08bc9c58265dc279914
+  rev: 317d5165d0fe039a4899cd21c737cc3c8a9e62e0
   tag: 0.2.20
 moat-link-server:
   deb: 0.2.3-1

@@ -6,6 +6,7 @@ import time
 from contextlib import asynccontextmanager, nullcontext, suppress
 from enum import Enum, auto
 from functools import partial
+from platform import uname
 
 from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
@@ -42,6 +43,8 @@ async def cmd_host(link: Link, cfg: dict, main: bool = False, *, debug=False) ->
     It tells MoaT-Link that a particular host is up.
     """
 
+    if not main:
+        main = cfg.main == uname().node
     async with (
         as_service(attrdict(debug=debug, link=link)) as srv,
         announcing(link, host=not main, via=srv.evt),

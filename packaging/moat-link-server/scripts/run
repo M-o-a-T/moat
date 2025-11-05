@@ -9,11 +9,11 @@ fi
 
 if test -v TEMP && test -s "$TEMP" ; then
     test -f /etc/moat/link.init && rm /etc/moat/link.init
-    exec moat -c /etc/moat/moat.cfg link -n "$NAME" server -l "$TEMP"
+    exec moat -c /etc/moat/moat.cfg link server -n "$NAME" -l "$TEMP"
 elif test -f /etc/moat/link.init ; then
     D="$(head -1 /etc/moat/link.init)"
     rm /etc/moat/link.init
-    exec moat -c /etc/moat/moat.cfg link -n "$NAME" server -I "$D"
+    exec moat -c /etc/moat/moat.cfg link server -n "$NAME" -I "$D"
 else
-    exec moat -c /etc/moat/moat.cfg link -n "$NAME" server
+    exec moat -c /etc/moat/moat.cfg link server -n "$NAME"
 fi

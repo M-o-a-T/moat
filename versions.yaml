@@ -137,8 +137,8 @@ moat-lib-cmd:
   deb: 0.3.6-5
   pkg: 1
   pypi: 0.4.3
-  rev: 4a59d4eb8aacf469bdcdc9c3554e5e299de016f3
-  tag: 0.4.3
+  rev: d258476a5183a61466969f109810eea8f2b7c3b9
+  tag: 0.4.4
 moat-lib-codec:
   deb: 0.4.3-2
   pkg: 1
@@ -177,10 +177,10 @@ moat-lib-victron:
   tag: 0.1.4
 moat-link:
   deb: 0.2.5-1
-  pkg: 2
+  pkg: 1
   pypi: 0.2.24
-  rev: 18592dac8b80e6c379e07edbd32b7fec5b969900
-  tag: 0.2.24
+  rev: d258476a5183a61466969f109810eea8f2b7c3b9
+  tag: 0.2.25
 moat-link-server:
   deb: 0.2.3-1
   pkg: 1
@@ -237,6 +237,6 @@ moat-thing:
 moat-util:
   deb: 0.57.10-1
   pkg: 1
-  pypi: 0.60.3
-  rev: 3fd5d8abd1376839682ce2cf5a6b973105123e01
-  tag: 0.60.3
+  pypi: 0.60.4
+  rev: d258476a5183a61466969f109810eea8f2b7c3b9
+  tag: 0.60.4

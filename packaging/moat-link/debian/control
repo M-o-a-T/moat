@@ -20,6 +20,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-moat-lib-cmd,
   python3-mqttproto,
   systemd (>= 241),
+Replaces: moat-link-server (<< 0.3.11)
 Recommends:
   python3-httpx,
   python3-trio (>= 0.22),

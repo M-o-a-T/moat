@@ -90,16 +90,19 @@ async def data_get(
 
     if recursive:
         kw = {}
+        a = [None, None, None]
 
         if maxdepth is not None and maxdepth >= 0:
-            kw["max_depth"] = maxdepth
+            a[2] = maxdepth
         if mindepth:
-            kw["min_depth"] = mindepth
+            a[1] = mindepth
         if empty:
             kw["empty"] = True
+        while a and a[-1] is None:
+            a.pop()
         y = {}
         pl = PathLongener()
-        async with conn.d.walk(path, **kw).stream_in() as res:
+        async with conn.d.walk(path, *a, **kw).stream_in() as res:
             async for r in res:
                 r = await item_mangle(r)  # noqa:PLW2901
                 if r is None:

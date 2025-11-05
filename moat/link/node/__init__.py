@@ -284,17 +284,17 @@ class Node:
         """
 
         async def _walk(s, p):
-            if depth_first and max_depth > len(p):
+            if depth_first and (max_depth is None or max_depth > len(p)):
                 for k, v in s._sub.items():  # noqa: SLF001
                     await _walk(v, p / k)
 
-            if min_depth <= len(p) and (
+            if (min_depth is None or min_depth <= len(p)) and (
                 force or (s.meta is not None and s.meta.timestamp >= timestamp)
             ):
                 if await proc(p, s) is False:
                     return
 
-            if not depth_first and max_depth > len(p):
+            if not depth_first and (max_depth is None or max_depth > len(p)):
                 for k, v in list(s._sub.items()):  # noqa: SLF001
                     await _walk(v, p / k)
 

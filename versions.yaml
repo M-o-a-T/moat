@@ -57,9 +57,9 @@ moat-ems:
   tag: 0.2.11
 moat-ems-battery:
   deb: 0.2.14-3
-  pkg: 1
+  pkg: 2
   pypi: 0.2.14
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.2.15
 moat-ems-inv:
   deb: 0.2.11-3
@@ -75,9 +75,9 @@ moat-ems-sched:
   tag: 0.2.13
 moat-kv:
   deb: 0.71.11-2
-  pkg: 1
+  pkg: 2
   pypi: 0.71.16
-  rev: d047b1a4c0e7128fbbae810a77253b0f66c20d89
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.71.20
 moat-kv-akumuli:
   deb: 0.8.6-7
@@ -147,21 +147,21 @@ moat-lib-codec:
   tag: 0.4.7
 moat-lib-diffiehellman:
   deb: 0.13.4-8
-  pkg: 1
+  pkg: 2
   pypi: 0.13.4
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.13.5
 moat-lib-gpio:
   deb: 0.7.2-5
-  pkg: 2
+  pkg: 3
   pypi: 0.7.2
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.8.0
 moat-lib-pid:
   deb: 0.6.2-6
-  pkg: 1
+  pkg: 2
   pypi: 0.6.2
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.6.3
 moat-lib-priomap:
   deb: 0.1.1-2
@@ -177,21 +177,21 @@ moat-lib-victron:
   tag: 0.1.4
 moat-link:
   deb: 0.2.5-1
-  pkg: 2
-  pypi: 0.2.30
-  rev: 8eb51ad7673194b3399c5a2ba084f5c1e21e995c
-  tag: 0.2.31
+  pkg: 1
+  pypi: 0.2.32
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
+  tag: 0.2.32
 moat-link-server:
   deb: 0.2.3-1
-  pkg: 1
+  pkg: 2
   pypi: 0.3.15
-  rev: 8eb51ad7673194b3399c5a2ba084f5c1e21e995c
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.3.15
 moat-micro:
   deb: 0.16.4-1
-  pkg: 4
+  pkg: 5
   pypi: 0.16.9
-  rev: 87af75c5850fc10d5f73fa3c4fae4b73fd8bf475
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.17.2
 moat-modbus:
   deb: 0.8.5-2
@@ -207,9 +207,9 @@ moat-modbus-dev-_data:
   tag: 0.8.2
 moat-mqtt:
   deb: 0.42.8-4
-  pkg: 1
+  pkg: 2
   pypi: 0.42.8
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
+  rev: ed3e1eb0b4e213c33ec3fcb543229fcbb8e7b013
   tag: 0.42.12
 moat-nodered:
   pkg: 1

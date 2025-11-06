@@ -1,3 +1,9 @@
+moat-lib-diffiehellman (0.13.5-2) unstable; urgency=medium
+
+  * New release for 25.5.27
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 06 Nov 2025 16:29:44 +0100
+
 moat-lib-diffiehellman (0.13.5-1) unstable; urgency=medium
 
   * New release for 25.5.2

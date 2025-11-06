@@ -84,7 +84,7 @@ async def cli(obj, load, save, init, name):
         ev.set()
         async with (
             Link(obj.cfg.link) as li,
-            announcing(li) as ann,
+            announcing(li, force=True) as ann,
         ):
             if ann is not None:
                 ann.set()

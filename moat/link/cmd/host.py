@@ -50,7 +50,7 @@ async def run(obj, main, debug):
     async with (
         Link(cfg) as link,
         as_service(attrdict(debug=debug, link=link)) as srv,
-        announcing(link, host=not main, via=srv.evt),  # TODO: add service
+        announcing(link, host=not main, via=srv.evt, force=True),  # TODO: add service
         ServiceMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
     ):
         srv.started()

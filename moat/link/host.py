@@ -75,7 +75,7 @@ class HostMachine(MachineFactory.get_predefined(graph=True, asyncio=True)):
             dict(name=_S.UP),
             dict(name=_S.TIMEOUT),
             dict(name=_S.STALE),
-            dict(name=_S.DROP),
+            dict(name=_S.DROP, final=True),
             dict(name=_S.ONLY_I),
             dict(name=_S.ONLY_P),
         ]
@@ -155,6 +155,7 @@ class HostMachine(MachineFactory.get_predefined(graph=True, asyncio=True)):
             send_event=True,
             queued=True,
             after_state_change=[self._set_timeout, host.updated],
+            on_final=host.drop_both,
         )
         self.host = host
 
@@ -212,9 +213,10 @@ class Service:
     def drop_host(self) -> Awaitable[None]:
         return self.mon.drop_host(self)
 
-    def drop_both(self) -> Awaitable[None]:
-        return self.mon.drop_host(self)
-        return self.mon.drop_id(self)
+    async def drop_both(self, evt=None) -> None:
+        evt  # noqa:B018
+        await self.mon.drop_host(self)
+        await self.mon.drop_id(self)
 
     @property
     def last(self):

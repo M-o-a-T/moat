@@ -521,7 +521,7 @@ class Path(Sequence[PathElem]):
             if other._prefix is None:
                 other = other._data
             else:
-                other = (*other._prefix, *other._data)
+                other = (f":{other._prefix.key}", *other._data)
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen.
             other = (other,)  # pyright:ignore

@@ -16,6 +16,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat,
+  python3-transitions-aio (>> 0.9.3.4-0),
   python3-moat-lib-codec,
   python3-moat-lib-cmd,
   python3-moat-lib-priomap,

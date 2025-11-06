@@ -20,7 +20,7 @@ dependencies = [
 	"ruyaml",
 	"httpx",
 	"simpleeval",
-	"transitions_aio",
+	"transitions_aio ~= 0.9.3.4",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
 	"moat-lib-priomap ~= 0.0.0",

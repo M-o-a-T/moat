@@ -350,7 +350,7 @@ class HostList(CtxObj):
                     try:
                         h = self.ids[id]
                     except KeyError:
-                        self.ids[id] = h = Service(mon=self, id=id, path=p)
+                        self.ids[id] = h = Service(mon=self, id=id)
                         await h.trigger(_E.INIT)
                     self.hsi[p] = h
                     h.last = meta.timestamp

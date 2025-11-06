@@ -422,10 +422,14 @@ class ServerClient(LinkCommon):
         return res
 
     doc_d_delete = dict(
-        _d="delete value", _0="Path", _99="MsgMeta:optional", t="Time of+ last change"
+        _d="delete value",
+        _0="Path",
+        _99="MsgMeta:optional",
+        t="float:Time of+ last change",
+        rec="bool:recursive",
     )
 
-    async def cmd_d_delete(self, path, meta=None, t: float | None = None):
+    async def cmd_d_delete(self, path, meta=None, t: float | None = None, rec: bool = False):
         """Delete a node's value.
 
         Arguments:
@@ -447,9 +451,19 @@ class ServerClient(LinkCommon):
         except (KeyError, ValueError):
             node = None
         else:
-            if t is not None and abs(node.meta.timestamp - t) > 0.001:
-                raise OutOfDateError(node.meta)
-            self.server.maybe_update(path, NotGiven, meta)
+            if rec:
+
+                async def rec_del(n, p):
+                    await anyio.sleep(0.01)
+                    for pp, nn in n.items():
+                        await rec_del(nn, p / pp)
+                    self.server.maybe_update(p, NotGiven, meta)
+
+                await rec_del(node, path)
+            else:
+                if t is not None and abs(node.meta.timestamp - t) > 0.001:
+                    raise OutOfDateError(node.meta)
+                self.server.maybe_update(path, NotGiven, meta)
 
         if node is None:
             return None

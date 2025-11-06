@@ -8,6 +8,7 @@ import anyio
 import logging
 import os
 import platform
+import sys
 import time
 from contextlib import asynccontextmanager, nullcontext, suppress
 from contextvars import ContextVar
@@ -678,6 +679,7 @@ class Link(LinkCommon, CtxObj):
             data=dict(
                 host=platform.node(),
                 pid=os.getpid(),
+                argv=sys.argv,
             ),
             retain=True,
         )
@@ -714,22 +716,23 @@ class Link(LinkCommon, CtxObj):
                 await self._state_change.wait()
                 self._state_change = anyio.Event()
 
-    async def _monitor_id(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        path = Root.get() + self._id_path
+    async def _monitor_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        path = Root.get() + self._ping_path
         async with self.backend.monitor(path) as mon:
             task_status.started()
             async for msg in mon:
                 if msg.data is NotGiven:
                     raise ClientCancelledError(msg.meta)
+                # anything else shall be ignored
 
     @asynccontextmanager
     async def _ctx(self):
         from .backend import get_backend  # noqa: PLC0415
 
         will = attrdict(
-            data=NotGiven,
-            topic=P(":R") + self._id_path,
-            retain=True,
+            data=dict(up=False, state="will"),
+            topic=P(":R") + self._ping_path,
+            retain=False,
             qos=QoS.AT_LEAST_ONCE,
         )
         async with (
@@ -750,7 +753,7 @@ class Link(LinkCommon, CtxObj):
             sdr.add_sub("i")
             try:
                 self.sdr = sdr
-                await self.tg.start(self._monitor_id)
+                await self.tg.start(self._monitor_ping)
                 await self.tg.start(self._send_ping)
 
                 with ctx_as(_the_link, self) if self._common else nullcontext():
@@ -761,12 +764,6 @@ class Link(LinkCommon, CtxObj):
                 Root.get() + self._ping_path,
                 data=dict(up=False, state="closed"),
                 retain=False,
-                meta=False,
-            )
-            await self.backend.send(
-                Root.get() + self._id_path,
-                data=NotGiven,
-                retain=True,
                 meta=False,
             )
             self.tg.cancel_scope.cancel()

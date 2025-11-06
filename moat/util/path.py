@@ -1101,7 +1101,7 @@ class RootPath(Path):
         # wontfix, pyright issue #4445
         p: Path | None = self._var.get()
         if p is None:
-            raise ValueError("Root {self._var.name} is unassigned!")
+            raise ValueError(f"Root contextvar {self._var.name!r} is unassigned!")
         return p._data  # noqa:SLF001
 
 

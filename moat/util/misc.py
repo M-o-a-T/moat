@@ -90,7 +90,7 @@ def drepr(k, v):
     return f"{k}={srepr(v)}"
 
 
-def srepr(x):
+def srepr(x, bare=False):
     "short repr of possibly-complex objects"
     if isinstance(x, set):
         if not x:
@@ -100,10 +100,16 @@ def srepr(x):
     if isinstance(x, Path):
         return str(x)
     if isinstance(x, tuple):
+        if bare:
+            return ",".join(srepr(v) for v in x)
         return "(" + ",".join(srepr(v) for v in x) + ")"
     if isinstance(x, list):
-        return "(" + ",".join(srepr(v) for v in x) + ")"
+        if bare:
+            return ",".join(srepr(v) for v in x)
+        return "[" + ",".join(srepr(v) for v in x) + "]"
     if isinstance(x, dict):
+        if bare:
+            return ",".join(drepr(k, v) for k, v in x.items())
         return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
     try:
         d = vars(x)

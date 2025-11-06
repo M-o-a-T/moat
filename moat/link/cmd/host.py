@@ -70,4 +70,4 @@ async def list(obj, timeout):  # noqa: A001
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
-                print("    UPD  ", h.id, h.state.name, srepr(h.data))
+                print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))

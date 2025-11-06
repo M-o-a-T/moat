@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import Path, as_service, ensure_cfg, merge, to_attrdict, yload
 from moat.link._test import Scaffold
-from moat.link.host import HostMon
+from moat.link.host import ServiceMon
 
 from typing import TYPE_CHECKING
 
@@ -80,7 +80,7 @@ async def test_mon(cfg):
         cl = await sf.client()
         sc2, sid = await sf.tg.start(run_service, sf, dict(debug=False, dbg_host=("a", "b")))
 
-        async with HostMon(link=cl, cfg=cfg.link) as br:
+        async with ServiceMon(link=cl, cfg=cfg.link) as br:
             with anyio.fail_after(2):
                 ibr = aiter(br)
 

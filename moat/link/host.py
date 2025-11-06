@@ -3,17 +3,15 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import logging
 import time
-from contextlib import asynccontextmanager, nullcontext, suppress
+from contextlib import asynccontextmanager, suppress
 from enum import Enum, auto
 from functools import partial
-from platform import uname
 
 from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
 
-from moat.util import CtxObj, NotGiven, P, as_service, attrdict, srepr
+from moat.util import CtxObj, NotGiven, P, attrdict, srepr
 from moat.lib.priomap import PrioMap
-from moat.link.announce import announcing
 from moat.util.broadcast import Broadcaster
 
 from typing import TYPE_CHECKING
@@ -25,33 +23,10 @@ if TYPE_CHECKING:
     from moat.link.client import Link
 
     from collections.abc import Awaitable
-    from typing import NoReturn
 
-__all__ = ["HostMon", "cmd_host"]
+__all__ = ["HostList", "ServiceMon"]
 
 logger = logging.getLogger(__name__)
-
-# def dprint(*a):
-#     print(f"{int(time.monotonic()) % 1000 :03d}", *a)
-
-
-async def cmd_host(link: Link, cfg: dict, main: bool = False, *, debug=False) -> NoReturn:
-    """
-    Host specific runner.
-
-    This is the handler for the "moat-link-host" service.
-    It tells MoaT-Link that a particular host is up.
-    """
-
-    if not main:
-        main = cfg.main == uname().node
-    async with (
-        as_service(attrdict(debug=debug, link=link)) as srv,
-        announcing(link, host=not main, via=srv.evt),
-        HostMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
-    ):
-        srv.started()
-        await anyio.sleep_forever()
 
 
 #
@@ -80,7 +55,7 @@ class HostEvent(Enum):
     MSG_ID = auto()
 
     MSG_DOWN = auto()
-    DEL_HOST = auto()  # Host gets dropped, or replaced
+    DEL_HOST = auto()  # Service gets dropped, or replaced
     DEL_ID = auto()
 
     TIMEOUT = auto()
@@ -160,8 +135,8 @@ class HostMachine(MachineFactory.get_predefined(graph=True, asyncio=True)):
             dict(trigger=_E.MSG_PING, source=_S.DROP, dest=None, after=host.re_init),
             dict(trigger=_E.MSG_DOWN, source=_S.DROP, dest=None, after=host.re_init),
             dict(trigger=_E.DEL_HOST, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.DEL_ID, source=_S.DROP, dest=None),
-            dict(trigger=_E.TIMEOUT, source=_S.DROP, dest=None),
+            dict(trigger=_E.DEL_ID, source=_S.DROP, dest=None, after=host.drop_id),
+            dict(trigger=_E.TIMEOUT, source=_S.DROP, dest=None, after=host.drop_both),
         ]
         for s in states:
             sn = s["name"].name.lower()
@@ -189,30 +164,21 @@ class HostMachine(MachineFactory.get_predefined(graph=True, asyncio=True)):
 
 
 @define(eq=False)
-class Host:
-    """Contains data for one particular host, service, or instance."""
+class Service:
+    """Contains data for one particular service."""
 
-    mon = field()
-    id = field()
-    path = field(default=())
+    mon: HostList = field()
+    id: str = field()
 
     # These get filled via path
-    host = field(type=str, default=None, init=False)
-    service = field(type=str, default=None, init=False)
-    instance = field(type=str, default=None, init=False)
-
-    data = field(factory=attrdict, init=False)
-    machine = field(default=None, init=False)
+    data: dict[str, dict] = field(factory=attrdict, init=False)
+    machine: HostMachine = field(init=False)
 
     _last = field(default=0, init=False)
 
     def __attrs_post_init__(self):
-        p = self.path
-        with suppress(IndexError):
-            self.host = p[0]
-            self.service = p[1]
-            self.instance = p[2]
         self.machine = HostMachine(self)
+        self.data.h = dict()
 
     @property
     def state(self):
@@ -226,7 +192,7 @@ class Host:
 
         if self.state in (HostState.ONLY_I, HostState.TIMEOUT):
             val = "stale"
-        elif self.state in (HostState.DOWN,) or self.state in (HostState.STALE,):
+        elif self.state in (HostState.DOWN, HostState.STALE):
             val = "delete"
         else:
             val = "timeout"
@@ -237,6 +203,7 @@ class Host:
         return res
 
     def updated(self, evt):
+        "queue update to Broadcaster"
         self.mon.updated(self, evt)
 
     def drop_id(self) -> Awaitable[None]:
@@ -244,6 +211,10 @@ class Host:
 
     def drop_host(self) -> Awaitable[None]:
         return self.mon.drop_host(self)
+
+    def drop_both(self) -> Awaitable[None]:
+        return self.mon.drop_host(self)
+        return self.mon.drop_id(self)
 
     @property
     def last(self):
@@ -268,8 +239,9 @@ class Host:
         ho = ev.model.host
         mon = ho.mon
         # dprint("**RE*",ho.id)
-        h = Host(mon, ho.id, ho.path)
+        h = Service(mon, ho.id)
         h.data = ho.data
+        # not copying the paths!
         mon.ids[h.id] = h
         await h.trigger(_E.INIT)
 
@@ -289,9 +261,9 @@ class HostList(CtxObj):
 
         self._retime = anyio.Event()
 
-        # Host Service Instance
-        self.hsi: dict[Path, Host] = {}
-        self.ids: dict[str, Host] = {}
+        # Service Instance
+        self.hsi: dict[Path, Service] = {}
+        self.ids: dict[str, Service] = {}
         self.times: PrioMap[str, float] = PrioMap()
 
     @asynccontextmanager
@@ -307,7 +279,8 @@ class HostList(CtxObj):
             yield self._bc
             self.tg.cancel_scope.cancel()
 
-    def set_timeout(self, host, to=None):
+    def set_timeout(self, host: Service, to: float | None = None):
+        "Update service entry in timeout queue"
         if to is None:
             to = host.timeout
         if not to:
@@ -337,9 +310,10 @@ class HostList(CtxObj):
             # dprint("OUT  ",h.id)
             self.tg.start_soon(h.trigger, _E.TIMEOUT)
 
-    def updated(self, host: Host, evt: EventData):
+    def updated(self, host: Service, evt: EventData):
+        "queue update to Broadcaster"
         if evt.transition.dest is not None or evt.kwargs.get("changed", False):
-            logger.debug("Host %s: %s %s", host.id, host.state.name, srepr(host.data))
+            logger.debug("Service %s: %s %s", host.id, host.state.name, srepr(host.data))
             self._bc(host)
 
     async def _mon_host(self):
@@ -356,42 +330,32 @@ class HostList(CtxObj):
                     if msg is NotGiven:  # host deleted
                         with suppress(KeyError, AttributeError):
                             h = self.hsi.pop(p)
-                            h.data.h.discard(p)
-                            if not h.data.h.path:
-                                del h.data.h
+                            h.data.h.pop(p, None)
+                            if not h.data.h:
+                                self.tg.start_soon(h.trigger, _E.DEL_HOST)
 
                         continue
 
-                    id = msg["id"]
-                    msg.setdefault("path", set()).add(p)
+                    id = msg.pop("id")
 
-                    # now points to another host? drop it from the other entry
+                    # points to another service? drop it from the other entry
                     with suppress(KeyError, AttributeError):
                         h = self.hsi[p]
                         if h.id != id:
-                            del self.ids[h.id].data.h
+                            h.data.h.pop(p, None)
+                            if not h.data.h:
+                                self.tg.start_soon(h.trigger, _E.DEL_HOST)
                             # unconditionally updated below
 
                     try:
                         h = self.ids[id]
                     except KeyError:
-                        self.ids[id] = h = Host(mon=self, id=id, path=p)
+                        self.ids[id] = h = Service(mon=self, id=id, path=p)
                         await h.trigger(_E.INIT)
-                        self.hsi[p] = h
-                    else:
-                        if h.path != p:
-                            if len(h.path):
-                                self.hsi.pop(h.path, None)
-                            h.path = p
-                            self.hsi[p] = h.path
+                    self.hsi[p] = h
                     h.last = meta.timestamp
-                    h.data.h = msg
-                    self.tg.start_soon(h.trigger, _E.MSG_HOST)
-
-                    changed = False
-                    if h.data.get("h", None) != msg:
-                        h.data.h = msg
-                        changed = True
+                    changed = h.data.h.get(p, None) != msg
+                    h.data.h[p] = msg
                     self.tg.start_soon(partial(h.trigger, _E.MSG_HOST, changed=changed))
                     # dprint("H    ",p,id,h)
 
@@ -416,7 +380,7 @@ class HostList(CtxObj):
                     try:
                         h = self.ids[id]
                     except KeyError:
-                        self.ids[id] = h = Host(mon=self, id=id)
+                        self.ids[id] = h = Service(mon=self, id=id)
                         await h.trigger(_E.INIT)
                     h.last = meta.timestamp
 
@@ -442,7 +406,7 @@ class HostList(CtxObj):
                     try:
                         h = self.ids[id]
                     except KeyError:
-                        self.ids[id] = h = Host(mon=self, id=id)
+                        self.ids[id] = h = Service(mon=self, id=id)
                         await h.trigger(_E.INIT)
 
                     changed = False
@@ -461,11 +425,12 @@ class HostList(CtxObj):
 
     async def drop_cb(self, host):
         """
-        Called from `Host.on_enter_drop`
+        Called from `Service.on_enter_drop`
         """
         # dprint("  DCB",host.id)
-        if self.hsi.get(host.path, None) is host:
-            del self.hsi[host.path]
+        for p in host.data.h:
+            if self.hsi.get(p, None) is host:
+                del self.hsi[p]
         if self.ids.get(host.id, None) is host:
             del self.ids[host.id]
         self.set_timeout(host, False)
@@ -483,9 +448,9 @@ class HostList(CtxObj):
         pass
 
 
-class HostMon(HostList):
+class ServiceMon(HostList):
     """
-    The Host Monitor runs once in a MoaT-Link network, as part of the main
+    The Service Monitor runs once in a MoaT-Link network, as part of the main
     hosts's 'moat-link-host' service.
 
     Its main job is to remove stale retained entries under 'run.id' and 'run.host'.
@@ -495,13 +460,13 @@ class HostMon(HostList):
         """
         Send a message to delete this ID entry.
         """
-        if "h" in host.data:
-            await self.link.d_set(P("run.id") / host.id, retain=True)
+        await self.link.d_set(P("run.id") / host.id, retain=True)
         await super().drop_id(host)
 
     async def drop_host(self, host):
         """
         Send a message to delete this host entry.
         """
-        await self.link.d_set(P("run.host") + host.path, retain=True)
+        for p in host.data.h.keys():
+            await self.link.d_set(P("run.host") + p, retain=True)
         await super().drop_host(host)

@@ -4,12 +4,14 @@ from __future__ import annotations
 import anyio
 import logging
 from contextlib import nullcontext
+from platform import uname
 
 import asyncclick as click
 
-from moat.util import srepr
+from moat.util import as_service, attrdict, srepr
+from moat.link.announce import announcing
 from moat.link.client import Link
-from moat.link.host import HostMon, cmd_host
+from moat.link.host import HostList, ServiceMon
 from moat.util.broadcast import Broadcaster
 
 logger = logging.getLogger(__name__)
@@ -43,8 +45,16 @@ async def run(obj, main, debug):
     """
 
     cfg = obj.cfg.link
-    async with Link(cfg) as link:
-        await cmd_host(link, cfg, main=main, debug=debug)
+    if not main:
+        main = cfg.main == uname().node
+    async with (
+        Link(cfg) as link,
+        as_service(attrdict(debug=debug, link=link)) as srv,
+        announcing(link, host=not main, via=srv.evt),  # TODO: add service
+        ServiceMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
+    ):
+        srv.started()
+        await anyio.sleep_forever()
 
 
 @cli.command()
@@ -58,6 +68,6 @@ async def list(obj, timeout):  # noqa: A001
     """
 
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
-        async with HostMon(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
+        async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
                 print("    UPD  ", h.id, h.state.name, srepr(h.data, skip={"id": h.id}))

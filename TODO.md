@@ -8,8 +8,7 @@ hero: Any spare days that are not in the calendar?
   * test coverage?
 
 * moat.lib.cmd
-  * Add classes for tunneling a command pipe
-  * Refactor dispatching to use active hook-in of subpaths
+  * Add support for tunneling through websockets
 
 * moat.bms
   * get it to work, dammit
@@ -27,8 +26,9 @@ hero: Any spare days that are not in the calendar?
 
 * moat.lib.cbor
   * auto-generated proxies
-  * a way to release them
-  * auto-release after some time / max cache size?
+  * add a way to release them
+    * idea: store a reference in the codec and use weakrefs in the actual
+      proxy dict
 
 * moat.link
   * host
@@ -45,6 +45,9 @@ hero: Any spare days that are not in the calendar?
 * moat.micro
   * app for multiplexed I/O
   * app for Triac control
+
+  * Refactor dispatching to use active hook-in of subpaths
+  * move some dispatch code to moat.lib.cmd
 
   * hook the MoaT loop into dupterm
 

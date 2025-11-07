@@ -58,7 +58,7 @@ from moat.util.cbor import (
     CBOR_TAG_MOAT_FILE_END,
     CBOR_TAG_MOAT_FILE_ID,
 )
-from moat.util.exc import exc_iter
+from moat.util.exc import ExpKeyError, exc_iter
 
 from collections import defaultdict
 from collections.abc import Sequence
@@ -392,16 +392,22 @@ class ServerClient(LinkCommon):
         _d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change"
     )
 
-    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None, t: float | None = None):
+    async def cmd_d_set(
+        self, path, value, meta: MsgMeta | None = None, t: float | bool | None = None
+    ):
         """Set a node's value.
 
         Arguments:
         * pathname
         * value
         * optional: new metadata
-        * optional: t: timestamp of last change
+        * optional: t: timestamp of last change, or a flag.
+          If False, must not exist; if True, must exist.
 
-        You should not call this. Send to the MQTT topic directly.
+        You should not call this unless absolutely necessary.
+        Instead, send to the MQTT topic directly.
+
+        Using this method does *not* protect against conflicts.
         """
         if meta is None:
             meta = MsgMeta(origin=self.name)
@@ -410,14 +416,16 @@ class ServerClient(LinkCommon):
         try:
             node = self.server.data.get(path)
         except ValueError:
-            res = None
+            if t:
+                raise ExpKeyError(path) from None
         else:
-            if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
+            if t is (node.data_ is NotGiven):
+                raise ExpKeyError(path) from None
+            elif t not in (None, True, False) and (
+                node.meta is None or abs(node.meta.timestamp - t) > 0.001
+            ):
                 raise OutOfDateError(node.meta)
-            try:
-                res = node.data, *(node.meta.dump() if node.meta is not None else ())
-            except ValueError:
-                res = NotGiven, *(node.meta.dump() if node.meta is not None else ())
+            res = node.data_, *(node.meta.dump() if node.meta is not None else ())
         self.server.maybe_update(path, value, meta)
         return res
 

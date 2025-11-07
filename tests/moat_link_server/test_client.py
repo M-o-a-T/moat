@@ -5,6 +5,7 @@ import pytest
 
 from moat.util import NotGiven, P, Path
 from moat.link._test import Scaffold
+from moat.link.exceptions import OutOfDateError
 from moat.link.meta import MsgMeta
 
 
@@ -196,3 +197,30 @@ async def test_get_tree_drop(cfg):
         res = res[-1]
         assert res[0] == Path("too")
         assert res[1] is NotGiven
+
+
+@pytest.mark.anyio
+async def test_set_time(cfg):
+    "Check updating with timestamps"
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
+        with pytest.raises(KeyError):
+            await c.d_set(P("test.here"), "Nope0", t=True)
+
+        await c.d.set(P("test.here"), "HiLo", t=False)
+        res = await c.d.get(P("test.here"))
+        assert res[0] == "HiLo"
+        meta = MsgMeta.restore(res[1:])
+        await c.d_set(P("test.here"), "Ugh", t=meta.timestamp)
+        res = await c.d.get(P("test.here"))
+        assert res[0] == "Ugh"
+        with pytest.raises(OutOfDateError):
+            await c.d_set(P("test.here"), "Nope1", t=meta.timestamp - 10)
+        with pytest.raises(KeyError):
+            await c.d_set(P("test.here"), "Nope2", t=False)
+        await c.d_set(P("test.here"), "Yep3", t=True)
+        res = await c.d.get(P("test.here"))
+        assert res[0] == "Yep3"

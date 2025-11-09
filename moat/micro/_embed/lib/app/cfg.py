@@ -4,7 +4,7 @@ R/W access to configuration data.
 
 from __future__ import annotations
 
-from moat.util import ExpKeyError, NotGiven
+from moat.util import ExpKeyError, NotGiven, attrdict, to_attrdict
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.compat import log
@@ -76,15 +76,16 @@ class Cmd(BaseCmd):
             try:
                 cur = cur[pp]
             except KeyError:
-                cur[pp] = {}
+                cur[pp] = attrdict()
                 cur = cur[pp]
             except IndexError:
                 if len(cur) != pp:
                     raise
-                cur.append({})
+                cur.append(attrdict())
                 cur = cur[pp]
         log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
+        d = to_attrdict(d)
         if d is NotGiven:
             try:
                 del cur[k]

@@ -67,4 +67,7 @@ class Path(tuple):  # noqa:SLOT001
         return Path(self + (x,))
 
     def __add__(self, x):
-        return Path(tuple(self) + x)
+        return Path(tuple(self) + tuple(x))
+
+    def __radd__(self, x):
+        return Path(tuple(x) + tuple(self))

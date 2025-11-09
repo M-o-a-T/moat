@@ -581,9 +581,11 @@ class MsgHandler(BaseMsgHandler):
 
         # Neither of the above.
         # First check if it's a readiness check.
+        is_rdy = False
         if rcmd[0] == "rdy_":
             if L and await self.wait_ready(wait=True):
                 raise NotReadyError(msg.cmd, rcmd)
+            is_rdy = True
 
         # Find a subcommand.
         scmd = rcmd.pop()
@@ -592,8 +594,7 @@ class MsgHandler(BaseMsgHandler):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
-        # Not found. Add workaround.
-        if rcmd and rcmd[0] == "rdy_":
+        if is_rdy:
             return await msg.result(None)
 
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())

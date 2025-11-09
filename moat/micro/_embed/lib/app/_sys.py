@@ -109,9 +109,9 @@ class Cmd(_Cmd):
 
     doc_boot = dict(
         _d="reboot",
-        _0="int:magic",
+        _0="str:SysBooT",
         _1="int:1=soft,2=hard,3=KbdIntr,4=SysExit",
-        _t="int:timeout msec",
+        _t="int:timeout msec(100)",
     )
 
     async def cmd_boot(self, code, m, t=100):

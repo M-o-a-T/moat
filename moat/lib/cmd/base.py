@@ -7,7 +7,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 
 from moat.util import NotGiven, Path
-from moat.util.compat import ACM, AC_exit, TaskGroup, log, shield
+from moat.util.compat import ACM, AC_exit, L, TaskGroup, log, shield
 from moat.util.exc import ungroup
 
 from .const import B_ERROR, B_STREAM, E_CANCEL, E_ERROR, SD_BOTH, SD_IN, SD_NONE, SD_OUT
@@ -582,7 +582,7 @@ class MsgHandler(BaseMsgHandler):
         # Neither of the above.
         # First check if it's a readiness check.
         if rcmd[0] == "rdy_":
-            if await self.wait_ready(wait=True):
+            if L and await self.wait_ready(wait=True):
                 raise NotReadyError(msg.cmd, rcmd)
 
         # Find a subcommand.

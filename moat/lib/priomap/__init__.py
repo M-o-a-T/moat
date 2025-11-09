@@ -5,6 +5,7 @@ Priority mapping library
 from __future__ import annotations
 
 import anyio
+from time import monotonic as time
 
 try:
     from collections.abc import MutableMapping
@@ -17,7 +18,7 @@ from typing import TYPE_CHECKING, TypeVar, overload
 if TYPE_CHECKING:
     from abc import abstractmethod
 
-    from collections.abc import Hashable
+    from collections.abc import Hashable, Iterator
     from typing import Protocol
 
     class Comparable(Protocol):
@@ -32,7 +33,10 @@ if TYPE_CHECKING:
     Priority = CT
     Key = Hashable
     InitialData = dict[Key, Priority] | None
+    InitialPrio = dict[Key, float] | None
     HeapItem = list[Key | Priority]  # Each heap item is [key, priority]
+
+__all__ = ["PrioMap", "TimerMap"]
 
 
 class PrioMap(MutableMapping):
@@ -56,13 +60,19 @@ class PrioMap(MutableMapping):
 
         # Bulk initialize if provided
         if initial:
-            for key, priority in initial.items():
-                self.heap.append([key, priority])
-            # Record positions and heapify
-            for idx, (key, _) in enumerate(self.heap):
-                self.position[key] = idx
-            for i in reversed(range(len(self.heap) // 2)):
-                self._sift_down(i)
+            self.bulk(initial.items())
+
+    def bulk(self, initial: Iterator[HeapItem]):
+        """
+        Bulk insert.
+        """
+        for key, priority in initial:
+            self.heap.append([key, priority])
+        # Record positions and heapify
+        for idx, (key, _) in enumerate(self.heap):
+            self.position[key] = idx
+        for i in reversed(range(len(self.heap) // 2)):
+            self._sift_down(i)
 
     def items(self):
         """
@@ -163,12 +173,18 @@ class PrioMap(MutableMapping):
         else:
             self._sift_down(idx)
 
+        if idx == 0 or self.heap[0][0] == key:
+            self.evt.set()
+            self.evt = anyio.Event()
+
     def clear(self) -> None:
         """
         Remove all items from the heap.
         """
         self.heap.clear()
         self.position.clear()
+        self.evt.set()
+        self.evt = anyio.Event()
 
     def is_empty(self) -> bool:
         """
@@ -251,12 +267,12 @@ class PrioMap(MutableMapping):
             self.update(key, priority)
         else:
             idx = len(self.heap)
-            if not idx:
-                self.evt.set()
-                self.evt = anyio.Event()
             self.heap.append([key, priority])
             self.position[key] = idx
             self._sift_up(idx)
+            if self.heap[0][0] == key:
+                self.evt.set()
+                self.evt = anyio.Event()
 
     def __delitem__(self, key: Key) -> None:
         """
@@ -274,6 +290,9 @@ class PrioMap(MutableMapping):
             self.position[last[0]] = idx
             self._sift_down(idx)
             self._sift_up(idx)
+            if idx == 0:
+                self.evt.set()
+                self.evt = anyio.Event()
 
     def __contains__(self, key: Key) -> bool:
         """
@@ -360,8 +379,80 @@ class PrioMap(MutableMapping):
         """
         Return the root item without removing it.
 
-        This waits for the next item if the heap is empty.
+        Waits for an item to arrive if the heap is empty.
         """
         while not self.heap:
             await self.evt.wait()
         return self.heap[0][0], self.heap[0][1]
+
+
+class TimerMap:
+    """
+    A map that stores timeout values.
+
+    The value auto-decrements; async iteration returns a key
+    when its timer expires.
+
+    Timeouts can be retrieved and updated iff they have not been processed.
+    Negative delays are not an error.
+    """
+
+    def __init__(self, initial: InitialPrio = None):
+        self._pm = PrioMap()
+        if initial:
+            self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())
+
+    @staticmethod
+    def T_ADD(p):
+        "Add the current time."
+        return p + time()
+
+    @staticmethod
+    def T_SUB(p):
+        "Subtract the current time."
+        return p - time()
+
+    def __setitem__(self, key: Key, delay: float) -> None:
+        self._pm[key] = self.T_ADD(delay)
+
+    def __getitem__(self, key: Key) -> float:
+        return self.T_SUB(self._pm[key])
+
+    def pop(self) -> tuple[Key, float]:
+        "Remove and return the first item"
+        k, p = self._pm.pop()
+        return k, self.T_SUB(p)
+
+    async def apeek(self) -> tuple[Key, float]:
+        """
+        Return the first item (without removing it).
+
+        Waits while the heap is empty.
+        """
+        k, p = await self._pm.apeek()
+        return k, self.T_SUB(p)
+
+    def __len__(self):
+        return len(self._pm)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> Key:
+        "iterate keys as they time out."
+        while True:
+            k, p = await self.apeek()
+            if p > 0:
+                with anyio.move_on_after(p):
+                    await self._pm.evt.wait()
+            else:
+                k, p = self.pop()
+                if p > 0:
+                    raise RuntimeError("Heap got confused? {k !r}:{p}")
+                return k
+
+    def update(self, key: Key, new_delay: float) -> None:
+        """
+        Update priority for an existing key, then reheapify.
+        """
+        self._pm.update(key, self.T_ADD(new_delay))

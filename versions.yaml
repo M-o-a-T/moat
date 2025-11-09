@@ -165,10 +165,10 @@ moat-lib-pid:
   tag: 0.6.3
 moat-lib-priomap:
   deb: 0.1.1-2
-  pkg: 2
+  pkg: 1
   pypi: 0.1.1
-  rev: 87af75c5850fc10d5f73fa3c4fae4b73fd8bf475
-  tag: 0.1.1
+  rev: 112db2025d994365ce434085dbed040bd6a9b181
+  tag: 0.2.0
 moat-lib-victron:
   deb: 0.1.3-3
   pkg: 1

@@ -5,7 +5,6 @@ This is a button in/out multiplexer.
 from __future__ import annotations
 
 import asyncio
-import micropython
 from machine import Pin, Timer, disable_irq, enable_irq
 from micropython import const
 
@@ -120,7 +119,6 @@ class Multiplex:
         for pin in self.scan:
             pin(v)
 
-    @micropython.native
     def step(self, _timer=None):
         """Run one pass of the multiplexer"""
         vs = self.inv[SCAN]

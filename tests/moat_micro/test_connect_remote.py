@@ -85,9 +85,9 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
         await sleep_ms(100)
         await (set_client if server_first else set_server)(cr)
         if (server_first == remote_first, link_in) != (True, False):
-            await d.cmd("s.r.!rdy_")
+            await d.cmd(P("s.r.!rdy_"))
         if (server_first == remote_first, link_in) != (False, False):
-            await d.cmd("r.!rdy_")
+            await d.cmd(P("r.!rdy_"))
 
         async def chk(*p):
             res = await d.cmd(Path.build(p) / "a" / "echo", m="hello")

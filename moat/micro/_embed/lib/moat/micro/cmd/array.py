@@ -4,7 +4,7 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import P, combine_dict, import_
+from moat.util import combine_dict, import_
 from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg
@@ -167,8 +167,9 @@ class ArrayCmd(BaseSuperCmd):
         else:
             cmd = msg.args_l.pop(0)
             if isinstance(cmd, str):
-                cmd = P(cmd)
-            cmd = list(cmd)
+                cmd = [cmd]
+            else:
+                cmd = list(cmd)
 
         res = []
         snd = MsgSender(None)
@@ -185,8 +186,9 @@ class ArrayCmd(BaseSuperCmd):
         if not rcmd:
             cmd = msg.args.pop(0)
             if isinstance(cmd, str):
-                cmd = P(cmd)
-            cmd = list(cmd)
+                cmd = [cmd]
+            else:
+                cmd = list(cmd)
             cmd.reverse()
             rcmd = cmd
 

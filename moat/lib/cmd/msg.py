@@ -4,7 +4,7 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util import ExpectedError, P, Path, outcome
+from moat.util import ExpectedError, Path, outcome
 from moat.lib.codec.errors import SilentRemoteError
 from moat.util.compat import Event, Queue, is_async, log, shield
 
@@ -214,8 +214,9 @@ class Msg(MsgLink, MsgResult):
     def Call(cls, cmd: Path, a: list, kw: dict, flags: int = 0) -> Self:
         """Constructor for a possibly-remote function call."""
         if isinstance(cmd, str):
-            # XXX we might want to warn and/or error out here
-            cmd = P(cmd)
+            if ":" in cmd or "." in cmd:
+                raise ValueError("Wrap command paths in a `P()` call")
+            cmd = Path.build((cmd,))
         s = cls()
         s._cmd = cmd
         s._a = a

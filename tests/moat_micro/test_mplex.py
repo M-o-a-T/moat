@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import Path
+from moat.util import P, Path
 from moat.micro._test import mpy_stack
 from moat.util.compat import log, sleep_ms, ticks_diff, ticks_ms
 
@@ -51,17 +51,17 @@ r:
 async def test_mplex(tmp_path):
     """Basic multiplexer test"""
     async with mpy_stack(tmp_path, CFG) as d:
-        r = await d.cmd("a.echo", m="He")
+        r = await d.cmd(P("a.echo"), m="He")
         assert r["r"] == "He"
-        r = await d.cmd("l.a.echo", m="Hel")
+        r = await d.cmd(P("l.a.echo"), m="Hel")
         assert r["r"] == "Hel"
-        r = await d.cmd("r.b.echo", m="Hi")
+        r = await d.cmd(P("r.b.echo"), m="Hi")
         assert r["r"] == "Hi"
-        r = await d.cmd("r.l.b.echo", m="Hol")
+        r = await d.cmd(P("r.l.b.echo"), m="Hol")
         assert r["r"] == "Hol"
-        r = await d.cmd("r.r.a.echo", m="Hu")
+        r = await d.cmd(P("r.r.a.echo"), m="Hu")
         assert r["r"] == "Hu"
-        r = await d.cmd("r.r.l.a.echo", m="Hul")
+        r = await d.cmd(P("r.r.l.a.echo"), m="Hul")
         assert r["r"] == "Hul"
 
 

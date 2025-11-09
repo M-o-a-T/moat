@@ -115,7 +115,7 @@ async def test_iter_m(tmp_path):
         s = d.sub_at(P("r"))
 
         res = []
-        async with s.cmd("b.it", lim=3, delay=0.2).stream_in() as it:
+        async with s.cmd(P("b.it"), lim=3, delay=0.2).stream_in() as it:
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
@@ -140,7 +140,7 @@ async def test_modes(tmp_path, lossy, guarded):
         ),
     )
     async with mpy_stack(tmp_path, CFG, cfu) as d:
-        res = await d.cmd("r.b.echo", m="hi")
+        res = await d.cmd(P("r.b.echo"), m="hi")
         assert res.kw == {"r": "hi"}
 
 
@@ -186,9 +186,9 @@ async def test_eval(tmp_path, cons):
     async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
-        dr = await d.cmd("l.dir_")
+        dr = await d.cmd(P("l.dir_"))
         pprint(dr.kw)
-        dr = await d.cmd("l._sys.dir_")
+        dr = await d.cmd(P("l._sys.dir_"))
         pprint(dr.kw)
 
         f = Foo(42)
@@ -218,9 +218,9 @@ async def test_msgpack(tmp_path):
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
-        dr = await d.cmd("r.dir_")
+        dr = await d.cmd(P("r.dir_"))
         pprint(dr.kw)
-        dr = await d.cmd("r._sys.dir_")
+        dr = await d.cmd(P("r._sys.dir_"))
         pprint(dr.kw)
 
         f = Foo(42)

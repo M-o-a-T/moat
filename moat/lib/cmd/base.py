@@ -495,7 +495,7 @@ class SubMsgSender(MsgSender):
         """
         Returns a SubMsgSender for this name
         """
-        return self.sub_at(Path(x))
+        return self.sub_at(Path.build((x,)))
 
 
 class MsgHandler(BaseMsgHandler):

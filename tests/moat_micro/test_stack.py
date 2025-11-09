@@ -167,7 +167,7 @@ async def test_stack(tmp_path):
             assert res.stdout == ""
 
             # now do the same thing sanely
-            res = await s.cmd("f.dir_")
+            res = await s.cmd(P("f.dir_"))
             assert "rmdir" in res["c"]
             res = await s.f.dir_()
             assert "rmdir" in res["c"]

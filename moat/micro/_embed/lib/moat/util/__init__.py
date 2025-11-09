@@ -13,7 +13,7 @@ from moat.util.compat import Event, log
 from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
 from .exc import ExpKeyError as ExpKeyError
-from .path import P, Path  # noqa:F401
+from .path import Path
 
 
 class OutOfData(EOFError):  # noqa: D101
@@ -136,6 +136,21 @@ class attrdict(dict):
             del self[k]
         except KeyError:
             return AttributeError(k)
+
+
+def to_attrdict(d) -> attrdict:
+    """
+    Return a hierarchy with all dicts converted to attrdicts.
+    """
+    if isinstance(d, dict):
+        return attrdict((k, to_attrdict(v)) for k, v in d.items())
+    if isinstance(d, Path):
+        # this is not in the CPython version because there,
+        # `Path` is not a subclass of `tuple`
+        return d
+    if isinstance(d, (tuple, list)):
+        return [to_attrdict(v) for v in d]
+    return d
 
 
 def import_(name, off=0):

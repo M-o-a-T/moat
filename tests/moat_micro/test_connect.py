@@ -79,8 +79,8 @@ async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
         await (set_server if server_first else set_client)(c)
         await sleep_ms(100)
         await (set_client if server_first else set_server)(c)
-        await d.cmd("l.!rdy_")
-        await d.cmd("r.!rdy_")
+        await d.cmd(P("l.!rdy_"))
+        await d.cmd(P("r.!rdy_"))
         res = await d.cmd(P("l.a.echo"), m="hello")
         assert res.kw == dict(r="hello")
 

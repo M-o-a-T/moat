@@ -71,3 +71,6 @@ hero: Any spare days that are not in the calendar?
   * implement (and test) all the fancy pin and relay features
 
   * NamedSerial should open a device if running on Unix-µPy
+
+  * tell mpy-cross about the destination architecture
+    so that `@micropython.native` works

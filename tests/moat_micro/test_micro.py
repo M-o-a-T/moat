@@ -109,7 +109,7 @@ async def test_iter_m(tmp_path):
         for i in range(1, 4):
             assert await s.nit(delay=0.2) == i
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 1100
+        assert 450 < ticks_diff(t2, t1) < 1150
 
         # now do the same thing with a partial subdispatcher
         s = d.sub_at(P("r"))

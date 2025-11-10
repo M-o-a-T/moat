@@ -418,11 +418,6 @@ class TimerMap:
     def __getitem__(self, key: Key) -> float:
         return self.T_SUB(self._pm[key])
 
-    def pop(self) -> tuple[Key, float]:
-        "Remove and return the first item"
-        k, p = self._pm.pop()
-        return k, self.T_SUB(p)
-
     async def apeek(self) -> tuple[Key, float]:
         """
         Return the first item (without removing it).

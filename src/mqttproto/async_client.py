@@ -298,6 +298,7 @@ class AsyncMQTTClient:
     _pending_operations: dict[int, MQTTOperation[Any]] = field(init=False, factory=dict)
     _ignored_exc_classes: tuple[type[Exception]] = field(init=False)
     __ctx: AbstractAsyncContextManager[Self] = field(init=False)
+    _conn_scope:anyio.abc.CancelScope|None=field(init=False)
 
     def __attrs_post_init__(self) -> None:
         if not self.host_or_path:
@@ -341,22 +342,24 @@ class AsyncMQTTClient:
     @asynccontextmanager
     async def _ctx(self) -> AsyncGenerator[Self]:
         async with create_task_group() as task_group:
-            await task_group.start(self._manage_connection)
             try:
+                await task_group.start(self._manage_connection)
                 yield self
 
-                self._closed = True
-                self._state_machine.disconnect()
-                operation = MQTTDisconnectOperation()
-                await self._run_operation(operation)
-
             finally:
-                task_group.cancel_scope.cancel()
                 with move_on_after(2, shield=True):
-                    await self._stream.aclose()
+                    try:
+                        self._closed = True
+                        self._state_machine.disconnect()
+                        operation = MQTTDisconnectOperation()
+                        await self._run_operation(operation)
+                        await self._stream.aclose()
+                    finally:
+                        if self._conn_scope is not None:
+                            self._conn_scope.cancel()
 
-                self._stream = None
-                self._state_machine = MQTTClientStateMachine()
+                        self._stream = None
+                        self._state_machine = MQTTClientStateMachine()
 
     async def _manage_connection(
         self,
@@ -375,34 +378,42 @@ class AsyncMQTTClient:
                 else:
                     cm = self._connect_mqtt()
 
-                async with AsyncExitStack() as exit_stack:
-                    (
-                        stream,
-                        self._ignored_exc_classes,
-                    ) = await exit_stack.enter_async_context(cm)
-                    self._stream = stream
+                with anyio.CancelScope(shield=True) as self._conn_scope:
+                    async with AsyncExitStack() as exit_stack:
+                        (
+                            stream,
+                            self._ignored_exc_classes,
+                        ) = await exit_stack.enter_async_context(cm)
+                        self._stream = stream
 
-                    # Start handling inbound packets
-                    task_group = await exit_stack.enter_async_context(create_task_group())
-                    task_group.start_soon(self._read_inbound_packets, stream, task_group)
+                        # Start handling inbound packets
+                        task_group = await exit_stack.enter_async_context(create_task_group())
+                        task_group.start_soon(self._read_inbound_packets, stream, task_group)
 
-                    # Perform the MQTT handshake (send conn + receive connack)
-                    await self._do_handshake()
-                    t_conn = anyio.current_time()
+                        # Perform the MQTT handshake (send conn + receive connack)
+                        await self._do_handshake()
+                        t_conn = anyio.current_time()
 
-                    # Manage keepalives
-                    task_group.start_soon(self._keep_alive, stream)
+                        # Manage keepalives
+                        task_group.start_soon(self._keep_alive, stream)
 
-                    # Signal that the client is ready
-                    if not task_status_sent:
-                        task_status.started()
-                        task_status_sent = True
+                        # Signal that the client is ready
+                        if not task_status_sent:
+                            task_status.started()
+                            task_status_sent = True
 
             except* MQTTServerRestarted:
                 raise
 
             except* Exception as exc:
                 logger.warning("Connection died: %r", exc, exc_info=exc)
+
+            except* BaseException as exc:
+                logger.warning("Connection died: %r", exc, exc_info=exc)
+                raise
+
+            finally:
+                self._conn_scope = None
 
             # reset the thing
             if self._stream is not None:

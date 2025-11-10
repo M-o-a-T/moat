@@ -12,11 +12,11 @@ try:
 except ImportError:
     from collections.abc import MutableMapping
 
-# ==== Centralized type aliases ====
 from typing import TYPE_CHECKING, TypeVar, overload
 
 if TYPE_CHECKING:
     from abc import abstractmethod
+    from types import EllipsisType
 
     from collections.abc import Hashable, Iterator
     from typing import Protocol
@@ -418,6 +418,9 @@ class TimerMap:
     def __getitem__(self, key: Key) -> float:
         return self.T_SUB(self._pm[key])
 
+    def __delitem__(self, key: Key) -> float:
+        del self._pm[key]
+
     async def apeek(self) -> tuple[Key, float]:
         """
         Return the first item (without removing it).
@@ -451,3 +454,24 @@ class TimerMap:
         Update priority for an existing key, then reheapify.
         """
         self._pm.update(key, self.T_ADD(new_delay))
+
+    @overload
+    def pop(self) -> tuple[Key, float]: ...
+
+    @overload
+    def pop(self, key: Key) -> float: ...
+
+    def pop(self, a: Key | EllipsisType = Ellipsis):
+        """
+        Remove and return an item.
+
+        Args are passed to dict.pop.
+
+        :return: (key, priority)
+        :raises IndexError: If empty.
+        """
+        if a is Ellipsis:
+            key, prio = self._pm.pop()
+            return key, self.T_SUB(prio)
+        else:
+            return self.T_SUB(self._pm.pop(a))

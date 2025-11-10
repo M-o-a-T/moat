@@ -1057,6 +1057,8 @@ class Watcher(CtxObj):
                 await tg.start(self._current, qw.clone())
             else:
                 self._current_done.set()
+                if self.mark:
+                    await qw.send(None)
             await qw.aclose()
             yield self
             tg.cancel_scope.cancel()

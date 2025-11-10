@@ -292,7 +292,7 @@ class AsyncMQTTClient:
         init=False, factory=dict
     )
     _last_subscr_id: int = field(init=False, default=0)
-    _stream: ByteStream = field(init=False)
+    _stream: ByteStream = field(init=False, default=None)
     _stream_lock: Lock = field(init=False, factory=Lock)
     _pending_connect: MQTTConnectOperation | None = field(init=False, default=None)
     _pending_operations: dict[int, MQTTOperation[Any]] = field(init=False, factory=dict)

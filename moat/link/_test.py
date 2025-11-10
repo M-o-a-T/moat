@@ -49,23 +49,40 @@ async def run_broker(cfg, *, task_status):
     The task status returns the port we're listening on.
     """
     cfg  # pyright:ignore # noqa:B018
-    # broker = AsyncMQTTBroker(("127.0.0.1", 0))
-    # await broker.serve(task_status=task_status)
-    from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
-    from socket import SOCK_STREAM  # noqa: PLC0415
 
-    port = FreePortFactory(SOCK_STREAM)()
+    if False:
+        # Just use the system MQTT broker.
+        # TODO: This requires cleaning up retained messages.
+        task_status.started(1883)
+        return
 
-    async with (
-        anyio.TemporaryDirectory() as td,
-        anyio.create_task_group() as tg,
-    ):
-        tf = anyio.Path(td) / "config"
-        await tf.write_text(
-            f"""\
+    elif False:
+        # Use the experimental mqttproto broker.
+        from mqttproto import AsyncMQTTBroker  # noqa:PLC0415
+
+        broker = AsyncMQTTBroker(("127.0.0.1", 0))
+        await broker.serve(task_status=task_status)
+
+    else:
+        # Use a standalone instance of FlashMQ.
+        from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
+        from socket import SOCK_STREAM  # noqa: PLC0415
+
+        port = FreePortFactory(SOCK_STREAM)()
+
+        async with (
+            anyio.TemporaryDirectory() as td,
+            anyio.create_task_group() as tg,
+        ):
+            tf = anyio.Path(td) / "config"
+            await tf.write_text(
+                f"""\
 allow_anonymous true
 retained_messages_mode enabled_without_persistence
 thread_count 1
+
+log_level debug
+log_subscriptions true
 
 listen {{
     protocol mqtt
@@ -73,29 +90,29 @@ listen {{
     inet4_bind_address 127.0.0.1
 }}
 """
-        )
-
-        tg.start_soon(
-            partial(
-                anyio.run_process,
-                ["flashmq", "-c", str(tf)],
-                stderr=sys.stderr,
-                stdout=sys.stdout,
-                env=dict(HOME=td),
             )
-        )
-        for _ in range(20):
-            try:
-                sock = await anyio.connect_tcp("127.0.0.1", port)
-            except OSError:
-                await anyio.sleep(0.1)
-            else:
-                await sock.aclose()
-                break
-        else:
-            raise RuntimeError("Could not connect to FlashMQ")
 
-        task_status.started(port)
+            tg.start_soon(
+                partial(
+                    anyio.run_process,
+                    ["flashmq", "-c", str(tf)],
+                    stderr=sys.stderr,
+                    stdout=sys.stdout,
+                    env=dict(HOME=td),
+                )
+            )
+            for _ in range(20):
+                try:
+                    sock = await anyio.connect_tcp("127.0.0.1", port)
+                except OSError:
+                    await anyio.sleep(0.1)
+                else:
+                    await sock.aclose()
+                    break
+            else:
+                raise RuntimeError("Could not connect to FlashMQ")
+
+            task_status.started(port)
 
 
 class Scaffold(CtxObj):
@@ -136,12 +153,21 @@ class Scaffold(CtxObj):
             else TemporaryDirectory() as tempdir
         ):
             self.tempdir = FSPath(tempdir)
-            async with anyio.create_task_group() as self.tg:
-                bport = await self.tg.start(run_broker, self.cfg)
-
+            async with (
+                anyio.create_task_group() as tg,
+                anyio.create_task_group() as self.tg,
+            ):
+                bport = await tg.start(run_broker, self.cfg)
                 self.cfg.backend.port = bport
-                yield self
-                self.tg.cancel_scope.cancel()  # pyright:ignore
+                try:
+                    yield self
+                finally:
+                    with anyio.CancelScope(shield=True):
+                        await anyio.sleep(0.1)
+                        self.tg.cancel_scope.cancel()  # pyright:ignore
+                        await anyio.sleep(0.1)
+                        tg.cancel_scope.cancel()  # pyright:ignore
+                        await anyio.sleep(0.1)
 
     async def backend(self, cfg: dict | None = None, **kw):
         """

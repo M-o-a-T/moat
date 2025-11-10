@@ -203,6 +203,10 @@ class Backend(_Backend):
         if retain is None:
             raise ValueError("Need to set whether to retain or not")
 
+        if self.logger.isEnabledFor(logging.DEBUG):
+            m = Message(topic, data, meta, retain=retain, prop=prop)
+            self.logger.debug("Send:%r", m)
+
         if isinstance(data, str):
             msg = data  # utf-8 is pass-thru in MQTT5
         elif data is NotGiven:

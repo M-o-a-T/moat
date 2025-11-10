@@ -24,7 +24,7 @@ dependencies = [
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
 	"moat-lib-priomap ~= 0.0.0",
-	"mqttproto ~= 0.7.2.17",
+	"mqttproto ~= 0.7.2.22",
 	]
 version = "0.2.33"
 keywords = [ "MoaT",]

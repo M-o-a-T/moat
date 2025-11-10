@@ -43,6 +43,11 @@ class ServiceSupplanted(MoaTLinkError):  # noqa: D101
     pass
 
 
+@as_proxy("_EMLClClr")
+class ServiceCleared(MoaTLinkError):  # noqa: D101
+    pass
+
+
 @as_proxy("_EMLClSnF")
 class ServiceNotFound(MoaTLinkError):  # noqa: D101
     pass

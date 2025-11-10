@@ -247,6 +247,7 @@ class LinkSender(MsgSender):
 
     def __init__(self, link: LinkCommon):
         self._link = link
+        self.announced = self._link.announced
 
     @property
     def root(self):
@@ -281,6 +282,16 @@ class LinkSender(MsgSender):
         """
         cmd  # noqa:B018
         return self, path
+
+    @asynccontextmanager
+    async def announcing(self, *a, **kw):
+        """
+        Frontend for `moat.link.announce.announcing`.
+        """
+        from moat.link.announce import announcing as ann  # noqa:PLC0415
+
+        async with ann(self, *a, **kw) as res:
+            yield res
 
     @overload
     def d_get(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
@@ -631,6 +642,7 @@ class Link(LinkCommon, CtxObj):
     _port: str | None = None
     _state: str = "init"
     _common: bool = False
+    announced: set[Path]
 
     def __new__(cls, cfg, name: str | None = None, common: bool = False):  # noqa:D102
         cfg, name  # noqa:B018
@@ -646,6 +658,7 @@ class Link(LinkCommon, CtxObj):
         self._server_up = anyio.Event()
         self._state_change = anyio.Event()
         self._common = common
+        self.announced = set()
         with suppress(AttributeError):
             self._port = self.cfg.client.port
 

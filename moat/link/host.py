@@ -11,7 +11,7 @@ from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
 
 from moat.util import CtxObj, NotGiven, P, attrdict, srepr
-from moat.lib.priomap import PrioMap
+from moat.lib.priomap import TimerMap
 from moat.util.broadcast import Broadcaster
 
 from typing import TYPE_CHECKING
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from moat.link.client import Link
 
     from collections.abc import Awaitable
+    from typing import Any
 
 __all__ = ["HostList", "ServiceMon"]
 
@@ -261,12 +262,10 @@ class HostList(CtxObj):
         self.cfg = cfg
         self._bc = broadcaster
 
-        self._retime = anyio.Event()
-
         # Service Instance
         self.hsi: dict[Path, Service] = {}
         self.ids: dict[str, Service] = {}
-        self.times: PrioMap[str, float] = PrioMap()
+        self.times: TimerMap[str, float] = TimerMap()
 
     @asynccontextmanager
     async def _ctx(self):
@@ -274,42 +273,32 @@ class HostList(CtxObj):
             self._bc = Broadcaster(10)
 
         async with self._bc, anyio.create_task_group() as self.tg:
-            self.tg.start_soon(self._mon_host)
-            self.tg.start_soon(self._mon_ping)
-            self.tg.start_soon(self._mon_id)
-            self.tg.start_soon(self._timer)
+            await self.start_tasks()
             yield self._bc
             self.tg.cancel_scope.cancel()
+
+    async def start_tasks(self):
+        "Starting Tasks. Can be supplanted by subclasses."
+        self.tg.start_soon(self._mon_host)
+        self.tg.start_soon(self._mon_ping)
+        self.tg.start_soon(self._mon_id)
+        self.tg.start_soon(self._timer)
 
     def set_timeout(self, host: Service, to: float | None = None):
         "Update service entry in timeout queue"
         if to is None:
             to = host.timeout
         if not to:
-            self.times.pop(host.id, None)
+            with suppress(KeyError):
+                self.times.pop(host.id)
             return
 
-        tm = time.monotonic() + to
-
-        if len(self.times) and self.times.peek()[1] > tm:
-            self._retime.set()
-        # dprint("TIME ",host.id,tm-time.monotonic())
-        self.times[host.id] = tm
+        # dprint("TIME ", host.id, to)
+        self.times[host.id] = to
 
     async def _timer(self):
-        async for id, timeout in self.times:
+        async for id in self.times:
             h = self.ids[id]
-
-            t = time.monotonic()
-            if t < timeout:
-                self.times[id] = timeout
-                # dprint("WAIT+",id,timeout-t)
-                with anyio.move_on_after(timeout - t):
-                    await self._retime.wait()
-                    self._retime = anyio.Event()
-                continue
-
-            # dprint("OUT  ",h.id)
             self.tg.start_soon(h.trigger, _E.TIMEOUT)
 
     def updated(self, host: Service, evt: EventData):
@@ -324,15 +313,13 @@ class HostList(CtxObj):
 
         These update the .hsi lookup but don't actually affect state.
         """
-        async with self.link.d_watch(
-            P("run.host"), subtree=True, meta=True, state=NotGiven
-        ) as mon:
-            async for p, msg, meta in mon:
+        async with self.link.d_watch(P("run.host"), subtree=True, state=NotGiven) as mon:
+            async for p, msg in mon:
                 try:
                     if msg is NotGiven:  # host deleted
                         with suppress(KeyError, AttributeError):
                             h = self.hsi.pop(p)
-                            h.data.h.pop(p, None)
+                            await self.drop_path(h, p)
                             if not h.data.h:
                                 self.tg.start_soon(h.trigger, _E.DEL_HOST)
 
@@ -344,7 +331,7 @@ class HostList(CtxObj):
                     with suppress(KeyError, AttributeError):
                         h = self.hsi[p]
                         if h.id != id:
-                            h.data.h.pop(p, None)
+                            await self.drop_path(h, p)
                             if not h.data.h:
                                 self.tg.start_soon(h.trigger, _E.DEL_HOST)
                             # unconditionally updated below
@@ -355,9 +342,8 @@ class HostList(CtxObj):
                         self.ids[id] = h = Service(mon=self, id=id)
                         await h.trigger(_E.INIT)
                     self.hsi[p] = h
-                    h.last = meta.timestamp
                     changed = h.data.h.get(p, None) != msg
-                    h.data.h[p] = msg
+                    self.add_path(h, p, msg)
                     self.tg.start_soon(partial(h.trigger, _E.MSG_HOST, changed=changed))
                     # dprint("H    ",p,id,h)
 
@@ -439,15 +425,27 @@ class HostList(CtxObj):
 
     async def drop_id(self, host):
         """
-        Send a message to delete this ID entry.
+        Seen a message that deletes this ID entry.
         """
         pass
 
-    async def drop_host(self, host):
+    def add_path(self, host: Service, path: Path, msg: dict):
         """
-        Send a message to delete this host entry.
+        Add a path with this message to the service
+        """
+        host.data.h[path] = msg
+
+    async def drop_host(self, host: Service):
+        """
+        Seen a message that deletes this service entry.
         """
         pass
+
+    async def drop_path(self, host: Service, path: Path):
+        """
+        Seen a message that deletes/supersedes this service entry.
+        """
+        host.data.h.pop(path, None)
 
 
 class ServiceMon(HostList):
@@ -458,17 +456,97 @@ class ServiceMon(HostList):
     Its main job is to remove stale retained entries under 'run.id' and 'run.host'.
     """
 
+    def __init__(self, *a, **kw):
+        """ """
+        super().__init__(*a, **kw)
+        self.hostdown: TimerMap[Path, float] = TimerMap()
+        self.hostup: TimerMap[Path, float] = TimerMap()
+        self.errored: dict[Path, bool] = dict()
+
+    async def start_tasks(self):
+        "internal helper"
+        await super().start_tasks()
+        self.tg.start_soon(self._mon_hostdown)
+        self.tg.start_soon(self._mon_hostup)
+
+    async def _mon_hostdown(self):
+        # watch host comings+goings, complain if one is down for too long
+        # (TODO: or goes down+up too often)
+        async for path in self.hostdown:
+            # print("******** TIME",path)
+            if path in self.hsi:
+                # Present. Clear error.
+                await self._no_err(path)
+            else:
+                # not present. Error.
+                await self._err(None, path, "down")
+
+    async def _mon_hostup(self):
+        # watch host.data.up
+        # (TODO: or goes down+up too often)
+        async for path in self.hostup:
+            # print("******** TIMEUP",path)
+            try:
+                host = self.hsi[path]
+            except KeyError:
+                # not present.
+                pass
+            else:
+                # Present. Clear error.
+                if not host.data.h[path].get("up", False):
+                    await self._err(None, path, "not up")
+
     async def drop_id(self, host):
-        """
-        Send a message to delete this ID entry.
-        """
+        "Delete a host's ID message"
         await self.link.d_set(P("run.id") / host.id, retain=True)
         await super().drop_id(host)
 
     async def drop_host(self, host):
-        """
-        Send a message to delete this host entry.
-        """
+        "Delete a host's Service messages (yes all of them)"
         for p in host.data.h.keys():
             await self.link.d_set(P("run.host") + p, retain=True)
+            self.hostdown[p] = self.cfg.timeout.restart.error
+            with suppress(KeyError):
+                del self.hostup[p]
         await super().drop_host(host)
+
+    async def _err(self, host: Service | None, path: Path, msg: str, data: Any = None):
+        if self.errored.get(path, "") != msg:
+            dat = {"msg": msg, "level": 4}
+            if data is not None:
+                dat["aux"] = data
+            if host is not None and (dt := host.data.h.get(path, None)) is not None:
+                dat["data"] = dt
+            await self.link.d_set(P("error.run.host") + path, dat)
+            self.errored[path] = msg
+
+    async def _no_err(self, path: Path):
+        if self.errored.get(path, True) is not False:
+            await self.link.d_set(P("error.run.host") + path)
+            self.errored[path] = False
+
+    def add_path(self, host: Service, path: Path, msg: dict):
+        "Add a path with this message to the service"
+        # print("******** ADD",path)
+        super().add_path(host, path, msg)
+        self.hostdown[path] = self.cfg.timeout.restart.flap
+        if msg.get("up", False):
+            with suppress(KeyError):
+                del self.hostup[path]
+        else:
+            self.hostup[path] = self.cfg.timeout.restart.up
+
+    async def drop_path(self, host: Service, path: Path):
+        "Remove a path with this message from the service"
+        # print("******** DROP",path)
+        try:
+            msg = host.data.h[path]
+        except KeyError:
+            msg = None
+        try:
+            self.hostdown.pop(path)
+        except KeyError:
+            self.hostdown[path] = self.cfg.timeout.restart.error
+        else:
+            await self._err(host, path, "flapping", msg)
+        await super().drop_path(host, path)

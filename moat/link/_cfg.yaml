@@ -42,6 +42,11 @@ timeout:
     down: 25  # delayed error, give it a chance to come back
     min: 20  # answering old messages. Should be > ping timeout
 
+  restart:
+    error: 30  # generate an error if not back in this many seconds
+    flap: 60  # keep the error if it won't stay online this long
+    up: 20  # timeout for service.up to become True
+
   # client reconnect
   connect:
     initial: 5

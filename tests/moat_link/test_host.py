@@ -6,8 +6,9 @@ import anyio
 import os
 import pytest
 
-from moat.util import Path, as_service, ensure_cfg, merge, to_attrdict, yload
+from moat.util import P, Path, as_service, ensure_cfg, merge, to_attrdict, yload
 from moat.link._test import Scaffold
+from moat.link.announce import announcing
 from moat.link.host import ServiceMon
 
 from typing import TYPE_CHECKING
@@ -29,6 +30,10 @@ timeout:
     stale: .2  # delay removal after active replacement
     down: .15  # delayed error, give it a chance to come back
     min: .9  # answering old messages. Should be > ping timeout
+  restart:
+    error: .1
+    flap: .3
+    up: .2
 """
 
 
@@ -73,12 +78,28 @@ async def test_mon(cfg):
     ctim = yload(TIMES, attr=True)
     ctim.root = Path(os.getpid(), "TEST")
     merge(cfg.link, ctim)
+    emsgs = []
+    hmsgs = []
+
+    async def mon_err(cl):
+        async with cl.d_watch(P("error.run.host"), subtree=True) as mon:
+            async for p, m in mon:
+                assert p == P("test123.test.mon")
+                emsgs.append(m)
+
+    async def mon_host(cl):
+        async with cl.d_watch(P("run.host.test123.test"), subtree=True) as mon:
+            async for p, m in mon:
+                assert p == P("mon")
+                hmsgs.append(m)
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init="TEST")
 
         cl = await sf.client()
         sc2, sid = await sf.tg.start(run_service, sf, dict(debug=False, dbg_host=("a", "b")))
+        sf.tg.start_soon(mon_err, cl)
+        sf.tg.start_soon(mon_host, cl)
 
         async with ServiceMon(link=cl, cfg=cfg.link) as br:
             with anyio.fail_after(2):
@@ -108,3 +129,68 @@ async def test_mon(cfg):
             with anyio.move_on_after(0.5):
                 h = await sel_br(ibr, sid)
                 raise AssertionError(h)
+
+            if True:
+                async with cl.announcing(host="test123", name=P("test.mon")) as s:
+                    await anyio.sleep(0.5)
+                await anyio.sleep(0.5)
+                assert len(emsgs) == 3
+                assert emsgs[0]["msg"] == "not up"
+                assert emsgs[1] is Ellipsis
+                assert emsgs[2]["msg"] == "down"
+                assert len(hmsgs) == 2
+                assert hmsgs[0]["up"] is False
+                assert hmsgs[1] is Ellipsis
+                hmsgs = []
+                emsgs = []
+                # should update state when setting
+                # should error when not started after TIME
+
+                async with announcing(cl, host="test123", name=P("test.mon")) as s:
+                    s.set()
+                    await anyio.sleep(0.5)
+                    assert len(emsgs) == 1
+                await anyio.sleep(0.5)
+                assert len(emsgs) == 2
+                assert emsgs[0] is Ellipsis
+                assert emsgs[1]["msg"] == "down"
+                assert len(hmsgs) == 3
+                assert hmsgs[0]["up"] is False
+                assert hmsgs[1]["up"] is True
+                assert hmsgs[2] is Ellipsis
+                hmsgs = []
+                emsgs = []
+
+                async with cl.announcing(host="test123", name=P("test.mon")) as s:
+                    await anyio.sleep(0.1)
+                    s.set()
+                    await anyio.sleep(0.1)
+                    s.value = 42
+                    await anyio.sleep(0.1)
+                assert len(emsgs) == 0
+                await anyio.sleep(0.1)
+                assert len(emsgs) == 1
+                assert emsgs[0]["msg"] == "flapping"
+
+                assert 2 <= len(hmsgs) <= 4
+                assert hmsgs[0]["up"] is False
+                assert hmsgs[1]["up"] is True
+                assert hmsgs[-2]["up"] is True
+                assert hmsgs[-2]["value"] == 42
+                assert hmsgs[-1] is Ellipsis
+                hmsgs = []
+                emsgs = []
+
+            async with cl.announcing(host="test123", name=P("test.mon")) as s:
+                s.value = 43
+                await anyio.sleep(0.35)
+            assert len(emsgs) == 2
+            assert emsgs[0]["msg"] == "not up"
+            assert emsgs[1] is Ellipsis
+            assert 2 <= len(hmsgs) <= 4
+            assert hmsgs[-2]["up"] is False
+            assert hmsgs[-2]["value"] == 43
+            hmsgs = []
+            emsgs = []
+
+            await anyio.sleep(0.5)

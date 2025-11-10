@@ -8,7 +8,17 @@ from functools import partial
 
 from moat.util import Path, QueueFull
 from moat.lib.cmd.base import MsgHandler, MsgLink, MsgSender
-from moat.lib.cmd.const import B_ERROR, B_STREAM, E_CANCEL, E_NO_CMD, E_NO_STREAM, E_SKIP
+from moat.lib.cmd.const import (
+    B_ERROR,
+    B_STREAM,
+    E_CANCEL,
+    E_ERROR,
+    E_NO_CMD,
+    E_NO_CMDS,
+    E_NO_STREAM,
+    E_SKIP,
+    E_UNSPEC,
+)
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
 from moat.util.compat import (
@@ -41,6 +51,37 @@ if TYPE_CHECKING:
 
     from collections.abc import Sequence
     from typing import Any
+
+
+def B_FL_NAME(flag):
+    "stringify message flags"
+    if flag & B_ERROR:
+        return ".W" if flag & B_STREAM else ".E"
+    else:
+        return ".S" if flag & B_STREAM else ""
+
+
+def B_ERR_NAME(err):
+    "stringify message errors"
+    if isinstance(err, Exception):
+        return repr(err)
+    if err >= 0:
+        return f"S+{err}"
+    if err <= E_NO_CMD:
+        return f"NO_CMD_{-E_NO_CMD.value - err}"
+    if err == E_UNSPEC:
+        return "UNSPEC"
+    if err == E_NO_STREAM:
+        return "NO_STREAM"
+    if err == E_CANCEL:
+        return "CANCEL"
+    if err == E_NO_CMDS:
+        return "NO_CMDS"
+    if err == E_SKIP:
+        return "SKIP"
+    if err == E_ERROR:
+        return "ERROR"
+    return f"?{err}"
 
 
 def i_f2wire(id: int, flag: int) -> int:  # noqa: D103
@@ -180,8 +221,15 @@ class HandlerStream(MsgHandler):
         i, flag = wire2i_f(msg[0])
         # flip sign
         i = -i
+
         if self._logger:
-            self._logger("IN : %r", msg)
+            self._logger(
+                "IN : %d%s %s%r",
+                i,
+                B_FL_NAME(flag),
+                B_ERR_NAME(msg[1]) + " " if flag & B_ERROR else "",
+                msg[2:] if flag & B_ERROR else msg[1:],
+            )
 
         a = msg[1:]
         kw = a.pop() if a and isinstance(a[-1], dict) else {}
@@ -339,7 +387,13 @@ class HandlerStream(MsgHandler):
             res.append({})
 
         if self._logger:
-            self._logger("OUT: %r", res)
+            self._logger(
+                "OUT: %d%s %s%r",
+                link.id,
+                B_FL_NAME(flag),
+                B_ERR_NAME(res[1]) + " " if flag & B_ERROR else "",
+                res[2:] if flag & B_ERROR else res[1:],
+            )
         return res
 
     def start(self, cmd, *a, **kw) -> None:  # noqa: D102

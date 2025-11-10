@@ -26,17 +26,22 @@ async def test_basic(cfg):
 
             @tg.start_soon
             async def ann1():
-                async with announcing(c1, P("foo.bar")) as s:
+                # If the test fails here, most likely you're using the
+                # system broker and have retained messages lying around.
+                # TODO.
+                async with announcing(c1, P("foo.bar"), value="C1") as s:
                     s.set()
                     evt.set()
+                    await c1.i_sync()
+                    await anyio.sleep(0.3)
 
             @tg.start_soon
             async def ann2():
                 with anyio.fail_after(1.2):
                     await evt.wait()
-                # with pytest.raises(ServiceSupplanted), ungroup:
-                if True:
-                    async with announcing(c2, P("foo.bar")) as s:
+                await anyio.sleep(0.2)
+                with pytest.raises(ServiceSupplanted), ungroup:  # noqa:PT012
+                    async with announcing(c2, P("foo.bar"), value="C2") as s:
                         s.set()
                         await anyio.sleep(0.2)
 
@@ -63,6 +68,7 @@ async def test_force(cfg):
                 with pytest.raises(ServiceSupplanted), ungroup:  # noqa:PT012
                     async with announcing(c1, P("foo.bar")) as s:
                         s.set()
+                        await c1.i_sync()
                         evt.set()
                         with anyio.fail_after(1.4):
                             await evt2.wait()
@@ -76,6 +82,7 @@ async def test_force(cfg):
                     s.set()
                     await anyio.sleep(0.2)
                     evt2.set()
+                    await anyio.sleep(0.2)
 
             with anyio.fail_after(1.0):
                 await evt2.wait()

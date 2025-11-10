@@ -2140,7 +2140,7 @@ class Server(MsgHandler):
             self.logger.debug("Client C_%s closed", cnr)
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
-            self.logger.debug("End Client C_%s %r", cnr, exc, exc_info=exc)
+            self.logger.debug("End Client C_%s %r", cnr, exc)
             if hasattr(exc, "split"):
                 exc = exc.split(CancelExc)[1]  # pyright: ignore
                 ex = list(exc_iter(exc))

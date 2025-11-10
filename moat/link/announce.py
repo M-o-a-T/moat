@@ -131,12 +131,20 @@ class SetReady:
         self._value = value
         self.evt.set()
 
-    async def monitor(self):
+    async def monitor(self, *, task_status):
         """
         Watch for other announcements with a different ID.
         """
-        async with self.link.d_watch(self.path, state=False if self.force else NotGiven) as mon:
+        async with self.link.d_watch(
+            self.path, state=False if self.force else None, mark=True
+        ) as mon:
             async for msg in mon:
+                if msg is None:
+                    if task_status is not None:
+                        task_status.started()
+                        task_status = None
+                    continue
+
                 if msg is NotGiven:
                     raise ServiceCleared(self.path)
 
@@ -196,6 +204,7 @@ async def announcing(
     force: bool = False,
     service: MsgSender | None = None,
     via: anyio.Event | None = None,
+    value: Any = None,
 ):
     """
     This async context manager broadcasts the availability of a named service.
@@ -256,7 +265,9 @@ async def announcing(
             if service:
                 await tg.start(_delegate, service_path, service)
             srv = SetReady(link, path, force, service_path)
-            tg.start_soon(srv.monitor)
+            if value is not None:
+                srv.value = value
+            await tg.start(srv.monitor)
             tg.start_soon(srv.run)
             tg.start_soon(srv.wait_sr)
             if via:

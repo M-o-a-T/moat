@@ -721,28 +721,33 @@ class AsyncMQTTClient:
 
         async def unsubscribe() -> None:
             # Send an unsubscribe request if any of my subscriptions are unused
-            with anyio.fail_after(1,shield=True):
-                async with self._subscribe_lock:
-                    patterns: list[Pattern] = []
-                    for subscr in subscription.subscriptions:
-                        subscr.users.discard(subscription)
-                        if not subscr.users:
-                            patterns.append(subscr.pattern)
-                            del self._subscriptions[subscr.pattern]
-                            if subscr.subscription_id:
-                                del self._subscription_ids[subscr.subscription_id]
-                            else:
-                                del self._subscription_no_id[pattern]
+            try:
+                patterns: list[Pattern] = []
+                with anyio.fail_after(2,shield=True):
+                    async with self._subscribe_lock:
+                        for subscr in subscription.subscriptions:
+                            subscr.users.discard(subscription)
+                            if not subscr.users:
+                                patterns.append(subscr.pattern)
+                                del self._subscriptions[subscr.pattern]
+                                if subscr.subscription_id:
+                                    del self._subscription_ids[subscr.subscription_id]
+                                else:
+                                    del self._subscription_no_id[pattern]
 
-                    if patterns:
-                        if unsubscribe_packet_id := self._state_machine.unsubscribe(
-                            patterns
-                        ):
-                            unsubscribe_op = MQTTUnsubscribeOperation(unsubscribe_packet_id)
-                            try:
-                                await self._run_operation(unsubscribe_op)
-                            except MQTTUnsubscribeFailed as exc:
-                                logger.warning("Unsubscribe failed: %s", exc)
+                        if patterns:
+                            if unsubscribe_packet_id := self._state_machine.unsubscribe(
+                                patterns
+                            ):
+                                unsubscribe_op = MQTTUnsubscribeOperation(unsubscribe_packet_id)
+                                try:
+                                    await self._run_operation(unsubscribe_op)
+                                except MQTTUnsubscribeFailed as exc:
+                                    logger.warning("Unsubscribe failed: %s", exc)
+            except TimeoutError:
+                logger.warning("Unsubscribe timed out: %r", pattern)
+                # TODO if the timeout is due to a disconnect
+                # we need to retry after reconnecting
 
         async with AsyncExitStack() as exit_stack:
             subscription = AsyncMQTTSubscription()

@@ -340,23 +340,24 @@ class AsyncMQTTClient:
 
     @asynccontextmanager
     async def _ctx(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as task_group:
-            await task_group.start(self._manage_connection)
-            try:
+        try:
+            async with create_task_group() as task_group:
+                await task_group.start(self._manage_connection)
+
                 yield self
 
+                task_group.cancel_scope.cancel()
+
+        finally:
+            with move_on_after(2, shield=True):
                 self._closed = True
                 self._state_machine.disconnect()
                 operation = MQTTDisconnectOperation()
                 await self._run_operation(operation)
+                await self._stream.aclose()
 
-            finally:
-                task_group.cancel_scope.cancel()
-                with move_on_after(2, shield=True):
-                    await self._stream.aclose()
-
-                self._stream = None
-                self._state_machine = MQTTClientStateMachine()
+            self._stream = None
+            self._state_machine = MQTTClientStateMachine()
 
     async def _manage_connection(
         self,

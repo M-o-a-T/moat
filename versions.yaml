@@ -166,7 +166,7 @@ moat-lib-pid:
 moat-lib-priomap:
   deb: 0.2.1-1
   pkg: 1
-  pypi: 0.1.1
+  pypi: 0.2.1
   rev: 800382c5e7801ba5cbfac8781bba65cb6bb6b1cf
   tag: 0.2.1
 moat-lib-victron:
@@ -183,9 +183,9 @@ moat-link:
   tag: 0.2.34
 moat-link-server:
   deb: 0.2.3-1
-  pkg: 1
+  pkg: 2
   pypi: 0.3.16
-  rev: 800382c5e7801ba5cbfac8781bba65cb6bb6b1cf
+  rev: 43bf29f206750038dd12f40817846cb17a7427e7
   tag: 0.3.17
 moat-micro:
   deb: 0.16.4-1

@@ -7,7 +7,6 @@ import time
 from moat.util import NotGiven, P, Path
 from moat.lib.cmd import RemoteError
 from moat.link._test import Scaffold
-from moat.util.msg import MsgReader
 
 
 @pytest.mark.anyio
@@ -180,18 +179,18 @@ async def test_wrap_ok(cfg):
 
 
 @pytest.mark.anyio
-async def test_wrap_bad(cfg, tmp_path):
+async def test_errlog(cfg):
     "Check wrapping an exception (and clearing it the same way)"
-    epath = tmp_path / "errs"
-    cfg.link.server.errlog = str(epath)
-    epath = anyio.Path(epath)
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init={"Hello": "there!", "test": 123}),
         sf.client_() as c,
     ):
         t1 = time.time()
-        async with sf.do_watch(Path("error"), meta=True, subtree=True) as r:
+        async with (
+            sf.do_watch(P("error"), meta=True, subtree=True) as r,
+            sf.do_watch(P("run.error"), meta=True, subtree=True, break_=False) as errlog,
+        ):
             try:
                 async with c.e_wrap(P("test.here"), help="me?") as mon:
                     await mon.send("one")
@@ -234,35 +233,18 @@ async def test_wrap_bad(cfg, tmp_path):
         with pytest.raises(KeyError):
             await c.d_get(P("error.test.here"))
 
-    from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_CHANGE  # noqa:PLC0415,I001
+    rdr = await errlog.get()
+    rdr = iter(rdr)
 
-    async with MsgReader(epath, codec="std-cbor") as rd:
-        rdr = aiter(rd)
-        m = await anext(rdr)
-        assert m.tag == CBOR_TAG_MOAT_FILE_ID
-        assert m.value[1]["state"] is None
-        assert m.value[1]["mode"] == "error"
+    m = next(rdr)
+    assert m[0] == P("test.here")
+    assert m[1]["help"] == "me?"
+    assert "_ok" not in m[2]
 
-        m = await anext(rdr)
-        assert m.tag == CBOR_TAG_MOAT_CHANGE
-        assert m.value["state"] is False
-        assert m.value["mode"] == "error"
+    m = next(rdr)
+    assert m[0] == P("test.here")
+    assert m[1]["help"] == "me too"
+    assert m[1]["_ok"] is True
 
-        m = await anext(rdr)
-        assert m[0] == 0
-        assert m[1] == P("test.here")
-        assert m[2]["help"] == "me?"
-        assert "_ok" not in m[2]
-
-        m = await anext(rdr)
-        assert m[0] == 2
-        assert m[1] == []
-        assert m[2]["help"] == "me too"
-        assert m[2]["_ok"] is True
-
-        m = await anext(rdr)
-        assert m.tag == CBOR_TAG_MOAT_FILE_END
-        assert m.value["mode"] == "cancel"
-
-        with pytest.raises(StopAsyncIteration):
-            await anext(rdr)
+    with pytest.raises(StopIteration):
+        next(rdr)

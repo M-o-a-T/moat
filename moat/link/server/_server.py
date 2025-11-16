@@ -994,8 +994,17 @@ class Server(MsgHandler):
     ):
         """
         Update error data.
+
+        Args:
+            path: Path which the error applies to. Must not be empty and
+                  not start with "error".
+            err: Error message or exception. None: clear; NotGiven:
+                 increase occurrence counter
         """
+        if len(path) == 0 or path[0] == "error":
+            raise ValueError(f"Messed-up error path: {path}")
         p = Path("error") + path
+
         try:
             dt = self.data.get(p, create=False if err is None else None)
         except KeyError:
@@ -1011,7 +1020,9 @@ class Server(MsgHandler):
             dd["_ok"] = True
         elif err is not NotGiven:
             # count
-            dd["_n"] = dd.get("_n", 0) + 1
+            if dt.meta:  # this is an update
+                dd["_n"] = dd.get("_n", 1) + 1
+                dd["_first"] = dt.meta.timestamp
 
         if self._err_log is not None:
             await self._err_log(path, dd, meta)

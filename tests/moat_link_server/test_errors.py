@@ -45,29 +45,44 @@ async def test_exc(cfg):
                 raise KeyError("abc")
             except Exception as exc:
                 await c.e_exc(P("test.here"), exc, missing="key")
+                err = exc
+            await anyio.sleep(0.2)
+            await c.e_exc(P("test.here"), err, missing="key", foo="again")
             await anyio.sleep(0.2)
             await c.e_ack(P("test.here"), this="that")
             await anyio.sleep(0.2)
         r = await r.get()
         t2 = time.time()
-        assert len(r) == 2
+        assert len(r) == 3
         p, d, m = r[0]
         assert p == P("test.here")
         assert d["missing"] == "key"
         assert "this" not in d
-        assert d["_n"] == 1
         assert isinstance(d["_exc"], KeyError)
         assert "_bt" not in d
+        assert "_first" not in d
         assert t1 < m.timestamp < t2
         p, d, m2 = r[1]
         assert p == P("test.here")
         assert d["missing"] == "key"
-        assert d["this"] == "that"
-        assert d["_ack"]
-        assert d["_n"] == 1
+        assert d["foo"] == "again"
+        assert "_ack" not in d
+        assert d["_n"] == 2
+        assert d["_first"] == m.timestamp
         assert isinstance(d["_exc"], KeyError)
         assert "_bt" not in d
         assert m.timestamp < m2.timestamp < t2
+        p, d, m3 = r[2]
+        assert p == P("test.here")
+        assert d["missing"] == "key"
+        assert d["this"] == "that"
+        assert d["foo"] == "again"
+        assert d["_ack"]
+        assert d["_first"] == m.timestamp
+        assert d["_n"] == 2
+        assert isinstance(d["_exc"], KeyError)
+        assert "_bt" not in d
+        assert m2.timestamp < m3.timestamp < t2
 
 
 @pytest.mark.anyio

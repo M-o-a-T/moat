@@ -251,7 +251,6 @@ async def monitor(
                     if pm(p):
                         continue
 
-                    m = MsgMeta.restore(m)
                     if only:
                         res = d
                     elif path_only:

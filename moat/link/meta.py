@@ -281,7 +281,7 @@ class MsgMeta:
 
 
 def _meta_repr(dumper, data):
-    return dumper.represent_scalar("!Meta", repr(data))
+    return dumper.represent_dict(data.repr())
 
 
 SafeRepresenter.add_representer(MsgMeta, _meta_repr)

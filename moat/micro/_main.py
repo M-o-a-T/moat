@@ -331,10 +331,10 @@ async def boot(obj, state):
 
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
-@click.option("-t", "--time", is_flag=True, help="Time the command")
-@click.option("-a", "--parts", is_flag=True, help="Retrieve a possibly-partial result")
 @click.argument("path", nargs=1, type=P)
-@attr_args(with_path=True, with_proxy=True)
+@attr_args(with_path=True, with_proxy=True, with_arglist=True)
+@click.option("-a", "--parts", is_flag=True, help="Retrieve a possibly-partial result")
+@click.option("-t", "--time", is_flag=True, help="Time the command")
 @catch_errors
 async def cmd(obj, path, time, parts, **attrs):
     """
@@ -343,8 +343,8 @@ async def cmd(obj, path, time, parts, **attrs):
     The command is prefixed by the "micro.connect.remote" option;
     use "moat micro -R ‹path› cmd …" to change it if necessary.
 
-    The key ":n" contains an empty array, for positional arguments.
-    Use `-s :n:n XXX` to append to it.
+    Positional arguments may follow the command name. They are parsed as
+    with `--set`.
     """
     cfg = obj.mcfg
     val = process_args({None: []}, no_path=True, **attrs)

@@ -36,7 +36,9 @@ class Cmd(BaseCmd):
         (simple keys and their values) and a list (keys for complex
         values).
 
-        Same for a list.
+        Likewise, the data for a list is a list with "simple" elements
+        (complex data replaced by `None`), plus a list with the offsets of
+        complex items that should be retrieved recursively.
         """
         p = msg.get("p", ())
         try:

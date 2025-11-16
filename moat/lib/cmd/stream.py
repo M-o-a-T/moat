@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from functools import partial
 
-from moat.util import Path, QueueFull
+from moat.util import Path, QueueFull, pop_kw, push_kw
 from moat.lib.cmd.base import MsgHandler, MsgLink, MsgSender
 from moat.lib.cmd.const import (
     B_ERROR,
@@ -232,7 +232,7 @@ class HandlerStream(MsgHandler):
             )
 
         a = msg[1:]
-        kw = a.pop() if a and isinstance(a[-1], dict) else {}
+        kw = pop_kw(a)
 
         stream = flag & B_STREAM
         error = flag & B_ERROR
@@ -372,19 +372,9 @@ class HandlerStream(MsgHandler):
         link, a, kw, flag = await self._send_q.get()
         i = i_f2wire(link.id, flag)
 
-        # Handle last-arg-is-dict ambiguity
-        if kw:
-            pass
-        elif not a or not isinstance(a[-1], dict):
-            kw = None
-        elif kw is None:
-            kw = {}
         res: list[Any] = [i]
         res.extend(a)
-        if kw is not None:
-            res.append(kw)
-        elif a and isinstance(a[-1], dict):
-            res.append({})
+        push_kw(res, kw)
 
         if self._logger:
             self._logger(

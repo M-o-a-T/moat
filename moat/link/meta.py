@@ -10,7 +10,7 @@ from base64 import b85decode, b85encode
 import ruyaml as yaml
 from attrs import define, field
 
-from moat.util import NotGiven
+from moat.util import NotGiven, pop_kw, push_kw
 from moat.lib.codec.proxy import as_proxy
 from moat.util.cbor import StdCBOR
 from moat.util.times import ts2iso
@@ -97,9 +97,9 @@ class MsgMeta:
         """
         Emit this as an array, ready for sending.
         """
-        if self.kw or (self.a and isinstance(self.a[-1], dict)):
-            return self.a + [self.kw]
-        return self.a
+        a = list(self.a)
+        push_kw(a, self.kw)
+        return a
 
     def repr(self):
         """
@@ -115,10 +115,7 @@ class MsgMeta:
     def restore(cls, a, kw=NotGiven):  # noqa: D102
         m = object.__new__(cls)
         if kw is NotGiven:
-            if a and isinstance(a[-1], dict):
-                kw = a.pop()
-            else:
-                kw = {}
+            kw = pop_kw(a)
         source = kw.pop("source", None)
         if isinstance(a, tuple):
             raise TypeError("why a tuple?")  # XXX
@@ -183,13 +180,11 @@ class MsgMeta:
         res = self.a[:]
         while res and res[-1] is None:
             res.pop()
-        if self.kw or isinstance(res[-1], dict):
-            res.append(self.kw)
+        push_kw(res, self.kw)
         return res
 
     def _unmap(self, data: list[Any]):
-        if isinstance(data[-1], dict):
-            self.kw = data.pop()
+        self.kw = pop_kw(data)
         self.a = data
         dit = iter(data)
         try:

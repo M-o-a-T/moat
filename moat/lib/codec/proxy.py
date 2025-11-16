@@ -31,6 +31,7 @@ from moat.lib.codec._proxy import (
     name2obj,
     obj2name,
 )
+from moat.util.pp import pop_kw, push_kw
 
 
 class NoProxyError(ValueError):
@@ -93,11 +94,9 @@ def wrap_obj(obj, name=None):
                     a = []
                 else:
                     a, k = ak
-                res = [
-                    name,
-                ] + a
-                if k or (a and isinstance(a[-1], dict)):
-                    res.append(k)
+                res = [name]
+                res.extend(a)
+                push_kw(res, k)
             elif p[0].__name__ == "__newobj__":
                 raise NotImplementedError(p)
                 res = (p[1][0], p[1][1:]) + tuple(p[2:])
@@ -132,12 +131,9 @@ def unwrap_obj(s):
         try:
             pk = _CProxy[pk]
         except KeyError:
-            kw = a.pop() if a and isinstance(a[-1], dict) else {}
+            kw = pop_kw(a)
             return DProxy(pk, a, kw)
-    if a and isinstance(a[-1], dict):
-        kw = a.pop()
-    else:
-        kw = {}
+    kw = pop_kw(a)
 
     if isfunction(pk):
         return pk(*a, **kw)

@@ -40,6 +40,7 @@ from moat.util import (
     attrdict,
     gen_ident,
     id2str,
+    push_kw,
     to_attrdict,
 )
 from moat.lib.cmd.anyio import run as run_cmd_anyio
@@ -521,11 +522,8 @@ class ServerClient(LinkCommon):
         try:
             async with msg.stream_in() as mon:
                 async for msg in mon:
-                    if a := msg.args:
-                        if msg.kw:
-                            a.append(msg.kw)
-                        elif isinstance(a[-1], dict):
-                            a.append({})
+                    if a := list(msg.args):
+                        push_kw(a, msg.kw)
                         log.append(a)
                     elif msg.kw:
                         log.append(msg.kw)

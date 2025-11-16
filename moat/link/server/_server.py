@@ -40,7 +40,6 @@ from moat.util import (
     attrdict,
     gen_ident,
     id2str,
-    push_kw,
     to_attrdict,
 )
 from moat.lib.cmd.anyio import run as run_cmd_anyio
@@ -522,17 +521,13 @@ class ServerClient(LinkCommon):
         try:
             async with msg.stream_in() as mon:
                 async for msg in mon:
-                    if a := list(msg.args):
-                        push_kw(a, msg.kw)
-                        log.append(a)
-                    elif msg.kw:
-                        log.append(msg.kw)
-                    elif log and log[-1] != ():
-                        log.append(())
-                    else:
+                    a = msg.to_list(dict_only=True)
+                    if not a and log and not log[-1]:
                         continue
+                    log.append(a)
                     if len(log) > 10:
-                        log = log[0:4] + [...] + log[-5:]
+                        log[4:-5] = [...]
+                    # await self.backend.send(P(":R.run.error") + path, kw)
         except Exception as exc:
             err = exc
         except BaseException:

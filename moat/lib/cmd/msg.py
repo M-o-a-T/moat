@@ -4,7 +4,7 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util import ExpectedError, Path, outcome
+from moat.util import ExpectedError, Path, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
 from moat.util.compat import Event, Queue, is_async, log, shield
 
@@ -89,7 +89,9 @@ class MsgResult(Iterable):
 
     @property
     def args_l(self) -> MutableSequence:  # pyright:ignore
-        "Retrieve the argument list as a list."
+        """
+        Retrieve the argument list, in a mutable form.
+        """
         if not isinstance(self._a, MutableSequence):
             self._a = list(self._a)
         return self._a
@@ -100,6 +102,14 @@ class MsgResult(Iterable):
         if self._kw is None:
             return {}
         return self._kw
+
+    def to_list(self, dict_only=False) -> list[Any]:
+        "Returns the args with a possible kwargs at the end"
+        if dict_only and self._kw and not self._a:
+            return self._kw
+        a = list(self._a)
+        push_kw(a, self._kw)
+        return a
 
     def __len__(self) -> int:
         return len(self._a)

@@ -140,7 +140,7 @@ class Cmd(_Cmd):
             elif m == 4:
                 raise SystemExit
 
-        await self.root.tg.start_soon(_boot, t, _name="_sys.boot1")
+        self.root.tg.start_soon(_boot, t, _name="_sys.boot1")
         return True
 
     doc_machid = dict(_d="unique machine id", _r="int")

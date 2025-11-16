@@ -433,9 +433,13 @@ class SubMsgSender(MsgSender):
 
     async def __aenter__(self):
         "Ensure that the called object is ready for service"
-        msg = await self.cmd(["rdy_"])
-        if msg[0]:
-            raise NotReadyError(self)
+        try:
+            msg = await self.cmd(["rdy_"])
+        except KeyError:
+            pass  # can't do it. Oh well.
+        else:
+            if msg[0]:
+                raise NotReadyError(self)
         return await super().__aenter__()
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:  # noqa: D102

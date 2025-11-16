@@ -91,11 +91,14 @@ class Path(Sequence[PathElem]):
 
     \b
         ::  escapes : colon
-        :.  escapes . dot   (dot-path repr only)
-        :_  escapes   space (dot-path repr only)
-        :|  escapes / slash (slash-path repr only)
-        :h  escapes # hash  (slash-path repr only, optional)
-        :p  escapes + plus  (slash-path repr only, optional)
+        :.  escapes . dot   (dot-path only)
+        :_  escapes   space (dot-path only)
+        :=  escapes + plus  (dot-path parsing only)
+        :|  escapes / slash (slash-path only)
+        :h  escapes # hash  (slash-path only, optional)
+        :p  escapes + plus  (slash-path only, optional)
+        :%  escapes \\ backslash (parsing only)
+        :!  escapes | pipe/bar (parsing only)
 
     As separator (starts a new element):
 
@@ -145,13 +148,13 @@ class Path(Sequence[PathElem]):
     form. Thus, if you rename the root or move data from one MoaT-Link
     setup to another, everything still works.
 
-    Matching a path works. Note that due to the way Python's matching
-    algorithm works you need to use double parentheses.
+    Matching a path works:
 
-        p=Path("a","b","c")
-        match p:
-            case Path((x,y)):
-                print("Yes")
+    >>> p=Path("a","b","c")
+    ... match p:
+    ...     case Path((x,y,"c")):
+    ...         print("Yes")
+    >>>
 
     """
 
@@ -632,6 +635,12 @@ class Path(Sequence[PathElem]):
                 esc = False
                 if e in ":.":
                     add(e)
+                elif e == "!":
+                    add("|")
+                elif e == "%":
+                    add("\\")
+                elif e == "=":
+                    add("+")
                 elif e in "z?":
                     new(NotGiven, True)
                 elif e == "e":

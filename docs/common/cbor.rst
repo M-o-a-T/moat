@@ -42,11 +42,12 @@ Path
     =============== =============================
 
 In the context of MoaT, this tag is used with arrays to tag a path to an
-object.
+object. See :ref:`common/path` for details.
 
-A Path is a sequence of object accessors, i.e. a way to reference a
-possibly-deeply nested object. Path elements typically include text strings
-(object members, map keys) and non-negative integers (array indices).
+In the context of CBOR, a Path is a sequence of object accessors, i.e. a
+way to reference a possibly-deeply nested object. Path elements typically
+include text strings (object members, map keys) and non-negative integers
+(array indices).
 
 A recipient can use this tag to distinguish a sequence of lookups from
 a tuple that's directly used as a map key. (Languages like Python allow this.)

@@ -21,6 +21,8 @@ from .config import CFG, ensure_cfg
 from .dict import attrdict, to_attrdict
 from .exc import ungroup
 from .merge import merge
+from .path import P, Path
+from .yaml import yload
 
 from collections import defaultdict
 from collections.abc import Mapping
@@ -29,8 +31,6 @@ try:
     from moat.lib.codec.proxy import Proxy
 except ImportError:
     Proxy = None
-from .path import P
-from .yaml import yload
 
 from typing import TYPE_CHECKING
 
@@ -96,6 +96,10 @@ def attr_args(
 
     In new mode, Legacy short options are not availabile;
     long options are available but hidden.
+
+    All arguments are of the form "-X path value". A path consisting of a
+    single ``+`` expands to ``:n:n`` for easy appending to argument lists.
+    Use ``:=`` if you ever need a path that consist of a single plus character.
     """
 
     def _proc(proc):
@@ -281,7 +285,10 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
 
     for k, v in dd:
         if isinstance(k, str):
-            k = P(k)
+            if k == "+":
+                k = Path.build((None, None))
+            else:
+                k = P(k)
         if not len(k):
             if vs is not None:
                 raise click.BadOptionUsage(

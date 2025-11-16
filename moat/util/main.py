@@ -4,6 +4,7 @@ Support for main program, argv, etc.
 
 from __future__ import annotations
 
+import ast
 import importlib
 import logging
 import logging.config
@@ -15,6 +16,7 @@ from functools import partial, wraps
 from pathlib import Path as FSPath
 
 import asyncclick as click
+import simpleeval
 
 from . import NotGiven
 from .config import CFG, ensure_cfg
@@ -57,6 +59,19 @@ this_load = ContextVar("this_load", default=None)
 
 NoneType = type(None)
 
+# cmd_eval is a simple and safe "eval" replacement.
+_eval = simpleeval.SimpleEval(functions={})
+_eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript]
+    _eval._eval(x) for x in node.elts
+)
+_eval.nodes[ast.List] = lambda node: list(  # pyright: ignore[reportOptionalSubscript]
+    _eval._eval(x) for x in node.elts
+)
+_eval.nodes[ast.Dict] = lambda node: attrdict(  # pyright: ignore[reportOptionalSubscript]
+    (_eval._eval(x), _eval._eval(y)) for x, y in zip(node.keys, node.values, strict=False)
+)
+cmd_eval = _eval.eval
+
 
 def _no_config(*a, **k):  # noqa:ARG001
     import warnings  # noqa: PLC0415
@@ -67,6 +82,7 @@ def _no_config(*a, **k):  # noqa:ARG001
 def attr_args(
     proc=None,
     with_combined="s",
+    with_arglist=False,
     with_path=True,
     with_eval=True,
     with_var=True,
@@ -108,12 +124,12 @@ def attr_args(
             if with_var:
                 ht.append("~str")
             if with_eval:
-                ht.append("=value")
+                ht.append("=expr")
             if with_path:
                 ht.append(".path, :path")
             if with_proxy:
                 ht.append("^proxy")
-            ht = "|".join(ht)
+            ht = " | ".join(ht)
 
             args = ("--set",) + (
                 ("-" + ("s" if isinstance(with_combined, bool) else with_combined),)
@@ -126,8 +142,16 @@ def attr_args(
                 nargs=2,
                 type=(P, str),
                 multiple=True,
-                help=f"{par_name} (name {ht})",
+                metavar="name|path value",
+                help=f"{par_name} (value: {ht})",
                 hidden=not with_eval or not with_combined,
+            )(proc)
+
+        if with_arglist:
+            proc = click.argument(
+                "args_",
+                nargs=-1,
+                type=str,
             )(proc)
 
         args = (f"--{with_path}" if isinstance(with_path, str) else "--path",) + (
@@ -140,7 +164,7 @@ def attr_args(
             type=(P, P),
             multiple=True,
             help=f"{par_name} (name value), as path",
-            hidden=not with_path or not with_combined,
+            hidden=not with_path or with_combined,
         )(proc)
 
         args = (f"--{with_eval}" if isinstance(with_eval, str) else "--eval",) + (
@@ -153,7 +177,7 @@ def attr_args(
             type=(P, str),
             multiple=True,
             help=f"{par_name} (name value), evaluated",
-            hidden=not with_eval or not with_combined,
+            hidden=not with_eval or with_combined,
         )(proc)
 
         args = (f"--{with_var}" if isinstance(with_var, str) else "--var",) + (
@@ -166,7 +190,7 @@ def attr_args(
             type=(P, str),
             multiple=True,
             help=f"{par_name} (name value)",
-            hidden=not with_var or not with_combined,
+            hidden=not with_var or with_combined,
         )(proc)
 
         args = (f"--{with_proxy}" if isinstance(with_proxy, str) else "--proxy",) + (
@@ -179,7 +203,7 @@ def attr_args(
             type=(P, str),
             multiple=True,
             help="Remote proxy (name value)",
-            hidden=not with_proxy or not with_combined,
+            hidden=not with_proxy or with_combined,
         )(proc)
 
         return proc
@@ -190,13 +214,15 @@ def attr_args(
         return _proc(proc)
 
 
-def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None):
+def process_args(
+    val, set_=(), args_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None
+):
     """
-    process ``set_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
+    process ``set_``/``args_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
 
     Arguments:
         val: dict to modify
-        set_, vars_, eval_, path_, proxy_: via `attr_args`
+        set_, vars_, args_, eval_, path_, proxy_: via `attr_args`
         vs: if given: set of vars
     Returns:
         the new value.
@@ -214,7 +240,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
         proxy_ = proxy_.items()
 
     def data():
-        for k, v in set_:
+        def s_eval(v):
             if v[0] == "~":
                 v = v[1:]
             elif v == "=-":
@@ -226,7 +252,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
             elif v == "=n":
                 v = None
             elif v[0] == "=":
-                v = eval(v[1:])  # pylint: disable=W0631
+                v = cmd_eval(v[1:])  # pylint: disable=W0631
             elif v[0] == ":":
                 v = P(v)
             elif v[0] == ".":
@@ -247,7 +273,9 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                                 raise ValueError("noPath")
                         except ValueError:
                             pass  # leave it as a string
-            yield k, v
+
+        for k, v in set_:
+            yield k, s_eval(v)
         for k, v in vars_:
             yield k, v
         for k, v in eval_:
@@ -275,6 +303,10 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
             for k, v in proxy_:
                 v = Proxy(v)
                 yield k, v
+
+        # Arguments are given last, thus they get processed last.
+        for v in args_:
+            yield ((None, None), s_eval(v))
 
     if set_:
         dd = data()

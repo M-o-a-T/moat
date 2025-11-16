@@ -522,7 +522,7 @@ async def cfg_(
             rcfg = await cf.get()
 
         rcfg = process_args(rcfg, **attrs)
-        if attrs and not write and not write_client:
+        if has_attrs and not write and not write_client:
             await cf.set(rcfg, sync=sync, replace=True)
 
         if write_client:

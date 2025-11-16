@@ -259,7 +259,7 @@ class Scaffold(CtxObj):
             yield li
 
     @asynccontextmanager
-    async def do_watch(self, path, exp=NotGiven, n=0, *a, **kw) -> AsyncIterator[ValueEvent]:
+    async def do_watch(self, path, exp=NotGiven, n=0, **kw) -> AsyncIterator[ValueEvent]:
         """
         Run a client that expects @exp and appends all non-exp
         results to @rd.
@@ -276,7 +276,7 @@ class Scaffold(CtxObj):
             async def work():
                 res = []
                 try:
-                    async with c.d_watch(path, *a, **kw) as mon:
+                    async with c.d_watch(path, **kw) as mon:
                         async for r in mon:
                             if kw.get("meta"):
                                 t = time.time()

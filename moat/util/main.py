@@ -267,6 +267,7 @@ def process_args(
                         v = float(v)
                     except ValueError:
                         pass  # leave it as a string
+            return v
 
         for k, v in set_:
             yield k, s_eval(v)

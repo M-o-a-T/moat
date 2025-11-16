@@ -101,7 +101,7 @@ class _Pin:
 
 class Pin(BaseCmd):
     """
-    This is a basic analog pin.
+    This is a basic digital pin.
 
     Iterating it yields a new value whenever the pin changes.
     """

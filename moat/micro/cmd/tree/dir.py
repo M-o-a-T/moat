@@ -4,7 +4,6 @@ Server-side dir support
 
 from __future__ import annotations
 
-import sys
 from itertools import chain
 
 from moat.util import NotGiven, Path
@@ -124,9 +123,8 @@ class CfgStore(SubStore):
 
         async def _set(p, c):
             # current client cfg
-            print("SET", p, c, file=sys.stderr)
             try:
-                ocd = await self.sd.r(p)
+                ocd = await self.sd.r(p=p)
                 if isinstance(ocd, (list, tuple)):
                     ocd, ocl = ocd
                 else:

@@ -93,6 +93,8 @@ async def cli(ctx, section, remote, path):
     obj = ctx.obj
     ocfg = cfg = obj.cfg.micro
     remote2 = None
+    if "--help" in sys.argv:
+        return  # HACK
 
     inv = ctx.invoked_subcommand
     if inv == "run":

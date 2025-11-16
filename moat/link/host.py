@@ -208,10 +208,10 @@ class Service:
         "queue update to Broadcaster"
         self.mon.updated(self, evt)
 
-    def drop_id(self) -> Awaitable[None]:
+    def drop_id(self, _evt) -> Awaitable[None]:
         return self.mon.drop_id(self)
 
-    def drop_host(self) -> Awaitable[None]:
+    def drop_host(self, _evt) -> Awaitable[None]:
         return self.mon.drop_host(self)
 
     async def drop_both(self, evt=None) -> None:
@@ -298,7 +298,10 @@ class HostList(CtxObj):
 
     async def _timer(self):
         async for id in self.times:
-            h = self.ids[id]
+            try:
+                h = self.ids[id]
+            except KeyError:
+                continue
             self.tg.start_soon(h.trigger, _E.TIMEOUT)
 
     def updated(self, host: Service, evt: EventData):

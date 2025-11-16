@@ -266,13 +266,7 @@ def process_args(
                     try:
                         v = float(v)
                     except ValueError:
-                        try:
-                            if "." in v:
-                                v = P(v)
-                            else:
-                                raise ValueError("noPath")
-                        except ValueError:
-                            pass  # leave it as a string
+                        pass  # leave it as a string
 
         for k, v in set_:
             yield k, s_eval(v)

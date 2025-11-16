@@ -12,7 +12,7 @@ from moat.link.client import Link
 @click.option("-R", "--raw", is_flag=True, help="Show raw message data")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-@attr_args
+@attr_args(with_path=True, with_arglist=True)
 async def cli(ctx, path, stream, raw, **kw):
     """
     Send a command to the server.

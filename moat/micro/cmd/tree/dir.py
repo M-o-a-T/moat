@@ -136,6 +136,8 @@ class CfgStore(SubStore):
                 ocl = []
                 await self.sd.w(p, d={})
             for k, v in c.items():
+                if isinstance(k, str) and k.startswith("_"):
+                    continue
                 if isinstance(v, dict):
                     await _set(p + (k,), v)
                 elif ocd.get(k, _NotGiven) != v:

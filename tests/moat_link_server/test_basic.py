@@ -250,3 +250,27 @@ async def test_collate(cfg):  # noqa: D103
         await chk("a.b.f.c.e", dict(y=3, z=5))
         await chk("a.b.f.c.d", dict(y=4, z=5))
         await chk("a.b.f.c.d.u", dict(y=4, z=5))
+
+
+@pytest.mark.anyio
+async def test_asdict(cfg):  # noqa: D103
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        await c.d.set(P("a"), dict(x=2))
+        await c.d.set(P("a.b.c"), dict(z=dict(v=5)))
+
+        async with c.as_dict(P("a")) as a:
+            assert a.x == 2
+            assert a.b.c.z.v == 5
+            with pytest.raises(AttributeError):
+                a.b.y  # noqa:B018
+
+            @sf.tg.start_soon
+            async def pset():
+                await c.d.set(P("a.b"), dict(y=3))
+
+            with anyio.fail_after(0.2):
+                await a.wait_
+            assert a.b.y == 3

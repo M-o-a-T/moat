@@ -30,8 +30,10 @@ from moat.util import (
     attrdict,
     ctx_as,
     gen_ident,
+    merge,
     srepr,
     timed_ctx,
+    to_attrdict,
     ungroup,
 )
 from moat.lib.cmd.base import Caller, MsgSender
@@ -494,6 +496,58 @@ class LinkSender(MsgSender):
         subscription is already active somewhere else.
         """
         return Watcher(self, path, meta, subtree, state, age, mark, cls, min_length, max_length)
+
+    @asynccontextmanager
+    async def as_dict(self, path: Path, default: attrdict | None = None):
+        """
+        This async context manager returns an attrdict that gets auto-updated
+        when a configuration tree changes.
+
+        The root also contains a ``wait_`` member which can be awaited,
+        for re-sync after updates.
+
+        Warning: The order of interpreting these values and their updates
+        is not specified. Conflicts should be strictly avoided.
+        """
+        res = attrdict() if default is None else default
+        evt: anyio.Event | None = None
+
+        class AWT:
+            def __await__(self):
+                return evt.wait().__await__()
+
+        res.wait_ = AWT()
+
+        async with (
+            anyio.create_task_group() as tg,
+            Watcher(self, path, False, True, None, None, True, Node, None, None) as mon,
+        ):
+
+            async def _run(task_status):
+                nonlocal evt
+
+                async for pd in mon:
+                    if pd is None:
+                        evt = anyio.Event()
+                        task_status.started()
+                        continue
+                    p, d = pd
+                    d = to_attrdict(d)
+                    dl = list(p)
+                    while dl:
+                        n = dl.pop()
+                        d = attrdict({n: d})
+                    if not isinstance(d, dict):
+                        self.logger.warning("Item at {p} is {d !r}, not a dict, ignoring")
+                        continue
+                    merge(res, d)
+                    if evt is not None:
+                        evt.set()
+                        evt = anyio.Event()
+
+            await tg.start(_run)
+            yield res
+            tg.cancel_scope.cancel()
 
     async def e_exc(self, path: Path, exc: Exception, **kw):
         """

@@ -5,7 +5,10 @@ CPython-specific stream handling.
 from __future__ import annotations
 
 import anyio
+import fcntl
+import os
 import sys
+import termios
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
@@ -85,6 +88,78 @@ class AnyioBuf(BaseBuf):
         else:
             buf[: len(res)] = res
             return len(res)
+
+
+class FilenoBuf(BaseBuf):
+    """
+    Adapts a Unix file descriptor to MoaT.
+
+    """
+
+    rfd: int
+    wfd: int
+    rfl: int
+    wfl: int
+    term: bytes
+
+    def __init__(self, cfg, fd: int, wfd: int | None = None):
+        super().__init__(cfg)
+        self.rfd = fd
+        self.wfd = fd if wfd is None else wfd
+        self.term = None
+
+    async def stream(self) -> anyio.abc.ByteStream:
+        "Dummy here"
+        pass
+
+    async def setup(self):
+        "Change to nonblocking and raw"
+        self.rfl = fcntl.fcntl(self.rfd, fcntl.F_SETFL, 0)
+        if self.rfd != self.wfd:
+            self.wfl = fcntl.fcntl(self.wfd, fcntl.F_SETFL, 0)
+
+        fcntl.fcntl(self.rfd, fcntl.F_SETFL, self.rfl | os.O_NDELAY)
+        if self.rfd != self.wfd:
+            fcntl.fcntl(self.wfd, fcntl.F_SETFL, self.wfl | os.O_NDELAY)
+
+        try:
+            self.term = termios.tcgetattr(self.rfd)
+        except OSError:
+            pass
+        else:
+            new = self.term[:]
+            new[3] = new[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
+            new[6][termios.VMIN] = 1
+            new[6][termios.VTIME] = 0
+            termios.tcsetattr(self.rfd, termios.TCSANOW, new)
+
+    async def teardown(self):
+        "Return to blocking and cooked"
+        fcntl.fcntl(self.rfd, fcntl.F_SETFL, self.rfl)
+        if self.rfd != self.wfd:
+            fcntl.fcntl(self.wfd, fcntl.F_SETFL, self.wfl)
+        if self.term is not None:
+            termios.tcsetattr(self.rfd, termios.TCSANOW, self.term)
+
+    async def wr(self, buf) -> int:
+        "basic send"
+        on = len(buf)
+        while True:
+            n = len(buf)
+            await anyio.wait_writable(self.wfd)
+            nn = os.write(self.wfd, buf)
+            if nn <= 0:
+                raise OSError
+            if nn == n:
+                return on
+            buf = memoryview(buf)[nn:]
+
+    async def rd(self, buf) -> int:
+        "basic receive-into"
+        await anyio.wait_readable(self.rfd)
+        bf = os.read(self.rfd, len(buf))
+        buf[: len(bf)] = bf
+        return len(bf)
 
 
 class RemoteBufAnyio(anyio.abc.ByteStream):

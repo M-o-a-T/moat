@@ -8,7 +8,15 @@ from logging import getLogger
 
 from attrs import define, field
 
-from moat.util import NotGiven, Path, PathLongener, PathShortener
+from moat.util import (
+    NotGiven,
+    Path,
+    PathLongener,
+    PathShortener,
+    attrdict,
+    combine_dict,
+    to_attrdict,
+)
 from moat.link.meta import MsgMeta
 from moat.util.exc import ExpKeyError
 
@@ -308,6 +316,26 @@ class Node:
         for elem in path:
             nf.step(elem)
         return nf.result
+
+    def collect(self, path: Path) -> dict:
+        """
+        Collate all dicts from the root to this node (as far as data
+        exist) and return the combined result.
+        """
+        if self.data_ is not NotGiven:
+            res = to_attrdict(self.data_)
+        else:
+            res = attrdict()
+        slf = self
+        for p in path:
+            try:
+                slf = slf.get(p, create=False)
+            except KeyError:
+                break
+            if slf.data_ is not NotGiven:
+                res = combine_dict(slf.data_, res, cls=attrdict)
+
+        return res
 
 
 class NodeFinder:

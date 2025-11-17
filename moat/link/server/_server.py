@@ -297,6 +297,25 @@ class ServerClient(LinkCommon):
         d = data[msg[0]]
         await msg.result(d.data, *d.meta.dump())
 
+    doc_d_collect = dict(_d="collate subnode data", _r="Any:Data", _0="Path:root", _1="Path")
+
+    async def stream_d_collect(self, msg):
+        """Collate the dicts on the path from some root to a sub-node.
+
+        This is used to e.g. collect path-specific config data for a subsystem.
+
+        Arguments:
+        * root path
+        * path
+
+        Result:
+        * data (as dict)
+        """
+        root = msg[0]
+        path = msg[1]
+        d = self.server.data[root].collect(path)
+        await msg.result(**d)
+
     doc_d = dict(_d="Data access commands")
 
     def sub_d(self, msg: Msg, rcmd: list) -> Awaitable:

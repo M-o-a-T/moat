@@ -287,7 +287,7 @@ class ServerClient(LinkCommon):
 
         Result:
         * data
-        * metadata
+        * metadata dump
         """
         path = msg[0]
         if len(path) and path[0] == "run":

@@ -532,7 +532,8 @@ class LinkSender(MsgSender):
                         task_status.started()
                         continue
                     p, d = pd
-                    d = to_attrdict(d)
+                    if type(d) is dict:
+                        d = to_attrdict(d)
                     dl = list(p)
                     while dl:
                         n = dl.pop()

@@ -59,7 +59,7 @@ async def cli(ctx, path, meta):
 @click.pass_obj
 async def get(obj, **k):
     """
-    Read a MoaT-KV value.
+    Read a MoaT-Link value.
 
     If you read a sub-tree recursively, be aware that the whole subtree
     will be read before anything is printed. Use the "watch --state" subcommand
@@ -94,7 +94,7 @@ async def get(obj, **k):
 @click.pass_obj
 async def list_(obj, **k):
     """
-    List MoaT-KV values.
+    List MoaT-Link values.
 
     This is like "get" but with "--mindepth=1 --maxdepth=1 --recursive --empty"
 
@@ -111,35 +111,17 @@ async def list_(obj, **k):
 
 @cli.command("set", short_help="Add or update an entry")
 @attr_args
-@click.option("-l", "--last", nargs=2, help="Previous change entry (node serial)")
-@click.option("-n", "--new", is_flag=True, help="This is a new entry.")
 @click.pass_obj
-async def set_(obj, last, new, **kw):
+async def set_(obj, **kw):
     """
-    Store a value at some MoaT-KV position.
+    Store a value at some MoaT-Link position.
 
-    If you update a value you can use "--last" to ensure that no other
-    change arrived between reading and writing the entry.
-
-    TODO: When adding a new entry use "--new" to ensure that you don't
-    accidentally overwrite something.
-
-    MoaT-KV entries typically are mappings. Use a colon as the path if you
-    want to replace the top level.
+    Use a colon as the path if you want to replace the top level.
     """
-    last, new  # noqa:B018
-
     res = await node_attr(obj, obj.path, **kw)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
-
-
-class nstr:  # noqa: D101
-    def __new__(cls, val):  # noqa: D102
-        if val is NotGiven:
-            return val
-        return str(val)
 
 
 @cli.command(short_help="Delete an entry / subtree")
@@ -155,10 +137,7 @@ async def delete(obj, before, recursive):
     """
     Delete an entry, or a subtree.
 
-    You really should use "--before" flag to ensure that no other change
-    arrived after you viewed the data in question.
-
-    Non-recursively deleting an entry with children works and does *not*
+    Non-recursively deleting an entry with children does not
     affect the child entries.
 
     The root entry cannot be deleted.
@@ -206,10 +185,10 @@ async def monitor(
     """Monitor a MoaT-Link subtree.
 
     The mode can be:
-    * c/current   read current data from the server
-    * u/update    read updates from MQTT
-    * s/stream    current plus updates
-    * m/mqtt      subscribe to MQTT stream, including retained data
+    * c  current   read current data from the server
+    * u  update    read updates from MQTT
+    * s  stream    current plus updates
+    * m  mqtt      subscribe to the MQTT stream, including retained data
     """
 
     match mode:
@@ -269,7 +248,9 @@ async def monitor(
 @click.option("-C", "--codec", type=str, default="yaml", help="Codec to use (default: yaml).")
 @click.pass_obj
 async def update(obj, infile, codec):
-    """Write a list of updates to a MoaT-Link subtree"""
+    """
+    Copy a list of updates from a file to a MoaT-Link subtree
+    """
     async with MsgReader(path="/dev/stdin" if infile == "-" else infile, codec=codec) as reader:
         async for msg in reader:
             if isinstance(msg, dict):

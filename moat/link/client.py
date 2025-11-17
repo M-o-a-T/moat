@@ -501,8 +501,8 @@ class LinkSender(MsgSender):
         """
         exc = ungroup.one(exc)
 
-        kw["_bt"] = format_exception(exc)
-        kw["_exc"] = exc
+        kw["bt"] = format_exception(exc)
+        kw["exc"] = exc
 
         await self.e.exc(path, repr(exc), **kw)
 

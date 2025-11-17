@@ -57,30 +57,30 @@ async def test_exc(cfg):
         assert p == P("test.here")
         assert d["missing"] == "key"
         assert "this" not in d
-        assert isinstance(d["_exc"], KeyError)
-        assert "_bt" not in d
-        assert "_first" not in d
+        assert isinstance(d["exc"], KeyError)
+        assert "bt" not in d
+        assert "first" not in d
         assert t1 < m.timestamp < t2
         p, d, m2 = r[1]
         assert p == P("test.here")
         assert d["missing"] == "key"
         assert d["foo"] == "again"
-        assert "_ack" not in d
-        assert d["_n"] == 2
-        assert d["_first"] == m.timestamp
-        assert isinstance(d["_exc"], KeyError)
-        assert "_bt" not in d
+        assert "ack" not in d
+        assert d["n"] == 2
+        assert d["first"] == m.timestamp
+        assert isinstance(d["exc"], KeyError)
+        assert "bt" not in d
         assert m.timestamp < m2.timestamp < t2
         p, d, m3 = r[2]
         assert p == P("test.here")
         assert d["missing"] == "key"
         assert d["this"] == "that"
         assert d["foo"] == "again"
-        assert d["_ack"]
-        assert d["_first"] == m.timestamp
-        assert d["_n"] == 2
-        assert isinstance(d["_exc"], KeyError)
-        assert "_bt" not in d
+        assert d["ack"]
+        assert d["first"] == m.timestamp
+        assert d["n"] == 2
+        assert isinstance(d["exc"], KeyError)
+        assert "bt" not in d
         assert m2.timestamp < m3.timestamp < t2
 
 
@@ -105,10 +105,10 @@ async def test_exc_np(cfg):
         p, d, m = r[0]
         assert p == P("test.here")
         assert d["missing"] == "key"
-        assert isinstance(d["_exc"], RemoteError)
-        assert d["_exc"].args[0] == "SyntaxError"
-        assert d["_exc"].args[1] == "abc"
-        assert "_bt" not in d
+        assert isinstance(d["exc"], RemoteError)
+        assert d["exc"].args[0] == "SyntaxError"
+        assert d["exc"].args[1] == "abc"
+        assert "bt" not in d
         assert t1 < m.timestamp < t2
 
 
@@ -129,8 +129,8 @@ async def test_exc_clear(cfg):
             await anyio.sleep(0.1)
             d, m = await c.d_get(P("error.test.here"), meta=True)
             assert d["some"] == "data"
-            assert isinstance(d["_exc"], RemoteError)
-            assert "_bt" not in d
+            assert isinstance(d["exc"], RemoteError)
+            assert "bt" not in d
             assert t1 < m.timestamp
 
             await c.e_ok(P("test.here"), situation="normal")
@@ -141,8 +141,8 @@ async def test_exc_clear(cfg):
         p, d, m = r[0]
         assert p == P("test.here")
         assert d["some"] == "data"
-        assert isinstance(d["_exc"], RemoteError)
-        assert "_bt" not in d
+        assert isinstance(d["exc"], RemoteError)
+        assert "bt" not in d
         assert t1 < m.timestamp < t2
 
         p, d, m2 = r[1]
@@ -189,7 +189,7 @@ async def test_errlog(cfg):
         t1 = time.time()
         async with (
             sf.do_watch(P("error"), meta=True, subtree=True) as r,
-            sf.do_watch(P("run.error"), meta=True, subtree=True, break_=False) as errlog,
+            sf.do_watch(P("run.error"), meta=True, subtree=True) as errlog,
         ):
             try:
                 async with c.e_wrap(P("test.here"), help="me?") as mon:
@@ -203,9 +203,9 @@ async def test_errlog(cfg):
 
             d, m = await c.d_get(P("error.test.here"), meta=True)
             assert d["help"] == "me?"
-            assert d["_log"] == [["one"], ["two"]]
-            assert isinstance(d["_exc"], RuntimeError)
-            assert "_bt" not in d
+            assert d["log"] == [["one"], ["two"]]
+            assert isinstance(d["exc"], RuntimeError)
+            assert "bt" not in d
             assert t1 < m.timestamp
 
             async with c.e_wrap(P("test.here"), help="me too") as mon:
@@ -220,9 +220,9 @@ async def test_errlog(cfg):
         p, d, m = r[0]
         assert p == P("test.here")
         assert d["help"] == "me?"
-        assert isinstance(d["_exc"], RuntimeError)
-        assert d["_log"] == [["one"], ["two"]]
-        assert "_bt" not in d
+        assert isinstance(d["exc"], RuntimeError)
+        assert d["log"] == [["one"], ["two"]]
+        assert "bt" not in d
         assert t1 < m.timestamp < t2
 
         p, d, m2 = r[1]
@@ -239,12 +239,12 @@ async def test_errlog(cfg):
     m = next(rdr)
     assert m[0] == P("test.here")
     assert m[1]["help"] == "me?"
-    assert "_ok" not in m[2]
+    assert "ok" not in m[2]
 
     m = next(rdr)
     assert m[0] == P("test.here")
     assert m[1]["help"] == "me too"
-    assert m[1]["_ok"] is True
+    assert m[1]["ok"] is True
 
     with pytest.raises(StopIteration):
         next(rdr)

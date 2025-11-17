@@ -483,7 +483,7 @@ class ServerClient(LinkCommon):
     def stream_e_exc(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
-            msg.kw["_args"] = msg.args[2:]
+            msg.kw["args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
     doc_e_info = dict(_d="Report a non-exceptional anomaly", _0="path:Path", _k="any")
@@ -491,7 +491,7 @@ class ServerClient(LinkCommon):
     def stream_e_info(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
-            msg.kw["_args"] = msg.args[2:]
+            msg.kw["args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
     doc_e_ack = dict(_d="Acknowledge an error", _0="path:Path", _k="any", ack="None|bool|float:")
@@ -499,8 +499,8 @@ class ServerClient(LinkCommon):
     def stream_e_ack(self, msg: Msg) -> Awaitable:
         """Acknowledge an error"""
         if len(msg.args) > 2:
-            msg.kw["_args"] = msg.args[2:]
-        msg.kw["_ack"] = True
+            msg.kw["args"] = msg.args[2:]
+        msg.kw["ack"] = True
         return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
 
     doc_e_ok = dict(_d="State is OK", _0="path:Path", _k="any")
@@ -508,7 +508,7 @@ class ServerClient(LinkCommon):
     def stream_e_ok(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 1:
-            msg.kw["_args"] = msg.args[1:]
+            msg.kw["args"] = msg.args[1:]
         return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
 
     doc_e_mon = dict(_d="Monitoring wrapper", _0="path:Path", _i="log data", _k="any")
@@ -516,8 +516,8 @@ class ServerClient(LinkCommon):
     async def stream_e_mon(self, msg: Msg):
         path = msg[0]
         kw = msg.kw
-        kw["_start"] = time.time()
-        kw["_log"] = log = []
+        kw["start"] = time.time()
+        kw["log"] = log = []
         try:
             async with msg.stream_in() as mon:
                 async for msg in mon:
@@ -536,9 +536,8 @@ class ServerClient(LinkCommon):
         else:
             err = None
         finally:
-            kw["_stop"] = time.time()
             if err is not None:
-                kw["_exc"] = err
+                kw["exc"] = err
             with anyio.move_on_after(2, shield=True):
                 await self.server.set_error(path, err, kw, MsgMeta(origin=self.name))
 
@@ -1001,23 +1000,25 @@ class Server(MsgHandler):
         if (dd := dt.data_) is NotGiven:
             dd = {}
         elif not isinstance(dd, dict):
-            dd = {"_data": dd}
+            dd = {"data": dd}
         dd.update(kw)
 
         if err is None:
             # Delete, i.e. write the old record to error storage.
-            dd["_ok"] = True
+            dd["ok"] = True
         elif err is not NotGiven:
             # count
+            dd.pop("ok", None)
             if dt.meta:  # this is an update
-                dd["_n"] = dd.get("_n", 1) + 1
-                dd["_first"] = dt.meta.timestamp
+                dd["n"] = dd.get("n", 1) + 1
+                if "first" not in dd:
+                    dd["first"] = dt.meta.timestamp
 
         await self.backend.send(P(":R.run.error") + path, dd, meta=meta, retain=False)
         if err is None:
             dd = NotGiven
         else:
-            dd.pop("_bt", None)
+            dd.pop("bt", None)
 
         # this shortcuts maybe_update
         # forcing is required because we just modified the dict in-place

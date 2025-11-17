@@ -41,13 +41,71 @@ properties:
 required:
 - title
 ---
-_path: !P error
+_path: !P error._
 title: Error states
 type: object
-properties: TODO
+properties:
+  level:
+    type: int
+    title: Severity (0-4)
+  msg:
+    type: str
+    title: Message
+  val:
+    type: any
+    title: Some value that triggered the problem
+  data:
+    type: any
+    title: data at the node in question
+    doc: if present when the error happened
+  codec:
+    type: str
+    title: "For encoding-related errors: name of the codec"
+  exc:
+    type: str
+    title: Exception
+  ok:
+    type: bool
+    title: Flag that the most recent invocation succeeded
+  n:
+    type: int
+    title: Number of occurrences
+  first:
+    type: int
+    title: Time of first occurrence
+  start:
+    type: int
+    title: start of most recent run
+  log:
+    type: list
+    title: Log of messages leading up to the problem
+  bt:
+    type: list
+    title: Error backtrace
+    doc: only in error trace
+required:
+  - msg
+additionalProperties: true
+---
+_path: !P cfg.error._
+title: Error management
+type: object
+properties:
+  min:
+    type: int
+    title: Time from first occurrence to raising a notification
+  max:
+    type: int
+    title: Time from last occurrence (unfixed) to deletion
+  ok:
+    type: int
+    title: Time from fix-up to deletion
+  prio:
+    type: int
+    title: Priority for notifications
 ---
 _path: !P gate._
-title: Gateway sppecification
+title: Gateway specification
 properties:
   driver:
     type: str

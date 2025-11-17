@@ -46,10 +46,10 @@ title: Error states
 type: object
 properties:
   level:
-    type: int
+    type: integer
     title: Severity (0-4)
   msg:
-    type: str
+    type: string
     title: Message
   val:
     type: any
@@ -59,22 +59,22 @@ properties:
     title: data at the node in question
     doc: if present when the error happened
   codec:
-    type: str
+    type: string
     title: "For encoding-related errors: name of the codec"
   exc:
-    type: str
+    type: string
     title: Exception
   ok:
-    type: bool
+    type: boolean
     title: Flag that the most recent invocation succeeded
   n:
-    type: int
+    type: integer
     title: Number of occurrences
   first:
-    type: int
+    type: number
     title: Time of first occurrence
   start:
-    type: int
+    type: number
     title: start of most recent run
   log:
     type: list
@@ -83,6 +83,16 @@ properties:
     type: list
     title: Error backtrace
     doc: only in error trace
+  notify:
+    type: object
+    title: notification info
+    properties:
+      last:
+        type: number
+        title: Timestamp of last notification
+      pos:
+        type: integer
+        title: Position in the escalation list used
 required:
   - msg
 additionalProperties: true
@@ -92,26 +102,33 @@ title: Error management
 type: object
 properties:
   min:
-    type: int
+    type: integer
     title: Time from first occurrence to raising a notification
   max:
-    type: int
+    type: integer
     title: Time from last occurrence (unfixed) to deletion
   ok:
-    type: int
+    type: integer
     title: Time from fix-up to deletion
   prio:
-    type: int
+    type: integer
     title: Priority for notifications
+  schedule:
+    type: array
+    items:
+      type: integer
+      title: Re-Notification intervals
+      description: if not present, use min*10
+
 ---
 _path: !P gate._
 title: Gateway specification
 properties:
   driver:
-    type: str
+    type: string
     title: Name of driver
   name:
-    type: str
+    type: string
     title: Name of gateway
     doc: |
       This is used when debugging (to impersonate another gateway)
@@ -145,11 +162,11 @@ _path: !P codec._
 title: Specialized codecs
 properties:
   decode:
-    type: str
+    type: string
     doc: |
       Python script snippet to decode `value`.
   encode:
-    type: str
+    type: string
     doc: |
       Python script snippet to encode `value`.
   in:
@@ -166,7 +183,7 @@ title: Gateway between MQTT and MoaT-Link data TODO DRAFT
 type: object
 properties:
   dir:
-    type: str
+    type: string
     doc: |
       rd: read from MoaT-Link, send to MQTT
       wr: read from MQTT, send to MoaT-Link
@@ -185,7 +202,7 @@ properties:
     type: Path
     doc: destination to send to
   raw:
-    type: bool
+    type: boolean
     doc: set if the MQTT path is outside the MoaT root
   srcpath:
     type: Path
@@ -292,7 +309,7 @@ items:
 _path: !P _.ext
 title: External data flag
 description: set if the entry was loaded from MoaT
-type: bool
+type: boolean
 ---
 _path: !P _.frame
 title: Metadata for MoaT messages
@@ -319,7 +336,7 @@ prefixItems:
     title: local name
   - type: string
     title: remote name
-  - type: bool
+  - type: boolean
     title: Server flag
   - anyOf:
     - type: array
@@ -331,7 +348,7 @@ prefixItems:
     - type: string
       title: auth token
       deacription: "Client: from broadcast; Server: use this method"
-    - type: bool
+    - type: boolean
       title: authorized
       description: |2
         Flag for authorization shortcut
@@ -377,7 +394,7 @@ properties:
     title: Name of the savefile this one supersedes
     description: also read @sup if @prev is incomplete
   level:
-    type: int
+    type: integer
     title: Save level of this file
 
 required:

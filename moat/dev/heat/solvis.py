@@ -227,7 +227,7 @@ cmd:
       temp: !P heat.s.pellets.temp.goal.cmd
       load: !P heat.s.pellets.load.goal.cmd
       wanted: !P heat.s.pellets.power.cmd.auto  # set by us when requesting
-      run: !P heat.s.pellets.power.cmd  # cm_pellet - set by MoaT-VK, also controls the burner
+      run: !P heat.s.pellets.power.cmd  # cm_pellet - set by MoaT-KV, also controls the burner
 
     passthru:
       pump: !P home.ass.dyn.switch.heizung.wp_auto_mode.cmd       # m_passthru_pump
@@ -1548,6 +1548,12 @@ class Data:
         task_status.started()
         run = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
+        if self.t_nom is None:
+            print("NOM-")
+            while self.t_nom is None:
+                await self.wait()
+            print("NOM+")
+
         while True:
             for _ in range(10):
                 await self.wait()
@@ -1562,6 +1568,8 @@ class Data:
                         and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict - 0.15
                     )
                 )
+                and (min(self.tb_water, self.tb_heat) if self.cm_heat else self.tb_water)
+                < self.t_nom
             ):
                 print("  PELLET ON  ")
                 run = True
@@ -1577,7 +1585,8 @@ class Data:
                 and self.t_ext_avg is not None
                 and self.t_ext_avg > self.cfg.misc.pellet.avg_off
                 and isinstance(self.state.t_pellet_on, bool)
-                and self.cm_wp
+                and (self.cm_wp or self.tb_low >= self.t_nom)
+                # and self.cm_wp
             ):
                 run = False
                 self.state.t_pellet_on = False

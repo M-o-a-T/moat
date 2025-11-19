@@ -22,6 +22,14 @@ regs:
       register: 288
       factor: 0.004 # 1/250
       unit: "%"
+    reset:
+      _doc: error reset
+      reg_type: h
+      type: uint
+      len: 1
+      register: 513
+      values:
+        1: reset
 
   state:
     state:
@@ -90,6 +98,36 @@ regs:
       type: int
       unit: bar
       scale: -2
+    _x3:
+      register: 779
+      len: 1
+      reg_type: h
+      type: int
+    _x4:
+      register: 780
+      len: 1
+      reg_type: h
+      type: int
+    _x5:
+      register: 781
+      len: 1
+      reg_type: h
+      type: int
+    _x6:
+      register: 782
+      len: 1
+      reg_type: h
+      type: int
+    _x7:
+      register: 783
+      len: 1
+      reg_type: h
+      type: int
+    _x8:
+      register: 784
+      len: 1
+      reg_type: h
+      type: int
 
     power:
       register: 869
@@ -158,6 +196,26 @@ regs:
       type: int
     _y3:
       register: 866
+      len: 1
+      reg_type: h
+      type: int
+    _y4:
+      register: 262
+      len: 1
+      reg_type: h
+      type: int
+    _y5:
+      register: 809
+      len: 1
+      reg_type: h
+      type: int
+    _y6:
+      register: 874
+      len: 1
+      reg_type: h
+      type: int
+    _y7:
+      register: 794
       len: 1
       reg_type: h
       type: int

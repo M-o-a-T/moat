@@ -10,7 +10,8 @@ import time
 from abc import ABCMeta, abstractmethod
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from moat.util import CtxObj, P, Path, as_service, attrdict
+from moat.util import CtxObj, NotGiven, P, Path, as_service, attrdict
+from moat.lib.priomap import PrioMap
 
 from typing import TYPE_CHECKING
 
@@ -30,8 +31,11 @@ class Notify:
     Notification runner.
     """
 
+    link: Link
+
     def __init__(self, cfg):
         self.cfg = cfg
+        self.dropped: PrioMap[Notifier] = PrioMap()
 
     async def run(self, link: Link, evt: anyio.Event | None = None):
         """
@@ -64,30 +68,53 @@ class Notify:
                         "error.notify", "Backend stopped", "The backend terminated.", prio="fatal"
                     )
 
-    async def send(self, *a, **kw) -> None:
+    async def send(self, **kw) -> None:
         """Send this notification to that topic."""
-        bad = []
-        dropped = []
+        # reactivate dropped items
+        tm = time.monotonic()
+        retry: set[Notifier] = set()
+        error_seen = False
+
+        # Collect failed backends for retrying
+        while self.dropped:
+            b_e, t = self.dropped.peek()
+            if t > tm:
+                break
+            del self.dropped[b_e]
+            retry.add(b_e)
+
         for name, b_e in list(self._backends.items()):
+            if b_e in self.dropped:
+                continue
             try:
-                await b_e.send(*a, **kw)
+                await b_e.send(**kw)
             except Exception as exc:
-                logger.warning("Backend %r", name, exc_info=exc)
-                bad.append(b_e)
+                # Log failed backends only once
+                if b_e in self.dropped:
+                    continue
+                error_seen = True
+                self.dropped[b_e] = tm + self.cfg.timeout.notify.retry
+                await self.link.e_exc(
+                    P("run.notify.backend") / name,
+                    exc,
+                    msg=f"The notification backend {name} failed.",
+                    val=kw,
+                    level=3,
+                )
+            else:
+                if b_e in retry:
+                    # No lock because this can only happen in one branch
+                    await self.link.e_ok(P("run.notify.backend") / name)
 
-        for name in bad:
-            if self._backends.pop(name, None) is not None:
-                dropped.append(name)
-        if not self._backends:
-            raise RuntimeError("All backends failed.")
-
-        for name in dropped:
-            await self.send(
-                "error.notify",
-                f"Backend {name} error",
-                "The backend errored and was removed.",
-                prio="error",
-            )
+        if len(self.dropped) >= len(self._backends):
+            # This might conceivably happen in more than one branch
+            # if more than one backend fails at a time, but we don't care
+            if error_seen:
+                await self.link.e_info(
+                    P("run.notify.backend"), "All notification backends failed.", level=4
+                )
+        elif any(x not in self.dropped for x in retry):
+            await self.link.e_ok(P("run.notify.backend"))
 
     async def _run(self, evt) -> NoReturn:
         """
@@ -107,6 +134,9 @@ class Notify:
                         t = time.time()
                         if meta.timestamp < t - self.cfg.max_age:
                             continue
+                        if isinstance(msg, NotGiven):
+                            # Treat as empty message, for now
+                            msg = {"msg": "Deleted"}  # noqa:PLW2901
                         if isinstance(msg, dict):
                             if "title" not in msg:
                                 msg["title"] = str(path)
@@ -187,5 +217,7 @@ class Notifier(CtxObj, metaclass=ABCMeta):
         yield self
 
     @abstractmethod
-    async def send(self, topic: str | Path, title: str, msg: str, **kw):
+    async def send(
+        self, topic: str | Path, title: str | None = None, msg: str | None = None, **kw
+    ):
         """Send this notification to that topic."""

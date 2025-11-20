@@ -53,6 +53,9 @@ timeout:
     max: 30
     factor: 1.3
 
+  notify:
+    retry: 300
+
 
 # Notifications are messages below :R.notify.TOPIC topic.
 notify:

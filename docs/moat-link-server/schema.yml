@@ -218,6 +218,11 @@ properties:
     doc: trigger an error if the update didn't work for t_max
 
 ---
+_path: !P run.notify.backend._
+title: Placeholder for error management
+description: There are no messages here, but error.* logs when a backend fails.
+type: null
+---
 _path: !P run.service.conn.main
 title: Address of the main MoaT-Link server
 type: object

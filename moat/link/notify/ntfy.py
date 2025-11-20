@@ -82,4 +82,5 @@ class Notifier(BaseNotifier):  # noqa:D101
         if "token" in self.cfg:
             hdr["authorization"] = f"Bearer {self.cfg['token']}"
 
-        await self.http.post(url, data=msg, headers=hdr)
+        resp = await self.http.post(url, data=msg, headers=hdr)
+        resp.raise_for_status()

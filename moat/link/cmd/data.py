@@ -111,13 +111,20 @@ async def list_(obj, **k):
 
 @cli.command("set", short_help="Add or update an entry")
 @attr_args
+@click.option("-r", "--retain", is_flag=True, help="Retain the result")
+@click.option("-o", "--one-shot", "one", is_flag=True, help="Do not retain the result")
 @click.pass_obj
 async def set_(obj, **kw):
     """
     Store a value at some MoaT-Link position.
 
-    Use a colon as the path if you want to replace the top level.
+    Use '--set : VALUE' if you want to set a non-dict element.
     """
+    one = kw.pop("one", False)
+    if one:
+        if kw.get("retain", False):
+            raise click.UsageError("--retain and --one-shot are opposites.")
+        kw["retain"] = False
     res = await node_attr(obj, obj.path, **kw)
 
     if obj.meta:

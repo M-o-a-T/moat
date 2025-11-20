@@ -332,7 +332,7 @@ def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-
     return val._update(attr, value=value, **kw)  # noqa: SLF001
 
 
-async def node_attr(obj, path, val=NotGiven, meta=NotGiven, **kw):
+async def node_attr(obj, path, val=NotGiven, meta=NotGiven, *, retain: bool = False, **kw):
     """
     Sub-attr setter.
 
@@ -352,10 +352,18 @@ async def node_attr(obj, path, val=NotGiven, meta=NotGiven, **kw):
         else:
             meta = MsgMeta.restore(m)
     val = process_args(val, **kw)
-    t = {} if meta is NotGiven else {"t": meta.timestamp}
-    if val is NotGiven:
-        res = await obj.conn.d.delete(path, **t)
+    if retain:
+        t = {} if meta is NotGiven else {"t": meta.timestamp}
+        if val is NotGiven:
+            res = await obj.conn.d.delete(path, **t)
+        else:
+            res = await obj.conn.d.set(path, val, **t)
+        meta = MsgMeta.restore(res[1:])
+        res = res[0]
     else:
-        res = await obj.conn.d.set(path, val, **t)
-    res = res[0], MsgMeta.restore(res[1:])
-    return res
+        if meta is NotGiven:
+            meta = None
+        meta = MsgMeta(name=obj.conn.name)
+        res = val
+        await obj.conn.d_set(path, val, meta)
+    return res, meta

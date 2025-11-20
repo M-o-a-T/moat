@@ -26,7 +26,7 @@ async def cli(ctx, path):
     cfg = obj.cfg["link"]
     if obj.get("port", None) is not None:
         cfg.client.port = obj.port
-    obj.conn = await ctx.with_async_resource(Link(cfg))
+    obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
     obj.path = path
     if ctx.invoked_subcommand is None:
         await _list(obj)

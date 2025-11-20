@@ -22,7 +22,7 @@ async def cli(ctx, path, meta):
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
-    obj.conn = await ctx.with_async_resource(Link(cfg))
+    obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
     obj.meta = meta
     if ctx.invoked_subcommand is None:
         await data_get(obj.conn, path, meta=obj.meta, out=obj.stdout, recursive=False)

@@ -28,7 +28,7 @@ async def cli(ctx):
     obj = ctx.obj
     cfg = obj.cfg["link"]
     if ctx.invoked_subcommand != "run":
-        obj.conn = await ctx.with_async_resource(Link(cfg))
+        obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
 
 
 @cli.command()

@@ -139,8 +139,8 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
         task_status.started(cfg)
 
         if nd:
-            logger.info("Running.")
-        if not nd:
-            logger.error("No devices to poll found.")
+            logger.info("Server running.")
+        else:
+            logger.error("Poll running, no server.")
 
         pass  # wait until all tasks are done

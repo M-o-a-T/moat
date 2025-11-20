@@ -59,15 +59,25 @@ async def run(obj, main, debug):
 
 @cli.command()
 @click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
+@click.option("-h", "--hosts", is_flag=True, help="Show host paths.")
 @click.pass_obj
-async def list(obj, timeout):  # noqa: A001
+async def list(obj, timeout, hosts):  # noqa: A001
     """
     Host list.
 
     "moat link host list" shows the hosts that are currently active.
     """
 
+    hc = dict()
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
-                print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
+                if hosts:
+                    for k, v in h.data.h.items():
+                        ok = v.get("up", False)
+                        if hc.get(k, False) == ok:
+                            continue
+                        hc[k] = ok
+                        print(h.id, k, "" if ok else "** DOWN **")
+                else:
+                    print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))

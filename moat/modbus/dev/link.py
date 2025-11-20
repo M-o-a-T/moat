@@ -80,7 +80,7 @@ class Register(BaseRegister):
         """Copy a Modbus value to MoaT-Link"""
         async for val in self:
             logger.debug("%s L %r", self.path, val)
-            await self._link.d_set(dest, val, retain=True)
+            await self._link.d_set(dest, val, retain="idle" not in self.data)
 
     async def from_link(self, mon, *, task_status):
         """Copy an MQTT value to Modbus"""
@@ -92,14 +92,15 @@ class Register(BaseRegister):
                 if val is None:  # Link message
                     continue
                 if isinstance(val, tuple):  # Link client
-                    logger.debug("%s W %r", self.path, val)
                     val = val[0]  # noqa:PLW2901
                 elif "value" not in val:  # KV message
                     logger.debug("%s Wx", self.path)
                     continue
                 else:
-                    logger.debug("%s W %r", self.path, val)
                     val = val.value  # noqa:PLW2901
+                if (idle := self.data.get("idle")) is not None and val == idle:
+                    continue
+                logger.debug("%s W %r", self.path, val)
                 await self._set(val)
 
     async def from_link_p(self, mon, slot):
@@ -117,7 +118,6 @@ class Register(BaseRegister):
                         await evt.wait()
                 if val is NotGiven:
                     continue
-
                 logger.debug("%s Wr %r", self.path, val)
                 await self._set(val)
 
@@ -135,7 +135,10 @@ class Register(BaseRegister):
                             first = False
                             continue
                         val = NotGiven
-                logger.debug("%s w %r", self.path, val)
+                if val is not NotGiven:
+                    if (idle := self.data.get("idle")) is not None and val == idle:
+                        continue
+                    logger.debug("%s w %r", self.path, val)
                 evt.set()
                 evt = anyio.Event()
 

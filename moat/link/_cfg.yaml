@@ -88,3 +88,8 @@ notify:
     # token: tk_whatever
     # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
     # topic: my_secret_topic
+
+error:
+  min: 30       # half a minute
+  max: 3000000  # a month plus
+  ok: 300000    # a weekend plus

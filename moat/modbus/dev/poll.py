@@ -83,6 +83,8 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                 srv.add_unit(u, dev)
                 nd += 1
 
+            srv.add_ignored_unit(*s.get("ignored", ()))
+
         def do_attach(v, dev):
             p = v.get("server", None)
             if p is None:

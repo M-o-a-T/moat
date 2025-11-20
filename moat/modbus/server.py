@@ -89,6 +89,8 @@ class BaseModbusServer(CtxObj):
         self.broadcast_enable = False
         self.response_manipulator = response_manipulator
 
+        self.ignored = set()
+
         if isinstance(identity, ModbusDeviceIdentification):
             self.control.Identity.update(identity)
 
@@ -113,6 +115,13 @@ class BaseModbusServer(CtxObj):
         if ctx is None:
             return UnitContext(self, unit)
         self.units[unit] = ctx
+
+    def add_ignored_unit(self, *unit) -> None:
+        """
+        Add to the list of units we don't complain about when a client
+        tries to access them.
+        """
+        self.ignored |= set(unit)
 
     def _add_unit(self, unit):
         self.units[unit.unit] = unit
@@ -219,8 +228,8 @@ class SerialModbusServer(BaseModbusServer):
             else:
                 response = await self.process_request(request)
         except NoSuchSlaveException:
-            txt = f"requested slave does not exist: {request.unit_id}"
-            _logger.error(txt)
+            if unit not in self.ignored:
+                _logger.error("requested slave does not exist: %d", request.unit_id)
             if self.ignore_missing_slaves:
                 return  # the client will simply timeout waiting for a response
             response = ExceptionResponse(

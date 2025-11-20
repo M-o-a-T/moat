@@ -134,7 +134,7 @@ class BaseValue:
         """
         Encode the current value. Returns a list of registers.
         """
-        return self._encode(self.value_w)
+        return self._encode(self._value_w if self._value_w is not None else self._value)
 
     def __str__(self):
         return f"‹{self.value}›"

@@ -97,9 +97,9 @@ async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
         await trio.sleep(1)
         assert reg.value_w == 42
 
-        await c.d_set(P("a.srv.src"), data=44)
+        await c.d_set(P("a.srv.src"), data=50044)
         await trio.sleep(2)
-        assert reg.value_w == 44
+        assert reg.value_w == 50044
 
         await c.d_set(P("a.cli.src"), data=144)
         cfg2 = await tg.start(dev_poll, cfg2, c)
@@ -112,7 +112,7 @@ async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
             rv = await c.d_get(P("a.cli.dst"))
         except KeyError:
             rv = None
-        assert rv == 44
+        assert rv == 50044
 
         try:
             rv = await c.d_get(P("a.srv.dst"))
@@ -130,7 +130,7 @@ async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
         ):
             s.add(HoldingRegisters, 12342, IntValue)
             res = await s.getValues()
-            assert res[HoldingRegisters][12342].value == 44
+            assert res[HoldingRegisters][12342].value == 50044
 
         # terminate tasks
         tg.cancel_scope.cancel()

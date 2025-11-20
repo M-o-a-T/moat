@@ -40,8 +40,8 @@ class Notifier(BaseNotifier):  # noqa:D101
     async def send(
         self,
         topic: str | Path,
-        title: str,
-        msg: str,
+        title: str | None = None,
+        msg: str | None = None,
         prio: str | None = None,
         tags: Sequence[str] = (),
         **kw,  # noqa: ARG002

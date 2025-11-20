@@ -4,7 +4,6 @@ Command line for gatewaying
 
 from __future__ import annotations
 
-import anyio
 import sys
 
 import asyncclick as click
@@ -38,13 +37,16 @@ async def run(obj):
     """
     Run a gateway setup.
     """
+    from moat.link.announce import announcing  # noqa: PLC0415
     from moat.link.gate import run_gate  # noqa: PLC0415
     from moat.util.systemd import as_service  # noqa: PLC0415
 
-    async with as_service(obj) as srv:
-        await srv.tg.start(run_gate, obj.cfg, obj.conn, P("gate") + obj.path)
-        srv.set()
-        await anyio.sleep_forever()
+    gate = P("gate") + obj.path
+    async with (
+        as_service(obj) as srv,
+        announcing(obj.conn, host=False, name=gate, force=True, via=srv.evt),
+    ):
+        await run_gate(obj.cfg, obj.conn, gate, task_status=srv)
 
 
 @cli.command("list")

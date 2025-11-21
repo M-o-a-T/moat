@@ -19,7 +19,7 @@ from .path import P, Path, PathLongener, PathShortener, path_eval
 from .times import humandelta, time_until
 from .yaml import yprint
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 log = logging.getLogger()
 
@@ -272,14 +272,22 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
 
         for d in in_d():
             for data in dec(d):
-                if long and isinstance(data, Sequence):
-                    d, p, *x = data  # noqa:PLW2901
-                    p = long.long(d, p)
-                    data = [p, *x]  # noqa:PLW2901
-                if short and isinstance(data, Sequence):
-                    p, *x = data
-                    d, p = short.short(p)  # noqa:PLW2901
-                    data = [d, p, *x]  # noqa:PLW2901
+                if long:
+                    if isinstance(data, Sequence) and len(data) > 1:
+                        d, p, *x = data  # noqa:PLW2901
+                        p = long.long(d, p)
+                        data = [p, *x]  # noqa:PLW2901
+                    elif isinstance(data, Mapping) and "depth" in data and "path" in data:
+                        data["path"] = long.long(data.pop("depth"), data["path"])
+                if short:
+                    if isinstance(data, Sequence) and len(data) > 0:
+                        p, *x = data
+                        d, p = short.short(p)  # noqa:PLW2901
+                        data = [d, p, *x]  # noqa:PLW2901
+                    elif isinstance(data, Mapping) and "path" in data and "path" in data:
+                        d, p = short.short(data["path"])  # noqa:PLW2901
+                        data["depth"] = d
+                        data["path"] = p
 
                 data = process_args(data, **kw)  # noqa:PLW2901
                 if cse:

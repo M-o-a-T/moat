@@ -12,7 +12,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 
-from moat.util import Queue
+from moat.util.broadcast import Broadcaster
 
 from typing import NamedTuple
 
@@ -21,9 +21,11 @@ logger = logging.getLogger(__name__)
 _r_chip = re.compile(
     "^(?P<chip>[a-z0-9]+): GPIOs (?P<base>[0-9]+)-(?:.*, (?P<name>[-_a-zA-Z0-9]+): *$)?",
 )
-_r_pin = re.compile("^gpio-(?P<pin>[0-9]+) \\(.*\\) (?P<dir>in|out) +(?P<val>hi|lo)")
+_r_pin = re.compile("^gpio-(?P<pin>[0-9]+) \\(.*\\)( (?P<dir>in|out) *(?P<val>hi|lo))?")
 
-Pin = NamedTuple("Pin", ["out", "level"])
+class Pin(NamedTuple):
+    out: bool
+    level: bool
 
 
 class _GpioPin:
@@ -37,21 +39,25 @@ class _GpioPin:
         self.watcher = watcher
         self.chip = chip
         self.pin = pin
-        self.mon = set()
+        self.mon = Broadcaster(3)
         self.state = (None, None)
         try:
             self.fd = os.open(
-                os.path.join(watcher.debugfs_path, "gpio-mockup-event", chip, str(pin)),
+                os.path.join(watcher.debugfs_path, "gpio-mockup", chip, str(pin)),
                 os.O_WRONLY,
             )
         except OSError as exc:
+            raise
             if exc.errno != errno.ENOENT:
                 raise
+        self.mon.open()
 
     def __del__(self):
         if self.fd is not None:
             os.close(self.fd)
             del self.fd
+        if self.mon is not None:
+            self.mon.close()
 
     @asynccontextmanager
     async def watch(self):
@@ -62,21 +68,23 @@ class _GpioPin:
         Values are (out,level) tuples of bool, with "out" and "high"
         represented as True.
         """
-        q = Queue(10)
-        self.mon.add(q)
+        it = aiter(self.mon)
         try:
-            yield q
+            yield it
         finally:
-            self.mon.remove(q)
+            await it.aclose()
 
-    async def see(self, write: bool, level: bool):
+    @property
+    def value(self):
+        return self.state[1]
+
+    def see(self, write: bool, level: bool):
         s = (write, level)
         if self.state == s:
             return
         self.state = s
-        logger.debug("SEE %s %d %s", self.chip, self.pin, self.state)
-        for cb in list(self.mon):
-            await cb.put(s)
+        logger.error("SEE %s %d %s", self.chip, self.pin, self.state)
+        self.mon(s)
 
     def set(self, value: bool):
         logger.debug("SET %s %d %s", self.chip, self.pin, value)
@@ -171,9 +179,7 @@ class GpioWatcher:
                 r = _r_chip.match(line)
                 if not r:
                     raise ValueError(line)
-                chip = r.group("name")
-                if not chip:
-                    chip = r.group("chip")
+                chip = r.group("chip")
                 base = int(r.group("base"))
             else:
                 r = _r_pin.match(line)
@@ -188,7 +194,7 @@ class GpioWatcher:
                 except KeyError:
                     pass
                 else:
-                    await pin.see(out, val)
+                    pin.see(out, val)
         self.gpio.seek(0)
 
     @asynccontextmanager
@@ -198,9 +204,9 @@ class GpioWatcher:
         """
         async with anyio.create_task_group() as tg:
             self.tg = tg
-            await tg.spawn(self._watch)
+            tg.start_soon(self._watch)
             try:
                 yield self
             finally:
                 self.tg = None
-                await tg.cancel_scope.cancel()
+                tg.cancel_scope.cancel()

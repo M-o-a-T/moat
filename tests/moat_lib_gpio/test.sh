@@ -2,14 +2,8 @@
 
 set -uxe
 chip="gpio-mockup-A"
-cur="$(pwd)"
+D=
 
-rmmod gpio-mockup >/dev/null 2>&1 || true
-if lsmod | grep -sq gpio-mockup  ; then
-	echo "Could not remove the gpio-mockup module. Exiting." >&2
-	exit 1
-fi
-modprobe gpio-mockup gpio_mockup_ranges=-1,8
 cd /sys/class/gpio/
 for d in gpiochip* ; do
 	if test "$(cat $d/label)" = "$chip" ; then
@@ -17,10 +11,7 @@ for d in gpiochip* ; do
 		break
 	fi
 done
-E="/sys/kernel/debug/gpio-mockup-event/$chip"
-H="$(hostname | sed -e 's/\..*//')"
-cd "$cur"
+cd
 
-export PYTHONPATH=.
-
-python3 tests/moat_lib_gpio/run.py $chip
+if test -n "$D" ; then exit 0; fi
+modprobe gpio-mockup gpio_mockup_ranges=-1,8

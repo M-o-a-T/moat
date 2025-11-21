@@ -6,7 +6,10 @@ import logging
 import sys
 from pathlib import Path
 
-import gpiod
+from gpiod import Chip as _Chip, LineSettings, is_gpiochip_device
+from gpiod.line import Direction, Edge, Value, Drive, Bias
+
+__all__ = ["Chip","Direction"]
 
 _logger = logging.getLogger(__name__)
 
@@ -40,17 +43,33 @@ class Chip:
         else:
             return f"{self.__class__.__name__}({self._label})"
 
+    @property
+    def name(self):
+        return self._chip.get_info().name
+
+    @property
+    def num_lines(self):
+        return self._chip.get_info().num_lines
+
+    @property
+    def label(self):
+        return self._chip.get_info().label
+
+    @property
+    def consumer(self):
+        return self._consumer
+
     def __enter__(self):
         chip = None
         try:
             if self._label is None:
-                chip = gpiod.Chip("/dev/gpiochip{self._num}")
+                chip = _Chip(f"/dev/gpiochip{self._num}")
             else:
                 for name in Path("/dev/").glob("gpiochip*"):
-                    if not gpiod.is_gpiochip_device(str(name)):
+                    if not is_gpiochip_device(str(name)):
                         continue
                     try:
-                        chip = gpiod.Chip(str(name))
+                        chip = _Chip(str(name))
                     except Exception as exc:
                         _logger.warning("unable to open %r: %s", str(name), repr(exc))
                     info = chip.get_info()
@@ -60,18 +79,20 @@ class Chip:
                     chip = None
                 else:
                     raise RuntimeError(f"GPIO chip {self._label!r} not found")
-
         except BaseException:
             if chip is not None:
                 chip.close()
             raise
 
-        self._chip = chip
+        self._chip = chip.__enter__()
+        self.__chip = chip
         return self
 
     def __exit__(self, *tb):
-        gpiod.chip_close(self._chip)
-        self._chip = None
+        try:
+            return self.__chip.__exit__(*tb)
+        finally:
+            self.__chip = self._chip = None
 
     def line(self, offset, consumer=None):
         """Get a descriptor for a single GPIO line.
@@ -122,23 +143,23 @@ class Line:
             self._state,
         )
 
-    def open(self, direction=gpiod.line.Direction.INPUT, default=False, flags=0):
+    def open(self, direction:bool|Direction=False, default=False, flags=0):
         """
         Create a context manager for controlling this line's input or output.
 
         Arguments:
-            direction: input or output. Default: gpiod.line.Direction.INPUT.
+            direction: input or output. Default: Direction.INPUT.
             flags: to request pull-up/down resistors or open-collector outputs.
 
         Example::
             with gpio.Chip(0) as chip:
                 line = chip.line(16)
-                with line.open(direction=gpiod.line.Direction.INPUT) as wire:
+                with line.open(direction=Direction.INPUT) as wire:
                     print(wire.value)
         """
         if self._state in _IN_USE:
             raise OSError("This line is already in use")
-        self._direction = direction
+        self._direction = direction if isinstance(direction,Direction) else Direction.OUTPUT if direction else Direction.INPUT
         self._default = default
         self._flags = flags
         self._state = _PRE_IO
@@ -150,7 +171,7 @@ class Line:
             raise OSError("This line is already in use")
         if self._state == _FREE:
             raise RuntimeError("You need to call .open() or .monitor()")
-        self._line = self._chip.request_lines({self._offset: gpiod.line.Direction.INPUT})
+        self._line = self._chip.request_lines({self._offset: LineSettings(direction=self._direction)})
 
         if self._state == _PRE_IO:
             self._enter_io()
@@ -176,7 +197,7 @@ class Line:
     def __exit__(self, *tb):
         if self._line is not None:
             try:
-                gpiod.line_release(self._line)
+                self._line.release()
             finally:
                 self._line = None
         self._state = _FREE
@@ -193,30 +214,42 @@ class Line:
     @value.setter
     def value(self, value):
         "Set Value"
-        gpiod.line_set_value(
-            self._line, gpiod.line.Value.ACTIVE if value else gpiod.line.Value.INACTIVE
-        )
+        self._line.set_value(self._offset, Value.ACTIVE if value else Value.INACTIVE)
 
     @property
     def direction(self) -> bool:  # noqa: D102
         if self._line is None:
             return self._direction
-        return gpiod.line_direction(self._line)
+        return self._chip.get_line_info(self._offset).direction == Direction.OUTPUT
 
     @property
-    def active_state(self):  # noqa: D102
-        self._is_open()
-        return gpiod.line_active_state(self._line)
+    def active_low(self) -> bool:  # noqa: D102
+        return self._chip.get_line_info(self._offset).active_low
+
+    @property
+    def is_pull_up(self) -> bool:
+        "True if configured with pull-up"
+        return self._chip.get_line_info(self._offset).bias == Bias.PULL_UP
+
+    @property
+    def is_pull_down(self) -> bool:
+        "True if configured with pull-down"
+        return self._chip.get_line_info(self._offset).bias == Bias.PULL_DOWN
+
+    @property
+    def is_open_none(self) -> bool:
+        "True if configured with pull-down"
+        return self._chip.get_line_info(self._offset).drive == Drive.PUSH_PULL
 
     @property
     def is_open_drain(self) -> bool:
         "True if configured as open-drain"
-        return self._chip.get_line_info(self._offset).drive == gpiod.line.Drive.OPEN_DRAIN
+        return self._chip.get_line_info(self._offset).drive == Drive.OPEN_DRAIN
 
     @property
     def is_open_source(self):
         "True if configured as open-source"
-        return self._chip.get_line_info(self._offset).drive == gpiod.line.Drive.OPEN_SOURCE
+        return self._chip.get_line_info(self._offset).drive == Drive.OPEN_SOURCE
 
     @property
     def is_used(self) -> bool:
@@ -237,7 +270,7 @@ class Line:
     def consumer(self):  # noqa: D102
         return self._chip.get_line_info(self._offset).consumer
 
-    def monitor(self, type=gpiod.line.Edge.BOTH, flags=0):  # noqa: A002
+    def monitor(self, type=Edge.BOTH, flags=0):  # noqa: A002
         """
         Monitor events.
 
@@ -258,11 +291,6 @@ class Line:
         self._type = type
         self._flags = flags
         return self
-
-    def _update(self):
-        self._is_open()
-        if gpiod.line_update(self._line) == -1:
-            raise OSError("unable to update state")
 
     def __iter__(self):
         raise RuntimeError("You need to use 'async for', not 'for'")

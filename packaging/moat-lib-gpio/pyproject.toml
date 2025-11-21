@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 4.2",
 	"libgpiod ~= 2.2",
 	]
-version = "0.8.1"
+version = "0.9.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.9"
 name = "moat-lib-gpio"

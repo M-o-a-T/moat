@@ -93,10 +93,10 @@ moat-kv-cal:
   tag: 0.1.6
 moat-kv-gpio:
   deb: 0.12.2-6
-  pkg: 2
+  pkg: 1
   pypi: 0.12.2
-  rev: 781bab3f5fc68b1603941e956780cac6e9917170
-  tag: 0.12.4
+  rev: 6c45c82c1cbd6b8b87515247602c821ebb3a26a4
+  tag: 0.12.5
 moat-kv-ha:
   deb: 0.5.6-6
   pkg: 2
@@ -153,10 +153,10 @@ moat-lib-diffiehellman:
   tag: 0.13.5
 moat-lib-gpio:
   deb: 0.7.2-5
-  pkg: 2
-  pypi: 0.7.2
-  rev: 401e21125d3db973ca240d3b600fc508c8646755
-  tag: 0.8.1
+  pkg: 1
+  pypi: 0.9.1
+  rev: 6c45c82c1cbd6b8b87515247602c821ebb3a26a4
+  tag: 0.9.1
 moat-lib-pid:
   deb: 0.6.2-6
   pkg: 2

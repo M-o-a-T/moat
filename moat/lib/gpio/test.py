@@ -83,7 +83,7 @@ class _GpioPin:
         if self.state == s:
             return
         self.state = s
-        logger.error("SEE %s %d %s", self.chip, self.pin, self.state)
+        logger.debug("SEE %s %d %s", self.chip, self.pin, self.state)
         self.mon(s)
 
     def set(self, value: bool):

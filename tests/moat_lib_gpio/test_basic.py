@@ -21,8 +21,10 @@ async def test_mockup():
     """
     Empty test
     """
-    async with anyio.create_task_group() as tg,GpioWatcher().run() as w:
-
+    async with (
+        anyio.create_task_group() as tg,
+        GpioWatcher(interval=.05).run() as w,
+    ):
         try:
             with open_chip(label="gpio-mockup-A") as c:
                 assert c.num_lines == 8, f"Should have eight lines, not {c.num_lines}"
@@ -53,15 +55,58 @@ async def test_mockup():
                 p = w.pin(c.name,2)
 
                 li.value = False
-                await anyio.sleep(0.3)
+                await anyio.sleep(0.1)
                 assert p.value is False
 
                 li.value = True
-                await anyio.sleep(0.3)
+                await anyio.sleep(0.1)
                 assert p.value is True
 
                 li.value = False
-                await anyio.sleep(0.3)
+                await anyio.sleep(0.1)
                 assert p.value is False
 
-    pass  # pylint: disable=unnecessary-pass
+@pytest.mark.anyio
+async def test_poll():
+    """
+    Empty test
+    """
+    try:
+        with open_chip(label="gpio-mockup-A") as c:
+            assert c.num_lines == 8, f"Should have eight lines, not {c.num_lines}"
+            pass
+    except RuntimeError:
+        pytest.skip("GPIO Mockup module not loaded!")
+
+    async with (
+        GpioWatcher(interval=.05).run() as w,
+        open_chip(label="gpio-mockup-A") as c,
+        ):
+        assert c.label == "gpio-mockup-A"
+
+        with c.line(3).monitor() as li:
+            p = w.pin(c.name,3)
+
+            ali=aiter(li)
+            p.set(False)
+            with anyio.move_on_after(.1):
+                s=await anext(ali)
+                assert not s.value
+            p.set(True)
+            with anyio.fail_after(.1):
+                s=await anext(ali)
+                assert s.value
+            with anyio.move_on_after(.1):
+                s=await anext(ali)
+                raise RuntimeError("two events", s)
+            await anyio.sleep(0.1)
+            p.set(False)
+            with anyio.fail_after(.1):
+                s=await anext(ali)
+                assert not s.value
+            with anyio.move_on_after(.1):
+                s=await anext(ali)
+                raise RuntimeError("two events", s)
+
+
+pass  # pylint: disable=unnecessary-pass

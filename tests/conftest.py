@@ -4,6 +4,10 @@ import pytest
 
 
 @pytest.fixture(autouse=True, scope="session")
+def anyio_backend():
+    return "trio"
+
+@pytest.fixture(autouse=True, scope="session")
 def in_test(free_tcp_port_factory):
     """
     This fixture ensures that the configuration for moat-link clients

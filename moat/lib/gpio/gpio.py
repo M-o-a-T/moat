@@ -8,6 +8,8 @@ from pathlib import Path
 
 from gpiod import Chip as _Chip, LineSettings, is_gpiochip_device
 from gpiod.line import Direction, Edge, Value, Drive, Bias
+from gpiod.edge_event import EdgeEvent
+Type = EdgeEvent.Type
 
 __all__ = ["Chip","Direction"]
 
@@ -88,11 +90,17 @@ class Chip:
         self.__chip = chip
         return self
 
+    async def __aenter__(self):
+        return self.__enter__()
+
     def __exit__(self, *tb):
         try:
             return self.__chip.__exit__(*tb)
         finally:
             self.__chip = self._chip = None
+
+    async def __aexit__(self, *tb):
+        return self.__exit__(*tb)
 
     def line(self, offset, consumer=None):
         """Get a descriptor for a single GPIO line.
@@ -121,18 +129,18 @@ class Line:
     """
 
     _line = None
-    _direction = None
-    _default = None
+    _settings:Linesettings = None
     _flags = None
     _ev_flags = None
     _state = _FREE
 
-    _type = None
-
-    def __init__(self, chip, offset, consumer=sys.argv[0][:-3]):
+    def __init__(self, chip, offset, consumer=sys.argv[0][:-3], settings:LineSettings|None=None, **kw):
         self._chip = chip
         self._offset = offset
         self._consumer = consumer.encode("utf-8")
+        self._settings = settings or LineSettings(Direction.INPUT)
+        if kw:
+            self.open(**kw)
 
     def __repr__(self):
         return "<%s %s:%d %s=%d>" % (  # noqa:UP031
@@ -143,13 +151,13 @@ class Line:
             self._state,
         )
 
-    def open(self, direction:bool|Direction=False, default=False, flags=0):
+    def open(self, direction:bool|Direction=False, settings:LineSettings|None=None):
         """
         Create a context manager for controlling this line's input or output.
 
         Arguments:
             direction: input or output. Default: Direction.INPUT.
-            flags: to request pull-up/down resistors or open-collector outputs.
+            settings: LineSettings for fine control
 
         Example::
             with gpio.Chip(0) as chip:
@@ -159,40 +167,32 @@ class Line:
         """
         if self._state in _IN_USE:
             raise OSError("This line is already in use")
-        self._direction = direction if isinstance(direction,Direction) else Direction.OUTPUT if direction else Direction.INPUT
-        self._default = default
-        self._flags = flags
-        self._state = _PRE_IO
+        if settings is None:
+            settings = self._settings
+        else:
+            self._settings = settings
+        if not isinstance(direction,Direction):
+            direction = Direction.OUTPUT if direction else Direction.INPUT
+        settings.direction = direction
         return self
 
     def __enter__(self):
         """Context management for use with :meth:`open` and :meth:`monitor`."""
-        if self._state in _IN_USE:
+        if self._line is not None:
             raise OSError("This line is already in use")
-        if self._state == _FREE:
-            raise RuntimeError("You need to call .open() or .monitor()")
-        self._line = self._chip.request_lines({self._offset: LineSettings(direction=self._direction)})
+        if self._settings is None:
+            self._settings = LineSettings(direction = Direction.INPUT)
 
-        if self._state == _PRE_IO:
-            self._enter_io()
-        elif self._state == _PRE_EV:
-            self._enter_ev()
-        else:
-            raise RuntimeError("wrong state", self)
+        line = self._chip.request_lines({self._offset: self._settings})
+
         try:
-            self._line.__enter__()
+            line.__enter__()
         except BaseException:
-            self._line.release()
+            line.release()
             raise
 
+        self._line = line
         return self
-
-    def _enter_io(self):
-        self._state = _IN_IO
-        return self
-
-    def _enter_ev(self):
-        self._state = _IN_EV
 
     def __exit__(self, *tb):
         if self._line is not None:
@@ -200,10 +200,9 @@ class Line:
                 self._line.release()
             finally:
                 self._line = None
-        self._state = _FREE
 
     def _is_open(self):
-        if self._state not in _IN_USE:
+        if self._line is None:
             raise RuntimeError("Line is not open", self)
 
     @property
@@ -270,7 +269,7 @@ class Line:
     def consumer(self):  # noqa: D102
         return self._chip.get_line_info(self._offset).consumer
 
-    def monitor(self, type=Edge.BOTH, flags=0):  # noqa: A002
+    def monitor(self, type=Edge.BOTH):  # noqa: A002
         """
         Monitor events.
 
@@ -285,11 +284,10 @@ class Line:
                     async for event in line:
                         print(event)
         """
-        if self._state in _IN_USE:
+        if self._line is not None:
             raise OSError("This line is already in use")
-        self._state = _PRE_EV
-        self._type = type
-        self._flags = flags
+        self._settings.direction = Direction.INPUT
+        self._settings.edge_detection = type
         return self
 
     def __iter__(self):
@@ -302,14 +300,11 @@ class Line:
         raise RuntimeError("You need to use 'with', not 'async with'")
 
     def __aiter__(self):
-        if self._state != _IN_EV:
-            raise RuntimeError("You need to call 'with LINE.monitor() / async for event in LINE'")
+        if self._settings.edge_detection == Edge.NONE:
+            raise RuntimeError("You need to call 'with LINE.monitor()'")
         return self
 
     async def __anext__(self):
-        if self._state != _IN_EV:
-            raise RuntimeError("wrong state")
-
         await anyio.wait_readable(self._line.fd)
         res = self._line.read_edge_events(max_events=1)
         return Event(res[0])
@@ -322,27 +317,27 @@ class Line:
 class Event:
     """Store a Pythonic representation of an event"""
 
+    value: bool
+
     def __init__(self, ev):
-        if ev.event_type == gpiod.EdgeEvent.Type.RISING_EDGE:
+        if ev.event_type == Type.RISING_EDGE:
             self.value = 1
-        elif ev.event_type == gpiod.EdgeEvent.Type.FALLING_EDGE:
+        elif ev.event_type == Type.FALLING_EDGE:
             self.value = 0
         else:
-            raise RuntimeError("Unknown event type")
-        self._ts_sec = ev.ts.tv_sec
-        self._ts_nsec = ev.ts.tv_nsec
+            raise RuntimeError("Unknown event type",ev)
+        self._ts = ev.timestamp_ns
 
     @property
-    def timestamp(self):
-        """Return a (second,nanosecond) tuple for fast timestamping"""
-        return (self._ts_sec, self._ts_nsec)
+    def timestamp(self) -> int:
+        """nanosecond timestamp, TIME_MONOTONIC"""
+        return self._ts
 
     @property
-    def time(self):
-        """Return the event's proper datetime"""
-        return datetime.datetime.fromtimestamp(
-            self._ts_sec + self._ts_nsec / 1000000000, tz=datetime.UTC
-        )
+    def time(self) -> float:
+        """Return the event's wall-clock time"""
+        now_bns = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
+        return time.time() - (now_bns-self._ts)/1000000000
 
     def __repr__(self):
         return f"<{self.value} @{self.time}>"

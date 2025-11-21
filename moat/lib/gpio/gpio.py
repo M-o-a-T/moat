@@ -4,6 +4,7 @@ import anyio
 import datetime
 import logging
 import sys
+import time
 from pathlib import Path
 
 from gpiod import Chip as _Chip, LineSettings, is_gpiochip_device

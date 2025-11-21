@@ -17,7 +17,7 @@ so that you can still see very fast flashes)
 """
 if __name__ == "__main__":
     with gpio.Chip(0) as c:
-        with c.line(16).open(gpio.DIRECTION_OUTPUT) as l:
+        with c.line(16).open(gpio.Direction.OUTPUT) as l:
             try:
                 while True:
                     l.value = 1

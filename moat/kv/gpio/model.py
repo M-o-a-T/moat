@@ -519,7 +519,7 @@ class GPIOline(_GPIOnode):
         """
         with anyio.CancelScope() as sc:
             self._poll = sc
-            with self.chip.line(self._path[-1]).open(direction=gpio.DIRECTION_OUTPUT) as line:
+            with self.chip.line(self._path[-1]).open(direction=gpio.Direction.OUTPUT) as line:
                 async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                     pl = PathLongener()
                     old_val = None

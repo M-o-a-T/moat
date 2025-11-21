@@ -17,10 +17,10 @@ async def pling(line):
 async def main():
     async with anyio.create_task_group() as n:
         with gpio.Chip(0) as c:
-            with c.line(19).open(direction=gpio.DIRECTION_OUTPUT) as out_:
+            with c.line(19).open(direction=gpio.Direction.OUTPUT) as out_:
                 in_ = c.line(20)
                 await n.spawn(pling, out_)
-                with in_.monitor(gpio.REQUEST_EVENT_BOTH_EDGES):
+                with in_.monitor(gpio.Edge.BOTH):
                     async for e in in_:
                         print(
                             e,

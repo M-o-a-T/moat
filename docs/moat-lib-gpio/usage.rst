@@ -78,7 +78,7 @@ Output
 
 Conceptually, controlling on a GPIO line is simple::
 
-    with chip.line(20).open(direction=gpio.DIRECTION_OUTPUT) as line:
+    with chip.line(20).open(direction=gpio.Direction.OUTPUT) as line:
         line.value = 1
 
 However, the code above will not work because as soon as the ``with`` block is exited,
@@ -88,7 +88,7 @@ default.
 Thus, if you want your light to be on for more than a few microseconds, the following
 code might be a better idea::
 
-    with chip.line(20).open(direction=gpio.DIRECTION_OUTPUT) as line:
+    with chip.line(20).open(direction=gpio.Direction.OUTPUT) as line:
         line.value = 1
         try:
             await anyio.sleep(5*60)
@@ -101,7 +101,7 @@ Input
 
 Reading a line is easy::
 
-    with chip.line(20).open(direction=gpio.DIRECTION_INPUT) as line:
+    with chip.line(20).open(direction=gpio.Direction.OUTPUT) as line:
         if line.value:
             print("It's on!")
 
@@ -120,9 +120,9 @@ it is continually busy.
 Therefore, it's better to let the kernel signal changes to a GPIO device::
 
     with gpio.Chip(0) as c:
-        with c.line(19).open(direction=gpio.DIRECTION_OUTPUT) as out_:
+        with c.line(19).open(direction=gpio.Direction.OUTPUT) as out_:
             wire = c.line(20)
-            with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES):
+            with wire.monitor(gpio.Edge.BOTH):
                 async for e in in_:
                     print(e, "on" if e.value else "off", "at", e.time.strftime("%H:%M:%S"))
 

@@ -25,7 +25,7 @@ class Led:
 
     async def liteon(self):
         with gpio.open_chip() as chip:
-            with chip.line(self.x).open(direction=gpio.DIRECTION_OUTPUT) as line:
+            with chip.line(self.x).open(direction=gpio.Direction.OUTPUT) as line:
                 self._on.clear()
                 await self._off.set()
                 while True:
@@ -58,7 +58,7 @@ class Button:
     async def push(self):
         with gpio.Chip(0) as c:
             in_ = c.line(self.y)
-            with in_.monitor(gpio.REQUEST_EVENT_RISING_EDGE):
+            with in_.monitor(gpio.Edge.RISING):
                 last = 0
                 async for e in in_:
                     # This section is for debouncing the button.

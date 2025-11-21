@@ -1,18 +1,19 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
-import datetime
 import logging
 import sys
 import time
 from pathlib import Path
 
-from gpiod import Chip as _Chip, LineSettings, is_gpiochip_device
-from gpiod.line import Direction, Edge, Value, Drive, Bias
+from gpiod import Chip as _Chip
+from gpiod import LineSettings, is_gpiochip_device
 from gpiod.edge_event import EdgeEvent
+from gpiod.line import Bias, Direction, Drive, Edge, Value
+
 Type = EdgeEvent.Type
 
-__all__ = ["Chip","Direction","Edge","Drive","Bias","Type"]
+__all__ = ["Bias", "Chip", "Direction", "Drive", "Edge", "Type"]
 
 _logger = logging.getLogger(__name__)
 
@@ -47,19 +48,23 @@ class Chip:
             return f"{self.__class__.__name__}({self._label})"
 
     @property
-    def name(self):
+    def name(self) -> str:
+        "name (NOT the file name)"
         return self._chip.get_info().name
 
     @property
-    def num_lines(self):
+    def num_lines(self) -> int:
+        "#lines on this chip"
         return self._chip.get_info().num_lines
 
     @property
-    def label(self):
+    def label(self) -> str:
+        "Label"
         return self._chip.get_info().label
 
     @property
-    def consumer(self):
+    def consumer(self) -> str:
+        "Consumer"
         return self._consumer
 
     def __enter__(self):
@@ -130,12 +135,14 @@ class Line:
     """
 
     _line = None
-    _settings:Linesettings = None
+    _settings: LineSettings = None
     _flags = None
     _ev_flags = None
     _state = _FREE
 
-    def __init__(self, chip, offset, consumer=sys.argv[0][:-3], settings:LineSettings|None=None, **kw):
+    def __init__(
+        self, chip, offset, consumer=sys.argv[0][:-3], settings: LineSettings | None = None, **kw
+    ):
         self._chip = chip
         self._offset = offset
         self._consumer = consumer.encode("utf-8")
@@ -152,7 +159,7 @@ class Line:
             self._state,
         )
 
-    def open(self, direction:bool|Direction=False, settings:LineSettings|None=None):
+    def open(self, direction: bool | Direction = False, settings: LineSettings | None = None):
         """
         Create a context manager for controlling this line's input or output.
 
@@ -172,7 +179,7 @@ class Line:
             settings = self._settings
         else:
             self._settings = settings
-        if not isinstance(direction,Direction):
+        if not isinstance(direction, Direction):
             direction = Direction.OUTPUT if direction else Direction.INPUT
         settings.direction = direction
         return self
@@ -182,7 +189,7 @@ class Line:
         if self._line is not None:
             raise OSError("This line is already in use")
         if self._settings is None:
-            self._settings = LineSettings(direction = Direction.INPUT)
+            self._settings = LineSettings(direction=Direction.INPUT)
 
         line = self._chip.request_lines({self._offset: self._settings})
 
@@ -217,13 +224,13 @@ class Line:
         self._line.set_value(self._offset, Value.ACTIVE if value else Value.INACTIVE)
 
     @property
-    def direction(self) -> bool:  # noqa: D102
+    def direction(self) -> bool:
         if self._line is None:
             return self._direction
         return self._chip.get_line_info(self._offset).direction == Direction.OUTPUT
 
     @property
-    def active_low(self) -> bool:  # noqa: D102
+    def active_low(self) -> bool:
         return self._chip.get_line_info(self._offset).active_low
 
     @property
@@ -267,10 +274,10 @@ class Line:
         return self._chip.get_line_info(self._offset).name
 
     @property
-    def consumer(self):  # noqa: D102
+    def consumer(self):
         return self._chip.get_line_info(self._offset).consumer
 
-    def monitor(self, type=Edge.BOTH):  # noqa: A002
+    def monitor(self, type: Edge | bool | None = Edge.BOTH):  # noqa: A002
         """
         Monitor events.
 
@@ -287,6 +294,10 @@ class Line:
         """
         if self._line is not None:
             raise OSError("This line is already in use")
+        if type is None:
+            type = Edge.BOTH  # noqa:A001
+        elif isinstance(type, bool):
+            type = Edge.RISING if type else Edge.FALLING  # noqa:A001
         self._settings.direction = Direction.INPUT
         self._settings.edge_detection = type
         return self
@@ -326,7 +337,7 @@ class Event:
         elif ev.event_type == Type.FALLING_EDGE:
             self.value = 0
         else:
-            raise RuntimeError("Unknown event type",ev)
+            raise RuntimeError("Unknown event type", ev)
         self._ts = ev.timestamp_ns
 
     @property
@@ -338,7 +349,7 @@ class Event:
     def time(self) -> float:
         """Return the event's wall-clock time"""
         now_bns = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
-        return time.time() - (now_bns-self._ts)/1000000000
+        return time.time() - (now_bns - self._ts) / 1000000000
 
     def __repr__(self):
         return f"<{self.value} @{self.time}>"

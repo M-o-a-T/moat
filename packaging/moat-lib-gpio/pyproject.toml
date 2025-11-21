@@ -13,11 +13,11 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"cffi",
+	"libgpiod ~= 2.2",
 	]
 version = "0.8.1"
 keywords = [ "MoaT",]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 name = "moat-lib-gpio"
 description = "Easy async access to GPIO pins"
 readme = "README.rst"

@@ -136,6 +136,10 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
 
     Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
     """
+    try:
+        import moat.link.meta  # noqa:F401,PLC0415
+    except ImportError:
+        pass
 
     if (long or short) and not stream:
         raise click.UsageError("Path mods only make sense when streaming")

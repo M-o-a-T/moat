@@ -14,7 +14,7 @@ dependencies = [
 	"moat-kv ~= 0.71.20",
 	"moat-lib-gpio ~= 0.8.0",
 ]
-version = "0.12.5"
+version = "0.12.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-gpio"

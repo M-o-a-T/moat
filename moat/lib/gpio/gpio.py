@@ -12,7 +12,7 @@ from gpiod.line import Direction, Edge, Value, Drive, Bias
 from gpiod.edge_event import EdgeEvent
 Type = EdgeEvent.Type
 
-__all__ = ["Chip","Direction"]
+__all__ = ["Chip","Direction","Edge","Drive","Bias","Type"]
 
 _logger = logging.getLogger(__name__)
 

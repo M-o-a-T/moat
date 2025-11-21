@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 def _DIR(d):
     if d is None:
-        return gpio.REQUEST_EVENT_BOTH_EDGES
+        return gpio.Edge.BOTH
     if d:
-        return gpio.REQUEST_EVENT_RISING_EDGE
+        return gpio.Edge.RISING
     else:
-        return gpio.REQUEST_EVENT_FALLING_EDGE
+        return gpio.Edge.FALLING
 
 
 class _GPIObase(ClientEntry):
@@ -161,7 +161,7 @@ class GPIOline(_GPIOnode):
         with anyio.CancelScope() as sc:
             self._poll = sc
             wire = self.chip.line(self._path[-1])
-            with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
+            with wire.monitor(gpio.Edge.BOTH) as mon:
                 old_value = mon.value
 
                 async def set_value(value):
@@ -212,7 +212,7 @@ class GPIOline(_GPIOnode):
             self._poll = sc
 
             wire = self.chip.line(self._path[-1])
-            with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
+            with wire.monitor(gpio.Edge.BOTH) as mon:
                 self.logger.debug("Init %s", mon.value)
                 evt.set()
                 ival = None

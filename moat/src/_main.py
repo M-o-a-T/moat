@@ -42,6 +42,14 @@ def dash(n: str) -> str:
     return n.replace(".", "-")
 
 
+def under(n: str) -> str:
+    """
+    moat.foo.bar > moat_foo_bar
+    foo.bar > foo_bar
+    """
+    return n.replace(".", "_")
+
+
 def undash(n: str) -> str:
     """
     moat-foo-bar > moat.foo.bar
@@ -457,23 +465,27 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     return work
 
 
-def run_tests(pkg: str | None, *opts) -> bool:
+async def run_tests(pkg: str | None, *opts) -> bool:
     """Run subtests for subpackage @pkg."""
 
     if pkg is None:
         tests = Path("tests")
     else:
-        tests = dash(pkg).replace("-", "_")
-        tests = Path("tests") / tests
+        tests = Path("tests") / pkg
 
-    if not Path(tests):
+    if not Path(tests).exists():
         # No tests. Assume it's OK.
+        print("No tests:", pkg)
         return True
     try:
         print("\n*** Testing:", pkg)
-        subprocess.run(  # noqa:S603
-            ["/usr/bin/python3", "-mpytest", *opts, tests],
-            check=False,
+        await run_(
+            "/usr/bin/python3",
+            "-mpytest",
+            *opts,
+            tests,
+            capture=False,
+            env=dict(PYTHONPATH="."),
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -1013,9 +1025,9 @@ async def build(
     # Step 2: run tests
     if not no_test:
         fails = set()
-        for p in parts:
-            if not run_tests(p, *pytest_opts):
-                fails.add(p)
+        for r in repos:
+            if not await run_tests(r.under, *pytest_opts):
+                fails.add(r.name)
         if fails:
             if not run:
                 print("*** Tests failed:", *fails, file=sys.stderr)

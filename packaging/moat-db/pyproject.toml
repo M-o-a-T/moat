@@ -19,7 +19,7 @@ dependencies = [
 	"outcome",
 	"ruyaml",
 	"simpleeval",
-	"moat-util ~= 0.56.4",
+	"moat-util ~= 0.60.9",
 	"sqlalchemy ~= 2.0",
 	]
 version = "0.2.3"

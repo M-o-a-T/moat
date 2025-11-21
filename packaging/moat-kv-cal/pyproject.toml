@@ -11,8 +11,8 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.24",
-	"moat-util ~= 0.56.4",
+	"moat-kv ~= 0.71.20",
+	"moat-util ~= 0.60.9",
         "aiocaldav",
 ]
 version = "0.1.6"

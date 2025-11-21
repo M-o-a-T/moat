@@ -11,7 +11,7 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.24",
+	"moat-kv ~= 0.71.20",
 	"asyncakumuli ~= 0.6.4",
 ]
 version = "0.8.8"

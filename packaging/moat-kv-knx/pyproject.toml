@@ -11,7 +11,7 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.2",
+	"moat-kv ~= 0.71.20",
         "netifaces",
 ]
 keywords = [ "MoaT",]

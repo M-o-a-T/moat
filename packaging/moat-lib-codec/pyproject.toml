@@ -13,7 +13,7 @@ classifiers = [
 ]
 dependencies = [
     "anyio ~= 4.2",
-    "moat-lib-cmd ~= 0.3.5",
+    "moat-lib-cmd ~= 0.4.6",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -22,7 +22,7 @@ maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple command/stream multiplexer'
 readme = "README.rst"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
-version = "0.4.7"
+version = "0.4.8"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

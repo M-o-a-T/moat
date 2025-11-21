@@ -15,8 +15,8 @@ dependencies = [
 	"anyio ~= 4.2",
 	"attrs",
 	"ruyaml",
-	"moat-util ~= 0.56.4",
-	"moat-db ~= 0.2.1",
+	"moat-util ~= 0.60.9",
+	"moat-db ~= 0.2.3",
 	]
 version = "0.2.2"
 keywords = [ "MoaT",]

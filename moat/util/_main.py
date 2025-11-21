@@ -125,7 +125,7 @@ y, yr   Year (2023–)
     help="Destination file",
     default=sys.stdout,
 )
-@click.option("-s", "--stream", is_flag=True, help="Multiple messages")
+@click.option("-F", "--stream", is_flag=True, help="Multiple messages")
 @click.option("-L", "--long", is_flag=True, help="Fix input paths")
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")

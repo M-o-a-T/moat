@@ -13,7 +13,7 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"moat-util ~= 0.56.4",
+	"moat-util ~= 0.60.9",
 	]
 version = "0.2.11"
 keywords = [ "MoaT",]

@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
 	"anyio ~= 4.0",
 	"asyncscope",
-	"moat-util ~= 0.56.4",
+	"moat-util ~= 0.60.9",
 	]
 version = "0.11.4"
 keywords = [ "MoaT",]

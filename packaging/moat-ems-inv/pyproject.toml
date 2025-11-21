@@ -13,9 +13,9 @@ classifiers = [
 ]
 dependencies = [
   "anyio ~= 4.2",
-  "moat-util ~= 0.56.4",
-  "moat-modbus ~= 0.8.3",
-  "moat-lib-victron ~= 0.1.2",
+  "moat-util ~= 0.60.9",
+  "moat-modbus ~= 0.8.8",
+  "moat-lib-victron ~= 0.1.4",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

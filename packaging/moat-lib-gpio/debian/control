@@ -15,7 +15,7 @@ Package: python3-moat-lib-gpio
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-libgpiod,
-  anyio (>= 4),
+  python3-anyio (>= 4),
 Conflicts: python3-moat-gpio, moat-gpio
 Description: GPIO access via AnyIO and libgpiod
  MoaT-lib-GPIO allows easy access to the GPIO pins on your Raspberry Pi or

@@ -153,9 +153,9 @@ moat-lib-diffiehellman:
   tag: 0.13.5
 moat-lib-gpio:
   deb: 0.7.2-5
-  pkg: 1
+  pkg: 2
   pypi: 0.7.2
-  rev: 781bab3f5fc68b1603941e956780cac6e9917170
+  rev: 401e21125d3db973ca240d3b600fc508c8646755
   tag: 0.8.1
 moat-lib-pid:
   deb: 0.6.2-6

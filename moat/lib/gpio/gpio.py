@@ -108,7 +108,7 @@ class Chip:
     async def __aexit__(self, *tb):
         return self.__exit__(*tb)
 
-    def line(self, offset, consumer=None):
+    def line(self, offset, consumer=None, **kw):
         """Get a descriptor for a single GPIO line.
 
         Arguments:
@@ -117,15 +117,7 @@ class Chip:
         """
         if consumer is None:
             consumer = self._consumer
-        return Line(self._chip, offset, consumer=consumer)
-
-
-_FREE = 0
-_PRE_IO = 1
-_IN_IO = 2
-_PRE_EV = 3
-_IN_EV = 4
-_IN_USE = {_IN_IO, _IN_EV}
+        return Line(self._chip, offset, consumer=consumer, **kw)
 
 
 class Line:
@@ -138,7 +130,6 @@ class Line:
     _settings: LineSettings = None
     _flags = None
     _ev_flags = None
-    _state = _FREE
 
     def __init__(
         self, chip, offset, consumer=sys.argv[0][:-3], settings: LineSettings | None = None, **kw
@@ -146,20 +137,23 @@ class Line:
         self._chip = chip
         self._offset = offset
         self._consumer = consumer.encode("utf-8")
-        self._settings = settings or LineSettings(Direction.INPUT)
-        if kw:
-            self.open(**kw)
+        if settings is not None and kw:
+            raise TypeError("Either implicit or explicit settings please.")
+        if settings is None:
+            settings = LineSettings(direction=Direction.INPUT)
+        self._settings = settings
+        for k,v in kw.items():
+            setattr(self._settings,k,v)
 
     def __repr__(self):
-        return "<%s %s:%d %s=%d>" % (  # noqa:UP031
+        return "<%s %s:%d %s>" % (  # noqa:UP031
             self.__class__.__name__,
             self._chip,
             self._offset,
             self._line,
-            self._state,
         )
 
-    def open(self, direction: bool | Direction = False, settings: LineSettings | None = None):
+    def open(self, direction: bool | Direction |None= None):
         """
         Create a context manager for controlling this line's input or output.
 
@@ -173,15 +167,37 @@ class Line:
                 with line.open(direction=Direction.INPUT) as wire:
                     print(wire.value)
         """
-        if self._state in _IN_USE:
+        if self._line is not None:
             raise OSError("This line is already in use")
-        if settings is None:
-            settings = self._settings
-        else:
-            self._settings = settings
         if not isinstance(direction, Direction):
-            direction = Direction.OUTPUT if direction else Direction.INPUT
-        settings.direction = direction
+            if direction is None:
+                direction = self._settings.direction
+            else:
+                direction = Direction.OUTPUT if direction else Direction.INPUT
+        self._settings.direction = direction
+        return self
+
+    def monitor(self, type: Edge | bool | None = Edge.BOTH):  # noqa: A002
+        """
+        Monitor events on this line.
+
+        Arguments:
+            type: which edge(s) to monitor
+            flags: REQUEST_FLAG_* values (ORed)
+
+        Usage::
+
+            with gpio.Chip(0) as chip, chip.line(13).monitor() as line:
+                async for event in line:
+                    print(event)
+        """
+        if self._line is not None:
+            raise OSError("This line is already in use")
+        if type is None:
+            type = Edge.BOTH  # noqa:A001
+        elif isinstance(type, bool):
+            type = Edge.RISING if type else Edge.FALLING  # noqa:A001
+        self._settings.edge_detection = type
         return self
 
     def __enter__(self):
@@ -276,31 +292,6 @@ class Line:
     @property
     def consumer(self):
         return self._chip.get_line_info(self._offset).consumer
-
-    def monitor(self, type: Edge | bool | None = Edge.BOTH):  # noqa: A002
-        """
-        Monitor events.
-
-        Arguments:
-            type: which edge(s) to monitor
-            flags: REQUEST_FLAG_* values (ORed)
-
-        Usage::
-
-            with gpio.Chip(0) as chip:
-                with chip.line(13).monitor() as line:
-                    async for event in line:
-                        print(event)
-        """
-        if self._line is not None:
-            raise OSError("This line is already in use")
-        if type is None:
-            type = Edge.BOTH  # noqa:A001
-        elif isinstance(type, bool):
-            type = Edge.RISING if type else Edge.FALLING  # noqa:A001
-        self._settings.direction = Direction.INPUT
-        self._settings.edge_detection = type
-        return self
 
     def __iter__(self):
         raise RuntimeError("You need to use 'async for', not 'for'")

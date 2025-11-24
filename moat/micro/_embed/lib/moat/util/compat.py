@@ -91,7 +91,7 @@ def log(s, *x, err=None):
         s = s % x
     print(s, file=sys.stderr)
     if err is not None:
-        sys.print_exception(err, sys.stderr)
+        print_exc(err)
 
 
 def at(*a, **kw):  # noqa: D103

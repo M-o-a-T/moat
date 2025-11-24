@@ -104,15 +104,25 @@ class Pin(BaseCmd):
     This is a basic digital pin.
 
     Iterating it yields a new value whenever the pin changes.
+
+    Config:
+        out: bool  # direction
+        drive: 0…3 (ESP32)
+        value: bool  # on/off on init
     """
 
     def __init__(self, cfg):
         super().__init__(cfg)
         kw = {}
+        a = [cfg["pin"], M.Pin.OUT if cfg.get("out", False) else M.Pin.IN]
         if (val := cfg.get("init", None)) is not None:
             kw["value"] = val
+        if (drive := cfg.get("drive", None)) is not None:
+            kw["drive"] = drive
+        if (pull := cfg.get("pull", None)) is not None:
+            a.append(M.Pin.PULL_UP if pull else M.Pin.PULL_DOWN)
 
-        self.pin = _Pin(cfg["pin"], **kw)
+        self.pin = _Pin(*a, **kw)
 
     async def setup(self):
         "initialization, triggers change"
@@ -135,25 +145,25 @@ class Pin(BaseCmd):
         o = msg.get("o", None)
         if msg.can_stream:
             async with msg.stream_out() as m:
-                val = self.pin()
+                val = bool(self.pin())
                 if o is None or val != o:
                     await m.send(val)
                 while True:
                     await self.pin.evt.wait()
-                    await m.send(self.pin())
+                    await m.send(bool(self.pin()))
 
-        val = self.pin()
+        val = bool(self.pin())
         if val is o:
             await self.pin.evt.wait()
-            val = self.pin()
-        return val
+            val = bool(self.pin())
+        await msg.result(val)
 
     doc_w = dict(
         _d="write",
         _s=[
             dict(_i="bool:new values"),
-            dict(_0="bool:new value"),
         ],
+        _0="bool:new value",
     )
 
     async def stream_w(self, msg):
@@ -165,3 +175,4 @@ class Pin(BaseCmd):
             return
 
         self.pin(msg[0])
+        await msg.result()

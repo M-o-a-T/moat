@@ -140,7 +140,7 @@ def attr_args(
                 *args,
                 "set_",
                 nargs=2,
-                type=(P, str),
+                type=(str, str),
                 multiple=True,
                 metavar="name|path value",
                 help=f"{par_name} (value: {ht})",

@@ -60,7 +60,7 @@ class _Pin:
         self.evt = Event()
         self.val = self._pin.value()
 
-    def _irq(self):
+    def _irq(self, _x=None):
         "sets the change flag"
         self.val = self._pin.value()
         self.flag.set()

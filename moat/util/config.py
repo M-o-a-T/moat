@@ -40,10 +40,9 @@ def ensure_cfg(path: str | Path, cfg=CFG) -> dict:
             if fn.is_file():
                 merge(cfg, yload(fn, attr=True), replace=False)
 
+    EXT = cfg.setdefault("ext", attrdict())
+    EXT["moat"] = cfg
     try:
-        EXT = cfg.setdefault("ext", attrdict())
-        EXT["moat"] = cfg
-
         if "logging" not in cfg:
             _load(cfg, "moat")
 

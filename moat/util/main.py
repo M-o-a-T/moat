@@ -18,6 +18,8 @@ from pathlib import Path as FSPath
 import asyncclick as click
 import simpleeval
 
+import moat  # for CFG
+
 from . import NotGiven
 from .config import CFG, ensure_cfg
 from .dict import attrdict, to_attrdict
@@ -885,7 +887,6 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.DEBUG = debug
 
     # Don't forget to import toplevel config files
-    import moat  # noqa: PLC0415
 
     try:
         p = moat.__path__
@@ -943,6 +944,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     obj.logger = logging.getLogger(name)
     obj.debug_loader = debug_loader
+
+    moat.cfg = obj.cfg
 
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg

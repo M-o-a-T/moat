@@ -1,11 +1,16 @@
 from __future__ import annotations  # noqa: D100
 
+import copy
 import pytest
+
+from moat.link._test import CFG
 
 
 @pytest.fixture(autouse=True, scope="session")
 def anyio_backend():
+    "never use asyncio for testing"
     return "trio"
+
 
 @pytest.fixture(autouse=True, scope="session")
 def in_test(free_tcp_port_factory):
@@ -29,3 +34,10 @@ def in_test(free_tcp_port_factory):
         yield
     finally:
         del CFG.env.in_test
+
+
+@pytest.fixture
+def cfg():
+    "fixture for the static config"
+    c = copy.deepcopy(CFG)
+    return c

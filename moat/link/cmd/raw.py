@@ -111,7 +111,10 @@ def _get_message(args):
     for m in args["msg"]:
         yield m
     for m in args["msg_eval"]:
-        yield eval(m)  # pylint: disable=eval-used
+        if m == "-":
+            yield NotGiven
+        else:
+            yield eval(m)  # pylint: disable=eval-used
     if args["msg_lines"]:
         with open(args["msg_lines"]) as f:  # pylint: disable=unspecified-encoding
             for line in f:

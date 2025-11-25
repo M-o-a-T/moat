@@ -587,7 +587,7 @@ class MsgHandler(BaseMsgHandler):
         # First check if it's a readiness check.
         is_rdy = False
         if rcmd[0] == "rdy_":
-            if L and await self.wait_ready(wait=True):
+            if L and hasattr(self, "wait_ready") and await self.wait_ready(wait=True):
                 raise NotReadyError(msg.cmd, rcmd)
             is_rdy = True
 

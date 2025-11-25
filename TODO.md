@@ -7,6 +7,9 @@ hero: Any spare days that are not in the calendar?
   * pyright?
   * test coverage?
 
+* link vs. lib.cmd vs. micro
+  * unify command handling, directory, readiness, etc.
+
 * moat.lib.cmd
   * Add support for tunneling through websockets
 

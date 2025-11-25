@@ -97,8 +97,8 @@ async def test_lsy_from_file(cfg, tmp_path):  # noqa: D103
             n.set(p, v, MsgMeta(origin="Test"))
 
         await data(s)
-        fn = next(iter(srv1[0]._writing))  # noqa: SLF001
-        await srv1[0].stop()
+        fn = next(iter(srv1._writing))  # noqa: SLF001
+        await srv1.stop()
 
     # check the file
 
@@ -132,7 +132,7 @@ async def test_lsy_switch_server_hard(cfg):  # noqa: D103
         await c1.cmd(P("d.set"), P("test.one"), 123)
 
         await sf.server()
-        await srv1[0].cancel()
+        await srv1.cancel()
 
         res, *_meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123
@@ -153,7 +153,7 @@ async def test_lsy_switch_server_hard_break(cfg):  # noqa: D103
                 async for _m in st:
                     n += 1
                     if n == 3:
-                        await srv1[0].cancel()
+                        await srv1.cancel()
         assert n == 3
         res, *_meta = await c1.d.get(P("test.one"))
         assert res == 123
@@ -168,7 +168,7 @@ async def test_lsy_switch_server_soft(cfg):  # noqa: D103
         await c1.cmd(P("d.set"), P("test.one"), 123)
 
         await sf.server()
-        await srv1[0].stop()
+        await srv1.stop()
 
         res, *_meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123

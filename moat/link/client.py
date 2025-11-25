@@ -137,18 +137,17 @@ class LinkCommon(CmdCommon):
 
     protocol_version: int = -1
     name: str
-    server_name: str
+    server_name: str = None
     is_server: bool = False
 
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
-        self._id = gen_ident(12, alphabet=al_unique)
         if name is not None:
             self.is_server = True
         else:
             name = cfg.get("client_id")
             if name is None:
-                name = "_" + self._id
+                name = "_" + gen_ident(12, alphabet=al_unique)
         self.name = name
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
@@ -167,7 +166,7 @@ class LinkCommon(CmdCommon):
 
     @property
     def id(self):  # noqa:D102
-        return self._id
+        return self.name
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         async with self._connect_one(self._port) as hdl:
@@ -677,7 +676,8 @@ class LinkSender(MsgSender):
 
     async def get_service(self, srv: Path) -> MsgHandler:
         res = await self.d_get(P("run.host") + srv)
-        return self.sub_at(P("cl") / res["id"] + res["path"])
+        res2 = await self.d_get(P("run.id") + res["id"])
+        return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 
 
 class Link(LinkCommon, CtxObj):
@@ -735,20 +735,23 @@ class Link(LinkCommon, CtxObj):
 
     @property
     def _ping_path(self):
-        return P("run.ping.id") / self._id
+        return P("run.ping.id") / self.name
 
     @property
     def _id_path(self):
-        return P("run.id") / self._id
+        return P("run.id") / self.name
 
     async def _send_id(self):
+        data = dict(
+            host=platform.node(),
+            pid=os.getpid(),
+            argv=sys.argv,
+        )
+        if self.server_name is not None:
+            data["srv"] = self.server_name
         await self.sdr.d_set(
             self._id_path,
-            data=dict(
-                host=platform.node(),
-                pid=os.getpid(),
-                argv=sys.argv,
-            ),
+            data,
             retain=True,
         )
 

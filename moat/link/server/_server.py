@@ -25,7 +25,6 @@ from asyncactor import (
     TagEvent,
 )
 from asyncactor.backend import get_transport
-from attrs import define, field
 from mqttproto import QoS
 
 from moat.util import (
@@ -232,17 +231,12 @@ class ServerClient(LinkCommon):
                     return
                 them = self._hello.them
                 self.is_server = self._hello.they_server
-                try:
-                    self.server.rename_client(self, them)
-                except ValueError:
-                    self.logger.warning("Rename to %s failed", them)
+                if self.is_server:
+                    try:
+                        self.server.rename_client(self, them)
+                    except ValueError:
+                        self.logger.warning("Rename to %s failed", them)
 
-                if not self.is_server and "." not in them:
-                    # announce fixed-name client
-                    # The condition *must* match the 'vanish' message
-                    await self.server.backend.send(
-                        P(":R.run.service.main.client") / them, self.server.name, retain=True
-                    )
                 self.protocol_version = self._hello.protocol_version
             finally:
                 del self._hello
@@ -345,6 +339,12 @@ class ServerClient(LinkCommon):
     def sub_cl(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 'cl'"
         return self.server.sub_cl(msg, rcmd)
+
+    doc_srv = dict(_d="Access to named servers")
+
+    def sub_srv(self, msg: Msg, rcmd: list) -> Awaitable:
+        "Local subcommand redirect for 'srv'"
+        return self.server.sub_srv(msg, rcmd)
 
     def stream_cl(self, msg: Msg) -> Awaitable:
         "Send the list of currently-known clients"
@@ -647,36 +647,6 @@ class ServerClient(LinkCommon):
         return await self.server.load_file(fn=path, prefix=prefix)
 
 
-@define
-class ClientStub:
-    """
-    This is an entry in the client list that redirects to the server
-    which this client is connected to.
-    """
-
-    server: Server = field()
-    name: str = field()
-    client: str = field()
-
-    @property
-    def sender(self):
-        "Stub, returns self"
-        return self
-
-    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
-        "Handler that forwards to the remote server"
-        if prefix:
-            raise ValueError("doesn't work")
-        srv = self.server.server_link(self.name)[1]
-        if isinstance(srv, ClientStub):
-            raise RuntimeError("Client dropped, try later")  # noqa:TRY004
-        rcmd.extend((self.client, "cl"))
-        return await srv.handle(msg, rcmd)
-
-    async def aclose(self):
-        pass
-
-
 class Server(MsgHandler):
     """
     This is the main MoaT-Link server. It manages connections to the MQTT server,
@@ -761,7 +731,7 @@ class Server(MsgHandler):
         self._downed = {}
 
         # connected clients
-        self._clients: dict[str, ServerClient | ClientStub] = dict()
+        self._clients: dict[str, ServerClient] = dict()
 
         if load is not None:
             self._f_load = anyio.Path(load)
@@ -779,7 +749,6 @@ class Server(MsgHandler):
         """
         Change a client name (result of protocol startup)
         """
-        # Warning, this must not be called after a client has been announced
         if client.name == name:
             return
         if name in self._clients:
@@ -1395,9 +1364,6 @@ class Server(MsgHandler):
             await _tg.start(self._auth_update)
             await _tg.start(self._sigterm)
 
-            # monitor client connects
-            await _tg.start(self._watch_client)
-
             # background tasks
 
             await _tg.start(self._backend_monitor)
@@ -1592,15 +1558,6 @@ class Server(MsgHandler):
                         self._server_link_add.set()
                         self._server_link_add = anyio.Event()
 
-                        # ask it about its existing clients
-                        async with conn.cl().stream_in() as cld:
-                            async for cl in cld:
-                                cl = cl[0]  # noqa:PLW2901
-                                if cl == name or cl == self.name:
-                                    continue
-                                if not isinstance(self.clients.get(cl, None), ServerClient):
-                                    self._clients[cl] = ClientStub(self, name, cl)
-
                         await anyio.sleep(30)
                         backoff = 0
                         await anyio.sleep_forever()
@@ -1622,38 +1579,6 @@ class Server(MsgHandler):
 
                 backoff = min(backoff * 1.2 + 0.1, 30)
                 await anyio.sleep(backoff)
-
-    async def _watch_client(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        """
-        Monitor fixed-name client announcements.
-        """
-        async with self.backend.monitor(
-            P(":R.run.service.main.client"),
-            raw=False,
-            qos=QoS.AT_LEAST_ONCE,
-            no_local=True,
-            subtree=True,
-        ) as mon:
-            task_status.started()
-
-            async for msg in mon:
-                name = msg.topic[-1]
-                rem = self._clients.get(name, None)
-                if msg.data is NotGiven:
-                    if rem is None:
-                        continue
-                    if not isinstance(rem, ClientStub) or rem.name != msg.meta.origin:
-                        raise ValueError(repr(rem))  # XXX
-                        continue
-                    del self._clients[name]
-                else:
-                    if isinstance(rem, ServerClient):
-                        # we have this connection, so don't listen to them
-                        continue
-                    if name == msg.data:
-                        self.logger.warning("Got self-ref client: %r", name)
-                        continue
-                    self._clients[name] = ClientStub(self, msg.data, name)
 
     async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -2042,16 +1967,6 @@ class Server(MsgHandler):
                 if self._clients.get(c.name, None) is c:
                     del self._clients[c.name]
 
-                    if not c.is_server and "." not in c.name:
-                        # announce that client vanished
-                        # The condition *must* match the announcement
-                        with anyio.move_on_after(2, shield=True):
-                            await self.backend.send(
-                                P(":R.run.service.main.client") / c.name,
-                                b"",
-                                codec=None,
-                                retain=True,
-                            )
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("Client C_%s closed", cnr)
         except BaseException as exc:
@@ -2084,29 +1999,51 @@ class Server(MsgHandler):
     # server-to-server crosslinks
 
     async def sub_cl(self, msg: Msg, rcmd: list) -> None:
+        """
+        Direct to one of our clients.
+        """
         "Local subcommand redirect for 'cl'"
         name = rcmd.pop()
-        try:
-            cl = self.clients[name]
-        except KeyError:
-            cln = self.rdata.get(Path("run", "id", name)).meta.origin
-            cl = self.clients[cln]
+        cl = self._clients[name]
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:
         """
         Send the list of currently-known clients.
         """
-        # disabled
-        #       if msg.args:
-        #           srv = msg.args[0]
-        #           async with msg.stream_in() as ml:
-        #               async for mm in ml:
-        #                   name = mm[0]
-        #                   if not isinstance(self._clients.get(name,None), ServerClient):
-        #                       self._clients[name] = ClientStub(self,srv)
-        #           return
-        cl = list(self.clients.keys())
+        if not msg.can_stream:
+            return await msg.result(len(self._clients))
+
+        cl = list(self._clients.keys())
+        async with msg.stream_out(len(cl)) as ml:
+            for cn in cl:
+                await ml.send(cn)
+
+    async def sub_srv(self, msg: Msg, rcmd: list) -> None:
+        """
+        Direct a message to another server.
+        """
+        name = rcmd.pop()
+        if name == self.name:
+            return await self.handle(msg, rcmd)
+
+        try:
+            _sc, conn = self._server_link[name]
+        except KeyError:
+            conn = None
+        if conn is None:
+            raise RuntimeError(f"Server link {name!r} down")
+
+        return await conn.handle(msg, rcmd)
+
+    async def stream_srv(self, msg: Msg) -> None:
+        """
+        Send the list of currently-known servers.
+        """
+        if not msg.can_stream:
+            return await msg.result(len(self._server_link))
+
+        cl = list(self._server_link.keys())
         async with msg.stream_out(len(cl)) as ml:
             for cn in cl:
                 await ml.send(cn)

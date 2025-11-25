@@ -211,11 +211,17 @@ class Scaffold(CtxObj):
         cfg["server"]["port"] = 0
         if self.tempdir is not None:
             cfg["server"]["save"]["dir"] = self.tempdir / "data"
-        global _seq
-        _seq += 1
 
-        s = Server(cfg, f"S_{_seq}", **kw)
-        await s.serve(task_status=task_status)
+        name = kw.pop("name", None)
+        if name is None:
+            global _seq
+            _seq += 1
+            name = f"S_{_seq}"
+
+        s = Server(cfg, name, **kw)
+        await self.tg.start(s.serve)
+        task_status.started(s)
+        await anyio.sleep_forever()
 
     @asynccontextmanager
     async def server_(self, cfg: dict | None = None, **kw) -> None:
@@ -234,10 +240,9 @@ class Scaffold(CtxObj):
         return cl
 
     async def _run_client(self, *a, task_status, **kw) -> Never:
-        async with self.client_(*a, **kw) as li:
-            task_status.started(li)
+        async with self.client_(*a, **kw) as cl:
+            task_status.started(cl)
             await anyio.sleep_forever()
-            raise AssertionError
 
     @asynccontextmanager
     async def client_(

@@ -473,7 +473,7 @@ class LinkSender(MsgSender):
         min_length: int | None = None,
         max_length: int | None = None,
         cls: type = Node,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]:
+    ):
         """
         Monitor a node or subtree.
 
@@ -674,9 +674,20 @@ class LinkSender(MsgSender):
 
         return self._codec_tree
 
-    async def get_service(self, srv: Path) -> MsgHandler:
-        res = await self.d_get(P("run.host") + srv)
+    async def get_service(self, srv: Path, wait: bool = False) -> MsgHandler:
+        srv = P("run.host") + srv
+        try:
+            res = await self.d_get(srv)
+        except KeyError:
+            if not wait:
+                raise
+            async with self.d_watch(srv) as mon:
+                async for res in mon:
+                    if res not in (None, NotGiven):
+                        break
+
         res2 = await self.d_get(P("run.id") + res["id"])
+
         return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 
 
@@ -800,6 +811,7 @@ class Link(LinkCommon, CtxObj):
     async def _ctx(self):
         from .backend import get_backend  # noqa: PLC0415
 
+        # clears our announcement on disconnect
         will = attrdict(
             data=dict(up=False, state="will"),
             topic=P(":R") + self._ping_path,

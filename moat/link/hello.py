@@ -76,9 +76,6 @@ class Hello(CmdCommon):
 
     # negotiated protocol version
     protocol_version: int = field(init=False, default=0)
-    hello_seen: anyio.Event = field(init=False, factory=anyio.Event)
-    hello_a: tuple[Any, ...] = field(init=False, default=())
-    hello_kw: dict[str, Any] = field(init=False, default={})
 
     def __init__(self, *a, **kw):
         super().__init__()
@@ -241,7 +238,7 @@ class Hello(CmdCommon):
             am = self.auth_out.get(a, None)
             if am is None:
                 continue
-            res = await am.chat(self, self.hello_kw.get(a, None))
+            res = await am.chat(self, msg.kw.get(a, None))
             if res is None:
                 continue
             if isinstance(res, dict):

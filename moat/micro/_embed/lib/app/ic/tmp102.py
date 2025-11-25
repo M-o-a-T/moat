@@ -26,8 +26,8 @@ class Cmd(BaseCmd):
 
     async def run(self):
         "wrapper, for i2c bus access"
-        self.adr = self.cfg.adr
-        async with self.root.sub_at(self.cfg.bus) as self.bus:
+        self.adr = self.cfg["adr"]
+        async with self.root.sub_at(self.cfg["bus"]) as self.bus:
             await super().run()
 
     doc_r = dict(

@@ -47,7 +47,7 @@ class Cmd(BaseCmd):
         else:
             raise RuntimeError("No conv")
         res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
-        (t,) = struct.unpack("<h", res)
+        (t,) = struct.unpack("<H", res)
         return t
 
     async def stream_rt(self, msg: Msg):
@@ -84,7 +84,7 @@ class Cmd(BaseCmd):
         else:
             raise RuntimeError("No conv")
         res = await self.bus.wrrd(self.adr, bytes((2,)), 2)
-        (h,) = struct.unpack("<h", res)
+        (h,) = struct.unpack("<H", res)
         return h
 
     async def stream_rh(self, msg: Msg):
@@ -121,7 +121,7 @@ class Cmd(BaseCmd):
         else:
             raise RuntimeError("No conv")
         res = await self.bus.wrrd(self.adr, bytes((0,)), 4)
-        (t, h) = struct.unpack("<hh", res)
+        (t, h) = struct.unpack("<HH", res)
         return t, h
 
     async def stream_rth(self, msg: Msg):

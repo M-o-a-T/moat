@@ -148,7 +148,7 @@ class MpyBuf(ProcessBuf):
 
 
 @asynccontextmanager
-async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
+async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None, **kw):
     """
     Creates a multiplexer.
     """
@@ -163,7 +163,7 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
         cfg = combine_dict(cfg2, cfg, cls=attrdict)
 
     async with ctx_as(temp_dir, temp), TaskGroup() as tg:
-        stack = Dispatch(cfg)
+        stack = Dispatch(cfg, **kw)
         try:
             await tg.spawn(stack.run)
             if L:

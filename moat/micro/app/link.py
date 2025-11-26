@@ -14,13 +14,16 @@ from moat.util.compat import AC_use
 
 class Register(BaseCmd):
     """
-    This command registers a link to a remote device.
+    This command registers a link between a MoaT-micro path and a MoaT-Link subcommand.
 
     Config:
        link: !P foo.bar  # for registration of foo.bar on MoaT-Link
        host: bool        # whether to host-prefix the link name, default False
-       path: !P r.x      # path to the advertised remote (sub)system
+       path: !P r.x      # path to the advertised MoaT-micro (sub)system (if any)
 
+    `link` is mandatory, should be unique, and registers this subcommand in MoaT-Link.
+    If `path` is set, accessing @link via :meth:`moat.link.client.LinkSender.get_service`
+    connects to it.
     """
 
     async def setup(self):
@@ -28,15 +31,16 @@ class Register(BaseCmd):
         await super().setup()
         cfg = ensure_cfg("moat.link", moat.cfg)
         self.link = await AC_use(self, Link(cfg.link, common=True))
-        self.ann = await AC_use(
-            self,
-            announcing(
-                self.link,
-                self.cfg.link,
-                host=self.cfg.get("host", False),
-                service=self.root.sub_at(self.cfg.path),
-            ),
-        )
+        if "path" in self.cfg:
+            self.ann = await AC_use(
+                self,
+                announcing(
+                    self.link,
+                    self.cfg.link,
+                    host=self.cfg.get("host", False),
+                    service=self.root.sub_at(self.cfg.path),
+                ),
+            )
 
     async def task(self):
         "just start announcing"

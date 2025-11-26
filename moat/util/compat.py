@@ -23,6 +23,11 @@ from moat.util.merge import merge
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -158,12 +163,12 @@ async def wait_for_ms(timeout, p, *a, **k):
         return await p(*a, **k)
 
 
-async def every_ms(t, p, *a, **k):
+async def every_ms(t, p: Callable | None = None, *a, **k):
     "every t milliseconds, call p(*a,**k)"
     tt = ticks_add(ticks_ms(), t)
     while True:
         try:
-            yield await p(*a, **k)
+            yield None if p is None else await p(*a, **k)
         except StopAsyncIteration:
             return
         tn = ticks_ms()
@@ -176,9 +181,9 @@ async def every_ms(t, p, *a, **k):
             tt = ticks_add(tn, t)
 
 
-def every(t, p, *a, **k):
+def every(t, *a, **k):
     "every t seconds, call p(*a,**k)"
-    return every_ms(t * 1000, p, *a, **k)
+    return every_ms(t * 1000, *a, **k)
 
 
 async def idle():

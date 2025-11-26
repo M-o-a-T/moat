@@ -144,17 +144,19 @@ class _MsecIter:
             else:
                 # owch, delay too long
                 self.tt = ticks_add(tn, self.t)
+        if self.p is None:
+            return None
         return await self.p(*self.a, **self.k)
 
 
-def every_ms(t, p, *a, **k):
+def every_ms(t, p=None, *a, **k):
     "call a function every @t milliseconds"
     return _MsecIter(t, p, a, k)
 
 
-def every(t, p, *a, **k):
+def every(t, *a, **k):
     "call a function every @t seconds"
-    return every_ms(t * 1000, p, *a, **k)
+    return every_ms(t * 1000, *a, **k)
 
 
 if DEBUG:

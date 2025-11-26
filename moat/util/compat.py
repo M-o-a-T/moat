@@ -34,6 +34,7 @@ __all__ = [
     "TaskGroup",
     "WouldBlock",
     "at",
+    "breakpoint",
     "byte2utf8",
     "const",
     "every",
@@ -67,6 +68,7 @@ ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001
 ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
+breakpoint = breakpoint  # noqa: A001, PLW0127
 
 
 def const(_x):
@@ -122,7 +124,7 @@ def log(s, *x, err=None, nback=1):
     log_ = logging.getLogger(caller.f_globals["__name__"])
     (log_.debug if err is None else log_.error)(s, *x, exc_info=err, stacklevel=1 + nback)
     if err and int(os.getenv("LOG_BRK", "0")):
-        breakpoint()  # noqa:T100 pylint:disable=forgotten-debug-statement
+        breakpoint()
 
 
 def at(*a, **kw):  # noqa: D103

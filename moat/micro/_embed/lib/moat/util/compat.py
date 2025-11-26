@@ -46,6 +46,11 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 
 
+def breakpoint():  # noqa:A001
+    "does nothing on µPy"
+    pass
+
+
 ExceptionGroup = asyncio.ExceptionGroup  # noqa: A001
 BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa: A001
 

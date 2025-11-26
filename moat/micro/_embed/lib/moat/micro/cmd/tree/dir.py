@@ -266,6 +266,11 @@ class Dispatch(DirCmd):
         return self
 
     @property
+    def sender(self) -> MsgSender:
+        "sender adapter"
+        return self._sender
+
+    @property
     def path(self):
         "root path"
         return Path()

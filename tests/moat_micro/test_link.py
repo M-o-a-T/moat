@@ -21,6 +21,7 @@ x:
 ln:
   path: !P x
   link: !P foo.bar
+  rlink: !P baz.quux
 """
 
 
@@ -34,13 +35,16 @@ async def test_fake(seed, tmp_path, cfg):
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init="Foo"),
-        mpy_stack(tmp_path, CFG, dict(x=dict(seed=seed))),
+        mpy_stack(tmp_path, CFG, dict(x=dict(seed=seed))) as ps,
         sf.client_() as cl,
         await cl.get_service(P("foo.bar")) as fb,
+        cl.announcing(P("baz.quux"), host=False, service=cl.sub_at("d")) as ann,
     ):
         md = 0
         mdi = 0
         v = None
+        ann.set()
+
         for i in range(10):
             (vv,) = await fb.r()
 
@@ -52,3 +56,15 @@ async def test_fake(seed, tmp_path, cfg):
                     mdi = i
             v = vv
         assert 1 < md < 10, (md, mdi)
+
+        # This tests rlink
+        # We do delayed lookup, so make sure it hasn't happened yet
+        assert ps.sub["ln"].rlink is None
+
+        se = ps.sender
+        se.add_sub("ln")
+        await se.ln.set(P("test:12"), 123)
+        assert await cl.d_get(P("test:12")) == 123
+
+        # make sure the lookup actually happened and nobody cheated
+        assert ps.sub["ln"].rlink is not None

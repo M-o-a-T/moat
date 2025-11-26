@@ -102,7 +102,10 @@ class BaseCmd(Base):
             self._stopped = Event()
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
+        try:
+            return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
+        except AttributeError:
+            return f"<{self.__class__.__name__}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         "See `MsgHandler.handle`."

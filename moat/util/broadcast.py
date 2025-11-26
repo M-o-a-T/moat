@@ -62,10 +62,11 @@ class BroadcastReader:  ## TYPE [TData]:
 
     parent: Broadcaster = field()
     length: int = field(default=1)
+    skip: bool = field(default=False)
     value: TData | Literal[NotGiven] = field(default=NotGiven, init=False)
 
     loss: int = field(init=False, default=0)
-    _q: Queue = field(init=False)
+    _q: Queue = field(init=False, repr=False)
 
     def __attrs_post_init__(self) -> None:
         if self.length <= 0:
@@ -79,7 +80,7 @@ class BroadcastReader:  ## TYPE [TData]:
         return self
 
     async def __anext__(self) -> TData:
-        if self.loss > 0:
+        if not self.skip and self.loss > 0:
             n, self.loss = self.loss, 0
             raise LostData(n)
 
@@ -208,13 +209,18 @@ class Broadcaster:  ## TYPE [TData]:
             r(cast("TData", self.value))
         return aiter(r)
 
-    def reader(self, length: int, send_last: bool | None = None) -> BroadcastReader[TData]:
-        """Create a reader with an explicit queue length"""
+    def reader(
+        self, length: int, send_last: bool | None = None, skip: bool = False
+    ) -> BroadcastReader[TData]:
+        """Create a reader with an explicit queue length.
+
+        Set `skip` to ignore overflows.
+        """
         assert self._rdr is not None
 
         if send_last is None:
             send_last = self.send_last
-        r: BroadcastReader[TData] = BroadcastReader(self, length)
+        r: BroadcastReader[TData] = BroadcastReader(self, length, skip)
         self._rdr.add(r)
         if send_last and self.value is not NotGiven:
             if not length:

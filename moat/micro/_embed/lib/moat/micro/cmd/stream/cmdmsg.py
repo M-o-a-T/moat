@@ -67,9 +67,6 @@ class BaseCmdMsg(BaseCmd):
     tg: TaskGroup = None
     __stream = None
 
-    def __init__(self, cfg):
-        super().__init__(cfg)
-
     doc = dict(_d="Foo")
 
     async def stream(self) -> BaseMsg:

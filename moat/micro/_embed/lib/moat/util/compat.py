@@ -156,7 +156,7 @@ def every_ms(t, p=None, *a, **k):
 
 def every(t, *a, **k):
     "call a function every @t seconds"
-    return every_ms(t * 1000, *a, **k)
+    return every_ms(int(t * 1000), *a, **k)
 
 
 if DEBUG:

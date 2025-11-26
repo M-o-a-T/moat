@@ -28,6 +28,7 @@ class Cmd(BaseCmd):
     n = 0
     err: Exception = None
     err_evt: Event = None
+    store: list[Any]
 
     doc_echo = dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
 
@@ -59,6 +60,17 @@ class Cmd(BaseCmd):
         d = int(delay * 1000)
         await sleep_ms(d)
         return self.n
+
+    doc_store = dict(_d="Save data.", _0="any:Data", _r="list[any]:collected data if no param")
+
+    async def stream_store(self, msg):
+        "Collect data (or return them)"
+        if msg.args:
+            self.store.extend(msg.args)
+            st = ()
+        else:
+            st, self.store = self.store, []
+        await msg.result(*st)
 
     doc_clr = dict(_d="Clear the counter.", n="int:new value, default zero")
 
@@ -92,6 +104,7 @@ class Cmd(BaseCmd):
 
     async def setup(self):
         self.err_evt = Event()
+        self.store = []
         await super().setup()
 
     async def task(self):

@@ -36,7 +36,7 @@ def wrap_obj(obj, name=None):
     if name is None:
         name = obj2name(type(obj))
     if isinstance(obj, Exception):
-        return name, obj.args
+        return name, (obj.args if hasattr(obj, "args") else [])
     try:
         p = obj.__dict__
     except AttributeError:

@@ -85,42 +85,49 @@ class Flow(BaseException):
         self.n = n
 
 
+@as_proxy("_CSMErr")
 class StopMe(StreamError):
     "Unspecified Stop"
 
     pass
 
 
+@as_proxy("_CSDErr")
 class SkippedData(StreamError):
     "Data skipped, took too long"
 
     pass
 
 
+@as_proxy("_CNsErr")
 class NoStream(StreamError):
     "No streaming support"
 
     pass
 
 
+@as_proxy("_CNCsErr")
 class NoCmds(StreamError):
     "No support for any commands"
 
     pass
 
 
+@as_proxy("_CNCErr")
 class NoCmd(StreamError):
     "Unknown command"
 
     pass
 
 
+@as_proxy("_CWSErr")
 class WantsStream(StreamError):
     "API: NoStream called on a streaming endpoint"
 
     pass
 
 
+@as_proxy("_CMSErr")
 class MustStream(StreamError):
     "Requires streaming support"
 

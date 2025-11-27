@@ -10,6 +10,7 @@ _attrs = {
     "PWM": "pwm",
     "Relay": "relay",
     "Transfer": "transfer",
+    "Average": "average",
 }
 
 

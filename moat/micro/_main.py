@@ -164,12 +164,6 @@ async def cli(ctx, section, remote, path):
 @click.option("-D", "--dest", type=str, default="", help="Destination path")
 @click.option("-R", "--root", type=str, default=".", help="Destination root")
 @click.option("-U/-V", "--update/--no-update", is_flag=True, help="Run standard updates")
-@click.option(
-    "-M",
-    "--mount",
-    type=click.Path(dir_okay=True, file_okay=False),
-    help="Mount point for FUSE mount",
-)
 @click.option("-l/-L", "--large/--no-large", is_flag=True, help="Use more RAM")
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")

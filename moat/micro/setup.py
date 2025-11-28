@@ -92,7 +92,6 @@ async def setup(
     config: dict | None = None,
     cross: str | None = None,
     update: bool = False,
-    mount: bool = False,
     watch: bool = False,
     main: str = False,
 ):
@@ -105,8 +104,8 @@ async def setup(
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 
-    if bool(watch) + bool(run) + bool(mount) > 1:
-        raise click.UsageError("You can only use one of 'watch','mount', and 'run'.")
+    if bool(watch) + bool(run) > 1:
+        raise click.UsageError("You can only use one of 'watch' or 'run'.")
 
     if install:
         await install_(cfg, dest=dest)
@@ -151,7 +150,7 @@ async def setup(
 
     async def part_two():
         nonlocal need_run
-        if run or watch or mount:
+        if run or watch:
             if run and not reset:
                 o, e = await repl.exec_raw(
                     f"from main import go; go(state={state!r})",
@@ -169,20 +168,6 @@ async def setup(
                     d = await ser.receive()
                     sys.stderr.buffer.write(d)
                     sys.stderr.buffer.flush()
-
-            if mount:
-                from moat.micro.fuse import wrap  # noqa: PLC0415
-
-                async with (
-                    dsp.sub_at(cfg["path"] / f) as fs,
-                    wrap(
-                        fs,
-                        mount,
-                        blocksize=cfg.get("blocksize", 64),
-                        debug=4,
-                    ),
-                ):
-                    await idle()
 
             if run:
                 log("Reloading.")

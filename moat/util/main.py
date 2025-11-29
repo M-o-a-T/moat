@@ -230,7 +230,7 @@ def process_args(
         the new value.
     """
     # otherwise these are assumes to be empty tuples.
-    if isinstance(vars_, Mapping):
+    if isinstance(set_, Mapping):
         set_ = set_.items()
     if isinstance(vars_, Mapping):
         vars_ = vars_.items()

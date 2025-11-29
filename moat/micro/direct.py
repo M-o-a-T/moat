@@ -12,7 +12,6 @@ import logging
 import os
 import re
 from anyio.streams.buffered import BufferedByteReceiveStream
-from functools import partial
 
 from moat.micro.proto.stream import SingleAnyioBuf
 from moat.util.compat import AC_use
@@ -47,15 +46,22 @@ class DirectREPL(SingleAnyioBuf):
     async def stream(self):
         "Context. Tries hard to exit special MicroPython modes, if any"
         self.serial = await super().stream()
-        await AC_use(self, partial(self.serial.send, b"\x02\x03\x03"))
+
+        async def out_():
+            with anyio.fail_after(0.5):
+                await self.serial.send(b"\x02\x03\x03")
+
+        await AC_use(self, out_)
 
         self.srbuf = BufferedByteReceiveStream(self.serial)
 
-        await self.serial.send(b"\x02")  # exit raw repl, CTRL+C
+        await self.serial.send(b"\x02")  # exit raw repl (if we're in that)
         await self.flush_in(0.5)
-        await self.serial.send(b"\x03")  # exit raw repl, CTRL+C
+        with anyio.fail_after(0.5):
+            await self.serial.send(b"\x03")  # CTRL+C (if running something)
         await self.flush_in(0.5)
-        await self.serial.send(b"\x01")  # CTRL+C, enter raw repl
+        with anyio.fail_after(0.5):
+            await self.serial.send(b"\x01")  # enter raw repl
         await self.flush_in(0.2)
 
         # Rather than wait for a longer timeout we try sending a command.

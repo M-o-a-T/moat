@@ -114,31 +114,40 @@ class Cmd(_Cmd):
         _t="int:timeout msec(100)",
     )
 
-    async def cmd_boot(self, code, m, t=100):
+    async def cmd_boot(self, code, m=0, t=100):
         """
         Reboot MoaT.
 
         @code needs to be "SysBooT".
 
         @m can be
-            1: immediate soft reset
-            2: immediate hard reset
-            3: return to command line
-            4: "clean" soft reset
+            0: hard reset
+            1: soft reset
+            2: bootloader
+            3: KeyboardInterrupt
+            4: SystemExit
+            5: raise RuntimeError
+
+        Modes other than 0 and 2 only work when there is no active watchdog
+        module.
         """
         if code != "SysBooT":
             raise RuntimeError("wrong")
 
         async def _boot(t):
             await sleep_ms(t)
+            if m == 0:
+                machine.reset()
             if m == 1:
                 machine.soft_reset()
             elif m == 2:
-                machine.reset()
+                machine.bootloader()
             elif m == 3:
                 raise KeyboardInterrupt
             elif m == 4:
                 raise SystemExit
+            elif m == 5:
+                raise RuntimeError("Boot")
 
         self.root.tg.start_soon(_boot, t, _name="_sys.boot1")
         return True

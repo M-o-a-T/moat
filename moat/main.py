@@ -11,24 +11,49 @@ import sys
 import asyncclick as click
 from asyncscope import main_scope
 
-from moat.util import attrdict, exc_iter, main_, ungroup
+from moat.util import NotGiven, attrdict, exc_iter, main_, to_attrdict, ungroup
 from moat.util.exc import ExpectedError
+
+__all__ = ["cmd", "run"]
 
 
 def cmd(backend="trio"):
+    "The standard MoaT command line handler"
+    return _cmd(attrdict(sub_pre="moat", sub_post="_main.cli"), backend=backend)
+
+
+def run(main, backend="trio", **kw):
+    """
+    Run external code in the MoaT environment.
+    """
+    kw.setdefault("sub_pre", NotGiven)
+    kw.setdefault("sub_post", "cli")
+    kw.setdefault("ext_pre", NotGiven)
+    kw.setdefault("ext_post", "_main.cli")
+    kw.setdefault("doc", "Document this command! Use a 'doc=…' argument.")
+
+    kw = to_attrdict(kw)
+    kw.main_cmd = main
+    return _cmd(kw, backend=backend)
+
+
+def _cmd(mt: attrdict, backend="trio"):
     """
     The main command entry point, as declared in ``pyproject.toml``.
     """
 
     # @click.* decorators change the semantics
     # pylint: disable=no-value-for-parameter
-    main_.help = """\
+    main_.help = mt.get(
+        "doc",
+        """\
 This is the main command handler for MoaT, the Master of all Things.
-"""
+""",
+    )
 
     async def runner():
-        async with main_scope() as m_s:
-            obj = attrdict(moat=attrdict(main_scope=m_s, sub_pre="moat", sub_post="_main.cli"))
+        async with main_scope() as mt.main_scope:
+            obj = attrdict(moat=mt)
             await main_.main(obj=obj)
 
     ec = 0
@@ -54,15 +79,3 @@ This is the main command handler for MoaT, the Master of all Things.
             else:
                 raise
     return ec
-
-
-@main_.command(short_help="Import the debugger")
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-async def pdb(args):  # pylint: disable=unused-argument  # safe
-    """
-    This command imports PDB and continues to process arguments.
-    """
-    breakpoint()  # noqa:T100
-    if not args:
-        return
-    return await main_.main(args)

@@ -411,6 +411,8 @@ def load_cfg(name):
 def _namespaces(name):
     import pkgutil  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
+    if name is NotGiven:
+        return ()
     try:
         ext = importlib.import_module(name)
     except ModuleNotFoundError:
@@ -656,12 +658,15 @@ class Loader(click.Group):
                 merge(ctx.obj.cfg, cf, replace=False)
 
         if command is None:
-            if sub_pre is None:
+            if sub_pre is None or sub_pre is NotGiven:
                 return None
-            command = load_ext(sub_pre, cmd_name, *sub_post)
-            if command is not None:
-                cf = load_cfg(f"{sub_pre}.{cmd_name}")
-                merge(ctx.obj.cfg, cf, replace=False)
+            if sub_post is None or sub_post is NotGiven:
+                pass
+            else:
+                command = load_ext(sub_pre, cmd_name, *sub_post)
+                if command is not None:
+                    cf = load_cfg(f"{sub_pre}.{cmd_name}")
+                    merge(ctx.obj.cfg, cf, replace=False)
 
         if command is None:
             # raise click.UsageError(f"No such subcommand: {cmd_name}")
@@ -739,9 +744,20 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
         return
     ctx._moat_invoked = True  # pylint: disable=protected-access
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
-    if help or (ctx.invoked_subcommand is None and not ctx.args and not ctx._protected_args):
+    try:
+        main = ctx.obj.moat.main_cmd
+    except AttributeError:
+        main = None
+    if help or (
+        main is None
+        and ctx.invoked_subcommand is None
+        and not ctx.args
+        and not ctx._protected_args
+    ):
         print(ctx.get_help())
         await ctx.aexit()
+    elif main is not None:
+        await main(ctx)
 
 
 def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements

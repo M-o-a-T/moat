@@ -441,3 +441,54 @@ def is_async(obj):  # noqa: D103
     if iscoroutine(obj) or hasattr(obj, "__iter__"):
         return True
     return False
+
+
+class _Thr:
+    def __init__(self, p, a, k):
+        self.p = p
+        self.a = a
+        self.k = k
+        self.evt = asyncio.ThreadSafeFlag()
+        self.res = None
+        self.err = None
+
+    def run(self):
+        try:
+            self.res = self.p(*self.a, **self.k)
+        except BaseException as exc:
+            self.exc = exc
+        self.evt.set()
+
+
+if sys.platform == "rp2":
+    # RP2 only can do a single thread at a time
+    _thr_lock = Lock()
+else:
+
+    class _DummyLock:
+        async def __aenter__(self):
+            return
+
+        async def __aexit__(self, *tb):
+            return
+
+    _thr_lock = _DummyLock()
+
+
+async def to_thread(p, *a, **k):
+    """Run this function in a thread.
+
+    Some platforms only have one thread (e.g. RP2). Thus don't do
+    long-running things in there.
+
+    Also startup cost is not trivial due to result and exception propagation.
+    """
+    thr = _Thr(p, a, k)
+    import _thread  # noqa:PLC0415
+
+    async with _thr_lock:
+        _thread.start_new_thread(thr.run)
+        await thr.evt.wait()
+    if thr.err is not None:
+        raise thr.err from None
+    return thr.res

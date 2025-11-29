@@ -16,6 +16,7 @@ import traceback as _traceback
 from codecs import utf_8_decode
 from concurrent.futures import CancelledError
 from contextlib import AsyncExitStack, suppress
+from functools import partial
 from inspect import currentframe, iscoroutine, iscoroutinefunction
 
 from moat.util.merge import merge
@@ -55,6 +56,7 @@ __all__ = [
     "ticks_add",
     "ticks_diff",
     "ticks_ms",
+    "to_thread",
     "wait_for",
     "wait_for_ms",
 ]
@@ -427,7 +429,15 @@ async def AC_exit(obj, *exc):
     return await obj._AC_.pop().__aexit__(*exc)
 
 
-def is_async(obj):  # noqa: D103
+def is_async(obj):
+    """test if the argument is an awaitable"""
     if hasattr(obj, "__await__"):
         return True
     return False
+
+
+async def to_thread(p, *a, **k):
+    """run this function in a thread"""
+    if k:
+        return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)
+    return await _anyio.to_thread.run_sync(p, *a, abandon_on_cancel=True)

@@ -64,9 +64,10 @@ def go(state=None, cmd=True):
             sys.print_exception(err, sys.stderr)
 
     def wr_exc(exc):
-        with open("moat.err", "w") as f:
-            print("Error:", repr(exc), file=f)
-            sys.print_exception(exc, f)
+        if "moat.err" not in _os.listdir():
+            with open("moat.err", "w") as f:
+                print("Error:", repr(exc), file=f)
+                sys.print_exception(exc, f)
 
         print("Error:", repr(exc), file=sys.stderr)
         sys.print_exception(exc, sys.stderr)

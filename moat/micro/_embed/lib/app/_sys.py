@@ -5,7 +5,7 @@ import sys
 
 import machine
 
-from moat.util.compat import log, sleep_ms, ticks_diff, ticks_ms
+from moat.util.compat import log, sleep_ms, ticks_diff, ticks_ms, to_thread
 
 from ._sys_ import Cmd as _Cmd
 
@@ -172,4 +172,4 @@ class Cmd(_Cmd):
         Read an analog pin.
         """
         p = machine.ADC(n)
-        return p.read_u16()  # XXX this is probably doing a sync wait
+        return await to_thread(p.read_u16)

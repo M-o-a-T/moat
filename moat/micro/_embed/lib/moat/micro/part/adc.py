@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.compat import AC_use, Event, TaskGroup, sleep_ms
+from moat.compat import AC_use, Event, TaskGroup, sleep_ms, to_thread
 from moat.micro.cmd.base import BaseCmd
 
 
@@ -46,7 +46,7 @@ class _ADC(M.ADC):
             if a:
                 await sleep_ms(self.dly)
             for _ in range(self.n):
-                c += self.read_u16()
+                c += await to_thread(self.read_u16)
         res = c * self.factor + self.offset
         return res
 

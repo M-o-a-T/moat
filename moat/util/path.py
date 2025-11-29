@@ -43,20 +43,17 @@ except ImportError:
     Buffer = bytes | bytearray | memoryview[bytes | bytearray]
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 if TYPE_CHECKING:
     from typing import Any, Literal
 
-PathTuple = tuple["PathElem", ...]
-PathElem = None | bool | int | float | str | bytes | PathTuple
-PathElemI = (type(None), bool, int, float, str, bytes, tuple)
-
-BufStr = (Buffer, str)
+PathTuple: TypeAlias = tuple["PathElem", ...]
+PathElem: TypeAlias = None | bool | int | float | str | bytes | PathTuple
+PathElemI: TypeAlias = None | bool | int | float | str | bytes | tuple
 
 __all__ = [
     "PS",
-    "BufStr",
     "P",
     "Path",
     "PathElem",
@@ -190,7 +187,7 @@ class Path(Sequence[PathElem]):
             prefix = a[0]
             a = a[1:]
         for x in a:
-            if not isinstance(x, PathElemI):
+            if not isinstance(x, PathElemI):  # pyright:ignore[reportArgumentType]
                 raise TypeError(f"{x!r} cannot be in a path")
         if scan and prefix is None:
             for proxy in _Roots.values():

@@ -91,7 +91,7 @@ async def cli(ctx, section, remote, path):
     'moat micro' configures MoaT satellites and runs the link to them,
     as well as applications using it."""
     obj = ctx.obj
-    ocfg = cfg = obj.cfg.micro
+    cfg = obj.cfg.micro
     remote2 = None
     if "--help" in sys.argv:
         return  # HACK
@@ -125,12 +125,6 @@ async def cli(ctx, section, remote, path):
             raise click.UsageError(f"The config section '{section}' doesn't exist.") from None
     if remote2 is not None:
         cfg.remote2 = remote2
-    try:
-        cfg.args.config = get_part(ocfg, cfg.args.config)
-    except (AttributeError, KeyError):
-        if "args" in cfg and "config" in cfg.args:
-            raise
-        # otherwise no args section thus nothing to copy
 
     if remote is not None:
         cfg.remote = remote
@@ -169,6 +163,7 @@ async def cli(ctx, section, remote, path):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@click.option("-M", "--mode", help="Mode add_on (filename, section)")
 @click.option(
     "-m",
     "--main",
@@ -176,13 +171,23 @@ async def cli(ctx, section, remote, path):
     help="file to use as main_.py",
 )
 @catch_errors
-async def setup_(ctx, run_section=None, **kw):
+async def setup_(ctx, run_section=None, mode=None, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
 
     MoaT must not currently run on the target.
     """
     from .setup import setup  # noqa: PLC0415
+
+    ocfg = ctx.obj.cfg["micro"]
+
+    cfg = ctx.obj.mcfg
+    cfg.args.config = get_part(
+        ocfg,
+        cfg.args.config[:-1] / f"{cfg.args.config[-1]}_{mode}"
+        if mode is not None
+        else cfg.args.config,
+    )
 
     default = {
         k: v
@@ -199,12 +204,13 @@ async def setup_(ctx, run_section=None, **kw):
     if "large" in default:
         default["large"] = None
 
-    cfg = ctx.obj.mcfg
     st = {
         k: (v if v != "-" else NotGiven) for k, v in cfg.setdefault("args", {}).items() if k in kw
     }
 
     st = combine_dict(param, st, default)
+
+    st["config_file"] = f"moat_{mode}.cfg" if mode is not None else "moat.cfg"
 
     run = st["run"]
     if run:

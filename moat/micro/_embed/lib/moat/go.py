@@ -66,6 +66,7 @@ def go(state=None, cmd=True):
     states = [
         ("flash", "moat_fb.cfg"),
         ("rom", "moat_rom.cfg"),
+        ("safe", "moat_safe.cfg"),
         ("std", "moat.cfg"),
     ]
     if state is None:
@@ -105,11 +106,11 @@ def go(state=None, cmd=True):
 
     # build path
     print("*** STATE ***", state, "***", file=sys.stderr)
-    if state in ("norom", "std", "once"):
+    if state in ("norom", "std", "once", "safe"):
         sys.path.append("/lib")
     if state in ("rom", "std"):
         sys.path.append("/rom")
-    if state in ("flash", "rom", "norom", "std", "once"):
+    if state in ("flash", "rom", "norom", "std", "once", "safe"):
         sys.path.append(".frozen")
     # keep the root in the path, but at the end
     sys.path.append("/")
@@ -140,7 +141,9 @@ def go(state=None, cmd=True):
 
     except KeyboardInterrupt:
         at("main3", i)
-        print("MoaT stopped.", file=sys.stderr)
+        print("MoaT stopped, mode is 'skip'", file=sys.stderr)
+        # because the watchdog might kill us
+        set_rtc("state", "skip")
 
     except SystemExit:
         at("main4", i)
@@ -159,6 +162,9 @@ def go(state=None, cmd=True):
                 sys.exit(0)
             log("CRASH! Exiting!", err=exc)
             sys.exit(1)
+
+        new_state = "safe"
+        set_rtc("state", new_state)
 
         log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)
         time.sleep_ms(1000)

@@ -94,6 +94,7 @@ async def setup(
     update: bool = False,
     watch: bool = False,
     main: str = False,
+    config_file: str = "moat.cfg",
 ):
     """
     Given the serial link to a MicroPython board,
@@ -224,8 +225,8 @@ async def setup(
             if config:
                 config = _clean_cfg(config)
                 logger.debug("Config:\n%s", pformat(config))
-                f = ABytes(name="moat.cfg", data=codec.encode(config))
-                await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
+                f = ABytes(name=config_file, data=codec.encode(config))
+                await copy_over(f, MoatDevPath(config_file).connect_repl(repl))
 
             if main:
                 from moat.micro.path import copytree  # noqa: PLC0415

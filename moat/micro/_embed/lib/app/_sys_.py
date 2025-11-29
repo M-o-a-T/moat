@@ -134,6 +134,7 @@ class Cmd(BaseCmd):
         """
         Echo @m.
 
-        This is for humans and testing. Don't use it for automated keepalive.
+        This is for humans and testing. Don't use it for automated keepalive,
+        that's what the "external" function of the watchdog is good for.
         """
         return {"m": m}

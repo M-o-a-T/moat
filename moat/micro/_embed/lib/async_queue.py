@@ -56,6 +56,8 @@ class Queue:
             self._empty.push(core.cur_task)
             core.cur_task.data = self._empty
             yield
+            if self._closed_w:
+                raise EOFError
 
         return self._get()
 

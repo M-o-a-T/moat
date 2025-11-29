@@ -63,6 +63,14 @@ def go(state=None, cmd=True):
         if err is not None:
             sys.print_exception(err, sys.stderr)
 
+    def wr_exc(exc):
+        with open("moat.err", "w") as f:
+            print("Error:", repr(exc), file=f)
+            sys.print_exception(exc, f)
+
+        print("Error:", repr(exc), file=sys.stderr)
+        sys.print_exception(exc, sys.stderr)
+
     states = [
         ("flash", "moat_fb.cfg"),
         ("rom", "moat_rom.cfg"),
@@ -92,7 +100,7 @@ def go(state=None, cmd=True):
 
     set_rtc("state", new_state)
     if state == "skip":
-        log(state)
+        log("MoaT state: %r", state)
         return True
 
     fn = dict(states).get(state, "moat.cfg")
@@ -115,7 +123,7 @@ def go(state=None, cmd=True):
     # keep the root in the path, but at the end
     sys.path.append("/")
 
-    print("Start MoaT:", state, file=sys.stderr)
+    print("Start MoaT:", repr(state), file=sys.stderr)
 
     from moat.micro.main import main  # noqa: PLC0415
     from moat.util.compat import at  # noqa: PLC0415
@@ -135,8 +143,9 @@ def go(state=None, cmd=True):
         at("main1", i)
         main(fn, i=i)
 
-    except ImportError:
+    except ImportError as exc:
         print("PATH:", sys.path, file=sys.stderr)
+        wr_exc(exc)
         raise
 
     except KeyboardInterrupt:
@@ -152,6 +161,7 @@ def go(state=None, cmd=True):
         machine.soft_reset()
 
     except BaseException as exc:
+        wr_exc(exc)
         at("main5", i)
         del main
         sys.modules.clear()

@@ -11,13 +11,14 @@ clears the output, then waits until the value is below the threshold.
 It repeats this a number of times, then prints the results.
 
 The data can then be used as initial tuning values for a PID algorithm.
-Specifically, 109G
+Specifically, this code
 
 """
 
 from __future__ import annotations
 
 import anyio
+import math
 import sys
 import time
 
@@ -53,6 +54,7 @@ async def main(ctx: click.Context):
 @click.option("-i", "--invert", is_flag=True, help="Increasing control lowers input")
 @click.option("-d", "--delay", type=float, help="Delay between measurements", default=10)
 @click.option("-L", "--limit", type=float, help="Total runtime limit (safety), hours", default=3)
+@click.option("-I", "--loop-time", type=float, help="Control loop frequency, seconds", default=1)
 @click.pass_context
 async def cal(
     ctx,
@@ -69,6 +71,7 @@ async def cal(
     limit,
     blind,
     delay,
+    loop_time,
 ):
     """
     Calibrate a PID controller.
@@ -77,10 +80,9 @@ async def cal(
     threshold, set the control to "min", wait until the value is below
     the threshold, repeat.
 
-    The output is two averages: the overshoot, and the time a cycle takes.
-
-    You use these data as initial values for tuning a PID controller that
-    keeps the output at the threshold.
+    The result is used to calculate initial PID parameters
+    (via the Ziegler-Nichols method:
+    https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method).
     """
     obj = ctx.obj
     cfg = obj.cfg.get_(section)
@@ -141,22 +143,35 @@ async def cal(
             for _ in range(tests):
                 await go()
 
-        print(
-            f"Delta min: {sum(v_min) / len(v_min):5.2f}",
-            ",".join(f"{v:5.2f}" for v in v_min),
-        )
-        print(
-            f"Delta max: {sum(v_max) / len(v_max):5.2f}",
-            ",".join(f"{v:5.2f}" for v in v_max),
-        )
-        print(
-            f"Times min: {sum(t_min) / len(t_min):5.0f}",
-            ",".join(f"{t:5.0f}" for t in t_min),
-        )
-        print(
-            f"Times max: {sum(t_max) / len(t_max):5.0f}",
-            ",".join(f"{t:5.0f}" for t in t_max),
-        )
+        v_avg_min = sum(v_min) / len(v_min)
+        v_avg_max = sum(v_max) / len(v_max)
+        v_avg = v_avg_min + v_avg_max
+
+        t_avg_min = sum(t_min) / len(t_min)
+        t_avg_max = sum(t_max) / len(t_max)
+        t_avg = t_avg_min + t_avg_max
+
+        ku = 4 * v_avg / math.pi / (c_max - c_min)
+        tu = t_avg
+
+        # Basic
+        # kpc,tic,tdc = .6,.5,.125
+        # less overshoot
+        kpc, tic, tdc = 0.33, 0.5, 0.33
+        # no overshoot
+        # kpc,tic,tdc = .2,.5,.33
+
+        kp = kpc * ku
+        ki = (kp / (tic * tu)) * loop_time
+        kd = (tdc * kp * tu) / loop_time
+
+        print(f"Delta min: {v_avg_min:5.2f}", ",".join(f"{v:5.2f}" for v in v_min))
+        print(f"Delta max: {v_avg_max:5.2f}", ",".join(f"{v:5.2f}" for v in v_max))
+        print(f"Times min: {t_avg_min:5.2f}", ",".join(f"{t:5.2f}" for t in t_min))
+        print(f"Times max: {t_avg_max:5.2f}", ",".join(f"{t:5.2f}" for t in t_max))
+
+        print(f"Calculated p,i,d for t={humandelta(loop_time)}:")
+        print(kp, ki, kd)
 
     finally:
         with anyio.move_on_after(2, shield=True):

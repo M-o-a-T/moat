@@ -33,10 +33,12 @@ class Register(BaseCmd):
     If `path` is set, accessing @link via :meth:`moat.link.client.LinkSender.get_service`
     connects to it.
 
-    If `rlink` is set, MoaT-micro commands are forwarded to this MoaT-Link
-    service.
+    If `rlink` is set, MoaT-micro commands that are directed to this app
+    instance get forwarded to the given MoaT-Link command on the server.
+    (Typically you'd use this to connect another MoaT-micro gateway.)
     """
 
+    link: Link | None = None
     rlink: MsgSender | None = None
 
     async def setup(self):
@@ -63,10 +65,18 @@ class Register(BaseCmd):
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         "forward, possibly"
+        if self.link is None:
+            raise RuntimeError("Not ready")  # XXX maybe just return
         if self.rlink is None:
-            if "rlink" not in self.cfg:
-                raise ExpKeyError(rcmd)
-            self.rlink = await self.link.get_service(self.cfg["rlink"])
+            try:
+                rpath = self.cfg["rlink"]
+            except KeyError:
+                raise ExpKeyError(rcmd) from None
+            if len(rpath):
+                self.rlink = await self.link.get_service(rpath)
+            else:
+                # empty rpath: direct link access
+                self.rlink = self.link
 
         try:
             return await self.rlink.handle(msg, rcmd, *prefix)

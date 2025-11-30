@@ -50,7 +50,7 @@ class Queue:
 
             item = await queue.get()
         """
-        if not self._queue:
+        while not self._queue:
             if self._closed_w:
                 raise EOFError
             self._empty.push(core.cur_task)
@@ -82,7 +82,7 @@ class Queue:
 
             await queue.put(item)
         """
-        if self.maxsize and self.qsize() >= self.maxsize:
+        while self.maxsize and self.qsize() >= self.maxsize:
             self._full.push(core.cur_task)
             core.cur_task.data = self._full
             yield

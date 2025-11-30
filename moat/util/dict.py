@@ -114,7 +114,7 @@ class attrdict(dict):
         except KeyError:
             raise AttributeError(a) from None
 
-    def _get(self, path, skip_empty=True, default=NotGiven):
+    def get_(self, path, skip_empty=True, default=NotGiven):
         """
         Get a node's value and access the dict items beneath it.
         """
@@ -133,7 +133,9 @@ class attrdict(dict):
                 return default
         return val
 
-    def _update(self, path, value=None, skip_empty=False):
+    _get = get_
+
+    def update_(self, path, value=None, skip_empty=False):
         """
         Set some sub-item's value, possibly merging dicts.
         Items set to 'NotGiven' are deleted.
@@ -184,7 +186,9 @@ class attrdict(dict):
 
         return val
 
-    def _delete(self, path, skip_empty=True):
+    _update = update_
+
+    def delete_(self, path, skip_empty=True):
         """
         Remove some sub-item's value, possibly removing now-empty intermediate
         dicts.
@@ -214,6 +218,8 @@ class attrdict(dict):
             if v:
                 break
         return val
+
+    _delete = delete_
 
 
 def to_attrdict(d) -> attrdict:

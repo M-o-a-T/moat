@@ -137,6 +137,10 @@ class BaseSubCmd(BaseSuperCmd):
         if isinstance(cmd, str) and cmd[0] == "!":
             rcmd[-1] = cmd[1:]
         elif not prefix and (sub := self.sub.get(cmd, None)) is not None:
+            if rcmd[0] == "rdy_":
+                if await sub.wait_ready(False) is None:
+                    if await sub.wait_ready():
+                        return True
             rcmd.pop()
             return await sub.handle(msg, rcmd)
         return await super().handle(msg, rcmd, *prefix)

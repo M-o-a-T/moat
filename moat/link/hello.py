@@ -287,3 +287,7 @@ class Hello(CmdCommon):
         # Wait for the incoming side of the auth/hello dance to succeed
         await self._done.wait()
         return res
+
+    async def wait_done(self):
+        "wait until done"
+        await self._done.wait()

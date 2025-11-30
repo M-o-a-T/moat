@@ -164,7 +164,7 @@ class HelloProc:
 
 
 class ServerClient(LinkCommon):
-    """Represent one (non-server) client."""
+    """Represent one (possibly-non-server) client."""
 
     _hello: Hello | None = None
     _auth_data: Any = None
@@ -249,6 +249,14 @@ class ServerClient(LinkCommon):
                 await anyio.sleep(self.server.cfg.server.probe.repeat)
                 with anyio.fail_after(self.server.cfg.server.probe.timeout):
                     await self._sender.cmd(P("i.乒"))
+
+    async def wait_ready(self, wait: bool = True):
+        "Standard; waits for auth to complete"
+        if self._hello is None:
+            return False
+        if not wait:
+            await self._hello.wait_done()
+        return None
 
     @property
     def auth_data(self):

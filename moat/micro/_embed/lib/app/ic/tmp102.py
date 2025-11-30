@@ -7,7 +7,7 @@ from __future__ import annotations
 import struct
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import sleep_ms
+from moat.util.compat import Lock, sleep_ms
 
 from typing import TYPE_CHECKING
 
@@ -24,6 +24,13 @@ class Cmd(BaseCmd):
         adr: Bus address to access
     """
 
+    lock: Lock
+
+    async def setup(self):
+        "Allocate lock"
+        await super().setup()
+        self.lock = Lock()
+
     async def run(self):
         "wrapper, for i2c bus access"
         self.adr = self.cfg["adr"]
@@ -37,16 +44,17 @@ class Cmd(BaseCmd):
     )
 
     async def _rd(self):
-        await self.bus.wr(self.adr, bytes((1, 0x81, 0x10)))
-        # OneShot+Shutdown, Extended
-        for _ in range(10):
-            await sleep_ms(3)
-            res = await self.bus.wrrd(self.adr, bytes((1,)), 2)
-            if res[0] & 0x80:
-                break
-        else:
-            raise RuntimeError("No conv")
-        res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
+        with self.lock:
+            await self.bus.wr(self.adr, bytes((1, 0x81, 0x10)))
+            # OneShot+Shutdown, Extended
+            for _ in range(20):
+                await sleep_ms(3)
+                res = await self.bus.wrrd(self.adr, bytes((1,)), 2)
+                if res[0] & 0x80:
+                    break
+            else:
+                raise RuntimeError("No conv")
+            res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
         (t,) = struct.unpack(">h", res)
         assert t & 1, (res, t)
         t -= 1

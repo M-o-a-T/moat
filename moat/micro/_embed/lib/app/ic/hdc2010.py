@@ -7,7 +7,7 @@ from __future__ import annotations
 import struct
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import sleep_ms
+from moat.util.compat import Lock, sleep_ms
 
 from typing import TYPE_CHECKING
 
@@ -24,6 +24,13 @@ class Cmd(BaseCmd):
         adr: Bus address to access
     """
 
+    lock: Lock
+
+    async def setup(self):
+        "allocate lock"
+        super().setup()
+        self.lock = Lock
+
     async def run(self):
         "wrapper, for i2c bus access"
         self.adr = self.cfg["adr"]
@@ -37,16 +44,17 @@ class Cmd(BaseCmd):
     )
 
     async def _rdt(self):
-        await self.bus.wr(self.adr, bytes((15, 0x01)))
-        # OneShot+Shutdown, Extended
-        for _ in range(10):
-            await sleep_ms(3)
-            res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
-            if res[0] & 0x80:
-                break
-        else:
-            raise RuntimeError("No conv")
-        res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
+        async with self.lock:
+            await self.bus.wr(self.adr, bytes((15, 0x01)))
+            # OneShot+Shutdown, Extended
+            for _ in range(20):
+                await sleep_ms(3)
+                res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
+                if res[0] & 0x80:
+                    break
+            else:
+                raise RuntimeError("No conv")
+            res = await self.bus.wrrd(self.adr, bytes((0,)), 2)
         (t,) = struct.unpack("<H", res)
         return t
 
@@ -74,16 +82,17 @@ class Cmd(BaseCmd):
         await msg.result(val * 165 / 65536 - 40)
 
     async def _rdh(self):
-        await self.bus.wr(self.adr, bytes((15, 0x01)))
-        # OneShot+Shutdown, Extended
-        for _ in range(10):
-            await sleep_ms(3)
-            res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
-            if res[0] & 0x80:
-                break
-        else:
-            raise RuntimeError("No conv")
-        res = await self.bus.wrrd(self.adr, bytes((2,)), 2)
+        async with self.lock:
+            await self.bus.wr(self.adr, bytes((15, 0x01)))
+            # OneShot+Shutdown, Extended
+            for _ in range(20):
+                await sleep_ms(3)
+                res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
+                if res[0] & 0x80:
+                    break
+            else:
+                raise RuntimeError("No conv")
+            res = await self.bus.wrrd(self.adr, bytes((2,)), 2)
         (h,) = struct.unpack("<H", res)
         return h
 
@@ -111,16 +120,17 @@ class Cmd(BaseCmd):
         await msg.result(val * 100 / 65536)
 
     async def _rdth(self):
-        await self.bus.wr(self.adr, bytes((15, 0x01)))
-        # OneShot+Shutdown, Extended
-        for _ in range(10):
-            await sleep_ms(3)
-            res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
-            if res[0] & 0x80:
-                break
-        else:
-            raise RuntimeError("No conv")
-        res = await self.bus.wrrd(self.adr, bytes((0,)), 4)
+        async with self.lock:
+            await self.bus.wr(self.adr, bytes((15, 0x01)))
+            # OneShot+Shutdown, Extended
+            for _ in range(20):
+                await sleep_ms(3)
+                res = await self.bus.wrrd(self.adr, bytes((4,)), 1)
+                if res[0] & 0x80:
+                    break
+            else:
+                raise RuntimeError("No conv")
+            res = await self.bus.wrrd(self.adr, bytes((0,)), 4)
         (t, h) = struct.unpack("<HH", res)
         return t, h
 

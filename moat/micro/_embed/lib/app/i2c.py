@@ -14,7 +14,7 @@ except ImportError:
 import contextlib
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import to_thread
+from moat.util.compat import Lock, to_thread
 
 from typing import TYPE_CHECKING
 
@@ -66,6 +66,7 @@ class Cmd(BaseCmd):
         else:
             cls = partial(machine.I2C, i)
         self._bus = cls(scl=c, sda=d, freq=f, timeout=t)
+        self.lock = Lock()
 
     async def teardown(self):
         "shutdown"
@@ -80,15 +81,17 @@ class Cmd(BaseCmd):
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
-    def cmd_rd(self, i, n=16) -> Awaitable:
+    async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"
-        return to_thread(self._bus.readfrom, i, n)
+        async with self.lock:
+            return await to_thread(self._bus.readfrom, i, n)
 
     doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
 
-    def cmd_wr(self, i, buf) -> Awaitable:
+    async def cmd_wr(self, i, buf):
         "write @buf to bus @cd at address @i"
-        return to_thread(self._bus.writeto, i, buf)
+        async with self.lock:
+            return await to_thread(self._bus.writeto, i, buf)
 
     doc_wrrd = dict(
         _d="write+read",
@@ -98,13 +101,14 @@ class Cmd(BaseCmd):
         _r="int|bytes:nbytes short-written|read result",
     )
 
-    async def cmd_wrrd(self, *a, **kw) -> Awaitable:
+    async def cmd_wrrd(self, *a, **kw):
         """
         write @buf to bus @cd at address @i, then read @n bytes.
 
         Returns -x if only x bytes could be written.
         """
-        return to_thread(self._cmd_wrrd, *a, **kw)
+        async with self.lock:
+            return await to_thread(self._cmd_wrrd, *a, **kw)
 
     def _cmd_wrrd(self, i, buf, n=16) -> Awaitable:
         bus = self._bus
@@ -116,6 +120,7 @@ class Cmd(BaseCmd):
 
     doc_scan = dict(_d="bus scan")
 
-    def cmd_scan(self):
+    async def cmd_scan(self):
         "scan the bus"
-        return to_thread(self._bus.scan)
+        async with self.lock:
+            return await to_thread(self._bus.scan)

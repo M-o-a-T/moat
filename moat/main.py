@@ -65,6 +65,11 @@ This is the main command handler for MoaT, the Master of all Things.
             raise
         print(repr(exc), file=sys.stderr)
         ec = 1
+    except click.exceptions.ClickException as exc:
+        if "MOAT_TB" in os.environ:
+            raise
+        print(exc, file=sys.stderr)
+        ec = 1
     except BaseException as exc:
         for e in exc_iter(exc):
             if isinstance(e, KeyboardInterrupt):

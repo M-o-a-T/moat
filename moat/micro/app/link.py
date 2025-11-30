@@ -8,13 +8,14 @@ import moat
 from moat.util import ensure_cfg
 from moat.link.announce import announcing
 from moat.link.client import Link
-from moat.micro.cmd.base import BaseCmd, MsgSender
+from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import AC_use
 from moat.util.exc import ExpKeyError
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.cmd.base import MsgSender
     from moat.micro.cmd.msg import Msg
 
 

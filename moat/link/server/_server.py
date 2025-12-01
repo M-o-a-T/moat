@@ -191,7 +191,7 @@ class ServerClient(LinkCommon):
             if _client_nr > t + 1000:
                 raise RuntimeError("The connection rate is too high!")
         self.client_nr = id2str(_client_nr)
-        self.name = f"{self.prefix}.C{self.client_nr}"
+        self.name = f"{self.prefix}_{self.client_nr}"
 
         self.logger = logging.getLogger(f"moat.link.server.{prefix}.{self.client_nr}")
 

@@ -12,6 +12,8 @@ from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import AC_use
 from moat.util.exc import ExpKeyError
 
+from ._link import Alert as Alert
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

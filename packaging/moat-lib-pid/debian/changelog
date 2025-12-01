@@ -1,3 +1,9 @@
+moat-lib-pid (0.6.4-1) unstable; urgency=medium
+
+  * New release for 25.6.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 01 Dec 2025 13:18:41 +0100
+
 moat-lib-pid (0.6.3-2) unstable; urgency=medium
 
   * New release for 25.5.27

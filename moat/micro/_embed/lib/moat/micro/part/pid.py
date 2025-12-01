@@ -4,7 +4,6 @@ PID controller.
 
 from __future__ import annotations
 
-from moat.util import Path
 from moat.lib.pid import CPID
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import ticks_diff, ticks_ms
@@ -40,8 +39,6 @@ class PID(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         self.pid = CPID(cfg)
-        if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
-            raise ValueError("Pin not set")  # noqa:TRY004
         self.sn = sn = cfg.get("state", None)
         if sn is not None and sn in RTC:
             data = RTC[sn]

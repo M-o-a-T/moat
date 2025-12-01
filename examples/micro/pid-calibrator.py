@@ -54,7 +54,6 @@ async def main(ctx: click.Context):
 @click.option("-i", "--invert", is_flag=True, help="Increasing control lowers input")
 @click.option("-d", "--delay", type=float, help="Delay between measurements", default=10)
 @click.option("-L", "--limit", type=float, help="Total runtime limit (safety), hours", default=3)
-@click.option("-I", "--loop-time", type=float, help="Control loop frequency, seconds", default=1)
 @click.pass_context
 async def cal(
     ctx,
@@ -71,7 +70,6 @@ async def cal(
     limit,
     blind,
     delay,
-    loop_time,
 ):
     """
     Calibrate a PID controller.
@@ -162,15 +160,15 @@ async def cal(
         # kpc,tic,tdc = .2,.5,.33
 
         kp = kpc * ku
-        ki = (kp / (tic * tu)) * loop_time
-        kd = (tdc * kp * tu) / loop_time
+        ki = kp / (tic * tu)
+        kd = tdc * kp * tu
 
         print(f"Delta min: {v_avg_min:5.2f}", ",".join(f"{v:5.2f}" for v in v_min))
         print(f"Delta max: {v_avg_max:5.2f}", ",".join(f"{v:5.2f}" for v in v_max))
         print(f"Times min: {t_avg_min:5.2f}", ",".join(f"{t:5.2f}" for t in t_min))
         print(f"Times max: {t_avg_max:5.2f}", ",".join(f"{t:5.2f}" for t in t_max))
 
-        print(f"Calculated p,i,d for t={humandelta(loop_time)}:")
+        print("Calculated p,i,d:")
         print(kp, ki, kd)
 
     finally:

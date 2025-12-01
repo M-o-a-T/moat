@@ -9,8 +9,6 @@ from __future__ import annotations
 import os
 from anyio import get_cancelled_exc_class
 
-from sniffio import AsyncLibraryNotFoundError
-
 __all__ = [
     "ExpAttrError",
     "ExpKeyError",
@@ -70,7 +68,7 @@ class ungroup:
 
         try:
             Cancel = get_cancelled_exc_class()
-        except AsyncLibraryNotFoundError:
+        except Exception:  # noqa:S110  # no need to be more selective
             pass
         else:
             c, e = e.split(Cancel)

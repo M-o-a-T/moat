@@ -13,6 +13,11 @@ SuccessExitStatus=42
 
 RuntimeDirectory=moat/link
 
+KillSignal=TERM
+FinalKillSignal=INT
+WatchdogSignal=KILL
+TimeoutStopSec=5
+
 User=MoaT-Link
 Group=MoaT
 

@@ -37,16 +37,19 @@ class PWM(BaseCmd):
     """
     A PWM is an output pin that changes periodically.
 
-    - pin: how to talk to the actual hardware output
-    - ratio: on/off, between zero (all off) and one (all on).
+    Config:
+    - pin: the hardware output we're controlling
     - min: Minimum time between switching
     - max: Maximum time between switching
-    - base: the maximum value for the switching ratio.
+    - base: the maximum value for the ratio.
 
-    If the ratio exceeds min/2/max, it is set zo zero. Likewise for max.
+    The input must be in [0..base]; the output is controlled so that
+    `t_on/(t_on+t_off) = val/base`, given that `min <= t_on,t_off <= max`
+    and one of t_on and t_off are equal to `min`. (Thus when `val=base/2`,
+    both are.)
 
-    If the value is an integer, this code will perform integer division.
-    Otherwise it uses floating point.
+    If val is too low (or too high) such that this constraint can no longer
+    be satisfied, the output is turned off (or on) permanently.
     """
 
     t_last = 0
@@ -54,10 +57,10 @@ class PWM(BaseCmd):
     t_off: int = 0
     is_on: bool = False
 
-    value: int = 0
+    value: int = 0  # must be in range 0..base
     min: int = 500  # milliseconds
     max: int = 100000  # milliseconds
-    base: int = 1000  # baseline for value
+    base: int = 1000  # max for value
     evt: Event
     ps: Msg  # Data stream to the pin
 
@@ -154,7 +157,7 @@ class PWM(BaseCmd):
         b = self.max
         base = self.base
 
-        if (val << 1) > base:
+        if val * 2 > base:
             rev = True
             val = base - val
 
@@ -164,12 +167,8 @@ class PWM(BaseCmd):
             a = 0
         else:
             # a/(a+b) == val/base; solve for b
-            r = a * (base - val)
-            if isinstance(val, int):
-                r //= val
-            else:
-                r /= val
-
+            # the test above prevents val from being zero
+            r = a * (base - val) / val
             b = min(b, r)
 
         return (b, a) if rev else (a, b)
@@ -197,17 +196,13 @@ class PWM(BaseCmd):
         else:
             self.set_times(msg[0])
 
-    async def cmd_w(self, val: int):
-        "change ratio"
-        self.set_times(val)
-
     doc_s = dict(
         _d="read state",
         _r=dict(
             a="int:t_on",
             b="int:t_off",
             p="bool:state",
-            t="int:time since last change",
+            t="int:time until next change",
         ),
     )
 
@@ -215,10 +210,9 @@ class PWM(BaseCmd):
         """
         Returns the current state.
         """
-        p = await self.is_on
         return dict(
             a=self.t_on,
             b=self.t_off,
-            p=p,
-            t=ticks_diff(ticks_ms(), self.t_last),
+            p=self.is_on,
+            t=(self.t_on if self.is_on else self.t_off) - ticks_diff(ticks_ms(), self.t_last),
         )

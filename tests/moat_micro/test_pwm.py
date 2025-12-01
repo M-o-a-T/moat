@@ -50,7 +50,7 @@ class FPWM(PWM):
 async def test_basic():
     "Basic PWM test"
     p = FPWM(1, 10, 100)
-    await p.cmd_w(10)
+    p.set_times(10)
     await p.step(1, 8, None)
     await p.step(8, 1, True)
     await p.step(1, 9, False)
@@ -64,7 +64,7 @@ async def test_basic():
 async def test_basic_on():
     "Basic PWM test with a lot"
     p = FPWM(1, 10, 100)
-    await p.cmd_w(90)
+    p.set_times(90)
     await p.step(1, 9, True)
     await p.step(1, 8, None)
     await p.step(7, 1, None)
@@ -76,13 +76,13 @@ async def test_basic_on():
 async def test_onoff():
     "on/off test"
     p = FPWM(3, 10, 100)
-    await p.cmd_w(99)
+    p.set_times(99)
     await p.step(2, 1, None)
     await p.step(1, None, True)
-    await p.cmd_w(1)
+    p.set_times(1)
     await p.step(2, 1, None)
     await p.step(1, None, False)
-    await p.cmd_w(50)
+    p.set_times(50)
     await p.step(1, 2, None)
     await p.step(2, 3, True)
     await p.step(1, 2, None)

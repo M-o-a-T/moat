@@ -8,6 +8,7 @@ import anyio
 
 # pylint: disable=missing-module-docstring
 import logging
+import math
 import sys
 import time
 from functools import partial
@@ -363,6 +364,7 @@ async def run_sub(client, topic, args, cfg, lock, skip):
 @click.option("-n", "--n_msg", type=int, default=0, help="Number of messages to read (per topic)")
 @click.option("-k", "--keep-alive", type=float, help="Keep-alive timeout (seconds)")
 @click.option("-s", "--skip", type=P, multiple=True, help="Skip this path prefix")
+@click.option("-l", "--limit", type=float, help="Stop after this many seconds")
 @click.pass_obj
 async def sub(obj, **args):
     """
@@ -376,4 +378,5 @@ async def sub(obj, **args):
     if args["keep_alive"]:
         cfg.link["keep_alive"] = args["keep_alive"]
 
-    await do_sub(obj.conn, args, cfg)
+    with anyio.move_on_after(args["limit"] or math.inf):
+        await do_sub(obj.conn, args, cfg)

@@ -79,11 +79,12 @@ class PWM(BaseCmd):
         if await self.pin.rdy_():
             raise StoppedError("pin")
 
-    async def run(self):  # noqa:D102
+    async def task(self):  # noqa:D102
         async with (
             _Send(self.pin.cmd_w) if hasattr(self.pin, "cmd_w") else self.pin.w.stream_out()
         ) as self.ps:
             try:
+                self.set_ready()
                 self.t_last = ticks_ms()
                 self.is_on = False
                 await self.ps.send(False)

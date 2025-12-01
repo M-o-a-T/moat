@@ -78,6 +78,13 @@ async def list(obj, timeout, hosts):  # noqa: A001
                         if hc.get(k, False) == ok:
                             continue
                         hc[k] = ok
-                        print(h.id, k, "" if ok else "** DOWN **")
+                        print(
+                            h.id,
+                            ""
+                            if "i" not in h.data or (len(k) and k[0] == h.data.i["host"])
+                            else h.data.i["host"],
+                            k,
+                            "" if ok else "** DOWN **",
+                        )
                 else:
                     print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))

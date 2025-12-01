@@ -179,14 +179,14 @@ moat-link:
   deb: 0.2.5-1
   pkg: 1
   pypi: 0.2.37
-  rev: 71ce4a725c3e3f86ec6e0cf1b644a9856c65a417
-  tag: 0.2.37
+  rev: 36ebf8c5674538caf638858611fe15680cb11f3a
+  tag: 0.2.38
 moat-link-server:
   deb: 0.2.3-1
   pkg: 1
   pypi: 0.3.16
-  rev: 71ce4a725c3e3f86ec6e0cf1b644a9856c65a417
-  tag: 0.3.19
+  rev: 36ebf8c5674538caf638858611fe15680cb11f3a
+  tag: 0.3.20
 moat-micro:
   deb: 0.16.4-1
   pkg: 1
@@ -237,6 +237,6 @@ moat-thing:
 moat-util:
   deb: 0.57.10-1
   pkg: 1
-  pypi: 0.60.9
-  rev: 71ce4a725c3e3f86ec6e0cf1b644a9856c65a417
-  tag: 0.60.11
+  pypi: 0.60.12
+  rev: 36ebf8c5674538caf638858611fe15680cb11f3a
+  tag: 0.60.12

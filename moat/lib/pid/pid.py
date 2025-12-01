@@ -196,16 +196,17 @@ class PID:
         if t is None:
             t = time()
 
-        # Check timestamp
         if t0 is None:
             t0 = t
-        elif t0 > t:
-            raise ValueError("Time went backwards")
-
         if e0 is None:
             e0 = e
+
         # Calculate time step
         dt = ticks_diff(t, t0)
+        if dt < 0:
+            self.t = t
+            raise ValueError("Time went backwards")
+
         # Calculate proportional term
         p = self.Kp * e
         # Calculate integral term
@@ -215,7 +216,8 @@ class PID:
             i = min(max(i, self.lower - p), self.upper - p)
         else:
             i = 0
-        # Calculate derivative term
+
+        # Calculate possibly-delayed derivative term
         d = 0.0
         if dt and (Kd := self.Kd):
             if (Tf := self.Tf) is not None:

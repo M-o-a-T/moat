@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from . import NotGiven
 
-from collections.abc import Mapping, MutableSequence
+from collections.abc import Mapping
 
 __all__ = ["attrdict", "combine_dict", "drop_dict", "to_attrdict"]
 
@@ -179,7 +179,7 @@ class attrdict(dict):
             v[px] = value
         elif not isinstance(v, Mapping):
             raise ValueError((v, px))
-        elif px in v and isinstance(v[px], (Mapping, MutableSequence)):
+        elif px in v and isinstance(v[px], Mapping):
             v[px] = combine_dict(value, v[px], cls=type(self))
         else:
             v[px] = value

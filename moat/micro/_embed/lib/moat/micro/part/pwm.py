@@ -42,6 +42,7 @@ class PWM(BaseCmd):
     - min: Minimum time between switching, milliseconds
     - max: Maximum time between switching, milliseconds
     - base: the maximum value for the ratio.
+    - init: initial value (defaults to `min`)
     - so: stream_out: Flag whether to stream the pin value
 
     The input must be in [0..base]; the output is controlled so that
@@ -59,6 +60,7 @@ class PWM(BaseCmd):
     is_on: bool = False
 
     value: int = 0  # must be in range 0..base
+    init: int = 0  # initial value
     min: int = 500  # milliseconds
     max: int = 100000  # milliseconds
     base: int = 1000  # max for value
@@ -79,6 +81,7 @@ class PWM(BaseCmd):
         self.pin = self.root.sub_at(self.cfg["pin"])
         if await self.pin.rdy_():
             raise StoppedError("pin")
+        self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
         async with (

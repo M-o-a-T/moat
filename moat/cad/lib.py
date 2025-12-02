@@ -11,6 +11,7 @@ from build123d import (
     Align,
     Axis,
     BuildLine,
+    Cone,
     Cylinder,
     Intrinsic,
     JernArc,
@@ -111,10 +112,12 @@ def LocR(d, a, h=0):
     return Loc(d * math.sin(a), d * math.cos(a), h)
 
 
-def Cyl(d, h):
+def Cyl(d, h, d2=None):
     """
     A cylinder with diameter d and height h, centered but with +z.
     """
+    if d2 is not None and d2 != d:
+        return Cone(d / 2, d2 / 2, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
     return Cylinder(d / 2, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
@@ -250,13 +253,14 @@ def show(obj, name=None, dest=None):
             f = f.f_back
         s_o = None if f is None else f.f_globals["show_object"]
     if s_o is not None:
-        s_o(getattr(obj, "wrapped", obj), name)
+        s_o(obj, name)
 
     if dest is not None:
         dest = Path(dest)
         if dest.is_dir():
             export_stl(obj, str(dest / f"{name}.stl"))
             dest /= f"{name}.step"
+
         export_step(obj, str(dest))
 
 

@@ -110,7 +110,7 @@ class Cmd(_Cmd):
     doc_boot = dict(
         _d="reboot",
         _0="str:SysBooT",
-        _1="int:1=soft,2=hard,3=KbdIntr,4=SysExit",
+        _1="int:(0)=hard,1=soft,2=boot,3=KbdIntr,4=SysExit,5=RuntimeExc",
         _t="int:timeout msec(100)",
     )
 

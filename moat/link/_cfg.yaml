@@ -73,6 +73,9 @@ notify:
         The MoaT system at 'some_host' is back up. (MQTT-Keepalive)
       prio: info
 
+  timeout:
+    retry: 300
+
 
   path: !P notify
   # ignore messages older than … seconds

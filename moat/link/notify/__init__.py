@@ -93,7 +93,8 @@ class Notify:
                 if b_e in self.dropped:
                     continue
                 error_seen = True
-                self.dropped[b_e] = tm + self.cfg.timeout.notify.retry
+
+                self.dropped[b_e] = tm + self.cfg.timeout.retry
                 await self.link.e_exc(
                     P("run.notify.backend") / name,
                     exc,

@@ -28,6 +28,7 @@ class PID(BaseCmd):
     - d: differential gain
     - tf: first-order filter time constant for the differential, in seconds
     - state: name of our state storage (in RTC).
+    - set: initial goal (default zero)
 
     t should be larger than the interval between inputs.
     """
@@ -47,6 +48,8 @@ class PID(BaseCmd):
             setpoint = data.get("setpoint")
             if setpoint is not None:
                 self.pid.setpoint(setpoint)
+                return
+        self.pid.setpoint(cfg.get("set", 0))
 
     def cmd_sr(self) -> attrdict:
         "Read the current state"
@@ -83,20 +86,39 @@ class PID(BaseCmd):
             RTC[self.sn] = self.pid.state
         return self.pid.sum(s)
 
+    doc_sp = dict(
+        _d="setpoint",
+        _0="float:new setpoint",
+        _r="float:current setpoint",
+    )
+
+    async def cmd_sp(self, sp: float | None = None):
+        "Sets/Returns the current setpoint"
+        if sp is None:
+            return self.pid.state.setpoint
+        self.pid.setpoint(sp)
+
     doc_s = dict(
         _d="read state",
+        t="int:current time",
+        e="float:differential error",
+        i="float:integral error",
         _r=dict(
             state="dict", i="float:last input", o="float:last output", split="tuple:p-i-d output"
         ),
     )
 
-    async def cmd_s(self):
+    async def cmd_s(self, **kw):
         """
-        Returns the current state.
+        Sets/Returns the current state.
         """
-        return dict(
+        if kw:
+            self.pid.set_state(**kw)
+        res = dict(
             state=self.pid.get_state(),
-            split=self.split,
             i=self.val_in,
-            o=self.pid.sum(self.split),
+            split=self.split,
         )
+        if self.split:
+            res["o"] = self.pid.sum(self.split)
+        return res

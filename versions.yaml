@@ -22,9 +22,9 @@ moat-bus:
 moat-cad:
   deb: 0.3.3-3
   pkg: 1
-  pypi: 0.3.3
-  rev: c95cb317d8594ed0b5e7af34912a2bc30779d7f6
-  tag: 0.3.6
+  pypi: 0.3.7
+  rev: 33eec3fed9969641076e0fdee26ebc8c6adaa114
+  tag: 0.3.7
 moat-db:
   deb: 0.2.2-3
   pkg: 2
@@ -177,16 +177,16 @@ moat-lib-victron:
   tag: 0.1.4
 moat-link:
   deb: 0.2.5-1
-  pkg: 2
+  pkg: 1
   pypi: 0.2.37
-  rev: 9d8cf965181f4e8d7b135a23bbb2f4aa13a3faf8
-  tag: 0.2.40
+  rev: 33eec3fed9969641076e0fdee26ebc8c6adaa114
+  tag: 0.2.41
 moat-link-server:
   deb: 0.2.3-1
-  pkg: 3
+  pkg: 1
   pypi: 0.3.16
-  rev: 9d8cf965181f4e8d7b135a23bbb2f4aa13a3faf8
-  tag: 0.3.21
+  rev: 33eec3fed9969641076e0fdee26ebc8c6adaa114
+  tag: 0.3.22
 moat-micro:
   deb: 0.16.4-1
   pkg: 3

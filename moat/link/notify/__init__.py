@@ -65,7 +65,10 @@ class Notify:
             finally:
                 with anyio.move_on_after(2, shield=True):
                     await self.send(
-                        "error.notify", "Backend stopped", "The backend terminated.", prio="fatal"
+                        topic="error.notify",
+                        title="Backend stopped",
+                        msg="The backend terminated.",
+                        prio="fatal",
                     )
 
     async def send(self, **kw) -> None:

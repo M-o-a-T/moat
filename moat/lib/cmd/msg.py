@@ -51,11 +51,10 @@ if TYPE_CHECKING:
 try:
     import logging
 except ImportError:
-    from moat.util.compat import print_exc
+    from moat.util.compat import log
 
     def log_exc(e, s, *a):  # noqa: D103
-        log(s + ": %r", *a, e)
-        print_exc(e)
+        log(s + ": %r", *a, e, err=e)
 
 else:
     logger = logging.getLogger(__name__)

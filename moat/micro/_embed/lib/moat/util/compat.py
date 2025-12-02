@@ -174,8 +174,7 @@ if DEBUG:
             print("RRR", n, file=sys.stderr)
             return await p(*a, **k)
         except Exception as exc:
-            print("Error:", n, repr(exc), file=sys.stderr)
-            print_exc(exc)
+            log("Error: %s %r", n, exc, err=exc)
             raise
         else:
             print("Done:", n, file=sys.stderr)

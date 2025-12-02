@@ -262,7 +262,7 @@ class CPID(PID):
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
         """
-        super().__init__(cfg.p, cfg.i, cfg.d, cfg.tf)
+        super().__init__(cfg["p"], cfg["i"], cfg["d"], cfg["tf"])
         self.cfg = cfg
         self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
 

@@ -89,7 +89,7 @@ class _Step:
         if p is not None:
             self.p = t.root.sub_at(p)
 
-    async def task(self) -> None:
+    async def run(self) -> None:
         if self.p is not None:
             await self.p.rdy_()
         if self.so:

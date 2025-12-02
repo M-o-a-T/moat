@@ -10,7 +10,6 @@ import os
 import platform
 from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
-from warnings import warn
 
 from attrs import define, field
 
@@ -33,16 +32,6 @@ if TYPE_CHECKING:
 __all__ = ["announcing"]
 
 logger = logging.getLogger(__name__)
-
-# TODO when to warn vs. when to log a warning
-
-
-class NoServiceWarning(UserWarning):
-    """
-    Warn when not running in a cgroup.
-    """
-
-    pass
 
 
 async def get_service_path(host: Path | str | bool, name: Path | None = None):
@@ -154,7 +143,7 @@ class SetReady:
     async def wait_sr(self):
         await anyio.sleep(5)
         if not self.up:
-            warn(f"{self.path} did not (yet?) start")
+            logger.warning(f"{self.path} did not (yet?) start")
 
     async def wait_evt(self, via: anyio.Event):
         await via.wait()
@@ -245,7 +234,7 @@ async def announcing(
     try:
         path = await get_service_path(host, name)
     except ServiceNotFound:
-        warn("Not running in a service CGroup. Set MT_SERVICE envvar?", NoServiceWarning)
+        logger.warning("Not running in a service CGroup. Set MT_SERVICE envvar?")
         yield FakeReady()
         return
 

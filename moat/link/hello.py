@@ -181,15 +181,9 @@ class Hello(CmdCommon):
             elif self.them is None:
                 self.them = remote_name
             elif self.them != remote_name:
-                if remote_name.startswith("_"):
-                    logger.debug("Remote name: %r / %r", remote_name, self.them)
-                    aux_data["name"] = self.them
-                elif self.they_server:
-                    self.them = remote_name
-                else:  # we're the server, so use our name as a prefix
-                    self.them = f"{self.me}.{remote_name}"
-                    logger.debug("Remote name: %r", self.them)
-                    aux_data["name"] = self.them
+                logger.debug("Remote name: %r / %r", remote_name, self.them)
+                aux_data["name"] = self.them
+                self.them = remote_name
 
             local_name = next(it)
             if local_name is None:
@@ -198,8 +192,6 @@ class Hello(CmdCommon):
                 self.me = local_name
             elif self.me != local_name:
                 logger.debug("My name: %r / %r", local_name, self.me)
-                if not self.me_server:
-                    self.me = local_name
 
             auth = next(it)
 

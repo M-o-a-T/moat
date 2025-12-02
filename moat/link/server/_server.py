@@ -231,7 +231,7 @@ class ServerClient(LinkCommon):
                     return
                 them = self._hello.them
                 self.is_server = self._hello.they_server
-                if self.is_server:
+                if True:  # self.is_server:
                     try:
                         self.server.rename_client(self, them)
                     except ValueError:

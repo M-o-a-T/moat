@@ -77,9 +77,7 @@ class Hello(CmdCommon):
     # negotiated protocol version
     protocol_version: int = field(init=False, default=0)
 
-    def __init__(self, *a, **kw):
-        super().__init__()
-        self.__attrs_init__(*a, **kw)  # pyright:ignore
+    def __attrs_post_init__(self):
         if self.me_server and self.me is None:
             raise ValueError("A server must have a name")
 

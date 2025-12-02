@@ -1494,6 +1494,11 @@ class Server(MsgHandler):
 
             # Stop the rest
             _tg.cancel_scope.cancel()
+            self._stopped.set()
+
+    async def wait_stopped(self):
+        "wait until service ends"
+        await self._stopped.wait()
 
     async def _stop_writers(self):
         """Tell our writers to stop"""

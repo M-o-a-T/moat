@@ -1355,6 +1355,7 @@ class Server(MsgHandler):
             self._tg = _tg
 
             await _tg.start(self._monitor_ids)
+            await _tg.start(self._monitor_pings)
 
             # Semi-detached taskgroups for clients and listeners
 
@@ -2072,3 +2073,17 @@ class Server(MsgHandler):
                     self.known_ids.discard(name)
                 else:
                     self.known_ids.add(name)
+
+    async def _monitor_pings(self, *, task_status):
+        async with self.backend.monitor(
+            P(":R.run.ping.id"),
+            raw=False,
+            no_local=False,
+            subtree=True,
+        ) as mon:
+            task_status.started()
+
+            async for msg in mon:
+                name = msg.topic[-1]
+                if msg.data is NotGiven or not msg.data["up"]:
+                    self.known_ids.discard(name)

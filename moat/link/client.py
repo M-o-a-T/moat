@@ -686,7 +686,7 @@ class LinkSender(MsgSender):
                     if res not in (None, NotGiven):
                         break
 
-        res2 = await self.d_get(P("run.id") + res["id"])
+        res2 = await self.d_get(P("run.id") / res["id"])
 
         return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 

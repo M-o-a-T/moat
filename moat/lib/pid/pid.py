@@ -205,7 +205,7 @@ class PID:
         dt = ticks_diff(t, t0)
         if dt < 0:
             self.t = t
-            raise ValueError("Time went backwards")
+            raise ValueError(f"Time went backwards: {t} {t0} {dt}")
 
         # Calculate proportional term
         p = self.Kp * e
@@ -282,10 +282,13 @@ class CPID(PID):
         if i is None:
             i = 0
         osp = self.state.setpoint
+
+        # the default is a no-op adjustment so the factor is zero not one
         if osp is not None:
             i -= osp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
         self.state.setpoint = nsp = setpoint
         i += nsp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
+
         self.i = i
 
     def move_to(self, i: float, o: float, t=None):

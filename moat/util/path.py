@@ -521,9 +521,10 @@ class Path(Sequence[PathElem]):
             if other._prefix is None:
                 other = other._data
             else:
+                # XXX this probably shouldn't happen
                 other = (f":{other._prefix.key}", *other._data)
         elif not isinstance(other, (list, tuple)):
-            # Legacy code. Should not happen.
+            # Legacy code. Should not happen. TODO: add a deprecation warning
             other = (other,)  # pyright:ignore
         if len(other) == 0:
             if self.mark != mark:
@@ -532,7 +533,7 @@ class Path(Sequence[PathElem]):
         return type(self)(*self._data, *other, mark=mark, prefix=self._prefix)
 
     def __radd__(self, other: PathTuple) -> PathTuple:
-        # This method is present because pyright doesn't get our
+        # This method exists because pyright doesn't get our
         # __getitem__ overrides right. TODO.
         return other + self.raw
 

@@ -81,7 +81,7 @@ allow_anonymous true
 retained_messages_mode enabled_without_persistence
 thread_count 1
 
-log_level debug
+log_level info
 log_subscriptions true
 
 listen {{

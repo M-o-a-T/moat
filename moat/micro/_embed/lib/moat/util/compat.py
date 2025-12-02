@@ -5,6 +5,7 @@ to something roughly equivalent.
 
 from __future__ import annotations
 
+import os as _os
 import sys
 from inspect import iscoroutine
 from time import ticks_add, ticks_diff, ticks_ms
@@ -90,10 +91,17 @@ def print_exc(exc, file=None):
     sys.print_exception(exc, file)
 
 
-def log(s, *x, err=None):
+def log(s, *x, err=None, write: bool = True):
     "Basic logger.debug/error call (depends on @err)"
     if x:
         s = s % x
+
+    if write and err is not None:
+        if "moat.exc" not in _os.listdir():
+            with open("moat.exc", "w") as f:
+                print(s, file=f)
+                print_exc(err, f)
+
     print(s, file=sys.stderr)
     if err is not None:
         print_exc(err)

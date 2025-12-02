@@ -121,8 +121,9 @@ class CancelScope:
         return self.sc.cancel_called()
 
 
-def log(s, *x, err=None, nback=1):
+def log(s, *x, err=None, nback=1, write: bool = True):
     "Basic logger.debug/error call (depends on @err)"
+    write  # noqa:B018
     caller = currentframe()
     for _ in range(nback):
         if caller.f_back is None:

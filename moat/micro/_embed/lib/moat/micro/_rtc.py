@@ -48,7 +48,7 @@ class State:
                     self._d = _unpack(m())
                     return
             except Exception as exc:
-                log("RTC error", err=exc)
+                log("RTC error", err=exc, write=False)
 
     @property
     def data(self):

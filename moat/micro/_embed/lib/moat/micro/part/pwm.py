@@ -113,7 +113,7 @@ class PWM(BaseCmd):
             nonlocal now
 
             if self.is_on != state:
-                await self.ps(state)
+                await self.ps.send(state)
                 self.is_on = state
                 self.t_last = now
             if state:

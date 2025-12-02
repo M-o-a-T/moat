@@ -524,6 +524,9 @@ class Msg(MsgLink, MsgResult):
         except BaseException as exc:
             await self.ml_send_error(exc)
             raise
+        else:
+            if self._stream_out != S_END:
+                await self.result()
 
     def _stream(self, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
         return _Stream(self, a, kw, flag, initial=initial)

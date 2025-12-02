@@ -8,7 +8,6 @@ import pytest
 from moat.util import P, ungroup
 from moat.lib.cmd.base import MsgHandler
 from moat.link._test import Scaffold
-from moat.link.announce import announcing
 from moat.link.exceptions import ServiceSupplanted
 
 
@@ -29,7 +28,7 @@ async def test_basic(cfg):
                 # If the test fails here, most likely you're using the
                 # system broker and have retained messages lying around.
                 # TODO.
-                async with announcing(c1, P("foo.bar"), value="C1") as s:
+                async with c1.announcing(P("foo.bar"), value="C1") as s:
                     s.set()
                     evt.set()
                     await c1.i_sync()
@@ -41,7 +40,7 @@ async def test_basic(cfg):
                     await evt.wait()
                 await anyio.sleep(0.2)
                 with pytest.raises(ServiceSupplanted), ungroup:  # noqa:PT012
-                    async with announcing(c2, P("foo.bar"), value="C2") as s:
+                    async with c2.announcing(P("foo.bar"), value="C2") as s:
                         s.set()
                         await anyio.sleep(0.2)
 
@@ -66,7 +65,7 @@ async def test_force(cfg):
             @tg.start_soon
             async def ann1():
                 with pytest.raises(ServiceSupplanted), ungroup:  # noqa:PT012
-                    async with announcing(c1, P("foo.bar")) as s:
+                    async with c1.announcing(P("foo.bar")) as s:
                         s.set()
                         await c1.i_sync()
                         evt.set()
@@ -78,7 +77,7 @@ async def test_force(cfg):
             async def ann2():
                 with anyio.fail_after(1.2):
                     await evt.wait()
-                async with announcing(c2, P("foo.bar"), force=True) as s:
+                async with c2.announcing(P("foo.bar"), force=True) as s:
                     s.set()
                     await anyio.sleep(0.2)
                     evt2.set()
@@ -108,7 +107,7 @@ async def test_call(cfg):
 
             @tg.start_soon
             async def ann1():
-                async with announcing(c1, P("foo.bar"), service=CmdI(), host=False) as s:
+                async with c1.announcing(P("foo.bar"), service=CmdI(), host=False) as s:
                     s.set()
                     evt.set()
                     await evt2.wait()

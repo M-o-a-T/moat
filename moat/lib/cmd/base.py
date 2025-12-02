@@ -432,7 +432,7 @@ class SubMsgSender(MsgSender):
             self.Caller_ = caller
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}:{self.root} {self.path}"
+        return f"<{self.__class__.__name__}:{self.root} {self._path}"
 
     async def __aenter__(self):
         "Ensure that the called object is ready for service"

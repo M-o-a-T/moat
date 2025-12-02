@@ -10,7 +10,7 @@ from __future__ import annotations
 from moat.util import Path
 from moat.lib.codec.errors import StoppedError
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, ticks_diff, ticks_ms, wait_for_ms
+from moat.util.compat import Event, L, ticks_diff, ticks_ms, wait_for_ms
 
 from typing import TYPE_CHECKING
 
@@ -84,7 +84,8 @@ class PWM(BaseCmd):
             _Send(self.pin.cmd_w) if hasattr(self.pin, "cmd_w") else self.pin.w.stream_out()
         ) as self.ps:
             try:
-                self.set_ready()
+                if L:
+                    self.set_ready()
                 self.t_last = ticks_ms()
                 self.is_on = False
                 await self.ps.send(False)

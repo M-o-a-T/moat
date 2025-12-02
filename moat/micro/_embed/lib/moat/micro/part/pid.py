@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from moat.lib.pid import CPID
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import ticks_diff, ticks_ms
 
 from typing import TYPE_CHECKING
 
@@ -35,6 +34,8 @@ class PID(BaseCmd):
 
     pid: CPID
     sn: str | None
+    val_in: float | None = None
+    split: tuple[float, float, float] | None = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -77,18 +78,15 @@ class PID(BaseCmd):
         """
         Run a PID step.
         """
-        val = self.pid(val, t=t)
+        self.split = s = self.pid.integrate(val, t=t)
         if self.sn is not None:
             RTC[self.sn] = self.pid.state
-        return val
+        return self.pid.sum(s)
 
     doc_s = dict(
         _d="read state",
         _r=dict(
-            a="int:t_on",
-            b="int:t_off",
-            p="bool:state",
-            t="int:time since last change",
+            state="dict", i="float:last input", o="float:last output", split="tuple:p-i-d output"
         ),
     )
 
@@ -96,10 +94,9 @@ class PID(BaseCmd):
         """
         Returns the current state.
         """
-        p = await self.is_on
         return dict(
-            a=self.t_on,
-            b=self.t_off,
-            p=p,
-            t=ticks_diff(ticks_ms(), self.t_last),
+            state=self.pid.get_state(),
+            split=self.split,
+            i=self.val_in,
+            o=self.pid.sum(self.split),
         )

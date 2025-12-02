@@ -195,7 +195,7 @@ class PWM(BaseCmd):
 
     async def stream_w(self, msg: Msg):
         "change ratio"
-        if msg.can_stream():
+        if msg.can_stream:
             async with msg.stream_in() as md:
                 async for m in md:
                     self.set_times(m[0])

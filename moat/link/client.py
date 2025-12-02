@@ -173,6 +173,9 @@ class LinkCommon(CmdCommon):
             task_status.started(hdl)
             await anyio.sleep_forever()
 
+    def _state_changed(self):
+        pass
+
     @asynccontextmanager
     async def _connect_one(self, remote: dict | str, data: dict | None = None) -> MsgHandler:
         auth_out = []
@@ -207,6 +210,7 @@ class LinkCommon(CmdCommon):
             self.server_name = self._hello.them
             self.protocol_version = self._hello.protocol_version
             self._hello = None  # done with that
+            self._state_changed()
 
             yielded = True
             yield handler
@@ -675,6 +679,11 @@ class LinkSender(MsgSender):
         return self._codec_tree
 
     async def get_service(self, srv: Path, wait: bool = False) -> MsgHandler:
+        """
+        Retrieve a SubDispatcher that connects to the given announced
+        service.
+        """
+
         srv = P("run.host") + srv
         try:
             res = await self.d_get(srv)
@@ -734,7 +743,10 @@ class Link(LinkCommon, CtxObj):
         """
         if state != self._state:
             self._state = state
-            self._state_change.set()
+            self._state_changed()
+
+    def _state_changed(self):
+        self._state_change.set()
 
     async def get_link(self):
         """
@@ -774,6 +786,7 @@ class Link(LinkCommon, CtxObj):
         but only if the task status isn't ignored.
         """
         path = Root.get() + self._ping_path
+        sn = self.server_name
         while True:
             await self.backend.send(
                 path,
@@ -787,9 +800,14 @@ class Link(LinkCommon, CtxObj):
 
             if task_status is not anyio.TASK_STATUS_IGNORED:
                 # send initial run.id message, *after* the ping
+                sn = self.server_name
                 await self._send_id()
                 task_status.started()
                 task_status = anyio.TASK_STATUS_IGNORED
+
+            elif sn != self.server_name:
+                sn = self.server_name
+                await self._send_id()
 
             if self._state == "init":
                 self._state = "auto"

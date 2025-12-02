@@ -38,10 +38,11 @@ class PWM(BaseCmd):
     A PWM is an output pin that changes periodically.
 
     Config:
-    - pin: the hardware output we're controlling
-    - min: Minimum time between switching
-    - max: Maximum time between switching
+    - pin: the hardware output we're controlling. Path to the write method.
+    - min: Minimum time between switching, milliseconds
+    - max: Maximum time between switching, milliseconds
     - base: the maximum value for the ratio.
+    - so: stream_out: Flag whether to stream the pin value
 
     The input must be in [0..base]; the output is controlled so that
     `t_on/(t_on+t_off) = val/base`, given that `min <= t_on,t_off <= max`
@@ -75,13 +76,13 @@ class PWM(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.pin = self.root.sub_at(self.cfg.pin)
+        self.pin = self.root.sub_at(self.cfg["pin"])
         if await self.pin.rdy_():
             raise StoppedError("pin")
 
     async def task(self):  # noqa:D102
         async with (
-            _Send(self.pin.cmd_w) if hasattr(self.pin, "cmd_w") else self.pin.w.stream_out()
+            _Send(self.pin) if not self.cfg.get("so", False) else self.pin.stream_out()
         ) as self.ps:
             try:
                 if L:

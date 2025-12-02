@@ -839,35 +839,42 @@ class Link(LinkCommon, CtxObj):
         async with (
             ctx_as(Root, self.cfg["root"]),
             get_backend(self.cfg, name=self.name, will=will) as self.backend,
-            anyio.create_task_group() as self.tg,
         ):
-            if self._port is not None:
-                sdr = await self.tg.start(self._connected_port)
-            else:
-                if self.cfg.client.init_timeout:
-                    # connect to the main server
-                    await self.tg.start(self._run_server_link)
-                sdr = LinkSender(self)
-            sdr.add_sub("cl")
-            sdr.add_sub("d")
-            sdr.add_sub("e")
-            sdr.add_sub("i")
             try:
-                self.sdr = sdr
-                await self.tg.start(self._monitor_ping)
-                await self.tg.start(self._send_ping)
+                async with anyio.create_task_group() as self.tg:
+                    if self._port is not None:
+                        sdr = await self.tg.start(self._connected_port)
+                    else:
+                        if self.cfg.client.init_timeout:
+                            # connect to the main server
+                            await self.tg.start(self._run_server_link)
+                        sdr = LinkSender(self)
+                    sdr.add_sub("cl")
+                    sdr.add_sub("d")
+                    sdr.add_sub("e")
+                    sdr.add_sub("i")
+                    try:
+                        self.sdr = sdr
+                        await self.tg.start(self._monitor_ping)
+                        await self.tg.start(self._send_ping)
 
-                with ctx_as(_the_link, self) if self._common else nullcontext():
-                    yield sdr
+                        with ctx_as(_the_link, self) if self._common else nullcontext():
+                            yield sdr
+                    finally:
+                        del self.sdr
+                    self.tg.cancel_scope.cancel()
+
             finally:
-                del self.sdr
-            await self.backend.send(
-                Root.get() + self._ping_path,
-                data=dict(up=False, state="closed"),
-                retain=False,
-                meta=False,
-            )
-            self.tg.cancel_scope.cancel()
+                try:
+                    with anyio.move_on_after(2, shield=True):
+                        await self.backend.send(
+                            Root.get() + self._ping_path,
+                            data=dict(up=False, state="closed"),
+                            retain=False,
+                            meta=False,
+                        )
+                except Exception as exc:
+                    self.logger.warning("Could not send Close message", exc_info=exc)
 
     def cancel(self):
         "Stop me"

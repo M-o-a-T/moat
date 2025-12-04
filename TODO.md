@@ -46,6 +46,8 @@ hero: Any spare days that are not in the calendar?
       see TODO in moat.link.server.\_server:Server.recover\_split
 
 * moat.micro
+  * console via MoaT
+  * "safe" config reload, i.e. with fallback
   * app for multiplexed I/O
   * app for Triac control
 

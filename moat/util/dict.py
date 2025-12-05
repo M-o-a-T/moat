@@ -160,6 +160,13 @@ class attrdict(dict):
                 w = v[p]
             except KeyError:
                 w = type(v)()
+            except TypeError:
+                if isinstance(v, list) and p is None:
+                    p = len(v)
+                    v.append(None)
+                    w = attrdict()
+                else:
+                    raise
             else:
                 # copy
                 w = attrdict() if w is None else type(w)(w)

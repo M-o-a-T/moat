@@ -158,25 +158,30 @@ class PID:
         """Set PID controller states.
 
         Args:
-            t0:
-                Current time. If ``None``, calls `time`.
-            e0:
+            t:
+                Current time. If zero, calls ``time``.
+            e:
                 Current error.
-            i0:
+            i:
                 Current integral.
 
         """
-        if t is None:
-            t = time()
-        self.t = t
-        self.e = e
-        self.i = i or 0
+        if t is not None:
+            if t == 0:
+                t = time()
+            self.t = t
+        elif self.t is None:
+            self.t = time()
+        if e is not None:
+            self.e = e
+        if i is not None:
+            self.i = i
 
     def get_state(self) -> tuple[float | None, float | None, float]:
         """Get PID controller states.
 
         Returns:
-            State of the PID controller (t0, e0, i0)
+            State of the PID controller (t, e, i)
 
         """
         return self.t, self.e, self.i

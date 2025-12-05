@@ -10,12 +10,14 @@ from __future__ import annotations
 
 from math import exp
 
-from moat.util import attrdict
+from moat.util import NotGiven, attrdict
 from moat.util.compat import ticks_diff
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from collections.abc import Sequence
 
 try:
@@ -49,9 +51,9 @@ class PID:
 
     """
 
-    t: float | None  # current time
-    e: float | None  # current error
-    i: float  # current integral
+    t: float | None = None  # current time
+    e: float | None = None  # current error
+    i: float = 0  # current integral
 
     Kp: float  # proportional gain
     Ki: float | None  # integral gain
@@ -78,6 +80,8 @@ class PID:
 
     def reset(self, t: float | None = None):  # noqa: D102
         self.set_state(t, None, None)
+        if t is None:
+            self.t = None
 
     def __call__(self, e: float, t: float | None = None) -> float:
         """Run a PID step.
@@ -153,25 +157,26 @@ class PID:
         return self.lower, self.upper
 
     def set_state(
-        self, t: float | None = None, e: float | None = None, i: float | None = None
+        self,
+        t: float | None | EllipsisType = None,
+        e: float | None = None,
+        i: float | None = None,
     ) -> None:
         """Set PID controller states.
 
         Args:
             t:
-                Current time. If zero, calls ``time``.
+                Current time. If NotGiven, clears.
             e:
                 Current error.
             i:
                 Current integral.
 
         """
-        if t is not None:
-            if t == 0:
-                t = time()
-            self.t = t
-        elif self.t is None:
-            self.t = time()
+        if t is NotGiven:
+            self.t = None
+        elif t is not None:
+            self.t = cast(float, t)
         if e is not None:
             self.e = e
         if i is not None:

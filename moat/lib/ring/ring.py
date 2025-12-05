@@ -106,9 +106,3 @@ class RingBuffer:
         self._read_pos = (self._read_pos + read_len) % buf_len
         self._count -= read_len
         return read_len
-
-    def any(self) -> int:
-        """
-        Returns the number of bytes in the buffer.
-        """
-        return self._count

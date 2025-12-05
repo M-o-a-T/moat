@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from moat.util import Path, Queue, QueueFull, combine_dict
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L, TaskGroup, every, idle, is_async, log
+from moat.util.compat import Event, L, TaskGroup, every, idle, is_async, log, ticks_ms
 
 from typing import TYPE_CHECKING
 
@@ -190,6 +190,7 @@ class Transfer(BaseCmd):
 
     tg: TaskGroup
     steps: list[_Step]
+    t_last: int = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -217,6 +218,7 @@ class Transfer(BaseCmd):
                 await idle()
             else:
                 async for _ in every(t):
+                    self.t_last = ticks_ms()
                     await self.steps[0]()
 
     async def cont(self, i, a, kw):
@@ -269,6 +271,6 @@ class Transfer(BaseCmd):
 
     async def stream_s(self, msg: Msg):
         "feed current state"
-        async with msg.stream_out() as md:
-            async for a, kw in self.data:
+        async with msg.stream_out(t=self.t_last) as md:
+            for a, kw in self.data:
                 await md.send(*a, **kw)

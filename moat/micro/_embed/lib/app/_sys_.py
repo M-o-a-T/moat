@@ -4,6 +4,8 @@ System access app
 
 from __future__ import annotations
 
+import time
+
 from moat.util import Path
 from moat.lib.codec.proxy import Proxy, drop_proxy
 from moat.micro.cmd.base import BaseCmd
@@ -138,3 +140,14 @@ class Cmd(BaseCmd):
         that's what the "external" function of the watchdog is good for.
         """
         return {"m": m}
+
+    doc_time = dict(
+        _d="Get current satellite time(s)",
+        _r=dict(t="int:seconds", ms="int:milliseconds", us="int:microseconds"),
+    )
+
+    async def cmd_time(self):
+        """
+        Return the current time.
+        """
+        return {"t": time.time(), "ms": time.ticks_ms(), "us": time.ticks_us()}

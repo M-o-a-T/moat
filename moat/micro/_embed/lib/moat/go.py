@@ -63,15 +63,6 @@ def go(state=None, cmd=True):
         if err is not None:
             sys.print_exception(err, sys.stderr)
 
-    def wr_exc(exc):
-        if "moat.err" not in _os.listdir():
-            with open("moat.err", "w") as f:
-                print("Error:", repr(exc), file=f)
-                sys.print_exception(exc, f)
-
-        print("Error:", repr(exc), file=sys.stderr)
-        sys.print_exception(exc, sys.stderr)
-
     states = [
         ("flash", "moat_fb.cfg"),
         ("rom", "moat_rom.cfg"),
@@ -126,7 +117,7 @@ def go(state=None, cmd=True):
 
     print("Start MoaT:", repr(state), file=sys.stderr)
 
-    from moat.micro.main import main  # noqa: PLC0415
+    from moat.micro.main import main, wr_exc  # noqa: PLC0415
     from moat.util.compat import at  # noqa: PLC0415
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")

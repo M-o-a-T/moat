@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from moat.util import Path, Queue, QueueFull, combine_dict
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, TaskGroup, every, idle, is_async, log
+from moat.util.compat import Event, L, TaskGroup, every, idle, is_async, log
 
 from typing import TYPE_CHECKING
 
@@ -209,7 +209,8 @@ class Transfer(BaseCmd):
                 self.tg.start_soon(s.run)
             for s in self.steps:
                 await s.is_ready()
-            self.set_ready()
+            if L:
+                self.set_ready()
 
             t = self.cfg.get("t", None)
             if t is None:
@@ -233,7 +234,7 @@ class Transfer(BaseCmd):
         "send data to (first) step"
         kw = msg.kw
         s0 = self.steps[kw.pop("qs", 0)]
-        if msg.can_stream():
+        if msg.can_stream:
             async with msg.stream_in() as md:
                 async for m in md:
                     await s0(m.a, m.kw)
@@ -251,7 +252,7 @@ class Transfer(BaseCmd):
         qp = q.put
         s0.q.add(qp)
         try:
-            if msg.can_stream():
+            if msg.can_stream:
                 async with msg.stream_out(*(s0.last_a or ()), **(s0.last_kw or {})) as md:
                     async for a, kw in q:
                         await md.send(*a, **kw)

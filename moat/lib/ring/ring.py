@@ -18,8 +18,7 @@ class RingBuffer:
         """
         self._buf = bytearray(length)
         self._read_pos = 0  # Position to read from
-        self._write_pos = 0  # Position to write to
-        self._count = 0  # Number of bytes available to read
+        self._count = 0  # Number of bytes available
 
     def write(self, buf: bytes) -> None:
         """
@@ -47,19 +46,19 @@ class RingBuffer:
             self._count -= overflow
 
         # Write data, handling wraparound
-        space_to_end = buf_len - self._write_pos
+        write_pos = (self._read_pos + self._count) % buf_len
+        space_to_end = buf_len - write_pos
         if write_len <= space_to_end:
             # Simple case: no wraparound
-            self._buf[self._write_pos : self._write_pos + write_len] = buf
+            self._buf[write_pos : write_pos + write_len] = buf
         else:
             # Wraparound case: split the write
-            self._buf[self._write_pos : buf_len] = buf[:space_to_end]
+            self._buf[write_pos:buf_len] = buf[:space_to_end]
             self._buf[0 : write_len - space_to_end] = buf[space_to_end:]
 
-        self._write_pos = (self._write_pos + write_len) % buf_len
         self._count += write_len
 
-        # Mark the oldest byte with 0x00 if we had overflow
+        # Replace the oldest byte with 0x00 if we had overflow
         if overflow > 0:
             self._buf[self._read_pos] = 0x00
 

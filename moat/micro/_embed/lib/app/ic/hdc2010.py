@@ -29,7 +29,7 @@ class Cmd(BaseCmd):
     async def setup(self):
         "allocate lock"
         super().setup()
-        self.lock = Lock
+        self.lock = Lock()
 
     async def task(self):
         "wrapper, for i2c bus access"

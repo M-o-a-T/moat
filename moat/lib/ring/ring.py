@@ -20,21 +20,35 @@ class RingBuffer:
         self._read_pos = 0  # Position to read from
         self._count = 0  # Number of bytes available
 
-    def write(self, buf: bytes) -> None:
+    def n_free(self):
+        "free space in buffer"
+        return len(self._buf) - self._count
+
+    def n_avail(self):
+        "bytes in buffer"
+        return self._count
+
+    __len__ = n_avail
+
+    def __repr__(self):
+        return f"<Ring:{self._count}/{len(self._buf)}>"
+
+    def write(self, buf: bytes, drop: bool = True) -> int:
         """
         Adds the bytes in `buf` to the end of the buffer.
 
-        If the buffer is full, discards as many old bytes as necessary and
-        replaces the first byte with a 0x00.
+        If the buffer is full and `drop` is set (the default), discards as
+        many old bytes as necessary and replaces the first byte with a
+        0x00. Otherwise only write as much as will fit.
         """
         if not buf:
-            return
+            return 0
 
         buf_len = len(self._buf)
-        write_len = len(buf)
+        res = write_len = len(buf)
 
         # If writing more than buffer can hold, only write last buf_len bytes
-        if write_len > buf_len:
+        if drop and write_len > buf_len:
             buf = memoryview(buf)[write_len - buf_len :]
             write_len = buf_len
 
@@ -42,8 +56,13 @@ class RingBuffer:
         overflow = max(0, self._count + write_len - buf_len)
         if overflow > 0:
             # Advance read position to discard old bytes
-            self._read_pos = (self._read_pos + overflow) % buf_len
-            self._count -= overflow
+            if drop:
+                self._read_pos = (self._read_pos + overflow) % buf_len
+                self._count -= overflow
+            else:
+                res = write_len = buf_len - self._count
+                overflow = 0
+                buf = memoryview(buf)[:write_len]
 
         # Write data, handling wraparound
         write_pos = (self._read_pos + self._count) % buf_len
@@ -61,6 +80,8 @@ class RingBuffer:
         # Replace the oldest byte with 0x00 if we had overflow
         if overflow > 0:
             self._buf[self._read_pos] = 0x00
+
+        return res
 
     def readinto(self, buf: bytearray) -> int:
         """

@@ -218,6 +218,39 @@ class TestRingBufferOverflow:
         assert 0x00 not in buf[:7]
 
 
+class TestRingBufferNoDrop:
+    """Test drop=False writes"""
+
+    def test_start(self):
+        """Test that drop=False stops in the buffer"""
+        rb = RingBuffer(5)
+        assert rb.write(b"123", drop=False) == 3
+        assert rb.write(b"456", drop=False) == 2
+        assert rb.write(b"789", drop=False) == 0
+
+        buf = bytearray(6)
+        assert rb.readinto(buf) == 5
+        assert buf[:5] == b"12345"
+
+    def test_mid(self):
+        """Test that drop=False works correctly when wrapping"""
+        rb = RingBuffer(4)
+        assert rb.write(b"123", drop=False) == 3
+
+        buf = bytearray(1)
+        assert rb.readinto(buf) == 1
+        assert buf == b"1"
+        assert rb.readinto(buf) == 1
+        assert buf == b"2"
+
+        assert rb.write(b"456", drop=False) == 3
+        assert rb.write(b"789", drop=False) == 0
+
+        buf = bytearray(6)
+        assert rb.readinto(buf) == 4
+        assert buf[:4] == b"3456"
+
+
 class TestRingBufferEdgeCases:
     """Test edge cases and boundary conditions."""
 

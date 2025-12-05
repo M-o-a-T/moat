@@ -7,10 +7,6 @@ from __future__ import annotations
 from moat.lib.pid import CPID
 from moat.micro.cmd.base import BaseCmd
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from moat.util import attrdict
 try:
     from moat.micro.rtc import state as RTC
 except ImportError:
@@ -50,10 +46,6 @@ class PID(BaseCmd):
                 self.pid.setpoint(setpoint)
                 return
         self.pid.setpoint(cfg.get("set", 0))
-
-    def cmd_sr(self) -> attrdict:
-        "Read the current state"
-        return self.pid.state
 
     def cmd_sw(self, t: int | None, e: float | None, i: float | None, **_kw):
         "Update the PID state."
@@ -104,7 +96,14 @@ class PID(BaseCmd):
         e="float:differential error",
         i="float:integral error",
         _r=dict(
-            state="dict", i="float:last input", o="float:last output", split="tuple:p-i-d output"
+            state=dict(
+                t="int:current time",
+                e="float:differential error",
+                i="float:integral error",
+            ),
+            i="float:last input",
+            o="float:last output",
+            split="tuple:p-i-d output",
         ),
     )
 
@@ -115,7 +114,7 @@ class PID(BaseCmd):
         if kw:
             self.pid.set_state(**kw)
         res = dict(
-            state=self.pid.get_state(),
+            state=self.pid.state,
             i=self.val_in,
             split=self.split,
         )

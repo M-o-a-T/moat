@@ -205,8 +205,8 @@ class PWM(BaseCmd):
     doc_s = dict(
         _d="read state",
         _r=dict(
-            a="int:t_on",
-            b="int:t_off",
+            on="int:t_on",
+            off="int:t_off",
             p="bool:state",
             t="int:time until next change",
         ),
@@ -216,9 +216,13 @@ class PWM(BaseCmd):
         """
         Returns the current state.
         """
-        return dict(
-            a=self.t_on,
-            b=self.t_off,
+        res = dict(
+            on=self.t_on,
+            off=self.t_off,
             p=self.is_on,
-            t=(self.t_on if self.is_on else self.t_off) - ticks_diff(ticks_ms(), self.t_last),
         )
+        if self.t_on and self.t_off:
+            res["t"] = (self.t_on if self.is_on else self.t_off) - ticks_diff(
+                ticks_ms(), self.t_last
+            )
+        return res

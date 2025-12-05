@@ -494,7 +494,7 @@ async def to_thread(p, *a, **k):
     import _thread  # noqa:PLC0415
 
     async with _thr_lock:
-        _thread.start_new_thread(thr.run)
+        _thread.start_new_thread(thr.run, ())
         await thr.evt.wait()
     if thr.err is not None:
         raise thr.err from None

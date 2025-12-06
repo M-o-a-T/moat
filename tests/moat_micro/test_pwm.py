@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.micro.part.pwm import PWM
+from moat.micro.part.pwm import PWM, _Send
 
 
 class FPWM(PWM):
@@ -23,6 +23,7 @@ class FPWM(PWM):
         self.t_last = 0
         self.__t = 0
         self.evt = anyio.Event()
+        self.ps = _Send(self._ps)
 
     async def setup(self):
         "duh"
@@ -32,7 +33,7 @@ class FPWM(PWM):
         "duh"
         pass
 
-    async def ps(self, state: bool) -> None:
+    async def _ps(self, state: bool) -> None:
         "fake push-an-update"
         assert self.__xstate is None
         self.__xstate = state

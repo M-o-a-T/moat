@@ -124,6 +124,7 @@ class Path(Sequence[PathElem]):
         :Q   An alias for an alternate root
         :P   An alias for another alternate root
         :S   An alias for yet another alternate root
+        :@   Marks this path as relative to the current location
 
     The empty path is denoted by a single colon. A path that starts or ends
     with a dot, or that contains empty elements (two non-escaped dots, one
@@ -155,14 +156,19 @@ class Path(Sequence[PathElem]):
 
     """
 
-    _prefix: RootPath | None = None
+    _prefix: RootPath | Literal[True] | None = None
     _mark: str = ""
     _data: PathTuple
 
     __match_args__ = ("raw_rooted",)
 
     def __init__(
-        self, *a: PathElem, mark: str = "", scan: bool = False, prefix=None, decoded: bool = False
+        self,
+        *a: PathElem,
+        mark: str = "",
+        scan: bool = False,
+        prefix: RootPath | Literal[True] | None = None,
+        decoded: bool = False,
     ):
         """
         Create a path from the given elements.
@@ -215,7 +221,7 @@ class Path(Sequence[PathElem]):
         mark: str = "",
         scan: bool = False,
         decoded: bool = False,
-        prefix: RootPath | None = None,
+        prefix: RootPath | Literal[True] | None = None,
     ):
         """Optimized shortcut to generate a path from an existing tuple"""
         if mark:
@@ -261,7 +267,7 @@ class Path(Sequence[PathElem]):
 
         The prefix, if any, is expanded.
         """
-        if self._prefix is not None:
+        if isinstance(self._prefix, Path):
             return self._prefix.raw + self._data
         return self._data
 
@@ -272,7 +278,7 @@ class Path(Sequence[PathElem]):
 
         If the path has a prefix, it is returned in the tuple's first element.
         """
-        if self._prefix is not None:
+        if isinstance(self._prefix, Path):
             return (self._prefix,) + self._data
         return self._data
 
@@ -347,12 +353,17 @@ class Path(Sequence[PathElem]):
             res.append(":")
 
         def elems():
-            if self._prefix is not None:
+            if isinstance(self._prefix, Path):
                 if slash:
                     yield from self._prefix.raw
                 else:
                     yield self._prefix
             yield from self._data
+
+        if self.is_relative:
+            if slash:
+                raise ValueError("Cannot slashify relative paths")
+            res.append(":@")
 
         for x in elems():
             if slash and res:
@@ -456,14 +467,19 @@ class Path(Sequence[PathElem]):
         """
         True if the path does not have a prefix and is empty.
         """
-        if self._prefix is not None:
+        if isinstance(self._prefix, Path):
             return False
         return not bool(self._data)
 
     @property
     def has_prefix(self) -> bool:
         "True if the path has a root prefix."
-        return self._prefix is not None
+        return isinstance(self._prefix, Path)
+
+    @property
+    def is_relative(self) -> bool:
+        "True if the path has a :@ prefix."
+        return self._prefix is True
 
     def __eq__(self, other) -> bool:
         if other is None:
@@ -518,11 +534,11 @@ class Path(Sequence[PathElem]):
         """Concatenate two paths"""
         mark = self._tag_add(other)
         if isinstance(other, Path):
-            if other._prefix is None:
-                other = other._data
-            else:
+            if isinstance(other._prefix, Path):
                 # XXX this probably shouldn't happen
                 other = (f":{other._prefix.key}", *other._data)
+            else:
+                other = other._data
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen. TODO: add a deprecation warning
             other = (other,)  # pyright:ignore
@@ -656,6 +672,11 @@ class Path(Sequence[PathElem]):
                     part = True
                 elif e == "n":
                     new(None, True)
+                elif e == "@":
+                    if res or prefix is not None or part not in (False, True):
+                        raise ValueError("The :@ tag must be at the start")
+                    part = True
+                    prefix = True
                 elif e in _Roots:
                     if res or prefix is not None or part not in (False, True):
                         raise ValueError("A root must be at the start")

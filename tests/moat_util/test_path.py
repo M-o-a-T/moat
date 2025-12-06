@@ -57,6 +57,11 @@ _invalid = (
     "",
     ":list",
     ":dict",
+    ":@:R.abc",
+    ":Q:@.abc",
+    "abc:@",
+    "abc:P",
+    "abc:Z",
 )
 
 # standard slash expansion
@@ -185,6 +190,20 @@ def test_paths():
     assert str(r) == "a.b.c.d"
     pp = Path.build(("a", "b"))
     assert str(p) == str(pp)
+
+
+def test_relative():
+    a = P("a.b")
+    b = P(":@.c.d")
+    c = P(":R.a.b")
+    assert str(b) == ":@.c.d"
+    assert a + b == P("a.b.c.d")
+    assert c + b == P(":R.a.b.c.d")
+    assert b + a == P(":@.c.d.a.b")
+    with pytest.raises(ValueError):  # noqa:PT011
+        b + c
+    with pytest.raises(ValueError):  # noqa:PT011
+        a + c
 
 
 @pytest.mark.filterwarnings("ignore")

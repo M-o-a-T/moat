@@ -1,5 +1,5 @@
 """
-Access a satellite's Flash file system.
+Access a satellite's file system.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import os
 
 from moat.lib.codec.errors import FileExistsError, FileNotFoundError  # noqa:A004
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import sleep_ms
+from moat.util.compat import attrdict, to_thread
 
 
 def _fty(s, **r):
@@ -52,7 +52,7 @@ class Cmd(BaseCmd):
     _fd_last = 0
     _fd_cache = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: attrdict):
         super().__init__(cfg)
         self._fd_cache = dict()
         try:
@@ -65,7 +65,7 @@ class Cmd(BaseCmd):
 
     doc = dict(_d="File system access.", _c=dict(root="Path to file system root"))
 
-    def _fsp(self, p):
+    def _fsp(self, p: str):
         if self._pre:
             p = self._pre + p
         if p == "":
@@ -74,7 +74,7 @@ class Cmd(BaseCmd):
         # raise FSError("nf")
         return p
 
-    def _fd(self, fd):
+    def _fd(self, fd: int):
         # filenr > fileobj
         f = self._fd_cache[fd]
         # log(f"{fd}:{repr(f)}")
@@ -88,17 +88,17 @@ class Cmd(BaseCmd):
         # log(f"{fd}={repr(f)}")
         return fd
 
-    def _del_f(self, fd):
+    async def _del_f(self, fd: int):
         f = self._fd_cache.pop(fd)
         # log(f"{fd}!{repr(f)}")
-        f.close()
+        await to_thread(f.close)
 
     doc_reset = dict(_d="close all", p="str:set new prefix")
 
-    async def cmd_reset(self, p=None):
+    async def cmd_reset(self, p: str | None = None):
         "close all"
         for v in self._fd_cache.values():
-            v.close()
+            await to_thread(v.close)
         self._fd_cache = dict()
 
         if not p or p == "/":
@@ -110,39 +110,39 @@ class Cmd(BaseCmd):
 
     doc_open = dict(_d="open file", _0="str:path", m="str:mode (r,w)", _r="int:fileid")
 
-    async def cmd_open(self, p, m="r"):
+    async def cmd_open(self, p: str, m: str = "r"):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
-        f = _efix(open, p, m + "b")
+        f = await to_thread(_efix, open, p, m + "b")
         return self._add_f(f)
 
     doc_rd = dict(_d="read file", _0="int:fileid", _1="int:offset", n="int:length")
 
-    async def cmd_rd(self, f, o=0, n=64):
+    async def cmd_rd(self, f: int, o: int = 0, n: int = 64):
         "read @n bytes from @f at offset @o"
         fh = self._fd(f)
         fh.seek(o)
-        return fh.read(n)
+        return await to_thread(fh.read, n)
 
     doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
 
-    async def cmd_wr(self, f, o=0, d=None):
+    async def cmd_wr(self, f: int, o: int = 0, d: bytes = None):  # noqa: RUF013
         "write @d to @f at offset @o"
         if d is None:
             raise ValueError("No Data")
         fh = self._fd(f)
         fh.seek(o)
-        return fh.write(d)
+        return await to_thread(fh.write, d)
 
     doc_cl = dict(_d="close file", _0="int:fileid")
 
     async def cmd_cl(self, f):
         "close @f"
-        self._del_f(f)
+        await self._del_f(f)
 
     doc_ls = dict(_d="list dir", _0="str:path", x="bool:return mapping", _o="str|dict")
 
-    async def cmd_ls(self, p="", x=False):
+    async def cmd_ls(self, p: str = "", x: bool = False):
         """
         dir of @p.
 
@@ -154,24 +154,27 @@ class Cmd(BaseCmd):
         """
         p = self._fsp(p)
         res = []
-        if x:
-            for n, *_ in os.ilistdir(p):
-                await sleep_ms(1)
-                st = os.stat(f"{p}/{n}")
-                await sleep_ms(1)
-                res.append(_fty(st, n=n))
-        else:
-            for n, *_ in os.ilistdir(p):
-                await sleep_ms(1)
-                res.append(n)
+        it = await to_thread(os.ilistdir, p)
+        try:
+            if x:
+                while True:
+                    n, *_ = await to_thread(next, it)
+                    st = await to_thread(os.stat, f"{p}/{n}")
+                    res.append(_fty(st, n=n))
+            else:
+                while True:
+                    n, *_ = await to_thread(next, it)
+                    res.append(n)
+        except StopIteration:
+            pass
         return res
 
     doc_mkdir = dict(_d="make dir", _0="str:path")
 
-    async def cmd_mkdir(self, p):
+    async def cmd_mkdir(self, p: str):
         "new dir at @p"
         p = self._fsp(p)
-        _efix(os.mkdir, p)
+        await to_thread(_efix, os.mkdir, p)
 
     doc_hash = dict(_d="hash file", _0="str:path", l="int:prefixlen", _r="bytes:hash")
 
@@ -185,12 +188,15 @@ class Cmd(BaseCmd):
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        with open(p, "rb") as _f:  # noqa:ASYNC230
+        _f = await to_thread(p, "rb")
+        try:
             while True:
-                n = _f.readinto(_mem)
+                n = await to_thread(_f.readinto, _mem)
                 if not n:
                     break
                 _h.update(_mem[:n])
+        finally:
+            await to_thread(_f.close)
         res = _h.digest()
         if l is not None:
             res = res[:l]
@@ -203,7 +209,7 @@ class Cmd(BaseCmd):
         _r=dict(m="int:mode", s="int:size", t="int:modtime", d="list:state struct"),
     )
 
-    async def cmd_stat(self, p, v=False):
+    async def cmd_stat(self, p: str, v: bool = False):
         """
         State of @p.
 
@@ -217,7 +223,7 @@ class Cmd(BaseCmd):
         @d will not be sent if @v is False.
         """
         p = self._fsp(p)
-        s = _efix(os.stat, p)
+        s = await to_thread(_efix, os.stat, p)
         res = _fty(s)
         if v:
             res["d"] = s
@@ -231,11 +237,12 @@ class Cmd(BaseCmd):
         n="bool:dest must be new",
     )
 
-    async def cmd_mv(self, s, d, x=None, n=False):
+    async def cmd_mv(self, s: str, d: str, x: str | None = None, n: bool = False):
         """
         move file @s to @d.
 
-        If @n is True, the destination must not exist
+        If @n is True, the destination must not exist.
+
         @x is the name of a temp file; if set, it is used for swapping @s
         and @d.
         """
@@ -251,7 +258,7 @@ class Cmd(BaseCmd):
             else:
                 raise FileExistsError(q)
         if x is None:
-            os.rename(p, q)
+            await to_thread(os.rename, p, q)
         else:
             x = self._fsp(x)
             # exchange contents, via third file
@@ -261,28 +268,28 @@ class Cmd(BaseCmd):
                 pass
             else:
                 raise FileExistsError(q)
-            os.rename(p, x)
-            os.rename(q, p)
-            os.rename(x, q)
+            await to_thread(os.rename, p, x)
+            await to_thread(os.rename, q, p)
+            await to_thread(os.rename, x, q)
 
     doc_rm = dict(_d="remove file", _0="str:path")
 
-    async def cmd_rm(self, p):
+    async def cmd_rm(self, p: str):
         "unlink file @p"
         p = self._fsp(p)
-        _efix(os.remove, p)
+        await to_thread(_efix, os.remove, p)
 
     doc_rmdir = dict(_d="remove dir", _0="str:path")
 
-    async def cmd_rmdir(self, p):
+    async def cmd_rmdir(self, p: str):
         "unlink dir @p"
         p = self._fsp(p)
-        _efix(os.rmdir, p)
+        await to_thread(_efix, os.rmdir, p)
 
     doc_new = dict(_d="create file", _0="str:path")
 
-    async def cmd_new(self, p):
+    async def cmd_new(self, p: str):
         "new file @p"
         p = self._fsp(p)
-        f = _efix(open, p, "wb")
-        f.close()
+        f = await to_thread(_efix, open, p, "wb")
+        await to_thread(f.close)

@@ -3,7 +3,7 @@ from asyncakumuli import get_data
 import asyncclick as click
 import datetime
 import time
-from moat.util import P, yload, CFG, ensure_cfg, merge
+from moat.util import P, yload, CFG, merge, main_, run
 import sys
 from moat.link.client import Link
 import anyio
@@ -17,26 +17,23 @@ def sdate(d):
     return d.strftime("%Y-%m-%d %H:%M")
 
 
-@click.command()
+async def empty(ctx):
+    pass
+
+
+@main_.command()
 @click.option("--path", "-p", type=P, help="Value to set")
 @click.option("--verbose", "-v", is_flag=True, help="Report values as set")
-@click.option(
-    "--config", "-c", type=click.File("r"), help="MoaT config file", default="/etc/moat/moat.cfg"
-)
 @click.option("--offset", "-o", type=float, help="offset from start (seconds)", default=0)
-async def main(path, verbose, config, offset):
+async def back(path, verbose, config, offset):
     """
     Feed a stored Akumuli time series back to MoaT-KV.
     """
     if path is None and not verbose:
         raise click.UsageError("No path and no verbosity is a no-op")
-    with config as f:
-        cfg = yload(f, attr=True)
-    ensure_cfg("moat.link")
-    merge(CFG, cfg)
     tt = time.time()
     val = None
-    async with Link(CFG["link"]) as cli, httpx.AsyncClient() as s:
+    async with Link(CFG.moat.link) as cli, httpx.AsyncClient() as s:
         while True:
             seen = False
             t = datetime.datetime.now()
@@ -70,4 +67,4 @@ async def main(path, verbose, config, offset):
                 await anyio.sleep(3000)
 
 
-main(_anyio_backend="trio")
+run(empty)

@@ -75,10 +75,9 @@ async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
     cfg2.hostports.localhost[free_tcp_port] = cfg2.hostports.localhost.PORT
     del cfg2.hostports.localhost.PORT
 
-    from moat.util import CFG, ensure_cfg  # noqa: PLC0415
+    from moat.util import CFG  # noqa: PLC0415
 
-    ensure_cfg("moat.link.server")
-    cfg = copy.deepcopy(CFG)
+    cfg = copy.deepcopy(CFG.result)
 
     async with (
         Scaffold(cfg, use_servers=True) as sf,

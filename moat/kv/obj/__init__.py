@@ -28,7 +28,6 @@ from moat.util import (
     Path,
     PathLongener,
     combine_dict,
-    ensure_cfg,
     yload,
 )
 
@@ -452,8 +451,7 @@ class MirrorRoot(ClientEntry):
             from pathlib import Path as _Path  # noqa: PLC0415
 
             md = inspect.getmodule(cls)
-            ensure_cfg("moat.kv")
-            defcfg = CFG.kv.get(cls.CFG)
+            defcfg = CFG.moat.kv.get(cls.CFG)
             try:
                 f = (_Path(md.__file__).parent / "_nconfig.yaml").open("r")
             except OSError:

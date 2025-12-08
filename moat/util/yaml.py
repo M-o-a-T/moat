@@ -196,7 +196,7 @@ def yload(stream, multi=False, attr=False):
     y = yaml.YAML(typ="safe")
     if attr:
 
-        class AttrConstructor(SafeConstructor):  # pylint: disable=missing-class-docstring
+        class AttrConstructor(SafeConstructor):
             def __init__(self, *a, **k):
                 super().__init__(*a, **k)
                 self.yaml_base_dict_type = attrdict if attr is True else attr

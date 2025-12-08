@@ -12,12 +12,10 @@ from unittest import mock
 import trio
 from asyncscope import main_scope, scope
 
-from moat.util import NotGiven, attrdict, combine_dict
+from moat.util import CFG, CfgStore, NotGiven, P, attrdict, combine_dict
 from moat.kv.mock import S
 from moat.kv.server import Server
 from moat.mqtt.broker import create_broker
-
-from . import CFG
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +23,31 @@ otm = time.time
 
 
 @asynccontextmanager
-async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):  # noqa:D103
-    C_OUT = CFG.get("_stdout", NotGiven)
+async def stdtest(**kw):  # noqa:D103
+    try:
+        ocfg = CFG.result
+        cf = CfgStore()
+    except AttributeError:
+        cf = CfgStore()
+        ocfg = cf.result
+    with CFG.with_config(cf):
+        async with _stdtest(ocfg, **kw) as x:
+            yield x
+
+
+@asynccontextmanager
+async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
+    C_OUT = CFG.env.get("stdout", NotGiven)
     if C_OUT is not NotGiven:
-        del CFG["_stdout"]
-    TESTCFG = copy.deepcopy(CFG["kv"])
+        del CFG.env.stdout
+    TESTCFG = copy.deepcopy(ocfg.moat.kv)
     TESTCFG.server.port = None
     TESTCFG.root = "test"
+    CFG.mod(P("moat.kv"), NotGiven)
+    CFG.mod(P("moat.kv"), TESTCFG)
+
     if C_OUT is not NotGiven:
-        TESTCFG["_stdout"] = C_OUT
+        TESTCFG["stdout"] = C_OUT
 
     from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
     from socket import SOCK_STREAM  # noqa: PLC0415

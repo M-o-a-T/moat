@@ -14,6 +14,7 @@ from time import time
 
 import asyncclick as click
 
+from .config import CFG
 from .main import attr_args, load_subgroup, process_args
 from .path import P, Path, PathLongener, PathShortener, path_eval
 from .times import humandelta, time_until
@@ -375,10 +376,8 @@ async def cfg_(obj, path, yaml, empty, load):
 
     cfg = obj.cfg
     if load:
-        from .config import ensure_cfg  # noqa: PLC0415
-
         for ld in load:
-            cfg = ensure_cfg(ld, cfg=cfg)
+            CFG.add(ld)
 
     delim = False
     for p in path:

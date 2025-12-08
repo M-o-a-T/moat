@@ -8,7 +8,7 @@ import anyio
 import pytest
 from pathlib import Path
 
-from moat.util import P, ensure_cfg, yload, yprint
+from moat.util import P, yload, yprint
 from moat.lib.codec import get_codec
 from moat.micro._test import mpy_stack
 from moat.src.test import run
@@ -99,7 +99,6 @@ micro:
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)
-    ensure_cfg("moat.micro", cfg)
 
     here = Path(".").absolute()
     port = tmp_path / "uport"

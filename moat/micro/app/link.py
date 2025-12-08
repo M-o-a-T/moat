@@ -4,12 +4,11 @@ Apps used for interconnecting.
 
 from __future__ import annotations
 
-import moat
-from moat.util import ensure_cfg
 from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import AC_use
+from moat.util.config import CFG
 from moat.util.exc import ExpKeyError
 
 from ._link import Alert as Alert
@@ -46,8 +45,7 @@ class Register(BaseCmd):
     async def setup(self):
         "set up the link"
         await super().setup()
-        cfg = ensure_cfg("moat.link", moat.cfg)
-        self.link = await AC_use(self, Link(cfg.link, common=True))
+        self.link = await AC_use(self, Link(CFG.moat.link, common=True))
         if "path" in self.cfg:
             self.ann = await AC_use(
                 self,

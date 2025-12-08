@@ -3,7 +3,10 @@ from __future__ import annotations  # noqa: D100
 import copy
 import pytest
 
-from moat.link._test import CFG
+from moat.util import config
+from moat.util.config import CFG
+
+config.TEST = True
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -19,16 +22,17 @@ def in_test(free_tcp_port_factory):
     does not access port 1883 and thus won't disturb / depend on a
     locally runnign MQTT server.
     """
-    from moat.util import CFG, ensure_cfg  # noqa:PLC0415
-
-    ensure_cfg("moat.link")
+    from moat.util import CFG  # noqa:PLC0415
 
     def fix_for_testing(cfg):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:
             cfg.link.backend.port = free_tcp_port_factory()
 
     CFG.env.in_test = fix_for_testing
-    fix_for_testing(CFG)
+    try:
+        fix_for_testing(CFG)
+    except AttributeError:
+        pass
 
     try:
         yield
@@ -39,5 +43,5 @@ def in_test(free_tcp_port_factory):
 @pytest.fixture
 def cfg():
     "fixture for the static config"
-    c = copy.deepcopy(CFG)
-    return c
+    with CFG.with_config(config.CfgStore()) as c:
+        yield copy.deepcopy(c.result.moat)

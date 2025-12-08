@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.util import NotGiven, P, Path, attrdict, ensure_cfg, gen_ident
+from moat.util import NotGiven, P, Path, attrdict, gen_ident
 from moat.util import as_service as _as_service
 
 from .client import Link
@@ -286,11 +286,10 @@ async def as_service(obj: attrdict | None = None):
     if obj is None:
         obj = attrdict()
     obj.setdefault("debug", False)
-    cfg = ensure_cfg("moat.link", obj.cfg)
 
     async with (
         _as_service(obj) as mon,
-        Link(cfg.link, common=True) as mon.link,
+        Link(obj.cfg.link, common=True) as mon.link,
         announcing(mon.link, via=mon.evt),
     ):
         yield mon

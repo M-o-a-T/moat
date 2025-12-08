@@ -10,7 +10,6 @@ from asyncscope import scope
 from moat.util import (  # pylint:disable=no-name-in-module
     CFG,
     combine_dict,
-    ensure_cfg,
 )
 from moat.kv.client import _scoped_client
 
@@ -19,8 +18,6 @@ try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager
-
-ensure_cfg("moat.kv")
 
 
 @attr.s
@@ -54,7 +51,7 @@ class S:  # noqa:D101
             try:
                 cfg = combine_dict(
                     dict(conn=dict(host=host, port=port, ssl=self.client_ctx, **kv)),
-                    CFG["kv"],
+                    CFG.moat.kv,
                 )
 
                 async def scc(s, **cfg):

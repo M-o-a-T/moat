@@ -463,7 +463,7 @@ class _Thr:
         try:
             self.res = self.p(*self.a, **self.k)
         except BaseException as exc:
-            self.exc = exc
+            self.err = exc
         self.evt.set()
 
 

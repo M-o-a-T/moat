@@ -34,3 +34,7 @@ protocol_version_min = 0
 protocol_version = 0
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)
+
+from moat.util.config import CfgStore  # noqa:E402
+
+CfgStore.with_(__name__)

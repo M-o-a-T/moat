@@ -14,8 +14,8 @@ import sys
 import time as _time
 import traceback as _traceback
 from codecs import utf_8_decode
-from concurrent.futures import CancelledError
-from contextlib import AsyncExitStack, suppress
+from concurrent.futures import CancelledError as CancelledError
+from contextlib import AsyncExitStack
 from functools import partial
 from inspect import currentframe, iscoroutine, iscoroutinefunction
 
@@ -232,12 +232,13 @@ def TaskGroup():
                 Like start(), but returns something you can cancel
                 """
                 # logger.info("Launch %s %s %s %s",_name, p,a,k)
+                if _name is None:
+                    _name = str((p, a, k))
 
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
-                        with suppress(CancelledError):  # error from concurrent.futures
-                            await p(*a, **k)
+                        await p(*a, **k)
 
                 return await super().start(catch, p, a, k, name=_name)
 

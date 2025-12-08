@@ -8,3 +8,7 @@ try:
     from .lib import *  # noqa:F403
 except ImportError:
     pass
+
+from moat.util.config import CfgStore
+
+CfgStore.with_(__name__)

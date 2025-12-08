@@ -11,7 +11,6 @@ from moat.util import (
     Path,
     attr_args,
     attrdict,
-    ensure_cfg,
     yprint,
 )
 from moat.kv.data import data_get, node_attr
@@ -29,7 +28,6 @@ async def cli(obj):
     List Onewire devices, modify device handling …
     """
     obj.data = await OWFSroot.as_handler(obj.client)
-    ensure_cfg("moat.kv.ow", obj.cfg)
 
 
 @cli.command("list")

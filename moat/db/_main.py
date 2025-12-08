@@ -12,11 +12,9 @@ import sys
 import asyncclick as click
 from alembic import command
 
-from moat.util import ensure_cfg, load_subgroup
+from moat.util import load_subgroup
 
 from .util import alembic_cfg, database, load
-
-ensure_cfg("moat.db")
 
 
 @load_subgroup(prefix="moat.db", invoke_without_command=False)

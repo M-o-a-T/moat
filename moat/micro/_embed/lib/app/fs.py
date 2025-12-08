@@ -9,7 +9,12 @@ import os
 
 from moat.lib.codec.errors import FileExistsError, FileNotFoundError  # noqa:A004
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import attrdict, to_thread
+from moat.util.compat import to_thread
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.util import attrdict
 
 
 def _fty(s, **r):

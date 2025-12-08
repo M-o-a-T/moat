@@ -14,7 +14,6 @@ from sqlalchemy import select as sel
 from moat.util import (
     NotGiven,
     al_lower,
-    ensure_cfg,
     gen_ident,
     load_subgroup,
     merge,
@@ -42,9 +41,6 @@ class CustomFormatter(click.HelpFormatter):
 
 class CustomContext(click.Context):
     formatter_class = CustomFormatter
-
-
-ensure_cfg("moat.label")
 
 
 @load_subgroup(prefix="moat.label")

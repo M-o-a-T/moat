@@ -12,12 +12,10 @@ import sys
 import asyncclick as click
 from sqlalchemy import select
 
-from moat.util import ensure_cfg, load_subgroup, option_ng, yprint
+from moat.util import load_subgroup, option_ng, yprint
 from moat.db import database
 
 from .model import Thing, ThingTyp
-
-ensure_cfg("moat.db")
 
 
 @load_subgroup(prefix="moat.thing", invoke_without_command=False)

@@ -9,7 +9,7 @@ from unittest import mock
 
 import trio
 
-from moat.util import CFG, P, combine_dict, ensure_cfg
+from moat.util import P, combine_dict, to_attrdict
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
 from moat.kv.server import Server as KVServer
@@ -138,9 +138,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         async def mock_get_host_port(kvs, host):  # noqa: ARG001
             return "127.0.0.1", sf.cfg.backend.port
 
-        ensure_cfg("moat.link")
-        ensure_cfg("moat.kv")
-        TESTCFG = copy.deepcopy(CFG["kv"])
+        TESTCFG = copy.deepcopy(cfg.kv)
         TESTCFG.server.port = None
         TESTCFG.root = "test"
 
@@ -149,7 +147,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
             clock.autojump_threshold = 0.02  # networking
         except Exception:
             pass  # test doesn't have autojump_clock fixture
-        cfg = {
+        kcfg = {
             "conn": {"ssl": False},
             "server": {
                 "bind_default": {
@@ -161,8 +159,8 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
                 "mqtt": {"uri": URI},
             },
         }
-        cfg = combine_dict(cfg, TESTCFG)
-        kvs = KVServer("KVgateTest", cfg=cfg, init=dict(KV="test server"))
+        kcfg = to_attrdict(combine_dict(kcfg, TESTCFG))
+        kvs = KVServer("KVgateTest", cfg=kcfg, init=dict(KV="test server"))
         ex.enter_context(
             mock.patch.object(kvs, "_get_host_port", new=partial(mock_get_host_port, kvs))
         )
@@ -176,7 +174,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
                 continue
             ccfg = combine_dict(
                 dict(conn=dict(host="127.0.0.1", port=port, ssl=False)),
-                CFG["kv"],
+                cfg.kv,
             )
             kvc = await ex.enter_async_context(KVClient("test.client", **ccfg))
             break
@@ -216,8 +214,8 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         )
         await c.i_sync()
 
-        cfg["conn"] = dict(host="127.0.0.1", port=cfg["server"]["bind_default"]["port"])
-        await sf.tg.start(run_gate, dict(kv=cfg), c, "test")
+        kcfg.conn = dict(host="127.0.0.1", port=kcfg.server.bind_default.port)
+        await sf.tg.start(run_gate, dict(kv=kcfg), c, "test")
 
         await c.i_sync()
         a = await data_get(c, P("test.a"), out=False)

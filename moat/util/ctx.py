@@ -225,7 +225,10 @@ class ctx_as:
         if self.token is not None:
             raise ValueError("nested 'ctx_as' contexts ??")
         self.token = self.var.set(self.value)
-        del self.value
+        try:
+            return self.value
+        finally:
+            del self.value
 
     def __exit__(self, *tb) -> None:
         self.var.reset(self.token)

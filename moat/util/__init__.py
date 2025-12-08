@@ -15,10 +15,11 @@ _log = _logging.getLogger(__name__)
 
 NotGiven = Ellipsis
 
-from .config import CFG, ensure_cfg  # noqa: E402, F401
 from .dict import attrdict  # noqa: E402, F401
 
 from .alert import *  # noqa: F403, E402  # isort:skip
+from .config import *  # noqa: F403, E402  # isort:skip
+
 from .impl import *  # noqa: F403, E402  # isort:skip
 from .dict import *  # noqa: F403, E402  # isort:skip
 from .merge import *  # noqa: F403, E402  # isort:skip

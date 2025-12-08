@@ -6,8 +6,6 @@ from functools import partial
 
 from asyncowfs.mock import some_server
 
-from moat.util import ensure_cfg
-
 from .task import task
 
 
@@ -25,9 +23,6 @@ async def server(client, tree: dict | None = None, options: dict | None = None, 
 
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
         tg.start_soon(may_close)
-
-        cfg = {"kv": client._cfg}  # noqa: SLF001
-        ensure_cfg("moat.kv.ow", cfg)
 
         await client.set(
             client._cfg.ow.prefix + ("server", "127.0.0.1"),  # noqa: SLF001

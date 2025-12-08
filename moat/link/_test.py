@@ -16,7 +16,6 @@ from moat.util import (  # pylint:disable=no-name-in-module
     ValueEvent,
     attrdict,
     combine_dict,
-    ensure_cfg,
 )
 from moat.link.backend import get_backend
 from moat.link.client import Link
@@ -30,8 +29,6 @@ if TYPE_CHECKING:
 
     from collections.abc import AsyncIterator
     from typing import Never, Self
-
-ensure_cfg("moat.link")
 
 
 otm = time.time
@@ -123,7 +120,6 @@ class Scaffold(CtxObj):
     tempdir: str | None
 
     def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
-        ensure_cfg("moat.link.server", cfg)
         self.cfg = cfg.link
 
         self.cfg.setdefault("backend", attrdict())

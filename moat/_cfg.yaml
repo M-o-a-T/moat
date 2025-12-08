@@ -2,6 +2,7 @@ env:
   timezone: UTC
   in_test: False
 logging:
+  version: 1
   loggers:
     moat.mqtt:
       level: INFO

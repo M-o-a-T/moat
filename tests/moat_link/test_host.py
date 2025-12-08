@@ -5,8 +5,9 @@ from __future__ import annotations
 import anyio
 import os
 import pytest
+import sys
 
-from moat.util import P, Path, as_service, ensure_cfg, merge, to_attrdict, yload
+from moat.util import P, Path, as_service, merge, to_attrdict, yload
 from moat.link._test import Scaffold
 from moat.link.announce import announcing
 from moat.link.host import ServiceMon
@@ -74,7 +75,6 @@ async def test_mon(cfg):
     "host monitoring test"
 
     # shorten timeouts
-    cfg = ensure_cfg("moat.link")
     ctim = yload(TIMES, attr=True)
     ctim.root = Path(os.getpid(), "TEST")
     merge(cfg.link, ctim)
@@ -130,7 +130,8 @@ async def test_mon(cfg):
                 h = await sel_br(ibr, sid)
                 raise AssertionError(h)
 
-            if True:
+            print("**************** A", file=sys.stderr)
+            if False:
                 async with cl.announcing(host="test123", name=P("test.mon")) as s:
                     await anyio.sleep(0.5)
                 await anyio.sleep(0.5)
@@ -180,10 +181,14 @@ async def test_mon(cfg):
                 assert hmsgs[-1] is Ellipsis
                 hmsgs = []
                 emsgs = []
+            print("**************** B", file=sys.stderr)
 
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
+                print("**************** B1", file=sys.stderr)
                 s.value = 43
                 await anyio.sleep(0.35)
+                print("**************** B2", file=sys.stderr)
+            print("**************** B3", file=sys.stderr)
             assert len(emsgs) == 2
             assert emsgs[0]["msg"] == "not up"
             assert emsgs[1] is Ellipsis
@@ -194,3 +199,6 @@ async def test_mon(cfg):
             emsgs = []
 
             await anyio.sleep(0.5)
+            print("**************** C", file=sys.stderr)
+        print("**************** D", file=sys.stderr)
+    print("**************** E", file=sys.stderr)

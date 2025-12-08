@@ -24,7 +24,7 @@ import time
 
 import asyncclick as click
 
-from moat.util import P, ensure_cfg
+from moat.util import P
 from moat.link.client import Link
 from moat.main import main_, run
 from moat.micro.cmd.tree.dir import Dispatch
@@ -35,7 +35,6 @@ async def main(ctx: click.Context):
     "PID calibrator main code"
     obj = ctx.obj
     cfg = obj.cfg
-    cfg = ensure_cfg("moat.link", cfg)
     cfg = obj.cfg["link"]
     obj.conn = await ctx.with_async_resource(Link(cfg))
 

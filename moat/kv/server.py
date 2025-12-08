@@ -9,7 +9,7 @@ from anyio.abc import SocketAttribute
 
 from asyncscope import scope
 
-from moat.util import DelayedRead, DelayedWrite, create_queue, ensure_cfg
+from moat.util import DelayedRead, DelayedWrite, create_queue
 from moat.lib.codec import get_codec
 
 from collections.abc import Mapping
@@ -1398,10 +1398,7 @@ class Server:
         self.root = RootEntry(self, tock=self.tock)
         from moat.util import CFG  # noqa: PLC0415
 
-        ensure_cfg("moat.kv")
-        CFG = CFG["kv"]
-
-        self.cfg = combine_dict(cfg or {}, CFG, cls=attrdict)
+        self.cfg = combine_dict(cfg or {}, CFG.moat.kv, cls=attrdict)
         csr = self.cfg.server["root"]
         csr = P(csr) if isinstance(csr, str) else Path.build(csr)
         self.cfg.server["root"] = csr

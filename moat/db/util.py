@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from moat.util import CFG, attrdict, ctx_as, ensure_cfg, merge
+from moat.util import CFG, attrdict, ctx_as, merge
 
 from typing import TYPE_CHECKING
 
@@ -24,8 +24,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 __all__ = ["Session", "alembic_cfg", "database", "load", "session"]
-
-ensure_cfg("moat.db")
 
 
 @event.listens_for(Engine, "connect")
@@ -50,7 +48,7 @@ def load(cfg: attrdict) -> MetaData:
     """Load database models as per config."""
     from moat.db.schema import Base  # noqa: PLC0415
 
-    merge(cfg, CFG.db, replace=False)
+    merge(cfg, CFG.moat.db, replace=False)
 
     global _loaded
     if not _loaded:

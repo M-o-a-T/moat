@@ -8,7 +8,6 @@ import ast
 import importlib
 import logging
 import logging.config
-import os
 import sys
 from contextlib import suppress
 from contextvars import ContextVar
@@ -18,15 +17,11 @@ from pathlib import Path as FSPath
 import asyncclick as click
 import simpleeval
 
-import moat  # for CFG
-
 from . import NotGiven
-from .config import CFG, ensure_cfg
-from .dict import attrdict, to_attrdict
+from .config import CFG, CfgStore, current_cfg
+from .dict import attrdict
 from .exc import ungroup
-from .merge import merge
 from .path import P, Path
-from .yaml import yload
 
 from collections import defaultdict
 from collections.abc import Mapping
@@ -39,7 +34,7 @@ except ImportError:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Awaitable  # noqa:UP035
+    from typing import Awaitable, Literal, Sequence  # noqa:UP035
 
 logger = logging.getLogger("_loader")
 
@@ -47,13 +42,11 @@ __all__ = [
     "Loader",
     "attr_args",
     "list_ext",
-    "load_cfg",
     "load_ext",
     "load_subgroup",
     "main_",
     "option_ng",
     "process_args",
-    "read_cfg",
     "wrap_main",
 ]
 
@@ -217,7 +210,15 @@ def attr_args(
 
 
 def process_args(
-    val, set_=(), args_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None
+    val: dict | None = None,
+    set_=(),
+    args_=(),
+    vars_=(),
+    eval_=(),
+    path_=(),
+    proxy_=(),
+    no_path=False,
+    vs=None,
 ):
     """
     process ``set_``/``args_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
@@ -318,6 +319,10 @@ def process_args(
                 k = Path.build((None, None))
             else:
                 k = P(k)
+        if val is None:
+            CFG.mod(k, v)
+            continue
+
         if not len(k):
             if vs is not None:
                 raise click.BadOptionUsage(
@@ -338,38 +343,6 @@ def process_args(
         else:
             val = attrdict._update(val, k, v)  # pylint: disable=protected-access
     return val
-
-
-def read_cfg(name, path=None):
-    """
-    Read a YAML config file, either from the specified path
-    or from a couple of default paths.
-    """
-    cfg = None
-
-    def _cfg(path):
-        nonlocal cfg
-        if cfg is not None:
-            return
-        if path is False:
-            return
-        if os.path.exists(path):
-            try:
-                with open(path) as cf:
-                    cfg = yload(cf, attr=True)
-            except PermissionError:
-                pass
-
-    if name is not None and cfg is not False:
-        if path is not None:
-            _cfg(path)
-        else:
-            _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
-            _cfg(os.path.expanduser(f"~/.{name}.cfg"))
-            _cfg(f"/etc/{name}/{name}.cfg")
-            _cfg(f"/etc/{name}.cfg")
-
-    return cfg
 
 
 def load_ext(name, *attr, err=False):
@@ -398,14 +371,6 @@ def load_ext(name, *attr, err=False):
                 logger.debug("Err %s.%s", dp, attr[-1])
                 return None
         return mod
-
-
-def load_cfg(name):
-    """
-    Load a module's configuration
-    """
-    ensure_cfg(name)
-    return CFG
 
 
 def _namespaces(name):
@@ -654,8 +619,7 @@ class Loader(click.Group):
         if command is None and ext_pre is not None:
             command = load_ext(ext_pre, cmd_name, *ext_post)
             if command is not None:
-                cf = load_cfg(f"{ext_pre}.{cmd_name}")
-                merge(ctx.obj.cfg, cf, replace=False)
+                CFG.with_(f"{ext_pre}.{cmd_name}")
 
         if command is None:
             if sub_pre is None or sub_pre is NotGiven:
@@ -665,8 +629,7 @@ class Loader(click.Group):
             else:
                 command = load_ext(sub_pre, cmd_name, *sub_post)
                 if command is not None:
-                    cf = load_cfg(f"{sub_pre}.{cmd_name}")
-                    merge(ctx.obj.cfg, cf, replace=False)
+                    CFG.with_(f"{sub_pre}.{cmd_name}")
 
         if command is None:
             # raise click.UsageError(f"No such subcommand: {cmd_name}")
@@ -716,6 +679,7 @@ class MainLoader(Loader):
 @click.option(
     "-c",
     "--cfg",
+    "cfg_files",
     type=click.Path("r"),
     default=None,
     help="Configuration file (YAML).",
@@ -743,6 +707,9 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
     if hasattr(ctx, "_moat_invoked"):
         return
     ctx._moat_invoked = True  # pylint: disable=protected-access
+    cfg = current_cfg.get()
+    if cfg is not None:
+        kv["cfg"] = cfg
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
     try:
         main = ctx.obj.moat.main_cmd
@@ -773,8 +740,10 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     sub_post=None,
     ext_pre=None,
     ext_post=None,
-    cfg=None,
-    CFG=None,
+    ext_name: str | None = None,
+    cfg: attrdict | None | Literal[False] = None,
+    cfg_files: str | Sequence[str] = (),
+    cfg_load_all: bool | None = True,
     args=None,
     wrap=False,
     verbose=1,
@@ -791,9 +760,10 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     name: command name, defaults to {main}'s toplevel module name.
     {sub,ext}_{pre,post}: commands to load in submodules or extensions.
 
-    cfg: configuration file(s), default: various locations based on {name}, False=don't load
-    CFG: default configuration (dir or file), relative to caller
-         Default: load from name._config
+    cfg: additional configuration to preconfigure
+    cfg_files: additional configuration file(s) to load
+    cfg_load_all: Flag whether to load the default config file(s): True=all,
+        False=first found, None=No.
 
     wrap: Flag: this is a subcommand. Don't set up logging, return the awaitable.
     args: Argument list if called from a test, `None` otherwise.
@@ -833,12 +803,14 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     else:
         opts["ext_post"] = ext_post
 
+    # Name defaults to "moat", of course ;-)
     if name is None:
-        name = opts.get("name", "moat")
+        name = opts.setdefault("name", "moat")
     else:
         opts["name"] = name
 
     if sub_pre is True:
+        "discover from caller"
         import inspect  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         sub_pre = inspect.currentframe().f_back.f_globals["__package__"]
@@ -860,69 +832,20 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj._util_ext_pre = ext_pre  # pylint: disable=protected-access
     obj._util_ext_post = ext_post  # pylint: disable=protected-access
 
-    if CFG is None:
-        CFG = opts.get("CFG")
+    if not isinstance(cfg, CfgStore):
+        cfg = CfgStore(name, preload=cfg, load_all=cfg_load_all, ext=ext_name)
+        CFG.set_real_cfg(cfg)
 
-    if isinstance(CFG, str):
-        p = FSPath(CFG)
-        if not p.is_absolute():
-            p = FSPath((main or main_).__file__).parent / p
-        with open(p) as cfgf:
-            CFG = yload(cfgf, attr=True)
-    elif CFG is None:
-        CFG = obj.get("CFG", None)
-        if CFG is None:
-            CFG = load_cfg(name)
+    if isinstance(cfg_files, str):
+        cfg_files = (cfg_files,)
+    for fn in cfg_files:
+        cfg.add(fn)
 
-    obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
-    obj.CFG = CFG
-
-    if not cfg:
-        cfg = to_attrdict(read_cfg(name, None))
-    elif isinstance(cfg, (list, tuple)):
-        cf = {}
-        for fn in cfg:
-            merge(cf, read_cfg(name, fn), replace=True)
-        cfg = to_attrdict(cf)
-    else:
-        cfg = to_attrdict(read_cfg(name, cfg))
-
-    if cfg:
-        merge(cfg, obj.CFG, replace=False)
-    else:
-        cfg = CFG
-
-    if (fn := os.environ.get("MOAT_CFG")) is not None:
-        merge(cfg, read_cfg(name, fn), replace=False)
-
-    obj.cfg = cfg = to_attrdict(cfg)
-    if cfg.env.in_test:
-        cfg.env.in_test(cfg)
+    # our toplevel config file(s)
+    CFG.with_("moat")
 
     obj.debug = verbose
     obj.DEBUG = debug
-
-    # Don't forget to import toplevel config files
-
-    try:
-        p = moat.__path__
-    except AttributeError:
-        p = (str(FSPath(moat.__file__).parent),)
-    for fp in p:
-        try:
-            with (FSPath(fp) / "_cfg.yaml").open("r") as f:
-                merge(cfg, yload(f, attr=True), replace=False)
-        except FileNotFoundError:
-            pass
-
-    obj.cfg = process_args(
-        obj.cfg,
-        set_=set_,
-        vars_=vars_,
-        eval_=eval_,
-        path_=path_,
-        proxy_=proxy_,
-    )
 
     if wrap:
         pass
@@ -930,22 +853,36 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         logging.debug("Logging already set up")  # noqa:LOG015
     else:
         # Configure logging. This is a somewhat arcane art.
-        lcfg = obj.cfg.setdefault("logging", {})
-        lcfg.setdefault("version", 1)
-        lcfg.setdefault("root", {})["level"] = (
+        cfg.mod(
+            P("logging.root.level"),
             "DEBUG"
             if verbose > 2
             else "INFO"
             if verbose > 1
             else "WARNING"
             if verbose
-            else "ERROR"
+            else "ERROR",
         )
         for k in log:
             k, v = k.split("=")
-            lcfg["loggers"].setdefault(k, {})["level"] = v
-        logging.config.dictConfig(lcfg)
+            cfg.mod(P("logging.loggers" / k / "level", v), logging.config.dictConfig(cfg.logging))
 
+    process_args(
+        set_=set_,
+        vars_=vars_,
+        eval_=eval_,
+        path_=path_,
+        proxy_=proxy_,
+    )
+
+    try:
+        in_test = cfg.env.in_test
+    except AttributeError:
+        pass
+    else:
+        in_test(cfg)
+
+    if not wrap and not hasattr(logging.root, "_MoaT"):
         logging.basicConfig = _no_config
         logging.config.dictConfig = _no_config
         logging.config.fileConfig = _no_config
@@ -960,8 +897,11 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     obj.logger = logging.getLogger(name)
     obj.debug_loader = debug_loader
-
-    moat.cfg = obj.cfg
+    obj.cfg = cfg.result[name]
+    try:
+        obj.stdout = cfg.result.env.stdout
+    except AttributeError:
+        obj.stdout = sys.stdout
 
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg

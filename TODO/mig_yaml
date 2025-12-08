@@ -5,7 +5,7 @@ import os
 
 sys.path.insert(0, os.curdir)
 
-from moat.util import CFG, yload, merge, ensure_cfg
+from moat.util import CFG, yload, merge
 
 from moat.db import database
 from moat.label.model import LabelTyp, Label
@@ -16,17 +16,15 @@ from pathlib import Path
 from sqlalchemy import select
 import click
 
-ensure_cfg("moat.db")
-
 
 @click.command
 @click.argument("config")
 def main(config):
     p = Path(config)
-    merge(CFG, yload(p.read_text(), attr=True), replace=True)
+    merge(CFG.moat, yload(p.read_text(), attr=True), replace=True)
     data = yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
 
-    with database(CFG) as db:
+    with database(CFG.moat) as db:
         for k, v in data.items():
             if "t" not in v:
                 continue

@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 from asyncscope import main_scope, scope
 
-from moat.util import CFG, OptCtx, attrdict, wrap_main  # pylint:disable=no-name-in-module
+from moat.util import CFG, CfgStore, OptCtx, P, attrdict, wrap_main
 
 logger = logging.getLogger(__name__)
 
@@ -20,46 +20,45 @@ async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
     args = ("-c", "/dev/null", *args)
 
-    if do_stdout:
-        CFG["_stdout"] = out = io.StringIO()
-    logger.debug(" moat %s", " ".join(shlex.quote(str(x)) for x in args))
-    try:
-        res = None
-        async with (
-            OptCtx(main_scope(name="run") if scope.get() is None else None),
-            scope.using_scope(),
-        ):
-            res = await wrap_main(
-                args=args,
-                wrap=True,
-                CFG=CFG,
-                cfg=False,
-                name="moat",
-                sub_pre="moat",
-                sub_post="_main.cli",
-            )
-        if res is None:
-            res = attrdict()
-        return res
-    except SystemExit as exc:
-        res = exc
-        assert exc.code == expect_exit, exc.code  # noqa:PT017
-        return exc
-    except Exception as exc:
-        while isinstance(exc, ExceptionGroup) and len(exc.exceptions) == 1:
-            exc = exc.exceptions[0]
-        raise
-    except BaseException as exc:
-        res = exc
-        raise
-    else:
-        assert expect_exit == 0
-        return res
-    finally:
+    with CFG.with_config(CfgStore()) as cfg:
         if do_stdout:
-            if res is not None:
+            out = io.StringIO()
+            cfg.mod(P("env.stdout"), out)
+        logger.debug(" moat %s", " ".join(shlex.quote(str(x)) for x in args))
+        try:
+            res = None
+            async with (
+                OptCtx(main_scope(name="run") if scope.get() is None else None),
+                scope.using_scope(),
+            ):
+                res = await wrap_main(
+                    args=args,
+                    wrap=True,
+                    cfg=cfg,
+                    name="moat",
+                    sub_pre="moat",
+                    sub_post="_main.cli",
+                )
+            if res is None:
+                res = attrdict()
+            return res
+        except SystemExit as exc:
+            res = exc
+            assert exc.code == expect_exit, exc.code  # noqa:PT017
+            return exc
+        except Exception as exc:
+            while isinstance(exc, ExceptionGroup) and len(exc.exceptions) == 1:
+                exc = exc.exceptions[0]
+            raise
+        except BaseException as exc:
+            res = exc
+            raise
+        else:
+            assert expect_exit == 0
+            return res
+        finally:
+            if do_stdout and res is not None:
                 res.stdout = out.getvalue()
-        CFG.pop("_stdout", None)
 
 
 class DidNotRaise(Exception):  # noqa: D101

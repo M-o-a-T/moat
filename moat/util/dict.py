@@ -7,13 +7,20 @@ from __future__ import annotations
 from copy import deepcopy
 
 from . import NotGiven
+from .merge import merge
 
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .path import Path
+
+    from typing import Any
 
 __all__ = ["attrdict", "combine_dict", "drop_dict", "to_attrdict"]
 
 
-def combine_dict(*d, cls=dict, deep=False) -> dict:
+def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
@@ -29,9 +36,11 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
       cls (type): a class to instantiate the result with. Default: dict.
         Often used: :class:`attrdict`.
       deep (bool): if set, always copy.
+      replace: whether the first (default, False) or last (True) entry wins
     """
     res = cls()
     keys = {}
+    idx = -1 if replace else 0
     if not d:
         return res
 
@@ -52,19 +61,19 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
             keys[k].append(v)
 
     for k, v in keys.items():
-        if v[0] is NotGiven:
+        if v[idx] is NotGiven:
             pass
         elif len(v) == 1 and not deep:
             res[k] = v[0]
-        elif not isinstance(v[0], Mapping):
-            for vv in v[1:]:
-                assert vv is NotGiven or not isinstance(vv, Mapping)
-            if deep and isinstance(v[0], (list, tuple)):
-                res[k] = deepcopy(v[0])
+        elif not isinstance(v[idx], Mapping):
+            for vv in v[:-1] if replace else v[1:]:
+                assert not isinstance(vv, Mapping)
+            if deep and isinstance(v[idx], (list, tuple)):
+                res[k] = deepcopy(v[idx])
             else:
-                res[k] = v[0]
+                res[k] = v[idx]
         else:
-            res[k] = combine_dict(*v, cls=cls)
+            res[k] = combine_dict(*v, cls=cls, replace=replace)
 
     return res
 
@@ -114,7 +123,7 @@ class attrdict(dict):
         except KeyError:
             raise AttributeError(a) from None
 
-    def get_(self, path, skip_empty=True, default=NotGiven):
+    def get_(self, path, default=NotGiven):
         """
         Get a node's value and access the dict items beneath it.
         """
@@ -124,8 +133,6 @@ class attrdict(dict):
         for p in path:
             if val is None:
                 return None
-            if skip_empty and not p:
-                continue
             val = val.get(p, NotGiven)
             if val is NotGiven:
                 if default is NotGiven:
@@ -135,7 +142,7 @@ class attrdict(dict):
 
     _get = get_
 
-    def update_(self, path, value=None, skip_empty=False):
+    def update_(self, path, value=None):
         """
         Set some sub-item's value, possibly merging dicts.
         Items set to 'NotGiven' are deleted.
@@ -144,8 +151,6 @@ class attrdict(dict):
         """
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
-        if skip_empty:
-            path = [p for p in path if p != ""]
         val = type(self)()
         val.update(self)
         v = val
@@ -195,7 +200,65 @@ class attrdict(dict):
 
     _update = update_
 
-    def delete_(self, path, skip_empty=True):
+    def set_(self, path: Path, value: Any, apply_notgiven=True) -> attrdict:
+        """
+        Set some sub-item's value, possibly merging dicts.
+        No copying; deleting an entry when the value is NotGiven is optional.
+
+        This function returns Self, *except* when the input path is empty
+        and the value is not a Mapping. The latter case is not typed.
+        """
+        if isinstance(path, str):
+            raise TypeError(f"Must be a Path/list, not {path!r}")
+
+        if not path:
+            if isinstance(value, Mapping):
+                return merge(self, value, replace=True)
+            else:
+                return value
+
+        v = self
+        for p in path[:-1]:
+            try:
+                w = v[p]
+            except KeyError:
+                w = type(v)()
+            except TypeError:
+                if isinstance(v, list) and p is None:
+                    p = len(v)
+                    v.append(None)
+                    w = attrdict()
+                else:
+                    raise
+            else:
+                # create/copy
+                if w is None:
+                    w = type(v)()
+            v[p] = w
+            v = w
+
+        px = path[-1]
+        if apply_notgiven and value is NotGiven:
+            v.pop(px, None)
+        elif isinstance(v, list):
+            if px is None:
+                v.append(value)
+                return self
+            if px >= len(v):
+                if px > len(v) + 10:
+                    raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
+                v.extend([NotGiven] * (1 + px - len(v)))
+            v[px] = value
+        elif not isinstance(v, Mapping):
+            raise ValueError((v, px))
+        elif px in v and isinstance(v[px], Mapping):
+            merge(v[px], value, replace=True)
+        else:
+            v[px] = value
+
+        return self
+
+    def delete_(self, path):
         """
         Remove some sub-item's value, possibly removing now-empty intermediate
         dicts.
@@ -204,8 +267,6 @@ class attrdict(dict):
         """
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
-        if skip_empty:
-            path = [p for p in path if p]
         val = type(self)(**self)
         v = val
         vc = []

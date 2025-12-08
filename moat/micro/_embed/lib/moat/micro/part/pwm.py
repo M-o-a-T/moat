@@ -10,7 +10,14 @@ from __future__ import annotations
 from moat.util import Path
 from moat.lib.codec.errors import StoppedError
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L, TimeoutError, ticks_diff, ticks_ms, wait_for_ms  # noqa:A004
+from moat.util.compat import (
+    Event,
+    L,
+    TimeoutError,  # noqa:A004
+    ticks_diff,
+    ticks_ms,
+    wait_for_ms,
+)
 
 from typing import TYPE_CHECKING
 

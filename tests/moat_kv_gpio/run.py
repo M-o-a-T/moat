@@ -6,8 +6,7 @@ import sys
 
 import trio
 
-from moat.util import Path
-from moat.kv.gpio.config import CFG
+from moat.util import CFG, Path
 from moat.kv.gpio.model import GPIOroot
 from moat.kv.gpio.task import task as GPIOtask
 from moat.lib.gpio.test import GpioWatcher, Pin
@@ -65,7 +64,7 @@ class _test(metaclass=_test_m):
         for s in ("src", "dest", "state"):
             if s in pr:
                 setattr(self, s, pr[s])
-        return await c.set(CFG.prefix + (host, label, self.pin), value=pr, nchain=1)
+        return await c.set(CFG.moat.kv.gpio.prefix + (host, label, self.pin), value=pr, nchain=1)
 
     async def task(self, c, q, p):
         self.client = c

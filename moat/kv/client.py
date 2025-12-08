@@ -29,7 +29,6 @@ from moat.util import (  # pylint: disable=no-name-in-module
     byte2num,
     combine_dict,
     create_queue,
-    ensure_cfg,
     gen_ident,
     gen_ssl,
     num2byte,
@@ -390,8 +389,7 @@ class Client:
     qlen: int = 0
 
     def __init__(self, cfg: dict):
-        ensure_cfg("moat.kv")
-        self._cfg = combine_dict(cfg, CFG["kv"], cls=attrdict)
+        self._cfg = combine_dict(cfg, CFG.moat.kv, cls=attrdict)
         self.config = ClientConfig(self)
         self.codec = get_codec("std-msgpack")
 

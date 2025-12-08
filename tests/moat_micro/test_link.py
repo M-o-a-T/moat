@@ -29,9 +29,6 @@ ln:
 @pytest.mark.parametrize("seed", [1])  # range(10))
 async def test_fake(seed, tmp_path, cfg):
     "basic random-walk ADC test"
-    import moat  # noqa:PLC0415
-
-    moat.cfg = cfg
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init="Foo"),

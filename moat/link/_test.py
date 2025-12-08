@@ -9,13 +9,15 @@ from pathlib import Path as FSPath
 from tempfile import TemporaryDirectory
 
 from moat.util import (  # pylint:disable=no-name-in-module
-    CFG,  # noqa:F401
+    CFG,
     CtxObj,
     NotGiven,
+    P,
     Root,
     ValueEvent,
     attrdict,
     combine_dict,
+    merge,
 )
 from moat.link.backend import get_backend
 from moat.link.client import Link
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
     from moat.link.client import LinkCommon
 
     from collections.abc import AsyncIterator
-    from typing import Never, Self
+    from typing import Literal, Never, Self
 
 
 otm = time.time
@@ -115,23 +117,37 @@ listen {{
 class Scaffold(CtxObj):
     """
     Basic testcase runner for testing with an ephemeral MQTT server.
+
+    If @cfg is `True`, place our mod in (and use) the global `moat.link`
+    subconfig. Otherwise, pass in the `moat` subconfig.
     """
 
     tempdir: str | None
 
-    def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
-        self.cfg = cfg.link
-
-        self.cfg.setdefault("backend", attrdict())
-        self.cfg.backend.setdefault("driver", "mqtt")
-        self.cfg.backend.setdefault("codec", "std-cbor")
-        self.cfg.backend.setdefault("keep_alive", 9999)
-
-        self.cfg.server.ping.cycle = 0.5
-        self.cfg.server.ping.gap = 0.15
-        self.cfg.server.ping.override = True
-        self.cfg.server.timeout.startup = 3
-
+    def __init__(
+        self, cfg: attrdict | Literal[True], use_servers=True, tempdir: str | None = None
+    ):
+        cf = attrdict(
+            backend=attrdict(
+                driver="mqtt",
+                codec="std-cbor",
+                keep_alive=9999,
+            ),
+            server=attrdict(
+                ping=attrdict(
+                    cycle=0.5,
+                    gap=0.15,
+                    override=True,
+                ),
+                timeout=attrdict(startup=3),
+            ),
+        )
+        if cfg is True:
+            CFG.mod(P("moat.link"), cf)
+            self.cfg = CFG.result.moat.link
+        else:
+            self.cfg = cfg.link
+            merge(self.cfg, cf)
         self._tempdir = tempdir
 
         if not use_servers:

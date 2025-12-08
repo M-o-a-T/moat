@@ -29,8 +29,10 @@ ln:
 @pytest.mark.parametrize("seed", [1])  # range(10))
 async def test_fake(seed, tmp_path, cfg):
     "basic random-walk ADC test"
+
+    cfg  # noqa:B018  # required for side effect of setting up a config
     async with (
-        Scaffold(cfg, use_servers=True) as sf,
+        Scaffold(cfg=True, use_servers=True) as sf,
         sf.server_(init="Foo"),
         mpy_stack(tmp_path, CFG, dict(x=dict(seed=seed))) as ps,
         sf.client_() as cl,

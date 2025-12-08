@@ -353,7 +353,8 @@ class AsyncMQTTClient:
                         self._state_machine.disconnect()
                         operation = MQTTDisconnectOperation()
                         await self._run_operation(operation)
-                        await self._stream.aclose()
+                        if self._stream is not None:
+                            await self._stream.aclose()
                     finally:
                         if self._conn_scope is not None:
                             self._conn_scope.cancel()

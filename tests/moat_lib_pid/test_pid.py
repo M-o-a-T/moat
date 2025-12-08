@@ -15,8 +15,11 @@ from moat.lib.pid import PID, PID_TC
 
 from typing import cast
 
-if True:
-    # Hack to test non-second time intervals
+if False:
+    # Hack to test non-second time intervals.
+    # Don't enable this in general, the corresponding moat.micro test
+    # handles this by way of running on µPy
+
     from moat.lib.pid import pid as _pid
     from moat.util.compat import ticks_ms
 

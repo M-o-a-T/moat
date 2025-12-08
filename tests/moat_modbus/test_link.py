@@ -1,6 +1,5 @@
 from __future__ import annotations  # noqa: D100
 
-import copy
 import logging
 import pytest
 
@@ -67,7 +66,8 @@ async def mon(c):  # noqa: D103
 
 
 @pytest.mark.trio
-async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
+async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
+    cfg  # noqa:B018
     autojump_clock.autojump_threshold = 0.2
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
@@ -77,10 +77,10 @@ async def test_kv_poll(autojump_clock, free_tcp_port):  # noqa: D103
 
     from moat.util import CFG  # noqa: PLC0415
 
-    cfg = copy.deepcopy(CFG.result)
+    cfg = CFG.result
 
     async with (
-        Scaffold(cfg, use_servers=True) as sf,
+        Scaffold(True, use_servers=True) as sf,
         sf.server_(init={"Hello": "there!", "value": 123}),
         sf.client_() as c,
         trio.open_nursery() as tg,

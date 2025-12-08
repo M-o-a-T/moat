@@ -6,7 +6,6 @@ from __future__ import annotations
 import anyio
 import logging
 import pytest
-import unittest
 
 try:
     from contextlib import asynccontextmanager
@@ -116,8 +115,9 @@ async def moat_kv_server(n, broker_config, test_config):  # noqa: D103
     # assert len(msgs) == n, msgs
 
 
-class MQTTClientTest(unittest.TestCase):  # noqa: D101
-    def test_deliver(self):  # noqa: D102
+class TestMQTTClient:  # noqa:D101
+    def test_deliver(self, cfg):  # noqa: D102
+        cfg  # noqa:B018
         data = b"data 123 a"
 
         async def test_coro():
@@ -142,7 +142,8 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_transparent(self):  # noqa: D102
+    def test_deliver_transparent(self, cfg):  # noqa: D102
+        cfg  # noqa:B018
         data = b"data 123 t"
 
         async def test_coro():
@@ -167,7 +168,8 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_direct(self):  # noqa: D102
+    def test_deliver_direct(self, cfg):  # noqa: D102
+        cfg  # noqa:B018
         data = b"data 123 b"
 
         async def test_coro():
@@ -190,7 +192,9 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
         anyio_run(test_coro, backend="trio")
 
-    def test_deliver_timeout(self):  # noqa: D102
+    def test_deliver_timeout(self, cfg):  # noqa: D102
+        cfg  # noqa:B018
+
         async def test_coro():
             broker_config, test_config = _PBD()
             async with (

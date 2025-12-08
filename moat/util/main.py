@@ -843,6 +843,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     # our toplevel config file(s)
     CFG.with_("moat")
+    if name != "moat":
+        CFG.with_(name)
 
     obj.debug = verbose
     obj.DEBUG = debug

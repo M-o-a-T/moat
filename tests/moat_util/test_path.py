@@ -262,9 +262,9 @@ def test_root():
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))
     p = P(":R.d.::a.e")
-    with pytest.raises(ValueError) as err:  # noqa:PT011,F841,RUF100
+    with pytest.raises(SyntaxError) as err:  # noqa:PT011,F841,RUF100
         P("yes:Q.d.::a.e")
-    with pytest.raises(ValueError) as err:  # noqa:PT011,F841,RUF100
+    with pytest.raises(SyntaxError) as err:  # noqa:PT011,F841,RUF100
         P("yes.no:Q.d.::a.e")
 
     assert p.slashed == "abba/c/d/::a/e"

@@ -485,16 +485,18 @@ class Path(Sequence[PathElem]):
         if other is None:
             return False
         if isinstance(other, Path):
-            if self.mark != other.mark:
+            if self._mark != other._mark:
                 return False
-            other = other.raw
+            if self._prefix is not other._prefix:
+                return False
+            return self._data == other._data
         else:
             try:
                 other = tuple(other)
             except TypeError:
                 return NotImplemented
 
-        return self.raw == other
+            return self.raw == other
 
     def __lt__(self, other) -> bool:
         other = other.raw if isinstance(other, Path) else tuple(other)
@@ -535,10 +537,9 @@ class Path(Sequence[PathElem]):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             if isinstance(other._prefix, Path):
-                # XXX this probably shouldn't happen
-                other = (f":{other._prefix.key}", *other._data)
-            else:
-                other = other._data
+                raise ValueError(f"Add with prefix: {self} + {other}")  # noqa:TRY004
+            # Prefix=True (relative) is OK
+            other = other._data
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen. TODO: add a deprecation warning
             other = (other,)  # pyright:ignore
@@ -674,12 +675,12 @@ class Path(Sequence[PathElem]):
                     new(None, True)
                 elif e == "@":
                     if res or prefix is not None or part not in (False, True):
-                        raise ValueError("The :@ tag must be at the start")
+                        raise SyntaxError("The :@ tag must be at the start")
                     part = True
                     prefix = True
                 elif e in _Roots:
                     if res or prefix is not None or part not in (False, True):
-                        raise ValueError("A root must be at the start")
+                        raise SyntaxError("A root must be at the start")
                     part = True
                     prefix = _Roots[e]
                 elif e == "_":

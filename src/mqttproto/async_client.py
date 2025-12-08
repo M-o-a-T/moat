@@ -353,7 +353,8 @@ class AsyncMQTTClient:
                         self._state_machine.disconnect()
                         operation = MQTTDisconnectOperation()
                         await self._run_operation(operation)
-                        await self._stream.aclose()
+                        if self._stream is not None:
+                            await self._stream.aclose()
                     finally:
                         if self._conn_scope is not None:
                             self._conn_scope.cancel()
@@ -378,7 +379,7 @@ class AsyncMQTTClient:
                 else:
                     cm = self._connect_mqtt()
 
-                with anyio.CancelScope(shield=True) as self._conn_scope:
+                with anyio.CancelScope() as self._conn_scope:
                     async with AsyncExitStack() as exit_stack:
                         (
                             stream,

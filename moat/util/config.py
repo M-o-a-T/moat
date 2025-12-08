@@ -136,7 +136,13 @@ def default_cfg(name, load_all: bool):
         _cfg(f"/etc/{name}/{name}.cfg")
         _cfg(f"/etc/{name}.cfg")
 
-    # foo=one ext=bar=two => moat=foo=one bar=two
+    return undo_ext(cfg, name)
+
+
+def undo_ext(cfg: dict, name: str):
+    "foo=one ext=bar=two => moat=foo=one bar=two"
+    if cfg is None:
+        return attrdict()
     ext = cfg.pop("ext", attrdict())
     ext[name] = cfg
     return ext
@@ -246,7 +252,7 @@ class CfgStore:
             self.config = attrdict()
         elif (cf := os.environ.get(f"{self.name.upper()}_CFG", None)) is not None:
             with open(cf, "r") as cff:
-                self.config = yload(cff, attr=True)
+                self.config = undo_ext(yload(cff, attr=True), self.name)
         else:
             self.config = default_cfg(self.name, load_all=load_all)
 
@@ -265,8 +271,9 @@ class CfgStore:
         """
         Add a config file.
         """
-        with open(path) as cf:
-            cfg = yload(cf, attr=True)
+        with open(path) as cff:
+            cfg = undo_ext(yload(cff, attr=True), self.name)
+
         self.cfg.append((path, cfg))
         self._redo = True
 

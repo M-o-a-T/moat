@@ -102,7 +102,7 @@ def deref(cfg: attrdict) -> None:
 TEST = False
 
 
-def default_cfg(name, load_all: bool):
+def default_cfg(name, ext_name="ext", load_all: bool = False):
     """
     Read a YAML config file, either from the specified path
     or from a couple of default paths.
@@ -136,14 +136,14 @@ def default_cfg(name, load_all: bool):
         _cfg(f"/etc/{name}/{name}.cfg")
         _cfg(f"/etc/{name}.cfg")
 
-    return undo_ext(cfg, name)
+    return undo_ext(cfg, name, ext_name)
 
 
-def undo_ext(cfg: dict, name: str):
+def undo_ext(cfg: dict, name: str, ext_name: str):
     "foo=one ext=bar=two => moat=foo=one bar=two"
     if cfg is None:
         return attrdict()
-    ext = cfg.pop("ext", attrdict())
+    ext = cfg.pop(ext_name, attrdict())
     ext[name] = cfg
     return ext
 
@@ -218,6 +218,9 @@ class CfgStore:
     load_all: bool | None
     "flag"
 
+    ext_name: str
+    "external subdir"
+
     config: attrdict
     "data from config file(s)"
 
@@ -240,8 +243,10 @@ class CfgStore:
         name: str | None = "moat",
         preload: attrdict | None = None,
         load_all: bool | None = False,
+        ext: str | None = None,
     ):
         self.name = name
+        self.ext_name = ext or "ext"
         self.load_all = load_all
         self.cfg = []
         self.args = []
@@ -252,9 +257,9 @@ class CfgStore:
             self.config = attrdict()
         elif (cf := os.environ.get(f"{self.name.upper()}_CFG", None)) is not None:
             with open(cf, "r") as cff:
-                self.config = undo_ext(yload(cff, attr=True), self.name)
+                self.config = undo_ext(yload(cff, attr=True), self.name, self.ext_name)
         else:
-            self.config = default_cfg(self.name, load_all=load_all)
+            self.config = default_cfg(self.name, self.ext_name, load_all=load_all)
 
         self.preload = preload or attrdict()
 
@@ -272,7 +277,7 @@ class CfgStore:
         Add a config file.
         """
         with open(path) as cff:
-            cfg = undo_ext(yload(cff, attr=True), self.name)
+            cfg = undo_ext(yload(cff, attr=True), self.name, self.ext_name)
 
         self.cfg.append((path, cfg))
         self._redo = True

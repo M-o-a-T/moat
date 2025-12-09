@@ -1,0 +1,18 @@
+Source: moat-lib-ring
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+X-DH-Compat: 13
+
+Package: python3-moat-lib-ring
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 3.0),
+Description: A simple ring buffer
+  This is an efficient character-based ring buffer. It can either stall when the buffer
+  is full, or keep only the last n-1 bytes (adding a null byte to signal overflow).

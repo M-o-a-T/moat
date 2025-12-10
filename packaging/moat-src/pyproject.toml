@@ -18,7 +18,7 @@ dependencies = [
 	"gitpython",
 	"packaging",
 	]
-version = "0.9.22"
+version = "0.9.23"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"

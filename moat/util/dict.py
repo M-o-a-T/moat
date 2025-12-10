@@ -8,13 +8,12 @@ from copy import deepcopy
 
 from . import NotGiven
 from .merge import merge
+from .path import Path
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .path import Path
-
     from typing import Any
 
 __all__ = ["attrdict", "combine_dict", "drop_dict", "to_attrdict"]
@@ -103,6 +102,25 @@ class attrdict(dict):
     This also supports updating path accessors.
     """
 
+    _post: bool = False
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        for a, b in self.items():
+            self._check_post(a, b)
+
+    def _check_post(self, a, b):
+        if self._post:
+            return
+        if isinstance(a, str):
+            if a[0] == "$":
+                self._post = True
+                return
+        if isinstance(b, Path) and b.is_relative:
+            self._post = True
+        elif getattr(b, "_post", False):
+            self._post = True
+
     def __getattr__(self, a):
         if a.startswith("_"):
             return object.__getattribute__(self, a)
@@ -110,6 +128,12 @@ class attrdict(dict):
             return self[a]
         except KeyError:
             raise AttributeError(a) from None
+
+    def __setitem__(self, a, b):
+        if (isinstance(a, str) and a[0] == "$") or (isinstance(b, Path) and b.is_relative):
+            if a[0] == "$" or (isinstance(b, Path) and b.is_relative):
+                self._post = True
+        super().__setitem__(a, b)
 
     def __setattr__(self, a, b):
         if a.startswith("_"):
@@ -122,6 +146,13 @@ class attrdict(dict):
             del self[a]
         except KeyError:
             raise AttributeError(a) from None
+
+    @property
+    def needs_post(self):
+        """
+        Returns a flag whether this dict requires postprocessing.
+        """
+        return self._post
 
     def get_(self, path, default=NotGiven):
         """

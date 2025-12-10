@@ -19,7 +19,7 @@ requires-python = ">=3.8"
 name = "moat-kv-knx"
 description = "1wire connector for MoaT-KV"
 readme = "README.rst"
-version = "0.12.3"
+version = "0.12.4"
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"

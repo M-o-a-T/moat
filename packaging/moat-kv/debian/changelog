@@ -1,3 +1,9 @@
+moat-kv (0.71.21-1) unstable; urgency=medium
+
+  * New release for 25.6.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Dec 2025 11:06:37 +0100
+
 moat-kv (0.71.20-3) unstable; urgency=medium
 
   * New release for 25.5.34

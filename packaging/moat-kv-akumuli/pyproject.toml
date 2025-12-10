@@ -14,7 +14,7 @@ dependencies = [
 	"moat-kv ~= 0.71.20",
 	"asyncakumuli ~= 0.6.4",
 ]
-version = "0.8.8"
+version = "0.8.9"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-akumuli"

@@ -8,18 +8,28 @@ __all__ = ["merge"]
 from . import NotGiven
 
 
+def _chk_post(v) -> bool:
+    if isinstance(v, list):
+        return any(_chk_post(x) for x in v)
+    else:
+        return getattr(v, "needs_post_", False)
+
+
 def _merge_dict(d, other, drop=False, replace=True):
     for key, value in other.items():
         if value is NotGiven:
             d.pop(key, None)
-        elif key in d:
-            d[key] = _merge_one(d[key], value, drop=drop, replace=replace)
+            continue
+        if key in d:
+            d[key] = val = _merge_one(d[key], value, drop=drop, replace=replace)
         else:
-            d[key] = value
+            d[key] = val
+        if not getattr(d, "needs_post_", True) and isinstance(val, list) and _chk_post(val):
+            d.set_post_()
 
     if drop:
         keys = []
-        for k in d.keys():  # noqa:SIM118
+        for k in d.keys():
             if k not in other:
                 keys.append(k)
         for k in keys:

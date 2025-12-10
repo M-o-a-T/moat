@@ -5,7 +5,7 @@ Some rudimentary tests for merge and combine_dict
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
-from moat.util import NotGiven, P, attrdict, combine_dict, merge
+from moat.util import NotGiven, P, attrdict, combine_dict, merge, to_attrdict
 
 
 def chkm(a, b, c, drop=False):
@@ -24,7 +24,7 @@ def chkcr(a, b, c):
 
 
 def chku(a, b, c, d):
-    r = attrdict._update(a, b, c)  # noqa: SLF001
+    r = to_attrdict(a).update_(b, c)
     assert r == d
 
 
@@ -63,3 +63,25 @@ def test_combine_r():
 
 def test_update():
     chku(dict(a={"b": "fubar", "ft": 42}), P("a.ft"), 44, dict(a={"b": "fubar", "ft": 44}))
+
+
+def test_post():
+    assert not attrdict().needs_post_
+    assert not attrdict(a=1).needs_post_
+    assert not attrdict(a=P("foo")).needs_post_
+    assert attrdict(a=P(":@.foo")).needs_post_
+
+    d = attrdict()
+    d["$a"] = 42
+    assert d.needs_post_
+    assert attrdict(x=d).needs_post_
+    e = attrdict()
+    e["y"] = d
+    assert e.needs_post_
+
+    f = e.update_(P("f:n.h"), P(":@.bar"))
+    assert f.needs_post_
+    g = attrdict(i=[None, None, attrdict(k=attrdict())])
+    assert not g.needs_post_
+    g.set_(P("i:2.k"), attrdict((("$b", "cd"),)))
+    assert g.needs_post_

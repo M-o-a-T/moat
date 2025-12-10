@@ -38,10 +38,12 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
       replace: whether the first (default, False) or last (True) entry wins
     """
     res = cls()
-    keys = {}
-    idx = -1 if replace else 0
     if not d:
         return res
+
+    keys = {}
+    idx = -1 if replace else 0
+    post = False if issubclass(cls, attrdict) else None
 
     if len(d) == 1 and deep and not isinstance(d[0], Mapping):
         if deep and isinstance(d[0], (list, tuple)):
@@ -50,6 +52,8 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
             return d[0]
 
     for kv in d:
+        if post is False and getattr(d, "_post", False):
+            post = True
         if kv is None:
             continue
         if not isinstance(kv, dict):
@@ -74,6 +78,8 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
         else:
             res[k] = combine_dict(*v, cls=cls, replace=replace)
 
+    if post:
+        res.set_post_()
     return res
 
 
@@ -84,15 +90,35 @@ def drop_dict(data: Mapping, drop: tuple[str | tuple[str]]) -> Mapping:
     Returns a new mapping. The original is not changed.
     """
     data = data.copy()
+    if getattr(data, "needs_post_", False):
+        data.set_post_()
     for d in drop:
         # ruff:noqa:PLW2901 # var overwritten
         vv = data
         if isinstance(d, (tuple, list)):
             for dd in d[:-1]:
-                vv = vv[dd] = vv[dd].copy()
+                vn = vv[dd].copy()
+                if getattr(vv[dd], "needs_post_", False):
+                    vn.set_post_()
+                vv = vv[dd] = vn
             d = d[-1]
         del vv[d]
     return data
+
+
+def _check_post(a, b) -> bool:
+    if isinstance(a, str):
+        if a[0] == "$":
+            return True
+    if isinstance(b, Path) and b.is_relative:
+        return True
+    if isinstance(b, list):
+        for x in b:
+            if _check_post(None, x):  # don't need the index here
+                return True
+    if getattr(b, "needs_post_", False):
+        return True
+    return False
 
 
 class attrdict(dict):
@@ -107,19 +133,9 @@ class attrdict(dict):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         for a, b in self.items():
-            self._check_post(a, b)
-
-    def _check_post(self, a, b):
-        if self._post:
-            return
-        if isinstance(a, str):
-            if a[0] == "$":
+            if _check_post(a, b):
                 self._post = True
                 return
-        if isinstance(b, Path) and b.is_relative:
-            self._post = True
-        elif getattr(b, "_post", False):
-            self._post = True
 
     def __getattr__(self, a):
         if a.startswith("_"):
@@ -130,9 +146,8 @@ class attrdict(dict):
             raise AttributeError(a) from None
 
     def __setitem__(self, a, b):
-        if (isinstance(a, str) and a[0] == "$") or (isinstance(b, Path) and b.is_relative):
-            if a[0] == "$" or (isinstance(b, Path) and b.is_relative):
-                self._post = True
+        if not self._post and _check_post(a, b):
+            self._post = True
         super().__setitem__(a, b)
 
     def __setattr__(self, a, b):
@@ -148,11 +163,17 @@ class attrdict(dict):
             raise AttributeError(a) from None
 
     @property
-    def needs_post(self):
+    def needs_post_(self):
         """
-        Returns a flag whether this dict requires postprocessing.
+        Returns a flag whether this attrdict requires postprocessing.
         """
         return self._post
+
+    def set_post_(self):
+        """
+        Set the flag signalling that this attrdict requires postprocessing.
+        """
+        self._post = True
 
     def get_(self, path, default=NotGiven):
         """
@@ -184,13 +205,21 @@ class attrdict(dict):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         val = type(self)()
         val.update(self)
-        v = val
+        if self.needs_post_:
+            val.set_post_()
+
         if not path:
             if isinstance(value, Mapping):
                 return combine_dict(value, val, cls=type(self))
             else:
                 return value
 
+        px = path[-1]
+        post = _check_post(px, value)
+
+        v = val
+        if post and isinstance(v, attrdict):
+            v.set_post_()
         for p in path[:-1]:
             try:
                 w = v[p]
@@ -205,10 +234,15 @@ class attrdict(dict):
                     raise
             else:
                 # copy
-                w = attrdict() if w is None else type(w)(w)
+                wx = attrdict() if w is None else type(w)(w)
+                if getattr(w, "needs_post_", False):
+                    wx.set_post_()
+                w = wx
             v[p] = w
             v = w
-        px = path[-1]
+            if post and isinstance(v, attrdict):
+                v.set_post_()
+
         if value is NotGiven:
             v.pop(px, None)
         elif isinstance(v, list):
@@ -223,7 +257,7 @@ class attrdict(dict):
         elif not isinstance(v, Mapping):
             raise ValueError((v, px))
         elif px in v and isinstance(v[px], Mapping):
-            v[px] = combine_dict(value, v[px], cls=type(self))
+            v[px] = value = combine_dict(value, v[px], cls=type(self))
         else:
             v[px] = value
 
@@ -248,7 +282,12 @@ class attrdict(dict):
             else:
                 return value
 
+        px = path[-1]
+        post = _check_post(px, value)
         v = self
+
+        if post and isinstance(v, attrdict):
+            v.set_post_()
         for p in path[:-1]:
             try:
                 w = v[p]
@@ -267,8 +306,9 @@ class attrdict(dict):
                     w = type(v)()
             v[p] = w
             v = w
+            if post and isinstance(v, attrdict):
+                v.set_post_()
 
-        px = path[-1]
         if apply_notgiven and value is NotGiven:
             v.pop(px, None)
         elif isinstance(v, list):

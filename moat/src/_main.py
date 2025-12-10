@@ -926,8 +926,6 @@ async def build(
     g_done = cfg.get("src", {}).get("done")
     if g_done is not None:
         g_done = Path(g_done)
-    else:
-        g_done = Path("/tmp/nonexistent")  # noqa:S108
     repo = Repo(cfg.src.toplevel, None)
 
     tags = dict(version)
@@ -1203,6 +1201,8 @@ async def build(
                 if not p.is_file():
                     continue
                 tag = r.last_tag
+                if r.vers.get("pypi", "-") == tag:
+                    continue
                 name = r.dash
                 targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
@@ -1220,14 +1220,13 @@ async def build(
                 else:
                     done = rd / "dist" / f"{r.under}-{tag}.done"
                     done.touch()
+                    r.vers.pypi = tag
             if err:
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix(?) and try again.", file=sys.stderr)
                 no_commit = True
                 no_deb = True
-            else:
-                r.vers.pypi = r.last_tag
 
     # Step 7: upload Debian package
     if run and not no_deb:
@@ -1243,10 +1242,12 @@ async def build(
             changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
             done = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
             if done.exists():
+                r.vers.deb = f"{ltag}-{r.vers.pkg}"
                 continue
             if g_done is not None:
-                gdone = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
-                if gdone.exists():
+                gd = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+                if gd.exists():
+                    r.vers.deb = f"{ltag}-{r.vers.pkg}"
                     continue
             try:
                 await run_("dput", *dput_opts, str(changes), echo=obj.debug > 1)
@@ -1254,13 +1255,12 @@ async def build(
                 err.add(r.name)
             else:
                 done.touch()
+                r.vers.deb = f"{ltag}-{r.vers.pkg}"
         if err:
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)
             print("Please fix(?) and try again.", file=sys.stderr)
             no_commit = True
-        else:
-            r.vers.deb = f"{ltag}-{r.vers.pkg}"
 
     # Step 8: commit the result
     if run:

@@ -110,7 +110,7 @@ class Cmd(_Cmd):
     doc_boot = dict(
         _d="reboot",
         _0="str:SysBooT",
-        _1="int:(0)=hard,1=soft,2=boot,3=KbdIntr,4=SysExit,5=RuntimeExc",
+        _1="int:(0)=hard,1=soft,2=boot,3=KbdIntr,4=immediate,5=RuntimeExc",
         _t="int:timeout msec(100)",
     )
 
@@ -121,15 +121,15 @@ class Cmd(_Cmd):
         @code needs to be "SysBooT".
 
         @m can be
-            0: hard reset
-            1: soft reset
+            0: hard reset (via SystemExit)
+            1: soft reset (via SystemExit)
             2: bootloader
             3: KeyboardInterrupt
-            4: SystemExit
+            4: hard reset (immediate)
             5: raise RuntimeError
 
-        Modes other than 0 and 2 only work when there is no active watchdog
-        module.
+        Modes other than 0/4 and 2 do not work (not for long anyway) when
+        the watchdog module is active.
         """
         if code != "SysBooT":
             raise RuntimeError("wrong")
@@ -137,15 +137,15 @@ class Cmd(_Cmd):
         async def _boot(t):
             await sleep_ms(t)
             if m == 0:
-                machine.reset()
+                raise SystemExit(1)
             if m == 1:
-                machine.soft_reset()
+                raise SystemExit(0)
             elif m == 2:
                 machine.bootloader()
             elif m == 3:
                 raise KeyboardInterrupt
             elif m == 4:
-                raise SystemExit
+                machine.reset()
             elif m == 5:
                 raise RuntimeError("Boot")
 

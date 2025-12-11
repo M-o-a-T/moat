@@ -146,11 +146,14 @@ def go(state=None, cmd=True):
         # because the watchdog might kill us
         set_rtc("state", "skip")
 
-    except SystemExit:
+    except SystemExit as exc:
         at("main4", i)
         print("REBOOT to", new_state, file=sys.stderr)
         time.sleep_ms(100)
-        machine.soft_reset()
+        if exc.val:
+            machine.reset()
+        else:
+            machine.soft_reset()
 
     except BaseException as exc:
         wr_exc(exc)

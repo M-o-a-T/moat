@@ -64,3 +64,13 @@ class RingBuffer(_RingBuf):
             self._w_evt = None
 
         return n
+
+    async def wait_avail(self) -> None:
+        """
+        Waits until data are available.
+        """
+        if self.n_free > 0:
+            return
+        if self._r_evt is None:
+            self._r_evt = Event()
+        await self._r_evt.wait()

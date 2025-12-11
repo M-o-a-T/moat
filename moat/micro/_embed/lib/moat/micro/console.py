@@ -10,7 +10,7 @@ import io
 import os
 import sys
 
-from asyncio import run_until_complete, sleep_ms
+from asyncio import create_task, run_until_complete, sleep_ms
 
 from moat.lib.ring import RingBuffer
 from moat.micro.cmd.base import BaseCmd
@@ -53,7 +53,7 @@ class Main:
         self.stop()
         self.wr_exc(exc)
         while self._AC_:
-            run_until_complete(AC_exit(self, type(exc), exc, None))
+            run_until_complete(create_task(AC_exit(self, type(exc), exc, None)))
 
     def maybe_end(self, exc: Exception | None = None):
         "Stop if no console"

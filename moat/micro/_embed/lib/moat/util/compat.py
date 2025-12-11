@@ -93,7 +93,17 @@ def print_exc(exc, file=None):
 
 
 def log(s, *x, err=None, write: bool = True):
-    "Basic logger.debug/error call (depends on @err)"
+    """
+    Basic logger.debug/error call (depends on @err).
+
+    Args:
+        s:
+            String to print, followed by %-formatting arguments like logging.debug.
+        err:
+            None for debug, True for error, or an exception if you want a
+            traceback.
+
+    """
     if x:
         s = s % x
 
@@ -104,7 +114,7 @@ def log(s, *x, err=None, write: bool = True):
                 print_exc(err, f)
 
     print(s, file=sys.stderr)
-    if err is not None:
+    if isinstance(err, BaseException):
         print_exc(err)
 
 

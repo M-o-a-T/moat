@@ -130,7 +130,9 @@ def log(s, *x, err=None, nback=1, write: bool = True):
             break
         caller = caller.f_back
     log_ = logging.getLogger(caller.f_globals["__name__"])
-    (log_.debug if err is None else log_.error)(s, *x, exc_info=err, stacklevel=1 + nback)
+    (log_.debug if err is None else log_.error)(
+        s, *x, exc_info=err if isinstance(err, BaseException) else None, stacklevel=1 + nback
+    )
     if err and int(os.getenv("LOG_BRK", "0")):
         breakpoint()
 

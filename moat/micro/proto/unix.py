@@ -29,5 +29,5 @@ class Link(AnyioBuf):
         try:
             return await AC_use(self, await anyio.connect_unix(self.port))
         except Exception:
-            log("Trying to connect to %r", self.port)
+            log("Failed to connect to %r", self.port, err=True)
             raise

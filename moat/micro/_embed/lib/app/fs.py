@@ -165,7 +165,7 @@ class Cmd(LockBaseCmd):
             try:
                 return next(it)
             except StopIteration:
-                return None
+                return (None,)
 
         if x:
             while True:

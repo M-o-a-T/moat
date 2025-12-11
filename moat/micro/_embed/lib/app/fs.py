@@ -193,7 +193,7 @@ class Cmd(BaseCmd):
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        _f = await to_thread(p, "rb")
+        _f = await to_thread(open, p, "rb")
         try:
             while True:
                 n = await to_thread(_f.readinto, _mem)

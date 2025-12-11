@@ -38,7 +38,7 @@ class Main:
         ACM(self)
 
         self.evt = evt = Event()
-        self.wait = evt.wait()
+        self.wait = evt.wait
         self.wr_exc = wr_exc
 
     # There is no "start", that's done by `Cmd.setup`.

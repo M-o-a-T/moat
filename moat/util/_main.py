@@ -375,6 +375,8 @@ async def cfg_(obj, path, yaml, empty):
 
     cfg = CFG.result
 
+    if not path:
+        raise click.UsageError("Missing path(s). Add ':' for the complete config.")
     delim = False
     for p in path:
         if delim and yaml:

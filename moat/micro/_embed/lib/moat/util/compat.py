@@ -78,7 +78,8 @@ else:
 WouldBlock = (QueueFull, QueueEmpty)
 
 
-def byte2utf8(buf):  # noqa: D103
+def byte2utf8(buf):
+    "UTF-8 decoder that works with memoryview et al."
     if not hasattr(buf, "decode"):
         buf = bytes(buf)
     return buf.decode("utf-8")
@@ -107,7 +108,8 @@ def log(s, *x, err=None, write: bool = True):
         print_exc(err)
 
 
-def at(*a, **kw):  # noqa: D103
+def at(*a, **kw):
+    "Record debug state in the RTC"
     set_rtc("debug", a if not kw else kw if not a else (a, kw), fs=False)
 
 

@@ -299,6 +299,8 @@ async def sync_(ctx, **kw):
                 await rsys.boot(code="SysBooT", m=1)
 
     await syn(**st)
+    if obj.debug:
+        print(" " * 50, end="\r")
 
 
 @cli.command(short_help="Reboot MoaT node")

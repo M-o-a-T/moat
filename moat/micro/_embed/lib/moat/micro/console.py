@@ -163,6 +163,8 @@ class Console(io.IOBase):
 class Cmd(BaseCmd):
     """
     The command that attaches and runs a console.
+
+    See :cls:`Console` for configuration.
     """
 
     async def setup(self):

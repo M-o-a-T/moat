@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 from functools import wraps
+from pathlib import Path as FSPath
 
 import asyncclick as click
 
@@ -255,6 +256,11 @@ async def sync_(ctx, **kw):
         for k, v in kw.items()
         if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT
     }
+
+    mydir = FSPath(__file__).parent.parent.parent
+    mpydir = mydir / "ext" / "micropython"
+    default["cross"] = mpydir / "mpy-cross" / "build" / "mpy-cross"
+
     param = {
         k: v
         for k, v in kw.items()

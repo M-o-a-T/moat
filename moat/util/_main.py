@@ -374,10 +374,10 @@ async def cfg_(obj, path, yaml, empty, load):
     """
     from .exc import ungroup  # noqa: PLC0415
 
-    cfg = obj.cfg
     if load:
         for ld in load:
             CFG.add(ld)
+    cfg = CFG.result
 
     delim = False
     for p in path:

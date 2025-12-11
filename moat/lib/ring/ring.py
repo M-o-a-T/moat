@@ -20,15 +20,18 @@ class RingBuffer:
         self._read_pos = 0  # Position to read from
         self._count = 0  # Number of bytes available
 
+    @property
     def n_free(self):
         "free space in buffer"
         return len(self._buf) - self._count
 
+    @property
     def n_avail(self):
         "bytes in buffer"
         return self._count
 
-    __len__ = n_avail
+    def __len__(self):
+        return self._count
 
     def __repr__(self):
         return f"<Ring:{self._count}/{len(self._buf)}>"

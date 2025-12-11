@@ -13,38 +13,38 @@ class TestRingBufferBasics:
     def test_initialization(self):
         """Test that buffer initializes correctly."""
         rb = RingBuffer(10)
-        assert rb.n_avail() == 0
-        assert rb.n_free() == 10
+        assert rb.n_avail == 0
+        assert rb.n_free == 10
 
     def test_simple_write_and_read(self):
         """Test simple write and read without wraparound."""
         rb = RingBuffer(10)
         assert rb.write(b"hello") == 5
-        assert rb.n_avail() == 5
-        assert rb.n_free() == 5
+        assert rb.n_avail == 5
+        assert rb.n_free == 5
 
         buf = bytearray(10)
         n = rb.readinto(buf)
         assert n == 5
         assert buf[:5] == b"hello"
-        assert rb.n_avail() == 0
-        assert rb.n_free() == 10
+        assert rb.n_avail == 0
+        assert rb.n_free == 10
 
     def test_multiple_writes_and_reads(self):
         """Test multiple write/read cycles."""
         rb = RingBuffer(10)
 
         assert rb.write(b"abc") == 3
-        assert rb.n_avail() == 3
+        assert rb.n_avail == 3
 
         assert rb.write(b"def") == 3
-        assert rb.n_avail() == 6
+        assert rb.n_avail == 6
 
         buf = bytearray(10)
         n = rb.readinto(buf)
         assert n == 6
         assert buf[:6] == b"abcdef"
-        assert rb.n_avail() == 0
+        assert rb.n_avail == 0
 
     def test_read_less_than_available(self):
         """Test reading fewer bytes than available."""
@@ -55,12 +55,12 @@ class TestRingBufferBasics:
         n = rb.readinto(buf)
         assert n == 3
         assert buf == b"hel"
-        assert rb.n_avail() == 7
+        assert rb.n_avail == 7
 
         n = rb.readinto(buf)
         assert n == 3
         assert buf == b"lo "
-        assert rb.n_avail() == 4
+        assert rb.n_avail == 4
 
     def test_read_more_than_available(self):
         """Test reading when buffer has fewer bytes than requested."""
@@ -71,13 +71,13 @@ class TestRingBufferBasics:
         n = rb.readinto(buf)
         assert n == 2
         assert buf[:2] == b"hi"
-        assert rb.n_avail() == 0
+        assert rb.n_avail == 0
 
     def test_empty_write(self):
         """Test writing empty bytes."""
         rb = RingBuffer(10)
         assert rb.write(b"") == 0
-        assert rb.n_avail() == 0
+        assert rb.n_avail == 0
 
     def test_read_from_empty_buffer(self):
         """Test reading from empty buffer."""
@@ -85,7 +85,7 @@ class TestRingBufferBasics:
         buf = bytearray(10)
         n = rb.readinto(buf)
         assert n == 0
-        assert rb.n_avail() == 0
+        assert rb.n_avail == 0
 
 
 class TestRingBufferWraparound:
@@ -102,7 +102,7 @@ class TestRingBufferWraparound:
 
         # Now write_pos is at 8, writing 5 bytes should wrap
         assert rb.write(b"abcde") == 5
-        assert rb.n_avail() == 5
+        assert rb.n_avail == 5
 
         buf = bytearray(10)
         n = rb.readinto(buf)
@@ -120,7 +120,7 @@ class TestRingBufferWraparound:
 
         # Write wrapping data
         assert rb.write(b"abcdefgh") == 8  # write_pos wraps around
-        assert rb.n_avail() == 10
+        assert rb.n_avail == 10
 
         # Read wrapping data
         buf = bytearray(10)
@@ -148,10 +148,10 @@ class TestRingBufferOverflow:
         rb = RingBuffer(5)
 
         assert rb.write(b"12345") == 5  # Fill buffer
-        assert rb.n_avail() == 5
+        assert rb.n_avail == 5
 
         assert rb.write(b"abc") == 3  # Overflow by 3
-        assert rb.n_avail() == 5  # Still at capacity
+        assert rb.n_avail == 5  # Still at capacity
 
         buf = bytearray(10)
         n = rb.readinto(buf)
@@ -211,7 +211,7 @@ class TestRingBufferOverflow:
         rb.readinto(buf)  # Read 3, leaving 2
 
         assert rb.write(b"world") == 5  # Total: 2 + 5 = 7, no overflow
-        assert rb.n_avail() == 7
+        assert rb.n_avail == 7
 
         buf = bytearray(10)
         n = rb.readinto(buf)
@@ -262,7 +262,7 @@ class TestRingBufferEdgeCases:
         rb = RingBuffer(1)
 
         assert rb.write(b"a") == 1
-        assert rb.n_avail() == 1
+        assert rb.n_avail == 1
 
         buf = bytearray(1)
         n = rb.readinto(buf)
@@ -287,7 +287,7 @@ class TestRingBufferEdgeCases:
 
         for i in range(10):
             assert rb.write(bytes([ord("a") + i])) == 1
-            assert rb.n_avail() == 1
+            assert rb.n_avail == 1
 
             buf = bytearray(1)
             n = rb.readinto(buf)
@@ -300,13 +300,13 @@ class TestRingBufferEdgeCases:
 
         for _ in range(5):
             assert rb.write(b"12345678") == 8
-            assert rb.n_avail() == 8
+            assert rb.n_avail == 8
 
             buf = bytearray(8)
             n = rb.readinto(buf)
             assert n == 8
             assert buf == b"12345678"
-            assert rb.n_avail() == 0
+            assert rb.n_avail == 0
 
     def test_partial_read_then_overflow(self):
         """Test overflow after partial read."""
@@ -316,10 +316,10 @@ class TestRingBufferEdgeCases:
         buf = bytearray(2)
         rb.readinto(buf)  # Read 2, leaving ABC at positions 2,3,4
         assert buf == b"AB"
-        assert rb.n_avail() == 3
+        assert rb.n_avail == 3
 
         assert rb.write(b"XYZ12") == 5  # Write 5 more (total would be 8, overflow by 3)
-        assert rb.n_avail() == 5
+        assert rb.n_avail == 5
 
         buf = bytearray(10)
         n = rb.readinto(buf)
@@ -332,7 +332,7 @@ class TestRingBufferEdgeCases:
         rb = RingBuffer(10)
 
         assert rb.write(b"0123456789") == 10
-        assert rb.n_avail() == 10
+        assert rb.n_avail == 10
 
         buf = bytearray(10)
         n = rb.readinto(buf)
@@ -347,7 +347,7 @@ class TestRingBufferEdgeCases:
         assert rb.write(b"cd") == 2
         assert rb.write(b"ef") == 2
         assert rb.write(b"gh") == 2
-        assert rb.n_avail() == 8
+        assert rb.n_avail == 8
 
         buf = bytearray(20)
         n = rb.readinto(buf)
@@ -362,19 +362,19 @@ class TestRingBufferEdgeCases:
         buf = bytearray(0)
         n = rb.readinto(buf)
         assert n == 0
-        assert rb.n_avail() == 4  # Data still there
+        assert rb.n_avail == 4  # Data still there
 
 
 class TestRingBufferInvariants:
     """Test that buffer maintains invariants."""
 
     def test_avail_never_exceeds_buffer_size(self):
-        """Test that n_avail() never reports more than buffer size."""
+        """Test that n_avail never reports more than buffer size."""
         rb = RingBuffer(10)
 
         for size in [5, 10, 15, 20]:
             assert rb.write(b"X" * size) == size
-            assert rb.n_avail() <= 10
+            assert rb.n_avail <= 10
 
     def test_read_never_returns_more_than_requested(self):
         """Test that readinto never returns more than buffer size."""
@@ -393,10 +393,10 @@ class TestRingBufferInvariants:
         rb = RingBuffer(10)
 
         assert rb.write(b"hello") == 5
-        count1 = rb.n_avail()
+        count1 = rb.n_avail
 
         buf = bytearray(3)
         n = rb.readinto(buf)
-        count2 = rb.n_avail()
+        count2 = rb.n_avail
 
         assert count2 == count1 - n

@@ -146,14 +146,21 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         if fake_end:
             at("MA7")
             sys.stdout.write("OK\x04\x04>")
-        at("MA8")
+        else:
+            at("MA8")
+            print("MoaT is up.", file=sys.stderr)
 
         try:
+            at("MA9")
             await m.wait()
         except BaseException as exc:
+            at("MA10")
             m.die(exc)
+            at("MA11")
         else:
+            at("MA12")
             m.maybe_end()
+            at("MA13")
 
     from asyncio import create_task, run_until_complete  # noqa: PLC0415
 

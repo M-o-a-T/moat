@@ -155,9 +155,6 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         else:
             m.maybe_end()
 
-    at("M5")
-
-    at("M6")
     from asyncio import create_task, run_until_complete  # noqa: PLC0415
 
     task = create_task(_main())

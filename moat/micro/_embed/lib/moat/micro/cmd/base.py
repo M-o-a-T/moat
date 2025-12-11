@@ -25,7 +25,7 @@ from moat.lib.cmd.base import MsgHandler
 from moat.micro.cmd.util import wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.micro.proto.stack import Base
-from moat.util.compat import AC_use, Event, L, idle
+from moat.util.compat import AC_use, Event, L, Lock, idle
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -317,3 +317,18 @@ class BaseCmd(Base):
 
 BaseCmd.handle = MsgHandler.handle
 BaseCmd.find_handler = MsgHandler.find_handler
+
+
+class LockBaseCmd(BaseCmd):
+    """
+    A BaseCmd that blocks concurrent requests.
+    """
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self._lock = Lock()
+
+    async def handle(self, *a, **kw):
+        "strictly serial"
+        async with self._lock:
+            return await super().handle(*a, **kw)

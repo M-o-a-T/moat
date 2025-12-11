@@ -42,7 +42,12 @@ def get_base(base, root: attrdict, loc: Path) -> attrdict:
         return cfg
     if isinstance(base, str):
         with open(base, "r") as cf:
-            return yload(cf, attr=True)
+            res = yload(cf, attr=True)
+            v = res.pop("$base", None)
+            if v is not None:
+                v = get_base(v, root, loc)
+                merge(res, v, replace=False)
+            return res
     if isinstance(base, dict):
         res = {}
         for k, v in base.items():

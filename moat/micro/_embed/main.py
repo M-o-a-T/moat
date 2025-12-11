@@ -8,6 +8,6 @@ This file is not replaced if it already exists!
 
 from __future__ import annotations
 
-from moat.go import go
+import moat
 
-go(cmd=False)
+moat.go(cmd=False)

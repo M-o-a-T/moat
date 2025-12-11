@@ -8,7 +8,7 @@ import errno
 import os
 
 from moat.lib.codec.errors import FileExistsError, FileNotFoundError  # noqa:A004
-from moat.micro.cmd.base import BaseCmd
+from moat.micro.cmd.base import LockBaseCmd
 from moat.util.compat import to_thread
 
 from typing import TYPE_CHECKING
@@ -47,7 +47,7 @@ def _efix(f, p, *a):
         raise
 
 
-class Cmd(BaseCmd):
+class Cmd(LockBaseCmd):
     """
     File system access.
 
@@ -160,18 +160,26 @@ class Cmd(BaseCmd):
         p = self._fsp(p)
         res = []
         it = await to_thread(os.ilistdir, p)
-        try:
-            if x:
-                while True:
-                    n, *_ = await to_thread(next, it)
-                    st = await to_thread(os.stat, f"{p}/{n}")
-                    res.append(_fty(st, n=n))
-            else:
-                while True:
-                    n, *_ = await to_thread(next, it)
-                    res.append(n)
-        except StopIteration:
-            pass
+
+        def inext(it):
+            try:
+                return next(it)
+            except StopIteration:
+                return None
+
+        if x:
+            while True:
+                n, *_ = await to_thread(inext, it)
+                if n is None:
+                    break
+                st = await to_thread(os.stat, f"{p}/{n}")
+                res.append(_fty(st, n=n))
+        else:
+            while True:
+                n, *_ = await to_thread(inext, it)
+                if n is None:
+                    break
+                res.append(n)
         return res
 
     doc_mkdir = dict(_d="make dir", _0="str:path")

@@ -14,7 +14,7 @@ from asyncio import create_task, run_until_complete, sleep_ms
 
 from moat.lib.ring import RingBuffer
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import ACM, AC_exit, AC_use, Event, idle
+from moat.util.compat import ACM, AC_exit, AC_use, CancelledError, Event, idle
 
 from typing import TYPE_CHECKING
 
@@ -51,7 +51,8 @@ class Main:
     def die(self, exc: Exception):
         "Stop using the console and unwind."
         self.stop()
-        self.wr_exc(exc)
+        if not isinstance(exc, CancelledError):
+            self.wr_exc(exc)
         while self._AC_:
             run_until_complete(create_task(AC_exit(self, type(exc), exc, None)))
 

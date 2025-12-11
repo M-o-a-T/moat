@@ -9,3 +9,5 @@
 
 #define MICROPY_HW_I2C0_SCL                 (22)
 #define MICROPY_HW_I2C0_SDA                 (21)
+
+#define MICROPY_PY_OS_DUPTERM (2)

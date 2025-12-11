@@ -1,0 +1,32 @@
+#
+# This is a configuration file template.
+#
+$base:
+  - moat/micro/_embed/boards/esp32/tinypico/config.cfg
+  - /etc/moat/moat.cfg
+
+cfg:
+  serial:
+# Use this if your ESP32 is behind a serial adapter
+    config: &ser "/dev/serial/by-id/usb-Silicon_Labs_CP2104_USB_to_UART_Bridge_Controller_XXXXXXXX-if00-port0"
+    run: *ser
+# alternately, if your ESP is on USB:
+#   config: "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_XX:XX:XX:XX:XX:XX-if00"
+#   run: "/dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_XXXXXXXXXXXX0000-if00"
+  net:
+    name: "your-hostname"
+    ap: "your-wlan-name"
+    pwd: "your-wlan-password"
+    addr: "192.168.1.42"
+    netmask: "255.255.255.0"
+    router: "192.168.1.1"
+    dns: "9.9.9.9"
+  socket: "/var/run/moat/your-hostname.sock"
+  board: tinypico
+  tempdir: "/var/tmp/esp32-tinypico"
+
+# Here we can enable additional apps on the satellite.
+micro:
+  cfg:
+    r:
+      apps: {}

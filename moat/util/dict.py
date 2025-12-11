@@ -247,7 +247,7 @@ class attrdict(dict):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         val = type(self)()
         val.update(self)
-        if self.needs_post_:
+        if getattr(self, "needs_post_", False):
             val.set_post_()
 
         if not path:

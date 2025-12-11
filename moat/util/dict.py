@@ -5,6 +5,7 @@ This module contains various helper functions and classes for dictionaries.
 from __future__ import annotations
 
 from copy import deepcopy
+from weakref import ref
 
 from . import NotGiven
 from .merge import merge
@@ -129,6 +130,7 @@ class attrdict(dict):
     """
 
     _post: bool = False
+    _super = None
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -148,7 +150,23 @@ class attrdict(dict):
     def __setitem__(self, a, b):
         if not self._post and _check_post(a, b):
             self._post = True
+        if isinstance(b, attrdict):
+            b._super = ref(self)  # noqa:SLF001
         super().__setitem__(a, b)
+
+        if not self._post:
+            return
+
+        s = self
+        while True:
+            if not s._super:  # noqa:SLF001
+                return
+            if not (sup := s._super()):  # noqa:SLF001
+                return
+            if sup._post:  # noqa:SLF001
+                return
+            s = sup
+            s._post = True  # noqa:SLF001
 
     def __setattr__(self, a, b):
         if a.startswith("_"):
@@ -193,6 +211,30 @@ class attrdict(dict):
         return val
 
     _get = get_
+
+    def setdefault(self, a, b):
+        """
+        Standard dict setdefault but updates _post
+        """
+        if a in self:
+            return self[a]
+        self[a] = b
+        return b
+
+    def update(self, a=None, **kw):
+        """
+        Standard dict update but updates _post
+        """
+        if a is None:
+            pass
+        elif hasattr(a, "items"):
+            for k, v in a.items():
+                self[k] = v
+        else:
+            for k, v in a:
+                self[k] = v
+        for k, v in kw.items():
+            self[k] = v
 
     def update_(self, path, value=None):
         """

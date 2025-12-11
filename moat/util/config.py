@@ -58,14 +58,14 @@ def _deref_l(cfg: list | tuple, root: attrdict, loc: Path) -> None:
         cfg = list(cfg)
     for k, v in enumerate(cfg):
         if isinstance(v, attrdict):
-            _deref(v, root, loc / k)
+            if v.needs_post_:
+                _deref(v, root, loc / k)
         elif isinstance(v, (list, tuple)):
             _deref_l(v, root, loc / k)
 
 
 def _deref(cfg: attrdict, root: attrdict, loc: Path) -> None:
-    drop = set()
-    for k, v in cfg.items():
+    for k, v in list(cfg.items()):
         if not isinstance(k, str):
             pass
         elif not k or k[0] != "$":
@@ -79,24 +79,23 @@ def _deref(cfg: attrdict, root: attrdict, loc: Path) -> None:
                     merge(cfg, res, replace=False)
             else:
                 raise ValueError(f"Unknown: {k}")
-            drop.add(k)
+            del cfg[k]
             continue
-    for k in drop:
-        del cfg[k]
 
     for k, v in cfg.items():
         if isinstance(v, attrdict):
-            _deref(v, root, loc / k)
+            if v.needs_post_:
+                _deref(v, root, loc / k)
         elif isinstance(v, (list, tuple)):
             _deref_l(v, root, loc / k)
-
-    for k in drop:
-        del cfg[k]
+        elif isinstance(v, Path) and v.is_relative:
+            cfg[k] = root.get_(v)
 
 
 def deref(cfg: attrdict) -> None:
     """Merge $X keys"""
-    _deref(cfg, cfg, Path())
+    if cfg.needs_post_:
+        _deref(cfg, cfg, Path())
 
 
 TEST = False

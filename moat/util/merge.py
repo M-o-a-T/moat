@@ -23,7 +23,7 @@ def _merge_dict(d, other, drop=False, replace=True):
         if key in d:
             d[key] = val = _merge_one(d[key], value, drop=drop, replace=replace)
         else:
-            d[key] = val
+            d[key] = val = value
         if not getattr(d, "needs_post_", True) and isinstance(val, list) and _chk_post(val):
             d.set_post_()
 

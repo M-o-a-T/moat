@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import ExpectedError, Path, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
-from moat.util.compat import Event, Queue, is_async, log, shield
+from moat.util.compat import CancelledError, Event, Queue, is_async, log, shield
 
 from .base import MsgLink
 from .const import (
@@ -678,7 +678,10 @@ class _Stream:
             slf = self.slf
             if e is not None and slf._stream_out != S_END:  # noqa: SLF001
                 await slf.ml_send_error(e)
-            await self._close()
+            try:
+                await self._close()
+            except CancelledError:
+                pass
         finally:
             if e is not None:
                 raise e

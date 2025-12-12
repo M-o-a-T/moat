@@ -1,5 +1,5 @@
 """
-Datellite main code.
+The main entry point to load MoaT.
 """
 
 from __future__ import annotations

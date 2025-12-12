@@ -296,6 +296,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
                     async with SingleAnyioBuf(
                         anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout),
                     ) as s:
+                        self.pid=proc.pid
                         yield s
                     await proc.wait()
                 except BaseException:

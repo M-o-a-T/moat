@@ -71,6 +71,8 @@ async def test_iter_m(tmp_path):
     "basic iterator tests"
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
         print("Attach GDB to micropython now, then continue", file=sys.stderr)
+        proc=d.sub["r"].s.s.link
+        print(f"gdb {proc.argv[0]} {proc.pid}", file=sys.stderr)
         breakpoint()
 
         print("I01")

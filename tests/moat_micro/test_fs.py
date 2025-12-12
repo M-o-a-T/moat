@@ -27,10 +27,14 @@ r:
     f:
       root: "/tmp/nonexisting"
     r:
+      link: &link
+        frame: 0x85
+        console: true
       log:
         txt: "S"
       log_raw:
         txt: "B"
+  link: *link
   log:
     txt: "XD"
   log_raw:

@@ -29,6 +29,7 @@ s:
   link: &link
     lossy: False
     guarded: False
+    frame: 0x85
   cfg:
     apps:
       a: _test.Cmd

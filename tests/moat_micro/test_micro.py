@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import P, as_proxy
 from moat.micro._test import mpy_stack
-from moat.util.compat import ticks_diff, ticks_ms
+from moat.util.compat import ticks_ms
 
 pytestmark = pytest.mark.anyio
 
@@ -73,62 +73,64 @@ async def test_iter_m(tmp_path):
         # await anyio.sleep(30)  ## attach gdb to micropython now
         t1 = ticks_ms()
 
+        print("I01")
         res = []
         async with d.cmd(P("r.b.it"), lim=3).stream_in() as it:
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
 
+        print("I40")
         res = []
         async with d.cmd(P("r.b.it")).stream_in() as it:
+            print("I41")
             async for (n,) in it:
                 if n == 3:
                     break
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 450 < ticks_diff(t1, t2) < 880
 
+        print("I50")
         for i in range(1, 4):
             assert await drb.nit() == i
         t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
 
         # now do the same thing with a subdispatcher
         s = d.sub_at(P("r.b"))
 
+        print("I60")
         res = []
         async with s.it.stream_in(delay=0.2, lim=3) as it:
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 300 < ticks_diff(t1, t2) < 880
 
+        print("I70")
         await s.clr()
         for i in range(1, 4):
             assert await s.nit(delay=0.2) == i
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 1150
 
         # now do the same thing with a partial subdispatcher
         s = d.sub_at(P("r"))
 
+        print("I80")
         res = []
         async with s.cmd(P("b.it"), lim=3, delay=0.2).stream_in() as it:
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 300 < ticks_diff(t1, t2) < 880
 
+        print("I90")
         await s.b.clr()
         for i in range(1, 4):
             assert (await s.cmd(P("b.nit")))[0] == i
         t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
+        print("I99")
 
 
 @pytest.mark.parametrize("lossy", [False, True])

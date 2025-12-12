@@ -79,3 +79,15 @@ hero: Any spare days that are not in the calendar?
 
   * tell mpy-cross about the destination architecture
     so that `@micropython.native` works
+
+  * MicroPython port
+    * 4beafa4e919bf2fe8ea424290fc97b5782e1040d still required?
+    * native: 36ae50aa9629871ae597ec530127dace6ba01bee
+    * native: e82d9b7881d20bef5347c40f0cf7543a11104e0c
+    * 8ca55e2c1ae21afdb2e7cabf738b064a30d725e7
+
+    To look into:
+    * f7635bbaee4eed4926dd78d03eff99c7430bb1ce
+
+    To add to MoaT recipes:
+    * deecb269153d591dadb2eebd34cea5d573874433

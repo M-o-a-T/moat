@@ -11,6 +11,7 @@ from contextlib import suppress
 from moat.util import P, yload
 from moat.lib.cmd.errors import NoStream
 from moat.micro._test import mpy_stack
+from moat.util.compat import CancelledError
 
 pytestmark = pytest.mark.anyio
 
@@ -31,6 +32,7 @@ r:
       link: &link
         lossy: false
         guarded: false
+        frame: 0x85
       log:
         txt: "S"
     p:
@@ -98,4 +100,5 @@ async def test_avg_there(tmp_path):
         mpy_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.p")) as xa,
     ):
-        await run_avg(xa)
+        with suppress(CancelledError):
+            await run_avg(xa)

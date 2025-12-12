@@ -33,8 +33,10 @@ r:
       log: RX
     r:
       link: &link
-        lossy: False
-        guarded: False
+        lossy: false
+        guarded: false
+        frame: 0x85
+        console: false
       log:
         txt: "!MH"
 #     log_raw:

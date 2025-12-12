@@ -28,8 +28,12 @@ r:
     f:
       root: "/tmp/nonexisting"
     r:
+      link: &link
+        frame: 0x85
+        console: false
       log:
         txt: "S"
+  link: *link
 """
 
 

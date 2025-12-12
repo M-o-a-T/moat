@@ -27,8 +27,9 @@ apps:
 s:
   mplex: true
   link: &link
-    lossy: False
-    guarded: False
+    lossy: false
+    guarded: false
+    frame: 0x85
   cfg:
     apps:
       a: _test.Cmd

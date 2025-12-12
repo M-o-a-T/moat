@@ -37,6 +37,8 @@ r:
       link: &link
         lossy: false
         guarded: false
+        frame: 0x85
+        console: false
       log:
         txt: "MH"
       log_raw:

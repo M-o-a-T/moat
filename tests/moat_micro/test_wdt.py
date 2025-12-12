@@ -32,8 +32,9 @@ r:
       c: cfg.Cmd
     r:
       link: &link
-        lossy: False
-        guarded: False
+        lossy: false
+        guarded: false
+        frame: 0x85
       log:
         txt: "MH"
       log_raw:

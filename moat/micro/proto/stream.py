@@ -299,10 +299,13 @@ class ProcessBuf(CtxObj, AnyioBuf):
                         yield s
                     await proc.wait()
                 except BaseException:
-                    proc.kill()
-                    with anyio.CancelScope(shield=True):
-                        await proc.wait()
-                    raise
+                    try:
+                        proc.kill()
+                        with anyio.CancelScope(shield=True):
+                            await proc.wait()
+                        raise
+                    finally:
+                        proc = None  # noqa:PLW2901
         finally:
             if proc is not None and proc.returncode != 0 and proc.returncode != -9:
                 raise ProcessDeadError(f"{self} died with {proc.returncode}")

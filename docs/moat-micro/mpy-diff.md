@@ -25,6 +25,7 @@ a change that doesn't work, or a debug command).
 ## Taskgroups
 
 We include a subset of `asyncio.TaskGroup`.
+This also adds minimal support for `BaseExceptionGroup` and `ExceptionGroup`.
 
 ## Threading
 
@@ -35,10 +36,6 @@ We include a subset of `asyncio.threads.to_thread`.
 CPython's historic write-plus-async-drain method of writing to an async
 stream requires a superfluous function call and a buffer copy. We add an
 `awrite` method.
-
-## Exception groups
-
-We include minimal support for `BaseExceptionGroup` and `ExceptionGroup`.
 
 ## Sleep handling bugfix
 
@@ -53,6 +50,11 @@ Stock MicroPython doesn't let us task objects as dictionary keys.
 
 There's an obscure bug (or at least an unhandled condition) in `py/vm.c`
 which needs tracking down.
+
+## dupterm
+
+The Unix port of MicroPython doesn't enable `os.dupterm`, which prevents us
+from testing that feature.
 
 ## Building
 

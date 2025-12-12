@@ -33,8 +33,8 @@ r:
       log: RX
     r:
       link: &link
-        lossy: False
-        guarded: False
+        lossy: false
+        guarded: true
       log:
         txt: "!MH"
 #     log_raw:

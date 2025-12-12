@@ -5,10 +5,10 @@ Basic test using a MicroPython subtask
 from __future__ import annotations
 
 import pytest
+import sys
 
 from moat.util import P, as_proxy
 from moat.micro._test import mpy_stack
-from moat.util.compat import ticks_ms
 
 pytestmark = pytest.mark.anyio
 
@@ -70,8 +70,8 @@ async def test_ping(tmp_path):
 async def test_iter_m(tmp_path):
     "basic iterator tests"
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
-        # await anyio.sleep(30)  ## attach gdb to micropython now
-        t1 = ticks_ms()
+        print("Attach GDB to micropython now, then continue", file=sys.stderr)
+        breakpoint()
 
         print("I01")
         res = []
@@ -79,7 +79,6 @@ async def test_iter_m(tmp_path):
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t2 = ticks_ms()
 
         print("I40")
         res = []
@@ -90,12 +89,10 @@ async def test_iter_m(tmp_path):
                     break
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
 
         print("I50")
         for i in range(1, 4):
             assert await drb.nit() == i
-        t2 = ticks_ms()
 
         # now do the same thing with a subdispatcher
         s = d.sub_at(P("r.b"))
@@ -106,13 +103,11 @@ async def test_iter_m(tmp_path):
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
 
         print("I70")
         await s.clr()
         for i in range(1, 4):
             assert await s.nit(delay=0.2) == i
-        t2 = ticks_ms()
 
         # now do the same thing with a partial subdispatcher
         s = d.sub_at(P("r"))
@@ -123,13 +118,11 @@ async def test_iter_m(tmp_path):
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
 
         print("I90")
         await s.b.clr()
         for i in range(1, 4):
             assert (await s.cmd(P("b.nit")))[0] == i
-        t2 = ticks_ms()
         print("I99")
 
 

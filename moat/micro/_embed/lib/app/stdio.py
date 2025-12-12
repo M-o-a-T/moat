@@ -30,3 +30,10 @@ class StdIO(BaseCmdMsg):
         micropython.kbd_intr(-1)
         await AC_use(self, partial(micropython.kbd_intr, 3))
         return await AC_use(self, console_stack(cs, self.cfg))
+
+
+def console(*a, **kw):
+    """Creates a 'real' Python console running the REPL"""
+    from moat.micro.console import Cmd  # noqa:PLC0415
+
+    return Cmd(*a, **kw)

@@ -124,22 +124,27 @@ class MpyBuf(ProcessBuf):
             }
             self.cwd = root
 
-        if mplex:
-            with (root / "moat.cfg").open("wb") as f:
-                f.write(codec.encode(self.cfg["cfg"]))
-            if self.cfg.get("large", True):
-                with (root / "moat.lrg").open("wb") as f:
-                    pass
+        with (root / "moat.cfg").open("wb") as f:
+            f.write(codec.encode(self.cfg["cfg"]))
+        if self.cfg.get("large", True):
+            with (root / "moat.lrg").open("wb") as f:
+                pass
 
+        if mplex:
             self.argv = [
-                # "strace","-s300","-o/tmp/bla",
+                # "strace","-s300","-o/tmp/mpy.log",
                 upy / "ports/unix/build-standard/micropython",
                 pre / "packaging/moat-micro/tests-mpy/mplex.py",
             ]
             if isinstance(mplex, str):
                 self.argv.append(mplex)
         else:
+            rlink(libp[0] / "boot.py", root / "boot.py")
+            rlink(libp[0] / "main.py", root / "main.py")
             self.argv = [
+                "strace",
+                "-s300",
+                "-o/tmp/mpy.log",
                 upy / "ports/unix/build-standard/micropython",
                 "-e",
             ]

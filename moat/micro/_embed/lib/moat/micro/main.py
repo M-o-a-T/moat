@@ -50,11 +50,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     """
     at("M1")
     if isinstance(cfg, str):
-        try:
-            f = open(cfg, "rb")  # noqa:SIM115
-        except OSError:
-            raise OSError(cfg) from None
-        with f:
+        with open(cfg, "rb") as f:
             cfg = CBOR().decode(f.read())
 
     # Update config from RTC memory, if present
@@ -132,10 +128,10 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
 
         cons.main = m = cons.Main(wr_exc)
         dsp = await AC_use(m, Dispatch(cfg, i=i))
-        tg = await AC_use(m, TaskGroup())
+        m.tg = await AC_use(m, TaskGroup())
 
         at("MA3")
-        tg.start_soon(dsp.task)
+        m.main_task = await m.tg.spawn(dsp.task)
         if L:
             at("MA4")
             await dsp.wait_ready()
@@ -155,12 +151,16 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
             await m.wait()
         except BaseException as exc:
             at("MA10")
-            m.die(exc)
+            await m.die_(exc)
+            print("MoaT has terminated.", file=sys.stderr)
             at("MA11")
         else:
-            at("MA12")
-            m.maybe_end()
-            at("MA13")
+            if m.console is None:
+                at("MA12")
+                print("MoaT is down.", file=sys.stderr)
+            else:
+                at("MA13")
+                print("MoaT is in the background.", file=sys.stderr)
 
     from asyncio import create_task, run_until_complete  # noqa: PLC0415
 

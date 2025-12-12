@@ -275,21 +275,29 @@ async def _run_server(tg, s, cb):
 # minimal Outcome clone
 
 
-class _Outcome:
+class Outcome:
+    "a minimal stub for `outcome.Outcome`"
+
     def __init__(self, val):
         self.val = val
 
 
-class _Value(_Outcome):
+class Value(Outcome):
+    "a wrapped non-error value"
+
     def unwrap(self):
+        "unwrap and return the value"
         try:
             return self.val
         finally:
             del self.val
 
 
-class _Error(_Outcome):
+class Error(Outcome):
+    "a wrapped exception"
+
     def unwrap(self):
+        "unwrap and raise the exception"
         try:
             raise self.val
         finally:
@@ -307,22 +315,23 @@ class ValueEvent:
     Note that the value can only be read once.
     """
 
-    def __init__(self):
+    def __init__(self, scope=None):
         self.event = Event()
         self.value = None
+        self.scope = scope
 
     def set(self, value):
         """
         Set the result to return this value, and wake any waiting task.
         """
-        self.value = _Value(value)
+        self.value = Value(value)
         self.event.set()
 
     def set_error(self, exc):
         """
         Set the result to raise this exception, and wake any waiting task.
         """
-        self.value = _Error(exc)
+        self.value = Error(exc)
         self.event.set()
 
     def is_set(self):
@@ -335,6 +344,8 @@ class ValueEvent:
         """
         Send a cancelation to the recipient.
         """
+        if self.scope is not None:
+            self.scope.cancel()
         self.set_error(CancelledError())
 
     async def get(self):

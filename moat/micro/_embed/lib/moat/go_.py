@@ -177,6 +177,13 @@ def go(state=None, cmd=True):
 
     else:
         at("main6", i)
+        try:
+            from moat.micro.console import main as m  # noqa:PLC0415
+
+            if m.console is not None:
+                return
+        except Exception:  # noqa:S110
+            pass
         log("MoaT Ended.")
         sys.exit(0)
 

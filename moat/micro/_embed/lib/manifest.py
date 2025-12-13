@@ -5,5 +5,6 @@ from __future__ import annotations  # noqa: D100
 
 module("serialpacker.py", opt=0)
 module("async_queue.py", opt=0)
+module("rtc.py", opt=0)
 package("moat", opt=0)
 package("app", opt=0)

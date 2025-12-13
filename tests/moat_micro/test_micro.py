@@ -65,19 +65,29 @@ async def test_ping(tmp_path):
         assert res.kw == dict(r="hello")
 
 
+def timed(t: int, min_: int, max_: int) -> int:
+    """
+    Check that teh delta between this call and the last is between `min_` and
+    `max_`.
+    """
+    t2 = ticks_ms()
+    assert min_ <= ticks_diff(t2, t) <= max_
+
+    return t2
+
+
 async def test_iter_m(tmp_path):
     "basic iterator tests"
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
         # await anyio.sleep(30)  ## attach gdb to micropython now
-        t1 = ticks_ms()
+        t = ticks_ms()
 
         res = []
         async with d.cmd(P("r.b.it"), lim=3).stream_in() as it:
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
+        t = timed(t, 300, 1200)
 
         res = []
         async with d.cmd(P("r.b.it")).stream_in() as it:
@@ -86,13 +96,11 @@ async def test_iter_m(tmp_path):
                     break
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
-        assert 450 < ticks_diff(t1, t2) < 880
+        t = timed(t, 450, 880)
 
         for i in range(1, 4):
             assert await drb.nit() == i
-        t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
+        t = timed(t, 300, 880)
 
         # now do the same thing with a subdispatcher
         s = d.sub_at(P("r.b"))
@@ -102,14 +110,12 @@ async def test_iter_m(tmp_path):
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
-        assert 300 < ticks_diff(t1, t2) < 880
+        t = timed(t, 300, 880)
 
         await s.clr()
         for i in range(1, 4):
             assert await s.nit(delay=0.2) == i
-        t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 1150
+        t = timed(t, 450, 1150)
 
         # now do the same thing with a partial subdispatcher
         s = d.sub_at(P("r"))
@@ -119,14 +125,14 @@ async def test_iter_m(tmp_path):
             async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
-        t1 = ticks_ms()
-        assert 300 < ticks_diff(t1, t2) < 880
+        t = timed(t, 300, 880)
 
         await s.b.clr()
         for i in range(1, 4):
             assert (await s.cmd(P("b.nit")))[0] == i
-        t2 = ticks_ms()
-        assert 300 < ticks_diff(t2, t1) < 880
+        t = timed(t, 300, 880)
+
+        t  # noqa:B018
 
 
 @pytest.mark.parametrize("lossy", [False, True])

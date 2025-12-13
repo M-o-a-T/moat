@@ -14,11 +14,12 @@ from __future__ import annotations
 import os
 import sys
 
-try:
-    sys.path.remove("/lib")
-except ValueError:
-    pass
-sys.path.insert(0, "/lib")
+if sys.platform != "linux":
+    try:
+        sys.path.remove("/lib")
+    except ValueError:
+        pass
+    sys.path.insert(0, "/lib")
 
 import moat  # just for the namespace
 

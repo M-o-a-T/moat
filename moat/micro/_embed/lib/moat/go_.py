@@ -105,15 +105,16 @@ def go(state=None, cmd=True):
             pass
 
     # build path
+    lin = sys.platform == "linux"
     print("*** STATE ***", state, "***", file=sys.stderr)
     if state in ("norom", "std", "once", "safe"):
-        sys.path.append("/lib")
+        sys.path.append("lib" if lin else "/lib")
     if state in ("rom", "std"):
         sys.path.append("/rom")
     if state in ("flash", "rom", "norom", "std", "once", "safe"):
         sys.path.append(".frozen")
     # keep the root in the path, but at the end
-    sys.path.append("/")
+    sys.path.append("." if lin else "/")
 
     print("Start MoaT:", repr(state), file=sys.stderr)
 

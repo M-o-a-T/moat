@@ -133,7 +133,7 @@ class MpyBuf(ProcessBuf):
         if mplex:
             self.argv = [
                 # "strace","-s300","-o/tmp/mpy.log",
-                upy / "ports/unix/build-standard/micropython",
+                pre / "build/mpy-unix/micropython",
                 pre / "packaging/moat-micro/tests-mpy/mplex.py",
             ]
             if isinstance(mplex, str):
@@ -142,10 +142,8 @@ class MpyBuf(ProcessBuf):
             rlink(libp[0] / "boot.py", root / "boot.py")
             rlink(libp[0] / "main.py", root / "main.py")
             self.argv = [
-                "strace",
-                "-s300",
-                "-o/tmp/mpy.log",
-                upy / "ports/unix/build-standard/micropython",
+                # "strace", "-s300", "-o/tmp/mpy.log",
+                pre / "build/mpy-unix/micropython",
                 "-e",
             ]
 

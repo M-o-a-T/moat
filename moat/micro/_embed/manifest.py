@@ -1,6 +1,9 @@
 # ruff:noqa:D100,F821,SLF001,I002
 
-freeze("$(PORT_DIR)/modules")
+try:
+    freeze("$(PORT_DIR)/modules")
+except Exception:
+    pass
 
 require("copy")
 require("collections")

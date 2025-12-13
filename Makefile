@@ -4,6 +4,7 @@
 
 PACKAGE = moat
 MAKEINCL = $(shell python3 -mmoat src path)/make/py
+PWD := $(shell pwd)
 
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)
@@ -18,4 +19,8 @@ endif
 prep:
 	git submodule update --init --recursive
 	make -C ext/micropython/mpy-cross
-	make -C ext/micropython/ports/unix
+	env PYTHONPATH=${PWD} \
+	  make -C ext/micropython/ports/unix \
+	    VARIANT_DIR=${PWD}/moat/micro/_embed/boards/unix/test \
+	    BUILD=${PWD}/build/mpy-unix \
+	    STRIP= DEBUG=1

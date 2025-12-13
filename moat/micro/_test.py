@@ -130,17 +130,17 @@ class MpyBuf(ProcessBuf):
             with (root / "moat.lrg").open("wb") as f:
                 pass
 
-        if mplex:
+        if False:  # mplex:
             self.argv = [
                 # "strace","-s300","-o/tmp/mpy.log",
                 pre / "build/mpy-unix/micropython",
-                pre / "packaging/moat-micro/tests-mpy/mplex.py",
+                pre / "moat/micro/_embed/main_unix.py",
             ]
             if isinstance(mplex, str):
                 self.argv.append(mplex)
         else:
             rlink(libp[0] / "boot.py", root / "boot.py")
-            rlink(libp[0] / "main.py", root / "main.py")
+            rlink(libp[0] / "main_unix.py", root / "main.py")
             self.argv = [
                 # "strace", "-s300", "-o/tmp/mpy.log",
                 pre / "build/mpy-unix/micropython",

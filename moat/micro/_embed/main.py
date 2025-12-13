@@ -1,7 +1,7 @@
 """
 MoaT main code.
 
-Simply load and run moat.go.go().
+Simply runs moat.go().
 
 This file is not replaced if it already exists!
 """

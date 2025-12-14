@@ -70,7 +70,7 @@ async def test_ping(tmp_path):
 
 def timed(t: int, min_: int, max_: int) -> int:
     """
-    Check that teh delta between this call and the last is between `min_` and
+    Check that the delta between this call and the last is between `min_` and
     `max_`.
     """
     t2 = ticks_ms()

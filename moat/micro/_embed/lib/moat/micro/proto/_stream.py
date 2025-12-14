@@ -136,7 +136,7 @@ class _CBORMsgBuf(StackedMsg):
             raise
         async with self.w_lock:
             if self.pref is not None:
-                if self.cons:
+                if True:  # self.cons:
                     msg = self.pref + msg  # must be atomic
                 else:
                     await self.s.wr(self.pref)

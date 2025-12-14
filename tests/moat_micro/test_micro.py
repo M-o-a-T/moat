@@ -107,8 +107,8 @@ async def test_iter_m(tmp_path):
 
         print("I20", file=sys.stderr)
         for i in range(1, 4):
-            assert await drb.nit() == i
-        t = timed(t, 300, 880)
+            assert await drb.nit(0.1) == i
+        t = timed(t, 300, 500)
 
         # now do the same thing with a subdispatcher
         s = d.sub_at(P("r.b"))
@@ -141,8 +141,8 @@ async def test_iter_m(tmp_path):
         print("I60", file=sys.stderr)
         await s.b.clr()
         for i in range(1, 4):
-            assert (await s.cmd(P("b.nit")))[0] == i
-        t = timed(t, 300, 880)
+            assert (await s.cmd(P("b.nit"), 0.1))[0] == i
+        t = timed(t, 300, 500)
 
         print("I99", file=sys.stderr)
         t  # noqa:B018

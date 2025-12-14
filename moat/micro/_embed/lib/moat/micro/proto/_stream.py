@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 from moat.lib.codec.proxy import as_proxy
-from moat.util.compat import Event, Lock, log
+from moat.util.compat import AC_use, Event, Lock, log
 
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
+    from moat.util.liner import Liner
 
     from collections.abc import Awaitable
     from typing import Any
@@ -102,6 +103,7 @@ class _CBORMsgBuf(StackedMsg):
 
     cons = False
     codec: Codec = None
+    liner: Liner = None
 
     def __init__(self, stream: BaseBuf, cfg: dict):
         #
@@ -119,6 +121,13 @@ class _CBORMsgBuf(StackedMsg):
         cons = cfg.get("console", False)
         if cons:
             _CReader.__init__(self, cons)
+
+    async def setup(self):
+        await super().setup()
+        if not self.cons:
+            from moat.util.liner import Liner  # noqa:PLC0415
+
+            self.liner = await AC_use(self, Liner())
 
     async def cwr(self, buf):
         if not self.cons:
@@ -173,6 +182,8 @@ class _CBORMsgBuf(StackedMsg):
                 break
             elif self.cons:
                 _CReader.cput(self, b[0])
+            elif self.liner is not None:
+                self.liner(b)
 
         while True:
             # read until we get an object

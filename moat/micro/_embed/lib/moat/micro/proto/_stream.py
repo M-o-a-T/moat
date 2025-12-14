@@ -165,25 +165,24 @@ class _CBORMsgBuf(StackedMsg):
 
         while True:
             b = bytearray(1)
-            while True:
-                # read until we get a prefix byte
-                if self.codec.unfeed(b) == 0:
-                    n = await self.s.rd(buf)
-                    self.codec.feed(memoryview(buf)[:n])
-                elif b == self.pref:
-                    break
-                elif self.cons:
-                    _CReader.cput(self, b[0])
-
-            while True:
-                # read until we get an object
-                try:
-                    return next(self.codec)
-                except StopIteration:
-                    pass
-
+            # read until we get a prefix byte
+            if self.codec.unfeed(b) == 0:
                 n = await self.s.rd(buf)
                 self.codec.feed(memoryview(buf)[:n])
+            elif b == self.pref:
+                break
+            elif self.cons:
+                _CReader.cput(self, b[0])
+
+        while True:
+            # read until we get an object
+            try:
+                return next(self.codec)
+            except StopIteration:
+                pass
+
+            n = await self.s.rd(buf)
+            self.codec.feed(memoryview(buf)[:n])
 
 
 class _CBORMsgBlk(StackedMsg):

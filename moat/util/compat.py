@@ -368,8 +368,8 @@ def ACM(obj):
                     ...
                     return self_or_whatever
 
-                except BaseException:
-                    await AC_exit(self, *exc)
+                except BaseException as exc:
+                    await AC_exit(self, type(exc), exc, None)
                     raise
 
             async def __aexit__(self, *exc):

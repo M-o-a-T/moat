@@ -36,6 +36,7 @@ micro:
       mplex: false
       log:
         txt: "M"
+      cfg: !P :@.moat.micro.cfg.r
     remote: !P r
 
   # main service. This could be a serial.Link instead, but this way

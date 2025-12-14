@@ -99,6 +99,13 @@ class _CBORMsgBuf(StackedMsg):
 
     If @console is set and a prefix is used, sends data atomically.
     Otherwise two separate write calls are used to save on message copying.
+
+    Config:
+        console (bool):
+            Flag how to handle non-framed data.
+            True: collect for crd/cwr, False: print incoming, None: ignore.
+        msg_prefix(int):
+            bytecode of prefix for messages (as opposed to console data)
     """
 
     cons = False
@@ -124,7 +131,7 @@ class _CBORMsgBuf(StackedMsg):
 
     async def setup(self):
         await super().setup()
-        if not self.cons:
+        if self.cons is False:
             from moat.util.liner import Liner  # noqa:PLC0415
 
             self.liner = await AC_use(self, Liner())

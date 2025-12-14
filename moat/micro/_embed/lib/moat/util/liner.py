@@ -5,7 +5,15 @@ from __future__ import annotations
 import sys
 from inspect import iscoroutinefunction
 
-from moat.util.compat import ACM, AC_exit, Event, TaskGroup, is_async, wait_for_ms
+from moat.util.compat import (
+    ACM,
+    AC_exit,
+    Event,
+    TaskGroup,
+    TimeoutError,  # noqa:A004
+    is_async,
+    wait_for_ms,
+)
 
 
 async def _no_op():
@@ -51,7 +59,7 @@ class Liner:
         return self
 
     async def __aexit__(self, *exc):
-        self._tg.cancel_scope.cancel()
+        self._tg.cancel()
         if self.buf:
             await self._partial()
         return await AC_exit(self, *exc)
@@ -91,8 +99,13 @@ class Liner:
         if isinstance(data, memoryview):
             data = bytes(data)
         buf = self.buf
-        buf += data
-        idx = buf.rfind(b"\n")
+        if buf is None:
+            # after end. Oops, async timing is nontrivial.
+            buf = data
+            idx = len(buf)
+        else:
+            buf += data
+            idx = buf.rfind(b"\n")
         try:
             if idx != -1:
                 pr = buf[:idx].decode("utf-8").replace("\n", f"\n{self.prefix}")

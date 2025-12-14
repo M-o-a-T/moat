@@ -37,7 +37,6 @@ def Raw(*a, **k):
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
-        max_idle = 100
         pack = None
 
         async def stream(self):

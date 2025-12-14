@@ -59,7 +59,6 @@ class Serial(NamedSerial):
 
     # inherits from NamedSerial for __init__ which is the same
 
-    max_idle = 100
     pack = None
 
     async def stream(self):

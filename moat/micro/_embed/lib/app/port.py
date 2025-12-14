@@ -27,7 +27,6 @@ class Port(BaseCmdBBM):
     The config item "device" must contain the class path.
     """
 
-    max_idle = 100
     pack = None
 
     async def stream(self):

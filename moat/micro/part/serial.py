@@ -33,7 +33,6 @@ class NamedSerial(AnyioBuf):
     Serial port abstraction.
     """
 
-    max_idle = 100
     pack = None
 
     async def stream(self):  # noqa:D102

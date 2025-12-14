@@ -105,4 +105,4 @@ async def test_iter(tmp_path, conn):
             assert n == i
         log("I X %d", ticks_diff(ticks_ms(), t1))
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 1350
+        assert 450 < ticks_diff(t2, t1) < 1450

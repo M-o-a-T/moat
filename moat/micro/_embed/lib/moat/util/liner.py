@@ -61,7 +61,7 @@ class Liner:
     async def __aexit__(self, *exc):
         self._tg.cancel()
         if self.buf:
-            await self._partial()
+            await self._partial(True)
         return await AC_exit(self, *exc)
 
     async def _flush(self):
@@ -78,7 +78,7 @@ class Liner:
 
             # Event did not trigger
             if self.buf:
-                await self._partial(True)
+                await self._partial()
 
             # now wait for the next possibly-incomplete line
             await self.evt.wait()

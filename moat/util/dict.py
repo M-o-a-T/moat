@@ -65,6 +65,9 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
             keys[k].append(v)
 
     for k, v in keys.items():
+        for i, vv in enumerate(v):
+            if isinstance(vv, Path) and vv.is_relative:
+                v[i] = d[idx].root_.get_(vv)
         if v[idx] is NotGiven:
             pass
         elif len(v) == 1 and not deep:
@@ -138,6 +141,19 @@ class attrdict(dict):
             if _check_post(a, b):
                 self._post = True
                 return
+
+    @property
+    def root_(self):
+        "Follow the _super chain"
+        s = self
+        while True:
+            try:
+                if (sp := s._super) is None:  # noqa:SLF001
+                    return s
+            except AttributeError:
+                return s
+            else:
+                s = sp()
 
     def __getattr__(self, a):
         if a.startswith("_"):

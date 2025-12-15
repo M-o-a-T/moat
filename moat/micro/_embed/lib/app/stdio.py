@@ -39,7 +39,8 @@ class StdioBuf(FileBuf):
 class StdIO(BaseCmdMsg):
     """Sends/receives MoaT messages using stdin/stdout"""
 
-    async def stream(self):  # noqa:D102
+    async def stream(self):
+        "Set up a MoaT message stream on stdin+stdout"
         cs = StdioBuf(self.cfg)
         micropython.kbd_intr(-1)
         await AC_use(self, partial(micropython.kbd_intr, 3))

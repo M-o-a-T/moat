@@ -18,8 +18,22 @@ from moat.util.compat import AC_use
 class StdioBuf(FileBuf):
     "direct access to stdio"
 
-    async def stream(self):  # noqa:D102
-        return sys.stdin.buffer, sys.stdout.buffer
+    async def stream(self):
+        "Create a dedicated stdin/stdout stream"
+        stdin = stdout = None
+        try:
+            stdin = open("/dev/stdin", "rb")  # noqa:SIM115,ASYNC230
+            stdout = open("/dev/stdout", "wb")  # noqa:SIM115,ASYNC230
+        except OSError:
+            if stdin is not None:
+                stdin.close()
+            if stdout is not None:
+                stdout.close()
+            return sys.stdin.buffer, sys.stdout.buffer
+        else:
+            AC_use(self, stdin.close)
+            AC_use(self, stdout.close)
+            return stdin, stdout
 
 
 class StdIO(BaseCmdMsg):

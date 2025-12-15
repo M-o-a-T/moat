@@ -159,10 +159,9 @@ class BaseCmdMsg(BaseCmd):
 
     async def cmd_cwr(self, b):
         """write some console data"""
-        async with self.w_lock:
-            if self.s is None:
-                raise EOFError
-            await self.s.cwr(b)
+        if self.s is None:
+            raise EOFError
+        await self.s.cwr(b)
 
     doc_c = dict(
         _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"

@@ -115,3 +115,82 @@ async def test_repl_stream(tmp_path, free_tcp_port):
         assert "Foo" in cb
         assert "42" in cb
         tg.cancel_scope.cancel()
+
+
+CFG2 = """
+apps:
+  r: _test.MpyCmd
+  _sys: _sys.Cmd
+r:
+  mplex: true
+  cfg:
+    apps:
+      r: stdio.StdIO
+      co: stdio.console
+      co_in: part.Transfer
+      co_out: part.Transfer
+    co:
+      keep: false
+      repl: true
+    co_in:
+      t: .001
+      s:
+        - p: !P r.crd
+        - p: !P co.w
+    co_out:
+      t: .001
+      s:
+        - p: !P co.r
+        - p: !P r.cwr
+    r:
+      link: &link
+        lossy: false
+        guarded: false
+        frame: 0x85
+        console: true
+    tt:
+      a: b
+      c:
+        d: e
+      z: 99
+
+  link: *link
+"""
+
+
+async def test_repl_direct(tmp_path):
+    "REPL on the Unix stdio data stream"
+    cfg = yload(CFG2, attr=True)
+
+    async def readcons(s, con, cob=None):
+        if cob is None:
+            wr = sys.stdout.write
+        else:
+
+            def wr(s):
+                cob.append(s)
+                sys.stdout.write(s)
+
+        async with Liner(prefix=s, writer=wr) as line:
+            while True:
+                nbuf = await con(100)
+                if isinstance(nbuf, memoryview):
+                    nbuf = bytes(nbuf)
+                line(nbuf)
+
+    async with (
+        mpy_stack(tmp_path, cfg) as d,
+        d.sub_at(P("r")) as cr,
+        anyio.create_task_group() as tg,
+    ):
+        cob = []
+        tg.start_soon(readcons, "CONS ", d.sub_at(P("r.crd")), cob)
+        await d.cmd(P("r.rdy_"))
+        await anyio.sleep(0.5)
+
+        await cr.cwr(b"'Foo',2*21\n")
+        await anyio.sleep(0.5)
+        cb = "".join(cob)
+        assert "Foo" in cb
+        assert "42" in cb
+        tg.cancel_scope.cancel()

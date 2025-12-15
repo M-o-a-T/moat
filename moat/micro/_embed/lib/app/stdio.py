@@ -14,6 +14,11 @@ from moat.micro.stacks.console import console_stack
 from moat.micro.stacks.file import FileBuf
 from moat.util.compat import AC_use
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.micro.console import Cmd
+
 
 class StdioBuf(FileBuf):
     "direct access to stdio"
@@ -47,7 +52,7 @@ class StdIO(BaseCmdMsg):
         return await AC_use(self, console_stack(cs, self.cfg))
 
 
-def console(*a, **kw):
+def console(*a, **kw) -> Cmd:
     """Creates a 'real' Python console running the REPL"""
     from moat.micro.console import Cmd  # noqa:PLC0415
 

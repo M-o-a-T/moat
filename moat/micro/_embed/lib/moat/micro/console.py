@@ -21,6 +21,7 @@ from moat.util.compat import (
     AC_use,
     CancelledError,
     Event,
+    TaskGroup,
     TimeoutError,  # noqa:A004
     ValueEvent,
     wait_for_ms,
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     from asyncio import Task
 
     from moat.lib.cmd.msg import Msg
-    from moat.util.compat import TaskGroup
 
     from collections.abc import Awaitable, Callable
 
@@ -293,32 +293,42 @@ class Cmd(BaseCmd):
 
     doc_r = dict(_d="Read console data", _0="int:maxlength (default 32)")
 
-    async def stream_r(self, msg: Msg):
+    async def cmd_r(self, n: int = 32) -> bytes:
         "read from stdout/stderr"
-        buf = bytearray(msg.get(0, 32))
-        if msg.can_stream:
-            async with msg.stream_w() as ms:
-                while True:
-                    res = await self.cons.get_out(buf)
-                    await ms.send(buf[:res])
-        else:
-            res = await self.cons.get_out(buf)
-            if not res:
-                buf = b""
-            else:
-                buf = memoryview(buf)[:res]
-            await msg.result(buf)
+        buf = bytearray(n)
+        res = await self.cons.get_out(buf)
+        if not res:
+            buf = b""
+        elif res < n:
+            buf = memoryview(buf)[:res]
+        return buf
 
     doc_w = dict(_d="Write console data", _0="bytes: data")
 
-    async def stream_w(self, msg: Msg):
-        "write, goes to stdin"
-        if msg.can_stream:
-            with msg.stream_r() as ms:
-                async for m in ms:
-                    await self.cons.put_in(m[0])
-        else:
-            await self.cons.put_in(msg[0])
+    async def cmd_w(self, data: bytes):
+        "write stdin"
+        await self.cons.put_in(data)
+
+    doc_rw = dict(
+        _d="r/w console byte stream",
+        _0="int:rdbuflen (64)",
+        _i="bytes:for stdin",
+        _o="bytes:from stdout+stderr",
+    )
+
+    async def stream_rw(self, msg):
+        "read/write the console stream"
+        n = msg.get(0, 32)
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def rd():
+                while True:
+                    await st.send(await self.cmd_r(n))
+
+            async for m in st:
+                await self.cmd_w(m[0])
+            tg.cancel()
 
     doc_rb = dict(_d="Read input buffer", _0="int:maxlength (default 32)")
 

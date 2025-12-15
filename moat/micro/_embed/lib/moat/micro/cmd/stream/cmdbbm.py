@@ -5,7 +5,7 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import ACM, AC_exit, L, Lock
+from moat.util.compat import ACM, AC_exit, L, Lock, TaskGroup
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -92,9 +92,27 @@ class BaseCmdBBM(BaseCmd):
                 raise EOFError
             await self.s.wr(b)
 
+    doc_rw = dict(
+        _d="r/w byte stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
+    )
+
+    async def stream_rw(self, msg):
+        "read/write byte stream"
+        n = msg.get(0, 64)
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def rd():
+                while True:
+                    await st.send(await self.cmd_rd(n))
+
+            async for m in st:
+                await self.cmd_wr(m[0])
+            tg.cancel()
+
     # Blk/Msg: Console crd/cwr = .crd/cwr
 
-    doc_crd = dict(_d="read console", _0="int:len (64)")
+    doc_crd = dict(_d="read console", _0="int:len (64)", _r="bytes:data")
 
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
@@ -119,6 +137,24 @@ class BaseCmdBBM(BaseCmd):
                 raise EOFError
             await self.s.cwr(b)
 
+    doc_crw = dict(
+        _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
+    )
+
+    async def stream_crw(self, msg):
+        "read/write console stream"
+        n = msg.get(0, 64)
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def crd():
+                while True:
+                    await st.send(await self.cmd_crd(n))
+
+            async for m in st:
+                await self.cmd_cwr(m[0])
+            tg.cancel()
+
     # Msg: s/r = .send/.recv
 
     doc_s = dict(_d="write message", _0="any:message")
@@ -137,6 +173,21 @@ class BaseCmdBBM(BaseCmd):
             raise EOFError
         return self.s.recv()
 
+    doc_mrw = dict(_d="r/w msg stream", _i="any:message", _o="any:message")
+
+    async def stream_mrw(self, msg):
+        "read/write message stream"
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def mrd():
+                while True:
+                    await st.send(await self.cmd_r())
+
+            async for m in st:
+                await self.cmd_s(m[0])
+            tg.cancel()
+
     # Blk: sb/rb = .snd/.rcv
 
     doc_sb = dict(_d="write block", _0="bytes:encoded message")
@@ -154,3 +205,18 @@ class BaseCmdBBM(BaseCmd):
         if self.s is None:
             raise EOFError
         return self.s.rcv()
+
+    doc_brw = dict(_d="r/w block stream", _i="bytes:message", _o="bytes:message")
+
+    async def stream_brw(self, msg):
+        "read/write block stream"
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def brd():
+                while True:
+                    await st.send(await self.cmd_rb())
+
+            async for m in st:
+                await self.cmd_sb(m[0])
+            tg.cancel()

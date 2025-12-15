@@ -164,6 +164,24 @@ class BaseCmdMsg(BaseCmd):
                 raise EOFError
             await self.s.cwr(b)
 
+    doc_c = dict(
+        _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
+    )
+
+    async def stream_c(self, msg):
+        "read/write console stream"
+        n = msg.get(0, 64)
+        async with msg.stream() as st, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def crd():
+                while True:
+                    await st.send(await self.cmd_crd(n))
+
+            async for m in st:
+                await self.cmd_cwr(m[0])
+            tg.cancel()
+
 
 class CmdMsg(BaseCmdMsg):
     """

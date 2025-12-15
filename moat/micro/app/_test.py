@@ -108,6 +108,7 @@ def LoopLink(*a, **k):
     to the external end of the remote queue.
     """
     from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _LoopLink(BaseCmd):  # duck-typed to BaseCmdBBM
         # q_ATX.
@@ -186,6 +187,9 @@ def LoopLink(*a, **k):
             "remotely read the message write queue"
             return self.q_wmr.receive()
 
+        doc_mrw = BaseCmdBBM.doc_mrw
+        stream_mrw = BaseCmdBBM.stream_mrw
+
         # Blocks
 
         doc_sb = dict(_d="b write ", _r="bytes:msg")
@@ -217,6 +221,9 @@ def LoopLink(*a, **k):
         def cmd_xrb(self) -> Awaitable[bytes]:
             "remotely read the block write queue"
             return self.q_wbr.receive()
+
+        doc_brw = BaseCmdBBM.doc_brw
+        stream_brw = BaseCmdBBM.stream_brw
 
         # Bytes
 
@@ -263,6 +270,9 @@ def LoopLink(*a, **k):
             self.q_ws[:n] = b""
             return res
 
+        doc_rw = BaseCmdBBM.doc_rw
+        stream_rw = BaseCmdBBM.stream_rw
+
         # Console
 
         doc_cwr = dict(_d="s write cons", _0="bytes:stream")
@@ -307,5 +317,8 @@ def LoopLink(*a, **k):
             res = self.q_wc[:n]
             self.q_wc[:n] = b""
             return res
+
+        doc_crw = BaseCmdBBM.doc_crw
+        stream_crw = BaseCmdBBM.stream_crw
 
     return _LoopLink(*a, **k)

@@ -354,6 +354,7 @@ class Msg(MsgLink, MsgResult):
         if not self._dir & SD_OUT:
             raise RuntimeError("This stream is read only")
         if self._stream_out != S_ON:
+            log("NoStream:%d", self._stream_out)
             raise NoStream
         await self._skipped()
         await self.ml_send(a, kw, B_STREAM)

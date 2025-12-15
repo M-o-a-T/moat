@@ -126,6 +126,8 @@ class MpyBuf(ProcessBuf):
 
         with (root / "moat.cfg").open("wb") as f:
             f.write(codec.encode(self.cfg["cfg"]))
+        with (root / "moat.state").open("w") as f:
+            f.write(self.cfg.get("state", "once"))
         if self.cfg.get("large", True):
             with (root / "moat.lrg").open("wb") as f:
                 pass

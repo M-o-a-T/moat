@@ -37,6 +37,7 @@ micro:
       log:
         txt: "M"
       cfg: !P :@.moat.micro.cfg.r
+      state: skip
     remote: !P r
 
   # main service. This could be a serial.Link instead, but this way
@@ -47,7 +48,13 @@ micro:
       s: remote.Link
       n: net.unix.Port
       co: _test.Cons
-    r: *rm
+    r:
+      cwd: /tmp/mpy-test
+      mplex: false
+      log:
+        txt: "M"
+      cfg: !P :@.moat.micro.cfg.r
+      state: once
     s:
       path: !P r
       link:

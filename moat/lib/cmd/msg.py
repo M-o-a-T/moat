@@ -12,6 +12,7 @@ from .base import MsgLink
 from .const import (
     B_ERROR,
     B_STREAM,
+    B_WARNING,
     B_WARNING_INTERNAL,
     E_CANCEL,
     E_NO_STREAM,
@@ -27,7 +28,7 @@ from .const import (
 )
 from .errors import Flow, NoStream, StreamError, WantsStream
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 try:
     from collections.abc import Iterable, Mapping
@@ -47,7 +48,7 @@ if TYPE_CHECKING:
     from .base import OptDict
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
-    from typing import Any, Self
+    from typing import Any, Literal, Self
 
 
 try:
@@ -104,8 +105,33 @@ class MsgResult(Iterable):
             return {}
         return self._kw
 
-    def to_list(self, dict_only=False) -> list[Any]:
-        "Returns the args with a possible kwargs at the end"
+    @overload
+    def to_list(self, dict_only: Literal[False]) -> list[Any]: ...
+
+    @overload
+    def to_list(self, dict_only: None) -> list[Any]: ...
+
+    @overload
+    def to_list(self, dict_only: Literal[True]) -> list[Any] | dict: ...
+
+    @overload
+    def to_list(self, dict_only: bool | None = True) -> list[Any]:
+        """
+        Returns a list of positional arguments.
+        May end with a dict of keyword arguments.
+
+        Args:
+            dict_only:
+                True (default):
+                    If the positional args are empty but the keywords are
+                    not, returns a dict, otherwise a list.
+                False:
+                    Always return the positional arguments followed by a
+                    keyword mapping.
+                None:
+                    Append an empty keyword mapping only when required for
+                    disambiguation.
+        """
         if dict_only and self._kw and not self._a:
             return self._kw
         a = list(self._a)
@@ -358,7 +384,10 @@ class Msg(MsgLink, MsgResult):
 
         await self._ended()
 
-    async def send(self, *a, **kw) -> None:  # noqa: D102
+    async def send(self, *a, **kw) -> None:
+        """
+        Send a streamed message.
+        """
         if not self._dir & SD_OUT:
             raise RuntimeError("This stream is read only")
         if self._stream_out != S_ON:
@@ -367,10 +396,22 @@ class Msg(MsgLink, MsgResult):
         await self._skipped()
         await self.ml_send(a, kw, B_STREAM)
 
-    async def warn(self, *a, **kw) -> None:  # noqa: D102
-        await self.ml_send(a, kw, B_STREAM | B_ERROR)
+    async def warn(self, *a, **kw) -> None:
+        """
+        Send a warning on this stream (single integers are masked).
+        """
+        await self.ml_send(a, kw, B_WARNING)
 
-    async def error(self, *a, **kw) -> None:  # noqa: D102
+    async def warn_int(self, *a, **kw) -> None:
+        """
+        Send an internal warning (single integers are not masked).
+        """
+        await self.ml_send(a, kw, B_WARNING_INTERNAL)
+
+    async def error(self, *a, **kw) -> None:
+        """
+        Reply / end the stream with an error.
+        """
         await self.ml_send(a, kw, B_ERROR)
 
     def _set_msg(self, a: Sequence, kw: OptDict | None, flags: int) -> None:

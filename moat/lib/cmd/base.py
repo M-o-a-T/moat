@@ -318,7 +318,7 @@ class Caller:
 
 class BaseMsgHandler:
     """
-    Somewhat-abstract superclass for anythiong that accepts messages.
+    Somewhat-abstract superclass for anything that accepts messages.
     """
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
@@ -334,6 +334,11 @@ class BaseMsgHandler:
 class MsgSender(BaseMsgHandler):
     """
     This class is the client-side API of the MoaT Command multiplexer.
+
+    It is typically returned by the `MsgHandler.sender` method. The
+    MsgHandler's `handle` method processes messages from the remote side,
+    while this class accepts local messages and forwards them to the
+    remote.
     """
 
     Caller_: type[Caller] = Caller
@@ -418,6 +423,20 @@ class MsgSender(BaseMsgHandler):
 class SubMsgSender(MsgSender):
     """
     This `MsgSender` subclass auto-prefixes a path to all calls.
+
+    Thus,
+
+    >>> async with some_handler() as h:
+    ...     h.add_sub("a")
+    ...     await h.a.b.c()
+
+    is the same as
+
+    >>> async with some_handler() as h, h.sub_at(P("a.b")) as hab:
+    ...     await hab.c()
+
+    The additional context also verifies that the remote link is up
+    (or rather, waits for it to *be* up).
     """
 
     def __init__(self, root: MsgHandler, path: Path, caller=None):
@@ -445,7 +464,10 @@ class SubMsgSender(MsgSender):
                 raise NotReadyError(self)
         return await super().__aenter__()
 
-    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:  # noqa: D102
+    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+        """
+        Forward the message, as directed by `_path`.
+        """
         rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
 
@@ -453,15 +475,16 @@ class SubMsgSender(MsgSender):
         """
         Run a command.
 
-        The result of this call can be used both as an awaitable (straight
-        method call) and a context manager (streaming):
+        The result of this call can be used both as an Awaitable (straight
+        method call) and an async context manager (streaming):
 
-        >>> res = await hdl.cmd("foo",42)
-        >>> async with hdl.cmd("bar",x=21) as m:
+        >>> res = await hdl.cmd(P("foo"),42)
+        >>> async with hdl.cmd(P("times_two")) as m:
         ...     async for msg, in m:
         ...         m.send(msg*2)
         """
-        # The path is modified in .handle
+        # The path is modified later, when the Caller object
+        # calls our .handle method
         return Caller(self, (cmd, a, kw))
 
     def stream(self, *a, **kw):  # noqa: D102
@@ -553,6 +576,22 @@ class MsgHandler(BaseMsgHandler):
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         """
         Process the message.
+
+        * If the command is `XX.doc_`, return `self.doc_XX`. This should be
+          a class attribute.
+
+        * If the command ends with `rdy_`, check for readiness before
+          further processing (if any).
+
+        * Multi-step commands `XX.*` are handled by the `sub_XX` method.
+          (If that is a class instance: call its `handle` method.)
+
+        * Non-streaming commands are processed by `cmd_XX` if it exists.
+
+        * Otherwise, commands are processed by `stream_XX`.
+
+        * If that doesn't exist, raise a `KeyError`.
+
         """
         pref = "_" + "_".join(prefix) if prefix else ""
 

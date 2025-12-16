@@ -1,7 +1,7 @@
 # Victron support
 
-.. start synopsis
+% start synopsis
 
 Nothing to see here (yet).
 
-.. end synopsis
+% end synopsis

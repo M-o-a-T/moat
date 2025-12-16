@@ -1,10 +1,10 @@
 # MoaT-KV-KNX
 
-.. start synopsis
+% start synopsis
 
 MoaT-KV-KNX is a link between KNX buses and MoaT-KV.
 
-.. end synopsis
+% end synopsis
 
 It will
 

@@ -1,12 +1,12 @@
 # The MoaT Battery Scheduler
 
-.. start synopsis
+% start synopsis
 
 This module implements a scheduling algorithm for a photovoltaic system
 with battery. It considers varying projected PV gain, local load, and
 buy/sell prices for grid power.
 
-.. end synopsis
+% end synopsis
 
 ## Operation
 

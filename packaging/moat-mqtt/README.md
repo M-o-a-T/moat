@@ -1,6 +1,6 @@
 # MoaT-MQTT
 
-.. start synopsis
+% start synopsis
 
 `MoaT-MQTT` is an open source [MQTT] 3.1.1 client and broker
 implementation. It is a fork of [hbmqtt] with support for [anyio] and
@@ -9,7 +9,7 @@ implementation. It is a fork of [hbmqtt] with support for [anyio] and
 MoaT-MQTT provides a straightforward API based on coroutines, making it easy
 to write highly concurrent applications.
 
-.. end synopsis
+% end synopsis
 
 ## Deprecation Notice
 

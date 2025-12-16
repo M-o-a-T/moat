@@ -1,12 +1,12 @@
 # MoaT-Lib-PrioMap
 
-.. start synopsis
+% start synopsis
 
 A heap that behaves like a dict (or vice versa).
 
 The keys are ordered by their associated value.
 
-.. end synopsis
+% end synopsis
 
 ## Features
 

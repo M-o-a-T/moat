@@ -1,10 +1,10 @@
 # MoaT-KV-HA
 
-.. start synopsis
+% start synopsis
 
 This is a link between Home Assistant and Moat-KV.
 
-.. end synopsis
+% end synopsis
 
 It will
 

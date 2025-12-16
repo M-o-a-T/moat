@@ -2,14 +2,14 @@
 
 ## Rationale
 
-.. begin synopsis
+% begin synopsis
 
 This library is a generalization of the Remote Procedure Call pattern.
 Aside from the basics (call a method, get a reply back asynchronously)
 it supports cancellation (both client- and server-side), exception
 forwarding, and streaming data (bidirectionally).
 
-.. end synopsis
+% end synopsis
 
 ## Prerequisites
 

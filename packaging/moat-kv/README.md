@@ -2,7 +2,7 @@
 
 Welcome to [MoaT-KV](https://github.com/MoaT/moat-kv)!
 
-.. start synopsis
+% start synopsis
 
 MoaT-KV is a master-less distributed key-value storage system. It
 circumvents the CAP theorem (you can't have all of consistency, availablilty,
@@ -11,7 +11,7 @@ by one node only. It is thus resistant to partitioning and intended to be
 always-on; it will not block or lose updates, even in a partitioned
 network.
 
-.. end synopsis
+% end synopsis
 
 MoaT-KV comes with several batteries included:
 

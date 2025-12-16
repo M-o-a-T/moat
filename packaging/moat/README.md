@@ -1,6 +1,6 @@
 # MoaT command line
 
-.. start synopsis
+% start synopsis
 
 This package contains the `moat` command line utility. It uses `asyncclick`
 under the hood.
@@ -9,4 +9,4 @@ under the hood.
 and manipulation. everything else is (in deed, must be) handled with
 plugins that supply sub-commands.
 
-.. end synopsis
+% end synopsis

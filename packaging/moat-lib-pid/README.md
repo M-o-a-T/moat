@@ -1,12 +1,12 @@
 # moat-lib-pid
 
-.. start synopsis
+% start synopsis
 
 An advanced PID controller in Python. It does not require a fixed feed
 rate, supports anti-windup, and contains an optional first-order filter for
 the derivative term.
 
-.. end synopsis
+% end synopsis
 
 Usage is very simple:
 

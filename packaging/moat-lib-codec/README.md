@@ -1,11 +1,11 @@
 # The MoaT-Codec library
 
-.. start synopsis
+% start synopsis
 
 This library packages various codecs used for MoaT protocols
 in a way that's reason- and stream-able.
 
-.. end synopsis
+% end synopsis
 
 ## Interface
 

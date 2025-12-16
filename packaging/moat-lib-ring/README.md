@@ -1,13 +1,13 @@
 # moat-lib-ring
 
-.. start synopsis
+% start synopsis
 
 A simple opinionated character-based ring buffer.
 
 This buffer, well, buffers. It's async compatible and can handle writes
 overruns either by delaying the writer or by only keeping the newest data.
 
-.. end synopsis
+% end synopsis
 
 Usage is very simple:
 

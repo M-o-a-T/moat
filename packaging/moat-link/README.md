@@ -1,6 +1,8 @@
+
 # MoaT Link
 
-.. start synopsis
+% start synopsis
+% start main
 
 Moat-Link is a library that distributes messages between several possible
 back-ends, channel arrangements or encodings.
@@ -8,7 +10,7 @@ back-ends, channel arrangements or encodings.
 The associated server links these backends into one coherent system,
 provide message history, documentation, and whatnot.
 
-.. end synopsis
+% end synopsis
 
 ## Rationale
 
@@ -57,3 +59,5 @@ simply normal (but tagged) data structures and thus are introspectable.
 [aiomqtt]: https://github.com/sbtinstruments/aiomqtt
 [cbor]: https://cbor.io/
 [msgpack]: https://msgpack.org.
+
+% end main

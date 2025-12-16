@@ -1,11 +1,11 @@
 # moat-lib-gpio
 
-.. start synopsis
+% start synopsis
 
 MoaT-lib-GPIO allows easy access to the GPIO pins on your Raspberry Pi or
 similar embedded computer.
 
-.. end synopsis
+% end synopsis
 
 It is based on libgpiod and its CFFI adapter by Steven P. Goldsmith
 \<<mailto:sgjava@gmail.com>>, as downloaded from

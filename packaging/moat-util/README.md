@@ -1,6 +1,6 @@
 # Utilities for Python
 
-.. start synopsis
+% start synopsis
 
 This is a Python "utilities" submodule with code that the rest of MoaT
 uses rather extensively.
@@ -10,7 +10,7 @@ between CPython/anyio and MicroPython/asyncio.
 
 Feel free to extend and embrace. Patches welcome.
 
-.. end synopsis
+% end synopsis
 
 ## Features
 

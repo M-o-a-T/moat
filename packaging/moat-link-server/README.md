@@ -1,12 +1,12 @@
 # The MoaT-Link Server
 
-.. start synopsis
+% start synopsis
 
 MoaT-Link requires a data server for message history, retrieval of
 non-retained or possibly-non-existent messages, and communication between
 clients.
 
-.. end synopsis
+% end synopsis
 
 ## Rationale
 

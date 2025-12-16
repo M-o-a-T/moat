@@ -1,11 +1,11 @@
 # Victron Scripts
 
-.. start synopsis
+% start synopsis
 
 This repository attempts to establish a modern framework for talking to
 Victron Energy products, mainly via Dbus.
 
-.. end synopsis
+% end synopsis
 
 Also included:
 

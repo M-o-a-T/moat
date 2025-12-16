@@ -1,10 +1,10 @@
 # MoaT-KV-OW
 
-.. start synopsis
+% start synopsis
 
 This is a link between 1wire and MoaT-KV.
 
-.. end synopsis
+% end synopsis
 
 It will
 

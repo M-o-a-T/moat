@@ -1,6 +1,6 @@
 # MoaT-Box
 
-.. start synopsis
+% start synopsis
 
 This module manages boxes, i.e. things you can put other things into.
 

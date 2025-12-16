@@ -1,10 +1,10 @@
 # Moat-KV-Wago
 
-.. start synopsis
+% start synopsis
 
 MoaT-KV-Wago is a link between old Linux-based WAGO controllers and MoaT-KV.
 
-.. end synopsis
+% end synopsis
 
 It will
 

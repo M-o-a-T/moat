@@ -1,12 +1,12 @@
 # MoaT-KV-Inv
 
-.. start synopsis
+% start synopsis
 
 This is a link between DistKV and your network infrastructure.
 
 DistInv knows about hosts, ports, VLANs, (sub)networks, cables.
 
-.. end synopsis
+% end synopsis
 
 It stores
 

@@ -1,6 +1,6 @@
 # MoaT EMS Battery
 
-.. start synopsis
+% start synopsis
 
 This module implements a generic battery controller.
 
@@ -10,7 +10,7 @@ MicroPython and talks to the server via the MoaT messaging protocol.
 The server side runs in the MoaT multiplexer that talks to the battery.
 It typically uses a web page for setup, and/or connects to DBus.
 
-.. end synopsis
+% end synopsis
 
 ## Rationale
 

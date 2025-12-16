@@ -1,7 +1,7 @@
 # Device Support
 
-.. start synopsis
+% start synopsis
 
 This is a helper command for MoaT-supported device classes.
 
-.. end synopsis
+% end synopsis

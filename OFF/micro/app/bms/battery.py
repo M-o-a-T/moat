@@ -5,10 +5,6 @@ import anyio
 import logging
 from functools import cached_property
 
-import asyncdbus.service as dbus
-from asyncdbus.signature import Variant
-from victron.dbus.utils import wrap_dbus_dict
-
 from moat.util import attrdict, combine_dict
 from moat.dbus import DbusInterface
 from moat.util.compat import (
@@ -21,6 +17,10 @@ from moat.util.compat import (
 from .. import ConfigError
 from .cell import Cell
 from .packet import *
+
+import asyncdbus.service as dbus
+from asyncdbus.signature import Variant
+from victron.dbus.utils import wrap_dbus_dict
 
 logger = logging.getLogger(__name__)
 

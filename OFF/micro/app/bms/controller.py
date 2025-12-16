@@ -7,9 +7,6 @@ import logging
 from functools import cached_property
 from pprint import pformat
 
-import asyncdbus.service as _dbus
-from victron.dbus.utils import wrap_dbus_dict
-
 from moat.util import ValueEvent
 from moat.dbus import DbusInterface, DbusName
 from moat.util.compat import (
@@ -27,6 +24,9 @@ from . import MessageLost, SpuriousData
 from .battery import Battery
 from .packet import *
 from .victron import BatteryState
+
+import asyncdbus.service as _dbus
+from victron.dbus.utils import wrap_dbus_dict
 
 logger = logging.getLogger(__name__)
 

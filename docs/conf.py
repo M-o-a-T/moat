@@ -12,7 +12,7 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
+# If extensions (or modules to document with autodoc2) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 from __future__ import annotations
@@ -56,21 +56,34 @@ author = "Matthias Urlichs"
 # extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
+    "autodoc2",
     "sphinx.ext.napoleon",
     #   "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx_last_updated_by_git",
-    "sphinx_immaterial",
-    "sphinx_immaterial.apidoc.python.apigen",
-    "sphinx_immaterial.theme_result",
-    #   "sphinx_design",
-    "sphinx_favicon",
     "myst_parser",
+    #"sphinx_immaterial",
+    #"sphinx_immaterial.apidoc.python.apigen",
+    #"sphinx_immaterial.theme_result",
+    "sphinx_design",
+    "sphinx_favicon",
+    "sphinx_book_theme",
 ]
 myst_enable_extensions = [
     "attrs_block",
+    "colon_fence",
 ]
+
+sd_custom_directives = {
+    "dropdown-syntax": {
+        "inherit": "dropdown",
+        "argument": "Syntax",
+        "options": {
+            "color": "primary",
+            "icon": "code",
+        },
+    }
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -104,7 +117,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_immaterial"
+html_theme = "sphinx_book_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -144,6 +157,7 @@ html_theme_options = {
     "icon": {
         "repo": "fontawesome/brands/github",
     },
+    "font": {},
     "site_url": "https://moat.readthedocs.io/",
     "repo_url": "https://github.com/M-o-a-T/moat",
     "repo_name": "M-o-a-T/moat",
@@ -195,10 +209,6 @@ html_theme_options = {
             },
         },
     ],
-    "analytics": {
-        "provider": "google",
-        "property": "G-4FW9NCNFZH",
-    },
     "version_dropdown": True,
     "version_json": "../versions.json",
 }
@@ -214,6 +224,24 @@ html_domain_indices = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
+
+autodoc2_packages = [
+        "../moat",
+]
+autodoc2_render_plugin = "myst"
+autodoc2_output_dir = "api"
+autodoc2_docstring_parser_regexes = [
+    # this will render all docstrings as Markdown
+    (r".*", "myst"),
+]
+autodoc2_skip_module_regexes = [
+    r".*\.OFF\..*",
+    r".*\._embed\..*",
+]
+autodoc2_hidden_objects = [
+    "private",
+    "inherited",
+]
 
 autodoc_default_options = {
     "imported-members": True,
@@ -280,7 +308,7 @@ object_description_options = [
     ("py:.*", dict(include_rubrics_in_toc=True)),
 ]
 
-sphinx_immaterial_custom_admonitions = [
+OFF_sphinx_immaterial_custom_admonitions = [
     {
         "name": "note",
         "title": "Note",
@@ -480,8 +508,8 @@ def gen_icons():
 
 
 def setup(app):
-    monkey_patch_parse_see_also()
-    app.connect("autodoc-skip-member", autodoc_skip_member)
-    app.connect("autodoc-process-bases", autodoc_process_bases)
-    app.connect("autodoc-process-signature", autodoc_process_signature)
+    #monkey_patch_parse_see_also()
+    #app.connect("autodoc-skip-member", autodoc_skip_member)
+    #app.connect("autodoc-process-bases", autodoc_process_bases)
+    #app.connect("autodoc-process-signature", autodoc_process_signature)
     gen_icons()

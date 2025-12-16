@@ -1,16 +1,19 @@
-# Welcome to advanced-pid's documentation!
+# The PID Library
 
-<div class="mdinclude">
+```{include} ../../packaging/moat-lib-pid/README.md
+:start-after: % start main
+:end-before: % end main
+```
 
-../../README.md
+# Manual
 
-</div>
+TODO
 
-# Complete API documentation
+% insert toctree here
 
-<div class="autoclass" members="" special-members="__call__"
-undoc-members="">
 
-moat.lib.pid.PID
+# API documentation
 
-</div>
+TODO
+
+% insert API here

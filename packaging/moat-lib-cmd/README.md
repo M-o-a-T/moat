@@ -1,8 +1,10 @@
 # The MoaT-Command library
 
+% start main
+
 ## Rationale
 
-% begin synopsis
+% start synopsis
 
 This library is a generalization of the Remote Procedure Call pattern.
 Aside from the basics (call a method, get a reply back asynchronously)
@@ -212,7 +214,10 @@ Error messages with the streaming bit clear terminate the command. They
 should be treated as fatal.
 
 Error messages with the streaming bit set are either flow control
-messages (see above) or warnings.
+messages (see above) or out-of-band information from one endpoint
+to the other.
+
+% end main
 
 ### Well-Known Errors
 
@@ -237,20 +242,19 @@ messages (see above) or warnings.
   The sender's or receiver's task is cancelled: the work is no longer
   required / performed.
 
-  This message SHOULD NOT be transmitted as a warning; that would be
+  This message should not be transmitted as a warning; that would be
   pointless.
 
 - -4: No Commands
 
-  The sender on this side doesn't process commands at all.
+  The sender of this error doesn't process commands.
 
 - -5: Data loss
 
   An incoming message was dropped due to resource exhaustion (full
   queue).
 
-  This message SHOULD be sent as a warning, but MAY be interpreted as a
-  hard error by its receiver.
+  This message should be sent as a warning.
 
 - -6: Must stream
 
@@ -259,7 +263,8 @@ messages (see above) or warnings.
 - -7: Error
 
   Used if the "real" error could not be encoded for some (equaly
-  untransmittable) reason.
+  untransmittable) reason. Typically includes a text dump of the
+  problematic exception.
 
 - -11 …: No Command
 
@@ -338,7 +343,7 @@ Bidirectional data stream:
 | \*  | \-  | \+  | Let's talk         |
 | \*  | \-  | \-  | OK                 |
 | \*  | \-  | \+  | *chat data* …      |
-| \*  | \-  | \-  | *also chat data* … |
+| \*  | \-  | \-  | *more chat data* … |
 | \-  | \-  | \+  | hanging up         |
 | \-  | \-  | \-  | oh well            |
 

@@ -232,7 +232,7 @@ moat-src:
   deb: 0.9.23-1
   pkg: 1
   pypi: 0.9.23
-  rev: f53511f64ad070c44ccafc82e6cd09b8950a5411
+  rev: 9043944c8e3ad81d4aecb0c9d175820072086872
   tag: 0.9.23
 moat-thing:
   deb: 0.2.1-3

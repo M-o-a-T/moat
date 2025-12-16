@@ -30,6 +30,13 @@ monorepo
 :end-before: % end synopsis
 ```
 
+#### Server
+
+```{include} ../packaging/moat-link-server/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### The RPC Library
 
 ```{include} ../packaging/moat-lib-cmd/README.md
@@ -46,10 +53,12 @@ monorepo
 
 ### Configuration
 
-```{include} ../packaging/moat-lib-config/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
+% ```{include} ../packaging/moat-lib-config/README.md
+% :start-after: % start synopsis
+% :end-before: % end synopsis
+% ```
+
+See `moat.util.config`.
 
 ### Command Line
 
@@ -115,10 +124,13 @@ monorepo
 
 #### Networking
 
-```{include} ../packaging/moat-db-network/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
+% ```{include} ../packaging/moat-db-network/README.md
+% :start-after: % start synopsis
+% :end-before: % end synopsis
+% ```
+
+See `moat.kv.inv`. Redesigning to be part of the MoaT database of
+things is TODO.
 
 #### Labels
 
@@ -259,7 +271,7 @@ monorepo
 
 # Foo
 
-# FooFoo
+## FooFoo
 
 ### FooFooFoo
 

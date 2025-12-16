@@ -68,6 +68,9 @@ extensions = [
     "sphinx_favicon",
     "myst_parser",
 ]
+myst_enable_extensions = [
+    "attrs_block",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

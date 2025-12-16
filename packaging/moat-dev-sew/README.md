@@ -1,6 +1,10 @@
 # SEW MOVITRAC modbus control
 
+.. start synopsis
+
 This is a simple controller for SEW MOVITRAC motor controllers.
+
+.. end synopsis
 
 ## Instructions
 

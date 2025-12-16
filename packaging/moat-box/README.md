@@ -1,5 +1,7 @@
 # MoaT-Box
 
+.. start synopsis
+
 This module manages boxes, i.e. things you can put other things into.
 
 "Box" is meant to be inclusive. A room is a box. So is a cupboard, or a row

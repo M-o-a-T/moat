@@ -1,6 +1,10 @@
 # Moat-KV-Wago
 
-MoaT-KV-Wago is a link between WAGO controllers and MoaT-KV.
+.. start synopsis
+
+MoaT-KV-Wago is a link between old Linux-based WAGO controllers and MoaT-KV.
+
+.. end synopsis
 
 It will
 

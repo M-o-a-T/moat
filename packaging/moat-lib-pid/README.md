@@ -1,8 +1,12 @@
-
 # moat-lib-pid
-An advanced PID controller in Python. The derivative term can also be used in
-practice thanks to built-in first-order filter. Detailed information can be
-found [here](https://en.wikipedia.org/wiki/PID_controller#Derivative_term).
+
+.. start synopsis
+
+An advanced PID controller in Python. It does not require a fixed feed
+rate, supports anti-windup, and contains an optional first-order filter for
+the derivative term.
+
+.. end synopsis
 
 Usage is very simple:
 
@@ -13,22 +17,31 @@ from moat.lib.pid import PID
 pid = PID(Kp=2.0, Ki=0.1, Kd=1.0, Tf=0.05)
 
 # Control loop
+
+reference = 1.0
+
 while True:
     # Get current measurement from system
     timestamp, measurement = system.get_measurement()
 
     # Calculate control signal by using PID controller
-    reference = 1.0
     control = pid(timestamp, reference - measurement)
 
     # Feed control signal to system
     system.set_input(control)
 ```
 
+
 This module was vendorized from the advanced-pid module by Erkan Adali <erkanadali91@gmail.com>.
 
 Complete API documentation can be found
 [here](https://advanced-pid.readthedocs.io/en/latest/).
+
+MoaT improvements include
+
+- a `CPID` subclass with a settable reference
+- saving internal state, for crash recovery and rebooting
+- introspection
 
 ## Usage
 Biggest advantage of advanced-pid, the derivative term has a built-in first-order

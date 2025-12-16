@@ -1,7 +1,11 @@
 # MoaT Modbus device registry
 
+.. start synopsis
+
 This archive collects modbus register descriptions for a many devices as
 possible.
+
+.. end synopsis
 
 ## Organization
 

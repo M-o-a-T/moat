@@ -1,5 +1,7 @@
 # MoaT EMS Battery
 
+.. start synopsis
+
 This module implements a generic battery controller.
 
 The client is a microcontroller, e.g. an ESP32 or a RP2040. It runs
@@ -8,6 +10,7 @@ MicroPython and talks to the server via the MoaT messaging protocol.
 The server side runs in the MoaT multiplexer that talks to the battery.
 It typically uses a web page for setup, and/or connects to DBus.
 
+.. end synopsis
 
 ## Rationale
 

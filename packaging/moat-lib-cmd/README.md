@@ -2,23 +2,27 @@
 
 ## Rationale
 
-MoaT contains some components which require a possibly bidirectional
-stream of asynchronous messaging, including request/reply interactions
-and data streaming, possibly across system boundaries (but should be
-efficient on same-system calls).
+.. begin synopsis
 
-This library supports such interactions.
+This library is a generalization of the Remote Procedure Call pattern.
+Aside from the basics (call a method, get a reply back asynchronously)
+it supports cancellation (both client- and server-side), exception
+forwarding, and streaming data (bidirectionally).
+
+.. end synopsis
 
 ## Prerequisites
 
-This library requires a reliable underlying transport for Python
-objects. MoaT uses CBOR, but any reliable, non-reordering messsage
+For RPC, MoaT-Lib-Cmd requires a reliable underlying transport for Python
+objects. MoaT uses CBOR; however, any reliable, non-reordering messsage
 stream that can encode basic Python data structures (plus whatever
 objects you send/receive) works.
 
-The MoaT-Cmd library does not itself call the transport. Instead it
-affords basic async methods to iterate on messages to send, and to feed
-incoming lower-level data in.
+MoaT-Lib-Cmd does not itself call the transport. Instead, it contains basic
+async methods to iterate on messages to send, and to feed incoming
+lower-level data in.
+
+Local use, i.e. within a single process, does not require a codec.
 
 ## Usage
 
@@ -74,14 +78,12 @@ TODO
 
 ## Transport Specification
 
-All MoaT-Cmd messages are non-empty lists whose first element is a
-small(ish) integer.
+MoaT-Lib-Cmd messaging is simple by design. A basic interaction starts with
+a command (sent from A to B, Streaming bit off) and ends with a reply (sent
+from B to A, Streaming bit off).
 
-MoaT-Cmd messaging is simple by design and consists of a command (sent
-from A to B) followed by a reply (sent from B to A).
-
-There is no provision for messages that don't have a reply. On the other
-hand, an "empty" reply is just three bytes and the sender isn't required
+There is no provision for messages that don't have a reply. However,
+an "empty" reply is just three bytes and the sender is not required
 to wait for it.
 
 The side opening a sub-channel uses a unique non-negative integer as
@@ -100,6 +102,7 @@ variable and usually non-empty amount of data.
 
 The integer is interpreted as follows.
 
+- Sign: message direction.
 - Bit 0: if set, the message starts or continues a data stream; if
   clear, the message is the final message for this subchannel and
   direction.
@@ -107,35 +110,54 @@ The integer is interpreted as follows.
   which terminates the channel. Otherwise it is a warning or similar
   information, and SHOULD be attached to the following command or reply.
 
-All other bits contain the message ID, left-shifted by two bits. This
-scheme allows for five concurrent messages per direction before encoding
-to two bytes is required.
+:::{tip}
+If a transport is more efficient when encoding small positive numbers
+(e.g. [MesssagePack](https://github.com/msgpack/msgpack/blob/master/spec.md)),
+the integer shall be shifted one bit to the right instead of being
+inverted. The direction is then encoded in the bit 0 (1: ID was negative).
+:::
+
+The other bits contain the message ID. Using CBOR (MessagePack), this
+scheme allows for five (four) concurrent messages per direction before
+encoding to two bytes is required.
 
 Negative integers signal that the ID has been allocated by that
-message's recipient. They are inverted bit-wise, i.e. `(-1-id)`. Thus an
+message's recipient. They are inverted bit-wise, i.e. `(-1-id)`. An
 ID of zero is legal. The bits described above are not affected by this
 inversion. Thus a command with ID=1 (no streaming, no error) is sent
-with an initial integer of 4; the reply uses -5.
+with an initial integer of 4; the reply would use -5.
+
+An interaction has concluded when both sides have transmitted exactly one
+message with the Streaming bit clear.
 
 ### Streaming
 
+An originator starts a stream by sending an initial message with the
+Streaming bit set.
+
 Data streams are inherently bidirectional. The command's semantics
-SHOULD specify which side is supposed to send data (originator,
+should specify which side is supposed to send data (originator,
 responer, or both). Error -2 will be sent (once) if a streamed item is
 received that won't be handled.
 
-Streaming may start when both sides have exchanged initial messages.
-Sending a stream SHOULD NOT commence before the initial command has been
-replied to (with the Stream bit set).
+Streaming may start when both sides have exchanged initial messages, i.e.
+the originator may not send streamed data before receiving the initial
+reply (with the Stream bit set).
 
-Messages with both the streaming and error bits set carry out-of-band
-data while the stream is open, e.g. advising the recipient of data loss.
-Otherwise they MAY be delivered as warnings or similar out-of-band data.
-Conceptally, these messages are attached to the command or reply that
-immediately follows them.
+The initial and final message are assumed to be out-of-band data. This also
+applies to warnings.
 
-For both directions, the initial and final message are assumed to be
-out-of-band data. This also applies to warnings.
+#### Out-of-band data
+
+Messages with both streaming and error bits set may be used to carry
+out-of-band data while the stream is open, e.g. advising the recipient of
+data loss. Conceptally, these messages are attached to the command or reply
+that immediately follows them.
+
+Application-generated warnings may not contain of single integers because
+they conflict with the flow control mechanism (see next section).
+The API should use payload formatting rules to avoid this situation
+transparently.
 
 #### Flow Control
 
@@ -143,24 +165,44 @@ For the most part: None. MoaT-Cmd is mostly used for monitoring events
 or enumerating small data sets.
 
 However, *if* a stream's recipient has limited buffer space and sends a
-command that might trigger a nontrivial amount of messages, it MAY send
+command that might trigger a nontrivial amount of messages, it may send
 a specific warning (i.e. a message with both Error and Streaming bits
-set) before its initial command or reply. This warning MUST consist of a
+set) before its initial command or reply. This warning must consist of a
 single non-negative integer that advises the sender of the number of
 streamed messages it may transmit without acknowledgement.
 
-During stream transmission, the recipient then MUST periodically send
-some more (positive) integers to signal the availability of more buffer
-space. It MUST send such a message if the counter is zero (after buffer
-space becomes available of course) and more messages are expected.
+During stream transmission, the recipient periodically sends some more
+(positive) integers to signal the availability of more buffer space. It
+must send such a message if the counter is zero (after buffer space becomes
+available of course) and more messages are expected.
 
-The initial flow control messages SHOULD be sent before the initial
-command or reply, but MAY be deferred until later.
+The initial flow control messages should be sent before the initial
+command or reply, but may be deferred until later.
 
-A receiver SHOULD start flow control sufficiently early, but that isn't
-always feasible. It MUST notify the remote side (error -5, below) if an
-incoming message gets dropped due to resource exhaustion; likewise, the
-API is required to notify the local side.
+A receiver should start flow control sufficiently early, but that isn't
+always feasible. It notifies the remote side (error/warning -5, below) if
+an incoming message was dropped due to resource exhaustion; likewise, the
+API is required to notify the sender.
+
+## Payload conventions
+
+The contents of messages beyond the initial integer is up to the
+application. However, the following conventions are used by the rest of
+MoaT:
+
+- Initial messages start with the message's destination at the receiver,
+  interpreted as a Path.
+
+- Messages consist of a possibly-empty list of positional arguments /
+  results, followed by a mapping of keyword+value arguments or results.
+
+- The trailing mapping may be omitted if it is empty and the last positional
+  argument is not a mapping. This also applies when there are no positional
+  arguments.
+
+- An empty mapping must not be omitted when the message is a warning
+  and consists of a single integer.
+
 
 ## Error handling
 

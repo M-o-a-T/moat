@@ -1,6 +1,11 @@
 # moat-modbus
 
-This is an anyio-enabled async frontend for pymodbus.
+.. start synopsis
+
+This is an anyio-enabled async frontend for pymodbus (though the goal is to
+eventually replace pymodbus, as it is not at all MicroPython-friendly).
+
+.. end synopsis
 
 ## Usage
 

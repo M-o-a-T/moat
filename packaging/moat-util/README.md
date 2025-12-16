@@ -1,9 +1,16 @@
 # Utilities for Python
 
-This is a Python "util" submodule with code that I habitually use in so
-many projects that I decided to split it off into its own git archive.
+.. start synopsis
+
+This is a Python "utilities" submodule with code that the rest of MoaT
+uses rather extensively.
+
+Notably, `moat.util.compat` contains adapters to paper over the differences
+between CPython/anyio and MicroPython/asyncio.
 
 Feel free to extend and embrace. Patches welcome.
+
+.. end synopsis
 
 ## Features
 

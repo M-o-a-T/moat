@@ -7,7 +7,7 @@ from __future__ import annotations
 __all__ = ["pop_kw", "push_kw"]
 
 
-def push_kw(args: list, kwargs: dict):
+def push_kw(args: list, kwargs: dict, is_warn: bool = False):
     """
     Add kwargs to the list, if required.
 
@@ -16,7 +16,7 @@ def push_kw(args: list, kwargs: dict):
     if (
         kwargs
         or (args and isinstance(args[-1], dict))
-        or (len(args) == 1 and isinstance(args[0], int))
+        or (is_warn and len(args) == 1 and isinstance(args[0], int))
     ):
         args.append(kwargs if isinstance(kwargs, dict) else {})
 

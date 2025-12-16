@@ -1,10 +1,14 @@
 # MoaT Link
 
+.. start synopsis
+
 Moat-Link is a library that distributes messages between several possible
 back-ends, channel arrangements or encodings.
 
 The associated server links these backends into one coherent system,
 provide message history, documentation, and whatnot.
+
+.. end synopsis
 
 ## Rationale
 

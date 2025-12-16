@@ -1,5 +1,17 @@
 # The MoaT bus
 
+.. start synopsis
+
+The MoaT Bus is a multi-master, multi-wire, self-clocked bus protocol
+for environments where high baud rates won't work and dedicated hardware
+(differential transmission, frequency modulation) is not suitable.
+
+The protocol is designed to be implemented in software. It achieves
+decent transmission speed, despite these limitations, by changing the
+levels of one *or more* bus lines per clock tick.
+
+.. end synopsis
+
 ## Why a new bus?
 
 Given that RJ45, PoE, VDSL, and multiple wireless options exist, you might

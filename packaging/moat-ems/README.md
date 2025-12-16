@@ -1,10 +1,14 @@
 # MoaT EMS
 
+.. start synopsis
+
 This module contains a collection of code related to energy management.
 
 The basic setup assumed by these modules is that you have a DC battery, a
 bidirectional inverter (one to three phases), photovoltaics, local demand,
 and a grid connection.
+
+.. end synopsis
 
 ## battery
 

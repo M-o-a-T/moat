@@ -1,6 +1,6 @@
 # MoaT micro
 
-.. synopsis-begin
+.. start synopsis
 
 MoaT-Micro runs on top of MicroPython. It provides a rich set of building
 blocks that can be connected with the MoaT-Cmd library, and several ways for
@@ -12,7 +12,7 @@ CPython, thus simplifying debugging. MicroPython' REPL is available.
 
 Like all of MoaT, the Python code is written in an async-first way.
 
-.. synopsis-end
+.. end synopsis
 
 
 ## Operation

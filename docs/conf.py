@@ -127,17 +127,17 @@ rst_prolog = """
 default_role = "python"
 
 favicons = [
-    {"href": "MoaT.svg"},  # => use `_static/icon.svg`
-    {"href": "MoaT.16.png"},
-    {"href": "MoaT.32.png"},
-    {"href": "MoaT.128.png"},
+    {"href": "_static/MoaT.svg"},  # => use `_static/icon.svg`
+    {"href": "_static/MoaT.16.png"},
+    {"href": "_static/MoaT.32.png"},
+    {"href": "_static/MoaT.128.png"},
     {
         "rel": "apple-touch-icon",
         "href": "MoaT.180.png",
     },
 ]
 html_title = "The Master of all Things"
-html_logo = "MoaT.svg"
+html_logo = "_static/MoaT.svg"
 
 # Sphinx Immaterial theme options
 html_theme_options = {

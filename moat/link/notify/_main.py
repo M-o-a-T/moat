@@ -1,4 +1,4 @@
-# command line interface  # noqa: D100
+# command line interface
 from __future__ import annotations
 
 import asyncclick as click

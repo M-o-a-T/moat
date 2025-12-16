@@ -13,7 +13,11 @@ def push_kw(args: list, kwargs: dict):
 
     This modifies the list.
     """
-    if kwargs or (args and isinstance(args[-1], dict)):
+    if (
+        kwargs
+        or (args and isinstance(args[-1], dict))
+        or (len(args) == 1 and isinstance(args[0], int))
+    ):
         args.append(kwargs if isinstance(kwargs, dict) else {})
 
 

@@ -32,37 +32,37 @@ monorepo
 
 ### The RPC Library
 
-```{literalinclude} ../packaging/moat-lib-cmd/README.md
+```{include} ../packaging/moat-lib-cmd/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### MicroPython Support
 
-```{literalinclude} ../packaging/moat-micro/README.md
+```{include} ../packaging/moat-micro/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Configuration
 
-```{literalinclude} ../packaging/moat-lib-config/README.md
+```{include} ../packaging/moat-lib-config/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Command Line
 
-```{literalinclude} ../packaging/moat/README.md
+```{include} ../packaging/moat/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Modbus
 
-```{literalinclude} ../packaging/moat-modbus/README.md
+```{include} ../packaging/moat-modbus/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### More Parts
@@ -70,37 +70,37 @@ monorepo
 
 #### Codec support buffer
 
-```{literalinclude} ../packaging/moat-lib-codec/README.md
+```{include} ../packaging/moat-lib-codec/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### GPIO
 
-```{literalinclude} ../packaging/moat-lib-ring/README.md
+```{include} ../packaging/moat-lib-ring/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Priority Map
 
-```{literalinclude} ../packaging/moat-lib-priomap/README.md
+```{include} ../packaging/moat-lib-priomap/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Ring buffer
 
-```{literalinclude} ../packaging/moat-lib-ring/README.md
+```{include} ../packaging/moat-lib-ring/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### MQTT
 
-```{literalinclude} ../packaging/moat-modbus/README.md
+```{include} ../packaging/moat-modbus/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Database
@@ -108,86 +108,86 @@ monorepo
 
 #### Things
 
-```{literalinclude} ../packaging/moat-db-thing/README.md
+```{include} ../packaging/moat-db-thing/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Networking
 
-```{literalinclude} ../packaging/moat-db-network/README.md
+```{include} ../packaging/moat-db-network/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Labels
 
-```{literalinclude} ../packaging/moat-db-label/README.md
+```{include} ../packaging/moat-db-label/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Boxes
 
-```{literalinclude} ../packaging/moat-db-box/README.md
+```{include} ../packaging/moat-db-box/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Energy Management
 
-```{literalinclude} ../packaging/moat-ems/README.md
+```{include} ../packaging/moat-ems/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Battery control
 
-```{literalinclude} ../packaging/moat-ems-battery/README.md
+```{include} ../packaging/moat-ems-battery/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Inverter control
 
-```{literalinclude} ../packaging/moat-ems-inv/README.md
+```{include} ../packaging/moat-ems-inv/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Scheduling
 
-```{literalinclude} ../packaging/moat-ems-sched/README.md
+```{include} ../packaging/moat-ems-sched/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### Modbus Devices
 
-```{literalinclude} ../packaging/moat-dev/README.md
+```{include} ../packaging/moat-dev/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### SEW inverters
 
-```{literalinclude} ../packaging/moat-dev-sew/README.md
+```{include} ../packaging/moat-dev-sew/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Heating
 
-```{literalinclude} ../packaging/moat-dev-heat/README.md
+```{include} ../packaging/moat-dev-heat/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 ### The Data Bus
 
-```{literalinclude} ../packaging/moat-bus/README.md
+```{include} ../packaging/moat-bus/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 
@@ -196,63 +196,63 @@ monorepo
 
 #### Key-Value Storage
 
-```{literalinclude} ../packaging/moat-kv/README.md
+```{include} ../packaging/moat-kv/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Akumuli (time-based storage) backend
 
-```{literalinclude} ../packaging/moat-kv-akumuli/README.md
+```{include} ../packaging/moat-kv-akumuli/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Calendar access
 
-```{literalinclude} ../packaging/moat-kv-cal/README.md
+```{include} ../packaging/moat-kv-cal/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### GPIO
 
-```{literalinclude} ../packaging/moat-kv-gpio/README.md
+```{include} ../packaging/moat-kv-gpio/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Home Assistant
 
-```{literalinclude} ../packaging/moat-kv-ha/README.md
+```{include} ../packaging/moat-kv-ha/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Inventory
 
-```{literalinclude} ../packaging/moat-kv-inv/README.md
+```{include} ../packaging/moat-kv-inv/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### KNX
 
-```{literalinclude} ../packaging/moat-kv-knx/README.md
+```{include} ../packaging/moat-kv-knx/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### 1Wire
 
-```{literalinclude} ../packaging/moat-kv-ow/README.md
+```{include} ../packaging/moat-kv-ow/README.md
 :start-after: .. start synopsis
-:end-before: end synopsis
+:end-before: .. end synopsis
 ```
 
 #### Wago
 
-```{literalinclude} ../packaging/moat-kv-wago/README.md
+```{include} ../packaging/moat-kv-wago/README.md
 :start-after: .. start synopsis
 :end-before: .. end synopsis
 ```

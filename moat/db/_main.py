@@ -43,20 +43,6 @@ def init_(obj):
 
 
 @cli.command()
-@click.pass_obj
-def update(obj):
-    """
-    Migrate the database.
-    """
-    cfg = obj.cfg.db
-
-    with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
-
-        command.upgrade(acfg, "head")
-
-
-@cli.command()
 @click.argument("args", nargs=-1)
 @click.pass_obj
 def get(obj, args):
@@ -86,6 +72,20 @@ def mig():
     """\
     Database migration commands. Development only!
     """
+
+
+@mig.command()
+@click.pass_obj
+def update(obj):
+    """
+    Migrate the database.
+    """
+    cfg = obj.cfg.db
+
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
+
+        command.upgrade(acfg, "head")
 
 
 @mig.command(name="init")

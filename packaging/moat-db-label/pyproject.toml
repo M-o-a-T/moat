@@ -12,27 +12,19 @@ classifiers = [
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
-	"anyio ~= 4.2",
-	"asyncclick",
-	"attrs",
-	"msgpack",
-	"outcome",
-	"ruyaml",
-	"simpleeval",
 	"moat-util ~= 0.60.9",
 	"moat-db ~= 0.2.3",
-	"moat-label ~= 0.2.2",
 	]
 version = "0.2.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
-name = "moat-box"
-description = "MoaT support for managing containers"
+name = "moat-db-label"
+description = "MoaT support for printing labels"
 readme = "README.rst"
+
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"
-
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

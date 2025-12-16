@@ -12,29 +12,35 @@ classifiers = [
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
-	"anyio ~= 4.2",
-	"asyncclick",
-	"attrs",
-	"msgpack",
 	"moat-util ~= 0.60.9",
 	"moat-db ~= 0.2.3",
 	"moat-label ~= 0.2.2",
-	"moat-box ~= 0.2.2",
 	]
 version = "0.2.3"
 keywords = [ "MoaT",]
-requires-python = ">=3.8"
-name = "moat-thing"
-description = "MoaT support for storing info about things"
+requires-python = ">=3.11"
+name = "moat-db-box"
+description = "MoaT support for managing containers"
 readme = "README.rst"
-
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"
 
+
 [project.urls]
 homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
+
+[project.optional-dependencies]
+event = [ "attr", "outcome",]
+main = [ "asyncclick", "getpass",]
+msg = [ "msgpack",]
+path = [ "simpleeval",]
+queue = [ "outcome",]
+systemd = [ "systemd.daemon",]
+yaml = [ "ruyaml",]
+time = [ "calendar",]
+dev = [ "flake8", "isort",]
 
 [tool.setuptools]
 [tool.setuptools.packages.find]

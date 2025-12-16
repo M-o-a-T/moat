@@ -1,30 +1,37 @@
 # MoaT micro
 
-This module contains code to talk to MoaT satellites running MicroPython.
+.. synopsis-begin
+
+MoaT-Micro runs on top of MicroPython. It provides a rich set of building
+blocks that can be connected with the MoaT-Cmd library, and several ways for
+a server to connect to them. Controllers can be updated incrementally, and
+their file system can be mounted on the server.
+
+A compatibility library ensures that most of these blocks can also run on
+CPython, thus simplifying debugging. MicroPython' REPL is available.
+
+Like all of MoaT, the Python code is written in an async-first way.
+
+.. synopsis-end
+
 
 ## Operation
 
-After installation, the MicroPython node runs a script that loads a config
-file, connects to a microcontroller (or two or …), runs some application
-code, and accepts structured commands across TCP or Unix sockets.
+Installing MoaT on a microcontroller is a one-stop process that involves
+building a slightly modified version of MicroPython that includes the MoaT
+library.
 
-There is no conceptual difference between the master program and the
-microcontrollers; if the MCU supports networking, you can connect MCUs
-directly to each other.
+NVRAM (if present) or a status file control whether / how to start the
+system. The main code loads a config file that specifies the application
+code blocks to run and the communication channels to open and/or listen on.
+
 
 ## Supported devices
 
-On servers, CPython or (possibly) PyPy.
-
-On satellites, basically anything that can run MicroPython and has enough
-flash (2MB) and RAM (128k).
+Basically anything that can run MicroPython and has enough flash (2MB) and
+RAM (128k).
 
 This does include the ESP8266, if barely.
-
-On most MCUs there is not enough RAM to load the MoaT support code.
-Thus, you need to build a version of MicroPython that includes the MoaT
-modules in Flash. The installer script uses MoaT's MicroPython fork
-to build the required binaries.
 
 ## Principle of Operation
 
@@ -32,175 +39,112 @@ Each controller runs a main task which loads some applications. These apps
 might do something locally, e.g. let a LED blink or poll a button, provide
 a link to a remote system, or call other apps for high-level functions.
 
-Apps are connected hierarchically. They can send messages to each other;
-a message may return a reply ("read this temperature").
-
-Multiple replies ("read this temperature every ten seconds") are supported.
+Apps can be connected to each other freely, via the standard MoaT-Link mechanism.
+These links are designed to be transparent: server code may freely call
+code on a satellite, or vice versa.
 
 All app-related code is written in async Python. We use ``anyio`` on the
 multiplexer and native asyncio on the MCUs; a shallow compatibility layer
-ensures that most code can be shared.
+ensures that most code can be shared. Blocking operations are delegated to
+a separate thread if the controller supports them.
 
 
 ## Installation
 
-See "INSTALL".
+```shell
+pip install moat-micro
+moat -c your-config.cfg micro setup -i
+```
+
+The interesting part is of course how to write the configuratio file.
+
+For details see the config file documentation, section [Installation](config.md#install-top).
+
+A simple tutorial is [here](tutorial.md).
+
 
 ### MicroPython
 
 Our fork of MicroPython is kept up-to-date with the official release. It
-contains a couple of improvements:
+contains a couple of improvements, all of which are separate branches in
+the [MoaT repository](https://github.com/M-o-a-T/micropython):
 
-* Taskgroups are essential for structuring large async applications. Our
-  version includes support for them.
+* dupterm: the Unix version of MPy always prints the dup'd output to the
+  terminal. MoaT can't work that way.
 
-* Our version does not require submodules to be located below the same path
-  as their parent modules.
+* namespace-update: MPy traditionally searched subpackages only in the path
+  where their top-level name is found. That doesn't work when you want to
+  upload small bugfixes to a large codebase.
 
-* We include a ``_hash`` module, which contains a mapping of hashes for the
-  source code of the modules included in Flash.
+* moat\_build: Building with nonstandard build directories tends to leak
+  that build directory to `mpy-cross`. That doesn't work.
 
-The latter two changes allow you to selectively update single packages, while
-the rest of the system continues to run from code "frozen" into flash. This
-saves on RAM usage and/or Flash cycles, particularly when debugging.
+* moat\_lib: MoaT includes a few improvement to the MPy library.
 
+* async-extend: asyncio's way of writing to and closing a stream is a
+  historical relict. We can do better.
 
-## MoaT.micro Commands
+* unix\_embed: Teach the unix version of MicroPython to behave exactly like
+  its embedded counterpart, i.e. read `boot.py` and `main.py`, understand
+  raw mode, and all that.
 
-### Built-in commands
+* hash\_frozen: Add hash values for all modules embedded in the MicroPython
+  binary. That way we can check whether they should be replaced with an
+  update in the ROM image or the file system.
 
-#### command directory lookup
+* taskgroup: Taskgroups are essential for structuring large async
+  applications and ensuring that exceptions do not get lost (or leave
+  disconnected threads behind).
 
-There's a directory function:
-
-	moat micro -c whatever.cfg cmd dir
-
-* c
-
-  A list of commands you can call directly.
-
-* d
-
-  A list of submodules. You can enumerate them:
-
-	moat micro -c whatever.cfg cmd sys.dir
-
-Online docstrings are on the TODO list.
+* thread: We add minimal threading support to asyncio.
 
 
-#### ping
+## Included Apps
 
-Your basic "are you still there?" message. Echoes its `m` argument. Not for
-machine consumption.
+The following list is incomplete because we can't think of everything
+(and don't own the hardware you do). Fortunately, writing additional
+building blocks is reasonably easy.
 
-#### sys.is\_up
+### Hardware
 
-Triggers sending a "link" message.
+* I²C
+* Analog input
+* Analog output
+* Digital I/O
+* UART (serial)
 
-## Message structure
+### Drivers
 
-See `doc/messages.md`.
+* Temperature sensors
+* Humidity sensors
+* PWM modulator
+* PID controller.
+* Relay controller (digital output with manual override)
+* Hardware or software watchdog
+* NVRAM and RTC
 
-### Built-in unsolicited messages
+### Data
 
-#### link
+* Transfer (e.g.: read analog input, send to PID, send that to PWM output …)
+* Calculate a moving average
+* TODO: threshold with hysteresis
 
-Send when a link is established (data: ``True``) or taken down (data:
-``False``).
+### Communication
 
-Obviously you cannot depend on any of these to happen automatically. Use
-`sys.is_up` to trigger this message if you don't get it after connecting;
-use .
+* TCP links (incoming, outgoing, server).
+* Serial, with error recovery
+* USB
+* TODO: encryption and authorization
 
-### Proxy objects
+### Internals
 
-Objects which cannot be encoded to MsgPack are sent as Proxy objects (MsgPack
-extension 4, content: proxy name). The name is opaque. Proxies are cached
-on the side which generates them; the recipient is responsible for
-calling `sys.unproxy(proxy_obj)` to release them.
+* System control: Python `eval`, free memory, reboot, …
+* Configuration updates
+* File system access
+* MicroPython's [REPL](repl.md)
+* TODO: ROM file system update
+* MoaT-CMD built-ins (directory, documentation)
 
-`Proxy('-')` is a special "no data" object, used e.g. for deleting config
-options.
-
-
-## Supported links
-
-Either serial console or TCP works.
-
-### TCP
-
-The default is port 27587. We directly send MsgPack messages; they're
-self-terminating, thus no length bytes or related silliness is required.
-
-### Serial data
-
-Serial data come in two flavors, either lossy (your basic UART signal) or
-lossless (the microcontroller emulates a serial interface over USB).
-
-In the first case we use the `SerialPacker` module, with a start byte,
-to transmit single MsgPack messages. (Anything not introduced with the
-start byte is console output.) On top of this we add basic recovery.
-
-For the second case we can use a MsgPack data stream directly. As MsgPack
-encodes integers (0…127) as single bytes, we also can interleave console
-output with our messages.
-
-## Shared link
-
-The connection to the microcontroller is a 1:1 link. (This is obvious when
-using serial data, but using just one TCP connection also conserves
-controller memory.)
-
-In order to support multiple parallel usages, a simple multiplexing
-protocol allows clients to connect using a Unix-domain socket.
-
-## Configuration
-
-Configuration data for a module is stored on the module. You can read and
-update it online, though reading of larger config files is best done via
-the file system.
-
-### wdt
-
-Watchdog timer configuration.
-
-* t
-
-  Timeout. You need to send a ``sys.wdt`` message every this-many seconds.
-  The default is 10 seconds.
-
-* s
-
-  Start. 0: manually, 1: immediately, 2: after network config, 3:
-  before task start, 4: before mainloop start. The default is zero.
-
-  Note that each of these phases might take multiple seconds.
-
-* n
-
-  If you autostart the watchdog, the first ``n`` watchdog periods are covered by
-  the controller. After that, you need to have established a connection and
-  started sending periodic ``sys.wdt`` messages.
-
-  n=-1: no "free" watchdog messages. The default is ``3``, but at least one
-  minute.
-
-  The first ``sys.wdt`` message terminates the effect of this parameter.
-
-
-## Modular applications
-
-As controllers have different functions, it's possible – and in fact quite
-simple – to send specialized applications to it.
-
-Applications are activated using a configuration file which can be updated
-remotely.
-
-Modules can use all resources on the controller but should be careful not
-to use blocking code if possible.
-
-In order to support long-running applications and complex operations for which
-the controller isn't suited, application modules can also run on the muktiplexer.
 
 ### File system access
 

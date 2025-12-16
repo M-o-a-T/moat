@@ -891,7 +891,7 @@ A map: ``m``, the message sent to it, and ``rep``: ``repr(m)``.
 wdt
 ===
 
-The watchdog timer, on the client side.
+The watchdog timer, on the controller side.
 
 Config
 ++++++

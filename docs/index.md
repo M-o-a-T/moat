@@ -1,15 +1,16 @@
 (moat-top)=
 # The MoaT: An opinionated monorepo
 
-The MoaT is a rather large :term:`monorepo`, aspiring to be a one-stop shop
-for the daily practice of at least one person (hint: the primary author),
-hence the "Master of all Things" part.
+The MoaT aspires to be a one-stop shop for the daily practice of at least
+one person (hint: the primary author), hence the "Master of all Things"
+part.
 
-It's also, historically, the swamp around a castle … into which people
+Historically, a moat is the ditch around a castle … into which people
 tossed stuff they wanted to get rid of or no longer think about, and which
-needed to be dredged periodically.
+needed to be dredged periodically. This codebase admittedly
 
-This codebase does have some relationship to all of the above.
+We'll ignore a moat's secondary function of keeping unwanted people out
+of the castle, except to request to please adhere to our [Code of Conduct](common/conduct.html).
 
 {.glossary}
 monorepo
@@ -20,44 +21,257 @@ monorepo
   The reason why the MoaT is a monorepo is explained in [the
   History section](history).
 
-## Opinions and Standards
-
-The MoaT is admittedly a somewhat opinionated codebase.
-The plus side is that we don't need to think about which mechanism to select
-when a single one is used pretty much everywhere.
-
-### Attributes
-
-We like dictionaries that behave like objects. Yes typing those gets
-interesting, but dicts with random keys (or not) have the same problem.
-
-### Data Serialization
-
-We like CBOR. Yes it has its faults but at least it's regular, self-describing,
-and self-delimiting. It can even be streamed, something which MoaT currently
-doesn't support.
-
-We like YAML, much for the same reasons.
-
-There is no TOML or JSON in the MoaT codebase, other than `pyproject.toml`
-of course.
-
-
 ## Parts included
 
-(moat-top-link)
 ### The Link
 
+```{literalinclude} /packaging/moat-link/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### The RPC Library
+
+```{literalinclude} /packaging/moat-lib-cmd/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### MicroPython Support
+
+```{literalinclude} /packaging/moat-micro/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Configuration
+
+```{literalinclude} /packaging/moat-lib-config/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Command Line
+
+```{literalinclude} /packaging/moat/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Modbus
+
+```{literalinclude} /packaging/moat-modbus/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### More Parts
+
+
+#### Codec support buffer
+
+```{literalinclude} /packaging/moat-lib-codec/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### GPIO
+
+```{literalinclude} /packaging/moat-lib-ring/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Priority Map
+
+```{literalinclude} /packaging/moat-lib-priomap/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Ring buffer
+
+```{literalinclude} /packaging/moat-lib-ring/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### MQTT
+
+```{literalinclude} /packaging/moat-modbus/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Database
+
+
+#### Things
+
+```{literalinclude} /packaging/moat-db-thing/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Networking
+
+```{literalinclude} /packaging/moat-db-network/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Labels
+
+```{literalinclude} /packaging/moat-db-label/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Boxes
+
+```{literalinclude} /packaging/moat-db-box/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Energy Management
+
+```{literalinclude} /packaging/moat-ems/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Battery control
+
+```{literalinclude} /packaging/moat-ems-battery/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Inverter control
+
+```{literalinclude} /packaging/moat-ems-inv/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Scheduling
+
+```{literalinclude} /packaging/moat-ems-sched/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### Modbus Devices
+
+```{literalinclude} /packaging/moat-dev/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### SEW inverters
+
+```{literalinclude} /packaging/moat-dev-sew/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Heating
+
+```{literalinclude} /packaging/moat-dev-heat/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+### The Data Bus
+
+```{literalinclude} /packaging/moat-bus/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+
+### Legacy
+
+
+#### Key-Value Storage
+
+```{literalinclude} /packaging/moat-kv/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Akumuli (time-based storage) backend
+
+```{literalinclude} /packaging/moat-kv-akumuli/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Calendar access
+
+```{literalinclude} /packaging/moat-kv-cal/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### GPIO
+
+```{literalinclude} /packaging/moat-kv-gpio/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Home Assistant
+
+```{literalinclude} /packaging/moat-kv-ha/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Inventory
+
+```{literalinclude} /packaging/moat-kv-inv/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### KNX
+
+```{literalinclude} /packaging/moat-kv-knx/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### 1Wire
+
+```{literalinclude} /packaging/moat-kv-ow/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+#### Wago
+
+```{literalinclude} /packaging/moat-kv-wago/README.md
+:start-after: start synopsis
+:end-before: end synopsis
+```
+
+# Foo
+
+# FooFoo
+
+### FooFooFoo
+
 [MoaT-Link](moat-link-top) is a client/server architecture on top of MQTT. It
-uses [MoaT-CMD](moat_lib_cmd_top) as a data link to a background
-server that operates as message forwarder and persistent data storage
-(including history).
+uses the [MoaT-CMD](moat_lib_cmd_top) library to connect to a background
+server that operates as message forwarder and persistent data storage.
 
 MoaT-Link supports a variety of clients for other services. Some of these
-are still using in [MoaT-KV](moat_top_kv).
+are still using [MoaT-KV](moat_top_kv).
 
 All MoaT-Link messages are encoded using CBOR. On MQTT they are tagged
-with a user property that records who sent it when.
+with a user property that records which service sent it, and when.
 
 
 #### Persistency, Redundancy
@@ -158,3 +372,26 @@ much-too-useful thing that allows for typing one dot instead of the ``["…"]``
 combination. It also contains a wrapper for multi-level command-line-based
 programs, using *asyncclick* under the hood, and some date/time handling,
 conversion between yaml and CBOR and msgpack and … you get the idea.
+
+
+## Opinions and Standards
+
+The MoaT is admittedly a somewhat opinionated codebase.
+The plus side is that we don't need to think about which mechanism to select
+when a single one is used pretty much everywhere.
+
+### Configuration
+
+Python programmers have a love-hate relationship to dictionaries whose
+elements can be addressed with dot syntax. The MoaT is no exception.
+
+### Data Serialization
+
+We like CBOR. Yes it has its faults but at least it's regular, self-describing,
+and self-delimiting. It can even be streamed, something which MoaT currently
+doesn't support.
+
+We like YAML, much for the same reasons.
+
+There is no TOML or JSON in the MoaT codebase, other than `pyproject.toml`
+of course.

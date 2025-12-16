@@ -152,65 +152,12 @@ favicons = [
 html_title = "The Master of all Things"
 html_logo = "_static/MoaT.svg"
 
-# Sphinx Immaterial theme options
+# theme options
 html_theme_options = {
     "icon": {
         "repo": "fontawesome/brands/github",
     },
-    "font": {},
-    "site_url": "https://moat.readthedocs.io/",
-    "repo_url": "https://github.com/M-o-a-T/moat",
-    "repo_name": "M-o-a-T/moat",
-    "social": [
-        {
-            "icon": "fontawesome/brands/github",
-            "link": "https://github.com/M-o-a-T/moat",
-        },
-        {
-            "icon": "fontawesome/brands/python",
-            "link": "https://pypi.org/project/moat/",
-        },
-    ],
-    "edit_uri": "",
     "globaltoc_collapse": False,
-    "features": [
-        # "navigation.expand",
-        "navigation.tabs",
-        # "toc.integrate",
-        # "navigation.sections",
-        # "navigation.instant",
-        # "header.autohide",
-        "navigation.top",
-        "navigation.tracking",
-        "toc.follow",
-        "toc.sticky",
-        "content.tabs.link",
-        "announce.dismiss",
-    ],
-    "palette": [
-        {
-            "media": "(prefers-color-scheme: light)",
-            "scheme": "default",
-            "primary": "light-blue",
-            "accent": "indigo",
-            "toggle": {
-                "icon": "material/weather-night",
-                "name": "Switch to dark mode",
-            },
-        },
-        {
-            "media": "(prefers-color-scheme: dark)",
-            "scheme": "slate",
-            "primary": "grey",
-            "accent": "indigo",
-            "toggle": {
-                "icon": "material/weather-sunny",
-                "name": "Switch to light mode",
-            },
-        },
-    ],
-    "version_dropdown": True,
-    "version_json": "../versions.json",
 }
 
 html_last_updated_fmt = ""

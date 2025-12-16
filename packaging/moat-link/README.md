@@ -41,9 +41,35 @@ Translators send and receive messages from other channels or topics.
 For instance, Home Assistant's default of device state/cmd/control in one
 single hierarchy doesn't always mesh well with other systems' ideas.
 
-### Errors
+### Persistency, Redundancy
 
-MoaT-Link supports error handling and recovery.
+There can be multiple MoaT-Link servers. Clients automatically reconnect
+when one of them disconnects or becomes unresponsive.
+
+Planned: [support for multiple MQTT servers](todo-link-mqtt).
+
+
+### Error handling
+
+In a system that aspires to be reliable, misbehaving code needs to record
+that it failed. MoaT-Link comes with a wrapper that auto-creates a problem
+report, or deletes it when the problem no longer occurs.
+
+TODO: basic infrastructure exists but reporting needs a heap of code
+and there are a few parts that would benefit from error-handling
+wrappers.
+
+Of course, if the system that handles error reporting fails … there's
+nobody to send an error. Thus, MoaT-Link also has a keepalive mechanism
+that can automatically notify you as soon as one of the critical components
+is down.
+
+(This part works …)
+
+### Data Schema
+
+Any large system suffers from data rot. An extension to MoaT-Link (planned)
+describes every message with a JSON schema and records mismatches.
 
 ### Web view
 

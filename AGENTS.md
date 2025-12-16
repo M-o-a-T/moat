@@ -38,14 +38,15 @@
     new or updated code, or when instructed to fix documentation.
 
 ## Testing Guidelines
-- Tests focus on exercising a module's API
+- Tests should focus on exercising a module's API
 - don't repeat similar tests or assertions
 
 ## Commit & Pull Requests
-- One commit per logical change
-- Mention the affected module only if a change also affects other modules
-- Every commit should test cleanly
-- Include documentation updates with the main commit
+- One commit per logical change.
+- Mention the affected module only if a change also affects other modules.
+- Every commit should test cleanly. It's OK to only run tests for the
+  module(s) you're committing code for.
+- Include documentation updates with the main commit.
 
 ## Agent‑Specific Notes
 - Follow these guidelines for any code changes in this repo tree.

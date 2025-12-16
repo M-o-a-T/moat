@@ -6,7 +6,6 @@ This module contains helpers for testing async gpio, via the Linux kernel's
 from __future__ import annotations
 
 import anyio
-import errno
 import logging
 import os
 import re
@@ -23,7 +22,8 @@ _r_chip = re.compile(
 )
 _r_pin = re.compile("^gpio-(?P<pin>[0-9]+) \\(.*\\)( (?P<dir>in|out) *(?P<val>hi|lo))?")
 
-class Pin(NamedTuple):
+
+class Pin(NamedTuple):  # noqa:D101
     out: bool
     level: bool
 
@@ -41,15 +41,10 @@ class _GpioPin:
         self.pin = pin
         self.mon = Broadcaster(3)
         self.state = (None, None)
-        try:
-            self.fd = os.open(
-                os.path.join(watcher.debugfs_path, "gpio-mockup", chip, str(pin)),
-                os.O_WRONLY,
-            )
-        except OSError as exc:
-            raise
-            if exc.errno != errno.ENOENT:
-                raise
+        self.fd = os.open(
+            os.path.join(watcher.debugfs_path, "gpio-mockup", chip, str(pin)),
+            os.O_WRONLY,
+        )
         self.mon.open()
 
     def __del__(self):

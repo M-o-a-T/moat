@@ -6,3 +6,5 @@ __path__ = __import__("pkgutil").extend_path(__path__, __name__)
 from moat.util.config import CfgStore
 
 CfgStore.with_(__name__)
+
+__all__ = []

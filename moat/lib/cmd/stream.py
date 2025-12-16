@@ -11,6 +11,8 @@ from moat.lib.cmd.base import MsgHandler, MsgLink, MsgSender
 from moat.lib.cmd.const import (
     B_ERROR,
     B_STREAM,
+    B_WARNING,
+    B_WARNING_INTERNAL,
     E_CANCEL,
     E_ERROR,
     E_NO_CMD,
@@ -86,7 +88,7 @@ def B_ERR_NAME(err):
 
 def i_f2wire(id: int, flag: int) -> int:  # noqa: D103
     assert id != 0
-    assert 0 <= flag <= 3
+    assert 0 <= flag <= 3 or flag == B_WARNING_INTERNAL
     if id > 0:
         id -= 1
     return (id << 2) | flag
@@ -232,10 +234,13 @@ class HandlerStream(MsgHandler):
             )
 
         a = msg[1:]
-        kw = pop_kw(a)
+        internal = flag == B_WARNING and len(a) == 1 and isinstance(a[0], int)
+        kw = None if internal else pop_kw(a)
 
         stream = flag & B_STREAM
         error = flag & B_ERROR
+        if internal and stream and error:
+            flag = B_WARNING_INTERNAL
 
         try:
             link = self._msgs[i]
@@ -268,7 +273,7 @@ class HandlerStream(MsgHandler):
                 self.detach(link)
             except QueueFull:
                 if flag & B_STREAM:
-                    await self.send(link, [E_SKIP], None, B_ERROR | B_STREAM)
+                    await self.send(link, [E_SKIP], None, B_WARNING_INTERNAL)
                 else:
                     await self.send(link, [E_SKIP], None, B_ERROR)
                     self.detach(link)
@@ -364,7 +369,7 @@ class HandlerStream(MsgHandler):
         if self.closing:
             raise EOFError
         assert isinstance(a, (list, tuple)), a
-        assert 0 <= flag <= 3, flag
+        assert 0 <= flag <= 3 or flag == B_WARNING_INTERNAL, flag
         # log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
         await self._send_q.put((link, a, kw, flag))
 
@@ -374,7 +379,7 @@ class HandlerStream(MsgHandler):
 
         res: list[Any] = [i]
         res.extend(a)
-        push_kw(res, kw)
+        push_kw(res, kw, is_warn=(flag == B_WARNING))
 
         if self._logger:
             self._logger(
@@ -482,14 +487,14 @@ class StreamLink(MsgLink):
         """data to be forwarded across the link"""
         if self.__stream is None:
             raise EOFError
-        assert 0 <= flags <= 3, flags
+        assert 0 <= flags <= 3 or flags == B_WARNING_INTERNAL, flags
         # log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         await self.__stream.send(self, a, kw, flags)
 
     async def ml_send(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """data to be forwarded to our remote"""
         # log("LS L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
-        assert 0 <= flags <= 3, flags
+        assert 0 <= flags <= 3 or flags == B_WARNING_INTERNAL, flags
         await super().ml_send(a, kw, flags)
 
     def stream_detach(self) -> None:  # noqa: D102

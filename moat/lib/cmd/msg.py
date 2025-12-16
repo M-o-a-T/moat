@@ -12,6 +12,7 @@ from .base import MsgLink
 from .const import (
     B_ERROR,
     B_STREAM,
+    B_WARNING_INTERNAL,
     E_CANCEL,
     E_NO_STREAM,
     E_SKIP,
@@ -29,15 +30,16 @@ from .errors import Flow, NoStream, StreamError, WantsStream
 from typing import TYPE_CHECKING, cast
 
 try:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 except ImportError:
     Iterable = object
+    Mapping = dict
 
 try:
     from collections.abc import MutableMapping, MutableSequence
 except ImportError:
-    MutableSequence = list  # pyright:ignore
-    MutableMapping = dict  # pyright:ignore
+    MutableSequence = list
+    MutableMapping = dict
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
@@ -107,7 +109,10 @@ class MsgResult(Iterable):
         if dict_only and self._kw and not self._a:
             return self._kw
         a = list(self._a)
-        push_kw(a, self._kw)
+        if dict_only is False:
+            a.append(self._kw)
+        else:
+            push_kw(a, self._kw)
         return a
 
     def __len__(self) -> int:
@@ -312,7 +317,10 @@ class Msg(MsgLink, MsgResult):
                 self._recv_q.close_sender()
 
         elif flags & B_ERROR:
-            if kw:
+            # Warning.
+            if len(a) == 1 and not kw and flags == B_WARNING_INTERNAL:
+                pass
+            elif kw or (a and isinstance(a[-1], Mapping)):
                 if not hasattr(a, "append"):
                     a = list(a)
                 a = cast(list, a)
@@ -409,7 +417,7 @@ class Msg(MsgLink, MsgResult):
             q, self._recv_q = self._recv_q, None
             if q is not None and q.qsize() and self._stream_in == S_ON:
                 self._stream_in = S_OFF
-                await self.warn(E_NO_STREAM)
+                await self.warn_int(E_NO_STREAM)
             # whatever has been received will be discarded
 
         self._stream_out = S_ON if flag & SD_OUT else S_OFF
@@ -580,7 +588,7 @@ class Msg(MsgLink, MsgResult):
         receive queue getting full.
         """
         if self._recv_q is not None and self._recv_skip and self.stream_out != S_END:
-            await self.warn(E_SKIP)
+            await self.warn_int(E_SKIP)
             self._recv_skip = False
 
     async def _qsize(self) -> None:
@@ -592,7 +600,7 @@ class Msg(MsgLink, MsgResult):
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
                 # - send a message announcing 1/4 of the queue space
-                await self.warn(self._recv_qlen // 4)
+                await self.warn_int(self._recv_qlen // 4)
 
         # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
         #   have been processed (which will happen because the queue was
@@ -600,7 +608,7 @@ class Msg(MsgLink, MsgResult):
         elif self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2:
             m = self._recv_qlen // 2 + 1
             self._fli -= m
-            await self.warn(m)
+            await self.warn_int(m)
 
         # - additionally, if the max queue is < 10
         #   we send a bit more aggressively, to reduce lag
@@ -608,7 +616,7 @@ class Msg(MsgLink, MsgResult):
             self._fli += 1
             if self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4:
                 m, self._fli = self._fli, 0
-                await self.warn(m)
+                await self.warn_int(m)
 
     async def __anext__(self) -> MsgResult:
         if self._recv_q is None:
@@ -654,7 +662,7 @@ class _Stream:
 
         if slf._recv_qlen < 10:  # noqa: SLF001
             slf._fli = 0  # noqa: SLF001
-            await slf.warn(slf._recv_qlen)  # noqa: SLF001
+            await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
 
         if self.initial:
             await slf.wait_replied()

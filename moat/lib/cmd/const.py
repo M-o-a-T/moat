@@ -6,8 +6,8 @@ from moat.util.compat import const
 
 B_STREAM = const(1)
 B_ERROR = const(2)
-B_INITIAL = const(4)  # pseudo flag
-B_SENDER = const(8)  # pseudo flag
+B_WARNING = const(3)  # external warning (no single integer allowed)
+B_WARNING_INTERNAL = const(7)  # internal warning (may contain a naked int)
 
 B_FLAGSTR = " SEW"
 

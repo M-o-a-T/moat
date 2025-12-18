@@ -1,10 +1,11 @@
-"""
-PID controller library
-"""
-
+# noqa:D100
+#
 # Created on Wed Jun 22 20:06:38 2022
 #
 # @author: eadali
+#
+# extended for MoaT by Matthias Urlichs
+#
 
 from __future__ import annotations
 

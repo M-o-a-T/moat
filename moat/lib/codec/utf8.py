@@ -42,11 +42,9 @@ class Codec(_Codec):
         "Decode a bytestring to UTF-8"
         return byte2utf8(data)
 
-    def feed(self, data: ByteType):
+    def feed(self, data: ByteType) -> None:
         """
         Add to-be-decoded data.
-
-        Returns the string found so far (i.e. without incomplete UTF-8 codes).
         """
         self._buf += self.dec.decode(data)
 

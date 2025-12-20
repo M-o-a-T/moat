@@ -14,6 +14,8 @@ from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
 from .exc import ExpKeyError as ExpKeyError
 from .path import Path
+from .pp import pop_kw as pop_kw
+from .pp import push_kw as push_kw
 
 
 class OutOfData(EOFError):  # noqa: D101
@@ -408,26 +410,3 @@ def _add_obj(a, b):
     for k in dir(b):
         if not hasattr(a, k):
             setattr(a, k, getattr(b, k))
-
-
-def push_kw(args: list, kwargs: dict):
-    """
-    Add kwargs to the list, if required.
-
-    This modifies the list.
-    """
-    if kwargs or (args and isinstance(args[-1], dict)):
-        args.append(kwargs if isinstance(kwargs, dict) else {})
-
-
-def pop_kw(ak: list) -> dict:
-    """
-    Unpack an args-and-maybe-trailing-kwargs list.
-
-    This modifies the list and returns the trailing dict, if any.
-    Otherwise an empty dict is returned.
-    """
-    if ak and isinstance(ak[-1], dict):
-        kw = ak.pop()
-        return kw
-    return {}

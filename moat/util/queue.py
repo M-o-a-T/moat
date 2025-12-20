@@ -11,8 +11,6 @@ from anyio import create_memory_object_stream as _cmos
 
 from outcome import Error, Value
 
-from .dict import attrdict
-
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
@@ -45,14 +43,6 @@ class Queue:
 
     def __init__(self, length=0):
         self._s, self._r = _cmos(length)
-
-    @property
-    def _moat(self):
-        try:
-            return self.__moat
-        except AttributeError:
-            self.__moat = d = attrdict()  # pylint: disable=attribute-defined-outside-init
-            return d
 
     async def put(self, x):
         """Send a value, blocking"""

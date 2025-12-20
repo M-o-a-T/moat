@@ -1060,6 +1060,7 @@ class Watcher:
         if self.q is not None:
             raise RuntimeError("You cannot enter this context more than once")
         self.q = create_queue(self.q_len)
+        self.q._moat = attrdict()  # noqa:SLF001
         self.q._moat.kv__free = self.q_len or None  # noqa:SLF001
         self.root.monitors.add(self.q)
         return self

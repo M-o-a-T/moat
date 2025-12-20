@@ -72,6 +72,28 @@ async def run_tests(pkg: str | None, *opts) -> bool:
         return True
 
 
+def do_autotag(repo, repos, major, minor):
+    "Create tags for updated subrepos"
+    for r in repos:
+        if r.has_changes(True):
+            try:
+                nt = r.next_tag()
+            except AttributeError:
+                nt = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
+            r.vers = attrdict(
+                tag=nt,
+                pkg=1,
+                rev=repo.head.commit.hexsha,
+            )
+            logger.debug("Changes: %s %s", r.name, r.verstr)
+        elif r.has_changes(False):
+            r.vers.pkg += 1
+            r.vers.rev = repo.head.commit.hexsha
+            logger.debug("Build Changes: %s %s", r.name, r.verstr)
+        else:
+            logger.debug("No Changes: %s %s", r.name, r.verstr)
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -195,24 +217,7 @@ async def cli(
 
     # Step 1: check for changed files since last tagging
     if autotag:
-        for r in repos:
-            if r.has_changes(True):
-                try:
-                    nt = r.next_tag()
-                except AttributeError:
-                    nt = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
-                r.vers = attrdict(
-                    tag=nt,
-                    pkg=1,
-                    rev=repo.head.commit.hexsha,
-                )
-                logger.debug("Changes: %s %s", r.name, r.verstr)
-            elif r.has_changes(False):
-                r.vers.pkg += 1
-                r.vers.rev = repo.head.commit.hexsha
-                logger.debug("Build Changes: %s %s", r.name, r.verstr)
-            else:
-                logger.debug("No Changes: %s %s", r.name, r.verstr)
+        do_autotag(repo, repos, major, minor)
 
     elif not no_tag:
         err = set()

@@ -139,6 +139,12 @@ def do_versions(repo, repos, tags, no_version):
             repo.index.add(p)
 
 
+def do_copy_repos(repos):
+    "copy reops to packaging dir"
+    for r in repos:
+        r.copy()
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -303,8 +309,7 @@ async def cli(
     do_versions(repo, repos, tags, no_version)
 
     # Step 3: copy to packaging dir
-    for r in repos:
-        r.copy()
+    do_copy_repos(repos)
 
     # Step 4: build Debian package
     if not no_deb:

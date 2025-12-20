@@ -6,7 +6,18 @@ from __future__ import annotations
 
 from moat.util import ExpectedError, Path, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
-from moat.util.compat import CancelledError, Event, Queue, is_async, log, shield
+from moat.util.compat import (
+    CancelledError,
+    Event,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Queue,
+    is_async,
+    log,
+    shield,
+)
 
 from .base import MsgLink
 from .const import (
@@ -29,18 +40,6 @@ from .const import (
 from .errors import Flow, NoStream, StreamError, WantsStream
 
 from typing import TYPE_CHECKING, cast, overload
-
-try:
-    from collections.abc import Iterable, Mapping
-except ImportError:
-    Iterable = object
-    Mapping = dict
-
-try:
-    from collections.abc import MutableMapping, MutableSequence
-except ImportError:
-    MutableSequence = list
-    MutableMapping = dict
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager

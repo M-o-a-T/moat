@@ -285,6 +285,37 @@ async def do_upload_pypi(up, debug):
     return err
 
 
+async def do_upload_deb(repos, debug, dput_opts, g_done):
+    "Upload to Debian"
+    err = set()
+    if not dput_opts:
+        dput_opts = ["-u", "ext"]
+    for r in repos:
+        ltag = r.last_tag
+        if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
+            continue
+        if not (PACK / r.dash / "debian").is_dir():
+            continue
+        changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+        done = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+        if done.exists():
+            r.vers.deb = f"{ltag}-{r.vers.pkg}"
+            continue
+        if g_done is not None:
+            gd = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+            if gd.exists():
+                r.vers.deb = f"{ltag}-{r.vers.pkg}"
+                continue
+        try:
+            await run_("dput", *dput_opts, str(changes), echo=debug)
+        except subprocess.CalledProcessError:
+            err.add(r.name)
+        else:
+            done.touch()
+            r.vers.deb = f"{ltag}-{r.vers.pkg}"
+    return err
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -495,32 +526,8 @@ async def cli(
 
     # Step 7: upload Debian package
     if not no.run and not no.deb:
-        err = set()
-        if not dput_opts:
-            dput_opts = ["-u", "ext"]
-        for r in repos:
-            ltag = r.last_tag
-            if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
-                continue
-            if not (PACK / r.dash / "debian").is_dir():
-                continue
-            changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-            done = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
-            if done.exists():
-                r.vers.deb = f"{ltag}-{r.vers.pkg}"
-                continue
-            if g_done is not None:
-                gd = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
-                if gd.exists():
-                    r.vers.deb = f"{ltag}-{r.vers.pkg}"
-                    continue
-            try:
-                await run_("dput", *dput_opts, str(changes), echo=obj.debug > 1)
-            except subprocess.CalledProcessError:
-                err.add(r.name)
-            else:
-                done.touch()
-                r.vers.deb = f"{ltag}-{r.vers.pkg}"
+        err = await do_upload_deb(repos, obj.debug > 1, dput_opts, g_done)
+
         if err:
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)

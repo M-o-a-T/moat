@@ -13,5 +13,18 @@ TODO
 ```{toctree}
 :maxdepth: 2
 
+INSTALL
+config
+apps
+async
+parts
+messages
+streams
+serial
+cbor-readonly
+mpy-diff
+testing
+hacking
+TODO
 api
 ```

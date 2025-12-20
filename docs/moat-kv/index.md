@@ -1,51 +1,33 @@
-| MoaT-KV: A distributed no-master key-value store |
-|--------------------------------------------------|
-|                                                  |
-| Rationale                                        |
+(moat-kv-top)=
+# MoaT-KV: Distributed Key-Value Store
 
-Any kind of distributed storage is subject to the CAP theorem (also
-called "Brewer's theorem"): you can't get all of (global) Consistency,
-Availability, and Partition tolerance. The problem is that you do want
-all three of these.
+```{include} ../../packaging/moat-kv/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
 
-One way around this problem is to recognize that on most KV storage
-systems, any given record is rarely (if ever) changed by more than one
-entity at the same time. Thus, a simple gossip protocol is sufficient
-for distributing data.
+# Manual
 
-MoaT-KV is intended to be used in a mostly-RAM architecture. There is no
-disk-based storage backend; snapshots and event logs are used to restore
-a system, if necessary.
+```{toctree}
+:maxdepth: 2
 
-See <span class="title-ref">Protocol Overview \<overview.html\></span>
-for details about MoaT-KV's choices.
-
-# API
-
-MoaT-KV offers an efficient interface to access and change data.
-
-# Status
-
-MoaT-KV is in production use as the backbone of the author's home and
-office automation setup.
-
-Note that as of MoaT-KV 0.30, multi-word paths were replaced with dotted
-strings. Some pieces of documentation might still reflect the old style.
-
-<div class="toctree" maxdepth="2">
-
-overview.rst tutorial.rst startup.rst command_line.rst
-common_protocol.rst client_protocol.rst server_protocol.rst auth.rst
-acls.rst code.rst model.rst translator.rst debugging.rst extend.rst
-related.rst
-
-TODO.rst history.rst
-
-</div>
-
-## Indices and tables
-
-- `genindex`
-- `modindex`
-- `search`
-- `glossary`
+overview
+tutorial
+startup
+command_line
+model
+auth
+acls
+common_protocol
+client_protocol
+server_protocol
+translator
+extend
+code
+debugging
+related
+v3
+history
+TODO
+api
+```

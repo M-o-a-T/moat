@@ -13,5 +13,6 @@ TODO
 ```{toctree}
 :maxdepth: 2
 
+Testing
 api
 ```

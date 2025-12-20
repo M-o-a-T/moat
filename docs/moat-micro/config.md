@@ -195,19 +195,19 @@ recommend it.
 
 ## Applications
 
-#### net.unix.Port
+### net.unix.Port
 
-##### Config
+#### Config
 
 Create a Unix-domain port and listen to it. Used mainly for connecting
 command line clients.
 
-###### port
+##### port
 
 The path of the socket. Required. Prefixed with `XDG_RUNTIME_DIR` (or
 `/tmp`) if relative.
 
-###### replace
+##### replace
 
 Action when there is more than one connection to the port. The value is
 expected to be a boolean. If <span class="title-ref">True</span> a new
@@ -219,7 +219,7 @@ If <span class="title-ref">None</span> (the default), multiple
 connections are allowed. In this case, individual links are numbered. A
 method to derive the link's path is TODO.
 
-###### wait
+##### wait
 
 Action when there is no open connection. If
 <span class="title-ref">False</span>, raise an exception; otherwise wait
@@ -230,28 +230,28 @@ A numeric value specifies how long to wait until returning an error.
 This parameter is ignored when `replace` is
 <span class="title-ref">None</span>.
 
-###### fatal
+##### fatal
 
 Flag whether to raise an exception if the link closes (and is not
 re-established within `wait` seconds, if that is not
 <span class="title-ref">False</span>).
 
-##### Commands
+#### Commands
 
 None so far.
 
-#### net.unix.Link
+### net.unix.Link
 
 Connect to a Unix-domain port. Used mainly for testing.
 
-##### Config
+#### Config
 
-###### port
+##### port
 
 The path of the socket. Required. Prefixed with `XDG_RUNTIME_DIR` (or
 `/tmp`) if relative.
 
-###### wait
+##### wait
 
 > Timeout for messages sent to the link when there is no open
 > connection. A numeric value specifies how long to wait until returning
@@ -269,63 +269,63 @@ The path of the socket. Required. Prefixed with `XDG_RUNTIME_DIR` (or
   Ignored when <span class="title-ref">wait</span> is
   <span class="title-ref">True</span>.
 
-#### net.pipe.Process
+### net.pipe.Process
 
 Start a process and connect to its standard input and output.
 
-##### Config
+#### Config
 
-###### command
+##### command
 
 An array with the command's name and arguments.
 
 Mandatory of course.
 
-###### path
+##### path
 
 Path to the command. If not given, the command's first element is used.
 
-###### link
+##### link
 
 Data framing and link configuration. See below.
 
-#### net.ip.Port
+### net.ip.Port
 
 Connect to an IPv4 TCP port.
 
-##### Config
+#### Config
 
-###### address
+##### address
 
 The address to connect to. The default is `localhost`.
 
-###### port
+##### port
 
 The port number to connect to. Required.
 
-###### Other parameters
+##### Other parameters
 
 All other parameters are as in `net.unix.Port`.
 
-#### net.ip.Link
+### net.ip.Link
 
 Create an IPv4 TCP socket and listen to it.
 
-##### Config
+#### Config
 
-###### address
+##### address
 
 The address to bind to. The default is `localhost`.
 
-###### port
+##### port
 
 The port number to bind to. Required.
 
-###### Other parameters
+##### Other parameters
 
 All other parameters are as in `net.unix.Link`.
 
-#### fs
+### fs
 
 This application affords basic file system access. It is used to access
 files stored on embedded clients.
@@ -333,20 +333,20 @@ files stored on embedded clients.
 There currently is no implementation of this app for servers, as network
 file systems (NFS, CIFS) perform much better than a MoaT server.
 
-##### Config
+#### Config
 
-###### path
+##### path
 
 > The prefix to use.
 
-###### readonly
+##### readonly
 
 > Flag, defaults to <span class="title-ref">False</span>. If
 > <span class="title-ref">True</span>, write access is rejected.
 
-##### Commands
+#### Commands
 
-###### reset
+##### reset
 
 Close all open files.
 
@@ -357,7 +357,7 @@ Close all open files.
 
 No return value.
 
-###### open
+##### open
 
 Open a file. Returns a file handle.
 
@@ -371,7 +371,7 @@ Open a file. Returns a file handle.
 
   Files are always opened in binary mode.
 
-###### rd
+##### rd
 
 Read a file.
 
@@ -389,7 +389,7 @@ Read a file.
 
 Return value: the bytes read.
 
-###### wr
+##### wr
 
 Write to a file.
 
@@ -407,7 +407,7 @@ Write to a file.
 
 Return value: the number of bytes written.
 
-###### cl
+##### cl
 
 Close a file.
 
@@ -415,7 +415,7 @@ Close a file.
 
   A valid file handle.
 
-###### ls
+##### ls
 
 List a directory.
 
@@ -444,7 +444,7 @@ value is a map with these entries:
 
   file type ("d", "f", "?").
 
-###### mkdir
+##### mkdir
 
 Create a directory.
 
@@ -452,7 +452,7 @@ Create a directory.
 
   The path of the new directory.
 
-###### hash
+##### hash
 
 Return the `sha256` of a file's contents.
 
@@ -462,7 +462,7 @@ Return the `sha256` of a file's contents.
 
 Return value: The hash value, as 32 bytes.
 
-###### stat
+##### stat
 
 Return the status of a file.
 
@@ -488,7 +488,7 @@ Return value: a dict of
 
   Status array.
 
-###### mv
+##### mv
 
 Rename a file.
 
@@ -510,7 +510,7 @@ Rename a file.
 
 `n` and `x` are mutually exclusive.
 
-###### rm
+##### rm
 
 Delete a file.
 
@@ -518,7 +518,7 @@ Delete a file.
 
   Path to the file to delete.
 
-###### rmdir
+##### rmdir
 
 Delete a directory.
 
@@ -528,7 +528,7 @@ Delete a directory.
 
 The directory must be empty.
 
-###### new
+##### new
 
 Create a file.
 
@@ -538,7 +538,7 @@ Create a file.
 
 The new file is *not* opened for writing by this command.
 
-#### serial.Cmd
+### serial.Cmd
 
 Access to a serial port.
 
@@ -547,14 +547,14 @@ needs the path to that port to talk to it; whether the port is on a
 local system or three links away is transparent (the latter is slower,
 obviously).
 
-##### Config
+#### Config
 
-###### port
+##### port
 
 The port to use. Typically a number (on satellites), or a path (on
 Unix).
 
-###### tx, rx, rts, cts
+##### tx, rx, rts, cts
 
 Pins to use, if they need to be specified.
 
@@ -563,56 +563,56 @@ others.
 
 The RTS and DTR pins default to being enabled.
 
-###### flush
+##### flush
 
 Timer for dropping spurious incoming characters after opening the port.
 The default is 200 msec if <span class="title-ref">True</span>. Data
 trickling in extends the timeout.
 
-###### txb, rxb
+##### txb, rxb
 
 Buffer sizes for transmit and receive. The default is 128 for each.
 
-###### mode
+##### mode
 
 Basic communication parameters.
 
-####### rate
+###### rate
 
 > Baud rate.
 
-####### stop
+###### stop
 
 > Flag whether to send two stop bits. Defaults to
 > <span class="title-ref">False</span>. If
 > <span class="title-ref">None</span>, 1.5 stop bits are used (if
 > supported).
 
-####### parity
+###### parity
 
 \`True\`: odd parity, \`False\`: even parity. The default is
 <span class="title-ref">None</span> for no parity bit.
 
-####### bits
+###### bits
 
 Number of bits. The default is 8. Other values may or may not be
 supported.
 
-####### flow
+###### flow
 
 Hardware flow control: "R" and/or "C" to use RTS / CTS. The default is
 neither.
 
-####### rts_state, dtr_state
+###### rts\_state, dtr\_state
 
 State of RTS and DTR.
 
-####### rts_flip, dtr_flip
+###### rts\_flip, dtr\_flip
 
 Flag whether RTS and/or DTR should be inverted briefly, when opening the
 port.
 
-####### dtr_rts
+###### dtr\_rts
 
 The delay from setting or changing DTR to affecting RTS.
 
@@ -620,28 +620,28 @@ If negative, RTS is changed first.
 
 The default is zero.
 
-####### delay
+###### delay
 
 The initial delay between opening the port and affecting its wires.
 
 The default is zero.
 
-####### delay_flip
+###### delay\_flip
 
 The delay between initially flipping the wires and setting them to their
 final configuration.
 
 The default is 0.2 seconds.
 
-###### link
+##### link
 
 Data framing and link configuration. See below.
 
-#### cfg
+### cfg
 
 Access to the configuration file.
 
-###### r
+#### r
 
 Read part of the configuration.
 
@@ -651,17 +651,17 @@ necessary when building the bytestring for transmitting it.
 
 Thus this method retrieves a config slice.
 
-####### p
+##### p
 
 The path to the data to be retrieved, as a sequence of map keys.
 
 The default is the empty path, i.e. the config root.
 
-####### Result
+##### Result
 
 Same as `eval`.
 
-###### w
+#### w
 
 Update part of the configuration.
 
@@ -669,20 +669,20 @@ This afects only the in-memory config data. The satellite's nonvolatile
 config is stored on its file system an can be accessed using the `fs`
 module.
 
-####### p
+##### p
 
 Path to the destination. It cannot be empty.
 
-####### d
+##### d
 
 Data to be put there. If `NotGiven` (or simply missing, though you
 shouldn't depend on that), data at the destination is deleted.
 
-####### Result
+##### Result
 
 None.
 
-###### x
+#### x
 
 Activates the new configuration.
 
@@ -691,29 +691,29 @@ command may or may not be broken by it. The satellite will try to
 deliver the confirmation before rebooting, but currently it does not
 guarantee that.
 
-#### \_sys
+### \_sys
 
 This app is installed by default. It cannot be configured.
 
-##### Commands
+#### Commands
 
-###### state
+##### state
 
 MoaT devices have a state file in Flash or possibly NVRAM, which
 controls what happens when the system ends, dies with an error, or the
 device is reset due to watchdog or power failure.
 
-####### state
+###### state
 
 A simple string which, if set, replaces the previous state file.
 
-####### Result
+###### Result
 
 A map consisting of `n`: the previous state, `c`: the state when the
 system was started, and `fb`: a flag whether the current state is using
 the fall-back MaoT stack and configuration.
 
-###### test
+##### test
 
 This command builds and returns a test string, consisting of
 `r CR n LF - NUL c ^C e ESC !`. It is used to verify the integrity of
@@ -721,31 +721,31 @@ the communications line towards the server.
 
 Use `ping` to verify consistency in the other direction.
 
-###### eval
+##### eval
 
 Evaluate an object / return its details. This call can be used to
 evaluate a string, or to dig into the data held by a proxy.
 
-####### x
+###### x
 
 The object to access. Strings are evaluated. Anything else (typically a
 proxy) is used as-is.
 
-####### p
+###### p
 
 The path to the data to be retrieved. The first element is an attribute
 of the object; all others are map keys or list indices.
 
 The path is ignored when an object is proxied to the remote side.
 
-####### r
+###### r
 
 If set, returns `repr(result)` instead of the result itself.
 
 The default is <span class="title-ref">False</span> though the caller
 should not depend on that.
 
-####### Result
+###### Result
 
 If the accessed element is a "simple" object, i.e. anything that's not a
 map or a list, it is returned as-is (i.e. as a proxy object if it cannot
@@ -757,7 +757,7 @@ removed members.
 
 The caller is expected to recurse retrieval of the configuration.
 
-###### unproxy
+##### unproxy
 
 Proxy objects represent data that cannot be serialized. They are kept
 around, potentially cluttering memory.
@@ -767,69 +767,69 @@ Unless expressly noted, no other command may return them. Sending a
 proxy to anything other than an `eval` may result in unpredictable
 behavior.
 
-####### p
+###### p
 
 The proxy object to be deallocated.
 
-###### ping
+##### ping
 
-####### m
+###### m
 
 The message to be echoed. Defaults to
 <span class="title-ref">None</span>.
 
-####### Result
+###### Result
 
 A map: `m`, the message sent to it, and `rep`: `repr(m)`.
 
-#### wdt
+### wdt
 
 The watchdog timer, on the controller side.
 
-##### Config
+#### Config
 
-###### hw
+##### hw
 
 Flag whether to use the hardware watchdog timer.
 
-###### t
+##### t
 
 Watchdog timeout in seconds.
 
-###### tt
+##### tt
 
 Timer for periodically triggering the watchdog; defaults to `t/2`.
 
-###### ext
+##### ext
 
 Flag whether a periodic external message is required. Note that the
 timer does start before the first message arrives, thus a too-small
 value of `t` might cause the client to be non-recoverable.
 
-#### wdt.ping
+### wdt.ping
 
 Server component to periodically reassure a remote watchdog.
 
-##### Config
+#### Config
 
-###### p
+##### p
 
 Path to the remote watchdog timer.
 
-###### tt
+##### tt
 
 Timer for periodically sending a keepalive message, in seconds.
 
 Communication errors are ignored.
 
-###### t
+##### t
 
 If set, raises an error if no watchdog reply arrives within this many
 seconds.
 
 ## Additional settings
 
-##### Data transport
+### Data transport
 
 MoaT-micro supports data links that are
 
@@ -865,7 +865,7 @@ Some considerations:
   typically tries to reconnect without losing state, and thus needs loss
   protection.
 
-###### cbor
+#### cbor
 
 A flag. Set this if you want to use CBOR instead of MsgPack. The default
 is <span class="title-ref">False</span>, but that might change.
@@ -874,7 +874,7 @@ If you use CBOR on a link that also carries stdout/stderr from the
 remote system, you definitely need a lead-in or framing. With msgpack
 this is only required if the output can contain UTF-8.
 
-###### console
+#### console
 
 A flag. If set, incoming console data (i.e. outside of a frame) will be
 processed (e.g. printed to stderr). Further details are TODO.
@@ -884,23 +884,23 @@ Otherwise console data are ignored.
 The default is <span class="title-ref">True</span> on serial lines,
 <span class="title-ref">False</span> for network links.
 
-###### lossy
+#### lossy
 
 Loss protection. If this element is missing or
 <span class="title-ref">None</span>, the link is assumed to be lossless.
 
 Otherwise this should be a map with these entries:
 
-####### window
+##### window
 
 The maximum number of messages that have not been acknowledged. The
 default is 8.
 
-####### timeout
+##### timeout
 
 Retransmission timer, in milliseconds. The default is 1000.
 
-####### persist
+##### persist
 
 Mark the link as persistent: a link error will cause reconnecton
 attempts.
@@ -911,22 +911,22 @@ permanent.
 
 Loss protection
 
-###### frame
+#### frame
 
 SerialPacker configuration. If this element is missing or
 <span class="title-ref">None</span>, no framing is performed.
 
 Otherwise it should be a map with these entries:
 
-####### idle
+##### idle
 
 Inter-packet timeout im milliseconds. Default: 100.
 
-####### max
+##### max
 
 Max packet length. The default is 127.
 
-####### frame
+##### frame
 
 Frame start byte. The default is `0x85`.
 <span class="title-ref">None</span> relies on inter-frame timing and
@@ -936,7 +936,7 @@ This byte should not occur in standard console output. The frame
 receiver understands UTF-8 sequences, thus the ranges `0x00…0x1F`, and
 `0x80…0xBF` are safe to use.
 
-####### mark
+##### mark
 
 Every byte that's part of a frame *must* be prefixed with a `mark` byte.
 Other bytes are transmitted as-is. There is no provision for escaping
@@ -946,7 +946,7 @@ will not occur in normal console output.
 This doubles the number of bytes transmitted. Don't use unless you need
 to do really-low-level debugging.
 
-###### Frame mark
+#### Frame mark
 
 Alternately, `frame` can be an integer between `0x00` and `0xFF`. In
 this case, SerialPacker is not used; instead, the integer is used as the

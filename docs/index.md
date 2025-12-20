@@ -23,28 +23,28 @@ monorepo
 
 ## Parts included
 
-### The Link
+### [The Link](moat-link/index.md)
 
 ```{include} ../packaging/moat-link/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Server
+#### [Server](moat-link-server/index.md)
 
 ```{include} ../packaging/moat-link-server/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### The RPC Library
+### [The RPC Library](moat-lib-cmd/index.md)
 
 ```{include} ../packaging/moat-lib-cmd/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### MicroPython Support
+### [MicroPython Support](moat-micro/index.md)
 
 ```{include} ../packaging/moat-micro/README.md
 :start-after: % start synopsis
@@ -67,7 +67,7 @@ See `moat.util.config`.
 :end-before: % end synopsis
 ```
 
-### Modbus
+### [Modbus](moat-modbus/index.md)
 
 ```{include} ../packaging/moat-modbus/README.md
 :start-after: % start synopsis
@@ -77,35 +77,35 @@ See `moat.util.config`.
 ### More Parts
 
 
-#### Codec support buffer
+#### [Codec support buffer](moat-lib-codec/index.md)
 
 ```{include} ../packaging/moat-lib-codec/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### GPIO
+#### [GPIO](moat-lib-ring/index.md)
 
 ```{include} ../packaging/moat-lib-ring/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Priority Map
+#### [Priority Map](moat-lib-priomap/index.md)
 
 ```{include} ../packaging/moat-lib-priomap/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Ring buffer
+#### [Ring buffer](moat-lib-ring/index.md)
 
 ```{include} ../packaging/moat-lib-ring/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### MQTT
+#### [MQTT](moat-modbus/index.md)
 
 ```{include} ../packaging/moat-modbus/README.md
 :start-after: % start synopsis
@@ -115,7 +115,7 @@ See `moat.util.config`.
 ### Database
 
 
-#### Things
+#### [Things](moat-db-thing/index.md)
 
 ```{include} ../packaging/moat-db-thing/README.md
 :start-after: % start synopsis
@@ -132,70 +132,70 @@ See `moat.util.config`.
 See `moat.kv.inv`. Redesigning to be part of the MoaT database of
 things is TODO.
 
-#### Labels
+#### [Labels](moat-db-label/index.md)
 
 ```{include} ../packaging/moat-db-label/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Boxes
+#### [Boxes](moat-db-box/index.md)
 
 ```{include} ../packaging/moat-db-box/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### Energy Management
+### [Energy Management](moat-ems/index.md)
 
 ```{include} ../packaging/moat-ems/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Battery control
+#### [Battery control](moat-ems-battery/index.md)
 
 ```{include} ../packaging/moat-ems-battery/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Inverter control
+#### [Inverter control](moat-ems-inv/index.md)
 
 ```{include} ../packaging/moat-ems-inv/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Scheduling
+#### [Scheduling](moat-ems-sched/index.md)
 
 ```{include} ../packaging/moat-ems-sched/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### Modbus Devices
+### [Modbus Devices](moat-dev/index.md)
 
 ```{include} ../packaging/moat-dev/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### SEW inverters
+#### [SEW inverters](moat-dev-sew/index.md)
 
 ```{include} ../packaging/moat-dev-sew/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Heating
+#### [Heating](moat-dev-heat/index.md)
 
 ```{include} ../packaging/moat-dev-heat/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### The Data Bus
+### [The Data Bus](moat-bus/index.md)
 
 ```{include} ../packaging/moat-bus/README.md
 :start-after: % start synopsis
@@ -206,63 +206,63 @@ things is TODO.
 ### Legacy
 
 
-#### Key-Value Storage
+#### [Key-Value Storage](moat-kv/index.md)
 
 ```{include} ../packaging/moat-kv/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Akumuli (time-based storage) backend
+#### [Akumuli (time-based storage) backend](moat-kv-akumuli/index.md)
 
 ```{include} ../packaging/moat-kv-akumuli/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Calendar access
+#### [Calendar access](moat-kv-cal/index.md)
 
 ```{include} ../packaging/moat-kv-cal/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### GPIO
+#### [GPIO](moat-kv-gpio/index.md)
 
 ```{include} ../packaging/moat-kv-gpio/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Home Assistant
+#### [Home Assistant](moat-kv-ha/index.md)
 
 ```{include} ../packaging/moat-kv-ha/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Inventory
+#### [Inventory](moat-kv-inv/index.md)
 
 ```{include} ../packaging/moat-kv-inv/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### KNX
+#### [KNX](moat-kv-knx/index.md)
 
 ```{include} ../packaging/moat-kv-knx/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### 1Wire
+#### [1Wire](moat-kv-ow/index.md)
 
 ```{include} ../packaging/moat-kv-ow/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### Wago
+#### [Wago](moat-kv-wago/index.md)
 
 ```{include} ../packaging/moat-kv-wago/README.md
 :start-after: % start synopsis

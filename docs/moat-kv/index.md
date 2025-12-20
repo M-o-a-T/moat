@@ -10,6 +10,7 @@
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 overview
 tutorial
@@ -29,5 +30,13 @@ related
 v3
 history
 TODO
+../moat-kv-akumuli/index
+../moat-kv-cal/index
+../moat-kv-gpio/index
+../moat-kv-ha/index
+../moat-kv-inv/index
+../moat-kv-knx/index
+../moat-kv-ow/index
+../moat-kv-wago/index
 api
 ```

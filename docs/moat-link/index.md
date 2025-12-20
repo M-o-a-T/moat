@@ -12,7 +12,10 @@ TODO
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 tracking
+../moat-link-server/index
+../moat-link-web/index
 api
 ```

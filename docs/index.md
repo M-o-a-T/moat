@@ -430,3 +430,23 @@ We like YAML, much for the same reasons.
 
 There is no TOML or JSON in the MoaT codebase, other than `pyproject.toml`
 of course.
+
+```{toctree}
+:maxdepth: 2
+:hidden:
+
+moat-link/index
+moat-lib
+moat-micro/index
+moat/index
+moat-modbus/index
+moat-db/index
+moat-ems/index
+moat-dev/index
+moat-bus/index
+moat-kv/index
+moat-util/index
+moat-src/index
+moat-cad/index
+common/index
+```

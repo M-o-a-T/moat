@@ -12,6 +12,8 @@ TODO
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
+../moat-modbus-dev-_data/index
 api
 ```

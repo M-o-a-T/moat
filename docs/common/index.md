@@ -5,6 +5,7 @@ This section contains general information about the MoaT project, including comm
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 CONDUCT
 HACKING

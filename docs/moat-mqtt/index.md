@@ -10,6 +10,7 @@
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 quickstart
 changelog

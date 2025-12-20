@@ -12,6 +12,10 @@ TODO
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
+../moat-db-thing/index
+../moat-db-label/index
+../moat-db-box/index
 api
 ```

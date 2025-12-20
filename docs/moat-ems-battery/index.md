@@ -12,6 +12,7 @@ TODO
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 Testing
 api

@@ -18,8 +18,8 @@ TODO:
 
 from __future__ import annotations
 
-from .pid import CPID as CPID
-from .pid import PID as PID
-from .pid import PID_TC as PID_TC
+from ._impl import CPID as CPID
+from ._impl import PID as PID
+from ._impl import PID_TC as PID_TC
 
 __all__ = ["CPID", "PID"]

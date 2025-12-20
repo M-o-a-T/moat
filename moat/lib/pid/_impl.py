@@ -1,4 +1,3 @@
-# noqa:D100
 #
 # Created on Wed Jun 22 20:06:38 2022
 #

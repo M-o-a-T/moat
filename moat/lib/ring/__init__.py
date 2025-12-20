@@ -1,4 +1,4 @@
 # noqa:D104
 from __future__ import annotations
 
-from .ring import RingBuffer as RingBuffer
+from ._impl import RingBuffer as RingBuffer

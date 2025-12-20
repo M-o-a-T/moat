@@ -140,10 +140,11 @@ rst_prolog = """
 default_role = "python"
 
 favicons = [
-    {"href": "_static/MoaT.svg"},  # => use `_static/icon.svg`
-    {"href": "_static/MoaT.16.png"},
-    {"href": "_static/MoaT.32.png"},
-    {"href": "_static/MoaT.128.png"},
+    {"href": "MoaT-gears.svg"},  # => use `_static/icon.svg`
+    {"href": "MoaT.16.png"},
+    {"href": "MoaT.32.png"},
+    {"href": "MoaT.64.png"},
+    {"href": "MoaT.128.png"},
     {
         "rel": "apple-touch-icon",
         "href": "MoaT.180.png",
@@ -448,10 +449,16 @@ def monkey_patch_parse_see_also():
 
 def gen_icons():
     src = docs_dir / "_static" / "MoaT.svg"
-    for sz in (16, 32, 128, 160, 180, 256):
+    for sz in (128, 160, 180, 256):
         dest = docs_dir / "_static" / f"MoaT.{sz}.png"
         if not dest.exists():
             subprocess.check_call(["inkscape", "-o", str(dest), "-w", str(sz), str(src)])
+
+    src_ng = docs_dir / "_static" / "MoaT-gears.svg"
+    for sz in (16, 32, 64):
+        dest = docs_dir / "_static" / f"MoaT.{sz}.png"
+        if not dest.exists():
+            subprocess.check_call(["inkscape", "-o", str(dest), "-w", str(sz), str(src_ng)])
 
 
 def setup(app):

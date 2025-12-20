@@ -5,6 +5,7 @@
 /*.buildinfo
 /*.changes
 
+/*/examples/
 /*/src/moat/
 /*/src/moat*.egg-info
 /*/LICENSE.txt

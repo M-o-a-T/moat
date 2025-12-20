@@ -146,6 +146,11 @@ class Package(_Common):
         if not licd.exists():
             copyfile("LICENSE.txt", licd)
 
+        exa = Path("examples") / self.dash
+        if exa.is_dir():
+            pe = Path("packaging") / self.dash / "examples"
+            copytree(exa, pe)
+
     def has_changes(self, main: bool | None = None) -> bool:
         """
         Test whether the given subsystem changed

@@ -213,7 +213,7 @@ class HandlerStream(MsgHandler):
                 self._read_task.cancel()
                 await self.reader_done.wait()
 
-            tg.cancel_scope.cancel()
+            tg.cancel()
 
         for link in list(self._msgs.values()):
             await link.kill()

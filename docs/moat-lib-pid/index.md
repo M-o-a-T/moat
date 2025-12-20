@@ -12,8 +12,11 @@ TODO
 % insert toctree here
 
 
-# API documentation
+# API
 
-TODO
+```{eval-rst}
+.. autoclass:: moat.lib.pid.PID
+.. autoclass:: moat.lib.pid.CPID
+```
 
 % insert API here

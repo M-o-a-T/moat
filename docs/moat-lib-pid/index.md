@@ -1,3 +1,4 @@
+(moat-lib-pid)=
 # The PID Library
 
 ```{include} ../../packaging/moat-lib-pid/README.md
@@ -18,5 +19,3 @@ TODO
 .. autoclass:: moat.lib.pid.PID
 .. autoclass:: moat.lib.pid.CPID
 ```
-
-% insert API here

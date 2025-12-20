@@ -67,7 +67,7 @@ monorepo
 
 See `moat.util.config`.
 
-### Command Line
+### [Command Line](moat/index.md)
 
 ```{include} ../packaging/moat/README.md
 :start-after: % start synopsis

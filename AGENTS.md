@@ -53,10 +53,13 @@
 ## Commit & Pull Requests
 - One commit per logical change.
 - Mention the affected module only if a change also affects other modules.
-- Every commit should test cleanly. It's OK to only run tests for the
-  module(s) you're committing code for.
-- Include documentation updates with the main commit.
+- Every commit should test cleanly. pre-commit runs module-specific tests.
+  Manually test other modules before committing if they might be affected.
+- Include documentation updates with the main commit, i.e. don't commit docs
+  separately.
+- Don't include agent information in the commit.
 
 ## Agent‑Specific Notes
 - Follow these guidelines for any code changes in this repo tree.
-- Do not introduce unrelated tooling or broad refactors in a single PR.
+- Do not introduce unrelated tooling or broad refactors unless specifically
+  asked to do so.

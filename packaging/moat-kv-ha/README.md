@@ -2,7 +2,13 @@
 
 % start synopsis
 
-This is a link between Home Assistant and Moat-KV.
+This module is a link between Home Assistant and Moat-KV.
+
+The core of this module is concerned with assembling appropriate
+configuration for MQTT.
+
+Message transport and translation is performed by a [MoaT-Link
+Gate](moat-link-gate-top) instance.
 
 % end synopsis
 

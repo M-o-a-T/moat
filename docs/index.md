@@ -44,13 +44,6 @@ monorepo
 :end-before: % end synopsis
 ```
 
-### [The RPC Library](moat-lib-cmd/index.md)
-
-```{include} ../packaging/moat-lib-cmd/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
 ### [MicroPython Support](moat-micro/index.md)
 
 ```{include} ../packaging/moat-micro/README.md
@@ -261,6 +254,13 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
+:::{note}
+MoaT uses CBOR. MoaT-KV uses Msgpack. Home Assistant and much of the
+rest of the MQTT universe insist on strings like `ON` or `off`, or JSON.
+
+We'd rather not do that.
+:::
+
 #### [Inventory](moat-kv-inv/index.md)
 
 ```{include} ../packaging/moat-kv-inv/README.md
@@ -310,58 +310,6 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
-### Legacy code
-
-(moat-top-kv)=
-#### MoaT-KV: key-value storage
-
-[MoaT-KV]<moat-kv-top>` attempted to work around the limitations of the
-:term:`CAP theorem` by noting that in most installations there's only one
-side modifying any particular data item. Thus it attached an internal
-message history to each node, and multiple server merged their changes
-whenever they reconnected after a network break.
-
-{.glossary}
-CAP theorem
-: The CAP (or Brewer's) theorem states that you can get at most two of
-  (global) Consistency, Availability, and Partition tolerance.
-
-MoaT-KV is in the process of getting replaced by MoaT-Link. The reasons
-for the switch are detailed :ref:`here<moat_kv_why_not>`.
-
-
-(moat-top-lib-kv-knx)=
-##### knx
-
-(moat-top-lib-kv-ow)=
-##### 1wire
-
-(moat-top-lib-kv-gpio)=
-##### GPIO
-
-(moat-top-lib-kv-akumuli)=
-##### akumuli
-
-(moat-top-lib-kv-cal)=
-##### cal
-
-(moat-top-lib-kv-ha)=
-##### Home Assistant
-
-MoaT interfaces with Home Assistant, using MQTT.
-
-The KV part is concerned with assembling appropriate configuration.
-Message translation is performed by a [MoaT-Link-Gate](link-gate-top)
-instance.
-
-:::{note}
-We use CBOR. MoaT-KV used (or uses) Msgpack. Home Assistant and much of the
-rest of the MQTT universe insist on strings like `ON` or `off`, or JSON.
-
-We'd rather not do that.
-:::
-
-##### wago
 
 ### Libraries
 

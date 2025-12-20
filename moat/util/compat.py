@@ -5,6 +5,8 @@ well as MicroPython/uasyncio.
 Well, for the most part.
 """
 
+# ruff:noqa:F401
+
 from __future__ import annotations
 
 import anyio as _anyio
@@ -24,6 +26,7 @@ from moat.util.merge import merge
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
 
+from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

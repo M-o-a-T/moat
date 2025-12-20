@@ -22,6 +22,11 @@ from rtc import set_rtc
 if TYPE_CHECKING:
     from typing import Never
 
+Iterable = object  # TODO
+Mapping = dict
+MutableSequence = list
+MutableMapping = dict
+
 
 def _l():
     import os  # noqa: PLC0415

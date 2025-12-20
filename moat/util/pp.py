@@ -4,6 +4,8 @@ This module contains list-to-kw mangling helpers.
 
 from __future__ import annotations
 
+from moat.util.compat import Mapping
+
 __all__ = ["pop_kw", "push_kw"]
 
 
@@ -28,7 +30,6 @@ def pop_kw(ak: list) -> dict:
     This modifies the list and returns the trailing dict, if any.
     Otherwise an empty dict is returned.
     """
-    if ak and isinstance(ak[-1], dict):
-        kw = ak.pop()
-        return kw
+    if ak and isinstance(ak[-1], Mapping):
+        return ak.pop()
     return {}

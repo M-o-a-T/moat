@@ -224,6 +224,67 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 no.pypi = True
 
 
+async def do_build_pypi(repos, debug):
+    "build for pypi"
+    err = set()
+    up = set()
+    for r in repos:
+        rd = PACK / r.dash
+        p = rd / "pyproject.toml"
+        if not p.is_file():
+            continue
+        tag = r.last_tag
+        if r.vers.get("pypi", "-") == r.last_tag:
+            continue
+
+        targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
+        done = rd / "dist" / f"{r.under}-{tag}.done"
+
+        if done.exists():
+            pass
+        elif targz.is_file():
+            up.add(r)
+        else:
+            try:
+                await run_("python3", "-mbuild", "-snw", cwd=rd, echo=debug)
+            except subprocess.CalledProcessError:
+                err.add(r.name)
+            else:
+                up.add(r)
+    return up, err
+
+
+async def do_upload_pypi(up, debug):
+    "send packages to pypi"
+    err = set()
+    for r in up:
+        rd = PACK / r.dash
+        p = rd / "pyproject.toml"
+        if not p.is_file():
+            continue
+        tag = r.last_tag
+        if r.vers.get("pypi", "-") == tag:
+            continue
+        targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
+        whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
+        try:
+            await run_(
+                "twine",
+                "upload",
+                str(targz),
+                str(whl),
+                cwd=rd,
+                echo=debug,
+            )
+        except subprocess.CalledProcessError:
+            err.add(r.name)
+        else:
+            done = rd / "dist" / f"{r.under}-{tag}.done"
+            done.touch()
+            r.vers.pypi = tag
+    return err
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -409,32 +470,8 @@ async def cli(
 
     # Step 5: build PyPI package
     if not no.pypi:
-        err = set()
-        up = set()
-        for r in repos:
-            rd = PACK / r.dash
-            p = rd / "pyproject.toml"
-            if not p.is_file():
-                continue
-            tag = r.last_tag
-            name = r.dash
-            if r.vers.get("pypi", "-") == r.last_tag:
-                continue
+        up, err = await do_build_pypi(repos, obj.debug > 1)
 
-            targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
-            done = rd / "dist" / f"{r.under}-{tag}.done"
-
-            if done.exists():
-                pass
-            elif targz.is_file():
-                up.add(r)
-            else:
-                try:
-                    await run_("python3", "-mbuild", "-snw", cwd=rd, echo=obj.debug > 1)
-                except subprocess.CalledProcessError:
-                    err.add(r.name)
-                else:
-                    up.add(r)
         if err:
             if no.run:
                 print("*** Build errors:", file=sys.stderr)
@@ -448,33 +485,7 @@ async def cli(
 
         # Step 6: upload PyPI package
         elif not no.run:
-            err = set()
-            for r in up:
-                rd = PACK / r.dash
-                p = rd / "pyproject.toml"
-                if not p.is_file():
-                    continue
-                tag = r.last_tag
-                if r.vers.get("pypi", "-") == tag:
-                    continue
-                name = r.dash
-                targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
-                whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
-                try:
-                    await run_(
-                        "twine",
-                        "upload",
-                        str(targz),
-                        str(whl),
-                        cwd=rd,
-                        echo=obj.debug > 1,
-                    )
-                except subprocess.CalledProcessError:
-                    err.add(r.name)
-                else:
-                    done = rd / "dist" / f"{r.under}-{tag}.done"
-                    done.touch()
-                    r.vers.pypi = tag
+            err = await do_upload_pypi(up, obj.debug > 1)
             if err:
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)

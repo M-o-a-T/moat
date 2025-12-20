@@ -156,9 +156,9 @@ html_logo = "_static/MoaT.svg"
 
 # theme options
 html_theme_options = {
-    "icon": {
-        "repo": "fontawesome/brands/github",
-    },
+#   "icon": {
+#       "repo": "fontawesome/brands/github",
+#   },
     "globaltoc_collapse": False,
 }
 

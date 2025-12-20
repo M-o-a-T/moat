@@ -103,6 +103,42 @@ async def do_runtest(repos, pytest_opts):
     return fails
 
 
+def do_versions(repo, repos, tags, no_version):
+    "set versions"
+    for r in repos:
+        rd = PACK / r.dash
+        p = rd / "pyproject.toml"
+        skip = rd / "SKIP.build"
+
+        if skip.is_file():
+            # bad=True
+            print("Skip:", r.name, file=sys.stderr)
+            continue
+
+        if p.is_file():
+            with p.open("r") as f:
+                pr = tomlkit.load(f)
+                pr["project"]["version"] = r.last_tag
+
+            if not no_version:
+                try:
+                    deps = pr["project"]["dependencies"]
+                except KeyError:
+                    pass
+                else:
+                    fix_deps(deps, tags)
+                try:
+                    deps = pr["project"]["optional_dependencies"]
+                except KeyError:
+                    pass
+                else:
+                    for v in deps.values():
+                        fix_deps(v, tags)
+            p.write_text(pr.as_string())
+
+            repo.index.add(p)
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -264,38 +300,7 @@ async def cli(
                 raise SystemExit(1)
 
     # Step 3: set version and fix versioned dependencies
-    for r in repos:
-        rd = PACK / r.dash
-        p = rd / "pyproject.toml"
-        skip = rd / "SKIP.build"
-
-        if skip.is_file():
-            # bad=True
-            print("Skip:", r.name, file=sys.stderr)
-            continue
-
-        if p.is_file():
-            with p.open("r") as f:
-                pr = tomlkit.load(f)
-                pr["project"]["version"] = r.last_tag
-
-            if not no_version:
-                try:
-                    deps = pr["project"]["dependencies"]
-                except KeyError:
-                    pass
-                else:
-                    fix_deps(deps, tags)
-                try:
-                    deps = pr["project"]["optional_dependencies"]
-                except KeyError:
-                    pass
-                else:
-                    for v in deps.values():
-                        fix_deps(v, tags)
-            p.write_text(pr.as_string())
-
-            repo.index.add(p)
+    do_versions(repo, repos, tags, no_version)
 
     # Step 3: copy to packaging dir
     for r in repos:

@@ -3,7 +3,7 @@
 ## Project Structure & Modules
 - This is a monorepository. All code lives in `moat/`.
   - Code is CPython 12+ compatible
-    - exception: `moat/micro/embed` runs on MicroPython 1.25+
+    - exception: code in `moat/micro/_embed` runs on MicroPython 1.25+
   - Each Python module named `moat.XXX.YYY` has
     - `docs/moat-X-Y` for documentation
     - `packaging/moat-X-Y` for `pyproject.toml` and Debian packaging
@@ -12,7 +12,14 @@
   - We use semantic versioning for submodules.
     - Run `./mt src tag -s moat.X.Y -m` to request a new minor version; use
       `-M` for new major versions.
-- Build output should be created in, or moved to, `dist/`.
+    - Patch versions are allocated automatically when building.
+  - Some code in `moat.lib` is shared between CPython and MicroPython
+    areas, via symlinks.
+    - Shared code must use `moat.util.compat` to mask implementation
+      differences between them.
+    - Assume that any code that imports `moat.util.compat` does run on
+      both.
+- Build output should be created in, or moved to, the `dist/` folder.
 
 ## Build and Test
 - pre-commit enforces formatting and typechecking.
@@ -20,26 +27,28 @@
 
 ## Coding Style
 - Standard Python, 4-space indents, formatted by `ruff format`.
-- `ruff check` clean. See `pyproject.toml` for exceptions.
+- `ruff check` clean. See `pyproject.toml` for global exceptions.
 - Keep functions reasonably small. Do not repeat yourself.
 - Follow existing practice when naming. Be concise.
-- This is a legacy codebase. The following guidelines are aspirational:
+- In legacy code, these guidelines are aspirational:
   - All code should be pyright clean.
   - Functions and variables shall be typed concisely.
 
 ## Documentation
 - Every module, class, public variable and function must be documented.
-- All documentation is written using Markdown (Myst).
-  Do not use RestructuredText syntax.
-- We use Google-style docstrings. Types are specified in the function
-  declaration, not in the docstring.
+- Docstrings are written in RestructuredText, with Google-style docstrings.
+- Types are specified in the function declaration, not in the docstring.
   - Legacy code might use something wildly different. Don't copy legacy
-    styles! Always use / convert to Google style and Myst references for
-    new or updated code, or when instructed to fix documentation.
+    styles! Always use / convert to Google style and proper object
+    references for new or updated code, or when instructed to fix
+    documentation.
+- All other documentation is written using Markdown (Myst).
+  Only use RestructuredText syntax or blocks when Myst doesn't support a
+  feature.
 
 ## Testing Guidelines
-- Tests should focus on exercising a module's API
-- don't repeat similar tests or assertions
+- Tests should focus on exercising a module's API.
+- Don't repeat similar tests or assertions.
 
 ## Commit & Pull Requests
 - One commit per logical change.

@@ -26,6 +26,7 @@ cbor-readonly
 mpy-diff
 testing
 hacking
+notes
 TODO
 api
 ```

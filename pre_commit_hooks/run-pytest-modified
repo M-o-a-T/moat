@@ -111,8 +111,8 @@ def main(filenames: list[str]) -> int:
         result = subprocess.run(  # noqa:S603
             [  # noqa:S607
                 "pytest",
-                "-xv",
-                "--cov=moat",
+                "-x",
+                "--cov=",
                 "--cov-report=term",
                 str(test_dir),
             ],

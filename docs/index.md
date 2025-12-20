@@ -10,7 +10,7 @@ tossed stuff they wanted to get rid of or no longer think about, and which
 needed to be dredged periodically. This codebase admittedly
 
 We'll ignore a moat's secondary function of keeping unwanted people out
-of the castle, except to request to please adhere to our [Code of Conduct](common/conduct.html).
+of the castle, except to request to please adhere to our [Code of Conduct](common/CONDUCT.html).
 
 {.glossary}
 monorepo
@@ -431,7 +431,7 @@ cancellation would be nice to have too" question.
 {#moat-top-util}
 #### [Utilities](moat-util/index.md)
 
-[moat-util](moat-util-top) is a collection of code that makes life easier.
+[moat-util](moat-util) is a collection of code that makes life easier.
 Or at least typing. :class:`attrdict` in particular is a dangerous but
 much-too-useful thing that allows for typing one dot instead of the ``["…"]``
 combination. It also contains a wrapper for multi-level command-line-based

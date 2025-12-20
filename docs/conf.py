@@ -56,9 +56,10 @@ author = "Matthias Urlichs"
 # extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
 extensions = [
-    "autodoc2",
+    # "autodoc2",
+    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    #   "sphinx.ext.mathjax",
+    # "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx_last_updated_by_git",
     "myst_parser",
@@ -176,11 +177,10 @@ intersphinx_mapping = {
 autodoc2_packages = [
         "../moat",
 ]
-autodoc2_render_plugin = "myst"
+autodoc2_render_plugin = "rst"
 autodoc2_output_dir = "api"
 autodoc2_docstring_parser_regexes = [
-    # this will render all docstrings as Markdown
-    (r".*", "myst"),
+    (r".*", "rst"),
 ]
 autodoc2_skip_module_regexes = [
     r".*\.OFF\..*",
@@ -203,13 +203,9 @@ autodoc_typehints_description_target = "documented"
 autodoc_typehints_format = "short"
 
 autodoc_type_aliases = {
-    "ElementLike": "~typing.ElementLike",
-    "IterableLike": "~typing.IterableLike",
-    "ArrayLike": "~typing.ArrayLike",
-    "ShapeLike": "~typing.ShapeLike",
-    "DTypeLike": "~typing.DTypeLike",
-    "PolyLike": "~typing.PolyLike",
 }
+autoclass_content = 'both'
+
 
 # -- Sphinx Immaterial configs -------------------------------------------------
 

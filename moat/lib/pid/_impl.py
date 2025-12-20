@@ -38,14 +38,6 @@ except ImportError:
 class PID:
     """
     An advanced PID controller with first-order filter on derivative term.
-
-    Attributes:
-        t: current time
-        e: current differential error
-        i: current integral sum
-
-        lower: Lower limit of the output
-        upper: Upper limit of the output
     """
 
     t: float | None = None
@@ -69,14 +61,20 @@ class PID:
         t: float | None = None,
     ):
         """
-        Setup.
-
         Args:
             Kp: proportional term
             Ki: integral term.
             Kd: derivative term.
             Tf: Time constant for first-order filter on the derivative
             t: current / initial time
+
+        Attributes:
+            t: current time
+            e: current differential error
+            i: current integral sum
+
+            lower: Lower limit of the output
+            upper: Upper limit of the output
         """
         self.set_gains(Kp, Ki, Kd, Tf)
         self.set_output_limits()
@@ -289,8 +287,9 @@ class CPID(PID):
 
     def __init__(self, cfg: attrdict, state: attrdict | None = None, t: float | None = None):
         """
-        @cfg: our configuration. See above.
-        @state: the state storage. Ours is at ``state[cfg.state]``.
+        Args:
+            cfg: our configuration. See above.
+            state: the state storage. Typically an `attrdict`.
         """
         super().__init__(cfg["p"], cfg["i"], cfg["d"], cfg["tf"])
         self.cfg = cfg

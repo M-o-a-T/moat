@@ -16,7 +16,3 @@ TODO
 cmdline
 api
 ```
-
-# API
-
-See [](api.rst).

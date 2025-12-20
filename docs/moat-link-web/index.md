@@ -15,7 +15,3 @@ TODO
 
 api
 ```
-
-# API
-
-See [](api.rst).

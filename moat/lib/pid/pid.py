@@ -37,32 +37,29 @@ except ImportError:
 
 
 class PID:
-    """An advanced PID controller with first-order filter on derivative term.
+    """
+    An advanced PID controller with first-order filter on derivative term.
 
-    Parameters
-    ----------
-    Kp: float
-        Proportional gain.
-    Ki: float
-        Integral time constant.
-    Kd: float
-        Derivative time constant.
-    Tf: float
-        Time constant of the first-order derivative filter.
+    Attributes:
+        t: current time
+        e: current differential error
+        i: current integral sum
 
+        lower: Lower limit of the output
+        upper: Upper limit of the output
     """
 
-    t: float | None = None  # current time
-    e: float | None = None  # current error
-    i: float = 0  # current integral
+    t: float | None = None
+    e: float | None = None
+    i: float = 0
 
-    Kp: float  # proportional gain
-    Ki: float | None  # integral gain
-    Kd: float | None  # differential gain
-    Tf: float | None  # time constant for derivative filter
+    Kp: float
+    Ki: float | None
+    Kd: float | None
+    Tf: float | None
 
-    lower: float  # lower output limit
-    upper: float  # upper output limit
+    lower: float
+    upper: float
 
     def __init__(
         self,
@@ -73,14 +70,30 @@ class PID:
         t: float | None = None,
     ):
         """
-        Setup. Legacy call, using gain constants, not times, for the i and d terms.
+        Setup.
+
+        Args:
+            Kp: proportional term
+            Ki: integral term.
+            Kd: derivative term.
+            Tf: Time constant for first-order filter on the derivative
+            t: current / initial time
         """
         self.set_gains(Kp, Ki, Kd, Tf)
         self.set_output_limits()
         self.reset(t)
 
-    def reset(self, t: float | None = None):  # noqa: D102
-        self.set_state(t, None, None)
+    def reset(self, t: float | None = None, clear: bool = False) -> None:
+        """
+        Reset the controller.
+
+        Args:
+            t:
+                current time (if known)
+            clear:
+                if set, clear internal state so that `self(0) == 0`
+        """
+        self.set_state(t, 0 if clear else None, 0 if clear else None)
         if t is None:
             self.t = None
 
@@ -98,7 +111,11 @@ class PID:
         return self.sum(self.integrate(e, t))
 
     def sum(self, args: Sequence[float]) -> float:
-        "Sum the values and apply limit"
+        """
+        Sum the input values and limit the result to the interval between `min`…`max`.
+
+        `self(signal)` ≍ `self.sum(*self.integrate(signal))`
+        """
         return min(max(sum(args), self.lower), self.upper)
 
     def get_gains(self) -> tuple[float, float | None, float | None, float | None]:
@@ -202,6 +219,7 @@ class PID:
         Returns:
             p,i,d: Control signal (in parts), *not* limited.
 
+        This method performs anti-windup protection on the controller's integral term.
         """
         t0, e0, i0 = self.get_state()
         if t is None:
@@ -248,13 +266,15 @@ class PID:
 
 class CPID(PID):
     """
-    A PID that's configured::
+    A PID that's configured with a config dictionary.
+
+    ::
 
         flow:
             p: 0.1
             i: 0.01
             d: 0.0
-            tf: 0.0  # both must be set
+            tf: 0.0  # both d ant tf must be set
 
             # output limits
             min: .3
@@ -304,7 +324,15 @@ class CPID(PID):
 
     def move_to(self, i: float, o: float, t=None):
         """
-        Tell the controller that this input shall result in that output.
+        Tell the controller that this input shall result in that output,
+        by mangling its internal state as required.
+
+        This method only works with a valid setpoint. It can be used to
+        bumpless-ly hand control from one PID to another.
+
+        Args:
+            i: current process state
+            o: desired controller state
         """
         if t is None:
             t = time()

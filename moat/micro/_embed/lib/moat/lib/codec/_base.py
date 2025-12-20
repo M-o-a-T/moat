@@ -20,18 +20,26 @@ class IncompleteData(ValueError):
 
 class Codec:
     """
-    Base class for en/decoding.
+    This is an abstract base class. It supports block and
+    incremental decoders.
 
-    Override encode+decode for basic codecs.
+    To support block decoding, override the decode method.
 
-    Incremental codecs which return objects need to support interleaved operation.
+    Incremental codecs need to support interleaved operation. This means
+    that the decoder must support two modes.
 
-    In practice this means that `feed` must not start decoding and
-    `__next__` must return the first object and leave the rest of the input
-    buffer.
+    The initial mode is to append all data passed in via `feed` to an
+    internal buffer. If necessary, the application then uses `unfeed` to
+    read data off the start of the buffer until a packet header is
+    detected.
 
-    Also, `unfeed` must return bytes from the start of the buffer.
+    After the header is consumed, the application must repeat calling
+    `__anext__` until an object is returned. (If the decoder
+    raises `StopAsyncIteration`, feed more data to it and repeat.)
 
+    The decoder must leave all incoming data extending past the object in
+    its buffer. It must not attempt to decode them until the next call to
+    `__anext__`.
     """
 
     def __init__(self, ext=None):
@@ -62,9 +70,6 @@ class Codec:
     def feed(self, data: ByteType) -> None:
         """
         Add to the codec's buffer.
-
-        If @final is set, there must be no residual data left after one
-        iteration.
 
         This method buffers input data (unless they belong to an
         object-in-progress). If there is no such object, this method must

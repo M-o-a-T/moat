@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+from anyio import Path
 
 import asyncclick as click
 import git
@@ -52,7 +52,7 @@ async def run_tests(pkg: str | None, *opts) -> bool:
     else:
         tests = Path("tests") / pkg
 
-    if not Path(tests).exists():
+    if not await tests.exists():
         # No tests. Assume it's OK.
         print("No tests:", pkg)
         return True
@@ -106,22 +106,22 @@ async def do_runtest(repos, pytest_opts):
     return fails
 
 
-def do_versions(repo, repos, tags, no):
+async def do_versions(repo, repos, tags, no):
     "set versions"
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
         skip = rd / "SKIP.build"
 
-        if skip.is_file():
+        if await skip.is_file():
             # bad=True
             print("Skip:", r.name, file=sys.stderr)
             continue
 
-        if p.is_file():
-            with p.open("r") as f:
-                pr = tomlkit.load(f)
-                pr["project"]["version"] = r.last_tag
+        if await p.is_file():
+            content = await p.read_text()
+            pr = tomlkit.loads(content)
+            pr["project"]["version"] = r.last_tag
 
             if not no.version:
                 try:
@@ -137,9 +137,9 @@ def do_versions(repo, repos, tags, no):
                 else:
                     for v in deps.values():
                         fix_deps(v, tags)
-            p.write_text(pr.as_string())
+            await p.write_text(pr.as_string())
 
-            repo.index.add(p)
+            repo.index.add(str(p))
 
 
 def do_copy_repos(repos):
@@ -150,7 +150,7 @@ def do_copy_repos(repos):
 
 async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
     "Build Debian packages"
-    DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
+    await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
         ltag = r.last_tag
@@ -158,9 +158,9 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
             continue
         rd = PACK / r.dash
         p = rd / "debian"
-        if not p.is_dir():
+        if not await p.is_dir():
             continue
-        if not (rd / "debian" / "changelog").exists():
+        if not await (rd / "debian" / "changelog").exists():
             await run_(
                 "debchange",
                 "--create",
@@ -216,13 +216,13 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
             if (
                 debversion.get(r.srcname, "") != ltag
                 or r.vers.pkg != ptag
-                or not (no.test_chg or changes.exists())
+                or not (no.test_chg or await changes.exists())
             ):
                 await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug > 1)
                 # Move built Debian artifacts to dist/debian
                 prefix = f"{r.srcname}_{ltag}-{r.vers.pkg}_"
-                for artifact in PACK.glob(f"{prefix}*"):
-                    if artifact.is_file():
+                async for artifact in PACK.glob(f"{prefix}*"):
+                    if await artifact.is_file():
                         dest = DIST_DEBIAN / artifact.name
                         shutil.move(str(artifact), str(dest))
         except subprocess.CalledProcessError:
@@ -239,12 +239,12 @@ async def do_build_pypi(repos, debug):
     "build for pypi"
     err = set()
     up = set()
-    DIST_PYPI.mkdir(parents=True, exist_ok=True)
+    await DIST_PYPI.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
-        if not p.is_file():
+        if not await p.is_file():
             continue
         tag = r.last_tag
         if r.vers.get("pypi", "-") == r.last_tag:
@@ -254,17 +254,17 @@ async def do_build_pypi(repos, debug):
         whl = DIST_PYPI / f"{r.under}-{tag}-py3-none-any.whl"
         done = DIST_PYPI / f"{r.under}-{tag}.done"
 
-        if done.exists():
+        if await done.exists():
             pass
-        elif targz.is_file() and whl.is_file():
+        elif await targz.is_file() and await whl.is_file():
             up.add(r)
         else:
             try:
                 await run_("python3", "-mbuild", "-snw", cwd=rd, echo=debug)
                 # Move built files to dist/pypi
                 build_dist = rd / "dist"
-                if build_dist.exists():
-                    for artifact in build_dist.glob(f"{r.under}-{tag}*"):
+                if await build_dist.exists():
+                    async for artifact in build_dist.glob(f"{r.under}-{tag}*"):
                         if artifact.suffix in {".gz", ".whl"}:
                             dest = DIST_PYPI / artifact.name
                             shutil.move(str(artifact), str(dest))
@@ -281,7 +281,7 @@ async def do_upload_pypi(up, debug):
     for r in up:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
-        if not p.is_file():
+        if not await p.is_file():
             continue
         tag = r.last_tag
         if r.vers.get("pypi", "-") == tag:
@@ -292,8 +292,8 @@ async def do_upload_pypi(up, debug):
             await run_(
                 "twine",
                 "upload",
-                str(targz),
-                str(whl),
+                targz,
+                whl,
                 cwd=rd,
                 echo=debug,
             )
@@ -301,7 +301,7 @@ async def do_upload_pypi(up, debug):
             err.add(r.name)
         else:
             done = DIST_PYPI / f"{r.under}-{tag}.done"
-            done.touch()
+            await done.touch()
             r.vers.pypi = tag
     return err
 
@@ -315,24 +315,24 @@ async def do_upload_deb(repos, debug, dput_opts, g_done):
         ltag = r.last_tag
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
             continue
-        if not (PACK / r.dash / "debian").is_dir():
+        if not await (PACK / r.dash / "debian").is_dir():
             continue
         changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
         done = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
-        if done.exists():
+        if await done.exists():
             r.vers.deb = f"{ltag}-{r.vers.pkg}"
             continue
         if g_done is not None:
             gd = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
-            if gd.exists():
+            if await gd.exists():
                 r.vers.deb = f"{ltag}-{r.vers.pkg}"
                 continue
         try:
-            await run_("dput", *dput_opts, str(changes), echo=debug)
+            await run_("dput", *dput_opts, changes, echo=debug)
         except subprocess.CalledProcessError:
             err.add(r.name)
         else:
-            done.touch()
+            await done.touch()
             r.vers.deb = f"{ltag}-{r.vers.pkg}"
     return err
 
@@ -447,14 +447,13 @@ async def cli(
     else:
         if not skip:
             pass
-        repos = [
-            x
-            for x in repo.parts
-            if not x.hidden and x.dash not in skip and not (PACK / x.dash / "SKIP").exists()
-        ]
+        repos = []
+        for x in repo.parts:
+            if not x.hidden and x.dash not in skip and not await (PACK / x.dash / "SKIP").exists():
+                repos.append(x)
 
-    if DIST_DEBIAN.exists():
-        for name in DIST_DEBIAN.iterdir():
+    if await DIST_DEBIAN.exists():
+        async for name in DIST_DEBIAN.iterdir():
             if name.suffix != ".changes":
                 continue
             name = name.stem  # noqa:PLW2901
@@ -482,7 +481,7 @@ async def cli(
             except KeyError:
                 rd = PACK / r.dash
                 p = rd / "pyproject.toml"
-                if not p.is_file():
+                if not await p.is_file():
                     continue
                 raise
             tags[r.mdash] = tag
@@ -510,7 +509,7 @@ async def cli(
                 raise SystemExit(1)
 
     # Step 3: set version and fix versioned dependencies
-    do_versions(repo, repos, tags, no)
+    await do_versions(repo, repos, tags, no)
 
     # Step 3: copy to packaging dir
     do_copy_repos(repos)

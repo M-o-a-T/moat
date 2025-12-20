@@ -20,6 +20,15 @@ repos:
       types: [yaml]
       args: [--allow-multiple-documents]
 
+    - id: pytest-modified
+      name: pytest on modified modules
+      description: runs pytest on test directories for modified moat modules
+      entry: pre_commit_hooks/run-pytest-modified
+      language: python
+      types: [python]
+      pass_filenames: true
+      require_serial: true
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.3
     hooks:

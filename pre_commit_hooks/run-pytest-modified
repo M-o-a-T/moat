@@ -53,19 +53,6 @@ def get_test_dir(filepath: str) -> Path | None:
     return None
 
 
-def get_module_from_test_dir(test_dir: Path) -> str:
-    """
-    Convert test directory to module path.
-
-    E.g., tests/moat_util → moat.util
-    """
-    parts = test_dir.parts[1:]  # Skip 'tests'
-    if not parts:
-        return "moat"
-    # Convert test_moat_util to moat.util (Python module path)
-    return ".".join(parts[0].split("_"))
-
-
 def load_coverage_baseline() -> dict[str, float]:
     """Load coverage baseline from file."""
     if not COVERAGE_FILE.exists():

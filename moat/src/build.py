@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,8 @@ from ._util import dash
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
+DIST_PYPI = Path("dist/pypi")
+DIST_DEBIAN = Path("dist/debian")
 ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode("utf-8").strip()
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
@@ -147,6 +150,8 @@ def do_copy_repos(repos):
 
 async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
     "Build Debian packages"
+    DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
+
     for r in repos:
         ltag = r.last_tag
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
@@ -207,13 +212,19 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
             elif tag == ltag and r.vers.pkg < ptag:
                 r.vers.pkg = ptag
 
-            changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+            changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
             if (
                 debversion.get(r.srcname, "") != ltag
                 or r.vers.pkg != ptag
                 or not (no.test_chg or changes.exists())
             ):
                 await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug > 1)
+                # Move built Debian artifacts to dist/debian
+                prefix = f"{r.srcname}_{ltag}-{r.vers.pkg}_"
+                for artifact in PACK.glob(f"{prefix}*"):
+                    if artifact.is_file():
+                        dest = DIST_DEBIAN / artifact.name
+                        shutil.move(str(artifact), str(dest))
         except subprocess.CalledProcessError:
             if no.run:
                 print("*** Failure packaging", r.name, file=sys.stderr)
@@ -228,6 +239,8 @@ async def do_build_pypi(repos, debug):
     "build for pypi"
     err = set()
     up = set()
+    DIST_PYPI.mkdir(parents=True, exist_ok=True)
+
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
@@ -237,16 +250,24 @@ async def do_build_pypi(repos, debug):
         if r.vers.get("pypi", "-") == r.last_tag:
             continue
 
-        targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
-        done = rd / "dist" / f"{r.under}-{tag}.done"
+        targz = DIST_PYPI / f"{r.under}-{tag}.tar.gz"
+        whl = DIST_PYPI / f"{r.under}-{tag}-py3-none-any.whl"
+        done = DIST_PYPI / f"{r.under}-{tag}.done"
 
         if done.exists():
             pass
-        elif targz.is_file():
+        elif targz.is_file() and whl.is_file():
             up.add(r)
         else:
             try:
                 await run_("python3", "-mbuild", "-snw", cwd=rd, echo=debug)
+                # Move built files to dist/pypi
+                build_dist = rd / "dist"
+                if build_dist.exists():
+                    for artifact in build_dist.glob(f"{r.under}-{tag}*"):
+                        if artifact.suffix in {".gz", ".whl"}:
+                            dest = DIST_PYPI / artifact.name
+                            shutil.move(str(artifact), str(dest))
             except subprocess.CalledProcessError:
                 err.add(r.name)
             else:
@@ -265,8 +286,8 @@ async def do_upload_pypi(up, debug):
         tag = r.last_tag
         if r.vers.get("pypi", "-") == tag:
             continue
-        targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
-        whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
+        targz = DIST_PYPI / f"{r.under}-{tag}.tar.gz"
+        whl = DIST_PYPI / f"{r.under}-{tag}-py3-none-any.whl"
         try:
             await run_(
                 "twine",
@@ -279,7 +300,7 @@ async def do_upload_pypi(up, debug):
         except subprocess.CalledProcessError:
             err.add(r.name)
         else:
-            done = rd / "dist" / f"{r.under}-{tag}.done"
+            done = DIST_PYPI / f"{r.under}-{tag}.done"
             done.touch()
             r.vers.pypi = tag
     return err
@@ -296,8 +317,8 @@ async def do_upload_deb(repos, debug, dput_opts, g_done):
             continue
         if not (PACK / r.dash / "debian").is_dir():
             continue
-        changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-        done = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+        changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+        done = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
         if done.exists():
             r.vers.deb = f"{ltag}-{r.vers.pkg}"
             continue
@@ -432,12 +453,13 @@ async def cli(
             if not x.hidden and x.dash not in skip and not (PACK / x.dash / "SKIP").exists()
         ]
 
-    for name in PACK.iterdir():
-        if name.suffix != ".changes":
-            continue
-        name = name.stem  # noqa:PLW2901
-        name, vers, _ = name.split("_")  # noqa:PLW2901
-        debversion[name] = vers.rsplit("-", 1)[0]
+    if DIST_DEBIAN.exists():
+        for name in DIST_DEBIAN.iterdir():
+            if name.suffix != ".changes":
+                continue
+            name = name.stem  # noqa:PLW2901
+            name, vers, _ = name.split("_")  # noqa:PLW2901
+            debversion[name] = vers.rsplit("-", 1)[0]
 
     # Step 0: basic check
     if not no.dirty:

@@ -1,12 +1,16 @@
+from __future__ import annotations
+
+import anyio
+import datetime
+import sys
+import time
+
+import asyncclick as click
 import httpx
 from asyncakumuli import get_data
-import asyncclick as click
-import datetime
-import time
-from moat.util import P, yload, CFG, merge, main_, run
-import sys
+
+from moat.util import CFG, P, main_, run
 from moat.link.client import Link
-import anyio
 
 series = "price"
 tags = dict(type="power", source="awattar", redo="A")

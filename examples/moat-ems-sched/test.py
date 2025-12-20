@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 # Invent a typical day
+from __future__ import annotations
 
-from moat.bms.sched import Hardware, FutureData, Model
+from moat.bms.sched import FutureData, Hardware, Model
 
 
 def F(price, load, pv):

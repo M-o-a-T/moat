@@ -3,11 +3,12 @@
 # Batch-convert data. In this case I had some entries which were stored as
 # a list, but using Path made much more sense (esp when you need to
 # view/edit the yaml export).
+from __future__ import annotations
 
-import anyio
-from moat.kv.client import open_client
-from moat.util import P, yload, Path
 import asyncclick as click
+
+from moat.util import P, Path, yload
+from moat.kv.client import open_client
 
 
 def conv(m, s: str) -> bool:

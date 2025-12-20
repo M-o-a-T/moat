@@ -23,13 +23,12 @@ Short names for hosts are built by reversing the first N labels, i.e.
 "you-one" and "you-two". N defaults to 2.
 """
 
-import trio
+from __future__ import annotations
+
 import asyncclick as click
 import yaml
-import logging
-from logging.config import dictConfig
 
-from moat.util import combine_dict, main_, run
+from moat.util import main_, run
 from moat.kv.client import open_client
 from moat.kv.default import CFG
 from moat.kv.inv.model import InventoryRoot

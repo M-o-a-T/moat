@@ -1,5 +1,7 @@
-import time
+from __future__ import annotations
+
 import anyio
+
 import moat.lib.gpio as gpio
 
 """

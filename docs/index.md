@@ -269,48 +269,6 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
-# Foo
-
-## FooFoo
-
-### FooFooFoo
-
-[MoaT-Link](moat-link-top) is a client/server architecture on top of MQTT. It
-uses the [MoaT-CMD](moat_lib_cmd_top) library to connect to a background
-server that operates as message forwarder and persistent data storage.
-
-MoaT-Link supports a variety of clients for other services. Some of these
-are still using [MoaT-KV](moat_top_kv).
-
-All MoaT-Link messages are encoded using CBOR. On MQTT they are tagged
-with a user property that records which service sent it, and when.
-
-
-#### Persistency, Redundancy
-
-There can be multiple MoaT-Link servers. Clients automatically reconnect
-when one of them disconnects or becomes unresponsive.
-
-Planned: [support for multiple MQTT servers](todo-link-mqtt).
-
-
-#### Error handling
-
-In a system that aspires to be reliable, misbehaving code needs to record
-that it failed. MoaT-Link comes with a wrapper that auto-creates a problem
-report, or deletes it when the problem no longer occurs.
-
-Of course if a computer fails then there's nobody to send an error.
-MoaT-Link also has a keepalive mechanism that can automatically notify
-you when something goes down.
-
-
-#### Data Schema
-
-Any large system suffers from data rot. An extension to MoaT-Link (planned)
-describes every message with a JSON schema and records mismatches.
-
-
 ### Legacy code
 
 (moat-top-kv)=

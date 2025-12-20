@@ -94,6 +94,15 @@ def do_autotag(repo, repos, major, minor):
             logger.debug("No Changes: %s %s", r.name, r.verstr)
 
 
+async def do_runtest(repos, pytest_opts):
+    "Run tests"
+    fails = set()
+    for r in repos:
+        if not await run_tests(r.under, *pytest_opts):
+            fails.add(r.name)
+    return fails
+
+
 @click.command(
     epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
@@ -245,17 +254,14 @@ async def cli(
 
     # Step 2: run tests
     if not no_test:
-        fails = set()
-        for r in repos:
-            if not await run_tests(r.under, *pytest_opts):
-                fails.add(r.name)
+        fails = await do_runtest(repos, pytest_opts)
         if fails:
             if not run:
                 print("*** Tests failed:", *fails, file=sys.stderr)
             else:
                 print("Failed tests:", *fails, file=sys.stderr)
                 print("Fix and try again.", file=sys.stderr)
-                return
+                raise SystemExit(1)
 
     # Step 3: set version and fix versioned dependencies
     for r in repos:

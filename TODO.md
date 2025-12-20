@@ -33,6 +33,9 @@ hero: Any spare days that are not in the calendar?
     * idea: store a reference in the codec and use weakrefs in the actual
       proxy dict
 
+* moat.lib.pid
+  * bumpless parameter changes
+
 * moat.link
   * host
     * monitoring by creating an error

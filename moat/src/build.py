@@ -103,7 +103,7 @@ async def do_runtest(repos, pytest_opts):
     return fails
 
 
-def do_versions(repo, repos, tags, no_version):
+def do_versions(repo, repos, tags, no):
     "set versions"
     for r in repos:
         rd = PACK / r.dash
@@ -120,7 +120,7 @@ def do_versions(repo, repos, tags, no_version):
                 pr = tomlkit.load(f)
                 pr["project"]["version"] = r.last_tag
 
-            if not no_version:
+            if not no.version:
                 try:
                     deps = pr["project"]["dependencies"]
                 except KeyError:
@@ -140,9 +140,88 @@ def do_versions(repo, repos, tags, no_version):
 
 
 def do_copy_repos(repos):
-    "copy reops to packaging dir"
+    "copy repos to packaging dir"
     for r in repos:
         r.copy()
+
+
+async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
+    "Build Debian packages"
+    for r in repos:
+        ltag = r.last_tag
+        if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
+            continue
+        rd = PACK / r.dash
+        p = rd / "debian"
+        if not p.is_dir():
+            continue
+        if not (rd / "debian" / "changelog").exists():
+            await run_(
+                "debchange",
+                "--create",
+                "--newversion",
+                f"{r.last_tag}-{r.vers.pkg}",
+                "--package",
+                r.mdash,
+                f"Initial release for {forcetag}",
+                cwd=rd,
+            )
+
+        try:
+            res = await run_(
+                "dpkg-parsechangelog",
+                "-l",
+                "debian/changelog",
+                "-S",
+                "version",
+                cwd=rd,
+                capture=True,
+            )
+            tag, ptag = res.strip().rsplit("-", 1)
+            ptag = int(ptag)
+            if tag != ltag or r.vers.pkg > ptag:
+                res = await run_(
+                    "dpkg-parsechangelog",
+                    "-n1",
+                    "-s",
+                    "Changes",
+                    cwd=rd,
+                    capture=True,
+                )
+                if res[-1].strip().endswith(f" for {forcetag}"):
+                    # New version for the same tag.
+                    # Restore the previous version before continuing
+                    # so we don't end up with duplicates.
+                    await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
+                await run_(
+                    "debchange",
+                    "--distribution",
+                    "unstable",
+                    "--newversion",
+                    f"{ltag}-{r.vers.pkg}",
+                    f"New release for {forcetag}",
+                    cwd=rd,
+                )
+                repo.index.add(p / "changelog")
+
+            elif tag == ltag and r.vers.pkg < ptag:
+                r.vers.pkg = ptag
+
+            changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+            if (
+                debversion.get(r.srcname, "") != ltag
+                or r.vers.pkg != ptag
+                or not (no.test_chg or changes.exists())
+            ):
+                await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug > 1)
+        except subprocess.CalledProcessError:
+            if no.run:
+                print("*** Failure packaging", r.name, file=sys.stderr)
+            else:
+                print("Failure packaging", r.name, file=sys.stderr)
+                no.commit = True
+                no.deb = True
+                no.pypi = True
 
 
 @click.command(
@@ -173,7 +252,7 @@ it is dropped when you use '--dput'.
 @click.option("-o", "--pytest", "pytest_opts", type=str, multiple=True, help="Options for pytest")
 @click.option("-d", "--deb", "deb_opts", type=str, multiple=True, help="Options for debuild")
 @click.option("-p", "--dput", "dput_opts", type=str, multiple=True, help="Options for dput")
-@click.option("-r", "--run", is_flag=True, help="actually do the tagging")
+@click.option("-r", "--run", is_flag=True, help="apply tags")
 @click.option("-s", "--skip", "skip_", type=str, multiple=True, help="skip these repos")
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")
@@ -227,11 +306,22 @@ async def cli(
     parts = set(dash(s) for s in parts)
     debversion = {}
 
-    if no_tag and not no_version:
+    no = attrdict()
+    no.commit = bool(no_commit)
+    no.deb = bool(no_deb)
+    no.dirty = bool(no_dirty)
+    no.pypi = bool(no_pypi)
+    no.run = not bool(run)
+    no.tag = bool(no_tag)
+    no.test = bool(no_test)
+    no.test_chg = bool(no_test_chg)
+    no.version = bool(no_version)
+
+    if no.tag and not no.version:
         print("Warning: not updating moat versions in pyproject files", file=sys.stderr)
     if minor and major:
         raise click.UsageError("Can't change both minor and major!")
-    if autotag and no_tag:
+    if autotag and no.tag:
         raise click.UsageError("Can't change tags without verifying them!")
     if forcetag and (minor or major):
         raise click.UsageError("Can't use an explicit tag with changing minor or major!")
@@ -258,9 +348,9 @@ async def cli(
         debversion[name] = vers.rsplit("-", 1)[0]
 
     # Step 0: basic check
-    if not no_dirty:
+    if not no.dirty:
         if repo.is_dirty(index=False, working_tree=True, untracked_files=True, submodules=False):
-            if not run:
+            if no.run:
                 print("*** Repository is not clean.", file=sys.stderr)
             else:
                 print("Please commit changes and try again.", file=sys.stderr)
@@ -270,7 +360,7 @@ async def cli(
     if autotag:
         do_autotag(repo, repos, major, minor)
 
-    elif not no_tag:
+    elif not no.tag:
         err = set()
         for r in repos:
             try:
@@ -285,7 +375,7 @@ async def cli(
             if r.has_changes(True):
                 err.add(r.dash)
         if err:
-            if not run:
+            if no.run:
                 print("*** Untagged changes:", file=sys.stderr)
                 print("***", *err, file=sys.stderr)
             else:
@@ -295,10 +385,10 @@ async def cli(
                 return
 
     # Step 2: run tests
-    if not no_test:
+    if not no.test:
         fails = await do_runtest(repos, pytest_opts)
         if fails:
-            if not run:
+            if no.run:
                 print("*** Tests failed:", *fails, file=sys.stderr)
             else:
                 print("Failed tests:", *fails, file=sys.stderr)
@@ -306,94 +396,19 @@ async def cli(
                 raise SystemExit(1)
 
     # Step 3: set version and fix versioned dependencies
-    do_versions(repo, repos, tags, no_version)
+    do_versions(repo, repos, tags, no)
 
     # Step 3: copy to packaging dir
     do_copy_repos(repos)
 
     # Step 4: build Debian package
-    if not no_deb:
+    if not no.deb:
         if not deb_opts:
             deb_opts = ["--no-sign"]
-
-        for r in repos:
-            ltag = r.last_tag
-            if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
-                continue
-            rd = PACK / r.dash
-            p = rd / "debian"
-            if not p.is_dir():
-                continue
-            if not (rd / "debian" / "changelog").exists():
-                await run_(
-                    "debchange",
-                    "--create",
-                    "--newversion",
-                    f"{r.last_tag}-{r.vers.pkg}",
-                    "--package",
-                    r.mdash,
-                    f"Initial release for {forcetag}",
-                    cwd=rd,
-                )
-
-            try:
-                res = await run_(
-                    "dpkg-parsechangelog",
-                    "-l",
-                    "debian/changelog",
-                    "-S",
-                    "version",
-                    cwd=rd,
-                    capture=True,
-                )
-                tag, ptag = res.strip().rsplit("-", 1)
-                ptag = int(ptag)
-                if tag != ltag or r.vers.pkg > ptag:
-                    res = await run_(
-                        "dpkg-parsechangelog",
-                        "-n1",
-                        "-s",
-                        "Changes",
-                        cwd=rd,
-                        capture=True,
-                    )
-                    if res[-1].strip().endswith(f" for {forcetag}"):
-                        # New version for the same tag.
-                        # Restore the previous version before continuing
-                        # so we don't end up with duplicates.
-                        await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
-                    await run_(
-                        "debchange",
-                        "--distribution",
-                        "unstable",
-                        "--newversion",
-                        f"{ltag}-{r.vers.pkg}",
-                        f"New release for {forcetag}",
-                        cwd=rd,
-                    )
-                    repo.index.add(p / "changelog")
-
-                elif tag == ltag and r.vers.pkg < ptag:
-                    r.vers.pkg = ptag
-
-                changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-                if (
-                    debversion.get(r.srcname, "") != ltag
-                    or r.vers.pkg != ptag
-                    or not (no_test_chg or changes.exists())
-                ):
-                    await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=obj.debug > 1)
-            except subprocess.CalledProcessError:
-                if not run:
-                    print("*** Failure packaging", r.name, file=sys.stderr)
-                else:
-                    print("Failure packaging", r.name, file=sys.stderr)
-                    no_commit = True
-                    no_deb = True
-                    no_pypi = True
+        await do_build_deb(repo, repos, deb_opts, no, obj.debug > 1, debversion, forcetag)
 
     # Step 5: build PyPI package
-    if not no_pypi:
+    if not no.pypi:
         err = set()
         up = set()
         for r in repos:
@@ -421,18 +436,18 @@ async def cli(
                 else:
                     up.add(r)
         if err:
-            if not run:
+            if no.run:
                 print("*** Build errors:", file=sys.stderr)
                 print("***", *err, file=sys.stderr)
             else:
                 print("Build errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix and try again.", file=sys.stderr)
-                no_commit = True
-                no_deb = True
+                no.commit = True
+                no.deb = True
 
         # Step 6: upload PyPI package
-        elif run:
+        elif not no.run:
             err = set()
             for r in up:
                 rd = PACK / r.dash
@@ -464,11 +479,11 @@ async def cli(
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix(?) and try again.", file=sys.stderr)
-                no_commit = True
-                no_deb = True
+                no.commit = True
+                no.deb = True
 
     # Step 7: upload Debian package
-    if run and not no_deb:
+    if not no.run and not no.deb:
         err = set()
         if not dput_opts:
             dput_opts = ["-u", "ext"]
@@ -499,10 +514,10 @@ async def cli(
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)
             print("Please fix(?) and try again.", file=sys.stderr)
-            no_commit = True
+            no.commit = True
 
     # Step 8: commit the result
-    if run:
-        if repo.write_tags() and not no_commit:
+    if not no.run:
+        if repo.write_tags() and not no.commit:
             repo.index.commit(f"Build version {forcetag}")
             git.TagReference.create(repo, forcetag)

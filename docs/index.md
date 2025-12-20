@@ -457,6 +457,9 @@ conversion between yaml and CBOR and msgpack and … you get the idea.
 :end-before: % end synopsis
 ```
 
+## [Project Information](common/index.md)
+
+Community guidelines, contribution guides, and technical reference documentation.
 
 ## Opinions and Standards
 

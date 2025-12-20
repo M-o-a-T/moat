@@ -37,6 +37,13 @@ monorepo
 :end-before: % end synopsis
 ```
 
+#### [Web Frontend](moat-link-web/index.md)
+
+```{include} ../packaging/moat-link-web/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### [The RPC Library](moat-lib-cmd/index.md)
 
 ```{include} ../packaging/moat-lib-cmd/README.md
@@ -74,6 +81,13 @@ See `moat.util.config`.
 :end-before: % end synopsis
 ```
 
+#### [Device Registry](moat-modbus-dev-_data/index.md)
+
+```{include} ../packaging/moat-modbus-dev-_data/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### More Parts
 
 
@@ -84,9 +98,16 @@ See `moat.util.config`.
 :end-before: % end synopsis
 ```
 
-#### [GPIO](moat-lib-ring/index.md)
+#### [GPIO](moat-lib-gpio/index.md)
 
-```{include} ../packaging/moat-lib-ring/README.md
+```{include} ../packaging/moat-lib-gpio/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [PID Controller](moat-lib-pid/index.md)
+
+```{include} ../packaging/moat-lib-pid/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -105,15 +126,14 @@ See `moat.util.config`.
 :end-before: % end synopsis
 ```
 
-#### [MQTT](moat-modbus/index.md)
+### Database
 
-```{include} ../packaging/moat-modbus/README.md
+#### [Database Core](moat-db/index.md)
+
+```{include} ../packaging/moat-db/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
-
-### Database
-
 
 #### [Things](moat-db-thing/index.md)
 
@@ -269,6 +289,27 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
+#### [MQTT](moat-mqtt/index.md)
+
+```{include} ../packaging/moat-mqtt/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Signal](moat-signal/index.md)
+
+```{include} ../packaging/moat-signal/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Node-RED](moat-nodered/index.md)
+
+```{include} ../packaging/moat-nodered/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### Legacy code
 
 (moat-top-kv)=
@@ -325,23 +366,96 @@ We'd rather not do that.
 ### Libraries
 
 (moat-top-lib-cmd)=
-#### MoaT-Cmd
+#### [MoaT-Cmd](moat-lib-cmd/index.md)
 
 This library is our answer to the "how do I do bidirectional RPC calls over
 any data link? Oh, error forwarding and flow-controlled streaming and
 cancellation would be nice to have too" question.
 
-:mod:``
+```{include} ../packaging/moat-lib-cmd/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Codec Buffer](moat-lib-codec/index.md)
+
+```{include} ../packaging/moat-lib-codec/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Diffie-Hellman](moat-lib-diffiehellman/index.md)
+
+```{include} ../packaging/moat-lib-diffiehellman/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [GPIO](moat-lib-gpio/index.md)
+
+```{include} ../packaging/moat-lib-gpio/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [PID Controller](moat-lib-pid/index.md)
+
+```{include} ../packaging/moat-lib-pid/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Priority Map](moat-lib-priomap/index.md)
+
+```{include} ../packaging/moat-lib-priomap/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Ring Buffer](moat-lib-ring/index.md)
+
+```{include} ../packaging/moat-lib-ring/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Victron Support](moat-lib-victron/index.md)
+
+```{include} ../packaging/moat-lib-victron/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
 
 ### Random helpers
 
 {#moat-top-util}
+#### [Utilities](moat-util/index.md)
+
 [moat-util](moat-util-top) is a collection of code that makes life easier.
 Or at least typing. :class:`attrdict` in particular is a dangerous but
 much-too-useful thing that allows for typing one dot instead of the ``["…"]``
 combination. It also contains a wrapper for multi-level command-line-based
 programs, using *asyncclick* under the hood, and some date/time handling,
 conversion between yaml and CBOR and msgpack and … you get the idea.
+
+```{include} ../packaging/moat-util/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Source Management](moat-src/index.md)
+
+```{include} ../packaging/moat-src/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [3D CAD Support](moat-cad/index.md)
+
+```{include} ../packaging/moat-cad/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
 
 
 ## Opinions and Standards

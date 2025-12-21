@@ -15,7 +15,7 @@ dependencies = [
 	"moat-util ~= 0.60.9",
 	"moat-db ~= 0.2.3",
 	]
-version = "0.2.3"
+version = "0.0.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db-label"

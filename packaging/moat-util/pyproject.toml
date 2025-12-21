@@ -21,7 +21,7 @@ dependencies = [
 	"simpleeval",
 	"moat-lib-codec ~= 0.4.7",
 	]
-version = "0.61.0"
+version = "0.61.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"

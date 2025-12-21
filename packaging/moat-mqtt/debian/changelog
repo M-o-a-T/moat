@@ -1,3 +1,9 @@
+moat-mqtt (0.42.13-2) unstable; urgency=medium
+
+  * New release for 25.6.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Dec 2025 10:24:02 +0100
+
 moat-mqtt (0.42.13-1) unstable; urgency=medium
 
   * New release for 25.6.6

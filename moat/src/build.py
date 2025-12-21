@@ -220,11 +220,39 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
             ):
                 await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug > 1)
                 # Move built Debian artifacts to dist/debian
+                # First, move files matching the glob pattern
                 prefix = f"{r.srcname}_{ltag}-{r.vers.pkg}_"
+                moved_files = set()
                 async for artifact in PACK.glob(f"{prefix}*"):
                     if await artifact.is_file():
                         dest = DIST_DEBIAN / artifact.name
                         shutil.move(str(artifact), str(dest))
+                        moved_files.add(artifact.name)
+
+                # Also move all files listed in the .changes file
+                changes_file = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+                if await changes_file.exists():
+                    content = await changes_file.read_text()
+                    in_files_section = False
+                    for line in content.split("\n"):
+                        if line.startswith("Files:"):
+                            in_files_section = True
+                            continue
+                        if in_files_section:
+                            if line.startswith((" ", "\t")):
+                                # Parse: md5sum size section priority filename
+                                parts = line.split()
+                                if len(parts) >= 5:
+                                    filename = parts[4]
+                                    if filename not in moved_files:
+                                        src = PACK / filename
+                                        if await src.exists():
+                                            dest = DIST_DEBIAN / filename
+                                            shutil.move(str(src), str(dest))
+                                            moved_files.add(filename)
+                            else:
+                                # End of Files section
+                                break
         except subprocess.CalledProcessError:
             if no.run:
                 print("*** Failure packaging", r.name, file=sys.stderr)

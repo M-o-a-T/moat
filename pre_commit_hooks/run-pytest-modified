@@ -39,7 +39,7 @@ def get_test_dir(filepath: str) -> Path | None:
         return None
 
     # Extract module parts
-    module_parts = path.parts[:-1]
+    module_parts = list(path.parts[:-1])
 
     # Try progressively shorter paths
     while module_parts:

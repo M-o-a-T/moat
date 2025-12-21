@@ -26,9 +26,6 @@ class Cmd(BaseCmd):
     """
     This command implements basic access to an I²C bus.
 
-    Warning: This is synchronous, thus subjects the whole system to
-    arbitrary slowdowns if the destination device employs clock stretching.
-
     Config::
 
         id: None  # use soft i2c

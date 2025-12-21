@@ -113,7 +113,6 @@ class MsgResult(Iterable):
     @overload
     def to_list(self, dict_only: Literal[True]) -> list[Any] | dict: ...
 
-    @overload
     def to_list(self, dict_only: bool | None = True) -> list[Any]:
         """
         Returns a list of positional arguments.

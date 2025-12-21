@@ -4,7 +4,7 @@ Tests for the RingBuffer implementation.
 
 from __future__ import annotations
 
-from moat.lib.ring.ring import RingBuffer
+from moat.lib.ring import RingBuffer
 
 
 class TestRingBufferBasics:

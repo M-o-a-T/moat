@@ -44,7 +44,7 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     return work
 
 
-async def run_tests(pkg: str | None, *opts) -> bool:
+async def run_tests(pkg: str | None, opts, debug: bool) -> bool:
     """Run subtests for subpackage @pkg."""
 
     if pkg is None:
@@ -68,6 +68,7 @@ async def run_tests(pkg: str | None, *opts) -> bool:
             stdin=sys.stdin,
             stdout=sys.stdout,
             stderr=sys.stderr,
+            echo=debug,
         )
     except subprocess.CalledProcessError:
         return False
@@ -97,11 +98,11 @@ def do_autotag(repo, repos, major, minor):
             logger.debug("No Changes: %s %s", r.name, r.verstr)
 
 
-async def do_runtest(repos, pytest_opts):
+async def do_runtest(repos, pytest_opts, debug):
     "Run tests"
     fails = set()
     for r in repos:
-        if not await run_tests(r.under, *pytest_opts):
+        if not await run_tests(r.under, pytest_opts, debug):
             fails.add(r.name)
     return fails
 
@@ -170,6 +171,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 r.mdash,
                 f"Initial release for {forcetag}",
                 cwd=rd,
+                echo=debug,
             )
 
         try:
@@ -181,6 +183,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 "version",
                 cwd=rd,
                 capture=True,
+                echo=debug,
             )
             tag, ptag = res.strip().rsplit("-", 1)
             ptag = int(ptag)
@@ -192,6 +195,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                     "Changes",
                     cwd=rd,
                     capture=True,
+                    echo=debug,
                 )
                 if res[-1].strip().endswith(f" for {forcetag}"):
                     # New version for the same tag.
@@ -206,6 +210,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                     f"{ltag}-{r.vers.pkg}",
                     f"New release for {forcetag}",
                     cwd=rd,
+                    echo=debug,
                 )
                 repo.index.add(p / "changelog")
 
@@ -218,7 +223,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 or r.vers.pkg != ptag
                 or not (no.test_chg or await changes.exists())
             ):
-                await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug > 1)
+                await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug)
                 # Move built Debian artifacts to dist/debian
                 # First, move files matching the glob pattern
                 prefix = f"{r.srcname}_{ltag}-{r.vers.pkg}_"
@@ -527,7 +532,7 @@ async def cli(
 
     # Step 2: run tests
     if not no.test:
-        fails = await do_runtest(repos, pytest_opts)
+        fails = await do_runtest(repos, pytest_opts, debug=obj.debug > 1)
         if fails:
             if no.run:
                 print("*** Tests failed:", *fails, file=sys.stderr)

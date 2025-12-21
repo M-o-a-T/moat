@@ -308,23 +308,30 @@ async def do_build_pypi(repos, debug):
     return up, err
 
 
-async def do_upload_pypi(up, debug):
+async def do_upload_pypi(up, debug, no, twine_repo):
     "send packages to pypi"
     err = set()
+    official = twine_repo == "pypi"
+
     for r in up:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
         if not await p.is_file():
             continue
         tag = r.last_tag
-        if r.vers.get("pypi", "-") == tag:
+        if official and r.vers.get("pypi", "-") == tag:
             continue
         targz = DIST_PYPI / f"{r.under}-{tag}.tar.gz"
         whl = DIST_PYPI / f"{r.under}-{tag}-py3-none-any.whl"
+        done = DIST_PYPI / f"{r.under}-{tag}-{twine_repo}.done"
+        if not no.test_chg and await done.exists():
+            continue
         try:
             await run_(
                 "twine",
                 "upload",
+                "-r",
+                twine_repo,
                 targz,
                 whl,
                 cwd=rd,
@@ -333,9 +340,9 @@ async def do_upload_pypi(up, debug):
         except subprocess.CalledProcessError:
             err.add(r.name)
         else:
-            done = DIST_PYPI / f"{r.under}-{tag}.done"
             await done.touch()
-            r.vers.pypi = tag
+            if official:
+                r.vers.pypi = tag
     return err
 
 
@@ -402,6 +409,14 @@ it is dropped when you use '--dput'.
 @click.option("-s", "--skip", "skip_", type=str, multiple=True, help="skip these repos")
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")
+@click.option(
+    "-R",
+    "--twine",
+    "twine_repo",
+    type=str,
+    default="pypi",
+    help="Repository to upload Twine packages to",
+)
 @click.option("-t", "--tag", "forcetag", type=str, help="Use this explicit tag value")
 @click.option("-a", "--auto-tag", "autotag", is_flag=True, help="Auto-retag updated packages")
 @click.option(
@@ -434,6 +449,7 @@ async def cli(
     minor,
     forcetag,
     autotag,
+    twine_repo,
 ):
     """
     Rebuild all modified packages.
@@ -570,7 +586,7 @@ async def cli(
 
         # Step 6: upload PyPI package
         elif not no.run:
-            err = await do_upload_pypi(up, obj.debug > 1)
+            err = await do_upload_pypi(up, obj.debug > 1, no, twine_repo)
             if err:
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)

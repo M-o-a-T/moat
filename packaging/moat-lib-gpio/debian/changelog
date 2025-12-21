@@ -1,3 +1,9 @@
+moat-lib-gpio (0.9.2-2) unstable; urgency=medium
+
+  * New release for 25.6.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Dec 2025 11:09:03 +0100
+
 moat-lib-gpio (0.9.2-1) unstable; urgency=medium
 
   * New release for 25.6.8

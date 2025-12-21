@@ -1,3 +1,9 @@
+moat-kv-knx (0.12.4-3) unstable; urgency=medium
+
+  * New release for 25.6.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Dec 2025 11:05:59 +0100
+
 moat-kv-knx (0.12.4-2) unstable; urgency=medium
 
   * New release for 25.6.8

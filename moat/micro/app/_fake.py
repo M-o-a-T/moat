@@ -1,1 +1,1 @@
-../_embed/lib/moat/micro/part/fake.py
+../part/fake.py

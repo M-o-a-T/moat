@@ -1,1 +1,1 @@
-# noqa:D104
+../../../../../../cmd/stream/__init__.py

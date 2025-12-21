@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util.compat import Event
 
-from .ring import RingBuffer as _RingBuf
+from ._impl import RingBuffer as _RingBuf
 
 
 class RingBuffer(_RingBuf):

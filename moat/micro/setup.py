@@ -298,7 +298,7 @@ async def install_(cfg, dest: Path = None):
     mpydir = mydir / "ext" / "micropython"
     portdir = mpydir / "ports" / device
 
-    boardp = f"{board or 'generic'}{f'-{variant}' if variant else ''}"
+    boardp = f"{board or 'generic'}" + (f"-{variant}" if variant else '')
 
     board_dir = FSPath(__file__).parent / "_embed" / "boards" / device / board
     if await board_dir.exists():

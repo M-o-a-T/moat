@@ -149,7 +149,7 @@ def do_copy_repos(repos):
         r.copy()
 
 
-async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
+async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
     "Build Debian packages"
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
@@ -218,11 +218,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 r.vers.pkg = ptag
 
             changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-            if (
-                debversion.get(r.srcname, "") != ltag
-                or r.vers.pkg != ptag
-                or not (no.test_chg or await changes.exists())
-            ):
+            if not await changes.exists() or no.test_chg:
                 await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug)
                 # Move built Debian artifacts to dist/debian
                 # First, move files matching the glob pattern
@@ -230,34 +226,33 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 moved_files = set()
                 async for artifact in PACK.glob(f"{prefix}*"):
                     if await artifact.is_file():
-                        dest = DIST_DEBIAN / artifact.name
-                        shutil.move(str(artifact), str(dest))
+                        await artifact.rename(DIST_DEBIAN / artifact.name)
                         moved_files.add(artifact.name)
 
                 # Also move all files listed in the .changes file
-                changes_file = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-                if await changes_file.exists():
-                    content = await changes_file.read_text()
-                    in_files_section = False
-                    for line in content.split("\n"):
-                        if line.startswith("Files:"):
-                            in_files_section = True
-                            continue
-                        if in_files_section:
-                            if line.startswith((" ", "\t")):
-                                # Parse: md5sum size section priority filename
-                                parts = line.split()
-                                if len(parts) >= 5:
-                                    filename = parts[4]
-                                    if filename not in moved_files:
-                                        src = PACK / filename
-                                        if await src.exists():
-                                            dest = DIST_DEBIAN / filename
-                                            shutil.move(str(src), str(dest))
-                                            moved_files.add(filename)
-                            else:
-                                # End of Files section
-                                break
+                changes_file = PACK / changes.name
+                content = await changes_file.read_text()
+                in_files_section = False
+                for line in content.split("\n"):
+                    if line.startswith("Files:"):
+                        in_files_section = True
+                        continue
+                    if not in_files_section:
+                        continue
+                    if not line.startswith((" ", "\t")):
+                        # End of Files section
+                        break
+                    # Parse: md5sum size section priority filename
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        filename = parts[4]
+                        if filename not in moved_files:
+                            src = PACK / filename
+                            if await src.exists():
+                                dest = DIST_DEBIAN / filename
+                                shutil.move(str(src), str(dest))
+                                moved_files.add(filename)
+
         except subprocess.CalledProcessError:
             if no.run:
                 print("*** Failure packaging", r.name, file=sys.stderr)
@@ -268,7 +263,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, debversion, forcetag):
                 no.pypi = True
 
 
-async def do_build_pypi(repos, debug):
+async def do_build_pypi(repos, no, debug):
     "build for pypi"
     err = set()
     up = set()
@@ -285,11 +280,8 @@ async def do_build_pypi(repos, debug):
 
         targz = DIST_PYPI / f"{r.under}-{tag}.tar.gz"
         whl = DIST_PYPI / f"{r.under}-{tag}-py3-none-any.whl"
-        done = DIST_PYPI / f"{r.under}-{tag}.done"
 
-        if await done.exists():
-            pass
-        elif await targz.is_file() and await whl.is_file():
+        if not no.test_chg and await targz.is_file() and await whl.is_file():
             up.add(r)
         else:
             try:
@@ -399,9 +391,7 @@ it is dropped when you use '--dput'.
 )
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
-@click.option(
-    "-G", "--no-test-chg", is_flag=True, help="don't rebuild if changes file doesn't exist"
-)
+@click.option("-G", "--no-test-chg", is_flag=True, help="rebuild even if artefact exists")
 @click.option("-o", "--pytest", "pytest_opts", type=str, multiple=True, help="Options for pytest")
 @click.option("-d", "--deb", "deb_opts", type=str, multiple=True, help="Options for debuild")
 @click.option("-p", "--dput", "dput_opts", type=str, multiple=True, help="Options for dput")
@@ -567,11 +557,11 @@ async def cli(
     if not no.deb:
         if not deb_opts:
             deb_opts = ["--no-sign"]
-        await do_build_deb(repo, repos, deb_opts, no, obj.debug > 1, debversion, forcetag)
+        await do_build_deb(repo, repos, deb_opts, no, obj.debug > 1, forcetag)
 
     # Step 5: build PyPI package
     if not no.pypi:
-        up, err = await do_build_pypi(repos, obj.debug > 1)
+        up, err = await do_build_pypi(repos, no, obj.debug > 1)
 
         if err:
             if no.run:

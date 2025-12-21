@@ -1,12 +1,13 @@
-| Extending MoaT-KV                                                                               |
-|-------------------------------------------------------------------------------------------------|
-|                                                                                                 |
-| MoaT-KV comes with a built-in extension mechanism for its command line,                         |
-| based on Python namespaces and import hackery.                                                  |
-| Yor extension needs to ship a `moat.kv.NAME` module, with a                                     |
-| `_main.py` file that exports a `cli` command (usually used as an                                |
-| <span class="title-ref">asyncclick.group</span>). This adds the subcommand `NAME` to `moat kv`. |
-| Command line helper                                                                             |
+# Extending MoaT-KV
+
+MoaT-KV comes with a built-in extension mechanism for its command line,
+based on Python namespaces and import hackery.
+
+Your extension needs to ship a `moat.kv.NAME` module, with a
+`_main.py` file that exports a `cli` command (usually used as an
+`asyncclick.group`). This adds the subcommand `NAME` to `moat kv`.
+
+## Command line helper
 
 MoaT-KV commands follow a standard scheme (TODO some don't yet):
 
@@ -20,17 +21,18 @@ MoaT-KV commands follow a standard scheme (TODO some don't yet):
 In order to simplify implementing that, there's a couple of helper
 methods.
 
-<span class="title-ref">moat.kv.obj.command.std_command</span> takes a
+<span class="title-ref">moat.kv.obj.command.std\_command</span> takes a
 `click.Group` command and attaches a subgroup with standard
 add/set/delete commands to it. The new group is returned so you can
 attach more commands to it if you want.
 
-<span class="title-ref">moat.util.attr_args</span> attaches MoaT-KV's
+<span class="title-ref">moat.util.attr\_args</span> attaches MoaT-KV's
 generic parameter+value options.
 
-<span class="title-ref">moat.util.process_args</span> takes a dict
+<span class="title-ref">moat.util.process\_args</span> takes a dict
 (usually) and the generic options' variables (`set_`, `vars_`, `eval_`,
 `path_`, `proxy_`) and applies them.
 
-It's the caller's job to verify that the result is sane. TODO: support
-using a validation library (probably jsonschema).
+It's the caller's job to verify that the result is sane.
+
+TODO: support using a validation library (probably jsonschema).

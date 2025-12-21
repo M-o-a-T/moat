@@ -1,5 +1,7 @@
 # The MoaT
 
+% begin main
+
 "MoaT" is an acronym of "Master of all Things", which is either
 aspirational or just plain pretentious. Take your pick.
 
@@ -12,10 +14,6 @@ Well, except for the water.
 
 
 ## Seriously …
-
-The MoaT code comprises a lot of somewhat-opinionated code to control
-various IoT devices. Among those are photovoltaics, irrigation, door
-intercoms, and whatnot.
 
 The core of MoaT is written in anyio-compatible asynchronous Python3,
 written with Structured Concurrency principles in mind.
@@ -33,6 +31,18 @@ There's a [Wikipedia article](https://en.wikipedia.org/wiki/Structured_concurren
 
 A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/).
 
+## Contents
+
+- MoaT-Link: MQTT support
+  - Storage of volatile data
+  - Messaging and alerting
+  - Data conversion (CBOR, JSON, plaintxt, msgpack, modbus)
+- MicroPython integration
+- Process control (physical processes, not computers)
+  - heat pumps
+- Solar energy
+  - battery monitor
+  - energy scheduling
 
 ## Repository Structure
 
@@ -50,6 +60,7 @@ MoaT code that can reasonably be controlled by a command line hooks into
 it, by way of a `_main` module with a `cli` object, which should be an
 `asyncclick` group (or command).
 
+% end main
 
 ## Modules
 

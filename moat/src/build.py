@@ -230,8 +230,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                         moved_files.add(artifact.name)
 
                 # Also move all files listed in the .changes file
-                changes_file = PACK / changes.name
-                content = await changes_file.read_text()
+                content = await changes.read_text()
                 in_files_section = False
                 for line in content.split("\n"):
                     if line.startswith("Files:"):

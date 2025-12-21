@@ -129,8 +129,11 @@ class Package(_Common):
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
         p = Path("packaging") / self.dash / "src"
+        pe = Path("packaging") / self.dash / "examples"
         with suppress(FileNotFoundError):
             rmtree(p)
+        with suppress(FileNotFoundError):
+            rmtree(pe)
         dest = p / self.path
         dest.mkdir(parents=True)
         for f in self.files:
@@ -148,7 +151,6 @@ class Package(_Common):
 
         exa = Path("examples") / self.dash
         if exa.is_dir():
-            pe = Path("packaging") / self.dash / "examples"
             copytree(exa, pe)
 
     def has_changes(self, main: bool | None = None) -> bool:

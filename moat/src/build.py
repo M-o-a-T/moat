@@ -323,9 +323,9 @@ async def do_upload_pypi(up, debug, no, twine_repo):
                 "upload",
                 "-r",
                 twine_repo,
-                targz,
-                whl,
-                cwd=rd,
+                targz.name,
+                whl.name,
+                cwd=DIST_PYPI,
                 echo=debug,
             )
         except subprocess.CalledProcessError:

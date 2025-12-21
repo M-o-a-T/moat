@@ -1,6 +1,11 @@
 (moat-top)=
 # The MoaT: An opinionated monorepo
 
+```{include} ../README.md
+:start-after: % start main
+:end-before: % end main
+```
+
 The MoaT aspires to be a one-stop shop for the daily practice of at least
 one person (hint: the primary author), hence the "Master of all Things"
 part.
@@ -10,7 +15,7 @@ tossed stuff they wanted to get rid of or no longer think about, and which
 needed to be dredged periodically. This codebase admittedly
 
 We'll ignore a moat's secondary function of keeping unwanted people out
-of the castle, except to request to please adhere to our [Code of Conduct](common/CONDUCT.html).
+of the castle, except to request to please adhere to our [Code of Conduct](common/CONDUCT).
 
 {.glossary}
 monorepo
@@ -292,13 +297,6 @@ We'd rather not do that.
 #### [MQTT](moat-mqtt/index.md)
 
 ```{include} ../packaging/moat-mqtt/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Signal](moat-signal/index.md)
-
-```{include} ../packaging/moat-signal/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```

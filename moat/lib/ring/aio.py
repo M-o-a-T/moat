@@ -69,7 +69,7 @@ class RingBuffer(_RingBuf):
         """
         Waits until data are available.
         """
-        if self.n_free > 0:
+        if self.n_avail > 0:
             return
         if self._r_evt is None:
             self._r_evt = Event()

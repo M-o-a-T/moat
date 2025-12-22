@@ -225,7 +225,7 @@ class Console(io.IOBase):
         if req == 3:  # MP_STREAM_POLL
             if flags & 1:
                 try:
-                    if not len(self._rd):
+                    if not len(self._rb):
                         run_until_complete(
                             create_task(
                                 wait_for_ms(self.cfg.get("sleep", 20), self._rb.wait_avail)

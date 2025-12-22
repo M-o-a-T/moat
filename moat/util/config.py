@@ -76,7 +76,9 @@ def _deref(cfg: attrdict, root: attrdict, loc: Path) -> None:
         elif not k or k[0] != "$":
             pass
         else:
-            if k == "$base":
+            if k == "$root":
+                merge(root, v, replace=True)
+            elif k == "$base":
                 res = get_base(v, root, loc)
                 if isinstance(res, Path) and res.is_relative:
                     root.set_(loc, root.get_(res))
@@ -87,7 +89,7 @@ def _deref(cfg: attrdict, root: attrdict, loc: Path) -> None:
             del cfg[k]
             continue
 
-    for k, v in cfg.items():
+    for k, v in list(cfg.items()):
         if isinstance(v, attrdict):
             if v.needs_post_:
                 _deref(v, root, loc / k)

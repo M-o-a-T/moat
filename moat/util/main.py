@@ -867,7 +867,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         )
         for k in log:
             k, v = k.split("=")
-            cfg.mod(P("logging.loggers" / k / "level", v), logging.config.dictConfig(cfg.logging))
+            cfg.mod(P("logging.loggers") / k / "level", v)
+        logging.config.dictConfig(cfg.logging)
 
     process_args(
         set_=set_,

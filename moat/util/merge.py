@@ -16,7 +16,7 @@ def _chk_post(v) -> bool:
 
 
 def _merge_dict(d, other, drop=False, replace=True):
-    for key, value in other.items():
+    for key, value in list(other.items()):
         if value is NotGiven:
             d.pop(key, None)
             continue

@@ -195,10 +195,8 @@ class Console(io.IOBase):
                 self._wr_evt = None
         return self._wb.readinto(buf)
 
-    def read(self, n):
-        "Console read"
-        # if self._wb.n_avail < 100: self.write(b"R")
-        buf = bytearray(n)
+    def readinto(self, buf: bytearray):
+        "Console readinto, runs the asyncio loop"
         try:
             res = run_until_complete(
                 create_task(wait_for_ms(self.cfg.get("sleep", 20), self._rb.readinto, buf))
@@ -212,10 +210,17 @@ class Console(io.IOBase):
             run_until_complete(AC_exit(self, type(exc), exc, None))
             raise
         else:
-            # if self._wb.n_avail < 100: self.write(f"r{res} ".encode("utf-8"))
-            if res < n:
-                buf[res:] = b""
-            return buf
+            return res
+
+    def read(self, n):
+        "Console read, runs the asyncio loop"
+        buf = bytearray(n)
+        n = self.readinto(buf)
+        if not n:
+            return None
+        if n < len(buf):
+            buf[n:] = b""
+        return buf
 
     def ioctl(self, req, flags):
         """

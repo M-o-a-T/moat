@@ -343,7 +343,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
 
     async def send(self, m):  # noqa:D102
         if self.txt[0] == "!" and isinstance(m, (list, tuple)) and m and isinstance(m[0], int):
-            log("S:%s %s %s", self.txt, *self._repr_bang(m))
+            log("S:%s %s %s", self.txt[1:], *self._repr_bang(m))
         else:
             log("S:%s %s", self.txt, self._repr(m, "d"))
         try:
@@ -363,7 +363,10 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %s", self.txt, self._repr(msg, "d"))
+            if self.txt[0] == "!" and isinstance(msg, (list, tuple)) and msg and isinstance(msg[0], int):
+                log("R:%s %s %s", self.txt[1:], *self._repr_bang(msg))
+            else:
+                log("R:%s %s", self.txt, self._repr(msg, "d"))
             return msg
 
     async def snd(self, m):  # noqa:D102

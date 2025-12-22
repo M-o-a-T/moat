@@ -8,5 +8,9 @@
 #define MICROPY_HW_ENABLE_UART_REPL         (1)
 
 // these are for BaguetteS3
+#define MICROPY_HW_ESP32S3_EXTENDED_IO (1)
+
 #define MICROPY_HW_I2C0_SCL                 (48)
 #define MICROPY_HW_I2C0_SDA                 (47)
+
+#define MICROPY_PY_OS_DUPTERM (2)

@@ -36,6 +36,14 @@ hero: Any spare days that are not in the calendar?
 * moat.lib.pid
   * bumpless parameter changes
 
+* moat.util
+  * config
+    * move to moat.lib.config
+    * reload with NotGiven: first assemble the whole thing with NotGiven
+      intact, then apply to existing config en bloc
+  * attrdict
+    * drop dict compatibility and methods
+
 * moat.link
   * host
     * monitoring by creating an error

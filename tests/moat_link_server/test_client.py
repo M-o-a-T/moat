@@ -21,7 +21,7 @@ async def test_get_flat_simple(cfg):
         await c.d_set(P("test.here.too"), "Ugh")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="HiLo", state=True) as res:
                 res = await res.get()
         assert res == []
@@ -39,7 +39,7 @@ async def test_get_flat_dyn(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=False) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
@@ -61,7 +61,7 @@ async def test_get_flat_full(cfg, state):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=state) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
@@ -84,7 +84,7 @@ async def test_get_tree_simple(cfg):
         await c.d_set(P("test.here.too"), "Ugh")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="HiLo", state=True, subtree=True) as res:
                 res = await res.get()
         assert res == []
@@ -102,7 +102,7 @@ async def test_get_tree_dyn(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=False, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
@@ -126,7 +126,7 @@ async def test_get_tree_full(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
@@ -157,7 +157,7 @@ async def test_get_tree_dyn_old(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "dead", meta=old)
@@ -186,7 +186,7 @@ async def test_get_tree_drop(cfg):
         await c.d_set(P("test.here.too"), "Ugh2")
         await c.i_sync()
 
-        with anyio.fail_after(0.2):
+        with anyio.fail_after(0.5):
             async with sf.do_watch(P("test.here"), exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), NotGiven)

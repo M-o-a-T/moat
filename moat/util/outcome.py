@@ -1,4 +1,14 @@
-from __future__ import annotations  # noqa: D100
+"""
+This is a vendorized minimal version of the "outcome" package,
+from https://pypi.org/project/outcome/.
+
+Contrary to the upstream version, regular values (but not exceptions)
+may be unwrapped more than once.
+"""
+
+from __future__ import annotations
+
+__all__ = ["Error", "Outcome", "Value", "capture"]
 
 
 def capture(sync_fn, *args, **kwargs):

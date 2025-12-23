@@ -352,7 +352,10 @@ class AsyncMQTTClient:
                         self._closed = True
                         self._state_machine.disconnect()
                         operation = MQTTDisconnectOperation()
-                        await self._run_operation(operation)
+                        try:
+                            await self._run_operation(operation)
+                        except anyio.BrokenResourceError:
+                            pass
                         if self._stream is not None:
                             await self._stream.aclose()
                     finally:
@@ -365,9 +368,8 @@ class AsyncMQTTClient:
     async def _manage_connection(
         self,
         *,
-        task_status: TaskStatus[None],
+        task_status: TaskStatus[None] | None = None,
     ) -> None:
-        task_status_sent = False
         while not self._closed:
             t_conn = 0
             t_backoff = 0
@@ -399,9 +401,9 @@ class AsyncMQTTClient:
                         task_group.start_soon(self._keep_alive, stream)
 
                         # Signal that the client is ready
-                        if not task_status_sent:
+                        if task_status is not None:
                             task_status.started()
-                            task_status_sent = True
+                            task_status = None
 
             except* MQTTServerRestarted:
                 raise
@@ -481,6 +483,9 @@ class AsyncMQTTClient:
         except self._ignored_exc_classes:
             pass
         finally:
+            with anyio.move_on_after(1):
+                await self._stream.aclose()
+            self._stream = None
             taskgroup.cancel_scope.cancel()
 
     async def _handle_packet(self, packet: MQTTPacket) -> None:
@@ -590,15 +595,14 @@ class AsyncMQTTClient:
 
     async def _flush_outbound_data(self) -> None:
         async with self._stream_lock:
+            if self._stream is None:
+                raise anyio.BrokenResourceError
             if data := self._state_machine.get_outbound_data():
                 try:
                     await self._stream.send(data)
                 except self._ignored_exc_classes:
                     # logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
                     pass
-                except anyio.BrokenResourceError:
-                    # logger.debug("Could not send bytes to transport stream: %r", data)
-                    pass  # probably dead
                 else:
                     # logger.debug("Sent bytes to transport stream: %r", data)
                     pass
@@ -759,6 +763,10 @@ class AsyncMQTTClient:
                                     await self._run_operation(unsubscribe_op)
                                 except MQTTUnsubscribeFailed as exc:
                                     logger.warning("Unsubscribe failed: %s", exc)
+                                except anyio.BrokenResourceError:
+                                    # already closed.
+                                    # TODO: remember for possible reconnect
+                                    pass
             except TimeoutError:
                 logger.warning("Unsubscribe timed out: %r", pattern)
                 # TODO if the timeout is due to a disconnect

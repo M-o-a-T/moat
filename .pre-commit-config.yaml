@@ -23,7 +23,7 @@ repos:
     - id: pytest-modified
       name: pytest on modified modules
       description: runs pytest on test directories for modified moat modules
-      entry: pre_commit_hooks/run-pytest-modified
+      entry: pre_commit_hooks/pytest
       language: python
       types: [python]
       pass_filenames: true

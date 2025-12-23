@@ -365,9 +365,8 @@ class AsyncMQTTClient:
     async def _manage_connection(
         self,
         *,
-        task_status: TaskStatus[None],
+        task_status: TaskStatus[None] | None = None,
     ) -> None:
-        task_status_sent = False
         while not self._closed:
             t_conn = 0
             t_backoff = 0
@@ -399,9 +398,9 @@ class AsyncMQTTClient:
                         task_group.start_soon(self._keep_alive, stream)
 
                         # Signal that the client is ready
-                        if not task_status_sent:
+                        if task_status is not None:
                             task_status.started()
-                            task_status_sent = True
+                            task_status = None
 
             except* MQTTServerRestarted:
                 raise

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "DelayedRead",
     "DelayedWrite",
+    "Lockstep",
     "Queue",
     "QueueEmpty",
     "QueueFull",

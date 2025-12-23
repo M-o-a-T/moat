@@ -26,6 +26,7 @@ from moat.util import (
     attrdict,
     combine_dict,
     pos2val,
+    t_iter,
     to_attrdict,
     val2pos,
     yload,
@@ -2138,31 +2139,6 @@ async def pwm(obj):
     async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
         for k, p in obj.cfg.output.items():
             tg.start_soon(_run_pwm, cl, k, p)
-
-
-class t_iter:  # noqa:D101
-    def __init__(self, interval):
-        self.interval = interval
-
-    def time(self):  # noqa:D102
-        return time.monotonic()
-
-    async def sleep(self, dt):  # noqa:D102
-        await anyio.sleep(max(dt, 0))
-
-    def __aiter__(self):
-        self._t = self.time() - self.interval
-        return self
-
-    def __anext__(self):
-        t = self.time()
-        dt = self._t - t
-        if dt > 0:
-            self._t += self.interval
-        else:
-            self._t = t + self.interval
-            dt = 0
-        return self.sleep(dt)
 
 
 # output:

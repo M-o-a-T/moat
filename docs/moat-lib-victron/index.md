@@ -1,12 +1,12 @@
 (moat-lib-victron)=
-# The Lib Victron Module
+# Victron device support
 
 ```{include} ../../packaging/moat-lib-victron/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

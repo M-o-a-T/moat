@@ -1,12 +1,12 @@
 (moat-ems-sched)=
-# The Ems Sched Module
+# EMS: Scheduling
 
 ```{include} ../../packaging/moat-ems-sched/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

@@ -26,6 +26,14 @@ monorepo
   The reason why the MoaT is a monorepo is explained in [the
   History section](history).
 
+## [Project Information](common/index.md)
+
+Start here if you have no idea what this is all about and want the bird's
+eye view.
+
+Also, the usual: Community guidelines, contribution guide, code and
+documentation style, and all that.
+
 ## Parts included
 
 ### [The Link](moat-link/index.md)
@@ -403,34 +411,9 @@ conversion between yaml and CBOR and msgpack and … you get the idea.
 :end-before: % end synopsis
 ```
 
-## [Project Information](common/index.md)
-
-Community guidelines, contribution guides, and technical reference documentation.
-
-## Opinions and Standards
-
-The MoaT is admittedly a somewhat opinionated codebase.
-The plus side is that we don't need to think about which mechanism to select
-when a single one is used pretty much everywhere.
-
-### Configuration
-
-Python programmers have a love-hate relationship to dictionaries whose
-elements can be addressed with dot syntax. The MoaT is no exception.
-
-### Data Serialization
-
-We like CBOR. Yes it has its faults but at least it's regular, self-describing,
-and self-delimiting. It can even be streamed, something which MoaT currently
-doesn't support.
-
-We like YAML, much for the same reasons.
-
-There is no TOML or JSON in the MoaT codebase, other than `pyproject.toml`
-of course.
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 4
 :hidden:
 
 moat-link/index

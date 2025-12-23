@@ -1,12 +1,12 @@
 (moat-link-server)=
-# The Link Server Module
+# The Link: Data Server
 
 ```{include} ../../packaging/moat-link-server/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

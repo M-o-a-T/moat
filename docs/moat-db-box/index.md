@@ -1,12 +1,12 @@
 (moat-db-box)=
-# The Db Box Module
+# DB: Boxes for Things
 
 ```{include} ../../packaging/moat-db-box/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

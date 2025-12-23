@@ -1,19 +1,40 @@
-# Paths
+# MoaT Paths
+
+## Overview
 
 Loosely speaking, a path is a way to go from object A to object B
-by way of a series of attribute / index lookups.
+by way of a series of attribute or index lookups.
 
-In MoaT, paths are tuples that may contain strings, integers, floats,
-bytestrings, a few constants (`True`, `False`, `None`), or tuples of any of
-the above, recursively. Important: a MoaT path is not restricted to
-strings (`123` is not `"123"`, just as in Python), an empty element is
-distinct from no element (unlike a file system path where `a//b` is the same
-thing as `a/b`), and there is no restriction WRT allowed characters (unlike
-a file system where `/` is not allowed in a file name, or `+` which is not
-allowed in a MQTT )patch.
+In MoaT, a path may contain strings, integers, floats, bytestrings,
+constants (`True`, `False`, `None`), or tuples of any of the above,
+recursively.
+
+Important: a MoaT path is not a series of strings (`123` is not `"123"`,
+just as in Python), an empty element is distinct from no element (unlike a
+file system path where `a//b` is the same thing as `a/b`), and there are no
+disallowed characters — unlike file paths (`/` cannot be part of a file name)
+or MQTT topics (no `+` allowed).
 
 MoaT uses Paths as accessors for data, MoaT-Link remote commands, MQTT data,
 and probably some others.
+
+## Examples
+
+- `foo.42.bar`
+  A path consisting of three strings.
+
+- `foo:42.bar`
+  A path consisting of a string, an integer, and another string.
+
+- `foo:.42.bar`
+  A path consisting of the strings `foo.42` and `bar`.
+
+- `foo:42:.5.bar`
+  A path consisting of a string, the floating-point number `42.5`, and
+  another string.
+
+- `:`
+  The empty path.
 
 ## Syntax
 

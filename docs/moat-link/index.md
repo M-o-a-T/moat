@@ -1,12 +1,12 @@
 (moat-link)=
-# The Link Module
+# The Link: Connecting programs and data
 
 ```{include} ../../packaging/moat-link/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

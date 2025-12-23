@@ -1,12 +1,12 @@
 (moat-ems-inv)=
-# The Ems Inv Module
+# EMS: Inverter Control
 
 ```{include} ../../packaging/moat-ems-inv/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

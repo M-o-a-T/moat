@@ -1,12 +1,12 @@
 (moat-kv-akumuli)=
-# The Kv Akumuli Module
+# KV: Akumuli Data Storage
 
 ```{include} ../../packaging/moat-kv-akumuli/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

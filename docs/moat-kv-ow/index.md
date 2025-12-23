@@ -1,12 +1,12 @@
 (moat-kv-ow)=
-# The Kv Ow Module
+# KV: 1Wire interface
 
 ```{include} ../../packaging/moat-kv-ow/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

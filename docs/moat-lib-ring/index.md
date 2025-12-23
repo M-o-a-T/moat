@@ -1,12 +1,12 @@
 (moat-lib-ring)=
-# The Lib Ring Module
+# Ring buffer (for bytes)
 
 ```{include} ../../packaging/moat-lib-ring/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

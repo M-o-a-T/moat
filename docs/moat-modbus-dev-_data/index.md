@@ -1,12 +1,12 @@
 (moat-modbus-dev-_data)=
-# The Modbus Dev _Data Module
+# Register descriptions for Modbus
 
 ```{include} ../../packaging/moat-modbus-dev-_data/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

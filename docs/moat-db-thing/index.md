@@ -1,12 +1,12 @@
 (moat-db-thing)=
-# The Db Thing Module
+# DB: Things
 
 ```{include} ../../packaging/moat-db-thing/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

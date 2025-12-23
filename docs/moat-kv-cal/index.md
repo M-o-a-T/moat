@@ -1,12 +1,12 @@
 (moat-kv-cal)=
-# The Kv Cal Module
+# KV: Calendars
 
 ```{include} ../../packaging/moat-kv-cal/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

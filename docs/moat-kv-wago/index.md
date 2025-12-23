@@ -1,12 +1,12 @@
 (moat-kv-wago)=
-# The Kv Wago Module
+# KV: Wago Controllers
 
 ```{include} ../../packaging/moat-kv-wago/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

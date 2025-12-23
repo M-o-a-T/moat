@@ -1,13 +1,18 @@
-# Welcome to diffiehellman's documentation!
+(moat-lib-diffiehellman)=
+# Diffie-Hellman key exchange
 
-Contents:
+```{include} ../../packaging/moat-lib-diffiehellman/README.md
+:start-after: % start main
+:end-before: % end main
+```
 
-<div class="toctree" maxdepth="2">
+## Manual
 
-</div>
+TODO
 
-# Indices and tables
+```{toctree}
+:maxdepth: 2
+:hidden:
 
-- `genindex`
-- `modindex`
-- `search`
+api
+```

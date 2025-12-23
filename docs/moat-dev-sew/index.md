@@ -1,12 +1,12 @@
 (moat-dev-sew)=
-# The Dev Sew Module
+# Devices: SEW motor controllers
 
 ```{include} ../../packaging/moat-dev-sew/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

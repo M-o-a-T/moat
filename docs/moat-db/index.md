@@ -1,12 +1,12 @@
 (moat-db)=
-# The Db Module
+# Database Support
 
 ```{include} ../../packaging/moat-db/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

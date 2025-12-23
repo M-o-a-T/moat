@@ -1,12 +1,12 @@
 (moat-lib-pid)=
-# The PID Library
+# PID process control
 
 ```{include} ../../packaging/moat-lib-pid/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

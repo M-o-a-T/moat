@@ -1,12 +1,12 @@
 (moat-kv-knx)=
-# The Kv Knx Module
+# KV: KNX building automation
 
 ```{include} ../../packaging/moat-kv-knx/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

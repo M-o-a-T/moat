@@ -1,12 +1,12 @@
 (moat-top)=
-# MoaT Command Line
+# The MoaT Command Line
 
 ```{include} ../../packaging/moat/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-# Manual
+## Manual
 
 TODO
 

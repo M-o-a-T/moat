@@ -1,12 +1,12 @@
 (moat-kv-ha)=
-# The Kv Ha Module
+# KV: Home Assistant
 
 ```{include} ../../packaging/moat-kv-ha/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

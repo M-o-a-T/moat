@@ -59,19 +59,17 @@ hero: Any spare days that are not in the calendar?
 * moat.micro
   * console via MoaT
   * "safe" config reload, i.e. with fallback
-  * app for multiplexed I/O
-  * app for Triac control
+  * remote file system for MPy
 
   * Refactor dispatching to use active hook-in of subpaths
   * move some dispatch code to moat.lib.cmd
 
-  * hook the MoaT loop into dupterm
+  * app for multiplexed I/O
+  * app for Triac control
 
   * create a separate library for MoaT streams
     * clean-up etc
 
-  * test console data
-    * write an app for it
   * the single-channel listener+connect apps must be converted to streams
     * so that we can put a Reliable above them
   * BaseCmdMsg dispatcher: multiplex remote iterators locally

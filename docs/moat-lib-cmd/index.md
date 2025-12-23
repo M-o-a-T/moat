@@ -1,12 +1,12 @@
 (moat-lib-cmd)=
-# The Lib Cmd Module
+# CMD: Remote Procedure Calls and more
 
 ```{include} ../../packaging/moat-lib-cmd/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

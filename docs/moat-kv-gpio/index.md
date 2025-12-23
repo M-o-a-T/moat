@@ -1,12 +1,12 @@
 (moat-kv-gpio)=
-# The Kv Gpio Module
+# KV: GPIOs
 
 ```{include} ../../packaging/moat-kv-gpio/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

@@ -6,7 +6,7 @@
 :end-before: % end synopsis
 ```
 
-# Manual
+## Manual
 
 ```{toctree}
 :maxdepth: 2

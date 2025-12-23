@@ -1,17 +1,17 @@
 (moat-micro)=
-# The Micro Module
+# MoaT on MicroPython
 
 ```{include} ../../packaging/moat-micro/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 4
 :hidden:
 
 tutorial

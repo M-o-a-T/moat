@@ -1,12 +1,12 @@
 (moat-link-web)=
-# The Link Web Module
+# The Link: Web access
 
 ```{include} ../../packaging/moat-link-web/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

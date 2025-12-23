@@ -1,12 +1,12 @@
 (moat-kv-top)=
-# MoaT-KV: Distributed Key-Value Store
+# Distributed Key-Value Storage
 
 ```{include} ../../packaging/moat-kv/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-# Manual
+## Manual
 
 ```{toctree}
 :maxdepth: 2

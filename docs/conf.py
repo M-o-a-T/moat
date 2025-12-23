@@ -160,6 +160,14 @@ html_theme_options = {
 #       "repo": "fontawesome/brands/github",
 #   },
     "globaltoc_collapse": False,
+    "show_toc_level": 4,
+    "toc_title": "Contents",
+    "navigation_with_keys": True,
+    "show_nav_level": 2,
+}
+
+html_sidebars = {
+    "**": ["navbar-logo.html", "search-field.html", "sbt-sidebar-nav.html"]
 }
 
 html_last_updated_fmt = ""

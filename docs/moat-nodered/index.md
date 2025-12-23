@@ -1,12 +1,12 @@
 (moat-nodered)=
-# The Nodered Module
+# NodeRed adapter for MoaT-Link
 
 ```{include} ../../packaging/moat-nodered/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

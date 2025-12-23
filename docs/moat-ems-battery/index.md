@@ -1,12 +1,12 @@
 (moat-ems-battery)=
-# The Ems Battery Module
+# EMS: Battery Monitor
 
 ```{include} ../../packaging/moat-ems-battery/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

@@ -1,12 +1,12 @@
 (moat-util)=
-# The Util Module
+# Various helpers (grab-bag)
 
 ```{include} ../../packaging/moat-util/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

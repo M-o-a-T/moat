@@ -1,12 +1,12 @@
 (moat-ems)=
-# The Ems Module
+# Energy Management
 
 ```{include} ../../packaging/moat-ems/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

@@ -1,12 +1,12 @@
 (moat-db-label)=
-# The Db Label Module
+# DB: Labels
 
 ```{include} ../../packaging/moat-db-label/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

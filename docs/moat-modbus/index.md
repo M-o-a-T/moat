@@ -1,12 +1,12 @@
 (moat-modbus)=
-# The Modbus Module
+# Modbus: A High-Level Interface
 
 ```{include} ../../packaging/moat-modbus/README.md
 :start-after: % start main
 :end-before: % end main
 ```
 
-# Manual
+## Manual
 
 TODO
 

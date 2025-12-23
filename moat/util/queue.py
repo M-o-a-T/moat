@@ -1,6 +1,6 @@
 """
-trio/anyio no longer have queues, but sometimes a memory object stream is
-unwieldy. Thus this re-implemens a simple queue using
+trio/anyio no longer have plain queues, but sometimes a memory object
+stream is unwieldy. Thus this re-implements a simple queue on top of
 `anyio.create_memory_object_stream`.
 """
 
@@ -38,7 +38,8 @@ class Queue:
     Queues have been replaced in trio/anyio by memory object streams, but
     those are more complicated to use.
 
-    This Queue class simply re-implements queues on top of memory object streams.
+    This Queue class is a simple re-implementation of queues on top of
+    memory object streams.
     """
 
     def __init__(self, length=0):

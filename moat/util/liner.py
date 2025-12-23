@@ -15,6 +15,8 @@ from moat.util.compat import (
     wait_for_ms,
 )
 
+__all__ = ["Liner"]
+
 
 async def _no_op():
     pass

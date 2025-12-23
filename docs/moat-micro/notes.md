@@ -1,3 +1,7 @@
+# Notes
+
+## esp32
+
 ### esp32-c6
 
 #### Gaggenau

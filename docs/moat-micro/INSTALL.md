@@ -1,5 +1,4 @@
-Installing the moat.micro client
-================================
+# Installing the moat.micro client
 
 The *moat.micro* client is a Python program, running on MicroPython.
 

@@ -14,6 +14,7 @@ TODO
 :maxdepth: 2
 :hidden:
 
+tutorial
 INSTALL
 config
 apps

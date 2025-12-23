@@ -1,10 +1,10 @@
-| Fixing MoaT-KV network problems                                       |
-|-----------------------------------------------------------------------|
-|                                                                       |
-| As the MoaT-KV network is fully asynchronous, there's no way to avoid |
-| getting into trouble – there's no arbitration of inconsistent data.   |
-| This document explains how to get back out, if necessary.             |
-| Missing data                                                          |
+# Fixing MoaT-KV network problems
+
+As the MoaT-KV network is fully asynchronous, there's no way to avoid
+getting into trouble – there's no arbitration of inconsistent data.
+This document explains how to get back out, if necessary.
+
+## Missing data
 
 See the <span class="title-ref">Server protocol
 \<server_protocol\></span> for details on how MoaT-KV works. From that

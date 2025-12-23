@@ -286,7 +286,7 @@ class Scaffold(CtxObj):
         The results are appended to a list that's posted to the event when
         `do_watch` ends (for whatever reason).
         """
-        async with anyio.create_task_group() as tg, self.client_() as c:
+        async with self.client_() as c, anyio.create_task_group() as tg:
             evt = ValueEvent()
 
             @tg.start_soon

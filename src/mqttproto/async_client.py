@@ -594,11 +594,14 @@ class AsyncMQTTClient:
                 try:
                     await self._stream.send(data)
                 except self._ignored_exc_classes:
-                    pass
                     # logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
-                else:
                     pass
+                except anyio.BrokenResourceError:
+                    # logger.debug("Could not send bytes to transport stream: %r", data)
+                    pass  # probably dead
+                else:
                     # logger.debug("Sent bytes to transport stream: %r", data)
+                    pass
 
     async def _run_operation(self, operation: MQTTOperation[Any]) -> None:
         with ExitStack() as exit_stack:

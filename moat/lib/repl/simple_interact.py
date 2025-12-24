@@ -100,7 +100,7 @@ def _more_lines(console: code.InteractiveConsole, unicodetext: str) -> bool:
         return code is None
 
 
-def run_multiline_interactive_console(  # noqa: D103
+async def run_multiline_interactive_console(  # noqa: D103
     console: code.InteractiveConsole,
     *,
     future_flags: int = 0,
@@ -143,7 +143,7 @@ def run_multiline_interactive_console(  # noqa: D103
             ps1 = getattr(sys, "ps1", ">>> ")
             ps2 = getattr(sys, "ps2", "... ")
             try:
-                statement = multiline_input(more_lines, ps1, ps2)
+                statement = await multiline_input(more_lines, ps1, ps2)
             except EOFError:
                 break
 
@@ -160,10 +160,10 @@ def run_multiline_interactive_console(  # noqa: D103
             r = _get_reader()
             r.cmpltn_reset()
             if r.input_trans is r.isearch_trans:
-                r.do_cmd(("isearch-end", [""]))
+                await r.do_cmd(("isearch-end", [""]))
             r.pos = len(r.get_unicode())
             r.dirty = True
-            r.refresh()
+            await r.refresh()
             r.in_bracketed_paste = False
             console.write("\nKeyboardInterrupt\n")
             console.resetbuffer()

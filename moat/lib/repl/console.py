@@ -91,10 +91,10 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    def get_event(self, block: bool = True) -> Event | None:
-        """Return an Event instance.  Returns None if |block| is false
-        and there is no event pending, otherwise waits for the
-        completion of an event."""
+    async def get_event(self) -> Event:
+        """
+        Return the next Event instance.
+        """
         ...
 
     @abstractmethod
@@ -113,13 +113,13 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    def finish(self) -> None:
+    async def finish(self) -> None:
         """Move the cursor to the end of the display and otherwise get
         ready for end.  XXX could be merged with restore?  Hmm."""
         ...
 
     @abstractmethod
-    def flushoutput(self) -> None:
+    async def flushoutput(self) -> None:
         """Flush all output to the screen (assuming there's some
         buffering going on somewhere)."""
         ...
@@ -133,13 +133,6 @@ class Console(ABC):  # noqa: D101
     def getpending(self) -> Event:
         """Return the characters that have been typed but not yet
         processed."""
-        ...
-
-    @abstractmethod
-    def wait(self, timeout: float | None) -> bool:
-        """Wait for an event. The return value is True if an event is
-        available, False if the timeout has been reached. If timeout is
-        None, wait forever. The timeout is in milliseconds."""
         ...
 
     @property

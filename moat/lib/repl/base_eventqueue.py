@@ -26,11 +26,11 @@ See unix_eventqueue and windows_eventqueue for subclasses.
 
 from __future__ import annotations
 
+import anyio
+
 from . import keymap
 from .console import Event
 from .trace import trace
-
-from collections import deque
 
 
 class BaseEventQueue:  # noqa: D101
@@ -39,23 +39,20 @@ class BaseEventQueue:  # noqa: D101
         self.keymap = self.compiled_keymap
         trace("keymap {k!r}", k=self.keymap)
         self.encoding = encoding
-        self.events: deque[Event] = deque()
+        self.ev_w, self.ev_r = anyio.create_memory_object_stream(9999)
         self.buf = bytearray()
 
-    def get(self) -> Event | None:
+    async def get(self) -> Event:
         """
         Retrieves the next event from the queue.
         """
-        if self.events:
-            return self.events.popleft()
-        else:
-            return None
+        return await self.ev_r.receive()
 
     def empty(self) -> bool:
         """
         Checks if the queue is empty.
         """
-        return not self.events
+        return self.ev_r.statistics().current_buffer_used == 0
 
     def flush_buf(self) -> bytearray:
         """
@@ -70,7 +67,7 @@ class BaseEventQueue:  # noqa: D101
         Inserts an event into the queue.
         """
         trace("added event {event}", event=event)
-        self.events.append(event)
+        self.ev_w.send_nowait(event)
 
     def push(self, char: int | bytes) -> None:
         """

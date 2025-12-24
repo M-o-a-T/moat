@@ -170,7 +170,7 @@ def build_menu(  # noqa: D103
 
 
 class complete(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
         last_is_completer = r.last_command_is(self.__class__)
@@ -210,11 +210,11 @@ class complete(commands.Command):  # noqa: D101
 
 
 class self_insert(commands.self_insert):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
 
-        commands.self_insert.do(self)
+        await commands.self_insert.do(self)
         if r.cmpltn_menu_visible:
             stem = r.get_stem()
             if len(stem) < 1:
@@ -275,8 +275,8 @@ class CompletingReader(Reader):
                 self.screeninfo[ly:ly] = [(0, [])] * len(self.cmpltn_menu)
         return screen
 
-    def finish(self) -> None:  # noqa: D102
-        super().finish()
+    async def finish(self) -> None:  # noqa: D102
+        await super().finish()
         self.cmpltn_reset()
 
     def cmpltn_reset(self) -> None:  # noqa: D102

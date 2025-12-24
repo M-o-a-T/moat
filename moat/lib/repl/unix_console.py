@@ -21,7 +21,9 @@
 
 from __future__ import annotations
 
+import anyio
 import errno
+import fcntl
 import os
 import platform
 import re
@@ -29,7 +31,7 @@ import select
 import signal
 import struct
 import termios
-import time
+from contextlib import asynccontextmanager
 from fcntl import ioctl
 
 from . import curses
@@ -63,51 +65,6 @@ SIGWINCH_EVENT = "repaint"
 FIONREAD = getattr(termios, "FIONREAD", None)
 TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", None)
 
-# ------------ start of baudrate definitions ------------
-
-# Add (possibly) missing baudrates (check termios man page) to termios
-
-
-def add_baudrate_if_supported(dictionary: dict[int, int], rate: int) -> None:  # noqa: D103
-    baudrate_name = "B%d" % rate  # noqa: UP031
-    if hasattr(termios, baudrate_name):
-        dictionary[getattr(termios, baudrate_name)] = rate
-
-
-# Check the termios man page (Line speed) to know where these
-# values come from.
-potential_baudrates = [
-    0,
-    110,
-    115200,
-    1200,
-    134,
-    150,
-    1800,
-    19200,
-    200,
-    230400,
-    2400,
-    300,
-    38400,
-    460800,
-    4800,
-    50,
-    57600,
-    600,
-    75,
-    9600,
-]
-
-ratedict: dict[int, int] = {}
-for rate in potential_baudrates:
-    add_baudrate_if_supported(ratedict, rate)
-
-# Clean up variables to avoid unintended usage
-del rate, add_baudrate_if_supported
-
-# ------------ end of baudrate definitions ------------
-
 delayprog = re.compile(b"\\$<([0-9]+)((?:/|\\*){0,2})>")
 
 try:
@@ -133,7 +90,44 @@ except AttributeError:
     poll = MinimalPoll  # type: ignore[assignment]
 
 
-class UnixConsole(Console):  # noqa: D101
+class FDWrapper:
+    "Wrap a file descriptor"
+
+    def __init__(self, fd):
+        self.fd = fd
+
+    async def __aenter__(self):
+        flg = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+        fcntl.fcntl(self.fd, fcntl.F_SETFL, flg | os.O_NONBLOCK)
+
+    async def __aexit__(self, *err):
+        await self.aclose()
+
+    async def write(self, buf: bytes) -> None:
+        "write data"
+        while len(buf):
+            await anyio.wait_writable(self.fd)
+            n = os.write(self.fd, buf)
+            if n == len(buf):
+                break
+            buf = memoryview(buf)[n:]
+
+    async def read(self, n: int):
+        "read data"
+        await anyio.wait_readable(self.fd)
+        return os.read(self.fd, n)
+
+    async def aclose(self):  # noqa:D102
+        try:
+            flg = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+            fcntl.fcntl(self.fd, fcntl.F_SETFL, flg & ~os.O_NONBLOCK)
+            if self.fd > 2:
+                os.close(self.fd)
+        finally:
+            self.fd = -1
+
+
+class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     def __init__(
         self,
         f_in: IO[bytes] | int = 0,
@@ -152,16 +146,21 @@ class UnixConsole(Console):  # noqa: D101
         """
         super().__init__(f_in, f_out, term, encoding)
 
-        self.pollob = poll()
-        self.pollob.register(self.input_fd, select.POLLIN)
         self.input_buffer = b""
         self.input_buffer_pos = 0
-        curses.setupterm(term or None, self.output_fd)
-        self.term = term
+
+        self.input_f = FDWrapper(self.input_fd)
+        self.output_f = FDWrapper(self.output_fd)
+
         self.is_apple_terminal = (
             platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
         )
+        self.term = term
 
+    @asynccontextmanager
+    async def __asynccontextmanager__(self):
+        term = self.term
+        curses.setupterm(term or None, self.output_fd)
         try:
             self.__input_fd_set(tcgetattr(self.input_fd), ignore=frozenset())
         except _error as e:
@@ -211,16 +210,41 @@ class UnixConsole(Console):  # noqa: D101
 
         signal.signal(signal.SIGCONT, self._sigcont_handler)
 
-    def _sigcont_handler(self, signum, frame):  # noqa: ARG002
-        self.restore()
-        self.prepare()
+        async with (
+            self.output_f,
+            self.input_f,
+            anyio.create_task_group() as tg,
+        ):
+            with anyio.open_signal_receiver(signal.SIGWINCH) as wch:
+
+                @tg.start_soon
+                async def _winch():
+                    async for _sig in wch:
+                        self.__sigwinch()
+
+                @tg.start_soon
+                async def _read():
+                    while True:
+                        self.push_char(await self.__read(1))
+
+                await self.prepare()
+                try:
+                    yield self
+                finally:
+                    tg.cancel_scope.cancel()
+                    with anyio.move_on_after(1, shield=True):
+                        await self.restore()
+
+    async def _sigcont_handler(self, signum, frame):  # noqa: ARG002
+        await self.restore()
+        await self.prepare()
 
     def more_in_buffer(self) -> bool:  # noqa: D102
         return bool(self.input_buffer and self.input_buffer_pos < len(self.input_buffer))
 
-    def __read(self, n: int) -> bytes:
+    async def __read(self, n: int) -> bytes:
         if not self.more_in_buffer():
-            self.input_buffer = os.read(self.input_fd, 10000)
+            self.input_buffer = await self.input_f.read(10000)
 
         ret = self.input_buffer[self.input_buffer_pos : self.input_buffer_pos + n]
         self.input_buffer_pos += len(ret)
@@ -238,7 +262,7 @@ class UnixConsole(Console):  # noqa: D101
         """
         self.encoding = encoding
 
-    def refresh(self, screen, c_xy):
+    async def refresh(self, screen, c_xy):
         """
         Refresh the console screen.
 
@@ -319,7 +343,7 @@ class UnixConsole(Console):  # noqa: D101
 
         self.screen = screen.copy()
         self.move_cursor(cx, cy)
-        self.flushoutput()
+        await self.flushoutput()
 
     def move_cursor(self, x, y):
         """
@@ -334,9 +358,8 @@ class UnixConsole(Console):  # noqa: D101
         else:
             self.__move(x, y)
             self.posxy = x, y
-            self.flushoutput()
 
-    def prepare(self):
+    async def prepare(self):
         """
         Prepare the console for input/output operations.
         """
@@ -357,7 +380,7 @@ class UnixConsole(Console):  # noqa: D101
 
         # In macOS terminal we need to deactivate line wrap via ANSI escape code
         if self.is_apple_terminal:
-            os.write(self.output_fd, b"\033[?7l")
+            await self.output_f.write(b"\033[?7l")
 
         self.screen = []
         self.height, self.width = self.getheightwidth()
@@ -369,28 +392,19 @@ class UnixConsole(Console):  # noqa: D101
 
         self.__maybe_write_code(self._smkx)
 
-        try:
-            self.old_sigwinch = signal.signal(signal.SIGWINCH, self.__sigwinch)
-        except ValueError:
-            pass
-
         self.__enable_bracketed_paste()
 
-    def restore(self):
+    async def restore(self):
         """
         Restore the console to the default state
         """
         self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)
-        self.flushoutput()
+        await self.flushoutput()
         self.__input_fd_set(self.__svtermstate)
 
         if self.is_apple_terminal:
-            os.write(self.output_fd, b"\033[?7h")
-
-        if hasattr(self, "old_sigwinch"):
-            signal.signal(signal.SIGWINCH, self.old_sigwinch)
-            del self.old_sigwinch
+            await self.output_f.write(b"\033[?7h")
 
     def push_char(self, char: int | bytes) -> None:
         """
@@ -399,44 +413,14 @@ class UnixConsole(Console):  # noqa: D101
         trace("push char {char!r}", char=char)
         self.event_queue.push(char)
 
-    def get_event(self, block: bool = True) -> Event | None:
+    async def get_event(self) -> Event:
         """
         Get an event from the console event queue.
-
-        Parameters:
-        - block (bool): Whether to block until an event is available.
 
         Returns:
         - Event: Event object from the event queue.
         """
-        if not block and not self.wait(timeout=0):
-            return None
-
-        while self.event_queue.empty():
-            while True:
-                try:
-                    self.push_char(self.__read(1))
-                except OSError as err:
-                    if err.errno == errno.EINTR:
-                        if not self.event_queue.empty():
-                            return self.event_queue.get()
-                        else:
-                            continue
-                    else:
-                        raise
-                else:
-                    break
-        return self.event_queue.get()
-
-    def wait(self, timeout: float | None = None) -> bool:
-        """
-        Wait for events on the console.
-        """
-        return (
-            not self.event_queue.empty()
-            or self.more_in_buffer()
-            or bool(self.pollob.poll(timeout))
-        )
+        return await self.event_queue.get()
 
     def set_cursor_vis(self, visible):
         """
@@ -491,18 +475,18 @@ class UnixConsole(Console):  # noqa: D101
         """
         termios.tcflush(self.input_fd, termios.TCIFLUSH)
 
-    def flushoutput(self):
+    async def flushoutput(self):
         """
         Flush the output buffer.
         """
         for text, iscode in self.__buffer:
             if iscode:
-                self.__tputs(text)
+                await self.__tputs(text)
             else:
-                os.write(self.output_fd, text.encode(self.encoding, "replace"))
+                await self.output_f.write(text.encode(self.encoding, "replace"))
         del self.__buffer[:]
 
-    def finish(self):
+    async def finish(self):
         """
         Finish console operations and flush the output buffer.
         """
@@ -511,18 +495,18 @@ class UnixConsole(Console):  # noqa: D101
             y -= 1
         self.__move(0, min(y, self.height + self.__offset - 1))
         self.__write("\n\r")
-        self.flushoutput()
+        await self.flushoutput()
 
-    def beep(self):
+    async def beep(self):
         """
         Emit a beep sound.
         """
         self.__maybe_write_code(self._bel)
-        self.flushoutput()
+        await self.flushoutput()
 
     if FIONREAD:
 
-        def getpending(self):
+        async def getpending(self):
             """
             Get pending events from the console event queue.
 
@@ -537,7 +521,7 @@ class UnixConsole(Console):  # noqa: D101
                 e.raw += e.raw
 
             amount = struct.unpack("i", ioctl(self.input_fd, FIONREAD, b"\0\0\0\0"))[0]
-            raw = self.__read(amount)
+            raw = await self.__read(amount)
             data = str(raw, self.encoding, "replace")
             e.data += data
             e.raw += raw
@@ -545,7 +529,7 @@ class UnixConsole(Console):  # noqa: D101
 
     else:
 
-        def getpending(self):
+        async def getpending(self):
             """
             Get pending events from the console event queue.
 
@@ -560,7 +544,7 @@ class UnixConsole(Console):  # noqa: D101
                 e.raw += e.raw
 
             amount = 10000
-            raw = self.__read(amount)
+            raw = await self.__read(amount)
             data = str(raw, self.encoding, "replace")
             e.data += data
             e.raw += raw
@@ -790,7 +774,7 @@ class UnixConsole(Console):  # noqa: D101
             ns = self.height * ["\000" * self.width]
             self.screen = ns
 
-    def __tputs(self, fmt, prog=delayprog):
+    async def __tputs(self, fmt, prog=delayprog):
         """A Python implementation of the curses tputs function; the
         curses one can't really be wrapped in a sane manner.
 
@@ -799,23 +783,18 @@ class UnixConsole(Console):  # noqa: D101
         # using .get() means that things will blow up
         # only if the bps is actually needed (which I'm
         # betting is pretty unlkely)
-        bps = ratedict.get(self.__svtermstate.ospeed)
         while 1:
             m = prog.search(fmt)
             if not m:
-                os.write(self.output_fd, fmt)
+                await self.output_f.write(fmt)
                 break
             x, y = m.span()
-            os.write(self.output_fd, fmt[:x])
+            await self.output_f.write(fmt[:x])
             fmt = fmt[y:]
             delay = int(m.group(1))
             if b"*" in m.group(2):
                 delay *= self.height
-            if self._pad and bps is not None:
-                nchars = (bps * delay) / 1000
-                os.write(self.output_fd, self._pad * nchars)
-            else:
-                time.sleep(float(delay) / 1000.0)
+            await anyio.sleep(float(delay) / 1000.0)
 
     def __input_fd_set(
         self,

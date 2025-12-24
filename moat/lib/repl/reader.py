@@ -21,8 +21,9 @@
 
 from __future__ import annotations
 
+import anyio
 import sys
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, fields
 
 from _colorize import ANSIColors, can_colorize
@@ -216,7 +217,6 @@ class Reader:
     lxy: tuple[int, int] = field(init=False)
     scheduled_commands: list[str] = field(default_factory=list)
     can_colorize: bool = False
-    threading_hook: Callback | None = None
 
     ## cached metadata to speed up screen refreshes
     @dataclass
@@ -577,12 +577,11 @@ class Reader:
                 self.dirty = True
             self.arg = None
 
-    def prepare(self) -> None:
+    async def prepare(self) -> None:
         """Get ready to run.  Call restore when finished.  You must not
         write to the console in between the calls to prepare and
         restore."""
         try:
-            self.console.prepare()
             self.arg = None
             self.finished = False
             del self.buffer[:]
@@ -596,7 +595,7 @@ class Reader:
 
         while self.scheduled_commands:
             cmd = self.scheduled_commands.pop()
-            self.do_cmd((cmd, []))
+            await self.do_cmd((cmd, []))
 
     def last_command_is(self, cls: type) -> bool:  # noqa: D102
         if not self.last_command:
@@ -605,10 +604,10 @@ class Reader:
 
     def restore(self) -> None:
         """Clean up after a run."""
-        self.console.restore()
+        pass
 
-    @contextmanager
-    def suspend(self) -> SimpleContextManager:
+    @asynccontextmanager
+    async def suspend(self) -> SimpleContextManager:
         """A context manager to delegate to another reader."""
         prev_state = {f.name: getattr(self, f.name) for f in fields(self)}
         try:
@@ -617,9 +616,9 @@ class Reader:
         finally:
             for arg in ("msg", "ps1", "ps2", "ps3", "ps4", "paste_mode"):
                 setattr(self, arg, prev_state[arg])
-            self.prepare()
+            await self.prepare()
 
-    def finish(self) -> None:
+    async def finish(self) -> None:
         """Called when a command signals that we're finished."""
         pass
 
@@ -628,21 +627,21 @@ class Reader:
         self.dirty = True
         self.console.beep()
 
-    def update_screen(self) -> None:  # noqa: D102
+    async def update_screen(self) -> None:  # noqa: D102
         if self.dirty:
-            self.refresh()
+            await self.refresh()
 
-    def refresh(self) -> None:
+    async def refresh(self) -> None:
         """Recalculate and refresh the screen."""
         if self.in_bracketed_paste and self.buffer and self.buffer[-1] != "\n":
             return
 
         # this call sets up self.cxy, so call it first.
         self.screen = self.calc_screen()
-        self.console.refresh(self.screen, self.cxy)
+        await self.console.refresh(self.screen, self.cxy)
         self.dirty = False
 
-    def do_cmd(self, cmd: tuple[str, list[str]]) -> None:
+    async def do_cmd(self, cmd: tuple[str, list[str]]) -> None:
         """`cmd` is a tuple of "event_name" and "event", which in the current
         implementation is always just the "buffer" which happens to be a list
         of single-character strings."""
@@ -656,12 +655,12 @@ class Reader:
             return  # nothing to do
 
         command = command_type(self, *cmd)  # type: ignore[arg-type]
-        command.do()
+        await command.do()
 
         self.after_command(command)
 
         if self.dirty:
-            self.refresh()
+            await self.refresh()
         else:
             self.update_cursor()
 
@@ -670,21 +669,10 @@ class Reader:
 
         self.finished = bool(command.finish)
         if self.finished:
-            self.console.finish()
-            self.finish()
+            await self.console.finish()
+            await self.finish()
 
     def run_hooks(self) -> None:  # noqa: D102
-        threading_hook = self.threading_hook
-        if threading_hook is None and "threading" in sys.modules:
-            from ._threading_handler import install_threading_hook  # noqa: PLC0415
-
-            install_threading_hook(self)
-        if threading_hook is not None:
-            try:
-                threading_hook()
-            except Exception:  # noqa: S110
-                pass
-
         input_hook = self.console.input_hook
         if input_hook:
             try:
@@ -692,7 +680,7 @@ class Reader:
             except Exception:  # noqa: S110
                 pass
 
-    def handle1(self, block: bool = True) -> bool:
+    async def handle1(self, block: bool = True) -> bool:
         """Handle a single event.  Wait as long as it takes if block
         is true (the default), otherwise return False if no event is
         pending."""
@@ -704,11 +692,10 @@ class Reader:
         while True:
             # We use the same timeout as in readline.c: 100ms
             self.run_hooks()
-            self.console.wait(100)
-            event = self.console.get_event(block=False)
-            if not event:
-                if block:
-                    continue
+            try:
+                with anyio.fail_after(None if block else 0.1):
+                    event = await self.console.get_event()
+            except TimeoutError:
                 return False
 
             translate = True
@@ -716,9 +703,9 @@ class Reader:
             if event.evt == "key":
                 self.input_trans.push(event)
             elif event.evt == "scroll":
-                self.refresh()
+                await self.refresh()
             elif event.evt == "resize":
-                self.refresh()
+                await self.refresh()
             else:
                 translate = False
 
@@ -732,28 +719,30 @@ class Reader:
                     continue
                 return False
 
-            self.do_cmd(cmd)
+            await self.do_cmd(cmd)
+            await self.console.flushoutput()
             return True
 
     def push_char(self, char: int | bytes) -> None:  # noqa: D102
         self.console.push_char(char)
         self.handle1(block=False)
 
-    def readline(self, startup_hook: Callback | None = None) -> str:
+    async def readline(self, startup_hook: Callback | None = None) -> str:
         """Read a line.  The implementation of this method also shows
         how to drive Reader if you want more control over the event
         loop."""
-        self.prepare()
-        try:
-            if startup_hook is not None:
-                startup_hook()
-            self.refresh()
-            while not self.finished:
-                self.handle1()
-            return self.get_unicode()
+        async with self.console:
+            self.prepare()
+            try:
+                if startup_hook is not None:
+                    startup_hook()
+                await self.refresh()
+                while not self.finished:
+                    await self.handle1()
+                return self.get_unicode()
 
-        finally:
-            self.restore()
+            finally:
+                self.restore()
 
     def bind(self, spec: KeySpec, command: CommandName) -> None:  # noqa: D102
         self.keymap = self.keymap + ((spec, command),)

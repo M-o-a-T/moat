@@ -58,7 +58,7 @@ ISEARCH_DIRECTION_FORWARDS = "f"
 
 
 class next_history(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         if r.historyi == len(r.history):
             r.error("end of history list")
@@ -67,7 +67,7 @@ class next_history(commands.Command):  # noqa: D101
 
 
 class previous_history(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         if r.historyi == 0:
             r.error("start of history list")
@@ -76,19 +76,19 @@ class previous_history(commands.Command):  # noqa: D101
 
 
 class history_search_backward(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.search_next(forwards=False)
 
 
 class history_search_forward(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.search_next(forwards=True)
 
 
 class restore_history(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         if r.historyi != len(r.history):
             if r.get_unicode() != r.history[r.historyi]:
@@ -98,22 +98,22 @@ class restore_history(commands.Command):  # noqa: D101
 
 
 class first_history(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         self.reader.select_item(0)
 
 
 class last_history(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         self.reader.select_item(len(self.reader.history))
 
 
 class operate_and_get_next(commands.FinishCommand):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         self.reader.next_history = self.reader.historyi + 1
 
 
 class yank_arg(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         if r.last_command is self.__class__:
             r.yank_arg_i += 1
@@ -141,7 +141,7 @@ class yank_arg(commands.Command):  # noqa: D101
 
 
 class forward_history_isearch(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_FORWARDS
         r.isearch_start = r.historyi, r.pos
@@ -151,7 +151,7 @@ class forward_history_isearch(commands.Command):  # noqa: D101
 
 
 class reverse_history_isearch(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_BACKWARDS
         r.dirty = True
@@ -161,7 +161,7 @@ class reverse_history_isearch(commands.Command):  # noqa: D101
 
 
 class isearch_cancel(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_NONE
         r.pop_input_trans()
@@ -171,7 +171,7 @@ class isearch_cancel(commands.Command):  # noqa: D101
 
 
 class isearch_add_character(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         r.isearch_term += self.event[-1]
@@ -182,7 +182,7 @@ class isearch_add_character(commands.Command):  # noqa: D101
 
 
 class isearch_backspace(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         if len(r.isearch_term) > 0:
             r.isearch_term = r.isearch_term[:-1]
@@ -192,21 +192,21 @@ class isearch_backspace(commands.Command):  # noqa: D101
 
 
 class isearch_forwards(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_FORWARDS
         r.isearch_next()
 
 
 class isearch_backwards(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_BACKWARDS
         r.isearch_next()
 
 
 class isearch_end(commands.Command):  # noqa: D101
-    def do(self) -> None:  # noqa: D102
+    async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_NONE
         r.console.forgetinput()
@@ -410,8 +410,8 @@ class HistoricalReader(Reader):
                     s = self.get_item(i)
                     p = len(s)
 
-    def finish(self) -> None:  # noqa: D102
-        super().finish()
+    async def finish(self) -> None:  # noqa: D102
+        await super().finish()
         ret = self.get_unicode()
         for i, t in self.transient_history.items():
             if i < len(self.history) and i != self.historyi:

@@ -47,6 +47,8 @@ Examples:
    - all of these are the tab character.
 """
 
+from __future__ import annotations
+
 _escapes = {
     "\\": "\\",
     "'": "'",
@@ -101,7 +103,7 @@ _keynames = {
 }
 
 
-class KeySpecError(Exception):
+class KeySpecError(Exception):  # noqa: D101
     pass
 
 
@@ -128,25 +130,19 @@ def _parse_single_key_sequence(key: str, s: int) -> tuple[list[str], int]:
             elif c == "c":
                 if key[s + 2] != "-":
                     raise KeySpecError(
-                        "\\C must be followed by `-' (char %d of %s)"
-                        % (s + 2, repr(key))
+                        "\\C must be followed by `-' (char %d of %s)" % (s + 2, repr(key))  # noqa: UP031
                     )
                 if ctrl:
-                    raise KeySpecError(
-                        "doubled \\C- (char %d of %s)" % (s + 1, repr(key))
-                    )
+                    raise KeySpecError("doubled \\C- (char %d of %s)" % (s + 1, repr(key)))  # noqa: UP031
                 ctrl = 1
                 s += 3
             elif c == "m":
                 if key[s + 2] != "-":
                     raise KeySpecError(
-                        "\\M must be followed by `-' (char %d of %s)"
-                        % (s + 2, repr(key))
+                        "\\M must be followed by `-' (char %d of %s)" % (s + 2, repr(key))  # noqa: UP031
                     )
                 if meta:
-                    raise KeySpecError(
-                        "doubled \\M- (char %d of %s)" % (s + 1, repr(key))
-                    )
+                    raise KeySpecError("doubled \\M- (char %d of %s)" % (s + 1, repr(key)))  # noqa: UP031
                 meta = 1
                 s += 3
             elif c.isdigit():
@@ -161,21 +157,18 @@ def _parse_single_key_sequence(key: str, s: int) -> tuple[list[str], int]:
                 t = key.find(">", s)
                 if t == -1:
                     raise KeySpecError(
-                        "unterminated \\< starting at char %d of %s"
-                        % (s + 1, repr(key))
+                        "unterminated \\< starting at char %d of %s" % (s + 1, repr(key))  # noqa: UP031
                     )
                 ret = key[s + 2 : t].lower()
                 if ret not in _keynames:
                     raise KeySpecError(
-                        "unrecognised keyname `%s' at char %d of %s"
-                        % (ret, s + 2, repr(key))
+                        "unrecognised keyname `%s' at char %d of %s" % (ret, s + 2, repr(key))  # noqa: UP031
                     )
                 ret = _keynames[ret]
                 s = t + 1
             else:
                 raise KeySpecError(
-                    "unknown backslash escape %s at char %d of %s"
-                    % (repr(c), s + 2, repr(key))
+                    "unknown backslash escape %s at char %d of %s" % (repr(c), s + 2, repr(key))  # noqa: UP031
                 )
         else:
             ret = key[s]
@@ -194,7 +187,7 @@ def _parse_single_key_sequence(key: str, s: int) -> tuple[list[str], int]:
     return result
 
 
-def compile_keymap(keymap, empty=b""):
+def compile_keymap(keymap, empty=b""):  # noqa: D103
     r = {}
     for key, value in keymap.items():
         if isinstance(key, bytes):
@@ -205,7 +198,7 @@ def compile_keymap(keymap, empty=b""):
     for key, value in r.items():
         if empty in value:
             if len(value) != 1:
-                raise KeySpecError("key definitions for %s clash" % (value.values(),))
+                raise KeySpecError(f"key definitions for {value.values()} clash")
             else:
                 r[key] = value[empty]
         else:

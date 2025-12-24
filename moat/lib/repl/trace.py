@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import os
 
@@ -9,10 +9,10 @@ if False:
 
 trace_file: IO[str] | None = None
 if trace_filename := os.environ.get("PYREPL_TRACE"):
-    trace_file = open(trace_filename, "a")
+    trace_file = open(trace_filename, "a")  # noqa: SIM115
 
 
-def trace(line: str, *k: object, **kw: object) -> None:
+def trace(line: str, *k: object, **kw: object) -> None:  # noqa: D103
     if trace_file is None:
         return
     if k or kw:

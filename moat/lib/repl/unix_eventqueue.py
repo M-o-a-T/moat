@@ -1,4 +1,4 @@
-#   Copyright 2000-2008 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2008 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #                       Armin Rigo
 #
 #                        All Rights Reserved
@@ -17,13 +17,14 @@
 # RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
 # CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+from __future__ import annotations
+
+import os
+from termios import VERASE, tcgetattr
 
 from . import curses
-from .trace import trace
 from .base_eventqueue import BaseEventQueue
-from termios import tcgetattr, VERASE
-import os
-
+from .trace import trace
 
 # Mapping of human-readable key names to their terminal-specific codes
 TERMINAL_KEYNAMES = {
@@ -42,17 +43,18 @@ TERMINAL_KEYNAMES = {
 
 
 # Function keys F1-F20 mapping
-TERMINAL_KEYNAMES.update(("f%d" % i, "kf%d" % i) for i in range(1, 21))
+TERMINAL_KEYNAMES.update(("f%d" % i, "kf%d" % i) for i in range(1, 21))  # noqa: UP031
 
 # Known CTRL-arrow keycodes
-CTRL_ARROW_KEYCODES= {
+CTRL_ARROW_KEYCODES = {
     # for xterm, gnome-terminal, xfce terminal, etc.
-    b'\033[1;5D': 'ctrl left',
-    b'\033[1;5C': 'ctrl right',
+    b"\033[1;5D": "ctrl left",
+    b"\033[1;5C": "ctrl right",
     # for rxvt
-    b'\033Od': 'ctrl left',
-    b'\033Oc': 'ctrl right',
+    b"\033Od": "ctrl left",
+    b"\033Oc": "ctrl right",
 }
+
 
 def get_terminal_keycodes() -> dict[bytes, str]:
     """
@@ -61,13 +63,14 @@ def get_terminal_keycodes() -> dict[bytes, str]:
     keycodes = {}
     for key, terminal_code in TERMINAL_KEYNAMES.items():
         keycode = curses.tigetstr(terminal_code)
-        trace('key {key} tiname {terminal_code} keycode {keycode!r}', **locals())
+        trace("key {key} tiname {terminal_code} keycode {keycode!r}", **locals())
         if keycode:
             keycodes[keycode] = key
     keycodes.update(CTRL_ARROW_KEYCODES)
     return keycodes
 
-class EventQueue(BaseEventQueue):
+
+class EventQueue(BaseEventQueue):  # noqa: D101
     def __init__(self, fd: int, encoding: str) -> None:
         keycodes = get_terminal_keycodes()
         if os.isatty(fd):

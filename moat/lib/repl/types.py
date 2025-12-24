@@ -1,3 +1,5 @@
+from __future__ import annotations  # noqa: D100
+
 from collections.abc import Callable, Iterator
 
 type Callback = Callable[[], object]

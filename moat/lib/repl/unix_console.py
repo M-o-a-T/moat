@@ -1,4 +1,4 @@
-#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #                       Antonio Cuni
 #                       Armin Rigo
 #
@@ -23,34 +23,34 @@ from __future__ import annotations
 
 import errno
 import os
+import platform
 import re
 import select
 import signal
 import struct
 import termios
 import time
-import platform
 from fcntl import ioctl
 
 from . import curses
 from .console import Console, Event
-from .fancy_termios import tcgetattr, tcsetattr, TermState
+from .fancy_termios import TermState, tcgetattr, tcsetattr
 from .trace import trace
 from .unix_eventqueue import EventQueue
 from .utils import wlen
-
 
 TYPE_CHECKING = False
 
 # types
 if TYPE_CHECKING:
-    from typing import AbstractSet, IO, Literal, overload, cast
+    from collections.abc.Set import AbstractSet
+    from typing import IO, Literal, cast, overload
 else:
-    overload = lambda func: None
-    cast = lambda typ, val: val
+    overload = lambda func: None  # noqa: ARG005, E731
+    cast = lambda typ, val: val  # noqa: ARG005, E731
 
 
-class InvalidTerminal(RuntimeError):
+class InvalidTerminal(RuntimeError):  # noqa: D101
     def __init__(self, message: str) -> None:
         super().__init__(errno.EIO, message)
 
@@ -68,8 +68,8 @@ TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", None)
 # Add (possibly) missing baudrates (check termios man page) to termios
 
 
-def add_baudrate_if_supported(dictionary: dict[int, int], rate: int) -> None:
-    baudrate_name = "B%d" % rate
+def add_baudrate_if_supported(dictionary: dict[int, int], rate: int) -> None:  # noqa: D103
+    baudrate_name = "B%d" % rate  # noqa: UP031
     if hasattr(termios, baudrate_name):
         dictionary[getattr(termios, baudrate_name)] = rate
 
@@ -115,25 +115,25 @@ try:
 except AttributeError:
     # this is exactly the minumum necessary to support what we
     # do with poll objects
-    class MinimalPoll:
+    class MinimalPoll:  # noqa: D101
         def __init__(self):
             pass
 
-        def register(self, fd, flag):
+        def register(self, fd, flag):  # noqa: ARG002, D102
             self.fd = fd
 
         # note: The 'timeout' argument is received as *milliseconds*
-        def poll(self, timeout: float | None = None) -> list[int]:
+        def poll(self, timeout: float | None = None) -> list[int]:  # noqa: D102
             if timeout is None:
                 r, w, e = select.select([self.fd], [], [])
             else:
-                r, w, e = select.select([self.fd], [], [], timeout / 1000)
+                r, w, e = select.select([self.fd], [], [], timeout / 1000)  # noqa: RUF059
             return r
 
     poll = MinimalPoll  # type: ignore[assignment]
 
 
-class UnixConsole(Console):
+class UnixConsole(Console):  # noqa: D101
     def __init__(
         self,
         f_in: IO[bytes] | int = 0,
@@ -159,19 +159,16 @@ class UnixConsole(Console):
         curses.setupterm(term or None, self.output_fd)
         self.term = term
         self.is_apple_terminal = (
-            platform.system() == "Darwin"
-            and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
+            platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
         )
 
         try:
             self.__input_fd_set(tcgetattr(self.input_fd), ignore=frozenset())
         except _error as e:
-            raise RuntimeError(f"termios failure ({e.args[1]})")
+            raise RuntimeError(f"termios failure ({e.args[1]})") from e
 
         @overload
-        def _my_getstr(
-            cap: str, optional: Literal[False] = False
-        ) -> bytes: ...
+        def _my_getstr(cap: str, optional: Literal[False] = False) -> bytes: ...
 
         @overload
         def _my_getstr(cap: str, optional: bool) -> bytes | None: ...
@@ -179,9 +176,7 @@ class UnixConsole(Console):
         def _my_getstr(cap: str, optional: bool = False) -> bytes | None:
             r = curses.tigetstr(cap)
             if not optional and r is None:
-                raise InvalidTerminal(
-                    f"terminal doesn't have the required {cap} capability"
-                )
+                raise InvalidTerminal(f"terminal doesn't have the required {cap} capability")
             return r
 
         self._bel = _my_getstr("bel")
@@ -216,15 +211,12 @@ class UnixConsole(Console):
 
         signal.signal(signal.SIGCONT, self._sigcont_handler)
 
-    def _sigcont_handler(self, signum, frame):
+    def _sigcont_handler(self, signum, frame):  # noqa: ARG002
         self.restore()
         self.prepare()
 
-    def more_in_buffer(self) -> bool:
-        return bool(
-            self.input_buffer
-            and self.input_buffer_pos < len(self.input_buffer)
-        )
+    def more_in_buffer(self) -> bool:  # noqa: D102
+        return bool(self.input_buffer and self.input_buffer_pos < len(self.input_buffer))
 
     def __read(self, n: int) -> bytes:
         if not self.more_in_buffer():
@@ -270,7 +262,7 @@ class UnixConsole(Console):
             self.__gone_tall = 1
             self.__move = self.__move_tall
 
-        px, py = self.posxy
+        px, py = self.posxy  # noqa: RUF059
         old_offset = offset = self.__offset
         height = self.height
 
@@ -292,7 +284,7 @@ class UnixConsole(Console):
             self.__hide_cursor()
             self.__write_code(self._cup, 0, 0)
             self.posxy = 0, old_offset
-            for i in range(old_offset - offset):
+            for _i in range(old_offset - offset):
                 self.__write_code(self._ri)
                 oldscr.pop(-1)
                 oldscr.insert(0, "")
@@ -300,7 +292,7 @@ class UnixConsole(Console):
             self.__hide_cursor()
             self.__write_code(self._cup, self.height - 1, 0)
             self.posxy = 0, old_offset + self.height - 1
-            for i in range(offset - old_offset):
+            for _i in range(offset - old_offset):
                 self.__write_code(self._ind)
                 oldscr.pop(0)
                 oldscr.append("")
@@ -311,7 +303,7 @@ class UnixConsole(Console):
             y,
             oldline,
             newline,
-        ) in zip(range(offset, offset + height), oldscr, newscr):
+        ) in zip(range(offset, offset + height), oldscr, newscr, strict=False):
             if oldline != newline:
                 self.__write_changed_line(y, oldline, newline, px)
 
@@ -430,8 +422,6 @@ class UnixConsole(Console):
                             return self.event_queue.get()
                         else:
                             continue
-                    elif err.errno == errno.EIO:
-                        raise SystemExit(errno.EIO)
                     else:
                         raise
                 else:
@@ -587,13 +577,13 @@ class UnixConsole(Console):
         self.screen = []
 
     @property
-    def input_hook(self):
+    def input_hook(self):  # noqa: D102
         try:
-            import posix
+            import posix  # noqa: PLC0415
         except ImportError:
             return None
-        if posix._is_inputhook_installed():
-            return posix._inputhook
+        if posix._is_inputhook_installed():  # noqa: SLF001
+            return posix._inputhook  # noqa: SLF001
 
     def __enable_bracketed_paste(self) -> None:
         os.write(self.output_fd, b"\x1b[?2004h")
@@ -605,7 +595,7 @@ class UnixConsole(Console):
         """
         Set up the movement functions based on the terminal capabilities.
         """
-        if 0 and self._hpa:  # hpa don't work in windows telnet :-(
+        if False:  # hpa don't work in windows telnet :-(
             self.__move_x = self.__move_x_hpa
         elif self._cub and self._cuf:
             self.__move_x = self.__move_x_cub_cuf
@@ -657,11 +647,7 @@ class UnixConsole(Console):
         # reuse the oldline as much as possible, but stop as soon as we
         # encounter an ESCAPE, because it might be the start of an escape
         # sequene
-        while (
-            x_coord < minlen
-            and oldline[x_pos] == newline[x_pos]
-            and newline[x_pos] != "\x1b"
-        ):
+        while x_coord < minlen and oldline[x_pos] == newline[x_pos] and newline[x_pos] != "\x1b":
             x_coord += wlen(newline[x_pos])
             x_pos += 1
 
@@ -778,7 +764,7 @@ class UnixConsole(Console):
         assert 0 <= y - self.__offset < self.height, y - self.__offset
         self.__write_code(self._cup, y - self.__offset, x)
 
-    def __sigwinch(self, signum, frame):
+    def __sigwinch(self, signum, frame):  # noqa: ARG002
         self.height, self.width = self.getheightwidth()
         self.event_queue.insert(Event("resize", None))
 
@@ -792,7 +778,7 @@ class UnixConsole(Console):
             self.__maybe_write_code(self._cnorm)
             self.cursor_visible = 1
 
-    def repaint(self):
+    def repaint(self):  # noqa: D102
         if not self.__gone_tall:
             self.posxy = 0, self.posxy[1]
             self.__write("\r")

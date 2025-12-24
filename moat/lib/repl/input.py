@@ -1,4 +1,4 @@
-#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #
 #                        All Rights Reserved
 #
@@ -35,34 +35,38 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import unicodedata
-from collections import deque
+from abc import ABC, abstractmethod
 
+from collections import deque
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types import EventTuple
 
 # types
 if False:
-    from .types import EventTuple
+    pass
 
 
-class InputTranslator(ABC):
+class InputTranslator(ABC):  # noqa: D101
     @abstractmethod
-    def push(self, evt: EventTuple) -> None:
+    def push(self, evt: EventTuple) -> None:  # noqa: D102
         pass
 
     @abstractmethod
-    def get(self) -> EventTuple | None:
+    def get(self) -> EventTuple | None:  # noqa: D102
         return None
 
     @abstractmethod
-    def empty(self) -> bool:
+    def empty(self) -> bool:  # noqa: D102
         return True
 
 
-class KeymapTranslator(InputTranslator):
+class KeymapTranslator(InputTranslator):  # noqa: D101
     def __init__(self, keymap, verbose=False, invalid_cls=None, character_cls=None):
         self.verbose = verbose
-        from .keymap import compile_keymap, parse_keys
+        from .keymap import compile_keymap, parse_keys  # noqa: PLC0415
 
         self.keymap = keymap
         self.invalid_cls = invalid_cls
@@ -77,7 +81,7 @@ class KeymapTranslator(InputTranslator):
         self.results = deque()
         self.stack = []
 
-    def push(self, evt):
+    def push(self, evt):  # noqa: D102
         if self.verbose:
             print("pushed", evt.data, end="")
         key = evt.data
@@ -104,11 +108,11 @@ class KeymapTranslator(InputTranslator):
             self.stack = []
             self.k = self.ck
 
-    def get(self):
+    def get(self):  # noqa: D102
         if self.results:
             return self.results.popleft()
         else:
             return None
 
-    def empty(self) -> bool:
+    def empty(self) -> bool:  # noqa: D102
         return not self.results

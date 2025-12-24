@@ -1,4 +1,4 @@
-#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #
 #                        All Rights Reserved
 #
@@ -16,19 +16,19 @@
 # RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
 # CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+from __future__ import annotations
 
 import termios
-
 
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
     from typing import cast
 else:
-    cast = lambda typ, val: val
+    cast = lambda typ, val: val  # noqa: ARG005, E731
 
 
-class TermState:
+class TermState:  # noqa: D101
     def __init__(self, attrs: list[int | list[bytes]]) -> None:
         self.iflag = cast(int, attrs[0])
         self.oflag = cast(int, attrs[1])
@@ -38,7 +38,7 @@ class TermState:
         self.ospeed = cast(int, attrs[5])
         self.cc = cast(list[bytes], attrs[6])
 
-    def as_list(self) -> list[int | list[bytes]]:
+    def as_list(self) -> list[int | list[bytes]]:  # noqa: D102
         return [
             self.iflag,
             self.oflag,
@@ -51,19 +51,19 @@ class TermState:
             self.cc[:],
         ]
 
-    def copy(self) -> "TermState":
+    def copy(self) -> TermState:  # noqa: D102
         return self.__class__(self.as_list())
 
 
-def tcgetattr(fd: int) -> TermState:
+def tcgetattr(fd: int) -> TermState:  # noqa: D103
     return TermState(termios.tcgetattr(fd))
 
 
-def tcsetattr(fd: int, when: int, attrs: TermState) -> None:
+def tcsetattr(fd: int, when: int, attrs: TermState) -> None:  # noqa: D103
     termios.tcsetattr(fd, when, attrs.as_list())
 
 
-class Term(TermState):
+class Term(TermState):  # noqa: D101
     TS__init__ = TermState.__init__
 
     def __init__(self, fd: int = 0) -> None:
@@ -71,12 +71,12 @@ class Term(TermState):
         self.fd = fd
         self.stack: list[list[int | list[bytes]]] = []
 
-    def save(self) -> None:
+    def save(self) -> None:  # noqa: D102
         self.stack.append(self.as_list())
 
-    def set(self, when: int = termios.TCSANOW) -> None:
+    def set(self, when: int = termios.TCSANOW) -> None:  # noqa: D102
         termios.tcsetattr(self.fd, when, self.as_list())
 
-    def restore(self) -> None:
+    def restore(self) -> None:  # noqa: D102
         self.TS__init__(self.stack.pop())
         self.set()

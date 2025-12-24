@@ -1,4 +1,4 @@
-#   Copyright 2000-2008 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2008 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D104
 #                       Armin Rigo
 #
 #                        All Rights Reserved

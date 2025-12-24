@@ -1,4 +1,4 @@
-#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #                       Antonio Cuni
 #                       Armin Rigo
 #
@@ -22,28 +22,28 @@
 from __future__ import annotations
 
 import sys
-
 from contextlib import contextmanager
 from dataclasses import dataclass, field, fields
-from _colorize import can_colorize, ANSIColors
 
+from _colorize import ANSIColors, can_colorize
 
-from . import commands, console, input
-from .utils import wlen, unbracket, disp_str
+from . import commands, console, input  # noqa: A004
 from .trace import trace
-
+from .utils import disp_str, unbracket, wlen
 
 # types
 Command = commands.Command
-from .types import Callback, SimpleContextManager, KeySpec, CommandName
+from typing import TYPE_CHECKING  # noqa: E402
 
+if TYPE_CHECKING:
+    from .types import Callback, CommandName, KeySpec, SimpleContextManager
 
 # syntax classes:
 
 SYNTAX_WHITESPACE, SYNTAX_WORD, SYNTAX_SYMBOL = range(3)
 
 
-def make_default_syntax_table() -> dict[str, int]:
+def make_default_syntax_table() -> dict[str, int]:  # noqa: D103
     # XXX perhaps should use some unicodedata here?
     st: dict[str, int] = {}
     for c in map(chr, range(256)):
@@ -54,7 +54,7 @@ def make_default_syntax_table() -> dict[str, int]:
     return st
 
 
-def make_default_commands() -> dict[CommandName, type[Command]]:
+def make_default_commands() -> dict[CommandName, type[Command]]:  # noqa: D103
     result: dict[CommandName, type[Command]] = {}
     for v in vars(commands).values():
         if isinstance(v, type) and issubclass(v, Command) and v.__name__[0].islower():
@@ -83,7 +83,7 @@ default_keymap: tuple[tuple[KeySpec, CommandName], ...] = tuple(
         (r"\C-w", "unix-word-rubout"),
         (r"\C-x\C-u", "upcase-region"),
         (r"\C-y", "yank"),
-        *(() if sys.platform == "win32" else ((r"\C-z", "suspend"), )),
+        *(() if sys.platform == "win32" else ((r"\C-z", "suspend"),)),
         (r"\M-b", "backward-word"),
         (r"\M-c", "capitalize-word"),
         (r"\M-d", "kill-word"),
@@ -220,7 +220,7 @@ class Reader:
 
     ## cached metadata to speed up screen refreshes
     @dataclass
-    class RefreshCache:
+    class RefreshCache:  # noqa: D106
         in_bracketed_paste: bool = False
         screen: list[str] = field(default_factory=list)
         screeninfo: list[tuple[int, list[int]]] = field(init=False)
@@ -230,11 +230,12 @@ class Reader:
         dimensions: tuple[int, int] = field(init=False)
         invalidated: bool = False
 
-        def update_cache(self,
-                         reader: Reader,
-                         screen: list[str],
-                         screeninfo: list[tuple[int, list[int]]],
-            ) -> None:
+        def update_cache(  # noqa: D102
+            self,
+            reader: Reader,
+            screen: list[str],
+            screeninfo: list[tuple[int, list[int]]],
+        ) -> None:
             self.in_bracketed_paste = reader.in_bracketed_paste
             self.screen = screen.copy()
             self.screeninfo = screeninfo.copy()
@@ -243,7 +244,7 @@ class Reader:
             self.dimensions = reader.console.width, reader.console.height
             self.invalidated = False
 
-        def valid(self, reader: Reader) -> bool:
+        def valid(self, reader: Reader) -> bool:  # noqa: D102
             if self.invalidated:
                 return False
             dimensions = reader.console.width, reader.console.height
@@ -251,7 +252,7 @@ class Reader:
             paste_changed = reader.in_bracketed_paste != self.in_bracketed_paste
             return not (dimensions_changed or paste_changed)
 
-        def get_cached_location(self, reader: Reader) -> tuple[int, int]:
+        def get_cached_location(self, reader: Reader) -> tuple[int, int]:  # noqa: D102
             if self.invalidated:
                 raise ValueError("Cache is invalidated")
             offset = 0
@@ -286,7 +287,7 @@ class Reader:
         self.last_refresh_cache.cxy = self.cxy
         self.last_refresh_cache.dimensions = (0, 0)
 
-    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:
+    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
 
     def calc_screen(self) -> list[str]:
@@ -315,7 +316,7 @@ class Reader:
         pos = self.pos
         pos -= offset
 
-        prompt_from_cache = (offset and self.buffer[offset - 1] != "\n")
+        prompt_from_cache = offset and self.buffer[offset - 1] != "\n"
         lines = "".join(self.buffer[offset:]).split("\n")
         cursor_found = False
         lines_beyond_cursor = 0
@@ -354,7 +355,7 @@ class Reader:
             else:
                 pre = prompt
                 prelen = prompt_len
-                for wrap in range(wrapcount + 1):
+                for _wrap in range(wrapcount + 1):
                     index_to_wrap_before = 0
                     column = 0
                     for char_width in char_widths:
@@ -463,7 +464,7 @@ class Reader:
         """Return the last x-offset for line y"""
         return self.screeninfo[y][0] + sum(self.screeninfo[y][1])
 
-    def max_row(self) -> int:
+    def max_row(self) -> int:  # noqa: D102
         return len(self.screeninfo) - 1
 
     def get_arg(self, default: int = 1) -> int:
@@ -495,11 +496,11 @@ class Reader:
             prompt = f"{ANSIColors.BOLD_MAGENTA}{prompt}{ANSIColors.RESET}"
         return prompt
 
-    def push_input_trans(self, itrans: input.KeymapTranslator) -> None:
+    def push_input_trans(self, itrans: input.KeymapTranslator) -> None:  # noqa: D102
         self.input_trans_stack.append(self.input_trans)
         self.input_trans = itrans
 
-    def pop_input_trans(self) -> None:
+    def pop_input_trans(self) -> None:  # noqa: D102
         self.input_trans = self.input_trans_stack.pop()
 
     def setpos_from_xy(self, x: int, y: int) -> None:
@@ -597,7 +598,7 @@ class Reader:
             cmd = self.scheduled_commands.pop()
             self.do_cmd((cmd, []))
 
-    def last_command_is(self, cls: type) -> bool:
+    def last_command_is(self, cls: type) -> bool:  # noqa: D102
         if not self.last_command:
             return False
         return issubclass(cls, self.last_command)
@@ -622,18 +623,18 @@ class Reader:
         """Called when a command signals that we're finished."""
         pass
 
-    def error(self, msg: str = "none") -> None:
+    def error(self, msg: str = "none") -> None:  # noqa: D102
         self.msg = "! " + msg + " "
         self.dirty = True
         self.console.beep()
 
-    def update_screen(self) -> None:
+    def update_screen(self) -> None:  # noqa: D102
         if self.dirty:
             self.refresh()
 
     def refresh(self) -> None:
         """Recalculate and refresh the screen."""
-        if self.in_bracketed_paste and self.buffer and not self.buffer[-1] == "\n":
+        if self.in_bracketed_paste and self.buffer and self.buffer[-1] != "\n":
             return
 
         # this call sets up self.cxy, so call it first.
@@ -672,22 +673,23 @@ class Reader:
             self.console.finish()
             self.finish()
 
-    def run_hooks(self) -> None:
+    def run_hooks(self) -> None:  # noqa: D102
         threading_hook = self.threading_hook
-        if threading_hook is None and 'threading' in sys.modules:
-            from ._threading_handler import install_threading_hook
+        if threading_hook is None and "threading" in sys.modules:
+            from ._threading_handler import install_threading_hook  # noqa: PLC0415
+
             install_threading_hook(self)
         if threading_hook is not None:
             try:
                 threading_hook()
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
         input_hook = self.console.input_hook
         if input_hook:
             try:
                 input_hook()
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
     def handle1(self, block: bool = True) -> bool:
@@ -733,7 +735,7 @@ class Reader:
             self.do_cmd(cmd)
             return True
 
-    def push_char(self, char: int | bytes) -> None:
+    def push_char(self, char: int | bytes) -> None:  # noqa: D102
         self.console.push_char(char)
         self.handle1(block=False)
 
@@ -753,7 +755,7 @@ class Reader:
         finally:
             self.restore()
 
-    def bind(self, spec: KeySpec, command: CommandName) -> None:
+    def bind(self, spec: KeySpec, command: CommandName) -> None:  # noqa: D102
         self.keymap = self.keymap + ((spec, command),)
         self.input_trans = input.KeymapTranslator(
             self.keymap, invalid_cls="invalid-key", character_cls="self-insert"

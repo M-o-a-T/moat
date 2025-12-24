@@ -1,4 +1,4 @@
-#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #                       Armin Rigo
 #
 #                        All Rights Reserved
@@ -17,7 +17,7 @@
 # RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
 # CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
+from __future__ import annotations
 
 try:
     import _curses

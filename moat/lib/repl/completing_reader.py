@@ -1,4 +1,4 @@
-#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2010 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #                       Antonio Cuni
 #
 #                        All Rights Reserved
@@ -20,20 +20,24 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
-import re
 from . import commands, console, reader
 from .reader import Reader
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types import CommandName, KeySpec
 
 # types
 Command = commands.Command
 if False:
-    from .types import KeySpec, CommandName
+    pass
 
 
-def prefix(wordlist: list[str], j: int = 0) -> str:
+def prefix(wordlist: list[str], j: int = 0) -> str:  # noqa: D103
     d = {}
     i = j
     try:
@@ -51,29 +55,30 @@ def prefix(wordlist: list[str], j: int = 0) -> str:
 
 STRIPCOLOR_REGEX = re.compile(r"\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[m|K]")
 
-def stripcolor(s: str) -> str:
-    return STRIPCOLOR_REGEX.sub('', s)
+
+def stripcolor(s: str) -> str:  # noqa: D103
+    return STRIPCOLOR_REGEX.sub("", s)
 
 
-def real_len(s: str) -> int:
+def real_len(s: str) -> int:  # noqa: D103
     return len(stripcolor(s))
 
 
-def left_align(s: str, maxlen: int) -> str:
+def left_align(s: str, maxlen: int) -> str:  # noqa: D103
     stripped = stripcolor(s)
     if len(stripped) > maxlen:
         # too bad, we remove the color
         return stripped[:maxlen]
     padding = maxlen - len(stripped)
-    return s + ' '*padding
+    return s + " " * padding
 
 
-def build_menu(
-        cons: console.Console,
-        wordlist: list[str],
-        start: int,
-        use_brackets: bool,
-        sort_in_column: bool,
+def build_menu(  # noqa: D103
+    cons: console.Console,
+    wordlist: list[str],
+    start: int,
+    use_brackets: bool,
+    sort_in_column: bool,
 ) -> tuple[list[str], int]:
     if use_brackets:
         item = "[ %s ]"
@@ -83,7 +88,7 @@ def build_menu(
         padding = 2
     maxlen = min(max(map(real_len, wordlist)), cons.width - padding)
     cols = int(cons.width / (maxlen + padding))
-    rows = int((len(wordlist) - 1)/cols + 1)
+    rows = int((len(wordlist) - 1) / cols + 1)
 
     if sort_in_column:
         # sort_in_column=False (default)     sort_in_column=True
@@ -93,27 +98,28 @@ def build_menu(
         #
         # "fill" the table with empty words, so we always have the same amout
         # of rows for each column
-        missing = cols*rows - len(wordlist)
-        wordlist = wordlist + ['']*missing
+        missing = cols * rows - len(wordlist)
+        wordlist = wordlist + [""] * missing
         indexes = [(i % cols) * rows + i // cols for i in range(len(wordlist))]
         wordlist = [wordlist[i] for i in indexes]
     menu = []
     i = start
     for r in range(rows):
         row = []
-        for col in range(cols):
+        for _col in range(cols):
             row.append(item % left_align(wordlist[i], maxlen))
             i += 1
             if i >= len(wordlist):
                 break
-        menu.append(''.join(row))
+        menu.append("".join(row))
         if i >= len(wordlist):
             i = 0
             break
         if r + 5 > cons.height:
-            menu.append("   %d more... " % (len(wordlist) - i))
+            menu.append("   %d more... " % (len(wordlist) - i))  # noqa: UP031
             break
     return menu, i
+
 
 # this gets somewhat user interface-y, and as a result the logic gets
 # very convoluted.
@@ -163,8 +169,8 @@ def build_menu(
 # choices).
 
 
-class complete(commands.Command):
-    def do(self) -> None:
+class complete(commands.Command):  # noqa: D101
+    def do(self) -> None:  # noqa: D102
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
         last_is_completer = r.last_command_is(self.__class__)
@@ -181,7 +187,7 @@ class complete(commands.Command):
             if completions_unchangable and len(completions[0]) == len(stem):
                 r.msg = "[ sole completion ]"
                 r.dirty = True
-            r.insert(completions[0][len(stem):])
+            r.insert(completions[0][len(stem) :])
         else:
             p = prefix(completions, len(stem))
             if p:
@@ -190,8 +196,8 @@ class complete(commands.Command):
                 r.cmpltn_menu_visible = True
                 r.cmpltn_message_visible = False
                 r.cmpltn_menu, r.cmpltn_menu_end = build_menu(
-                    r.console, completions, r.cmpltn_menu_end,
-                    r.use_brackets, r.sort_in_column)
+                    r.console, completions, r.cmpltn_menu_end, r.use_brackets, r.sort_in_column
+                )
                 r.dirty = True
             elif not r.cmpltn_menu_visible:
                 r.cmpltn_message_visible = True
@@ -203,8 +209,8 @@ class complete(commands.Command):
                     r.dirty = True
 
 
-class self_insert(commands.self_insert):
-    def do(self) -> None:
+class self_insert(commands.self_insert):  # noqa: D101
+    def do(self) -> None:  # noqa: D102
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
 
@@ -214,12 +220,11 @@ class self_insert(commands.self_insert):
             if len(stem) < 1:
                 r.cmpltn_reset()
             else:
-                completions = [w for w in r.cmpltn_menu_choices
-                               if w.startswith(stem)]
+                completions = [w for w in r.cmpltn_menu_choices if w.startswith(stem)]
                 if completions:
                     r.cmpltn_menu, r.cmpltn_menu_end = build_menu(
-                        r.console, completions, 0,
-                        r.use_brackets, r.sort_in_column)
+                        r.console, completions, 0, r.use_brackets, r.sort_in_column
+                    )
                 else:
                     r.cmpltn_reset()
 
@@ -246,18 +251,17 @@ class CompletingReader(Reader):
         self.cmpltn_reset()
         for c in (complete, self_insert):
             self.commands[c.__name__] = c
-            self.commands[c.__name__.replace('_', '-')] = c
+            self.commands[c.__name__.replace("_", "-")] = c
 
-    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:
-        return super().collect_keymap() + (
-            (r'\t', 'complete'),)
+    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
+        return super().collect_keymap() + ((r"\t", "complete"),)
 
-    def after_command(self, cmd: Command) -> None:
+    def after_command(self, cmd: Command) -> None:  # noqa: D102
         super().after_command(cmd)
         if not isinstance(cmd, (complete, self_insert)):
             self.cmpltn_reset()
 
-    def calc_screen(self) -> list[str]:
+    def calc_screen(self) -> list[str]:  # noqa: D102
         screen = super().calc_screen()
         if self.cmpltn_menu_visible:
             # We display the completions menu below the current prompt
@@ -268,28 +272,28 @@ class CompletingReader(Reader):
             # This is a hack to prevent the cursor jumping
             # into the completions menu when pressing left or down arrow.
             if self.pos != len(self.buffer):
-                self.screeninfo[ly:ly] = [(0, [])]*len(self.cmpltn_menu)
+                self.screeninfo[ly:ly] = [(0, [])] * len(self.cmpltn_menu)
         return screen
 
-    def finish(self) -> None:
+    def finish(self) -> None:  # noqa: D102
         super().finish()
         self.cmpltn_reset()
 
-    def cmpltn_reset(self) -> None:
+    def cmpltn_reset(self) -> None:  # noqa: D102
         self.cmpltn_menu = []
         self.cmpltn_menu_visible = False
         self.cmpltn_message_visible = False
         self.cmpltn_menu_end = 0
         self.cmpltn_menu_choices = []
 
-    def get_stem(self) -> str:
+    def get_stem(self) -> str:  # noqa: D102
         st = self.syntax_table
         SW = reader.SYNTAX_WORD
         b = self.buffer
         p = self.pos - 1
         while p >= 0 and st.get(b[p], SW) == SW:
             p -= 1
-        return ''.join(b[p+1:self.pos])
+        return "".join(b[p + 1 : self.pos])
 
-    def get_completions(self, stem: str) -> list[str]:
+    def get_completions(self, stem: str) -> list[str]:  # noqa: ARG002, D102
         return []

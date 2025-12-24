@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import traceback
-
+from dataclasses import dataclass, field
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from threading import Thread
     from types import TracebackType
+
     from typing import Protocol
 
     class ExceptHookArgs(Protocol):
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 def install_threading_hook(reader: Reader) -> None:
-    import threading
+    import threading  # noqa: PLC0415
 
     @dataclass
     class ExceptHookHandler:
@@ -67,7 +67,6 @@ def install_threading_hook(reader: Reader) -> None:
 
         def __call__(self) -> int:
             return self.show()
-
 
     handler = ExceptHookHandler()
     reader.threading_hook = handler

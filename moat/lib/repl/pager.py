@@ -1,17 +1,18 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import io
 import os
 import re
 import sys
+from shlex import quote
 
+from typing import TYPE_CHECKING
 
-# types
-if False:
+if TYPE_CHECKING:
     from typing import Protocol
-    class Pager(Protocol):
-        def __call__(self, text: str, title: str = "") -> None:
-            ...
+
+    class Pager(Protocol):  # noqa: D101
+        def __call__(self, text: str, title: str = "") -> None: ...  # noqa: D102
 
 
 def get_pager() -> Pager:
@@ -24,57 +25,59 @@ def get_pager() -> Pager:
         return plain_pager
     if sys.platform == "emscripten":
         return plain_pager
-    use_pager = os.environ.get('MANPAGER') or os.environ.get('PAGER')
+    use_pager = os.environ.get("MANPAGER") or os.environ.get("PAGER")
     if use_pager:
-        if sys.platform == 'win32': # pipes completely broken in Windows
-            return lambda text, title='': tempfile_pager(plain(text), use_pager)
-        elif os.environ.get('TERM') in ('dumb', 'emacs'):
-            return lambda text, title='': pipe_pager(plain(text), use_pager, title)
+        if sys.platform == "win32":  # pipes completely broken in Windows
+            return lambda text, title="": tempfile_pager(plain(text), use_pager)  # noqa: ARG005
+        elif os.environ.get("TERM") in ("dumb", "emacs"):
+            return lambda text, title="": pipe_pager(plain(text), use_pager, title)
         else:
-            return lambda text, title='': pipe_pager(text, use_pager, title)
-    if os.environ.get('TERM') in ('dumb', 'emacs'):
+            return lambda text, title="": pipe_pager(text, use_pager, title)
+    if os.environ.get("TERM") in ("dumb", "emacs"):
         return plain_pager
-    if sys.platform == 'win32':
-        return lambda text, title='': tempfile_pager(plain(text), 'more <')
-    if hasattr(os, 'system') and os.system('(pager) 2>/dev/null') == 0:
-        return lambda text, title='': pipe_pager(text, 'pager', title)
-    if hasattr(os, 'system') and os.system('(less) 2>/dev/null') == 0:
-        return lambda text, title='': pipe_pager(text, 'less', title)
+    if sys.platform == "win32":
+        return lambda text, title="": tempfile_pager(plain(text), "more <")  # noqa: ARG005
+    if hasattr(os, "system") and os.system("(pager) 2>/dev/null") == 0:  # noqa: S605, S607
+        return lambda text, title="": pipe_pager(text, "pager", title)
+    if hasattr(os, "system") and os.system("(less) 2>/dev/null") == 0:  # noqa: S605, S607
+        return lambda text, title="": pipe_pager(text, "less", title)
 
-    import tempfile
+    import tempfile  # noqa: PLC0415
+
     (fd, filename) = tempfile.mkstemp()
     os.close(fd)
     try:
-        if hasattr(os, 'system') and os.system('more "%s"' % filename) == 0:
-            return lambda text, title='': pipe_pager(text, 'more', title)
+        if hasattr(os, "system") and os.system(f'more "{filename}"') == 0:  # noqa: S605
+            return lambda text, title="": pipe_pager(text, "more", title)
         else:
             return tty_pager
     finally:
         os.unlink(filename)
 
 
-def escape_stdout(text: str) -> str:
+def escape_stdout(text: str) -> str:  # noqa: D103
     # Escape non-encodable characters to avoid encoding errors later
-    encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
-    return text.encode(encoding, 'backslashreplace').decode(encoding)
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    return text.encode(encoding, "backslashreplace").decode(encoding)
 
 
-def escape_less(s: str) -> str:
-    return re.sub(r'([?:.%\\])', r'\\\1', s)
+def escape_less(s: str) -> str:  # noqa: D103
+    return re.sub(r"([?:.%\\])", r"\\\1", s)
 
 
 def plain(text: str) -> str:
     """Remove boldface formatting from text."""
-    return re.sub('.\b', '', text)
+    return re.sub(".\b", "", text)
 
 
-def tty_pager(text: str, title: str = '') -> None:
+def tty_pager(text: str, title: str = "") -> None:  # noqa: ARG001
     """Page through text on a text terminal."""
-    lines = plain(escape_stdout(text)).split('\n')
+    lines = plain(escape_stdout(text)).split("\n")
     has_tty = False
     try:
-        import tty
-        import termios
+        import termios  # noqa: PLC0415
+        import tty  # noqa: PLC0415
+
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         tty.setcbreak(fd)
@@ -84,34 +87,36 @@ def tty_pager(text: str, title: str = '') -> None:
             return sys.stdin.read(1)
 
     except (ImportError, AttributeError, io.UnsupportedOperation):
+
         def getchar() -> str:
             return sys.stdin.readline()[:-1][:1]
 
     try:
         try:
-            h = int(os.environ.get('LINES', 0))
+            h = int(os.environ.get("LINES", "0"))
         except ValueError:
             h = 0
         if h <= 1:
             h = 25
         r = inc = h - 1
-        sys.stdout.write('\n'.join(lines[:inc]) + '\n')
+        sys.stdout.write("\n".join(lines[:inc]) + "\n")
         while lines[r:]:
-            sys.stdout.write('-- more --')
+            sys.stdout.write("-- more --")
             sys.stdout.flush()
             c = getchar()
 
-            if c in ('q', 'Q'):
-                sys.stdout.write('\r          \r')
+            if c in ("q", "Q"):
+                sys.stdout.write("\r          \r")
                 break
-            elif c in ('\r', '\n'):
-                sys.stdout.write('\r          \r' + lines[r] + '\n')
+            elif c in ("\r", "\n"):
+                sys.stdout.write("\r          \r" + lines[r] + "\n")
                 r = r + 1
                 continue
-            if c in ('b', 'B', '\x1b'):
+            if c in ("b", "B", "\x1b"):
                 r = r - inc - inc
-                if r < 0: r = 0
-            sys.stdout.write('\n' + '\n'.join(lines[r:r+inc]) + '\n')
+                if r < 0:
+                    r = 0
+            sys.stdout.write("\n" + "\n".join(lines[r : r + inc]) + "\n")
             r = r + inc
 
     finally:
@@ -119,28 +124,31 @@ def tty_pager(text: str, title: str = '') -> None:
             termios.tcsetattr(fd, termios.TCSAFLUSH, old)
 
 
-def plain_pager(text: str, title: str = '') -> None:
+def plain_pager(text: str, title: str = "") -> None:  # noqa: ARG001
     """Simply print unformatted text.  This is the ultimate fallback."""
     sys.stdout.write(plain(escape_stdout(text)))
 
 
-def pipe_pager(text: str, cmd: str, title: str = '') -> None:
+def pipe_pager(text: str, cmd: str, title: str = "") -> None:
     """Page through text by feeding it to another program."""
-    import subprocess
+    import subprocess  # noqa: PLC0415
+
     env = os.environ.copy()
     if title:
-        title += ' '
+        title += " "
     esc_title = escape_less(title)
     prompt_string = (
-        f' {esc_title}' +
-        '?ltline %lt?L/%L.'
-        ':byte %bB?s/%s.'
-        '.'
-        '?e (END):?pB %pB\\%..'
-        ' (press h for help or q to quit)')
-    env['LESS'] = '-RmPm{0}$PM{0}$'.format(prompt_string)
-    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                            errors='backslashreplace', env=env)
+        f" {esc_title}"
+        "?ltline %lt?L/%L."
+        ":byte %bB?s/%s."
+        "."
+        "?e (END):?pB %pB\\%.."
+        " (press h for help or q to quit)"
+    )
+    env["LESS"] = f"-RmPm{prompt_string}$PM{prompt_string}$"
+    proc = subprocess.Popen(  # noqa: S602
+        cmd, shell=True, stdin=subprocess.PIPE, errors="backslashreplace", env=env
+    )
     assert proc.stdin is not None
     try:
         with proc.stdin as pipe:
@@ -151,7 +159,7 @@ def pipe_pager(text: str, cmd: str, title: str = '') -> None:
                 # but the pager is still in control of the terminal.
                 pass
     except OSError:
-        pass # Ignore broken pipes caused by quitting the pager program.
+        pass  # Ignore broken pipes caused by quitting the pager program.
     while True:
         try:
             proc.wait()
@@ -162,14 +170,17 @@ def pipe_pager(text: str, cmd: str, title: str = '') -> None:
             pass
 
 
-def tempfile_pager(text: str, cmd: str, title: str = '') -> None:
+def tempfile_pager(text: str, cmd: str, title: str = "") -> None:  # noqa: ARG001
     """Page through text by invoking a program on a temporary file."""
-    import tempfile
+    import tempfile  # noqa: PLC0415
+
     with tempfile.TemporaryDirectory() as tempdir:
-        filename = os.path.join(tempdir, 'pydoc.out')
-        with open(filename, 'w', errors='backslashreplace',
-                  encoding=os.device_encoding(0) if
-                  sys.platform == 'win32' else None
-                  ) as file:
+        filename = os.path.join(tempdir, "pydoc.out")
+        with open(
+            filename,
+            "w",
+            errors="backslashreplace",
+            encoding=os.device_encoding(0) if sys.platform == "win32" else None,
+        ) as file:
             file.write(text)
-        os.system(cmd + ' "' + filename + '"')
+        os.system(cmd + quote(filename))  # noqa: S605

@@ -29,21 +29,20 @@ import _sitebuiltins
 import functools
 import os
 import sys
-import code
 
 from .readline import _get_reader, multiline_input
 
-TYPE_CHECKING = False
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
-
+    import code
 
 _error: tuple[type[Exception], ...] | type[Exception]
 try:
     from .unix_console import _error
 except ModuleNotFoundError:
     from .windows_console import _error
+
 
 def check() -> str:
     """Returns the error message if there is a problem initializing the state."""
@@ -73,12 +72,12 @@ def _clear_screen():
 
 
 REPL_COMMANDS = {
-    "exit": _sitebuiltins.Quitter('exit', ''),
-    "quit": _sitebuiltins.Quitter('quit' ,''),
-    "copyright": _sitebuiltins._Printer('copyright', sys.copyright),
-    "help": _sitebuiltins._Helper(),
+    "exit": _sitebuiltins.Quitter("exit", ""),
+    "quit": _sitebuiltins.Quitter("quit", ""),
+    "copyright": _sitebuiltins._Printer("copyright", sys.copyright),  # noqa: SLF001
+    "help": _sitebuiltins._Helper(),  # noqa: SLF001
     "clear": _clear_screen,
-    "\x1a": _sitebuiltins.Quitter('\x1a', ''),
+    "\x1a": _sitebuiltins.Quitter("\x1a", ""),
 }
 
 
@@ -101,12 +100,13 @@ def _more_lines(console: code.InteractiveConsole, unicodetext: str) -> bool:
         return code is None
 
 
-def run_multiline_interactive_console(
+def run_multiline_interactive_console(  # noqa: D103
     console: code.InteractiveConsole,
     *,
     future_flags: int = 0,
 ) -> None:
-    from .readline import _setup
+    from .readline import _setup  # noqa: PLC0415
+
     _setup(console.locals)
     if future_flags:
         console.compile.compiler.flags |= future_flags
@@ -114,7 +114,7 @@ def run_multiline_interactive_console(
     more_lines = functools.partial(_more_lines, console)
     input_n = 0
 
-    _is_x_showrefcount_set = sys._xoptions.get("showrefcount")
+    _is_x_showrefcount_set = sys._xoptions.get("showrefcount")  # noqa: SLF001
     _is_pydebug_build = hasattr(sys, "gettotalrefcount")
     show_ref_count = _is_x_showrefcount_set and _is_pydebug_build
 
@@ -137,7 +137,7 @@ def run_multiline_interactive_console(
         try:
             try:
                 sys.stdout.flush()
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             ps1 = getattr(sys, "ps1", ">>> ")
@@ -151,7 +151,9 @@ def run_multiline_interactive_console(
                 continue
 
             input_name = f"<python-input-{input_n}>"
-            more = console.push(_strip_final_indent(statement), filename=input_name, _symbol="single")  # type: ignore[call-arg]
+            more = console.push(
+                _strip_final_indent(statement), filename=input_name, _symbol="single"
+            )  # type: ignore[call-arg]
             assert not more
             input_n += 1
         except KeyboardInterrupt:
@@ -170,11 +172,8 @@ def run_multiline_interactive_console(
             console.resetbuffer()
         except SystemExit:
             raise
-        except:
+        except Exception:
             console.showtraceback()
             console.resetbuffer()
         if show_ref_count:
-            console.write(
-                f"[{sys.gettotalrefcount()} refs,"
-                f" {sys.getallocatedblocks()} blocks]\n"
-            )
+            console.write(f"[{sys.gettotalrefcount()} refs, {sys.getallocatedblocks()} blocks]\n")

@@ -1,9 +1,15 @@
+from __future__ import annotations  # noqa: D100
+
+import functools
 import re
 import unicodedata
-import functools
 
-from .types import CharBuffer, CharWidths
 from .trace import trace
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types import CharBuffer, CharWidths
 
 ANSI_ESCAPE_SEQUENCE = re.compile(r"\x1b\[[ -@]*[A-~]")
 ZERO_WIDTH_BRACKET = re.compile(r"\x01.*?\x02")
@@ -11,7 +17,7 @@ ZERO_WIDTH_TRANS = str.maketrans({"\x01": "", "\x02": ""})
 
 
 @functools.cache
-def str_width(c: str) -> int:
+def str_width(c: str) -> int:  # noqa: D103
     if ord(c) < 128:
         return 1
     w = unicodedata.east_asian_width(c)
@@ -20,7 +26,7 @@ def str_width(c: str) -> int:
     return 2
 
 
-def wlen(s: str) -> int:
+def wlen(s: str) -> int:  # noqa: D103
     if len(s) == 1 and s != "\x1a":
         return str_width(s)
     length = sum(str_width(i) for i in s)
@@ -67,7 +73,7 @@ def disp_str(buffer: str) -> tuple[CharBuffer, CharWidths]:
             chars.append(c)
             char_widths.append(1)
         elif unicodedata.category(c).startswith("C"):
-            c = r"\u%04x" % ord(c)
+            c = rf"\u{ord(c):04x}"  # noqa: PLW2901
             chars.append(c)
             char_widths.append(len(c))
         else:

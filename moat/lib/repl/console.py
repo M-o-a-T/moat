@@ -1,4 +1,4 @@
-#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #
 #                        All Rights Reserved
 #
@@ -19,33 +19,32 @@
 
 from __future__ import annotations
 
-import _colorize
-
-from abc import ABC, abstractmethod
 import ast
 import code
 import linecache
-from dataclasses import dataclass, field
 import os.path
 import sys
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
+import _colorize
 
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import IO
-    from typing import Callable
 
 
 @dataclass
-class Event:
+class Event:  # noqa: D101
     evt: str
     data: str
     raw: bytes = b""
 
 
 @dataclass
-class Console(ABC):
+class Console(ABC):  # noqa: D101
     posxy: tuple[int, int]
     screen: list[str] = field(default_factory=list)
     height: int = 25
@@ -55,7 +54,7 @@ class Console(ABC):
         self,
         f_in: IO[bytes] | int = 0,
         f_out: IO[bytes] | int = 1,
-        term: str = "",
+        term: str = "",  # noqa: ARG002
         encoding: str = "",
     ):
         self.encoding = encoding or sys.getdefaultencoding()
@@ -71,19 +70,19 @@ class Console(ABC):
             self.output_fd = f_out.fileno()
 
     @abstractmethod
-    def refresh(self, screen: list[str], xy: tuple[int, int]) -> None: ...
+    def refresh(self, screen: list[str], xy: tuple[int, int]) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def prepare(self) -> None: ...
+    def prepare(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def restore(self) -> None: ...
+    def restore(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def move_cursor(self, x: int, y: int) -> None: ...
+    def move_cursor(self, x: int, y: int) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def set_cursor_vis(self, visible: bool) -> None: ...
+    def set_cursor_vis(self, visible: bool) -> None: ...  # noqa: D102
 
     @abstractmethod
     def getheightwidth(self) -> tuple[int, int]:
@@ -106,7 +105,7 @@ class Console(ABC):
         ...
 
     @abstractmethod
-    def beep(self) -> None: ...
+    def beep(self) -> None: ...  # noqa: D102
 
     @abstractmethod
     def clear(self) -> None:
@@ -144,20 +143,21 @@ class Console(ABC):
         ...
 
     @property
+    @abstractmethod
     def input_hook(self) -> Callable[[], int] | None:
         """Returns the current input hook."""
         ...
 
     @abstractmethod
-    def repaint(self) -> None: ...
+    def repaint(self) -> None: ...  # noqa: D102
 
 
-class InteractiveColoredConsole(code.InteractiveConsole):
+class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
     STATEMENT_FAILED = object()
 
     def __init__(
         self,
-        locals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,  # noqa: A002
         filename: str = "<console>",
         *,
         local_exit: bool = False,
@@ -165,20 +165,20 @@ class InteractiveColoredConsole(code.InteractiveConsole):
         super().__init__(locals=locals, filename=filename, local_exit=local_exit)
         self.can_colorize = _colorize.can_colorize()
 
-    def showsyntaxerror(self, filename=None, **kwargs):
+    def showsyntaxerror(self, filename=None, **kwargs):  # noqa: D102
         super().showsyntaxerror(filename=filename, **kwargs)
 
     def _excepthook(self, typ, value, tb):
-        import traceback
-        lines = traceback.format_exception(
-                typ, value, tb,
-                colorize=self.can_colorize,
-                limit=traceback.BUILTIN_EXCEPTION_LIMIT)
-        self.write(''.join(lines))
+        import traceback  # noqa: PLC0415
 
-    def runcode(self, code):
+        lines = traceback.format_exception(
+            typ, value, tb, colorize=self.can_colorize, limit=traceback.BUILTIN_EXCEPTION_LIMIT
+        )
+        self.write("".join(lines))
+
+    def runcode(self, code):  # noqa: D102
         try:
-            exec(code, self.locals)
+            exec(code, self.locals)  # noqa: S102
         except SystemExit:
             raise
         except BaseException:
@@ -186,7 +186,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):
             return self.STATEMENT_FAILED
         return None
 
-    def runsource(self, source, filename="<input>", symbol="single"):
+    def runsource(self, source, filename="<input>", symbol="single"):  # noqa: D102
         try:
             tree = self.compile.compiler(
                 source,
@@ -206,7 +206,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):
             item = wrapper([stmt])
             try:
                 code = self.compile.compiler(item, filename, the_symbol)
-                linecache._register_code(code, source, filename)
+                linecache._register_code(code, source, filename)  # noqa: SLF001
             except SyntaxError as e:
                 if e.args[0] == "'await' outside function":
                     python = os.path.basename(sys.executable)

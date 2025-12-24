@@ -1,4 +1,4 @@
-#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>
+#   Copyright 2000-2004 Michael Hudson-Doyle <micahel@gmail.com>  # noqa: D100
 #
 #                        All Rights Reserved
 #
@@ -19,41 +19,41 @@
 
 from __future__ import annotations
 
+import ctypes
 import io
+import msvcrt
 import os
 import sys
 import time
-import msvcrt
-
-from collections import deque
-import ctypes
+from ctypes import POINTER, Structure, Union
 from ctypes.wintypes import (
     _COORD,
-    WORD,
-    SMALL_RECT,
     BOOL,
-    HANDLE,
     CHAR,
     DWORD,
-    WCHAR,
+    HANDLE,
     SHORT,
+    SMALL_RECT,
+    WCHAR,
+    WORD,
 )
-from ctypes import Structure, POINTER, Union
-from .console import Event, Console
+
+from .console import Console, Event
 from .trace import trace
 from .utils import wlen
 from .windows_eventqueue import EventQueue
 
 try:
-    from ctypes import GetLastError, WinDLL, windll, WinError  # type: ignore[attr-defined]
-except:
+    from ctypes import GetLastError, WinDLL, WinError, windll  # type: ignore[attr-defined]
+except Exception:
     # Keep MyPy happy off Windows
-    from ctypes import CDLL as WinDLL, cdll as windll
+    from ctypes import CDLL as WinDLL
+    from ctypes import cdll as windll
 
-    def GetLastError() -> int:
+    def GetLastError() -> int:  # noqa: D103
         return 42
 
-    class WinError(OSError):  # type: ignore[no-redef]
+    class WinError(OSError):  # type: ignore[no-redef]  # noqa: D101
         def __init__(self, err: int | None, descr: str | None = None) -> None:
             self.err = err
             self.descr = descr
@@ -113,14 +113,17 @@ CTRL_ACTIVE = 0x04 | 0x08
 class _error(Exception):
     pass
 
+
 def _supports_vt():
     try:
-        import nt
-        return nt._supports_virtual_terminal()
+        import nt  # noqa: PLC0415
+
+        return nt._supports_virtual_terminal()  # noqa: SLF001
     except (ImportError, AttributeError):
         return False
 
-class WindowsConsole(Console):
+
+class WindowsConsole(Console):  # moqa: D101  # noqa: D101
     def __init__(
         self,
         f_in: IO[bytes] | int = 0,
@@ -133,12 +136,12 @@ class WindowsConsole(Console):
         self.__vt_support = _supports_vt()
 
         if self.__vt_support:
-            trace('console supports virtual terminal')
+            trace("console supports virtual terminal")
 
         # Save original console modes so we can recover on cleanup.
         original_input_mode = DWORD()
         GetConsoleMode(InHandle, original_input_mode)
-        trace(f'saved original input mode 0x{original_input_mode.value:x}')
+        trace(f"saved original input mode 0x{original_input_mode.value:x}")
         self.__original_input_mode = original_input_mode.value
 
         SetConsoleMode(
@@ -154,7 +157,7 @@ class WindowsConsole(Console):
         self.__offset = 0
         self.event_queue = EventQueue(encoding)
         try:
-            self.out = io._WindowsConsoleIO(self.output_fd, "w")  # type: ignore[attr-defined]
+            self.out = io._WindowsConsoleIO(self.output_fd, "w")  # type: ignore[attr-defined]  # noqa: SLF001
         except ValueError:
             # Console I/O is redirected, fallback...
             self.out = None
@@ -176,7 +179,7 @@ class WindowsConsole(Console):
             self.posxy = 0, len(self.screen)
             self.screen.append("")
 
-        px, py = self.posxy
+        px, py = self.posxy  # noqa: RUF059
         old_offset = offset = self.__offset
         height = self.height
 
@@ -195,7 +198,7 @@ class WindowsConsole(Console):
             self.posxy = self.posxy[0], self.posxy[1] + scroll_lines
             self.__offset += scroll_lines
 
-            for i in range(scroll_lines):
+            for _i in range(scroll_lines):
                 self.screen.append("")
         elif offset > 0 and len(screen) < offset + height:
             offset = max(len(screen) - height, 0)
@@ -211,7 +214,7 @@ class WindowsConsole(Console):
             y,
             oldline,
             newline,
-        ) in zip(range(offset, offset + height), oldscr, newscr):
+        ) in zip(range(offset, offset + height), oldscr, newscr, strict=False):
             if oldline != newline:
                 self.__write_changed_line(y, oldline, newline, px)
 
@@ -228,17 +231,15 @@ class WindowsConsole(Console):
         self.move_cursor(cx, cy)
 
     @property
-    def input_hook(self):
+    def input_hook(self):  # moqa: D102  # noqa: D102
         try:
-            import nt
+            import nt  # noqa: PLC0415
         except ImportError:
             return None
-        if nt._is_inputhook_installed():
-            return nt._inputhook
+        if nt._is_inputhook_installed():  # noqa: SLF001
+            return nt._inputhook  # noqa: SLF001
 
-    def __write_changed_line(
-        self, y: int, oldline: str, newline: str, px_coord: int
-    ) -> None:
+    def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:
         # this is frustrating; there's no reason to test (say)
         # self.dch1 inside the loop -- but alternative ways of
         # structuring this function are equally painful (I'm trying to
@@ -253,16 +254,12 @@ class WindowsConsole(Console):
             if j >= px_coord:
                 break
             j += wlen(c)
-            px_pos += 1
+            px_pos += 1  # noqa: SIM113
 
         # reuse the oldline as much as possible, but stop as soon as we
         # encounter an ESCAPE, because it might be the start of an escape
         # sequene
-        while (
-            x_coord < minlen
-            and oldline[x_pos] == newline[x_pos]
-            and newline[x_pos] != "\x1b"
-        ):
+        while x_coord < minlen and oldline[x_pos] == newline[x_pos] and newline[x_pos] != "\x1b":
             x_coord += wlen(newline[x_pos])
             x_pos += 1
 
@@ -279,7 +276,7 @@ class WindowsConsole(Console):
         else:
             self.posxy = wlen(newline), y
 
-            if "\x1b" in newline or y != self.posxy[1] or '\x1a' in newline:
+            if "\x1b" in newline or y != self.posxy[1] or "\x1a" in newline:
                 # ANSI escape characters are present, so we can't assume
                 # anything about the position of the cursor.  Moving the cursor
                 # to the left margin should work to get to a known position.
@@ -292,9 +289,7 @@ class WindowsConsole(Console):
         scroll_rect.Top = SHORT(top)
         scroll_rect.Bottom = SHORT(bottom)
         scroll_rect.Left = SHORT(0 if left is None else left)
-        scroll_rect.Right = SHORT(
-            self.getheightwidth()[1] - 1 if right is None else right
-        )
+        scroll_rect.Right = SHORT(self.getheightwidth()[1] - 1 if right is None else right)
         destination_origin = _COORD()
         fill_info = CHAR_INFO()
         fill_info.UnicodeChar = " "
@@ -324,7 +319,7 @@ class WindowsConsole(Console):
 
     def __write(self, text: str) -> None:
         if "\x1a" in text:
-            text = ''.join(["^Z" if x == '\x1a' else x for x in text])
+            text = "".join(["^Z" if x == "\x1a" else x for x in text])
 
         if self.out is not None:
             self.out.write(text.encode(self.encoding, "replace"))
@@ -333,7 +328,7 @@ class WindowsConsole(Console):
             os.write(self.output_fd, text.encode(self.encoding, "replace"))
 
     @property
-    def screen_xy(self) -> tuple[int, int]:
+    def screen_xy(self) -> tuple[int, int]:  # moqa: D102  # noqa: D102
         info = CONSOLE_SCREEN_BUFFER_INFO()
         if not GetConsoleScreenBufferInfo(OutHandle, info):
             raise WinError(GetLastError())
@@ -342,7 +337,7 @@ class WindowsConsole(Console):
     def _erase_to_end(self) -> None:
         self.__write(ERASE_IN_LINE)
 
-    def prepare(self) -> None:
+    def prepare(self) -> None:  # moqa: D102  # noqa: D102
         trace("prepare")
         self.screen = []
         self.height, self.width = self.getheightwidth()
@@ -355,7 +350,7 @@ class WindowsConsole(Console):
             SetConsoleMode(InHandle, self.__original_input_mode | ENABLE_VIRTUAL_TERMINAL_INPUT)
             self._enable_bracketed_paste()
 
-    def restore(self) -> None:
+    def restore(self) -> None:  # moqa: D102  # noqa: D102
         if self.__vt_support:
             # Recover to original mode before running REPL
             self._disable_bracketed_paste()
@@ -375,7 +370,7 @@ class WindowsConsole(Console):
         elif dy > 0:
             self.__write(MOVE_DOWN.format(dy))
 
-    def move_cursor(self, x: int, y: int) -> None:
+    def move_cursor(self, x: int, y: int) -> None:  # noqa:D102
         if x < 0 or y < 0:
             raise ValueError(f"Bad cursor position {x}, {y}")
 
@@ -385,7 +380,7 @@ class WindowsConsole(Console):
             self._move_relative(x, y)
             self.posxy = x, y
 
-    def set_cursor_vis(self, visible: bool) -> None:
+    def set_cursor_vis(self, visible: bool) -> None:  # noqa: D102
         if visible:
             self._show_cursor()
         else:
@@ -453,7 +448,8 @@ class WindowsConsole(Console):
                 # Turn backspace directly into the command
                 key = "backspace"
             elif key == "\x00":
-                # Handle special keys like arrow keys and translate them into the appropriate command
+                # Handle special keys like arrow keys and translate them
+                # into the appropriate command
                 key = VK_MAP.get(key_event.wVirtualKeyCode)
                 if key:
                     if key_event.dwControlKeyState & CTRL_ACTIVE:
@@ -491,7 +487,7 @@ class WindowsConsole(Console):
         """
         raise NotImplementedError("push_char not supported on Windows")
 
-    def beep(self) -> None:
+    def beep(self) -> None:  # noqa: D102
         self.__write("\x07")
 
     def clear(self) -> None:
@@ -531,18 +527,18 @@ class WindowsConsole(Console):
         # Poor man's Windows select loop
         start_time = time.time()
         while True:
-            if msvcrt.kbhit(): # type: ignore[attr-defined]
+            if msvcrt.kbhit():  # type: ignore[attr-defined]
                 return True
             if timeout and time.time() - start_time > timeout / 1000:
                 return False
             time.sleep(0.01)
 
-    def repaint(self) -> None:
+    def repaint(self) -> None:  # noqa: D102
         raise NotImplementedError("No repaint support")
 
 
 # Windows interop
-class CONSOLE_SCREEN_BUFFER_INFO(Structure):
+class CONSOLE_SCREEN_BUFFER_INFO(Structure):  # noqa:D101
     _fields_ = [
         ("dwSize", _COORD),
         ("dwCursorPosition", _COORD),
@@ -552,28 +548,28 @@ class CONSOLE_SCREEN_BUFFER_INFO(Structure):
     ]
 
 
-class CONSOLE_CURSOR_INFO(Structure):
+class CONSOLE_CURSOR_INFO(Structure):  # noqa:D101
     _fields_ = [
         ("dwSize", DWORD),
         ("bVisible", BOOL),
     ]
 
 
-class CHAR_INFO(Structure):
+class CHAR_INFO(Structure):  # noqa:D101
     _fields_ = [
         ("UnicodeChar", WCHAR),
         ("Attributes", WORD),
     ]
 
 
-class Char(Union):
+class Char(Union):  # noqa:D101
     _fields_ = [
         ("UnicodeChar", WCHAR),
         ("Char", CHAR),
     ]
 
 
-class KeyEvent(ctypes.Structure):
+class KeyEvent(ctypes.Structure):  # noqa:D101
     _fields_ = [
         ("bKeyDown", BOOL),
         ("wRepeatCount", WORD),
@@ -584,18 +580,18 @@ class KeyEvent(ctypes.Structure):
     ]
 
 
-class WindowsBufferSizeEvent(ctypes.Structure):
+class WindowsBufferSizeEvent(ctypes.Structure):  # noqa:D101
     _fields_ = [("dwSize", _COORD)]
 
 
-class ConsoleEvent(ctypes.Union):
+class ConsoleEvent(ctypes.Union):  # noqa:D101
     _fields_ = [
         ("KeyEvent", KeyEvent),
         ("WindowsBufferSizeEvent", WindowsBufferSizeEvent),
     ]
 
 
-class INPUT_RECORD(Structure):
+class INPUT_RECORD(Structure):  # noqa:D101
     _fields_ = [("EventType", WORD), ("Event", ConsoleEvent)]
 
 

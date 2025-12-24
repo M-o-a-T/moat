@@ -1,7 +1,8 @@
+from __future__ import annotations  # noqa: D100
+
 import errno
 import os
 import sys
-
 
 CAN_USE_PYREPL: bool
 FAIL_REASON: str
@@ -11,6 +12,7 @@ try:
     if not os.isatty(sys.stdin.fileno()):
         raise OSError(errno.ENOTTY, "tty required", "stdin")
     from .simple_interact import check
+
     if err := check():
         raise RuntimeError(err)
 except Exception as e:
@@ -21,18 +23,20 @@ else:
     FAIL_REASON = ""
 
 
-def interactive_console(mainmodule=None, quiet=False, pythonstartup=False):
+def interactive_console(mainmodule=None, quiet=False, pythonstartup=False):  # noqa: ARG001, D103
     if not CAN_USE_PYREPL:
-        if not os.getenv('PYTHON_BASIC_REPL') and FAIL_REASON:
-            from .trace import trace
+        if not os.getenv("PYTHON_BASIC_REPL") and FAIL_REASON:
+            from .trace import trace  # noqa: PLC0415
+
             trace(FAIL_REASON)
             print(FAIL_REASON, file=sys.stderr)
-        return sys._baserepl()
+        return sys._baserepl()  # noqa: SLF001
 
     if mainmodule:
         namespace = mainmodule.__dict__
     else:
-        import __main__
+        import __main__  # noqa: PLC0415
+
         namespace = __main__.__dict__
         namespace.pop("__pyrepl_interactive_console", None)
 
@@ -41,10 +45,11 @@ def interactive_console(mainmodule=None, quiet=False, pythonstartup=False):
     if pythonstartup and startup_path:
         sys.audit("cpython.run_startup", startup_path)
 
-        import tokenize
+        import tokenize  # noqa: PLC0415
+
         with tokenize.open(startup_path) as f:
             startup_code = compile(f.read(), startup_path, "exec")
-            exec(startup_code, namespace)
+            exec(startup_code, namespace)  # noqa: S102
 
     # set sys.{ps1,ps2} just before invoking the interactive interpreter. This
     # mimics what CPython does in pythonrun.c
@@ -53,7 +58,8 @@ def interactive_console(mainmodule=None, quiet=False, pythonstartup=False):
     if not hasattr(sys, "ps2"):
         sys.ps2 = "... "
 
-    from .console import InteractiveColoredConsole
-    from .simple_interact import run_multiline_interactive_console
+    from .console import InteractiveColoredConsole  # noqa: PLC0415
+    from .simple_interact import run_multiline_interactive_console  # noqa: PLC0415
+
     console = InteractiveColoredConsole(namespace, filename="<stdin>")
     run_multiline_interactive_console(console)

@@ -239,22 +239,10 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         if nt._is_inputhook_installed():  # noqa: SLF001
             return nt._inputhook  # noqa: SLF001
 
-    def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:
-        # this is frustrating; there's no reason to test (say)
-        # self.dch1 inside the loop -- but alternative ways of
-        # structuring this function are equally painful (I'm trying to
-        # avoid writing code generators these days...)
+    def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
         minlen = min(wlen(oldline), wlen(newline))
         x_pos = 0
         x_coord = 0
-
-        px_pos = 0
-        j = 0
-        for c in oldline:
-            if j >= px_coord:
-                break
-            j += wlen(c)
-            px_pos += 1  # noqa: SIM113
 
         # reuse the oldline as much as possible, but stop as soon as we
         # encounter an ESCAPE, because it might be the start of an escape
@@ -343,7 +331,6 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         self.height, self.width = self.getheightwidth()
 
         self.posxy = 0, 0
-        self.__gone_tall = 0
         self.__offset = 0
 
         if self.__vt_support:

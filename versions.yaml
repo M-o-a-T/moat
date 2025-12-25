@@ -256,6 +256,9 @@ moat-thing:
   pypi: 0.2.1
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
+moat-lib-repo:
+  tag: 0.1.0
+  rev: 79f5529e6c5ed0b349639389d478634aac2917e5
 moat-util:
   deb: 0.61.0-1
   pkg: 2

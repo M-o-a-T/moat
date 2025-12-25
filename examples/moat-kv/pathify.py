@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3  # noqa: D100
 
 # Batch-convert data. In this case I had some entries which were stored as
 # a list, but using Path made much more sense (esp when you need to
@@ -11,7 +11,7 @@ from moat.util import P, Path, yload
 from moat.kv.client import open_client
 
 
-def conv(m, s: str) -> bool:
+def conv(m, s: str) -> bool:  # noqa: D103
     try:
         d = m.value[s]
     except KeyError:
@@ -28,7 +28,7 @@ def conv(m, s: str) -> bool:
 @click.command()
 @click.argument("path", type=P)
 @click.argument("keys", type=str, nargs=-1)
-async def main(path, keys):
+async def main(path, keys):  # noqa: D103
     if not keys:
         keys = "src dest dst state".split()
     with open("/etc/moat.kv.cfg") as cff:

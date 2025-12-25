@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 
@@ -9,7 +9,7 @@ This script toggles a pin and watches another. The two are presumed to be connec
 """
 
 
-async def pling(line):
+async def pling(line):  # noqa: D103
     while True:
         await anyio.sleep(1)
         line.value = 1
@@ -17,7 +17,7 @@ async def pling(line):
         line.value = 0
 
 
-async def main():
+async def main():  # noqa: D103
     async with anyio.create_task_group() as n:
         with gpio.Chip(0) as c:
             with c.line(19).open(direction=gpio.Direction.OUTPUT) as out_:

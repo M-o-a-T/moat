@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 import datetime
@@ -16,12 +16,12 @@ series = "price"
 tags = dict(type="power", source="awattar", redo="A")
 
 
-def sdate(d):
+def sdate(d):  # noqa: D103
     d = datetime.datetime.fromtimestamp(d)
     return d.strftime("%Y-%m-%d %H:%M")
 
 
-async def empty(ctx):
+async def empty(ctx):  # noqa: D103
     pass
 
 

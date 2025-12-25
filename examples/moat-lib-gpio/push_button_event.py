@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import anyio
 
@@ -16,7 +16,7 @@ who helped me out.
 """
 
 
-class Led:
+class Led:  # noqa: D101
     # This class turns on and off the power to a pin.
     # Two events are setup for turning off an on the pin. Both events need to be
     # called at the same time or trio might await at the wrong spot.
@@ -25,7 +25,7 @@ class Led:
         self._on = anyio.create_event()
         self._off = anyio.create_event()
 
-    async def liteon(self):
+    async def liteon(self):  # noqa: D102
         with gpio.open_chip() as chip:
             with chip.line(self.x).open(direction=gpio.Direction.OUTPUT) as line:
                 self._on.clear()
@@ -49,7 +49,7 @@ class Led:
                         await self._off.set()
 
 
-class Button:
+class Button:  # noqa: D101
     # Add the events tthe button is attached to and the on off event are passed into the class.
     # The class listens for the voltage to rise then reverses whatever the current settings are.
     def __init__(self, line, event_on, event_off):
@@ -57,7 +57,7 @@ class Button:
         self._on = event_on
         self._off = event_off
 
-    async def push(self):
+    async def push(self):  # noqa: D102
         with gpio.Chip(0) as c:
             in_ = c.line(self.y)
             with in_.monitor(gpio.Edge.RISING):
@@ -84,7 +84,7 @@ yellow = Led(21)
 yellowbutton = Button(23, yellow._on, yellow._off)
 
 
-async def main(y):
+async def main(y):  # noqa: D103
     async with anyio.create_task_group() as nursery:
         await nursery.spawn(yellowbutton.push)
         await nursery.spawn(yellow.liteon)

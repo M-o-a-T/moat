@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python  # noqa: D100
 
 # Invent a typical day
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 from moat.bms.sched import FutureData, Hardware, Model
 
 
-def F(price, load, pv):
+def F(price, load, pv):  # noqa: D103
     return FutureData(price_buy=(price + 0.2) * 1.2, price_sell=price, load=load, pv=pv)
 
 

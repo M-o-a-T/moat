@@ -26,11 +26,11 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, fields
 
-from _colorize import ANSIColors, can_colorize
+import _colorize
 
 from . import commands, console, input  # noqa: A004
 from .trace import trace
-from .utils import disp_str, unbracket, wlen
+from .utils import THEME, disp_str, gen_colors, unbracket, wlen
 
 # types
 Command = commands.Command
@@ -39,8 +39,7 @@ from typing import TYPE_CHECKING  # noqa: E402
 if TYPE_CHECKING:
     from .types import Callback, CommandName, KeySpec, SimpleContextManager
 
-# syntax classes:
-
+# syntax classes
 SYNTAX_WHITESPACE, SYNTAX_WORD, SYNTAX_SYMBOL = range(3)
 
 
@@ -106,8 +105,7 @@ default_keymap: tuple[tuple[KeySpec, CommandName], ...] = tuple(
         (r"\M-9", "digit-arg"),
         (r"\M-\n", "accept"),
         ("\\\\", "self-insert"),
-        (r"\x1b[200~", "enable_bracketed_paste"),
-        (r"\x1b[201~", "disable_bracketed_paste"),
+        (r"\x1b[200~", "perform-bracketed-paste"),
         (r"\x03", "ctrl-c"),
     ]
     + [(c, "self-insert") for c in map(chr, range(32, 127)) if c != "\\"]
@@ -145,20 +143,21 @@ class Reader:
     Instance variables of note include:
 
       * buffer:
-        A *list* (*not* a string at the moment :-) containing all the
-        characters that have been entered.
+        A per-character list containing all the characters that have been
+        entered. Does not include color information.
       * console:
         Hopefully encapsulates the OS dependent stuff.
       * pos:
-        A 0-based index into `buffer' for where the insertion point
+        A 0-based index into 'buffer' for where the insertion point
         is.
       * screeninfo:
-        Ahem.  This list contains some info needed to move the
-        insertion point around reasonably efficiently.
+        A list of screen position tuples. Each list element is a tuple
+        representing information on visible line length for a given line.
+        Allows for efficient skipping of color escape sequences.
       * cxy, lxy:
         the position of the insertion point in screen ...
       * syntax_table:
-        Dictionary mapping characters to `syntax class'; read the
+        Dictionary mapping characters to 'syntax class'; read the
         emacs docs to see what this means :-)
       * commands:
         Dictionary mapping command names to command classes.
@@ -204,7 +203,6 @@ class Reader:
     dirty: bool = False
     finished: bool = False
     paste_mode: bool = False
-    in_bracketed_paste: bool = False
     commands: dict[str, type[Command]] = field(default_factory=make_default_commands)
     last_command: type[Command] | None = None
     syntax_table: dict[str, int] = field(default_factory=make_default_syntax_table)
@@ -221,7 +219,6 @@ class Reader:
     ## cached metadata to speed up screen refreshes
     @dataclass
     class RefreshCache:  # noqa: D106
-        in_bracketed_paste: bool = False
         screen: list[str] = field(default_factory=list)
         screeninfo: list[tuple[int, list[int]]] = field(init=False)
         line_end_offsets: list[int] = field(default_factory=list)
@@ -236,7 +233,6 @@ class Reader:
             screen: list[str],
             screeninfo: list[tuple[int, list[int]]],
         ) -> None:
-            self.in_bracketed_paste = reader.in_bracketed_paste
             self.screen = screen.copy()
             self.screeninfo = screeninfo.copy()
             self.pos = reader.pos
@@ -249,8 +245,7 @@ class Reader:
                 return False
             dimensions = reader.console.width, reader.console.height
             dimensions_changed = dimensions != self.dimensions
-            paste_changed = reader.in_bracketed_paste != self.in_bracketed_paste
-            return not (dimensions_changed or paste_changed)
+            return not dimensions_changed
 
         def get_cached_location(self, reader: Reader) -> tuple[int, int]:  # noqa: D102
             if self.invalidated:
@@ -280,7 +275,7 @@ class Reader:
         self.screeninfo = [(0, [])]
         self.cxy = self.pos2xy()
         self.lxy = (self.pos, 0)
-        self.can_colorize = can_colorize()
+        self.can_colorize = _colorize.can_colorize()
 
         self.last_refresh_cache.screeninfo = self.screeninfo
         self.last_refresh_cache.pos = self.pos
@@ -317,6 +312,12 @@ class Reader:
         pos -= offset
 
         prompt_from_cache = offset and self.buffer[offset - 1] != "\n"
+
+        if self.can_colorize:
+            colors = list(gen_colors(self.get_unicode()))
+        else:
+            colors = None
+        trace("colors = {colors}", colors=colors)
         lines = "".join(self.buffer[offset:]).split("\n")
         cursor_found = False
         lines_beyond_cursor = 0
@@ -344,9 +345,8 @@ class Reader:
                 screeninfo.append((0, []))
             pos -= line_len + 1
             prompt, prompt_len = self.process_prompt(prompt)
-            chars, char_widths = disp_str(line)
+            chars, char_widths = disp_str(line, colors, offset)
             wrapcount = (sum(char_widths) + prompt_len) // self.console.width
-            trace("wrapcount = {wrapcount}", wrapcount=wrapcount)
             if wrapcount == 0 or not char_widths:
                 offset += line_len + 1  # Takes all of the line plus the newline
                 last_refresh_line_end_offsets.append(offset)
@@ -469,7 +469,7 @@ class Reader:
 
     def get_arg(self, default: int = 1) -> int:
         """Return any prefix argument that the user has supplied,
-        returning `default' if there is None.  Defaults to 1.
+        returning 'default' if there is None.  Defaults to 1.
         """
         if self.arg is None:
             return default
@@ -477,10 +477,10 @@ class Reader:
 
     def get_prompt(self, lineno: int, cursor_on_line: bool) -> str:
         """Return what should be in the left-hand margin for line
-        `lineno'."""
+        'lineno'."""
         if self.arg is not None and cursor_on_line:
             prompt = f"(arg: {self.arg}) "
-        elif self.paste_mode and not self.in_bracketed_paste:
+        elif self.paste_mode:
             prompt = "(paste) "
         elif "\n" in self.buffer:
             if lineno == 0:
@@ -493,7 +493,9 @@ class Reader:
             prompt = self.ps1
 
         if self.can_colorize:
-            prompt = f"{ANSIColors.BOLD_MAGENTA}{prompt}{ANSIColors.RESET}"
+            t = THEME()
+            if t is not None:
+                prompt = f"{t.prompt}{prompt}{t.reset}"
         return prompt
 
     def push_input_trans(self, itrans: input.KeymapTranslator) -> None:  # noqa: D102
@@ -568,6 +570,7 @@ class Reader:
     def update_cursor(self) -> None:
         """Move the cursor to reflect changes in self.pos"""
         self.cxy = self.pos2xy()
+        trace("update_cursor({pos}) = {cxy}", pos=self.pos, cxy=self.cxy)
         self.console.move_cursor(*self.cxy)
 
     def after_command(self, cmd: Command) -> None:
@@ -602,7 +605,7 @@ class Reader:
             return False
         return issubclass(cls, self.last_command)
 
-    def restore(self) -> None:
+    async def restore(self) -> None:
         """Clean up after a run."""
         pass
 
@@ -633,9 +636,6 @@ class Reader:
 
     async def refresh(self) -> None:
         """Recalculate and refresh the screen."""
-        if self.in_bracketed_paste and self.buffer and self.buffer[-1] != "\n":
-            return
-
         # this call sets up self.cxy, so call it first.
         self.screen = self.calc_screen()
         await self.console.refresh(self.screen, self.cxy)
@@ -732,7 +732,7 @@ class Reader:
         how to drive Reader if you want more control over the event
         loop."""
         async with self.console:
-            self.prepare()
+            await self.prepare()
             try:
                 if startup_hook is not None:
                     startup_hook()
@@ -742,7 +742,7 @@ class Reader:
                 return self.get_unicode()
 
             finally:
-                self.restore()
+                await self.restore()
 
     def bind(self, spec: KeySpec, command: CommandName) -> None:  # noqa: D102
         self.keymap = self.keymap + ((spec, command),)

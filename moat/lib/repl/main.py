@@ -3,6 +3,7 @@ from __future__ import annotations  # noqa: D100
 import errno
 import os
 import sys
+import types
 
 CAN_USE_PYREPL: bool
 FAIL_REASON: str
@@ -32,13 +33,10 @@ def interactive_console(mainmodule=None, quiet=False, pythonstartup=False):  # n
             print(FAIL_REASON, file=sys.stderr)
         return sys._baserepl()  # noqa: SLF001
 
-    if mainmodule:
-        namespace = mainmodule.__dict__
-    else:
-        import __main__  # noqa: PLC0415
+    if not mainmodule:
+        mainmodule = types.ModuleType("__main__")
 
-        namespace = __main__.__dict__
-        namespace.pop("__pyrepl_interactive_console", None)
+    namespace = mainmodule.__dict__
 
     # sys._baserepl() above does this internally, we do it here
     startup_path = os.getenv("PYTHONSTARTUP")

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import anyio
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 
@@ -306,8 +307,8 @@ class HistoricalReader(Reader):
         finally:
             self.history[:] = old_history
 
-    def prepare(self) -> None:  # noqa: D102
-        super().prepare()
+    async def prepare(self) -> None:  # noqa: D102
+        await super().prepare()
         try:
             self.transient_history = {}
             if self.next_history is not None and self.next_history < len(self.history):
@@ -318,8 +319,9 @@ class HistoricalReader(Reader):
             else:
                 self.historyi = len(self.history)
             self.next_history = None
-        except:
-            self.restore()
+        except BaseException:
+            with anyio.move_on_after(1, shield=True):
+                await self.restore()
             raise
 
     def get_prompt(self, lineno: int, cursor_on_line: bool) -> str:  # noqa: D102

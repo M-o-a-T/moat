@@ -77,6 +77,6 @@ class Term(TermState):  # noqa: D101
     def set(self, when: int = termios.TCSANOW) -> None:  # noqa: D102
         termios.tcsetattr(self.fd, when, self.as_list())
 
-    def restore(self) -> None:  # noqa: D102
+    async def restore(self) -> None:  # noqa: D102
         self.TS__init__(self.stack.pop())
         self.set()

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from typing import TYPE_CHECKING
 
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
 #  finishing
 # [completion]
 
+from .trace import trace
 
 # types
 if False:
@@ -363,6 +365,13 @@ class self_insert(EditCommand):  # noqa: D101
         r = self.reader
         text = self.event * r.get_arg()
         r.insert(text)
+        if r.paste_mode:
+            data = ""
+            ev = r.console.getpending()
+            data += ev.data
+            if data:
+                r.insert(data)
+                r.last_refresh_cache.invalidated = True
 
 
 class insert_nl(EditCommand):  # noqa: D101
@@ -412,8 +421,8 @@ class delete(EditCommand):  # noqa: D101
             elif (
                 r.pos == 0 and len(b) == 0  # this is something of a hack
             ):
-                r.update_screen()
-                r.console.finish()
+                await r.update_screen()
+                await r.console.finish()
                 raise EOFError
 
         for _i in range(r.get_arg()):
@@ -474,14 +483,18 @@ class paste_mode(Command):  # noqa: D101
         self.reader.dirty = True
 
 
-class enable_bracketed_paste(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
-        self.reader.paste_mode = True
-        self.reader.in_bracketed_paste = True
-
-
-class disable_bracketed_paste(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
-        self.reader.paste_mode = False
-        self.reader.in_bracketed_paste = False
-        self.reader.dirty = True
+class perform_bracketed_paste(Command):  # noqa:D101
+    async def do(self) -> None:  # noqa:D102
+        done = "\x1b[201~"
+        data = ""
+        start = time.time()
+        while done not in data:
+            ev = self.reader.console.getpending()
+            data += ev.data
+        trace(
+            "bracketed pasting of {l} chars done in {s:.2f}s",
+            l=len(data),
+            s=time.time() - start,
+        )
+        self.reader.insert(data.replace(done, ""))
+        self.reader.last_refresh_cache.invalidated = True

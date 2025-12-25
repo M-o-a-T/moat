@@ -29,8 +29,9 @@ import _sitebuiltins
 import functools
 import os
 import sys
+import warnings
 
-from .readline import _get_reader, multiline_input
+from .readline import _get_reader, append_history_file, multiline_input
 
 from typing import TYPE_CHECKING
 
@@ -133,7 +134,7 @@ async def run_multiline_interactive_console(  # noqa: D103
             return True
         return False
 
-    while 1:
+    while True:
         try:
             try:
                 sys.stdout.flush()
@@ -155,6 +156,11 @@ async def run_multiline_interactive_console(  # noqa: D103
                 _strip_final_indent(statement), filename=input_name, _symbol="single"
             )  # type: ignore[call-arg]
             assert not more
+            try:
+                append_history_file()
+            except (FileNotFoundError, PermissionError, OSError) as e:
+                warnings.warn(f"failed to open the history file for writing: {e}")
+
             input_n += 1
         except KeyboardInterrupt:
             r = _get_reader()

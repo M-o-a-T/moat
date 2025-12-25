@@ -31,17 +31,18 @@ import select
 import signal
 import struct
 import termios
+import types  # noqa:TC003
 from contextlib import asynccontextmanager
 from fcntl import ioctl
 
-from . import curses
+from . import terminfo
 from .console import Console, Event
 from .fancy_termios import TermState, tcgetattr, tcsetattr
 from .trace import trace
 from .unix_eventqueue import EventQueue
 from .utils import wlen
 
-TYPE_CHECKING = False
+from typing import TYPE_CHECKING
 
 # types
 if TYPE_CHECKING:
@@ -51,13 +52,20 @@ else:
     overload = lambda func: None  # noqa: ARG005, E731
     cast = lambda typ, val: val  # noqa: ARG005, E731
 
+# declare posix optional to allow None assignment on other platforms
+posix: types.ModuleType | None
+try:
+    import posix
+except ImportError:
+    posix = None
+
 
 class InvalidTerminal(RuntimeError):  # noqa: D101
     def __init__(self, message: str) -> None:
         super().__init__(errno.EIO, message)
 
 
-_error = (termios.error, curses.error, InvalidTerminal)
+_error = (termios.error, InvalidTerminal)
 _error_codes_to_ignore = frozenset([errno.EIO, errno.ENXIO, errno.EPERM])
 
 SIGWINCH_EVENT = "repaint"
@@ -70,7 +78,7 @@ delayprog = re.compile(b"\\$<([0-9]+)((?:/|\\*){0,2})>")
 try:
     poll: type[select.poll] = select.poll
 except AttributeError:
-    # this is exactly the minumum necessary to support what we
+    # this is exactly the minimum necessary to support what we
     # do with poll objects
     class MinimalPoll:  # noqa: D101
         def __init__(self):
@@ -160,7 +168,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     @asynccontextmanager
     async def __asynccontextmanager__(self):
         term = self.term
-        curses.setupterm(term or None, self.output_fd)
+        self.terminfo = terminfo.TermInfo(term or None)
         try:
             self.__input_fd_set(tcgetattr(self.input_fd), ignore=frozenset())
         except _error as e:
@@ -173,7 +181,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         def _my_getstr(cap: str, optional: bool) -> bytes | None: ...
 
         def _my_getstr(cap: str, optional: bool = False) -> bytes | None:
-            r = curses.tigetstr(cap)
+            r = self.terminfo.get(cap)
             if not optional and r is None:
                 raise InvalidTerminal(f"terminal doesn't have the required {cap} capability")
             return r
@@ -205,7 +213,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.__setup_movement()
 
-        self.event_queue = EventQueue(self.input_fd, self.encoding)
+        self.event_queue = EventQueue(self.input_fd, self.encoding, self.terminfo)
         self.cursor_visible = 1
 
         signal.signal(signal.SIGCONT, self._sigcont_handler)
@@ -239,19 +247,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         await self.restore()
         await self.prepare()
 
-    def more_in_buffer(self) -> bool:  # noqa: D102
-        return bool(self.input_buffer and self.input_buffer_pos < len(self.input_buffer))
-
     async def __read(self, n: int) -> bytes:
-        if not self.more_in_buffer():
-            self.input_buffer = await self.input_f.read(10000)
-
-        ret = self.input_buffer[self.input_buffer_pos : self.input_buffer_pos + n]
-        self.input_buffer_pos += len(ret)
-        if self.input_buffer_pos >= len(self.input_buffer):
-            self.input_buffer = b""
-            self.input_buffer_pos = 0
-        return ret
+        return await self.input_f.read(n)
 
     def change_encoding(self, encoding: str) -> None:
         """
@@ -521,6 +518,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 e.raw += e.raw
 
             amount = struct.unpack("i", ioctl(self.input_fd, FIONREAD, b"\0\0\0\0"))[0]
+            trace("getpending({a})", a=amount)
             raw = await self.__read(amount)
             data = str(raw, self.encoding, "replace")
             e.data += data
@@ -562,11 +560,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     @property
     def input_hook(self):  # noqa: D102
-        try:
-            import posix  # noqa: PLC0415
-        except ImportError:
-            return None
-        if posix._is_inputhook_installed():  # noqa: SLF001
+        if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001
             return posix._inputhook  # noqa: SLF001
 
     def __enable_bracketed_paste(self) -> None:
@@ -598,14 +592,14 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         if self._dch1:
             self.dch1 = self._dch1
         elif self._dch:
-            self.dch1 = curses.tparm(self._dch, 1)
+            self.dch1 = terminfo.tparm(self._dch, 1)
         else:
             self.dch1 = None
 
         if self._ich1:
             self.ich1 = self._ich1
         elif self._ich:
-            self.ich1 = curses.tparm(self._ich, 1)
+            self.ich1 = terminfo.tparm(self._ich, 1)
         else:
             self.ich1 = None
 
@@ -630,7 +624,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         # reuse the oldline as much as possible, but stop as soon as we
         # encounter an ESCAPE, because it might be the start of an escape
-        # sequene
+        # sequence
         while x_coord < minlen and oldline[x_pos] == newline[x_pos] and newline[x_pos] != "\x1b":
             x_coord += wlen(newline[x_pos])
             x_pos += 1
@@ -698,7 +692,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__buffer.append((text, 0))
 
     def __write_code(self, fmt, *args):
-        self.__buffer.append((curses.tparm(fmt, *args), 1))
+        self.__buffer.append((terminfo.tparm(fmt, *args), 1))
 
     def __maybe_write_code(self, fmt, *args):
         if fmt:
@@ -783,7 +777,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         # using .get() means that things will blow up
         # only if the bps is actually needed (which I'm
         # betting is pretty unlkely)
-        while 1:
+        while True:
             m = prog.search(fmt)
             if not m:
                 await self.output_f.write(fmt)

@@ -22,9 +22,13 @@ from __future__ import annotations
 import os
 from termios import VERASE, tcgetattr
 
-from . import curses
 from .base_eventqueue import BaseEventQueue
 from .trace import trace
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .terminfo import TermInfo
 
 # Mapping of human-readable key names to their terminal-specific codes
 TERMINAL_KEYNAMES = {
@@ -56,13 +60,13 @@ CTRL_ARROW_KEYCODES = {
 }
 
 
-def get_terminal_keycodes() -> dict[bytes, str]:
+def get_terminal_keycodes(ti: TermInfo) -> dict[bytes, str]:
     """
     Generates a dictionary mapping terminal keycodes to human-readable names.
     """
     keycodes = {}
     for key, terminal_code in TERMINAL_KEYNAMES.items():
-        keycode = curses.tigetstr(terminal_code)
+        keycode = ti.get(terminal_code)
         trace("key {key} tiname {terminal_code} keycode {keycode!r}", **locals())
         if keycode:
             keycodes[keycode] = key
@@ -71,8 +75,8 @@ def get_terminal_keycodes() -> dict[bytes, str]:
 
 
 class EventQueue(BaseEventQueue):  # noqa: D101
-    def __init__(self, fd: int, encoding: str) -> None:
-        keycodes = get_terminal_keycodes()
+    def __init__(self, fd: int, encoding: str, ti: TermInfo) -> None:
+        keycodes = get_terminal_keycodes(ti)
         if os.isatty(fd):
             backspace = tcgetattr(fd)[6][VERASE]
             keycodes[backspace] = "backspace"

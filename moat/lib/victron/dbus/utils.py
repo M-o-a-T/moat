@@ -269,13 +269,13 @@ class CtxObj:
     Add an async context manager that calls `_ctx` to run the context.
 
     Usage::
-            class Foo(CtxObj):
-                    @asynccontextmanager
-                    async def _ctx(self):
-                            yield self # or whatever
+        class Foo(CtxObj):
+            @asynccontextmanager
+            async def _ctx(self):
+                yield self # or whatever
 
-            async with Foo() as self_or_whatever:
-                    pass
+        async with Foo() as self_or_whatever:
+            pass
     """
 
     async def __aenter__(self):

@@ -9,8 +9,8 @@ import asyncclick as click
 
 from moat.util import P, attrdict, yprint
 from moat.kv.data import node_attr, res_get, res_update
+from moat.lib.run import attr_args
 from moat.link.announce import as_service
-from moat.run import attr_args
 
 from collections.abc import Mapping
 

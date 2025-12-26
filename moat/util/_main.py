@@ -14,7 +14,7 @@ from time import time
 
 import asyncclick as click
 
-from moat.run import attr_args, load_subgroup, process_args
+from moat.lib.run import attr_args, load_subgroup, process_args
 
 from .config import CFG
 from .path import P, Path, PathLongener, PathShortener, path_eval

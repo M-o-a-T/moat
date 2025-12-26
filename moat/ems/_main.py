@@ -9,7 +9,7 @@ import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click
 
-from moat.run import load_subgroup
+from moat.lib.run import load_subgroup
 
 log = logging.getLogger()
 

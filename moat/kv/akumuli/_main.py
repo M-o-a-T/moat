@@ -9,8 +9,8 @@ from asyncakumuli import DS
 from moat.util import NotGiven, P, attrdict, yprint
 from moat.kv.data import data_get, node_attr
 from moat.kv.obj.command import std_command
+from moat.lib.run import attr_args
 from moat.link.announce import as_service
-from moat.run import attr_args
 
 from .model import AkumuliRoot
 

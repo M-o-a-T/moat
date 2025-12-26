@@ -19,7 +19,7 @@ dependencies = [
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
-name = "moat-run"
+name = "moat-lib-run"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Main command entry point infrastructure for MoaT applications'
 readme = "README.md"

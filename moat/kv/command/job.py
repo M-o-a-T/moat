@@ -12,7 +12,7 @@ from moat.util import P, Path, attrdict, yprint
 from moat.kv.code import CodeRoot
 from moat.kv.data import add_dates, data_get
 from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
-from moat.run import attr_args, process_args
+from moat.lib.run import attr_args, process_args
 
 
 @click.group()  # pylint: disable=undefined-variable

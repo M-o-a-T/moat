@@ -1,4 +1,4 @@
-# moat-run
+# moat-lib-run
 
 % start main
 % start synopsis
@@ -21,7 +21,7 @@ for MoaT applications. It includes:
 ### Basic command setup
 
 ```python
-from moat.run import main_, wrap_main
+from moat.lib.run import main_, wrap_main
 
 @main_.command()
 async def my_command(ctx):
@@ -34,7 +34,7 @@ async def my_command(ctx):
 Use `load_subgroup` to create command groups that automatically load subcommands:
 
 ```python
-from moat.run import load_subgroup
+from moat.lib.run import load_subgroup
 import asyncclick as click
 
 @load_subgroup(prefix="myapp.commands")
@@ -50,7 +50,7 @@ The `attr_args` decorator and `process_args` function provide flexible
 argument handling:
 
 ```python
-from moat.run import attr_args, process_args
+from moat.lib.run import attr_args, process_args
 
 @main_.command()
 @attr_args(with_path=True)

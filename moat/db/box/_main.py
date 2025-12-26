@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from moat.util import yprint
 from moat.db import database
-from moat.run import load_subgroup, option_ng
+from moat.lib.run import load_subgroup, option_ng
 
 from .model import Box, BoxTyp
 

@@ -15,5 +15,6 @@ moat-lib-micro/index
 moat-lib-pid/index
 moat-lib-priomap/index
 moat-lib-ring/index
+moat-lib-run/index
 moat-lib-victron/index
 ```

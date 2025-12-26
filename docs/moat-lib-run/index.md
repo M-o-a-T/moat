@@ -1,4 +1,4 @@
-(moat-run)=
+(moat-lib-run)=
 # Main Command Infrastructure
 
 ```{toctree}
@@ -7,7 +7,7 @@
 api
 ```
 
-The `moat.run` module provides the infrastructure for building command-line
+The `moat.lib.run` module provides the infrastructure for building command-line
 interfaces for MoaT applications.
 
 ## Overview
@@ -27,7 +27,7 @@ This module includes:
 The `main_` command is the default entry point for MoaT applications:
 
 ```python
-from moat.run import main_
+from moat.lib.run import main_
 
 @main_.command()
 async def my_command(ctx):
@@ -40,7 +40,7 @@ async def my_command(ctx):
 Use `load_subgroup` to create command groups that automatically discover and load subcommands:
 
 ```python
-from moat.run import load_subgroup
+from moat.lib.run import load_subgroup
 import asyncclick as click
 
 @load_subgroup(prefix="myapp.commands")
@@ -59,7 +59,7 @@ This will automatically load commands from:
 The `attr_args` decorator provides flexible argument handling:
 
 ```python
-from moat.run import attr_args, process_args
+from moat.lib.run import attr_args, process_args
 
 @main_.command()
 @attr_args(with_path=True, with_eval=True)
@@ -79,7 +79,7 @@ Supports various value types:
 The `Loader` class provides automatic command loading from both internal modules and extensions:
 
 ```python
-from moat.run import Loader
+from moat.lib.run import Loader
 from functools import partial
 import asyncclick as click
 

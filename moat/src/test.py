@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from asyncscope import main_scope, scope
 
 from moat.util import CFG, CfgStore, OptCtx, P, attrdict
-from moat.run import wrap_main
+from moat.lib.run import wrap_main
 
 logger = logging.getLogger(__name__)
 

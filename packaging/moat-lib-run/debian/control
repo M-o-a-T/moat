@@ -1,4 +1,4 @@
-Source: moat-run
+Source: moat-lib-run
 Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: python
 Priority: optional
@@ -9,7 +9,7 @@ Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
 X-DH-Compat: 13
 
-Package: python3-moat-run
+Package: python3-moat-lib-run
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.0),

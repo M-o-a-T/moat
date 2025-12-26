@@ -30,7 +30,7 @@ the content of `/etc/moat/moat.cfg` is available.
 
 ### Subcommands
 
-You can add subcommands via `@moat.run.main_.command()`. Alternately, the
+You can add subcommands via `@moat.lib.run.main_.command()`. Alternately, the
 command handler can load subcommands when requested.
 
 In `yours.__main__.py`:

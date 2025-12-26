@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.run import main_
+from moat.lib.run import main_
 
 
 @main_.command(short_help="Import the debugger")

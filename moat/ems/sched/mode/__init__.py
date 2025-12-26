@@ -4,7 +4,7 @@ Base object for scheduling
 
 from __future__ import annotations
 
-from moat.run import load_ext
+from moat.lib.run import load_ext
 
 
 class BaseLoader:

@@ -12,8 +12,8 @@ from contextlib import asynccontextmanager
 import asyncclick as click
 
 from moat.util import P, Path, yprint
+from moat.lib.run import load_subgroup
 from moat.micro.cmd.tree.dir import Dispatch
-from moat.run import load_subgroup
 
 log = logging.getLogger()
 

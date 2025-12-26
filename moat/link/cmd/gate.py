@@ -9,10 +9,10 @@ import sys
 import asyncclick as click
 
 from moat.util import NotGiven, P, yprint
+from moat.lib.run import attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
-from moat.run import attr_args
 
 
 @click.group(short_help="Manage gateways.", invoke_without_command=True)

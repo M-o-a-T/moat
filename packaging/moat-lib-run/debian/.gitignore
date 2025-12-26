@@ -4,4 +4,4 @@
 /*.debhelper-build-stamp
 /*.substvars
 /debhelper-build-stamp
-/python3-moat-run
+/python3-moat-lib-run

@@ -10,18 +10,21 @@ __all__ = [
     "DProxy",
     "NoProxyError",
     "Proxy",
+    "_CProxy",
     "as_proxy",
     "drop_proxy",
     "get_proxy",
     "name2obj",
     "obj2name",
+    "unwrap_obj",
+    "wrap_obj",
 ]
 
 from anyio import Path as AioPath
 from pathlib import Path as FSPath
 
-from moat.lib.codec._proxy import DProxy as _DProxy
-from moat.lib.codec._proxy import (
+from moat.lib.proxy._proxy import DProxy as _DProxy
+from moat.lib.proxy._proxy import (
     NotGiven,
     Proxy,
     _CProxy,

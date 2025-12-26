@@ -18,7 +18,7 @@ from ipaddress import (
 from moat.util import attrdict
 from moat.lib.codec import get_codec
 from moat.lib.codec.msgpack import ExtType
-from moat.lib.codec.proxy import DProxy, as_proxy, name2obj
+from moat.lib.proxy import DProxy, as_proxy, name2obj
 
 as_proxy("_ip4", IPv4Address)
 as_proxy("_ip6", IPv6Address)

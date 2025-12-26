@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from moat.util import NotGiven
-from moat.lib.codec.proxy import as_proxy
 from moat.lib.micro import AC_use, Event, Lock, log
+from moat.lib.proxy import as_proxy
 
 from .stack import BaseBuf, StackedBlk, StackedMsg
 

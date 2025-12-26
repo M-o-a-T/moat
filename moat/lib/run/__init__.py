@@ -24,7 +24,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 
 try:
-    from moat.lib.codec.proxy import Proxy
+    from moat.lib.proxy import Proxy
 except ImportError:
     Proxy = None
 

@@ -11,7 +11,7 @@ import ruyaml as yaml
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw
-from moat.lib.codec.proxy import as_proxy
+from moat.lib.proxy import as_proxy
 from moat.util.cbor import StdCBOR
 from moat.util.times import ts2iso
 

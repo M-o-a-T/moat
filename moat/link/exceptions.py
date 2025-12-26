@@ -6,7 +6,7 @@ Currently this is (mostly) a re-import of moat.kv.exceptions.
 
 from __future__ import annotations
 
-from moat.lib.codec.proxy import as_proxy
+from moat.lib.proxy import as_proxy
 
 
 class MoaTLinkError(RuntimeError):

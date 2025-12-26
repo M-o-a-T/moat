@@ -33,7 +33,7 @@ from functools import total_ordering
 
 import simpleeval
 
-from moat.lib.codec.proxy import as_proxy
+from moat.lib.proxy import as_proxy
 
 from . import NotGiven
 

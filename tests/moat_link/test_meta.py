@@ -7,7 +7,7 @@ import time
 from base64 import b85encode
 
 from moat.lib.codec import get_codec
-from moat.lib.codec.proxy import unwrap_obj, wrap_obj
+from moat.lib.proxy import unwrap_obj, wrap_obj
 from moat.link.meta import MsgMeta
 
 

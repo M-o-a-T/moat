@@ -14,7 +14,7 @@ from .dict import attrdict
 from collections.abc import Mapping, Sequence
 
 try:
-    from moat.lib.codec.proxy import DProxy, Proxy
+    from moat.lib.proxy import DProxy, Proxy
 except ImportError:
     Proxy = None
     DProxy = None
@@ -135,7 +135,7 @@ if DProxy is not None:
 def _name2obj(constructor, node):
     constructor  # noqa:B018
 
-    from moat.lib.codec.proxy import name2obj  # noqa: PLC0415
+    from moat.lib.proxy import name2obj  # noqa: PLC0415
 
     return name2obj(node.value)
 

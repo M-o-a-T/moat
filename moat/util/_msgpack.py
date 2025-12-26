@@ -14,7 +14,7 @@ from __future__ import annotations
 import moat.lib.codec.msgpack as _msgpack
 from moat.lib.codec import Extension
 from moat.lib.codec.msgpack import Codec
-from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
+from moat.lib.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
 
 from .path import Path
 

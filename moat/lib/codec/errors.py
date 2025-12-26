@@ -4,7 +4,7 @@ FUSE operations for MoaT-micro-FS
 
 from __future__ import annotations
 
-from moat.lib.codec.proxy import as_proxy
+from moat.lib.proxy import as_proxy
 from moat.util.exc import ExpAttrError, ExpKeyError
 
 try:

@@ -17,6 +17,6 @@ def database(cfg):  # noqa:D103
     return database_(cfg)
 
 
-from moat.lib.config import CfgStore  # noqa:E402
+from moat.lib.config import CfgStore as _CfgStore  # noqa:E402
 
-CfgStore.with_(__name__)
+_CfgStore.with_(__name__)

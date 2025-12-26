@@ -4,6 +4,6 @@ This subpackage manages source code.
 
 from __future__ import annotations
 
-from moat.lib.config import CfgStore
+from moat.lib.config import CfgStore as _CfgStore
 
-CfgStore.with_(__name__)
+_CfgStore.with_(__name__)

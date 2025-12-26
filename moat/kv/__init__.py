@@ -17,6 +17,6 @@ except Exception:  # pragma: no cover
 
 with contextlib.suppress(NameError):
     del version
-from moat.lib.config import CfgStore
+from moat.lib.config import CfgStore as _CfgStore
 
-CfgStore.with_(__name__)
+_CfgStore.with_(__name__)

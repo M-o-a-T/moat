@@ -100,9 +100,6 @@ def deref(cfg: attrdict) -> None:
         _deref(cfg, cfg, Path())
 
 
-TEST = False
-
-
 def default_cfg(name, ext_name="ext", load_all: bool = False):
     """
     Read a YAML config file, either from the specified path
@@ -128,7 +125,7 @@ def default_cfg(name, ext_name="ext", load_all: bool = False):
                 else:
                     cfg = cfg2
 
-    if TEST:
+    if _config.TEST:
         _cfg(f"tests/cfg/{name}.cfg")
         _cfg(f"tests/cfg/{name}_add.cfg")
     else:
@@ -386,3 +383,6 @@ class CfgStore:
     def __delitem__(self, key):
         self.args.append((key, NotGiven))
         self._redo = True
+
+
+import moat.lib.config as _config  # noqa:E402

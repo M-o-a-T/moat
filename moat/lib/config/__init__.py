@@ -11,4 +11,6 @@ from ._impl import CFG as CFG
 from ._impl import CfgStore as CfgStore
 from ._impl import current_cfg as current_cfg
 
+TEST = False
+
 __all__ = ["CFG", "CfgStore", "current_cfg"]

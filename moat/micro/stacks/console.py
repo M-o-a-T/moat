@@ -56,18 +56,15 @@ def console_stack(stream, cfg, cons=False):
 
         stream = LogMsg(stream, log_raw)
 
-    if link.get("cbor", False):
-        raise NotImplementedError("CBOR")
+    if isinstance(frame, dict):
+        from moat.micro.proto.stream import CBORMsgBlk, SerialPackerBlkBuf  # noqa: PLC0415
+
+        stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
+        stream = CBORMsgBlk(stream, cfg)
     else:
-        if isinstance(frame, dict):
-            from moat.micro.proto.stream import CBORMsgBlk, SerialPackerBlkBuf  # noqa: PLC0415
+        from moat.micro.proto.stream import CBORMsgBuf  # noqa: PLC0415
 
-            stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
-            stream = CBORMsgBlk(stream, cfg)
-        else:
-            from moat.micro.proto.stream import CBORMsgBuf  # noqa: PLC0415
-
-            stream = CBORMsgBuf(stream, dict(msg_prefix=frame, console=cons))
+        stream = CBORMsgBuf(stream, dict(msg_prefix=frame, console=cons))
 
     assert isinstance(stream, BaseMsg)
 

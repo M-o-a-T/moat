@@ -11,6 +11,7 @@ moat-lib-cmd/index
 moat-lib-codec/index
 moat-lib-diffiehellman/index
 moat-lib-gpio/index
+moat-lib-micro/index
 moat-lib-pid/index
 moat-lib-priomap/index
 moat-lib-ring/index

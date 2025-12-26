@@ -13,8 +13,8 @@ except ImportError:
 
 import contextlib
 
+from moat.lib.micro import Lock, to_thread
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Lock, to_thread
 
 from typing import TYPE_CHECKING
 

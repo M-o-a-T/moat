@@ -9,7 +9,7 @@ from math import exp
 
 from moat.util import pos2val, val2pos
 from moat.ems.battery._base import BalBaseCell
-from moat.util.compat import sleep_ms
+from moat.lib.micro import sleep_ms
 
 logger = logging.getLogger(__name__)
 

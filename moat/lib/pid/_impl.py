@@ -11,7 +11,7 @@ from __future__ import annotations
 from math import exp
 
 from moat.util import NotGiven, attrdict
-from moat.util.compat import ticks_diff
+from moat.lib.micro import ticks_diff
 
 from typing import TYPE_CHECKING, cast
 

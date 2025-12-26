@@ -5,7 +5,7 @@ import sys
 
 import machine
 
-from moat.util.compat import log, sleep_ms, ticks_diff, ticks_ms, to_thread
+from moat.lib.micro import log, sleep_ms, ticks_diff, ticks_ms, to_thread
 
 from ._sys_ import Cmd as _Cmd
 

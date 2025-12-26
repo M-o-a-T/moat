@@ -8,8 +8,9 @@ from weakref import WeakSet
 
 from attrs import define, field
 
+from moat.lib.micro import EndOfStream, WouldBlock
+
 from . import NotGiven
-from .compat import EndOfStream, WouldBlock
 from .queue import Queue
 
 from typing import TYPE_CHECKING, TypeVar, cast

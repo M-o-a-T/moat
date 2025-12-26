@@ -20,8 +20,8 @@ if False:
     # Don't enable this in general, the corresponding moat.micro test
     # handles this by way of running on µPy
 
+    from moat.lib.micro import ticks_ms
     from moat.lib.pid import pid as _pid
-    from moat.util.compat import ticks_ms
 
     _pid.PID_TC = PID_TC = 1000
     _pid.time = ticks_ms

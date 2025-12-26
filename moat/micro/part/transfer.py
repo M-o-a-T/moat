@@ -7,8 +7,8 @@ This is intended for regularly moving data from A to B.
 from __future__ import annotations
 
 from moat.util import Path, Queue, QueueFull, combine_dict
+from moat.lib.micro import Event, L, TaskGroup, every, idle, is_async, log, ticks_ms
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L, TaskGroup, every, idle, is_async, log, ticks_ms
 
 from typing import TYPE_CHECKING
 

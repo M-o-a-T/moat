@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 import time
 
-from moat.util.compat import every_ms
+from moat.lib.micro import every_ms
 
 
 @pytest.mark.anyio

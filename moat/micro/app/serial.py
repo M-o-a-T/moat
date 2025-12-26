@@ -4,8 +4,8 @@ Serial port access apps
 
 from __future__ import annotations
 
+from moat.lib.micro import AC_use
 from moat.micro.part.serial import NamedSerial
-from moat.util.compat import AC_use
 
 
 # Serial packet forwarder

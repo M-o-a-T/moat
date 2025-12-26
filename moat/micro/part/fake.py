@@ -7,8 +7,8 @@ from __future__ import annotations
 import random
 from math import atanh, tanh
 
+from moat.lib.micro import Event
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event
 
 PINS = {}
 

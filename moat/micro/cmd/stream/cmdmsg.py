@@ -8,8 +8,8 @@ from moat.util import merge
 from moat.lib.cmd.errors import NotReadyError
 from moat.lib.cmd.stream import HandlerStream
 from moat.lib.codec.errors import SilentRemoteError
+from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

@@ -6,7 +6,7 @@ import trio
 
 from moat.util import P
 from moat.kv.mock.mqtt import stdtest
-from moat.util.compat import CancelledError
+from moat.lib.micro import CancelledError
 
 # doesn't yet work with MQTT because we can't split
 pytestmark = pytest.mark.skip

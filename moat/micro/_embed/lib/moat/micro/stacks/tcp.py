@@ -4,8 +4,8 @@ Support code to connect to a TCP server.
 
 from __future__ import annotations
 
+from moat.lib.micro import Event, L, TaskGroup, run_server
 from moat.micro.proto.stream import SingleAIOBuf
-from moat.util.compat import Event, L, TaskGroup, run_server
 
 from .util import BaseConnIter
 

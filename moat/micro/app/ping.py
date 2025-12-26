@@ -4,8 +4,8 @@ Active ping
 
 from __future__ import annotations
 
+from moat.lib.micro import sleep, wait_for
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import sleep, wait_for
 
 from typing import TYPE_CHECKING
 

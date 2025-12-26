@@ -19,10 +19,10 @@ import asyncclick as click
 
 from moat.util import NotGiven, P, Path, merge, ungroup
 from moat.lib.codec import get_codec
+from moat.lib.micro import idle, log
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.util import run_update
-from moat.util.compat import idle, log
 from moat.util.exec import run as run_cmd
 
 logger = logging.getLogger(__name__)
@@ -298,7 +298,7 @@ async def install_(cfg, dest: Path = None):
     mpydir = mydir / "ext" / "micropython"
     portdir = mpydir / "ports" / device
 
-    boardp = f"{board or 'generic'}" + (f"-{variant}" if variant else '')
+    boardp = f"{board or 'generic'}" + (f"-{variant}" if variant else "")
 
     board_dir = FSPath(__file__).parent / "_embed" / "boards" / device / board
     if await board_dir.exists():

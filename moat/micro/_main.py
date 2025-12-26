@@ -29,10 +29,10 @@ from moat.util import (
 from moat.lib.cmd.msg import Msg
 from moat.lib.codec import get_codec
 from moat.lib.codec.errors import NoPathError, RemoteError
+from moat.lib.micro import idle
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.stacks.util import TEST_MAGIC
-from moat.util.compat import idle
 from moat.util.main import load_subgroup
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util.compat import L
+from moat.lib.micro import L
 
 from .dir import BaseSubCmd
 from .layer import BaseLayerCmd

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.lib.cmd.const import B_FLAGSTR
 from moat.lib.cmd.stream import wire2i_f
-from moat.util.compat import log, shield
+from moat.lib.micro import log, shield
 from moat.util.exc import ungroup
 
 try:

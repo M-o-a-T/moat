@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from moat.lib.cmd.const import B_FLAGSTR
 from moat.lib.cmd.stream import wire2i_f
-from moat.util.compat import ACM, AC_exit, AC_use, log
+from moat.lib.micro import ACM, AC_exit, AC_use, log
 
 # Typing
 
@@ -363,7 +363,12 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            if self.txt[0] == "!" and isinstance(msg, (list, tuple)) and msg and isinstance(msg[0], int):
+            if (
+                self.txt[0] == "!"
+                and isinstance(msg, (list, tuple))
+                and msg
+                and isinstance(msg[0], int)
+            ):
                 log("R:%s %s %s", self.txt[1:], *self._repr_bang(msg))
             else:
                 log("R:%s %s", self.txt, self._repr(msg, "d"))

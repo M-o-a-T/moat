@@ -14,8 +14,9 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from moat.lib.micro import Event, TaskGroup
+
 from .broadcast import Broadcaster, BroadcastReader
-from .compat import Event, TaskGroup
 from .ctx import CtxObj
 
 __all__ = [

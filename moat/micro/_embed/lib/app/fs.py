@@ -8,8 +8,8 @@ import errno
 import os
 
 from moat.lib.codec.errors import FileExistsError, FileNotFoundError  # noqa:A004
+from moat.lib.micro import to_thread
 from moat.micro.cmd.base import LockBaseCmd
-from moat.util.compat import to_thread
 
 from typing import TYPE_CHECKING
 

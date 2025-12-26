@@ -7,10 +7,10 @@ from __future__ import annotations
 import os
 import pytest
 
+from moat.lib.micro import Event, TaskGroup
 from moat.micro._test import Loopback
 from moat.micro.proto.reliable import EphemeralMsg, ReliableMsg
 from moat.micro.proto.stack import LogMsg, StackedMsg
-from moat.util.compat import Event, TaskGroup
 
 pytestmark = pytest.mark.anyio
 

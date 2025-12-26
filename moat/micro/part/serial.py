@@ -8,8 +8,8 @@ import anyio
 
 from anyio_serial import Serial as _Serial
 
+from moat.lib.micro import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
-from moat.util.compat import AC_use, log
 
 
 # Serial link driver

@@ -15,8 +15,8 @@ import machine
 
 import moat.micro.console as cons
 from moat.util import merge
+from moat.lib.micro import AC_use, L, TaskGroup, at, sleep_ms
 from moat.util.cbor import Codec as CBOR
-from moat.util.compat import AC_use, L, TaskGroup, at, sleep_ms
 
 from typing import TYPE_CHECKING  # isort:skip
 

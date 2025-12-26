@@ -8,8 +8,8 @@ import pytest
 import sys
 
 from moat.util import P, as_proxy
+from moat.lib.micro import ticks_diff, ticks_ms
 from moat.micro._test import mpy_stack
-from moat.util.compat import ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 

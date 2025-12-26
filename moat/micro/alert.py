@@ -13,7 +13,7 @@ Alarm conditions are subclasses of exceptions.
 from __future__ import annotations
 
 from moat.util import Path, merge
-from moat.util.compat import AC_use, Event, Queue, TaskGroup, WouldBlock
+from moat.lib.micro import AC_use, Event, Queue, TaskGroup, WouldBlock
 
 from .cmd.base import BaseCmd
 

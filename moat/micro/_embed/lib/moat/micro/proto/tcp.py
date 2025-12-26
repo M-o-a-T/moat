@@ -8,8 +8,8 @@ import select
 
 import asyncio
 
+from moat.lib.micro import AC_use, log, sleep, wait_for
 from moat.micro.proto.stream import AIOBuf
-from moat.util.compat import AC_use, log, sleep, wait_for
 
 p = select.poll()
 

@@ -13,8 +13,8 @@ import os
 import re
 from anyio.streams.buffered import BufferedByteReceiveStream
 
+from moat.lib.micro import AC_use
 from moat.micro.proto.stream import SingleAnyioBuf
-from moat.util.compat import AC_use
 
 from .os_error_list import os_error_mapping
 

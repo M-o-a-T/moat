@@ -10,8 +10,8 @@ from contextlib import suppress
 
 from moat.util import P, yload
 from moat.lib.cmd.errors import NoStream
+from moat.lib.micro import CancelledError
 from moat.micro._test import mpy_stack
-from moat.util.compat import CancelledError
 
 pytestmark = pytest.mark.anyio
 

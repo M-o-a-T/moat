@@ -5,7 +5,7 @@ Error classes et al. for moat-lib-cmd.
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
-from moat.util.compat import CancelledError
+from moat.lib.micro import CancelledError
 
 from .const import (
     E_CANCEL,

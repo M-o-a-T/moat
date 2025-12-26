@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from math import exp
 
+from moat.lib.micro import Event, ticks_diff, ticks_ms
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, ticks_diff, ticks_ms
 
 from typing import TYPE_CHECKING
 

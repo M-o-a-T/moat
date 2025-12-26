@@ -4,7 +4,7 @@ This module contains list-to-kw mangling helpers.
 
 from __future__ import annotations
 
-from moat.util.compat import Mapping
+from moat.lib.micro import Mapping
 
 __all__ = ["pop_kw", "push_kw"]
 

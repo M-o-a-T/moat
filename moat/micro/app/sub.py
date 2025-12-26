@@ -4,7 +4,7 @@ Apps used for structure.
 
 from __future__ import annotations
 
-from moat.util.compat import L, log, sleep_ms
+from moat.lib.micro import L, log, sleep_ms
 
 try:
     from moat.micro.proto.stream import ProcessDeadError

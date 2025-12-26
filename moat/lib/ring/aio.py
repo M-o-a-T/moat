@@ -4,7 +4,7 @@ Async front-end for the characer-based ring buffer.
 
 from __future__ import annotations
 
-from moat.util.compat import Event
+from moat.lib.micro import Event
 
 from ._impl import RingBuffer as _RingBuf
 

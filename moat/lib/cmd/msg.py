@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import ExpectedError, Path, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
-from moat.util.compat import (
+from moat.lib.micro import (
     CancelledError,
     Event,
     Iterable,
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 try:
     import logging
 except ImportError:
-    from moat.util.compat import log
+    from moat.lib.micro import log
 
     def log_exc(e, s, *a):  # noqa: D103
         log(s + ": %r", *a, e, err=e)

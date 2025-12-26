@@ -5,11 +5,7 @@ Basic BMS classes
 from __future__ import annotations
 
 from moat.util import as_proxy, attrdict, val2pos
-from moat.micro.alert import Alert
-from moat.micro.cmd.array import ArrayCmd
-from moat.micro.cmd.base import BaseCmd
-from moat.micro.rtc import state as rtc_state
-from moat.util.compat import (
+from moat.lib.micro import (
     Event,
     TaskGroup,
     TimeoutError,  # noqa:A004
@@ -19,6 +15,10 @@ from moat.util.compat import (
     ticks_ms,
     wait_for_ms,
 )
+from moat.micro.alert import Alert
+from moat.micro.cmd.array import ArrayCmd
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.rtc import state as rtc_state
 
 from typing import TYPE_CHECKING  # isort:skip
 

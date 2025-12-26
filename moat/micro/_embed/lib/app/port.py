@@ -5,8 +5,8 @@ Access any moat.micro Buf/Blk/Msg device
 from __future__ import annotations
 
 from moat.util import import_
+from moat.lib.micro import AC_use
 from moat.micro.cmd.stream import BaseCmdBBM
-from moat.util.compat import AC_use
 
 
 # Serial packet forwarder

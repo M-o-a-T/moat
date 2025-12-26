@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from inspect import iscoroutinefunction
 
-from moat.util.compat import (
+from moat.lib.micro import (
     ACM,
     AC_exit,
     Event,

@@ -9,7 +9,7 @@ from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg
 from moat.lib.codec.errors import NoPathError
-from moat.util.compat import L, TaskGroup
+from moat.lib.micro import L, TaskGroup
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part

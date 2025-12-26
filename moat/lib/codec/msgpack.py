@@ -22,7 +22,7 @@ import sys
 from io import BytesIO
 
 from moat.util import OutOfData, attrdict
-from moat.util.compat import byte2utf8, const
+from moat.lib.micro import byte2utf8, const
 
 from ._base import Codec as _Codec
 from ._base import NoCodecError

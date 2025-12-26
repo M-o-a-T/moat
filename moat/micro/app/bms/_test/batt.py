@@ -8,7 +8,7 @@ import logging
 import random
 
 from moat.ems.battery._base import BaseBalancer, BaseBattery
-from moat.util.compat import sleep_ms
+from moat.lib.micro import sleep_ms
 
 logger = logging.getLogger(__name__)
 

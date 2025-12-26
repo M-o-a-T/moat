@@ -7,8 +7,8 @@ from __future__ import annotations
 import pytest
 
 from moat.util import P
+from moat.lib.micro import sleep_ms
 from moat.micro._test import mpy_stack
-from moat.util.compat import sleep_ms
 
 CFG = """
 apps:

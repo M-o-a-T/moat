@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import anyio
 
+from moat.lib.micro import AC_use
 from moat.micro.proto.stream import CBORMsgBlk
-from moat.util.compat import AC_use
 
 from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 

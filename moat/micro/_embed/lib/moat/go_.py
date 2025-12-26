@@ -118,8 +118,8 @@ def go(state=None, cmd=True):
 
     print("Start MoaT:", repr(state), file=sys.stderr)
 
+    from moat.lib.micro import at  # noqa: PLC0415
     from moat.micro.main import main, wr_exc  # noqa: PLC0415
-    from moat.util.compat import at  # noqa: PLC0415
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 

@@ -4,8 +4,8 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
+from moat.lib.micro import ACM, AC_exit, L, Lock, TaskGroup
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import ACM, AC_exit, L, Lock, TaskGroup
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

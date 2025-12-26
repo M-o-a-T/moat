@@ -7,7 +7,7 @@ from tests.moat_lib_cmd.scaffold import scaffold
 
 from moat.util import P
 from moat.lib.cmd.base import MsgHandler, MsgSender
-from moat.util.compat import log
+from moat.lib.micro import log
 
 
 @pytest.mark.anyio

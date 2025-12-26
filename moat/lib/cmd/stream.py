@@ -23,7 +23,7 @@ from moat.lib.cmd.const import (
 )
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
-from moat.util.compat import (
+from moat.lib.micro import (
     ACM,
     AC_exit,
     Event,

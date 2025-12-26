@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from moat.util.compat import const
+from moat.lib.micro import const
 
 # bitfields
 

@@ -4,8 +4,8 @@ Remote port access apps
 
 from __future__ import annotations
 
+from moat.lib.micro import AC_use
 from moat.micro.stacks.console import console_stack
-from moat.util.compat import AC_use
 
 # Typing
 

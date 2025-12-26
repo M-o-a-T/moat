@@ -9,8 +9,8 @@ import contextlib
 import os
 import pytest
 
+from moat.lib.micro import log
 from moat.micro._test import mpy_stack
-from moat.util.compat import log
 
 from .support import CF, as_attr
 

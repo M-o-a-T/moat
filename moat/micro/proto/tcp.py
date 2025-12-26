@@ -7,8 +7,8 @@ from __future__ import annotations
 import anyio
 import errno
 
+from moat.lib.micro import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
-from moat.util.compat import AC_use, log
 
 
 class Link(AnyioBuf):

@@ -7,8 +7,8 @@ import pytest
 import time
 
 from moat.ems.battery.diy_serial.packet import RequestTiming
+from moat.lib.micro import log
 from moat.micro._test import mpy_stack
-from moat.util.compat import log
 
 from .support import CF, as_attr
 

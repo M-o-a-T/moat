@@ -10,8 +10,7 @@ from pprint import pformat
 
 from moat.util import ValueEvent
 from moat.ems.battery.errors import MessageError, MessageLost, NoSuchCell
-from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import (
+from moat.lib.micro import (
     Lock,
     TimeoutError,  # noqa:A004
     sleep_ms,
@@ -19,6 +18,7 @@ from moat.util.compat import (
     ticks_ms,
     wait_for_ms,
 )
+from moat.micro.cmd.base import BaseCmd
 
 from .packet import PacketHeader, replyClass
 

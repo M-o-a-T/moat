@@ -22,9 +22,8 @@ from functools import partial
 from inspect import currentframe, iscoroutine, iscoroutinefunction
 
 from moat.util.merge import merge
-
-from .queue import Queue as _Queue
-from .queue import QueueEmpty, QueueFull
+from moat.util.queue import Queue as _Queue
+from moat.util.queue import QueueEmpty, QueueFull
 
 from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
 from typing import TYPE_CHECKING

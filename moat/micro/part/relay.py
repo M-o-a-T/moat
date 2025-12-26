@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from moat.util import NotGiven, Path
 from moat.lib.codec.errors import StoppedError
+from moat.lib.micro import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
 class Relay(BaseCmd):

@@ -8,7 +8,7 @@ import struct
 
 import ruyaml as yaml
 
-from moat.util.compat import const
+from moat.lib.micro import const
 
 from ._cbor import Codec, Tag  # noqa:F401
 

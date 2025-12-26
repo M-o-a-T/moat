@@ -12,10 +12,7 @@ import sys
 
 from asyncio import create_task, run_until_complete
 
-from moat.lib.ring import RingBuffer
-from moat.lib.ring.aio import RingBuffer as AioRingBuffer
-from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import (
+from moat.lib.micro import (
     ACM,
     AC_exit,
     AC_use,
@@ -26,6 +23,9 @@ from moat.util.compat import (
     ValueEvent,
     wait_for_ms,
 )
+from moat.lib.ring import RingBuffer
+from moat.lib.ring.aio import RingBuffer as AioRingBuffer
+from moat.micro.cmd.base import BaseCmd
 
 from typing import TYPE_CHECKING
 

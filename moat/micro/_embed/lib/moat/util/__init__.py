@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
-from moat.util.compat import Event, log
+from moat.lib.micro import Event, log
 
 from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
@@ -236,7 +236,7 @@ def exc_iter(exc):
     """
     iterate over all non-exceptiongroup parts of an exception(group)
     """
-    from moat.util.compat import BaseExceptionGroup, ExceptionGroup  # noqa: PLC0415,A004
+    from moat.lib.micro import BaseExceptionGroup, ExceptionGroup  # noqa: PLC0415,A004
 
     if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
         for e in exc.exceptions:

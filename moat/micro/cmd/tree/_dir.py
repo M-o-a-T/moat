@@ -7,8 +7,8 @@ from __future__ import annotations
 from moat.util import NotGiven, Path, import_
 from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.errors import ShortCommandError
+from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 
 # Typing
 

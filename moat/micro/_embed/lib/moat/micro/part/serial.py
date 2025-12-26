@@ -7,8 +7,8 @@ from __future__ import annotations
 import machine as M
 
 from moat.util import import_
+from moat.lib.micro import AC_use, TimeoutError, log, sleep, wait_for_ms  # noqa:A004
 from moat.micro.stacks.file import FileBuf
-from moat.util.compat import AC_use, TimeoutError, log, sleep, wait_for_ms  # noqa:A004
 
 
 # Serial link driver

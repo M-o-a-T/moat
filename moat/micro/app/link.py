@@ -4,10 +4,10 @@ Apps used for interconnecting.
 
 from __future__ import annotations
 
+from moat.lib.micro import AC_use
 from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import AC_use
 from moat.util.config import CFG
 from moat.util.exc import ExpKeyError
 

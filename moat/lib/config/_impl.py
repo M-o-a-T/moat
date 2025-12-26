@@ -10,12 +10,7 @@ from importlib import import_module
 from pathlib import Path as FSPath
 from weakref import WeakSet
 
-from . import NotGiven
-from .ctx import ctx_as
-from .dict import attrdict, combine_dict
-from .merge import merge
-from .path import Path
-from .yaml import yload
+from moat.util import NotGiven, Path, attrdict, combine_dict, ctx_as, merge, yload
 
 from typing import TYPE_CHECKING
 

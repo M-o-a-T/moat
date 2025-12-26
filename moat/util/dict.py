@@ -8,7 +8,7 @@ from copy import deepcopy
 from weakref import ref
 
 from . import NotGiven
-from .merge import merge
+from ._merge import merge
 from .path import Path
 
 from collections.abc import Mapping

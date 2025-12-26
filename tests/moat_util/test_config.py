@@ -5,8 +5,9 @@ Some rudimentary tests for config loading
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
-from moat.util import config, yload
-from moat.util.config import CfgStore
+from moat.util import yload
+from moat.lib import config
+from moat.lib.config import CfgStore
 
 c1 = """\
 bar: baz

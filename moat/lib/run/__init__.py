@@ -17,7 +17,8 @@ from pathlib import Path as FSPath
 import asyncclick as click
 import simpleeval
 
-from moat.util import CFG, CfgStore, NotGiven, P, Path, attrdict, current_cfg, ungroup
+from moat.util import NotGiven, P, Path, attrdict, ungroup
+from moat.lib.config import CFG, CfgStore, current_cfg
 
 from collections import defaultdict
 from collections.abc import Mapping

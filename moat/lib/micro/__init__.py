@@ -21,9 +21,8 @@ from contextlib import AsyncExitStack
 from functools import partial
 from inspect import currentframe, iscoroutine, iscoroutinefunction
 
-from moat.util.merge import merge
-from moat.util.queue import Queue as _Queue
-from moat.util.queue import QueueEmpty, QueueFull
+from moat.util import Queue as _Queue
+from moat.util import QueueEmpty, QueueFull, merge
 
 from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
 from typing import TYPE_CHECKING

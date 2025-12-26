@@ -31,7 +31,7 @@ import yaml
 from moat.kv.client import open_client
 from moat.kv.default import CFG
 from moat.kv.inv.model import InventoryRoot
-from moat.run import main_, run
+from moat.lib.run import main_, run
 
 
 async def empty(ctx):  # noqa:D103

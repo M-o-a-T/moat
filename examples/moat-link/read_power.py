@@ -12,8 +12,8 @@ import httpx
 from asyncakumuli import get_data
 
 from moat.util import CFG, P
+from moat.lib.run import main_, run
 from moat.link.client import Link
-from moat.run import main_, run
 
 series = "price"
 tags = dict(type="power", source="awattar", redo="A")

@@ -3,8 +3,8 @@ from __future__ import annotations  # noqa: D100
 import copy
 import pytest
 
-from moat.util import config
-from moat.util.config import CFG
+from moat.lib import config
+from moat.lib.config import CFG
 
 config.TEST = True
 

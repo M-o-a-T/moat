@@ -16,7 +16,7 @@ except Exception:  # pragma: no cover
     _version = "0.0.1"
     _version_tuple = (0, 0, 1)
 
-from moat.util.config import CfgStore
+from moat.lib.config import CfgStore
 
 from ._server import Server as Server
 

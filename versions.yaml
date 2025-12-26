@@ -197,6 +197,10 @@ moat-lib-ring:
   pypi: 0.2.1
   rev: 0b6e477a7bf2491126070bffd51d2a7a375521c9
   tag: 0.2.1
+moat-lib-run:
+  pkg: 1
+  rev: b9ca3e9b200e0e23c6b5d06abe7c7a7bc72781f5
+  tag: 0.1.0
 moat-lib-victron:
   deb: 0.1.3-3
   pkg: 3

@@ -24,10 +24,6 @@ _attrs = {
     "AlertMixin": "alert",
     "BaseAlert": "alert",
     "RepeatAlert": "alert",
-    # config
-    "CFG": "config",
-    "CfgStore": "config",
-    "current_cfg": "config",
     # impl
     "Cache": "impl",
     "NoLock": "impl",
@@ -50,7 +46,7 @@ _attrs = {
     "to_attrdict": "dict",
     "attrdict": "dict",
     # merge
-    "merge": "merge",
+    "merge": "_merge",
     # misc
     "OutOfData": "misc",
     "_add_obj": "misc",

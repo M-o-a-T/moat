@@ -15,80 +15,140 @@ _log = _logging.getLogger(__name__)
 
 NotGiven = Ellipsis
 
-from .dict import attrdict  # noqa: E402, F401
+# Mapping of exported names to their source modules
+_attrs = {
+    # alert
+    "Alert": "alert",
+    "AlertCollector": "alert",
+    "AlertHandler": "alert",
+    "AlertMixin": "alert",
+    "BaseAlert": "alert",
+    "RepeatAlert": "alert",
+    # config
+    "CFG": "config",
+    "CfgStore": "config",
+    "current_cfg": "config",
+    # impl
+    "Cache": "impl",
+    "NoLock": "impl",
+    "NoneType": "impl",
+    "OptCtx": "impl",
+    "TimeOnlyFormatter": "impl",
+    "acount": "impl",
+    "byte2num": "impl",
+    "count": "impl",
+    "digits": "impl",
+    "import_": "impl",
+    "load_from_cfg": "impl",
+    "num2byte": "impl",
+    "num2id": "impl",
+    "singleton": "impl",
+    "split_arg": "impl",
+    # dict (already imported attrdict above)
+    "combine_dict": "dict",
+    "drop_dict": "dict",
+    "to_attrdict": "dict",
+    "attrdict": "dict",
+    # merge
+    "merge": "merge",
+    # misc
+    "OutOfData": "misc",
+    "_add_obj": "misc",
+    "get_codec": "misc",
+    "pos2val": "misc",
+    "srepr": "misc",
+    "val2pos": "misc",
+    # pp
+    "pop_kw": "pp",
+    "push_kw": "pp",
+    # random
+    "al_ascii": "random",
+    "al_az": "random",
+    "al_lower": "random",
+    "al_unique": "random",
+    "gen_ident": "random",
+    "id2str": "random",
+    # inexact
+    "InexactFloat": "inexact",
+    # event
+    "ValueEvent": "event",
+    # ctx
+    "CtxObj": "ctx",
+    "ctx_as": "ctx",
+    "timed_ctx": "ctx",
+    # queue
+    "DelayedRead": "queue",
+    "DelayedWrite": "queue",
+    "Lockstep": "queue",
+    "Queue": "queue",
+    "QueueEmpty": "queue",
+    "QueueFull": "queue",
+    "create_queue": "queue",
+    # module
+    "Module": "module",
+    "make_module": "module",
+    "make_proc": "module",
+    # msg
+    "MsgReader": "msg",
+    "MsgWriter": "msg",
+    # msgpack
+    "StdMsgpack": "msgpack",
+    "std_ext": "msgpack",
+    # path
+    "PS": "path",
+    "P": "path",
+    "Path": "path",
+    "PathElem": "path",
+    "PathElemI": "path",
+    "PathLongener": "path",
+    "PathShortener": "path",
+    "Root": "path",
+    "RootPath": "path",
+    "logger_for": "path",
+    "path_eval": "path",
+    "set_root": "path",
+    "P_Root": "path",
+    "Q_Root": "path",
+    "S_Root": "path",
+    # server
+    "gen_ssl": "server",
+    "run_tcp_server": "server",
+    # spawn
+    "spawn": "spawn",
+    # systemd
+    "as_service": "systemd",
+    # yaml
+    "add_repr": "yaml",
+    "load_ansible_repr": "yaml",
+    "yaml_parse": "yaml",
+    "yaml_repr": "yaml",
+    "yformat": "yaml",
+    "yload": "yaml",
+    "yprint": "yaml",
+    # exc
+    "ExpAttrError": "exc",
+    "ExpKeyError": "exc",
+    "ExpectedError": "exc",
+    "exc_iter": "exc",
+    "ungroup": "exc",
+}
 
-from .alert import *  # noqa: F403, E402  # isort:skip
-from .config import *  # noqa: F403, E402  # isort:skip
 
-from .impl import *  # noqa: F403, E402  # isort:skip
-from .dict import *  # noqa: F403, E402  # isort:skip
-from .merge import *  # noqa: F403, E402  # isort:skip
-from .misc import *  # noqa: F403, E402  # isort:skip
-from .pp import *  # noqa: F403, E402  # isort:skip
-from .random import *  # noqa: F403, E402  # isort:skip
-from .inexact import *  # noqa: F403, E402  # isort:skip
+# Lazy loader, effectively does:
+#   global attr
+#   from .mod import attr
+def __getattr__(attr):
+    mod = _attrs.get(attr, None)
+    if mod is None:
+        raise AttributeError(attr)
 
-from moat.lib.codec.proxy import as_proxy  # noqa: E402  # isort:skip
+    # Try to import the attribute from the module
+    try:
+        value = getattr(__import__(f"moat.util.{mod}", globals(), None, [attr], 0), attr)
+    except ImportError as exc:
+        _log.warning("Missing: %s (importing .%s)", exc, mod)
+        raise AttributeError(attr) from exc
 
-as_proxy("_", NotGiven)
-
-
-try:
-    from .event import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .event)", exc)
-
-try:
-    from .ctx import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .ctx)", exc)
-
-try:
-    from .queue import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .queue)", exc)
-
-try:
-    from .module import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .module)", exc)
-
-try:
-    from .msg import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .msg)", exc)
-
-try:
-    from .msgpack import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .msgpack)", exc)
-
-try:
-    from .path import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .path)", exc)
-
-try:
-    from .server import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .server)", exc)
-
-try:
-    from .spawn import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .spawn)", exc)
-
-try:
-    from .systemd import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .systemd)", exc)
-
-try:
-    from .yaml import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .yaml)", exc)
-
-try:
-    from .exc import *  # noqa: F403
-except ImportError as exc:
-    _log.warning("Missing: %s (importing .exc)", exc)
+    # Cache it in globals for next time
+    globals()[attr] = value
+    return value

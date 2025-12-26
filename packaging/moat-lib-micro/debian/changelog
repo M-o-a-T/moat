@@ -1,0 +1,6 @@
+moat-lib-micro (0.1.0-1) unstable; urgency=medium
+
+  * Initial Debianization.
+  * Moved from moat.util.compat to moat.lib.micro
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 26 Dec 2025 14:50:00 +0100

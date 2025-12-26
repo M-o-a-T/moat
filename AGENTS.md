@@ -3,21 +3,25 @@
 ## Project Structure & Modules
 - This is a monorepository. All code lives in `moat/`.
   - Code is CPython 12+ compatible
-    - exception: code in `moat/micro/_embed` runs on MicroPython 1.25+
-  - Each Python module named `moat.XXX.YYY` has
+    - exception: code in `moat/micro/_embed` runs on a version of
+      MicroPython 1.25+, enhanced with taskgroups
+  - Each Python package named e.g. `moat.X.Y` has
+    - code in `moat/X/Y/*.py`
     - `docs/moat-X-Y` for documentation
     - `packaging/moat-X-Y` for `pyproject.toml` and Debian packaging
     - `tests/moat_X_Y` for testing
-  - Tests use `pytest`. Required modules are supposed to be installed on the host.
-  - We use semantic versioning for submodules.
+    - possibly `examples/moat-X-Y`
+  - Tests use `pytest`. Required modules are listed in the global
+    `pyproject.toml` and are supposed to be installed on the host system.
+  - We use semantic versioning for submodules, except for major version zero.
     - Run `./mt src tag -s moat.X.Y -m` to request a new minor version; use
       `-M` for new major versions.
     - Patch versions are allocated automatically when building.
   - Some code in `moat.lib` is shared between CPython and MicroPython
     areas, via symlinks.
-    - Shared code must use `moat.util.compat` to mask implementation
+    - Shared code must use `moat.lib.compat` to mask implementation
       differences between them.
-    - Assume that any code that imports `moat.util.compat` does run on
+    - Assume that any code that imports `moat.lib.compat` does run on
       both.
 - Build output should be created in, or moved to, the `dist/` folder.
 

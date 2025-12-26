@@ -1,16 +1,17 @@
 (moat-lib-run)=
 # Main Command Infrastructure
 
-```{toctree}
-:hidden:
-
-api
+```{include} ../../packaging/moat-lib-run/README.md
+:start-after: % start main
+:end-before: % end main
 ```
+
+## Manual
 
 The `moat.lib.run` module provides the infrastructure for building command-line
 interfaces for MoaT applications.
 
-## Overview
+### Overview
 
 This module includes:
 
@@ -91,6 +92,9 @@ async def main():
     pass
 ```
 
-## API Reference
+```{toctree}
+:maxdepth: 2
+:hidden:
 
-See the [API documentation](api) for detailed information on all functions and classes.
+api
+```

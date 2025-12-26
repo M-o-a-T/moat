@@ -1,16 +1,17 @@
 (moat-lib-config)=
 # Configuration Management
 
-```{toctree}
-:hidden:
-
-api
+```{include} ../../packaging/moat-lib-config/README.md
+:start-after: % start main
+:end-before: % end main
 ```
+
+## Manual
 
 The `moat.lib.config` module provides infrastructure for loading, merging, and
 managing configuration data for MoaT applications.
 
-## Overview
+### Overview
 
 This module includes:
 
@@ -156,6 +157,9 @@ CfgStore.with_("myapp.database")
 # Configuration now available in all CfgStore instances
 ```
 
-## API Reference
+```{toctree}
+:maxdepth: 2
+:hidden:
 
-See the [API documentation](api) for detailed information on all classes and functions.
+api
+```

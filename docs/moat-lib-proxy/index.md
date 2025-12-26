@@ -1,16 +1,17 @@
 (moat-lib-proxy)=
 # Proxy Helpers
 
-```{toctree}
-:hidden:
-
-api
+```{include} ../../packaging/moat-lib-proxy/README.md
+:start-after: % start main
+:end-before: % end main
 ```
+
+## Manual
 
 The `moat.lib.proxy` module provides infrastructure for serializing and
 deserializing objects across process boundaries or network connections.
 
-## Overview
+### Overview
 
 This module includes:
 
@@ -189,6 +190,9 @@ except NoProxyError:
     print("Cannot resolve proxy")
 ```
 
-## API Reference
+```{toctree}
+:maxdepth: 2
+:hidden:
 
-See the [API documentation](api) for detailed information on all classes and functions.
+api
+```

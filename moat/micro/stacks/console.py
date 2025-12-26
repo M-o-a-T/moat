@@ -12,10 +12,32 @@ def console_stack(stream, cfg, cons=False):
     """
     Build a message stack on top of a MoaT bytestream.
 
-    Set @lossy if the stream is not 100% reliable.
-    Set @frame to control protocol framing.
-    Set @console if incoming ASCII should be processed
-    Set @msg_prefix to the SerialPacker (or CBOR) lead-in character.
+    Configuration:
+        link(dict):
+            Link control; see below.
+        log(dict):
+            If present, log high-level messages.
+        log(dict):
+            If present, log messages
+        log_raw(dict):
+            If present, log the bytestream.
+
+    Link control:
+        cbor(bool):
+            must be ``True``.
+        lossy(bool):
+            set if the stream is not 100% reliable.
+        frame(int|dict):
+            control protocol framing.
+            If an integer, the character that starts a packet.
+            Otherwise configuration for a `SerialPacker` instance.
+        console(bool):
+            set if incoming non-framed data should be processed.
+
+    If `lossy` is ``True``, `frame` must be a dict.
+
+    There is no frame character escaping. Choose a value that cannot occur
+    in an ASCII or possibly UTF-8 bytestream, i.e. ≥ 0xF8.
     """
 
     if not hasattr(stream, "rd") or not hasattr(stream, "wr"):

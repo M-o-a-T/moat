@@ -1,5 +1,7 @@
-###
 API
-###
+===
 
-TODO: Add API documentation here.
+.. automodule:: moat.lib.codec
+   :members:
+   :undoc-members:
+   :show-inheritance:

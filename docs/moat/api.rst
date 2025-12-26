@@ -1,4 +1,7 @@
 API
 ===
 
-TODO
+.. automodule:: moat
+   :members:
+   :undoc-members:
+   :show-inheritance:

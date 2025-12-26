@@ -1,5 +1,7 @@
-###
 API
-###
+===
 
-TODO: Add API documentation here.
+.. automodule:: moat.mqtt
+   :members:
+   :undoc-members:
+   :show-inheritance:

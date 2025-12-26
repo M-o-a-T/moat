@@ -1,5 +1,7 @@
-###
 API
-###
+===
 
-TODO: Add API documentation here.
+.. automodule:: moat.kv.ha
+   :members:
+   :undoc-members:
+   :show-inheritance:

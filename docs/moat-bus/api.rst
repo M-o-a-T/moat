@@ -1,5 +1,7 @@
-###
 API
-###
+===
 
-TODO: Add API documentation here.
+.. automodule:: moat.bus
+   :members:
+   :undoc-members:
+   :show-inheritance:

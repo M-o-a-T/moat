@@ -17,6 +17,7 @@ moat-lib-pid/index
 moat-lib-priomap/index
 moat-lib-proxy/index
 moat-lib-ring/index
+moat-lib-repl/index
 moat-lib-run/index
 moat-lib-victron/index
 ```

@@ -16,4 +16,5 @@ quickstart
 changelog
 license
 api
+references/index
 ```

@@ -64,15 +64,6 @@ documentation style, and all that.
 :end-before: % end synopsis
 ```
 
-### Configuration
-
-% ```{include} ../packaging/moat-lib-config/README.md
-% :start-after: % start synopsis
-% :end-before: % end synopsis
-% ```
-
-See `moat.util.config`.
-
 ### [Command Line](moat/index.md)
 
 ```{include} ../packaging/moat/README.md
@@ -331,9 +322,23 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
+#### [Command Line Handling](moat-lib-run/index.md)
+
+```{include} ../packaging/moat-lib-run/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Configuration Management](moat-lib-config/index.md)
 
 ```{include} ../packaging/moat-lib-config/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Async REPL](moat-lib-repl/index.md)
+
+```{include} ../packaging/moat-lib-repl/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -425,11 +430,19 @@ conversion between yaml and CBOR and msgpack and … you get the idea.
 :end-before: % end synopsis
 ```
 
+#### [Node-RED Support](moat-nodered/index.md)
+
+```{include} ../packaging/moat-nodered/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 
 ```{toctree}
 :maxdepth: 4
 :hidden:
 
+common/index
 moat-link/index
 moat-lib
 moat-micro/index
@@ -443,5 +456,6 @@ moat-kv/index
 moat-util/index
 moat-src/index
 moat-cad/index
-common/index
+moat-mqtt/index
+moat-nodered/index
 ```

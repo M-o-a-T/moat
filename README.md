@@ -1,6 +1,6 @@
 # The MoaT
 
-% begin main
+% start main
 
 "MoaT" is an acronym of "Master of all Things", which is either
 aspirational or just plain pretentious. Take your pick.

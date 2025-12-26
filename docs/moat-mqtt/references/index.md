@@ -16,10 +16,14 @@ API.
 - `broker` : MQTT broker API reference
 - `common` : Common API
 
-TBD
+```{toctree}
+:maxdepth: 2
+:hidden:
 
-<div class="toctree" hidden="">
-
-moat_mqtt_pub moat_mqtt_sub moat_mqtt_broker mqttclient broker common
-
-</div>
+common
+mqttclient
+distmqtt
+distmqtt_pub
+distmqtt_sub
+broker
+```

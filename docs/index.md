@@ -373,6 +373,13 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
+#### [Proxy Helpers](moat-lib-proxy/index.md)
+
+```{include} ../packaging/moat-lib-proxy/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Ring Buffer](moat-lib-ring/index.md)
 
 ```{include} ../packaging/moat-lib-ring/README.md

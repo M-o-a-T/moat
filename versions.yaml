@@ -188,6 +188,10 @@ moat-lib-priomap:
   pypi: 0.2.2
   rev: 0b6e477a7bf2491126070bffd51d2a7a375521c9
   tag: 0.2.2
+moat-lib-proxy:
+  pkg: 1
+  rev: a0e919946c26c5f37b7941d23ab9ade20fb5a264
+  tag: 0.1.0
 moat-lib-repo:
   rev: 79f5529e6c5ed0b349639389d478634aac2917e5
   tag: 0.1.0

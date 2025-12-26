@@ -331,6 +331,13 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
+#### [Configuration Management](moat-lib-config/index.md)
+
+```{include} ../packaging/moat-lib-config/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Codec Buffer](moat-lib-codec/index.md)
 
 ```{include} ../packaging/moat-lib-codec/README.md

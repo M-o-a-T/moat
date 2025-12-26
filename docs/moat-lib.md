@@ -9,6 +9,7 @@ This section contains various library modules used throughout the MoaT ecosystem
 
 moat-lib-cmd/index
 moat-lib-codec/index
+moat-lib-config/index
 moat-lib-diffiehellman/index
 moat-lib-gpio/index
 moat-lib-micro/index

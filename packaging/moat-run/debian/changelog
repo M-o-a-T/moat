@@ -1,0 +1,6 @@
+moat-run (0.1.0-1) unstable; urgency=medium
+
+  * Initial Debianization.
+  * Moved from moat.util.main to moat.run
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 26 Dec 2025 15:00:00 +0100

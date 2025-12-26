@@ -418,6 +418,7 @@ conversion between yaml and CBOR and msgpack and … you get the idea.
 
 moat-link/index
 moat-lib
+moat-run/index
 moat-micro/index
 moat/index
 moat-modbus/index

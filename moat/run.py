@@ -17,11 +17,7 @@ from pathlib import Path as FSPath
 import asyncclick as click
 import simpleeval
 
-from . import NotGiven
-from .config import CFG, CfgStore, current_cfg
-from .dict import attrdict
-from .exc import ungroup
-from .path import P, Path
+from moat.util import CFG, CfgStore, NotGiven, P, Path, attrdict, current_cfg, ungroup
 
 from collections import defaultdict
 from collections.abc import Mapping
@@ -756,7 +752,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     """
     The main command entry point, when testing.
 
-    main: special main function, defaults to moat.util.main_
+    main: special main function, defaults to moat.run.main_
     name: command name, defaults to {main}'s toplevel module name.
     {sub,ext}_{pre,post}: commands to load in submodules or extensions.
 

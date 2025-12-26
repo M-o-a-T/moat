@@ -13,7 +13,8 @@ import git
 import tomlkit
 from packaging.requirements import Requirement
 
-from moat.util import P, attrdict, load_subgroup, make_proc, yload
+from moat.util import P, attrdict, make_proc, yload
+from moat.run import load_subgroup
 from moat.util.exec import run as run_
 
 from ._repo import Repo

@@ -8,10 +8,11 @@ from functools import partial
 
 import asyncclick as click
 
-from moat.util import P, Path, attr_args, attrdict, process_args, yprint
+from moat.util import P, Path, attrdict, yprint
 from moat.kv.code import CodeRoot
 from moat.kv.data import add_dates, data_get
 from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
+from moat.run import attr_args, process_args
 
 
 @click.group()  # pylint: disable=undefined-variable

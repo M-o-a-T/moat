@@ -11,9 +11,10 @@ from functools import partial
 
 from asyncowfs.mock import structs
 
-from moat.util import P, Path, load_ext
+from moat.util import P, Path
 from moat.kv.data import data_get
 from moat.kv.mock.mqtt import stdtest
+from moat.run import load_ext
 
 logger = logging.getLogger(__name__)
 

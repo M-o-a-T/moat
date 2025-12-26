@@ -1,4 +1,6 @@
-from __future__ import annotations  # noqa: D100
+#!/usr/bin/python3  # noqa:D100
+
+from __future__ import annotations
 
 import anyio
 import datetime
@@ -9,15 +11,16 @@ import asyncclick as click
 import httpx
 from asyncakumuli import get_data
 
-from moat.util import CFG, P, main_, run
+from moat.util import CFG, P
 from moat.link.client import Link
+from moat.run import main_, run
 
 series = "price"
 tags = dict(type="power", source="awattar", redo="A")
 
 
 def sdate(d):  # noqa: D103
-    d = datetime.datetime.fromtimestamp(d)
+    d = datetime.datetime.fromtimestamp(d)  # noqa:DTZ006
     return d.strftime("%Y-%m-%d %H:%M")
 
 
@@ -29,7 +32,7 @@ async def empty(ctx):  # noqa: D103
 @click.option("--path", "-p", type=P, help="Value to set")
 @click.option("--verbose", "-v", is_flag=True, help="Report values as set")
 @click.option("--offset", "-o", type=float, help="offset from start (seconds)", default=0)
-async def back(path, verbose, config, offset):
+async def back(path, verbose, offset):
     """
     Feed a stored Akumuli time series back to MoaT-KV.
     """
@@ -40,7 +43,7 @@ async def back(path, verbose, config, offset):
     async with Link(CFG.moat.link) as cli, httpx.AsyncClient() as s:
         while True:
             seen = False
-            t = datetime.datetime.now()
+            t = datetime.datetime.now()  # noqa:DTZ005
             async for v in get_data(
                 s,
                 series,

@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, attr_args, process_args, yprint
+from moat.util import NotGiven, P, yprint
 from moat.link.client import Link
+from moat.run import attr_args, process_args
 
 
 @click.command(short_help="Send a command")

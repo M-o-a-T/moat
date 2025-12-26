@@ -6,8 +6,9 @@ from time import time
 
 from asyncakumuli.mock import AkumuliTester
 
-from moat.util import P, load_ext
+from moat.util import P
 from moat.kv.mock.mqtt import stdtest
+from moat.run import load_ext
 
 task = akumuli_task = load_ext("moat.kv.akumuli.task", "task", err=True)
 

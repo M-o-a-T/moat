@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, ClassVar
 
-__all__ = ["CFG", "CfgStore"]
+__all__ = ["CFG", "CfgStore", "current_cfg"]
 
 current_cfg = ContextVar("current_cfg", default=None)
 

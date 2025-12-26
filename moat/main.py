@@ -11,7 +11,8 @@ import sys
 import asyncclick as click
 from asyncscope import main_scope
 
-from moat.util import NotGiven, attrdict, exc_iter, main_, to_attrdict, ungroup
+from moat.util import NotGiven, attrdict, exc_iter, to_attrdict, ungroup
+from moat.run import main_
 from moat.util.exc import ExpectedError
 
 __all__ = ["cmd", "run"]

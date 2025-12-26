@@ -12,7 +12,7 @@ import sys
 import asyncclick as click
 from alembic import command
 
-from moat.util import load_subgroup
+from moat.run import load_subgroup
 
 from .util import alembic_cfg, database, load
 

@@ -8,7 +8,8 @@ import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click
 
-from moat.util import P, Path, combine_dict, load_cfg, load_subgroup, merge
+from moat.util import P, Path, combine_dict, load_cfg, merge
+from moat.run import load_subgroup
 
 log = logging.getLogger()
 

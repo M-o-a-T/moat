@@ -9,7 +9,8 @@ import os
 import sys
 import time
 
-from moat.util import NotGiven, Path, attrdict, process_args, yprint
+from moat.util import NotGiven, Path, attrdict, yprint
+from moat.run import process_args
 from moat.util.times import ts2iso
 
 from collections.abc import Mapping

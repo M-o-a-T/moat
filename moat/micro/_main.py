@@ -18,10 +18,8 @@ from moat.util import (
     NotGiven,
     P,
     Path,
-    attr_args,
     combine_dict,
     merge,
-    process_args,
     to_attrdict,
     yload,
     yprint,
@@ -33,7 +31,7 @@ from moat.lib.micro import idle
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.stacks.util import TEST_MAGIC
-from moat.util.main import load_subgroup
+from moat.run import attr_args, load_subgroup, process_args
 
 logger = logging.getLogger(__name__)
 

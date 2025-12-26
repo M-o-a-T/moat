@@ -12,7 +12,7 @@ from pathlib import Path as FSPath
 
 import asyncclick as click
 
-from moat.util import load_subgroup
+from moat.run import load_subgroup
 
 logger = logging.getLogger(__name__)
 

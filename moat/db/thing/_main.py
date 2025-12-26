@@ -12,8 +12,9 @@ import sys
 import asyncclick as click
 from sqlalchemy import select
 
-from moat.util import load_subgroup, option_ng, yprint
+from moat.util import yprint
 from moat.db import database
+from moat.run import load_subgroup, option_ng
 
 from .model import Thing, ThingTyp
 

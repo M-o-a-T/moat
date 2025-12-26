@@ -92,5 +92,3 @@ try:
     from .exc import *  # noqa: F403
 except ImportError as exc:
     _log.warning("Missing: %s (importing .exc)", exc)
-
-from .main import *  # noqa: F403, E402

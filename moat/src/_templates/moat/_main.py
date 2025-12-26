@@ -4,7 +4,7 @@ MoaT sub-tool template
 
 from __future__ import annotations
 
-from moat.util import load_subgroup
+from moat.run import load_subgroup
 
 
 @load_subgroup(prefix="moat.new.component")

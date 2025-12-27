@@ -140,7 +140,7 @@ def log(s, *x, err=None, nback=1, write: bool = True):
 
 
 def log_exc(e, s, *a):  # noqa:D103
-    log(s, *a, exc_info=e)
+    log(s, *a, err=e)
 
 
 def at(*a, **kw):  # noqa: D103

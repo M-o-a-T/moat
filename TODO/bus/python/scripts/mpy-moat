@@ -17,7 +17,8 @@ from contextlib import asynccontextmanager
 from moat.direct import DirectREPL
 from moat.path import MoatDevPath, MoatFSPath
 from moat.compat import TaskGroup
-from moat.util import attrdict, as_service, P, attr_args, process_args, yprint, yload
+from moat.util import attrdict, as_service, P, yprint, yload
+from moat.lib.run import attr_args, process_args
 from moat.proto.multiplex import Multiplexer
 from moat.proto import RemoteError
 from moat.main import ABytes, NoPort, copy_over, add_client_hooks

@@ -12,16 +12,8 @@ from textwrap import dedent as _dedent
 
 import asyncclick as click
 
-from moat.util import (
-    attr_args,
-    list_ext,
-    load_ext,
-    load_subgroup,
-    merge,
-    process_args,
-    yload,
-    yprint,
-)
+from moat.util import merge, yload, yprint
+from moat.lib.run import attr_args, list_ext, load_ext, load_subgroup, process_args
 
 from .control import Model
 from .mode import BaseLoader

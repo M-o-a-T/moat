@@ -8,9 +8,10 @@ import logging
 
 import asyncclick as click
 
-from moat.util import CFG, attrdict, combine_dict
+from moat.util import attrdict, combine_dict
 from moat.kv.auth import gen_auth
 from moat.kv.client import client_scope
+from moat.lib.config import CFG
 from moat.lib.run import load_subgroup
 
 logger = logging.getLogger(__name__)

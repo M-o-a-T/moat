@@ -11,7 +11,8 @@ from contextlib import contextmanager
 
 from asyncscope import main_scope, scope
 
-from moat.util import CFG, CfgStore, OptCtx, P, attrdict
+from moat.util import OptCtx, P, attrdict
+from moat.lib.config import CFG, CfgStore
 from moat.lib.run import wrap_main
 
 logger = logging.getLogger(__name__)

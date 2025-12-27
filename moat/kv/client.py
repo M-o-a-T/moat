@@ -17,7 +17,6 @@ from inspect import iscoroutine
 from asyncscope import Scope, main_scope, scope
 
 from moat.util import (  # pylint: disable=no-name-in-module
-    CFG,
     DelayedRead,
     DelayedWrite,
     NotGiven,
@@ -34,6 +33,7 @@ from moat.util import (  # pylint: disable=no-name-in-module
     num2byte,
 )
 from moat.lib.codec import get_codec
+from moat.lib.config import CFG
 
 from .exceptions import (
     ClientAuthMethodError,

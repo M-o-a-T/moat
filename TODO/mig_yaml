@@ -5,7 +5,8 @@ import os
 
 sys.path.insert(0, os.curdir)
 
-from moat.util import CFG, yload, merge
+from moat.util import yload, merge
+from moat.lib.config import CFG
 
 from moat.db import database
 from moat.label.model import LabelTyp, Label

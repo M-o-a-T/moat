@@ -1396,7 +1396,7 @@ class Server:
     def __init__(self, name: str, cfg: dict | None = None, init: Any = NotGiven):
         self.codec = get_codec("std-msgpack")
         self.root = RootEntry(self, tock=self.tock)
-        from moat.util import CFG  # noqa: PLC0415
+        from moat.lib.config import CFG  # noqa: PLC0415
 
         self.cfg = combine_dict(cfg or {}, CFG.moat.kv, cls=attrdict)
         csr = self.cfg.server["root"]

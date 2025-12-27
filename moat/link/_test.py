@@ -9,7 +9,6 @@ from pathlib import Path as FSPath
 from tempfile import TemporaryDirectory
 
 from moat.util import (  # pylint:disable=no-name-in-module
-    CFG,
     CtxObj,
     NotGiven,
     P,
@@ -19,6 +18,7 @@ from moat.util import (  # pylint:disable=no-name-in-module
     combine_dict,
     merge,
 )
+from moat.lib.config import CFG
 from moat.link.backend import get_backend
 from moat.link.client import Link
 from moat.link.server import Server

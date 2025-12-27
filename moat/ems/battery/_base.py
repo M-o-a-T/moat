@@ -4,7 +4,7 @@ Basic BMS classes
 
 from __future__ import annotations
 
-from moat.util import as_proxy, attrdict, val2pos
+from moat.util import attrdict, val2pos
 from moat.lib.micro import (
     Event,
     TaskGroup,
@@ -15,6 +15,7 @@ from moat.lib.micro import (
     ticks_ms,
     wait_for_ms,
 )
+from moat.lib.proxy import as_proxy
 from moat.micro.alert import Alert
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.base import BaseCmd

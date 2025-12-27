@@ -15,12 +15,12 @@ from moat.util import (
     NotGiven,
     al_lower,
     gen_ident,
-    load_subgroup,
     merge,
     option_ng,
     yprint,
 )
 from moat.db import database
+from moat.lib.run import load_subgroup
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
 from .pdf import Labels

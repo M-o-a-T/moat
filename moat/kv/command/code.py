@@ -10,11 +10,10 @@ from moat.util import (
     P,
     Path,
     PathLongener,
-    attr_args,
-    process_args,
     yload,
     yprint,
 )
+from moat.lib.run import attr_args, process_args
 
 
 @click.group(invoke_without_command=True)  # pylint: disable=undefined-variable

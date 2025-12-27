@@ -11,12 +11,11 @@ from moat.util import (
     NotGiven,
     P,
     Path,
-    attr_args,
     attrdict,
     combine_dict,
-    process_args,
     yload,
 )
+from moat.lib.run import attr_args, process_args
 
 logger = logging.getLogger(__name__)
 

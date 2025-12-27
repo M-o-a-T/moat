@@ -14,7 +14,8 @@ from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
-from moat.util import CFG, attrdict, ctx_as, merge
+from moat.util import attrdict, ctx_as, merge
+from moat.lib.config import CFG
 
 from typing import TYPE_CHECKING
 

@@ -22,7 +22,6 @@ except ImportError:
 import contextlib
 
 from moat.util import (
-    CFG,
     NoLock,
     NotGiven,
     Path,
@@ -30,6 +29,7 @@ from moat.util import (
     combine_dict,
     yload,
 )
+from moat.lib.config import CFG
 
 __all__ = ["AttrClientEntry", "ClientEntry", "ClientRoot"]
 

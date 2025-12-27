@@ -10,10 +10,10 @@ from moat.util import (
     MsgWriter,
     P,
     Path,
-    load_subgroup,
     yload,
     yprint,
 )
+from moat.lib.run import load_subgroup
 from moat.util.msgpack import StdMsgpack
 
 from collections.abc import Mapping

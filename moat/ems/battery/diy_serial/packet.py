@@ -20,8 +20,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from struct import Struct
 
-from moat.util import as_proxy
 from moat.ems.battery.errors import MessageError
+from moat.lib.proxy import as_proxy
 
 from typing import ClassVar
 

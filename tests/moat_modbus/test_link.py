@@ -75,7 +75,7 @@ async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
     cfg2.hostports.localhost[free_tcp_port] = cfg2.hostports.localhost.PORT
     del cfg2.hostports.localhost.PORT
 
-    from moat.util import CFG  # noqa: PLC0415
+    from moat.lib.config import CFG  # noqa: PLC0415
 
     cfg = CFG.result
 

@@ -11,7 +11,8 @@ import asyncclick as click
 import httpx
 from asyncakumuli import get_data
 
-from moat.util import CFG, P
+from moat.util import P
+from moat.lib.config import CFG
 from moat.lib.run import main_, run
 from moat.link.client import Link
 

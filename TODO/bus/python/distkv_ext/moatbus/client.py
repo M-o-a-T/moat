@@ -8,7 +8,7 @@ import pkgutil
 import time
 import datetime
 
-from distkv.util import (
+from moat.util import (
     yprint,
     attrdict,
     NotGiven,
@@ -16,10 +16,9 @@ from distkv.util import (
     P,
     Path,
     path_eval,
-    attr_args,
-    process_args,
 )
-from distkv.obj.command import std_command
+from moat.lib.run import attr_args, process_args
+from moat.kv.obj.command import std_command
 
 from .model import MOATroot
 from moatbus.message import BusMessage

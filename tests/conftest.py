@@ -22,7 +22,7 @@ def in_test(free_tcp_port_factory):
     does not access port 1883 and thus won't disturb / depend on a
     locally runnign MQTT server.
     """
-    from moat.util import CFG  # noqa:PLC0415
+    from moat.lib.config import CFG  # noqa:PLC0415
 
     def fix_for_testing(cfg):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:

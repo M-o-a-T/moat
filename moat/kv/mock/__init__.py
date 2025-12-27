@@ -7,11 +7,9 @@ import socket
 import attr
 from asyncscope import scope
 
-from moat.util import (  # pylint:disable=no-name-in-module
-    CFG,
-    combine_dict,
-)
+from moat.util import combine_dict
 from moat.kv.client import _scoped_client
+from moat.lib.config import CFG
 
 logger = logging.getLogger(__name__)
 try:

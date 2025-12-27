@@ -9,11 +9,11 @@ from moat.util import (
     NotGiven,
     P,
     Path,
-    attr_args,
     attrdict,
     yprint,
 )
 from moat.kv.data import data_get, node_attr
+from moat.lib.run import attr_args
 from moat.link.announce import as_service
 
 from .model import OWFSroot

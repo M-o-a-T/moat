@@ -30,23 +30,39 @@ ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
+def _tagsplit(tag: str | None):
+    if not tag:
+        return []
+    try:
+        n = [int(x) for x in tag.split(".")]
+        if len(n) != 3:
+            raise ValueError(n)
+    except ValueError:
+        raise ValueError(f"Tag {tag} not in major#.minor#.patch# form.") from None
+    return n
+
+
 class _Common:
-    def next_tag(self, major: bool = False, minor: bool = False):
-        tag = self.last_tag
+    def next_tag(self, major: bool = False, minor: bool = False, new_tag: str | None = None):
         try:
-            n = [int(x) for x in tag.split(".")]
-            if len(n) != 3:
-                raise ValueError(n)
-        except ValueError:
-            raise ValueError(f"Tag {tag} not in major#.minor#.patch# form.") from None
+            tag = self.last_tag
+        except (AttributeError, ValueError):
+            tag = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
+        verstag = self.vers.get("new", None)
+        nt = _tagsplit(tag)
+        nv = _tagsplit(verstag)
+        no = _tagsplit(new_tag)
 
         if major:
-            n = [n[0] + 1, 0, 0]
+            nt = [nt[0] + 1, 0, 0]
         elif minor:
-            n = [n[0], n[1] + 1, 0]
+            nt = [nt[0], nt[1] + 1, 0]
         else:
-            n = [n[0], n[1], n[2] + 1]
-        return ".".join(str(x) for x in n)
+            nt = [nt[0], nt[1], nt[2] + 1]
+
+        nt = max(nt, nv, no)
+
+        self.vers.new = ".".join(str(x) for x in nt)
 
 
 @define
@@ -109,7 +125,11 @@ class Package(_Common):
 
     @property
     def last_commit(self):
-        return self.vers.rev
+        return self.vers.get("rev", "0" * 40)
+
+    @property
+    def last_pkg_commit(self):
+        return self.vers.get_("rev".self.last_commit)
 
     @property
     def mdash(self):
@@ -162,7 +182,7 @@ class Package(_Common):
         if not hasattr(self, "last_commit"):
             return True
         for d in head.diff(
-            self.last_commit if main else self._repo.last_tag,
+            self.last_commit if main else self.last_pkg_commit,
             paths=self.path if main else Path("packaging") / self.dash,
         ):
             pp = Path(d.b_path)
@@ -313,7 +333,7 @@ class Repo(git.Repo, _Common):
         sc = self._repos["moat"]
         path = Path(path)
 
-        if main is not True and path.parts[0] == "packaging":
+        if main is not True and path.parts[0] in ("docs", "packaging", "examples"):
             try:
                 return undash(path.parts[1])
             except IndexError:

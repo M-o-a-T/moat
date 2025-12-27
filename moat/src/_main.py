@@ -9,11 +9,10 @@ import sys
 from pathlib import Path
 
 import asyncclick as click
-import git
 import tomlkit
 from packaging.requirements import Requirement
 
-from moat.util import P, attrdict, make_proc, yload
+from moat.util import P, make_proc, yload
 from moat.lib.run import load_subgroup
 from moat.util.exec import run as run_
 
@@ -397,7 +396,9 @@ def tags(obj):
 @click.option("-s", "--subtree", type=str, help="Tag this partial module")
 @click.option("-v", "--tag", "force", type=str, help="Use this explicit tag value")
 @click.option("-q", "--query", "--show", "show", is_flag=True, help="Show the latest tag")
-@click.option("-f", "--force", "FORCE", is_flag=True, help="replace an existing tag")
+@click.option(
+    "-f", "--force", "FORCE", is_flag=True, help="replace an existing tag, or show override tag"
+)
 @click.option("-b", "--build", is_flag=True, help="set/increment the build number")
 @click.pass_obj
 def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
@@ -416,7 +417,7 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
         raise click.UsageError("Can't reuse a tag and also change minor or major!")
     if (build or force) and (minor or major or (build and force)):
         raise click.UsageError("Can't update both build and tag!")
-    if show and (run or force or minor or major):
+    if show and (run or minor or major):
         raise click.UsageError("Can't display and change the tag at the same time!")
     if build and not subtree:
         raise click.UsageError("The main release number doesn't have a build")
@@ -430,36 +431,17 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
 
     if show:
         tag = r.vers
+        if force:
+            if "override" in tag:
+                print(f"{tag.override} NEXT")
+            else:
+                print(f"{tag.tag} LAST")
+            return
         if r.has_changes():
             print(f"{tag.tag}-{tag.pkg} STALE")
         else:
             print(f"{tag.tag}-{tag.pkg}")
         return
 
-    if force:
-        tag = force
-    elif FORCE or build:
-        tag = r.last_tag
-    else:
-        tag = r.next_tag(major, minor)
-
-    if run or subtree:
-        if subtree:
-            if build:
-                r.vers.pkg += 1
-                r.vers.rev = repo.head.commit.hexsha
-            else:
-                r.vers = attrdict(
-                    tag=tag,
-                    pkg=1,
-                    rev=repo.head.commit.hexsha,
-                )
-            print(f"{tag}-{r.vers.pkg}")
-            repo.write_tags()
-        else:
-            git.TagReference.create(repo, tag, force=FORCE)
-            print(f"{tag}")
-    else:
-        print(f"{tag} RECORDED")
-        r.vers.tag = tag
-        repo.write_tags()
+    r.next_tag(major, minor, new_tag=force)
+    repo.write_tags()

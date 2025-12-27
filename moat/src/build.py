@@ -79,20 +79,14 @@ async def run_tests(pkg: str | None, opts, debug: bool) -> bool:
 def do_autotag(repo, repos, major, minor):
     "Create tags for updated subrepos"
     for r in repos:
-        if r.has_changes(True):
-            try:
-                nt = r.next_tag()
-            except AttributeError:
-                nt = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
-            r.vers = attrdict(
-                tag=nt,
-                pkg=1,
-                rev=repo.head.commit.hexsha,
-            )
+        if r.has_changes(True) or "tag" not in r.vers:
+            r.vers.tag = r.next_tag(major, minor)
+            r.vers.pkg = 1
+            r.vers.rev = repo.head.commit.hexsha
             logger.debug("Changes: %s %s", r.name, r.verstr)
         elif r.has_changes(False):
-            r.vers.pkg += 1
-            r.vers.rev = repo.head.commit.hexsha
+            r.vers.pkg = r.vers.get_("pkg", 0) + 1
+            r.vers.pkgrev = repo.head.commit.hexsha
             logger.debug("Build Changes: %s %s", r.name, r.verstr)
         else:
             logger.debug("No Changes: %s %s", r.name, r.verstr)

@@ -1,5 +1,6 @@
 # MoaT micro
 
+% start main
 % start synopsis
 
 MoaT-Micro runs on top of MicroPython. It provides a rich set of building
@@ -47,6 +48,8 @@ All app-related code is written in async Python. We use ``anyio`` on the
 multiplexer and native asyncio on the MCUs; a shallow compatibility layer
 ensures that most code can be shared. Blocking operations are delegated to
 a separate thread if the controller supports them.
+
+% end main
 
 
 ## Installation

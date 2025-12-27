@@ -1,5 +1,6 @@
 # The MoaT-Link Server
 
+% start main
 % start synopsis
 
 MoaT-Link requires a data server for message history, retrieval of
@@ -34,3 +35,5 @@ its location and services. Thus any other MoaT-Link user can connect
 If your MQTT cluster crashes, restoring the status from a day-old backup
 may not be the best strategy. The MoaT-Link server will reload the current
 state from its log and restore the server's state to just before the crash.
+
+% end main

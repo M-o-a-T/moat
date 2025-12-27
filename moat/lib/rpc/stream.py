@@ -15,6 +15,7 @@ from moat.lib.micro import (
     Queue,
     TaskGroup,
     log,
+    log_exc,
     shield,
     sleep_ms,
     ticks_diff,
@@ -37,7 +38,6 @@ from moat.lib.rpc import (
     MsgLink,
     MsgSender,
     ShortCommandError,
-    log_exc,
 )
 
 from typing import TYPE_CHECKING, cast

@@ -123,6 +123,11 @@ def log(s, *x, err=None, write: bool = True):
         print_exc(err)
 
 
+def log_exc(e, s, *a):
+    "Log an exception"
+    log(s + ": %r", *a, e, err=e)
+
+
 def at(*a, **kw):
     "Record debug state in the RTC"
     set_rtc("debug", a if not kw else kw if not a else (a, kw), fs=False)

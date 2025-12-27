@@ -49,6 +49,7 @@ __all__ = [
     "idle",
     "is_async",
     "log",
+    "log_exc",
     "print_exc",
     "run",
     "run_server",
@@ -136,6 +137,10 @@ def log(s, *x, err=None, nback=1, write: bool = True):
     )
     if err and int(os.getenv("LOG_BRK", "0")):
         breakpoint()
+
+
+def log_exc(e, s, *a):  # noqa:D103
+    log(s, *a, exc_info=e)
 
 
 def at(*a, **kw):  # noqa: D103

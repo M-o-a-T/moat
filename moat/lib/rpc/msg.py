@@ -16,6 +16,7 @@ from moat.lib.micro import (
     Queue,
     is_async,
     log,
+    log_exc,
     shield,
 )
 
@@ -48,21 +49,6 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
     from typing import Any, Literal, Self
-
-
-try:
-    import logging
-except ImportError:
-    from moat.lib.micro import log
-
-    def log_exc(e, s, *a):
-        log(s + ": %r", *a, e, err=e)
-
-else:
-    logger = logging.getLogger(__name__)
-
-    def log_exc(e, s, *a):
-        logger.error(s, *a, exc_info=e)
 
 
 __all__ = ["Msg", "MsgResult"]

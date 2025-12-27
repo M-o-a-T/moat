@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
 
+__all__ = ["BaseMsgHandler", "MsgHandler", "MsgLink", "MsgSender"]
+
 
 class MsgLink:
     """
@@ -487,13 +489,13 @@ class SubMsgSender(MsgSender):
         # calls our .handle method
         return Caller(self, (cmd, a, kw))
 
-    def stream(self, *a, **kw):  # noqa: D102
+    def stream(self, *a, **kw):
         return self.cmd((), *a, **kw).stream()
 
-    def stream_in(self, *a, **kw):  # noqa: D102
+    def stream_in(self, *a, **kw):
         return self.cmd((), *a, **kw).stream_in()
 
-    def stream_out(self, *a, **kw):  # noqa: D102
+    def stream_out(self, *a, **kw):
         return self.cmd((), *a, **kw).stream_out()
 
     def __call__(

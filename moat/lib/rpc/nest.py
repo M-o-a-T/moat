@@ -38,12 +38,14 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc.base import MsgHandler, MsgSender
+    from moat.lib.rpc.base import MsgSender
     from moat.lib.rpc.msg import Msg
 
     from .base import BaseMsgHandler
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["CmdStream", "rpc_on_rpc"]
 
 
 class CmdStream(HandlerStream):
@@ -98,13 +100,13 @@ class CmdStream(HandlerStream):
 
 
 @asynccontextmanager
-async def run(
+async def rpc_on_rpc(
     cmd: BaseMsgHandler,
     msg: Msg,
     *,
     debug: bool = False,
     logger=None,
-) -> MsgHandler:
+) -> CmdStream:
     """
     Run a command handler on top of a message stream @msg.
 

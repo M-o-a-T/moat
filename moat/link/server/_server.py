@@ -42,7 +42,7 @@ from moat.util import (
     to_attrdict,
 )
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
-from moat.lib.rpc.anyio import run as run_cmd_anyio
+from moat.lib.rpc import rpc_on_aiostream
 from moat.lib.rpc.base import MsgHandler, MsgSender
 from moat.link.auth import AnonAuth
 from moat.link.backend import Backend, get_backend
@@ -217,7 +217,7 @@ class ServerClient(LinkCommon):
         )
         async with (
             anyio.create_task_group() as self.tg,
-            run_cmd_anyio(self, self.stream) as cmd,
+            rpc_on_aiostream(self, self.stream) as cmd,
         ):
             self._sender = MsgSender(cmd)
 

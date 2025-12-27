@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["AioStream", "rpc_on_aiostream"]
+
 
 class AioStream(HandlerStream):  # noqa: D101
     __codec: Codec
@@ -86,7 +88,7 @@ class AioStream(HandlerStream):  # noqa: D101
 
 
 @asynccontextmanager
-async def run(
+async def rpc_on_aiostream(
     cmd: BaseMsgHandler,
     stream: anyio.abc.ByteStream,
     *,

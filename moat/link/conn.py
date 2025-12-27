@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 from contextlib import asynccontextmanager
 
-from moat.lib.rpc.anyio import run as run_stream
+from moat.lib.rpc.anyio import rpc_on_aiostream
 
 from typing import TYPE_CHECKING
 
@@ -41,7 +41,7 @@ async def TCPConn(
     """
     async with (
         await anyio.connect_tcp(*a, **kw) as stream,
-        run_stream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
+        rpc_on_aiostream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
     ):
         yield hdl
 
@@ -69,6 +69,6 @@ async def UnixConn(
     """
     async with (
         await anyio.connect_unix(*a, **kw) as stream,
-        run_stream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
+        rpc_on_aiostream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
     ):
         yield hdl

@@ -55,14 +55,17 @@ try:
 except ImportError:
     from moat.lib.micro import log
 
-    def log_exc(e, s, *a):  # noqa: D103
+    def log_exc(e, s, *a):
         log(s + ": %r", *a, e, err=e)
 
 else:
     logger = logging.getLogger(__name__)
 
-    def log_exc(e, s, *a):  # noqa: D103
+    def log_exc(e, s, *a):
         logger.error(s, *a, exc_info=e)
+
+
+__all__ = ["Msg", "MsgResult"]
 
 
 class MsgResult(Iterable):

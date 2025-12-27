@@ -54,6 +54,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
 
+__all__ = ["HandlerStream", "StreamLink", "i_f2wire", "wire2i_f"]
+
 
 def B_FL_NAME(flag):
     "stringify message flags"

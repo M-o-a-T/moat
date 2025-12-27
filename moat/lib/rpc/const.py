@@ -35,3 +35,31 @@ SD_NONE = const(0)
 SD_IN = const(1)
 SD_OUT = const(2)
 SD_BOTH = const(3)
+
+__all__ = [  # noqa:RUF022
+    # bitfields
+    "B_STREAM",
+    "B_ERROR",
+    "B_WARNING",
+    "B_WARNING_INTERNAL",
+    "B_FLAGSTR",
+    # errors
+    "E_UNSPEC",
+    "E_NO_STREAM",
+    "E_CANCEL",
+    "E_NO_CMDS",
+    "E_SKIP",
+    "E_MUST_STREAM",
+    "E_ERROR",
+    "E_NO_CMD",
+    # stream states
+    "S_END",
+    "S_NEW",
+    "S_ON",
+    "S_OFF",
+    # stream directions
+    "SD_NONE",
+    "SD_IN",
+    "SD_OUT",
+    "SD_BOTH",
+]

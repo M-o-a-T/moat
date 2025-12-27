@@ -132,3 +132,20 @@ class MustStream(StreamError):
     "Requires streaming support"
 
     pass
+
+
+__all__ = [
+    "Flow",
+    "LongCommandError",
+    "MustStream",
+    "NoCmd",
+    "NoCmds",
+    "NoStream",
+    "NotReadyError",
+    "RemoteError",
+    "ShortCommandError",
+    "SkippedData",
+    "StopMe",
+    "StreamError",
+    "WantsStream",
+]

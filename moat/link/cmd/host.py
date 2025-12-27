@@ -9,10 +9,10 @@ from platform import uname
 import asyncclick as click
 
 from moat.util import as_service, attrdict, srepr
+from moat.lib.broadcast import Broadcaster
 from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.link.host import HostList, ServiceMon
-from moat.util.broadcast import Broadcaster
 
 logger = logging.getLogger(__name__)
 

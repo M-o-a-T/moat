@@ -147,6 +147,8 @@ moat-label:
   pypi: 0.2.1
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
+moat-lib-broadcast:
+  tag: 0.1.0
 moat-lib-codec:
   deb: 0.4.8-1
   pkg: 2

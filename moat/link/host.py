@@ -11,8 +11,8 @@ from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
 
 from moat.util import CtxObj, NotGiven, P, attrdict, srepr
+from moat.lib.broadcast import Broadcaster
 from moat.lib.priomap import TimerMap
-from moat.util.broadcast import Broadcaster
 
 from typing import TYPE_CHECKING
 

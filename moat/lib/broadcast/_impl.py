@@ -8,10 +8,8 @@ from weakref import WeakSet
 
 from attrs import define, field
 
+from moat.util import NotGiven, Queue
 from moat.lib.micro import EndOfStream, WouldBlock
-
-from . import NotGiven
-from .queue import Queue
 
 from typing import TYPE_CHECKING, TypeVar, cast
 
@@ -58,7 +56,7 @@ class BroadcastReader:  ## TYPE [TData]:
     These contain the number of messages that have been dropped
     due to the reader being too slow.
 
-    Readers may be called to inject values.
+    Call this object to inject a value.
     """
 
     parent: Broadcaster = field()
@@ -131,22 +129,26 @@ class Broadcaster:  ## TYPE [TData]:
     """
     A simple broadcaster. Messages will be sent to all readers.
 
-    @length is each reader's default queue length.
-
-    If @send_last is set, a new reader immediately gets the last-sent
-    value. Otherwise it waits for new data.
+    Args:
+        length:
+            readers' default queue length.
+        send_last:
+            if set, a new reader immediately gets the last-sent value,
+            if any. Otherwise it strictly waits for new data.
 
     If a queue is full, the oldest message will be discarded. Readers will
     then get a LostData exception that contains the number of dropped
     messages.
 
-    To write, open a context manager (sync or async) and call with a value.
+    Writing requires a context manager (sync or async).
+    Then simply call with a value.
 
     To read, async-iterate::
 
         async def rdr(bcr: BroadcastReader|Broadcaster):
-            async for msg in bcr:
-                print(msg)
+            async with aclosing(aiter(bcr)) as mq:
+                async for msg in mq:
+                    print(msg)
 
         async with anyio.create_task_group() as tg, Broadcaster() as bc:
             tg.start_soon(rdr, aiter(bc))

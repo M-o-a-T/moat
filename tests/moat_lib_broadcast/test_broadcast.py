@@ -8,12 +8,12 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.util.broadcast import Broadcaster, LostData
+from moat.lib.broadcast import Broadcaster, LostData
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.util.broadcast import BroadcastReader
+    from moat.lib.broadcast import BroadcastReader
 
 
 @pytest.mark.anyio

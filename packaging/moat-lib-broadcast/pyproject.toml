@@ -1,0 +1,36 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["wheel","setuptools"]
+
+[project]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AnyIO",
+    "Framework :: Trio",
+    "Framework :: AsyncIO",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "moat-util ~= 0.61.1",
+    "moat-lib-micro ~= 0.1.0",
+    "attrs ~= 23.0",
+]
+keywords = ["MoaT"]
+requires-python = ">=3.8"
+name = "moat-lib-broadcast"
+maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description='Broadcasting support for MoaT applications'
+readme = "README.md"
+version = "0.1.0"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

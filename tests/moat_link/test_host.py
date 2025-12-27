@@ -14,7 +14,7 @@ from moat.link.host import ServiceMon
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.util.broadcast import BroadcastReader
+    from moat.lib.broadcast import BroadcastReader
 
 
 TIMES = """

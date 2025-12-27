@@ -41,6 +41,7 @@ from moat.util import (
     id2str,
     to_attrdict,
 )
+from moat.lib.broadcast import Broadcaster, BroadcastReader
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
 from moat.link.auth import AnonAuth
@@ -50,7 +51,6 @@ from moat.link.exceptions import ClientError, OutOfDateError
 from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
-from moat.util.broadcast import Broadcaster, BroadcastReader
 from moat.util.cbor import (
     CBOR_TAG_MOAT_CHANGE,
     CBOR_TAG_MOAT_FILE_END,

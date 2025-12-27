@@ -11,7 +11,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 
-from moat.util.broadcast import Broadcaster
+from moat.lib.broadcast import Broadcaster
 
 from typing import NamedTuple
 

@@ -19,8 +19,12 @@ dependencies = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
-  "moat-util ~= 0.60.9",
+  "moat-util ~= 0.61.1",
   "moat-micro ~= 0.17.5",
+  "moat-lib-config ~= 0.1.0",
+  "moat-lib-micro ~= 0.1.0",
+  "moat-lib-proxy ~= 0.1.0",
+  "moat-lib-run ~= 0.1.0",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

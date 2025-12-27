@@ -16,10 +16,11 @@ dependencies = [
 	"asyncclick",
 	"attrs",
 	"msgpack",
-	"moat-util ~= 0.60.9",
-	"moat-db ~= 0.2.3",
+	"moat-util ~= 0.61.1",
+	"moat-db ~= 0.2.5",
 	"moat-label ~= 0.2.2",
 	"moat-box ~= 0.2.2",
+	"moat-lib-run ~= 0.1.0",
 	]
 version = "0.0.1"
 keywords = [ "MoaT",]

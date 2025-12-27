@@ -13,8 +13,10 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"moat-util ~= 0.60.9",
+	"moat-util ~= 0.61.1",
         "ortools ~= 8.2",
+        "moat-lib-config ~= 0.1.0",
+        "moat-lib-run ~= 0.1.0",
 	]
 version = "0.2.14"
 keywords = [ "MoaT",]

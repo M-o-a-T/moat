@@ -21,10 +21,15 @@ dependencies = [
 	"httpx",
 	"simpleeval",
 	"transitions_aio ~= 0.9.3.4",
-	"moat-util ~= 0.60.9",
-	"moat-lib-cmd ~= 0.4.6",
-	"moat-lib-priomap ~= 0.2.1",
+	"moat-util ~= 0.61.1",
+	"moat-lib-cmd ~= 0.4.11",
+	"moat-lib-priomap ~= 0.2.2",
 	"mqttproto ~= 0.7.2.22",
+	"moat-lib-codec ~= 0.4.9",
+	"moat-lib-config ~= 0.1.0",
+	"moat-lib-proxy ~= 0.1.0",
+	"moat-lib-run ~= 0.1.0",
+	"moat-link-server ~= 0.3.24",
 	]
 version = "0.2.44"
 keywords = [ "MoaT",]

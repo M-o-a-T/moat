@@ -13,6 +13,9 @@ classifiers = [
 dependencies = [
 	"moat-kv ~= 0.71.20",
 	"asyncakumuli ~= 0.6.4",
+	"moat-lib-config ~= 0.1.0",
+	"moat-lib-run ~= 0.1.0",
+	"moat-util ~= 0.61.1",
 ]
 version = "0.8.9"
 keywords = [ "MoaT",]

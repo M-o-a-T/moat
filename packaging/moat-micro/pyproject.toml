@@ -20,11 +20,19 @@ dependencies = [
   "msgpack",
   "serialpacker >= 0.10.3",
   "pyfuse3 >= 3.2",
-  "moat-util ~= 0.60.9",
+  "moat-util ~= 0.61.1",
   "moat-src ~= 0.9.20",
   "moat-main ~= 0.10.0",
   "asyncdbus",
   "smbus3",
+  "moat-lib-cmd ~= 0.4.11",
+  "moat-lib-codec ~= 0.4.9",
+  "moat-lib-config ~= 0.1.0",
+  "moat-lib-micro ~= 0.1.0",
+  "moat-lib-pid ~= 0.6.6",
+  "moat-lib-proxy ~= 0.1.0",
+  "moat-lib-ring ~= 0.2.1",
+  "moat-lib-run ~= 0.1.0",
 ]
 requires-python = ">=3.8"
 name = "moat-micro"

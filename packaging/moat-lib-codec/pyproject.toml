@@ -14,6 +14,9 @@ classifiers = [
 dependencies = [
     "anyio ~= 4.2",
     "moat-lib-cmd ~= 0.4.6",
+    "moat-lib-micro ~= 0.1.0",
+    "moat-lib-proxy ~= 0.1.0",
+    "moat-util ~= 0.61.1",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

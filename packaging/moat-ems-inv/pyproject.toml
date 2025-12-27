@@ -13,7 +13,7 @@ classifiers = [
 ]
 dependencies = [
   "anyio ~= 4.2",
-  "moat-util ~= 0.60.9",
+  "moat-util ~= 0.61.1",
   "moat-modbus ~= 0.8.8",
   "moat-lib-victron ~= 0.1.4",
 ]

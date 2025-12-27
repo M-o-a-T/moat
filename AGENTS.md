@@ -25,6 +25,11 @@
       both.
 - Build output should be created in, or moved to, the `dist/` folder.
 
+## Python patterns
+- A BaseException (that's not an Exception) MUST propagate.
+  This includes `anyio.get_cancelled_exc_class()`.
+- Use `async with (a,b,c)` instead of nested `async with` statements.
+
 ## Build and Test
 - pre-commit enforces formatting and typechecking.
 - YAML files may contain Path objects, marked with `!P`.
@@ -61,7 +66,8 @@
   Manually test other modules before committing if they might be affected.
 - Include documentation updates with the main commit, i.e. don't commit docs
   separately.
-- Don't include agent information in the commit.
+- Don't include agent information, a verbose description of the change,
+  etc., in commit messages.
 
 ## Agent‑Specific Notes
 - Follow these guidelines for any code changes in this repo tree.

@@ -58,15 +58,11 @@ class AioStream(HandlerStream):  # noqa: D101
         rd_ = conn.read if hasattr(conn, "read") else conn.receive
 
         while True:
-            if self.__debug:
-                logger.debug("R%s ?", self.__debug)
             buf = await rd_(4096)
             if self.__debug:
                 logger.debug("R%s %r", self.__debug, buf)
             codec.feed(buf)
             for msg in codec:
-                if self.__debug:
-                    logger.debug("R%s %r", self.__debug, msg)
                 await self.msg_in(msg)
 
     async def write_stream(self):  # noqa: D102
@@ -78,9 +74,6 @@ class AioStream(HandlerStream):  # noqa: D101
                 msg = await self.msg_out()
             except EOFError:
                 return
-            if self.__debug:
-                logger.debug("W%s %r", self.__debug, msg)
-
             buf = codec.encode(msg)
             if self.__debug:
                 logger.debug("W%s %r", self.__debug, bytes(buf))

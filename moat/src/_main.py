@@ -445,20 +445,21 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
 
     if run or subtree:
         if subtree:
-            sb = repo.part(r.dash)
             if build:
-                sb.vers.pkg += 1
-                sb.vers.rev = repo.head.commit.hexsha
+                r.vers.pkg += 1
+                r.vers.rev = repo.head.commit.hexsha
             else:
-                sb.vers = attrdict(
+                r.vers = attrdict(
                     tag=tag,
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )
-            print(f"{tag}-{sb.vers.pkg}")
+            print(f"{tag}-{r.vers.pkg}")
             repo.write_tags()
         else:
             git.TagReference.create(repo, tag, force=FORCE)
             print(f"{tag}")
     else:
-        print(f"{tag} DRY_RUN")
+        print(f"{tag} RECORDED")
+        r.vers.tag = tag
+        repo.write_tags()

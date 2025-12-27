@@ -205,6 +205,14 @@ class Repo(git.Repo, _Common):
             self.versions = yload(f, attr=True)
         self.orig_versions = deepcopy(self.versions)
 
+    @property
+    def vers(self):
+        try:
+            v = self.versions["_"]
+        except KeyError:
+            self.versions["_"] = v = attrdict()
+        return v
+
     def write_tags(self):
         if self.versions == self.orig_versions:
             logger.warning("No changed versions. Not tagging.")

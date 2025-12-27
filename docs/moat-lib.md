@@ -7,7 +7,7 @@ This section contains various library modules used throughout the MoaT ecosystem
 :maxdepth: 2
 :hidden:
 
-moat-lib-cmd/index
+moat-lib-rpc/index
 moat-lib-codec/index
 moat-lib-config/index
 moat-lib-diffiehellman/index

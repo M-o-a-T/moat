@@ -16,7 +16,7 @@ from ._link import Alert as Alert
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.base import MsgSender
+    from moat.lib.rpc.base import MsgSender
     from moat.micro.cmd.msg import Msg
 
 

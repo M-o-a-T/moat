@@ -3,15 +3,15 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from tests.moat_lib_cmd.scaffold import scaffold
+from tests.moat_lib_rpc.scaffold import scaffold
 
 from moat.util import P
-from moat.lib.cmd.base import MsgHandler
+from moat.lib.rpc.base import MsgHandler
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.msg import Msg
+    from moat.lib.rpc.msg import Msg
 
 
 class Fwd:  # noqa: D101

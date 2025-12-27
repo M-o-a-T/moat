@@ -5,9 +5,9 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 from moat.util import NotGiven, Path, import_
-from moat.lib.cmd.base import MsgSender
-from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
+from moat.lib.rpc.base import MsgSender
+from moat.lib.rpc.errors import ShortCommandError
 from moat.micro.cmd.base import BaseCmd
 
 # Typing
@@ -15,7 +15,7 @@ from moat.micro.cmd.base import BaseCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Msg
+    from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable
 

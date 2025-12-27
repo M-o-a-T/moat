@@ -15,7 +15,7 @@ from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd  # noqa:F401
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.base import MsgSender
+    from moat.lib.rpc.base import MsgSender
 
 
 class _NotGiven:

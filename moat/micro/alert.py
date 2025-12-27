@@ -20,7 +20,7 @@ from .cmd.base import BaseCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Msg
+    from moat.lib.rpc import Msg
 
     from collections.abc import Iterator
 

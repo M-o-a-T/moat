@@ -25,7 +25,7 @@ dependencies = [
   "moat-main ~= 0.10.0",
   "asyncdbus",
   "smbus3",
-  "moat-lib-cmd ~= 0.4.11",
+  "moat-lib-rpc ~= 0.4.11",
   "moat-lib-codec ~= 0.4.9",
   "moat-lib-config ~= 0.1.0",
   "moat-lib-micro ~= 0.1.0",

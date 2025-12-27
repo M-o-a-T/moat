@@ -6,15 +6,15 @@ from __future__ import annotations
 
 import sys
 
-from moat.lib.cmd.errors import NoStream
 from moat.lib.micro import Event, L, Queue, log, sleep_ms, wait_for_ms
+from moat.lib.rpc.errors import NoStream
 from moat.micro.cmd.base import BaseCmd
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Msg
+    from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable
     from typing import Any

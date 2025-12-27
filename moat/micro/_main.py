@@ -24,10 +24,10 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.lib.cmd.msg import Msg
 from moat.lib.codec import get_codec
 from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.lib.micro import idle
+from moat.lib.rpc.msg import Msg
 from moat.lib.run import attr_args, load_subgroup, process_args
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part

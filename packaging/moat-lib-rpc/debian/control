@@ -1,4 +1,4 @@
-Source: moat-lib-cmd
+Source: moat-lib-rpc
 Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: python
 Priority: optional
@@ -9,11 +9,11 @@ Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
 X-DH-Compat: 13
 
-Package: python3-moat-lib-cmd
+Package: python3-moat-lib-rpc
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),
-Description: A simple command/stream multiplexer
+Description: A simple RPC and stream multiplexer
   This library implements a bidirectional RPC architecture that supports
   streaming messages and flow control.
   .

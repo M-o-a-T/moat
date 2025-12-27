@@ -3,11 +3,11 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from tests.moat_lib_cmd.scaffold import scaffold
+from tests.moat_lib_rpc.scaffold import scaffold
 
 from moat.util import OptCtx, P, ungroup
-from moat.lib.cmd.base import MsgHandler
-from moat.lib.cmd.errors import NoStream
+from moat.lib.rpc.base import MsgHandler
+from moat.lib.rpc.errors import NoStream
 
 # TODO no_s=False does no longer work for some reason
 

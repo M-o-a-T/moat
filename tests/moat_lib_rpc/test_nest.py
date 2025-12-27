@@ -3,8 +3,8 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from moat.lib.cmd.base import MsgHandler, MsgSender
-from moat.lib.cmd.nest import run as nested
+from moat.lib.rpc.base import MsgHandler, MsgSender
+from moat.lib.rpc.nest import run as nested
 
 
 @pytest.mark.anyio

@@ -22,7 +22,7 @@ from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.base import MsgSender
+    from moat.lib.rpc.base import MsgSender
     from moat.util.path import PathElem
 
     from .client import LinkSender

@@ -18,9 +18,9 @@ exception is the `Reliable` module, which limits this to commands.
 
 from __future__ import annotations
 
-from moat.lib.cmd.const import B_FLAGSTR
-from moat.lib.cmd.stream import wire2i_f
 from moat.lib.micro import ACM, AC_exit, AC_use, log
+from moat.lib.rpc.const import B_FLAGSTR
+from moat.lib.rpc.stream import wire2i_f
 
 # Typing
 

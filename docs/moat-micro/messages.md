@@ -8,7 +8,7 @@ list are applied in sequence. Any element might be missing.
 
 ## MoaT-Lib-CMD
 
-MoaT messaging uses the ``moat.lib.cmd`` library for bidirectional RPC,
+MoaT messaging uses the ``moat.lib.rpc`` library for bidirectional RPC,
 streaming, and error reporting.
 
 ## Reliability

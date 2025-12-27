@@ -1,7 +1,7 @@
 API
 ===
 
-.. automodule:: moat.lib.cmd
+.. automodule:: moat.lib.rpc
    :members:
    :undoc-members:
    :show-inheritance:

@@ -6,7 +6,7 @@ import anyio
 import pytest
 
 from moat.util import P, ungroup
-from moat.lib.cmd.base import MsgHandler
+from moat.lib.rpc.base import MsgHandler
 from moat.link._test import Scaffold
 from moat.link.exceptions import ServiceSupplanted
 

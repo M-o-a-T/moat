@@ -131,7 +131,7 @@ async def cli():
             for imported_module in file_imports:
                 # Convert module path to package name
                 # moat.kv -> moat-kv
-                # moat.lib.cmd -> moat-lib-cmd
+                # moat.lib.rpc -> moat-lib-cmd
                 # moat.util -> moat-util
 
                 parts = imported_module.split(".")
@@ -143,7 +143,7 @@ async def cli():
                     if len(parts) == 2:
                         imported_pkg = f"moat-{parts[1]}"
                     else:
-                        # moat.lib.cmd -> moat-lib-cmd
+                        # moat.lib.rpc -> moat-lib-cmd
                         imported_pkg = "moat-" + "-".join(parts[1:])
 
                     # Only track if it's a different package and exists

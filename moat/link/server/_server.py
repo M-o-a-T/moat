@@ -41,9 +41,9 @@ from moat.util import (
     id2str,
     to_attrdict,
 )
-from moat.lib.cmd.anyio import run as run_cmd_anyio
-from moat.lib.cmd.base import MsgHandler, MsgSender
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
+from moat.lib.rpc.anyio import run as run_cmd_anyio
+from moat.lib.rpc.base import MsgHandler, MsgSender
 from moat.link.auth import AnonAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
@@ -66,7 +66,7 @@ from typing import TYPE_CHECKING, Any, cast
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
 
-    from moat.lib.cmd.msg import Msg
+    from moat.lib.rpc.msg import Msg
     from moat.link.backend import Message
 
     from collections.abc import Awaitable, Callable

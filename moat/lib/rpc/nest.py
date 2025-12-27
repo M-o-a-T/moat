@@ -22,7 +22,7 @@ it anyway?
 
 Hence this stream handler.
 
-See ``tests/moat_lib_cmd/test_nest.py`` for an example.
+See ``tests/moat_lib_rpc/test_nest.py`` for an example.
 
 """
 
@@ -38,8 +38,8 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.base import MsgHandler, MsgSender
-    from moat.lib.cmd.msg import Msg
+    from moat.lib.rpc.base import MsgHandler, MsgSender
+    from moat.lib.rpc.msg import Msg
 
     from .base import BaseMsgHandler
 

@@ -5,7 +5,7 @@ import pytest
 import time
 
 from moat.util import NotGiven, P, Path
-from moat.lib.cmd import RemoteError
+from moat.lib.rpc import RemoteError
 from moat.link._test import Scaffold
 
 

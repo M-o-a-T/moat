@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import anyio
 
-from moat.lib.cmd.base import MsgHandler
+from moat.lib.rpc.base import MsgHandler
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Msg
+    from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable
 

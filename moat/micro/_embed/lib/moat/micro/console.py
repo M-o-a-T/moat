@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from asyncio import Task
 
-    from moat.lib.cmd.msg import Msg
+    from moat.lib.rpc.msg import Msg
 
     from collections.abc import Awaitable, Callable
 

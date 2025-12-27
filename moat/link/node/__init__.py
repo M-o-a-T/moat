@@ -23,7 +23,7 @@ from moat.util.exc import ExpKeyError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Key
+    from moat.lib.rpc import Key
 
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any

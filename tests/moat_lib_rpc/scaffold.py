@@ -5,8 +5,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj, Path
-from moat.lib.cmd._test import StreamLoop
-from moat.lib.cmd.base import MsgHandler, MsgSender
+from moat.lib.rpc._test import StreamLoop
+from moat.lib.rpc.base import MsgHandler, MsgSender
 
 from typing import TYPE_CHECKING
 
@@ -52,7 +52,7 @@ class StreamGate(CtxObj):  # noqa: D101
 
     @asynccontextmanager
     async def _ctx(self):
-        from moat.lib.cmd.anyio import run  # noqa: PLC0415
+        from moat.lib.rpc.anyio import run  # noqa: PLC0415
 
         async with await _wrap_sock(self.so) as sock, run(self.h, sock, debug=self.s) as out:
             yield out

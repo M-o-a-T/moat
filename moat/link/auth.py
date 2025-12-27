@@ -5,7 +5,7 @@ from moat.link import protocol_version
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Key, Msg, MsgHandler
+    from moat.lib.rpc import Key, Msg, MsgHandler
 
     from .hello import Hello
 

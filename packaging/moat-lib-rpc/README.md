@@ -32,7 +32,7 @@ Local use, i.e. within a single process, does not require a codec.
 
 ``` python
 from moat.lib.codec import get_codec
-from moat.lib.cmd import MsgEndpoint,MsgSender
+from moat.lib.rpc import MsgEndpoint,MsgSender
 
 class Called(MsgEndpoint):
     async def handle_command(msg):

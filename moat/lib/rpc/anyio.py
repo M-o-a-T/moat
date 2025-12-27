@@ -15,8 +15,8 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgHandler, MsgSender
     from moat.lib.codec import Codec
+    from moat.lib.rpc import MsgHandler, MsgSender
 
     from .base import BaseMsgHandler
 

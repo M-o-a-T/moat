@@ -19,7 +19,7 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"moat-util ~= 0.61.1",
-	"moat-lib-cmd ~= 0.4.6",
+	"moat-lib-rpc ~= 0.4.6",
 	"moat-lib-codec ~= 0.4.7",
 	"moat-link ~= 0.2.35",
 	"mqttproto ~= 0.7.2.13",

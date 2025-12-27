@@ -311,13 +311,13 @@ We'd rather not do that.
 ### Libraries
 
 (moat-top-lib-cmd)=
-#### [MoaT-Cmd](moat-lib-cmd/index.md)
+#### [MoaT-Cmd](moat-lib-rpc/index.md)
 
 This library is our answer to the "how do I do bidirectional RPC calls over
 any data link? Oh, error forwarding and flow-controlled streaming and
 cancellation would be nice to have too" question.
 
-```{include} ../packaging/moat-lib-cmd/README.md
+```{include} ../packaging/moat-lib-rpc/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```

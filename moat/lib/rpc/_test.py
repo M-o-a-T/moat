@@ -4,9 +4,9 @@ Test support
 
 from __future__ import annotations
 
-from moat.lib.cmd.const import B_FLAGSTR
-from moat.lib.cmd.stream import wire2i_f
 from moat.lib.micro import log, shield
+from moat.lib.rpc.const import B_FLAGSTR
+from moat.lib.rpc.stream import wire2i_f
 from moat.util.exc import ungroup
 
 try:
@@ -25,7 +25,7 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.msg import MsgHandler
+    from moat.lib.rpc.msg import MsgHandler
 
 
 class StreamLoop(HandlerStream):

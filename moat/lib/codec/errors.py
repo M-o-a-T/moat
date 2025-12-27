@@ -8,7 +8,7 @@ from moat.lib.proxy import as_proxy
 from moat.util.exc import ExpAttrError, ExpKeyError
 
 try:
-    from moat.lib.cmd.errors import RemoteError
+    from moat.lib.rpc.errors import RemoteError
 except ImportError:
 
     class RemoteError(RuntimeError):  # noqa: D101

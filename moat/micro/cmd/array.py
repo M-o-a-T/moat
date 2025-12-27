@@ -5,11 +5,11 @@ A command that accesses a row of mostly-identical subcommands
 from __future__ import annotations
 
 from moat.util import combine_dict, import_
-from moat.lib.cmd.base import MsgSender
-from moat.lib.cmd.errors import ShortCommandError
-from moat.lib.cmd.msg import Msg
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
+from moat.lib.rpc.base import MsgSender
+from moat.lib.rpc.errors import ShortCommandError
+from moat.lib.rpc.msg import Msg
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part

@@ -3,11 +3,11 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from tests.moat_lib_cmd.scaffold import scaffold
+from tests.moat_lib_rpc.scaffold import scaffold
 
 from moat.util import P
-from moat.lib.cmd.base import MsgHandler, MsgSender
 from moat.lib.micro import log
+from moat.lib.rpc.base import MsgHandler, MsgSender
 
 
 @pytest.mark.anyio

@@ -7,22 +7,6 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, QueueFull, pop_kw, push_kw
-from moat.lib.cmd.base import MsgHandler, MsgLink, MsgSender
-from moat.lib.cmd.const import (
-    B_ERROR,
-    B_STREAM,
-    B_WARNING,
-    B_WARNING_INTERNAL,
-    E_CANCEL,
-    E_ERROR,
-    E_NO_CMD,
-    E_NO_CMDS,
-    E_NO_STREAM,
-    E_SKIP,
-    E_UNSPEC,
-)
-from moat.lib.cmd.errors import ShortCommandError
-from moat.lib.cmd.msg import Msg, log_exc
 from moat.lib.micro import (
     ACM,
     AC_exit,
@@ -36,6 +20,22 @@ from moat.lib.micro import (
     ticks_diff,
     ticks_ms,
 )
+from moat.lib.rpc.base import MsgHandler, MsgLink, MsgSender
+from moat.lib.rpc.const import (
+    B_ERROR,
+    B_STREAM,
+    B_WARNING,
+    B_WARNING_INTERNAL,
+    E_CANCEL,
+    E_ERROR,
+    E_NO_CMD,
+    E_NO_CMDS,
+    E_NO_STREAM,
+    E_SKIP,
+    E_UNSPEC,
+)
+from moat.lib.rpc.errors import ShortCommandError
+from moat.lib.rpc.msg import Msg, log_exc
 
 from typing import TYPE_CHECKING, cast
 

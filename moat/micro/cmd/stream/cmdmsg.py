@@ -5,17 +5,17 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 from moat.util import merge
-from moat.lib.cmd.errors import NotReadyError
-from moat.lib.cmd.stream import HandlerStream
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
+from moat.lib.rpc.errors import NotReadyError
+from moat.lib.rpc.stream import HandlerStream
 from moat.micro.cmd.base import BaseCmd
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgSender
+    from moat.lib.rpc import MsgSender
     from moat.micro.proto.stack import BaseMsg
 
     from collections.abc import Awaitable
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 class MsgStream(HandlerStream):
     """
-    This :moat.lib.cmd.stream:`HandlerStream` subclass
+    This :moat.lib.rpc.stream:`HandlerStream` subclass
     interfaces with a `BaseCmdMsg` stream.
 
     """

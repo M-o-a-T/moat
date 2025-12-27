@@ -7,13 +7,13 @@ from __future__ import annotations
 import anyio
 from contextlib import asynccontextmanager
 
-from moat.lib.cmd.anyio import run as run_stream
+from moat.lib.rpc.anyio import run as run_stream
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgSender
     from moat.lib.codec import Codec
+    from moat.lib.rpc import MsgSender
 
     from collections.abc import AsyncGenerator
 

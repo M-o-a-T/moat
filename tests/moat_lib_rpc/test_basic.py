@@ -7,7 +7,7 @@ from tests.moat_lib_rpc.scaffold import scaffold
 
 from moat.util import P
 from moat.lib.micro import log
-from moat.lib.rpc.base import MsgHandler, MsgSender
+from moat.lib.rpc import MsgHandler, MsgSender
 
 
 @pytest.mark.anyio
@@ -265,3 +265,82 @@ async def test_stream_out(use_socket):  # noqa: D103
         assert tuple(st.args) == ({},)
         assert not st.kw
         assert n == 3
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_ab(use_socket):  # noqa: D103
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            res = []
+            assert msg.cmd == P("Test")
+            assert tuple(msg.args) == (123, 456)
+            assert msg.kw["answer"] == 42, msg.kw
+            async with msg.stream("Takeme") as st, anyio.create_task_group() as tg:
+
+                @tg.start_soon
+                async def xmit():
+                    await st.send("a")
+                    await st.send("def")
+                    await st.send("bc")
+                    await anyio.sleep(0.1)
+                    await msg.result({})
+
+                async for r in st:
+                    res.append(r)
+            assert res == [1, 3, 2]
+            assert msg.args[0] == "DONE"
+
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+        n = 0
+        async with b.cmd("Test", 123, 456, answer=42).stream() as st:
+            assert tuple(st.args) == ("Takeme",)
+            async for m in st:
+                await st.send(len(m[0]))
+                n += 1
+        assert tuple(st.args) == ({},)
+        assert not st.kw
+        assert n == 3
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_ba(use_socket):  # noqa: D103
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            assert msg.cmd == P("Test")
+            assert tuple(msg.args) == (123, 456)
+            assert msg.kw["answer"] == 42, msg.kw
+            n = 0
+            async with msg.stream() as st:
+                async for m in st:
+                    await st.send(len(m[0]))
+                    n += 1
+                await msg.result("XYZ")
+            assert msg.args[0] == "DonE"
+            assert n == 3
+
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+        res = []
+        async with (
+            b.cmd("Test", 123, 456, answer=42).stream() as st,
+            anyio.create_task_group() as tg,
+        ):
+
+            @tg.start_soon
+            async def xmit():
+                await st.send("a")
+                await st.send("def")
+                await st.send("bc")
+                await anyio.sleep(0.1)
+                await st.result("DonE")
+
+            async for (r,) in st:
+                res.append(r)
+        assert res == [1, 3, 2]
+        assert tuple(st.args) == ("XYZ",)
+        assert not st.kw

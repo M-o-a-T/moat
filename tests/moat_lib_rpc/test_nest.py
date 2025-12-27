@@ -3,8 +3,7 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from moat.lib.rpc.base import MsgHandler, MsgSender
-from moat.lib.rpc.nest import run as nested
+from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_rpc
 
 
 @pytest.mark.anyio
@@ -23,14 +22,14 @@ async def test_basic_handle():  # noqa: D103
 
     class EP(MsgHandler):
         async def stream_Test(self, msg):
-            async with msg.stream(), nested(CmdI(evt1), msg, debug="B") as cmdo:
+            async with msg.stream(), rpc_on_rpc(CmdI(evt1), msg, debug="B") as cmdo:
                 (res,) = await MsgSender(cmdo).cmd("yes", 1)
                 await evt1.wait()
                 assert res == 10
 
     ep = EP()
     ms = MsgSender(ep)
-    async with ms.cmd("Test").stream() as msg, nested(CmdI(evt2), msg, debug="A") as cmdo:
+    async with ms.cmd("Test").stream() as msg, rpc_on_rpc(CmdI(evt2), msg, debug="A") as cmdo:
         (res,) = await MsgSender(cmdo).cmd("yes", 2)
         await evt2.wait()
         assert res == 20

@@ -6,12 +6,12 @@ import pytest
 from tests.moat_lib_rpc.scaffold import scaffold
 
 from moat.util import P
-from moat.lib.rpc.base import MsgHandler
+from moat.lib.rpc import MsgHandler
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc.msg import Msg
+    from moat.lib.rpc import Msg
 
 
 class Fwd:  # noqa: D101

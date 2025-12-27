@@ -96,7 +96,7 @@ def i_f2wire(id: int, flag: int) -> int:  # noqa: D103
     assert 0 <= flag <= 3 or flag == B_WARNING_INTERNAL
     if id > 0:
         id -= 1
-    return (id << 2) | flag
+    return (id << 2) | (flag & 3)
 
 
 def wire2i_f(id: int) -> tuple[int, int]:  # noqa: D103

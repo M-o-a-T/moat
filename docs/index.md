@@ -1,4 +1,4 @@
-(moat-top)=
+(top)=
 # The MoaT: An opinionated monorepo
 
 ```{include} ../README.md

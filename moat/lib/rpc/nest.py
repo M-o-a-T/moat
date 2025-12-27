@@ -28,10 +28,7 @@ See ``tests/moat_lib_rpc/test_nest.py`` for an example.
 
 from __future__ import annotations
 
-import logging
-from contextlib import asynccontextmanager
-
-from moat.util import ungroup
+from moat.lib.micro import ACM, AC_exit, log
 
 from .stream import HandlerStream
 
@@ -41,8 +38,6 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg, MsgSender
 
     from .base import BaseMsgHandler
-
-logger = logging.getLogger(__name__)
 
 __all__ = ["CmdStream", "rpc_on_rpc"]
 
@@ -80,9 +75,9 @@ class CmdStream(HandlerStream):
 
         async for m in msg:
             if m.kw:
-                logger.debug("R%s: incoming keywords ignored!? %r", self.__debug or "", m)
+                log("R%s: incoming keywords ignored!? %r", self.__debug or "", m)
             elif self.__debug:
-                logger.debug("R%s %r", self.__debug, m)
+                log("R%s %r", self.__debug, m)
             await self.msg_in(m.args_l)
 
     async def write_stream(self):  # noqa: D102
@@ -93,26 +88,46 @@ class CmdStream(HandlerStream):
             except EOFError:
                 return
             if self.__debug:
-                logger.debug("W%s %r", self.__debug, m)
+                log("W%s %r", self.__debug, m)
 
             await msg.send(*m)
 
 
-@asynccontextmanager
-async def rpc_on_rpc(
-    cmd: BaseMsgHandler,
-    msg: Msg,
-    *,
-    debug: bool = False,
-    logger=None,
-) -> CmdStream:
+class rpc_on_rpc:
     """
     Run a command handler on top of a message stream @msg.
-
-    @cmd is the handler for incoming messages. It may be `None`.
-
-    This is an async context manager that yields a `CmdStream`.
     """
 
-    async with ungroup, CmdStream(cmd, msg, debug=debug, logger=logger) as hs:
-        yield hs
+    def __init__(
+        self,
+        cmd: BaseMsgHandler,
+        msg: Msg,
+        *,
+        debug: bool = False,
+        logger=None,
+    ):
+        """
+        Args:
+            cmd: handler for incoming messages. May be `None`.
+            msg: MoaT-RPC Transport stream
+            debug: flag whether to emit a message debug trace
+            logger: callable for debugging internal state
+
+        This is an async context manager that yields a `CmdStream`.
+        """
+        self.cmd = cmd
+        self.msg = msg
+        self.debug = debug
+        self.logger = logger
+
+    async def __aenter__(self) -> CmdStream:
+        AC = ACM(self)
+        try:
+            return await AC(CmdStream(self.cmd, self.msg, debug=self.debug, logger=self.logger))
+
+        except BaseException as exc:
+            await AC_exit(self, type(exc), exc, None)
+            raise
+
+    async def __aexit__(self, *exc):
+        return await AC_exit(self, *exc)

@@ -17,13 +17,6 @@ NotGiven = Ellipsis
 
 # Mapping of exported names to their source modules
 _attrs = {
-    # alert
-    "Alert": "alert",
-    "AlertCollector": "alert",
-    "AlertHandler": "alert",
-    "AlertMixin": "alert",
-    "BaseAlert": "alert",
-    "RepeatAlert": "alert",
     # impl
     "Cache": "impl",
     "NoLock": "impl",
@@ -40,7 +33,7 @@ _attrs = {
     "num2id": "impl",
     "singleton": "impl",
     "split_arg": "impl",
-    # dict (already imported attrdict above)
+    # dict
     "combine_dict": "dict",
     "drop_dict": "dict",
     "to_attrdict": "dict",

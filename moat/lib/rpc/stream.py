@@ -20,8 +20,7 @@ from moat.lib.micro import (
     ticks_diff,
     ticks_ms,
 )
-from moat.lib.rpc.base import MsgHandler, MsgLink, MsgSender
-from moat.lib.rpc.const import (
+from moat.lib.rpc import (
     B_ERROR,
     B_STREAM,
     B_WARNING,
@@ -33,9 +32,13 @@ from moat.lib.rpc.const import (
     E_NO_STREAM,
     E_SKIP,
     E_UNSPEC,
+    Msg,
+    MsgHandler,
+    MsgLink,
+    MsgSender,
+    ShortCommandError,
+    log_exc,
 )
-from moat.lib.rpc.errors import ShortCommandError
-from moat.lib.rpc.msg import Msg, log_exc
 
 from typing import TYPE_CHECKING, cast
 

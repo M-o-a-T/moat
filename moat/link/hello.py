@@ -18,9 +18,7 @@ from .common import CmdCommon
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import Key
-    from moat.lib.rpc.base import MsgSender
-    from moat.lib.rpc.msg import Msg
+    from moat.lib.rpc import Key, Msg, MsgSender
 
     from .auth import AuthMethod
 

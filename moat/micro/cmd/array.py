@@ -7,9 +7,7 @@ from __future__ import annotations
 from moat.util import combine_dict, import_
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
-from moat.lib.rpc.base import MsgSender
-from moat.lib.rpc.errors import ShortCommandError
-from moat.lib.rpc.msg import Msg
+from moat.lib.rpc import Msg, MsgSender, ShortCommandError
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part

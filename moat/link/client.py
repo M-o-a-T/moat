@@ -36,7 +36,7 @@ from moat.util import (
     to_attrdict,
     ungroup,
 )
-from moat.lib.rpc.base import Caller, MsgSender
+from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
 
 from .auth import AnonAuth, TokenAuth
@@ -52,8 +52,7 @@ from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
-    from moat.lib.rpc.base import MsgHandler
-    from moat.lib.rpc.msg import Msg
+    from moat.lib.rpc import Msg, MsgHandler
     from moat.link.node.codec import CodecNode
 
     from .backend import Message

@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.lib.micro import Event, L, Queue, log, sleep_ms, wait_for_ms
-from moat.lib.rpc.errors import NoStream
+from moat.lib.rpc import NoStream
 from moat.micro.cmd.base import BaseCmd
 
 # Typing

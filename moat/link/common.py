@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import anyio
 
-from moat.lib.rpc.base import MsgHandler
+from moat.lib.rpc import MsgHandler
 
 from typing import TYPE_CHECKING
 

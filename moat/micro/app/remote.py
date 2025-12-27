@@ -56,8 +56,8 @@ def Fwd(*a, **k):
                 self.sd = self.root.sub_at(self.cfg["path"])
                 return
 
+            from moat.lib.rpc import MsgSender  # noqa: PLC0415
             from moat.lib.rpc._test import StreamLoop  # noqa: PLC0415
-            from moat.lib.rpc.base import MsgSender  # noqa: PLC0415
 
             a = StreamLoop(self.root, log + ">")
             b = StreamLoop(None, log + "<")

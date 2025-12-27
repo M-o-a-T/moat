@@ -38,8 +38,7 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc.base import MsgSender
-    from moat.lib.rpc.msg import Msg
+    from moat.lib.rpc import Msg, MsgSender
 
     from .base import BaseMsgHandler
 

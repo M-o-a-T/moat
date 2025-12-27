@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 from contextlib import asynccontextmanager
 
-from moat.lib.rpc.anyio import rpc_on_aiostream
+from moat.lib.rpc import rpc_on_aiostream
 
 from typing import TYPE_CHECKING
 

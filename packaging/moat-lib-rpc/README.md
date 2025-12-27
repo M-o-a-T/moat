@@ -1,4 +1,4 @@
-# The MoaT-Command library
+# RPC library (sans-IO)
 
 % start main
 
@@ -6,81 +6,43 @@
 
 % start synopsis
 
-This library is a generalization of the Remote Procedure Call pattern.
-Aside from the basics (call a method, get a reply back asynchronously)
-it supports cancellation (both client- and server-side), exception
-forwarding, and streaming data (bidirectionally).
+This library is a sans-io generalization of the Remote Procedure Call
+pattern. Aside from the basics (call a method, get a reply back
+asynchronously) it supports cancellation (both client- and server-side),
+exception forwarding, and streaming data bidirectionally with flow control.
 
 % end synopsis
 
 ## Prerequisites
 
-For RPC, MoaT-Lib-Cmd requires a reliable underlying transport for Python
-objects. MoaT uses CBOR; however, any reliable, non-reordering messsage
-stream that can encode basic Python data structures (plus whatever
+MoaT's RPC requires a reliable underlying transport for Python
+objects. MoaT in general uses CBOR; however, any reliable, non-reordering
+method that can transfer basic Python data structures (plus whatever
 objects you send/receive) works.
 
-MoaT-Lib-Cmd does not itself call the transport. Instead, it contains basic
-async methods to iterate on messages to send, and to feed incoming
-lower-level data in.
+Our RPC is transport agnostic. It exposes basic async methods to
+iterate on messages to send, and to feed incoming lower-level messages
+in.
 
 Local use, i.e. within a single process, does not require a codec.
 
 ## Usage
 
-### No transport
+### Direct calls
 
-``` python
-from moat.lib.codec import get_codec
-from moat.lib.rpc import MsgEndpoint,MsgSender
-
-class Called(MsgEndpoint):
-    async def handle_command(msg):
-        if msg.cmd[0] == "Start":
-            return "OK starting"
-
-        if msg.cmd[0] == "gimme data":
-            async with msg.stream_out("Start") as st:
-                for i in range(10):
-                    await st.send(i+msg.kw["x"])
-                return "OK I'm done"
-
-        if msg.cmd[0] == "alive":
-            async with msg.stream_in("Start") as st:
-                async for data in st:
-                    print("We got", data)
-            return "OK nice"
-
-    raise ValueError(f"Unknown: {msg !r}")
-
-srv=Called()
-client=MsgSender(srv)
-
-res, = await client.cmd("Start")
-assert res.startswith("OK")
-
-async with client.cmd("gimme data",x=5).stream_in(5) as st:
-    async for nr, in st:
-        print(nr)  # 5, 6, .. 14
-    assert st.a[0] == "OK I'm done"
-
-async with client.cmd("alive").stream_out() as st:
-    for i in range(3):
-        await st.send(i)
-    assert st.a[0] == "OK nice"
+```{include} ../../examples/moat-lib-rpc/basic.py
+:lang: python
 ```
 
 ### Using a transport
 
-TODO
-
-## API Specification
-
-TODO
+```{include} ../../examples/moat-lib-rpc/tcp.py
+:lang: python
+```
 
 ## Transport Specification
 
-MoaT-Lib-Cmd messaging is simple by design. A basic interaction starts with
+MoaT-Lib-RPC messaging is simple by design. A basic interaction starts with
 a command (sent from A to B, Streaming bit off) and ends with a reply (sent
 from B to A, Streaming bit off).
 
@@ -99,7 +61,7 @@ be sent in both directions.
 
 ### Message format
 
-A Moat-Cmd message consist of a preferably-small signed integer, plus a
+A Moat-RPC message consist of a preferably-small signed integer, plus a
 variable and usually non-empty amount of data.
 
 The integer is interpreted as follows.

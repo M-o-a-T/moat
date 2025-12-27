@@ -10,14 +10,14 @@ classifiers = [
 	"Framework :: Trio",
 	"Framework :: AnyIO",
 	"Development Status :: 4 - Beta",
-	]
+]
 dependencies = [
 	"anyio ~= 4.2",
 	"moat-util ~= 0.61.1",
-        "ortools ~= 8.2",
-        "moat-lib-config ~= 0.1.0",
-        "moat-lib-run ~= 0.1.0",
-	]
+	"ortools ~= 8.2",
+	"moat-lib-config ~= 0.1.0",
+	"moat-lib-run ~= 0.1.0",
+]
 version = "0.2.14"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"

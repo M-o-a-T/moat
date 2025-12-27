@@ -18,6 +18,7 @@ import traceback as _traceback
 from codecs import utf_8_decode
 from concurrent.futures import CancelledError as CancelledError
 from contextlib import AsyncExitStack
+from contextlib import aclosing as aclosing
 from functools import partial
 from inspect import currentframe, iscoroutine, iscoroutinefunction
 
@@ -43,6 +44,7 @@ __all__ = [
     "Queue",
     "TaskGroup",
     "WouldBlock",
+    "aclosing",
     "at",
     "breakpoint",
     "byte2utf8",

@@ -370,6 +370,19 @@ class ValueEvent:
         return self.value.unwrap()
 
 
+class aclosing:
+    """contextlib.aclosing"""
+
+    def __init__(self, thing):
+        self.thing = thing
+
+    async def __aenter__(self):
+        return self.thing
+
+    async def __aexit__(self, *exc_info):
+        await self.thing.aclose()
+
+
 def ACM(obj):
     """A bare-bones async context manager.
 

@@ -431,13 +431,12 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
 
     if show:
         tag = r.vers
-        if force:
-            if "override" in tag:
-                print(f"{tag.override} NEXT")
+        if FORCE:
+            if "new" in tag:
+                print(f"{tag.new} NEXT")
             else:
                 print(f"{tag.tag} LAST")
-            return
-        if r.has_changes():
+        elif r.has_changes():
             print(f"{tag.tag}-{tag.pkg} STALE")
         else:
             print(f"{tag.tag}-{tag.pkg}")

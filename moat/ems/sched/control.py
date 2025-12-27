@@ -9,8 +9,6 @@ import logging
 import time
 from contextlib import nullcontext
 
-from ortools.linear_solver import pywraplp
-
 from moat.util import attrdict
 from moat.util.times import humandelta, ts2iso
 
@@ -136,6 +134,8 @@ class Model:
         per_hour = self.cfg.steps
 
         # ORtools
+        from ortools.linear_solver import pywraplp  # noqa:PLC0415
+
         self.solver = solver = pywraplp.Solver("B", pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
         self.objective = solver.Objective()
         inf = solver.infinity()

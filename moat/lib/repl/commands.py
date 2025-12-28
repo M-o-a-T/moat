@@ -58,7 +58,7 @@ class Command:  # noqa: D101
         self.event = event
         self.event_name = event_name
 
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         pass
 
 
@@ -112,7 +112,7 @@ def is_yank(command: type[Command] | None) -> bool:  # noqa: D103
 class digit_arg(Command):  # noqa: D101
     kills_digit_arg = False
 
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         c = self.event[-1]
         if c == "-":
@@ -133,25 +133,25 @@ class digit_arg(Command):  # noqa: D101
 
 
 class clear_screen(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         r.console.clear()
         r.dirty = True
 
 
 class refresh(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.dirty = True
 
 
 class repaint(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.dirty = True
         self.reader.console.repaint()
 
 
 class kill_line(KillCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         eol = r.eol()
@@ -163,34 +163,34 @@ class kill_line(KillCommand):  # noqa: D101
 
 
 class unix_line_discard(KillCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         self.kill_range(r.bol(), r.pos)
 
 
 class unix_word_rubout(KillCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _i in range(r.get_arg()):
             self.kill_range(r.bow(), r.pos)
 
 
 class kill_word(KillCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _i in range(r.get_arg()):
             self.kill_range(r.pos, r.eow())
 
 
 class backward_kill_word(KillCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _i in range(r.get_arg()):
             self.kill_range(r.bow(), r.pos)
 
 
 class yank(YankCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         if not r.kill_ring:
             r.error("nothing to yank")
@@ -199,7 +199,7 @@ class yank(YankCommand):  # noqa: D101
 
 
 class yank_pop(YankCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         if not r.kill_ring:
@@ -250,7 +250,7 @@ class suspend(Command):  # noqa: D101
 
 
 class up(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _ in range(r.get_arg()):
             x, y = r.pos2xy()
@@ -276,7 +276,7 @@ class up(MotionCommand):  # noqa: D101
 
 
 class down(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         for _ in range(r.get_arg()):
@@ -304,7 +304,7 @@ class down(MotionCommand):  # noqa: D101
 
 
 class left(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _ in range(r.get_arg()):
             p = r.pos - 1
@@ -315,7 +315,7 @@ class left(MotionCommand):  # noqa: D101
 
 
 class right(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         for _ in range(r.get_arg()):
@@ -327,41 +327,41 @@ class right(MotionCommand):  # noqa: D101
 
 
 class beginning_of_line(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.pos = self.reader.bol()
 
 
 class end_of_line(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.pos = self.reader.eol()
 
 
 class home(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.pos = 0
 
 
 class end(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.pos = len(self.reader.buffer)
 
 
 class forward_word(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _i in range(r.get_arg()):
             r.pos = r.eow()
 
 
 class backward_word(MotionCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         for _i in range(r.get_arg()):
             r.pos = r.bow()
 
 
 class self_insert(EditCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         text = self.event * r.get_arg()
         r.insert(text)
@@ -375,13 +375,13 @@ class self_insert(EditCommand):  # noqa: D101
 
 
 class insert_nl(EditCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         r.insert("\n" * r.get_arg())
 
 
 class transpose_characters(EditCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         s = r.pos - 1
@@ -399,7 +399,7 @@ class transpose_characters(EditCommand):  # noqa: D101
 
 
 class backspace(EditCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         r = self.reader
         b = r.buffer
         for _i in range(r.get_arg()):
@@ -434,12 +434,12 @@ class delete(EditCommand):  # noqa: D101
 
 
 class accept(FinishCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         pass
 
 
 class help(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         import _sitebuiltins  # noqa: PLC0415
 
         with self.reader.suspend():
@@ -447,20 +447,20 @@ class help(Command):  # noqa: D101
 
 
 class invalid_key(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         pending = self.reader.console.getpending()
         s = "".join(self.event) + pending.data
         self.reader.error(f"`{s!r}' not bound")
 
 
 class invalid_command(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         s = self.event_name
         self.reader.error(f"command `{s}' not known")
 
 
 class show_history(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         from site import gethistoryfile  # noqa: PLC0415
 
         from .pager import get_pager  # noqa: PLC0415
@@ -478,13 +478,13 @@ class show_history(Command):  # noqa: D101
 
 
 class paste_mode(Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+    def do(self) -> None:  # noqa: D102
         self.reader.paste_mode = not self.reader.paste_mode
         self.reader.dirty = True
 
 
 class perform_bracketed_paste(Command):  # noqa:D101
-    async def do(self) -> None:  # noqa:D102
+    def do(self) -> None:  # noqa:D102
         done = "\x1b[201~"
         data = ""
         start = time.time()

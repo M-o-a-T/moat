@@ -7,8 +7,10 @@ $root:
     loggers:
       moat.mqtt:
         level: INFO
+      transitions_aio:
+        level: WARNING
       transitions:
-        level: INFO
+        level: WARNING
       xknx.raw_socket:
         level: INFO
     root:

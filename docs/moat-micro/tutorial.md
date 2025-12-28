@@ -31,12 +31,9 @@ The last step adds the ESP-IDF environment to your current environment.
 
 Next we need to create a configuration file:
 ```shell
-$ cd /src/moat
-$ git submodule update --init --recursive  # assuming you didn't do that yet
-
-$ mkdir -p local/micro
-$ cp examples/moat-micro/esp-baguette.cfg local/micro/esp-s3.cfg
-$ vi local/micro/esp-s3.cfg
+$ mkdir -p src/moat; cd src/moat
+$ cp /usr/share/moat-micro/examples/moat-micro/esp-baguette.cfg ./esp-s3.cfg
+$ vi esp-s3.cfg
 ```
 
 You will have to edit the serial ports, as your device is unlikely to have
@@ -48,7 +45,7 @@ The "board" tag must name a directory in either
 
 ## Installation
 
-Save the config file, then run `./mt -V -c local/micro/esp-s3.cfg micro setup -i -U -s skip -N`.
+Save the config file, then run `moat -V -c ./esp-s3.cfg micro setup -i -U -s skip -N`.
 
 - `-V`: more verbosity
 - `-c`: config file
@@ -117,7 +114,7 @@ So let's talk to it. First we establish a link:
 
 ```shell
 $ mtc() {
-> ./mt -c local/micro/esp-s3.cfg micro "$@"
+> moat -c ./esp-s3.cfg micro "$@"
 > }
 $ mtc run
 ```
@@ -126,7 +123,7 @@ Nothing much seems to happen, but that's OK. In yet another terminal, let's
 review our board's configuration:
 
 ```shell
-$ ./mt -c local/micro/esp-s3.cfg util cfg moat.micro.cfg.r -y
+$ moat -c ./esp-s3.cfg util cfg moat.micro.cfg.r -y
 apps:
   c: cfg.Cmd
   f: fs.Cmd
@@ -250,7 +247,7 @@ Switch to another terminal:
 ```shell
 $ ls /mnt/py
 boot.py   main.py   moat.cfg   moat.state
-$ ./mt util convert -i /mnt/py/moat.cfg -d cbor -e yaml
+$ moat util convert -i /mnt/py/moat.cfg -d cbor -e yaml
 [ same config output as above ]
 $ less /mnt/py/boot.py
 ```
@@ -272,33 +269,33 @@ $ mtc cmd -s + '~1+2'
 ```
 
 The `~` says to evaluate the argument as a string; otherwise the command
-interpreter might evaluate the term itself and just send the result back
-and forth. In fact, we can watch the message exchange:
+interpreter might evaluate the number or term itself and just send the
+result back and forth. In fact, we can watch the message exchange:
 
 ```shell
-$ ./mt -c local/micro/esp-s3.cfg -l moat.micro.proto.stack=DEBUG \
-    -s moat.micro.connect.r.log.txt '!L' micro cmd s.eval -s + '~12'
+$ moat -c ./esp-s3.cfg \
+    -l moat.micro.proto.stack=DEBUG -s moat.micro.connect.r.log.txt '!L' \
+    micro cmd s.eval -s + '~12'
 09:22:41.602 DEBUG moat.micro.proto.stack:S:L  +2 [['t', 's', 'eval'], '12']
-09:22:41.602 DEBUG moat.micro.proto.stack:S:!L =None
 09:22:41.686 DEBUG moat.micro.proto.stack:R:L  -2 [12]
 12
-$ ./mt -c local/micro/esp-s3.cfg -l moat.micro.proto.stack=DEBUG \
-    -s moat.micro.connect.r.log.txt '!L' micro cmd s.eval -s + '3'
+$ moat -c ./esp-s3.cfg \
+    -l moat.micro.proto.stack=DEBUG -s moat.micro.connect.r.log.txt '!L' \
+    micro cmd s.eval -s + '3'
 09:25:26.622 DEBUG moat.micro.proto.stack:S:L  +2 [['t', 's', 'eval'], 3]
-09:25:26.622 DEBUG moat.micro.proto.stack:S:!L =None
 09:25:26.866 DEBUG moat.micro.proto.stack:R:L  -2 [3]
 3
 ```
 
-Note the missing quotes at the end of the `S:L` line.
+Note the missing quotes in the second example, at the end of the `S:L` line.
 
 Using this method we can send arbitrary Python commands and expressions and
-get some results back, but for interactive use there's a better way.
+get some results back. For interactive use, however, there's a better way.
 
 
 ## The REPL
 
-MoaT is able to hijack the MicroPython command line. So let's add a REPL.
+MoaT is able to hijack the MicroPython prompt. So let's add a REPL app.
 
 ```shell
 $ mtc cfg -S -s apps.repl ~stdio.console \
@@ -314,9 +311,9 @@ MoaT is in the background.
 ```
 
 You now can pretend everything is as before. The neat part is that all the
-commands from above still work. (Try them!)
+commands from above still work while you're typing on the serial link. (Try them!)
 
-The REPL is now remote-control-able:
+The REPL can be controlled remotely:
 
 ```shell
 $ mtc cmd repl.r
@@ -327,7 +324,7 @@ $ mtc cmd repl.r
 $
 ```
 
-As usual, we can do even better:
+Again, that's not very user friendly — but we can do better:
 ```shell
 $ mtc repl
 >>> 1+2+3+4

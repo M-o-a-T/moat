@@ -296,6 +296,8 @@ async def install_(cfg, dest: Path = None):
 
     mydir = FSPath(__file__).parent.parent.parent
     mpydir = mydir / "ext" / "micropython"
+    if not mpydir.is_dir():
+        mpydir = FSPath(cfg.install.micropython)
     portdir = mpydir / "ports" / device
 
     boardp = f"{board or 'generic'}" + (f"-{variant}" if variant else "")

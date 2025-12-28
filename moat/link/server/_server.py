@@ -25,7 +25,6 @@ from asyncactor import (
     TagEvent,
 )
 from asyncactor.backend import get_transport
-from mqttproto import QoS
 
 from moat.util import (
     MsgReader,
@@ -43,6 +42,7 @@ from moat.util import (
 )
 from moat.lib.broadcast import Broadcaster, BroadcastReader
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
+from moat.lib.mqtt import QoS
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
 from moat.link.auth import AnonAuth
 from moat.link.backend import Backend, get_backend

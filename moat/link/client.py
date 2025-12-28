@@ -17,7 +17,6 @@ from traceback import format_exception
 
 import outcome
 from attrs import define, field
-from mqttproto import QoS, RetainHandling
 
 from moat.util import (
     CtxObj,
@@ -36,6 +35,7 @@ from moat.util import (
     to_attrdict,
     ungroup,
 )
+from moat.lib.mqtt import QoS, RetainHandling
 from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
 

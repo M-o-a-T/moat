@@ -21,7 +21,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-asyncactor (>= 0.27.0),
   python3-moat-lib-codec,
   python3-moat-lib-cmd,
-  python3-mqttproto,
+  python3-moat-lib-mqtt,
   systemd (>= 241),
 Recommends:
   python3-trio (>= 0.22),

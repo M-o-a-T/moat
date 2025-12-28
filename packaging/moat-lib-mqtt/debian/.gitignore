@@ -4,4 +4,4 @@
 /*.debhelper-build-stamp
 /*.substvars
 /debhelper-build-stamp
-/python3-mqttproto
+/python3-moat-lib-mqtt

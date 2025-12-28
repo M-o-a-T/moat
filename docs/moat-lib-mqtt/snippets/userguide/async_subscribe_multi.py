@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from mqttproto.async_client import AsyncMQTTClient
+from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
 async def main() -> None:

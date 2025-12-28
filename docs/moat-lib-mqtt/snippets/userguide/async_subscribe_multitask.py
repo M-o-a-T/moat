@@ -5,7 +5,7 @@ import asyncio
 from anyio import create_task_group
 from anyio.abc import TaskStatus
 
-from mqttproto.async_client import AsyncMQTTClient
+from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
 async def subscriber1(

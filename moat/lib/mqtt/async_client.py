@@ -1,15 +1,7 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
-import logging
-import sys
 import anyio
-from collections.abc import AsyncGenerator, Container
-from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
-from ssl import SSLContext, SSLError
-from types import TracebackType
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
-
-import stamina
+import logging
 from anyio import (
     BrokenResourceError,
     ClosedResourceError,
@@ -24,20 +16,22 @@ from anyio import (
     move_on_after,
 )
 from anyio.abc import ByteReceiveStream, ByteStream, TaskStatus
-from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from anyio.streams.tls import TLSStream
-from anyio import ClosedResourceError, BrokenResourceError
+from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
+from ssl import SSLContext, SSLError
+
+import stamina
 from attr.validators import ge, gt, in_, instance_of, le, lt, optional
 from attrs import define, field
 
 from ._exceptions import (
     MQTTConnectFailed,
+    MQTTNoReconnect,
     MQTTOperationFailed,
     MQTTPublishFailed,
+    MQTTServerRestarted,
     MQTTSubscribeFailed,
     MQTTUnsubscribeFailed,
-    MQTTServerRestarted,
-    MQTTNoReconnect,
 )
 from ._types import (
     MQTTConnAckPacket,
@@ -58,16 +52,17 @@ from ._types import (
 )
 from .client_state_machine import MQTTClientStateMachine
 
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+
 if TYPE_CHECKING:
+    from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
     from contextlib import AbstractAsyncContextManager
-    from typing import Generic, Literal
+    from types import TracebackType
 
     from httpx_ws import AsyncWebSocketSession
 
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
+    from collections.abc import AsyncGenerator, Container
+    from typing import Literal, Self
 
 logger = logging.getLogger(__name__)
 
@@ -84,15 +79,16 @@ TAckPacket = TypeVar(
 TOperationException = TypeVar("TOperationException", bound=MQTTOperationFailed)
 
 
-class MQTTWebsocketStream(ByteStream):
+class MQTTWebsocketStream(ByteStream):  # noqa: D101
     def __init__(self, session: AsyncWebSocketSession):
         self._session = session
 
-    async def send_eof(self) -> None:
+    async def send_eof(self) -> None:  # noqa: D102
         raise NotImplementedError
 
-    async def receive(self, max_bytes: int = 65536) -> bytes:
-        from httpx_ws import WebSocketInvalidTypeReceived
+    async def receive(self, max_bytes: int = 65536) -> bytes:  # noqa: D102
+        max_bytes  # noqa:B018
+        from httpx_ws import WebSocketInvalidTypeReceived  # noqa:PLC0415
 
         try:
             return await self._session.receive_bytes()
@@ -100,35 +96,29 @@ class MQTTWebsocketStream(ByteStream):
             await self._session.close()
             raise BrokenResourceError from exc
 
-    async def send(self, item: bytes) -> None:
+    async def send(self, item: bytes) -> None:  # noqa: D102
         await self._session.send_bytes(item)
 
-    async def aclose(self) -> None:
+    async def aclose(self) -> None:  # noqa: D102
         if self._session is not None:
             sess, self._session = self._session, None
             await sess.close()
 
 
 @define(eq=False)
-class ClientSubscription(Subscription):
+class ClientSubscription(Subscription):  # noqa: D101
     users: set[AsyncMQTTSubscription] = field(init=False, factory=set)
 
 
 @define(eq=False)
-class AsyncMQTTSubscription:
+class AsyncMQTTSubscription:  # noqa: D101
     subscriptions: list[ClientSubscription] = field(init=False, factory=list)
-    send_stream: MemoryObjectSendStream[MQTTPublishPacket] = field(
-        init=False, repr=False
-    )
-    _receive_stream: MemoryObjectReceiveStream[MQTTPublishPacket] = field(
-        init=False, repr=False
-    )
+    send_stream: MemoryObjectSendStream[MQTTPublishPacket] = field(init=False, repr=False)
+    _receive_stream: MemoryObjectReceiveStream[MQTTPublishPacket] = field(init=False, repr=False)
     subscription_id: int | None = field(init=False, repr=True, default=None)
 
     def __attrs_post_init__(self) -> None:
-        self.send_stream, self._receive_stream = create_memory_object_stream[
-            MQTTPublishPacket
-        ](5)
+        self.send_stream, self._receive_stream = create_memory_object_stream[MQTTPublishPacket](5)
 
     def __aiter__(self) -> Self:
         return self
@@ -149,15 +139,12 @@ class AsyncMQTTSubscription:
         self.send_stream.close()
         return None
 
-    def matches(self, publish: MQTTPublishPacket) -> bool:
-        return any(
-            not sub.subscription_id and sub.matches(publish)
-            for sub in self.subscriptions
-        )
+    def matches(self, publish: MQTTPublishPacket) -> bool:  # noqa: D102
+        return any(not sub.subscription_id and sub.matches(publish) for sub in self.subscriptions)
 
 
 @define(eq=False)
-class MQTTOperation(Generic[TAckPacket]):
+class MQTTOperation(Generic[TAckPacket]):  # noqa: D101, UP046
     packet_id: int | None = None
     exception_class: type[MQTTOperationFailed] | None = field(
         kw_only=True, repr=False, default=None
@@ -170,31 +157,31 @@ class MQTTOperation(Generic[TAckPacket]):
     exception: MQTTOperationFailed | None = field(init=False, default=None, repr=False)
 
     @property
-    def requires_response(self) -> bool:
+    def requires_response(self) -> bool:  # noqa: D102
         return bool(self.success_codes)
 
 
-class MQTTConnectOperation(MQTTOperation[MQTTConnAckPacket]):
+class MQTTConnectOperation(MQTTOperation[MQTTConnAckPacket]):  # noqa: D101
     def __init__(self) -> None:
         super().__init__(exception_class=MQTTConnectFailed)
 
 
-class MQTTQoS0PublishOperation(MQTTOperation[None]):
+class MQTTQoS0PublishOperation(MQTTOperation[None]):  # noqa: D101
     def __init__(self) -> None:
         super().__init__(success_codes=())
 
 
-class MQTTQoS1PublishOperation(MQTTOperation[MQTTPublishAckPacket]):
+class MQTTQoS1PublishOperation(MQTTOperation[MQTTPublishAckPacket]):  # noqa: D101
     def __init__(self, packet_id: int):
         super().__init__(packet_id, exception_class=MQTTPublishFailed)
 
 
-class MQTTQoS2PublishOperation(MQTTOperation[MQTTPublishCompletePacket]):
+class MQTTQoS2PublishOperation(MQTTOperation[MQTTPublishCompletePacket]):  # noqa: D101
     def __init__(self, packet_id: int):
         super().__init__(packet_id, exception_class=MQTTPublishFailed)
 
 
-class MQTTSubscribeOperation(MQTTOperation[MQTTSubscribeAckPacket]):
+class MQTTSubscribeOperation(MQTTOperation[MQTTSubscribeAckPacket]):  # noqa: D101
     def __init__(self, packet_id: int):
         super().__init__(
             packet_id,
@@ -207,12 +194,12 @@ class MQTTSubscribeOperation(MQTTOperation[MQTTSubscribeAckPacket]):
         )
 
 
-class MQTTUnsubscribeOperation(MQTTOperation[MQTTUnsubscribeAckPacket]):
+class MQTTUnsubscribeOperation(MQTTOperation[MQTTUnsubscribeAckPacket]):  # noqa: D101
     def __init__(self, packet_id: int):
         super().__init__(packet_id, exception_class=MQTTUnsubscribeFailed)
 
 
-class MQTTDisconnectOperation(MQTTOperation[None]):
+class MQTTDisconnectOperation(MQTTOperation[None]):  # noqa: D101
     def __init__(self) -> None:
         super().__init__(success_codes=())
 
@@ -261,15 +248,9 @@ class AsyncMQTTClient:
     ssl: bool | SSLContext = field(
         kw_only=True, default=False, validator=instance_of((bool, SSLContext))
     )
-    client_id: str | None = field(
-        kw_only=True, validator=optional(instance_of(str)), default=None
-    )
-    username: str | None = field(
-        kw_only=True, default=None, validator=optional(instance_of(str))
-    )
-    password: str | None = field(
-        kw_only=True, default=None, validator=optional(instance_of(str))
-    )
+    client_id: str | None = field(kw_only=True, validator=optional(instance_of(str)), default=None)
+    username: str | None = field(kw_only=True, default=None, validator=optional(instance_of(str)))
+    password: str | None = field(kw_only=True, default=None, validator=optional(instance_of(str)))
     clean_start: bool = field(kw_only=True, default=True, validator=instance_of(bool))
     receive_maximum: int = field(
         kw_only=True, validator=[instance_of(int), ge(0), le(65535)], default=65535
@@ -277,9 +258,7 @@ class AsyncMQTTClient:
     max_packet_size: int | None = field(
         kw_only=True, validator=optional([instance_of(int), gt(0)]), default=None
     )  # TODO: enforce this when encoding packets
-    will: Will | None = field(
-        kw_only=True, default=None, validator=optional(instance_of(Will))
-    )
+    will: Will | None = field(kw_only=True, default=None, validator=optional(instance_of(Will)))
     keep_alive: int = field(
         kw_only=True, validator=[instance_of(int), ge(0), le(65535)], default=0
     )
@@ -290,9 +269,7 @@ class AsyncMQTTClient:
     _subscribe_lock: Lock = field(init=False, factory=Lock)
     _subscriptions: dict[Pattern, ClientSubscription] = field(init=False, factory=dict)
     _subscription_ids: dict[int, ClientSubscription] = field(init=False, factory=dict)
-    _subscription_no_id: dict[Pattern, ClientSubscription] = field(
-        init=False, factory=dict
-    )
+    _subscription_no_id: dict[Pattern, ClientSubscription] = field(init=False, factory=dict)
     _last_subscr_id: int = field(init=False, default=0)
     _stream: ByteStream = field(init=False, default=None)
     _stream_lock: Lock = field(init=False, factory=Lock)
@@ -306,8 +283,7 @@ class AsyncMQTTClient:
         if not self.host_or_path:
             if self.transport == "unix":
                 raise ValueError(
-                    "host_or_path must be a filesystem path when using the 'unix' "
-                    "transport"
+                    "host_or_path must be a filesystem path when using the 'unix' transport"
                 )
             else:
                 self.host_or_path = "localhost"
@@ -321,11 +297,11 @@ class AsyncMQTTClient:
         self._state_machine = MQTTClientStateMachine(client_id=self.client_id)
 
     @property
-    def cap_retain(self) -> bool:
+    def cap_retain(self) -> bool:  # noqa: D102
         return self._state_machine.cap.retain
 
     @property
-    def cap_subscription_ids(self) -> bool:
+    def cap_subscription_ids(self) -> bool:  # noqa: D102
         return self._state_machine.cap_subscription_ids
 
     async def __aenter__(self) -> Self:
@@ -392,19 +368,15 @@ class AsyncMQTTClient:
                         self._stream = stream
 
                         # Start handling inbound packets
-                        task_group = await exit_stack.enter_async_context(
-                            create_task_group()
-                        )
-                        task_group.start_soon(
-                            self._read_inbound_packets, stream, task_group
-                        )
+                        task_group = await exit_stack.enter_async_context(create_task_group())
+                        task_group.start_soon(self._read_inbound_packets, stream, task_group)
 
                         # Perform the MQTT handshake (send conn + receive connack)
                         await self._do_handshake()
                         t_conn = anyio.current_time()
 
                         # Manage keepalives
-                        task_group.start_soon(self._keep_alive, stream)
+                        task_group.start_soon(self._keep_alive)
 
                         # Signal that the client is ready
                         if task_status is not None:
@@ -438,7 +410,7 @@ class AsyncMQTTClient:
                     raise MQTTNoReconnect
                 await anyio.sleep(t_backoff)
 
-    async def _keep_alive(self, stream):
+    async def _keep_alive(self):
         if not self._state_machine.keep_alive:
             return
         try:
@@ -460,9 +432,7 @@ class AsyncMQTTClient:
         await self._run_operation(operation)
 
         # If the broker assigned us a client id, save that
-        if client_id := operation.response.properties.get(
-            PropertyType.ASSIGNED_CLIENT_IDENTIFIER
-        ):
+        if client_id := operation.response.properties.get(PropertyType.ASSIGNED_CLIENT_IDENTIFIER):
             assert isinstance(client_id, str)
             self.client_id = client_id
 
@@ -531,9 +501,7 @@ class AsyncMQTTClient:
                         # just quit
                         return
 
-            if subscr_ids := packet.properties.get(
-                PropertyType.SUBSCRIPTION_IDENTIFIER
-            ):
+            if subscr_ids := packet.properties.get(PropertyType.SUBSCRIPTION_IDENTIFIER):
                 for subscr_id in cast("list[int]", subscr_ids):
                     if sub := self._subscription_ids.get(subscr_id):
                         send(sub)
@@ -576,8 +544,8 @@ class AsyncMQTTClient:
     async def _connect_ws(
         self,
     ) -> AsyncGenerator[tuple[ByteStream, tuple[type[Exception]]], None]:
-        from httpx import AsyncClient
-        from httpx_ws import WebSocketNetworkError, aconnect_ws
+        from httpx import AsyncClient  # noqa:PLC0415
+        from httpx_ws import WebSocketNetworkError, aconnect_ws  # noqa:PLC0415
 
         scheme = "wss" if self.ssl else "ws"
         uri = f"{scheme}://{self.host_or_path}:{self.port}{self.websocket_path}"
@@ -611,9 +579,7 @@ class AsyncMQTTClient:
         with ExitStack() as exit_stack:
             if operation.packet_id is not None:
                 self._pending_operations[operation.packet_id] = operation
-                exit_stack.callback(
-                    self._pending_operations.pop, operation.packet_id, None
-                )
+                exit_stack.callback(self._pending_operations.pop, operation.packet_id, None)
             elif isinstance(operation, MQTTConnectOperation):
                 self._pending_connect = operation
                 exit_stack.callback(setattr, self, "_pending_connect", None)
@@ -683,10 +649,7 @@ class AsyncMQTTClient:
             # If there are sufficiently large and/or many holes in the list
             # of assigned subscription IDs, restart from the beginning:
             # larger IDs take up more space in the message.
-            if (
-                sid in (128, 16384)
-                and len(self._subscription_ids) < self._last_subscr_id / 5
-            ):
+            if sid in (128, 16384) and len(self._subscription_ids) < self._last_subscr_id / 5:
                 sid = 1
 
             if sid in self._subscription_ids:
@@ -755,12 +718,8 @@ class AsyncMQTTClient:
                                     del self._subscription_no_id[pattern]
 
                         if patterns:
-                            if unsubscribe_packet_id := self._state_machine.unsubscribe(
-                                patterns
-                            ):
-                                unsubscribe_op = MQTTUnsubscribeOperation(
-                                    unsubscribe_packet_id
-                                )
+                            if unsubscribe_packet_id := self._state_machine.unsubscribe(patterns):
+                                unsubscribe_op = MQTTUnsubscribeOperation(unsubscribe_packet_id)
                                 try:
                                     await self._run_operation(unsubscribe_op)
                                 except MQTTUnsubscribeFailed as exc:
@@ -786,9 +745,7 @@ class AsyncMQTTClient:
                     pattern = Pattern(pattern_str)
                     if subscr := self._subscriptions.get(pattern):
                         if subscr.no_local != no_local:
-                            raise ValueError(
-                                f"Conflicting 'no_local' option for {pattern}"
-                            )
+                            raise ValueError(f"Conflicting 'no_local' option for {pattern}")
                         if subscr.retain_as_published != retain_as_published:
                             raise ValueError(
                                 f"Conflicting 'retain_as_published' option for {pattern}"
@@ -823,9 +780,7 @@ class AsyncMQTTClient:
 
                     if subscr.subscription_id:
                         # every topic has (in fact, needs) its own ID.
-                        subscribe_packet_id = self._state_machine.subscribe(
-                            [subscr], max_qos=qos
-                        )
+                        subscribe_packet_id = self._state_machine.subscribe([subscr], max_qos=qos)
                         subscribe_op = MQTTSubscribeOperation(subscribe_packet_id)
                         await self._run_operation(subscribe_op)
                         subscr.max_qos = max(qos, subscr.max_qos)
@@ -834,9 +789,7 @@ class AsyncMQTTClient:
 
                 if to_subscribe:
                     # no subscription IDs, so do it all at once
-                    subscribe_packet_id = self._state_machine.subscribe(
-                        to_subscribe, max_qos=qos
-                    )
+                    subscribe_packet_id = self._state_machine.subscribe(to_subscribe, max_qos=qos)
                     subscribe_op = MQTTSubscribeOperation(subscribe_packet_id)
                     await self._run_operation(subscribe_op)
                     for subscr in to_subscribe:

@@ -44,7 +44,7 @@ websockets = [
     "httpx-ws >= 0.6.0"
 ]
 test = [
-    "mqttproto[websockets]",
+    "moat-lib-mqtt[websockets]",
     "anyio[trio]",
     "coverage >= 7",
     "pytest >= 8.0",
@@ -97,7 +97,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["mqttproto"]
+source = ["moat.lib.mqtt"]
 relative_files = true
 
 [tool.coverage.report]

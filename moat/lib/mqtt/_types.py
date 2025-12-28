@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import sys
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Callable, Sequence
-from enum import Enum, IntEnum, auto, Flag
+from enum import Enum, IntEnum, auto
 from functools import partial
 from itertools import zip_longest
-from typing import Any, ClassVar, cast
 
 from attrs import define, field
 from attrs.validators import deep_iterable, in_, instance_of
@@ -21,17 +18,13 @@ from ._exceptions import (
     MQTTUnsupportedPropertyType,
 )
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import TYPE_CHECKING, cast
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from typing import Any, ClassVar, Self, TypeAlias
 
-logger = logging.getLogger("mqttproto")
+logger = logging.getLogger("moat.lib.mqtt")
 
 PropertyValue: TypeAlias = "str | bytes | int | tuple[str, str] | list[int]"
 
@@ -222,10 +215,10 @@ class QoS(IntEnum):
 @define
 class Capabilities:
     # Does the server support subscription IDs?
-    subscription_ids = field(type=bool,default=True)
+    subscription_ids = field(type=bool, default=True)
 
     # Does the server support subscription IDs?
-    wildcard_subscriptions = field(type=bool,default=True)
+    wildcard_subscriptions = field(type=bool, default=True)
 
     # Number of slots for un-acked packets
     receive_queue = field(type=int, default=65535)
@@ -234,16 +227,16 @@ class Capabilities:
     session_expiry = field(type=int, default=0)
 
     # Max packet size
-    packet_size=field(type=int, default=0)
+    packet_size = field(type=int, default=0)
 
     # Max number of topic aliases
-    topic_alias=field(type=int,default=0)
+    topic_alias = field(type=int, default=0)
 
     # Max QOS
-    qos=field(type=QoS,default=QoS.EXACTLY_ONCE)
+    qos = field(type=QoS, default=QoS.EXACTLY_ONCE)
 
     # Does the server support RETAINed messages?
-    retain = field(type=bool,default=True)
+    retain = field(type=bool, default=True)
 
 
 class PublishAckState(Enum):
@@ -349,7 +342,7 @@ class PropertyType(IntEnum):
     encoder: Callable[[PropertyValue, bytearray], None]
     decoder: Callable[[memoryview], tuple[memoryview, PropertyValue]]
 
-    def __new__(
+    def __new__(  # noqa:PYI034
         cls,
         identifier: int,
         encoder: Callable[[PropertyValue, bytearray], None],
@@ -429,8 +422,7 @@ class PropertiesMixin:
             else:
                 if property_type in properties:
                     raise MQTTDecodeError(
-                        f"duplicate property {property_type} when decoding "
-                        f"{cls.__name__}"
+                        f"duplicate property {property_type} when decoding {cls.__name__}"
                     )
 
                 properties[property_type] = value
@@ -455,17 +447,15 @@ class ReasonCodeMixin:
 
 @define(kw_only=True)
 class Will(PropertiesMixin):
-    allowed_property_types = frozenset(
-        [
-            PropertyType.PAYLOAD_FORMAT_INDICATOR,
-            PropertyType.MESSAGE_EXPIRY_INTERVAL,
-            PropertyType.CONTENT_TYPE,
-            PropertyType.RESPONSE_TOPIC,
-            PropertyType.CORRELATION_DATA,
-            PropertyType.WILL_DELAY_INTERVAL,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.PAYLOAD_FORMAT_INDICATOR,
+        PropertyType.MESSAGE_EXPIRY_INTERVAL,
+        PropertyType.CONTENT_TYPE,
+        PropertyType.RESPONSE_TOPIC,
+        PropertyType.CORRELATION_DATA,
+        PropertyType.WILL_DELAY_INTERVAL,
+        PropertyType.USER_PROPERTY,
+    ])
 
     topic: str
     payload: str | bytes
@@ -512,8 +502,7 @@ class Pattern:
                 if i != len(parts) - 1:
                     # MQTT-4.7.1-1
                     raise InvalidPattern(
-                        "multi-level wildcard ('#') must be the last character in the "
-                        "topic filter"
+                        "multi-level wildcard ('#') must be the last character in the topic filter"
                     )
 
                 if prefix is not None:
@@ -588,9 +577,7 @@ class Pattern:
         # Now for the complicated part
         topic_parts = topic.split("/")
 
-        for i, (pattern_part, topic_part) in enumerate(
-            zip_longest(self._parts, topic_parts)
-        ):
+        for i, (pattern_part, topic_part) in enumerate(zip_longest(self._parts, topic_parts)):
             if i or not topic_part.startswith("$"):
                 if pattern_part == "#":
                     # MQTT-4.7.2-1
@@ -622,9 +609,7 @@ class Subscription:
     max_qos: QoS = field(kw_only=True, default=QoS.EXACTLY_ONCE)
     no_local: bool = field(kw_only=True, default=False)
     retain_as_published: bool = field(kw_only=True, default=True)
-    retain_handling: RetainHandling = field(
-        kw_only=True, default=RetainHandling.SEND_RETAINED
-    )
+    retain_handling: RetainHandling = field(kw_only=True, default=RetainHandling.SEND_RETAINED)
     subscription_id: int = field(kw_only=True, default=0)
 
     def __attrs_post_init__(self) -> None:
@@ -662,9 +647,7 @@ class Subscription:
 
     def encode(self, buffer: bytearray, max_qos: QoS | None = None) -> None:
         encode_utf8(self.pattern.pattern, buffer)
-        options = (
-            max_qos if max_qos is not None else self.max_qos
-        ) | self.retain_handling << 4
+        options = (max_qos if max_qos is not None else self.max_qos) | self.retain_handling << 4
         if self.no_local:
             options |= self.NO_LOCAL_FLAG
 
@@ -699,9 +682,7 @@ class MQTTPacket(metaclass=ABCMeta):
         assert isinstance(cls.packet_type, ControlPacketType)
         packet_types[cls.packet_type] = cls
 
-    def encode_fixed_header(
-        self, flags: int, payload: bytes, buffer: bytearray
-    ) -> None:
+    def encode_fixed_header(self, flags: int, payload: bytes, buffer: bytearray) -> None:
         logger.debug("OUT: %r", self)
         assert flags < 16
         encode_fixed_integer(flags | (self.packet_type << 4), buffer, 1)
@@ -724,18 +705,16 @@ class MQTTConnectPacket(MQTTPacket, PropertiesMixin):
 
     packet_type = ControlPacketType.CONNECT
     reserved_flags_mask = 0
-    allowed_property_types = frozenset(
-        [
-            PropertyType.SESSION_EXPIRY_INTERVAL,
-            PropertyType.AUTHENTICATION_METHOD,
-            PropertyType.AUTHENTICATION_DATA,
-            PropertyType.REQUEST_PROBLEM_INFORMATION,
-            PropertyType.RECEIVE_MAXIMUM,
-            PropertyType.TOPIC_ALIAS_MAXIMUM,
-            PropertyType.USER_PROPERTY,
-            PropertyType.MAXIMUM_PACKET_SIZE,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.SESSION_EXPIRY_INTERVAL,
+        PropertyType.AUTHENTICATION_METHOD,
+        PropertyType.AUTHENTICATION_DATA,
+        PropertyType.REQUEST_PROBLEM_INFORMATION,
+        PropertyType.RECEIVE_MAXIMUM,
+        PropertyType.TOPIC_ALIAS_MAXIMUM,
+        PropertyType.USER_PROPERTY,
+        PropertyType.MAXIMUM_PACKET_SIZE,
+    ])
 
     # Connect flags
     CLEAN_START_FLAG = 2
@@ -753,10 +732,9 @@ class MQTTConnectPacket(MQTTPacket, PropertiesMixin):
     keep_alive: int = 0
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTConnectPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTConnectPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, protocol_name = decode_utf8(data)
         if protocol_name != "MQTT":
             raise MQTTProtocolError(f"unexpected protocol: {protocol_name}")
@@ -861,65 +839,58 @@ class MQTTConnAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Connection acknowledgment"""
 
     packet_type = ControlPacketType.CONNACK
-    allowed_property_types = frozenset(
-        [
-            PropertyType.SESSION_EXPIRY_INTERVAL,
-            PropertyType.ASSIGNED_CLIENT_IDENTIFIER,
-            PropertyType.SERVER_KEEP_ALIVE,
-            PropertyType.AUTHENTICATION_METHOD,
-            PropertyType.AUTHENTICATION_DATA,
-            PropertyType.RESPONSE_INFORMATION,
-            PropertyType.SERVER_REFERENCE,
-            PropertyType.REASON_STRING,
-            PropertyType.RECEIVE_MAXIMUM,
-            PropertyType.TOPIC_ALIAS_MAXIMUM,
-            PropertyType.MAXIMUM_QOS,
-            PropertyType.RETAIN_AVAILABLE,
-            PropertyType.USER_PROPERTY,
-            PropertyType.MAXIMUM_PACKET_SIZE,
-            PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE,
-            PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE,
-            PropertyType.SHARED_SUBSCRIPTION_AVAILABLE,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.SUCCESS,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.MALFORMED_PACKET,
-            ReasonCode.PROTOCOL_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.UNSUPPORTED_PROTOCOL_VERSION,
-            ReasonCode.CLIENT_IDENTIFIER_NOT_VALID,
-            ReasonCode.BAD_USERNAME_OR_PASSWORD,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.SERVER_UNAVAILABLE,
-            ReasonCode.SERVER_BUSY,
-            ReasonCode.BANNED,
-            ReasonCode.BAD_AUTHENTICATION_METHOD,
-            ReasonCode.TOPIC_NAME_INVALID,
-            ReasonCode.PACKET_TOO_LARGE,
-            ReasonCode.QUOTA_EXCEEDED,
-            ReasonCode.PAYLOAD_FORMAT_INVALID,
-            ReasonCode.RETAIN_NOT_SUPPORTED,
-            ReasonCode.QOS_NOT_SUPPORTED,
-            ReasonCode.USE_ANOTHER_SERVER,
-            ReasonCode.SERVER_MOVED,
-            ReasonCode.CONNECTION_RATE_EXCEEDED,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.SESSION_EXPIRY_INTERVAL,
+        PropertyType.ASSIGNED_CLIENT_IDENTIFIER,
+        PropertyType.SERVER_KEEP_ALIVE,
+        PropertyType.AUTHENTICATION_METHOD,
+        PropertyType.AUTHENTICATION_DATA,
+        PropertyType.RESPONSE_INFORMATION,
+        PropertyType.SERVER_REFERENCE,
+        PropertyType.REASON_STRING,
+        PropertyType.RECEIVE_MAXIMUM,
+        PropertyType.TOPIC_ALIAS_MAXIMUM,
+        PropertyType.MAXIMUM_QOS,
+        PropertyType.RETAIN_AVAILABLE,
+        PropertyType.USER_PROPERTY,
+        PropertyType.MAXIMUM_PACKET_SIZE,
+        PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE,
+        PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+        PropertyType.SHARED_SUBSCRIPTION_AVAILABLE,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.SUCCESS,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.MALFORMED_PACKET,
+        ReasonCode.PROTOCOL_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.UNSUPPORTED_PROTOCOL_VERSION,
+        ReasonCode.CLIENT_IDENTIFIER_NOT_VALID,
+        ReasonCode.BAD_USERNAME_OR_PASSWORD,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.SERVER_UNAVAILABLE,
+        ReasonCode.SERVER_BUSY,
+        ReasonCode.BANNED,
+        ReasonCode.BAD_AUTHENTICATION_METHOD,
+        ReasonCode.TOPIC_NAME_INVALID,
+        ReasonCode.PACKET_TOO_LARGE,
+        ReasonCode.QUOTA_EXCEEDED,
+        ReasonCode.PAYLOAD_FORMAT_INVALID,
+        ReasonCode.RETAIN_NOT_SUPPORTED,
+        ReasonCode.QOS_NOT_SUPPORTED,
+        ReasonCode.USE_ANOTHER_SERVER,
+        ReasonCode.SERVER_MOVED,
+        ReasonCode.CONNECTION_RATE_EXCEEDED,
+    ])
 
     SESSION_PRESENT_FLAG = 1
 
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
     session_present: bool
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTConnAckPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTConnAckPacket]:
+        flags  # noqa:B018
         data, connect_ack_flags = decode_fixed_integer(data, 1)
         data, reason_code = cls.decode_reason_code(data)
         data, properties, user_properties = cls.decode_properties(data)
@@ -945,18 +916,16 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
 
     packet_type = ControlPacketType.PUBLISH
     reserved_flags_mask = 0
-    allowed_property_types = frozenset(
-        [
-            PropertyType.PAYLOAD_FORMAT_INDICATOR,
-            PropertyType.MESSAGE_EXPIRY_INTERVAL,
-            PropertyType.CONTENT_TYPE,
-            PropertyType.RESPONSE_TOPIC,
-            PropertyType.CORRELATION_DATA,
-            PropertyType.SUBSCRIPTION_IDENTIFIER,
-            PropertyType.TOPIC_ALIAS,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.PAYLOAD_FORMAT_INDICATOR,
+        PropertyType.MESSAGE_EXPIRY_INTERVAL,
+        PropertyType.CONTENT_TYPE,
+        PropertyType.RESPONSE_TOPIC,
+        PropertyType.CORRELATION_DATA,
+        PropertyType.SUBSCRIPTION_IDENTIFIER,
+        PropertyType.TOPIC_ALIAS,
+        PropertyType.USER_PROPERTY,
+    ])
 
     RETAIN_FLAG = 1
     QOS_MASK = 6
@@ -978,9 +947,7 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
             self.properties[PropertyType.PAYLOAD_FORMAT_INDICATOR] = True
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPublishPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPublishPacket]:
         # Decode the fixed header flags
         retain = bool(flags & cls.RETAIN_FLAG)
         qos = QoS.get((flags & cls.QOS_MASK) >> 1)
@@ -1042,36 +1009,29 @@ class MQTTPublishAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Publish acknowledgment (QoS 1)"""
 
     packet_type = ControlPacketType.PUBACK
-    allowed_property_types = frozenset(
-        [
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.SUCCESS,
-            ReasonCode.NO_MATCHING_SUBSCRIBERS,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.TOPIC_NAME_INVALID,
-            ReasonCode.PACKET_IDENTIFIER_IN_USE,
-            ReasonCode.QUOTA_EXCEEDED,
-            ReasonCode.PAYLOAD_FORMAT_INVALID,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.SUCCESS,
+        ReasonCode.NO_MATCHING_SUBSCRIBERS,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.TOPIC_NAME_INVALID,
+        ReasonCode.PACKET_IDENTIFIER_IN_USE,
+        ReasonCode.QUOTA_EXCEEDED,
+        ReasonCode.PAYLOAD_FORMAT_INVALID,
+    ])
 
     packet_id: int
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPublishAckPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPublishAckPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         reason_code = ReasonCode.SUCCESS
         properties: dict[PropertyType, PropertyValue] = {}
         user_properties: dict[str, str] = {}
@@ -1107,36 +1067,29 @@ class MQTTPublishReceivePacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Publish received (QoS 2 delivery part 1)"""
 
     packet_type = ControlPacketType.PUBREC
-    allowed_property_types = frozenset(
-        [
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.SUCCESS,
-            ReasonCode.NO_MATCHING_SUBSCRIBERS,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.TOPIC_NAME_INVALID,
-            ReasonCode.PACKET_IDENTIFIER_IN_USE,
-            ReasonCode.QUOTA_EXCEEDED,
-            ReasonCode.PAYLOAD_FORMAT_INVALID,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.SUCCESS,
+        ReasonCode.NO_MATCHING_SUBSCRIBERS,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.TOPIC_NAME_INVALID,
+        ReasonCode.PACKET_IDENTIFIER_IN_USE,
+        ReasonCode.QUOTA_EXCEEDED,
+        ReasonCode.PAYLOAD_FORMAT_INVALID,
+    ])
 
     packet_id: int
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPublishReceivePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPublishReceivePacket]:
         # Decode the variable header
+        flags  # noqa:B018
         reason_code = ReasonCode.SUCCESS
         properties: dict[PropertyType, PropertyValue] = {}
         user_properties: dict[str, str] = {}
@@ -1173,26 +1126,19 @@ class MQTTPublishReleasePacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
 
     packet_type = ControlPacketType.PUBREL
     expected_reserved_bits = 2
-    allowed_property_types = frozenset(
-        [
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [ReasonCode.SUCCESS, ReasonCode.PACKET_IDENTIFIER_NOT_FOUND]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([ReasonCode.SUCCESS, ReasonCode.PACKET_IDENTIFIER_NOT_FOUND])
 
     packet_id: int
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPublishReleasePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPublishReleasePacket]:
         # Decode the variable header
+        flags  # noqa:B018
         reason_code = ReasonCode.SUCCESS
         properties: dict[PropertyType, PropertyValue] = {}
         user_properties: dict[str, str] = {}
@@ -1228,26 +1174,19 @@ class MQTTPublishCompletePacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Publish complete (QoS 2 delivery part 3)"""
 
     packet_type = ControlPacketType.PUBCOMP
-    allowed_property_types = frozenset(
-        [
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [ReasonCode.SUCCESS, ReasonCode.PACKET_IDENTIFIER_NOT_FOUND]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([ReasonCode.SUCCESS, ReasonCode.PACKET_IDENTIFIER_NOT_FOUND])
 
     packet_id: int
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPublishCompletePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPublishCompletePacket]:
         # Decode the variable header
+        flags  # noqa:B018
         reason_code = ReasonCode.SUCCESS
         properties: dict[PropertyType, PropertyValue] = {}
         user_properties: dict[str, str] = {}
@@ -1285,12 +1224,10 @@ class MQTTSubscribePacket(MQTTPacket, PropertiesMixin):
     expected_reserved_bits: ClassVar[int] = 2
 
     packet_type = ControlPacketType.SUBSCRIBE
-    allowed_property_types = frozenset(
-        [
-            PropertyType.SUBSCRIPTION_IDENTIFIER,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.SUBSCRIPTION_IDENTIFIER,
+        PropertyType.USER_PROPERTY,
+    ])
 
     packet_id: int
     subscriptions: Sequence[Subscription]
@@ -1301,10 +1238,9 @@ class MQTTSubscribePacket(MQTTPacket, PropertiesMixin):
             raise MQTTProtocolError("subscription must have at least one topic filter")
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTSubscribePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTSubscribePacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, packet_id = decode_fixed_integer(data, 2)
         data, properties, user_properties = cls.decode_properties(data)
 
@@ -1346,28 +1282,24 @@ class MQTTSubscribeAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Subscribe acknowledgment"""
 
     packet_type = ControlPacketType.SUBACK
-    allowed_property_types = frozenset(
-        [
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.GRANTED_QOS_0,
-            ReasonCode.GRANTED_QOS_1,
-            ReasonCode.GRANTED_QOS_2,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.TOPIC_FILTER_INVALID,
-            ReasonCode.PACKET_IDENTIFIER_IN_USE,
-            ReasonCode.QUOTA_EXCEEDED,
-            ReasonCode.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED,
-            ReasonCode.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED,
-            ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.GRANTED_QOS_0,
+        ReasonCode.GRANTED_QOS_1,
+        ReasonCode.GRANTED_QOS_2,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.TOPIC_FILTER_INVALID,
+        ReasonCode.PACKET_IDENTIFIER_IN_USE,
+        ReasonCode.QUOTA_EXCEEDED,
+        ReasonCode.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED,
+        ReasonCode.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED,
+        ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
+    ])
 
     packet_id: int
     reason_codes: Sequence[ReasonCode] = field(
@@ -1375,10 +1307,9 @@ class MQTTSubscribeAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     )
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTSubscribeAckPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTSubscribeAckPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, packet_id = decode_fixed_integer(data, 2)
         data, properties, user_properties = cls.decode_properties(data)
 
@@ -1423,15 +1354,12 @@ class MQTTUnsubscribePacket(MQTTPacket, PropertiesMixin):
 
     def __attrs_post_init__(self) -> None:
         if not self.patterns:
-            raise MQTTProtocolError(
-                "an unsubscribe request must have at least one topic filter"
-            )
+            raise MQTTProtocolError("an unsubscribe request must have at least one topic filter")
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTUnsubscribePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTUnsubscribePacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, packet_id = decode_fixed_integer(data, 2)
         data, properties, user_properties = cls.decode_properties(data)
 
@@ -1468,20 +1396,16 @@ class MQTTUnsubscribeAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Unsubscribe acknowledgment"""
 
     packet_type = ControlPacketType.UNSUBACK
-    allowed_property_types = frozenset(
-        [PropertyType.REASON_STRING, PropertyType.USER_PROPERTY]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.SUCCESS,
-            ReasonCode.NO_SUBSCRIPTION_EXISTED,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.TOPIC_FILTER_INVALID,
-            ReasonCode.PACKET_IDENTIFIER_IN_USE,
-        ]
-    )
+    allowed_property_types = frozenset([PropertyType.REASON_STRING, PropertyType.USER_PROPERTY])
+    allowed_reason_codes = frozenset([
+        ReasonCode.SUCCESS,
+        ReasonCode.NO_SUBSCRIPTION_EXISTED,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.TOPIC_FILTER_INVALID,
+        ReasonCode.PACKET_IDENTIFIER_IN_USE,
+    ])
 
     packet_id: int
     reason_codes: Sequence[ReasonCode] = field(
@@ -1489,10 +1413,9 @@ class MQTTUnsubscribeAckPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     )
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTUnsubscribeAckPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTUnsubscribeAckPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, packet_id = decode_fixed_integer(data, 2)
         data, properties, user_properties = cls.decode_properties(data)
 
@@ -1531,9 +1454,8 @@ class MQTTPingRequestPacket(MQTTPacket):
     packet_type = ControlPacketType.PINGREQ
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPingRequestPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPingRequestPacket]:
+        flags  # noqa:B018
         return data, MQTTPingRequestPacket()
 
     def encode(self, buffer: bytearray) -> None:
@@ -1548,9 +1470,8 @@ class MQTTPingResponsePacket(MQTTPacket):
     packet_type = ControlPacketType.PINGRESP
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTPingResponsePacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTPingResponsePacket]:
+        flags  # noqa:B018
         return data, MQTTPingResponsePacket()
 
     def encode(self, buffer: bytearray) -> None:
@@ -1563,56 +1484,49 @@ class MQTTDisconnectPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Disconnect notification"""
 
     packet_type = ControlPacketType.DISCONNECT
-    allowed_property_types = frozenset(
-        [
-            PropertyType.SESSION_EXPIRY_INTERVAL,
-            PropertyType.SERVER_REFERENCE,
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.NORMAL_DISCONNECTION,
-            ReasonCode.DISCONNECT_WITH_WILL_MESSAGE,
-            ReasonCode.UNSPECIFIED_ERROR,
-            ReasonCode.MALFORMED_PACKET,
-            ReasonCode.PROTOCOL_ERROR,
-            ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
-            ReasonCode.NOT_AUTHORIZED,
-            ReasonCode.SERVER_BUSY,
-            ReasonCode.SERVER_SHUTTING_DOWN,
-            ReasonCode.SESSION_TAKEN_OVER,
-            ReasonCode.TOPIC_FILTER_INVALID,
-            ReasonCode.TOPIC_NAME_INVALID,
-            ReasonCode.RECEIVE_MAXIMUM_EXCEEDED,
-            ReasonCode.TOPIC_ALIAS_INVALID,
-            ReasonCode.PACKET_TOO_LARGE,
-            ReasonCode.MESSAGE_RATE_TOO_HIGH,
-            ReasonCode.QUOTA_EXCEEDED,
-            ReasonCode.ADMINISTRATIVE_ACTION,
-            ReasonCode.PAYLOAD_FORMAT_INVALID,
-            ReasonCode.RETAIN_NOT_SUPPORTED,
-            ReasonCode.QOS_NOT_SUPPORTED,
-            ReasonCode.USE_ANOTHER_SERVER,
-            ReasonCode.SERVER_MOVED,
-            ReasonCode.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED,
-            ReasonCode.CONNECTION_RATE_EXCEEDED,
-            ReasonCode.MAXIMUM_CONNECT_TIME,
-            ReasonCode.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED,
-            ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.SESSION_EXPIRY_INTERVAL,
+        PropertyType.SERVER_REFERENCE,
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.NORMAL_DISCONNECTION,
+        ReasonCode.DISCONNECT_WITH_WILL_MESSAGE,
+        ReasonCode.UNSPECIFIED_ERROR,
+        ReasonCode.MALFORMED_PACKET,
+        ReasonCode.PROTOCOL_ERROR,
+        ReasonCode.IMPLEMENTATION_SPECIFIC_ERROR,
+        ReasonCode.NOT_AUTHORIZED,
+        ReasonCode.SERVER_BUSY,
+        ReasonCode.SERVER_SHUTTING_DOWN,
+        ReasonCode.SESSION_TAKEN_OVER,
+        ReasonCode.TOPIC_FILTER_INVALID,
+        ReasonCode.TOPIC_NAME_INVALID,
+        ReasonCode.RECEIVE_MAXIMUM_EXCEEDED,
+        ReasonCode.TOPIC_ALIAS_INVALID,
+        ReasonCode.PACKET_TOO_LARGE,
+        ReasonCode.MESSAGE_RATE_TOO_HIGH,
+        ReasonCode.QUOTA_EXCEEDED,
+        ReasonCode.ADMINISTRATIVE_ACTION,
+        ReasonCode.PAYLOAD_FORMAT_INVALID,
+        ReasonCode.RETAIN_NOT_SUPPORTED,
+        ReasonCode.QOS_NOT_SUPPORTED,
+        ReasonCode.USE_ANOTHER_SERVER,
+        ReasonCode.SERVER_MOVED,
+        ReasonCode.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED,
+        ReasonCode.CONNECTION_RATE_EXCEEDED,
+        ReasonCode.MAXIMUM_CONNECT_TIME,
+        ReasonCode.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED,
+        ReasonCode.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED,
+    ])
 
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
-    def decode(
-        cls, data: memoryview, flags: int
-    ) -> tuple[memoryview, MQTTDisconnectPacket]:
+    def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTDisconnectPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         reason_code = ReasonCode.SUCCESS
         properties: dict[PropertyType, PropertyValue] = {}
         user_properties: dict[str, str] = {}
@@ -1644,29 +1558,24 @@ class MQTTAuthPacket(MQTTPacket, PropertiesMixin, ReasonCodeMixin):
     """Authentication exchange"""
 
     packet_type = ControlPacketType.AUTH
-    allowed_property_types = frozenset(
-        [
-            PropertyType.AUTHENTICATION_METHOD,
-            PropertyType.AUTHENTICATION_DATA,
-            PropertyType.REASON_STRING,
-            PropertyType.USER_PROPERTY,
-        ]
-    )
-    allowed_reason_codes = frozenset(
-        [
-            ReasonCode.SUCCESS,
-            ReasonCode.CONTINUE_AUTHENTICATION,
-            ReasonCode.REAUTHENTICATE,
-        ]
-    )
+    allowed_property_types = frozenset([
+        PropertyType.AUTHENTICATION_METHOD,
+        PropertyType.AUTHENTICATION_DATA,
+        PropertyType.REASON_STRING,
+        PropertyType.USER_PROPERTY,
+    ])
+    allowed_reason_codes = frozenset([
+        ReasonCode.SUCCESS,
+        ReasonCode.CONTINUE_AUTHENTICATION,
+        ReasonCode.REAUTHENTICATE,
+    ])
 
-    reason_code: ReasonCode = field(
-        validator=[instance_of(ReasonCode), in_(allowed_reason_codes)]
-    )
+    reason_code: ReasonCode = field(validator=[instance_of(ReasonCode), in_(allowed_reason_codes)])
 
     @classmethod
     def decode(cls, data: memoryview, flags: int) -> tuple[memoryview, MQTTAuthPacket]:
         # Decode the variable header
+        flags  # noqa:B018
         data, reason_code = cls.decode_reason_code(data)
         data, properties, user_properties = cls.decode_properties(data)
 
@@ -1698,9 +1607,7 @@ def decode_packet(
     try:
         packet_type = packet_types[packet_type_num].packet_type
     except KeyError:
-        raise MQTTProtocolError(
-            f"unrecognized packet type: {packet_type_num}"
-        ) from None
+        raise MQTTProtocolError(f"unrecognized packet type: {packet_type_num}") from None
 
     previous_length = data.nbytes
     data, remaining_length = decode_variable_integer(data[1:])

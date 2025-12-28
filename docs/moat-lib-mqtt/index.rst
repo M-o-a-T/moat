@@ -1,8 +1,9 @@
-MQTT state-machine protocol (mqttproto)
-=======================================
+MQTT state-machine protocol (moat.lib.mqtt)
+===========================================
 
-.. include:: ../README.rst
-   :start-after: Documentation
+.. include:: ../packaging/moat-lib-mqtt/README.md
+   :start-after: % start main
+   :end-before: % end main
 
 Table of Contents
 -----------------
@@ -13,7 +14,6 @@ Table of Contents
    userguide
    devguide
    api
-   contributing
    versionhistory
 
 Indices and tables

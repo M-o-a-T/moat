@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 
-from mqttproto.sync_client import MQTTClient
+from moat.lib.mqtt.sync_client import MQTTClient
 
 
 def subscriber1(client: MQTTClient) -> None:

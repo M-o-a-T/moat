@@ -14,19 +14,13 @@ import time
 from functools import partial
 
 import asyncclick as click
-from mqttproto import MQTTException
 
 from moat.util import NotGiven, P, PathLongener, gen_ident, yprint
 from moat.lib.codec import get_codec
+from moat.lib.mqtt import MQTTException
 from moat.link.backend import RawMessage, get_backend
 from moat.util.path import set_root
 from moat.util.times import humandelta, ts2iso
-
-try:
-    from mqttproto import MQTTPublishPacket
-except ImportError:
-    MQTTPublishPacket = NotGiven
-
 
 logger = logging.getLogger(__name__)
 

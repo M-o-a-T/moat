@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mqttproto.sync_client import MQTTClient
+from moat.lib.mqtt.sync_client import MQTTClient
 
 with MQTTClient() as client:
     with client.subscribe("topic", "more/+/topics", "other/#") as sub:

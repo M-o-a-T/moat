@@ -18,9 +18,8 @@ from moat.util import CtxObj, NotGiven, Path, Root, attrdict, get_codec
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mqttproto import QoS
-
     from moat.lib.codec import Codec
+    from moat.lib.mqtt import QoS
     from moat.link.meta import MsgMeta
 
     from collections.abc import AsyncIterator

@@ -1,7 +1,5 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
-from collections.abc import Sequence
-from typing import cast
 from uuid import uuid4
 
 from attr.validators import instance_of, min_len
@@ -31,6 +29,11 @@ from ._types import (
     Will,
 )
 
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 @define(eq=False, init=False)
 class MQTTClientStateMachine(BaseMQTTClientStateMachine):
@@ -42,7 +45,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     keep_alive: int = field(init=False, default=0)
 
     def __init__(self, client_id: str | None = None):
-        self.__attrs_init__(client_id=client_id or f"mqttproto-{uuid4().hex}")
+        self.__attrs_init__(client_id=client_id or f"moat-mqtt-{uuid4().hex}")
         self._auto_ack_publishes = True
 
     @property
@@ -60,7 +63,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         """Does the server support subscription IDs?"""
         return self.cap.subscription_ids
 
-    def reset(self, session_present: bool) -> None:
+    def reset(self, session_present: bool) -> None:  # noqa: D102
         self._ping_pending = False
         if session_present:
             self._pending_packets = {
@@ -88,15 +91,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 )
                 self.cap.subscription_ids = cast(
                     bool,
-                    packet.properties.get(
-                        PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True
-                    ),
+                    packet.properties.get(PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True),
                 )
                 self.cap.wildcard_subscriptions = cast(
                     bool,
-                    packet.properties.get(
-                        PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE, True
-                    ),
+                    packet.properties.get(PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE, True),
                 )
                 self.cap.qos = cast(
                     QoS,
@@ -121,20 +120,16 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             self._pop_pending_packet(packet.packet_id, MQTTSubscribePacket, local=True)
         elif isinstance(packet, MQTTUnsubscribeAckPacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
-            self._pop_pending_packet(
-                packet.packet_id, MQTTUnsubscribePacket, local=True
-            )
+            self._pop_pending_packet(packet.packet_id, MQTTUnsubscribePacket, local=True)
         elif isinstance(packet, MQTTDisconnectPacket):
-            self._in_require_state(
-                packet, MQTTClientState.CONNECTING, MQTTClientState.CONNECTED
-            )
+            self._in_require_state(packet, MQTTClientState.CONNECTING, MQTTClientState.CONNECTED)
             self._state = MQTTClientState.DISCONNECTED
         else:
             return False
 
         return True
 
-    def connect(
+    def connect(  # noqa: D102
         self,
         *,
         username: str | None = None,
@@ -156,14 +151,14 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.CONNECTING
 
-    def disconnect(self, reason_code: ReasonCode = ReasonCode.SUCCESS) -> None:
+    def disconnect(self, reason_code: ReasonCode = ReasonCode.SUCCESS) -> None:  # noqa: D102
         if self._state == MQTTClientState.DISCONNECTED:
             return
         packet = MQTTDisconnectPacket(reason_code=reason_code)
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.DISCONNECTED
 
-    def ping(self) -> None:
+    def ping(self) -> None:  # noqa: D102
         self._out_require_state(MQTTClientState.CONNECTED)
         packet = MQTTPingRequestPacket()
         packet.encode(self._out_buffer)
@@ -205,7 +200,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             user_properties={} if user_properties is None else user_properties,
         )
         if properties:
-            for prop,val in properties.items():
+            for prop, val in properties.items():
                 packet.properties[prop] = val
         packet.encode(self._out_buffer)
         if packet_id is not None:
@@ -220,9 +215,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         """
         return self.cap.qos
 
-    def subscribe(
-        self, subscriptions: Sequence[Subscription], max_qos: QoS | None = None
-    ) -> int:
+    def subscribe(self, subscriptions: Sequence[Subscription], max_qos: QoS | None = None) -> int:
         """
         Subscribe to one or more topic patterns.
 
@@ -277,9 +270,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             return None
             # TODO remember the unsubscription for reconnect
 
-        packet = MQTTUnsubscribePacket(
-            patterns=patterns, packet_id=self._generate_packet_id()
-        )
+        packet = MQTTUnsubscribePacket(patterns=patterns, packet_id=self._generate_packet_id())
         packet.encode(self._out_buffer)
         self._add_pending_packet(packet, local=True)
         return packet.packet_id

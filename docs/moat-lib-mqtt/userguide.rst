@@ -8,16 +8,16 @@ Installing
 
 To install the library without any extras::
 
-    pip install mqttproto
+    pip install moat-lib-mqtt
 
 If you need websockets connectivity, you will want to include the ``websockets`` extra::
 
-    pip install mqttproto[websockets]
+    pip install moat-lib-mqtt[websockets]
 
 Using the async client
 ----------------------
 
-.. py:currentmodule:: mqttproto.async_client
+.. py:currentmodule:: moat.lib.mqtt.async_client
 .. highlight:: python
 
 The asynchronous client needs to be used as an asynchronous context manager to manage
@@ -119,7 +119,7 @@ To publish a message to the broker, call the :meth:`~.AsyncMQTTClient.publish` m
 Using the sync client
 ---------------------
 
-.. py:currentmodule:: mqttproto.sync_client
+.. py:currentmodule:: moat.lib.mqtt.sync_client
 
 The synchronous client (:class:`~.MQTTClient`) is a wrapper for the asynchronous client,
 allowing users to not care about the details of the asynchronous implementation.

@@ -6,7 +6,6 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13),
   python3-setuptools,
   python3-wheel,
   flashmq,
-  python3-mqttproto,
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/moat
 X-DH-Compat: 13
@@ -20,7 +19,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-moat-lib-codec,
   python3-moat-lib-cmd,
   python3-moat-lib-priomap,
-  python3-mqttproto,
+  python3-moat-lib-mqtt,
   systemd (>= 241),
 Replaces: moat-link-server (<< 0.3.11)
 Recommends:

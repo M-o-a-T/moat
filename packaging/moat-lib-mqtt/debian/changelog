@@ -1,3 +1,9 @@
+mqttproto (0.8.0-0) unstable; urgency=medium
+
+  * Verndorized.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 13:38:25 +0100
+
 mqttproto (0.7.2.29-1) unstable; urgency=medium
 
   * Merge

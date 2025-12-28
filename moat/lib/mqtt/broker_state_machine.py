@@ -1,7 +1,4 @@
-from __future__ import annotations
-
-from collections.abc import Collection, Sequence
-from typing import TypeVar, cast
+from __future__ import annotations  # noqa: D100
 
 from attr.validators import instance_of
 from attrs import define, field
@@ -28,9 +25,13 @@ from ._types import (
     Subscription,
 )
 
-TPacket = TypeVar(
-    "TPacket", MQTTPublishPacket, MQTTSubscribePacket, MQTTUnsubscribePacket
-)
+from typing import TYPE_CHECKING, TypeVar, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Sequence
+
+
+TPacket = TypeVar("TPacket", MQTTPublishPacket, MQTTSubscribePacket, MQTTUnsubscribePacket)
 
 
 @define(eq=False)
@@ -40,18 +41,16 @@ class MQTTBrokerStateMachine:
     client_state_machines: dict[str, MQTTBrokerClientStateMachine] = field(
         init=False, factory=dict
     )
-    shared_subscriptions: dict[Pattern, dict[str, Subscription]] = field(
-        init=False, factory=dict
-    )
+    shared_subscriptions: dict[Pattern, dict[str, Subscription]] = field(init=False, factory=dict)
     retained_messages: dict[str, MQTTPublishPacket] = field(init=False, factory=dict)
 
-    def add_client_session(self, session: MQTTBrokerClientStateMachine) -> None:
+    def add_client_session(self, session: MQTTBrokerClientStateMachine) -> None:  # noqa: D102
         if session.client_id is None:
             raise ValueError("cannot add client session without client id")
 
         self.client_state_machines[session.client_id] = session
 
-    def remove_client_session(self, session: MQTTBrokerClientStateMachine) -> None:
+    def remove_client_session(self, session: MQTTBrokerClientStateMachine) -> None:  # noqa: D102
         if session.client_id is None:
             raise ValueError("cannot add client session without client id")
 
@@ -59,7 +58,7 @@ class MQTTBrokerStateMachine:
 
         self.client_state_machines[session.client_id] = session
         drop = []
-        for subscr in session._subscriptions:
+        for subscr in session._subscriptions:  # noqa:SLF001
             dest = self.shared_subscriptions.get(subscr)
             if dest is None:
                 continue
@@ -69,7 +68,7 @@ class MQTTBrokerStateMachine:
         for subscr in drop:
             del self.shared_subscriptions[subscr]
 
-    def subscribe_session_to(
+    def subscribe_session_to(  # noqa: D102
         self, session: MQTTBrokerClientStateMachine, subscription: Subscription
     ) -> None:
         session.subscribed_to(subscription.pattern)
@@ -79,8 +78,7 @@ class MQTTBrokerStateMachine:
         if subscription.retain_handling == RetainHandling.NO_RETAINED:
             return
         if (
-            subscription.retain_handling
-            == RetainHandling.SEND_RETAINED_IF_NOT_SUBSCRIBED
+            subscription.retain_handling == RetainHandling.SEND_RETAINED_IF_NOT_SUBSCRIBED
             and prev is not None
         ):
             return
@@ -114,7 +112,7 @@ class MQTTBrokerStateMachine:
             del self.shared_subscriptions[cast(Pattern, pattern)]
         return True
 
-    def acknowledge_connect(
+    def acknowledge_connect(  # noqa: D102
         self,
         client_state_machine: MQTTBrokerClientStateMachine,
         packet: MQTTConnectPacket,
@@ -130,9 +128,7 @@ class MQTTBrokerStateMachine:
             reason_code, username=packet.username, session_present=session_present
         )
 
-    def client_disconnected(
-        self, client_id: str, packet: MQTTDisconnectPacket | None
-    ) -> None:
+    def client_disconnected(self, client_id: str, packet: MQTTDisconnectPacket | None) -> None:
         """
         Handle a client disconnection.
 
@@ -141,12 +137,11 @@ class MQTTBrokerStateMachine:
             transport stream was closed
 
         """
+        packet  # noqa:B018
         self.client_state_machines.pop(client_id, None)
         # TODO: remove client from shared subscriptions
 
-    def publish(
-        self, source_client_id: str, packet: MQTTPublishPacket
-    ) -> Collection[str]:
+    def publish(self, source_client_id: str, packet: MQTTPublishPacket) -> Collection[str]:
         """
         Publish a message from the given client to all the appropriate subscribers.
 
@@ -164,13 +159,11 @@ class MQTTBrokerStateMachine:
         recipients: set[str] = set()
         drp = set()
         for pattern, clients in self.shared_subscriptions.items():
-            drop:set[str] = set()
+            drop: set[str] = set()
             if pattern.matches(packet):
                 for client_id, subscr in clients.items():
                     client = self.client_state_machines.get(client_id)
-                    if client and (
-                        not subscr.no_local or source_client_id != client_id
-                    ):
+                    if client and (not subscr.no_local or source_client_id != client_id):
                         try:
                             client.deliver_publish(
                                 topic=packet.topic,
@@ -207,10 +200,10 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         """The username the client authenticated as."""
         return self._username
 
-    def subscribed_to(self, pattern: Pattern) -> None:
+    def subscribed_to(self, pattern: Pattern) -> None:  # noqa: D102
         self._subscriptions.add(pattern)
 
-    def unsubscribed_from(self, pattern: Pattern | str) -> None:
+    def unsubscribed_from(self, pattern: Pattern | str) -> None:  # noqa: D102
         self._subscriptions.discard(cast(Pattern, pattern))
 
     def _handle_packet(self, packet: MQTTPacket) -> bool:
@@ -244,7 +237,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
         user_properties: dict[str, str] | None = None,
-        subscription_id: list[int] = [],
+        subscription_id: Sequence[int] = (),
     ) -> int | None:
         """
         Deliver a ``PUBLISH`` message to this client if the current state allows it.
@@ -293,14 +286,10 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         else:
             self._state = MQTTClientState.DISCONNECTED
 
-        ack = MQTTConnAckPacket(
-            reason_code=reason_code, session_present=session_present
-        )
+        ack = MQTTConnAckPacket(reason_code=reason_code, session_present=session_present)
         ack.encode(self._out_buffer)
 
-    def acknowledge_subscribe(
-        self, packet_id: int, reason_codes: Sequence[ReasonCode]
-    ) -> None:
+    def acknowledge_subscribe(self, packet_id: int, reason_codes: Sequence[ReasonCode]) -> None:
         """
         Respond to a ``SUBSCRIBE`` request by the client.
 
@@ -311,11 +300,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
 
         """
         self._out_require_state(MQTTClientState.CONNECTED)
-        if not (
-            request := self._pop_pending_packet(
-                packet_id, MQTTSubscribePacket, local=False
-            )
-        ):
+        if not (request := self._pop_pending_packet(packet_id, MQTTSubscribePacket, local=False)):
             raise MQTTProtocolError(
                 f"attempted to acknowledge a {MQTTSubscribePacket.packet_type._name_} "
                 f"that was either never received or has already been acknowledged"
@@ -332,9 +317,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
             self._out_buffer
         )
 
-    def acknowledge_unsubscribe(
-        self, packet_id: int, reason_codes: Sequence[ReasonCode]
-    ) -> None:
+    def acknowledge_unsubscribe(self, packet_id: int, reason_codes: Sequence[ReasonCode]) -> None:
         """
         Respond to a ``UNSUBSCRIBE`` request by the client.
 
@@ -346,9 +329,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         """
         self._out_require_state(MQTTClientState.CONNECTED)
         if not (
-            request := self._pop_pending_packet(
-                packet_id, MQTTUnsubscribePacket, local=False
-            )
+            request := self._pop_pending_packet(packet_id, MQTTUnsubscribePacket, local=False)
         ):
             raise MQTTProtocolError(
                 f"attempted to acknowledge a {MQTTUnsubscribePacket.packet_type._name_} "

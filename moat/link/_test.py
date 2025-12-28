@@ -56,8 +56,8 @@ async def run_broker(cfg, *, task_status):
         return
 
     elif False:
-        # Use the experimental mqttproto broker.
-        from mqttproto import AsyncMQTTBroker  # noqa:PLC0415
+        # Use the experimental moat.lib.mqtt broker.
+        from moat.lib.mqtt import AsyncMQTTBroker  # noqa:PLC0415
 
         broker = AsyncMQTTBroker(("127.0.0.1", 0))
         await broker.serve(task_status=task_status)

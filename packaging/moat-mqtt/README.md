@@ -16,7 +16,8 @@ to write highly concurrent applications.
 `MoaT-MQTT` will be retired because by now, broker support for MQTT 5 is
 nearly universal.
 
-The designated replacement is [mqttproto].
+The designated replacement is [mqttproto], or rather our enhanced version
+in [moat-lib-mqtt].
 
 ## Features
 
@@ -78,5 +79,6 @@ the strings "on" and "off" (or "ON" and "OFF" or "1" and "0" or …)), filtered
 [mqtt]: http://www.mqtt.org
 [mqtt 3.1.1]: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
 [mqttproto]: https://github.com/agronholm/mqttproto/
+[moat-lib-mqtt]: https://github.com/M-o-a-T/moat/
 [open an issue]: https://github.com/M-o-a-T/moat-mqtt/issues/new
 [read the docs]: http://moat-mqtt.readthedocs.org/

@@ -19,7 +19,7 @@ from moat.util.path import set_root
 from .backend import get_backend
 
 try:
-    from mqttproto import MQTTPublishPacket
+    from moat.lib.mqtt import MQTTPublishPacket
 except ImportError:
     MQTTPublishPacket = NotGiven
 

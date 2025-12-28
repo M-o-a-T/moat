@@ -1,3 +1,7 @@
+"""
+A continuation of mqttproto, vendorized into MoaT
+"""
+
 from __future__ import annotations
 
 from ._base_client_state_machine import MQTTClientState as MQTTClientState
@@ -37,5 +41,5 @@ from ._types import Will as Will
 
 # Re-export imports so they look like they live directly in this package
 for value in list(locals().values()):
-    if getattr(value, "__module__", "").startswith("mqttproto."):
+    if getattr(value, "__module__", "").startswith("moat.lib.mqtt."):
         value.__module__ = __name__

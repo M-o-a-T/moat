@@ -31,7 +31,6 @@ passlib
 asyncwebsockets
 nacl
 cbor2
-git+https://github.com/M-o-a-T/mqttproto@main
 #libffi-dev
 #pkg-config
 #flashmq

@@ -4,62 +4,62 @@ API Reference
 Enumerated types
 ----------------
 
-.. autoenum:: mqttproto.PropertyType
-.. autoenum:: mqttproto.QoS
-.. autoenum:: mqttproto.ReasonCode
-.. autoenum:: mqttproto.RetainHandling
-.. autoenum:: mqttproto.MQTTClientState
+.. autoenum:: moat.lib.mqtt.PropertyType
+.. autoenum:: moat.lib.mqtt.QoS
+.. autoenum:: moat.lib.mqtt.ReasonCode
+.. autoenum:: moat.lib.mqtt.RetainHandling
+.. autoenum:: moat.lib.mqtt.MQTTClientState
 
 Supporting classes
 ------------------
 
-.. autoclass:: mqttproto.Subscription
-.. autoclass:: mqttproto.Will
+.. autoclass:: moat.lib.mqtt.Subscription
+.. autoclass:: moat.lib.mqtt.Will
 
 MQTT packet classes
 -------------------
 
-.. autoclass:: mqttproto.MQTTPacket
-.. autoclass:: mqttproto.MQTTConnectPacket
-.. autoclass:: mqttproto.MQTTConnAckPacket
-.. autoclass:: mqttproto.MQTTPublishPacket
-.. autoclass:: mqttproto.MQTTPublishAckPacket
-.. autoclass:: mqttproto.MQTTPublishReceivePacket
-.. autoclass:: mqttproto.MQTTPublishReleasePacket
-.. autoclass:: mqttproto.MQTTPublishCompletePacket
-.. autoclass:: mqttproto.MQTTSubscribePacket
-.. autoclass:: mqttproto.MQTTSubscribeAckPacket
-.. autoclass:: mqttproto.MQTTUnsubscribePacket
-.. autoclass:: mqttproto.MQTTUnsubscribeAckPacket
-.. autoclass:: mqttproto.MQTTPingRequestPacket
-.. autoclass:: mqttproto.MQTTPingResponsePacket
-.. autoclass:: mqttproto.MQTTAuthPacket
-.. autoclass:: mqttproto.MQTTDisconnectPacket
+.. autoclass:: moat.lib.mqtt.MQTTPacket
+.. autoclass:: moat.lib.mqtt.MQTTConnectPacket
+.. autoclass:: moat.lib.mqtt.MQTTConnAckPacket
+.. autoclass:: moat.lib.mqtt.MQTTPublishPacket
+.. autoclass:: moat.lib.mqtt.MQTTPublishAckPacket
+.. autoclass:: moat.lib.mqtt.MQTTPublishReceivePacket
+.. autoclass:: moat.lib.mqtt.MQTTPublishReleasePacket
+.. autoclass:: moat.lib.mqtt.MQTTPublishCompletePacket
+.. autoclass:: moat.lib.mqtt.MQTTSubscribePacket
+.. autoclass:: moat.lib.mqtt.MQTTSubscribeAckPacket
+.. autoclass:: moat.lib.mqtt.MQTTUnsubscribePacket
+.. autoclass:: moat.lib.mqtt.MQTTUnsubscribeAckPacket
+.. autoclass:: moat.lib.mqtt.MQTTPingRequestPacket
+.. autoclass:: moat.lib.mqtt.MQTTPingResponsePacket
+.. autoclass:: moat.lib.mqtt.MQTTAuthPacket
+.. autoclass:: moat.lib.mqtt.MQTTDisconnectPacket
 
 Client-side state machine
 -------------------------
 
-.. autoclass:: mqttproto.client_state_machine.MQTTClientStateMachine
+.. autoclass:: moat.lib.mqtt.client_state_machine.MQTTClientStateMachine
    :inherited-members:
 
 Broker-side state machines
 --------------------------
 
-.. autoclass:: mqttproto.broker_state_machine.MQTTBrokerStateMachine
-.. autoclass:: mqttproto.broker_state_machine.MQTTBrokerClientStateMachine
+.. autoclass:: moat.lib.mqtt.broker_state_machine.MQTTBrokerStateMachine
+.. autoclass:: moat.lib.mqtt.broker_state_machine.MQTTBrokerClientStateMachine
    :inherited-members:
 
 Concrete client implementations
 -------------------------------
 
-.. autoclass:: mqttproto.async_client.AsyncMQTTClient
-.. autoclass:: mqttproto.async_client.AsyncMQTTSubscription
-.. autoclass:: mqttproto.sync_client.MQTTClient
-.. autoclass:: mqttproto.sync_client.MQTTSubscription
+.. autoclass:: moat.lib.mqtt.async_client.AsyncMQTTClient
+.. autoclass:: moat.lib.mqtt.async_client.AsyncMQTTSubscription
+.. autoclass:: moat.lib.mqtt.sync_client.MQTTClient
+.. autoclass:: moat.lib.mqtt.sync_client.MQTTSubscription
 
 Concrete broker implementation
 ------------------------------
 
-.. autoclass:: mqttproto.async_broker.AsyncMQTTBroker
-.. autoclass:: mqttproto.async_broker.MQTTAuthenticator
-.. autoclass:: mqttproto.async_broker.MQTTAuthorizer
+.. autoclass:: moat.lib.mqtt.async_broker.AsyncMQTTBroker
+.. autoclass:: moat.lib.mqtt.async_broker.MQTTAuthenticator
+.. autoclass:: moat.lib.mqtt.async_broker.MQTTAuthorizer

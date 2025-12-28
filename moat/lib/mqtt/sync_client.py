@@ -1,13 +1,8 @@
-from __future__ import annotations
-
-import sys
-from collections.abc import Generator
-from contextlib import ExitStack, contextmanager
-from ssl import SSLContext
-from types import TracebackType
-from typing import Any, Literal
+from __future__ import annotations  # noqa: D100
 
 from anyio.from_thread import BlockingPortal, BlockingPortalProvider
+from contextlib import ExitStack, contextmanager
+
 from attrs import define
 
 from ._types import (
@@ -20,16 +15,21 @@ from ._types import (
 )
 from .async_client import AsyncMQTTClient, AsyncMQTTSubscription
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ssl import SSLContext
+    from types import TracebackType
+
+    from collections.abc import Generator
+    from typing import Any, Literal, Self
+
 
 portal_provider = BlockingPortalProvider()
 
 
 @define(eq=False, repr=False, slots=True)
-class MQTTSubscription:
+class MQTTSubscription:  # noqa: D101
     async_subscription: AsyncMQTTSubscription
     portal: BlockingPortal
 
@@ -43,7 +43,7 @@ class MQTTSubscription:
             raise StopIteration from None
 
 
-class MQTTClient:
+class MQTTClient:  # noqa: D101
     _exit_stack: ExitStack
     _portal: BlockingPortal
 
@@ -83,15 +83,13 @@ class MQTTClient:
         )
 
     @property
-    def cap_retain(self) -> bool:
+    def cap_retain(self) -> bool:  # noqa: D102
         return self._async_client.cap_retain
 
     def __enter__(self) -> Self:
         with ExitStack() as exit_stack:
             self._portal = exit_stack.enter_context(portal_provider)
-            exit_stack.enter_context(
-                self._portal.wrap_async_context_manager(self._async_client)
-            )
+            exit_stack.enter_context(self._portal.wrap_async_context_manager(self._async_client))
             self._exit_stack = exit_stack.pop_all()
 
         return self
@@ -104,7 +102,7 @@ class MQTTClient:
     ) -> bool | None:
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
-    def publish(
+    def publish(  # noqa: D102
         self,
         topic: str,
         payload: bytes | str,
@@ -120,7 +118,7 @@ class MQTTClient:
         )
 
     @contextmanager
-    def subscribe(
+    def subscribe(  # noqa: D102
         self,
         *patterns: str,
         qos: QoS = QoS.EXACTLY_ONCE,

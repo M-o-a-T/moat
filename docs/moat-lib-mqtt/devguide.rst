@@ -1,7 +1,7 @@
 Developing new I/O implementations
 ==================================
 
-.. py:currentmodule:: mqttproto
+.. py:currentmodule:: moat.lib.mqtt
 
 This project contains both the appropriate state machines implementing the MQTT v5
 protocol, and also asynchronous and synchronous implementations of both the MQTT client
@@ -66,7 +66,7 @@ The I/O implementations will need to provide all this functionality.
 Responsibilities of client I/O implementations
 ----------------------------------------------
 
-.. py:currentmodule:: mqttproto.client_state_machine
+.. py:currentmodule:: moat.lib.mqtt.client_state_machine
 
 Responsibilities for client I/O implementations are:
 
@@ -84,7 +84,7 @@ Responsibilities for client I/O implementations are:
 Responsibilities of broker I/O implementations
 ----------------------------------------------
 
-.. py:currentmodule:: mqttproto.broker_state_machine
+.. py:currentmodule:: moat.lib.mqtt.broker_state_machine
 
 Responsibilities for broker I/O implementations are:
 
@@ -123,11 +123,11 @@ Responsibilities for broker I/O implementations are:
 Debugging
 ---------
 
-The state machines log both inbound and outbound packets using the ``mqttproto`` logger,
+The state machines log both inbound and outbound packets using the ``moat.lib.mqtt`` logger,
 on the :data:`~logging.DEBUG` level. :mod:`Configuring logging <logging.config>` for
 this logger will enable you to see exactly what's being received and transmitted by the
 state machines.
 
 The concrete I/O implementations of client and broker use their respective loggers,
-``mqttproto.client`` and ``mqttproto.broker``, respectively, also on the
+``moat.lib.mqtt.client`` and ``moat.lib.mqtt.broker``, respectively, also on the
 :data:`~logging.DEBUG` level.

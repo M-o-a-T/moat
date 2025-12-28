@@ -1,14 +1,8 @@
-from __future__ import annotations
-
-import logging
-from abc import ABCMeta, abstractmethod
-from collections.abc import Sequence
-from os import PathLike
-from ssl import SSLContext
-from typing import Any
-from uuid import uuid4
+from __future__ import annotations  # noqa: D100
 
 import anyio
+import logging
+from abc import ABCMeta, abstractmethod
 from anyio import Lock, create_task_group, create_tcp_listener, create_unix_listener
 from anyio.abc import (
     ByteStream,
@@ -16,6 +10,9 @@ from anyio.abc import (
     SocketAttribute,
 )
 from anyio.streams.tls import TLSListener
+from os import PathLike
+from uuid import uuid4
+
 from attrs import define, field
 
 from ._base_client_state_machine import MQTTClientState
@@ -35,18 +32,26 @@ from .broker_state_machine import (
     MQTTBrokerStateMachine,
 )
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ssl import SSLContext
+
+    from collections.abc import Sequence
+    from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
 @define(eq=False)
-class AsyncMQTTClientSession:
+class AsyncMQTTClientSession:  # noqa: D101
     stream: ByteStream
     state_machine: MQTTBrokerClientStateMachine = field(
         init=False, factory=MQTTBrokerClientStateMachine
     )
     lock: Lock = field(init=False, factory=Lock)
 
-    async def flush_outbound_data(self) -> None:
+    async def flush_outbound_data(self) -> None:  # noqa: D102
         async with self.lock:
             if data := self.state_machine.get_outbound_data():
                 try:
@@ -55,7 +60,7 @@ class AsyncMQTTClientSession:
                     pass
 
 
-class MQTTAuthenticator(metaclass=ABCMeta):
+class MQTTAuthenticator(metaclass=ABCMeta):  # noqa: D101
     @abstractmethod
     async def authenticate(
         self,
@@ -80,7 +85,7 @@ class MQTTAuthenticator(metaclass=ABCMeta):
         """
 
 
-class MQTTAuthorizer(metaclass=ABCMeta):
+class MQTTAuthorizer(metaclass=ABCMeta):  # noqa: D101
     @abstractmethod
     async def authorize_publish(
         self,
@@ -143,12 +148,8 @@ class AsyncMQTTBroker:
     ssl_context: SSLContext | None = None
     authenticators: Sequence[MQTTAuthenticator] = field(factory=list)
     authorizers: Sequence[MQTTAuthorizer] = field(factory=list)
-    _state_machine: MQTTBrokerStateMachine = field(
-        init=False, factory=MQTTBrokerStateMachine
-    )
-    _client_sessions: dict[str, AsyncMQTTClientSession] = field(
-        init=False, factory=dict
-    )
+    _state_machine: MQTTBrokerStateMachine = field(init=False, factory=MQTTBrokerStateMachine)
+    _client_sessions: dict[str, AsyncMQTTClientSession] = field(init=False, factory=dict)
 
     async def serve_client(self, stream: ByteStream) -> None:
         """
@@ -159,8 +160,8 @@ class AsyncMQTTBroker:
         """
         try:
             await self._serve_client(stream)
-        except Exception as exc:
-            logger.exception("Client on %r died",stream)
+        except Exception:
+            logger.exception("Client on %r died", stream)
 
     async def _serve_client(self, stream: ByteStream) -> None:
         async with stream:
@@ -172,10 +173,7 @@ class AsyncMQTTBroker:
 
                 if session.state_machine.state is MQTTClientState.DISCONNECTED:
                     return
-                elif (
-                    not added
-                    and session.state_machine.state is MQTTClientState.CONNECTED
-                ):
+                elif not added and session.state_machine.state is MQTTClientState.CONNECTED:
                     added = True
                     if not session.state_machine.client_id:
                         session.state_machine.client_id = uuid4().hex
@@ -184,9 +182,7 @@ class AsyncMQTTBroker:
                 await session.flush_outbound_data()
 
             if session.state_machine.state is MQTTClientState.DISCONNECTED:
-                self._state_machine.client_disconnected(
-                    session.state_machine.client_id, None
-                )
+                self._state_machine.client_disconnected(session.state_machine.client_id, None)
             self.remove_client_session(session)
 
     async def handle_packet(
@@ -207,9 +203,7 @@ class AsyncMQTTBroker:
         client_state_machine = session.state_machine
 
         if isinstance(packet, MQTTPublishPacket):
-            reason_code = await self._authorize_publish(
-                packet, client_state_machine, stream
-            )
+            reason_code = await self._authorize_publish(packet, client_state_machine, stream)
             if packet.packet_id is not None:
                 client_state_machine.acknowledge_publish(packet.packet_id, reason_code)
 
@@ -223,19 +217,13 @@ class AsyncMQTTBroker:
                             tg.start_soon(client_session.flush_outbound_data)
         elif isinstance(packet, MQTTConnectPacket):
             reason_code = await self._authorize_connect(packet, stream)
-            self._state_machine.acknowledge_connect(
-                client_state_machine, packet, reason_code
-            )
+            self._state_machine.acknowledge_connect(client_state_machine, packet, reason_code)
         elif isinstance(packet, MQTTDisconnectPacket):
             if client_state_machine.state is MQTTClientState.CONNECTED:
-                self._state_machine.client_disconnected(
-                    client_state_machine.client_id, packet
-                )
+                self._state_machine.client_disconnected(client_state_machine.client_id, packet)
         elif isinstance(packet, MQTTSubscribePacket):
             if client_state_machine.state is MQTTClientState.CONNECTED:
-                subscr_id = packet.properties.get(
-                        PropertyType.SUBSCRIPTION_IDENTIFIER, 0
-                )
+                subscr_id = packet.properties.get(PropertyType.SUBSCRIPTION_IDENTIFIER, 0)
 
                 reason_codes: list[ReasonCode] = []
                 for subscr in packet.subscriptions:
@@ -246,17 +234,13 @@ class AsyncMQTTBroker:
                     )
 
                 if packet.packet_id is not None:
-                    client_state_machine.acknowledge_subscribe(
-                        packet.packet_id, reason_codes
-                    )
+                    client_state_machine.acknowledge_subscribe(packet.packet_id, reason_codes)
 
                 # Ack queued: we can actually process the subscriptions
-                for subscr, res in zip(packet.subscriptions, reason_codes):
+                for subscr, res in zip(packet.subscriptions, reason_codes, strict=False):
                     subscr.subscription_id = subscr_id
                     if res <= ReasonCode.GRANTED_QOS_2:
-                        self._state_machine.subscribe_session_to(
-                            client_state_machine, subscr
-                        )
+                        self._state_machine.subscribe_session_to(client_state_machine, subscr)
                 await session.flush_outbound_data()
 
         elif isinstance(packet, MQTTUnsubscribePacket):
@@ -273,15 +257,13 @@ class AsyncMQTTBroker:
                     reason_codes.append(rc)
 
                 if packet.packet_id is not None:
-                    client_state_machine.acknowledge_unsubscribe(
-                        packet.packet_id, reason_codes
-                    )
+                    client_state_machine.acknowledge_unsubscribe(packet.packet_id, reason_codes)
 
-    def add_client_session(self, session: AsyncMQTTClientSession) -> None:
+    def add_client_session(self, session: AsyncMQTTClientSession) -> None:  # noqa: D102
         self._state_machine.add_client_session(session.state_machine)
         self._client_sessions[session.state_machine.client_id] = session
 
-    def remove_client_session(self, session: AsyncMQTTClientSession) -> None:
+    def remove_client_session(self, session: AsyncMQTTClientSession) -> None:  # noqa: D102
         self._state_machine.remove_client_session(session.state_machine)
         del self._client_sessions[session.state_machine.client_id]
 
@@ -333,7 +315,7 @@ class AsyncMQTTBroker:
 
         return ReasonCode.SUCCESS
 
-    async def serve(
+    async def serve(  # noqa: D102
         self, *, task_status: anyio.abc.TaskStatus[int] = anyio.TASK_STATUS_IGNORED
     ) -> None:
         listener: Listener[Any]
@@ -348,9 +330,7 @@ class AsyncMQTTBroker:
             listener = TLSListener(listener, self.ssl_context)
 
         async with listener:
-            logger.info(
-                "Broker listening on %s", listener.extra(SocketAttribute.local_address)
-            )
+            logger.info("Broker listening on %s", listener.extra(SocketAttribute.local_address))
             if port == 0:
                 port = listener.extra(SocketAttribute.local_port)
 

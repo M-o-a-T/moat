@@ -9,10 +9,9 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
-
 from moat.util import NotGiven, attrdict, get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
+from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
 from moat.link.meta import MsgMeta
 from moat.util.path import PS, P, Path
 

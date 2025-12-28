@@ -1,6 +1,7 @@
 # MQTT Library
 
 % start synopsis
+% start main
 
 A sans-io_ implementation of the MQTT_ v5 protocol.
 
@@ -15,6 +16,8 @@ While the provided client I/O implementations are intended for production use, t
 broker implementation should only be used in very lightweight scenarios where high
 performance or a broad feature set are not required.
 
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _MQTT: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
 .. _sans-io: https://sans-io.readthedocs.io/
 
 % end synopsis
@@ -26,11 +29,9 @@ possible, and this project has certain automatic safeguards to ensure correctnes
 * Passes Mypy_ in strict mode
 * Documentation built with "fail-on-warning" enabled
 
-You can find the documentation `here <https://mqttproto.readthedocs.io/>`_.
-
-.. _MQTT: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
-.. _Trio: https://github.com/python-trio/trio
-.. _asyncio: https://docs.python.org/3/library/asyncio.html
-.. _AnyIO: https://pypi.org/project/anyio/
 .. _Ruff: https://docs.astral.sh/ruff/
 .. _Mypy: https://mypy-lang.org/
+
+% end main
+
+You can find the documentation `here <https://m-o-a-t.org/moat.lib.mqtt/>`_.

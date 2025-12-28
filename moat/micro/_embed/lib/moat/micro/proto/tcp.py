@@ -11,7 +11,7 @@ import asyncio
 from moat.lib.micro import AC_use, log, sleep, wait_for
 from moat.lib.stream import AIOBuf
 
-p = select.poll()
+_poll = select.poll()
 
 
 class Link(AIOBuf):
@@ -34,9 +34,9 @@ class Link(AIOBuf):
                 raise RuntimeError(f"SingleSockOnly {rs!r} {ws!r}")
 
             # This dance is required because open_connection doesn't check
-            p.register(rs.s, select.POLLIN)
+            _poll.register(rs.s, select.POLLIN)
             try:
-                for x in p.poll(0):
+                for x in _poll.poll(0):
                     if x[1] & (select.POLLHUP | select.POLLERR):
                         try:
                             rs.s.read(1)  # raises the applicable error
@@ -44,7 +44,7 @@ class Link(AIOBuf):
                         finally:
                             rs.close()
             finally:
-                p.unregister(rs.s)
+                _poll.unregister(rs.s)
 
             await AC_use(self, rs.close)
             return rs

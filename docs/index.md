@@ -88,6 +88,13 @@ documentation style, and all that.
 ### More Parts
 
 
+#### [Broadcasting](moat-lib-broadcast/index.md)
+
+```{include} ../packaging/moat-lib-broadcast/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Codec support buffer](moat-lib-codec/index.md)
 
 ```{include} ../packaging/moat-lib-codec/README.md

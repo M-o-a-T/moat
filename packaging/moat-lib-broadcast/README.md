@@ -1,19 +1,11 @@
-# moat-lib-broadcast
+# Broadcasting
 
-Broadcasting support for MoaT applications.
+% start synopsis
 
-## Overview
+This module provides async broadcasting, with a finite, non-blocking
+message queue and data loss detection.
 
-This module provides broadcasting support with weak references, allowing multiple readers to receive messages from a single source with backpressure handling and data loss detection.
-
-## Features
-
-- **Broadcaster**: A message broadcaster that sends messages to multiple readers
-- **BroadcastReader**: A reader that receives messages from a broadcaster
-- **LostData**: Exception indicating data loss with dropped message count
-- Weak reference support to prevent memory leaks
-- Backpressure handling for slow readers
-- Queue-based buffering
+% end synopsis
 
 ## Installation
 
@@ -24,22 +16,24 @@ pip install moat-lib-broadcast
 ## Usage
 
 ```python
-from moat.lib.broadcast import Broadcaster, BroadcastReader
+from moat.lib.broadcast import Broadcaster
+import anyio
+from contextlib import aclosing
 
-# Create a broadcaster
-broadcaster = Broadcaster()
+async def reader(bc):
+    async with aclosing(bc) as mq:
+        async for msg in mq:
+            print(f"Received: {msg}")
 
-# Create readers
-reader1 = broadcaster.new_reader()
-reader2 = broadcaster.new_reader()
+async with anyio.create_task_group() as tg, Broadcaster() as bc:
+    # Start readers
+    tg.start_soon(reader, aiter(bc))
+    tg.start_soon(reader, bc.reader(10))  # explicit queue length
 
-# Send messages
-await broadcaster.send("Hello")
-await broadcaster.send("World")
-
-# Receive messages
-msg1 = await reader1.get()
-msg2 = await reader2.get()
+    # Send messages
+    bc("Hello")
+    await anyio.sleep(0.01)
+    bc("World")
 ```
 
 ## License

@@ -54,6 +54,11 @@
 - All other documentation is written using Markdown (Myst).
   Only use RestructuredText syntax or blocks when Myst doesn't support a
   feature.
+- Don't duplicate basic information: each package's `README.md` contains
+  markers for a synopsis (included in `docs/index.md`) and a main part
+  (included in `docs/moat-XXX-YYY/index.md`). The synopsis does not contain
+  headers. The main part is assumed to be under a level 1 header. It must
+  not itself contain a Level 1 header itself.
 
 ## Testing Guidelines
 - Tests should focus on exercising a module's API.

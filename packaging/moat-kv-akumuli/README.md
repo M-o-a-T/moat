@@ -1,9 +1,9 @@
-# DistAkumuli
+# Akumuli time series storage
 
 % start synopsis
 
-DistAkumuli is a simple link between Akumuli and DistKV.
+This is a simple link between Akumuli and MoaT-KV.
 
-It will update an Akumuli series whenever a DistKV value changes.
+It will update an Akumuli series whenever a MoaT-KV value changes.
 
 % end synopsis

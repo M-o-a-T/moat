@@ -19,7 +19,7 @@ class CBORMsgBuf(_CBORMsgBuf):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec("std-cbor")
+        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
 
 
 class CBORMsgBlk(_CBORMsgBlk):
@@ -32,4 +32,4 @@ class CBORMsgBlk(_CBORMsgBlk):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec("std-cbor")
+        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))

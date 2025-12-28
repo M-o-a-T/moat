@@ -57,13 +57,14 @@ simplifies the code structure and allows for clean restarting.
 
 As a consequence, non-abstract types need to overide at least the ``_ctx`` method.
 
-#### BaseMsg / BaseBuf
+#### BaseMsg / BaseBlk / BaseBuf
 
-Subclasses of these implement translation of object or byte streams to whatever
-lower layer that's not part of the MoaT stream system.
+Subclasses of these implement translation of object, byte block, or byte
+streams to whatever lower layer that may or may not be part of the MoaT
+stream system.
 
-You need to override rd/wr (BaseBuf) or send/recv (BaseMsg), and the
-context handler "\_ctx".
+You need to override rd/wr (BaseBuf), snd/rcv (BaseBlk) or send/recv
+(BaseMsg), and the context handler "\_ctx".
 
 Defined in ``moat.lib.stream``.
 

@@ -21,7 +21,6 @@ if _TC:
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
-    from .log import repr_b as repr_b
 
 
 # Lazy loading for logging classes
@@ -29,7 +28,6 @@ _imports = {
     "LogMsg": "log",
     "LogBlk": "log",
     "LogBuf": "log",
-    "repr_b": "log",
 }
 
 
@@ -58,5 +56,4 @@ __all__ = [  # noqa:RUF022
     "LogBlk",
     "LogBuf",
     "LogMsg",
-    "repr_b",
 ]

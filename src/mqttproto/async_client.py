@@ -417,10 +417,6 @@ class AsyncMQTTClient:
             except* Exception as exc:
                 logger.warning("Connection died: %r", exc, exc_info=exc)
 
-            except* BaseException as exc:
-                logger.warning("Connection died: %r", exc, exc_info=exc)
-                raise
-
             finally:
                 self._conn_scope = None
 

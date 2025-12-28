@@ -1,6 +1,7 @@
 # MoaT Modbus device registry
 
 % start synopsis
+% start main
 
 This archive collects modbus register descriptions for a many devices as
 possible.
@@ -18,6 +19,8 @@ include. Later values supersede earlier ones.
 The "regs" key contains a hierarchy of register descriptions.
 
 The "dev" key describes the device.
+
+% end main
 
 ## Register Hierarchy
 

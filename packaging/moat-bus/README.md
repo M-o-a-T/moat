@@ -1,6 +1,7 @@
 # The MoaT bus
 
 % start synopsis
+% start main
 
 The MoaT Bus is a multi-master, multi-wire, self-clocked bus protocol
 for environments where high baud rates won't work and dedicated hardware
@@ -108,6 +109,8 @@ A small header carries addressing and a few bits of message type
 information. All messages are terminated with an 11-bit CRC.
 
 The details are documented in `doc/spec_wire.rst`.
+
+% end main
 
 ## Addressing
 

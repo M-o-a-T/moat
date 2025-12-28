@@ -1,6 +1,7 @@
 # MoaT-Label
 
 % start synopsis
+% start main
 
 This module handles label printing.
 
@@ -12,3 +13,4 @@ Labels are printed on sheets, then attached to boxes and/or things. A label
 can be on one box and/or one thing.
 
 % end synopsis
+% end main

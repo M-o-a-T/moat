@@ -1,6 +1,7 @@
 # MoaT-Box
 
 % start synopsis
+% start main
 
 This module manages boxes, i.e. things you can put other things into.
 
@@ -16,3 +17,4 @@ box number, and one with a text that describes the content – or at least
 reminds the owner of it.
 
 % end synopsis
+% end main

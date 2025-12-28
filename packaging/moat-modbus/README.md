@@ -1,6 +1,7 @@
 # moat-modbus
 
 % start synopsis
+% start main
 
 This is an anyio-enabled async frontend for pymodbus (though the goal is to
 eventually replace pymodbus, as it is not at all MicroPython-friendly).
@@ -41,6 +42,8 @@ How to get there:
 
 The values can be modified (factor+offset); the gateway works in both
 directions (command/state).
+
+% end main
 
 ## MQTT / MoaT-KV interface
 

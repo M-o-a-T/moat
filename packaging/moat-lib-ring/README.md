@@ -1,6 +1,7 @@
 # moat-lib-ring
 
 % start synopsis
+% start main
 
 A simple opinionated character-based ring buffer.
 
@@ -8,6 +9,17 @@ This buffer, well, buffers. It's async compatible and can handle writes
 overruns either by delaying the writer or by only keeping the newest data.
 
 % end synopsis
+
+## Async operation
+
+`moat.lib.ring.aio` provides an async version.
+
+Async writes always wait until all bytes have been
+delivered to the buffer.
+
+% end main
+
+## Usage
 
 Usage is very simple:
 
@@ -44,14 +56,6 @@ waiting until there is free space.
 
 This code doesn't know if it's called from a thread or not.
 If required, please add your own.
-
-
-## Async operation
-
-`moat.lib.ring.aio` provides an async version.
-
-Async writes always wait until all bytes have been
-delivered to the buffer.
 
 
 # Threaded operation

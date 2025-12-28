@@ -6,10 +6,11 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mqttproto"
+name = "moat-lib-mqtt"
 description = "Sans-io MQTT v5 client/broker with an AnyIO based I/O implementation"
 readme = "README.rst"
-authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"}]
+authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"},
+           {name = "Matthias Urlichs", email = "matthias@urlichs.de"},]
 license = {text = "MIT"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,13 +20,12 @@ classifiers = [
     "Framework :: AnyIO",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 dependencies = [
     "anyio ~= 4.4",
     "attrs >= 23.2.0",
@@ -35,9 +35,9 @@ dependencies = [
 dynamic = [ "version" ]
 
 [project.urls]
-Documentation = "https://mqttproto.readthedocs.io/en/latest/"
-"Source code" = "https://github.com/agronholm/mqttproto"
-"Issue tracker" = "https://github.com/agronholm/mqttproto/issues"
+Documentation = "https://M-o-a-T.org/moat.lib.mqtt"
+"Source code" = "https://github.com/m-o-a-t/moat"
+"Issue tracker" = "https://github.com/m-o-a-t/moat/issues"
 
 [project.optional-dependencies]
 websockets = [
@@ -51,9 +51,8 @@ test = [
 ]
 doc = [
     "enum_tools[sphinx] >= 0.12.0",
-    "mqttproto[websockets]",
+    "moat-lib-mqtt[websockets]",
     "packaging",
-    "sphinx_rtd_theme >= 2.0.0",
     "sphinx-autodoc-typehints >= 2.1.1",
     "sphinx-tabs >= 3.3.1",
 ]

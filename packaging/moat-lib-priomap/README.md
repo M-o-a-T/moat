@@ -1,6 +1,7 @@
 # MoaT-Lib-PrioMap
 
 % start synopsis
+% start main
 
 A heap that behaves like a dict (or vice versa).
 
@@ -32,6 +33,8 @@ The keys are ordered by their associated value.
   * `.keys()`, `.values()`, `.items()`, and plain `for k, v in h:`
 
   * Detects concurrent modifications and raises `RuntimeError`.
+
+% end main
 
 ### Non-Features
 

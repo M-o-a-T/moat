@@ -1,6 +1,7 @@
 # MoaT EMS Battery
 
 % start synopsis
+% start main
 
 This module implements a generic battery controller.
 
@@ -40,6 +41,7 @@ battery's relay if any parameter exceeds the cell and battery
 specifications. This function should run continuously even if communication
 with the server fails.
 
+% end main
 
 ## Setup
 

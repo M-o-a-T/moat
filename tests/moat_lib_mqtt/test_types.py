@@ -1,14 +1,14 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import pytest
 
-from mqttproto._exceptions import (
+from moat.lib.mqtt._exceptions import (
     InsufficientData,
     InvalidPattern,
     MQTTDecodeError,
     MQTTPacketTooLarge,
 )
-from mqttproto._types import (
+from moat.lib.mqtt._types import (
     MQTTAuthPacket,
     MQTTConnAckPacket,
     MQTTConnectPacket,
@@ -44,9 +44,9 @@ from mqttproto._types import (
 )
 
 
-class TestFixedInteger:
+class TestFixedInteger:  # noqa: D101
     @pytest.mark.parametrize(
-        "value, size",
+        "value, size",  # noqa: PT006
         [
             pytest.param(0, 1, id="0"),
             pytest.param(255, 1, id="255"),
@@ -55,7 +55,7 @@ class TestFixedInteger:
             pytest.param(4294967295, 4, id="4294967295"),
         ],
     )
-    def test_roundtrip(self, value: int, size: int) -> None:
+    def test_roundtrip(self, value: int, size: int) -> None:  # noqa: D102
         buffer = bytearray()
         encode_fixed_integer(value, buffer, size)
         for length in range(1, len(buffer)):
@@ -67,7 +67,7 @@ class TestFixedInteger:
         assert decoded == value
 
 
-class TestDecodeVariableInteger:
+class TestDecodeVariableInteger:  # noqa: D101
     @pytest.mark.parametrize(
         "value",
         [
@@ -78,7 +78,7 @@ class TestDecodeVariableInteger:
             pytest.param(4294967295, id="4294967295"),
         ],
     )
-    def test_roundtrip(self, value: int) -> None:
+    def test_roundtrip(self, value: int) -> None:  # noqa: D102
         buffer = bytearray()
         encode_variable_integer(value, buffer)
         for length in range(1, len(buffer)):
@@ -90,7 +90,7 @@ class TestDecodeVariableInteger:
         assert decoded == value
 
 
-class TestBinary:
+class TestBinary:  # noqa: D101
     @pytest.mark.parametrize(
         "value",
         [
@@ -98,7 +98,7 @@ class TestBinary:
             pytest.param(b"\x00\xff\x00\xff", id="full"),
         ],
     )
-    def test_roundtrip(self, value: bytes) -> None:
+    def test_roundtrip(self, value: bytes) -> None:  # noqa: D102
         buffer = bytearray()
         encode_binary(value, buffer)
         for length in range(1, len(buffer)):
@@ -110,7 +110,7 @@ class TestBinary:
         assert decoded == value
 
 
-class TestUTF8:
+class TestUTF8:  # noqa: D101
     @pytest.mark.parametrize(
         "value",
         [
@@ -118,7 +118,7 @@ class TestUTF8:
             pytest.param("åäöabcåäö", id="unicode"),
         ],
     )
-    def test_roundtrip(self, value: str) -> None:
+    def test_roundtrip(self, value: str) -> None:  # noqa: D102
         buffer = bytearray()
         encode_utf8(value, buffer)
         for length in range(1, len(buffer)):
@@ -129,48 +129,47 @@ class TestUTF8:
         assert not data
         assert decoded == value
 
-    def test_invalid_utf8(self) -> None:
+    def test_invalid_utf8(self) -> None:  # noqa: D102
         buffer = bytearray()
         encode_fixed_integer(1, buffer, 2)
         buffer.append(0xFF)
         with pytest.raises(
             MQTTDecodeError,
             match=(
-                "error decoding utf-8 string: 'utf-8' codec can't decode byte 0xff in "
-                "position 0"
+                "error decoding utf-8 string: 'utf-8' codec can't decode byte 0xff in position 0"
             ),
         ):
             decode_utf8(memoryview(buffer))
 
 
-def test_unknown_reason_code() -> None:
+def test_unknown_reason_code() -> None:  # noqa: D103
     with pytest.raises(MQTTDecodeError, match="unknown reason code: 0xFF"):
         ReasonCode.get(0xFF)
 
 
-def test_unknown_retain_handling() -> None:
+def test_unknown_retain_handling() -> None:  # noqa: D103
     with pytest.raises(MQTTDecodeError, match="unknown retain handling: 0xFF"):
         RetainHandling.get(0xFF)
 
 
-def test_unknown_qos() -> None:
+def test_unknown_qos() -> None:  # noqa: D103
     with pytest.raises(MQTTDecodeError, match="unknown QoS value: 0xFF"):
         QoS.get(0xFF)
 
 
-def test_unknown_property_type() -> None:
+def test_unknown_property_type() -> None:  # noqa: D103
     with pytest.raises(MQTTDecodeError, match="unknown property type: 0xFF"):
         PropertyType.get(0xFF)
 
 
-def test_packet_too_large() -> None:
+def test_packet_too_large() -> None:  # noqa: D103
     buffer = bytearray()
     MQTTPublishPacket(topic="foo", payload="bar").encode(buffer)
     with pytest.raises(MQTTPacketTooLarge):
         decode_packet(memoryview(buffer), 8)
 
 
-def test_decode_two_packets_from_buffer() -> None:
+def test_decode_two_packets_from_buffer() -> None:  # noqa: D103
     buffer = bytearray()
     MQTTSubscribeAckPacket(
         reason_codes=[ReasonCode.GRANTED_QOS_0, ReasonCode.GRANTED_QOS_1], packet_id=1
@@ -185,32 +184,32 @@ def test_decode_two_packets_from_buffer() -> None:
     assert isinstance(packet2, MQTTPublishPacket)
 
 
-class TestSubscription:
+class TestSubscription:  # noqa: D101
     @pytest.mark.parametrize("pattern", ["#", "foo/+", "+/bar", "+/+", "foo/bar/#"])
-    def test_topic_matches(self, pattern: str) -> None:
+    def test_topic_matches(self, pattern: str) -> None:  # noqa: D102
         publish = MQTTPublishPacket(topic="foo/bar", payload="")
         assert Pattern(pattern).matches(publish)
 
     @pytest.mark.parametrize("pattern", ["foo/bar/baz", "foo", "foo/bar/+"])
-    def test_topic_no_match(self, pattern: str) -> None:
+    def test_topic_no_match(self, pattern: str) -> None:  # noqa: D102
         publish = MQTTPublishPacket(topic="foo/bar", payload="")
         assert not Pattern(pattern).matches(publish)
 
-    def test_single_level_wildcard_not_alone(self) -> None:
+    def test_single_level_wildcard_not_alone(self) -> None:  # noqa: D102
         with pytest.raises(
             InvalidPattern,
             match=r"single-level wildcard \('\+'\) must occupy an entire level of the topic filter",
         ):
             Pattern("foo/+bar/baz")
 
-    def test_multi_level_wildcard_not_alone(self) -> None:
+    def test_multi_level_wildcard_not_alone(self) -> None:  # noqa: D102
         with pytest.raises(
             InvalidPattern,
             match=r"multi-level wildcard \('\#'\) must occupy an entire level of the topic filter",
         ):
             Pattern("foo/#bar/baz")
 
-    def test_multi_level_wildcard_not_at_end(self) -> None:
+    def test_multi_level_wildcard_not_at_end(self) -> None:  # noqa: D102
         with pytest.raises(
             InvalidPattern,
             match=r"multi-level wildcard \('#'\) must be the last character in the topic filter",
@@ -218,16 +217,16 @@ class TestSubscription:
             Pattern(pattern="foo/#/baz")
 
     @pytest.mark.parametrize("pattern", ["#", "+/foo/bar"])
-    def test_sys_topic_wildcard(self, pattern: str) -> None:
+    def test_sys_topic_wildcard(self, pattern: str) -> None:  # noqa: D102
         publish = MQTTPublishPacket(topic="$SYS/foo/bar", payload="")
         assert not Pattern(pattern).matches(publish)
 
-    def test_group_id(self) -> None:
+    def test_group_id(self) -> None:  # noqa: D102
         assert Pattern(pattern="$share/foo/bar").group_id == "foo"
 
 
-class TestMQTTConnectPacket:
-    def test_minimal(self) -> None:
+class TestMQTTConnectPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTConnectPacket(client_id="teståäö")
         buffer = bytearray()
         packet.encode(buffer)
@@ -243,7 +242,7 @@ class TestMQTTConnectPacket:
             pytest.param(b"payload", id="binary"),
         ],
     )
-    def test_full(self, will_payload: str | bytes) -> None:
+    def test_full(self, will_payload: str | bytes) -> None:  # noqa: D102
         will_properties: dict[PropertyType, PropertyValue] = {
             PropertyType.MESSAGE_EXPIRY_INTERVAL: 15,
             PropertyType.CONTENT_TYPE: "application/json",
@@ -259,15 +258,13 @@ class TestMQTTConnectPacket:
             properties=will_properties,
             user_properties=will_user_properties,
         )
-        properties: dict[PropertyType, PropertyValue] = {
-            PropertyType.SESSION_EXPIRY_INTERVAL: 255
-        }
+        properties: dict[PropertyType, PropertyValue] = {PropertyType.SESSION_EXPIRY_INTERVAL: 255}
         user_properties = {"foo": "bar", "key2": "value2"}
         packet = MQTTConnectPacket(
             client_id="teståäö",
             will=will,
             username="usernämë",
-            password="pässörd",
+            password="pässörd",  # noqa: S106
             clean_start=False,
             keep_alive=65535,
             properties=properties,
@@ -281,11 +278,9 @@ class TestMQTTConnectPacket:
         assert not leftover_data
 
 
-class TestMQTTConnAckPacket:
-    def test_minimal(self) -> None:
-        packet = MQTTConnAckPacket(
-            session_present=False, reason_code=ReasonCode.SUCCESS
-        )
+class TestMQTTConnAckPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
+        packet = MQTTConnAckPacket(session_present=False, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
 
@@ -293,7 +288,7 @@ class TestMQTTConnAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.SESSION_EXPIRY_INTERVAL: 255,
             PropertyType.ASSIGNED_CLIENT_IDENTIFIER: "foä",
@@ -326,15 +321,15 @@ class TestMQTTConnAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTConnAckPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTConnAckPacket(reason_code=reason_code, session_present=False)
 
 
-class TestMQTTPublishPacket:
-    def test_minimal(self) -> None:
+class TestMQTTPublishPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPublishPacket(topic="test/töpic", payload=b"")
         buffer = bytearray()
         packet.encode(buffer)
@@ -347,7 +342,7 @@ class TestMQTTPublishPacket:
         "payload",
         [pytest.param(b"random", id="binary"), pytest.param("teståäö", id="utf8")],
     )
-    def test_full(self, payload: bytes | str) -> None:
+    def test_full(self, payload: bytes | str) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.MESSAGE_EXPIRY_INTERVAL: 15,
             PropertyType.CONTENT_TYPE: "application/json",
@@ -375,8 +370,8 @@ class TestMQTTPublishPacket:
         assert not leftover_data
 
 
-class TestMQTTPublishAckPacket:
-    def test_minimal(self) -> None:
+class TestMQTTPublishAckPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPublishAckPacket(packet_id=1, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -385,7 +380,7 @@ class TestMQTTPublishAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.REASON_STRING: "Bad data",
         }
@@ -403,7 +398,7 @@ class TestMQTTPublishAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_partial(self) -> None:
+    def test_partial(self) -> None:  # noqa: D102
         packet = MQTTPublishAckPacket(packet_id=65534, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         buffer2 = bytearray()
@@ -414,15 +409,15 @@ class TestMQTTPublishAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTPublishAckPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTPublishAckPacket(reason_code=reason_code, packet_id=1)
 
 
-class TestMQTTPublishReceivePacket:
-    def test_minimal(self) -> None:
+class TestMQTTPublishReceivePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPublishReceivePacket(packet_id=1, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -431,7 +426,7 @@ class TestMQTTPublishReceivePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.REASON_STRING: "Bad data",
         }
@@ -449,10 +444,8 @@ class TestMQTTPublishReceivePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_partial(self) -> None:
-        packet = MQTTPublishReceivePacket(
-            packet_id=65534, reason_code=ReasonCode.SUCCESS
-        )
+    def test_partial(self) -> None:  # noqa: D102
+        packet = MQTTPublishReceivePacket(packet_id=65534, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         buffer2 = bytearray()
         encode_fixed_integer(packet.packet_id, buffer2, 2)
@@ -462,15 +455,15 @@ class TestMQTTPublishReceivePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTPublishReceivePacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTPublishReceivePacket(reason_code=reason_code, packet_id=1)
 
 
-class TestMQTTPublishReleasePacket:
-    def test_minimal(self) -> None:
+class TestMQTTPublishReleasePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPublishReleasePacket(packet_id=1, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -479,7 +472,7 @@ class TestMQTTPublishReleasePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.REASON_STRING: "Bad data",
         }
@@ -497,10 +490,8 @@ class TestMQTTPublishReleasePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_partial(self) -> None:
-        packet = MQTTPublishReleasePacket(
-            packet_id=65534, reason_code=ReasonCode.SUCCESS
-        )
+    def test_partial(self) -> None:  # noqa: D102
+        packet = MQTTPublishReleasePacket(packet_id=65534, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         buffer2 = bytearray()
         encode_fixed_integer(packet.packet_id, buffer2, 2)
@@ -510,15 +501,15 @@ class TestMQTTPublishReleasePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTPublishReleasePacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTPublishReleasePacket(reason_code=reason_code, packet_id=1)
 
 
-class TestMQTTPublishCompletePacket:
-    def test_minimal(self) -> None:
+class TestMQTTPublishCompletePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPublishCompletePacket(packet_id=1, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -527,7 +518,7 @@ class TestMQTTPublishCompletePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.REASON_STRING: "Bad data",
         }
@@ -545,10 +536,8 @@ class TestMQTTPublishCompletePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_partial(self) -> None:
-        packet = MQTTPublishCompletePacket(
-            packet_id=65534, reason_code=ReasonCode.SUCCESS
-        )
+    def test_partial(self) -> None:  # noqa: D102
+        packet = MQTTPublishCompletePacket(packet_id=65534, reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         buffer2 = bytearray()
         encode_fixed_integer(packet.packet_id, buffer2, 2)
@@ -558,15 +547,15 @@ class TestMQTTPublishCompletePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTPublishCompletePacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTPublishCompletePacket(reason_code=reason_code, packet_id=1)
 
 
-class TestMQTTSubscribePacket:
-    def test_minimal(self) -> None:
+class TestMQTTSubscribePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         subscriptions = [
             Subscription(
                 pattern=Pattern("foo"),
@@ -584,7 +573,7 @@ class TestMQTTSubscribePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         subscriptions = [
             Subscription(
                 pattern=Pattern("foo"),
@@ -619,8 +608,8 @@ class TestMQTTSubscribePacket:
         assert not leftover_data
 
 
-class TestMQTTSubscribeAckPacket:
-    def test_minimal(self) -> None:
+class TestMQTTSubscribeAckPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTSubscribeAckPacket(packet_id=1, reason_codes=[ReasonCode.SUCCESS])
         buffer = bytearray()
         packet.encode(buffer)
@@ -629,7 +618,7 @@ class TestMQTTSubscribeAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.REASON_STRING: "Bad data",
         }
@@ -647,15 +636,15 @@ class TestMQTTSubscribeAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTSubscribeAckPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTSubscribeAckPacket(reason_codes=[reason_code], packet_id=1)
 
 
-class TestMQTTUnsubscribePacket:
-    def test_minimal(self) -> None:
+class TestMQTTUnsubscribePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTUnsubscribePacket(packet_id=1, patterns=[Pattern("foo")])
         buffer = bytearray()
         packet.encode(buffer)
@@ -664,7 +653,7 @@ class TestMQTTUnsubscribePacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         user_properties = {"foo": "bar", "key2": "value2"}
         packet = MQTTUnsubscribePacket(
             packet_id=65535,
@@ -679,11 +668,9 @@ class TestMQTTUnsubscribePacket:
         assert not leftover_data
 
 
-class TestMQTTUnsubscribeAckPacket:
-    def test_minimal(self) -> None:
-        packet = MQTTUnsubscribeAckPacket(
-            packet_id=1, reason_codes=[ReasonCode.SUCCESS]
-        )
+class TestMQTTUnsubscribeAckPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
+        packet = MQTTUnsubscribeAckPacket(packet_id=1, reason_codes=[ReasonCode.SUCCESS])
         buffer = bytearray()
         packet.encode(buffer)
 
@@ -691,10 +678,8 @@ class TestMQTTUnsubscribeAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
-        properties: dict[PropertyType, PropertyValue] = {
-            PropertyType.REASON_STRING: "reason cöde"
-        }
+    def test_full(self) -> None:  # noqa: D102
+        properties: dict[PropertyType, PropertyValue] = {PropertyType.REASON_STRING: "reason cöde"}
         user_properties = {"foo": "bar", "key2": "value2"}
         packet = MQTTUnsubscribeAckPacket(
             packet_id=65535,
@@ -709,15 +694,15 @@ class TestMQTTUnsubscribeAckPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTUnsubscribeAckPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTUnsubscribeAckPacket(reason_codes=[reason_code], packet_id=1)
 
 
-class TestMQTTPingRequestPacket:
-    def test_minimal(self) -> None:
+class TestMQTTPingRequestPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPingRequestPacket()
         buffer = bytearray()
         packet.encode(buffer)
@@ -727,8 +712,8 @@ class TestMQTTPingRequestPacket:
         assert not leftover_data
 
 
-class TestMQTTPingResponsePacket:
-    def test_minimal(self) -> None:
+class TestMQTTPingResponsePacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTPingResponsePacket()
         buffer = bytearray()
         packet.encode(buffer)
@@ -738,8 +723,8 @@ class TestMQTTPingResponsePacket:
         assert not leftover_data
 
 
-class TestMQTTDisconnectPacket:
-    def test_minimal(self) -> None:
+class TestMQTTDisconnectPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTDisconnectPacket(reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -748,7 +733,7 @@ class TestMQTTDisconnectPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.SESSION_EXPIRY_INTERVAL: 15,
             PropertyType.REASON_STRING: "reason cöde",
@@ -767,7 +752,7 @@ class TestMQTTDisconnectPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_partial(self) -> None:
+    def test_partial(self) -> None:  # noqa: D102
         packet = MQTTDisconnectPacket(reason_code=ReasonCode.NORMAL_DISCONNECTION)
         buffer = bytearray()
 
@@ -776,15 +761,15 @@ class TestMQTTDisconnectPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTDisconnectPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTDisconnectPacket(reason_code=reason_code)
 
 
-class TestMQTTAuthPacket:
-    def test_minimal(self) -> None:
+class TestMQTTAuthPacket:  # noqa: D101
+    def test_minimal(self) -> None:  # noqa: D102
         packet = MQTTAuthPacket(reason_code=ReasonCode.SUCCESS)
         buffer = bytearray()
         packet.encode(buffer)
@@ -793,7 +778,7 @@ class TestMQTTAuthPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_full(self) -> None:
+    def test_full(self) -> None:  # noqa: D102
         properties: dict[PropertyType, PropertyValue] = {
             PropertyType.AUTHENTICATION_METHOD: "SCRAM-SHA-1",
             PropertyType.AUTHENTICATION_DATA: b"random",
@@ -812,8 +797,8 @@ class TestMQTTAuthPacket:
         assert packet2 == packet
         assert not leftover_data
 
-    def test_bad_reason_codes(self) -> None:
+    def test_bad_reason_codes(self) -> None:  # noqa: D102
         for reason_code in ReasonCode.__members__.values():
             if reason_code not in MQTTAuthPacket.allowed_reason_codes:
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError):  # noqa: PT011
                     MQTTAuthPacket(reason_code=reason_code)

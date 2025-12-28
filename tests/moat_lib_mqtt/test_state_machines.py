@@ -1,8 +1,8 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: D100
 
 import pytest
 
-from mqttproto import (
+from moat.lib.mqtt import (
     MQTTClientState,
     MQTTConnAckPacket,
     MQTTConnectPacket,
@@ -17,17 +17,15 @@ from mqttproto import (
     ReasonCode,
     Subscription,
 )
-from mqttproto.broker_state_machine import (
+from moat.lib.mqtt.broker_state_machine import (
     MQTTBrokerClientStateMachine,
     MQTTBrokerStateMachine,
 )
-from mqttproto.client_state_machine import MQTTClientStateMachine
+from moat.lib.mqtt.client_state_machine import MQTTClientStateMachine
 
 
 @pytest.fixture
-def client_session_pairs() -> (
-    list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]]
-):
+def client_session_pairs() -> list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]]:  # noqa: D103
     client1 = MQTTClientStateMachine(client_id="client-1")
     client2 = MQTTClientStateMachine(client_id="client-2")
 
@@ -63,15 +61,13 @@ def client_session_pairs() -> (
 
 
 @pytest.fixture
-def connected_client(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+def connected_client(  # noqa: D103
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> MQTTClientStateMachine:
     return client_session_pairs[0][0]
 
 
-def test_subscribe_unsubscribe(connected_client: MQTTClientStateMachine) -> None:
+def test_subscribe_unsubscribe(connected_client: MQTTClientStateMachine) -> None:  # noqa: D103
     subscriptions = [Subscription(Pattern("foo/bar")), Subscription(Pattern("foo/baz"))]
     assert connected_client.subscribe(subscriptions) == 1
 
@@ -80,9 +76,7 @@ def test_subscribe_unsubscribe(connected_client: MQTTClientStateMachine) -> None
 
 
 def test_client_publish_qos0(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client publishing a QoS 0 message."""
     client1, client_session1 = client_session_pairs[0]
@@ -114,9 +108,7 @@ def test_client_limit_qos(qos: QoS) -> None:
 
 
 def test_client_receive_qos0(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client reciving a QoS 0 message from the broker."""
     client1, client_session1 = client_session_pairs[0]
@@ -141,9 +133,7 @@ def test_client_receive_qos0(
 
 
 def test_publish_qos1(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client publishing a QoS 1 message."""
     # Send the PUBLISH from the client
@@ -168,9 +158,7 @@ def test_publish_qos1(
 
 
 def test_client_receive_qos1(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client reciving a QoS 0 message from the broker."""
     client1, client_session1 = client_session_pairs[0]
@@ -206,9 +194,7 @@ def test_client_receive_qos1(
 
 
 def test_publish_qos2(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client publishing a QoS 2 message."""
     # Send the PUBLISH from the client
@@ -251,9 +237,7 @@ def test_publish_qos2(
 
 
 def test_client_receive_qos2(
-    client_session_pairs: list[
-        tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]
-    ],
+    client_session_pairs: list[tuple[MQTTClientStateMachine, MQTTBrokerClientStateMachine]],
 ) -> None:
     """Test the client reciving a QoS 0 message from the broker."""
     client1, client_session1 = client_session_pairs[0]
@@ -313,9 +297,7 @@ def test_client_retain(retain: bool | None) -> None:
     packet = MQTTConnAckPacket(
         reason_code=ReasonCode.SUCCESS,
         session_present=False,
-        properties={PropertyType.RETAIN_AVAILABLE: retain}
-        if retain is not None
-        else {},
+        properties={PropertyType.RETAIN_AVAILABLE: retain} if retain is not None else {},
     )
     buffer = bytearray()
     packet.encode(buffer)

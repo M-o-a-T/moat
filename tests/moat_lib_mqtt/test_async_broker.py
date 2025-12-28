@@ -1,33 +1,33 @@
-from __future__ import annotations
-
-import sys
-from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, cast
+from __future__ import annotations  # noqa: D100
 
 import pytest
+import sys  # noqa: TC003
 from anyio import Event, create_task_group
+from contextlib import asynccontextmanager
 
-from mqttproto import MQTTPublishPacket, QoS
-from mqttproto.async_broker import AsyncMQTTBroker
-from mqttproto.async_client import AsyncMQTTClient
+from moat.lib.mqtt import MQTTPublishPacket, QoS
+from moat.lib.mqtt.async_broker import AsyncMQTTBroker
+from moat.lib.mqtt.async_client import AsyncMQTTClient
+
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    import anyio
     from contextlib import AbstractAsyncContextManager
     from types import TracebackType
+
+    from collections.abc import AsyncIterator
     from typing import Any
 
-    import anyio
-
-    if sys.version_info < (3, 11):
-        from typing_extensions import Never, Self
+    if sys.version_info < (3, 11):  # noqa: PYI066, UP036
+        from typing import Never, Self
     else:
         from typing import Never, Self
 
 pytestmark = [pytest.mark.anyio, pytest.mark.network]
 
 
-class BrokerTest:
+class BrokerTest:  # noqa: D101
     __ctx: AbstractAsyncContextManager[Self]
 
     async def __aenter__(self) -> Self:
@@ -51,11 +51,9 @@ class BrokerTest:
         """
         broker = AsyncMQTTBroker(("127.0.0.1", 0))
         await broker.serve(task_status=task_status)
-        assert False
+        assert False  # noqa: B011, PT015
 
-    async def run_client(
-        self, *, task_status: anyio.abc.TaskStatus[AsyncMQTTClient]
-    ) -> Never:
+    async def run_client(self, *, task_status: anyio.abc.TaskStatus[AsyncMQTTClient]) -> Never:
         # PORT = 40000 + (os.getpid() + 21) % 10000
         """
         Runs a basic MQTT broker.
@@ -65,7 +63,7 @@ class BrokerTest:
         async with AsyncMQTTClient(port=self.port) as client:
             task_status.started(client)
             await Event().wait()
-            assert False
+            assert False  # noqa: B011, PT015
 
     @asynccontextmanager
     async def _ctx(self) -> AsyncIterator[Self]:
@@ -76,17 +74,13 @@ class BrokerTest:
             yield self
             tg.cancel_scope.cancel()
 
-    async def client(self) -> AsyncMQTTClient:
+    async def client(self) -> AsyncMQTTClient:  # noqa: D102
         return cast(AsyncMQTTClient, await self.tg.start(self.run_client))
 
 
-@pytest.mark.parametrize(
-    "qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
-)
-@pytest.mark.parametrize(
-    "qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
-)
-async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
+@pytest.mark.parametrize("qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
+@pytest.mark.parametrize("qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
+async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:  # noqa: D103
     qos_info = f"{qos_sub}-{qos_pub}"
     async with BrokerTest() as broker:
         client = await broker.client()
@@ -114,19 +108,13 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
             assert packets[1].user_properties == {}
 
 
-@pytest.mark.parametrize(
-    "qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
-)
-@pytest.mark.parametrize(
-    "qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
-)
-async def test_retain(qos_sub: QoS, qos_pub: QoS) -> None:
+@pytest.mark.parametrize("qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
+@pytest.mark.parametrize("qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
+async def test_retain(qos_sub: QoS, qos_pub: QoS) -> None:  # noqa: D103
     async with BrokerTest() as broker:
         client1 = await broker.client()
         await client1.publish("test/text", "test åäö", qos=qos_pub, retain=True)
-        await client1.publish(
-            "test/binary", b"\x00\xff\x00\x1f", qos=qos_pub, retain=True
-        )
+        await client1.publish("test/binary", b"\x00\xff\x00\x1f", qos=qos_pub, retain=True)
 
         client = await broker.client()
         async with client.subscribe("test/+", qos=qos_sub) as messages:

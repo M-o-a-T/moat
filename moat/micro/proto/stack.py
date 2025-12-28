@@ -1,19 +1,30 @@
 """
-This class implements the basic infrastructure to run an RPC system via an
-unreliable, possibly-reordering, and/or stream-based transport
+This package implements some basic infrastructure for handling data
+streams in a structured manner. It contains three distinct classes:
 
-We have a stack of classes. The "link" chain leads from the command handler
-to the actual hardware, represented by some Stream subclass.
+- `BaseMsg` transports Python objects, using `send` and `recv`.
+- `BaseBlk` transports delimited bytestrings, using `snd` and `rcv`.
+- `BaseBuf` transports undelimited bytestrings, using `wr` and `rd`.
 
-Everything is fully asynchronous and controlled by the MoaT stack.
-There are no callbacks from a linked-to module back to its user.
-Opening a link is equivalent to entering its async context.
+Additionally, message- and block-based classes understand `cwr` and `crd`
+which transport out-of-band data. Typically these contain raw console bytes
+that are interleaved with structured data; they are used on channels which
+needs to multiplex both.
 
-The "wrap" method provides a secondary context that can be used for
-a persistent outer context, e.g. to hold a listening socket.
+The common theme for using these classes is
 
-Methods for sending data typically return when the data has been sent. The
-exception is the `Reliable` module, which limits this to commands.
+- You assemble a communication stack bottom-up: start with a serial link;
+  add packetizing, retransmission, and an object-codec.
+- Using the top level as an async context managers establishes the complete
+  stack; leaving the context tears it down.
+- Most likely, connect the result to a [Base]MsgHandler.
+
+Everything is fully asynchronous. There is no "new incoming data" callback:
+it's the upper layer's job to repeatedly call the appropriate method to
+read or receive new messages.
+
+A `wrap` method provides a secondary context that can be used for
+a persistent outer context, e.g. to keep a listening socket open.
 """
 
 from __future__ import annotations
@@ -103,7 +114,7 @@ class Base:
 
 class BaseConn(Base):
     """
-    The MoaT stream base class for "something connected that talks".
+    This is the MoaT stream base class for "something connected that talks".
 
     This class *must* be used as an async context manager.
 
@@ -115,7 +126,7 @@ class BaseConn(Base):
     Augment `setup` or `teardown` to add non-stream related features.
     """
 
-    s = None
+    s: Any = None
 
     async def setup(self):
         """
@@ -216,12 +227,15 @@ class StackedConn(BaseConn):
     """
     Base class for connection stacking.
 
-    Connection stacks have a lower layer. `stream` generates a new
-    connection from it, using its async context manager.
-    stores the result in the attribute ``par`.`
+    Connection stacks have a lower layer. Our `stream` methods uses it as an
+    async context manager to create connection from it, using its
+
+    Args:
+        link(BaseConn): The lower layer to run on top of.
+        cfg: Config data
     """
 
-    link = None
+    link: BaseConn = None
 
     def __init__(self, link, cfg):
         super().__init__(cfg=cfg)
@@ -244,6 +258,10 @@ class StackedMsg(StackedConn, BaseMsg):
     A no-op stack module for messages. Override to implement interesting features.
 
     Use the attribute "s" to store the linked stream's context.
+
+    Args:
+        link(BaseMsg): The lower layer to run on top of.
+        cfg: Config data
     """
 
     def send(self, m):  # async
@@ -268,6 +286,10 @@ class StackedBuf(StackedConn, BaseBuf):
     A no-op stack module for byte steams. Override to implement interesting features.
 
     Use the attribute "s" to store the linked stream's context.
+
+    Args:
+        link(BaseBuf): The lower layer to run on top of.
+        cfg: Config data
     """
 
     def wr(self, buf):  # async
@@ -284,6 +306,10 @@ class StackedBlk(StackedConn, BaseBlk):
     A no-op stack module for bytestrings. Override to implement interesting features.
 
     Use the attribute "s" to store the linked stream's context.
+
+    Args:
+        link(BaseBlk): The lower layer to run on top of.
+        cfg: Config data
     """
 
     cwr = StackedMsg.cwr
@@ -302,7 +328,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     """
     Log whatever messages cross this stack.
 
-    This implements all of StackedMsg/Buf/Blk.
+    This class implements all of StackedMsg/Buf/Blk.
     """
 
     # StackedMsg is first because MicroPython uses only the first class and

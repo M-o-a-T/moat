@@ -226,6 +226,15 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
+### Vendorized libraries
+
+#### [MQTT protocol](moat-lib-mqtt/index.md)
+
+```{include} ../packaging/moat-lib-mqtt/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 
 ### Legacy
 

@@ -62,6 +62,8 @@ extensions = [
     # "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx_last_updated_by_git",
+    "sphinx_autodoc_typehints",
+    "enum_tools.autoenum",
     "myst_parser",
     #"sphinx_immaterial",
     #"sphinx_immaterial.apidoc.python.apigen",

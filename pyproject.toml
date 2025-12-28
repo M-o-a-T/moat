@@ -101,10 +101,14 @@ dev = [
 ]
 doc = [
     "sphinx",
+    "sphinx-autodoc-typehints",
     "sphinx-immaterial",
+    "sphinx-toolbox",
     "myst-parser",
     "sphinx-design",
+    "sphinx-book-theme",
     "sphinx-last-updated-by-git",
+    "enum_tools[sphinx] >= 0.12.0",
 ]
 
 [tool.ruff.lint]

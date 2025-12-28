@@ -23,6 +23,7 @@ asyncakumuli
 asyncowfs
 gpiod
 numpy
+enum_tools
 transitions_aio
 pyfuse3
 pymodbus

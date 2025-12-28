@@ -306,12 +306,11 @@ async def DbusName(bus, name=None):
     An async context manager that holds a DBus name while it's active.
 
     Usage::
-            async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"):
-                    # name is registered here
-                    ...
-            # name is no longer registered
+        async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"):
+            # name is registered here
             ...
-
+        # name is no longer registered
+        ...
     """
     await bus.request_name(reg_name(NAME, name), NameFlag.DO_NOT_QUEUE)
     try:

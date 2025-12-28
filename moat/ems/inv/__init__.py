@@ -31,7 +31,12 @@ from moat.util.times import time_until
 
 from ._util import balance
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from asyncdbus import DbusType
+
+    from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +99,7 @@ class InvInterface(DbusInterface):
         super().__init__(ctrl.bus, "/Control", "inv")
 
     @method()
-    async def GetModes(self) -> "as":  # noqa:F722
+    async def GetModes(self) -> DbusType["as"]:  # noqa:F722
         """
         Return a list of available methods.
         name => (ident#, descr)
@@ -102,7 +107,7 @@ class InvInterface(DbusInterface):
         return [m._name for m in InvControl.MODES.values()]  # noqa:SLF001
 
     @method()
-    async def GetModeInfo(self, mode: "s") -> "a{ss}":  # noqa:F722,UP037,F821
+    async def GetModeInfo(self, mode: DbusType["s"]) -> DbusType["a{ss}"]:  # noqa:F722,UP037,F821
         """
         Return information on a specific method
         """
@@ -110,21 +115,21 @@ class InvInterface(DbusInterface):
         return m._doc  # noqa:SLF001
 
     @method()
-    async def SetMode(self, mode: "s", args: "a{sv}") -> "b":  # noqa:F722,UP037,F821
+    async def SetMode(self, mode: DbusType["s"], args: DbusType["a{sv}"]) -> DbusType["b"]:  # noqa:F722,UP037,F821
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: "s", value: "v") -> "b":  # noqa:UP037,F821
+    async def SetModeParam(self, param: DbusType["s"], value: DbusType["v"]) -> DbusType["b"]:  # noqa:UP037,F821
         """
         Set a specific parameter
         """
         return await self.ctrl.change_mode_param(param, unwrap_dbus_value(value))
 
     @method()
-    async def GetState(self) -> "a{sv}":  # noqa:F722
+    async def GetState(self) -> DbusType["a{sv}"]:  # noqa:F722
         """
         Return the state of the current inverter controller.
         """

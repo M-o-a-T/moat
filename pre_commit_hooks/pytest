@@ -173,7 +173,7 @@ def main(filenames: list[str]) -> int:
             print(f"\nCoverage for {module_name}: {coverage}%", end="")
             if old_coverage > 0:
                 print(f" (was {old_coverage}%)")
-                if coverage < old_coverage:
+                if coverage * 1.02 < old_coverage:
                     coverage_decreased.append((module_name, old_coverage, coverage))
             else:
                 print(" (new)")

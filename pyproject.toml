@@ -78,7 +78,7 @@ line-length = 99
 
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
-addopts = "-x"
+addopts = "-x --cov"
 log_cli_level = "DEBUG"
 pythonpath = [
     ".",
@@ -194,10 +194,6 @@ branch = true
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
-include = [
-    "moat/lib/codec/*",
-    "tests/*",
-]
 exclude_also = [
     # Don't complain about missing debug-only code:
     "def __repr__",

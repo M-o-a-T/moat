@@ -24,16 +24,26 @@ COVERAGE_FILE = Path(".coverage-baseline")
 
 def get_test_dir(filepath: str) -> Path | None:
     """
-    Given a file path like moat/foo/bar/baz.py, return the corresponding test directory.
+    Given a file path, return the corresponding test directory.
 
-    Tries in order:
-    - tests/moat_foo_bar/
-    - tests/moat_foo/
-    - tests/
+    For moat/foo/bar/baz.py:
+    - Tries tests/moat_foo_bar/, tests/moat_foo/, etc.
 
-    Returns None if file is not in moat/ or no test directory exists.
+    For tests/moat_foo_bar/test_something.py:
+    - Returns tests/moat_foo_bar/
+
+    Returns None if no test directory exists.
     """
     path = Path(filepath)
+
+    # If it's a test file, return its directory
+    if path.parts and path.parts[0] == "tests":
+        # Get the test directory (e.g., tests/moat_lib_broadcast)
+        if len(path.parts) >= 2:
+            test_dir = Path("tests") / path.parts[1]
+            if test_dir.is_dir():
+                return test_dir
+        return None
 
     # Only consider files in moat/ directory
     if not path.parts or path.parts[0] != "moat":
@@ -52,6 +62,20 @@ def get_test_dir(filepath: str) -> Path | None:
             break
 
     return None
+
+
+def get_module_from_test_dir(test_dir: Path) -> str:
+    """
+    Get the module name to test from the test directory.
+
+    Examples:
+    - tests/moat_lib_broadcast -> moat.lib.broadcast
+    - tests/moat_kv -> moat.kv
+    - tests/moat_link_server -> moat.link.server
+    """
+    # Remove 'tests/' prefix and convert underscores to dots
+    module_name = test_dir.name.replace("_", ".")
+    return module_name
 
 
 def load_coverage_baseline() -> dict[str, float]:
@@ -87,7 +111,7 @@ def main(filenames: list[str]) -> int:
         0 if tests pass and coverage doesn't decrease, non-zero otherwise
     """
     # Check whether to skip
-    if os.environ.get("NO_TEST", "") in {"0", "N", ""}:
+    if os.environ.get("NO_TEST", "") in {"1", "Y", "y"}:
         return 0
 
     # Collect unique test directories
@@ -109,22 +133,26 @@ def main(filenames: list[str]) -> int:
 
     # Run pytest with coverage on each test directory
     for test_dir in sorted(test_dirs):
+        module_name = get_module_from_test_dir(test_dir)
         print(f"\n{'=' * 60}")
-        print(f"Running tests with coverage in {test_dir}")
+        print(f"Running tests in {test_dir}")
+        print(f"Coverage for module: {module_name}")
         print("=" * 60)
 
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "."
         result = subprocess.run(  # noqa:S603
             [  # noqa:S607
                 "pytest",
-                "-x",
-                "--cov=",
+                "--override-ini=addopts=-x",  # Override default addopts to disable --cov
+                f"--cov={module_name}",
                 "--cov-report=term",
                 str(test_dir),
             ],
             check=False,
             capture_output=True,
             text=True,
-            env={"PYTHONPATH": "."},
+            env=env,
         )
 
         # Show output
@@ -139,15 +167,14 @@ def main(filenames: list[str]) -> int:
         # Parse coverage
         coverage = parse_coverage(result.stdout)
         if coverage is not None:
-            module_key = str(test_dir)
-            new_coverage[module_key] = coverage
-            old_coverage = baseline.get(module_key, 0.0)
+            new_coverage[module_name] = coverage
+            old_coverage = baseline.get(module_name, 0.0)
 
-            print(f"\nCoverage for {module_key}: {coverage}%", end="")
+            print(f"\nCoverage for {module_name}: {coverage}%", end="")
             if old_coverage > 0:
                 print(f" (was {old_coverage}%)")
                 if coverage < old_coverage:
-                    coverage_decreased.append((module_key, old_coverage, coverage))
+                    coverage_decreased.append((module_name, old_coverage, coverage))
             else:
                 print(" (new)")
 

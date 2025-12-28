@@ -14,7 +14,7 @@ from moat.lib.stream import AIOBuf
 _poll = select.poll()
 
 
-class Link(AIOBuf):
+class TcpLink(AIOBuf):
     """
     A channel that connects to a remote TCP socket.
     """

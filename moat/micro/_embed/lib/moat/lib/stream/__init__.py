@@ -25,6 +25,9 @@ if _TC:
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
+    from .reliable import EphemeralMsg as EphemeralMsg
+    from .reliable import ReliableMsg as ReliableMsg
+    from .tcp import TcpLink as TcpLink
 
 
 # Compatibility
@@ -46,6 +49,11 @@ _imports = {
     # Asyncio
     "AIOBuf": "asyncio",
     "SingleAIOBuf": "asyncio",
+    # Reliable messaging
+    "ReliableMsg": "reliable",
+    "EphemeralMsg": "reliable",
+    # Network connections
+    "TcpLink": "tcp",
 }
 
 
@@ -80,6 +88,11 @@ __all__ = [  # noqa:RUF022
     # Asyncio (lazy)
     "AIOBuf",
     "SingleAIOBuf",
+    # Reliable messaging (lazy)
+    "ReliableMsg",
+    "EphemeralMsg",
+    # Network connections (lazy)
+    "TcpLink",
     # compatibility
     "ProcessDeadError",
 ]

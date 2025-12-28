@@ -72,7 +72,7 @@ def console_stack(stream, cfg, cons=False):
     if lossy:
         if lossy is True:
             lossy = {}
-        from moat.micro.proto.reliable import ReliableMsg  # noqa: PLC0415
+        from moat.lib.stream import ReliableMsg  # noqa: PLC0415
 
         if log_rel is not None:
             from moat.lib.stream import LogMsg  # noqa: PLC0415

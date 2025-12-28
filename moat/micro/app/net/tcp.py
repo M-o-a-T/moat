@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 def Raw(*a, **k):
     """Sends/receives raw data"""
+    from moat.lib.stream import TcpLink  # noqa: PLC0415
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
-    from moat.micro.proto.tcp import Link as TcpLink  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
         def stream(self) -> Awaitable:
@@ -30,8 +30,8 @@ def Link(*a, **k):
     """
     An app that connects to a remote socket.
     """
+    from moat.lib.stream import TcpLink  # noqa: PLC0415
     from moat.micro.cmd.stream.cmdmsg import CmdMsg  # noqa: PLC0415
-    from moat.micro.proto.tcp import Link as TcpLink  # noqa: PLC0415
     from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _Link(CmdMsg):

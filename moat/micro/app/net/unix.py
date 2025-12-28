@@ -5,7 +5,7 @@ Apps for Unix socket connectivity
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
-from moat.micro.proto.unix import Link as UnixLink
+from moat.lib.stream import UnixLink
 from moat.micro.stacks.console import console_stack
 
 # Typing

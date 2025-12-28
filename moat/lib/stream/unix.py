@@ -17,9 +17,9 @@ if TYPE_CHECKING:
     from moat.util import Path
 
 
-class Link(AnyioBuf):
+class UnixLink(AnyioBuf):
     """
-    A channel that connects to a remote TCP socket.
+    A channel that connects to a remote Unix socket.
     """
 
     def __init__(self, port: str | Path):

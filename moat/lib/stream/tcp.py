@@ -11,7 +11,7 @@ from moat.lib.micro import AC_use, log
 from moat.lib.stream import AnyioBuf
 
 
-class Link(AnyioBuf):
+class TcpLink(AnyioBuf):
     """
     A channel that connects to a remote TCP socket.
     """

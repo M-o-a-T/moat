@@ -1,3 +1,9 @@
+mqttproto (0.7.2.29-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 10:46:32 +0100
+
 mqttproto (0.7.2.28-1) unstable; urgency=medium
 
   * Merge

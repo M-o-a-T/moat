@@ -34,40 +34,39 @@ if _TC:
 
 
 # Lazy loading for classes and functions
-_lazy_imports = {
+_imports = {
     # From anyio
-    "rpc_on_aiostream": ".anyio",
+    "rpc_on_aiostream": "anyio",
     # From base
-    "BaseMsgHandler": ".base",
-    "Caller": ".base",
-    "Key": ".base",
-    "MsgHandler": ".base",
-    "MsgLink": ".base",
-    "MsgSender": ".base",
-    "OptDict": ".base",
-    "SubMsgSender": ".base",
+    "BaseMsgHandler": "base",
+    "Caller": "base",
+    "Key": "base",
+    "MsgHandler": "base",
+    "MsgLink": "base",
+    "MsgSender": "base",
+    "OptDict": "base",
+    "SubMsgSender": "base",
     # From msg
-    "Msg": ".msg",
-    "MsgResult": ".msg",
+    "Msg": "msg",
+    "MsgResult": "msg",
     # From nest
-    "rpc_on_rpc": ".nest",
+    "rpc_on_rpc": "nest",
     # From stream
-    "HandlerStream": ".stream",
-    "StreamLink": ".stream",
-    "i_f2wire": ".stream",
-    "wire2i_f": ".stream",
+    "HandlerStream": "stream",
+    "StreamLink": "stream",
+    "i_f2wire": "stream",
+    "wire2i_f": "stream",
 }
 
 
-def __getattr__(name: str):
-    if name in _lazy_imports:
-        from importlib import import_module  # noqa:PLC0415
-
-        mod = import_module(_lazy_imports[name], __name__)
-        attr = getattr(mod, name)
-        globals()[name] = attr
-        return attr
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+def __getattr__(attr: str):
+    try:
+        mod = _imports[attr]
+    except KeyError:
+        raise AttributeError(attr) from None
+    value = getattr(__import__(mod, globals(), None, True, 1), attr)
+    globals()[attr] = value
+    return value
 
 
 __all__ = [  # noqa:RUF022

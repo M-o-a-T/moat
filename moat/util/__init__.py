@@ -16,7 +16,7 @@ _log = _logging.getLogger(__name__)
 NotGiven = Ellipsis
 
 # Mapping of exported names to their source modules
-_attrs = {
+_imports = {
     # impl
     "Cache": "impl",
     "NoLock": "impl",
@@ -126,18 +126,11 @@ _attrs = {
 # Lazy loader, effectively does:
 #   global attr
 #   from .mod import attr
-def __getattr__(attr):
-    mod = _attrs.get(attr, None)
-    if mod is None:
-        raise AttributeError(attr)
-
-    # Try to import the attribute from the module
+def __getattr__(attr: str):
     try:
-        value = getattr(__import__(f"moat.util.{mod}", globals(), None, [attr], 0), attr)
-    except ImportError as exc:
-        _log.warning("Missing: %s (importing .%s)", exc, mod)
-        raise AttributeError(attr) from exc
-
-    # Cache it in globals for next time
+        mod = _imports[attr]
+    except KeyError:
+        raise AttributeError(attr) from None
+    value = getattr(__import__(mod, globals(), None, True, 1), attr)
     globals()[attr] = value
     return value

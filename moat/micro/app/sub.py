@@ -5,13 +5,7 @@ Apps used for structure.
 from __future__ import annotations
 
 from moat.lib.micro import L, log, sleep_ms
-
-try:
-    from moat.micro.proto.stream import ProcessDeadError
-except ImportError:  # satellite
-
-    class ProcessDeadError(Exception):
-        "dummy"
+from moat.lib.stream import ProcessDeadError
 
 
 def Tree(*a, **k):

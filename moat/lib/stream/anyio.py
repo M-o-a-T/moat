@@ -1,5 +1,5 @@
 """
-CPython-specific stream handling.
+AnyIO stream adaptors for MoaT (CPython-specific).
 """
 
 from __future__ import annotations
@@ -12,13 +12,8 @@ import termios
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
-from moat.lib.codec import get_codec
 from moat.lib.micro import AC_use
 from moat.lib.stream import BaseBuf
-
-from ._stream import _CBORMsgBlk, _CBORMsgBuf
-
-# Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -28,32 +23,6 @@ if TYPE_CHECKING:
 
 class ProcessDeadError(RuntimeError):
     """Process has died"""
-
-
-class CBORMsgBuf(_CBORMsgBuf):
-    """
-    structured messages > bytestream
-
-    Use this if your stream is reliable (TCP, USB, …) but doesn't support
-    message boundaries.
-    """
-
-    async def setup(self):  # noqa:D102
-        await super().setup()
-        self.codec = get_codec("std-cbor")
-
-
-class CBORMsgBlk(_CBORMsgBlk):
-    """
-    structured messages > chunked bytestrings
-
-    Use this if the layer below supports byte boundaries
-    (one bytestring-ized message per call).
-    """
-
-    async def setup(self):  # noqa:D102
-        await super().setup()
-        self.codec = get_codec("std-cbor")
 
 
 class AnyioBuf(BaseBuf):

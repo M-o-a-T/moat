@@ -8,7 +8,7 @@ import anyio
 import errno
 
 from moat.lib.micro import AC_use, log
-from moat.micro.proto.stream import AnyioBuf
+from moat.lib.stream import AnyioBuf
 
 
 class Link(AnyioBuf):

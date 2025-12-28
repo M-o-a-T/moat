@@ -18,16 +18,37 @@ from .base import StackedMsg as StackedMsg
 from typing import TYPE_CHECKING as _TC
 
 if _TC:
+    from .anyio import AnyioBuf as AnyioBuf
+    from .anyio import BufAnyio as BufAnyio
+    from .anyio import FilenoBuf as FilenoBuf
+    from .anyio import ProcessBuf as ProcessBuf
+    from .anyio import ProcessDeadError as ProcessDeadError
+    from .anyio import RemoteBufAnyio as RemoteBufAnyio
+    from .anyio import SingleAnyioBuf as SingleAnyioBuf
+    from .cbor import CBORMsgBlk as CBORMsgBlk
+    from .cbor import CBORMsgBuf as CBORMsgBuf
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
 
 
-# Lazy loading for logging classes
+# Lazy loading
 _imports = {
+    # Logging
     "LogMsg": "log",
     "LogBlk": "log",
     "LogBuf": "log",
+    # CBOR
+    "CBORMsgBuf": "cbor",
+    "CBORMsgBlk": "cbor",
+    # AnyIO
+    "ProcessDeadError": "anyio",
+    "AnyioBuf": "anyio",
+    "FilenoBuf": "anyio",
+    "RemoteBufAnyio": "anyio",
+    "BufAnyio": "anyio",
+    "SingleAnyioBuf": "anyio",
+    "ProcessBuf": "anyio",
 }
 
 
@@ -56,4 +77,15 @@ __all__ = [  # noqa:RUF022
     "LogBlk",
     "LogBuf",
     "LogMsg",
+    # CBOR (lazy)
+    "CBORMsgBlk",
+    "CBORMsgBuf",
+    # AnyIO (lazy)
+    "AnyioBuf",
+    "BufAnyio",
+    "FilenoBuf",
+    "ProcessBuf",
+    "ProcessDeadError",
+    "RemoteBufAnyio",
+    "SingleAnyioBuf",
 ]

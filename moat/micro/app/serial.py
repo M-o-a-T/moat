@@ -47,8 +47,8 @@ def Raw(*a, **k):
 
 def Msg(*a, **k):
     """snd/rcv: packetized data, via SerialPacker"""
-    from moat.micro.cmd.proto.stream import SerialPackerBlkBuf  # noqa: PLC0415
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
+    from moat.micro.proto._stream import SerialPackerBlkBuf  # noqa: PLC0415
 
     class _Msg(BaseCmdBBM):
         async def stream(self):

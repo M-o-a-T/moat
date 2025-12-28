@@ -65,7 +65,7 @@ lower layer that's not part of the MoaT stream system.
 You need to override rd/wr (BaseBuf) or send/recv (BaseMsg), and the
 context handler "\_ctx".
 
-Defined in ``moat.micro.proto.stack``.
+Defined in ``moat.lib.stream``.
 
 ##### FileBuf
 
@@ -76,7 +76,7 @@ object, socket, or whatever.
 
 Your context handler needs to create the stream and assign it to ``s``.
 
-Defined in ``moat.micro.proto.stream``.
+Defined in ``moat.lib.stream``.
 
 ##### AIOBuf
 
@@ -86,7 +86,7 @@ On CPython, MoaT uses anyio's streams. See ``AnyioBuf``.
 
 Your context handler needs to open the stream and assign it to ``s``.
 
-Defined in ``moat.micro.proto.stream``.
+Defined in ``moat.lib.stream``.
 
 ##### AnyioBuf
 
@@ -95,14 +95,14 @@ files (via `anyio.Path`).
 
 Your context handler needs to open the stream and assign it to ``s``.
 
-Defined in ``moat.micro.proto.stream``.
+Defined in ``moat.lib.stream``.
 
 
 ##### ProcessBuf
 
 A stream that connects to stdin+stdout an external process.
 
-Defined in ``moat.micro.proto.stream``.
+Defined in ``moat.lib.stream``.
 
 
 #### StackedMsg / StackedBuf
@@ -115,7 +115,7 @@ Streams have a parent links. The parent is the next lower level.
 
 The default implementation simply forwards everything to the parent.
 
-Defined in ``moat.micro.proto.stack``.
+Defined in ``moat.lib.stream``.
 
 ##### Naming convention
 
@@ -180,7 +180,7 @@ A stream translator that encapsulates structured messages to a MsgPack bytestrea
 
 Console messages are passed through transparently.
 
-Defined in ``moat.micro.proto.stream``.
+Defined in ``moat.lib.stream``.
 
 
 #### MsgpackMsgBlk

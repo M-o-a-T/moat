@@ -1,40 +1,11 @@
 """
-Adaptor for MicroPython streams.
+Asyncio stream adaptors for MoaT (MicroPython-specific).
 """
 
 from __future__ import annotations
 
-from moat.lib.codec import get_codec
 from moat.lib.micro import AC_use
 from moat.lib.stream import BaseBuf
-
-from ._stream import _CBORMsgBlk, _CBORMsgBuf
-
-
-class CBORMsgBuf(_CBORMsgBuf):
-    """
-    structured messages > stream of bytes
-
-    Use this if the layer below does not support/require byte boundaries
-    (one bytestring-ized message per call).
-    """
-
-    async def setup(self):  # noqa:D102
-        await super().setup()
-        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
-
-
-class CBORMsgBlk(_CBORMsgBlk):
-    """
-    structured messages > chunked bytestrings
-
-    Use this if the layer below supports byte boundaries
-    (one bytestring-ized message per call).
-    """
-
-    async def setup(self):  # noqa:D102
-        await super().setup()
-        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
 
 
 class AIOBuf(BaseBuf):

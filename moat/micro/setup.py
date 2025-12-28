@@ -112,9 +112,10 @@ async def setup(
         await install_(cfg, dest=dest)
         print("Firmware installation done.", file=sys.stderr)
 
+    from moat.lib.stream import RemoteBufAnyio  # noqa: PLC0415
+
     from .direct import DirectREPL  # noqa: PLC0415
     from .path import ABytes, MoatDevPath, copy_over  # noqa: PLC0415
-    from .proto.stream import RemoteBufAnyio  # noqa: PLC0415
 
     codec = get_codec("std-cbor")
 

@@ -5,8 +5,8 @@ Console stdio access
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.stream import FilenoBuf
 from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-from moat.micro.proto.stream.py import FilenoBuf
 from moat.micro.stacks.console import console_stack
 
 

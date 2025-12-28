@@ -9,7 +9,7 @@ import anyio
 from anyio_serial import Serial as _Serial
 
 from moat.lib.micro import AC_use, log
-from moat.micro.proto.stream import AnyioBuf
+from moat.lib.stream import AnyioBuf
 
 
 # Serial link driver

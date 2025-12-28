@@ -104,7 +104,9 @@ class MQTTWebsocketStream(ByteStream):
         await self._session.send_bytes(item)
 
     async def aclose(self) -> None:
-        await self._session.close()
+        if self._session is not None:
+            sess, self._session = self._session, None
+            await sess.close()
 
 
 @define(eq=False)
@@ -298,7 +300,7 @@ class AsyncMQTTClient:
     _pending_operations: dict[int, MQTTOperation[Any]] = field(init=False, factory=dict)
     _ignored_exc_classes: tuple[type[Exception]] = field(init=False)
     __ctx: AbstractAsyncContextManager[Self] = field(init=False)
-    _conn_scope:anyio.abc.CancelScope|None=field(init=False)
+    _conn_scope: anyio.abc.CancelScope | None = field(init=False)
 
     def __attrs_post_init__(self) -> None:
         if not self.host_or_path:
@@ -390,8 +392,12 @@ class AsyncMQTTClient:
                         self._stream = stream
 
                         # Start handling inbound packets
-                        task_group = await exit_stack.enter_async_context(create_task_group())
-                        task_group.start_soon(self._read_inbound_packets, stream, task_group)
+                        task_group = await exit_stack.enter_async_context(
+                            create_task_group()
+                        )
+                        task_group.start_soon(
+                            self._read_inbound_packets, stream, task_group
+                        )
 
                         # Perform the MQTT handshake (send conn + receive connack)
                         await self._do_handshake()
@@ -420,23 +426,21 @@ class AsyncMQTTClient:
 
             # reset the thing
             if self._stream is not None:
-                await self._stream.aclose()
+                stream, self._stream = self._stream, None
+                await stream.aclose()
             self._state_machine = MQTTClientStateMachine()
 
             # incremental back-off
             if self._closed:
                 return
-            if t_conn and anyio.current_time()-t_conn > 10:
+            if t_conn and anyio.current_time() - t_conn > 10:
                 t_backoff = 0
                 continue
             else:
-                t_backoff += .1+t_backoff*1.3
+                t_backoff += 0.1 + t_backoff * 1.3
                 if t_backoff > 10:
                     raise MQTTNoReconnect
                 await anyio.sleep(t_backoff)
-
-
-
 
     async def _keep_alive(self, stream):
         if not self._state_machine.keep_alive:
@@ -448,7 +452,6 @@ class AsyncMQTTClient:
                 await self._flush_outbound_data()
         except Exception as exc:
             logger.debug("Keepalive died: %r", exc, exc_info=exc)
-
 
     async def _do_handshake(self) -> None:
         self._state_machine.connect(
@@ -467,8 +470,9 @@ class AsyncMQTTClient:
             assert isinstance(client_id, str)
             self.client_id = client_id
 
-    async def _read_inbound_packets(self, stream: ByteReceiveStream,
-                                    taskgroup: anyio.abc.TaskGroup) -> None:
+    async def _read_inbound_packets(
+        self, stream: ByteReceiveStream, taskgroup: anyio.abc.TaskGroup
+    ) -> None:
         # Receives packets from the transport stream and forwards them to interested
         # listeners
         try:
@@ -483,8 +487,9 @@ class AsyncMQTTClient:
         except self._ignored_exc_classes:
             pass
         finally:
-            with anyio.move_on_after(1):
-                await self._stream.aclose()
+            if self._stream is not None:
+                with anyio.move_on_after(1):
+                    await self._stream.aclose()
             self._stream = None
             taskgroup.cancel_scope.cancel()
 
@@ -516,7 +521,6 @@ class AsyncMQTTClient:
             if not packet.session_present and self._subscriptions:
                 # The server restarted and forgot our session. Owch.
                 raise MQTTServerRestarted
-
 
     async def _deliver_publish(self, packet: MQTTPublishPacket) -> None:
         async with create_task_group() as tg:
@@ -742,7 +746,7 @@ class AsyncMQTTClient:
             # Send an unsubscribe request if any of my subscriptions are unused
             try:
                 patterns: list[Pattern] = []
-                with anyio.fail_after(2,shield=True):
+                with anyio.fail_after(2, shield=True):
                     async with self._subscribe_lock:
                         for subscr in subscription.subscriptions:
                             subscr.users.discard(subscription)
@@ -758,7 +762,9 @@ class AsyncMQTTClient:
                             if unsubscribe_packet_id := self._state_machine.unsubscribe(
                                 patterns
                             ):
-                                unsubscribe_op = MQTTUnsubscribeOperation(unsubscribe_packet_id)
+                                unsubscribe_op = MQTTUnsubscribeOperation(
+                                    unsubscribe_packet_id
+                                )
                                 try:
                                     await self._run_operation(unsubscribe_op)
                                 except MQTTUnsubscribeFailed as exc:

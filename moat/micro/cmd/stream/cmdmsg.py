@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.rpc import MsgSender
-    from moat.micro.proto.stack import BaseMsg
+    from moat.lib.stream import BaseMsg
 
     from collections.abc import Awaitable
     from typing import Any

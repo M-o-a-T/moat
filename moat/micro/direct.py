@@ -22,7 +22,7 @@ from .os_error_list import os_error_mapping
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.proto.stack import BaseBuf
+    from moat.lib.stream import BaseBuf
 
 
 logger = logging.getLogger(__name__)

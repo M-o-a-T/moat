@@ -1,0 +1,21 @@
+Source: moat-lib-stream
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+X-DH-Compat: 13
+
+Package: python3-moat-lib-stream
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-moat-lib-micro (>= 0.1),
+  python3-moat-lib-rpc (>= 0.1),
+Description: Stream infrastructure for MoaT applications
+  This module provides base classes for handling data streams in a
+  structured manner, including message-based (BaseMsg), block-based
+  (BaseBlk), and byte stream-based (BaseBuf) communication with
+  support for stacking and logging.

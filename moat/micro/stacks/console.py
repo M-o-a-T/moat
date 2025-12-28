@@ -4,7 +4,7 @@ Helper for building a MoaT stack on top of a byte stream (serial, TCP, …).
 
 from __future__ import annotations
 
-from moat.micro.proto.stack import BaseMsg
+from moat.lib.stream import BaseMsg
 
 
 def console_stack(stream, cfg, cons=False):
@@ -52,7 +52,7 @@ def console_stack(stream, cfg, cons=False):
     log_rel = cfg.get("log_rel", None)
 
     if log_raw is not None:
-        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
+        from moat.lib.stream import LogMsg  # noqa: PLC0415
 
         stream = LogMsg(stream, log_raw)
 
@@ -74,14 +74,14 @@ def console_stack(stream, cfg, cons=False):
         from moat.micro.proto.reliable import ReliableMsg  # noqa: PLC0415
 
         if log_rel is not None:
-            from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
+            from moat.lib.stream import LogMsg  # noqa: PLC0415
 
             stream = LogMsg(stream, log_rel)
 
         stream = ReliableMsg(stream, lossy)
 
     if log is not None:
-        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
+        from moat.lib.stream import LogMsg  # noqa: PLC0415
 
         stream = LogMsg(stream, log)
 

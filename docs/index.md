@@ -130,6 +130,13 @@ documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Stream Infrastructure](moat-lib-stream/index.md)
+
+```{include} ../packaging/moat-lib-stream/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### Database
 
 #### [Database Core](moat-db/index.md)

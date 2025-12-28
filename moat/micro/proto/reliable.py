@@ -22,8 +22,7 @@ from moat.lib.micro import (
     ticks_ms,
     wait_for_ms,
 )
-
-from .stack import StackedMsg
+from moat.lib.stream import StackedMsg
 
 from typing import TYPE_CHECKING  # isort:skip
 

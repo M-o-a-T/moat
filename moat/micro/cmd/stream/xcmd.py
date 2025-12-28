@@ -4,7 +4,7 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
-from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg
+from moat.lib.stream import Base, BaseBlk, BaseBuf, BaseMsg
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

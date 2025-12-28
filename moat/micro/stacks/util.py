@@ -11,7 +11,7 @@ from moat.lib.micro import ACM, AC_exit, Event, L, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.proto.stack import BaseConn
+    from moat.lib.stream import BaseConn
 
     from collections.abc import Awaitable
     from typing import Never

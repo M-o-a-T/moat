@@ -3,8 +3,7 @@ from __future__ import annotations
 from moat.util import NotGiven
 from moat.lib.micro import AC_use, Event, Lock, log
 from moat.lib.proxy import as_proxy
-
-from .stack import BaseBuf, StackedBlk, StackedMsg
+from moat.lib.stream import BaseBuf, StackedBlk, StackedMsg
 
 # Typing
 

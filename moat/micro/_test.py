@@ -15,11 +15,11 @@ import moat.micro
 from moat.util import attrdict, combine_dict, ctx_as, yload
 from moat.lib.codec import get_codec
 from moat.lib.micro import L, TaskGroup
-from moat.micro.cmd.tree.dir import Dispatch
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
-from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
+from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
+from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.proto.stream import ProcessBuf
 
 from typing import TYPE_CHECKING  # isort:skip

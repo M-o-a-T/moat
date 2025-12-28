@@ -14,9 +14,9 @@ from contextlib import asynccontextmanager
 from moat.util import CtxObj
 from moat.lib.codec import get_codec
 from moat.lib.micro import AC_use
+from moat.lib.stream import BaseBuf
 
 from ._stream import _CBORMsgBlk, _CBORMsgBuf
-from .stack import BaseBuf
 
 # Typing
 

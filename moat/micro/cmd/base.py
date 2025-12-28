@@ -23,9 +23,9 @@ from __future__ import annotations
 
 from moat.lib.micro import AC_use, Event, L, Lock, idle
 from moat.lib.rpc import MsgHandler
+from moat.lib.stream import Base
 from moat.micro.cmd.util import wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
-from moat.micro.proto.stack import Base
 
 from typing import TYPE_CHECKING  # isort:skip
 

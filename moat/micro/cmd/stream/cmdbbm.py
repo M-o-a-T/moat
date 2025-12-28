@@ -11,7 +11,7 @@ from moat.micro.cmd.base import BaseCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
+    from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
 
     from collections.abc import Awaitable
 

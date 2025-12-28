@@ -5,7 +5,7 @@ Adaptor for MicroPython streams.
 from __future__ import annotations
 
 from moat.lib.micro import TimeoutError, _rdq, _wrq, wait_for_ms  # noqa:A004
-from moat.micro.proto.stack import BaseBuf
+from moat.lib.stream import BaseBuf
 
 
 class FileBuf(BaseBuf):

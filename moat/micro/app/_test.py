@@ -59,7 +59,7 @@ def LoopCmd(*a, **k):
                 if "pack" in li and len(li) == 1:
                     s = CBORMsgBlk(s, li)
                     if (log := self.cfg.get("log", None)) is not None:
-                        from moat.micro.proto.stack import LogMsg  # noqa: PLC0415
+                        from moat.lib.stream import LogMsg  # noqa: PLC0415
 
                         s = LogMsg(s, log)
                     s = await AC_use(self, s)

@@ -1,0 +1,209 @@
+mqttproto (0.7.2.29-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 10:46:32 +0100
+
+mqttproto (0.7.2.28-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 10:43:57 +0100
+
+mqttproto (0.7.2.28-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 10:43:34 +0100
+
+mqttproto (0.7.2.27-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 23 Dec 2025 21:52:52 +0100
+
+mqttproto (0.7.2.26-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 23 Dec 2025 18:25:14 +0100
+
+mqttproto (0.7.2.25-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 08 Dec 2025 12:35:49 +0100
+
+mqttproto (0.7.2.24-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 20:36:21 +0100
+
+mqttproto (0.7.2.24-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 20:36:10 +0100
+
+mqttproto (0.7.2.24-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 20:35:52 +0100
+
+mqttproto (0.7.2.23-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 10:02:21 +0100
+
+mqttproto (0.7.2.22-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 09:34:02 +0100
+
+mqttproto (0.7.2.22-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 10 Nov 2025 09:33:35 +0100
+
+mqttproto (0.7.2.21-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 08 Sep 2025 08:35:11 +0200
+
+mqttproto (0.7.2.20-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Sep 2025 13:46:07 +0200
+
+mqttproto (0.7.2.19-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Sep 2025 12:46:18 +0200
+
+mqttproto (0.7.2.17-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 07 May 2025 12:57:22 +0200
+
+mqttproto (0.7.2.16-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 18 Apr 2025 12:13:24 +0200
+
+mqttproto (0.7.2.15-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 17 Apr 2025 15:26:32 +0200
+
+mqttproto (0.7.2.14-2) unstable; urgency=medium
+
+  * Packaging update
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 17 Apr 2025 15:23:11 +0200
+
+mqttproto (0.7.2.14-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 17 Apr 2025 15:20:26 +0200
+
+mqttproto (0.7.2.12-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Dec 2024 15:14:27 +0100
+
+mqttproto (0.7.2.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 17 Nov 2024 21:40:39 +0100
+
+mqttproto (0.7.2.10-2) unstable; urgency=medium
+
+  * depend on pytest
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 17 Nov 2024 19:30:00 +0100
+
+mqttproto (0.7.2.10-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 17 Nov 2024 19:27:40 +0100
+
+mqttproto (0.7.2.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 15 Nov 2024 14:56:23 +0100
+
+mqttproto (0.7.2.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 14 Nov 2024 04:00:25 +0100
+
+mqttproto (0.7.2.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 14 Nov 2024 03:45:42 +0100
+
+mqttproto (0.7.2.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 11 Nov 2024 09:29:18 +0100
+
+mqttproto (0.7.2.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 09 Nov 2024 13:24:02 +0100
+
+mqttproto (0.7.2.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 09 Nov 2024 11:50:23 +0100
+
+mqttproto (0.7.2.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 09 Nov 2024 10:09:49 +0100
+
+mqttproto (0.7.2-4) unstable; urgency=medium
+
+  * attr, not attrs
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 16:23:08 +0100
+
+mqttproto (0.7.2-3) unstable; urgency=medium
+
+  * Guh
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 15:15:58 +0100
+
+mqttproto (0.7.2-2) unstable; urgency=medium
+
+  * Dep fix
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 14:44:23 +0100
+
+mqttproto (0.7.2-1) unstable; urgency=medium
+
+  * Initial Debianization.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 14:42:32 +0100

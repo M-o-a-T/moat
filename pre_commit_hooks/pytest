@@ -144,7 +144,7 @@ def main(filenames: list[str]) -> int:
         result = subprocess.run(  # noqa:S603
             [  # noqa:S607
                 "pytest",
-                "--override-ini=addopts=-x",  # Override default addopts to disable --cov
+                "--override-ini=addopts=-x",  # Override default addopts to disable --no-cov
                 f"--cov={module_name}",
                 "--cov-report=term",
                 str(test_dir),

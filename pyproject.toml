@@ -77,7 +77,7 @@ line-length = 99
 
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
-addopts = "-x --cov"
+addopts = "-x --no-cov"
 log_cli_level = "DEBUG"
 pythonpath = [
     ".",

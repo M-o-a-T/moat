@@ -134,7 +134,7 @@ default_keymap: tuple[tuple[KeySpec, CommandName], ...] = tuple(
 
 
 @dataclass(slots=True)
-class Reader:
+class Reader(anyio.AsyncContextManagerMixin):
     """The Reader class implements the bare bones of a command reader,
     handling such details as editing and cursor motion.  What it does
     not support are such things as completion or history support -
@@ -215,6 +215,7 @@ class Reader:
     lxy: tuple[int, int] = field(init=False)
     scheduled_commands: list[str] = field(default_factory=list)
     can_colorize: bool = False
+    _in_context: bool = field(default=False, init=False)
 
     ## cached metadata to speed up screen refreshes
     @dataclass
@@ -281,6 +282,18 @@ class Reader:
         self.last_refresh_cache.pos = self.pos
         self.last_refresh_cache.cxy = self.cxy
         self.last_refresh_cache.dimensions = (0, 0)
+
+    @asynccontextmanager
+    async def __asynccontextmanager__(self):
+        """Context manager that handles console prepare/restore."""
+        async with self.console:
+            await self.prepare()
+            self._in_context = True
+            try:
+                yield
+            finally:
+                self._in_context = False
+                await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
@@ -731,18 +744,28 @@ class Reader:
         """Read a line.  The implementation of this method also shows
         how to drive Reader if you want more control over the event
         loop."""
-        async with self.console:
-            await self.prepare()
-            try:
-                if startup_hook is not None:
-                    startup_hook()
-                await self.refresh()
-                while not self.finished:
-                    await self.handle1()
-                return self.get_unicode()
+        if self._in_context:
+            # Already in context, don't prepare/restore
+            if startup_hook is not None:
+                startup_hook()
+            await self.refresh()
+            while not self.finished:
+                await self.handle1()
+            return self.get_unicode()
+        else:
+            # Not in context, do prepare/restore for this call
+            async with self.console:
+                await self.prepare()
+                try:
+                    if startup_hook is not None:
+                        startup_hook()
+                    await self.refresh()
+                    while not self.finished:
+                        await self.handle1()
+                    return self.get_unicode()
 
-            finally:
-                await self.restore()
+                finally:
+                    await self.restore()
 
     def bind(self, spec: KeySpec, command: CommandName) -> None:  # noqa: D102
         self.keymap = self.keymap + ((spec, command),)

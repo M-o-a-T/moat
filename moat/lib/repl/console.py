@@ -334,3 +334,128 @@ class Readline:
             return line
         except EOFError:
             raise StopAsyncIteration from None
+
+
+class MockConsole(Console):
+    """
+    Mock console for testing that records actions and provides scripted input.
+
+    User actions can be:
+        float - delay in seconds before next action
+        bytes - mock input to be returned by rd()
+
+    Recorded actions include:
+        ("wr", bytes) - data written via wr()
+        ("rd", int) - number of bytes requested via rd()
+        ("action", str) - operations like "prepare", "restore", "raw", "cooked"
+    """
+
+    def __init__(
+        self,
+        f_in: IO[bytes] | int = 0,
+        f_out: IO[bytes] | int = 1,
+        term: str = "",
+        encoding: str = "",
+        user_actions: list[float | bytes] | None = None,
+    ):
+        super().__init__(f_in, f_out, term, encoding)
+        self.user_actions = list(user_actions) if user_actions else []
+        self.recorded_actions: list[tuple[str, object]] = []
+        self.input_buffer = b""
+        self.output_buffer = b""
+        self._height = 25
+        self._width = 80
+
+    async def rd(self, n: int) -> bytes:
+        """Read up to n bytes from mock input."""
+        import anyio  # noqa: PLC0415
+
+        self.recorded_actions.append(("rd", n))
+
+        # Process user actions until we have input
+        while not self.input_buffer and self.user_actions:
+            action = self.user_actions.pop(0)
+            if isinstance(action, float):
+                await anyio.sleep(action)
+            elif isinstance(action, bytes):
+                self.input_buffer += action
+
+        # Return available data
+        result = self.input_buffer[:n]
+        self.input_buffer = self.input_buffer[n:]
+        return result
+
+    async def wr(self, data: bytes) -> None:
+        """Write data to mock output."""
+        self.recorded_actions.append(("wr", data))
+        self.output_buffer += data
+
+    async def prepare(self) -> None:
+        """Mock prepare."""
+        self.recorded_actions.append(("action", "prepare"))
+
+    async def restore(self) -> None:
+        """Mock restore."""
+        self.recorded_actions.append(("action", "restore"))
+
+    def refresh(self, screen: list[str], xy: tuple[int, int]) -> None:  # noqa: ARG002
+        """Mock refresh."""
+        self.recorded_actions.append(("action", "refresh"))
+
+    def move_cursor(self, x: int, y: int) -> None:
+        """Mock move_cursor."""
+        self.recorded_actions.append(("action", f"move_cursor({x},{y})"))
+
+    def set_cursor_vis(self, visible: bool) -> None:
+        """Mock set_cursor_vis."""
+        self.recorded_actions.append(("action", f"set_cursor_vis({visible})"))
+
+    def getheightwidth(self) -> tuple[int, int]:
+        """Return mock terminal size."""
+        self.recorded_actions.append(("action", "getheightwidth"))
+        return (self._height, self._width)
+
+    async def get_event(self) -> Event:
+        """Get next event from mock input."""
+        data = await self.rd(1)
+        return Event(evt="key", data=data.decode(self.encoding, errors="replace"), raw=data)
+
+    def push_char(self, char: int | bytes) -> None:
+        """Push character to mock input buffer."""
+        if isinstance(char, int):
+            char = bytes([char])
+        self.input_buffer = char + self.input_buffer
+
+    def beep(self) -> None:
+        """Mock beep."""
+        self.recorded_actions.append(("action", "beep"))
+
+    def clear(self) -> None:
+        """Mock clear."""
+        self.recorded_actions.append(("action", "clear"))
+
+    async def finish(self) -> None:
+        """Mock finish."""
+        self.recorded_actions.append(("action", "finish"))
+
+    async def flushoutput(self) -> None:
+        """Mock flushoutput."""
+        self.recorded_actions.append(("action", "flushoutput"))
+
+    def forgetinput(self) -> None:
+        """Mock forgetinput."""
+        self.recorded_actions.append(("action", "forgetinput"))
+
+    def getpending(self) -> Event:
+        """Mock getpending."""
+        self.recorded_actions.append(("action", "getpending"))
+        return Event(evt="", data="", raw=b"")
+
+    @property
+    def input_hook(self) -> Callable[[], int] | None:
+        """Mock input_hook."""
+        return None
+
+    def repaint(self) -> None:
+        """Mock repaint."""
+        self.recorded_actions.append(("action", "repaint"))

@@ -228,7 +228,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 @tg.start_soon
                 async def _winch():
                     async for _sig in wch:
-                        self.__sigwinch()
+                        await self.__sigwinch()
 
                 @tg.start_soon
                 async def _read():
@@ -388,7 +388,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             await self.output_f.write(b"\033[?7l")
 
         self.screen = []
-        self.height, self.width = self.getheightwidth()
+        self.height, self.width = await self.getheightwidth()
 
         self.posxy = 0, 0
         self.__gone_tall = 0
@@ -411,7 +411,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         if self.is_apple_terminal:
             await self.output_f.write(b"\033[?7h")
 
-    async def push_char(self, char: int | bytes) -> None:
+    def push_char(self, char: int | bytes) -> None:
         """
         Push a character to the console event queue.
         """
@@ -750,8 +750,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         assert 0 <= y - self.__offset < self.height, y - self.__offset
         self.__write_code(self._cup, y - self.__offset, x)
 
-    def __sigwinch(self, signum, frame):  # noqa: ARG002
-        self.height, self.width = self.getheightwidth()
+    async def __sigwinch(self, signum, frame):  # noqa: ARG002
+        self.height, self.width = await self.getheightwidth()
         self.event_queue.insert(Event("resize", None))
 
     def __hide_cursor(self):

@@ -179,7 +179,7 @@ class isearch_add_character(commands.Command):  # noqa: D101
         r.dirty = True
         p = r.pos + len(r.isearch_term) - 1
         if b[p : p + 1] != [r.isearch_term[-1]]:
-            r.isearch_next()
+            await r.isearch_next()
 
 
 class isearch_backspace(commands.Command):  # noqa: D101
@@ -196,14 +196,14 @@ class isearch_forwards(commands.Command):  # noqa: D101
     async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_FORWARDS
-        r.isearch_next()
+        await r.isearch_next()
 
 
 class isearch_backwards(commands.Command):  # noqa: D101
     async def do(self) -> None:  # noqa: D102
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_BACKWARDS
-        r.isearch_next()
+        await r.isearch_next()
 
 
 class isearch_end(commands.Command):  # noqa: D101

@@ -655,9 +655,7 @@ class Reader:
             return  # nothing to do
 
         command = command_type(self, *cmd)  # type: ignore[arg-type]
-        res = command.do()
-        if hasattr(res, "__await__"):
-            await res
+        await command.do()
 
         self.after_command(command)
 

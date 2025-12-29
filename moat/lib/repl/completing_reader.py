@@ -214,9 +214,7 @@ class self_insert(commands.self_insert):  # noqa: D101
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
 
-        res = commands.self_insert.do(self)
-        if hasattr(res, "__await__"):
-            await res
+        await commands.self_insert.do(self)
 
         if r.cmpltn_menu_visible:
             stem = r.get_stem()

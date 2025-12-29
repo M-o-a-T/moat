@@ -567,11 +567,11 @@ class Reader:
         self.pos += len(text)
         self.dirty = True
 
-    def update_cursor(self) -> None:
+    async def update_cursor(self) -> None:
         """Move the cursor to reflect changes in self.pos"""
         self.cxy = self.pos2xy()
         trace("update_cursor({pos}) = {cxy}", pos=self.pos, cxy=self.cxy)
-        self.console.move_cursor(*self.cxy)
+        await self.console.move_cursor(*self.cxy)
 
     def after_command(self, cmd: Command) -> None:
         """This function is called to allow post command cleanup."""
@@ -625,10 +625,10 @@ class Reader:
         """Called when a command signals that we're finished."""
         pass
 
-    def error(self, msg: str = "none") -> None:  # noqa: D102
+    async def error(self, msg: str = "none") -> None:  # noqa: D102
         self.msg = "! " + msg + " "
         self.dirty = True
-        self.console.beep()
+        await self.console.beep()
 
     async def update_screen(self) -> None:  # noqa: D102
         if self.dirty:
@@ -664,7 +664,7 @@ class Reader:
         if self.dirty:
             await self.refresh()
         else:
-            self.update_cursor()
+            await self.update_cursor()
 
         if not isinstance(cmd, commands.digit_arg):
             self.last_command = command_type

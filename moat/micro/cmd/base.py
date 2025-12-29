@@ -73,7 +73,8 @@ class BaseCmd(Base):
     """
     Basic Request handler.
 
-    This class does not accept subcommands.
+    This class duck-types `moat.lib.stream.MsgHander`. In particular,
+    it uses its `handle` and `find_handler` methods.
     """
 
     root: Dispatch = None
@@ -97,7 +98,7 @@ class BaseCmd(Base):
         self.init_events()
 
     def init_events(self):
-        "Setup events"
+        "Setup events for startup, stopping, and readiness"
         if self._stopped is None:
             if L:
                 self._starting = Event()

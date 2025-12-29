@@ -164,6 +164,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
         )
         self.term = term
+        self.__in_prep = False
 
     @asynccontextmanager
     async def __asynccontextmanager__(self):
@@ -374,6 +375,9 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         self.__buffer = []
 
+        if self.__in_prep:
+            return
+        self.__in_prep = True
         self.__svtermstate = tcgetattr(self.input_fd)
         raw = self.__svtermstate.copy()
         raw.iflag &= ~(termios.INPCK | termios.ISTRIP | termios.IXON)
@@ -407,6 +411,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Restore the console to the default state
         """
+        if not self.__in_prep:
+            return
         self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)
         await self.flushoutput()
@@ -414,6 +420,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         if self.is_apple_terminal:
             await self.output_f.write(b"\033[?7h")
+        self.__in_prep = False
 
     def push_char(self, char: int | bytes) -> None:
         """

@@ -216,8 +216,6 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.event_queue = EventQueue(self.input_fd, self.encoding, self.terminfo)
         self.cursor_visible = 1
 
-        signal.signal(signal.SIGCONT, self._sigcont_handler)
-
         async with (
             self.output_f,
             self.input_f,
@@ -229,6 +227,12 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 with anyio.open_signal_receiver(signal.SIGWINCH) as wch:
                     async for _sig in wch:
                         await self.__sigwinch()
+
+            @tg.start_soon
+            async def _sigcont():
+                with anyio.open_signal_receiver(signal.SIGCONT) as wch:
+                    async for _sig in wch:
+                        await self.__sigcont()
 
             @tg.start_soon
             async def _read():
@@ -243,7 +247,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 with anyio.move_on_after(1, shield=True):
                     await self.restore()
 
-    async def _sigcont_handler(self, signum, frame):  # noqa: ARG002
+    async def __sigcont(self):
         await self.restore()
         await self.prepare()
 

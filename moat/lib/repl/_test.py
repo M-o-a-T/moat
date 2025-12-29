@@ -46,7 +46,7 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         """Async context manager for console lifecycle."""
         self.recorded_actions.append(("action", "enter"))
         try:
-            yield
+            yield self
         finally:
             self.recorded_actions.append(("action", "exit"))
 
@@ -75,6 +75,8 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
     async def prepare(self) -> None:
         """Mock prepare."""
         self.recorded_actions.append(("action", "prepare"))
+        self.screen = []
+        self.height, self.width = self._height, self._width
 
     async def restore(self) -> None:
         """Mock restore."""

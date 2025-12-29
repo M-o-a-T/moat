@@ -164,7 +164,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
         )
         self.term = term
-        self.__in_prep = False
+        self.__in_prep = 0
 
     @asynccontextmanager
     async def __asynccontextmanager__(self):
@@ -216,6 +216,27 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.event_queue = EventQueue(self.input_fd, self.encoding, self.terminfo)
         self.cursor_visible = 1
+
+        self.__orig_termstate = tcgetattr(self.input_fd)
+        raw = self.__orig_termstate.copy()
+        raw.iflag &= ~(termios.INPCK | termios.ISTRIP | termios.IXON)
+        raw.oflag &= ~(termios.OPOST)
+        raw.cflag &= ~(termios.CSIZE | termios.PARENB)
+        raw.cflag |= termios.CS8
+        raw.iflag |= termios.BRKINT
+        raw.lflag &= ~(termios.ICANON | termios.ECHO | termios.IEXTEN)
+        raw.lflag |= termios.ISIG
+        raw.cc[termios.VMIN] = 1
+        raw.cc[termios.VTIME] = 0
+        self.__raw_termstate = raw
+
+        self.screen = []
+        self.height, self.width = await self.getheightwidth()
+
+        self.posxy = 0, 0
+        self.__gone_tall = 0
+        self.__move = self.__move_short
+        self.__offset = 0
 
         async with (
             self.output_f,
@@ -373,24 +394,14 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Prepare the console for input/output operations.
         """
-        self.__buffer = []
 
         if self.__in_prep:
             self.__in_prep += 1
             return
         self.__in_prep = 1
-        self.__svtermstate = tcgetattr(self.input_fd)
-        raw = self.__svtermstate.copy()
-        raw.iflag &= ~(termios.INPCK | termios.ISTRIP | termios.IXON)
-        raw.oflag &= ~(termios.OPOST)
-        raw.cflag &= ~(termios.CSIZE | termios.PARENB)
-        raw.cflag |= termios.CS8
-        raw.iflag |= termios.BRKINT
-        raw.lflag &= ~(termios.ICANON | termios.ECHO | termios.IEXTEN)
-        raw.lflag |= termios.ISIG
-        raw.cc[termios.VMIN] = 1
-        raw.cc[termios.VTIME] = 0
-        self.__input_fd_set(raw)
+
+        self.__buffer = []
+        self.__input_fd_set(self.__raw_termstate)
 
         # In macOS terminal we need to deactivate line wrap via ANSI escape code
         if self.is_apple_terminal:
@@ -420,7 +431,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)
         await self.flushoutput()
-        self.__input_fd_set(self.__svtermstate)
+        self.__input_fd_set(self.__orig_termstate)
 
         if self.is_apple_terminal:
             await self.output_f.write(b"\033[?7h")

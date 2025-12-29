@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 class _BBMCmd(Base):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.cmd = cfg["_cmd"]
+        self.cmd = cfg._moat_cmd  # noqa:SLF001
 
     async def setup(self):
         await Base.setup(self)

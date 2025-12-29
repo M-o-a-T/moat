@@ -8,6 +8,7 @@ import anyio
 
 from anyio_serial import Serial as _Serial
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use, log
 from moat.lib.stream import AnyioBuf
 
@@ -40,7 +41,7 @@ class NamedSerial(AnyioBuf):
         uart_cfg = {}
         uart_cfg["port"] = cfg["port"]
 
-        p = cfg.get("mode", {})
+        p = cfg.get("mode", attrdict())
 
         uart_cfg["baudrate"] = p.get("rate", 9600)
         pa = p.get("parity", None)

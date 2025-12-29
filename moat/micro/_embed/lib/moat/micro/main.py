@@ -14,14 +14,9 @@ from rtc import all_rtc
 import machine
 
 import moat.micro.console as cons
-from moat.util import merge
+from moat.util import attrdict, merge
 from moat.lib.micro import AC_use, L, TaskGroup, at, sleep_ms
 from moat.util.cbor import Codec as CBOR
-
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    from moat.util import attrdict
 
 WDT = None
 
@@ -63,7 +58,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     for k, v in cfg["apps"].items():
         if v != "wdt.Cmd":
             continue
-        k = cfg.get(k, {})  # noqa:PLW2901
+        k = cfg.get(k, attrdict())  # noqa:PLW2901
         if k.get("hw", False):
             machine.WDT(k.get("id", 0), k.get("t", 5000))
 

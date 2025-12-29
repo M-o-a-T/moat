@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.util import import_
+from moat.util import attrdict, import_
 from moat.lib.micro import AC_use, TimeoutError, log, sleep, wait_for_ms  # noqa:A004
 from moat.micro.stacks.file import FileBuf
 
@@ -66,7 +66,7 @@ class Serial(NamedSerial):
         pin_rts = pin_cts = pin_dtr = None
         cfg = self.cfg
         uart_cfg = {}
-        p = cfg.get("mode", {})
+        p = cfg.get("mode", attrdict())
         fl = p.get("flow", "")
         if "tx" in cfg:
             uart_cfg["tx"] = M.Pin(cfg["tx"], M.Pin.OUT)

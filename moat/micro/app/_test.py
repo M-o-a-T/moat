@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use
 from moat.lib.stream import CBORMsgBlk
 
@@ -53,7 +54,7 @@ def LoopCmd(*a, **k):
     class _LoopCmd(BaseCmdMsg):
         async def stream(self):
             # accepts qlen and loss
-            s = Loopback(**self.cfg.get("loop", {}))
+            s = Loopback(**self.cfg.get("loop", attrdict()))
             s.link(s)
             if (li := self.cfg.get("link", None)) is not None:
                 if "pack" in li and len(li) == 1:

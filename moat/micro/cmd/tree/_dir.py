@@ -4,7 +4,7 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util import NotGiven, Path, import_
+from moat.util import NotGiven, Path, attrdict, import_
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
 from moat.lib.rpc import MsgSender, ShortCommandError
 from moat.micro.cmd.base import BaseCmd
@@ -216,7 +216,7 @@ class DirCmd(BaseSubCmd):
             if v is NotGiven:
                 continue
 
-            cfg = gcfg.get(name, {})
+            cfg = gcfg.get(name, attrdict())
             await self.attach(name, imp(v)(cfg))
 
         # Second, run them all.

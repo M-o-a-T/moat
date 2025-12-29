@@ -4,6 +4,7 @@ Serial port access apps
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use
 from moat.micro.part.serial import NamedSerial
 
@@ -54,7 +55,7 @@ def Msg(*a, **k):
         async def stream(self):
             ser = SerialPackerBlkBuf(
                 _KS(self.cfg),
-                frame=self.cfg.get("frame", {}),
+                frame=self.cfg.get("frame", attrdict()),
                 cons=self.cfg.get(
                     "console",
                 ),

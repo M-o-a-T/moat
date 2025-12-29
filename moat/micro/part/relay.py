@@ -4,7 +4,7 @@ More common code
 
 from __future__ import annotations
 
-from moat.util import NotGiven, Path
+from moat.util import NotGiven, Path, attrdict
 from moat.lib.codec.errors import StoppedError
 from moat.lib.micro import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from moat.micro.cmd.base import BaseCmd
@@ -28,7 +28,7 @@ class Relay(BaseCmd):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError("Pin not set")  # noqa:TRY004
-        t = cfg.get("t", {})
+        t = cfg.get("t", attrdict())
         self.t = [t.get("off", 0), t.get("on", 0)]
         self.note = cfg.get("note", None)
 

@@ -4,7 +4,7 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import combine_dict, import_
+from moat.util import attrdict, combine_dict, import_
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
 from moat.lib.rpc import Msg, MsgSender, ShortCommandError
@@ -81,7 +81,7 @@ class ArrayCmd(BaseSuperCmd):
         return self.attach(name, None)
 
     def _cfg(self, i):
-        cfg = combine_dict(self.cfg.get("cfg", {}), self.cfg.get(i, {}))
+        cfg = combine_dict(self.cfg.get("cfg", {}), self.cfg.get(i, {}), cls=attrdict)
         if (ii := self.cfg.get("i", None)) is not None:
             set_part(cfg, ii, i + self.cfg.get("i_off", 0))
         return cfg

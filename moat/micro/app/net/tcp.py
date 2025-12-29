@@ -4,6 +4,7 @@ Apps for TCP connectivity
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use
 
 # Typing
@@ -40,7 +41,7 @@ def Link(*a, **k):
                 TcpLink(
                     cfg.get("host", "127.0.0.1"),
                     cfg["port"],
-                    retry=cfg.get("retry", {}),
+                    retry=cfg.get("retry", attrdict()),
                 ),
                 cfg,
             )

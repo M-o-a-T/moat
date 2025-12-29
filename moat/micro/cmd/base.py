@@ -21,6 +21,7 @@ may fail.
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use, Event, L, Lock, idle
 from moat.lib.rpc import MsgHandler
 from moat.lib.stream import Base
@@ -88,7 +89,9 @@ class BaseCmd(Base):
     _stopped: Event = None
 
     def __init__(self, cfg):
-        cfg["_cmd"] = self
+        if type(cfg) is dict:
+            cfg = attrdict(**cfg)
+        cfg._moat_cmd = self  # noqa:SLF001
         super().__init__(cfg)
         # self.cfg = cfg
         self.init_events()

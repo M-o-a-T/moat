@@ -264,3 +264,29 @@ class MsgConsole(MsgHandler):
     async def cmd_wr(self, data: bytes) -> None:
         """Write data to the console."""
         await self.console.wr(data)
+
+
+class MoatConsole:
+    """
+    Client-side console proxy that uses RPC to communicate with a remote MsgConsole.
+
+    Usage:
+        ux = UnixConsole()
+        tty = MsgConsole(ux)
+        snd = MsgSender(tty)
+        moat = MoatConsole(snd)
+        # Call chain: moat.rd(10) -> snd.rd(n=10) -> tty.cmd_rd(10) -> ux.rd(10)
+        data = await moat.rd(10)
+    """
+
+    def __init__(self, sender):
+        """Initialize with a MsgSender instance."""
+        self.sender = sender
+
+    async def rd(self, n: int) -> bytes:
+        """Read up to n bytes from the remote console."""
+        return await self.sender.rd(n=n)
+
+    async def wr(self, data: bytes) -> None:
+        """Write data to the remote console."""
+        await self.sender.wr(data=data)

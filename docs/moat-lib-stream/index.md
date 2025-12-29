@@ -8,7 +8,8 @@
 
 ## Manual
 
-TODO
+See the {doc}`details` page for in-depth documentation on stream types, class
+hierarchy, and usage patterns.
 
 ### Logging
 
@@ -32,5 +33,6 @@ methods for transmitting raw bytes alongside structured messages.
 :maxdepth: 2
 :hidden:
 
+details
 api
 ```

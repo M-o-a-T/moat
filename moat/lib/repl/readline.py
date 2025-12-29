@@ -392,8 +392,7 @@ class _ReadlineWrapper:
             reader.ps2 = ps1
             reader.ps3 = ps2
             reader.ps4 = ""
-            with warnings.catch_warnings(action="ignore"):
-                return await reader.readline()
+            return await reader.readline()
         finally:
             reader.more_lines = saved
             reader.paste_mode = False
@@ -568,8 +567,6 @@ _get_reader = _wrapper.get_reader
 
 def _make_stub(_name: str, _ret: object) -> None:
     def stub(*args: object, **kwds: object) -> None:  # noqa: ARG001
-        import warnings  # noqa: PLC0415
-
         warnings.warn(f"readline.{_name}() not implemented", stacklevel=2)
 
     stub.__name__ = _name

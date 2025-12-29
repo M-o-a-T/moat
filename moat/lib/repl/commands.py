@@ -242,7 +242,7 @@ class suspend(Command):  # noqa: D101
         os.kill(os.getpid(), signal.SIGSTOP)
         ## this should probably be done
         ## in a handler for SIGCONT?
-        r.console.prepare()
+        await r.console.prepare()
         r.pos = p
         # r.posxy = 0, 0  # XXX this is invalid
         r.dirty = True
@@ -466,10 +466,10 @@ class show_history(Command):  # noqa: D101
         from .pager import get_pager  # noqa: PLC0415
 
         history = os.linesep.join(self.reader.history[:])
-        self.reader.console.restore()
+        await self.reader.console.restore()
         pager = get_pager()
         pager(history, gethistoryfile())
-        self.reader.console.prepare()
+        await self.reader.console.prepare()
 
         # We need to copy over the state so that it's consistent between
         # console and reader, and console does not overwrite/append stuff

@@ -606,6 +606,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         """Get ready to run.  Call restore when finished.  You must not
         write to the console in between the calls to prepare and
         restore."""
+        await self.console.prepare()
         try:
             self.arg = None
             self.finished = False
@@ -615,7 +616,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             self.last_command = None
             self.calc_screen()
         except BaseException:
-            self.restore()
+            await self.restore()
             raise
 
         while self.scheduled_commands:
@@ -636,7 +637,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         """A context manager to delegate to another reader."""
         prev_state = {f.name: getattr(self, f.name) for f in fields(self)}
         try:
-            self.restore()
+            await self.restore()
             yield
         finally:
             for arg in ("msg", "ps1", "ps2", "ps3", "ps4", "paste_mode"):

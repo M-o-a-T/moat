@@ -19,9 +19,6 @@
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 from __future__ import annotations
 
-import os
-from termios import VERASE, tcgetattr
-
 from .base_eventqueue import BaseEventQueue
 from .trace import trace
 
@@ -75,9 +72,8 @@ def get_terminal_keycodes(ti: TermInfo) -> dict[bytes, str]:
 
 
 class EventQueue(BaseEventQueue):  # noqa: D101
-    def __init__(self, fd: int, encoding: str, ti: TermInfo) -> None:
+    def __init__(self, encoding: str, ti: TermInfo, backspace: bytes | None = None) -> None:
         keycodes = get_terminal_keycodes(ti)
-        if os.isatty(fd):
-            backspace = tcgetattr(fd)[6][VERASE]
+        if backspace is not None:
             keycodes[backspace] = "backspace"
         BaseEventQueue.__init__(self, encoding, keycodes)

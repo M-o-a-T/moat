@@ -216,7 +216,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.__setup_movement()
 
-        self.event_queue = EventQueue(self.input_fd, self.encoding, self.terminfo)
+        backspace = tcgetattr(self.input_fd).cc[termios.VERASE]
+        self.event_queue = EventQueue(self.encoding, self.terminfo, backspace=backspace)
         self.cursor_visible = 1
 
         self.__orig_termstate = tcgetattr(self.input_fd)

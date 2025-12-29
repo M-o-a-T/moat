@@ -290,3 +290,47 @@ class MoatConsole:
     async def wr(self, data: bytes) -> None:
         """Write data to the remote console."""
         await self.sender.wr(data=data)
+
+
+class Readline:
+    """
+    Async iterator interface for reading lines from a console.
+
+    Usage:
+        async with Readline(console, prompt=">>> ") as lines:
+            async for line in lines:
+                process(line)
+    """
+
+    def __init__(self, console: Console, prompt: str = ">>> "):
+        """Initialize with a console and optional prompt."""
+        self.console = console
+        self.prompt = prompt
+        self.reader = None
+
+    async def __aenter__(self):
+        """Enter async context and create reader."""
+        from .reader import Reader  # noqa: PLC0415
+
+        self.reader = Reader(console=self.console)
+        self.reader.ps1 = self.prompt
+        return self
+
+    async def __aexit__(self, *exc):
+        """Exit async context and clean up."""
+        self.reader = None
+        return False
+
+    def __aiter__(self):
+        """Return self as async iterator."""
+        return self
+
+    async def __anext__(self) -> str:
+        """Read and return the next line."""
+        if self.reader is None:
+            raise StopAsyncIteration
+        try:
+            line = await self.reader.readline()
+            return line
+        except EOFError:
+            raise StopAsyncIteration from None

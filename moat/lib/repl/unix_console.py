@@ -250,6 +250,14 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     async def __read(self, n: int) -> bytes:
         return await self.input_f.read(n)
 
+    async def rd(self, n: int) -> bytes:
+        """Read up to n bytes from the underlying terminal."""
+        return await self.__read(n)
+
+    async def wr(self, data: bytes) -> None:
+        """Write data to the underlying terminal."""
+        await self.output_f.write(data)
+
     def change_encoding(self, encoding: str) -> None:
         """
         Change the encoding used for I/O operations.

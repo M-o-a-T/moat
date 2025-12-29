@@ -145,6 +145,16 @@ class Console(ABC):  # noqa: D101
     @abstractmethod
     def repaint(self) -> None: ...  # noqa: D102
 
+    @abstractmethod
+    async def rd(self, n: int) -> bytes:
+        """Read up to n bytes from the underlying terminal."""
+        ...
+
+    @abstractmethod
+    async def wr(self, data: bytes) -> None:
+        """Write data to the underlying terminal."""
+        ...
+
 
 class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
     STATEMENT_FAILED = object()

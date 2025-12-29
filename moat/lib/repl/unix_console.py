@@ -136,6 +136,8 @@ class FDWrapper:
 
 
 class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
+    __in_prep: bool | None = False
+
     def __init__(
         self,
         f_in: IO[bytes] | int = 0,
@@ -164,7 +166,6 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
         )
         self.term = term
-        self.__in_prep = 0
 
     @asynccontextmanager
     async def __asynccontextmanager__(self):
@@ -261,13 +262,10 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 while True:
                     self.push_char(await self.__read(1))
 
-            await self.prepare()
             try:
                 yield self
             finally:
                 tg.cancel_scope.cancel()
-                with anyio.move_on_after(1, shield=True):
-                    await self.restore()
 
     async def __sigcont(self):
         await self.restore()
@@ -396,9 +394,10 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
 
         if self.__in_prep:
-            self.__in_prep += 1
-            return
-        self.__in_prep = 1
+            await self.restore()
+            self.__in_prep = None
+            raise RuntimeError("Already prepared")
+        self.__in_prep = True
 
         self.__buffer = []
         self.__input_fd_set(self.__raw_termstate)
@@ -423,10 +422,11 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Restore the console to the default state
         """
-        if not self.__in_prep:
-            raise RuntimeError("Misnested prepare/restore")
-        self.__in_prep -= 1
         if self.__in_prep:
+            self.__in_prep = False
+        elif self.__in_prep is False:
+            raise RuntimeError("Misnested prepare/restore")
+        else:
             return
         self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)

@@ -227,8 +227,8 @@ class interrupt(FinishCommand):  # noqa: D101
 
 class ctrl_c(Command):  # noqa: D101
     async def do(self) -> None:  # noqa: D102
-        await self.reader.console.finish()
-        await self.reader.finish()
+        # await self.reader.console.finish()
+        # await self.reader.finish()
         raise KeyboardInterrupt
 
 

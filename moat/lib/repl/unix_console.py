@@ -223,25 +223,25 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             self.input_f,
             anyio.create_task_group() as tg,
         ):
-            with anyio.open_signal_receiver(signal.SIGWINCH) as wch:
 
-                @tg.start_soon
-                async def _winch():
+            @tg.start_soon
+            async def _winch():
+                with anyio.open_signal_receiver(signal.SIGWINCH) as wch:
                     async for _sig in wch:
                         await self.__sigwinch()
 
-                @tg.start_soon
-                async def _read():
-                    while True:
-                        self.push_char(await self.__read(1))
+            @tg.start_soon
+            async def _read():
+                while True:
+                    self.push_char(await self.__read(1))
 
-                await self.prepare()
-                try:
-                    yield self
-                finally:
-                    tg.cancel_scope.cancel()
-                    with anyio.move_on_after(1, shield=True):
-                        await self.restore()
+            await self.prepare()
+            try:
+                yield self
+            finally:
+                tg.cancel_scope.cancel()
+                with anyio.move_on_after(1, shield=True):
+                    await self.restore()
 
     async def _sigcont_handler(self, signum, frame):  # noqa: ARG002
         await self.restore()

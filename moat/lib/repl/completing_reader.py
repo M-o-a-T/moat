@@ -21,7 +21,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+
+from attrs import define, field
 
 from . import commands, console, reader
 from .reader import Reader
@@ -230,7 +231,7 @@ class self_insert(commands.self_insert):  # noqa: D101
                     r.cmpltn_reset()
 
 
-@dataclass
+@define(slots=False)
 class CompletingReader(Reader):
     """Adds completion support"""
 
@@ -247,8 +248,8 @@ class CompletingReader(Reader):
     cmpltn_menu_end: int = field(init=False)
     cmpltn_menu_choices: list[str] = field(init=False)
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         self.cmpltn_reset()
         for c in (complete, self_insert):
             self.commands[c.__name__] = c

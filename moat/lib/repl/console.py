@@ -26,9 +26,9 @@ import os.path
 import re
 import sys
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 
 import _colorize
+from attrs import define, field
 
 TYPE_CHECKING = False
 
@@ -37,17 +37,17 @@ if TYPE_CHECKING:
     from typing import IO
 
 
-@dataclass
+@define
 class Event:  # noqa: D101
     evt: str
     data: str
     raw: bytes = b""
 
 
-@dataclass
+@define
 class Console(ABC):  # noqa: D101
     posxy: tuple[int, int]
-    screen: list[str] = field(default_factory=list)
+    screen: list[str] = field(factory=list)
     height: int = 25
     width: int = 80
 

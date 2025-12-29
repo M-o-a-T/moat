@@ -24,9 +24,9 @@ from __future__ import annotations
 import anyio
 import sys
 from contextlib import asynccontextmanager, nullcontext
-from dataclasses import dataclass, field, fields
 
 import _colorize
+from attrs import define, field, fields
 
 from . import commands, console, input  # noqa: A004
 from .trace import trace
@@ -135,7 +135,7 @@ default_keymap: tuple[tuple[KeySpec, CommandName], ...] = tuple(
 )
 
 
-@dataclass(slots=True)
+@define(slots=False)
 class Reader(anyio.AsyncContextManagerMixin):
     """The Reader class implements the bare bones of a command reader,
     handling such details as editing and cursor motion.  What it does
@@ -193,39 +193,39 @@ class Reader(anyio.AsyncContextManagerMixin):
     console: console.Console
 
     ## state
-    buffer: list[str] = field(default_factory=list)
+    buffer: list[str] = field(factory=list)
     pos: int = 0
     ps1: str = "->> "
     ps2: str = "/>> "
     ps3: str = "|.. "
     ps4: str = R"\__ "
-    kill_ring: list[list[str]] = field(default_factory=list)
+    kill_ring: list[list[str]] = field(factory=list)
     msg: str = ""
     arg: int | None = None
     dirty: bool = False
     finished: bool = False
     paste_mode: bool = False
-    commands: dict[str, type[Command]] = field(default_factory=make_default_commands)
+    commands: dict[str, type[Command]] = field(factory=make_default_commands)
     last_command: type[Command] | None = None
-    syntax_table: dict[str, int] = field(default_factory=make_default_syntax_table)
+    syntax_table: dict[str, int] = field(factory=make_default_syntax_table)
     keymap: tuple[tuple[str, str], ...] = ()
     input_trans: input.KeymapTranslator = field(init=False)
-    input_trans_stack: list[input.KeymapTranslator] = field(default_factory=list)
-    screen: list[str] = field(default_factory=list)
+    input_trans_stack: list[input.KeymapTranslator] = field(factory=list)
+    screen: list[str] = field(factory=list)
     screeninfo: list[tuple[int, list[int]]] = field(init=False)
     cxy: tuple[int, int] = field(init=False)
     lxy: tuple[int, int] = field(init=False)
-    scheduled_commands: list[str] = field(default_factory=list)
+    scheduled_commands: list[str] = field(factory=list)
     can_colorize: bool = False
     more_lines: Callable[[str], bool] | None = None
     _in_context: bool = field(default=False, init=False)
 
     ## cached metadata to speed up screen refreshes
-    @dataclass
+    @define
     class RefreshCache:  # noqa: D106
-        screen: list[str] = field(default_factory=list)
+        screen: list[str] = field(factory=list)
         screeninfo: list[tuple[int, list[int]]] = field(init=False)
-        line_end_offsets: list[int] = field(default_factory=list)
+        line_end_offsets: list[int] = field(factory=list)
         pos: int = field(init=False)
         cxy: tuple[int, int] = field(init=False)
         dimensions: tuple[int, int] = field(init=False)
@@ -266,12 +266,19 @@ class Reader(anyio.AsyncContextManagerMixin):
                 offset = 0
             return offset, num_common_lines
 
-    last_refresh_cache: RefreshCache = field(default_factory=RefreshCache)
+    last_refresh_cache: RefreshCache = field(factory=RefreshCache)
 
-    def __post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         # Enable the use of `insert` without a `prepare` call - necessary to
         # facilitate the tab completion hack implemented for
         # <https://bugs.python.org/issue25660>.
+        try:
+            sup = super().__attrs_post_init__
+        except AttributeError:
+            pass
+        else:
+            sup()
+
         self.keymap = self.collect_keymap()
         self.input_trans = input.KeymapTranslator(
             self.keymap, invalid_cls="invalid-key", character_cls="self-insert"

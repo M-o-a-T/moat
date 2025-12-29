@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import anyio
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+
+from attrs import define, field
 
 from . import commands, input  # noqa: A004
 from .reader import Reader
@@ -215,16 +216,16 @@ class isearch_end(commands.Command):  # noqa: D101
         r.dirty = True
 
 
-@dataclass
+@define(slots=False)
 class HistoricalReader(Reader):
     """Adds history support (with incremental history searching) to the
     Reader class.
     """
 
-    history: list[str] = field(default_factory=list)
+    history: list[str] = field(factory=list)
     historyi: int = 0
     next_history: int | None = None
-    transient_history: dict[int, str] = field(default_factory=dict)
+    transient_history: dict[int, str] = field(factory=dict)
     isearch_term: str = ""
     isearch_direction: str = ISEARCH_DIRECTION_NONE
     isearch_start: tuple[int, int] = field(init=False)
@@ -232,8 +233,8 @@ class HistoricalReader(Reader):
     yank_arg_i: int = 0
     yank_arg_yanked: str = ""
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         for c in [
             next_history,
             previous_history,

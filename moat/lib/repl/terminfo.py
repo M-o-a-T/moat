@@ -6,8 +6,9 @@ import errno
 import os
 import re
 import struct
-from dataclasses import dataclass, field
 from pathlib import Path
+
+from attrs import define, field
 
 # Terminfo constants
 MAGIC16 = 0o432  # Magic number for 16-bit terminfo format
@@ -315,14 +316,14 @@ _TERM_ALIASES = {
 }
 
 
-@dataclass
+@define
 class TermInfo:  # noqa:D101
     terminal_name: str | bytes | None
     fallback: bool = True
 
-    _capabilities: dict[str, bytes] = field(default_factory=dict)
+    _capabilities: dict[str, bytes] = field(factory=dict)
 
-    def __post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         """Initialize terminal capabilities for the given terminal type.
 
         Based on ncurses implementation in:

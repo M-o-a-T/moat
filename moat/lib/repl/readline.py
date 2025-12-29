@@ -31,9 +31,10 @@ from __future__ import annotations
 import os
 import sys
 import warnings
-from dataclasses import dataclass, field
 from rlcompleter import Completer as RLCompleter
 from site import gethistoryfile
+
+from attrs import define, field
 
 from . import commands, historical_reader
 from ._module_completer import ModuleCompleter, make_default_module_completer
@@ -103,14 +104,14 @@ __all__ = [
 # ____________________________________________________________
 
 
-@dataclass
+@define
 class ReadlineConfig:
     readline_completer: Completer | None = None
     completer_delims: frozenset[str] = frozenset(" \t\n`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?")
-    module_completer: ModuleCompleter = field(default_factory=make_default_module_completer)
+    module_completer: ModuleCompleter = field(factory=make_default_module_completer)
 
 
-@dataclass(kw_only=True)
+@define(kw_only=True)
 class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
     # Class fields
     assume_immutable_completions = False
@@ -346,16 +347,16 @@ class backspace_dedent(commands.Command):
 # ____________________________________________________________
 
 
-@dataclass(slots=True)
+@define
 class _ReadlineWrapper:
     f_in: int = -1
     f_out: int = -1
     reader: ReadlineAlikeReader | None = field(default=None, repr=False)
     saved_history_length: int = -1
     startup_hook: Callback | None = None
-    config: ReadlineConfig = field(default_factory=ReadlineConfig, repr=False)
+    config: ReadlineConfig = field(factory=ReadlineConfig, repr=False)
 
-    def __post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         if self.f_in == -1:
             self.f_in = os.dup(0)
         if self.f_out == -1:

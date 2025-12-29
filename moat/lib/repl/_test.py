@@ -103,6 +103,9 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
     async def get_event(self) -> Event:
         """Get next event from mock input."""
         data = await self.rd(1)
+        if not data:
+            # No more input available, treat as EOF
+            raise EOFError
         return Event(evt="key", data=data.decode(self.encoding, errors="replace"), raw=data)
 
     async def push_char(self, char: int | bytes) -> None:

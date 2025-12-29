@@ -114,3 +114,60 @@ async def test_full_stack():
     # Verify actions were recorded
     assert ("rd", 5) in mock.recorded_actions
     assert ("wr", b"test") in mock.recorded_actions
+
+
+@pytest.mark.anyio
+async def test_readline_iterator_full():
+    """Test Readline async iterator with multiple lines."""
+    # Create mock console with multiple lines of input
+    user_actions = [
+        b"first line\n",
+        b"second line\n",
+        b"third line\n",
+    ]
+    console = MockConsole(user_actions=user_actions)
+
+    lines = []
+    # Use the full pattern: async with console, Readline as iterator
+    async with console, Readline(console, prompt=">>> ") as inp:
+        async for line in inp:
+            lines.append(line)
+            if len(lines) >= 3:  # Stop after 3 lines
+                break
+
+    assert len(lines) == 3
+    assert "first" in lines[0]
+    assert "second" in lines[1]
+    assert "third" in lines[2]
+
+    # Verify console was prepared and restored
+    assert ("action", "enter") in console.recorded_actions
+    assert ("action", "exit") in console.recorded_actions
+
+
+@pytest.mark.anyio
+async def test_readline_multiline():
+    """Test Readline with multiline input support."""
+
+    def more_lines(text: str) -> bool:
+        """Check if we need more lines (simple continuation check)."""
+        # Continue if the text (without trailing newline) ends with backslash
+        text = text.rstrip("\n")
+        return text.endswith("\\")
+
+    # Create mock console with multiline input
+    user_actions = [
+        b"line 1\\\n",  # Continuation
+        b"line 2\n",  # Complete
+    ]
+    console = MockConsole(user_actions=user_actions)
+
+    lines = []
+    async with console, Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
+        line = await anext(inp)
+        lines.append(line)
+
+    # Should have received the complete multiline input
+    assert len(lines) == 1
+    assert "line 1" in lines[0]
+    assert "line 2" in lines[0]

@@ -39,6 +39,8 @@ from typing import TYPE_CHECKING  # noqa: E402
 if TYPE_CHECKING:
     from .types import Callback, CommandName, KeySpec, SimpleContextManager
 
+    from collections.abc import Callable
+
 # syntax classes
 SYNTAX_WHITESPACE, SYNTAX_WORD, SYNTAX_SYMBOL = range(3)
 
@@ -215,6 +217,7 @@ class Reader(anyio.AsyncContextManagerMixin):
     lxy: tuple[int, int] = field(init=False)
     scheduled_commands: list[str] = field(default_factory=list)
     can_colorize: bool = False
+    more_lines: Callable[[str], bool] | None = None
     _in_context: bool = field(default=False, init=False)
 
     ## cached metadata to speed up screen refreshes
@@ -286,14 +289,13 @@ class Reader(anyio.AsyncContextManagerMixin):
     @asynccontextmanager
     async def __asynccontextmanager__(self):
         """Context manager that handles console prepare/restore."""
-        async with self.console:
-            await self.prepare()
-            self._in_context = True
-            try:
-                yield
-            finally:
-                self._in_context = False
-                await self.restore()
+        await self.prepare()
+        self._in_context = True
+        try:
+            yield
+        finally:
+            self._in_context = False
+            await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
@@ -682,8 +684,19 @@ class Reader(anyio.AsyncContextManagerMixin):
 
         self.finished = bool(command.finish)
         if self.finished:
-            await self.console.finish()
-            await self.finish()
+            # Check if we need more lines for multiline input
+            if self.more_lines is not None:
+                current_text = self.get_unicode()
+                if self.more_lines(current_text):
+                    # Continue to next line
+                    self.buffer.append("\n")
+                    self.pos = len(self.buffer)
+                    self.finished = False
+                    self.dirty = True
+
+            if self.finished:
+                await self.console.finish()
+                await self.finish()
 
     def run_hooks(self) -> None:  # noqa: D102
         input_hook = self.console.input_hook

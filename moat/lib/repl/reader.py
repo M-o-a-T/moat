@@ -296,13 +296,14 @@ class Reader(anyio.AsyncContextManagerMixin):
     @asynccontextmanager
     async def __asynccontextmanager__(self):
         """Context manager that handles console prepare/restore."""
-        await self.prepare()
-        self._in_context = True
-        try:
-            yield
-        finally:
-            self._in_context = False
-            await self.restore()
+        async with self.console:
+            await self.prepare()
+            self._in_context = True
+            try:
+                yield
+            finally:
+                self._in_context = False
+                await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
@@ -630,7 +631,7 @@ class Reader(anyio.AsyncContextManagerMixin):
 
     async def restore(self) -> None:
         """Clean up after a run."""
-        pass
+        await self.console.restore()
 
     @asynccontextmanager
     async def suspend(self) -> SimpleContextManager:

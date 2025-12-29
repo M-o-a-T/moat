@@ -30,8 +30,6 @@ from dataclasses import dataclass, field
 
 import _colorize
 
-from moat.lib.rpc import MsgHandler
-
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
@@ -245,51 +243,6 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
             if result is self.STATEMENT_FAILED:
                 break
         return False
-
-
-class MsgConsole(MsgHandler):
-    """
-    RPC handler that wraps a Console instance and exposes its methods via cmd_* handlers.
-
-    This allows remote access to console operations via the MsgSender interface.
-    """
-
-    def __init__(self, console: Console):
-        self.console = console
-
-    async def cmd_rd(self, n: int) -> bytes:
-        """Read up to n bytes from the console."""
-        return await self.console.rd(n)
-
-    async def cmd_wr(self, data: bytes) -> None:
-        """Write data to the console."""
-        await self.console.wr(data)
-
-
-class MoatConsole:
-    """
-    Client-side console proxy that uses RPC to communicate with a remote MsgConsole.
-
-    Usage:
-        ux = UnixConsole()
-        tty = MsgConsole(ux)
-        snd = MsgSender(tty)
-        moat = MoatConsole(snd)
-        # Call chain: moat.rd(10) -> snd.rd(n=10) -> tty.cmd_rd(10) -> ux.rd(10)
-        data = await moat.rd(10)
-    """
-
-    def __init__(self, sender):
-        """Initialize with a MsgSender instance."""
-        self.sender = sender
-
-    async def rd(self, n: int) -> bytes:
-        """Read up to n bytes from the remote console."""
-        return await self.sender.rd(n=n)
-
-    async def wr(self, data: bytes) -> None:
-        """Write data to the remote console."""
-        await self.sender.wr(data=data)
 
 
 class Readline:

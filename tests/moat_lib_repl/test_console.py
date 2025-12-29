@@ -6,7 +6,8 @@ import pytest
 
 from moat.util import Path
 from moat.lib.repl._test import MockConsole
-from moat.lib.repl.console import MoatConsole, MsgConsole, Readline
+from moat.lib.repl.console import Readline
+from moat.lib.repl.rpc import MsgConsole
 from moat.lib.rpc import MsgSender
 
 
@@ -54,8 +55,8 @@ async def test_msg_console_wrapper():
 
 
 @pytest.mark.anyio
-async def test_moat_console_remote():
-    """Test MoatConsole remote proxy."""
+async def test_rpc_sender_remote():
+    """Test remote console access via MsgSender."""
     # Create a mock console
     user_actions = [b"remote input"]
     mock = MockConsole(user_actions=user_actions)
@@ -66,15 +67,12 @@ async def test_moat_console_remote():
     # Create MsgSender (simulating RPC layer)
     sender = MsgSender(msg_handler).sub_at(Path())
 
-    # Create MoatConsole that uses the sender
-    moat = MoatConsole(sender)
-
-    # Test rd through the chain: moat -> sender -> msg_handler -> mock
-    result = await moat.rd(6)
+    # Test rd through the chain: sender -> msg_handler -> mock
+    result = await sender.rd(n=6)
     assert result == b"remote"
 
     # Test wr through the chain
-    await moat.wr(b"remote output")
+    await sender.wr(data=b"remote output")
     assert mock.output_buffer == b"remote output"
 
 
@@ -95,23 +93,22 @@ async def test_readline_iterator():
 
 @pytest.mark.anyio
 async def test_full_stack():
-    """Test complete RPC stack with Readline."""
+    """Test complete RPC stack."""
     # Create mock console with scripted input
     user_actions = [
         b"print('hello')\n",
     ]
     mock = MockConsole(user_actions=user_actions)
 
-    # Build the stack: MockConsole -> MsgConsole -> MsgSender -> MoatConsole
+    # Build the stack: MockConsole -> MsgConsole -> MsgSender
     msg_handler = MsgConsole(mock)
     sender = MsgSender(msg_handler).sub_at(Path())
-    moat = MoatConsole(sender)
 
     # Test that rd/wr work through the stack
-    result = await moat.rd(5)
+    result = await sender.rd(n=5)
     assert result == b"print"
 
-    await moat.wr(b"test")
+    await sender.wr(data=b"test")
     assert mock.output_buffer == b"test"
 
     # Verify actions were recorded

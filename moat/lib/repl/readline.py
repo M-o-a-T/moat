@@ -276,7 +276,7 @@ def _should_auto_indent(buffer: list[str], pos: int) -> bool:
 
 
 class maybe_accept(commands.Command):
-    def do(self) -> None:
+    async def do(self) -> None:
         r: ReadlineAlikeReader
         r = self.reader  # type: ignore[assignment]
         r.dirty = True  # this is needed to hide the completion menu, if visible
@@ -322,7 +322,7 @@ class maybe_accept(commands.Command):
 
 
 class backspace_dedent(commands.Command):
-    def do(self) -> None:
+    async def do(self) -> None:
         r = self.reader
         b = r.buffer
         if r.pos > 0:

@@ -725,9 +725,9 @@ class Reader:
             await self.console.flushoutput()
             return True
 
-    def push_char(self, char: int | bytes) -> None:  # noqa: D102
-        self.console.push_char(char)
-        self.handle1(block=False)
+    async def push_char(self, char: int | bytes) -> None:  # noqa: D102
+        await self.console.push_char(char)
+        await self.handle1(block=False)
 
     async def readline(self, startup_hook: Callback | None = None) -> str:
         """Read a line.  The implementation of this method also shows

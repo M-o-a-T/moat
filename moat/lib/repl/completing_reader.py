@@ -182,7 +182,7 @@ class complete(commands.Command):  # noqa: D101
 
         completions = r.cmpltn_menu_choices
         if not completions:
-            r.error("no matches")
+            await r.error("no matches")
         elif len(completions) == 1:
             if completions_unchangable and len(completions[0]) == len(stem):
                 r.msg = "[ sole completion ]"

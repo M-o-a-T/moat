@@ -123,8 +123,8 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
     more_lines: MoreLinesCallable | None = None
     last_used_indentation: str | None = None
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
+    def __attrs_post_init__(self) -> None:
+        super().__attrs_post_init__()
         self.commands["maybe_accept"] = maybe_accept
         self.commands["maybe-accept"] = maybe_accept
         self.commands["backspace_dedent"] = backspace_dedent

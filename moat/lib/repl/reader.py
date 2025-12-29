@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import anyio
 import sys
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from dataclasses import dataclass, field, fields
 
 import _colorize
@@ -757,28 +757,13 @@ class Reader(anyio.AsyncContextManagerMixin):
         """Read a line.  The implementation of this method also shows
         how to drive Reader if you want more control over the event
         loop."""
-        if self._in_context:
-            # Already in context, don't prepare/restore
+        async with nullcontext() if self._in_context else self:
             if startup_hook is not None:
                 startup_hook()
             await self.refresh()
             while not self.finished:
                 await self.handle1()
             return self.get_unicode()
-        else:
-            # Not in context, do prepare/restore for this call
-            async with self.console:
-                await self.prepare()
-                try:
-                    if startup_hook is not None:
-                        startup_hook()
-                    await self.refresh()
-                    while not self.finished:
-                        await self.handle1()
-                    return self.get_unicode()
-
-                finally:
-                    await self.restore()
 
     def bind(self, spec: KeySpec, command: CommandName) -> None:  # noqa: D102
         self.keymap = self.keymap + ((spec, command),)

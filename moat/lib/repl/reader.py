@@ -711,11 +711,13 @@ class Reader(anyio.AsyncContextManagerMixin):
                 await self.console.finish()
                 await self.finish()
 
-    def run_hooks(self) -> None:  # noqa: D102
+    async def run_hooks(self) -> None:  # noqa: D102
         input_hook = self.console.input_hook
         if input_hook:
             try:
-                input_hook()
+                res = input_hook()
+                if hasattr(res, "__await__"):
+                    await res
             except Exception:  # noqa: S110
                 pass
 
@@ -730,7 +732,7 @@ class Reader(anyio.AsyncContextManagerMixin):
 
         while True:
             # We use the same timeout as in readline.c: 100ms
-            self.run_hooks()
+            await self.run_hooks()
             try:
                 with anyio.fail_after(None if block else 0.1):
                     event = await self.console.get_event()

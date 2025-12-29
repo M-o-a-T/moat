@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import anyio
+import anyio.abc
 import errno
 import fcntl
 import os
@@ -136,7 +137,7 @@ class FDWrapper:
 
 
 class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
-    __in_prep: bool | None = False
+    __read_task: anyio.abc.CancelScope = None
 
     def __init__(
         self,
@@ -257,15 +258,17 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                     async for _sig in wch:
                         await self.__sigcont()
 
-            @tg.start_soon
-            async def _read():
-                while True:
-                    self.push_char(await self.__read(1))
-
+            self.__tg = tg
             try:
                 yield self
             finally:
                 tg.cancel_scope.cancel()
+
+    async def _reader(self, task_status=anyio.TASK_STATUS_IGNORED):
+        with anyio.CancelScope() as sc:
+            task_status.started(sc)
+            while True:
+                self.push_char(await self.__read(1))
 
     async def __sigcont(self):
         await self.restore()
@@ -276,6 +279,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     async def rd(self, n: int) -> bytes:
         """Read up to n bytes from the underlying terminal."""
+        if self.__read_task is not None:
+            raise RuntimeError("Cannot read. Call .prepare(reader=False).")
         return await self.__read(n)
 
     async def wr(self, data: bytes) -> None:
@@ -388,16 +393,16 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             self.__move(x, y)
             self.posxy = x, y
 
-    async def prepare(self):
+    async def prepare(self, reader: bool = True):
         """
         Prepare the console for input/output operations.
         """
 
-        if self.__in_prep:
+        if self.__read_task:
             await self.restore()
-            self.__in_prep = None
             raise RuntimeError("Already prepared")
-        self.__in_prep = True
+        if reader:
+            self.__read_task = await self.__tg.start(self._reader)
 
         self.__buffer = []
         self.__input_fd_set(self.__raw_termstate)
@@ -422,12 +427,9 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Restore the console to the default state
         """
-        if self.__in_prep:
-            self.__in_prep = False
-        elif self.__in_prep is False:
-            raise RuntimeError("Misnested prepare/restore")
-        else:
-            return
+        if self.__read_task:
+            self.__read_task.cancel()
+            self.__read_task = None
         self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)
         await self.flushoutput()

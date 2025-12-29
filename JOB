@@ -1,0 +1,68 @@
+Your job is to enable moat.lib.repl to talk to a possibly-remote terminal via RPC,
+to streamline the REPL interface so it won't need to change the
+terminal to raw mode and back between lines, and to enable it to read and
+write in parallel without creating a mess on the screen.
+
+If something is unclear, ask.
+
+Design:
+
+In moat.lib.repl, convert console.Console (and UnixConsole) to use only
+async methods to access it, including "rd" and "wr" to read and write
+from the underlying TTY.
+
+Create a MsgHandler subclass "MsgConsole" that contains cmd_* methods
+which access a UnixConsole instance.
+
+Create a moat.lib.repl.MoatConsole class that uses the rpc.MsgSender
+interface to talk to a MsgConsole. I.e., given `ux=UnixConsole(...)`,
+`tty=MsgConsole(ux)`, `snd=MsgSender(tty)`, a call to `await
+snd.wr(b'abc')` will translate to `await tty.cmd_wr(b'abc')` and thus to
+`await ux.wr(b'abc').
+
+Next, refactor moat.lib.repl so that its main interface is an async iterator
+that yields input lines, i.e. instead of
+  while True:
+    line = await repl.input()
+    process(line)
+
+The caller should thus be able to do something like
+  async with MsgConsole(UnixConsole()) as con:
+    snd = MsgSender(con)
+    # ... or simply ...
+    snd = UnixConsole()
+
+followed by
+
+    async with snd, Readline(snd, prompt=">>>") as lines:
+       async for line in lines:
+          process(line)
+
+
+The existing _ReadlineWrapper.input and .multiline_input methods should
+look roughly like this:
+
+async def input(self, prompt:str) -> str:
+  inp = UnixConsole()  # file descriptor numbers for in and out
+  hdl = MsgConsole(inp)
+  async with hdl:
+     snd = MsgSender(hdl)
+     async with Readline(snd, prompt=prompt) as rdl:
+        return await anext(aiter(rdl))
+
+Similar for multi-line input.
+
+Create a test script that exercises the above. Create a MockConsole class
+that can be fed a list of "user actions" (float:delay, bytes:mock input)
+and records the actions performed (bytes: strings written, text: actions
+performed, like "raw", "cooked" or "getsize").
+
+After that works, we need to enhance the REPL: add a "write" method to the Readline
+class that inserts new lines above the input on screen. It should
+blank the current input immediately if required, print the line(s), and
+use the existing 0.1 second redraw timeout for re-displaying the input.
+
+Also, we need a "replace_prompt" method that changes the current prompt.
+
+Commit each step. Use terse commit messages without elaborate explanations
+or patch descriptions.

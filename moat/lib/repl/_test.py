@@ -87,15 +87,15 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         """Mock refresh."""
         self.recorded_actions.append(("action", "refresh"))
 
-    def move_cursor(self, x: int, y: int) -> None:
+    async def move_cursor(self, x: int, y: int) -> None:
         """Mock move_cursor."""
         self.recorded_actions.append(("action", f"move_cursor({x},{y})"))
 
-    def set_cursor_vis(self, visible: bool) -> None:
+    async def set_cursor_vis(self, visible: bool) -> None:
         """Mock set_cursor_vis."""
         self.recorded_actions.append(("action", f"set_cursor_vis({visible})"))
 
-    def getheightwidth(self) -> tuple[int, int]:
+    async def getheightwidth(self) -> tuple[int, int]:
         """Return mock terminal size."""
         self.recorded_actions.append(("action", "getheightwidth"))
         return (self._height, self._width)
@@ -105,17 +105,17 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         data = await self.rd(1)
         return Event(evt="key", data=data.decode(self.encoding, errors="replace"), raw=data)
 
-    def push_char(self, char: int | bytes) -> None:
+    async def push_char(self, char: int | bytes) -> None:
         """Push character to mock input buffer."""
         if isinstance(char, int):
             char = bytes([char])
         self.input_buffer = char + self.input_buffer
 
-    def beep(self) -> None:
+    async def beep(self) -> None:
         """Mock beep."""
         self.recorded_actions.append(("action", "beep"))
 
-    def clear(self) -> None:
+    async def clear(self) -> None:
         """Mock clear."""
         self.recorded_actions.append(("action", "clear"))
 
@@ -127,11 +127,11 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         """Mock flushoutput."""
         self.recorded_actions.append(("action", "flushoutput"))
 
-    def forgetinput(self) -> None:
+    async def forgetinput(self) -> None:
         """Mock forgetinput."""
         self.recorded_actions.append(("action", "forgetinput"))
 
-    def getpending(self) -> Event:
+    async def getpending(self) -> Event:
         """Mock getpending."""
         self.recorded_actions.append(("action", "getpending"))
         return Event(evt="", data="", raw=b"")
@@ -141,6 +141,6 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         """Mock input_hook."""
         return None
 
-    def repaint(self) -> None:
+    async def repaint(self) -> None:
         """Mock repaint."""
         self.recorded_actions.append(("action", "repaint"))

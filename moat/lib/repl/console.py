@@ -80,13 +80,13 @@ class Console(ABC):  # noqa: D101
     async def restore(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def move_cursor(self, x: int, y: int) -> None: ...  # noqa: D102
+    async def move_cursor(self, x: int, y: int) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def set_cursor_vis(self, visible: bool) -> None: ...  # noqa: D102
+    async def set_cursor_vis(self, visible: bool) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def getheightwidth(self) -> tuple[int, int]:
+    async def getheightwidth(self) -> tuple[int, int]:
         """Return (height, width) where height and width are the height
         and width of the terminal window in characters."""
         ...
@@ -99,17 +99,17 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    def push_char(self, char: int | bytes) -> None:
+    async def push_char(self, char: int | bytes) -> None:
         """
         Push a character to the console event queue.
         """
         ...
 
     @abstractmethod
-    def beep(self) -> None: ...  # noqa: D102
+    async def beep(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    def clear(self) -> None:
+    async def clear(self) -> None:
         """Wipe the screen"""
         ...
 
@@ -126,12 +126,12 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    def forgetinput(self) -> None:
+    async def forgetinput(self) -> None:
         """Forget all pending, but not yet processed input."""
         ...
 
     @abstractmethod
-    def getpending(self) -> Event:
+    async def getpending(self) -> Event:
         """Return the characters that have been typed but not yet
         processed."""
         ...
@@ -143,7 +143,7 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    def repaint(self) -> None: ...  # noqa: D102
+    async def repaint(self) -> None: ...  # noqa: D102
 
     @abstractmethod
     async def rd(self, n: int) -> bytes:

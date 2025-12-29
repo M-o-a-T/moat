@@ -347,10 +347,10 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__show_cursor()
 
         self.screen = screen.copy()
-        self.move_cursor(cx, cy)
+        await self.move_cursor(cx, cy)
         await self.flushoutput()
 
-    def move_cursor(self, x, y):
+    async def move_cursor(self, x, y):
         """
         Move the cursor to the specified position on the screen.
 
@@ -411,7 +411,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         if self.is_apple_terminal:
             await self.output_f.write(b"\033[?7h")
 
-    def push_char(self, char: int | bytes) -> None:
+    async def push_char(self, char: int | bytes) -> None:
         """
         Push a character to the console event queue.
         """
@@ -427,7 +427,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         return await self.event_queue.get()
 
-    def set_cursor_vis(self, visible):
+    async def set_cursor_vis(self, visible):
         """
         Set the visibility of the cursor.
 
@@ -441,7 +441,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     if TIOCGWINSZ:
 
-        def getheightwidth(self):
+        async def getheightwidth(self):
             """
             Get the height and width of the console.
 
@@ -462,7 +462,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     else:
 
-        def getheightwidth(self):
+        async def getheightwidth(self):
             """
             Get the height and width of the console.
 
@@ -474,7 +474,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             except (KeyError, TypeError, ValueError):
                 return 25, 80
 
-    def forgetinput(self):
+    async def forgetinput(self):
         """
         Discard any pending input on the console.
         """
@@ -556,7 +556,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             e.raw += raw
             return e
 
-    def clear(self):
+    async def clear(self):
         """
         Clear the console screen.
         """
@@ -764,7 +764,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             self.__maybe_write_code(self._cnorm)
             self.cursor_visible = 1
 
-    def repaint(self):  # noqa: D102
+    async def repaint(self):  # noqa: D102
         if not self.__gone_tall:
             self.posxy = 0, self.posxy[1]
             self.__write("\r")

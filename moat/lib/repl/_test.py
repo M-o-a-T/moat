@@ -11,7 +11,6 @@ TYPE_CHECKING = False
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import IO
 
 
 class MockConsole(Console, anyio.AsyncContextManagerMixin):
@@ -30,13 +29,11 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
 
     def __init__(
         self,
-        f_in: IO[bytes] | int = 0,
-        f_out: IO[bytes] | int = 1,
         term: str = "",
         encoding: str = "",
         user_actions: list[float | bytes] | None = None,
     ):
-        super().__init__(f_in, f_out, term, encoding)
+        super().__init__(-1, -1, term, encoding)
         self.user_actions = list(user_actions) if user_actions else []
         self.recorded_actions: list[tuple[str, object]] = []
         self.input_buffer = b""

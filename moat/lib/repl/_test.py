@@ -23,7 +23,7 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
 
     Recorded actions include:
         ("wr", bytes) - data written via wr()
-        ("rd", int) - number of bytes requested via rd()
+        ("rd", bytes) - number of bytes read via rd()
         ("action", str) - operations like "prepare", "restore", "raw", "cooked"
     """
 
@@ -52,8 +52,6 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
 
     async def rd(self, n: int) -> bytes:
         """Read up to n bytes from mock input."""
-        self.recorded_actions.append(("rd", n))
-
         # Process user actions until we have input
         while not self.input_buffer and self.user_actions:
             action = self.user_actions.pop(0)
@@ -65,6 +63,8 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         # Return available data
         result = self.input_buffer[:n]
         self.input_buffer = self.input_buffer[n:]
+
+        self.recorded_actions.append(("rd", result))
         return result
 
     async def wr(self, data: bytes) -> None:

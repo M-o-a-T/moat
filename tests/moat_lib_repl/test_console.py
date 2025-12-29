@@ -31,7 +31,7 @@ async def test_mock_console_basic():
     assert console.output_buffer == b"output"
 
     # Test that actions are recorded
-    assert ("rd", 5) in console.recorded_actions
+    assert ("rd", b"hello") in console.recorded_actions
     assert ("wr", b"output") in console.recorded_actions
 
 
@@ -115,7 +115,7 @@ async def test_full_stack():
     assert mock.output_buffer == b"test"
 
     # Verify actions were recorded
-    assert ("rd", 5) in mock.recorded_actions
+    assert ("rd", b"print") in mock.recorded_actions
     assert ("wr", b"test") in mock.recorded_actions
 
 

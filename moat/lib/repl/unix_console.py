@@ -484,11 +484,22 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Flush the output buffer.
         """
+        buf = []
+
+        async def _flush():
+            nonlocal buf
+            if buf:
+                await self.output_f.write(b"".join(buf))
+                buf = []
+
         for text, iscode in self.__buffer:
             if iscode:
+                await _flush()
                 await self.__tputs(text)
             else:
-                await self.output_f.write(text.encode(self.encoding, "replace"))
+                buf.append(text.encode(self.encoding, "replace"))
+        await _flush()
+
         del self.__buffer[:]
 
     async def finish(self):

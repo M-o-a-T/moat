@@ -149,6 +149,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         entered. Does not include color information.
       * console:
         Hopefully encapsulates the OS dependent stuff.
+        This is a required parameter.
       * pos:
         A 0-based index into 'buffer' for where the insertion point
         is.
@@ -180,17 +181,17 @@ class Reader(anyio.AsyncContextManagerMixin):
             ps4> and the last one gets ps4
         As with the usual top-level, you can set these to instances if
         you like; str() will be called on them (once) at the beginning
-        of each command.  Don't put really long or newline containing
-        strings here, please!
+        of each command.
         This is just the default policy; you can change it freely by
         overriding get_prompt() (and indeed some standard subclasses
         do).
+        Prompts that contain a newline are not yet supported.
       * finished:
         handle1 will set this to a true value if a command signals
         that we're done.
     """
 
-    console: console.Console
+    console: console.Console = field()
 
     ## state
     buffer: list[str] = field(factory=list)

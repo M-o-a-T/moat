@@ -303,7 +303,8 @@ class Reader(anyio.AsyncContextManagerMixin):
                 yield
             finally:
                 self._in_context = False
-                await self.restore()
+                with anyio.move_on_after(1, shield=True):
+                    await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap

@@ -88,7 +88,7 @@ async def test_readline_iterator():
     # Use Readline as async iterator
     async with Readline(console, prompt=">>> ") as lines:
         line = await anext(lines)
-        assert "test" in line or line == "test line"
+        assert line == "test line"
 
 
 @pytest.mark.anyio

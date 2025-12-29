@@ -280,33 +280,32 @@ class Readline:
         self.ps3 = ps3 or "|.. "
         self.ps4 = ps4 or R"\__ "
         self.reader = None
-        self._reader_ctx = None
 
     async def __aenter__(self):
         """Enter async context and create reader."""
         from .reader import Reader  # noqa: PLC0415
 
-        self.reader = Reader(console=self.console)
-        self.reader.ps1 = self.ps1
-        self.reader.ps2 = self.ps2
-        self.reader.ps3 = self.ps3
-        self.reader.ps4 = self.ps4
-        self.reader.more_lines = self.more_lines
+        reader = Reader(console=self.console)
+        reader.ps1 = self.ps1
+        reader.ps2 = self.ps2
+        reader.ps3 = self.ps3
+        reader.ps4 = self.ps4
+        reader.more_lines = self.more_lines
 
         # Enter the reader's context to do prepare() once
-        self._reader_ctx = self.reader.__aenter__()
-        await self._reader_ctx
+        await reader.__aenter__()
+        self.reader = reader
 
         return self
 
     async def __aexit__(self, *exc):
         """Exit async context and clean up."""
-        if self._reader_ctx is not None:
+        if self.reader is not None:
             # Exit the reader's context to do restore() once
-            await self.reader.__aexit__(*exc)
-            self._reader_ctx = None
-        self.reader = None
-        return False
+            try:
+                await self.reader.__aexit__(*exc)
+            finally:
+                self.reader = None
 
     def __aiter__(self):
         """Return self as async iterator."""

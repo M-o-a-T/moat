@@ -82,6 +82,7 @@ async def test_readline_iterator():
     # Create console with input ending in newline (to trigger accept)
     user_actions = [
         b"test line\n",
+        b"another line\n",
     ]
     console = MockConsole(user_actions=user_actions)
 
@@ -89,6 +90,8 @@ async def test_readline_iterator():
     async with Readline(console, prompt=">>> ") as lines:
         line = await anext(lines)
         assert line == "test line"
+        line = await anext(lines)
+        assert line == "another line"
 
 
 @pytest.mark.anyio
@@ -129,7 +132,7 @@ async def test_readline_iterator_full():
 
     lines = []
     # Use the full pattern: async with console, Readline as iterator
-    async with console, Readline(console, prompt=">>> ") as inp:
+    async with Readline(console, prompt=">>> ") as inp:
         async for line in inp:
             lines.append(line)
             if len(lines) >= 3:  # Stop after 3 lines
@@ -163,7 +166,7 @@ async def test_readline_multiline():
     console = MockConsole(user_actions=user_actions)
 
     lines = []
-    async with console, Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
+    async with Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
         line = await anext(inp)
         lines.append(line)
 

@@ -295,16 +295,18 @@ class Reader(anyio.AsyncContextManagerMixin):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self):
-        """Context manager that handles console prepare/restore."""
-        async with self.console:
-            await self.prepare()
-            self._in_context = True
-            try:
-                yield
-            finally:
-                self._in_context = False
-                with anyio.move_on_after(1, shield=True):
-                    await self.restore()
+        """Context manager that handles console prepare/restore.
+
+        The console context must already have been entered.
+        """
+        await self.prepare()
+        self._in_context = True
+        try:
+            yield
+        finally:
+            self._in_context = False
+            with anyio.move_on_after(1, shield=True):
+                await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
@@ -764,10 +766,11 @@ class Reader(anyio.AsyncContextManagerMixin):
         await self.handle1(block=False)
 
     async def readline(self, startup_hook: Callback | None = None) -> str:
-        """Read a line.  The implementation of this method also shows
-        how to drive Reader if you want more control over the event
-        loop."""
-        async with nullcontext() if self._in_context else self:
+        """Read a line."""
+        async with (
+            nullcontext() if self._in_context else self.console,
+            nullcontext() if self._in_context else self,
+        ):
             if startup_hook is not None:
                 startup_hook()
             await self.refresh()

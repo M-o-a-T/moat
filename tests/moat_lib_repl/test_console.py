@@ -87,7 +87,7 @@ async def test_readline_iterator():
     console = MockConsole(user_actions=user_actions)
 
     # Use Readline as async iterator
-    async with Readline(console, prompt=">>> ") as lines:
+    async with console, Readline(console, prompt=">>> ") as lines:
         line = await anext(lines)
         assert line == "test line"
         line = await anext(lines)
@@ -132,7 +132,7 @@ async def test_readline_iterator_full():
 
     lines = []
     # Use the full pattern: async with console, Readline as iterator
-    async with Readline(console, prompt=">>> ") as inp:
+    async with console, Readline(console, prompt=">>> ") as inp:
         async for line in inp:
             lines.append(line)
             if len(lines) >= 3:  # Stop after 3 lines
@@ -166,7 +166,7 @@ async def test_readline_multiline():
     console = MockConsole(user_actions=user_actions)
 
     lines = []
-    async with Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
+    async with console, Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
         line = await anext(inp)
         lines.append(line)
 

@@ -243,7 +243,7 @@ async def sync_(ctx, **kw):
     Sync of MoaT code to a running MicroPython device.
 
     """
-    from .path import MoatFSPath  # noqa: PLC0415
+    from .files import MoatFSPath  # noqa: PLC0415
     from .setup import do_copy, do_update  # noqa: PLC0415
 
     obj = ctx.obj
@@ -493,7 +493,7 @@ async def cfg_(
         return
 
     if read_client or write_client:
-        from .path import MoatFSPath  # noqa: PLC0415
+        from .files import MoatFSPath  # noqa: PLC0415
 
     p_cfg = cfg.path.get("cfg", P("cfg_"))
     p_fs = cfg.path.get("fs", P("fs"))

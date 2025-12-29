@@ -6,14 +6,14 @@ from __future__ import annotations
 
 import hashlib
 
-from .path import APath, copytree
+from .files import APath, copytree
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.path import MoatPath
+    from moat.micro.files import MoatPath
 
 
 def hash256(data):

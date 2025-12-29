@@ -31,7 +31,7 @@ all = ["setup", "install", "do_update", "do_copy"]  # noqa: A001
 
 
 async def do_update(dst, root, cross, hfn):  # noqa: D103
-    from moat.micro.path import copytree  # noqa: PLC0415
+    from moat.micro.files import copytree  # noqa: PLC0415
 
     await run_update(dst / "lib", cross=cross, hash_fn=hfn)
 
@@ -59,7 +59,7 @@ async def do_copy(
 
     @cross is the path of the mpy-cross executable.
     """
-    from .path import copy_over  # noqa: PLC0415
+    from .files import copy_over  # noqa: PLC0415
 
     if not dest:
         dest = str(source)
@@ -115,7 +115,7 @@ async def setup(
     from moat.lib.stream import RemoteBufAnyio  # noqa: PLC0415
 
     from .direct import DirectREPL  # noqa: PLC0415
-    from .path import ABytes, MoatDevPath, copy_over  # noqa: PLC0415
+    from .files import ABytes, MoatDevPath, copy_over  # noqa: PLC0415
 
     codec = get_codec("std-cbor")
 
@@ -230,7 +230,7 @@ async def setup(
                 await copy_over(f, MoatDevPath(config_file).connect_repl(repl))
 
             if main:
-                from moat.micro.path import copytree  # noqa: PLC0415
+                from moat.micro.files import copytree  # noqa: PLC0415
 
                 await copytree(
                     anyio.Path(main), MoatDevPath(".").connect_repl(repl) / "main.py", cross=None

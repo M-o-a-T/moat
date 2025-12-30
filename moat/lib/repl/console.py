@@ -44,6 +44,14 @@ class Event:  # noqa: D101
     raw: bytes = b""
 
 
+try:
+    from moat.lib.proxy import as_proxy
+except ImportError:
+    pass
+else:
+    as_proxy("_replEvt", Event)
+
+
 @define
 class Console(ABC):  # noqa: D101
     posxy: tuple[int, int]

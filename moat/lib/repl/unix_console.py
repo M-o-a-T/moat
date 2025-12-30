@@ -242,9 +242,9 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         buf[n:] = b""
         return buf
 
-    def rd(self, buf: bytearray) -> Awaitable[int]:
+    async def rd(self, buf: bytearray) -> Awaitable[int]:
         """Read up to len(buf) bytes directly from the underlying terminal."""
-        return self.__io.rd(buf)
+        return await self.__io.rd(buf)
 
     async def wr(self, data: bytes) -> None:
         """Write data directly to the underlying terminal."""

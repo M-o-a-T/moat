@@ -56,10 +56,16 @@ class TermState:  # noqa: D101
     def copy(self) -> TermState:  # noqa: D102
         return self.__class__(self.as_list())
 
+try:
+    from moat.lib.proxy import as_proxy
+except ImportError:
+    pass
+else:
+    as_proxy("_TermSt", TermState)
+
 
 def tcgetattr(fd: int) -> TermState:  # noqa: D103
     return TermState(termios.tcgetattr(fd))
-
 
 def tcsetattr(fd: int, when: int, attrs: TermState) -> None:  # noqa: D103
     termios.tcsetattr(fd, when, attrs.as_list())

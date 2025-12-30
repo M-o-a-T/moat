@@ -234,7 +234,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__raw_termstate = raw
 
         self.screen = []
-        self.height, self.width = await self.getheightwidth()
+        self._height, self._width = await self.getheightwidth()
 
         self.posxy = 0, 0
         self.__gone_tall = 0
@@ -307,7 +307,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         cx, cy = c_xy
         if not self.__gone_tall:
-            while len(self.screen) < min(len(screen), self.height):
+            while len(self.screen) < min(len(screen), self._height):
                 self.__hide_cursor()
                 self.__move(0, len(self.screen) - 1)
                 self.__write("\n")
@@ -317,13 +317,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             while len(self.screen) < len(screen):
                 self.screen.append("")
 
-        if len(screen) > self.height:
+        if len(screen) > self._height:
             self.__gone_tall = 1
             self.__move = self.__move_tall
 
         px, py = self.posxy  # noqa: RUF059
         old_offset = offset = self.__offset
-        height = self.height
+        height = self._height
 
         # we make sure the cursor is on the screen, and that we're
         # using all of the screen if we can
@@ -349,8 +349,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 oldscr.insert(0, "")
         elif old_offset < offset and self._ind:
             self.__hide_cursor()
-            self.__write_code(self._cup, self.height - 1, 0)
-            self.posxy = 0, old_offset + self.height - 1
+            self.__write_code(self._cup, self._height - 1, 0)
+            self.posxy = 0, old_offset + self._height - 1
             for _i in range(offset - old_offset):
                 self.__write_code(self._ind)
                 oldscr.pop(0)
@@ -388,7 +388,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         - x (int): X coordinate.
         - y (int): Y coordinate.
         """
-        if y < self.__offset or y >= self.__offset + self.height:
+        if y < self.__offset or y >= self.__offset + self._height:
             self.event_queue.insert(Event("scroll", None))
         else:
             self.__move(x, y)
@@ -413,7 +413,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             await self.output_f.write(b"\033[?7l")
 
         self.screen = []
-        self.height, self.width = await self.getheightwidth()
+        self._height, self._width = await self.getheightwidth()
 
         self.posxy = 0, 0
         self.__gone_tall = 0
@@ -537,7 +537,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         y = len(self.screen) - 1
         while y >= 0 and not self.screen[y]:
             y -= 1
-        self.__move(0, min(y, self.height + self.__offset - 1))
+        self.__move(0, min(y, self._height + self.__offset - 1))
         self.__write("\n\r")
         await self.flushoutput()
 
@@ -706,13 +706,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         elif (
             self.dch1
             and self.ich1
-            and wlen(newline) == self.width
+            and wlen(newline) == self._width
             and x_coord < wlen(newline) - 2
             and newline[x_pos + 1 : -1] == oldline[x_pos:-2]
         ):
             self.__hide_cursor()
-            self.__move(self.width - 2, y)
-            self.posxy = self.width - 2, y
+            self.__move(self._width - 2, y)
+            self.posxy = self._width - 2, y
             self.__write_code(self.dch1)
 
             character_width = wlen(newline[x_pos])
@@ -786,11 +786,11 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__move_y(y)
 
     def __move_tall(self, x, y):
-        assert 0 <= y - self.__offset < self.height, y - self.__offset
+        assert 0 <= y - self.__offset < self._height, y - self.__offset
         self.__write_code(self._cup, y - self.__offset, x)
 
-    async def __sigwinch(self, signum, frame):  # noqa: ARG002
-        self.height, self.width = await self.getheightwidth()
+    async def __sigwinch(self):
+        self._height, self._width = await self.getheightwidth()
         self.event_queue.insert(Event("resize", None))
 
     def __hide_cursor(self):
@@ -807,12 +807,12 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         if not self.__gone_tall:
             self.posxy = 0, self.posxy[1]
             self.__write("\r")
-            ns = len(self.screen) * ["\000" * self.width]
+            ns = len(self.screen) * ["\000" * self._width]
             self.screen = ns
         else:
             self.posxy = 0, self.__offset
             self.__move(0, self.__offset)
-            ns = self.height * ["\000" * self.width]
+            ns = self._height * ["\000" * self._width]
             self.screen = ns
 
     async def __tputs(self, fmt, prog=delayprog):
@@ -834,7 +834,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             fmt = fmt[y:]
             delay = int(m.group(1))
             if b"*" in m.group(2):
-                delay *= self.height
+                delay *= self._height
             await anyio.sleep(float(delay) / 1000.0)
 
     def __input_fd_set(

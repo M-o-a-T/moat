@@ -212,6 +212,8 @@ class Reader(anyio.AsyncContextManagerMixin):
     keymap: tuple[tuple[str, str], ...] = ()
     input_trans: input.KeymapTranslator = field(init=False)
     input_trans_stack: list[input.KeymapTranslator] = field(factory=list)
+    height: int = -1
+    width: int = -1
     screen: list[str] = field(factory=list)
     screeninfo: list[tuple[int, list[int]]] = field(init=False)
     cxy: tuple[int, int] = field(init=False)
@@ -242,13 +244,13 @@ class Reader(anyio.AsyncContextManagerMixin):
             self.screeninfo = screeninfo.copy()
             self.pos = reader.pos
             self.cxy = reader.cxy
-            self.dimensions = reader.console.width, reader.console.height
+            self.dimensions = reader.width, reader.height
             self.invalidated = False
 
         def valid(self, reader: Reader) -> bool:  # noqa: D102
             if self.invalidated:
                 return False
-            dimensions = reader.console.width, reader.console.height
+            dimensions = reader.width, reader.height
             dimensions_changed = dimensions != self.dimensions
             return not dimensions_changed
 
@@ -301,6 +303,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         The console context must already have been entered.
         """
         await self.prepare()
+        self.height, self.width = await self.console.getheightwidth()
         self._in_context = True
         try:
             yield
@@ -355,7 +358,7 @@ class Reader(anyio.AsyncContextManagerMixin):
                 cursor_found = True
             elif cursor_found:
                 lines_beyond_cursor += 1
-                if lines_beyond_cursor > self.console.height:
+                if lines_beyond_cursor > self.height:
                     # No need to keep formatting lines.
                     # The console can't show them.
                     break
@@ -373,7 +376,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             pos -= line_len + 1
             prompt, prompt_len = self.process_prompt(prompt)
             chars, char_widths = disp_str(line, colors, offset)
-            wrapcount = (sum(char_widths) + prompt_len) // self.console.width
+            wrapcount = (sum(char_widths) + prompt_len) // self.width
             if wrapcount == 0 or not char_widths:
                 offset += line_len + 1  # Takes all of the line plus the newline
                 last_refresh_line_end_offsets.append(offset)
@@ -386,7 +389,7 @@ class Reader(anyio.AsyncContextManagerMixin):
                     index_to_wrap_before = 0
                     column = 0
                     for char_width in char_widths:
-                        if column + char_width + prelen >= self.console.width:
+                        if column + char_width + prelen >= self.width:
                             break
                         index_to_wrap_before += 1
                         column += char_width
@@ -539,7 +542,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         while i < y:
             prompt_len, char_widths = self.screeninfo[i]
             offset = len(char_widths)
-            in_wrapped_line = prompt_len + sum(char_widths) >= self.console.width
+            in_wrapped_line = prompt_len + sum(char_widths) >= self.width
             if in_wrapped_line:
                 pos += offset - 1  # -1 cause backslash is not in buffer
             else:
@@ -574,7 +577,7 @@ class Reader(anyio.AsyncContextManagerMixin):
 
         for prompt_len, char_widths in self.screeninfo:
             offset = len(char_widths)
-            in_wrapped_line = prompt_len + sum(char_widths) >= self.console.width
+            in_wrapped_line = prompt_len + sum(char_widths) >= self.width
             if in_wrapped_line:
                 offset -= 1  # need to remove line-wrapping backslash
 
@@ -746,6 +749,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             elif event.evt == "scroll":
                 await self.refresh()
             elif event.evt == "resize":
+                self.height, self.width = await self.console.getheightwidth()
                 await self.refresh()
             else:
                 translate = False

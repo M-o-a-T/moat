@@ -20,107 +20,100 @@
 from __future__ import annotations
 
 # Lazy import mapping: maps exported names to (module, attribute) tuples
-_LAZY_IMPORTS = {
+_imports = {
     # base_eventqueue
-    "BaseEventQueue": ("base_eventqueue", "BaseEventQueue"),
+    "BaseEventQueue": "base_eventqueue",
     # commands
-    "Command": ("commands", "Command"),
-    "KillCommand": ("commands", "KillCommand"),
-    "YankCommand": ("commands", "YankCommand"),
-    "MotionCommand": ("commands", "MotionCommand"),
-    "EditCommand": ("commands", "EditCommand"),
-    "FinishCommand": ("commands", "FinishCommand"),
-    "is_kill": ("commands", "is_kill"),
-    "is_yank": ("commands", "is_yank"),
+    "Command": "commands",
+    "KillCommand": "commands",
+    "YankCommand": "commands",
+    "MotionCommand": "commands",
+    "EditCommand": "commands",
+    "FinishCommand": "commands",
+    "is_kill": "commands",
+    "is_yank": "commands",
     # completing_reader
-    "CompletingReader": ("completing_reader", "CompletingReader"),
+    "CompletingReader": "completing_reader",
     # console
-    "Event": ("console", "Event"),
-    "Console": ("console", "Console"),
-    "InteractiveColoredConsole": ("console", "InteractiveColoredConsole"),
-    "Readline": ("console", "Readline"),
+    "Event": "console",
+    "Console": "console",
+    "InteractiveColoredConsole": "console",
+    "Readline": "console",
     # fancy_termios
-    "TermState": ("fancy_termios", "TermState"),
-    "Term": ("fancy_termios", "Term"),
-    "tcgetattr": ("fancy_termios", "tcgetattr"),
-    "tcsetattr": ("fancy_termios", "tcsetattr"),
+    "TermState": "fancy_termios",
+    "Term": "fancy_termios",
+    "tcgetattr": "fancy_termios",
+    "tcsetattr": "fancy_termios",
     # historical_reader
-    "HistoricalReader": ("historical_reader", "HistoricalReader"),
+    "HistoricalReader": "historical_reader",
     # input
-    "InputTranslator": ("input", "InputTranslator"),
-    "KeymapTranslator": ("input", "KeymapTranslator"),
+    "InputTranslator": "input",
+    "KeymapTranslator": "input",
     # keymap
-    "compile_keymap": ("keymap", "compile_keymap"),
+    "compile_keymap": "keymap",
     # pager
-    "plain_pager": ("pager", "plain_pager"),
-    "pipe_pager": ("pager", "pipe_pager"),
-    "tempfile_pager": ("pager", "tempfile_pager"),
+    "plain_pager": "pager",
+    "pipe_pager": "pager",
+    "tempfile_pager": "pager",
     # reader
-    "Reader": ("reader", "Reader"),
+    "Reader": "reader",
     # readline - multiline input functions
-    "add_history": ("readline", "add_history"),
-    "append_history_file": ("readline", "append_history_file"),
-    "clear_history": ("readline", "clear_history"),
-    "get_begidx": ("readline", "get_begidx"),
-    "get_completer": ("readline", "get_completer"),
-    "get_completer_delims": ("readline", "get_completer_delims"),
-    "get_current_history_length": ("readline", "get_current_history_length"),
-    "get_endidx": ("readline", "get_endidx"),
-    "get_history_item": ("readline", "get_history_item"),
-    "get_history_length": ("readline", "get_history_length"),
-    "get_line_buffer": ("readline", "get_line_buffer"),
-    "insert_text": ("readline", "insert_text"),
-    "multiline_input": ("readline", "multiline_input"),
-    "parse_and_bind": ("readline", "parse_and_bind"),
-    "read_history_file": ("readline", "read_history_file"),
-    "remove_history_item": ("readline", "remove_history_item"),
-    "replace_history_item": ("readline", "replace_history_item"),
-    "set_auto_history": ("readline", "set_auto_history"),
-    "set_completer": ("readline", "set_completer"),
-    "set_completer_delims": ("readline", "set_completer_delims"),
-    "set_history_length": ("readline", "set_history_length"),
-    "set_startup_hook": ("readline", "set_startup_hook"),
-    "write_history_file": ("readline", "write_history_file"),
+    "add_history": "readline",
+    "append_history_file": "readline",
+    "clear_history": "readline",
+    "get_begidx": "readline",
+    "get_completer": "readline",
+    "get_completer_delims": "readline",
+    "get_current_history_length": "readline",
+    "get_endidx": "readline",
+    "get_history_item": "readline",
+    "get_history_length": "readline",
+    "get_line_buffer": "readline",
+    "insert_text": "readline",
+    "multiline_input": "readline",
+    "parse_and_bind": "readline",
+    "read_history_file": "readline",
+    "remove_history_item": "readline",
+    "replace_history_item": "readline",
+    "set_auto_history": "readline",
+    "set_completer": "readline",
+    "set_completer_delims": "readline",
+    "set_history_length": "readline",
+    "set_startup_hook": "readline",
+    "write_history_file": "readline",
     # rpc
-    "MsgConsole": ("rpc", "MsgConsole"),
+    "MsgConsole": "rpc",
     # simple_interact
-    "run_multiline_interactive_console": ("simple_interact", "run_multiline_interactive_console"),
+    "run_multiline_interactive_console": "simple_interact",
     # terminfo
-    "TermInfo": ("terminfo", "TermInfo"),
-    "tparm": ("terminfo", "tparm"),
-    # trace
-    "trace": ("trace", "trace"),
+    "TermInfo": "terminfo",
+    "tparm": "terminfo",
     # unix_console
-    "UnixConsole": ("unix_console", "UnixConsole"),
+    "UnixConsole": "unix_console",
     # unix_eventqueue
-    "EventQueue": ("unix_eventqueue", "EventQueue"),
+    "EventQueue": "unix_eventqueue",
     # utils
-    "THEME": ("utils", "THEME"),
-    "disp_str": ("utils", "disp_str"),
-    "gen_colors": ("utils", "gen_colors"),
-    "unbracket": ("utils", "unbracket"),
-    "wlen": ("utils", "wlen"),
+    "THEME": "utils",
+    "disp_str": "utils",
+    "gen_colors": "utils",
+    "unbracket": "utils",
+    "wlen": "utils",
     # windows_console
-    "WindowsConsole": ("windows_console", "WindowsConsole"),
+    "WindowsConsole": "windows_console",
 }
 
-__all__ = list(_LAZY_IMPORTS.keys())
+__all__ = list(_imports.keys())
 
 
-def __getattr__(name: str):
-    """Lazy import attributes from submodules."""
-    if name in _LAZY_IMPORTS:
-        module_name, attr_name = _LAZY_IMPORTS[name]
-        from importlib import import_module  # noqa: PLC0415
-
-        module = import_module(f".{module_name}", __name__)
-        value = getattr(module, attr_name)
-        # Cache the imported value
-        globals()[name] = value
-        return value
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+def __getattr__(attr: str):
+    try:
+        mod = _imports[attr]
+    except KeyError:
+        raise AttributeError(attr) from None
+    value = getattr(__import__(mod, globals(), None, True, 1), attr)
+    globals()[attr] = value
+    return value
 
 
 def __dir__():
-    """Return the list of available attributes."""
     return __all__

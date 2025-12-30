@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.repl import TermState
 
-    from collections.abc import AbstractSet
+    from collections.abc import AbstractSet, Awaitable
 
 
 __all__ = ["FilenoTerm", "InvalidTerminal"]
@@ -46,6 +46,30 @@ class FilenoTerm(FilenoBuf):
 
     Warning: Setting up raw mode etc. is the responsibility of the caller.
     """
+
+    async def setup(self):  # noqa:D102
+        await super().setup()
+
+        self.__orig_termstate = await self.tget()
+        raw = self.__orig_termstate.copy()
+        raw.iflag &= ~(termios.INPCK | termios.ISTRIP | termios.IXON)
+        raw.oflag &= ~(termios.OPOST)
+        raw.cflag &= ~(termios.CSIZE | termios.PARENB)
+        raw.cflag |= termios.CS8
+        raw.iflag |= termios.BRKINT
+        raw.lflag &= ~(termios.ICANON | termios.ECHO | termios.IEXTEN)
+        raw.lflag |= termios.ISIG
+        raw.cc[termios.VMIN] = 1
+        raw.cc[termios.VTIME] = 0
+        self.__raw_termstate = raw
+
+    def set_raw(self) -> Awaitable[None]:
+        """switch to raw mode"""
+        return self.tset(self.__raw_termstate)
+
+    def set_orig(self) -> Awaitable[None]:
+        """switch to previous mode"""
+        return self.tset(self.__orig_termstate)
 
     async def tget(self) -> TermState:
         """return current terminfo"""

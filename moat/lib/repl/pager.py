@@ -11,8 +11,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Protocol
 
-    class Pager(Protocol):  # noqa: D101
-        def __call__(self, text: str, title: str = "") -> None: ...  # noqa: D102
+    class Pager(Protocol):
+        def __call__(self, text: str, title: str = "") -> None: ...
+
+
+__all__ = ["pipe_pager", "plain_pager", "tempfile_pager"]
 
 
 def get_pager() -> Pager:
@@ -55,13 +58,13 @@ def get_pager() -> Pager:
         os.unlink(filename)
 
 
-def escape_stdout(text: str) -> str:  # noqa: D103
+def escape_stdout(text: str) -> str:
     # Escape non-encodable characters to avoid encoding errors later
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     return text.encode(encoding, "backslashreplace").decode(encoding)
 
 
-def escape_less(s: str) -> str:  # noqa: D103
+def escape_less(s: str) -> str:
     return re.sub(r"([?:.%\\])", r"\\\1", s)
 
 

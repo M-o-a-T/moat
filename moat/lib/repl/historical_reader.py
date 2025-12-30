@@ -32,9 +32,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .types import CommandName, KeySpec, SimpleContextManager
 
-if False:
-    pass
-
+__all__ = ["HistoricalReader"]
 
 isearch_keymap: tuple[tuple[KeySpec, CommandName], ...] = tuple(
     [(f"\\{c:03o}", "isearch-end") for c in range(256) if chr(c) != "\\"]
@@ -59,8 +57,8 @@ ISEARCH_DIRECTION_BACKWARDS = "r"
 ISEARCH_DIRECTION_FORWARDS = "f"
 
 
-class next_history(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class next_history(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         if r.historyi == len(r.history):
             await r.error("end of history list")
@@ -68,8 +66,8 @@ class next_history(commands.Command):  # noqa: D101
         r.select_item(r.historyi + 1)
 
 
-class previous_history(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class previous_history(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         if r.historyi == 0:
             await r.error("start of history list")
@@ -77,20 +75,20 @@ class previous_history(commands.Command):  # noqa: D101
         r.select_item(r.historyi - 1)
 
 
-class history_search_backward(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class history_search_backward(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.search_next(forwards=False)
 
 
-class history_search_forward(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class history_search_forward(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.search_next(forwards=True)
 
 
-class restore_history(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class restore_history(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         if r.historyi != len(r.history):
             if r.get_unicode() != r.history[r.historyi]:
@@ -99,23 +97,23 @@ class restore_history(commands.Command):  # noqa: D101
                 r.dirty = True
 
 
-class first_history(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class first_history(commands.Command):
+    async def do(self) -> None:
         self.reader.select_item(0)
 
 
-class last_history(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class last_history(commands.Command):
+    async def do(self) -> None:
         self.reader.select_item(len(self.reader.history))
 
 
-class operate_and_get_next(commands.FinishCommand):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class operate_and_get_next(commands.FinishCommand):
+    async def do(self) -> None:
         self.reader.next_history = self.reader.historyi + 1
 
 
-class yank_arg(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class yank_arg(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         if r.last_command is self.__class__:
             r.yank_arg_i += 1
@@ -142,8 +140,8 @@ class yank_arg(commands.Command):  # noqa: D101
         r.dirty = True
 
 
-class forward_history_isearch(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class forward_history_isearch(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_FORWARDS
         r.isearch_start = r.historyi, r.pos
@@ -152,8 +150,8 @@ class forward_history_isearch(commands.Command):  # noqa: D101
         r.push_input_trans(r.isearch_trans)
 
 
-class reverse_history_isearch(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class reverse_history_isearch(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_BACKWARDS
         r.dirty = True
@@ -162,8 +160,8 @@ class reverse_history_isearch(commands.Command):  # noqa: D101
         r.isearch_start = r.historyi, r.pos
 
 
-class isearch_cancel(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_cancel(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_NONE
         r.pop_input_trans()
@@ -172,8 +170,8 @@ class isearch_cancel(commands.Command):  # noqa: D101
         r.dirty = True
 
 
-class isearch_add_character(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_add_character(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         b = r.buffer
         r.isearch_term += self.event[-1]
@@ -183,8 +181,8 @@ class isearch_add_character(commands.Command):  # noqa: D101
             await r.isearch_next()
 
 
-class isearch_backspace(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_backspace(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         if len(r.isearch_term) > 0:
             r.isearch_term = r.isearch_term[:-1]
@@ -193,22 +191,22 @@ class isearch_backspace(commands.Command):  # noqa: D101
             await r.error("nothing to rubout")
 
 
-class isearch_forwards(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_forwards(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_FORWARDS
         await r.isearch_next()
 
 
-class isearch_backwards(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_backwards(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_BACKWARDS
         await r.isearch_next()
 
 
-class isearch_end(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class isearch_end(commands.Command):
+    async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_NONE
         r.console.forgetinput()

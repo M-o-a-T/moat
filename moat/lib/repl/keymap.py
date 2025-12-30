@@ -49,6 +49,8 @@ Examples:
 
 from __future__ import annotations
 
+__all__ = ["compile_keymap"]
+
 _escapes = {
     "\\": "\\",
     "'": "'",
@@ -103,7 +105,7 @@ _keynames = {
 }
 
 
-class KeySpecError(Exception):  # noqa: D101
+class KeySpecError(Exception):
     pass
 
 

@@ -60,8 +60,10 @@ try:
 except ImportError:
     posix = None
 
+__all__ = ["UnixConsole"]
 
-class InvalidTerminal(RuntimeError):  # noqa: D101
+
+class InvalidTerminal(RuntimeError):
     def __init__(self, message: str) -> None:
         super().__init__(errno.EIO, message)
 
@@ -81,15 +83,15 @@ try:
 except AttributeError:
     # this is exactly the minimum necessary to support what we
     # do with poll objects
-    class MinimalPoll:  # noqa: D101
+    class MinimalPoll:
         def __init__(self):
             pass
 
-        def register(self, fd, flag):  # noqa: ARG002, D102
+        def register(self, fd, flag):  # noqa: ARG002
             self.fd = fd
 
         # note: The 'timeout' argument is received as *milliseconds*
-        def poll(self, timeout: float | None = None) -> list[int]:  # noqa: D102
+        def poll(self, timeout: float | None = None) -> list[int]:
             if timeout is None:
                 r, w, e = select.select([self.fd], [], [])
             else:
@@ -126,7 +128,7 @@ class FDWrapper:
         await anyio.wait_readable(self.fd)
         return os.read(self.fd, n)
 
-    async def aclose(self):  # noqa:D102
+    async def aclose(self):
         try:
             flg = fcntl.fcntl(self.fd, fcntl.F_GETFL)
             fcntl.fcntl(self.fd, fcntl.F_SETFL, flg & ~os.O_NONBLOCK)

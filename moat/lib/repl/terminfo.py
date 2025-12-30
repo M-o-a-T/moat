@@ -10,6 +10,8 @@ from pathlib import Path
 
 from attrs import define, field
 
+__all__ = ["TermInfo", "tparm"]
+
 # Terminfo constants
 MAGIC16 = 0o432  # Magic number for 16-bit terminfo format
 MAGIC32 = 0o1036  # Magic number for 32-bit terminfo format

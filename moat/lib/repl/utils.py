@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
     from collections.abc import Iterable, Iterator
 
+__all__ = ["THEME", "disp_str", "gen_colors", "unbracket", "wlen"]
+
 ANSI_ESCAPE_SEQUENCE = re.compile(r"\x1b\[[ -@]*[A-~]")
 ZERO_WIDTH_BRACKET = re.compile(r"\x01.*?\x02")
 ZERO_WIDTH_TRANS = str.maketrans({"\x01": "", "\x02": ""})
@@ -51,12 +53,12 @@ class Span(NamedTuple):
     end: int
 
     @classmethod
-    def from_re(cls, m: Match[str], group: int | str) -> Self:  # noqa:D102
+    def from_re(cls, m: Match[str], group: int | str) -> Self:
         re_span = m.span(group)
         return cls(re_span[0], re_span[1] - 1)
 
     @classmethod
-    def from_token(cls, token: TI, line_len: list[int]) -> Self:  # noqa:D102
+    def from_token(cls, token: TI, line_len: list[int]) -> Self:
         end_offset = -1
         if token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE} and token.string.endswith((
             "{",
@@ -71,13 +73,13 @@ class Span(NamedTuple):
         )
 
 
-class ColorSpan(NamedTuple):  # noqa:D101
+class ColorSpan(NamedTuple):
     span: Span
     tag: str
 
 
 @functools.cache
-def str_width(c: str) -> int:  # noqa: D103
+def str_width(c: str) -> int:
     if ord(c) < 128:
         return 1
     # gh-139246 for zero-width joiner and combining characters
@@ -138,7 +140,7 @@ def gen_colors(buffer: str) -> Iterator[ColorSpan]:
         yield from recover_unterminated_string(te, line_lengths, last_emitted, buffer)
 
 
-def recover_unterminated_string(  # noqa: D103
+def recover_unterminated_string(
     exc: tokenize.TokenError,
     line_lengths: list[int],
     last_emitted: ColorSpan | None,
@@ -177,7 +179,7 @@ def recover_unterminated_string(  # noqa: D103
         )
 
 
-def gen_colors_from_token_stream(  # noqa: D103
+def gen_colors_from_token_stream(
     token_generator: Iterator[TI],
     line_lengths: list[int],
 ) -> Iterator[ColorSpan]:

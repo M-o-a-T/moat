@@ -3,10 +3,12 @@ from __future__ import annotations  # noqa: D100
 import os
 import sys
 
-# types
-if False:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
     from typing import IO
 
+__all__ = ["trace"]
 
 trace_file: IO[str] | None = None
 if trace_filename := os.environ.get("PYREPL_TRACE"):

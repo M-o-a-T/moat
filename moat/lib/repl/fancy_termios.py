@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 else:
     cast = lambda typ, val: val  # noqa: ARG005, E731
 
+__all__ = ["Term", "TermState", "tcgetattr", "tcsetattr"]
+
 
 class TermState:  # noqa: D101
     def __init__(self, attrs: list[int | list[bytes]]) -> None:

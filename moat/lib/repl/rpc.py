@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
     from .console import Console
 
+__all__ = ["MsgConsole"]
+
 
 class MsgConsole(MsgHandler):
     """

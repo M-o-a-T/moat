@@ -49,13 +49,13 @@ except Exception:
     from ctypes import CDLL as WinDLL
     from ctypes import cdll as windll
 
-    def GetLastError() -> int:  # noqa: D103
+    def GetLastError() -> int:
         return 42
 
-    def get_last_error() -> int:  # noqa: D103
+    def get_last_error() -> int:
         return 42
 
-    class WinError(OSError):  # type: ignore[no-redef]  # noqa: D101
+    class WinError(OSError):  # type: ignore[no-redef]
         def __init__(self, err: int | None, descr: str | None = None) -> None:
             self.err = err
             self.descr = descr
@@ -68,10 +68,12 @@ try:
 except ImportError:
     nt = None
 
-TYPE_CHECKING = False
+from typing import TYPE_CHECKING  # noqa:E402
 
 if TYPE_CHECKING:
     from typing import IO
+
+__all__ = ["WindowsConsole"]
 
 # Virtual-Key Codes: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 VK_MAP: dict[int, str] = {
@@ -563,7 +565,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
 
 
 # Windows interop
-class CONSOLE_SCREEN_BUFFER_INFO(Structure):  # noqa:D101
+class CONSOLE_SCREEN_BUFFER_INFO(Structure):
     _fields_ = [
         ("dwSize", _COORD),
         ("dwCursorPosition", _COORD),
@@ -573,28 +575,28 @@ class CONSOLE_SCREEN_BUFFER_INFO(Structure):  # noqa:D101
     ]
 
 
-class CONSOLE_CURSOR_INFO(Structure):  # noqa:D101
+class CONSOLE_CURSOR_INFO(Structure):
     _fields_ = [
         ("dwSize", DWORD),
         ("bVisible", BOOL),
     ]
 
 
-class CHAR_INFO(Structure):  # noqa:D101
+class CHAR_INFO(Structure):
     _fields_ = [
         ("UnicodeChar", WCHAR),
         ("Attributes", WORD),
     ]
 
 
-class Char(Union):  # noqa:D101
+class Char(Union):
     _fields_ = [
         ("UnicodeChar", WCHAR),
         ("Char", CHAR),
     ]
 
 
-class KeyEvent(ctypes.Structure):  # noqa:D101
+class KeyEvent(ctypes.Structure):
     _fields_ = [
         ("bKeyDown", BOOL),
         ("wRepeatCount", WORD),
@@ -605,18 +607,18 @@ class KeyEvent(ctypes.Structure):  # noqa:D101
     ]
 
 
-class WindowsBufferSizeEvent(ctypes.Structure):  # noqa:D101
+class WindowsBufferSizeEvent(ctypes.Structure):
     _fields_ = [("dwSize", _COORD)]
 
 
-class ConsoleEvent(ctypes.Union):  # noqa:D101
+class ConsoleEvent(ctypes.Union):
     _fields_ = [
         ("KeyEvent", KeyEvent),
         ("WindowsBufferSizeEvent", WindowsBufferSizeEvent),
     ]
 
 
-class INPUT_RECORD(Structure):  # noqa:D101
+class INPUT_RECORD(Structure):
     _fields_ = [("EventType", WORD), ("Event", ConsoleEvent)]
 
 

@@ -2,6 +2,8 @@ from __future__ import annotations  # noqa: D100
 
 from collections.abc import Callable, Iterator
 
+__all__ = []
+
 type Callback = Callable[[], object]
 type SimpleContextManager = Iterator[None]
 type KeySpec = str  # like r"\C-c"

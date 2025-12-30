@@ -44,8 +44,10 @@ if TYPE_CHECKING:
 # syntax classes
 SYNTAX_WHITESPACE, SYNTAX_WORD, SYNTAX_SYMBOL = range(3)
 
+__all__ = ["Reader"]
 
-def make_default_syntax_table() -> dict[str, int]:  # noqa: D103
+
+def make_default_syntax_table() -> dict[str, int]:
     # XXX perhaps should use some unicodedata here?
     st: dict[str, int] = {}
     for c in map(chr, range(256)):
@@ -56,7 +58,7 @@ def make_default_syntax_table() -> dict[str, int]:  # noqa: D103
     return st
 
 
-def make_default_commands() -> dict[CommandName, type[Command]]:  # noqa: D103
+def make_default_commands() -> dict[CommandName, type[Command]]:
     result: dict[CommandName, type[Command]] = {}
     for v in vars(commands).values():
         if isinstance(v, type) and issubclass(v, Command) and v.__name__[0].islower():

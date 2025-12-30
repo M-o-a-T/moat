@@ -44,9 +44,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .types import EventTuple
 
-# types
-if False:
-    pass
+__all__ = ["InputTranslator", "KeymapTranslator"]
 
 
 class InputTranslator(ABC):  # noqa: D101

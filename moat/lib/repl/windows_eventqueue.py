@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from .base_eventqueue import BaseEventQueue
 
+__all__ = []
+
 # Reference: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#input-sequences
 VT_MAP: dict[bytes, str] = {
     b"\x1b[A": "up",
@@ -36,6 +38,6 @@ VT_MAP: dict[bytes, str] = {
 }
 
 
-class EventQueue(BaseEventQueue):  # noqa: D101
+class EventQueue(BaseEventQueue):
     def __init__(self, encoding: str) -> None:
         BaseEventQueue.__init__(self, encoding, VT_MAP)

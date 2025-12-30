@@ -27,6 +27,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .terminfo import TermInfo
 
+__all__ = ["EventQueue"]
+
 # Mapping of human-readable key names to their terminal-specific codes
 TERMINAL_KEYNAMES = {
     "delete": "kdch1",

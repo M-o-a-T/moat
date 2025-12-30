@@ -52,13 +52,7 @@ else:
     from .unix_console import UnixConsole as Console
     from .unix_console import _error
 
-ENCODING = sys.getdefaultencoding() or "latin1"
-
-
-# types
-Command = commands.Command
-
-TYPE_CHECKING = False
+from typing import TYPE_CHECKING  # noqa:E402
 
 if TYPE_CHECKING:
     from .console import Console as ConsoleType
@@ -68,8 +62,10 @@ if TYPE_CHECKING:
     from typing import Any
 
 
+Command = commands.Command
 MoreLinesCallable = Callable[[str], bool]
 
+ENCODING = sys.getdefaultencoding() or "latin1"
 
 __all__ = [
     "add_history",

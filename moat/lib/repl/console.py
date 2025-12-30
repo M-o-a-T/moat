@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import IO
 
+__all__ = ["Console", "Event", "InteractiveColoredConsole", "Readline"]
+
 
 @define
 class Event:  # noqa: D101

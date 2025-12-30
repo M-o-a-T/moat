@@ -32,6 +32,8 @@ from . import keymap
 from .console import Event
 from .trace import trace
 
+__all__ = ["BaseEventQueue"]
+
 
 class BaseEventQueue:  # noqa: D101
     def __init__(self, encoding: str, keymap_dict: dict[bytes, str]) -> None:

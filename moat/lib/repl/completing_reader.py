@@ -34,11 +34,11 @@ if TYPE_CHECKING:
 
 # types
 Command = commands.Command
-if False:
-    pass
+
+__all__ = ["CompletingReader"]
 
 
-def prefix(wordlist: list[str], j: int = 0) -> str:  # noqa: D103
+def prefix(wordlist: list[str], j: int = 0) -> str:
     d = {}
     i = j
     try:
@@ -57,15 +57,15 @@ def prefix(wordlist: list[str], j: int = 0) -> str:  # noqa: D103
 STRIPCOLOR_REGEX = re.compile(r"\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[m|K]")
 
 
-def stripcolor(s: str) -> str:  # noqa: D103
+def stripcolor(s: str) -> str:
     return STRIPCOLOR_REGEX.sub("", s)
 
 
-def real_len(s: str) -> int:  # noqa: D103
+def real_len(s: str) -> int:
     return len(stripcolor(s))
 
 
-def left_align(s: str, maxlen: int) -> str:  # noqa: D103
+def left_align(s: str, maxlen: int) -> str:
     stripped = stripcolor(s)
     if len(stripped) > maxlen:
         # too bad, we remove the color
@@ -74,7 +74,7 @@ def left_align(s: str, maxlen: int) -> str:  # noqa: D103
     return s + " " * padding
 
 
-def build_menu(  # noqa: D103
+def build_menu(
     cons: console.Console,
     wordlist: list[str],
     start: int,
@@ -170,8 +170,8 @@ def build_menu(  # noqa: D103
 # choices).
 
 
-class complete(commands.Command):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class complete(commands.Command):
+    async def do(self) -> None:
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
         last_is_completer = r.last_command_is(self.__class__)
@@ -210,8 +210,8 @@ class complete(commands.Command):  # noqa: D101
                     r.dirty = True
 
 
-class self_insert(commands.self_insert):  # noqa: D101
-    async def do(self) -> None:  # noqa: D102
+class self_insert(commands.self_insert):
+    async def do(self) -> None:
         r: CompletingReader
         r = self.reader  # type: ignore[assignment]
 

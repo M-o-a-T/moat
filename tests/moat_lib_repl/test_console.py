@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from contextlib import AsyncExitStack
 
 from moat.util import Path
 from moat.lib.repl._test import MockConsole
@@ -97,7 +98,6 @@ async def test_readline_iterator():
 @pytest.mark.anyio
 async def test_full_stack():
     """Test complete RPC stack."""
-    # Create mock console with scripted input
     user_actions = [
         b"print('hello')\n",
     ]
@@ -107,7 +107,6 @@ async def test_full_stack():
     msg_handler = MsgConsole(mock)
     sender = MsgSender(msg_handler).sub_at(Path())
 
-    # Test that rd/wr work through the stack
     result = await sender.rd(n=5)
     assert result == b"print"
 
@@ -149,7 +148,8 @@ async def test_readline_iterator_full():
 
 
 @pytest.mark.anyio
-async def test_readline_multiline():
+@pytest.mark.parametrize("remote", (False, True))
+async def test_readline_multiline(remote):
     """Test Readline with multiline input support."""
 
     def more_lines(text: str) -> bool:
@@ -163,20 +163,20 @@ async def test_readline_multiline():
         b"line 1\\\n",  # Continuation
         b"line 2\n",  # Complete
     ]
-    console = MockConsole(user_actions=user_actions)
+    async with AsyncExitStack() as acm:
+        ac = acm.enter_async_context
+        console = await ac(MockConsole(user_actions=user_actions))
 
-    # Wrap with MsgConsole handler
-    msg_handler = MsgConsole(console)
+        if remote:
+            # Wrap with MsgConsole handler
+            msg_handler = MsgConsole(console)
 
-    # Create MsgSender (simulating RPC layer)
-    console = MsgSender(msg_handler).sub_at(Path())
+            # Create MsgSender (simulating RPC layer)
+            console = await ac(MsgSender(msg_handler).sub_at(Path()))
 
-    lines = []
-    async with console, Readline(console, prompt=">>> ", more_lines=more_lines) as inp:
+        inp = await ac(Readline(console, prompt=">>> ", more_lines=more_lines))
         line = await anext(inp)
-        lines.append(line)
 
     # Should have received the complete multiline input
-    assert len(lines) == 1
-    assert "line 1" in lines[0]
-    assert "line 2" in lines[0]
+    assert "line 1" in line
+    assert "line 2" in line

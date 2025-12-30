@@ -10,6 +10,7 @@ import termios
 from fcntl import ioctl
 
 from moat.lib.repl import tcgetattr, tcsetattr
+from moat.lib.stream import BaseBuf
 
 from .anyio import FilenoBuf
 
@@ -38,7 +39,48 @@ _error = (termios.error, InvalidTerminal)
 _error_codes_to_ignore = frozenset([errno.EIO, errno.ENXIO, errno.EPERM])
 
 
-class FilenoTerm(FilenoBuf):
+class TermBuf(BaseBuf):
+    """
+    An abstrace `BaseBuf`-derived class, enhanced with terminal access.
+    """
+
+    def set_raw(self) -> Awaitable[None]:
+        """switch to raw mode"""
+        raise NotImplementedError
+
+    def set_orig(self) -> Awaitable[None]:
+        """switch to previous mode"""
+        raise NotImplementedError
+
+    async def tget(self) -> TermState:
+        """return current terminfo"""
+        raise NotImplementedError
+
+    async def tset(self, state: TermState, ignore: AbstractSet[int] = frozenset()) -> bool:
+        """Set terminfo.
+
+        Args:
+            state: Terminal state.
+            ignore: errno values to retirn False on.
+                (Anything else raises an exception.)
+
+        """
+        raise NotImplementedError
+
+    async def forget_input(self):
+        "Delete pending input"
+        raise NotImplementedError
+
+    async def size(self) -> tuple[int, int]:
+        "Return terminal height/width tuple"
+        raise NotImplementedError
+
+    async def rdp(self) -> bytearray:
+        """read pending data, without blocking"""
+        raise NotImplementedError
+
+
+class FilenoTerm(FilenoBuf, TermBuf):
     """
     A `FilenoBuf`, enhanced with terminal access.
 

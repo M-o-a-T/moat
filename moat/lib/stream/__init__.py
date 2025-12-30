@@ -33,6 +33,8 @@ if _TC:
     from .reliable import EphemeralMsg as EphemeralMsg
     from .reliable import ReliableMsg as ReliableMsg
     from .tcp import TcpLink as TcpLink
+    from .terminal import FilenoTerm as FilenoTerm
+    from .terminal import TermBuf as TermBuf
     from .unix import UnixLink as UnixLink
 
 
@@ -61,6 +63,7 @@ _imports = {
     "UnixLink": "unix",
     # Terminal
     "FilenoTerm": "terminal",
+    "TermBuf": "terminal",
 }
 
 

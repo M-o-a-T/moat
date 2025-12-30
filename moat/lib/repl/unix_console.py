@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING
 
 # types
 if TYPE_CHECKING:
-    from moat.lib.stream import BaseBuf
+    from moat.lib.stream import TermBuf
 
     from collections.abc import Awaitable
     from typing import Literal, cast, overload
@@ -102,7 +102,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     def __init__(
         self,
-        stream: BaseBuf | None = None,
+        stream: TermBuf | None = None,
         term: str = "",
         encoding: str = "",
     ):

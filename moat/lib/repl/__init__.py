@@ -58,6 +58,7 @@ _imports = {
     # reader
     "Reader": "reader",
     # readline - multiline input functions
+    "ReadlineAlikeReader": "readline",
     "add_history": "readline",
     "append_history_file": "readline",
     "clear_history": "readline",

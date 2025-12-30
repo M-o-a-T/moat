@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     else:
         from typing import Never, Self
 
-pytestmark = [pytest.mark.anyio, pytest.mark.network]
+pytestmark = pytest.mark.anyio
 
 
 class BrokerTest:  # noqa: D101

@@ -10,7 +10,7 @@ from moat.lib.mqtt.async_client import AsyncMQTTClient
 if sys.version_info < (3, 11):  # noqa: UP036
     from exceptiongroup import BaseExceptionGroup  # noqa: A004
 
-pytestmark = [pytest.mark.anyio, pytest.mark.network]
+pytestmark = pytest.mark.anyio
 
 
 @pytest.mark.parametrize("qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])

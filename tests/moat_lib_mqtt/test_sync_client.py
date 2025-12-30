@@ -6,8 +6,6 @@ import sys
 from moat.lib.mqtt import MQTTPublishPacket, QoS
 from moat.lib.mqtt.sync_client import MQTTClient
 
-pytestmark = [pytest.mark.network]
-
 
 @pytest.mark.parametrize("qos", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
 def test_publish_subscribe(qos: QoS) -> None:  # noqa: D103

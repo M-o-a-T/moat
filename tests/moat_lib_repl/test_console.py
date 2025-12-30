@@ -31,8 +31,8 @@ async def test_mock_console_basic():
     assert console.output_buffer == b"output"
 
     # Test that actions are recorded
-    assert ("rd", b"hello") in console.recorded_actions
-    assert ("wr", b"output") in console.recorded_actions
+    assert ("rd", b"hello") in console.record
+    assert ("wr", b"output") in console.record
 
 
 @pytest.mark.anyio
@@ -115,8 +115,8 @@ async def test_full_stack():
     assert mock.output_buffer == b"test"
 
     # Verify actions were recorded
-    assert ("rd", b"print") in mock.recorded_actions
-    assert ("wr", b"test") in mock.recorded_actions
+    assert ("rd", b"print") in mock.record
+    assert ("wr", b"test") in mock.record
 
 
 @pytest.mark.anyio
@@ -144,8 +144,8 @@ async def test_readline_iterator_full():
     assert "third" in lines[2]
 
     # Verify console was prepared and restored
-    assert ("action", "enter") in console.recorded_actions
-    assert ("action", "exit") in console.recorded_actions
+    assert ("action", "enter") in console.record
+    assert ("action", "exit") in console.record
 
 
 @pytest.mark.anyio
@@ -164,6 +164,12 @@ async def test_readline_multiline():
         b"line 2\n",  # Complete
     ]
     console = MockConsole(user_actions=user_actions)
+
+    # Wrap with MsgConsole handler
+    msg_handler = MsgConsole(console)
+
+    # Create MsgSender (simulating RPC layer)
+    console = MsgSender(msg_handler).sub_at(Path())
 
     lines = []
     async with console, Readline(console, prompt=">>> ", more_lines=more_lines) as inp:

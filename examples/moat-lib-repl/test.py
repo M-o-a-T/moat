@@ -10,7 +10,6 @@ from moat.lib.repl.readline import multiline_input
 
 async def main():
     """Test multiline input functionality."""
-    # inp = await input("=== ")
     inp = await multiline_input(lambda r: "\n" not in r, "=== ", "--- ")
     print("RES:", repr(inp))
 

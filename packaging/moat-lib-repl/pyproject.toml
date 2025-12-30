@@ -15,7 +15,7 @@ dependencies = [
     "anyio ~= 4.0",
 ]
 keywords = ["MoaT"]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 name = "moat-lib-repl"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='An async readline re-implementation'

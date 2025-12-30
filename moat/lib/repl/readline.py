@@ -116,12 +116,14 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
     sort_in_column = True
 
     # Instance fields
-    config: ReadlineConfig
+    config: ReadlineConfig | None = None
     more_lines: MoreLinesCallable | None = None
     last_used_indentation: str | None = None
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
+        if self.config is None:
+            self.config = ReadlineConfig()
         self.commands["maybe_accept"] = maybe_accept
         self.commands["maybe-accept"] = maybe_accept
         self.commands["backspace_dedent"] = backspace_dedent

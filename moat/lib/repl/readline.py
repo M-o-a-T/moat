@@ -68,6 +68,7 @@ MoreLinesCallable = Callable[[str], bool]
 ENCODING = sys.getdefaultencoding() or "latin1"
 
 __all__ = [
+    "ReadlineAlikeReader",
     "add_history",
     "append_history_file",
     "clear_history",

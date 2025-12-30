@@ -35,7 +35,17 @@ class MsgConsole(MsgHandler):
             except AttributeError:
                 continue
             if inspect.iscoroutinefunction(v):
-                setattr(self, f"cmd_{k}", v)
+                fn = f"cmd_{k}"
+                if not hasattr(self,fn):
+                    setattr(self, f"cmd_{k}", v)
+
+    async def cmd_prepare(self, reader:bool=True):
+        "TODO"
+        pass
+
+    async def cmd_restore(self):
+        "TODO"
+        pass
 
     async def stream_raw(self, msg: Msg):
         """
@@ -48,11 +58,16 @@ class MsgConsole(MsgHandler):
                 @tg.start_soon
                 async def sender():
                     while True:
-                        data = await self.console.rd(32)
+                        try:
+                            data = await self.console.rd(32)
+                        except EOFError:
+                            break
                         await ms.send(data)
+                    tg.cancel_scope.cancel()
 
                 async for data in ms:
                     await self.console.wr(data)
+                tg.cancel_scope.cancel()
             finally:
                 with anyio.move_on_after(1, shield=True):
                     await self.console.restore()
@@ -71,12 +86,14 @@ class MsgConsole(MsgHandler):
                         try:
                             data = await self.console.get_event()
                         except EOFError:  # from mock console
-                            tg.cancel_scope.cancel()
                             break
                         await ms.send(data)
+                    tg.cancel_scope.cancel()
 
+                # XXX possibly
                 async for data in ms:
                     await self.console.wr(data)
+                tg.cancel_scope.cancel()
             finally:
                 with anyio.move_on_after(1, shield=True):
                     await self.console.restore()

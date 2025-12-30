@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import anyio
 import sys
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 
 import _colorize
 from attrs import define, field, fields
@@ -222,6 +222,7 @@ class Reader(anyio.AsyncContextManagerMixin):
     can_colorize: bool = False
     more_lines: Callable[[str], bool] | None = None
     _in_context: bool = field(default=False, init=False)
+    __events = None
 
     ## cached metadata to speed up screen refreshes
     @define
@@ -302,15 +303,22 @@ class Reader(anyio.AsyncContextManagerMixin):
 
         The console context must already have been entered.
         """
-        await self.prepare()
         self.height, self.width = await self.console.getheightwidth()
-        self._in_context = True
-        try:
-            yield
-        finally:
-            self._in_context = False
-            with anyio.move_on_after(1, shield=True):
-                await self.restore()
+        async with AsyncExitStack() as acm:
+            try:
+                self.__events = aiter(await acm.enter_async_context(self.console.evt().stream()))
+            except AttributeError:
+                pass
+
+            await self.prepare()
+            self._in_context = True
+            try:
+                yield
+            finally:
+                self._in_context = False
+                self.__events = None
+                with anyio.move_on_after(1, shield=True):
+                    await self.restore()
 
     def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa: D102
         return default_keymap
@@ -640,6 +648,12 @@ class Reader(anyio.AsyncContextManagerMixin):
         """Clean up after a run."""
         await self.console.restore()
 
+    async def get_event(self):
+        """Get the next event, either directly or via RPC stream"""
+        if self.__events is None:
+            return await self.console.get_event()
+        return (await anext(self.__events))[0]
+
     @asynccontextmanager
     async def suspend(self) -> SimpleContextManager:
         """A context manager to delegate to another reader."""
@@ -738,7 +752,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             await self.run_hooks()
             try:
                 with anyio.fail_after(None if block else 0.1):
-                    event = await self.console.get_event()
+                    event = await self.get_event()
             except TimeoutError:
                 return False
 

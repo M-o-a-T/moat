@@ -72,9 +72,9 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         self.recorded_actions.append(("wr", data))
         self.output_buffer += data
 
-    async def prepare(self) -> None:
+    async def prepare(self, reader: bool = True) -> None:
         """Mock prepare."""
-        self.recorded_actions.append(("action", "prepare"))
+        self.recorded_actions.append(("action", "prepare" if reader else "prepare_raw"))
         self.screen = []
         self.height, self.width = self._height, self._width
 

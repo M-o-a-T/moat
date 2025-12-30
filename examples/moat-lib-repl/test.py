@@ -10,6 +10,7 @@ from contextlib import AsyncExitStack
 from moat.util import Path
 from moat.lib.repl import ReadlineAlikeReader as Reader
 from moat.lib.repl import multiline_input
+from moat.lib.stream import FilenoTerm
 
 
 async def main_old():
@@ -29,14 +30,15 @@ async def main(mode):
             from moat.lib.repl import UnixConsole  # noqa:PLC0415
 
             async with AsyncExitStack() as acm:
-                console = await acm.enter_async_context(UnixConsole())
+                term = FilenoTerm({}, 0, 1)
                 if mode == 3:
-                    from moat.lib.repl import MsgConsole  # noqa:PLC0415
+                    await acm.enter_async_context(term)
+                    from moat.lib.repl import MsgTerm  # noqa:PLC0415
                     from moat.lib.rpc import MsgSender  # noqa:PLC0415
 
-                    msg_handler = MsgConsole(console)
-                    console = MsgSender(msg_handler).sub_at(Path())
-                    console = await acm.enter_async_context(console)
+                    msg_handler = MsgTerm(term)
+                    term = MsgSender(msg_handler).sub_at(Path())
+                console = await acm.enter_async_context(UnixConsole(term))
 
                 r = await acm.enter_async_context(Reader(console=console))
                 r.more_lines = lambda r: "\n" not in r

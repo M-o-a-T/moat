@@ -83,7 +83,7 @@ _imports = {
     "set_startup_hook": "readline",
     "write_history_file": "readline",
     # rpc
-    "MsgConsole": "rpc",
+    "MsgTerm": "rpc",
     # simple_interact
     "run_multiline_interactive_console": "simple_interact",
     # terminfo

@@ -6,86 +6,95 @@ import pytest
 from contextlib import AsyncExitStack
 
 from moat.util import Path
-from moat.lib.repl._test import MockConsole
-from moat.lib.repl.console import Readline
-from moat.lib.repl.rpc import MsgConsole
+from moat.lib.repl import MsgTerm, Readline, UnixConsole
+from moat.lib.repl._test import MockTerm
 from moat.lib.rpc import MsgSender
 
 
 @pytest.mark.anyio
-async def test_mock_console_basic():
-    """Test basic MockConsole functionality."""
+async def test_mock_term_basic():
+    """Test basic MockTerm functionality."""
     # Create console with scripted input
     user_actions = [
         b"hello",
         0.01,  # Small delay
         b" world\n",
     ]
-    console = MockConsole(user_actions=user_actions)
+    term = MockTerm(user_actions=user_actions)
 
     # Test rd() - read data
-    data1 = await console.rd(5)
-    assert data1 == b"hello"
+    buf = bytearray(10)
+    n = await term.rd(buf)
+    assert buf[:n] == b"hello"
 
     # Test wr() - write data
-    await console.wr(b"output")
-    assert console.output_buffer == b"output"
+    await term.wr(b"output")
+    assert term.output_buffer == b"output"
 
     # Test that actions are recorded
-    assert ("rd", b"hello") in console.record
-    assert ("wr", b"output") in console.record
+    assert ("rd", b"hello") in term.record
+    assert ("wr", b"output") in term.record
 
 
 @pytest.mark.anyio
 async def test_msg_console_wrapper():
     """Test MsgConsole RPC wrapper."""
-    # Create a mock console
-    user_actions = [b"test input"]
-    mock = MockConsole(user_actions=user_actions)
+    # Create a term console
+    user_actions = [b"test input", b"putput"]
+    term = MockTerm(user_actions=user_actions)
 
     # Wrap it with MsgConsole
-    msg_console = MsgConsole(mock)
+    console = MsgTerm(term)
 
     # Test cmd_rd via direct call
-    result = await msg_console.cmd_rd(4)
-    assert result == b"test"
+    buf = bytearray(4)
+    n = await console.cmd_rd(buf)
+    assert buf[:n] == b"test"
+
+    buf = bytearray(8)
+    n = await console.cmd_rd(buf)
+    assert buf[:n] == b" input"
+
+    n = await console.cmd_rd(buf)
+    assert buf[:n] == b"putput"
 
     # Test cmd_wr via direct call
-    await msg_console.cmd_wr(b"test output")
-    assert mock.output_buffer == b"test output"
+    await console.cmd_wr(b"test output")
+    assert term.output_buffer == b"test output"
 
 
 @pytest.mark.anyio
 async def test_rpc_sender_remote():
     """Test remote console access via MsgSender."""
-    # Create a mock console
+    # Create a term console
     user_actions = [b"remote input"]
-    mock = MockConsole(user_actions=user_actions)
+    term = MockTerm(user_actions=user_actions)
 
     # Wrap with MsgConsole handler
-    msg_handler = MsgConsole(mock)
+    msg_handler = MsgTerm(term)
 
     # Create MsgSender (simulating RPC layer)
     sender = MsgSender(msg_handler).sub_at(Path())
 
-    # Test rd through the chain: sender -> msg_handler -> mock
-    result = await sender.rd(n=6)
-    assert result == b"remote"
+    # Test rd through the chain: sender -> msg_handler -> term
+    buf = bytearray(6)
+    n = await sender.rd(buf)
+    assert buf[:n] == b"remote"
 
     # Test wr through the chain
     await sender.wr(data=b"remote output")
-    assert mock.output_buffer == b"remote output"
+    assert term.output_buffer == b"remote output"
 
 
 @pytest.mark.anyio
 async def test_readline_iterator():
     """Test Readline async iterator interface."""
-    # Create console with input ending in newline (to trigger accept)
     user_actions = [
         b"test line\n",
         b"another line\n",
     ]
-    console = MockConsole(user_actions=user_actions)
+    term = MockTerm(user_actions=user_actions)
+    console = UnixConsole(term)
 
     # Use Readline as async iterator
     async with console, Readline(console, prompt=">>> ") as lines:
@@ -96,87 +105,76 @@ async def test_readline_iterator():
 
 
 @pytest.mark.anyio
-async def test_full_stack():
-    """Test complete RPC stack."""
+async def test_rpc_stack():
+    """Test basic RPC stack."""
     user_actions = [
         b"print('hello')\n",
     ]
-    mock = MockConsole(user_actions=user_actions)
+    term = MockTerm(user_actions=user_actions)
 
-    # Build the stack: MockConsole -> MsgConsole -> MsgSender
-    msg_handler = MsgConsole(mock)
+    # Stack: MockTerm -> MsgTerm -> MsgSender
+    msg_handler = MsgTerm(term)
     sender = MsgSender(msg_handler).sub_at(Path())
 
-    result = await sender.rd(n=5)
-    assert result == b"print"
+    buf = bytearray(5)
+    n = await sender.rd(buf)
+    assert buf[:n] == b"print"
 
     await sender.wr(data=b"test")
-    assert mock.output_buffer == b"test"
+    assert term.output_buffer == b"test"
 
     # Verify actions were recorded
-    assert ("rd", b"print") in mock.record
-    assert ("wr", b"test") in mock.record
+    assert ("rd", b"print") in term.record
+    assert ("wr", b"test") in term.record
 
 
 @pytest.mark.anyio
-async def test_readline_iterator_full():
+@pytest.mark.parametrize("remote", [False, True])
+@pytest.mark.parametrize("multi", [False, True])
+async def test_readline_iterator_full(remote, multi):
     """Test Readline async iterator with multiple lines."""
-    # Create mock console with multiple lines of input
+    # Create term console with multiple lines of input
     user_actions = [
         b"first line\n",
         b"second line\n",
         b"third line\n",
     ]
-    console = MockConsole(user_actions=user_actions)
-
-    lines = []
-    # Use the full pattern: async with console, Readline as iterator
-    async with console, Readline(console, prompt=">>> ") as inp:
-        async for line in inp:
-            lines.append(line)
-            if len(lines) >= 3:  # Stop after 3 lines
-                break
-
-    assert len(lines) == 3
-    assert "first" in lines[0]
-    assert "second" in lines[1]
-    assert "third" in lines[2]
-
-    # Verify console was prepared and restored
-    assert ("action", "enter") in console.record
-    assert ("action", "exit") in console.record
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize("remote", (False, True))
-async def test_readline_multiline(remote):
-    """Test Readline with multiline input support."""
-
-    def more_lines(text: str) -> bool:
-        """Check if we need more lines (simple continuation check)."""
-        # Continue if the text (without trailing newline) ends with backslash
-        text = text.rstrip("\n")
-        return text.endswith("\\")
-
-    # Create mock console with multiline input
-    user_actions = [
+    user_actions_m = [
         b"line 1\\\n",  # Continuation
         b"line 2\n",  # Complete
     ]
+    lines = []
+
+    def more_lines(text: str) -> bool:
+        """Continue if the text (without trailing newline) ends with backslash"""
+        text = text.rstrip("\n")
+        return text.endswith("\\")
+
     async with AsyncExitStack() as acm:
         ac = acm.enter_async_context
-        console = await ac(MockConsole(user_actions=user_actions))
-
+        term = tx = MockTerm(user_actions=user_actions_m if multi else user_actions)
         if remote:
-            # Wrap with MsgConsole handler
-            msg_handler = MsgConsole(console)
+            # await ac(term)
+            hdl = MsgTerm(term)
+            term = MsgSender(hdl).sub_at(Path())
+        console = await ac(UnixConsole(term))
+        inp = await ac(Readline(console, prompt=">>> ", more_lines=more_lines if multi else None))
 
-            # Create MsgSender (simulating RPC layer)
-            console = await ac(MsgSender(msg_handler).sub_at(Path()))
+        async for line in inp:
+            lines.append(line)
+            if len(lines) == (1 if multi else 3):
+                break
 
-        inp = await ac(Readline(console, prompt=">>> ", more_lines=more_lines))
-        line = await anext(inp)
+    if multi:
+        assert len(lines) == 1
+        assert "line 1" in lines[0]
+        assert "line 2" in lines[0]
+    else:
+        assert len(lines) == 3
+        assert "first" in lines[0]
+        assert "second" in lines[1]
+        assert "third" in lines[2]
 
-    # Should have received the complete multiline input
-    assert "line 1" in line
-    assert "line 2" in line
+    # Verify console was prepared and restored
+    assert ("switch", "raw") in tx.record
+    assert ("switch", "orig") in tx.record

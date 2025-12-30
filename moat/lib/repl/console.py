@@ -33,7 +33,7 @@ from attrs import define, field
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Buffer, Callable
 
 __all__ = ["Console", "Event", "InteractiveColoredConsole", "Readline"]
 
@@ -142,7 +142,7 @@ class Console(ABC):  # noqa: D101
     async def repaint(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    async def rd(self, n: int) -> bytes:
+    async def rd(self, buf: Buffer) -> bytes:
         """Read up to n bytes from the underlying terminal."""
         ...
 

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.repl import TermState
 
-    from collections.abc import AbstractSet, Awaitable
+    from collections.abc import AbstractSet
 
 
 __all__ = ["FilenoTerm", "InvalidTerminal"]
@@ -44,11 +44,11 @@ class TermBuf(BaseBuf):
     An abstrace `BaseBuf`-derived class, enhanced with terminal access.
     """
 
-    def set_raw(self) -> Awaitable[None]:
+    async def set_raw(self) -> None:
         """switch to raw mode"""
         raise NotImplementedError
 
-    def set_orig(self) -> Awaitable[None]:
+    async def set_orig(self) -> None:
         """switch to previous mode"""
         raise NotImplementedError
 
@@ -105,13 +105,13 @@ class FilenoTerm(FilenoBuf, TermBuf):
         raw.cc[termios.VTIME] = 0
         self.__raw_termstate = raw
 
-    def set_raw(self) -> Awaitable[None]:
+    async def set_raw(self) -> None:
         """switch to raw mode"""
-        return self.tset(self.__raw_termstate)
+        return await self.tset(self.__raw_termstate)
 
-    def set_orig(self) -> Awaitable[None]:
+    async def set_orig(self) -> None:
         """switch to previous mode"""
-        return self.tset(self.__orig_termstate)
+        return await self.tset(self.__orig_termstate)
 
     async def tget(self) -> TermState:
         """return current terminfo"""

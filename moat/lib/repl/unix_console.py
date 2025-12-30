@@ -225,7 +225,10 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             with anyio.CancelScope() as sc:
                 task_status.started(sc)
                 while True:
-                    self.push_char(await self.__read(1))
+                    try:
+                        self.push_char(await self.__read(1))
+                    except EOFError:
+                        break
         finally:
             self.__read_task_end.set()
 
@@ -240,11 +243,11 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         return buf
 
     def rd(self, buf: bytearray) -> Awaitable[int]:
-        """Read up to len(buf) bytes from the underlying terminal."""
+        """Read up to len(buf) bytes directly from the underlying terminal."""
         return self.__io.rd(buf)
 
     async def wr(self, data: bytes) -> None:
-        """Write data to the underlying terminal."""
+        """Write data directly to the underlying terminal."""
         async with self._wrl:
             return await self.__io.wr(data)
 

@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import anyio
-from contextlib import asynccontextmanager
 
-from .console import Console, Event
+from moat.lib.stream import TermBuf
 
-TYPE_CHECKING = False
+from .fancy_termios import TermState
+
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from types import AbstractSet, Buffer
 
 
-class MockConsole(Console, anyio.AsyncContextManagerMixin):
+class MockTerm(TermBuf):
     """
-    Mock console for testing that records actions and provides scripted input.
+    Mock terminal for testing. Records actions and provides scripted input.
 
     User actions can be:
         float - delay in seconds before next action
@@ -23,18 +24,20 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
 
     Recorded actions include:
         ("wr", bytes) - data written via wr()
-        ("rd", bytes) - number of bytes read via rd()
-        ("action", str) - operations like "prepare", "restore", "raw", "cooked"
+        ("rd", bytes) - bytes read via rd()
+        ("set", "raw") - and similar operations
+
+    Instance attributes:
+        output_buffer(bytes): accumulated "wr()" data
+        record(list[tuple]): Actions; first item is a string
     """
 
     def __init__(
         self,
-        term: str = "",
-        encoding: str = "",
+        cfg: dict | None = None,
         user_actions: list[float | bytes] | None = None,
     ):
-        term  # noqa:B018
-        super().__init__(encoding)
+        super().__init__(cfg)
         self.user_actions = list(user_actions) if user_actions else []
         self.record: list[tuple[str, object]] = []
         self.input_buffer = b""
@@ -42,18 +45,11 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         self._height = 25
         self._width = 80
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self):
-        """Async context manager for console lifecycle."""
-        assert not self.record
-        self.record.append(("action", "enter"))
-        try:
-            yield self
-        finally:
-            self.record.append(("action", "exit"))
+    async def stream(self):
+        return 42
 
-    async def rd(self, n: int) -> bytes:
-        """Read up to n bytes from mock input."""
+    async def rd(self, buf: Buffer) -> int:
+        """Copy up to len(buf) bytes from mock input into buf."""
         # Process user actions until we have input
         while not self.input_buffer and self.user_actions:
             action = self.user_actions.pop(0)
@@ -63,90 +59,57 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
                 self.input_buffer += action
 
         # Return available data
-        result = self.input_buffer[:n]
+        n = min(len(buf), len(self.input_buffer))
+        if not n:
+            self.record.append(("rd", None))
+            raise EOFError
+        buf[:n] = self.input_buffer[:n]
         self.input_buffer = self.input_buffer[n:]
 
-        self.record.append(("rd", result))
-        return result
+        self.record.append(("rd", buf[:n]))
+        return n
 
     async def wr(self, data: bytes) -> None:
         """Write data to mock output."""
         self.record.append(("wr", data))
         self.output_buffer += data
 
-    async def prepare(self, reader: bool = True) -> None:
-        """Mock prepare."""
-        self.record.append(("action", "prepare" if reader else "prepare_raw"))
-        self.screen = []
-        self.height, self.width = self._height, self._width
+    async def set_raw(self) -> None:
+        """switch to raw mode"""
+        self.record.append(("switch", "raw"))
 
-    async def restore(self) -> None:
-        """Mock restore."""
-        self.record.append(("action", "restore"))
+    async def set_orig(self) -> None:
+        """switch to previous mode"""
+        self.record.append(("switch", "orig"))
 
-    async def refresh(self, screen: list[str], xy: tuple[int, int]) -> None:
-        """Mock refresh."""
-        self.record.append(("action", "refresh", screen, xy))
+    async def tget(self) -> TermState:
+        """return current terminfo"""
+        self.record.append(("get_ts",))
+        return TermState([0] * 6 + [[b"\0"] * 30])
 
-    async def move_cursor(self, x: int, y: int) -> None:
-        """Mock move_cursor."""
-        assert self.record[0] == ("action", "enter")
-        assert ("action", "exit") not in self.record
-        self.record.append(("action", "move_cursor", x, y))
+    async def tset(self, state: TermState, ignore: AbstractSet[int] = frozenset()) -> bool:
+        """Set terminfo.
 
-    async def set_cursor_vis(self, visible: bool) -> None:
-        """Mock set_cursor_vis."""
-        self.record.append(("action", "set_cursor_vis", visible))
+        Args:
+            state: Terminal state.
+            ignore: errno values to retirn False on.
+                (Anything else raises an exception.)
 
-    async def getheightwidth(self) -> tuple[int, int]:
-        """Return mock terminal size."""
-        self.record.append(("action", "getheightwidth"))
-        return (self._height, self._width)
+        """
+        ignore  # noqa:B018
+        self.record.append(("set_ts", state))
 
-    async def get_event(self) -> Event:
-        """Get next event from mock input."""
-        data = await self.rd(1)
-        if not data:
-            # No more input available, treat as EOF
-            raise EOFError
-        return Event(evt="key", data=data.decode(self.encoding, errors="replace"), raw=data)
+    async def forget_input(self):
+        "Delete pending input"
+        self.record.append(("forget", "input"))
+        raise NotImplementedError
 
-    async def push_char(self, char: int | bytes) -> None:
-        """Push character to mock input buffer."""
-        if isinstance(char, int):
-            char = bytes([char])
-        self.input_buffer = char + self.input_buffer
+    async def size(self) -> tuple[int, int]:
+        "Return terminal height/width tuple"
+        self.record.append(("get", "size"))
+        return self._height, self._width
 
-    async def beep(self) -> None:
-        """Mock beep."""
-        self.record.append(("action", "beep"))
-
-    async def clear(self) -> None:
-        """Mock clear."""
-        self.record.append(("action", "clear"))
-
-    async def finish(self) -> None:
-        """Mock finish."""
-        self.record.append(("action", "finish"))
-
-    async def flushoutput(self) -> None:
-        """Mock flushoutput."""
-        self.record.append(("action", "flushoutput"))
-
-    async def forgetinput(self) -> None:
-        """Mock forgetinput."""
-        self.record.append(("action", "forgetinput"))
-
-    async def getpending(self) -> Event:
-        """Mock getpending."""
-        self.record.append(("action", "getpending"))
-        return Event(evt="", data="", raw=b"")
-
-    @property
-    def input_hook(self) -> Callable[[], int] | None:
-        """Mock input_hook."""
-        return None
-
-    async def repaint(self) -> None:
-        """Mock repaint."""
-        self.record.append(("action", "repaint"))
+    async def rdp(self) -> bytearray:
+        """read pending data, without blocking"""
+        self.record.append(("read", "pending"))
+        return b""

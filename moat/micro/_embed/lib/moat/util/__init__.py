@@ -131,13 +131,19 @@ class attrdict(dict):
             return d
 
     def __setattr__(self, k, v):
-        self[k] = v
+        if k[0] == "_":
+            object.__setattr__(self, k, v)
+        else:
+            self[k] = v
 
     def __delattr__(self, k):
-        try:
-            del self[k]
-        except KeyError:
-            return AttributeError(k)
+        if k[0] == "_":
+            object.__delattr__(self, k)
+        else:
+            try:
+                del self[k]
+            except KeyError:
+                return AttributeError(k)
 
 
 def to_attrdict(d) -> attrdict:

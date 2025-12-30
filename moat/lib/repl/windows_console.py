@@ -68,10 +68,6 @@ try:
 except ImportError:
     nt = None
 
-from typing import TYPE_CHECKING  # noqa:E402
-
-if TYPE_CHECKING:
-    from typing import IO
 
 __all__ = ["WindowsConsole"]
 
@@ -140,12 +136,11 @@ def _supports_vt():
 class WindowsConsole(Console):  # moqa: D101  # noqa: D101
     def __init__(
         self,
-        f_in: IO[bytes] | int = 0,
-        f_out: IO[bytes] | int = 1,
         term: str = "",
         encoding: str = "",
     ):
-        super().__init__(f_in, f_out, term, encoding)
+        term  # noqa:B018
+        super().__init__(encoding)
 
         self.__vt_support = _supports_vt()
 

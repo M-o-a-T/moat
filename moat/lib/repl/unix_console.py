@@ -24,21 +24,17 @@ from __future__ import annotations
 import anyio
 import anyio.abc
 import errno
-import fcntl
 import os
 import platform
 import re
 import select
 import signal
-import struct
 import termios
 import types  # noqa:TC003
 from contextlib import asynccontextmanager
-from fcntl import ioctl
 
 from . import terminfo
 from .console import Console, Event
-from .fancy_termios import TermState, tcgetattr, tcsetattr
 from .trace import trace
 from .unix_eventqueue import EventQueue
 from .utils import wlen
@@ -47,8 +43,10 @@ from typing import TYPE_CHECKING
 
 # types
 if TYPE_CHECKING:
-    from collections.abc.Set import AbstractSet
-    from typing import IO, Literal, cast, overload
+    from moat.lib.stream import BaseBuf
+
+    from collections.abc import Awaitable
+    from typing import Literal, cast, overload
 else:
     overload = lambda func: None  # noqa: ARG005, E731
     cast = lambda typ, val: val  # noqa: ARG005, E731
@@ -72,9 +70,6 @@ _error = (termios.error, InvalidTerminal)
 _error_codes_to_ignore = frozenset([errno.EIO, errno.ENXIO, errno.EPERM])
 
 SIGWINCH_EVENT = "repaint"
-
-FIONREAD = getattr(termios, "FIONREAD", None)
-TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", None)
 
 delayprog = re.compile(b"\\$<([0-9]+)((?:/|\\*){0,2})>")
 
@@ -101,50 +96,13 @@ except AttributeError:
     poll = MinimalPoll  # type: ignore[assignment]
 
 
-class FDWrapper:
-    "Wrap a file descriptor"
-
-    def __init__(self, fd):
-        self.fd = fd
-
-    async def __aenter__(self):
-        flg = fcntl.fcntl(self.fd, fcntl.F_GETFL)
-        fcntl.fcntl(self.fd, fcntl.F_SETFL, flg | os.O_NONBLOCK)
-
-    async def __aexit__(self, *err):
-        await self.aclose()
-
-    async def write(self, buf: bytes) -> None:
-        "write data"
-        while len(buf):
-            await anyio.wait_writable(self.fd)
-            n = os.write(self.fd, buf)
-            if n == len(buf):
-                break
-            buf = memoryview(buf)[n:]
-
-    async def read(self, n: int):
-        "read data"
-        await anyio.wait_readable(self.fd)
-        return os.read(self.fd, n)
-
-    async def aclose(self):
-        try:
-            flg = fcntl.fcntl(self.fd, fcntl.F_GETFL)
-            fcntl.fcntl(self.fd, fcntl.F_SETFL, flg & ~os.O_NONBLOCK)
-            if self.fd > 2:
-                os.close(self.fd)
-        finally:
-            self.fd = -1
-
-
 class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
-    __read_task: anyio.abc.CancelScope = None
+    __read_task: anyio.abc.CancelScope | None = None
+    __read_task_end: anyio.Event | None = None
 
     def __init__(
         self,
-        f_in: IO[bytes] | int = 0,
-        f_out: IO[bytes] | int = 1,
+        stream: BaseBuf | None = None,
         term: str = "",
         encoding: str = "",
     ):
@@ -157,13 +115,18 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         - term (str): Terminal name.
         - encoding (str): Encoding to use for I/O operations.
         """
-        super().__init__(f_in, f_out, term, encoding)
+        super().__init__(encoding)
+        self._wrl = anyio.Lock()
 
         self.input_buffer = b""
         self.input_buffer_pos = 0
 
-        self.input_f = FDWrapper(self.input_fd)
-        self.output_f = FDWrapper(self.output_fd)
+        if stream is None:
+            from moat.lib.stream import FilenoTerm  # noqa:PLC0415
+
+            self.__io = FilenoTerm({}, 0, 1)
+        else:
+            self.__io = stream
 
         self.is_apple_terminal = (
             platform.system() == "Darwin" and os.getenv("TERM_PROGRAM") == "Apple_Terminal"
@@ -173,9 +136,10 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     @asynccontextmanager
     async def __asynccontextmanager__(self):
         term = self.term
-        self.terminfo = terminfo.TermInfo(term or None)
+        self.terminfo = terminfo.TermInfo(term or os.environ.get("TERM", "VT100"))
         try:
-            self.__input_fd_set(tcgetattr(self.input_fd), ignore=frozenset())
+            current_term = await self.__io.tget()
+            await self.__io.tset(current_term)
         except _error as e:
             raise RuntimeError(f"termios failure ({e.args[1]})") from e
 
@@ -218,22 +182,9 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.__setup_movement()
 
-        backspace = tcgetattr(self.input_fd).cc[termios.VERASE]
+        backspace = (await self.__io.tget()).cc[termios.VERASE]
         self.event_queue = EventQueue(self.encoding, self.terminfo, backspace=backspace)
         self.cursor_visible = 1
-
-        self.__orig_termstate = tcgetattr(self.input_fd)
-        raw = self.__orig_termstate.copy()
-        raw.iflag &= ~(termios.INPCK | termios.ISTRIP | termios.IXON)
-        raw.oflag &= ~(termios.OPOST)
-        raw.cflag &= ~(termios.CSIZE | termios.PARENB)
-        raw.cflag |= termios.CS8
-        raw.iflag |= termios.BRKINT
-        raw.lflag &= ~(termios.ICANON | termios.ECHO | termios.IEXTEN)
-        raw.lflag |= termios.ISIG
-        raw.cc[termios.VMIN] = 1
-        raw.cc[termios.VTIME] = 0
-        self.__raw_termstate = raw
 
         self.screen = []
         self._height, self._width = await self.getheightwidth()
@@ -244,8 +195,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__offset = 0
 
         async with (
-            self.output_f,
-            self.input_f,
+            self.__io,
             anyio.create_task_group() as tg,
         ):
 
@@ -268,27 +218,35 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
                 tg.cancel_scope.cancel()
 
     async def _reader(self, task_status=anyio.TASK_STATUS_IGNORED):
-        with anyio.CancelScope() as sc:
-            task_status.started(sc)
-            while True:
-                self.push_char(await self.__read(1))
+        if self.__read_task_end is not None:
+            raise RuntimeError("Started twice")
+        self.__read_task_end = anyio.Event()
+        try:
+            with anyio.CancelScope() as sc:
+                task_status.started(sc)
+                while True:
+                    self.push_char(await self.__read(1))
+        finally:
+            self.__read_task_end.set()
 
     async def __sigcont(self):
         await self.restore()
         await self.prepare()
 
     async def __read(self, n: int) -> bytes:
-        return await self.input_f.read(n)
+        buf = bytearray(n)
+        n = await self.__io.rd(buf)
+        buf[n:] = b""
+        return buf
 
-    async def rd(self, n: int) -> bytes:
-        """Read up to n bytes from the underlying terminal."""
-        if self.__read_task is not None:
-            raise RuntimeError("Cannot read. Call .prepare(reader=False).")
-        return await self.__read(n)
+    def rd(self, buf: bytearray) -> Awaitable[int]:
+        """Read up to len(buf) bytes from the underlying terminal."""
+        return self.__io.rd(buf)
 
     async def wr(self, data: bytes) -> None:
         """Write data to the underlying terminal."""
-        await self.output_f.write(data)
+        async with self._wrl:
+            return await self.__io.wr(data)
 
     def change_encoding(self, encoding: str) -> None:
         """
@@ -401,45 +359,48 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         Prepare the console for input/output operations.
         """
 
-        if self.__read_task:
-            await self.restore()
-            raise RuntimeError("Already prepared")
-        if reader:
-            self.__read_task = await self.__tg.start(self._reader)
-
         self.__buffer = []
-        self.__input_fd_set(self.__raw_termstate)
-
-        # In macOS terminal we need to deactivate line wrap via ANSI escape code
-        if self.is_apple_terminal:
-            await self.output_f.write(b"\033[?7l")
-
         self.screen = []
-        self._height, self._width = await self.getheightwidth()
-
         self.posxy = 0, 0
         self.__gone_tall = 0
         self.__move = self.__move_short
         self.__offset = 0
 
-        self.__maybe_write_code(self._smkx)
+        self._height, self._width = await self.getheightwidth()
 
-        self.__enable_bracketed_paste()
+        if self.__read_task_end is not None:
+            await self.restore()
+            raise RuntimeError("Already prepared")
+        if reader:
+            self.__read_task = await self.__tg.start(self._reader)
+
+        await self.__io.set_raw()
+
+        # In macOS terminal we need to deactivate line wrap via ANSI escape code
+        if self.is_apple_terminal:
+            async with self._wrl:
+                await self.__io.wr(b"\033[?7l")
+
+        self.__maybe_write_code(self._smkx)
+        await self.__enable_bracketed_paste()
 
     async def restore(self):
         """
         Restore the console to the default state
         """
-        if self.__read_task:
+        if self.__read_task_end is not None:
             self.__read_task.cancel()
+            await self.__read_task_end.wait()
             self.__read_task = None
-        self.__disable_bracketed_paste()
+            self.__read_task_end = None
+        await self.__disable_bracketed_paste()
         self.__maybe_write_code(self._rmkx)
         await self.flushoutput()
-        self.__input_fd_set(self.__orig_termstate)
+        await self.__io.set_orig()
 
         if self.is_apple_terminal:
-            await self.output_f.write(b"\033[?7h")
+            async with self._wrl:
+                await self.__io.wr(b"\033[?7h")
 
     def push_char(self, char: int | bytes) -> None:
         """
@@ -469,36 +430,15 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         else:
             self.__hide_cursor()
 
-    if TIOCGWINSZ:
+    async def getheightwidth(self) -> tuple[int, int]:
+        """
+        Get the height and width of the console.
 
-        async def getheightwidth(self):
-            """
-            Get the height and width of the console.
-
-            Returns:
-            - tuple: Height and width of the console.
-            """
-            try:
-                return int(os.environ["LINES"]), int(os.environ["COLUMNS"])
-            except (KeyError, TypeError, ValueError):
-                try:
-                    size = ioctl(self.input_fd, TIOCGWINSZ, b"\000" * 8)
-                except OSError:
-                    return 25, 80
-                height, width = struct.unpack("hhhh", size)[0:2]
-                if not height:
-                    return 25, 80
-                return height, width
-
-    else:
-
-        async def getheightwidth(self):
-            """
-            Get the height and width of the console.
-
-            Returns:
-            - tuple: Height and width of the console.
-            """
+        Returns: Height and width of the console.
+        """
+        try:
+            return await self.__io.size()
+        except Exception:
             try:
                 return int(os.environ["LINES"]), int(os.environ["COLUMNS"])
             except (KeyError, TypeError, ValueError):
@@ -508,7 +448,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         Discard any pending input on the console.
         """
-        termios.tcflush(self.input_fd, termios.TCIFLUSH)
+        await self.__io.forget_input()
 
     async def flushoutput(self):
         """
@@ -516,21 +456,23 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         buf = []
 
-        async def _flush():
-            nonlocal buf
-            if buf:
-                await self.output_f.write(b"".join(buf))
-                buf = []
+        async with self._wrl:
 
-        for text, iscode in self.__buffer:
-            if iscode:
-                await _flush()
-                await self.__tputs(text)
-            else:
-                buf.append(text.encode(self.encoding, "replace"))
-        await _flush()
+            async def _flush():
+                nonlocal buf
+                if buf:
+                    await self.__io.wr(b"".join(buf))
+                    buf = []
 
-        del self.__buffer[:]
+            for text, iscode in self.__buffer:
+                if iscode:
+                    await _flush()
+                    await self.__tputs(text)
+                else:
+                    buf.append(text.encode(self.encoding, "replace"))
+            await _flush()
+
+            del self.__buffer[:]
 
     async def finish(self):
         """
@@ -540,7 +482,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         while y >= 0 and not self.screen[y]:
             y -= 1
         self.__move(0, min(y, self._height + self.__offset - 1))
-        self.__write("\n\r")
+        self.__write("\n")
         await self.flushoutput()
 
     async def beep(self):
@@ -550,52 +492,27 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__maybe_write_code(self._bel)
         await self.flushoutput()
 
-    if FIONREAD:
+    async def getpending(self):
+        """
+        Get pending events from the console event queue.
 
-        async def getpending(self):
-            """
-            Get pending events from the console event queue.
+        Returns:
+        - Event: Pending event from the event queue.
+        """
+        e = Event("key", "", b"")
 
-            Returns:
-            - Event: Pending event from the event queue.
-            """
-            e = Event("key", "", b"")
+        while not self.event_queue.empty():
+            e2 = await self.event_queue.get()
+            if e.evt != "key":
+                raise ValueError(repr(e))
+            e.data += e2.data
+            e.raw += e.raw
 
-            while not self.event_queue.empty():
-                e2 = self.event_queue.get()
-                e.data += e2.data
-                e.raw += e.raw
-
-            amount = struct.unpack("i", ioctl(self.input_fd, FIONREAD, b"\0\0\0\0"))[0]
-            trace("getpending({a})", a=amount)
-            raw = await self.__read(amount)
-            data = str(raw, self.encoding, "replace")
-            e.data += data
-            e.raw += raw
-            return e
-
-    else:
-
-        async def getpending(self):
-            """
-            Get pending events from the console event queue.
-
-            Returns:
-            - Event: Pending event from the event queue.
-            """
-            e = Event("key", "", b"")
-
-            while not self.event_queue.empty():
-                e2 = self.event_queue.get()
-                e.data += e2.data
-                e.raw += e.raw
-
-            amount = 10000
-            raw = await self.__read(amount)
-            data = str(raw, self.encoding, "replace")
-            e.data += data
-            e.raw += raw
-            return e
+        raw = await self.__io.rdp()
+        data = str(raw, self.encoding, "replace")
+        e.data += data
+        e.raw += raw
+        return e
 
     async def clear(self):
         """
@@ -612,11 +529,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001
             return posix._inputhook  # noqa: SLF001
 
-    def __enable_bracketed_paste(self) -> None:
-        os.write(self.output_fd, b"\x1b[?2004h")
+    async def __enable_bracketed_paste(self) -> None:
+        async with self._wrl:
+            await self.__io.wr(b"\x1b[?2004h")
 
-    def __disable_bracketed_paste(self) -> None:
-        os.write(self.output_fd, b"\x1b[?2004l")
+    async def __disable_bracketed_paste(self) -> None:
+        async with self._wrl:
+            await self.__io.wr(b"\x1b[?2004l")
 
     def __setup_movement(self):
         """
@@ -820,35 +739,16 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     async def __tputs(self, fmt, prog=delayprog):
         """A Python implementation of the curses tputs function; the
         curses one can't really be wrapped in a sane manner.
-
-        I have the strong suspicion that this is complexity that
-        will never do anyone any good."""
-        # using .get() means that things will blow up
-        # only if the bps is actually needed (which I'm
-        # betting is pretty unlkely)
+        """
         while True:
             m = prog.search(fmt)
             if not m:
-                await self.output_f.write(fmt)
+                await self.__io.wr(fmt)
                 break
             x, y = m.span()
-            await self.output_f.write(fmt[:x])
+            await self.__io.wr(fmt[:x])
             fmt = fmt[y:]
             delay = int(m.group(1))
             if b"*" in m.group(2):
                 delay *= self._height
             await anyio.sleep(float(delay) / 1000.0)
-
-    def __input_fd_set(
-        self,
-        state: TermState,
-        ignore: AbstractSet[int] = _error_codes_to_ignore,
-    ) -> bool:
-        try:
-            tcsetattr(self.input_fd, termios.TCSADRAIN, state)
-        except termios.error as te:
-            if te.args[0] not in ignore:
-                raise
-            return False
-        else:
-            return True

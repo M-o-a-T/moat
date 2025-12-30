@@ -33,7 +33,8 @@ class MockConsole(Console, anyio.AsyncContextManagerMixin):
         encoding: str = "",
         user_actions: list[float | bytes] | None = None,
     ):
-        super().__init__(-1, -1, term, encoding)
+        term  # noqa:B018
+        super().__init__(encoding)
         self.user_actions = list(user_actions) if user_actions else []
         self.record: list[tuple[str, object]] = []
         self.input_buffer = b""

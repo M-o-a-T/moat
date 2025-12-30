@@ -109,7 +109,7 @@ class ReadlineConfig:
 
 
 @define(kw_only=True)
-class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
+class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):  # noqa:D101
     # Class fields
     assume_immutable_completions = False
     use_brackets = False
@@ -129,10 +129,10 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
         self.commands["backspace_dedent"] = backspace_dedent
         self.commands["backspace-dedent"] = backspace_dedent
 
-    async def error(self, msg: str = "none") -> None:
+    async def error(self, msg: str = "none") -> None:  # noqa:D102
         pass  # don't show error messages by default
 
-    def get_stem(self) -> str:
+    def get_stem(self) -> str:  # noqa:D102
         b = self.buffer
         p = self.pos - 1
         completer_delims = self.config.completer_delims
@@ -140,7 +140,7 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
             p -= 1
         return "".join(b[p + 1 : self.pos])
 
-    def get_completions(self, stem: str) -> list[str]:
+    def get_completions(self, stem: str) -> list[str]:  # noqa:D102
         module_completions = self.get_module_completions()
         if module_completions is not None:
             return module_completions
@@ -173,11 +173,11 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
             result.sort()
         return result
 
-    def get_module_completions(self) -> list[str] | None:
+    def get_module_completions(self) -> list[str] | None:  # noqa:D102
         line = self.get_line()
         return self.config.module_completer.get_completions(line)
 
-    def get_trimmed_history(self, maxlength: int) -> list[str]:
+    def get_trimmed_history(self, maxlength: int) -> list[str]:  # noqa:D102
         if maxlength >= 0:
             cut = len(self.history) - maxlength
             if cut < 0:
@@ -186,20 +186,20 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
             cut = 0
         return self.history[cut:]
 
-    def update_last_used_indentation(self) -> None:
+    def update_last_used_indentation(self) -> None:  # noqa:D102
         indentation = _get_first_indentation(self.buffer)
         if indentation is not None:
             self.last_used_indentation = indentation
 
     # --- simplified support for reading multiline Python statements ---
 
-    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:
+    def collect_keymap(self) -> tuple[tuple[KeySpec, CommandName], ...]:  # noqa:D102
         return super().collect_keymap() + (
             (r"\n", "maybe-accept"),
             (r"\<backspace>", "backspace-dedent"),
         )
 
-    def after_command(self, cmd: Command) -> None:
+    def after_command(self, cmd: Command) -> None:  # noqa:D102
         super().after_command(cmd)
         if self.more_lines is None:
             # Force single-line input if we are in raw_input() mode.
@@ -348,22 +348,14 @@ class backspace_dedent(commands.Command):
 
 @define
 class _ReadlineWrapper:
-    f_in: int = -1
-    f_out: int = -1
     reader: ReadlineAlikeReader | None = field(default=None, repr=False)
     saved_history_length: int = -1
     startup_hook: Callback | None = None
     config: ReadlineConfig = field(factory=ReadlineConfig, repr=False)
 
-    def __attrs_post_init__(self) -> None:
-        if self.f_in == -1:
-            self.f_in = os.dup(0)
-        if self.f_out == -1:
-            self.f_out = os.dup(1)
-
     def get_reader(self) -> ReadlineAlikeReader:
         if self.reader is None:
-            console = Console(self.f_in, self.f_out, encoding=ENCODING)
+            console = Console(encoding=ENCODING)
             self.reader = ReadlineAlikeReader(console=console, config=self.config)
         return self.reader
 
@@ -588,16 +580,8 @@ def _setup(namespace: Mapping[str, Any]) -> None:
     if raw_input is not None:
         return  # don't run _setup twice
 
-    try:
-        f_in = sys.stdin.fileno()
-        f_out = sys.stdout.fileno()
-    except (AttributeError, ValueError):
+    if not os.isatty(0) or not os.isatty(1):
         return
-    if not os.isatty(f_in) or not os.isatty(f_out):
-        return
-
-    _wrapper.f_in = f_in
-    _wrapper.f_out = f_out
 
     # set up namespace in rlcompleter, which requires it to be a bona fide dict
     if not isinstance(namespace, dict):

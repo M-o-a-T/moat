@@ -113,8 +113,7 @@ class FilenoBuf(BaseBuf):
     async def wr(self, buf) -> int:
         "basic send"
         on = len(buf)
-        while True:
-            n = len(buf)
+        while n := len(buf):
             await anyio.wait_writable(self.wfd)
             nn = os.write(self.wfd, buf)
             if nn <= 0:

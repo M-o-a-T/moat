@@ -75,7 +75,7 @@ class BaseEventQueue:  # noqa: D101
         """
         Processes a character by updating the buffer and handling special key mappings.
         """
-        assert isinstance(char, (int, bytes))
+        assert isinstance(char, (int, bytes, bytearray)), char
         ord_char = char if isinstance(char, int) else ord(char)
         char = ord_char.to_bytes()
         self.buf.append(ord_char)

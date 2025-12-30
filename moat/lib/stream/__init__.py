@@ -59,6 +59,8 @@ _imports = {
     # Network connections
     "TcpLink": "tcp",
     "UnixLink": "unix",
+    # Terminal
+    "FilenoTerm": "terminal",
 }
 
 
@@ -72,7 +74,7 @@ def __getattr__(attr: str):
     return value
 
 
-__all__ = [  # noqa:RUF022
+__all__ = [
     # Base classes (not lazy)
     "Base",
     "BaseBlk",
@@ -83,25 +85,8 @@ __all__ = [  # noqa:RUF022
     "StackedBuf",
     "StackedConn",
     "StackedMsg",
-    # Logging (lazy)
-    "LogBlk",
-    "LogBuf",
-    "LogMsg",
-    # CBOR (lazy)
-    "CBORMsgBlk",
-    "CBORMsgBuf",
-    # AnyIO (lazy)
-    "AnyioBuf",
-    "BufAnyio",
-    "FilenoBuf",
-    "ProcessBuf",
-    "ProcessDeadError",
-    "RemoteBufAnyio",
-    "SingleAnyioBuf",
-    # Reliable messaging (lazy)
-    "ReliableMsg",
-    "EphemeralMsg",
-    # Network connections (lazy)
-    "TcpLink",
-    "UnixLink",
-]
+] + list(_imports.keys())
+
+
+def __dir__():
+    return __all__

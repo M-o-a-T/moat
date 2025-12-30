@@ -315,7 +315,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             await self.prepare()
             self._in_context = True
             try:
-                yield
+                yield self
             finally:
                 self._in_context = False
                 self.__events = None

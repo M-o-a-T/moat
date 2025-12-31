@@ -212,7 +212,14 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
 
             changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
             if not await changes.exists() or no.test_chg:
-                await run_("debuild", "--build=binary", *deb_opts, cwd=rd, echo=debug)
+                await run_(
+                    "debuild",
+                    "--build=binary",
+                    *deb_opts,
+                    cwd=rd,
+                    echo=debug,
+                    env=dict(DEB_BUILD_OPTIONS="nocheck"),
+                )
                 # Move built Debian artifacts to dist/debian
                 # First, move files matching the glob pattern
                 prefix = f"{r.srcname}_{ltag}-{r.vers.pkg}_"

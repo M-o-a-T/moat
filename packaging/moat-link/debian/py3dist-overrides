@@ -1,0 +1,6 @@
+moat_lib_run python3-moat-lib-run
+moat_lib_rpc python3-moat-lib-rpc
+moat_lib_config python3-moat-lib-config
+moat_lib_mqtt python3-moat-lib-mqtt
+moat_lib_proxy python3-moat-lib-proxy
+moat_link_server moat-link-server

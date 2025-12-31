@@ -9,6 +9,3 @@ override_dh_install:
 	./build.sh debian/moat-modbus-data/usr/share/moat/modbus-data
 	find debian/moat-modbus-data/ -name \*.py -print0 | xargs -0r rm
 	find debian/moat-modbus-data/ -name .gitignore -print0 | xargs -0r rm
-
-override_dh_auto_test:
-	: skip

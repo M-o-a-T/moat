@@ -6,6 +6,3 @@
 override_dh_install:
 	mkdir -p debian/moat-node-red/usr/share/moat/
 	cp -a src/moat/nodered debian/moat-node-red/usr/share/moat/node-red
-
-override_dh_auto_test:
-	: skip

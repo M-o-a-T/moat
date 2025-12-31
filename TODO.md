@@ -57,7 +57,7 @@ hero: Any spare days that are not in the calendar?
       see TODO in moat.link.server.\_server:Server.recover\_split
 
 * moat.micro
-  * console via MoaT
+  * stream file contents
   * "safe" config reload, i.e. with fallback
   * remote file system for MPy
 

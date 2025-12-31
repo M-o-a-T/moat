@@ -1,6 +1,5 @@
-moat-run (0.1.0-1) unstable; urgency=medium
+moat-lib-run (0.1.1-4) unstable; urgency=medium
 
-  * Initial Debianization.
-  * Moved from moat.util.main to moat.run
+  * Initial release for 25.7.0
 
- -- Matthias Urlichs <matthias@urlichs.de>  Thu, 26 Dec 2025 15:00:00 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 14:01:43 +0100

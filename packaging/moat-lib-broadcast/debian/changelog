@@ -1,5 +1,5 @@
-moat-lib-config (0.1.0-1) unstable; urgency=medium
+moat-lib-broadcast (0.1.1-4) unstable; urgency=medium
 
-  * Initial release
+  * Initial release for 25.7.0
 
- -- Matthias Urlichs <matthias@urlichs.de>  Fri, 27 Dec 2024 00:00:00 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 14:02:06 +0100

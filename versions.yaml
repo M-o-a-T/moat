@@ -1,10 +1,10 @@
 _:
-  new: 25.7.3
+  new: 25.7.4
 moat:
-  deb: 0.11.8-5
+  deb: 0.11.8-6
   new: 0.11.8
-  pkg: 5
-  pkgrev: 1da45a828e270db4678e171fed7d5ebd392726a2
+  pkg: 6
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.11.8
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.11.8
@@ -194,10 +194,10 @@ moat-label:
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
 moat-lib-broadcast:
-  deb: 0.1.2-5
+  deb: 0.1.2-6
   new: 0.1.2
-  pkg: 5
-  pkgrev: 432a41c03ccf790400647468139738e29c486cac
+  pkg: 6
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.1.1
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.1.1
@@ -210,10 +210,10 @@ moat-lib-codec:
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.4.10
 moat-lib-config:
-  deb: 0.1.1-4
+  deb: 0.1.1-5
   new: 0.1.1
-  pkg: 4
-  pkgrev: 1da45a828e270db4678e171fed7d5ebd392726a2
+  pkg: 5
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.1.1
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.1.1
@@ -234,10 +234,10 @@ moat-lib-gpio:
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.9.3
 moat-lib-micro:
-  deb: 0.2.0-4
+  deb: 0.2.0-5
   new: 0.2.0
-  pkg: 4
-  pkgrev: 1da45a828e270db4678e171fed7d5ebd392726a2
+  pkg: 5
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.2.0
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.2.0
@@ -266,10 +266,10 @@ moat-lib-priomap:
   rev: 0b6e477a7bf2491126070bffd51d2a7a375521c9
   tag: 0.2.2
 moat-lib-proxy:
-  deb: 0.1.0-5
+  deb: 0.1.0-6
   new: 0.1.0
-  pkg: 5
-  pkgrev: 1da45a828e270db4678e171fed7d5ebd392726a2
+  pkg: 6
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.1.0
   rev: a0e919946c26c5f37b7941d23ab9ade20fb5a264
   tag: 0.1.0
@@ -301,10 +301,10 @@ moat-lib-rpc:
   rev: 7be8e6ebd2bd40a30f2234d0e954322d5107a45a
   tag: 0.5.1
 moat-lib-run:
-  deb: 0.1.2-5
+  deb: 0.1.2-6
   new: 0.1.2
-  pkg: 5
-  pkgrev: 432a41c03ccf790400647468139738e29c486cac
+  pkg: 6
+  pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.1.1
   rev: 6cee8a1bac500e9d589cd3ecb3fd7e9fac532dea
   tag: 0.1.1

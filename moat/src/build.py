@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 from anyio import Path
+from contextlib import suppress
 
 import asyncclick as click
 import git
@@ -83,6 +84,8 @@ def do_autotag(repo, repos, major, minor):
             r.vers.tag = r.next_tag(major, minor)
             r.vers.pkg = 1
             r.vers.rev = repo.head.commit.hexsha
+            with suppress(AttributeError):
+                del r.vers.pkgrev
             logger.debug("Changes: %s %s", r.name, r.verstr)
         elif r.has_changes(False):
             r.vers.pkg = r.vers.get("pkg", 0) + 1

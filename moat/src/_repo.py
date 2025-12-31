@@ -47,22 +47,17 @@ class _Common:
         try:
             tag = self.last_tag
         except (AttributeError, ValueError):
-            tag = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
+            tag = None
         verstag = self.vers.get("new", None)
-        nt = _tagsplit(tag)
+        nt = _tagsplit(tag) if tag is not None else [0, 0, 0]
+        nt[0 if major else 1 if minor else 2] += 1
         nv = _tagsplit(verstag)
         no = _tagsplit(new_tag)
-
-        if major:
-            nt = [nt[0] + 1, 0, 0]
-        elif minor:
-            nt = [nt[0], nt[1] + 1, 0]
-        else:
-            nt = [nt[0], nt[1], nt[2] + 1]
 
         nt = max(nt, nv, no)
 
         self.vers.new = ".".join(str(x) for x in nt)
+        return self.vers.new
 
 
 @define
@@ -121,7 +116,7 @@ class Package(_Common):
 
     @property
     def last_tag(self):
-        return self.vers.tag
+        return self.vers.get("tag", None)
 
     @property
     def last_commit(self):
@@ -180,6 +175,9 @@ class Package(_Common):
         """
         head = self._repo.head.commit
         if not hasattr(self, "last_commit"):
+            return True
+        lc = self.last_commit if main else self.last_pkg_commit
+        if lc == "0" * 40:
             return True
         for d in head.diff(
             self.last_commit if main else self.last_pkg_commit,
@@ -262,7 +260,7 @@ class Repo(git.Repo, _Common):
                     vers = tv
 
         if tag is None:
-            raise ValueError("No tags found")
+            return None
         self._last_tag = tag.name
         return tag.name
 

@@ -116,7 +116,7 @@ async def do_versions(repo, repos, tags, no):
         if await p.is_file():
             content = await p.read_text()
             pr = tomlkit.loads(content)
-            pr["project"]["version"] = r.last_tag
+            pr["project"]["version"] = r.vers.get("new", r.last_tag)
 
             if not no.version:
                 try:
@@ -160,7 +160,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                 "debchange",
                 "--create",
                 "--newversion",
-                f"{r.last_tag}-{r.vers.pkg}",
+                f"{r.vers.new}-{r.vers.pkg}",
                 "--package",
                 r.mdash,
                 f"Initial release for {forcetag}",

@@ -124,7 +124,7 @@ class Package(_Common):
 
     @property
     def last_pkg_commit(self):
-        return self.vers.get("rev", self.last_commit)
+        return self.vers.get("pkgrev", self.last_commit)
 
     @property
     def mdash(self):

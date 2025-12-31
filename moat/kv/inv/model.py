@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 class SkipNone:  # noqa:D101
     def get_value(self, **kw):  # noqa:D102
         kw["skip_none"] = True
-        kw["skip_empty"] = True
         return super().get_value(**kw)  # pylint: disable=no-member
 
 

@@ -370,7 +370,7 @@ class AttrClientEntry(ClientEntry):
                 with contextlib.suppress(AttributeError):
                     delattr(self, k)
 
-    def get_value(self, skip_none=False, skip_empty=False):
+    def get_value(self, skip_none=False):
         """
         Extract value from attrs
         """
@@ -384,8 +384,6 @@ class AttrClientEntry(ClientEntry):
                 if v is NotGiven:
                     continue
                 if skip_none and v is None:
-                    continue
-                if skip_empty and v == ():
                     continue
                 res[attr] = v
         return res

@@ -14,6 +14,6 @@ with open(sys.argv[1]) as f:
         e = attrdict(register=int(r[0]), reg_type="d", _doc=r[3])
         a, b = r[2].split(".")
         a, b = int(a), int(b)
-        d = d._update(Path("alarm", a, b), e, skip_empty=False)  # noqa: SLF001
+        d = d.update_(Path("alarm", a, b), e)
 
 yprint(d)

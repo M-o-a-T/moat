@@ -439,6 +439,8 @@ class SubMsgSender(MsgSender):
 
     The additional context also verifies that the remote link is up
     (or rather, waits for it to *be* up).
+
+    An empty path is OK.
     """
 
     def __init__(self, root: MsgHandler, path: Path, caller=None):
@@ -532,7 +534,7 @@ class SubMsgSender(MsgSender):
 
 class MsgHandler(BaseMsgHandler):
     """
-    Something that handles messages.
+    Message dispatching, using a Path-based prefix.
 
     Implement ``cmd(self, *a, *kw)`` and/or ``cmd_NAME(self, *a, *kw)``
     for simple method calls.
@@ -540,7 +542,7 @@ class MsgHandler(BaseMsgHandler):
     Implement ``stream(self, msg)`` and/or ``stream_NAME(self,
     msg)`` for streamed calls.
 
-    Use ``doc`` or ``doc_NAME`` for (too-)basic call introspection.
+    Use ``doc`` or ``doc_NAME`` for basic call introspection.
     """
 
     @property
@@ -562,13 +564,13 @@ class MsgHandler(BaseMsgHandler):
         if len(path) == 0:
             raise RuntimeError(f"{path}: cannot be empty")
         name = f"sub_{path[0]}"
-        if hasattr(self, name):
-            raise RuntimeError(f"{name}: already known")
         if len(path) > 1:
             sub = getattr(self, name)  # must exist
             with sub.delegate(name[1:], service):
                 yield self
         else:
+            if hasattr(self, name):
+                raise RuntimeError(f"{name}: already known")
             setattr(self, name, service)
             try:
                 yield self

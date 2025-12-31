@@ -66,7 +66,7 @@ class Base:
 
     Augment `setup` or `teardown` to add non-stream related features.
 
-    Override `wrap` to return an async context manager that holds resources
+    Override `wrap` to contain an async context manager that holds resources
     which must survive reconnection, e.g. a MQTT link's persistent state or
     a listening socket.
     """
@@ -98,9 +98,9 @@ class Base:
 
     async def setup(self):
         """
-        Basic async setup.
+        Basic async setup method. You may use AC_exit.
 
-        Call first when overriding.
+        Call the superclass first, when overriding.
         """
 
     async def teardown(self):

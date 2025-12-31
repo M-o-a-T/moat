@@ -193,7 +193,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                         capture=True,
                         echo=debug,
                     )
-                    if res[-1].strip().endswith(f" for {forcetag}"):
+                    if res.strip().endswith(f" for {forcetag}"):
                         # New version for the same tag.
                         # Restore the previous version before continuing
                         # so we don't end up with duplicates.
@@ -276,7 +276,7 @@ async def do_build_pypi(repos, no, debug):
         p = rd / "pyproject.toml"
         if not await p.is_file():
             continue
-        tag = r.last_tag
+        tag = r.next_tag(incr=False)
         if r.vers.get("pypi", "-") == r.last_tag:
             continue
 
@@ -312,7 +312,7 @@ async def do_upload_pypi(up, debug, no, twine_repo):
         p = rd / "pyproject.toml"
         if not await p.is_file():
             continue
-        tag = r.last_tag
+        tag = r.next_tag(incr=False)
         if official and r.vers.get("pypi", "-") == tag:
             continue
         targz = DIST_PYPI / f"{r.under}-{tag}.tar.gz"
@@ -346,7 +346,7 @@ async def do_upload_deb(repos, debug, dput_opts, g_done):
     if not dput_opts:
         dput_opts = ["-u", "ext"]
     for r in repos:
-        ltag = r.last_tag
+        ltag = r.next_tag(incr=False)
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
             continue
         if not await (PACK / r.dash / "debian").is_dir():

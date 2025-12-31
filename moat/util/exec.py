@@ -76,7 +76,11 @@ async def run(
         name = ""
     else:
         name += " "
+    if isinstance((cwd := kw.get("cwd")), (anyio.Path, Path)):
+        kw["cwd"] = str(cwd)
     if echo:
+        if cwd is not None:
+            print(name + "$", "cd", cwd)
         print(name + "$", *a, *(("<", repr(kw["input"])) if echo_input and "input" in kw else ()))
     if input is None:
         if "stdin" not in kw:
@@ -87,9 +91,6 @@ async def run(
 
     if capture and kw.get("stdout", PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")
-
-    if isinstance((cwd := kw.get("cwd")), (anyio.Path, Path)):
-        kw["cwd"] = str(cwd)
 
     frag = None
     out = None

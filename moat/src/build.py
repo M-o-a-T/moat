@@ -85,7 +85,7 @@ def do_autotag(repo, repos, major, minor):
             r.vers.rev = repo.head.commit.hexsha
             logger.debug("Changes: %s %s", r.name, r.verstr)
         elif r.has_changes(False):
-            r.vers.pkg = r.vers.get_("pkg", 0) + 1
+            r.vers.pkg = r.vers.get("pkg", 0) + 1
             r.vers.pkgrev = repo.head.commit.hexsha
             logger.debug("Build Changes: %s %s", r.name, r.verstr)
         else:
@@ -184,8 +184,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
             if tag != ltag or r.vers.pkg > ptag:
                 res = await run_(
                     "dpkg-parsechangelog",
-                    "-n1",
-                    "-s",
+                    "-S",
                     "Changes",
                     cwd=rd,
                     capture=True,

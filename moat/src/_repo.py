@@ -43,14 +43,21 @@ def _tagsplit(tag: str | None):
 
 
 class _Common:
-    def next_tag(self, major: bool = False, minor: bool = False, new_tag: str | None = None):
+    def next_tag(
+        self,
+        major: bool = False,
+        minor: bool = False,
+        new_tag: str | None = None,
+        incr: bool = True,
+    ):
         try:
             tag = self.last_tag
         except (AttributeError, ValueError):
             tag = None
         verstag = self.vers.get("new", None)
         nt = _tagsplit(tag) if tag is not None else [0, 0, 0]
-        nt[0 if major else 1 if minor else 2] += 1
+        if incr or tag is None:
+            nt[0 if major else 1 if minor else 2] += 1
         nv = _tagsplit(verstag)
         no = _tagsplit(new_tag)
 

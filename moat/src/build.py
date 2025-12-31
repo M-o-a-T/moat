@@ -148,69 +148,72 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
-        ltag = r.last_tag
+        ltag = r.next_tag(incr=False)
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
             continue
         rd = PACK / r.dash
         p = rd / "debian"
         if not await p.is_dir():
             continue
-        if not await (rd / "debian" / "changelog").exists():
-            await run_(
-                "debchange",
-                "--create",
-                "--newversion",
-                f"{r.vers.new}-{r.vers.pkg}",
-                "--package",
-                r.mdash,
-                f"Initial release for {forcetag}",
-                cwd=rd,
-                echo=debug,
-            )
-
         try:
-            res = await run_(
-                "dpkg-parsechangelog",
-                "-l",
-                "debian/changelog",
-                "-S",
-                "version",
-                cwd=rd,
-                capture=True,
-                echo=debug,
-            )
-            tag, ptag = res.strip().rsplit("-", 1)
-            ptag = int(ptag)
-            if tag != ltag or r.vers.pkg > ptag:
+            if not await (rd / "debian" / "changelog").exists():
+                ltag = r.next_tag()
+                await run_(
+                    "debchange",
+                    "--create",
+                    "--distribution",
+                    "unstable",
+                    "--newversion",
+                    f"{r.vers.new}-{r.vers.pkg}",
+                    "--package",
+                    r.mdash,
+                    f"Initial release for {forcetag}",
+                    cwd=rd,
+                    echo=debug,
+                )
+            else:
                 res = await run_(
                     "dpkg-parsechangelog",
+                    "-l",
+                    "debian/changelog",
                     "-S",
-                    "Changes",
+                    "version",
                     cwd=rd,
                     capture=True,
                     echo=debug,
                 )
-                if res[-1].strip().endswith(f" for {forcetag}"):
-                    # New version for the same tag.
-                    # Restore the previous version before continuing
-                    # so we don't end up with duplicates.
-                    await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
-                await run_(
-                    "debchange",
-                    "--distribution",
-                    "unstable",
-                    "--newversion",
-                    f"{ltag}-{r.vers.pkg}",
-                    f"New release for {forcetag}",
-                    cwd=rd,
-                    echo=debug,
-                )
-                repo.index.add(p / "changelog")
+                tag, ptag = res.strip().rsplit("-", 1)
+                ptag = int(ptag)
+                if tag != ltag or r.vers.pkg > ptag:
+                    res = await run_(
+                        "dpkg-parsechangelog",
+                        "-S",
+                        "Changes",
+                        cwd=rd,
+                        capture=True,
+                        echo=debug,
+                    )
+                    if res[-1].strip().endswith(f" for {forcetag}"):
+                        # New version for the same tag.
+                        # Restore the previous version before continuing
+                        # so we don't end up with duplicates.
+                        await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
+                    await run_(
+                        "debchange",
+                        "--distribution",
+                        "unstable",
+                        "--newversion",
+                        f"{ltag}-{r.vers.pkg}",
+                        f"New release for {forcetag}",
+                        cwd=rd,
+                        echo=debug,
+                    )
+                    repo.index.add(p / "changelog")
 
-            elif tag == ltag and r.vers.pkg < ptag:
-                r.vers.pkg = ptag
+                elif tag == ltag and r.vers.pkg < ptag:
+                    r.vers.pkg = ptag
 
-            changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+                changes = DIST_DEBIAN / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
             if not await changes.exists() or no.test_chg:
                 await run_(
                     "debuild",

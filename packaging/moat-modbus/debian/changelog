@@ -1,3 +1,27 @@
+moat-modbus (0.8.10-4) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 13:39:49 +0100
+
+moat-modbus (0.8.10-3) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:39:45 +0100
+
+moat-modbus (0.8.10-2) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:27:29 +0100
+
+moat-modbus (0.8.10-1) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 08:55:23 +0100
+
 moat-modbus (0.8.9-3) unstable; urgency=medium
 
   * New release for 25.6.8

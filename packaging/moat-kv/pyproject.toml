@@ -39,7 +39,7 @@ dependencies = [
 	"moat-lib-config ~= 0.1.0",
 	"moat-lib-run ~= 0.1.0",
 ]
-version = "0.71.23"
+version = "0.71.24"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv"

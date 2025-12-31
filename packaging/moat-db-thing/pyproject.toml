@@ -22,7 +22,7 @@ dependencies = [
 	"moat-box ~= 0.2.2",
 	"moat-lib-run ~= 0.1.0",
 	]
-version = "0.0.1"
+version = "0.0.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db-thing"

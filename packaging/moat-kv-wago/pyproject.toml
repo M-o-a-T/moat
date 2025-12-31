@@ -17,7 +17,7 @@ dependencies = [
 	"moat-lib-run ~= 0.1.0",
 	"moat-util ~= 0.61.1",
 ]
-version = "0.8.6"
+version = "0.8.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-wago"

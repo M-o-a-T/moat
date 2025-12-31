@@ -1,3 +1,27 @@
+moat-link-server (0.3.25-4) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 13:39:08 +0100
+
+moat-link-server (0.3.25-3) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:38:31 +0100
+
+moat-link-server (0.3.25-2) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:26:26 +0100
+
+moat-link-server (0.3.25-1) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 08:53:58 +0100
+
 moat-link-server (0.3.24-3) unstable; urgency=medium
 
   * New release for 25.6.8

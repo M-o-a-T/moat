@@ -1,6 +1,12 @@
+mqttproto (0.8.0-4) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 14:15:16 +0100
+
 mqttproto (0.8.0-0) unstable; urgency=medium
 
-  * Verndorized.
+  * Vendorized.
 
  -- Matthias Urlichs <matthias@urlichs.de>  Sun, 28 Dec 2025 13:38:25 +0100
 

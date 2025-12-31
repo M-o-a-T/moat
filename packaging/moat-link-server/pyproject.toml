@@ -25,7 +25,7 @@ dependencies = [
 	"moat-lib-mqtt ~= 0.8.0",
 	"moat-lib-config ~= 0.1.0",
 	]
-version = "0.3.24"
+version = "0.3.25"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-server"

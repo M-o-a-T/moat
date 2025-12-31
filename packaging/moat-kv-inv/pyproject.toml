@@ -15,7 +15,7 @@ dependencies = [
 	"moat-util ~= 0.61.1",
 	"moat-lib-config ~= 0.1.0",
 ]
-version = "0.22.10"
+version = "0.22.12"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-inv"

@@ -1,3 +1,33 @@
+moat-kv-knx (0.12.5-5) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 13:51:06 +0100
+
+moat-kv-knx (0.12.5-4) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 13:38:11 +0100
+
+moat-kv-knx (0.12.5-3) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:36:51 +0100
+
+moat-kv-knx (0.12.5-2) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:23:33 +0100
+
+moat-kv-knx (0.12.5-1) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 08:52:32 +0100
+
 moat-kv-knx (0.12.4-3) unstable; urgency=medium
 
   * New release for 25.6.8

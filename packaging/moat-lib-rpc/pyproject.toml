@@ -24,7 +24,7 @@ name = "moat-lib-rpc"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple RPC and stream multiplexer'
 readme = "README.md"
-version = "0.4.11"
+version = "0.5.1"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

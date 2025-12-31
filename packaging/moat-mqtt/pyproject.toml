@@ -28,7 +28,7 @@ dependencies = [
 	"moat-lib-codec ~= 0.4.9",
 	"moat-lib-config ~= 0.1.0",
 	]
-version = "0.42.13"
+version = "0.42.14"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-mqtt"

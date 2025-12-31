@@ -1,3 +1,27 @@
+moat-mqtt (0.42.14-4) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 13:40:00 +0100
+
+moat-mqtt (0.42.14-3) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:40:03 +0100
+
+moat-mqtt (0.42.14-2) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 09:27:46 +0100
+
+moat-mqtt (0.42.14-1) unstable; urgency=medium
+
+  * New release for 25.7.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 08:55:45 +0100
+
 moat-mqtt (0.42.13-3) unstable; urgency=medium
 
   * New release for 25.6.8

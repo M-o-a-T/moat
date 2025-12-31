@@ -1,5 +1,5 @@
 #!/usr/bin/make -f
 
-export PYBUILD_NAME=moat-lib-cmd
+export PYBUILD_NAME=moat-lib-rpc
 %:
 	dh $@ --with python3 --buildsystem=pybuild

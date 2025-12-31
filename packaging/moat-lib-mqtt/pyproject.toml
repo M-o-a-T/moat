@@ -1,7 +1,6 @@
 [build-system]
 requires = [
     "setuptools >= 64",
-    "setuptools_scm >= 6.4"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,11 +10,10 @@ description = "Sans-io MQTT v5 client/broker with an AnyIO based I/O implementat
 readme = "README.rst"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"},
            {name = "Matthias Urlichs", email = "matthias@urlichs.de"},]
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Typing :: Typed",
     "Framework :: AnyIO",
     "Programming Language :: Python",
@@ -32,7 +30,7 @@ dependencies = [
     "stamina >= 24.2.0",
     "typing-extensions >= 4.0; python_version < '3.11'",
 ]
-dynamic = [ "version" ]
+version = "0.8.0"
 
 [project.urls]
 Documentation = "https://M-o-a-T.org/moat.lib.mqtt"
@@ -56,10 +54,6 @@ doc = [
     "sphinx-autodoc-typehints >= 2.1.1",
     "sphinx-tabs >= 3.3.1",
 ]
-
-[tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "dirty-tag"
 
 [tool.ruff.lint]
 extend-select = [

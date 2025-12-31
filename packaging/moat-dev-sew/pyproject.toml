@@ -23,7 +23,7 @@ name = "moat-dev-sew"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.1.4"
+version = "0.1.5"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

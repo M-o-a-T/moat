@@ -5,6 +5,8 @@ $root:
   logging:
     version: 1
     loggers:
+      moat.lib.stream.log:
+        level: DEBUG
       moat.mqtt:
         level: INFO
       transitions_aio:

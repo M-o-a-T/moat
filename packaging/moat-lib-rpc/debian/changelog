@@ -1,3 +1,9 @@
+moat-lib-rpc (0.5.2-1) unstable; urgency=medium
+
+  * New release for 25.7.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 15:01:07 +0100
+
 moat-lib-rpc (0.5.1-1) unstable; urgency=medium
 
   * Initial release for 25.7.0

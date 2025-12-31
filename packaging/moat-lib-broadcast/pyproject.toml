@@ -22,7 +22,7 @@ name = "moat-lib-broadcast"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Broadcasting support for MoaT applications'
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

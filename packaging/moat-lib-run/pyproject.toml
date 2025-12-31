@@ -25,7 +25,7 @@ name = "moat-lib-run"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Main command entry point infrastructure for MoaT applications'
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

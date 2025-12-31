@@ -61,6 +61,7 @@ hero: Any spare days that are not in the calendar?
   * "safe" config reload, i.e. with fallback
   * remote file system for MPy
 
+  * clean up the REPL data ferrying
   * Refactor dispatching to use active hook-in of subpaths
   * move some dispatch code to moat.lib.cmd
 

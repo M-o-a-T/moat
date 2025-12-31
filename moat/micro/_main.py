@@ -631,3 +631,41 @@ async def path_(obj, manifest):
         p = pathlib.Path(p) / "lib"  # noqa:PLW2901
         if p.exists():
             print(p)
+
+
+@cli.command
+@click.pass_obj
+async def repl(obj):
+    """Connect to the Python prompt on a remote"""
+
+    cfg = obj.mcfg
+    from moat.lib.stream import FilenoBuf  # noqa:PLC0415
+
+    async with (
+        Dispatch(cfg, run=True, sig=True) as dsp,
+        dsp.sub_at(cfg.remote) as cfr,
+        cfr.sub_at(cfg.terminal) as cft,
+        cft().stream() as t1,
+        FilenoBuf({}, 0, 1) as t2,
+        anyio.create_task_group() as tg,
+    ):
+        print("--- Connected.  Quit: Ctrl+] --- ", file=sys.stderr)
+
+        @tg.start_soon
+        async def t_12():
+            async for msg in t1:
+                await t2.wr(msg[0])
+            tg.cancel_scope.cancel()
+
+        buf = bytearray(80)
+        while True:
+            try:
+                n = await t2.rd(buf)
+            except EOFError:
+                tg.cancel_scope.cancel()
+                break
+            if b"\x1d" in buf[:n]:
+                tg.cancel_scope.cancel()
+                break
+            await t1.send(buf[:n].replace(b"\n", b"\r"))
+    print("\nTerminated.", file=sys.stderr)

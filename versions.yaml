@@ -1,8 +1,8 @@
 _:
-  new: 25.7.4
+  new: 25.7.5
 moat:
-  deb: 0.11.8-6
-  new: 0.11.8
+  deb: 0.11.9-6
+  new: 0.11.9
   pkg: 6
   pkgrev: e0e1a4f7a2b878f75be6c3d74413ea80bde0de9c
   pypi: 0.11.8

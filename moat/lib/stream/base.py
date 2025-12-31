@@ -38,8 +38,8 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
-    from collections.abc import Awaitable
-    from typing import Any, Buffer
+    from collections.abc import Awaitable, Buffer
+    from typing import Any
 
 
 class _NullCtx:

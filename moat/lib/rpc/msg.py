@@ -206,9 +206,10 @@ class Msg(MsgLink, MsgResult):
     _msg2: outcome.Outcome | None = None
     _msg_in: Event
     _recv_q: Queue | None = None
-    _recv_qlen: int = 5
+    _recv_qlen: int = 20
     _recv_skip: bool = False
 
+    _fli: int | None = None
     _flo_evt: Event | None = None
     warnings: list
 

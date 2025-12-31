@@ -22,7 +22,6 @@ dependencies = [
   "pyfuse3 >= 3.2",
   "moat-util ~= 0.61.1",
   "moat-src ~= 0.9.20",
-  "moat-main ~= 0.10.0",
   "asyncdbus",
   "smbus3",
   "moat-lib-rpc ~= 0.4.11",
@@ -39,7 +38,7 @@ name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.17.10"
+version = "0.18.0"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

@@ -138,7 +138,7 @@ def bg(p, *a, **k) -> ValueEvent:
             evt.set(exc)
 
     async def run(evt, p, a, k):
-        evt.scope = main.tg.spawn(run_, evt, p, a, k)
+        evt.scope = await main.tg.spawn(run_, evt, p, a, k)
         return evt
 
     run_until_complete(create_task(run(evt, p, a, k)))

@@ -13,7 +13,7 @@ Package: python3-moat-lib-run
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.0),
-  python3-moat-util (>= 0.6),
+  moat-util (>= 0.6),
   python3-asyncclick (>= 8.0),
   python3-simpleeval (>= 1.0),
 Description: Main command entry point infrastructure for MoaT applications

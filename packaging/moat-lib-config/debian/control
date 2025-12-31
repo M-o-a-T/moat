@@ -12,7 +12,7 @@ X-DH-Compat: 13
 Package: python3-moat-lib-config
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  python3-moat-util (>= 0.6),
+  moat-util (>= 0.6),
 Description: Configuration management for MoaT applications
   This module provides infrastructure for loading, merging, and managing
   configuration data from multiple sources, including hierarchical

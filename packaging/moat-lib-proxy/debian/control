@@ -13,7 +13,7 @@ Package: python3-moat-lib-proxy
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.0),
-  python3-moat-util (>= 0.6),
+  moat-util (>= 0.6),
 Description: Proxy helpers for serializing and deserializing objects
   This module provides proxy helpers for transparently serializing and
   deserializing objects across process boundaries or network connections,

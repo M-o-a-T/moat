@@ -6,7 +6,7 @@ moat_lib_micro python3-moat-lib-micro
 moat_lib_proxy python3-moat-lib-proxy
 moat_lib_ring python3-moat-lib-ring
 moat_lib_run python3-moat-lib-run
-moat_ems_inv python3-moat-ems-inv
-moat_db python3-moat-db
+moat_ems_inv moat-ems-inv
+moat_db moat-db
 moat_link_server moat-link-server
-moat_micro moat-mico
+moat_micro moat-micro

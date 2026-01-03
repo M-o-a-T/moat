@@ -11,10 +11,10 @@ from attrs import define, field
 from moat.util import NotGiven, Queue
 from moat.lib.micro import EndOfStream, WouldBlock
 
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
-    from typing import Literal, Self
+    from typing import Self
 
 TData = TypeVar("TData")
 
@@ -41,12 +41,12 @@ class LostData(Exception):
     Attribute ``n`` contains the number of dropped messages.
     """
 
-    def __init__(self, n):
+    def __init__(self, n: int) -> None:
         self.n = n
 
 
 @define
-class BroadcastReader:  ## TYPE [TData]:
+class BroadcastReader(Generic[TData]):
     """
     The read side of a broadcaster.
 
@@ -62,7 +62,7 @@ class BroadcastReader:  ## TYPE [TData]:
     parent: Broadcaster = field()
     length: int = field(default=1)
     skip: bool = field(default=False)
-    value: TData | Literal[NotGiven] = field(default=NotGiven, init=False)
+    value: TData = field(default=NotGiven, init=False)  # type: ignore[assignment]
 
     loss: int = field(init=False, default=0)
     _q: Queue = field(init=False, repr=False)
@@ -72,7 +72,7 @@ class BroadcastReader:  ## TYPE [TData]:
             raise RuntimeError("Length must be at least one")
         self._q = Queue(self.length)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
     def __aiter__(self) -> Self:
@@ -125,7 +125,7 @@ class BroadcastReader:  ## TYPE [TData]:
 
 
 @define
-class Broadcaster:  ## TYPE [TData]:
+class Broadcaster(Generic[TData]):
     """
     A simple broadcaster. Messages will be sent to all readers.
 
@@ -173,7 +173,7 @@ class Broadcaster:  ## TYPE [TData]:
     send_last: bool = field(default=False)
 
     _rdr: WeakSet[BroadcastReader] | None = field(init=False, default=None, repr=False)
-    value: TData | Literal[NotGiven] = field(init=False, default=NotGiven)
+    value: TData = field(init=False, default=NotGiven)  # type: ignore[assignment]
 
     def open(self) -> Self:
         """Open the broadcaster.
@@ -197,7 +197,7 @@ class Broadcaster:  ## TYPE [TData]:
     async def __aexit__(self, *tb) -> None:
         self.close()
 
-    def _closed_reader(self, reader) -> None:
+    def _closed_reader(self, reader: BroadcastReader[TData]) -> None:
         assert self._rdr is not None
 
         self._rdr.remove(reader)
@@ -245,7 +245,7 @@ class Broadcaster:  ## TYPE [TData]:
             return await anext(aiter(self))
         return self.value
 
-    def close(self):
+    def close(self) -> None:
         "Close the broadcaster. No more writing."
         if self._rdr is not None:
             for r in self._rdr:

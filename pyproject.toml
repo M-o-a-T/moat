@@ -95,6 +95,7 @@ dev = [
     "cbor2",
     "passlib",
     "pytest-trio",
+    "pytest-coverage",
     "range_set ~= 0.3",
 ]
 doc = [
@@ -242,5 +243,5 @@ executionEnvironments = [
 ]
 
 [tool.ty.src]
-include = ["moat/util/path.py"]
+include = ["moat/util/path.py", "moat/lib/priomap/"]
 exclude = ["ext/**", "OFF/**", "TODO/**", "packaging/**", "docs/**"]

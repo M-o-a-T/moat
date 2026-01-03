@@ -1,6 +1,7 @@
 (moat-common)=
 # Project Information
 
+(moat-common-history)=
 ## History
 
 The MoaT started as a personal project for resilient home automation
@@ -47,7 +48,7 @@ of course. Anything that wants JSON will require a translator.
 See [CBOR](cbor.md) for MoaT's conventions and additions.
 
 :::{admonition} Why not MsgPack?
-:class:note
+:class: note
 
 - MsgPack's extensions are binary strings, not objects.
 

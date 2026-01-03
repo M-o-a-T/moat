@@ -24,7 +24,7 @@ monorepo
   each other.
   <br />
   The reason why the MoaT is a monorepo is explained in [the
-  History section](history).
+  History section](moat-common-history).
 
 ## [Project Information](common/index.md)
 

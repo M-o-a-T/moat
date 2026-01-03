@@ -21,7 +21,6 @@ apps
 async
 parts
 messages
-streams
 serial
 cbor-readonly
 mpy-diff

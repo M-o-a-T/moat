@@ -83,7 +83,9 @@ The `CfgStore` class combines configuration from multiple sources (in order of p
 5. Default config files (from standard paths)
 6. Static module configurations (loaded via `with_`)
 
-## Key Classes and Functions
+## Configuration Result
+
+The singleton `CFG` is the
 
 - `CfgStore`: Main configuration storage and management class
 - `CFG`: Global configuration accessor object

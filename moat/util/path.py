@@ -40,7 +40,7 @@ from . import NotGiven
 try:
     from collections.abc import Buffer
 except ImportError:
-    Buffer = bytes | bytearray | memoryview[bytes | bytearray]
+    Buffer = bytes | bytearray | memoryview[bytes | bytearray]  # ty:ignore[invalid-assignment]
 
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
@@ -446,15 +446,15 @@ class Path(Sequence[PathElem]):
         return super().__getattribute__(i)
 
     @overload
-    def __getitem__(self, x: int) -> PathElem: ...
+    def __getitem__(self, index: int) -> PathElem: ...
     @overload
-    def __getitem__(self, x: slice) -> Path: ...
+    def __getitem__(self, index: slice) -> Path: ...
 
-    def __getitem__(self, x):  # pyright:ignore[reportInconsistentOverload]
-        if isinstance(x, slice) and x.start in (0, None) and x.step in (1, None):
-            return type(self)(*self._data[x])
+    def __getitem__(self, index):  # pyright:ignore[reportInconsistentOverload]
+        if isinstance(index, slice) and index.start in (0, None) and index.step in (1, None):
+            return type(self)(*self._data[index])
         else:
-            return self._data[x]
+            return self._data[index]
 
     def __len__(self) -> int:
         return len(self._data)
@@ -508,8 +508,8 @@ class Path(Sequence[PathElem]):
     def __iter__(self):
         return self._data.__iter__()
 
-    def __contains__(self, x) -> bool:
-        return x in self._data
+    def __contains__(self, value) -> bool:
+        return value in self._data
 
     def __mod__(self, other) -> Path:
         """
@@ -542,7 +542,7 @@ class Path(Sequence[PathElem]):
             other = other._data
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen. TODO: add a deprecation warning
-            other = (other,)  # pyright:ignore
+            other = (other,)  # pyright:ignore # ty:ignore[invalid-assignment]
         if len(other) == 0:
             if self.mark != mark:
                 return self.build(self._data, mark=mark, prefix=self._prefix)
@@ -853,7 +853,7 @@ class Path(Sequence[PathElem]):
                 if p[1] < 0:
                     p[1] += 1
                     if p[1] == 0:  # was -1, thus to the end
-                        p[1] = None  # pyright:ignore
+                        p[1] = None  # pyright:ignore  # ty:ignore[invalid-assignment]
                 res.extend(path[slice(*p)])
         return Path.build(res)
 
@@ -1016,7 +1016,7 @@ class PathShortener:
                 cdepth = i
                 break
         self.path = p
-        return cdepth, p[cdepth:]  # pyright:ignore[reportReturnType]
+        return cdepth, Path.build(p[cdepth:])  # pyright:ignore[reportReturnType]
         # … this is actually correct
 
     def __call__(self, res: dict):
@@ -1081,7 +1081,7 @@ class PathLongener:
 # expressions in paths. While it can be used for math, its primary function
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
-_eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript]
+_eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript] # ty:ignore[invalid-assignment]
     _eval._eval(x)  # noqa:SLF001
     for x in node.elts
 )

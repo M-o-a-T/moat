@@ -12,13 +12,14 @@ try:
 except ImportError:
     from collections.abc import MutableMapping
 
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 if TYPE_CHECKING:
     from abc import abstractmethod
     from types import EllipsisType
 
-    from collections.abc import Hashable, Iterable
+    from collections.abc import Hashable, ItemsView, Iterable, KeysView, ValuesView
     from typing import Any, Protocol
 
     Priority = TypeVar("Priority")
@@ -49,7 +50,7 @@ class PrioMap[Priority](MutableMapping):
     removals, bulk initialization, and safe iteration (detects concurrent modifications).
     """
 
-    def __init__(self, initial: InitialData = None):
+    def __init__(self, initial: InitialData = None) -> None:
         """
         Initialize the HeapDict.
 
@@ -64,7 +65,7 @@ class PrioMap[Priority](MutableMapping):
         if initial:
             self.bulk(initial.items())
 
-    def bulk(self, initial: Iterable[HeapItem]):
+    def bulk(self, initial: Iterable[HeapItem]) -> None:
         """
         Bulk insert.
         """
@@ -76,7 +77,7 @@ class PrioMap[Priority](MutableMapping):
         for i in reversed(range(len(self.heap) // 2)):
             self._sift_down(i)
 
-    def items(self):
+    def items(self) -> ItemsView[Key, Priority]:
         """
         Yield (key, priority) pairs.
 
@@ -85,7 +86,7 @@ class PrioMap[Priority](MutableMapping):
         """
         return self._create_iterator(None)
 
-    def keys(self):
+    def keys(self) -> KeysView[Key]:
         """
         Yield keys only.
 
@@ -94,7 +95,7 @@ class PrioMap[Priority](MutableMapping):
         """
         return self._create_iterator(True)
 
-    def values(self):
+    def values(self) -> ValuesView[Priority]:
         """
         Yield priorities only.
 
@@ -112,7 +113,7 @@ class PrioMap[Priority](MutableMapping):
     @overload
     def pop(self, key: Key, default: RT) -> Priority | RT: ...
 
-    def pop(self, *a):
+    def pop(self, *a) -> tuple[Key, Priority] | Priority | RT:
         """
         Remove and return an item.
 
@@ -314,7 +315,7 @@ class PrioMap[Priority](MutableMapping):
         """
         return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
 
-    def _create_iterator(self, keys: bool | None = None):
+    def _create_iterator(self, keys: bool | None = None) -> Any:
         """
         Internal: return iterator over keys, values, or items, detecting concurrent mods.
 
@@ -327,15 +328,15 @@ class PrioMap[Priority](MutableMapping):
         }
 
         class SafeIterator:
-            def __init__(self, heap_dict, keys):
+            def __init__(self, heap_dict, keys) -> None:
                 self.heap_dict = heap_dict
                 self.state = heap_dict._iterator_state  # noqa: SLF001
                 self.keys = keys
 
-            def __iter__(self):
+            def __iter__(self) -> SafeIterator:
                 return self
 
-            def __next__(self):
+            def __next__(self) -> Key | Priority | tuple[Key, Priority]:
                 s = self.state
                 if s["index"] < s["len"]:
                     key, prio = self.heap_dict.heap[s["index"]]
@@ -351,7 +352,7 @@ class PrioMap[Priority](MutableMapping):
 
         return SafeIterator(self, keys)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[Key, Priority]]:
         """
         Iterate over (key, priority) pairs.
 
@@ -359,7 +360,7 @@ class PrioMap[Priority](MutableMapping):
         """
         return self._create_iterator(None)
 
-    def __aiter__(self):
+    def __aiter__(self) -> PrioMap[Priority]:
         """
         Iterate asynchronously over (key, priority) pairs.
 
@@ -399,18 +400,18 @@ class TimerMap:
     Negative delays are not an error.
     """
 
-    def __init__(self, initial: InitialPrio = None):
-        self._pm = PrioMap()
+    def __init__(self, initial: InitialPrio = None) -> None:
+        self._pm: PrioMap[float] = PrioMap()
         if initial:
-            self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())
+            self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())  # type: ignore[arg-type]
 
     @staticmethod
-    def T_ADD(p):
+    def T_ADD(p) -> float:
         "Add the current time."
         return p + time()
 
     @staticmethod
-    def T_SUB(p):
+    def T_SUB(p) -> float:
         "Subtract the current time."
         return p - time()
 
@@ -432,10 +433,10 @@ class TimerMap:
         k, p = await self._pm.apeek()
         return k, self.T_SUB(p)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._pm)
 
-    def __aiter__(self):
+    def __aiter__(self) -> TimerMap:
         return self
 
     async def __anext__(self) -> Key:
@@ -463,7 +464,7 @@ class TimerMap:
     @overload
     def pop(self, key: Key) -> float: ...
 
-    def pop(self, a: Key | EllipsisType = Ellipsis):
+    def pop(self, a: Key | EllipsisType = Ellipsis) -> tuple[Key, float] | float:
         """
         Remove and return an item.
 

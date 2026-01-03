@@ -25,11 +25,20 @@ from inspect import currentframe, iscoroutine, iscoroutinefunction
 from moat.util import Queue as _Queue
 from moat.util import QueueEmpty, QueueFull, merge
 
-from collections.abc import Iterable, Mapping, MutableMapping, MutableSequence
-from typing import TYPE_CHECKING
+from collections.abc import (  # noqa: TC002
+    AsyncIterator,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+)
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
+    from typing import NoReturn, Self
+
+_T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +94,7 @@ BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 breakpoint = breakpoint  # noqa: A001, PLW0127
 
 
-def const(_x):
+def const[T](_x: T) -> T:
     "µPython compatibility"
     return _x
 
@@ -108,35 +117,39 @@ class CancelScope:
     An async-await-able CancelScope wrapper
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sc = _anyio.CancelScope()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         self.sc.__enter__()
         return self
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(self, *tb) -> bool | None:
         return self.sc.__exit__(*tb)
 
-    def cancel(self):
+    def cancel(self) -> None:
         "Cancel the scope"
         self.sc.cancel()
 
     @property
-    def cancelled(self):
+    def cancelled(self) -> bool:
         "Was 'cancel' called on this scope?"
-        return self.sc.cancel_called()
+        return self.sc.cancel_called
 
 
-def log(s, *x, err=None, nback=1, write: bool = True):
+def log(s, *x, err=None, nback=1, write: bool = True) -> None:
     "Basic logger.debug/error call (depends on @err)"
     write  # noqa:B018
     caller = currentframe()
-    for _ in range(nback):
-        if caller.f_back is None:
-            break
-        caller = caller.f_back
-    log_ = logging.getLogger(caller.f_globals["__name__"])
+    if caller is None:
+        caller_name = __name__
+    else:
+        for _ in range(nback):
+            if caller.f_back is None:
+                break
+            caller = caller.f_back
+        caller_name = caller.f_globals["__name__"]
+    log_ = logging.getLogger(caller_name)
     (log_.debug if err is None else log_.error)(
         s, *x, exc_info=err if isinstance(err, BaseException) else None, stacklevel=1 + nback
     )
@@ -144,44 +157,46 @@ def log(s, *x, err=None, nback=1, write: bool = True):
         breakpoint()
 
 
-def log_exc(e, s, *a):  # noqa:D103
+def log_exc(e, s, *a) -> None:  # noqa:D103
     log(s, *a, err=e)
 
 
-def at(*a, **kw):  # noqa: D103
-    log.debug("%r %r", a, kw)
+def at(*a, **kw) -> None:  # noqa: D103
+    logger.debug("%r %r", a, kw)
 
 
-def print_exc(exc, file=None):
+def print_exc(exc, file=None) -> None:
     "print a stack trace to stderr"
     _traceback.print_exception(type(exc), exc, exc.__traceback__, file=file)
 
 
-def ticks_ms():
+def ticks_ms() -> int:
     "return a monotonic timer, in milliseconds"
     return _time.monotonic_ns() // 1000000
 
 
-async def sleep_ms(ms):
+async def sleep_ms(ms: float) -> None:
     "sleep for @ms milliseconds"
     await sleep(ms / 1000)
 
 
-async def wait_for(timeout, p, *a, **k):
+async def wait_for[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
     "timeout if the call to p(*a,**k) takes longer than @timeout seconds"
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
 
-async def wait_for_ms(timeout, p, *a, **k):
+async def wait_for_ms[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
     "timeout if the call to p(*a,**k) takes longer than @timeout milliseconds"
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
 
 
-async def every_ms(t, p: Callable | None = None, *a, **k):
+async def every_ms[R](
+    t: float, p: Callable[..., Awaitable[R]] | None = None, *a, **k
+) -> AsyncIterator[R | None]:
     "every t milliseconds, call p(*a,**k)"
-    tt = ticks_add(ticks_ms(), t)
+    tt = ticks_add(ticks_ms(), int(t))
     while True:
         try:
             yield None if p is None else await p(*a, **k)
@@ -194,30 +209,30 @@ async def every_ms(t, p: Callable | None = None, *a, **k):
             tt += t
         else:
             # owch, delay too long
-            tt = ticks_add(tn, t)
+            tt = ticks_add(tn, int(t))
 
 
-def every(t, *a, **k):
+def every(t: float, *a, **k) -> AsyncIterator[Any]:
     "every t seconds, call p(*a,**k)"
     return every_ms(t * 1000, *a, **k)
 
 
-async def idle():
+async def idle() -> None:
     "sleep forever"
     await _anyio.sleep_forever()
 
 
-def ticks_add(a, b):
+def ticks_add(a: int, b: int) -> int:
     "returns a+b"
     return a + b
 
 
-def ticks_diff(a, b):
+def ticks_diff(a: int, b: int) -> int:
     "returns a-b"
     return a - b
 
 
-def run(p, *a, **k):
+def run[R](p: Callable[..., Awaitable[R]], *a, **k) -> R:
     "wrapper for anyio.run"
     return _anyio.run(p, a, k)
 
@@ -226,7 +241,7 @@ _tg = None
 _tgt = None
 
 
-def TaskGroup():
+def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
 
     global _tg, _tgt
@@ -237,10 +252,12 @@ def TaskGroup():
     if tgt is not _tgt:
         _tgt = tgt
 
-        class TaskGroup_(_tgt):
+        class TaskGroup_(_tgt):  # type: ignore[misc]
             """An augmented taskgroup"""
 
-            async def spawn(self, p, *a, _name=None, **k):
+            async def spawn(
+                self, p: Callable[..., Awaitable[Any]], *a, _name: str | None = None, **k
+            ) -> _anyio.CancelScope:
                 """
                 Like start(), but returns something you can cancel
                 """
@@ -248,14 +265,14 @@ def TaskGroup():
                 if _name is None:
                     _name = str((p, a, k))
 
-                async def catch(p, a, k, *, task_status):
+                async def catch(p, a, k, *, task_status) -> None:
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
                         await p(*a, **k)
 
                 return await super().start(catch, p, a, k, name=_name)
 
-            def cancel(self):
+            def cancel(self) -> None:
                 "cancel all tasks in this taskgroup"
                 self.cancel_scope.cancel()
 
@@ -263,7 +280,15 @@ def TaskGroup():
     return _tg()
 
 
-async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True, evt=None):
+async def run_server(
+    cb: Callable,
+    host: str,
+    port: int,
+    backlog: int = 5,
+    taskgroup: Any = None,
+    reuse_port: bool = True,
+    evt: _anyio.Event | None = None,
+) -> None:
     """Listen to and serve a TCP stream.
 
     This mirrors [u]asyncio, except that the callback gets the socket once.
@@ -280,7 +305,7 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True,
         await listener.serve(cb, task_group=taskgroup)
 
 
-def shield():
+def shield() -> _anyio.CancelScope:
     """A wrapper shielding the contents from external cancellation.
 
     Equivalent to ``CancelScope(shield=True)``.
@@ -288,19 +313,19 @@ def shield():
     return _anyio.CancelScope(shield=True)
 
 
-class Queue(_Queue):
+class Queue[T](_Queue):
     """
     compatibility mode: raise `EOFError` and `QueueEmpty`/`QueueFull`
     instead of `anyio.EndOfStream` and `anyio.WouldBlock`
     """
 
-    async def get(self):  # noqa:D102
+    async def get(self) -> T:  # noqa:D102
         try:
             return await super().get()
         except _anyio.EndOfStream:
             raise EOFError from None
 
-    def get_nowait(self):  # noqa:D102
+    def get_nowait(self) -> T:  # noqa:D102
         try:
             return super().get_nowait()
         except _anyio.EndOfStream:
@@ -308,14 +333,14 @@ class Queue(_Queue):
         except _anyio.WouldBlock:
             raise QueueEmpty from None
 
-    def put_nowait(self, x):  # noqa:D102
+    def put_nowait(self, x: T) -> None:  # noqa:D102
         try:
             super().put_nowait(x)
         except _anyio.WouldBlock:
             raise QueueFull from None
 
 
-def _doc(_c=None, **kw):
+def _doc(_c: Callable | None = None, **kw) -> Callable[[_T], _T]:
     """
     Attach structured documentation to a function.
 
@@ -353,10 +378,10 @@ def _doc(_c=None, **kw):
     the data. This is used to limit the max block size.
     """
     if _c is not None:
-        merge(kw, _c._moat__doc, replace=False)  # noqa: SLF001
+        merge(kw, _c._moat__doc, replace=False)  # noqa: SLF001  # type: ignore[attr-defined]
 
-    def mod(fn):
-        fn._moat__doc = kw  # noqa: SLF001
+    def mod(fn: _T) -> _T:
+        fn._moat__doc = kw  # noqa: SLF001  # type: ignore[attr-defined]
         return fn
 
     return mod
@@ -365,7 +390,7 @@ def _doc(_c=None, **kw):
 # async context stack
 
 
-def ACM(obj):
+def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
     """A bare-bones async context manager / async exit stack.
 
     Usage::
@@ -408,13 +433,13 @@ def ACM(obj):
     else:
         raise RuntimeError("AExS ??")
 
-    def _ACc(ctx):
+    def _ACc(ctx: Any) -> Awaitable[Any]:
         return AC_use(obj, ctx)
 
     return _ACc
 
 
-async def AC_use(obj, ctx):
+async def AC_use(obj: Any, ctx: Any) -> Any:
     """
     Add an async context to this object's AsyncExitStack.
 
@@ -437,22 +462,22 @@ async def AC_use(obj, ctx):
     return None
 
 
-async def AC_exit(obj, *exc):
+async def AC_exit(obj: Any, *exc) -> bool | None:
     """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
     return await obj._AC_.pop().__aexit__(*exc)
 
 
-def is_async(obj):
+def is_async(obj: Any) -> bool:
     """test if the argument is an awaitable"""
     if hasattr(obj, "__await__"):
         return True
     return False
 
 
-async def to_thread(p, *a, **k):
+async def to_thread[R](p: Callable[..., R], *a, **k) -> R:
     """run this function in a thread"""
     if k:
-        return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)
-    return await _anyio.to_thread.run_sync(p, *a, abandon_on_cancel=True)
+        return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)  # type: ignore[attr-defined]
+    return await _anyio.to_thread.run_sync(p, *a, abandon_on_cancel=True)  # type: ignore[attr-defined]

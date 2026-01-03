@@ -33,11 +33,11 @@ dependencies = [
 	"psutil",
 	"simpleeval >= 0.9.10",
 	"moat-mqtt ~= 0.42.12",
-	"moat-util ~= 0.61.1",
+	"moat-util ~= 0.62.1",
 	"exceptiongroup; python_version<'3.11'",
-	"moat-lib-codec ~= 0.4.9",
-	"moat-lib-config ~= 0.1.0",
-	"moat-lib-run ~= 0.1.0",
+	"moat-lib-codec ~= 0.4.10",
+	"moat-lib-config ~= 0.1.1",
+	"moat-lib-run ~= 0.1.1",
 ]
 version = "0.71.24"
 keywords = [ "MoaT",]

@@ -13,12 +13,13 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"moat-util ~= 0.61.1",
-	"moat-ems-inv ~= 0.2.12",
-	"moat-lib-config ~= 0.1.0",
-	"moat-lib-micro ~= 0.1.0",
+	"moat-util ~= 0.62.1",
+	"moat-ems-inv ~= 0.2.13",
+	"moat-lib-config ~= 0.1.1",
+	"moat-lib-micro ~= 0.2.0",
 	"moat-lib-proxy ~= 0.1.0",
-	"moat-lib-run ~= 0.1.0",
+	"moat-lib-run ~= 0.1.1",
+	"moat-lib-rpc ~= 0.5.1",
 	]
 version = "0.2.12"
 keywords = [ "MoaT",]

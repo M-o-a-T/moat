@@ -34,6 +34,16 @@
   This includes `anyio.get_cancelled_exc_class()`.
 - Use `async with (a,b,c)` instead of nested `async with` statements.
 
+### Typing
+- MoaT does type checking with "ty".
+- Type-checked files need to be typed completely, i.e. all variables,
+  arguments and return types.
+- Only add type:ignore comments when (a) you see an actual error from "ty",
+  *and* (b) you thought hard and determined that the error cannot be fixed in
+  another way.
+- After a module typechecks, add its files to the tool.ty.src.include list in
+  pyproject.toml.
+
 ## Build and Test
 - pre-commit enforces formatting and typechecking.
 - YAML files may contain Path objects, marked with `!P`.
@@ -75,7 +85,7 @@
   Manually test other modules before committing if they might be affected.
 - Include documentation updates with the main commit, i.e. don't commit docs
   separately.
-- Don't include agent information, a verbose description of the change,
+- DO NOT include agent information, a verbose description of the change,
   etc., in commit messages.
 
 ## Agent‑Specific Notes

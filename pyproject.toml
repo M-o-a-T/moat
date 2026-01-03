@@ -17,18 +17,18 @@ dependencies = [
 	"trio",
 	"alembic",
 	"anyio_serial",
-	"asyncactor ~= 0.26.2",
+	"asyncactor ~= 0.27.0",
 	"asyncakumuli ~= 0.6.2",
 	"asyncclick",
 	"asyncowfs",
 	"asyncscope",
 	"asyncwebsockets",
 	"cffi",
-	"git",
+	"pygit",
 	"httpx",
 	"jmespath",
 	"jsonschema",
-	"nacl",
+	"pynacl",
 	"outcome",
 	"psutil",
 	"pyfuse3",
@@ -89,7 +89,7 @@ asyncio_default_fixture_loop_scope = "function"
 
 [project.optional-dependencies]
 dev = [
-    "asnycowfs ~= 0.15",
+    "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
     "cbor2",
@@ -240,3 +240,7 @@ executionEnvironments = [
 # { root = "src/tests", extraPaths = ["src/tests/e2e", "src/sdk" ]},
   { root = "." }
 ]
+
+[tool.ty.src]
+include = ["moat/util/path.py"]
+exclude = ["ext/**", "OFF/**", "TODO/**", "packaging/**", "docs/**"]

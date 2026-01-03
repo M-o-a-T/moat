@@ -9,6 +9,8 @@
   - Code is CPython 12+ compatible
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
+    - This also applies to all code which imports from `moat.lib.micro`
+    - Specifically, Python 3.11 syntax must be used in these files.
   - Each Python package named e.g. `moat.X.Y` has
     - code in `moat/X/Y/*.py`
     - `docs/moat-X-Y` for documentation
@@ -38,6 +40,8 @@
 - MoaT does type checking with "ty".
 - Type-checked files need to be typed completely, i.e. all variables,
   arguments and return types.
+- In files that import from moat.lib.micro, use explicit inheritance from
+  `Generic` instead of bracket syntax.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.

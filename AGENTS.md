@@ -83,9 +83,10 @@
 - Do not introduce unrelated tooling or broad refactors unless specifically
   asked to do so.
 
-## Session Completion
+## Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+After editing and updating/closing issues, you MUST complete ALL steps below.
+Work is NOT complete until `git push` succeeds.
 
 ### Workflow
 
@@ -98,11 +99,10 @@
    resolve conflicts, if any
    bd sync
    git push
-   git status  # MUST show "up to date with origin"
+   git status  # MUST show "up to date with 'intern/main'"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+5. **Verify** - All changes committed AND pushed
+6. **Hand off** - Provide context for next session
 
 ### Mandatory Rules
 - Work is NOT complete until `git push` succeeds

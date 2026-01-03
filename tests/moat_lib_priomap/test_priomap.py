@@ -65,14 +65,14 @@ def test_pop_item():  # noqa: D103
 
 def test_update():  # noqa: D103
     h = PrioMap({"a": 5, "b": 2})
-    h.update("a", 1)
+    h.set_priority("a", 1)
     assert h["a"] == 1
     # now a is smallest
     assert h.peek() == ("a", 1)
     with pytest.raises(KeyError):
-        h.update("c", 10)
+        h.set_priority("c", 10)
     with pytest.raises(TypeError):
-        h.update("a", "bad")
+        h.set_priority("a", "bad")
 
 
 def test_clear_and_is_empty():  # noqa: D103

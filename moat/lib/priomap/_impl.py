@@ -12,34 +12,36 @@ try:
 except ImportError:
     from collections.abc import MutableMapping
 
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 if TYPE_CHECKING:
     from abc import abstractmethod
     from types import EllipsisType
 
-    from collections.abc import Hashable, Iterator
-    from typing import Protocol
+    from collections.abc import Hashable, Iterable
+    from typing import Any, Protocol
+
+    Priority = TypeVar("Priority")
 
     class Comparable(Protocol):
         """Protocol for annotating comparable types."""
 
         @abstractmethod
-        def __lt__(self: CT, other: CT, /) -> bool: ...
+        def __lt__(self: Priority, other: Priority, /) -> bool: ...
 
-    CT = TypeVar("CT", bound=Comparable)
     RT = TypeVar("RT")
 
-    Priority = CT
     Key = Hashable
     InitialData = dict[Key, Priority] | None
     InitialPrio = dict[Key, float] | None
-    HeapItem = list[Key | Priority]  # Each heap item is [key, priority]
+    HeapItem = tuple[
+        Key, Priority
+    ]  # Each heap item is [key, priority] - typed as tuple for compatibility
 
 __all__ = ["PrioMap", "TimerMap"]
 
 
-class PrioMap(MutableMapping):
+class PrioMap[Priority](MutableMapping):
     """
     A heap that behaves like a dict but maintains heap ordering.
 
@@ -54,7 +56,7 @@ class PrioMap(MutableMapping):
         :param initial: Optional mapping of keys to initial priorities.
         :raises TypeError: If any priority in `initial` is not an int or float.
         """
-        self.heap: list[HeapItem] = []
+        self.heap: list[Any] = []  # list of [key, priority] pairs
         self.position: dict[Key, int] = {}
         self.evt: anyio.Event = anyio.Event()
 
@@ -62,7 +64,7 @@ class PrioMap(MutableMapping):
         if initial:
             self.bulk(initial.items())
 
-    def bulk(self, initial: Iterator[HeapItem]):
+    def bulk(self, initial: Iterable[HeapItem]):
         """
         Bulk insert.
         """
@@ -154,7 +156,7 @@ class PrioMap(MutableMapping):
         except IndexError:
             raise IndexError("Queue is empty") from None
 
-    def update(self, key: Key, new_priority: Priority) -> None:
+    def set_priority(self, key: Key, new_priority: Priority) -> None:
         """
         Update priority for an existing key, then reheapify.
 
@@ -264,7 +266,7 @@ class PrioMap(MutableMapping):
         :raises TypeError: If `priority` is not int or float.
         """
         if key in self.position:
-            self.update(key, priority)
+            self.set_priority(key, priority)
         else:
             idx = len(self.heap)
             self.heap.append([key, priority])
@@ -418,7 +420,7 @@ class TimerMap:
     def __getitem__(self, key: Key) -> float:
         return self.T_SUB(self._pm[key])
 
-    def __delitem__(self, key: Key) -> float:
+    def __delitem__(self, key: Key) -> None:
         del self._pm[key]
 
     async def apeek(self) -> tuple[Key, float]:
@@ -453,7 +455,7 @@ class TimerMap:
         """
         Update priority for an existing key, then reheapify.
         """
-        self._pm.update(key, self.T_ADD(new_delay))
+        self._pm.set_priority(key, self.T_ADD(new_delay))
 
     @overload
     def pop(self) -> tuple[Key, float]: ...

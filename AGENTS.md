@@ -10,6 +10,7 @@
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
     - This also applies to all code which imports from `moat.lib.micro`
+      (but not to moat.lib.micro itself)
     - Specifically, Python 3.11 syntax must be used in these files.
   - Each Python package named e.g. `moat.X.Y` has
     - code in `moat/X/Y/*.py`

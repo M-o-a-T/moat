@@ -8,7 +8,7 @@ import pytest
 import sys
 
 from moat.util import P
-from moat.lib.micro import ticks_diff, ticks_ms
+from moat.lib.micro import ACM, AC_exit, ticks_diff, ticks_ms
 from moat.lib.proxy import as_proxy
 from moat.micro._test import mpy_stack
 
@@ -254,3 +254,196 @@ async def test_msgpack(tmp_path):
 
         r = await req(x=b, r=None)
         assert r is b
+
+
+# AC_use / ACM tests
+
+
+class AsyncContextManagerTest:
+    """Test async context manager for AC_use"""
+
+    def __init__(self, value):
+        self.value = value
+        self.entered = False
+        self.exited = False
+
+    async def __aenter__(self):
+        self.entered = True
+        return self.value
+
+    async def __aexit__(self, *exc):
+        self.exited = True
+        return False
+
+
+class SyncContextManagerTest:
+    """Test sync context manager for AC_use"""
+
+    def __init__(self, value):
+        self.value = value
+        self.entered = False
+        self.exited = False
+
+    def __enter__(self):
+        self.entered = True
+        return self.value
+
+    def __exit__(self, *exc):
+        self.exited = True
+        return False
+
+
+async def test_ac_use_async_context_manager():
+    """Test AC_use with async context manager"""
+
+    class TestObj:
+        pass
+
+    obj = TestObj()
+    ctx = AsyncContextManagerTest("async_value")
+
+    AC = ACM(obj)
+    try:
+        result = await AC(ctx)
+        assert result == "async_value"
+        assert ctx.entered is True
+        assert ctx.exited is False
+    except BaseException as exc:
+        await AC_exit(obj, type(exc), exc, None)
+        raise
+
+    await AC_exit(obj)
+    assert ctx.exited is True
+
+
+async def test_ac_use_sync_context_manager():
+    """Test AC_use with sync context manager"""
+
+    class TestObj:
+        pass
+
+    obj = TestObj()
+    ctx = SyncContextManagerTest("sync_value")
+
+    AC = ACM(obj)
+    try:
+        result = await AC(ctx)
+        assert result == "sync_value"
+        assert ctx.entered is True
+        assert ctx.exited is False
+    except BaseException as exc:
+        await AC_exit(obj, type(exc), exc, None)
+        raise
+
+    await AC_exit(obj)
+    assert ctx.exited is True
+
+
+async def test_ac_use_async_callable():
+    """Test AC_use with async callable"""
+
+    class TestObj:
+        pass
+
+    obj = TestObj()
+    called = []
+
+    async def async_callback():
+        called.append("async")
+
+    AC = ACM(obj)
+    try:
+        result = await AC(async_callback)
+        assert result is None
+        assert len(called) == 0  # Not called yet
+    except BaseException as exc:
+        await AC_exit(obj, type(exc), exc, None)
+        raise
+
+    await AC_exit(obj)
+    assert called == ["async"]
+
+
+async def test_ac_use_sync_callable():
+    """Test AC_use with sync callable"""
+
+    class TestObj:
+        pass
+
+    obj = TestObj()
+    called = []
+
+    def sync_callback():
+        called.append("sync")
+
+    AC = ACM(obj)
+    try:
+        result = await AC(sync_callback)
+        assert result is None
+        assert len(called) == 0  # Not called yet
+    except BaseException as exc:
+        await AC_exit(obj, type(exc), exc, None)
+        raise
+
+    await AC_exit(obj)
+    assert called == ["sync"]
+
+
+async def test_ac_use_nested_managers():
+    """Test two managers attached to the same object"""
+
+    class TestObj:
+        pass
+
+    obj = TestObj()
+    ctx1 = AsyncContextManagerTest("value1")
+    ctx2 = SyncContextManagerTest("value2")
+    cleanup_order = []
+
+    async def cleanup1():
+        cleanup_order.append(1)
+
+    def cleanup2():
+        cleanup_order.append(2)
+
+    # First ACM
+    AC1 = ACM(obj)
+    try:
+        result1 = await AC1(ctx1)
+        assert result1 == "value1"
+        assert ctx1.entered is True
+        await AC1(cleanup1)
+
+        # Second ACM (nested)
+        AC2 = ACM(obj)
+        try:
+            result2 = await AC2(ctx2)
+            assert result2 == "value2"
+            assert ctx2.entered is True
+            await AC2(cleanup2)
+
+            # Both contexts should be entered
+            assert ctx1.entered is True
+            assert ctx2.entered is True
+            assert ctx1.exited is False
+            assert ctx2.exited is False
+
+        except BaseException as exc:
+            await AC_exit(obj, type(exc), exc, None)
+            raise
+
+        # Exit second ACM
+        await AC_exit(obj)
+        assert ctx2.exited is True
+        assert ctx1.exited is False  # First context still open
+
+    except BaseException as exc:
+        await AC_exit(obj, type(exc), exc, None)
+        raise
+
+    # Exit first ACM
+    await AC_exit(obj)
+    assert ctx1.exited is True
+
+    # Cleanup should happen in reverse order (LIFO)
+    assert cleanup_order == [2, 1]

@@ -28,7 +28,8 @@ from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 import _colorize
 from attrs import define, field, fields
 
-from . import commands, console, input  # noqa: A004
+from . import commands, console
+from . import input_ as input  # noqa:A004
 from .trace import trace
 from .utils import THEME, disp_str, gen_colors, unbracket, wlen
 

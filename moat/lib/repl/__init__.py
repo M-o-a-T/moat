@@ -47,8 +47,8 @@ _imports = {
     # historical_reader
     "HistoricalReader": "historical_reader",
     # input
-    "InputTranslator": "input",
-    "KeymapTranslator": "input",
+    "InputTranslator": "input_",
+    "KeymapTranslator": "input_",
     # keymap
     "compile_keymap": "keymap",
     # pager
@@ -70,6 +70,7 @@ _imports = {
     "get_history_item": "readline",
     "get_history_length": "readline",
     "get_line_buffer": "readline",
+    "input": "readline",
     "insert_text": "readline",
     "multiline_input": "readline",
     "parse_and_bind": "readline",

@@ -32,7 +32,7 @@ r:
       link: &link
         lossy: false
         guarded: false
-        frame: 0x85
+        frame: 0xFA
       log:
         txt: "S"
     p:

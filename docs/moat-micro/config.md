@@ -928,13 +928,14 @@ Max packet length. The default is 127.
 
 ##### frame
 
-Frame start byte. The default is `0x85`.
+Frame start byte. The default is `0xFA` because that doesn't occur in UTF-8
+and has some alternating bits.
+
+While the frame receiver understands out-of-band UTF-8 sequences, it's
+safer to not depend on that feature.
+
 <span class="title-ref">None</span> relies on inter-frame timing and
 does not allow non-framed data.
-
-This byte should not occur in standard console output. The frame
-receiver understands UTF-8 sequences, thus the ranges `0x00…0x1F`, and
-`0x80…0xBF` are safe to use.
 
 ##### mark
 

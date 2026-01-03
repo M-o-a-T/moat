@@ -40,8 +40,6 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import NoReturn, Self
 
-_T = TypeVar("_T")
-
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -340,53 +338,6 @@ class Queue[T](_Queue):
             super().put_nowait(x)
         except _anyio.WouldBlock:
             raise QueueFull from None
-
-
-def _doc(_c: Callable | None = None, **kw) -> Callable[[_T], _T]:
-    """
-    Attach structured documentation to a function.
-
-    This is used for command handlers because we want to (a) not add a heap
-    of obscure typing to the Message parameter that'd need to be serialozed
-    somehow, (b) support introspectable doc for MicroPython which has no typing
-    infrastructure.
-
-    Keywords:
-    _c: copy+extend Upstream
-    _d: very short Documentation, free text
-    _r: Return value
-    _i: Input stream type
-    _o: Output stream type
-    _a: Any keyword params
-    _m: first optional field
-    _NUM: positional arg
-    _99: positional arg trailer
-    NAME: keyword arg
-
-    All values are of the form `type`, `type:short documentation`, a dict
-    (as above, except no NUMs), or a list (positional values, like typing
-    w/ tuples). A trailing question mark on the type indicates "or None".
-    (This doesn't necessarily mean the same as not sending the value at all.)
-
-    Typically the return value is a single data item; if not you can set
-    '_r' to a dict with the above components.
-
-    The list of possibly-missing fields may include "i" and "o".
-    If any positional arguments are optional, only the first should be given.
-    Keyword args are always optional.
-
-    The result type "parts" describes a two-element tuple: a dict/list with
-    complex items removed plus a list of sub-keys to retrieve for restoring
-    the data. This is used to limit the max block size.
-    """
-    if _c is not None:
-        merge(kw, _c._moat__doc, replace=False)  # noqa: SLF001  # type: ignore[attr-defined]
-
-    def mod(fn: _T) -> _T:
-        fn._moat__doc = kw  # noqa: SLF001  # type: ignore[attr-defined]
-        return fn
-
-    return mod
 
 
 # async context stack

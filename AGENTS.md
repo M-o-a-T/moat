@@ -1,5 +1,9 @@
 # Repository Guidelines for MoaT
 
+## Issue tracking
+
+- Use 'beads' for tracking.
+
 ## Project Structure & Modules
 - This is a monorepository. All code lives in `moat/`.
   - Code is CPython 12+ compatible
@@ -78,3 +82,30 @@
 - Follow these guidelines for any code changes in this repo tree.
 - Do not introduce unrelated tooling or broad refactors unless specifically
   asked to do so.
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+### Workflow
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **Push to remote** - This is MANDATORY:
+   ```bash
+   git pull
+   resolve conflicts, if any
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+### Mandatory Rules
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds

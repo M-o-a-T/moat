@@ -16,6 +16,11 @@ else
 	@exit 1
 endif
 
+venv:
+	python3 -m venv .venv --upgrade-deps
+	.venv/bin/pip install -e .[dev]
+	.venv/bin/pip install ty pre-commit
+
 prep:
 	git submodule update --init --recursive
 	make -C ext/micropython/mpy-cross

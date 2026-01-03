@@ -32,9 +32,11 @@ from collections.abc import (  # noqa: TC002
     MutableMapping,
     MutableSequence,
 )
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager, AbstractContextManager
+
     from collections.abc import Awaitable, Callable
     from typing import NoReturn, Self
 
@@ -439,6 +441,22 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
     return _ACc
 
 
+@overload
+async def AC_use[T](obj: Any, ctx: AbstractAsyncContextManager[T]) -> T: ...
+
+
+@overload
+async def AC_use[T](obj: Any, ctx: AbstractContextManager[T]) -> T: ...
+
+
+@overload
+async def AC_use(obj: Any, ctx: Callable[[], Awaitable[Any]]) -> None: ...
+
+
+@overload
+async def AC_use(obj: Any, ctx: Callable[[], Any]) -> None: ...
+
+
 async def AC_use(obj: Any, ctx: Any) -> Any:
     """
     Add an async context to this object's AsyncExitStack.
@@ -448,7 +466,7 @@ async def AC_use(obj: Any, ctx: Any) -> Any:
 
     Otherwise it's a callable and will run on exit.
     """
-    acm = obj._AC_[-1]
+    acm: AsyncExitStack = obj._AC_[-1]
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):

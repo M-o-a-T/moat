@@ -244,5 +244,9 @@ executionEnvironments = [
 ]
 
 [tool.ty.src]
-include = ["moat/util/path.py", "moat/lib/priomap/", "moat/lib/broadcast/"]
+include = [
+    "moat/util/path.py",
+    "moat/lib/priomap/",
+    "moat/lib/broadcast/",
+]
 exclude = ["ext/**", "OFF/**", "TODO/**", "packaging/**", "docs/**"]

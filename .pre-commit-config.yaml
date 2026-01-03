@@ -36,13 +36,13 @@ repos:
       pass_filenames: true
       require_serial: true
 
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.406
+  - repo: local
     hooks:
-    - id: pyright
-      files: "moat/lib/pid|moat/util/path.py|tests/moat_lib_pid|tests/moat_util/test_path.py"
-      additional_dependencies:
-        - simpleeval
-        - pytest
-        - anyio
-        - numpy
+    - id: ty
+      name: ty type checker
+      description: Run ty type checker on configured files
+      entry: .venv/bin/ty check
+      language: system
+      types: [python]
+      files: "moat/util/path.py"
+      pass_filenames: false

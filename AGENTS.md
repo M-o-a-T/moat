@@ -83,7 +83,7 @@
 - Do not introduce unrelated tooling or broad refactors unless specifically
   asked to do so.
 
-## Landing the Plane (Session Completion)
+## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 

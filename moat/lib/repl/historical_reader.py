@@ -24,7 +24,8 @@ from contextlib import contextmanager
 
 from attrs import define, field
 
-from . import commands, input  # noqa: A004
+from . import commands
+from . import input_ as input  # noqa: A004
 from .reader import Reader
 
 from typing import TYPE_CHECKING

@@ -32,7 +32,7 @@ import os
 import sys
 import warnings
 from rlcompleter import Completer as RLCompleter
-from site import gethistoryfile
+from site import gethistoryfile  # type: ignore[attr-defined]
 
 from attrs import define, field
 
@@ -116,14 +116,12 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
     sort_in_column = True
 
     # Instance fields
-    config: ReadlineConfig | None = None
+    config: ReadlineConfig = field(factory=ReadlineConfig)
     more_lines: MoreLinesCallable | None = None
     last_used_indentation: str | None = None
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        if self.config is None:
-            self.config = ReadlineConfig()
         self.commands["maybe_accept"] = maybe_accept
         self.commands["maybe-accept"] = maybe_accept
         self.commands["backspace_dedent"] = backspace_dedent
@@ -218,7 +216,7 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
 
 def set_auto_history(_should_auto_add_history: bool) -> None:
     """Enable or disable automatic history"""
-    historical_reader.should_auto_add_history = bool(_should_auto_add_history)
+    historical_reader.should_auto_add_history = bool(_should_auto_add_history)  # type: ignore[misc]
 
 
 def _get_this_line_indent(buffer: list[str], pos: int) -> int:
@@ -587,13 +585,13 @@ def _setup(namespace: Mapping[str, Any]) -> None:
     if not isinstance(namespace, dict):
         namespace = dict(namespace)
     _wrapper.config.module_completer = ModuleCompleter(namespace)
-    _wrapper.config.readline_completer = RLCompleter(namespace).complete
+    _wrapper.config.readline_completer = RLCompleter(namespace).complete  # type: ignore[arg-type]
 
     # this is not really what readline.c does.  Better than nothing I guess
     import builtins  # noqa: PLC0415
 
     raw_input = builtins.input
-    builtins.input = _wrapper.input
+    builtins.input = _wrapper.input  # type: ignore[assignment]
 
 
 raw_input: Callable[[object], str] | None = None

@@ -27,7 +27,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 
-import _colorize
+import _colorize  # type: ignore[import-not-found]
 from attrs import define, field
 
 TYPE_CHECKING = False
@@ -43,6 +43,11 @@ class Event:  # noqa: D101
     evt: str
     data: str
     raw: bytes = b""
+
+    def __init__(self, evt: str, data: str | None = None, raw: bytes = b""):
+        self.evt = evt
+        self.data = data or ""
+        self.raw = raw
 
 
 try:
@@ -95,7 +100,7 @@ class Console(ABC):  # noqa: D101
         ...
 
     @abstractmethod
-    async def push_char(self, char: int | bytes) -> None:
+    def push_char(self, char: int | bytes) -> None:
         """
         Push a character to the console event queue.
         """
@@ -142,12 +147,12 @@ class Console(ABC):  # noqa: D101
     async def repaint(self) -> None: ...  # noqa: D102
 
     @abstractmethod
-    async def rd(self, buf: Buffer) -> bytes:
+    async def rd(self, buf: Buffer) -> int:
         """Read up to n bytes from the underlying terminal."""
         ...
 
     @abstractmethod
-    async def wr(self, data: bytes) -> None:
+    async def wr(self, data: Buffer) -> int:
         """Write data to the underlying terminal."""
         ...
 
@@ -162,7 +167,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         *,
         local_exit: bool = False,
     ) -> None:
-        super().__init__(locals=locals, filename=filename, local_exit=local_exit)
+        super().__init__(locals=locals, filename=filename, local_exit=local_exit)  # type: ignore[call-arg]
         self.can_colorize = _colorize.can_colorize()
 
     def showsyntaxerror(self, filename=None, **kwargs):  # noqa: D102
@@ -171,8 +176,12 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
     def _excepthook(self, typ, value, tb):
         import traceback  # noqa: PLC0415
 
-        lines = traceback.format_exception(
-            typ, value, tb, colorize=self.can_colorize, limit=traceback.BUILTIN_EXCEPTION_LIMIT
+        lines = traceback.format_exception(  # type: ignore[call-overload,attr-defined]
+            typ,
+            value,
+            tb,
+            colorize=self.can_colorize,
+            limit=traceback.BUILTIN_EXCEPTION_LIMIT,  # type: ignore[attr-defined]
         )
         self.write("".join(lines))
 
@@ -188,12 +197,12 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
 
     def runsource(self, source, filename="<input>", symbol="single"):  # noqa: D102
         try:
-            tree = self.compile.compiler(
+            tree = self.compile.compiler(  # type: ignore[call-arg,call-overload,misc,arg-type]
                 source,
                 filename,
                 "exec",
-                ast.PyCF_ONLY_AST,
-                incomplete_input=False,
+                ast.PyCF_ONLY_AST,  # type: ignore[misc]
+                incomplete_input=False,  # type: ignore[misc]
             )
         except SyntaxError as e:
             # If it looks like pip install was entered (a common beginner
@@ -210,15 +219,15 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         except (OverflowError, ValueError):
             self.showsyntaxerror(filename, source=source)
             return False
-        if tree.body:
-            *_, last_stmt = tree.body
-        for stmt in tree.body:
+        if tree.body:  # type: ignore[attr-defined]
+            *_, last_stmt = tree.body  # type: ignore[attr-defined]
+        for stmt in tree.body:  # type: ignore[attr-defined]
             wrapper = ast.Interactive if stmt is last_stmt else ast.Module
             the_symbol = symbol if stmt is last_stmt else "exec"
             item = wrapper([stmt])
             try:
-                code = self.compile.compiler(item, filename, the_symbol)
-                linecache._register_code(code, source, filename)  # noqa: SLF001
+                code = self.compile.compiler(item, filename, the_symbol)  # type: ignore[arg-type]
+                linecache._register_code(code, source, filename)  # noqa: SLF001  # type: ignore[attr-defined]
             except SyntaxError as e:
                 if e.args[0] == "'await' outside function":
                     python = os.path.basename(sys.executable)

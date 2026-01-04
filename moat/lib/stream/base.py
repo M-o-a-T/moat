@@ -215,7 +215,7 @@ class BaseBuf(BaseConn):
         """
         raise NotImplementedError(f"'rd' in {self!r}")
 
-    async def wr(self, buf: Buffer | bytes) -> int:
+    async def wr(self, data: Buffer) -> int:
         """
         Write some bytes.
         """

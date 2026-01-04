@@ -11,7 +11,7 @@ from io import StringIO
 from re import Match
 from tokenize import TokenInfo as TI
 
-import _colorize
+import _colorize  # type:ignore[unresolved-import]
 
 from .trace import trace
 
@@ -33,9 +33,9 @@ KEYWORD_CONSTANTS = {"True", "False", "None"}
 BUILTINS = {str(name) for name in dir(builtins) if not name.startswith("_")}
 
 if not hasattr(T, "TSTRING_START"):
-    T.TSTRING_START = None
-    T.TSTRING_MIDDLE = None
-    T.TSTRING_END = None
+    T.TSTRING_START = None  # type:ignore[unresolved-attribute]
+    T.TSTRING_MIDDLE = None  # type:ignore[unresolved-attribute]
+    T.TSTRING_END = None  # type:ignore[unresolved-attribute]
 
 
 def THEME(**kwargs):  # noqa: D103
@@ -60,10 +60,13 @@ class Span(NamedTuple):
     @classmethod
     def from_token(cls, token: TI, line_len: list[int]) -> Self:
         end_offset = -1
-        if token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE} and token.string.endswith((
-            "{",
-            "}",
-        )):
+        if (
+            token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE}  # type:ignore[unresolved-attribute]
+            and token.string.endswith((
+                "{",
+                "}",
+            ))
+        ):
             # gh-134158: a visible trailing brace comes from a double brace in input
             end_offset += 1
 
@@ -198,9 +201,9 @@ def gen_colors_from_token_stream(
                 | T.FSTRING_START
                 | T.FSTRING_MIDDLE
                 | T.FSTRING_END
-                | T.TSTRING_START
-                | T.TSTRING_MIDDLE
-                | T.TSTRING_END
+                | T.TSTRING_START  # type:ignore[unresolved-attribute]
+                | T.TSTRING_MIDDLE  # type:ignore[unresolved-attribute]
+                | T.TSTRING_END  # type:ignore[unresolved-attribute]
             ):
                 span = Span.from_token(token, line_lengths)
                 yield ColorSpan(span, "string")
@@ -259,7 +262,7 @@ def is_soft_keyword_used(*tokens: TI | None) -> bool:
         case (
             None | TI(T.NEWLINE) | TI(T.INDENT) | TI(string=":"),
             TI(string="match"),
-            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)
+            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # type:ignore[unresolved-attribute]
             | TI(T.OP, string="(" | "*" | "[" | "{" | "~" | "..."),
         ):
             return True
@@ -274,7 +277,7 @@ def is_soft_keyword_used(*tokens: TI | None) -> bool:
         case (
             None | TI(T.NEWLINE) | TI(T.INDENT) | TI(T.DEDENT) | TI(string=":"),
             TI(string="case"),
-            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)
+            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # type:ignore[unresolved-attribute]
             | TI(T.OP, string="(" | "*" | "-" | "[" | "{"),
         ):
             return True

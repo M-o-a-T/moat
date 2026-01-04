@@ -48,16 +48,18 @@ class MsgTerm(MsgHandler):
 
                 @tg.start_soon
                 async def sender():
+                    buf = bytearray(32)
                     while True:
                         try:
-                            data = await self.term.rd(32)
+                            n = await self.term.rd(buf)
+                            data = bytes(buf[:n])
                         except EOFError:
                             break
                         await ms.send(data)
                     tg.cancel_scope.cancel()
 
                 async for data in ms:
-                    await self.term.wr(data)
+                    await self.term.wr(data)  # type: ignore[arg-type]
                 tg.cancel_scope.cancel()
             finally:
                 with anyio.move_on_after(1, shield=True):

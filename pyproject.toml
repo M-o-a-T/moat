@@ -249,5 +249,13 @@ include = [
     "moat/lib/priomap/",
     "moat/lib/broadcast/",
     "moat/lib/micro/",
+    "moat/lib/repl/",
 ]
-exclude = ["ext/**", "OFF/**", "TODO/**", "packaging/**", "docs/**"]
+exclude = [
+    "ext/**",
+    "OFF/**",
+    "TODO/**",
+    "packaging/**",
+    "docs/**",
+    "moat/lib/repl/windows_*.py",
+]

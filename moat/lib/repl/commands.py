@@ -450,7 +450,8 @@ class help(Command):
         import _sitebuiltins  # noqa: PLC0415
 
         with self.reader.suspend():
-            self.reader.msg = _sitebuiltins._Helper()()  # type: ignore[assignment]  # noqa: SLF001
+            _sitebuiltins._Helper()()  # Displays help interactively  # noqa:SLF001
+            self.reader.msg = ""  # Clear any previous message
 
 
 class invalid_key(Command):
@@ -468,7 +469,7 @@ class invalid_command(Command):
 
 class show_history(Command):
     async def do(self) -> None:
-        from site import gethistoryfile  # noqa: PLC0415
+        from site import gethistoryfile  # noqa: PLC0415  # type: ignore[attr-defined]
 
         from .pager import get_pager  # noqa: PLC0415
 

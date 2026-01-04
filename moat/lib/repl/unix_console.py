@@ -30,7 +30,6 @@ import re
 import select
 import signal
 import termios
-import types  # noqa:TC003
 from contextlib import asynccontextmanager
 
 from . import terminfo
@@ -45,18 +44,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.stream import TermBuf
 
-    from collections.abc import Awaitable
+    from collections.abc import Buffer
     from typing import Literal, cast, overload
 else:
     overload = lambda func: None  # noqa: ARG005, E731
     cast = lambda typ, val: val  # noqa: ARG005, E731
 
 # declare posix optional to allow None assignment on other platforms
-posix: types.ModuleType | None
 try:
-    import posix
+    import posix  # type: ignore[import-not-found]
 except ImportError:
-    posix = None
+    posix = None  # type: ignore[assignment]
 
 __all__ = ["UnixConsole"]
 
@@ -240,13 +238,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         buf = bytearray(n)
         n = await self.__io.rd(buf)
         buf[n:] = b""
-        return buf
+        return bytes(buf)
 
-    async def rd(self, buf: bytearray) -> Awaitable[int]:
+    async def rd(self, buf: Buffer) -> int:
         """Read up to len(buf) bytes directly from the underlying terminal."""
         return await self.__io.rd(buf)
 
-    async def wr(self, data: bytes) -> None:
+    async def wr(self, data: Buffer) -> int:
         """Write data directly to the underlying terminal."""
         async with self._wrl:
             return await self.__io.wr(data)
@@ -260,15 +258,15 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         self.encoding = encoding
 
-    async def refresh(self, screen, c_xy):
+    async def refresh(self, screen: list[str], xy: tuple[int, int]) -> None:
         """
         Refresh the console screen.
 
         Parameters:
         - screen (list): List of strings representing the screen contents.
-        - c_xy (tuple): Cursor position (x, y) on the screen.
+        - xy (tuple): Cursor position (x, y) on the screen.
         """
-        cx, cy = c_xy
+        cx, cy = xy
         if not self.__gone_tall:
             while len(self.screen) < min(len(screen), self._height):
                 self.__hide_cursor()
@@ -392,7 +390,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         Restore the console to the default state
         """
         if self.__read_task_end is not None:
-            self.__read_task.cancel()
+            # cannot be None if _r_t_e is not None
+            self.__read_task.cancel()  # type:ignore[possibly-missing-attribute]
             await self.__read_task_end.wait()
             self.__read_task = None
             self.__read_task_end = None
@@ -529,8 +528,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     @property
     def input_hook(self):  # noqa: D102
-        if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001
-            return posix._inputhook  # noqa: SLF001
+        if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
+            return posix._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
 
     async def __enable_bracketed_paste(self) -> None:
         async with self._wrl:

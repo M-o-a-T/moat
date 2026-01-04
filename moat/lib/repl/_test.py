@@ -11,7 +11,8 @@ from .fancy_termios import TermState
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from types import AbstractSet, Buffer
+    from collections.abc import Buffer
+    from collections.abc import Set as AbstractSet
 
 
 class MockTerm(TermBuf):
@@ -59,20 +60,23 @@ class MockTerm(TermBuf):
                 self.input_buffer += action
 
         # Return available data
-        n = min(len(buf), len(self.input_buffer))
+        buf_mv = memoryview(buf).cast("B")
+        n = min(len(buf_mv), len(self.input_buffer))
         if not n:
             self.record.append(("rd", None))
             raise EOFError
-        buf[:n] = self.input_buffer[:n]
+        buf_mv[:n] = self.input_buffer[:n]
         self.input_buffer = self.input_buffer[n:]
 
-        self.record.append(("rd", buf[:n]))
+        self.record.append(("rd", bytes(buf_mv[:n])))
         return n
 
-    async def wr(self, data: bytes) -> None:
+    async def wr(self, data: Buffer) -> int:
         """Write data to mock output."""
-        self.record.append(("wr", data))
-        self.output_buffer += data
+        data_bytes = bytes(data) if not isinstance(data, bytes) else data
+        self.record.append(("wr", data_bytes))
+        self.output_buffer += data_bytes
+        return len(data_bytes)
 
     async def set_raw(self) -> None:
         """switch to raw mode"""
@@ -84,7 +88,7 @@ class MockTerm(TermBuf):
 
     async def tget(self) -> TermState:
         """return current terminfo"""
-        self.record.append(("get_ts",))
+        self.record.append(("get_ts", None))
         return TermState([0] * 6 + [[b"\0"] * 30])
 
     async def tset(self, state: TermState, ignore: AbstractSet[int] = frozenset()) -> bool:
@@ -98,6 +102,7 @@ class MockTerm(TermBuf):
         """
         ignore  # noqa:B018
         self.record.append(("set_ts", state))
+        return True
 
     async def forget_input(self):
         "Delete pending input"
@@ -112,4 +117,4 @@ class MockTerm(TermBuf):
     async def rdp(self) -> bytearray:
         """read pending data, without blocking"""
         self.record.append(("read", "pending"))
-        return b""
+        return bytearray()

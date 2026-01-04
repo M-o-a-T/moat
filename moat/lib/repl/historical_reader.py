@@ -294,7 +294,7 @@ class HistoricalReader(Reader):
 
     @contextmanager
     def suspend(self) -> SimpleContextManager:  # noqa: D102
-        with super().suspend(), self.suspend_history():
+        with super().suspend(), self.suspend_history():  # type: ignore[misc]
             yield
 
     @contextmanager

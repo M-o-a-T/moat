@@ -154,9 +154,11 @@ async def run_multiline_interactive_console(  # noqa: D103
                 continue
 
             input_name = f"<python-input-{input_n}>"
-            more = console.push(
-                _strip_final_indent(statement), filename=input_name, _symbol="single"
-            )  # type: ignore[call-arg]
+            more = console.push(  # type: ignore[call-arg,call-overload,misc,arg-type]
+                _strip_final_indent(statement),
+                filename=input_name,
+                _symbol="single",  # type: ignore[misc]
+            )
             assert not more
             try:
                 append_history_file()
@@ -172,7 +174,7 @@ async def run_multiline_interactive_console(  # noqa: D103
             r.pos = len(r.get_unicode())
             r.dirty = True
             await r.refresh()
-            r.in_bracketed_paste = False
+            r.in_bracketed_paste = False  # type: ignore[attr-defined]
             console.write("\nKeyboardInterrupt\n")
             console.resetbuffer()
         except MemoryError:

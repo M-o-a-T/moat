@@ -112,7 +112,7 @@ def __getattr__(attr: str):
         mod = _imports[attr]
     except KeyError:
         raise AttributeError(attr) from None
-    value = getattr(__import__(mod, globals(), None, True, 1), attr)
+    value = getattr(__import__(mod, globals(), None, [attr], 1), attr)
     globals()[attr] = value
     return value
 

@@ -25,10 +25,10 @@ import anyio
 import sys
 from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 
-import _colorize
+import _colorize  # type: ignore[import-not-found]
 from attrs import define, field, fields
 
-from . import commands, console
+from . import commands
 from . import input_ as input  # noqa:A004
 from .trace import trace
 from .utils import THEME, disp_str, gen_colors, unbracket, wlen
@@ -38,7 +38,8 @@ Command = commands.Command
 from typing import TYPE_CHECKING  # noqa: E402
 
 if TYPE_CHECKING:
-    from .types import Callback, CommandName, KeySpec, SimpleContextManager
+    from .console import Console as ConsoleType
+    from .types import Callback, CommandName, KeySpec
 
     from collections.abc import Callable
 
@@ -194,7 +195,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         that we're done.
     """
 
-    console: console.Console = field()
+    console: ConsoleType = field()
 
     ## state
     buffer: list[str] = field(factory=list)
@@ -280,7 +281,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         # facilitate the tab completion hack implemented for
         # <https://bugs.python.org/issue25660>.
         try:
-            sup = super().__attrs_post_init__
+            sup = super().__attrs_post_init__  # type: ignore[misc]
         except AttributeError:
             pass
         else:
@@ -309,7 +310,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         self.height, self.width = await self.console.getheightwidth()
         async with AsyncExitStack() as acm:
             try:
-                self.__events = aiter(await acm.enter_async_context(self.console.evt().stream()))
+                self.__events = aiter(await acm.enter_async_context(self.console.evt().stream()))  # type: ignore[attr-defined]
             except AttributeError:
                 pass
 
@@ -658,9 +659,9 @@ class Reader(anyio.AsyncContextManagerMixin):
         return (await anext(self.__events))[0]
 
     @asynccontextmanager
-    async def suspend(self) -> SimpleContextManager:
+    async def suspend(self):  # type: ignore[misc]
         """A context manager to delegate to another reader."""
-        prev_state = {f.name: getattr(self, f.name) for f in fields(self)}
+        prev_state = {f.name: getattr(self, f.name) for f in fields(type(self))}
         try:
             await self.restore()
             yield
@@ -781,18 +782,18 @@ class Reader(anyio.AsyncContextManagerMixin):
                     continue
                 return False
 
-            await self.do_cmd(cmd)
+            await self.do_cmd(cmd)  # type: ignore[arg-type]
             await self.console.flushoutput()
             return True
 
     async def push_char(self, char: int | bytes) -> None:  # noqa: D102
-        await self.console.push_char(char)
+        await self.console.push_char(char)  # type: ignore[misc]
         await self.handle1(block=False)
 
     async def readline(self, startup_hook: Callback | None = None) -> str:
         """Read a line."""
-        async with (
-            nullcontext() if self._in_context else self.console,
+        async with (  # type: ignore[attr-defined,misc]
+            nullcontext() if self._in_context else self.console,  # type: ignore[misc]
             nullcontext() if self._in_context else self,
         ):
             if startup_hook is not None:

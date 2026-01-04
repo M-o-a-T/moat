@@ -243,6 +243,9 @@ executionEnvironments = [
   { root = "." }
 ]
 
+[tool.ty.environment]
+python-version = "3.13"
+
 [tool.ty.src]
 include = [
     "moat/util/path.py",

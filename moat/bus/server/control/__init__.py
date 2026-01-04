@@ -6,13 +6,13 @@ Just dispatch them.
 
 from __future__ import annotations
 
-from moat.bus.util import SubDispatcher
+from moat.bus.util import SubDispatch
 
 # import logging
 # logger = logging.getLogger(__name__)
 
 
-class ControlHandler(SubDispatcher):
+class ControlHandler(SubDispatch):
     """
     Read and process control messages from the server.
 

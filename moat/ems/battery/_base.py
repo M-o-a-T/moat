@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.micro.cmd.alert import AlertHandler
-    from moat.micro.cmd.tree.dir import SubDispatcher
+    from moat.micro.cmd.tree.dir import SubDispatch
     from moat.micro.part.relay import Relay
 
 
@@ -350,8 +350,8 @@ class BaseCells(ArrayCmd):
     w: attrdict = None
     w_max: float = None
     p: float = None
-    al: SubDispatcher[AlertHandler] | None = None
-    rly: SubDispatcher[Relay] | None = None
+    al: SubDispatch[AlertHandler] | None = None
+    rly: SubDispatch[Relay] | None = None
     n_warn_w = 0
     n_warn_ud = 0
     n_save = 98

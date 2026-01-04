@@ -40,9 +40,10 @@ CHECK_STREAM_TIMEOUT = 0.001
 
 
 class ModbusClient(CtxObj):
-    """The main bus handler. Use as
-    >>> async with ModbusClient() as bus:
-        ...
+    """The main bus handler. Use as:
+
+        async with ModbusClient() as bus:
+            ...
     """
 
     _tg = None

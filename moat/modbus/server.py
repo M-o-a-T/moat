@@ -19,8 +19,21 @@ try:
 except ImportError:
     from pymodbus.datastore import ModbusServerContext
     from pymodbus.datastore import ModbusSlaveContext as ModbusDeviceContext
-from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
-from pymodbus.exceptions import NoSuchSlaveException
+
+try:
+    # pymodbus 3.11+
+    from pymodbus.pdu.device import ModbusControlBlock, ModbusDeviceIdentification
+except ImportError:
+    # pymodbus 3.9
+    from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
+
+try:
+    # pymodbus 3.11+
+    from pymodbus.exceptions import NoSuchIdException as NoSuchSlaveException
+except ImportError:
+    # pymodbus 3.9
+    from pymodbus.exceptions import NoSuchSlaveException
+from pymodbus.constants import ExcCodes
 from pymodbus.pdu import DecodePDU, ExceptionResponse
 from pymodbus.utilities import hexlify_packets
 
@@ -93,7 +106,11 @@ class BaseModbusServer(CtxObj):
 
     def __init__(self, identity=None, response_manipulator=None):
         self.context = ModbusServerContext(single=False)
-        self.context._slaves = self.units = {}  # noqa: SLF001
+        self.units = {}
+        if hasattr(self.context, "_devices"):  # pymodbus 3.11
+            self.context._devices = self.units  # noqa: SLF001
+        else:  # pymodbus 3.9
+            self.context._slaves = self.units  # noqa: SLF001
         self.control = ModbusControlBlock()
         self.broadcast_enable = False
         self.response_manipulator = response_manipulator
@@ -134,6 +151,7 @@ class BaseModbusServer(CtxObj):
 
     def _add_unit(self, unit):
         self.units[unit.unit] = unit
+        self.context[unit.unit] = unit
 
     async def serve(self, opened=None):
         """The actual server. Override me."""
@@ -167,7 +185,7 @@ class SerialModbusServer(BaseModbusServer):
 
     _serial = None
     framer = None
-    ignore_missing_slaves = False
+    ignore_missing_devices = False
     single = False
 
     def __init__(self, identity=None, timeout=None, **args):
@@ -175,9 +193,16 @@ class SerialModbusServer(BaseModbusServer):
         self.args = args
         self.timeout = timeout
 
-        from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
-            ModbusRtuFramer,
-        )
+        try:
+            # pymodbus 3.11+
+            from pymodbus.framer.rtu import (  # noqa: PLC0415
+                FramerRTU as ModbusRtuFramer,
+            )
+        except ImportError:
+            # pymodbus 3.9
+            from pymodbus.framer.rtu_framer import (  # noqa: PLC0415
+                ModbusRtuFramer,
+            )
 
         class Framer(ModbusRtuFramer):
             def _validate_dev_id(self, unit, single):  # noqa: ARG002
@@ -212,7 +237,7 @@ class SerialModbusServer(BaseModbusServer):
                 t = t2
                 msgs = []
                 while True:
-                    used, pdu = self.framer.processIncomingFrame(data)
+                    used, pdu = self.framer.handleFrame(data, 0, 0)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -239,14 +264,12 @@ class SerialModbusServer(BaseModbusServer):
         except NoSuchSlaveException:
             if unit not in self.ignored:
                 _logger.error("requested slave does not exist: %d", request.unit_id)
-            if self.ignore_missing_slaves:
+            if self.ignore_missing_devices:
                 return  # the client will simply timeout waiting for a response
-            response = ExceptionResponse(
-                request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE
-            )
+            response = ExceptionResponse(request.function_code, ExcCodes.GATEWAY_NO_RESPONSE)
         except Exception:  # pylint: disable=broad-except
             _logger.exception("Unable to fulfill request")
-            response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
+            response = ExceptionResponse(request.function_code, ExcCodes.DEVICE_FAILURE)
         # no response when broadcasting
         response.unit_id = unit
         response.transaction_id = tid
@@ -346,9 +369,22 @@ class ModbusServer(BaseModbusServer):
     def __init__(self, identity=None, address=None, port=None):
         super().__init__(identity=identity)
 
-        from pymodbus.framer.socket import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
-            FramerSocket,
-        )
+        try:
+            # pymodbus 3.11+
+            from pymodbus.framer.socket import (  # noqa: PLC0415
+                FramerSocket,
+            )
+        except ImportError:
+            # pymodbus 3.9 - try socket_framer module
+            try:
+                from pymodbus.framer.socket_framer import (  # noqa: PLC0415
+                    ModbusSocketFramer as FramerSocket,
+                )
+            except ImportError:
+                # Fallback if neither works
+                from pymodbus.framer.socket import (  # noqa: PLC0415
+                    FramerSocket,
+                )
 
         self.decoder = DecodePDU(True)
         self.framer = FramerSocket
@@ -397,7 +433,7 @@ class ModbusServer(BaseModbusServer):
 
                 reqs = []
                 while True:
-                    used, pdu = framer.processIncomingFrame(data)
+                    used, pdu = framer.handleFrame(data, 0, 0)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -411,12 +447,12 @@ class ModbusServer(BaseModbusServer):
                     except NoSuchSlaveException:
                         _logger.debug("requested slave does not exist: %d", request.dev_id)
                         response = ExceptionResponse(
-                            request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE
+                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
                         )
                     except Exception as exc:  # pylint: disable=broad-except
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
                         response = ExceptionResponse(
-                            request.function_code, ExceptionResponse.SLAVE_FAILURE
+                            request.function_code, ExcCodes.DEVICE_FAILURE
                         )
                     response.transaction_id = tid
                     response.dev_id = unit

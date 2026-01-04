@@ -15,6 +15,7 @@ from functools import partial
 from pathlib import Path
 
 from anyio_serial import Serial
+from pymodbus.constants import ExcCodes
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.framer import FramerRTU, FramerSocket
 from pymodbus.pdu import DecodePDU, ExceptionResponse
@@ -42,8 +43,8 @@ CHECK_STREAM_TIMEOUT = 0.001
 class ModbusClient(CtxObj):
     """The main bus handler. Use as:
 
-        async with ModbusClient() as bus:
-            ...
+    async with ModbusClient() as bus:
+        ...
     """
 
     _tg = None
@@ -354,7 +355,7 @@ class Host(_HostCommon, CtxObj):
                 replies = []
 
                 while True:
-                    used, pdu = self.framer.processIncomingFrame(data)
+                    used, pdu = self.framer.handleFrame(data, 0, 0)
                     data = data[used:]
                     if pdu is not None:
                         replies.append(pdu)
@@ -510,7 +511,7 @@ class SerialHost(_HostCommon, CtxObj):
 
                         # check for decoding errors
                         while True:
-                            used, pdu = self.framer.processIncomingFrame(data)
+                            used, pdu = self.framer.handleFrame(data, 0, 0)
                             if pdu is not None:
                                 replies.append(pdu)
                             if not used:
@@ -671,7 +672,7 @@ class Unit(CtxObj):
             response = await self.host.execute(request)
         except Exception as exc:
             _logger.exception("Handler for %d: %r", self.unit, exc)  # noqa: TRY401
-            response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
+            response = ExceptionResponse(request.function_code, ExcCodes.DEVICE_FAILURE)
 
         return response
 

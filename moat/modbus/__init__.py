@@ -16,6 +16,8 @@ Modbus-TCP and Modbus-RTU (serial) are supported.
 
 from __future__ import annotations
 
+# Import compatibility layer to monkeypatch pymodbus 3.9 if needed
+from . import _compat  # noqa: F401
 from .client import *  # noqa: F403
 from .server import *  # noqa: F403
 

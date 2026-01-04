@@ -12,10 +12,17 @@ from __future__ import annotations
 import anyio
 import logging
 
+from pymodbus.constants import ExcCodes
 from pymodbus.exceptions import ModbusIOException
-from pymodbus.factory import ServerDecoder
-from pymodbus.pdu import ExceptionResponse
-from pymodbus.transaction import ModbusSocketFramer
+from pymodbus.pdu import DecodePDU, ExceptionResponse
+
+try:
+    # pymodbus 3.11+
+    from pymodbus.framer.socket import FramerSocket as ModbusSocketFramer
+except ImportError:
+    # pymodbus 3.9
+    from pymodbus.factory import ServerDecoder
+    from pymodbus.transaction import ModbusSocketFramer
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +36,12 @@ class Forwarder:
         self.server = server
         self.client = client
         self.sem = anyio.Semaphore(10)
-        self.framer = ModbusSocketFramer(ServerDecoder())
+        try:
+            # pymodbus 3.11+ uses DecodePDU
+            self.framer = ModbusSocketFramer(DecodePDU(True))
+        except NameError:
+            # pymodbus 3.9 uses ServerDecoder
+            self.framer = ModbusSocketFramer(ServerDecoder())
         self.send_lock = anyio.Lock()
 
     async def work(self, request):
@@ -40,9 +52,7 @@ class Forwarder:
             try:
                 unit = self.server.units[unit_id]
             except KeyError:
-                response = ExceptionResponse(
-                    request.function_code, ExceptionResponse.SLAVE_FAILURE
-                )
+                response = ExceptionResponse(request.function_code, ExcCodes.DEVICE_FAILURE)
             else:
                 response = await unit.process_request(request)
 
@@ -76,7 +86,7 @@ class Forwarder:
                     msgs = []
 
                     while True:
-                        used, pdu = self.framer.processIncomingFrame(data)
+                        used, pdu = self.framer.handleFrame(data, 0, 0)
                         data = data[used:]
                         if pdu is None:
                             break

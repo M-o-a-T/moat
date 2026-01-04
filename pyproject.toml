@@ -94,10 +94,13 @@ dev = [
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
     "cbor2",
+    "gpiod",
+    "numpy",
     "passlib",
     "pytest-trio",
     "pytest-coverage",
     "setuptools-scm",
+    "transitions-aio",
     "wheel",
 ]
 doc = [

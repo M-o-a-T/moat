@@ -41,11 +41,17 @@ from .trace import trace
 from .utils import wlen
 from .windows_eventqueue import EventQueue
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from collections.abc import Buffer
+
 try:
     from ctypes import GetLastError, WinDLL, WinError, windll  # type: ignore[attr-defined]
 except Exception:
     # Keep MyPy happy off Windows
-    import types  # noqa:TC003
     from ctypes import CDLL as WinDLL
     from ctypes import cdll as windll
 
@@ -62,11 +68,11 @@ except Exception:
 
 
 # declare nt optional to allow None assignment on other platforms
-nt: types.ModuleType | None
+nt: ModuleType | None = None
 try:
     import nt
 except ImportError:
-    nt = None
+    pass
 
 
 __all__ = ["WindowsConsole"]
@@ -127,8 +133,10 @@ class _error(Exception):
 
 
 def _supports_vt():
+    if nt is None:
+        return False
     try:
-        return nt._supports_virtual_terminal()  # noqa: SLF001
+        return nt._supports_virtual_terminal()  # noqa: SLF001  # type: ignore[attr-defined]
     except AttributeError:
         return False
 
@@ -164,6 +172,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         self.width = 80
         self.height = 25
         self.__offset = 0
+        self.output_fd = 1  # stdout file descriptor
         self.event_queue = EventQueue(encoding)
         try:
             self.out = io._WindowsConsoleIO(self.output_fd, "w")  # type: ignore[attr-defined]  # noqa: SLF001
@@ -171,15 +180,15 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
             # Console I/O is redirected, fallback...
             self.out = None
 
-    def refresh(self, screen: list[str], c_xy: tuple[int, int]) -> None:
+    async def refresh(self, screen: list[str], xy: tuple[int, int]) -> None:
         """
         Refresh the console screen.
 
         Parameters:
         - screen (list): List of strings representing the screen contents.
-        - c_xy (tuple): Cursor position (x, y) on the screen.
+        - xy (tuple): Cursor position (x, y) on the screen.
         """
-        cx, cy = c_xy
+        cx, cy = xy
 
         while len(self.screen) < min(len(screen), self.height):
             self._hide_cursor()
@@ -203,7 +212,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
             # Scrolling the buffer as the current input is greater than the visible
             # portion of the window.  We need to scroll the visible portion and the
             # entire history
-            self._scroll(scroll_lines, self._getscrollbacksize())
+            await self._scroll(scroll_lines, self._getscrollbacksize())
             self.posxy = self.posxy[0], self.posxy[1] + scroll_lines
             self.__offset += scroll_lines
 
@@ -241,8 +250,11 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
 
     @property
     def input_hook(self):  # moqa: D102  # noqa: D102
-        if nt is not None and nt._is_inputhook_installed():  # noqa: SLF001
-            return nt._inputhook  # noqa: SLF001
+        if nt is None:
+            return None
+        if nt._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
+            return nt._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
+        return None
 
     def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
         minlen = min(wlen(oldline), wlen(newline))
@@ -275,14 +287,15 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
                 # to the left margin should work to get to a known position.
                 self.move_cursor(0, y)
 
-    def _scroll(
+    async def _scroll(
         self, top: int, bottom: int, left: int | None = None, right: int | None = None
     ) -> None:
         scroll_rect = SMALL_RECT()
         scroll_rect.Top = SHORT(top)
         scroll_rect.Bottom = SHORT(bottom)
         scroll_rect.Left = SHORT(0 if left is None else left)
-        scroll_rect.Right = SHORT(self.getheightwidth()[1] - 1 if right is None else right)
+        _height, width = await self.getheightwidth()
+        scroll_rect.Right = SHORT(width - 1 if right is None else right)
         destination_origin = _COORD()
         fill_info = CHAR_INFO()
         fill_info.UnicodeChar = " "
@@ -330,10 +343,10 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
     def _erase_to_end(self) -> None:
         self.__write(ERASE_IN_LINE)
 
-    def prepare(self) -> None:  # moqa: D102  # noqa: D102
+    async def prepare(self) -> None:  # moqa: D102  # noqa: D102
         trace("prepare")
         self.screen = []
-        self.height, self.width = self.getheightwidth()
+        self.height, self.width = await self.getheightwidth()
 
         self.posxy = 0, 0
         self.__offset = 0
@@ -342,7 +355,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
             SetConsoleMode(InHandle, self.__original_input_mode | ENABLE_VIRTUAL_TERMINAL_INPUT)
             self._enable_bracketed_paste()
 
-    def restore(self) -> None:  # moqa: D102  # noqa: D102
+    async def restore(self) -> None:  # moqa: D102  # noqa: D102
         if self.__vt_support:
             # Recover to original mode before running REPL
             self._disable_bracketed_paste()
@@ -362,7 +375,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         elif dy > 0:
             self.__write(MOVE_DOWN.format(dy))
 
-    def move_cursor(self, x: int, y: int) -> None:  # noqa:D102
+    async def move_cursor(self, x: int, y: int) -> None:  # noqa:D102
         if x < 0 or y < 0:
             raise ValueError(f"Bad cursor position {x}, {y}")
 
@@ -372,13 +385,13 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
             self._move_relative(x, y)
             self.posxy = x, y
 
-    def set_cursor_vis(self, visible: bool) -> None:  # noqa: D102
+    async def set_cursor_vis(self, visible: bool) -> None:  # noqa: D102
         if visible:
             self._show_cursor()
         else:
             self._hide_cursor()
 
-    def getheightwidth(self) -> tuple[int, int]:
+    async def getheightwidth(self) -> tuple[int, int]:
         """Return (height, width) where height and width are the height
         and width of the terminal window in characters."""
         info = CONSOLE_SCREEN_BUFFER_INFO()
@@ -412,27 +425,21 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
 
         return rec, read.value
 
-    def get_event(self, block: bool = True) -> Event | None:
-        """Return an Event instance.  Returns None if |block| is false
-        and there is no event pending, otherwise waits for the
-        completion of an event."""
-
-        if not block and not self.wait(timeout=0):
-            return None
+    async def get_event(self) -> Event:
+        """Return an Event instance, blocking until an event is available."""
 
         while self.event_queue.empty():
             rec = self._read_input()
             if rec is None:
-                return None
+                # No input available, continue waiting
+                continue
 
             if rec.EventType == WINDOW_BUFFER_SIZE_EVENT:
                 return Event("resize", "")
 
             if rec.EventType != KEY_EVENT or not rec.Event.KeyEvent.bKeyDown:
                 # Only process keys and keydown events
-                if block:
-                    continue
-                return None
+                continue
 
             key_event = rec.Event.KeyEvent
             raw_key = key = key_event.uChar.UnicodeChar
@@ -455,10 +462,8 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
                         self.event_queue.insert(Event(evt="key", data=key))
                         return Event(evt="key", data="\033")  # keymap.py uses this for meta
                     return Event(evt="key", data=key)
-                if block:
-                    continue
-
-                return None
+                # Unrecognized virtual key code, continue waiting
+                continue
             elif self.__vt_support:
                 # If virtual terminal is enabled, scanning VT sequences
                 for char in raw_key.encode(self.event_queue.encoding, "replace"):
@@ -475,7 +480,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
                     return Event(evt="key", data="\033")  # keymap.py uses this for meta
 
             return Event(evt="key", data=key)
-        return self.event_queue.get()
+        return await self.event_queue.get()
 
     def push_char(self, char: int | bytes) -> None:
         """
@@ -483,16 +488,16 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         """
         raise NotImplementedError("push_char not supported on Windows")
 
-    def beep(self) -> None:  # noqa: D102
+    async def beep(self) -> None:  # noqa: D102
         self.__write("\x07")
 
-    def clear(self) -> None:
+    async def clear(self) -> None:
         """Wipe the screen"""
         self.__write(CLEAR)
         self.posxy = 0, 0
         self.screen = [""]
 
-    def finish(self) -> None:
+    async def finish(self) -> None:
         """Move the cursor to the end of the display and otherwise get
         ready for end.  XXX could be merged with restore?  Hmm."""
         y = len(self.screen) - 1
@@ -501,25 +506,25 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         self._move_relative(0, min(y, self.height + self.__offset - 1))
         self.__write("\r\n")
 
-    def flushoutput(self) -> None:
+    async def flushoutput(self) -> None:
         """Flush all output to the screen (assuming there's some
         buffering going on somewhere).
 
         All output on Windows is unbuffered so this is a nop"""
         pass
 
-    def forgetinput(self) -> None:
+    async def forgetinput(self) -> None:
         """Forget all pending, but not yet processed input."""
         if not FlushConsoleInputBuffer(InHandle):
             raise WinError(GetLastError())
 
-    def getpending(self) -> Event:
+    async def getpending(self) -> Event:
         """Return the characters that have been typed but not yet
         processed."""
         e = Event("key", "", b"")
 
         while not self.event_queue.empty():
-            e2 = self.event_queue.get()
+            e2 = await self.event_queue.get()
             if e2:
                 e.data += e2.data
 
@@ -542,7 +547,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
                 e.data += ch
         return e
 
-    def wait(self, timeout: float | None) -> bool:
+    async def wait(self, timeout: float | None) -> bool:
         """Wait for an event."""
         if timeout is None:
             timeout = INFINITE
@@ -555,7 +560,15 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
             return False
         return True
 
-    def repaint(self) -> None:  # noqa: D102
+    async def rd(self, buf: Buffer) -> int:
+        """Read up to len(buf) bytes from the underlying terminal."""
+        raise NotImplementedError("not supported on Windows - use get_event instead")
+
+    async def wr(self, data: Buffer) -> int:
+        """Write data to the underlying terminal."""
+        raise NotImplementedError("not supported on Windows - use refresh/write instead")
+
+    async def repaint(self) -> None:  # noqa: D102
         raise NotImplementedError("No repaint support")
 
 

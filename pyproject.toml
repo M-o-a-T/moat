@@ -260,5 +260,4 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "docs/**",
-    "moat/lib/repl/windows_*.py",
 ]

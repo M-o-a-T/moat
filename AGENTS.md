@@ -66,6 +66,8 @@ This file isn't just for
 
 - Standard Python, 4-space indents, formatted by `ruff format`.
 - `ruff check` clean. See `pyproject.toml` for global exceptions.
+- while there are pyling comments in the code, we are not using it any more.
+  Ignore them, or remove if you're changing the line anyway.
 - Keep functions reasonably small. Do not repeat yourself.
 - Follow existing practice when naming. Be concise.
 - In legacy code, these guidelines are aspirational:

@@ -1,0 +1,32 @@
+# Notifications are messages below :R.notify.TOPIC topic.
+keepalive:
+  # timeout: 30  # default: ping *1.5
+  #
+  # topic: my_secret_topic
+  title: Server Link down?
+  msg: |
+    The MoaT system at 'some_host' is silent. (MQTT-Keepalive)
+  prio: fatal
+  ok:
+    title: Server Link OK
+    msg: |
+      The MoaT system at 'some_host' is back up. (MQTT-Keepalive)
+    prio: info
+
+timeout:
+  retry: 300
+
+path: !P notify
+# ignore messages older than … seconds
+max_age: 30
+
+# Backends
+backend:
+  - ntfy
+ntfy:
+  # See https://docs.nfty.sh/
+
+  url: https://ntfy.sh.example/
+  # token: tk_whatever
+  # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
+  # topic: my_secret_topic

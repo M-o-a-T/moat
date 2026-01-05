@@ -15,7 +15,7 @@ dependencies = [
     "anyio ~= 4.0",
     "moat-lib-proxy ~= 0.1.0",
     "moat-lib-rpc ~= 0.5.1",
-    "moat-lib-stream ~= 0.1.2",
+    "moat-lib-stream ~= 0.1.3",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.12"
@@ -23,7 +23,7 @@ name = "moat-lib-repl"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='An async readline re-implementation'
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

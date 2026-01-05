@@ -13,8 +13,8 @@ classifiers = [
 ]
 dependencies = [
   "anyio ~= 4.2",
-  "moat-util ~= 0.62.1",
-  "moat-modbus ~= 0.8.8",
+  "moat-util ~= 0.62.2",
+  "moat-modbus ~= 0.8.11",
   "moat-lib-victron ~= 0.1.4",
 ]
 keywords = ["MoaT"]

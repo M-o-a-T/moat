@@ -12,8 +12,8 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "moat-util ~= 0.62.1",
-    "moat-lib-micro ~= 0.2.0",
+    "moat-util ~= 0.62.2",
+    "moat-lib-micro ~= 0.2.1",
     "attrs ~= 23.0",
 ]
 keywords = ["MoaT"]

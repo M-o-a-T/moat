@@ -12,7 +12,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "moat-util ~= 0.62.1",
+    "moat-util ~= 0.62.2",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

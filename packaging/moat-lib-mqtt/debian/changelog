@@ -1,10 +1,16 @@
-mqttproto (0.8.0-4) unstable; urgency=medium
+moat-lib-mqtt (0.8.0-5) unstable; urgency=medium
+
+  * New release for 25.7.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Jan 2026 15:11:06 +0100
+
+moat-lib-mqtt (0.8.0-4) unstable; urgency=medium
 
   * New release for 25.7.0
 
  -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Dec 2025 14:15:16 +0100
 
-mqttproto (0.8.0-0) unstable; urgency=medium
+moat-lib-mqtt (0.8.0-0) unstable; urgency=medium
 
   * Vendorized.
 

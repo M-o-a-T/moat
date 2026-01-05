@@ -9,5 +9,4 @@ execute_after_dh_install:
 	dh_installsysusers
 
 override_dh_installsystemd:
-	dh_installsystemd --no-enable moat-link-notify.service
 	dh_installsystemd moat-link-host.service

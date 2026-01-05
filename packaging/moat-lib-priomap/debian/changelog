@@ -1,3 +1,9 @@
+moat-lib-priomap (0.2.3-1) unstable; urgency=medium
+
+  * New release for 25.7.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Jan 2026 15:09:23 +0100
+
 moat-lib-priomap (0.2.2-6) unstable; urgency=medium
 
   * New release for 25.7.0

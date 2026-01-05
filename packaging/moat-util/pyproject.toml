@@ -20,12 +20,12 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"moat-lib-codec ~= 0.4.10",
-	"moat-lib-micro ~= 0.2.0",
+	"moat-lib-micro ~= 0.2.1",
 	"moat-lib-proxy ~= 0.1.0",
 	"moat-lib-run ~= 0.1.1",
 	"moat-lib-config ~= 0.1.1",
 	]
-version = "0.62.1"
+version = "0.62.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"

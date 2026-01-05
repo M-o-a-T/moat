@@ -16,7 +16,7 @@ dependencies = [
 	"asyncclick",
 	"attrs",
 	"msgpack",
-	"moat-util ~= 0.62.1",
+	"moat-util ~= 0.62.2",
 	"moat-db ~= 0.2.6",
 	"moat-label ~= 0.2.2",
 	"moat-box ~= 0.2.2",

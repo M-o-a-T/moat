@@ -16,7 +16,7 @@ dependencies = [
 	"cadquery ~= 2.0",
 	"moat-lib-config ~= 0.1.1",
 	"moat-lib-run ~= 0.1.1",
-	"moat-util ~= 0.62.1",
+	"moat-util ~= 0.62.2",
 	]
 version = "0.3.9"
 keywords = [ "MoaT",]

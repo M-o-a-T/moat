@@ -15,16 +15,17 @@ dependencies = [
 	"anyio ~= 4.2",
 	"libgpiod ~= 2.2",
 	]
-[project.optional-dependencies]
-dev = [
-	"moat-lib-broadcast ~= 0.1.1",
-]
 version = "0.9.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.9"
 name = "moat-lib-gpio"
 description = "Easy async access to GPIO pins"
 readme = "README.rst"
+
+[project.optional-dependencies]
+dev = [
+	"moat-lib-broadcast ~= 0.1.1",
+]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

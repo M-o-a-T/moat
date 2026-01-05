@@ -16,7 +16,7 @@ dependencies = [
 	"aionotify",
 	"moat-lib-pid ~= 0.6.7",
 	"moat-lib-run ~= 0.1.1",
-	"moat-util ~= 0.62.1",
+	"moat-util ~= 0.62.2",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

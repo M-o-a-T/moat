@@ -13,7 +13,7 @@ classifiers = [
 ]
 dependencies = [
     "anyio ~= 4.0",
-    "moat-util ~= 0.62.1",
+    "moat-util ~= 0.62.2",
     "asyncclick ~= 8.0",
     "simpleeval ~= 1.0",
     "moat-lib-config ~= 0.1.1",

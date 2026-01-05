@@ -27,6 +27,7 @@ requires-python = ">= 3.10"
 dependencies = [
     "anyio ~= 4.4",
     "attrs >= 23.2.0",
+    "httpx-ws",
     "stamina >= 24.2.0",
     "typing-extensions >= 4.0; python_version < '3.11'",
 ]

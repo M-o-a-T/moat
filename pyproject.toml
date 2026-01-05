@@ -95,6 +95,7 @@ dev = [
     "asyncscope ~= 0.11",
     "cbor2",
     "gpiod",
+    "httpx-ws",
     "numpy",
     "passlib",
     "pytest-trio",

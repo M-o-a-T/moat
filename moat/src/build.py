@@ -77,7 +77,7 @@ async def run_tests(pkg: str | None, opts, debug: bool) -> bool:
         return True
 
 
-def do_autotag(repo, repos, major, minor):
+def do_autotag(repo, repos, major, minor, tags):
     "Create tags for updated subrepos"
     for r in repos:
         if r.has_changes(True) or "tag" not in r.vers:
@@ -87,6 +87,7 @@ def do_autotag(repo, repos, major, minor):
             with suppress(AttributeError):
                 del r.vers.pkgrev
             logger.debug("Changes: %s %s", r.name, r.verstr)
+            tags[r.mdash] = r.vers.tag
         elif r.has_changes(False):
             r.vers.pkg = r.vers.get("pkg", 0) + 1
             r.vers.pkgrev = repo.head.commit.hexsha
@@ -515,7 +516,7 @@ async def cli(
 
     # Step 1: check for changed files since last tagging
     if autotag:
-        do_autotag(repo, repos, major, minor)
+        do_autotag(repo, repos, major, minor, tags)
 
     elif not no.tag:
         err = set()

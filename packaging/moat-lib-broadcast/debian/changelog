@@ -1,3 +1,9 @@
+moat-lib-broadcast (0.1.2-7) unstable; urgency=medium
+
+  * New release for 25.8.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Jan 2026 15:36:34 +0100
+
 moat-lib-broadcast (0.1.2-6) unstable; urgency=medium
 
   * New release for 25.7.4

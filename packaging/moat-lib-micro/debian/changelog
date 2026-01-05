@@ -1,3 +1,9 @@
+moat-lib-micro (0.2.1-2) unstable; urgency=medium
+
+  * New release for 25.8.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Jan 2026 15:35:36 +0100
+
 moat-lib-micro (0.2.1-1) unstable; urgency=medium
 
   * New release for 25.7.7

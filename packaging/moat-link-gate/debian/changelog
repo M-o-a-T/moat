@@ -1,0 +1,5 @@
+moat-link-gate (0.1.0-1) unstable; urgency=medium
+
+  * Initial release as separate package
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jan 2025 13:00:00 +0100

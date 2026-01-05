@@ -1,0 +1,26 @@
+Source: moat-link-gate
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+  moat-src,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/moat
+X-DH-Compat: 13
+
+Package: moat-link-gate
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-util,
+  moat-link,
+  python3-moat-lib-mqtt,
+Recommends:
+  python3-trio (>= 0.22),
+Description: Gateway modules for MoaT-Link (KV and MQTT)
+ This package provides gateway functionality for MoaT-Link, including KV
+ (key-value) gateway for data storage integration and MQTT gateway for
+ MQTT broker integration.
+ .
+ Part of the MoaT ecosystem for distributed home automation.

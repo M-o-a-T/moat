@@ -1,0 +1,6 @@
+*.debhelper
+*.substvars
+files
+.debhelper/
+moat-link-notify/
+debhelper-build-stamp

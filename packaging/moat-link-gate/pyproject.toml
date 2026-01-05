@@ -1,0 +1,42 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [ "setuptools", "wheel",]
+
+[project]
+classifiers = [
+	"Intended Audience :: Developers",
+	"Programming Language :: Python :: 3",
+	"Framework :: AsyncIO",
+	"Framework :: Trio",
+	"Framework :: AnyIO",
+	"Development Status :: 4 - Beta",
+	]
+dependencies = [
+	"anyio ~= 4.2",
+	"asyncclick",
+	"attrs",
+	"moat-util ~= 0.62.1",
+	"moat-link ~= 0.2.45",
+	"moat-lib-mqtt ~= 0.0.1",
+	]
+version = "0.1.0"
+keywords = [ "MoaT",]
+requires-python = ">=3.8"
+name = "moat-link-gate"
+description = "Gateway modules for MoaT-Link (KV and MQTT)"
+readme = "README.md"
+
+[[project.authors]]
+name = "Matthias Urlichs"
+email = "matthias@urlichs.de"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

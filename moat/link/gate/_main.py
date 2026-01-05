@@ -99,8 +99,8 @@ async def set_(obj, src, dst, driver, **kw):
     await node_attr(obj, P("gate") + obj.path, **kw)
 
 
-class nstr:  # noqa: D101
-    def __new__(cls, val):  # noqa: D102
+class nstr:
+    def __new__(cls, val):
         if val is NotGiven:
             return val
         return str(val)

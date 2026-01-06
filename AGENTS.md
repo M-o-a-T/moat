@@ -123,10 +123,15 @@ Work is NOT complete until `git push` succeeds.
 
 ### Workflow
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **Push to remote** - This is MANDATORY:
+1. **File issues for remaining work** - Create issues for anything that needs follow-up.
+2. **Run quality gates** (if code changed) - Tests, linters, builds.
+   "git commit" should do this automatically, via pre-commit.
+3. **Commit all work**. Reference the issue(s) in the first line.
+   Example: "Fix moat-abc: wrangled the zumblicator"
+4. **Update issue status** - Close finished work, update in-progress items.
+   Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
+   Don't add information to the bug that's also in the commit's text.
+5. **Push to remote**:
    ```bash
    git pull
    resolve conflicts, if any
@@ -134,8 +139,8 @@ Work is NOT complete until `git push` succeeds.
    git push
    git status  # MUST show "up to date with 'intern/main'"
    ```
-5. **Verify** - All changes committed AND pushed
-6. **Hand off** - Provide context for next session
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
 
 If a git push/pull command fails with a permission error, STOP: the problem is a
 missing SSH key. The user needs to re-add the key before you can continue.

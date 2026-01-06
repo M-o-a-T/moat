@@ -30,14 +30,14 @@ Local use, i.e. within a single process, does not require a codec.
 
 ### Direct calls
 
-```{include} ../../examples/moat-lib-rpc/basic.py
-:lang: python
+```{literalinclude} ../../examples/moat-lib-rpc/basic.py
+:language: python
 ```
 
 ### Using a transport
 
-```{include} ../../examples/moat-lib-rpc/tcp.py
-:lang: python
+```{literalinclude} ../../examples/moat-lib-rpc/tcp.py
+:language: python
 ```
 
 ## Transport Specification

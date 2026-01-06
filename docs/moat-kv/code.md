@@ -1,60 +1,20 @@
-<table>
-<thead>
-<tr class="header">
-<th>Code in MoaT-KV</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td></td>
-</tr>
-<tr class="even">
-<td>MoaT-KV can store Python code and modules, either for direct use by
-your</td>
-</tr>
-<tr class="odd">
-<td><p>client or for a runner daemon.</p></td>
-</tr>
-<tr class="even">
-<td>TODO: There is no dependency resolution. Thus, while you can store
-Python</td>
-</tr>
-<tr class="odd">
-<td>modules in MoaT-KV, there's no guarantee yet that they'll actually
-be present</td>
-</tr>
-<tr class="even">
-<td><p>when your code loads.</p></td>
-</tr>
-<tr class="odd">
-<td>++++</td>
-</tr>
-<tr class="even">
-<td>Code</td>
-</tr>
-<tr class="odd">
-<td><hr /></td>
-</tr>
-<tr class="even">
-<td>Python code stored in MoaT-KV is wrapped with a procedure context,
-mainly to</td>
-</tr>
-<tr class="odd">
-<td>make returning a result more straightforward. This is done by
-indenting the</td>
-</tr>
-<tr class="even">
-<td>code before compiling it: don't depend on multi-line strings to be
-flush</td>
-</tr>
-<tr class="odd">
-<td><p>left.</p></td>
-</tr>
-<tr class="even">
-<td>Storage</td>
-</tr>
-</tbody>
-</table>
+# Code in MoaT-KV
+
+MoaT-KV can store Python code and modules, either for direct use by your
+client or for a runner daemon.
+
+TODO: There is no dependency resolution. Thus, while you can store Python
+modules in MoaT-KV, there's no guarantee yet that they'll actually be present
+when your code loads.
+
+## Code
+
+Python code stored in MoaT-KV is wrapped with a procedure context, mainly to
+make returning a result more straightforward. This is done by indenting the
+code before compiling it: don't depend on multi-line strings to be flush
+left.
+
+### Storage
 
 The location for executable scripts is configurable and defaults to
 ":.moat.kv.code.proc". Scripts are stored as a dict with these
@@ -84,13 +44,13 @@ naming it: `cr("forty.two")` or `cr(("forty","two"))` will run the code
 stored at `:.moat.kv.code.proc.forty.two`. All arguments will be passed
 to the stored code.
 
-# Modules
+## Modules
 
 Python modules are stored to MoaT-KV as plain code.
 
 Recursive dependencies are not allowed.
 
-## Storage
+### Storage
 
 The location for Python modules is configurable and defaults to
 ":.moat.kv.code.module". Modules are stored as a dict with these
@@ -99,7 +59,7 @@ attributes:
 - `code`: the actual program text
 - `requires`: other modules which this module needs to be loaded.
 
-## Usage
+### Usage
 
 Call `await ModuleRoot.as_handler(client)`. All modules in your MoaT-KV
 store are loaded into the Python interpreter; use normal import
@@ -107,7 +67,7 @@ statements to access them.
 
 TODO: Modules are not yet loaded incrementally.
 
-# Runners
+## Runners
 
 The distributed nature of MoaT-KV lends itself to running arbitrary code
 on any node that can accomodate it.
@@ -126,7 +86,7 @@ All groups and all runners are distinct. Which nodes actually execute
 the code you enter into MoaT-KV is determined solely by running
 `moat kv run all` on them, with the appropriate options.
 
-# Single-node runner
+### Single-node runner
 
 This runner executes code on a specific node. This is useful e.g. if you
 need to access non-redundant hardware, e.g. a 1wire bus connected to a
@@ -134,7 +94,7 @@ specific computer.
 
 On the command line you access this runner with `moat kv run -n NAME`.
 
-# Any-node runner
+### Any-node runner
 
 This runner executes code on one of a group of nodes. Which node
 executes the code is largely determined by chance, startup order, or
@@ -146,7 +106,7 @@ TODO: Load balancing is not yet implemented.
 On the command line you access this runner with `moat kv run`, i.e.
 without using the `-n ‹node›` option.
 
-# All-node runner
+### All-node runner
 
 This runner executes code on all members of a group of nodes. You access
 it with `moat kv run -n -`.
@@ -162,7 +122,7 @@ The actual runtime information is stored in a separate "state" node.
 This avoids race conditions. See `moat.kv.runner.StateEntry` for
 details.
 
-# Variables
+## Variables
 
 The runners pass a couple of variables to their code.
 
@@ -177,15 +137,14 @@ The runners pass a couple of variables to their code.
 
 - \_cls
 
-  A dict (actually,
-  <span class="title-ref">moat.kv.util.attrdict</span>) with various
+  A dict (actually, `moat.kv.util.attrdict`) with various
   runner-related message classes. Convenient if you want to avoid a
   cumbersome `import` statement in your code, since these are not part
   of MoaT-KV's public API.
 
 - \_digits
 
-  A reference to <span class="title-ref">moat.kv.util.digits</span>.
+  A reference to `moat.kv.util.digits`.
 
 - \_info (async only)
 
@@ -197,23 +156,20 @@ The runners pass a couple of variables to their code.
 
 - \_P
 
-  <span class="title-ref">moat.kv.util.P</span>, to decode a Path string
-  to a Path object.
+  `moat.kv.util.P`, to decode a Path string to a Path object.
 
 - \_Path
 
-  <span class="title-ref">moat.kv.util.Path</span>, to convert a list of
-  path elements to a Path object.
+  `moat.kv.util.Path`, to convert a list of path elements to a Path object.
 
 - \_self (async only)
 
-  The controller. See
-  <span class="title-ref">moat.kv.runner.CallAdmin</span>, below.
+  The controller. See `moat.kv.runner.CallAdmin`, below.
 
 These variables, as well as the contents of the data associated with the
 runner, are available as global variables.
 
-## Node Groups
+### Node Groups
 
 All runners are part of a group of nodes. The Any-Node runners use the
 group to synchronize job startup.
@@ -225,52 +181,56 @@ operation when disconnected" or similar fallback strategies.
 ### CallAdmin
 
 Your code has access to a `_self` variable which contains a
-<span class="title-ref">CallAdmin</span> object. The typical usage
+`CallAdmin` object. The typical usage
 pattern is to start monitoring some MoaT-KV entries with
-<span class="title-ref">CallAdmin.watch</span>, then iterate `_info` for
+`CallAdmin.watch`, then iterate `_info` for
 the values of those entries. When you get a
-<span class="title-ref">ReadyMsg</span> event, all values have been
+`ReadyMsg` event, all values have been
 transmitted; you can then set up some timeouts, set other values, access
 external services, and do whatever else your code needs to do.
 
 MoaT-KV client code requires an async context manager for most scoped
-operations. Since a <span class="title-ref">CallAdmin</span> is scoped
+operations. Since a `CallAdmin` is scoped
 by definition, it can manage these scopes for you. Thus, instead of
 writing boilerplate code like this:
 
-    import anyio
-    import moat.kv.runner
-    """
-    Assume we want to process changes from these two subtrees
-    for 100 seconds
-    """
-    async with _client.watch(_P("some.special.path")) as w1:
-       async with _client.watch(P("some.other.path")) as w2:
-          q = anyio.create_queue()  # q_s,q_r = anyio.create_memory_object_stream()
-          async def _watch(w):
-             async for msg in w:
-                await q.put(msg)  # q_s.send(msg)
-          async def _timeout(t):
-             await anyio.sleep(t)
-             await process_timeout()
-          await _self.spawn(_watch, w1)
-          await _self.spawn(_watch, w2)
-          await _self.spawn(_timeout, 100)
-          async for msg in q:  # q_r
-             await process_data(msg)
+```python
+import anyio
+import moat.kv.runner
+"""
+Assume we want to process changes from these two subtrees
+for 100 seconds
+"""
+async with _client.watch(_P("some.special.path")) as w1:
+   async with _client.watch(P("some.other.path")) as w2:
+      q = anyio.create_queue()  # q_s,q_r = anyio.create_memory_object_stream()
+      async def _watch(w):
+         async for msg in w:
+            await q.put(msg)  # q_s.send(msg)
+      async def _timeout(t):
+         await anyio.sleep(t)
+         await process_timeout()
+      await _self.spawn(_watch, w1)
+      await _self.spawn(_watch, w2)
+      await _self.spawn(_timeout, 100)
+      async for msg in q:  # q_r
+         await process_data(msg)
+```
 
 you can simplify this to:
 
-    await _self.watch(_P("some.special.path"))
-    await _self.watch(_P("some.other.path"))
-    await _self.timer(100)
-    async for msg in _info:
-       if msg is None:
-          return  # system was stalled
-       elif isinstance(msg, _cls.TimerMsg):
-          await process_timeout()
-       elif isinstance(msg, _cls.ChangeMsg):
-          await process_data(msg.msg)
+```python
+await _self.watch(_P("some.special.path"))
+await _self.watch(_P("some.other.path"))
+await _self.timer(100)
+async for msg in _info:
+   if msg is None:
+      return  # system was stalled
+   elif isinstance(msg, _cls.TimerMsg):
+      await process_timeout()
+   elif isinstance(msg, _cls.ChangeMsg):
+      await process_data(msg.msg)
+```
 
 Distinguishing messages from different sources can be further simplified
 by using distinct `cls=` parameters (subclasses of `ChangeMsg` and
@@ -287,21 +247,18 @@ If you use `max_depth`, entries are returned in mostly-depth-first
 order. It's "mostly" because updates may arrive at any time. A
 `ReadyMsg` message is sent when the subtree is complete.
 
-The <span class="title-ref">CallAdmin.spawn</span> method starts a
-subtask.
+The `CallAdmin.spawn` method starts a subtask.
 
-<span class="title-ref">watch</span>,
-<span class="title-ref">timer</span>, and
-<span class="title-ref">spawn</span> each return an object which you can
+`watch`, `timer`, and `spawn` each return an object which you can
 call `await res.cancel()` on, which causes the watcher, timer or task in
 question to be terminated.
 
-# Messages
+## Messages
 
 The messages in `_info` can be used to implement a state machine. If
 your code is long-running and async, you should iterate them; if the
 queue is full, your code may be halted. Alternately you'll get a
-<span class="title-ref">None</span> message. That message indicates that
+`None` message. That message indicates that
 the queue has stalled: you should exit.
 
 The following message types are defined. You're free to ignore any you
@@ -337,7 +294,7 @@ don't recognize.
 
   A timer has triggered. The message's `msg` attribute is the timer,
   i.e. the value you got back from `_self.timer`. You can use
-  <span class="title-ref">Timer.run(delay)</span> to restart the timer.
+  `Timer.run(delay)` to restart the timer.
 
   You can use the timer's `cls` argument to subclass this message, to
   simplify dispatching.

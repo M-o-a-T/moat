@@ -14,5 +14,6 @@ TODO
 :maxdepth: 2
 :hidden:
 
+messages
 api
 ```

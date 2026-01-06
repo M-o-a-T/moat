@@ -20,7 +20,6 @@ config
 apps
 async
 parts
-messages
 serial
 cbor-readonly
 mpy-diff

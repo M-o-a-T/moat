@@ -1,7 +1,7 @@
 MQTT state-machine protocol (moat.lib.mqtt)
 ===========================================
 
-.. include:: ../packaging/moat-lib-mqtt/README.md
+.. include:: ../../packaging/moat-lib-mqtt/README.md
    :start-after: % start main
    :end-before: % end main
 

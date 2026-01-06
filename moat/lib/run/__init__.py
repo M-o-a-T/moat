@@ -753,23 +753,24 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     """
     The main command entry point, when testing.
 
-    main: special main function, defaults to moat.run.main_
-    name: command name, defaults to {main}'s toplevel module name.
-    {sub,ext}_{pre,post}: commands to load in submodules or extensions.
+    Args:
+        main: special main function, defaults to `moat.lib.run.main`.
+        name: command name, defaults to {main}'s toplevel module name.
 
-    cfg: additional configuration to preconfigure
-    cfg_files: additional configuration file(s) to load
-    cfg_load_all: Flag whether to load the default config file(s): True=all,
-        False=first found, None=No.
+        cfg: additional configuration to preconfigure
+        cfg_files: additional configuration file(s) to load
+        cfg_load_all: Flag whether to load the default config file(s): True=all,
+            False=first found, None=No.
 
-    wrap: Flag: this is a subcommand. Don't set up logging, return the awaitable.
-    args: Argument list if called from a test, `None` otherwise.
-    help: Help text of your code.
+        wrap: Flag: this is a subcommand. Don't set up logging, return the awaitable.
+        args: Argument list if called from a test, `None` otherwise.
+        help: Help text of your code.
+
+    The arguments ``{sub,ext}_{pre,post}`` contain prefixes and suffices
+    for loading commands in submodules or extensions.
 
     Internal extensions are loaded as ``{sub_pre}.*.{sub_post}``.
     External extensions are loaded as ``{ext_pre}.*.{ext_post}``.
-
-    cfg.moat may contain values for {sub,ext}_{pre,post}.
     """
 
     obj = getattr(ctx, "obj", None)

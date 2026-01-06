@@ -1,3 +1,4 @@
+(moat-lib-rpc-messages)=
 # MoaT Message Structure
 
 Links between MoaT devices are always one-to-one and bidirectional.

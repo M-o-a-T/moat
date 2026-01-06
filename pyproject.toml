@@ -110,6 +110,7 @@ doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
     "sphinx-immaterial",
+    "sphinx-tabs",
     "sphinx-toolbox",
     "myst-parser",
     "sphinx-design",

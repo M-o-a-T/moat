@@ -20,4 +20,6 @@ from moat.lib.config import CfgStore
 
 from ._server import Server as Server
 
+__all__ = []
+
 CfgStore.with_(__name__)

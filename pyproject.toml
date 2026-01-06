@@ -28,6 +28,8 @@ dependencies = [
 	"httpx",
 	"jmespath",
 	"jsonschema",
+        "pydantic ~= 2.12",
+        "pydantic_variants ~= 0.3",
 	"pynacl",
 	"outcome",
 	"psutil",

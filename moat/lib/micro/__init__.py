@@ -181,13 +181,13 @@ async def sleep_ms(ms: float) -> None:
 
 
 async def wait_for[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
-    "timeout if the call to p(*a,**k) takes longer than @timeout seconds"
+    "timeout if the call to ``p(*a,**k)`` takes longer than @timeout seconds"
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
 
 async def wait_for_ms[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
-    "timeout if the call to p(*a,**k) takes longer than @timeout milliseconds"
+    "timeout if the call to ``p(*a,**k)`` takes longer than @timeout milliseconds"
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
 
@@ -195,7 +195,7 @@ async def wait_for_ms[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k
 async def every_ms[R](
     t: float, p: Callable[..., Awaitable[R]] | None = None, *a, **k
 ) -> AsyncIterator[R | None]:
-    "every t milliseconds, call p(*a,**k)"
+    "every t milliseconds, call ``p(*a,**k)``"
     tt = ticks_add(ticks_ms(), int(t))
     while True:
         try:
@@ -213,7 +213,7 @@ async def every_ms[R](
 
 
 def every(t: float, *a, **k) -> AsyncIterator[Any]:
-    "every t seconds, call p(*a,**k)"
+    "every t seconds, call ``p(*a,**k)``"
     return every_ms(t * 1000, *a, **k)
 
 

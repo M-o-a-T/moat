@@ -1,24 +1,24 @@
-# moat-link-notify
+# Notification gateway
+
+% start synopsis
+% start main
 
 Notification gateway for MoaT-Link.
 
 This package provides notification services for MoaT-Link, allowing you to send
-notifications to external services like ntfy.sh.
+notifications to external services.
 
-## Installation
+% end synopsis
 
-```bash
-pip install moat-link-notify
-```
+## Backends
+
+Currently the only implemented backend is `ntfy.sh`.
+
+% end main
 
 ## Usage
 
 The notification gateway can be configured through MoaT-Link's configuration system.
-
-## Dependencies
-
-- moat-link: Core MoaT-Link functionality
-- httpx: HTTP client for notification delivery
 
 ## License
 

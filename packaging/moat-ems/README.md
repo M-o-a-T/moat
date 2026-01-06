@@ -1,6 +1,7 @@
 # MoaT EMS
 
 % start synopsis
+% start main
 
 This module contains a collection of code related to energy management.
 
@@ -31,3 +32,5 @@ by not send any energy to the grid which you previously got from it.
 Energy use scheduling. Given possibly-variable prices for power (including
 grid feed-out), variable PV output, and local demand, this code models
 which strategy results in the lowest energy cost.
+
+% start main

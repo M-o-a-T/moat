@@ -1,6 +1,7 @@
 # MoaT-KV-Cal
 
 % start synopsis
+% start main
 
 MoaT-KV-Cal is a calendar extension to MoaT-KV.
 
@@ -9,3 +10,4 @@ entries, set alerts, control that they are acknowledged, and escalate
 if/when they are not.
 
 % end synopsis
+% end main

@@ -3,6 +3,7 @@
 Welcome to [MoaT-KV](https://github.com/MoaT/moat-kv)!
 
 % start synopsis
+% start main
 
 MoaT-KV is a master-less distributed key-value storage system. It
 circumvents the CAP theorem (you can't have all of consistency, availablilty,
@@ -36,6 +37,14 @@ Stored data are **not** forced to be strings or binary sequences, but can
 be anything that `MsgPack` supports. Keys to storage are multi-level and
 support string, integer/float, and tuple keys.
 
+## Status
+
+MoaT-KV is in end-of-life. There are a lot of corner cases that don't
+have tests. Critical bugs may be fixed, but "real" development continues
+in `MoaT-Link`.
+
+% end main
+
 ## Non-Features
 
 MoaT-KV does not support data partitioning. Every node stores the whole
@@ -43,15 +52,6 @@ data set and can instantly deliver mostly-uptodate data.
 
 MoaT-KV does not have a disk-based storage backend. Periodic snapshots and
 event logs can be used to quickly restore a system, if necessary.
-
-## Status
-
-MoaT-KV is mostly stable. There are a lot of corner cases that don't
-have tests yet.
-
-TODOs:
-\* some services (esp. command line tools and runners) are under-tested
-\* there's no good API for errors
 
 ## TODO
 

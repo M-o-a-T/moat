@@ -1,6 +1,7 @@
 # MoaT-KV-HA
 
 % start synopsis
+% start main
 
 This module is a link between Home Assistant and Moat-KV.
 
@@ -12,10 +13,12 @@ Gate](moat-link-gate-top) instance.
 
 % end synopsis
 
-It will
+## Features
 
 - set up standard config for Home Assistant in MoaT-KV
-- have command-line support to register (or not) devices
+- command-line support to register (or not) devices
+
+% end main
 
 ## Principle of Operation
 

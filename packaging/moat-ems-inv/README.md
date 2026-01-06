@@ -1,6 +1,7 @@
 # Victron Scripts
 
 % start synopsis
+% start main
 
 This repository attempts to establish a modern framework for talking to
 Victron Energy products, mainly via Dbus.
@@ -49,6 +50,8 @@ advantages:
   controller.
 
 * etc.
+
+% end main
 
 ## Modules
 

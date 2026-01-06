@@ -1,6 +1,7 @@
 # Utilities for Python
 
 % start synopsis
+% start main
 
 This is the MoaT's "utilities" submodule.  It contains code that the rest
 of MoaT uses rather extensively but which doesn't warrant packaging into
@@ -17,6 +18,8 @@ Feel free to extend, embrace, or split off. Patches welcome.
 
 A few. Read the code and the subpackages' documentation; I didn't get
 around to documenting all of that yet.
+
+% end main
 
 ## License
 

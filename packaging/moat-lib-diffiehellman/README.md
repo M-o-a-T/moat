@@ -1,16 +1,26 @@
-# diffiehellman
-![Travis CI](https://travis-ci.org/chrisvoncsefalvay/diffiehellman.svg?branch=master) [![PyPI version](https://badge.fury.io/py/diffiehellman.svg)](https://badge.fury.io/py/diffiehellman)
+# Diffie-Hellman key exchange
 
 % start synopsis
+% start main
 
 This is a Python-only version of the Diffie-Hellman key exchange library.
 
 % end synopsis
 
+## Features
+
+* Implements Diffie-Hellman key exchange
+* Pretty fast
+* Adjustable key size
+* Includes primes for groups 5 and 14-18
+* Currently works only with Python 3 (requires ssl). An OpenSSL compatible version is in the works.
+
+% end main
+
 ## Usage
 
 ```python
-from diffiehellman.diffiehellman import DiffieHellman
+from moat.lib.diffiehellman import DiffieHellman
 
 alice = DiffieHellman()
 bob = DiffieHellman()
@@ -21,20 +31,6 @@ bob.generate_public_key()
 alice.generate_shared_secret(bob.public_key, echo_return_key=True)
 bob.generate_shared_secret(alice.public_key, echo_return_key=True)
 ```
-
-## Install
-
-```shell
-pip install diffiehellman
-```
-
-## Features
-
-* Implements Diffie-Hellman key exchange
-* Pretty fast
-* Adjustable key size
-* Includes primes for groups 5 and 14-18
-* Currently works only with Python 3 (requires ssl). An OpenSSL compatible version is in the works.
 
 ## Code of Misconduct
 

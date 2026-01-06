@@ -1,25 +1,27 @@
 # moat-link-gate
 
+% start synopsis
+% start main
+
 Gateway modules for MoaT-Link providing KV and MQTT integrations.
 
 This package provides gateway functionality for MoaT-Link, including:
-- KV (key-value) gateway for data storage integration
-- MQTT gateway for MQTT broker integration
+- MoaT-KV gateway for data storage integration
+- "Raw" MQTT, using configurable codecs
 
-## Installation
+% end synopsis
 
-```bash
-pip install moat-link-gate
-```
+## Features
+
+The gateway bidirectionally translates from MoaT-Link to various other
+destinations. Messages are timestamped and marked, so there are no update
+cycles.
+
+% end main
 
 ## Usage
 
 The gateways can be configured through MoaT-Link's configuration system.
-
-## Dependencies
-
-- moat-link: Core MoaT-Link functionality
-- moat-lib-mqtt: MQTT client library
 
 ## License
 

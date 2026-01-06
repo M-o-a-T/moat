@@ -1,11 +1,23 @@
 # The MoaT-Codec library
 
 % start synopsis
+% start main
 
 This library packages various codecs used for MoaT protocols
 in a way that's reason- and stream-able.
 
 % end synopsis
+
+## Supplied codecs
+
+- CBOR
+- msgpack
+- no-op
+- UTF-8
+- JSON
+- YAML
+
+% end main
 
 ## Interface
 

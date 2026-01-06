@@ -1,6 +1,7 @@
 # The MoaT Battery Scheduler
 
 % start synopsis
+% start main
 
 This module implements a scheduling algorithm for a photovoltaic system
 with battery. It considers varying projected PV gain, local load, and
@@ -17,6 +18,8 @@ Use `--help` for usages.
 
 `moat ems sched analyze` reads the data it needs from a variety of possible
 channels. Likewise, it sends its output to them.
+
+% end main
 
 ### Data per interval
 

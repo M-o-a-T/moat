@@ -1,17 +1,14 @@
 # Broadcasting
 
 % start synopsis
+% start main
 
-This module provides async broadcasting, with a finite, non-blocking
-message queue and data loss detection.
+This module provides async broadcasting, with a finite message queue.
+
+The writer does not block; the reader supports data loss detection.
 
 % end synopsis
-
-## Installation
-
-```bash
-pip install moat-lib-broadcast
-```
+% end main
 
 ## Usage
 

@@ -13,6 +13,7 @@ from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial, wraps
 from pathlib import Path as FSPath
+from types import NoneType
 
 import asyncclick as click
 import simpleeval
@@ -49,7 +50,6 @@ __all__ = [
 
 this_load = ContextVar("this_load", default=None)
 
-NoneType = type(None)
 
 # cmd_eval is a simple and safe "eval" replacement.
 _eval = simpleeval.SimpleEval(functions={})

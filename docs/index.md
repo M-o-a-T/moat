@@ -235,7 +235,7 @@ things is TODO.
 
 ### Vendorized libraries
 
-#### [MQTT protocol](moat-lib-mqtt/index.md)
+#### [MQTT protocol](moat-lib-mqtt/index)
 
 ```{include} ../packaging/moat-lib-mqtt/README.md
 :start-after: % start synopsis

@@ -1,4 +1,5 @@
 (moat-link)=
+(moat-link-gate-top)=
 # The Link: Connecting programs and data
 
 ```{include} ../../packaging/moat-link/README.md

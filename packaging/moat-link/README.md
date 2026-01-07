@@ -46,7 +46,7 @@ single hierarchy doesn't always mesh well with other systems' ideas.
 There can be multiple MoaT-Link servers. Clients automatically reconnect
 when one of them disconnects or becomes unresponsive.
 
-Planned: [support for multiple MQTT servers](todo-link-mqtt).
+Planned: support for multiple MQTT servers.
 
 
 ### Error handling

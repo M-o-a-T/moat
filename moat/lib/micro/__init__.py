@@ -63,6 +63,14 @@ This is equivalent to::
         await agen.aclose()
 """
 
+# Monkeypatch breakpoint's docstring to be Sphinx-compatible
+breakpoint.__doc__ = """
+Enter the debugger at the call site.
+
+Calls ``sys.breakpointhook(*args, **kws)``. By default, this drops you
+into the pdb debugger.
+"""
+
 __all__ = [
     "ACM",
     "AC_exit",

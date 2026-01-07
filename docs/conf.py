@@ -65,9 +65,9 @@ extensions = [
     "sphinx_autodoc_typehints",
     "enum_tools.autoenum",
     "myst_parser",
-    #"sphinx_immaterial",
-    #"sphinx_immaterial.apidoc.python.apigen",
-    #"sphinx_immaterial.theme_result",
+    # "sphinx_immaterial",
+    # "sphinx_immaterial.apidoc.python.apigen",
+    # "sphinx_immaterial.theme_result",
     "sphinx_design",
     "sphinx_favicon",
     "sphinx_book_theme",
@@ -158,9 +158,9 @@ html_logo = "_static/MoaT.svg"
 
 # theme options
 html_theme_options = {
-#   "icon": {
-#       "repo": "fontawesome/brands/github",
-#   },
+    #   "icon": {
+    #       "repo": "fontawesome/brands/github",
+    #   },
     "globaltoc_collapse": False,
     "show_toc_level": 4,
     "toc_title": "Contents",
@@ -168,9 +168,7 @@ html_theme_options = {
     "show_nav_level": 2,
 }
 
-html_sidebars = {
-    "**": ["navbar-logo.html", "search-field.html", "sbt-sidebar-nav.html"]
-}
+html_sidebars = {"**": ["navbar-logo.html", "search-field.html", "sbt-sidebar-nav.html"]}
 
 html_last_updated_fmt = ""
 html_use_index = True
@@ -185,7 +183,7 @@ intersphinx_mapping = {
 }
 
 autodoc2_packages = [
-        "../moat",
+    "../moat",
 ]
 autodoc2_render_plugin = "rst"
 autodoc2_output_dir = "api"
@@ -212,9 +210,8 @@ autodoc_typehints = "signature"
 autodoc_typehints_description_target = "documented"
 autodoc_typehints_format = "short"
 
-autodoc_type_aliases = {
-}
-autoclass_content = 'both'
+autodoc_type_aliases = {}
+autoclass_content = "both"
 
 
 # -- Sphinx Immaterial configs -------------------------------------------------
@@ -468,8 +465,8 @@ def gen_icons():
 
 
 def setup(app):
-    #monkey_patch_parse_see_also()
-    #app.connect("autodoc-skip-member", autodoc_skip_member)
-    #app.connect("autodoc-process-bases", autodoc_process_bases)
-    #app.connect("autodoc-process-signature", autodoc_process_signature)
+    # monkey_patch_parse_see_also()
+    # app.connect("autodoc-skip-member", autodoc_skip_member)
+    # app.connect("autodoc-process-bases", autodoc_process_bases)
+    # app.connect("autodoc-process-signature", autodoc_process_signature)
     gen_icons()

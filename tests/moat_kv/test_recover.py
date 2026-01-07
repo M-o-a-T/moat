@@ -8,9 +8,9 @@ from unittest import mock
 import trio
 from asyncactor.actor import Actor
 
-from moat.util import P, Path
 from moat.kv.mock.mqtt import stdtest
 from moat.kv.server import Server
+from moat.lib.path import P, Path
 
 logger = logging.getLogger(__name__)
 

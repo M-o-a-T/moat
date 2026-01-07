@@ -13,7 +13,8 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.util import CtxObj, NotGiven, Path, Root, attrdict, get_codec
+from moat.util import CtxObj, NotGiven, attrdict, get_codec
+from moat.lib.path import Path, Root
 
 from typing import TYPE_CHECKING
 

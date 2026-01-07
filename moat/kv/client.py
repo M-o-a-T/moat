@@ -21,7 +21,6 @@ from moat.util import (  # pylint: disable=no-name-in-module
     DelayedWrite,
     NotGiven,
     OptCtx,
-    PathLongener,
     ValueEvent,
     al_lower,
     attrdict,
@@ -34,6 +33,7 @@ from moat.util import (  # pylint: disable=no-name-in-module
 )
 from moat.lib.codec import get_codec
 from moat.lib.config import CFG
+from moat.lib.path import PathLongener
 
 from .exceptions import (
     ClientAuthMethodError,

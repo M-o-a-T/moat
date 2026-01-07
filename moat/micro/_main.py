@@ -16,8 +16,6 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
-    P,
-    Path,
     combine_dict,
     merge,
     to_attrdict,
@@ -27,6 +25,10 @@ from moat.util import (
 from moat.lib.codec import get_codec
 from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.lib.micro import idle
+from moat.lib.path import (
+    P,
+    Path,
+)
 from moat.lib.rpc import Msg
 from moat.lib.run import attr_args, load_subgroup, process_args
 from moat.micro.cmd.tree.dir import Dispatch

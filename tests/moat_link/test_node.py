@@ -6,7 +6,8 @@ import pytest
 import time
 from itertools import zip_longest
 
-from moat.util import NotGiven, P, PathLongener
+from moat.util import NotGiven
+from moat.lib.path import P, PathLongener
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 

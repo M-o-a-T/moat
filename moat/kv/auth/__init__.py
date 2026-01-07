@@ -66,10 +66,11 @@ from importlib import import_module
 
 import jsonschema
 
-from moat.util import NotGiven, Path, attrdict, split_arg, yload
+from moat.util import NotGiven, attrdict, split_arg, yload
 from moat.kv.client import Client, NoData
 from moat.kv.exceptions import NoAuthModuleError
 from moat.kv.types import ACLFinder, NullACL
+from moat.lib.path import Path
 
 from typing import TYPE_CHECKING
 

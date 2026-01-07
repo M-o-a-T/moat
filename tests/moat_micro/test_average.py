@@ -8,8 +8,9 @@ import anyio
 import pytest
 from contextlib import suppress
 
-from moat.util import P, yload
+from moat.util import yload
 from moat.lib.micro import CancelledError
+from moat.lib.path import P
 from moat.lib.rpc import NoStream
 from moat.micro._test import mpy_stack
 

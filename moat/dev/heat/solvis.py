@@ -20,9 +20,6 @@ import aionotify
 import asyncclick as click
 
 from moat.util import (
-    P,
-    Path,
-    PathLongener,
     attrdict,
     combine_dict,
     pos2val,
@@ -33,6 +30,11 @@ from moat.util import (
     yprint,
 )
 from moat.kv.client import open_client
+from moat.lib.path import (
+    P,
+    Path,
+    PathLongener,
+)
 from moat.lib.pid import CPID
 
 FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"

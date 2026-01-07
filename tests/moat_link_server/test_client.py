@@ -3,7 +3,8 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from moat.util import NotGiven, P, Path
+from moat.util import NotGiven
+from moat.lib.path import P, Path
 from moat.link._test import Scaffold
 from moat.link.exceptions import OutOfDateError
 from moat.link.meta import MsgMeta

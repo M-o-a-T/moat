@@ -7,8 +7,8 @@ from __future__ import annotations
 import pytest
 import sys
 
-from moat.util import P
 from moat.lib.micro import ACM, AC_exit, ticks_diff, ticks_ms
+from moat.lib.path import P
 from moat.lib.proxy import as_proxy
 from moat.micro._test import mpy_stack
 

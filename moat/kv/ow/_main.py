@@ -7,12 +7,14 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
-    P,
-    Path,
     attrdict,
     yprint,
 )
 from moat.kv.data import data_get, node_attr
+from moat.lib.path import (
+    P,
+    Path,
+)
 from moat.lib.run import attr_args
 from moat.link.announce import as_service
 

@@ -10,7 +10,8 @@ import time
 from abc import ABCMeta, abstractmethod
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from moat.util import CtxObj, NotGiven, P, Path, as_service, attrdict
+from moat.util import CtxObj, NotGiven, as_service, attrdict
+from moat.lib.path import P, Path
 from moat.lib.priomap import PrioMap
 
 from typing import TYPE_CHECKING

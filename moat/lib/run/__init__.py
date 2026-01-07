@@ -18,8 +18,9 @@ from types import NoneType
 import asyncclick as click
 import simpleeval
 
-from moat.util import NotGiven, P, Path, attrdict, ungroup
+from moat.util import NotGiven, attrdict, ungroup
 from moat.lib.config import CFG, CfgStore, current_cfg
+from moat.lib.path import P, Path
 
 from collections import defaultdict
 from collections.abc import Mapping

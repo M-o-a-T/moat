@@ -16,7 +16,8 @@ from asyncowfs.event import (
     DeviceValue,
 )
 
-from moat.util import NotGiven, Path, combine_dict
+from moat.util import NotGiven, combine_dict
+from moat.lib.path import Path
 
 from .model import OWFSroot
 

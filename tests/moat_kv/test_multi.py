@@ -6,8 +6,9 @@ from unittest import mock
 import msgpack
 import trio
 
-from moat.util import P, Path, attrdict
+from moat.util import attrdict
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P, Path
 
 # doesn't yet work with MQTT because we can't split
 # requires asyncserf which is dead

@@ -7,9 +7,9 @@ from __future__ import annotations
 import anyio
 import logging
 
-from moat.util import Path
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import ClientEntry, ClientRoot
+from moat.lib.path import Path
 
 logger = logging.getLogger(__name__)
 

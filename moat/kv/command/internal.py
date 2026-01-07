@@ -6,7 +6,8 @@ import contextlib
 import asyncclick as click
 from range_set import RangeSet
 
-from moat.util import P, PathLongener, yprint
+from moat.util import yprint
+from moat.lib.path import P, PathLongener
 
 from collections.abc import Mapping
 

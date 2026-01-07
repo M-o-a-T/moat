@@ -8,13 +8,14 @@ from logging import getLogger
 
 from attrs import define, field
 
-from moat.util import Path, make_proc
+from moat.util import make_proc
 
 from . import Node
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import Path
     from moat.link.meta import MsgMeta
 
     from typing import Any

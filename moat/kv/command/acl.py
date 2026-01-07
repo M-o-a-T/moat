@@ -5,8 +5,9 @@ import sys
 
 import asyncclick as click
 
-from moat.util import P, Path, yprint
+from moat.util import yprint
 from moat.kv.data import data_get
+from moat.lib.path import P, Path
 
 ACL = set("rwdcxena")
 # read, write, delete, create, access, enumerate

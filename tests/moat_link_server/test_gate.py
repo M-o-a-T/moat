@@ -9,11 +9,12 @@ from unittest import mock
 
 import trio
 
-from moat.util import P, combine_dict, to_attrdict
+from moat.util import combine_dict, to_attrdict
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
 from moat.kv.server import Server as KVServer
 from moat.lib.codec import get_codec
+from moat.lib.path import P
 from moat.link._data import backend_get, data_get
 from moat.link._test import Scaffold
 from moat.link.gate import run_gate

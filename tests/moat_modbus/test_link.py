@@ -5,7 +5,8 @@ import pytest
 
 import trio
 
-from moat.util import P, yload
+from moat.util import yload
+from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.modbus.client import ModbusClient
 from moat.modbus.dev.poll import dev_poll

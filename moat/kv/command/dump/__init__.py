@@ -8,10 +8,12 @@ import asyncclick as click
 
 from moat.util import (
     MsgWriter,
-    P,
-    Path,
     yload,
     yprint,
+)
+from moat.lib.path import (
+    P,
+    Path,
 )
 from moat.lib.run import load_subgroup
 from moat.util.msgpack import StdMsgpack

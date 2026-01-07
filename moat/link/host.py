@@ -10,8 +10,9 @@ from functools import partial
 from attrs import define, field
 from transitions_aio.extensions.factory import MachineFactory
 
-from moat.util import CtxObj, NotGiven, P, attrdict, srepr
+from moat.util import CtxObj, NotGiven, attrdict, srepr
 from moat.lib.broadcast import Broadcaster
+from moat.lib.path import P
 from moat.lib.priomap import TimerMap
 
 from typing import TYPE_CHECKING
@@ -19,7 +20,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from transitions_aio import EventData
 
-    from moat.util import Path
+    from moat.lib.path import Path
     from moat.link.client import Link
 
     from collections.abc import Awaitable

@@ -10,10 +10,11 @@ from pprint import pprint
 import asyncclick as click
 from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
 
-from moat.util import P, attrdict
+from moat.util import attrdict
 from moat.kv.data import data_get
 from moat.kv.inv.model import Host, InventoryRoot, Wire
 from moat.kv.obj.command import std_command
+from moat.lib.path import P
 
 from collections import deque
 

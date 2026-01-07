@@ -14,7 +14,8 @@ import logging
 import sys
 from functools import partial
 
-from moat.util import NotGiven, P, make_module, make_proc
+from moat.util import NotGiven, make_module, make_proc
+from moat.lib.path import P
 
 from .obj import ClientEntry, ClientRoot
 

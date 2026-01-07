@@ -29,7 +29,7 @@ class NoPathError(KeyError):
     """An error that marks a nonexisting path"""
 
     def __str__(self):
-        from moat.util import Path  # noqa: PLC0415
+        from moat.lib.path import Path  # noqa: PLC0415
 
         return (
             f"‹NoPath {self.args[0]} {Path.build(self.args[1])}"

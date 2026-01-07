@@ -8,17 +8,17 @@ from functools import partial
 from pathlib import Path as FSPath
 from tempfile import TemporaryDirectory
 
-from moat.util import (  # pylint:disable=no-name-in-module
+from moat.util import (
+    # pylint:disable=no-name-in-module,
     CtxObj,
     NotGiven,
-    P,
-    Root,
     ValueEvent,
     attrdict,
     combine_dict,
     merge,
 )
 from moat.lib.config import CFG
+from moat.lib.path import P, Root
 from moat.link.backend import get_backend
 from moat.link.client import Link
 from moat.link.server import Server

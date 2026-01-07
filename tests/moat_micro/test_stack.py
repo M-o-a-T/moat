@@ -8,8 +8,9 @@ import anyio
 import pytest
 from pathlib import Path
 
-from moat.util import P, yload, yprint
+from moat.util import yload, yprint
 from moat.lib.codec import get_codec
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.src.test import run
 

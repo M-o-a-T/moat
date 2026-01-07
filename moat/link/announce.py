@@ -13,8 +13,9 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.util import NotGiven, P, Path, attrdict, gen_ident
+from moat.util import NotGiven, attrdict, gen_ident
 from moat.util import as_service as _as_service
+from moat.lib.path import P, Path
 
 from .client import Link
 from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
@@ -22,8 +23,8 @@ from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import MsgSender
-    from moat.util.path import PathElem
 
     from .client import LinkSender
 

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P
 from moat.lib.micro import Event, L, TaskGroup, sleep_ms
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
 

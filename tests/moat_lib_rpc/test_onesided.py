@@ -5,7 +5,8 @@ import pytest
 
 from tests.moat_lib_rpc.scaffold import scaffold
 
-from moat.util import OptCtx, P, ungroup
+from moat.util import OptCtx, ungroup
+from moat.lib.path import P
 from moat.lib.rpc import MsgHandler, NoStream
 
 # TODO no_s=False does no longer work for some reason

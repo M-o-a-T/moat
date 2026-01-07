@@ -4,9 +4,10 @@ More common code
 
 from __future__ import annotations
 
-from moat.util import NotGiven, Path, attrdict
+from moat.util import NotGiven, attrdict
 from moat.lib.codec.errors import StoppedError
 from moat.lib.micro import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from moat.lib.path import Path
 from moat.micro.cmd.base import BaseCmd
 
 

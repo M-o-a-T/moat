@@ -50,19 +50,3 @@ MoaT does not depend on:
 ## CBOR tags
 
 see `ref:../common/cbor.rst`.
-
-## Paths
-
-MoaT uses `Path` objects as hierarchical object accessors.
-
-A Path is a list of text strings and/or integers that identify an object or
-subroutine. For instance, `moat.micro` may connect to an external node
-named "ext" with three binary outputs, so you'd call `"ext" -> 1 -> "set"
-(True)` to turn the second port on.
-
-Since that's somewhat awkward, MoaT paths are typically entered and
-displayed as single strings with dots as separators, `ext:1.set` in this
-case. There's also a secondary representation that uses slashes (`ext/:1/set`)
-for interfacing with the file system or MQTT.
-
-See `pydoc moat.util.path.Path` for details.

@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 
-from moat.util import P, Path
+from moat.lib.path import P, Path
 
 from . import Notifier as BaseNotifier
 

@@ -7,7 +7,8 @@ from __future__ import annotations
 import anyio
 from contextlib import AsyncExitStack
 
-from moat.util import NotGiven, P, Path
+from moat.util import NotGiven
+from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
 
 from . import Gate as _Gate

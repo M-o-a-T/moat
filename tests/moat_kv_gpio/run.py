@@ -6,11 +6,11 @@ import sys
 
 import trio
 
-from moat.util import Path
 from moat.kv.gpio.model import GPIOroot
 from moat.kv.gpio.task import task as GPIOtask
 from moat.lib.config import CFG
 from moat.lib.gpio.test import GpioWatcher, Pin
+from moat.lib.path import Path
 from moat.mqtt.test import test_client
 
 logger = logging.getLogger(__name__)

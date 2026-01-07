@@ -88,8 +88,9 @@ import traceback
 from time import time  # wall clock, intentionally
 from weakref import WeakValueDictionary
 
-from moat.util import Cache, NotGiven, Path
+from moat.util import Cache, NotGiven
 from moat.lib.codec import get_codec
+from moat.lib.path import Path
 
 from .exceptions import ServerError
 from .obj import AttrClientEntry, ClientEntry, ClientRoot

@@ -4,7 +4,8 @@ import anyio
 import pytest
 import time
 
-from moat.util import NotGiven, P, Path
+from moat.util import NotGiven
+from moat.lib.path import P, Path
 from moat.lib.rpc import RemoteError
 from moat.link._test import Scaffold
 

@@ -3,10 +3,10 @@ from __future__ import annotations  # noqa: D100
 import logging
 import pytest
 
-from moat.util import P, PathLongener
 from moat.kv.auth import loader
 from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P, PathLongener
 from moat.src.test import raises
 
 logger = logging.getLogger(__name__)

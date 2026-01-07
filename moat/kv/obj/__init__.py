@@ -24,12 +24,11 @@ import contextlib
 from moat.util import (
     NoLock,
     NotGiven,
-    Path,
-    PathLongener,
     combine_dict,
     yload,
 )
 from moat.lib.config import CFG
+from moat.lib.path import Path, PathLongener
 
 __all__ = ["AttrClientEntry", "ClientEntry", "ClientRoot"]
 

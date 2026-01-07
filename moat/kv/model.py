@@ -11,7 +11,8 @@ from logging import getLogger
 
 from range_set import RangeSet
 
-from moat.util import NotGiven, Path, attrdict, create_queue
+from moat.util import NotGiven, attrdict, create_queue
+from moat.lib.path import Path
 
 from .exceptions import ACLError
 

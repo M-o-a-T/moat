@@ -4,7 +4,7 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util import ExpectedError, Path, outcome, push_kw
+from moat.util import ExpectedError, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import (
     CancelledError,
@@ -19,6 +19,7 @@ from moat.lib.micro import (
     log_exc,
     shield,
 )
+from moat.lib.path import Path
 
 from .base import MsgLink
 from .const import (

@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, Path, split_arg, yprint
+from moat.util import NotGiven, split_arg, yprint
 from moat.kv.auth import gen_auth, loader
+from moat.lib.path import Path
 
 
 @click.group(short_help="Manage authorization")  # pylint: disable=undefined-variable

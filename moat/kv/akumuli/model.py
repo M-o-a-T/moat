@@ -9,9 +9,10 @@ import logging
 
 from asyncakumuli import DS, Entry
 
-from moat.util import NotGiven, Path
+from moat.util import NotGiven
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot
+from moat.lib.path import Path
 
 from collections.abc import Mapping
 

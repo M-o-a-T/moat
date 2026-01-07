@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, yprint
+from moat.util import NotGiven, yprint
+from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
 

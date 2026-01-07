@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import csv
 
-from moat.util import P, Path, attrdict, yload, yprint
+from moat.util import attrdict, yload, yprint
+from moat.lib.path import P, Path
 
 with open("inc/enum.yaml") as f:
     enums = yload(f, attr=True).enum

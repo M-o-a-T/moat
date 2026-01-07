@@ -6,9 +6,10 @@ import logging
 import asyncclick as click
 from asyncakumuli import DS
 
-from moat.util import NotGiven, P, attrdict, yprint
+from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import data_get, node_attr
 from moat.kv.obj.command import std_command
+from moat.lib.path import P
 from moat.lib.run import attr_args
 from moat.link.announce import as_service
 

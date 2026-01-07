@@ -5,7 +5,8 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.util import P, ungroup
+from moat.util import ungroup
+from moat.lib.path import P
 from moat.lib.rpc import MsgHandler
 from moat.link._test import Scaffold
 from moat.link.exceptions import ServiceSupplanted

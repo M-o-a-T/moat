@@ -7,7 +7,8 @@ from __future__ import annotations
 import anyio
 import logging
 
-from moat.util import NotGiven, Path
+from moat.util import NotGiven
+from moat.lib.path import Path
 
 from .device import Register as BaseRegister
 

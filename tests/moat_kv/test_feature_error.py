@@ -5,9 +5,9 @@ import pytest
 
 import trio
 
-from moat.util import P, PathLongener
 from moat.kv.errors import ErrorRoot
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P, PathLongener
 
 logger = logging.getLogger(__name__)
 

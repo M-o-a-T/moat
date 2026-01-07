@@ -9,11 +9,15 @@ import os
 import sys
 import time
 
-from moat.util import NotGiven, Path, attrdict, yprint
+from moat.util import NotGiven, attrdict, yprint
 from moat.lib.run import process_args
 from moat.util.times import ts2iso
 
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import Path
 
 
 def add_dates(d):

@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven, P, ungroup
+from moat.util import NotGiven, ungroup
 from moat.lib.micro import log, sleep_ms
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.src.test import raises
 

@@ -6,7 +6,8 @@ import anyio
 import os
 import pytest
 
-from moat.util import P, Path, as_service, merge, to_attrdict, yload
+from moat.util import as_service, merge, to_attrdict, yload
+from moat.lib.path import P, Path
 from moat.link._test import Scaffold
 from moat.link.announce import announcing
 from moat.link.host import ServiceMon

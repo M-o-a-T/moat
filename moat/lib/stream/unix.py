@@ -14,7 +14,7 @@ from moat.lib.stream import AnyioBuf
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.util import Path
+    from moat.lib.path import Path
 
 
 class UnixLink(AnyioBuf):

@@ -9,11 +9,13 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
-    P,
-    Path,
     attrdict,
     combine_dict,
     yload,
+)
+from moat.lib.path import (
+    P,
+    Path,
 )
 from moat.lib.run import attr_args, process_args
 

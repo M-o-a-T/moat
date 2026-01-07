@@ -12,10 +12,11 @@ from unittest import mock
 import trio
 from asyncscope import main_scope, scope
 
-from moat.util import NotGiven, P, attrdict, combine_dict
+from moat.util import NotGiven, attrdict, combine_dict
 from moat.kv.mock import S
 from moat.kv.server import Server
 from moat.lib.config import CFG, CfgStore
+from moat.lib.path import P
 from moat.mqtt.broker import create_broker
 
 logger = logging.getLogger(__name__)

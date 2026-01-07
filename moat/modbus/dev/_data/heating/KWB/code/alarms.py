@@ -4,7 +4,8 @@ from __future__ import annotations
 import csv
 import sys
 
-from moat.util import Path, attrdict, yprint
+from moat.util import attrdict, yprint
+from moat.lib.path import Path
 
 d = attrdict()
 with open(sys.argv[1]) as f:

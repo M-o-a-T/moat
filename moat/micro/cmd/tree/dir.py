@@ -6,7 +6,8 @@ from __future__ import annotations
 
 from itertools import chain
 
-from moat.util import NotGiven, Path
+from moat.util import NotGiven
+from moat.lib.path import Path
 
 from ._dir import Dispatch as _Dispatch  # isort:skip
 from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd  # noqa:F401

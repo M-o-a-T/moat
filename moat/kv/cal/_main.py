@@ -10,8 +10,8 @@ import aiocaldav as caldav
 import asyncclick as click
 import pytz
 
-from moat.util import P, Path
 from moat.kv.data import data_get
+from moat.lib.path import P, Path
 
 from .model import CalRoot
 from .util import find_next_alarm

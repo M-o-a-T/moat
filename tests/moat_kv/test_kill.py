@@ -5,9 +5,9 @@ import pytest
 
 import trio
 
-from moat.util import P
 from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P
 from moat.src.test import raises
 
 logger = logging.getLogger(__name__)

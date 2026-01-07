@@ -39,10 +39,6 @@ from moat.util import (
     MsgReader,
     MsgWriter,
     NotGiven,
-    P,
-    Path,
-    PathLongener,
-    PathShortener,
     ValueEvent,
     attrdict,
     byte2num,
@@ -52,6 +48,7 @@ from moat.util import (
     num2byte,
     run_tcp_server,
 )
+from moat.lib.path import P, Path, PathLongener, PathShortener
 
 from . import _version_tuple
 from . import client as moat_kv_client  # needs to be mock-able

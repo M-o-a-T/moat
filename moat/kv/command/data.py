@@ -5,9 +5,10 @@ import time
 
 import asyncclick as click
 
-from moat.util import MsgReader, NotGiven, P, PathLongener, yprint
+from moat.util import MsgReader, NotGiven, yprint
 from moat.kv.client import StreamedRequest
 from moat.kv.data import add_dates, data_get, node_attr
+from moat.lib.path import P, PathLongener
 from moat.lib.run import attr_args
 from moat.util.times import ts2iso
 

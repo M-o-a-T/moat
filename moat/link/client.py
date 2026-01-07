@@ -21,10 +21,6 @@ from attrs import define, field
 from moat.util import (
     CtxObj,
     NotGiven,
-    P,
-    Path,
-    PathLongener,
-    Root,
     ValueEvent,
     attrdict,
     ctx_as,
@@ -36,6 +32,12 @@ from moat.util import (
     ungroup,
 )
 from moat.lib.mqtt import QoS, RetainHandling
+from moat.lib.path import (
+    P,
+    Path,
+    PathLongener,
+    Root,
+)
 from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
 

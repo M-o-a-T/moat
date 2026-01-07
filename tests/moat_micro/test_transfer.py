@@ -7,7 +7,8 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.util import P, yload
+from moat.util import yload
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 pytestmark = pytest.mark.anyio

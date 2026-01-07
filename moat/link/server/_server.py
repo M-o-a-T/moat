@@ -30,11 +30,6 @@ from moat.util import (
     MsgReader,
     MsgWriter,
     NotGiven,
-    P,
-    Path,
-    PathLongener,
-    PathShortener,
-    Root,
     attrdict,
     gen_ident,
     id2str,
@@ -43,6 +38,13 @@ from moat.util import (
 from moat.lib.broadcast import Broadcaster, BroadcastReader
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.lib.mqtt import QoS
+from moat.lib.path import (
+    P,
+    Path,
+    PathLongener,
+    PathShortener,
+    Root,
+)
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
 from moat.link.auth import AnonAuth
 from moat.link.backend import Backend, get_backend

@@ -5,7 +5,8 @@ import weakref
 
 import jsonschema
 
-from moat.util import NotGiven, P, Path, make_proc, singleton
+from moat.util import NotGiven, make_proc, singleton
+from moat.lib.path import P, Path
 
 from .exceptions import ACLError, ClientError
 from .model import Entry

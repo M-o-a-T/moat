@@ -6,7 +6,7 @@ import anyio
 import pytest
 import time
 
-from moat.util import P
+from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.meta import MsgMeta
 

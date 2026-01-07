@@ -5,7 +5,7 @@ import pytest
 
 from tests.moat_lib_rpc.scaffold import scaffold
 
-from moat.util import P
+from moat.lib.path import P
 from moat.lib.rpc import MsgHandler
 
 from typing import TYPE_CHECKING

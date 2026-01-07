@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from contextlib import AsyncExitStack
 
-from moat.util import Path
+from moat.lib.path import Path
 from moat.lib.repl import MsgTerm, Readline, UnixConsole
 from moat.lib.repl._test import MockTerm
 from moat.lib.rpc import MsgSender

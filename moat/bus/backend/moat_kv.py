@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from moat.util import P, Path
+from moat.lib.path import P, Path
 
 import typing
 

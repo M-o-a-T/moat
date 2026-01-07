@@ -14,10 +14,11 @@ except ImportError:
 import logging
 
 import moat.lib.gpio as gpio
-from moat.util import NotGiven, PathLongener
+from moat.util import NotGiven
 from moat.kv.errors import ErrorRoot
 from moat.kv.exceptions import ServerError
 from moat.kv.obj import ClientEntry, ClientRoot
+from moat.lib.path import PathLongener
 
 logger = logging.getLogger(__name__)
 

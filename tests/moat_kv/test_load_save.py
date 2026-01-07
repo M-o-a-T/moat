@@ -7,9 +7,9 @@ import pytest
 import trio
 from asyncscope import scope
 
-from moat.util import P, PathLongener
 from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P, PathLongener
 from moat.src.test import raises
 
 logger = logging.getLogger(__name__)

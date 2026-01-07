@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
-from moat.util import NotGiven, Path
+from moat.util import NotGiven
 from moat.lib.micro import ACM, AC_exit, L, TaskGroup, log, shield
+from moat.lib.path import Path
 from moat.util.exc import ungroup
 
 from .const import B_ERROR, B_STREAM, E_CANCEL, E_ERROR, SD_BOTH, SD_IN, SD_NONE, SD_OUT

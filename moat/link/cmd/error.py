@@ -6,7 +6,8 @@ from contextlib import nullcontext
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, yprint
+from moat.util import NotGiven, yprint
+from moat.lib.path import P
 from moat.lib.run import attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link

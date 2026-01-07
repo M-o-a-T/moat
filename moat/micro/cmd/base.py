@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
-    from moat.util import Path
+    from moat.lib.path import Path
     from moat.lib.rpc import Msg
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 

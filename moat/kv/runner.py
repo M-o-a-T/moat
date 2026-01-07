@@ -16,14 +16,16 @@ from asyncactor import AuthPingEvent, NodeList, PingEvent, TagEvent, UntagEvent
 
 from moat.util import (
     NotGiven,
-    P,
-    Path,
     attrdict,
     combine_dict,
     create_queue,
     digits,
-    logger_for,
     spawn,
+)
+from moat.lib.path import (
+    P,
+    Path,
+    logger_for,
 )
 
 from .actor import (

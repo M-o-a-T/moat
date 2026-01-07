@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, Path
 from moat.lib.micro import log, sleep_ms, ticks_diff, ticks_ms
+from moat.lib.path import P, Path
 from moat.micro._test import mpy_stack
 
 pytestmark = pytest.mark.anyio

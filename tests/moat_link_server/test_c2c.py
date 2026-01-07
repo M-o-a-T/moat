@@ -3,7 +3,7 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import pytest
 
-from moat.util import P
+from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.client import Link
 

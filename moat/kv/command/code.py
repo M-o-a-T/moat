@@ -7,11 +7,13 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
+    yload,
+    yprint,
+)
+from moat.lib.path import (
     P,
     Path,
     PathLongener,
-    yload,
-    yprint,
 )
 from moat.lib.run import attr_args, process_args
 

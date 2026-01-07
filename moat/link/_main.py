@@ -12,9 +12,9 @@ import sys
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, Path, yprint
+from moat.util import NotGiven, yprint
+from moat.lib.path import P, Path, set_root
 from moat.lib.run import load_subgroup
-from moat.util.path import set_root
 
 from .backend import get_backend
 

@@ -10,12 +10,14 @@ from attrs import define, field
 
 from moat.util import (
     NotGiven,
-    Path,
-    PathLongener,
-    PathShortener,
     attrdict,
     combine_dict,
     to_attrdict,
+)
+from moat.lib.path import (
+    Path,
+    PathLongener,
+    PathShortener,
 )
 from moat.link.meta import MsgMeta
 from moat.util.exc import ExpKeyError

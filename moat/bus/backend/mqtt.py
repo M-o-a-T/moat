@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from moat.util import NotGiven, P, StdCBOR
+from moat.util import NotGiven, StdCBOR
 from moat.bus.backend import BaseBusHandler, UnknownParamError
 from moat.bus.message import BusMessage
+from moat.lib.path import P
 from moat.link.backend.mqtt import Backend
 
 

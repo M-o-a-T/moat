@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import anyio
 
-from moat.util import NotGiven, Path, PathLongener
+from moat.util import NotGiven
 from moat.kv.client import Client, open_client
+from moat.lib.path import Path, PathLongener
 from moat.link.meta import MsgMeta
 
 from . import Gate as _Gate

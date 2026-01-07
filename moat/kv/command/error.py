@@ -5,9 +5,10 @@ import sys
 
 import asyncclick as click
 
-from moat.util import P, Path, yprint
+from moat.util import yprint
 from moat.kv.data import add_dates
 from moat.kv.errors import ErrorRoot
+from moat.lib.path import P, Path
 
 
 @click.group()  # pylint: disable=undefined-variable

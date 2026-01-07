@@ -1,20 +1,30 @@
-# Hierarchical Paths for MoaT
+# Hierarchical Paths
 
 % start main
 % start synopsis
 
-This module provides hierarchical path representation and manipulation for MoaT.
 MoaT Paths are immutable sequences that can be represented as dot-separated or
 slash-separated strings, with special encoding for various data types.
 
+MoaT paths are typically entered and displayed as simple strings with dots
+as separators and colon as "special" markers. For example, `ext:1.set` is a
+three-element path consisting of two strings with an integer in between.
+
+There's also a secondary representation that uses slashes (`ext/:1/set`)
+for interfacing with the file system or MQTT.
+
+See `pydoc moat.util.path.Path` for details.
 Features:
 
 - Immutable path objects with efficient operations
-- Dot-notation and slash-notation representations
-- Rich type support (strings, numbers, booleans, bytes, expressions)
+- Dot/colon-notation and slash-notation representations
+- Rich type support (strings, numbers, booleans, bytes, and tuples)
+- No forbidden characters (e.g. slashes, null bytes) in path elements
 - Path shortening/lengthening for efficient transmission
 - Context-aware root path substitution
 - Integration with YAML, CBOR, and msgpack serialization
+
+MoaT uses `Path` objects mainly as hierarchical object and data accessors.
 
 % end synopsis
 
@@ -28,6 +38,7 @@ from moat.lib.path import Path, P
 # Create paths from elements
 path = Path("foo", "bar", "baz")
 path = P("foo.bar.baz")  # Equivalent dot notation
+path = Path.build(("foo", "bar", "baz"))  # from tuples, lists etc.
 
 # Create from various types
 path = Path("config", 42, True)  # Mixed types
@@ -52,7 +63,8 @@ path.slash  # "foo/bar/baz"
 
 ### Special encodings
 
-MoaT paths support special encoding for non-string values:
+MoaT paths support special encoding for non-string values. The most common
+are:
 
 ```python
 # Inline escapes (within an element):
@@ -61,11 +73,12 @@ MoaT paths support special encoding for non-string values:
 #   :_  escapes   space
 #   :|  escapes / slash
 
-# Type prefixes (start new element):
+# Type prefixes (start a new element):
 #   :t   True
 #   :f   False
 #   :e   empty string
 #   :n   None
+#   :42  Simple integer
 #   :xAB Hex integer (0xAB)
 #   :b01 Binary integer (0b01)
 #   :yAB Bytestring, hex encoding
@@ -101,7 +114,7 @@ for elem in path:
     print(elem)
 
 # Appending single element
-path = path / "new"  # Append "new" element
+path = path / "new"  # a.b.c.d.new
 ```
 
 ### Path shortening/lengthening
@@ -137,35 +150,22 @@ Root.set(Path("my", "app", "config"))
 # Paths starting with the root get special encoding
 path = Path("my", "app", "config", "database", "url")
 # When serialized, "my.app.config" is replaced with :R placeholder
+path.str == ":R.database.url"
 # This makes paths portable across different root configurations
 ```
+
+The `Root` object (`:R`) is used by MoaT as its MQTT prefix. Three other
+prefixes (`P`, `Q` and `S`; `P_Root` etc.) are available for application use.
+
+% end main
 
 ## Integration with Serialization
 
 MoaT paths integrate with serialization formats:
 
 - **YAML**: Uses `!P` prefix for path objects
-- **CBOR/Msgpack**: Custom encoding for efficient transmission
-- **String representation**: Both dot and slash formats supported
+- **CBOR**: List marked with tag 39 ("Identifier")
+- **Msgpack**: extension 3 encapsulates path elements (no list marker)
 
-## API Reference
-
-### Main classes
-
-- `Path`: Immutable sequence representing a hierarchical path
-- `PathShortener`: Removes common prefixes for efficient transmission
-- `PathLongener`: Reconstructs full paths from shortened form
-- `RootPath`: Special path type for context-aware root substitution
-
-### Factory functions
-
-- `P(string)`: Create path from dot-separated string
-- `PS(string)`: Create path from slash-separated string
-
-### Utilities
-
-- `path_eval(expr)`: Evaluate Python expression in path context
-- `logger_for(path)`: Get logger for given path
-- `set_root(cfg)`: Set the root path from configuration
 
 % end main

@@ -7,11 +7,11 @@ import time
 
 import trio
 
-from moat.util import P
 from moat.kv.code import CodeRoot
 from moat.kv.errors import ErrorRoot
 from moat.kv.mock.mqtt import stdtest
 from moat.kv.runner import SingleRunnerRoot
+from moat.lib.path import P
 
 logger = logging.getLogger(__name__)
 

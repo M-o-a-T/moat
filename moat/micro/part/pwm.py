@@ -7,7 +7,6 @@ valve, where switching every five seconds or so works perfectly well.
 
 from __future__ import annotations
 
-from moat.util import Path
 from moat.lib.codec.errors import StoppedError
 from moat.lib.micro import (
     Event,
@@ -17,6 +16,7 @@ from moat.lib.micro import (
     ticks_ms,
     wait_for_ms,
 )
+from moat.lib.path import Path
 from moat.micro.cmd.base import BaseCmd
 
 from typing import TYPE_CHECKING

@@ -9,7 +9,7 @@ import logging
 
 from attrs import define, field
 
-from moat.util import P
+from moat.lib.path import P
 
 from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min

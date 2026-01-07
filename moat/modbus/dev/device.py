@@ -12,7 +12,8 @@ from pathlib import Path as FSPath
 
 from asyncscope import scope
 
-from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
+from moat.util import CtxObj, attrdict, combine_dict, merge, yload
+from moat.lib.path import P, Path
 from moat.modbus.server import UnitContext
 from moat.modbus.typemap import get_kind, get_type2
 from moat.modbus.types import Coils, DiscreteInputs, InputRegisters

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from functools import partial
 
-from moat.util import Path, QueueFull, pop_kw, push_kw
+from moat.util import QueueFull, pop_kw, push_kw
 from moat.lib.micro import (
     ACM,
     AC_exit,
@@ -21,6 +21,7 @@ from moat.lib.micro import (
     ticks_diff,
     ticks_ms,
 )
+from moat.lib.path import Path
 from moat.lib.rpc import (
     B_ERROR,
     B_STREAM,

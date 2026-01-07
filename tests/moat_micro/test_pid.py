@@ -9,7 +9,8 @@ from math import cos, pi
 
 from numpy import allclose, arange, array, zeros_like
 
-from moat.util import P, yload
+from moat.util import yload
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 from typing import cast

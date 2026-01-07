@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
+from moat.util import NotGiven, yload, yprint
+from moat.lib.path import P, Path, PathLongener
 
 
 @click.group()  # pylint: disable=undefined-variable

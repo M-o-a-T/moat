@@ -9,8 +9,9 @@ import logging
 
 from attrs import define, field
 
-from moat.util import NotGiven, P, Path, to_attrdict
+from moat.util import NotGiven, to_attrdict
 from moat.lib.codec import get_codec
+from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 

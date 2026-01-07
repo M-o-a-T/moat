@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.util import P
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.micro.fuse import wrap
 

@@ -8,7 +8,8 @@ import anyio
 import pytest
 import sys
 
-from moat.util import P, attrdict, yload
+from moat.util import attrdict, yload
+from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.util.liner import Liner
 

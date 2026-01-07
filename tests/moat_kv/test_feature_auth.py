@@ -6,11 +6,11 @@ from functools import partial
 
 import jsonschema
 
-from moat.util import P
 from moat.kv.auth import gen_auth
 from moat.kv.client import ServerError
 from moat.kv.exceptions import ClientAuthMethodError, ClientAuthRequiredError
 from moat.kv.mock.mqtt import stdtest
+from moat.lib.path import P
 from moat.src.test import raises, run
 
 logger = logging.getLogger(__name__)

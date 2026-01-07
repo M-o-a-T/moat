@@ -3,8 +3,9 @@ from __future__ import annotations  # noqa: D100
 import logging
 import pytest
 
-from moat.util import P, PathLongener, ungroup
+from moat.util import ungroup
 from moat.lib.codec.cbor import Tag as CBORTag
+from moat.lib.path import P, PathLongener
 from moat.lib.rpc import StreamError
 from moat.link._test import Scaffold
 from moat.link.client import BasicLink

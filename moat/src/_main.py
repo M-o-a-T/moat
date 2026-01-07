@@ -12,7 +12,8 @@ import asyncclick as click
 import tomlkit
 from packaging.requirements import Requirement
 
-from moat.util import P, make_proc, yload
+from moat.util import make_proc, yload
+from moat.lib.path import P
 from moat.lib.run import load_subgroup
 from moat.util.exec import run as run_
 

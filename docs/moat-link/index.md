@@ -1,5 +1,4 @@
 (moat-link)=
-(moat-link-gate-top)=
 # The Link: Connecting programs and data
 
 ```{include} ../../packaging/moat-link/README.md
@@ -16,6 +15,8 @@ TODO
 :hidden:
 
 tracking
+../moat-link-gate/index
+../moat-link-notify/index
 ../moat-link-server/index
 ../moat-link-web/index
 api

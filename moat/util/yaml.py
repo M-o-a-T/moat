@@ -19,7 +19,7 @@ except ImportError:
     Proxy = None
     DProxy = None
 
-from .path import Path
+from moat.lib.path import Path
 
 __all__ = [
     "add_repr",

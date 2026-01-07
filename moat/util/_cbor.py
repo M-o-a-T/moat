@@ -12,10 +12,10 @@ from __future__ import annotations
 # Typing
 from moat.lib.codec import Extension
 from moat.lib.codec.cbor import Codec, Tag
+from moat.lib.path import Path
 from moat.lib.proxy import DProxy, Proxy, get_proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
 from . import NotGiven
-from .path import Path
 
 from typing import TYPE_CHECKING
 

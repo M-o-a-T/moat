@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, Path, yformat, yload
+from moat.util import yformat, yload
 from moat.lib.codec import get_codec
+from moat.lib.path import P, Path
 
 from typing import cast
 
@@ -256,8 +257,8 @@ def test_yaml():
 
 
 def test_root():
+    from moat.lib.path import Q_Root, Root  # noqa: PLC0415
     from moat.util.cbor import StdCBOR  # noqa: PLC0415
-    from moat.util.path import Q_Root, Root  # noqa: PLC0415
 
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))

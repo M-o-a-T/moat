@@ -7,9 +7,10 @@ from __future__ import annotations
 from copy import deepcopy
 from weakref import ref
 
+from moat.lib.path import Path
+
 from . import NotGiven
 from ._merge import merge
-from .path import Path
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING

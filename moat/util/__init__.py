@@ -83,22 +83,6 @@ _imports = {
     # msgpack
     "StdMsgpack": "msgpack",
     "std_ext": "msgpack",
-    # path
-    "PS": "path",
-    "P": "path",
-    "Path": "path",
-    "PathElem": "path",
-    "PathElemI": "path",
-    "PathLongener": "path",
-    "PathShortener": "path",
-    "Root": "path",
-    "RootPath": "path",
-    "logger_for": "path",
-    "path_eval": "path",
-    "set_root": "path",
-    "P_Root": "path",
-    "Q_Root": "path",
-    "S_Root": "path",
     # server
     "gen_ssl": "server",
     "run_tcp_server": "server",
@@ -133,6 +117,7 @@ def __getattr__(attr: str):
     value = getattr(__import__(mod, globals(), None, True, 1), attr)
     globals()[attr] = value
     return value
+
 
 def __dir__():
     return __all__

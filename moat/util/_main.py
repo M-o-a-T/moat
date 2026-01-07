@@ -15,9 +15,9 @@ from time import time
 import asyncclick as click
 
 from moat.lib.config import CFG
+from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
 
-from .path import P, Path, PathLongener, PathShortener, path_eval
 from .times import humandelta, time_until
 from .yaml import yprint
 

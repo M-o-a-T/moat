@@ -16,6 +16,7 @@ moat-lib-config/index
 moat-lib-broadcast/index
 moat-lib-gpio/index
 moat-lib-micro/index
+moat-lib-path/index
 moat-lib-pid/index
 moat-lib-priomap/index
 moat-lib-proxy/index

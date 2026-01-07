@@ -1,0 +1,6 @@
+moat-lib-path (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * Extracted path module from moat-util
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 07 Jan 2026 18:00:00 +0100

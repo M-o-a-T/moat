@@ -33,9 +33,8 @@ from functools import total_ordering
 
 import simpleeval
 
+from moat.util import NotGiven
 from moat.lib.proxy import as_proxy
-
-from . import NotGiven
 
 try:
     from collections.abc import Buffer
@@ -867,7 +866,7 @@ class P(Path):
     MoaT code.
     """
 
-    def __new__(cls, path, *, mark="", scan=False):  # noqa:D102
+    def __new__(cls, path, *, mark="", scan=False):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark, scan=scan)
@@ -899,7 +898,7 @@ class PS(Path):
     objects.
     """
 
-    def __new__(cls, path, *, mark=""):  # noqa:D102
+    def __new__(cls, path, *, mark=""):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)

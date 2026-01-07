@@ -4,7 +4,7 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
-from .path import Path
+from moat.lib.path import Path
 
 from typing import TYPE_CHECKING
 

@@ -1,6 +1,5 @@
 (moat-link-gate)=
-(moat-link-gate-top)=
-# The Link: Gate
+# The Link: Gateway
 
 ```{include} ../../packaging/moat-link-gate/README.md
 :start-after: % start main

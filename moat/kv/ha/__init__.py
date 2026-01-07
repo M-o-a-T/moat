@@ -1,8 +1,8 @@
 # noqa:D104
 from __future__ import annotations
 
-from moat.lib.config import CfgStore
+from moat.lib.config import register as _register
 
 __all__ = []
 
-CfgStore.with_(__name__)
+_register(__name__)

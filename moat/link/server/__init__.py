@@ -16,10 +16,10 @@ except Exception:  # pragma: no cover
     _version = "0.0.1"
     _version_tuple = (0, 0, 1)
 
-from moat.lib.config import CfgStore
+from moat.lib.config import register as _register
 
 from ._server import Server as Server
 
 __all__ = []
 
-CfgStore.with_(__name__)
+_register(__name__)

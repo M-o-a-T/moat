@@ -9,6 +9,6 @@ try:
 except ImportError:
     pass
 
-from moat.lib.config import CfgStore as _CfgStore
+from moat.lib.config import register as _register
 
-_CfgStore.with_(__name__)
+_register(__name__)

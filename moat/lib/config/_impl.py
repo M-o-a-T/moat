@@ -10,7 +10,10 @@ from importlib import import_module
 from pathlib import Path as FSPath
 from weakref import WeakSet
 
-from moat.util import NotGiven, Path, attrdict, combine_dict, ctx_as, merge, yload
+from moat.util import NotGiven, attrdict, combine_dict, ctx_as, merge, yload
+from moat.lib.path import Path
+
+from ._reg import to_process
 
 from typing import TYPE_CHECKING
 
@@ -298,6 +301,11 @@ class CfgStore:
 
     def maybe_redo(self) -> None:
         "Rebuild the config if necessary"
+        # Process any pending registrations
+        while to_process:
+            name = to_process.pop()
+            self.with_(name)
+
         if self.updated > self._updated:
             self._redo = True
 

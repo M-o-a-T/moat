@@ -490,13 +490,13 @@ class Loader(click.Group):
 
     Both work in parallel.
 
-    Caller:
+    Caller::
 
         from moat.util import Loader
         from functools import partial
 
         @click.command(cls=partial(Loader,_util_sub_post='command'))
-        async def cmd()
+        async def cmd():
             print("I am the main program")
 
     Sub-Command Usage (``main`` is defined for you), e.g. in ``command/subcmd.py``::

@@ -42,6 +42,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Monkeypatch aclosing's docstring to be Sphinx-compatible
+aclosing.__doc__ = """
+Async context manager for safely finalizing an asynchronously cleaned-up
+resource such as an async generator, calling its ``aclose()`` method.
+
+Example usage::
+
+    async with aclosing(fetch_data()) as agen:
+        async for item in agen:
+            process(item)
+
+This is equivalent to::
+
+    agen = fetch_data()
+    try:
+        async for item in agen:
+            process(item)
+    finally:
+        await agen.aclose()
+"""
+
 __all__ = [
     "ACM",
     "AC_exit",
@@ -232,7 +253,7 @@ def ticks_diff(a: int, b: int) -> int:
     return a - b
 
 
-def run[R](p: Callable[..., Awaitable[R]], *a, **k) -> R:
+def run[R](p: Callable[..., Awaitable[R]], *a, **k) -> R | None:
     "wrapper for anyio.run"
     return _anyio.run(p, a, k)
 

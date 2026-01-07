@@ -83,11 +83,12 @@ if TYPE_CHECKING:
 def as_proxy(name: str, obj: Any = NotImplemented, replace: bool = False):
     """
     Export an object as a named proxy.
-    Usage:
+
+    Usage::
 
         @as_proxy("foo")
-        class Foo():
-            def __
+        class Foo:
+            pass
     """
     # This uses NotImplemented instead of None or Ellipsis/NotGiven because
     # those two are be legitimately proxied.

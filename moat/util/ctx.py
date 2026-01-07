@@ -30,14 +30,15 @@ T_Ctx = TypeVar("T_Ctx")
 class CtxObj(ABC):
     """
     Teach a class instance to act as an async context manager, by
-    forwarding ``_aenter__````_aexit__`` to a `_ctx` method
-    (which must be an `AsyncContextManager`).
+    forwarding ``__aenter__`` and ``__aexit__`` to a ``_ctx`` method
+    (which must be an ``AsyncContextManager``).
 
     Usage::
+
         class Foo(CtxObj):
             @asynccontextmanager
             async def _ctx(self):
-                yield self # or whatever
+                yield self  # or whatever
 
         async with Foo() as whatever:
             pass

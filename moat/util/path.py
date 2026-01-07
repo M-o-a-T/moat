@@ -84,9 +84,9 @@ def set_root(cfg):
 class Path(Sequence[PathElem]):
     """
     Paths are represented as dot-separated strings. The colon is special.
-    Inline (within an element):
 
-    \b
+    Inline (within an element)::
+
         ::  escapes : colon
         :.  escapes . dot   (dot-path only)
         :_  escapes   space (dot-path only)
@@ -97,9 +97,8 @@ class Path(Sequence[PathElem]):
         :%  escapes \\ backslash (parsing only)
         :!  escapes | pipe/bar (parsing only)
 
-    As separator (starts a new element):
+    As separator (starts a new element)::
 
-    \b
         :t   True
         :f   False
         :e   empty string
@@ -116,9 +115,8 @@ class Path(Sequence[PathElem]):
         :iXY evaluate XY as a Python expression.
              The 'i' may be missing if XY does not start with a letter.
 
-    Meta elements (must be in front, always followed by dot or colon):
+    Meta elements (must be in front, always followed by dot or colon)::
 
-    \b
         :mXX This path is marked with XX (deprecated)
         :R   An alias for the current root
         :Q   An alias for an alternate root

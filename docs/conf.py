@@ -140,8 +140,8 @@ rst_prolog = """
    :class: highlight
 """
 
-# Sets the default role of `content` to :python:`content`, which uses the custom Python syntax highlighting inline literal
-default_role = "py"
+# Sets the default role of `content` to :any:`content`, which creates cross-references
+default_role = "any"
 
 favicons = [
     {"href": "MoaT-gears.svg"},  # => use `_static/icon.svg`

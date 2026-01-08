@@ -115,7 +115,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("S:%s =%r", self.txt, res)
             return res
 
-    async def rd(self, buf) -> len:  # noqa:D102
+    async def rd(self, buf) -> int:  # noqa:D102
         log("R:%s %d", self.txt, len(buf))
         try:
             res = await self.s.rd(buf)
@@ -137,7 +137,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("SC:%s =%r", self.txt, res)
             return res
 
-    async def crd(self, buf) -> len:  # noqa:D102
+    async def crd(self, buf) -> int:  # noqa:D102
         log("RC:%s %d", self.txt, len(buf))
         try:
             res = await self.s.crd(buf)

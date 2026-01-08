@@ -15,6 +15,7 @@ Supporting classes
 
 .. autoclass:: moat.lib.mqtt.Subscription
 .. autoclass:: moat.lib.mqtt.Will
+.. autoclass:: moat.lib.mqtt.Pattern
 
 MQTT packet classes
 -------------------

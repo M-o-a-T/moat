@@ -51,7 +51,7 @@ Connecting to the broker
       .. literalinclude:: snippets/userguide/async_websockets.py
 
 When you need to use TLS_ (formerly SSL) for securing your connections, you can simply
-pass ``ssl=True`` to :class:`~.AsyncMQTTClient`, or you can provide your own
+pass ``ssl=True`` to :class:`moat.lib.mqtt.async_client.AsyncMQTTClient`, or you can provide your own
 :class:`~ssl.SSLContext` if you need to provide a client certificate or add a custom
 root certificate.
 
@@ -104,15 +104,15 @@ fine too:
     context managers.
 
 While the MQTT protocol doesn't support multiple subscriptions to the same
-topic pattern, :meth:`~.AsyncMQTTClient.subscribe` hides that from you —
+topic pattern, :meth:`moat.lib.mqtt.async_client.AsyncMQTTClient.subscribe` hides that from you —
 albeit with some restrictions.
 
-.. seealso:: :meth:`~.AsyncMQTTClient.subscribe`
+.. seealso:: :meth:`moat.lib.mqtt.async_client.AsyncMQTTClient.subscribe`
 
 Publishing messages
 +++++++++++++++++++
 
-To publish a message to the broker, call the :meth:`~.AsyncMQTTClient.publish` method:
+To publish a message to the broker, call the :meth:`moat.lib.mqtt.async_client.AsyncMQTTClient.publish` method:
 
 .. literalinclude:: snippets/userguide/async_publish.py
 

@@ -7,9 +7,6 @@ This is the MoaT's "utilities" submodule.  It contains code that the rest
 of MoaT uses rather extensively but which doesn't warrant packaging into
 its own subrepository.
 
-Notably, `moat.util.compat` contains adapters to paper over the differences
-between CPython/anyio and MicroPython/asyncio.
-
 Feel free to extend, embrace, or split off. Patches welcome.
 
 % end synopsis

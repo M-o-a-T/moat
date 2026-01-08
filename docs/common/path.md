@@ -48,8 +48,8 @@ The canonical separator for MoaT path elements is a dot.
   et al..
 
 * Particularly when using fixed-width fonts, it affords the most visual
-  separation between path elements (except for a space, which we can't use
-  because you'd need a ton of shell quoting whenever a path is used in a
+  separation between path elements (except for a space, which we don't want
+  to use because you'd need shell quoting whenever a path is used in a
   command line argument).
 
 
@@ -74,49 +74,63 @@ traditionally, are a bad fit for this.
 
 ### Some Examples
 
-* a.b
+* ``a.b``
+
   A path element 'a' followed by a path element 'b'.
 
-* a.b.c
+* ``a.b.c``
+
   'a' and 'b' and 'c'.
 
-* a:.b.c
+* ``a:.b.c``
+
   'a.b' and 'c'.
 
-* a.b::c
+* ``a.b::c``
+
   'a' and 'b:c'.
 
-* a
+* ``a``
+
   A single-element path.
 
-* a/b
+* ``a/b``
+
   Another single-element path.
 
-* :
+* ``:``
+
   An empty path.
 
-* :e
+* ``:e``
+
   A single-element path consisting of an empty string.
 
-* a.123.b
+* ``a.123.b``
+
   'a' plus '123' (a 3-character string) plus 'b'.
 
-* a:123.b
+* ``a:123.b``
+
   'a' plus 123 (an integer number) plus 'b'.
 
-* a:123:.5.b
+* ``a:123:.5.b``
+
   'a' plus 123.5 (a floating-point number) plus 'b'.
 
   Floats are not typically used in paths, so escaping the dot with a colon
   seems like an acceptable compromise.
 
-* a."123".b
+* ``a."123".b``
+
   'a' plus '"123"' (a 5-character string, i.e. including the quotes) plus 'b'.
 
-* :t
+* ``:t``
+
   A one-element path whose only element is the bool constant `True`.
 
-* :t:f:n
+* ``:t:f:n``
+
   A path consisting of `True`, `False`, and `None`.
 
 

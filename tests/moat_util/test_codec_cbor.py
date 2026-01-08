@@ -19,7 +19,8 @@ from moat.util import attrdict
 from moat.lib.codec import get_codec
 from moat.lib.codec.cbor import Codec as CBOR
 from moat.lib.codec.cbor import Tag
-from moat.lib.codec.moat_cbor import StdCBOR, gen_start, gen_stop
+from moat.lib.codec.moat_cbor import Codec as StdCBOR
+from moat.lib.codec.moat_cbor import gen_start, gen_stop
 from moat.lib.proxy import DProxy, as_proxy, name2obj
 
 as_proxy("_ip4", IPv4Address)

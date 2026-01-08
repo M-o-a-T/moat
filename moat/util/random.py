@@ -14,17 +14,17 @@ else:  # pragma: no cover
     else:
         random = tcr._r  # noqa: SLF001
 
-# Intended to be unambiguous, no special characters
 al_unique = "bcdfghjkmnpqrstvwxyzBCDFGHJKMNPQRSTVWXYZ23456789"
+"An alphabet intended to be unambiguous: both cases, no special characters, no vowels"
 
-# Lowercase and digits, e.g. for restricted-alphabet labels
 al_lower = "abcdefghijklmnopqrstuvwxyz0123456789"
+"Lowercase letters and digits, e.g. for restricted-alphabet labels"
 
-# everything (except for backslash, just to be safe)
 al_ascii = bytes(x for x in range(33, 127) if x != 92).decode("ascii")
+"all printable ASCII characters (except for backslash, just to be safe)"
 
-# lowercase letters only
 al_az = "abcdefghijklmnopqrstuvwxyz"
+"lowercase letters"
 
 __all__ = ["al_ascii", "al_az", "al_lower", "al_unique", "gen_ident", "id2str"]
 

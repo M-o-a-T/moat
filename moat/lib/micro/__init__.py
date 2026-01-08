@@ -72,6 +72,8 @@ __all__ = [
     "L",
     "Lock",
     "Queue",
+    "QueueEmpty",
+    "QueueFull",
     "TaskGroup",
     "WouldBlock",
     "aclosing",
@@ -114,10 +116,10 @@ ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 
 
-_breakpoint = breakpoint  # noqa: A001, PLW0127
+_breakpoint = breakpoint
 
 
-def breakpoint():  # noqa:D103
+def breakpoint():  # noqa:D103,A001
     _breakpoint()
 
 

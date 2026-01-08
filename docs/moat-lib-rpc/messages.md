@@ -1,15 +1,14 @@
 (moat-lib-rpc-messages)=
-# MoaT Message Structure
+# MoaT Messaging
 
-Links between MoaT devices are always one-to-one and bidirectional.
+Links between MoaT devices are one-to-one and bidirectional.
 There is no master/slave relationship.
 
-MoaT uses a multi-level encapsulation strategy. The elements in this
-list are applied in sequence. Any element might be missing.
+MoaT uses a multi-level encapsulation strategy.
 
-## MoaT-Lib-CMD
+## RPC
 
-MoaT messaging uses the ``moat.lib.rpc`` library for bidirectional RPC,
+MoaT messaging uses this library for bidirectional RPC,
 streaming, and error reporting.
 
 ## Reliability
@@ -19,7 +18,7 @@ If message loss or reordering is possible, a
 
 ## Serialization
 
-Messages are typically serialized with the ``StdCBOR`` codec.
+Messages are typically serialized with the ``moat-cbor`` codec.
 
 TODO: The codec might create object proxies.
 These should be deleted when no longer in use.

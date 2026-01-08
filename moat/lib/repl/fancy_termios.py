@@ -30,7 +30,9 @@ else:
 __all__ = ["Term", "TermState", "tcgetattr", "tcsetattr"]
 
 
-class TermState:  # noqa: D101
+class TermState:
+    "Structured terminal state"
+
     def __init__(self, attrs: list[int | list[bytes]]) -> None:
         self.iflag = cast(int, attrs[0])
         self.oflag = cast(int, attrs[1])

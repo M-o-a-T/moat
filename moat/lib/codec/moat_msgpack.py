@@ -12,12 +12,9 @@ Extension types defined here:
 
 from __future__ import annotations
 
-from ._moat_msgpack import StdMsgpack, std_ext
+from ._moat_msgpack import Codec, std_ext
 
-__all__ = ["StdMsgpack", "std_ext"]
-
-
-Codec = StdMsgpack
+__all__ = ["Codec", "std_ext"]
 
 
 @std_ext.encoder(2, int)

@@ -475,7 +475,7 @@ class Path(Sequence[PathElem]):
 
     @property
     def is_relative(self) -> bool:
-        "True if the path has a :@ prefix."
+        "True if the path has a ``:@`` prefix."
         return self._prefix is True
 
     def __eq__(self, other) -> bool:
@@ -892,13 +892,13 @@ class PP(Path):
 
 class PS(Path):
     """
-    A Path subclass that delegates to `Path.from_path`.
+    A Path subclass that delegates to :py:func:`moat.lib.path.Path.from_path`.
 
-    For idempotency (required by ``click``) it transparently accepts `Path`
+    For idempotency (required by ``click``) it transparently accepts :class:`Path`
     objects.
     """
 
-    def __new__(cls, path, *, mark=""):
+    def __new__(cls, path: Path | str, *, mark=""):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)

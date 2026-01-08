@@ -24,12 +24,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.codec import ByteType
 
-__all__ = ["StdCBOR", "std_ext"]
+__all__ = ["Codec", "std_ext"]
 
 std_ext = Extension()
 
 
-class StdCBOR(_cbor.Codec):
+class Codec(_cbor.Codec):
     """
     CBOR codec with MoaT's standard extensions.
     """
@@ -41,9 +41,6 @@ class StdCBOR(_cbor.Codec):
         if data == b"":
             return NotGiven
         return super().decode(data)
-
-
-Codec = StdCBOR
 
 
 @std_ext.encoder(27, DProxy)

@@ -42,6 +42,14 @@ builtins.__sphinx_build__ = True
 
 import sphinx
 
+# Suppress specific sphinx-autodoc-typehints warnings
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"Cannot resolve forward reference.*BroadcastReader.: name 'Broadcaster' is not defined..sphinx_autodoc_typehints.forward_reference.",
+)
+
 # -- Project information -----------------------------------------------------
 
 project = "moat"
@@ -141,7 +149,7 @@ rst_prolog = """
 """
 
 # Sets the default role of `content` to :any:`content`, which creates cross-references
-default_role = "any"
+default_role = "py:obj"
 
 favicons = [
     {"href": "MoaT-gears.svg"},  # => use `_static/icon.svg`
@@ -181,6 +189,9 @@ html_domain_indices = True
 # Create hyperlinks to other documentation
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
+    # "asyncdbus": ("https://M-o-a-T.org/docs/asyncdbus/", None),
+    # "asyncclick": ("https://M-o-a-T.org/docs/asyncclick/", None),
 }
 
 autodoc2_packages = [
@@ -203,7 +214,7 @@ autodoc2_hidden_objects = [
 autodoc_default_options = {
     "members": True,
     # "special-members": True,
-    # "inherited-members": "ndarray",
+    # "inherited-members": True,
     # "member-order": "groupwise",
 }
 autodoc_typehints = "description"
@@ -216,10 +227,35 @@ autodoc_inherit_docstrings = False
 always_use_bars_union = True
 typehints_defaults = "comma"
 
-autodoc_type_aliases = {}
+autodoc_type_aliases = {
+    "moat.lib.gpio.gpio.Chip": "moat.lib.gpio.Chip",
+    "moat.lib.rpc.base.BaseMsgHandler": "moat.lib.rpc.BaseMsgHandler",
+    "moat.lib.rpc.base.Caller": "moat.lib.rpc.Caller",
+    # "RetainHandling": "moat.lib.mqtt.RetainHandling",
+}
 autoclass_content = "both"
 autodoc_member_order = "groupwise"
-
+nitpicky = True
+nitpick_ignore = [
+    ("py:class", "Sequence"),
+    ("py:class", "Broadcaster"),
+    ("py:class", "T"),
+    ("py:class", "PathElem"),
+    ("py:class", "moat.lib.repl.types.TypeAliasType"),
+    ("py:obj", "moat.lib.broadcast._impl.TData"),
+    ("py:obj", "NotGiven"),
+    ("py:func", "moat.lib.path.Path.from_path"),
+    # TODO
+    ("py:func", "asyncclick.command"),
+    ("py:func", "asyncclick.group"),
+    ("py:class", "asyncclick.core.Command"),
+    ("py:class", "asyncclick.core.Group"),
+    ("py:class", "asyncclick.Group"),
+    ("py:class", "asyncdbus.service.ServiceInterface"),
+]
+nitpick_ignore_regex = [
+    (r".*", r"'Broadcaster'"),
+]
 
 # -- Sphinx Immaterial configs -------------------------------------------------
 
@@ -265,6 +301,21 @@ python_module_names_to_strip_from_xrefs = ["collections.abc"]
 object_description_options = [
     ("py:.*", dict(include_rubrics_in_toc=True)),
 ]
+
+
+# Custom autodoc-skip-member handler to honor :meta public: directive
+def autodoc_skip_member(app, what, name, obj, skip, options):
+    """Don't skip objects with ``:meta public:`` in their docstring."""
+    docstring = getattr(obj, "__doc__", None)
+    if docstring:
+        if ":meta public:" in docstring:
+            return False
+        if ":meta private:" in docstring:
+            return True
+
+    # default behavior
+    return skip
+
 
 OFF_sphinx_immaterial_custom_admonitions = [
     {
@@ -378,23 +429,23 @@ SPECIAL_MEMBERS = {
 }
 
 
-def autodoc_skip_member(app, what, name, obj, skip, options):
-    """
-    Instruct autodoc to skip members that are inherited from np.ndarray.
-    """
-    if skip:
-        # Continue skipping things Sphinx already wants to skip
-        return skip
-
-    if name in SPECIAL_MEMBERS:
-        # Don't skip members in "special-members"
-        return False
-
-    if name[0] == "_":
-        # For some reason we need to tell Sphinx to hide private members
-        return True
-
-    return skip
+# def autodoc_skip_member(app, what, name, obj, skip, options):
+#    """
+#    Instruct autodoc to skip members that are inherited from np.ndarray.
+#    """
+#    if skip:
+#        # Continue skipping things Sphinx already wants to skip
+#        return skip
+#
+#    if name in SPECIAL_MEMBERS:
+#        # Don't skip members in "special-members"
+#        return False
+#
+#    if name[0] == "_":
+#        # For some reason we need to tell Sphinx to hide private members
+#        return True
+#
+#    return skip
 
 
 def autodoc_process_bases(app, name, obj, options, bases):
@@ -471,14 +522,24 @@ def gen_icons():
             subprocess.check_call(["inkscape", "-o", str(dest), "-w", str(sz), str(src_ng)])
 
 
+suppress_warnings = [
+    "docutils",
+    "sphinx_autodoc_typehints.forward_reference",  # Suppress all forward ref warnings
+]
+
+
 def setup(app):
     # monkey_patch_parse_see_also()
-    # app.connect("autodoc-skip-member", autodoc_skip_member)
+    app.connect("autodoc-skip-member", autodoc_skip_member)
     # app.connect("autodoc-process-bases", autodoc_process_bases)
     # app.connect("autodoc-process-signature", autodoc_process_signature)
     gen_icons()
 
     # These imports are required to prevent circular import nonsense for typing
+    import moat
+
+    if not moat.DOC:
+        raise RuntimeError("NoDoc")
     import anyio
     import asyncclick.core
     import prometheus_client
@@ -489,7 +550,6 @@ def setup(app):
     import wsproto
     import moat.lib.mqtt._types
     import moat.lib.rpc
-    import moat.lib.rpc.msg
     import moat.link
     import moat.link.server
     import moat.lib.stream.anyio
@@ -497,4 +557,5 @@ def setup(app):
     import moat.micro.cmd.tree.dir
 
     import typing
-    typing.TYPE_CHECKING=True
+
+    typing.TYPE_CHECKING = True

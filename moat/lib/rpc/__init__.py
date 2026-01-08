@@ -5,6 +5,11 @@ MoaT's command multiplexer.
 
 from __future__ import annotations
 
+from moat import DOC as _DOC
+
+# Import BaseMsgHandler at runtime for Sphinx documentation
+from .base import BaseMsgHandler as BaseMsgHandler
+
 # Import constants directly (not lazy)
 from .const import *  # noqa: F403
 
@@ -12,26 +17,6 @@ from .const import *  # noqa: F403
 from .errors import *  # noqa: F403
 
 from typing import TYPE_CHECKING as _TC
-
-if _TC:
-    from .anyio import AioStream as AioStream
-    from .base import BaseMsgHandler as BaseMsgHandler
-    from .base import Caller as Caller
-    from .base import Key as Key
-    from .base import MsgHandler as MsgHandler
-    from .base import MsgLink as MsgLink
-    from .base import MsgSender as MsgSender
-    from .base import OptDict as OptDict
-    from .base import SubMsgSender as SubMsgSender
-    from .msg import Msg as Msg
-    from .msg import MsgResult as MsgResult
-    from .nest import CmdStream as CmdStream
-    from .nest import rpc_on_rpc as rpc_on_rpc
-    from .stream import HandlerStream as HandlerStream
-    from .stream import StreamLink as StreamLink
-    from .stream import i_f2wire as i_f2wire
-    from .stream import wire2i_f as wire2i_f
-
 
 # Lazy loading for classes and functions
 _imports = {
@@ -42,12 +27,12 @@ _imports = {
     "Caller": "base",
     "Key": "base",
     "MsgHandler": "base",
-    "MsgLink": "base",
     "MsgSender": "base",
     "OptDict": "base",
     "SubMsgSender": "base",
     # From msg
     "Msg": "msg",
+    "MsgLink": "msg",
     "MsgResult": "msg",
     # From nest
     "rpc_on_rpc": "nest",
@@ -92,7 +77,7 @@ __all__ = [  # noqa:RUF022
     "SD_IN",
     "SD_OUT",
     "SD_BOTH",
-    # From errors (not lazy)
+    # From errors
     "NotReadyError",
     "ShortCommandError",
     "LongCommandError",
@@ -106,27 +91,46 @@ __all__ = [  # noqa:RUF022
     "NoCmd",
     "WantsStream",
     "MustStream",
-    # From anyio (lazy via TYPE_CHECKING)
+    # From anyio
     "AioStream",
     "rpc_on_aiostream",
-    # From base (lazy via TYPE_CHECKING)
+    # From base
     "BaseMsgHandler",
     "Caller",
     "Key",
     "MsgHandler",
-    "MsgLink",
     "MsgSender",
     "OptDict",
     "SubMsgSender",
-    # From msg (lazy via TYPE_CHECKING)
+    # From msg
     "Msg",
+    "MsgLink",
     "MsgResult",
-    # From nest (lazy via TYPE_CHECKING)
+    # From nest
     "CmdStream",
     "rpc_on_rpc",
-    # From stream (lazy via TYPE_CHECKING)
+    # From stream
     "HandlerStream",
     "StreamLink",
     "i_f2wire",
     "wire2i_f",
 ]
+
+if _TC or _DOC:
+    _DOC = False
+    from .anyio import AioStream as AioStream
+    from .base import Caller as Caller
+    from .base import Key as Key
+    from .base import MsgHandler as MsgHandler
+    from .base import MsgSender as MsgSender
+    from .base import OptDict as OptDict
+    from .base import SubMsgSender as SubMsgSender
+    from .msg import Msg as Msg
+    from .msg import MsgLink as MsgLink
+    from .msg import MsgResult as MsgResult
+    from .nest import CmdStream as CmdStream
+    from .nest import rpc_on_rpc as rpc_on_rpc
+    from .stream import HandlerStream as HandlerStream
+    from .stream import StreamLink as StreamLink
+    from .stream import i_f2wire as i_f2wire
+    from .stream import wire2i_f as wire2i_f

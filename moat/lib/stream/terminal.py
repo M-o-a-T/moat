@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.repl import TermState
 
-    from collections.abc import AbstractSet
+    from collections.abc import Set as AbstractSet
 
 
 __all__ = ["FilenoTerm", "InvalidTerminal"]

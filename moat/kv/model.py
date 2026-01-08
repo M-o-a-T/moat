@@ -868,8 +868,8 @@ class Entry:
         """This entry is updated by that event.
 
         Args:
-          event: The :class:`NodeEvent` to base the update on.
-          data (Any): whatever the node should contains. Use :any:`moat.kv.util.NotGiven`
+          event: The :py:class:`NodeEvent` to base the update on.
+          data (Any): whatever the node should contains. Use `NotGiven`
             to delete.
 
         Returns:

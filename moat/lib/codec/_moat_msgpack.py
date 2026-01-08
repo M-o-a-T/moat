@@ -17,21 +17,18 @@ from moat.lib.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_o
 from . import Extension
 from . import msgpack as _msgpack
 
-__all__ = ["StdMsgpack", "std_ext"]
+__all__ = ["Codec", "std_ext"]
 
 
 std_ext = Extension()
 ExtType = _msgpack.ExtType
 
 
-class StdMsgpack(_msgpack.Codec):
+class Codec(_msgpack.Codec):
     "A MsgPack codec with our extensions"
 
     def __init__(self):
         super().__init__(ext=std_ext, use_attrdict=True)
-
-
-Codec = StdMsgpack
 
 
 @std_ext.encoder(5, DProxy)

@@ -14,7 +14,8 @@ class RingBuffer:
 
     def __init__(self, length: int):
         """
-        Sets up a ring buffer of size `len` (i.e. holds zero to len-1 bytes).
+        Args:
+            length: Buffer length, *not* constrained to powers of two.
         """
         self._buf = bytearray(length)
         self._read_pos = 0  # Position to read from

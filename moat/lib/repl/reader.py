@@ -177,12 +177,14 @@ class Reader(anyio.AsyncContextManagerMixin):
         The emacs-style kill-ring; manipulated with yank & yank-pop
       * ps1, ps2, ps3, ps4:
         prompts.  ps1 is the prompt for a one-line input; for a
-        multiline input it looks like:
+        multiline input it looks like::
+
             ps2> first line of input goes here
             ps3> second and further
             ps3> lines get ps3
             ...
             ps4> and the last one gets ps4
+
         As with the usual top-level, you can set these to instances if
         you like; str() will be called on them (once) at the beginning
         of each command.

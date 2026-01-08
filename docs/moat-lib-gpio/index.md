@@ -13,6 +13,5 @@
 :hidden:
 
 usage
-history
 api
 ```

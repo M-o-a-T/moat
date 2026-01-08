@@ -30,11 +30,14 @@ class _CBORMsgBuf(StackedMsg):
     Otherwise two separate write calls are used to save on message copying.
 
     Config:
-        console (bool):
+        console:
             Flag how to handle non-framed data.
             True: collect for crd/cwr, False: print incoming, None: ignore.
-        msg_prefix(int):
-            bytecode of prefix for messages (as opposed to console data)
+            If an integer: Buffer size
+        msg_prefix:
+            value of the prefix byte for messages (as opposed to console data).
+
+    :meta public:
     """
 
     cons = False
@@ -42,10 +45,6 @@ class _CBORMsgBuf(StackedMsg):
     liner: Liner = None
 
     def __init__(self, stream: BaseBuf, cfg: dict):
-        #
-        # console: size of console buffer, 128 if True
-        # msg_prefix: int: code for start-of-packet
-        #
         super().__init__(stream, cfg)
         self.w_lock = Lock()
 
@@ -138,6 +137,8 @@ class _CBORMsgBlk(StackedMsg):
 
     Use this if the layer below supports byte boundaries
     (one bytestring-ized message per call).
+
+    :meta public:
     """
 
     async def send(self, msg):

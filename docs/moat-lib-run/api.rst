@@ -5,3 +5,5 @@ API
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. autofunction:: moat.lib.run.main_

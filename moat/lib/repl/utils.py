@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from collections.abc import Iterable, Iterator
 
-__all__ = ["THEME", "disp_str", "gen_colors", "unbracket", "wlen"]
+__all__ = ["THEME", "ColorSpan", "Span", "disp_str", "gen_colors", "unbracket", "wlen"]
 
 ANSI_ESCAPE_SEQUENCE = re.compile(r"\x1b\[[ -@]*[A-~]")
 ZERO_WIDTH_BRACKET = re.compile(r"\x01.*?\x02")
@@ -54,11 +54,13 @@ class Span(NamedTuple):
 
     @classmethod
     def from_re(cls, m: Match[str], group: int | str) -> Self:
+        "generate from regexp match"
         re_span = m.span(group)
         return cls(re_span[0], re_span[1] - 1)
 
     @classmethod
     def from_token(cls, token: TI, line_len: list[int]) -> Self:
+        "generate from token"
         end_offset = -1
         if (
             token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE}  # type:ignore[unresolved-attribute]
@@ -77,6 +79,8 @@ class Span(NamedTuple):
 
 
 class ColorSpan(NamedTuple):
+    "A span with a named tag"
+
     span: Span
     tag: str
 
@@ -108,9 +112,9 @@ def wlen(s: str) -> int:  # noqa: D103
 
 
 def unbracket(s: str, including_content: bool = False) -> str:
-    r"""Return `s` with \001 and \002 characters removed.
+    r"""Return ``s`` with \001 and \002 characters removed.
 
-    If `including_content` is True, content between \001 and \002 is also
+    If ``including_content`` is True, content between \001 and \002 is also
     stripped.
     """
     if including_content:
@@ -121,8 +125,9 @@ def unbracket(s: str, including_content: bool = False) -> str:
 def gen_colors(buffer: str) -> Iterator[ColorSpan]:
     """Returns a list of index spans to color using the given color tag.
 
-    The input `buffer` should be a valid start of a Python code block, i.e.
-    it cannot be a block starting in the middle of a multiline string.
+    Args:
+        buffer: A valid start of a Python code block, i.e. it cannot be a
+                block starting in the middle of a multiline string.
     """
     sio = StringIO(buffer)
     line_lengths = [0] + [len(line) for line in sio.readlines()]
@@ -310,6 +315,7 @@ def disp_str(
     r"""Decompose the input buffer into a printable variant with applied colors.
 
     Returns a tuple of two lists:
+
     - the first list is the input buffer, character by character, with color
       escape codes added (while those codes contain multiple ASCII characters,
       each code is considered atomic *and is attached for the corresponding
@@ -318,22 +324,24 @@ def disp_str(
       buffer.
 
     Note on colors:
-    - The `colors` list, if provided, is partially consumed within. We're using
+
+    - The ``colors`` list, if provided, is partially consumed within. We're using
       a list and not a generator since we need to hold onto the current
       unfinished span between calls to disp_str in case of multiline strings.
-    - The `colors` list is computed from the start of the input block. `buffer`
+    - The ``colors`` list is computed from the start of the input block. ``buffer``
       is only a subset of that input block, a single line within. This is why
-      we need `start_index` to inform us which position is the start of `buffer`
+      we need ``start_index`` to inform us which position is the start of ``buffer``
       actually within user input. This allows us to match color spans correctly.
 
-    Examples:
-    >>> utils.disp_str("a = 9")
-    (['a', ' ', '=', ' ', '9'], [1, 1, 1, 1, 1])
+    Examples::
 
-    >>> line = "while 1:"
-    >>> colors = list(utils.gen_colors(line))
-    >>> utils.disp_str(line, colors=colors)
-    (['\x1b[1;34mw', 'h', 'i', 'l', 'e\x1b[0m', ' ', '1', ':'], [1, 1, 1, 1, 1, 1, 1, 1])
+        >>> utils.disp_str("a = 9")
+        (['a', ' ', '=', ' ', '9'], [1, 1, 1, 1, 1])
+
+        >>> line = "while 1:"
+        >>> colors = list(utils.gen_colors(line))
+        >>> utils.disp_str(line, colors=colors)
+        (['\x1b[1;34mw', 'h', 'i', 'l', 'e\x1b[0m', ' ', '1', ':'], [1, 1, 1, 1, 1, 1, 1, 1])
 
     """
     chars: CharBuffer = []

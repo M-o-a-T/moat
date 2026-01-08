@@ -254,7 +254,8 @@ class Readline:
     """
     Async iterator interface for reading lines from a console.
 
-    Usage:
+    Usage::
+
         # Single-line input
         async with Readline(console, prompt=">>> ") as lines:
             async for line in lines:

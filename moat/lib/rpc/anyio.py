@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.lib.rpc import MsgHandler, MsgSender
 
-    from .base import BaseMsgHandler
+    from . import BaseMsgHandler
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class AioStream(HandlerStream):  # noqa: D101
         self.__debug = debug
 
         if codec is None:
-            from moat.lib.codec.moat_cbor import StdCBOR  # noqa: PLC0415
+            from moat.lib.codec.moat_cbor import Codec as StdCBOR  # noqa: PLC0415
 
             codec = StdCBOR()
 
@@ -92,11 +92,12 @@ async def rpc_on_aiostream(
     """
     Run a command handler on top of an anyio stream, using the given codec.
 
-    @cmd is the handler for incoming messages. It may be `None`.
+    Args:
+        cmd: the handler for incoming messages. It may be `None`.
 
     This is an async context manager that yields the command handler.
 
-    The default codec is `moat.lib.codec.moat_cbor.Codec`.
+    The default codec is :py:class:`moat.lib.codec.moat_cbor.Codec`.
     """
 
     y = False

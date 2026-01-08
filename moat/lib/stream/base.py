@@ -61,8 +61,8 @@ class Base:
 
     Usage:
 
-    Use the `AC_use` helper if you need to call an async context manager or
-    to register a destructor.
+    Use the :py:func:`moat.lib.micro.AC_use` helper if you need
+    to call an async context manager or to register a destructor.
 
     Augment `setup` or `teardown` to add non-stream related features.
 
@@ -119,7 +119,8 @@ class BaseConn(Base):
 
     Usage:
 
-    Override :py:meth:`BaseConn.stream` to create the data link. Use `AC_use` to
+    Override :py:meth:`BaseConn.stream` to create the data link.
+    Use :py:func:`moat.lib.micro.AC_use` to
     call an async context manager or to register a destructor.
 
     Augment `setup` or `teardown` to add non-stream related features.
@@ -151,7 +152,7 @@ class BaseConn(Base):
         """
         Data stream setup.
 
-        You need to use `AC_use` for setting up an async context
+        You need to use `moat.lib.micro.AC_use` for setting up an async context
         or to register a cleanup handler.
         """
         raise NotImplementedError(f"'stream' in {self!r}")
@@ -275,7 +276,7 @@ class StackedMsg(StackedConn, BaseMsg):
         "Console Send. Returns when the buffer is transmitted."
         return self.s.cwr(buf)
 
-    def crd(self, buf) -> len:  # async
+    def crd(self, buf) -> int:  # async
         "Console Receive. Returns data by reading into a buffer."
         return self.s.crd(buf)
 
@@ -295,7 +296,7 @@ class StackedBuf(StackedConn, BaseBuf):
         "Send. Returns when the buffer is transmitted."
         return self.s.wr(buf)
 
-    def rd(self, buf) -> len:  # async
+    def rd(self, buf) -> int:  # async
         "Receive. Returns data by reading into a buffer."
         return self.s.rd(buf)
 

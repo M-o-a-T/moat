@@ -13,6 +13,10 @@ from asyncdbus.message_bus import MessageBus
 from .utils import CtxObj, call, unwrap_dbus_value, wrap_dbus_value
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from asyncdbus import DbusType
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ class Dbus(CtxObj):
         context manager for creating a service.
 
         Importers and exporters are not context managers. You need to
-        control their lifetimes explicitly by calling their `close`
+        control their lifetimes explicitly by calling their ``close``
         method if they need to be destroyed before the bus context ends.
         """
 
@@ -542,12 +546,12 @@ class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
         return r
 
     @dbus.method()
-    async def GetValue(self) -> "v":  # noqa: D102,F821,UP037
+    async def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
         value = await self._get_value_handler(self._path)
         return wrap_dbus_value(value)
 
     @dbus.method()
-    async def GetText(self) -> "v":  # noqa: D102,F821,UP037
+    async def GetText(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
         value = await self._get_value_handler(self._path, True)
         return wrap_dbus_value(value)
 
@@ -557,11 +561,11 @@ class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
 
 class DbusRootExport(DbusTreeExport):  # noqa: D101
     @dbus.signal()
-    def ItemsChanged(self, changes) -> "a{sa{sv}}":  # noqa: D102,F722
+    def ItemsChanged(self, changes) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722
         return changes
 
     @dbus.method()
-    async def GetItems(self) -> "a{sa{sv}}":  # noqa: D102,F722
+    async def GetItems(self) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722
         return {
             path: {
                 "Value": wrap_dbus_value(item.get_value()),
@@ -712,7 +716,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # Other processes connected to this BusItem object will have subscribed to the
     # event when they want to track our state.
     @dbus.signal()
-    def PropertiesChanged(self, changes) -> "a{sv}":  # noqa: D102,F722
+    def PropertiesChanged(self, changes) -> DbusType["a{sv}"]:  # noqa: D102,F722
         return changes
 
 

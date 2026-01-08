@@ -217,7 +217,9 @@ class Broadcaster(Generic[TData]):
     ) -> BroadcastReader[TData]:
         """Create a reader with an explicit queue length.
 
-        Set `skip` to ignore overflows.
+        Args:
+            length: Queue size.
+            skip: if `True`, ignore overflows.
         """
         assert self._rdr is not None
 

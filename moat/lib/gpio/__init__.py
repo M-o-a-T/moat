@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import sys
 
-from .gpio import Chip
-from .gpio import *  # noqa:F403
+from ._impl import Chip, Direction, Edge, Line, LineSettings
+
+__all__ = ["Chip", "Direction", "Edge", "Line", "LineSettings", "open_chip"]
 
 
 def open_chip(num=None, label=None, consumer=sys.argv[0]):
@@ -18,6 +19,6 @@ def open_chip(num=None, label=None, consumer=sys.argv[0]):
             Defaults to the program's name.
 
     Returns:
-        a :class:`moat.lib.gpio.gpio.Chip` instance.
+        a :class:`moat.lib.gpio.Chip` instance.
     """
     return Chip(num=num, label=label, consumer=consumer)

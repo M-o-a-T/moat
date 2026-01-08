@@ -24,16 +24,7 @@ import stamina
 from attr.validators import ge, gt, in_, instance_of, le, lt, optional
 from attrs import define, field
 
-from ._exceptions import (
-    MQTTConnectFailed,
-    MQTTNoReconnect,
-    MQTTOperationFailed,
-    MQTTPublishFailed,
-    MQTTServerRestarted,
-    MQTTSubscribeFailed,
-    MQTTUnsubscribeFailed,
-)
-from ._types import (
+from . import (
     MQTTConnAckPacket,
     MQTTPacket,
     MQTTPublishAckPacket,
@@ -49,6 +40,15 @@ from ._types import (
     RetainHandling,
     Subscription,
     Will,
+)
+from ._exceptions import (
+    MQTTConnectFailed,
+    MQTTNoReconnect,
+    MQTTOperationFailed,
+    MQTTPublishFailed,
+    MQTTServerRestarted,
+    MQTTSubscribeFailed,
+    MQTTUnsubscribeFailed,
 )
 from .client_state_machine import MQTTClientStateMachine
 
@@ -693,7 +693,8 @@ class AsyncMQTTClient:
 
             * the ``retain_as_published`` and ``no_local`` flags must match.
 
-            * subsequent subscriptions can't use `RetainHandling.SEND_RETAINED`.
+            * subsequent subscriptions can't use
+              :py:obj:`moat.lib.mqtt.RetainHandling.SEND_RETAINED`.
 
             * When a second subscription raises the subscription's maximum QoS,
               it's not lowered when the second subscription ends.

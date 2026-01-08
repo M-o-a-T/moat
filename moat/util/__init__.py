@@ -20,7 +20,6 @@ _imports = {
     # impl
     "Cache": "impl",
     "NoLock": "impl",
-    "NoneType": "impl",
     "OptCtx": "impl",
     "TimeOnlyFormatter": "impl",
     "acount": "impl",
@@ -80,9 +79,6 @@ _imports = {
     # msg
     "MsgReader": "msg",
     "MsgWriter": "msg",
-    # msgpack
-    "StdMsgpack": "msgpack",
-    "std_ext": "msgpack",
     # server
     "gen_ssl": "server",
     "run_tcp_server": "server",

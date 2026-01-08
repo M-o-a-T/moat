@@ -15,6 +15,8 @@ from moat.lib.micro import ticks_diff
 
 from typing import TYPE_CHECKING, cast
 
+__all__ = []
+
 if TYPE_CHECKING:
     from types import EllipsisType
 
@@ -149,14 +151,11 @@ class PID:
         self.Tf = Tf * PID_TC if Tf else None
 
     def set_output_limits(self, lower: float | None = -MAX_VAL, upper: float | None = MAX_VAL):
-        """Set PID controller output limits for anti-windup.
+        """Set PID controller output limits, for anti-windup.
 
-        Parameters
-        ----------
-        lower : float or None
-            Lower limit for anti-windup,
-        upper : flaot or None
-            Upper limit for anti-windup.
+        Args:
+            lower: Lower limit for anti-windup,
+            upper: Upper limit for anti-windup.
 
         """
         self.lower = -MAX_VAL if lower is None else lower
@@ -165,8 +164,7 @@ class PID:
     def get_output_limits(self) -> tuple[float, float]:
         """Get PID controller output limits for anti-windup.
 
-        Return:
-            Output limits (lower, upper).
+        Returns: Output limits (lower, upper).
 
         """
         return self.lower, self.upper
@@ -214,7 +212,7 @@ class PID:
             t: Current time.
 
         Returns:
-            p,i,d: Control signal (in parts), *not* limited.
+            ``p,i,d``: Control signal (in parts), *not* limited.
 
         This method performs anti-windup protection on the controller's integral term.
         """
@@ -289,7 +287,7 @@ class CPID(PID):
         """
         Args:
             cfg: our configuration. See above.
-            state: the state storage. Typically an `attrdict`.
+            state: the state storage. Typically an :py:class:`moat.util.attrdict`.
         """
         super().__init__(cfg["p"], cfg["i"], cfg["d"], cfg["tf"])
         self.cfg = cfg
@@ -356,7 +354,7 @@ class CPID(PID):
         self._update_state()
         return res
 
-    def integrate(self, i, t=None) -> tuple[float, float, float]:  # pyright:ignore
+    def integrate(self, i: float, t=None) -> tuple[float, float, float]:  # pyright:ignore
         """
         Run a PID step.
 
@@ -365,7 +363,7 @@ class CPID(PID):
             t: current time, or `None` for monotonicity.
         Returns:
             the p,i,d control variables.
-            Call :meth:`sum` to get the new input.
+            Call :meth:`PID.sum` to get the new input.
         """
         if t is None:
             t = time()

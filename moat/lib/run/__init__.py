@@ -74,16 +74,16 @@ def _no_config(*a, **k):  # noqa:ARG001
 
 def attr_args(
     proc=None,
-    with_combined="s",
-    with_arglist=False,
-    with_path=True,
-    with_eval=True,
-    with_var=True,
-    with_proxy=False,
-    par_name="Parameter",
+    with_combined: bool | str = "s",
+    with_arglist: bool = False,
+    with_path: bool = True,
+    with_eval: bool = True,
+    with_var: bool = True,
+    with_proxy: bool = False,
+    par_name: str = "Parameter",
 ):
     """
-    Add an option for setting possibly-hierarchical values to `click.command`.
+    Add an option for setting possibly-hierarchical values to :func:`asyncclick.command`.
 
     ``-s``/``--set`` accepts these prefix-tagged values:
     * ~str
@@ -92,21 +92,33 @@ def attr_args(
     * :path (the colon is not stripped)
     * ^named_proxy
 
-    These are enabled (rather, displayed) by passing ``True`` in
-    ``with_val``, ``with_eval``, ``with_path``, and ``with_proxy``,
-    respectively. The latter defaults to `False`, all others to `True`.
+    Args:
+        with_combined: display ``-s`` / ``--set`` help text.
+        with_var: display ``-v`` / ``--var`` help text.
+        with_eval: display ``-e`` / ``--eval`` help text.
+        with_path: display ``-p`` / ``--path`` help text.
+        with_proxy: display ``-P`` / ``--proxy`` help text.
+        with_arglist: the command accepts non-option arguments.
+        par_name: overrides the parameter name.
 
-    Legacy behavior (hidden unless `with_combined` is False): Adds separate
+    Options are enabled (rather, displayed in the help text) by
+    passing ``True`` in the corresponding argument.
+
+    Legacy behavior (hidden unless ``with_combined`` is `False`): Adds separate
     ``-v``/``--var``, ``-e``/``--eval``, -p``/``--path, and
     ``-P``/``--proxy`` arguments.
 
     Use ``with_combined=False`` to get legacy behavior.
     Use ``with_combined=LETTER`` to change the default from ``-s``.
 
-    In new mode, Legacy short options are not availabile;
-    long options are available but hidden.
+    If ``with_combined`` is not `False`, short options for hidden legacy
+    flags are not availabile; the long options are available but hidden.
 
-    All arguments are of the form "-X path value". A path consisting of a
+    Options access a hierarchical mapping. Positional arguments are
+    accessible by the ``:n`` (`None`) key. Lists are appended to if the
+    position is `None`.
+
+    All arguments are of the form ``-X path value``. A path consisting of a
     single ``+`` expands to ``:n:n`` for easy appending to argument lists.
     Use ``:=`` if you ever need a path that consist of a single plus character.
     """
@@ -451,12 +463,12 @@ def load_subgroup(
     **kw,
 ) -> click.Command:
     """
-    A decorator like click.group, enabling loading of subcommands
+    A decorator like :func:`asyncclick.group`, enabling loading of subcommands
 
     Internal extensions are loaded as ``{sub_pre}.*.{sub_post}``.
     External extensions are loaded as ``{ext_pre}.*.{ext_post}``.
 
-    All other arguments are forwarded to `click.command`.
+    All other arguments are forwarded to :func:`asyncclick.command`.
     """
 
     def _ext(fn, **kw):
@@ -478,7 +490,7 @@ def load_subgroup(
 
 class Loader(click.Group):
     """
-    A `click.group` that loads additional commands from subfolders and/or extensions.
+    An :class:`asyncclick.Group` that loads additional commands from subfolders and/or extensions.
 
     Subfolders: set _util_sub_pre to your module's name.
         This works with namespace packages.
@@ -692,7 +704,7 @@ class MainLoader(Loader):
 )
 @attr_args(par_name="Config item")
 @click.pass_context
-async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
+async def main_(ctx, verbose, quiet, help=False, **kv) -> None:
     """
     This is the main command. (You might want to override this text.)
 
@@ -725,7 +737,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
         await main(ctx)
 
 
-def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements
+def wrap_main(
     main=main_,
     *,
     set_=(),
@@ -755,7 +767,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     The main command entry point, when testing.
 
     Args:
-        main: special main function, defaults to `moat.lib.run.main`.
+        main: special main function, defaults to :func:`moat.lib.run.main_`.
         name: command name, defaults to {main}'s toplevel module name.
 
         cfg: additional configuration to preconfigure

@@ -11,13 +11,13 @@ class Data(dict):
     "Schema-verified data (dict)"
 
 
-class _SchemaName(str):
+class SchemaName(str):
     __slots__ = ()
 
     def __getattr__(self, x):
         if len(self):
-            return _SchemaName(f"{self}.{x}")
-        return _SchemaName(x)
+            return SchemaName(f"{self}.{x}")
+        return SchemaName(x)
 
 
-Schema = _SchemaName("")
+Schema = SchemaName("")

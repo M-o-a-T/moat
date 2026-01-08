@@ -34,8 +34,8 @@ class AnyioBuf(BaseBuf):
         """
         Create the stream to use.
 
-        Use `AC_use` to arrange for closing it. This class will not do it
-        for you.
+        Use :py:func:`moat.lib.micro.AC_use` to arrange for closing it.
+        This class will not do it for you.
         """
         raise NotImplementedError(f"Override {self.__class__.__name__}.stream")
 
@@ -230,7 +230,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
         self.exec = executable
 
     def open_args(self):
-        """Return keyword arguments for `anyio.open_process`.
+        """Return keyword arguments for :func:`~anyio.open_process`.
 
         Default is whatever has been passed to the ProcessBuf constructor.
         """

@@ -70,7 +70,7 @@ def import_(name, off=0):
     """
     Import a module and access an object in it.
 
-    `import_("a.b.c.d.e", 2)` imports "a.b.c" and returns the e attribute
+    ``import_("a.b.c.d.e", 2)`` imports "a.b.c" and returns the e attribute
     of object d from it.
     """
     n = name.split(".")
@@ -249,13 +249,12 @@ _alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 def num2id(number, alphabet=_alphabet):
     """
-    Encode a number / object ID in base36 (default).
+    Encode a number / object ID in base36 (by default).
 
     This code doesn't care about num2id(739172) or similar.
 
     To avoid these issues, pass an alphabet without vowels
-    as the second parameter. `moat.util.random` contains some
-    you might consider useful.
+    as the second parameter, e.g. :py:data:`moat.util.al_unique`.
     """
     if not isinstance(number, int):
         if isinstance(number, (float, complex, str, bytes, bytearray)):

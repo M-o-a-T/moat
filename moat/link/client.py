@@ -140,6 +140,7 @@ class LinkCommon(CmdCommon):
     name: str
     server_name: str = None
     is_server: bool = False
+    _sender: MsgSender
 
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
@@ -153,7 +154,12 @@ class LinkCommon(CmdCommon):
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")
-        self.sender = MsgSender(self)
+        self._sender = MsgSender(self)
+
+    @property
+    def sender(self):
+        "The MsgSender that forwards to our server"
+        return self._sender
 
     def handle(self, msg, rpath, *add) -> Awaitable[Any]:
         """
@@ -482,21 +488,22 @@ class LinkSender(MsgSender):
         """
         Monitor a node or subtree.
 
-        @path: what to examine
-        @meta: flag whether to return metadata too
-        @subtree: flag whether to watch a subtree, not just this node
-        @mark: yield `None` when the initial state has been transmitted
-        @state: send the current state (True), updates (False), both with
-                current data from the server (None), or both via MQTT (NotGiven).
-        @age: cutoff this many seconds ago. Older entries are skipped.
-        @cls: type of root node (default `Node`)
+        Args:
+            path: what to examine
+            meta: flag whether to return metadata too
+            subtree: flag whether to watch a subtree, not just this node
+            mark: yield `None` when the initial state has been transmitted
+            state: send the current state (True), updates (False), both with
+                    current data from the server (None), or both via MQTT (NotGiven).
+            age: cutoff this many seconds ago. Older entries are skipped.
+            cls: type of root node (default `Node`)
 
         This method returns an async context manager which yields an async iterator.
-        The iterator yields node data if neither @subtree nor @meta is set.
-        Otherwise it yields tuples. The first item is the path if @subtree
-        is set; the last item is the metadata if @meta is set.
+        The iterator yields node data if neither ``subtree`` nor ``meta`` is set.
+        Otherwise it yields tuples. The first item is the path if ``subtree``
+        is set; the last item is the metadata if ``meta`` is set.
 
-        ``state=NotGiven`` does not work with @mark=True, or when the same
+        ``state=NotGiven`` does not work with ``mark=True``, or when the same
         subscription is already active somewhere else.
         """
         return Watcher(self, path, meta, subtree, state, age, mark, cls, min_length, max_length)

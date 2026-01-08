@@ -1,5 +1,5 @@
 (moat-lib-rpc)=
-# CMD: Remote Procedure Calls and more
+# RPC: Remote Procedure Calls
 
 ```{include} ../../packaging/moat-lib-rpc/README.md
 :start-after: % start main

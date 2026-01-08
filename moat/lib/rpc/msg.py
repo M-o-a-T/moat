@@ -21,13 +21,13 @@ from moat.lib.micro import (
 )
 from moat.lib.path import Path
 
-from .base import MsgLink
 from .const import (
     B_ERROR,
     B_STREAM,
     B_WARNING,
     B_WARNING_INTERNAL,
     E_CANCEL,
+    E_ERROR,
     E_NO_STREAM,
     E_SKIP,
     S_END,
@@ -130,15 +130,27 @@ class MsgResult(Iterable):
         return a
 
     def __len__(self) -> int:
+        """
+        Returns the number of positional values.
+
+        :meta public:
+        """
         return len(self._a)
 
     def __bool__(self) -> bool:
+        """
+        Always `True`.
+
+        :meta public:
+        """
         return True
 
     def __getitem__(self, k: int | str) -> Any:
         """
         Get an item. If the key is numeric, retrieve from the argument
         list, else from the keywords.
+
+        :meta public:
         """
         if isinstance(k, (int, slice)):
             return self._a[k]
@@ -146,7 +158,7 @@ class MsgResult(Iterable):
 
     def get(self, k: int | str, default=None, nulled=False) -> Any:
         """
-        Get an item. Like `__getitem__` but returns a default (None) instead of
+        Get an item. Like :py:meth:`__getitem__` but returns a default (None) instead of
         raising `KeyError` / `IndexError`.
         """
         if isinstance(k, int):
@@ -164,26 +176,213 @@ class MsgResult(Iterable):
             return default
         return res
 
-    def __contains__(self, k) -> bool:
+    def __contains__(self, k: int | str) -> bool:
+        """
+        Test whether the given key is a valid positional index (if it's an
+        integer) or an existing keyword (if a string).
+
+        Use :py:attr:`kw` if you need to access numeric keywords.
+
+        :meta public:
+        """
         if isinstance(k, int):
             return 0 <= k < len(self._a)
         return k in self._kw
 
     def __iter__(self) -> Iterator:
-        "Returns an iterator over the list."
+        """
+        Returns an iterator over the positional values.
+
+        :meta public:
+        """
         return iter(self._a)
 
     def keys(self) -> KeysView:
+        """
+        Returns an iterator over the keyword names.
+
+        :meta public:
+        """
         "Returns an iterator over the dict's keys."
         return self._kw.keys()  # pyright:ignore
 
     def values(self) -> ValuesView:
+        """
+        Returns an iterator over the keyword values.
+
+        :meta public:
+        """
         "Returns an iterator over the dict's values."
         return self._kw.values()  # pyright:ignore
 
     def items(self) -> ItemsView:
-        "Returns an iterator over the dict's keys/value tuples."
+        """
+        Returns an iterator over the keyword items.
+
+        :meta public:
+        """
         return self._kw.items()  # pyright:ignore
+
+
+_link_id = 0
+
+
+class MsgLink:
+    """
+    The "other side" of a message.
+
+    Message links are bidirectional tunnels. :meth:`ml_send` on one side delivers
+    to the :meth:`ml_recv` method of the other.
+
+    This class is the base implementation, which simply forwards data from
+    a message to its sibling.
+    """
+
+    _remote: MsgLink = None
+    _end: bool = False
+
+    def __init__(self):
+        """
+        Link setup. By default does nothing.
+
+        You need to call :meth:`set_remote` before this is usable.
+        """
+        global _link_id
+        _link_id += 1
+        self.link_id = _link_id
+
+    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
+        """Message Link Receive
+
+        Called from the other side with whatever data.
+
+        Override this.
+        """
+        raise NotImplementedError
+
+    async def ml_send(self, a: Sequence, kw: OptDict, flags: int) -> None:
+        """Message Link Send
+
+        This method forwards data to the other side.
+
+        Don't override this.
+        """
+        if self._remote is None:
+            raise EOFError
+        try:
+            await self._remote.ml_recv(a, kw, flags)
+        except BaseException:
+            await self.kill()
+            raise
+        else:
+            if not flags & B_STREAM:
+                self.set_end()
+
+    async def ml_send_error(self, exc):
+        """
+        Send an exception.
+        """
+        if self.end_here:
+            if isinstance(exc, Exception):
+                log("Err after end: %r %r", self, exc, err=exc)
+            return
+        try:
+            # send the error directly
+            await self.ml_send((exc,), None, B_ERROR)
+        except Exception as exc:
+            try:
+                # that failed? send the error name and arguments
+                await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            except Exception:
+                try:
+                    # that failed too? send just the error name
+                    await self.ml_send((exc.__class__.__name__,), None, B_ERROR)
+                except Exception:
+                    try:
+                        # oh well, just send a naked error indication
+                        await self.ml_send([E_ERROR], None, B_ERROR)
+                    except Exception as ex:
+                        log("Unable to send: %r %r / %r", self, exc, ex)
+                        pass
+
+    @property
+    def end_both(self) -> bool:
+        if self._remote and not self._remote.end_here:
+            return False
+        return self._end
+
+    @property
+    def end_here(self) -> bool:
+        return self._end
+
+    @property
+    def end_there(self) -> bool:
+        if self._remote is None:
+            return True
+        return self._remote.end_here
+
+    @property
+    def remote(self):
+        return self._remote
+
+    def stream_detach(self):
+        """
+        Called when this stream is done.
+
+        Override this method to clean up any related data.
+
+        This method must be idempotent.
+        """
+        pass
+
+    def set_end(self):
+        "The send side of this stream has ended."
+        self._end = True
+        if self.end_both:
+            if self._remote is not None:
+                self._remote.stream_detach()
+            self.stream_detach()
+            self._remote = None
+
+    async def kill(self):
+        """
+        No further communication is possible.
+
+        This must only be called if e.g. a link is down.
+        It tries to deliver cancel messages to both sides.
+        """
+        rem = self._remote
+        if self._end:
+            pass
+        else:
+            rs = self if rem is None else rem
+            rs.set_end()
+            try:
+                with shield():
+                    await rs.ml_recv([E_CANCEL], None, B_ERROR)
+            except Exception:  # noqa:S110
+                pass
+
+    def set_remote(self, remote: MsgLink):
+        """
+        Set (or change) my remote side.
+
+        Args:
+            remote: the new MsgLink on the remote side.
+
+        The old remote, if any, will be :meth:`kill`-ed.
+        """
+        rem = self._remote
+        if rem is not None:
+            rem._remote = None  # noqa: SLF001
+            rem.set_end()
+        self._remote = remote
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}:L{self.link_id} "
+            f"r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
+        )
 
 
 class Msg(MsgLink, MsgResult):

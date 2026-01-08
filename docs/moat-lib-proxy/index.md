@@ -119,7 +119,6 @@ The proxy system integrates with MoaT's serialization formats:
 ### CBOR Integration
 
 ```python
-from moat.util import yload, yprint
 
 # Proxied objects are automatically handled in CBOR
 data = {"service": as_proxy(RemoteService())}
@@ -130,18 +129,19 @@ deserialized = cbor.loads(serialized)
 ### Msgpack Integration
 
 ```python
-from moat.util._msgpack import StdMsgpack
+from moat.lib.codec.moat_msgpack import Codec as StdCBOR
 
-packer = StdMsgpack()
+packer = StdCBOR()
 packed = packer.pack({"obj": proxy})
 unpacked = packer.unpack(packed)
+assert unpacked["obj"] is proxy
 ```
 
 ### YAML Integration
 
 ```yaml
 # Proxies can be referenced in YAML
-service: !Proxy myapp.RemoteService
+service: !R myapp.RemoteService
 ```
 
 ## Common Patterns

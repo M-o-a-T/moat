@@ -121,7 +121,12 @@ class Queue:
 
 
 class Lockstep(Queue):
-    "A queue with sender/receiver rendez-vous"
+    """
+    A sender/receiver rendez-vous.
+
+    The sender/receiver waits until the receiver/sender is called, then
+    the data item is transferred and both return.
+    """
 
     def __init__(self):
         super().__init__(0)

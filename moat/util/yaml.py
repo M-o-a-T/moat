@@ -95,20 +95,14 @@ SafeRepresenter.add_representer(str, str_presenter)
 
 def _path_repr(dumper, data):
     return dumper.represent_scalar("!P", str(data))
-    # return ScalarNode(tag, value, style=style)
-    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
 
 def _proxy_repr(dumper, data):
     return dumper.represent_scalar("!R", data.name)
-    # return ScalarNode(tag, value, style=style)
-    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
 
 def _dproxy_repr(dumper, data):
     return dumper.represent_scalar("!DP", repr([data.name, data.a, data.k]))
-    # return ScalarNode(tag, value, style=style)
-    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
 
 def read_env(loader, node):

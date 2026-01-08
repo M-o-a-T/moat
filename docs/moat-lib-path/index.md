@@ -301,13 +301,14 @@ print(data["paths"][1])  # Path("sensors", 1, "temperature")
 ### CBOR/Msgpack Integration
 
 ```python
-from moat.util import StdMsgpack
+from moat.lib.codec.moat_cbor import Codec as StdCBOR
 
 # Paths are automatically encoded
-packer = StdMsgpack()
-packed = packer.pack(Path("foo", "bar"))
+packer = StdCBOR()
+path = Path.build(("foo", "bar"))
+packed = packer.pack(path)
 unpacked = packer.unpack(packed)
-# unpacked is Path("foo", "bar")
+assert packed == path
 ```
 
 ```{toctree}

@@ -7,193 +7,39 @@ from __future__ import annotations
 from contextlib import contextmanager
 
 from moat.util import NotGiven
-from moat.lib.micro import ACM, AC_exit, L, TaskGroup, log, shield
+from moat import DOC
+from moat.lib.micro import ACM, AC_exit, L, TaskGroup
 from moat.lib.path import Path
 from moat.util.exc import ungroup
 
-from .const import B_ERROR, B_STREAM, E_CANCEL, E_ERROR, SD_BOTH, SD_IN, SD_NONE, SD_OUT
+from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
 from typing import TYPE_CHECKING
 
-_link_id = 0
-
-if TYPE_CHECKING:
+if TYPE_CHECKING or DOC:
     from contextlib import AbstractContextManager
-    from types import EllipsisType
+    from types import EllipsisType  # noqa:TC003
 
-    from .msg import Msg
+    from .msg import Msg  # noqa:TC001
 
-    from collections.abc import Awaitable, Callable, Mapping, Sequence
+    from collections.abc import Awaitable, Callable, Mapping
     from typing import Any, Self
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
 
-__all__ = ["BaseMsgHandler", "MsgHandler", "MsgLink", "MsgSender"]
-
-
-class MsgLink:
-    """
-    The "other side" of a message.
-
-    Message links are bidirectional tunnels. :meth:`ml_send` on one side delivers
-    to the :meth:`ml_recv` method of the other.
-
-    This class is the base implementation, which simply forwards data from
-    a message to its sibling.
-    """
-
-    _remote: MsgLink = None
-    _end: bool = False
-
-    def __init__(self):
-        """
-        Link setup. By default does nothing.
-
-        You need to call :meth:`set_remote` before this is usable.
-        """
-        global _link_id
-        _link_id += 1
-        self.link_id = _link_id
-
-    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
-        """Message Link Receive
-
-        Called from the other side with whatever data.
-
-        Override this.
-        """
-        raise NotImplementedError
-
-    async def ml_send(self, a: Sequence, kw: OptDict, flags: int) -> None:
-        """Message Link Send
-
-        This method forwards data to the other side.
-
-        Don't override this.
-        """
-        if self._remote is None:
-            raise EOFError
-        try:
-            await self._remote.ml_recv(a, kw, flags)
-        except BaseException:
-            await self.kill()
-            raise
-        else:
-            if not flags & B_STREAM:
-                self.set_end()
-
-    async def ml_send_error(self, exc):
-        """
-        Send an exception.
-        """
-        if self.end_here:
-            if isinstance(exc, Exception):
-                log("Err after end: %r %r", self, exc, err=exc)
-            return
-        try:
-            # send the error directly
-            await self.ml_send((exc,), None, B_ERROR)
-        except Exception as exc:
-            try:
-                # that failed? send the error name and arguments
-                await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
-            except Exception:
-                try:
-                    # that failed too? send just the error name
-                    await self.ml_send((exc.__class__.__name__,), None, B_ERROR)
-                except Exception:
-                    try:
-                        # oh well, just send a naked error indication
-                        await self.ml_send([E_ERROR], None, B_ERROR)
-                    except Exception as ex:
-                        log("Unable to send: %r %r / %r", self, exc, ex)
-                        pass
-
-    @property
-    def end_both(self) -> bool:  # noqa: D102
-        if self._remote and not self._remote.end_here:
-            return False
-        return self._end
-
-    @property
-    def end_here(self) -> bool:  # noqa: D102
-        return self._end
-
-    @property
-    def end_there(self) -> bool:  # noqa: D102
-        if self._remote is None:
-            return True
-        return self._remote.end_here
-
-    @property
-    def remote(self):  # noqa: D102
-        return self._remote
-
-    def stream_detach(self):
-        """
-        Called when this stream is done.
-
-        Override this method to clean up any related data.
-
-        This method must be idempotent.
-        """
-        pass
-
-    def set_end(self):
-        "The send side of this stream has ended."
-        self._end = True
-        if self.end_both:
-            if self._remote is not None:
-                self._remote.stream_detach()
-            self.stream_detach()
-            self._remote = None
-
-    async def kill(self):
-        """
-        No further communication is possible.
-
-        This must only be called if e.g. a link is down.
-        It tries to deliver cancel messages to both sides.
-        """
-        rem = self._remote
-        if self._end:
-            pass
-        else:
-            rs = self if rem is None else rem
-            rs.set_end()
-            try:
-                with shield():
-                    await rs.ml_recv([E_CANCEL], None, B_ERROR)
-            except Exception:  # noqa:S110
-                pass
-
-    def set_remote(self, remote: MsgLink):
-        """
-        Set (or change) my remote side.
-
-        Args:
-            remote: the new MsgLink on the remote side.
-
-        The old remote, if any, will be :meth:`kill`ed.
-        """
-        rem = self._remote
-        if rem is not None:
-            rem._remote = None  # noqa: SLF001
-            rem.set_end()
-        self._remote = remote
-
-    def __repr__(self):
-        return (
-            f"<{self.__class__.__name__}:L{self.link_id} "
-            f"r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
-        )
+__all__ = ["BaseMsgHandler", "MsgHandler", "MsgSender"]
 
 
 class Caller:
     """
-    This is the Wrapper returned by `MsgSender.cmd`.
+    This is the Wrapper returned by `MsgSender.cmd`. It can be *await*ed
+    (direct RPC call), or used as an async context manager (data streaming).
+
+    The context manager yields an async iterator for incoming messages.
+
+    .. seealso: moat.lib.rpc.Msg
 
     You should not instantiate this class directly.
     """
@@ -208,7 +54,7 @@ class Caller:
     ):
         """
         Args:
-            sender: the MsgSender on which we call :meth:`handle` to get the result.
+            sender: the MsgSender on which we call :py:meth:`MsgSender.handle` to get the result.
             data: (cmd,args,kw) tuple.
             _list: can be
                 - NotGiven: return the message object
@@ -268,7 +114,7 @@ class Caller:
         # otherwise return all of them (if any)
         return args
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Msg:
         acm = ACM(self)
         try:
             if not self._dir:
@@ -346,8 +192,8 @@ class MsgSender(BaseMsgHandler):
     """
     This class is the client-side API of the MoaT Command multiplexer.
 
-    It is typically returned by the `MsgHandler.sender` method. The
-    MsgHandler's `handle` method processes messages from the remote side,
+    It is typically returned by the :meth:`MsgHandler.sender` method. The
+    MsgHandler's :meth:`handle` method processes messages from the remote side,
     while this class accepts local messages and forwards them to the
     remote.
     """
@@ -420,7 +266,7 @@ class MsgSender(BaseMsgHandler):
 
     def add_sub(self, elem: str):
         """
-        Ensures that `self.ELEM` is a SubMsgSender.
+        Ensures that ``self.ELEM`` is a SubMsgSender.
         """
         if hasattr(self, elem):
             sb = getattr(self, elem)
@@ -466,6 +312,11 @@ class SubMsgSender(MsgSender):
     def __repr__(self):
         return f"<{self.__class__.__name__}:{self.root} {self._path}"
 
+    @property
+    def path(self):
+        "The subpath accessible with this object"
+        return self._path
+
     async def __aenter__(self):
         "Ensure that the called object is ready for service"
         try:
@@ -479,7 +330,7 @@ class SubMsgSender(MsgSender):
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         """
-        Forward the message, as directed by `_path`.
+        Forward the message, as directed by :py:attr:`path`.
         """
         rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
@@ -561,6 +412,17 @@ class MsgHandler(BaseMsgHandler):
     def root(self):  # noqa: D102
         return self
 
+    @property
+    def sender(self):
+        """
+        If you implement a ``MsgHandler`` that controls a remote link,
+        override this method to return a MsgSender that transmits to the
+        remote side.
+
+        Raises `NotImplementedError`.
+        """
+        raise NotImplementedError
+
     @contextmanager
     def delegate(self, path: Path, service: MsgHandler) -> AbstractContextManager[Self]:
         """
@@ -593,18 +455,18 @@ class MsgHandler(BaseMsgHandler):
         """
         Process the message.
 
-        * If the command is `XX.doc_`, return `self.doc_XX`. This should be
+        * If the command is ``XX.doc_``, return ``self.doc_XX``. This should be
           a class attribute.
 
-        * If the command ends with `rdy_`, check for readiness before
+        * If the command ends with ``rdy_``, check for readiness before
           further processing (if any).
 
-        * Multi-step commands `XX.*` are handled by the `sub_XX` method.
-          (If that is a class instance: call its `handle` method.)
+        * Multi-step commands ``XX.*`` are handled by the ``sub_XX`` method.
+          (If that is a class instance: call its ``handle`` method.)
 
-        * Non-streaming commands are processed by `cmd_XX` if it exists.
+        * Non-streaming commands are processed by ``cmd_XX`` if it exists.
 
-        * Otherwise, commands are processed by `stream_XX`.
+        * Otherwise, commands are processed by ``stream_XX``.
 
         * If that doesn't exist, raise a `KeyError`.
 

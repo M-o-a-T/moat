@@ -16,6 +16,12 @@ __all__ = ["gen_ssl", "run_tcp_server"]
 
 
 class _Server:
+    """
+    Wrapper for running a server.
+
+    :meta public:
+    """
+
     server = None
 
     def __init__(self, tg, handler, _rdy=None, port=0, ssl=None, **kw):

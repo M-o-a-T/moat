@@ -2,5 +2,8 @@
 API
 ###
 
-.. autofunction:: moat.lib.repl.input
-.. autofunction:: moat.lib.repl.multiline_input
+.. automodule:: moat.lib.repl
+
+.. automodule:: moat.lib.repl.fancy_termios
+
+.. automodule:: moat.lib.repl.utils

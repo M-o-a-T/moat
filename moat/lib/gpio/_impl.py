@@ -1,4 +1,4 @@
-from __future__ import annotations  # noqa: D100
+from __future__ import annotations
 
 import anyio
 import logging
@@ -168,6 +168,7 @@ class Line:
             settings: LineSettings for fine control
 
         Example::
+
             with gpio.Chip(0) as chip:
                 line = chip.line(16)
                 with line.open(direction=Direction.INPUT) as wire:

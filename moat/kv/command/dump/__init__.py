@@ -11,7 +11,7 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.lib.codec.moat_msgpack import StdMsgpack
+from moat.lib.codec.moat_msgpack import Codec as StdMsgpack
 from moat.lib.path import (
     P,
     Path,

@@ -21,7 +21,7 @@ from ipaddress import (
     IPv6Network,
 )
 
-from ._moat_cbor import StdCBOR, std_ext
+from ._moat_cbor import Codec, std_ext
 
 # Typing
 from .cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
@@ -30,7 +30,7 @@ __all__ = [
     "CBOR_TAG_MOAT_CHANGE",
     "CBOR_TAG_MOAT_FILE_END",
     "CBOR_TAG_MOAT_FILE_ID",
-    "StdCBOR",
+    "Codec",
     "gen_start",
     "gen_stop",
     "std_ext",
@@ -39,8 +39,6 @@ __all__ = [
 CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'
 CBOR_TAG_MOAT_CHANGE = 1298360423  # 'Mchg'
-
-Codec = StdCBOR
 
 
 def gen_start(text: str, /, **kw) -> Tag:

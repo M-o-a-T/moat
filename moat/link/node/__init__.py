@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any
 
+__all__ = ["Node"]
+
 logger = getLogger(__name__)
 
 
@@ -382,6 +384,6 @@ class NodeFinder:
         self.steps = steps
 
     @property
-    def result(self) -> tuple[Path, Node]:  # noqa: D102
+    def result(self) -> tuple[Path, Node]:
         s = self.steps[0]
         return s[0]

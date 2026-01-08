@@ -4,8 +4,8 @@ FUSE operations for MoaT-micro-FS
 
 from __future__ import annotations
 
+from moat.util import ExpAttrError, ExpKeyError
 from moat.lib.proxy import as_proxy
-from moat.util.exc import ExpAttrError, ExpKeyError
 
 try:
     from moat.lib.rpc import RemoteError

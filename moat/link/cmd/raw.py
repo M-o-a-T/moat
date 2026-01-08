@@ -52,8 +52,8 @@ async def init(file):
     Using this command, followed by "moat kv server -l <outfile> <node>", is
     equivalent to running "moat kv server -i 'Initial data' <node>.
     """
+    from moat.lib.codec.moat_cbor import gen_start, gen_stop  # noqa: PLC0415
     from moat.link.meta import MsgMeta  # noqa: PLC0415
-    from moat.util.cbor import gen_start, gen_stop  # noqa: PLC0415
     from moat.util.msg import MsgWriter  # noqa: PLC0415
 
     meta = MsgMeta(origin="init")

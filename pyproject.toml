@@ -257,7 +257,7 @@ python-version = "3.13"
 
 [tool.ty.src]
 include = [
-    "moat/util/path.py",
+    "moat/lib.path/",
     "moat/lib/priomap/",
     "moat/lib/broadcast/",
     "moat/lib/micro/",

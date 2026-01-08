@@ -257,8 +257,8 @@ def test_yaml():
 
 
 def test_root():
+    from moat.lib.codec.moat_cbor import StdCBOR  # noqa: PLC0415
     from moat.lib.path import Q_Root, Root  # noqa: PLC0415
-    from moat.util.cbor import StdCBOR  # noqa: PLC0415
 
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))

@@ -11,12 +11,12 @@ from moat.util import (
     yload,
     yprint,
 )
+from moat.lib.codec.moat_msgpack import StdMsgpack
 from moat.lib.path import (
     P,
     Path,
 )
 from moat.lib.run import load_subgroup
-from moat.util.msgpack import StdMsgpack
 
 from collections.abc import Mapping
 

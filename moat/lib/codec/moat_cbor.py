@@ -21,11 +21,20 @@ from ipaddress import (
     IPv6Network,
 )
 
-# Typing
-from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
-from moat.util._cbor import StdCBOR, std_ext
+from ._moat_cbor import StdCBOR, std_ext
 
-__all__ = ["StdCBOR", "gen_start", "gen_stop", "std_ext"]
+# Typing
+from .cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
+
+__all__ = [
+    "CBOR_TAG_MOAT_CHANGE",
+    "CBOR_TAG_MOAT_FILE_END",
+    "CBOR_TAG_MOAT_FILE_ID",
+    "StdCBOR",
+    "gen_start",
+    "gen_stop",
+    "std_ext",
+]
 
 CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'

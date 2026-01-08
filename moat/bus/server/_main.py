@@ -12,8 +12,8 @@ import asyncclick as click
 from anyio_serial import Serial
 
 from moat.bus.backend.stream import StreamBusHandler
+from moat.lib.codec.moat_msgpack import StdMsgpack
 from moat.mqtt.client import open_mqttclient
-from moat.util.msgpack import StdMsgpack
 
 from .server import Server
 

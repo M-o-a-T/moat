@@ -6,30 +6,11 @@ from __future__ import annotations
 
 from moat.lib.path import Path
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from moat.lib.codec import Codec
-
-__all__ = ["OutOfData", "_add_obj", "get_codec", "pos2val", "srepr", "val2pos"]
+__all__ = ["OutOfData", "_add_obj", "pos2val", "srepr", "val2pos"]
 
 
 class OutOfData(EOFError):  # noqa: D101
     pass
-
-
-def get_codec(name: str | Codec):
-    "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    from moat.lib.codec import Codec  # noqa: PLC0415
-    from moat.lib.codec import get_codec as _get_codec  # noqa: PLC0415
-
-    if isinstance(name, Codec):
-        return name
-    if name is None:
-        name = "noop"
-    elif name[0:4] == "std-":
-        name = "moat.util." + name[4:]
-    return _get_codec(name)
 
 
 def val2pos(a: float, b: float, c: float, /, clamp: bool = False):

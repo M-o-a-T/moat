@@ -11,11 +11,11 @@ Extension types defined here:
 
 from __future__ import annotations
 
-import moat.lib.codec.msgpack as _msgpack
-from moat.lib.codec import Extension
-from moat.lib.codec.msgpack import Codec
 from moat.lib.path import Path
 from moat.lib.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
+
+from . import Extension
+from . import msgpack as _msgpack
 
 __all__ = ["StdMsgpack", "std_ext"]
 
@@ -24,7 +24,7 @@ std_ext = Extension()
 ExtType = _msgpack.ExtType
 
 
-class StdMsgpack(Codec):
+class StdMsgpack(_msgpack.Codec):
     "A MsgPack codec with our extensions"
 
     def __init__(self):

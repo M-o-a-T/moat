@@ -9,13 +9,15 @@ An overly-simple CBOR packer/unpacker.
 
 from __future__ import annotations
 
+from moat.util import NotGiven
+
 # Typing
-from moat.lib.codec import Extension
-from moat.lib.codec.cbor import Codec, Tag
 from moat.lib.path import Path
 from moat.lib.proxy import DProxy, Proxy, get_proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
-from . import NotGiven
+from . import Extension
+from . import cbor as _cbor
+from .cbor import Tag
 
 from typing import TYPE_CHECKING
 
@@ -27,7 +29,7 @@ __all__ = ["StdCBOR", "std_ext"]
 std_ext = Extension()
 
 
-class StdCBOR(Codec):
+class StdCBOR(_cbor.Codec):
     """
     CBOR codec with MoaT's standard extensions.
     """

@@ -225,7 +225,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-cbor":
-            from moat.util.cbor import StdCBOR  # noqa: PLC0415
+            from moat.lib.codec.moat_cbor import StdCBOR  # noqa: PLC0415
 
             c = StdCBOR()
             d = StdCBOR()
@@ -239,7 +239,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return IT(c) if stream else EV(c.decode) if f_eval else c.decode, d.encode, True, False
 
         if n == "std-msgpack":
-            from moat.util.msgpack import StdMsgpack  # noqa: PLC0415
+            from moat.lib.codec.moat_msgpack import StdMsgpack  # noqa: PLC0415
 
             c = StdMsgpack()
             d = StdMsgpack()

@@ -9,11 +9,11 @@ from copy import deepcopy
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
 from moat.lib.micro import Event, log
+from moat.lib.path import Path
 
 from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
 from .exc import ExpKeyError as ExpKeyError
-from .path import Path
 from .pp import pop_kw as pop_kw
 from .pp import push_kw as push_kw
 

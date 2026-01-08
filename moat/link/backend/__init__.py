@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.util import CtxObj, NotGiven, attrdict, get_codec
+from moat.util import CtxObj, NotGiven, attrdict
 from moat.lib.path import Path, Root
 
 from typing import TYPE_CHECKING
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from typing import Any, ClassVar, Literal, Self
 
 
-__all__ = ["Backend", "Message", "RawMessage", "get_backend", "get_codec"]
+__all__ = ["Backend", "Message", "RawMessage", "get_backend"]
 
 
 @define

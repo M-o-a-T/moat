@@ -12,7 +12,7 @@ Extension types defined here:
 
 from __future__ import annotations
 
-from ._msgpack import StdMsgpack, std_ext
+from ._moat_msgpack import StdMsgpack, std_ext
 
 __all__ = ["StdMsgpack", "std_ext"]
 

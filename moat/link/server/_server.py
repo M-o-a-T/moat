@@ -37,6 +37,11 @@ from moat.util import (
 )
 from moat.lib.broadcast import Broadcaster, BroadcastReader
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
+from moat.lib.codec.moat_cbor import (
+    CBOR_TAG_MOAT_CHANGE,
+    CBOR_TAG_MOAT_FILE_END,
+    CBOR_TAG_MOAT_FILE_ID,
+)
 from moat.lib.mqtt import QoS
 from moat.lib.path import (
     P,
@@ -53,11 +58,6 @@ from moat.link.exceptions import ClientError, OutOfDateError
 from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
-from moat.util.cbor import (
-    CBOR_TAG_MOAT_CHANGE,
-    CBOR_TAG_MOAT_FILE_END,
-    CBOR_TAG_MOAT_FILE_ID,
-)
 from moat.util.exc import ExpKeyError, exc_iter
 
 from collections import defaultdict
@@ -1063,7 +1063,7 @@ class Server(MsgHandler):
 
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
-        from moat.util.cbor import gen_start  # noqa: PLC0415
+        from moat.lib.codec.moat_cbor import gen_start  # noqa: PLC0415
 
         fn = anyio.Path(name).name
         mstr = f"MoaT-Link {mode} {fn!r}"
@@ -1076,14 +1076,14 @@ class Server(MsgHandler):
 
     def gen_hdr_stop(self, **kw):
         """Return the CBOR tag for an end-of-file record"""
-        from moat.util.cbor import gen_stop  # noqa: PLC0415
+        from moat.lib.codec.moat_cbor import gen_stop  # noqa: PLC0415
 
         kw["time"] = datetime.now(UTC)
         return gen_stop(**kw)
 
     def gen_hdr_change(self, **kw):
         """Return the CBOR tag that describes a change"""
-        from moat.util.cbor import gen_change  # noqa: PLC0415
+        from moat.lib.codec.moat_cbor import gen_change  # noqa: PLC0415
 
         kw["time"] = datetime.now(UTC)
         return gen_change(**kw)

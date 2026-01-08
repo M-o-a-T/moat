@@ -5,13 +5,13 @@ import pytest
 
 from moat.util import ungroup
 from moat.lib.codec.cbor import Tag as CBORTag
+from moat.lib.codec.moat_cbor import CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_FILE_ID
 from moat.lib.path import P, PathLongener
 from moat.lib.rpc import StreamError
 from moat.link._test import Scaffold
 from moat.link.client import BasicLink
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
-from moat.util.cbor import CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_FILE_ID
 from moat.util.msg import MsgReader
 
 logger = logging.getLogger(__name__)

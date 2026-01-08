@@ -40,7 +40,7 @@ class AioStream(HandlerStream):  # noqa: D101
         self.__debug = debug
 
         if codec is None:
-            from moat.util.cbor import StdCBOR  # noqa: PLC0415
+            from moat.lib.codec.moat_cbor import StdCBOR  # noqa: PLC0415
 
             codec = StdCBOR()
 
@@ -96,7 +96,7 @@ async def rpc_on_aiostream(
 
     This is an async context manager that yields the command handler.
 
-    The default codec is `moat.util.cbor.Codec`.
+    The default codec is `moat.lib.codec.moat_cbor.Codec`.
     """
 
     y = False

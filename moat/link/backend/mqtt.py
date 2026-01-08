@@ -9,7 +9,8 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from moat.util import NotGiven, attrdict, get_codec
+from moat.util import NotGiven, attrdict
+from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
 from moat.lib.path import PS, P, Path

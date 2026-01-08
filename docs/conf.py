@@ -201,23 +201,24 @@ autodoc2_hidden_objects = [
 ]
 
 autodoc_default_options = {
-    "imported-members": True,
     "members": True,
     # "special-members": True,
     # "inherited-members": "ndarray",
     # "member-order": "groupwise",
 }
-autodoc_typehints = "signature"
+autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented"
 autodoc_typehints_format = "short"
 
 # Suppress warnings for forward references in TYPE_CHECKING blocks
 typehints_fully_qualified = False
+autodoc_inherit_docstrings = False
 always_use_bars_union = True
 typehints_defaults = "comma"
 
 autodoc_type_aliases = {}
 autoclass_content = "both"
+autodoc_member_order = "groupwise"
 
 
 # -- Sphinx Immaterial configs -------------------------------------------------
@@ -476,3 +477,24 @@ def setup(app):
     # app.connect("autodoc-process-bases", autodoc_process_bases)
     # app.connect("autodoc-process-signature", autodoc_process_signature)
     gen_icons()
+
+    # These imports are required to prevent circular import nonsense for typing
+    import anyio
+    import asyncclick.core
+    import prometheus_client
+    import tenacity
+    import httpx
+    import httpx_ws
+    import h11
+    import wsproto
+    import moat.lib.mqtt._types
+    import moat.lib.rpc
+    import moat.lib.rpc.msg
+    import moat.link
+    import moat.link.server
+    import moat.lib.stream.anyio
+    import moat.lib.repl.commands
+    import moat.micro.cmd.tree.dir
+
+    import typing
+    typing.TYPE_CHECKING=True

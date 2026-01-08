@@ -20,8 +20,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.lib.codec import Codec
-
-    from .client import Link, Watcher
+    from moat.link.client import Link, Watcher
 
     from typing import Any
 

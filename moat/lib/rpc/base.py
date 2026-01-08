@@ -37,8 +37,8 @@ class MsgLink:
     """
     The "other side" of a message.
 
-    Message links are bidirectional tunnels. `ml_send` on one side delivers
-    to the `ml_recv` method of the other.
+    Message links are bidirectional tunnels. :meth:`ml_send` on one side delivers
+    to the :meth:`ml_recv` method of the other.
 
     This class is the base implementation, which simply forwards data from
     a message to its sibling.
@@ -51,7 +51,7 @@ class MsgLink:
         """
         Link setup. By default does nothing.
 
-        You need to call `set_remote` before this is usable.
+        You need to call :meth:`set_remote` before this is usable.
         """
         global _link_id
         _link_id += 1
@@ -171,9 +171,12 @@ class MsgLink:
 
     def set_remote(self, remote: MsgLink):
         """
-        Set (or change) my remote for @remote.
+        Set (or change) my remote side.
 
-        The old remote, if any, is `kill`ed.
+        Args:
+            remote: the new MsgLink on the remote side.
+
+        The old remote, if any, will be :meth:`kill`ed.
         """
         rem = self._remote
         if rem is not None:
@@ -204,13 +207,14 @@ class Caller:
         _list: bool | EllipsisType | None = NotGiven,
     ):
         """
-        @sender: the MsgSender on which we call ``.handle`` to get the result.
-        @data: (cmd,args,kw) tuple.
-        @_list: can be
-          - NotGiven: return the message object
-          - True: return a list
-          - False: return a dict
-          - None: best effort (single/map/list/message object)
+        Args:
+            sender: the MsgSender on which we call :meth:`handle` to get the result.
+            data: (cmd,args,kw) tuple.
+            _list: can be
+                - NotGiven: return the message object
+                - True: return a list
+                - False: return a dict
+                - None: best effort (single/map/list/message object)
         """
         self.data = data
         self.sender = sender
@@ -295,7 +299,8 @@ class Caller:
     def stream(self, size: int = 42) -> Self:
         """mark as streaming bidirectionally (the default)
 
-        @size: length of the incoming queue
+        Args:
+            size: length of the incoming queue
         """
         assert not self._dir
         self._dir = SD_BOTH
@@ -305,7 +310,8 @@ class Caller:
     def stream_in(self, size: int = 42) -> Self:
         """mark as only streaming in.
 
-        @size: length of the incoming queue
+        Args:
+            size: length of the incoming queue
         """
         assert not self._dir
         self._dir = SD_IN
@@ -328,8 +334,10 @@ class BaseMsgHandler:
         """
         Handle this message stream.
 
-        @rcmd is the inverted command prefix. Hierarchical handlers chop an
-        element off the end.
+        Args:
+            msg: the message to process.
+            rcmd: the inverted command prefix. Hierarchical handlers chop an
+                  element off the end.
         """
         raise NotImplementedError
 
@@ -508,8 +516,11 @@ class SubMsgSender(MsgSender):
         Process a direct call.
 
         This makes some kind of best effort to unpack the result.
-        If @_list is False, always returns a dict.
-        If @_list is True, always returns a list.
+        If ``_list`` is False, always returns a dict.
+        If ``_list`` is True, always returns a list.
+
+        Args:
+            _list: Unpacking mode.
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 

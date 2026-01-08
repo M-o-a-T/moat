@@ -1,7 +1,7 @@
 # MoaT-kv-gpio
 
 % start synopsis
-% end synopsis
+% start main
 
 MoaT-kv-gpio is a link between GPIO pins and MoaT-kv.
 

@@ -18,7 +18,7 @@ from moat.lib.stream import BaseBuf
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.cmd.tree.dir import SubDispatch
+    from moat.lib.rpc import SubMsgSender
 
 
 class ProcessDeadError(RuntimeError):
@@ -137,7 +137,7 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
     TODO: use remote iteration for receiving
     """
 
-    def __init__(self, disp: SubDispatch):
+    def __init__(self, disp: SubMsgSender):
         self.disp = disp
 
     async def receive(self, max_bytes=256):

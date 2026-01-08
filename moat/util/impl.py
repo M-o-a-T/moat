@@ -92,15 +92,13 @@ def load_from_cfg(*a, _cfg=None, _attr: str = "server", _raise: bool = False, **
     use).
 
     The module+object name is the "server" attribute (or @_attr).
+
     Args:
-        _cfg:
-            The configuration stanza to use. If not given, a ``cfg``
-            argument must exist.
-        _attr:
-            The config entry that names the service to load.
-            The default is ``"server"``.
-        _raise:
-            If no ``_attr`` exists, raise KeyError instead of returning `None`.
+        _cfg: The configuration stanza to use. If not given, a ``cfg``
+              argument must exist.
+        _attr: The config entry that names the service to load.
+               The default is ``"server"``.
+        _raise: If no ``_attr`` exists, raise KeyError instead of returning `None`.
 
     """
     if _cfg is None:

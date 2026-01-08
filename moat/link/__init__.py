@@ -6,7 +6,7 @@ and timestamp), and
 The point of this library is to support a minimal unified pub/sub messaging
 service.
 
-Configuration looks like this:
+Configuration looks like this::
 
     link:
       backend:

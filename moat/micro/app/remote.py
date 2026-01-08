@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from most.micro.proto.stack import BaseBuf, BaseMsg
 
-    from moat.micro.cmd.tree.dir import SubDispatch
+    from moat.lib.rpc import SubMsgSender
+    from moat.micro.cmd import BaseCmd
 
     from collections.abc import Awaitable
 
@@ -35,7 +36,7 @@ def Raw(*a, **k):
     return _Raw(*a, **k)
 
 
-def Fwd(*a, **k):
+def Fwd(*a, **k) -> BaseCmd:
     """
     Link to a stream that's someplace else.
 
@@ -44,7 +45,7 @@ def Fwd(*a, **k):
     from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
 
     class _Fwd(BaseCmd):
-        sd: SubDispatch = None
+        sd: SubMsgSender = None
 
         async def setup(self):
             "create a subdispatcher"

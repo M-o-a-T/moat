@@ -7,19 +7,21 @@ from __future__ import annotations
 import anyio
 from time import monotonic as time
 
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections.abc import MutableMapping
-
-from collections.abc import Iterator
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 if TYPE_CHECKING:
     from abc import abstractmethod
     from types import EllipsisType
 
-    from collections.abc import Hashable, ItemsView, Iterable, KeysView, ValuesView
+    from collections.abc import (
+        Hashable,
+        ItemsView,
+        Iterable,
+        Iterator,
+        KeysView,
+        ValuesView,
+    )
     from typing import Any, Protocol
 
     Priority = TypeVar("Priority")
@@ -54,8 +56,10 @@ class PrioMap[Priority](MutableMapping):
         """
         Initialize the HeapDict.
 
-        :param initial: Optional mapping of keys to initial priorities.
-        :raises TypeError: If any priority in `initial` is not an int or float.
+        Args:
+            initial: Optional mapping of keys to initial priorities.
+        Raises:
+            TypeError: If any priority in ``initial`` is not an int or float.
         """
         self.heap: list[Any] = []  # list of [key, priority] pairs
         self.position: dict[Key, int] = {}

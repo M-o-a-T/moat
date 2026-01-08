@@ -28,7 +28,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.cmd.tree.dir import SubDispatch
+    from moat.lib.rpc import SubMsgSender
 
 
 logger = logging.getLogger(__name__)
@@ -801,7 +801,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
 
 @asynccontextmanager
-async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
+async def wrap(link: SubMsgSender, path: Path, blocksize=0, debug=1):
     """
     Context manager that mounts a satellite file system locally
     """

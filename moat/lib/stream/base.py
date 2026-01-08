@@ -119,7 +119,7 @@ class BaseConn(Base):
 
     Usage:
 
-    Override `stream` to create the data link. Use `AC_use` to
+    Override :py:meth:`BaseConn.stream` to create the data link. Use `AC_use` to
     call an async context manager or to register a destructor.
 
     Augment `setup` or `teardown` to add non-stream related features.
@@ -131,7 +131,7 @@ class BaseConn(Base):
         """
         Object construction.
 
-        By default, assigns the result of calling `stream` to the attribute
+        By default, assigns the result of calling :py:meth:`BaseConn.stream` to the attribute
         ``s``.
         """
         if self.s is not None:

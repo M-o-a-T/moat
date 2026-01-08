@@ -33,4 +33,4 @@ Energy use scheduling. Given possibly-variable prices for power (including
 grid feed-out), variable PV output, and local demand, this code models
 which strategy results in the lowest energy cost.
 
-% start main
+% end main

@@ -26,10 +26,14 @@ class InexactFloat(float):
 
     def __eq__(self, b):
         """Check if the two floats are mostly-equal."""
-        return isclose(self, b, rel_tol=self.rel, abs_tol=self.abs)
+        if isclose(self, b, rel_tol=self.rel, abs_tol=self.abs):
+            return True
+        if not isinstance(b, InexactFloat):
+            return False
+        return isclose(b, self, rel_tol=b.rel, abs_tol=b.abs)
 
     def __ne__(self, b):
-        return not isclose(self, b, rel_tol=self.rel, abs_tol=self.abs)
+        return not self.__eq__(b)
 
     def __lt__(self, other):
         return super().__lt__(other) and self != other

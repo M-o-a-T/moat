@@ -26,7 +26,7 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
 
-    This operation is recursive and non-destructive. If `deep` is set, the
+    This operation is recursive and non-destructive. If ``deep`` is set, the
     result always is a deep copy.
 
     A value of `NotGiven` causes an entry to be skipped.
@@ -34,10 +34,10 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
     TODO: arrays are not merged.
 
     Args:
-      cls (type): a class to instantiate the result with. Default: dict.
-        Often used: :class:`attrdict`.
-      deep (bool): if set, always copy.
-      replace: whether the first (default, False) or last (True) entry wins
+        cls: a class to instantiate the result with. Default: dict.
+             Often used: :class:`attrdict`.
+        deep: if set, always copy.
+        replace: whether the first (default, False) or last (True) entry wins
     """
     res = cls()
     if not d:

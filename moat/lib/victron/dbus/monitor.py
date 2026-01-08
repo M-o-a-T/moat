@@ -98,7 +98,9 @@ class Service:  # noqa: D101
 class DbusMonitor(CtxObj):
     """
     This is the main DBus monitoring class.
-    Usage:
+
+    Usage::
+
         dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
         monitorlist = {'com.victronenergy.solarcharger': {
                         '/Connected': dummy,

@@ -12,13 +12,29 @@ from asyncdbus.constants import NameFlag
 from asyncdbus.service import ServiceInterface
 from asyncdbus.signature import Variant
 
+from moat.util import CtxObj
+
+__all__ = [
+    "DbusInterface",
+    "DbusName",
+    "get_free_space",
+    "get_machine_name",
+    "get_product_id",
+    "get_vrm_portal_id",
+    "reg_name",
+    "unwrap_dbus_dict",
+    "unwrap_dbus_value",
+    "wrap_dbus_dict",
+    "wrap_dbus_value",
+]
+
 logger = logging.getLogger(__name__)
 
 
 VEDBUS_INVALID = Variant("ai", [])
 
 
-class NoVrmPortalIdError(Exception):  # noqa: D101
+class NoVrmPortalIdError(Exception):
     pass
 
 
@@ -262,28 +278,6 @@ def unwrap_dbus_value(val):
         # keys cannot be wrapped
         return {x: unwrap_dbus_value(y) for x, y in val.items()}
     return val
-
-
-class CtxObj:
-    """
-    Add an async context manager that calls `_ctx` to run the context.
-
-    Usage::
-        class Foo(CtxObj):
-            @asynccontextmanager
-            async def _ctx(self):
-                yield self # or whatever
-
-        async with Foo() as self_or_whatever:
-            pass
-    """
-
-    async def __aenter__(self):
-        self.__ctx = ctx = self._ctx()  # pylint: disable=E1101,W0201
-        return await ctx.__aenter__()
-
-    def __aexit__(self, *tb):
-        return self.__ctx.__aexit__(*tb)
 
 
 INTF = "org.m_o_a_t"

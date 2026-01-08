@@ -38,6 +38,8 @@ if TYPE_CHECKING:
 
     from typing import Any
 
+__all__ = ["BusVars", "InvControl", "InvInterface", "InvModeBase"]
+
 logger = logging.getLogger(__name__)
 
 _dummy = {"code": None, "whenToLog": "configChange", "accessLevel": None}
@@ -143,7 +145,7 @@ class InvControl(BusVars):
     It can operate in various modes. Call `change_mode` to switch between them.
     There's a mandatory 30 second delay so that things can settle down somewhat.
 
-    Configurable parameters ("system" group in `inv*.cfg`):
+    Configurable parameters ("system" group in ``inv*.cfg``):
     """
 
     # pylint: disable=too-many-public-methods
@@ -746,7 +748,7 @@ class InvControl(BusVars):
         """
         Calculate how much DC current a given inverter output would generate.
 
-        Set `rev` if you want to know the DC current you'd need for a given AC power.
+        Set ``rev`` if you want to know the DC current you'd need for a given AC power.
         """
         res = -p / self.u_dc
         if rev == (res < 0):
@@ -760,7 +762,7 @@ class InvControl(BusVars):
         """
         Calculate how much AC power to set for a given inverter DC current would generate.
 
-        Set `rev` if you want to know the AC power you'd need for a given DC current.
+        Set ``rev`` if you want to know the AC power you'd need for a given DC current.
         """
         res = -i * self.u_dc
         if rev == (res > 0):

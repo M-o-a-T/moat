@@ -92,6 +92,7 @@ testpaths = [
 
 [project.optional-dependencies]
 dev = [
+    "asyncdbus ~= 0.7",
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",

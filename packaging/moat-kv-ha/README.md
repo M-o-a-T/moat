@@ -9,7 +9,7 @@ The core of this module is concerned with assembling appropriate
 configuration for MQTT.
 
 Message transport and translation is performed by a [MoaT-Link
-Gate](moat-link-gate-top) instance.
+Gate](moat-link-gate) instance.
 
 % end synopsis
 

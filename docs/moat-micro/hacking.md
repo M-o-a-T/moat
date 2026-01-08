@@ -83,7 +83,7 @@ Likewise for "…MsgBlk" or "…BlkBuf".
 
 On top of this, a "…CmdMsg" class accepts MoaT commands via its
 `dispatch` method and translates them to a standardizes mapping. See
-[messages](moat-lib-rpc:messages) for details.
+[messages](moat-lib-rpc/messages) for details.
 
 ##### Out-of-band data
 

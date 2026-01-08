@@ -211,6 +211,11 @@ autodoc_typehints = "signature"
 autodoc_typehints_description_target = "documented"
 autodoc_typehints_format = "short"
 
+# Suppress warnings for forward references in TYPE_CHECKING blocks
+typehints_fully_qualified = False
+always_use_bars_union = True
+typehints_defaults = "comma"
+
 autodoc_type_aliases = {}
 autoclass_content = "both"
 

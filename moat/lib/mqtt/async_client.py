@@ -691,7 +691,7 @@ class AsyncMQTTClient:
         Subscribing to the same topic pattern multiple times is supported,
         with these restrictions:
 
-            * the `retain_as_published` and `no_local` flags must match.
+            * the ``retain_as_published`` and ``no_local`` flags must match.
 
             * subsequent subscriptions can't use `RetainHandling.SEND_RETAINED`.
 

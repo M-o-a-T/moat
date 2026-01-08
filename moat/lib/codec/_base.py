@@ -34,12 +34,12 @@ class Codec:
     detected.
 
     After the header is consumed, the application must repeat calling
-    `__anext__` until an object is returned. (If the decoder
+    ``__anext__`` until an object is returned. (If the decoder
     raises `StopAsyncIteration`, feed more data to it and repeat.)
 
     The decoder must leave all incoming data extending past the object in
     its buffer. It must not attempt to decode them until the next call to
-    `__anext__`.
+    ``__anext__``.
     """
 
     def __init__(self, ext=None):

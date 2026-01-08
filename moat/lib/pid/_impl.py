@@ -88,7 +88,7 @@ class PID:
             t:
                 current time (if known)
             clear:
-                if set, clear internal state so that `self(0) == 0`
+                if set, clear internal state so that ``self(0) == 0``
         """
         self.set_state(t, 0 if clear else None, 0 if clear else None)
         if t is None:
@@ -111,7 +111,7 @@ class PID:
         """
         Sum the input values and limit the result to the interval between `min`…`max`.
 
-        `self(signal)` ≍ `self.sum(*self.integrate(signal))`
+        ``self(signal)`` ≍ ``self.sum(*self.integrate(signal))``
         """
         return min(max(sum(args), self.lower), self.upper)
 

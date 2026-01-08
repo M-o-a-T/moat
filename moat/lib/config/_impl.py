@@ -294,7 +294,7 @@ class CfgStore:
 
         A path element of `None` adds an element to a list.
 
-        A value of `NotGiven` deletes the entry.
+        A value of :py:obj:`moat.util.NotGiven` deletes the entry.
         """
         self.args.append((path, value))
         self._redo = True

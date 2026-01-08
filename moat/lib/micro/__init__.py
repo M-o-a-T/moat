@@ -112,7 +112,13 @@ ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001
 ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
-breakpoint = breakpoint  # noqa: A001, PLW0127
+
+
+_breakpoint = breakpoint  # noqa: A001, PLW0127
+
+
+def breakpoint():  # noqa:D103
+    _breakpoint()
 
 
 def const[T](_x: T) -> T:
@@ -263,7 +269,7 @@ _tgt = None
 
 
 def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
-    "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
+    "A TaskGroup subclass that supports ``spawn`` and ``cancel``"
 
     global _tg, _tgt
     if "pytest" in sys.modules or _tgt is None:
@@ -337,7 +343,7 @@ def shield() -> _anyio.CancelScope:
 class Queue[T](_Queue):
     """
     compatibility mode: raise `EOFError` and `QueueEmpty`/`QueueFull`
-    instead of `anyio.EndOfStream` and `anyio.WouldBlock`
+    instead of :py:exc:`anyio.EndOfStream` and :py:exc:`anyio.WouldBlock`
     """
 
     async def get(self) -> T:  # noqa:D102

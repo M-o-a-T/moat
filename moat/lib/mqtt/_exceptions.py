@@ -27,6 +27,7 @@ class MQTTServerRestarted(MQTTException):
     """
     The server lost our subscriptions.
     """
+
     pass
 
 
@@ -34,6 +35,7 @@ class MQTTNoReconnect(MQTTException):
     """
     Reconnecting to the server was not possible for some time.
     """
+
     pass
 
 
@@ -80,10 +82,7 @@ class MQTTUnsupportedPropertyType(MQTTDecodeError):
         self.packet_class = packet_class.__name__
 
     def __str__(self) -> str:
-        return (
-            f"unsupported property type: {self.property_type._name_} in "
-            f"{self.packet_class}"
-        )
+        return f"unsupported property type: {self.property_type._name_} in {self.packet_class}"
 
 
 class InvalidPattern(MQTTException):

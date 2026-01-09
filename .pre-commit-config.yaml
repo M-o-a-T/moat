@@ -38,6 +38,14 @@ repos:
       types: [yaml]
       args: [--allow-multiple-documents]
 
+    - id: sphinx-build
+      name: sphinx documentation build
+      description: builds sphinx documentation and fails on warnings or errors
+      entry: pre_commit_hooks/sphinx-build
+      language: python
+      pass_filenames: false
+      files: "^(docs/.*|moat/.*\\.py)$"
+
     - id: pytest-modified
       name: pytest on modified modules
       description: runs pytest on test directories for modified moat modules
@@ -46,4 +54,3 @@ repos:
       types: [python]
       pass_filenames: true
       require_serial: true
-

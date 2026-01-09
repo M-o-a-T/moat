@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""
+Pre-commit hook to run Sphinx documentation build and fail on warnings or errors.
+
+This hook:
+1. Runs sphinx-build with -W (treat warnings as errors) and -E (rebuild all)
+2. Fails the commit if there are any warnings or errors
+3. Can be skipped by setting NO_DOCS=1 environment variable
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+def main() -> int:
+    """
+    Main entry point for pre-commit hook.
+
+    Returns:
+        0 if documentation builds successfully, non-zero otherwise
+    """
+    # Check whether to skip
+    if os.environ.get("NO_DOCS", "") in {"1", "Y", "y"}:
+        print("Skipping Sphinx build (NO_DOCS is set)")
+        return 0
+
+    # Check docs directory exists
+    docs_dir = Path("docs")
+    if not docs_dir.exists():
+        print(f"Error: {docs_dir} directory not found")
+        return 1
+
+    build_dir = Path("dist/docs")
+
+    print("=" * 60)
+    print("Building Sphinx documentation...")
+    print("=" * 60)
+
+    # Run sphinx-build from within docs/ directory with:
+    # -W: turn warnings into errors
+    # -E: rebuild all (don't use cached environment)
+    # -b html: build HTML output
+    result = subprocess.run(  # noqa: S603
+        [  # noqa:S607
+            "sphinx-build",
+            "-W",  # Warnings are errors
+            "-b",
+            "html",
+            ".",  # Source directory (current = docs/)
+            f"../{build_dir}",  # Output to dist/docs
+        ],
+        cwd=str(docs_dir),  # Run from docs/ directory
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    # Show output
+    if result.stdout:
+        print(result.stdout)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
+
+    if result.returncode != 0:
+        print("\n" + "=" * 60)
+        print("SPHINX BUILD FAILED")
+        print("Documentation has warnings or errors.")
+        print("Fix the issues above before committing.")
+        print("=" * 60)
+        return 1
+
+    print("\n" + "=" * 60)
+    print("Sphinx documentation built successfully!")
+    print("=" * 60)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

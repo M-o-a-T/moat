@@ -53,7 +53,7 @@ warnings.filterwarnings(
 # -- Project information -----------------------------------------------------
 
 project = "moat"
-copyright = "2018-2025, Matthias Urlichs"
+copyright = "2018-2026, Matthias Urlichs"
 author = "Matthias Urlichs"
 # version: see above
 

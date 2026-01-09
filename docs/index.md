@@ -31,8 +31,8 @@ monorepo
 Start here if you have no idea what this is all about and want the bird's
 eye view.
 
-Also, the usual: Community guidelines, contribution guide, code and
-documentation style, and all that.
+This section also contains the usual generic content: Community guidelines,
+contribution guide, code and documentation style, and all that.
 
 ## Parts included
 
@@ -50,7 +50,21 @@ documentation style, and all that.
 :end-before: % end synopsis
 ```
 
-#### [Web Frontend](moat-link-web/index.md)
+#### [Data Gateway](moat-link-gate/index.md)
+
+```{include} ../packaging/moat-link-gate/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Notifications](moat-link-notify/index.md)
+
+```{include} ../packaging/moat-link-notify/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [TODO: Web Frontend](moat-link-web/index.md)
 
 ```{include} ../packaging/moat-link-web/README.md
 :start-after: % start synopsis
@@ -81,58 +95,6 @@ documentation style, and all that.
 #### [Device Registry](moat-modbus-dev-_data/index.md)
 
 ```{include} ../packaging/moat-modbus-dev-_data/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-### More Parts
-
-
-#### [Broadcasting](moat-lib-broadcast/index.md)
-
-```{include} ../packaging/moat-lib-broadcast/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Codec support buffer](moat-lib-codec/index.md)
-
-```{include} ../packaging/moat-lib-codec/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [GPIO](moat-lib-gpio/index.md)
-
-```{include} ../packaging/moat-lib-gpio/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [PID Controller](moat-lib-pid/index.md)
-
-```{include} ../packaging/moat-lib-pid/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Priority Map](moat-lib-priomap/index.md)
-
-```{include} ../packaging/moat-lib-priomap/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Ring buffer](moat-lib-ring/index.md)
-
-```{include} ../packaging/moat-lib-ring/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Stream Infrastructure](moat-lib-stream/index.md)
-
-```{include} ../packaging/moat-lib-stream/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -331,14 +293,11 @@ We'd rather not do that.
 ```
 
 
+(moat-top-lib-cmd)=
 ### Libraries
 
-(moat-top-lib-cmd)=
-#### [MoaT-Cmd](moat-lib-rpc/index.md)
 
-This library is our answer to the "how do I do bidirectional RPC calls over
-any data link? Oh, error forwarding and flow-controlled streaming and
-cancellation would be nice to have too" question.
+#### [RPC, with streaming](moat-lib-rpc/index.md)
 
 ```{include} ../packaging/moat-lib-rpc/README.md
 :start-after: % start synopsis
@@ -366,16 +325,17 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
-#### [Codec Buffer](moat-lib-codec/index.md)
 
-```{include} ../packaging/moat-lib-codec/README.md
+#### [Broadcasting](moat-lib-broadcast/index.md)
+
+```{include} ../packaging/moat-lib-broadcast/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-#### [Diffie-Hellman](moat-lib-diffiehellman/index.md)
+#### [Codecs](moat-lib-codec/index.md)
 
-```{include} ../packaging/moat-lib-diffiehellman/README.md
+```{include} ../packaging/moat-lib-codec/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -401,6 +361,27 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
+#### [Ring buffer](moat-lib-ring/index.md)
+
+```{include} ../packaging/moat-lib-ring/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Data Stream](moat-lib-stream/index.md)
+
+```{include} ../packaging/moat-lib-stream/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Diffie-Hellman](moat-lib-diffiehellman/index.md)
+
+```{include} ../packaging/moat-lib-diffiehellman/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Proxy Helpers](moat-lib-proxy/index.md)
 
 ```{include} ../packaging/moat-lib-proxy/README.md
@@ -408,21 +389,14 @@ cancellation would be nice to have too" question.
 :end-before: % end synopsis
 ```
 
-#### [Ring Buffer](moat-lib-ring/index.md)
-
-```{include} ../packaging/moat-lib-ring/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [Victron Support](moat-lib-victron/index.md)
+#### [TODO: Victron Support](moat-lib-victron/index.md)
 
 ```{include} ../packaging/moat-lib-victron/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
 
-### Random helpers
+### More bits and pieces
 
 {#moat-top-util}
 #### [Utilities](moat-util/index.md)
@@ -471,13 +445,13 @@ moat-lib
 moat-micro/index
 moat/index
 moat-modbus/index
-moat-db/index
-moat-ems/index
 moat-dev/index
 moat-bus/index
-moat-kv/index
 moat-util/index
 moat-src/index
+moat-db/index
+moat-ems/index
+moat-kv/index
 moat-cad/index
 moat-mqtt/index
 moat-nodered/index

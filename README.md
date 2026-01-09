@@ -15,12 +15,13 @@ Well, except for the water.
 
 ## Seriously …
 
-The core of MoaT is written in anyio-compatible asynchronous Python3,
-written with Structured Concurrency principles in mind.
+The core of MoaT is written in asynchronous Python3,
+based on Structured Concurrency principles.
 
-Satellite microcontrollers typically run MicroPython, again heavily using
-structured async code: MicroPython supports taskgroups if you patch it
-lightly.
+Satellite microcontrollers run MicroPython, again using structured async
+code. MicroPython supports taskgroups if you patch it lightly.
+
+% end main
 
 
 ### Structured what?
@@ -31,18 +32,36 @@ There's a [Wikipedia article](https://en.wikipedia.org/wiki/Structured_concurren
 
 A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/).
 
+
 ## Contents
 
-- MoaT-Link: MQTT support
-  - Storage of volatile data
-  - Messaging and alerting
+- MoaT-Link: Storage of semi-volatile data
+  - Structured messaging via MQTT
   - Data conversion (CBOR, JSON, plaintxt, msgpack, modbus)
+  - Bidirectional gateway
+  - Host and service monitoring
+  - Error notification and alerting
 - MicroPython integration
-- Process control (physical processes, not computers)
+  - taskgroups
+  - incremental updates
+  - seamless RPC
+- Many support libraries:
+  - Async RPC, with bidirectional data streaming
+  - MQTT
+  - Modbus
+  - GPIO
+  - PID control
+  - Async console I/O (with multi-line input, history, tab completion, and all that)
+  - Async read/write streams
+- Process control (physical processes, not computers) (TODO)
   - heat pumps
-- Solar energy
+  - motor controllers
+- Solar energy (TODO)
   - battery monitor
+  - inverter control
   - energy scheduling
+- MoaT-KV (key-value storage, deprecated)
+  - with various adapters that need a rewrite (TODO)
 
 ## Repository Structure
 
@@ -55,92 +74,18 @@ caused too many coordination problems. Thus they were all imported into the
 main repo, including their history, which is why this repository has
 way too many initial commits. ;-)
 
-The top module contains the command-line front-end of MoaT. Any
-MoaT code that can reasonably be controlled by a command line hooks into
-it, by way of a `_main` module with a `cli` object, which should be an
-`asyncclick` group (or command).
+## Issues, pull requests, et al.
 
-% end main
+As of 2026-01, we're on [Github](https://github.com/M-o-a-T/moat).
 
-## Modules
-
-### Components
-
-* dbus: an async DBus client.
-
-* gpio: a library to read and write GPIO lines.
-
-* modbus: an opinionated Modbus client and server library.
-
-* mqtt: a MQTT broker, client library, and client command line front-ends.
-
-* wire: a bidirectional link exchanging structured messages,
-  with backends for serial and TCP.
-
-* micro: Support for MoaT sattelites running MicroPython
-
-* kv: distributed masterless eventually-consistent key-value storage.
-
-* ems: Battery management, photovoltaics, …
-
-* src: MoaT source code management
-
-* dev: support for specific devices
+This will change, in favor of Codeberg and Radicle. TODO.
 
 
-### Support Libraries
+## Support
 
-* pid: a PID controller with anti-wind-up, saveable state, bumpless transfer, and
-  measurement noise suppression.
-
-
-### MoaT-KV components
-
-Moat-KV is a master-less distributed key-value storage system. It is
-resistant to partitioning and intended to be always-on. It will not block
-or lose updates in a partitioned network; inconsistent entries are
-re-synchronized upon reconnection.
-
-"moat.kv" is currently named "distkv". Conversion to MoaT is planned.
-
-* akumuli: Data storage to [Akumuli](https://docs.akumuli.org/), an
-  efficient light-weight time series database
-
-* gpio: Connecting Moat-KV and MoaT-GPIO
-
-* hass: Use MoaT-KV as the MQTT back-end to Home Assistant
-
-* inv: Network inventory management (hosts, networks, VLANs, links between hosts)
-
-* knx: Link with KNX building automation networks
-
-* owfs: Connecting 1wire sensors
-
-* wago: A rudimentary interface for WAGO 330 controllers
-
-
-### MoaT-EMS components
-
-EMS is an acronym for "Energy Management System".
-
-* battery: Battery management
-
-* inv: Inverter management
-
-* sched: Energy storage scheduling
-
-More will follow.
-
-### MoaT-dev support
-
-* heat: example for controlling a home's heating system (heat exchanger,
-  pellet boiler, buffer for hot water and radiator-based heating).
-
-
-# Support
-
-Supporting MoaT is possible via [Paypal](https://paypal.me/MMoooaaTT) or
-bank transfer (DE34430609671145580100, GENODEM1GLS).
+Supporting MoaT is possible, ideally via bank transfer
+(DE07430609671145580101, GENODEM1GLS). If you can't do that,
+[Paypal](https://paypal.me/MMoooaaTT) is possible.
 
 Direct support via email or Zoom/Teamviewer is also available.
 Contact [Matthias Urlichs](mailto:urlichs@m-u-it.de) for details.

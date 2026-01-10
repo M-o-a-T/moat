@@ -89,10 +89,14 @@ class Base:
         return _nullctx
 
     async def __aenter__(self):
-        await ACM(self)(self.teardown)
+        res = self
+        AC = ACM(self)
+        await AC(self.teardown)
         try:
             await self.setup()
-            return self
+            if (ctx := getattr(self, "_ctx", None)) is not None:
+                res = await AC(ctx())
+            return res
         except BaseException as exc:
             await AC_exit(self, type(exc), exc, getattr(exc, "__traceback__", None))
             raise

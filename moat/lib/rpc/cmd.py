@@ -24,25 +24,22 @@ from __future__ import annotations
 from moat.util import attrdict
 from moat.lib.micro import AC_use, Event, L, Lock, idle
 from moat.lib.rpc import MsgHandler
-from moat.lib.stream import Base
 from moat.micro.cmd.util import wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.path import Path
-    from moat.lib.rpc import Msg
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable
 
 
-class BaseCmd(Base):
+class BaseCmd(MsgHandler):
     """
     Basic Request handler.
 
-    This class duck-types `moat.lib.stream.MsgHander`. In particular,
+    This class duck-types `moat.lib.rpc.MsgHander`. In particular,
     it uses its `handle` and `find_handler` methods.
     """
 
@@ -79,14 +76,6 @@ class BaseCmd(Base):
             return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
         except AttributeError:
             return f"<{self.__class__.__name__}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
-
-    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
-        "See `MsgHandler.handle`."
-        ...
-
-    def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:
-        "See `MsgHandler.find_handler`."
-        ...
 
     async def setup(self):
         """
@@ -286,11 +275,6 @@ class BaseCmd(Base):
         self._parent = parent
         self._name = name
         self.root = parent.root
-
-
-BaseCmd.handle = MsgHandler.handle
-BaseCmd.find_sub = MsgHandler.find_sub
-BaseCmd.find_handler = MsgHandler.find_handler
 
 
 class LockBaseCmd(BaseCmd):

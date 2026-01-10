@@ -112,13 +112,15 @@ class ArrayCmd(BaseSuperCmd):
         """
         Dispatch a message to subcommands.
 
+        The subcommand ``here`` handles a command locally.
+
         See `BaseCmd.handle` for details.
         """
 
         if not rcmd:
             raise ShortCommandError(msg.cmd)
-        if isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
-            rcmd[-1] = rcmd[-1][1:]
+        if isinstance(rcmd[-1], str) and rcmd[-1] == "!":
+            rcmd.pop()
             return await super().handle(msg, rcmd)
 
         cmd = rcmd.pop()

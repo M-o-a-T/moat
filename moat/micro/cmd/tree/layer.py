@@ -21,9 +21,7 @@ class BaseLayerCmd(BaseSuperCmd):
     A handler for a single nested app.
 
     This handler doesn't affect the command hierarchy.
-    Its own commands, if any, are reachable by adding "_f" to their name.
-
-    Alternately, the nested app is named "_".
+    Its own commands, if any, are reachable by prepending "!" to the command.
 
     You need to override "gen_cmd" to create the app object.
     """
@@ -92,10 +90,12 @@ class BaseLayerCmd(BaseSuperCmd):
 
     async def handle(self, msg, rcmd):
         """
-        Forward to the sub-app unless specifically directed not to.
+        Forward to the sub-app.
+
+        The subcommand "!" redirects to the local handler.
         """
-        if rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
-            rcmd[-1] = rcmd[-1][1:]
+        if rcmd and isinstance(rcmd[-1], str) and rcmd[-1] == "!":
+            rcmd.pop()
             return await super().handle(msg, rcmd)
 
         if L:

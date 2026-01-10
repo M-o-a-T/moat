@@ -633,11 +633,11 @@ class Path(Sequence[PathElem]):
                 res.append(part)
             part = new_part
 
-        def new(x, new_part):
+        def new(x):
             nonlocal part
             if part is None:
                 raise SyntaxError(f"Cannot use {part!r} at {pos}")
-            done(new_part)
+            done(True)
             res.append(x)
 
         if path == "":
@@ -654,13 +654,15 @@ class Path(Sequence[PathElem]):
                 elif e == "=":
                     add("+")
                 elif e in "z?":
-                    new(NotGiven, True)
+                    new(NotGiven)
                 elif e == "e":
-                    new("", True)
+                    new("")
                 elif e == "t":
-                    new(True, True)
+                    new(True)
                 elif e == "f":
-                    new(False, True)
+                    new(False)
+                elif e == "n":
+                    new(None)
                 elif e[0] == "m" and len(e) > 1:
                     done(None)
                     if not mark:
@@ -668,8 +670,6 @@ class Path(Sequence[PathElem]):
                     elif mark != e[1:]:
                         raise SyntaxError(f"Conflicting tags: {mark} vs. {e[1:]} at {pos}")
                     part = True
-                elif e == "n":
-                    new(None, True)
                 elif e == "@":
                     if res or prefix is not None or part not in (False, True):
                         raise SyntaxError("The :@ tag must be at the start")
@@ -677,7 +677,7 @@ class Path(Sequence[PathElem]):
                     prefix = True
                 elif e in _Roots:
                     if res or prefix is not None or part not in (False, True):
-                        raise SyntaxError("A root must be at the start")
+                        raise SyntaxError("Root designators must be at the start")
                     part = True
                     prefix = _Roots[e]
                 elif e == "_":

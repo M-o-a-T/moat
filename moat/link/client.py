@@ -184,7 +184,7 @@ class LinkCommon(CmdCommon):
         pass
 
     @asynccontextmanager
-    async def _connect_one(self, remote: dict | str, data: dict | None = None) -> MsgHandler:
+    async def _connect_one(self, remote: dict | str, data: dict | None = None) -> MsgSender:
         auth_out = []
         if isinstance(remote, dict):
             with suppress(KeyError):
@@ -726,6 +726,7 @@ class Link(LinkCommon, CtxObj):
     _state: str = "init"
     _common: bool = False
     announced: set[Path]
+    sdr: LinkSender
 
     def __new__(cls, cfg, name: str | None = None, common: bool = False):  # noqa:D102
         cfg, name  # noqa:B018

@@ -26,6 +26,8 @@ from moat.link.server import Server
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import Path
+    from moat.lib.rpc import MsgSender
     from moat.link.backend import Backend
     from moat.link.client import LinkCommon
 
@@ -259,7 +261,7 @@ class Scaffold(CtxObj):
     @asynccontextmanager
     async def client_(
         self, cfg: dict | None = None, cli: LinkCommon | None = None, name=None
-    ) -> Never:
+    ) -> MsgSender:
         """
         Start a client (async context manager)
         """
@@ -276,15 +278,22 @@ class Scaffold(CtxObj):
             yield li
 
     @asynccontextmanager
-    async def do_watch(self, path, exp=NotGiven, n=0, **kw) -> AsyncIterator[ValueEvent]:
+    async def do_watch(
+        self, path: Path, exp=NotGiven, n: int = 0, **kw
+    ) -> AsyncIterator[ValueEvent]:
         """
-        Run a client that expects @exp and appends all non-exp
-        results to @rd.
+        Run a client that expects ``exp`` and appends all non-exp
+        results to ``rd``.
 
         All other args+kw are forwarded to `Link.d_watch`.
 
         The results are appended to a list that's posted to the event when
         `do_watch` ends (for whatever reason).
+
+        Args:
+            path: The Link path to watch.
+            exp: Expected element, or `NotGiven`.
+            n: Exit after ``n`` messages. Default: Don't.
         """
         async with self.client_() as c, anyio.create_task_group() as tg:
             evt = ValueEvent()

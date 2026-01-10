@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 
 from moat.lib.micro import AC_use, Event, TaskGroup
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 try:
     import machine as M

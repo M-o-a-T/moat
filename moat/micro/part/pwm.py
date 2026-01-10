@@ -17,7 +17,7 @@ from moat.lib.micro import (
     wait_for_ms,
 )
 from moat.lib.path import Path
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 

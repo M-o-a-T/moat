@@ -4,7 +4,7 @@ App and command base classes
 
 from __future__ import annotations
 
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 
 class ConfigError(RuntimeError):

@@ -9,8 +9,8 @@ from functools import partial
 
 from moat.util import attrdict
 from moat.lib.micro import Queue, TaskGroup
+from moat.lib.rpc import BaseCmd
 from moat.micro.app.bms._test.diy_packet import PacketHeader, replyClass
-from moat.micro.cmd.base import BaseCmd
 
 logger = logging.getLogger(__name__)
 

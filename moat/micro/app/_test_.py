@@ -7,8 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.lib.micro import Event, L, Queue, log, sleep_ms, wait_for_ms
-from moat.lib.rpc import NoStream
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd, NoStream
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

@@ -21,7 +21,7 @@ There is one main "wdt" option which
 from __future__ import annotations
 
 from moat.lib.micro import Event, L
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 from moat.micro.wdt import WDT, M
 
 from typing import TYPE_CHECKING

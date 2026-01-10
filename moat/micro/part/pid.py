@@ -5,7 +5,7 @@ PID controller.
 from __future__ import annotations
 
 from moat.lib.pid import CPID
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 try:
     from moat.micro.rtc import state as RTC

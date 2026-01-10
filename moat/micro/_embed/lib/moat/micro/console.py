@@ -25,7 +25,7 @@ from moat.lib.micro import (
 )
 from moat.lib.ring import RingBuffer
 from moat.lib.ring.aio import RingBuffer as AioRingBuffer
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 

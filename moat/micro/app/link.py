@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from moat.lib.config import CFG
 from moat.lib.micro import AC_use
+from moat.lib.rpc import BaseCmd
 from moat.link.announce import announcing
 from moat.link.client import Link
-from moat.micro.cmd.base import BaseCmd
 from moat.util.exc import ExpKeyError
 
 from ._link import Alert as Alert

@@ -8,7 +8,7 @@ from moat.util import NotGiven, attrdict
 from moat.lib.codec.errors import StoppedError
 from moat.lib.micro import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from moat.lib.path import Path
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 
 class Relay(BaseCmd):

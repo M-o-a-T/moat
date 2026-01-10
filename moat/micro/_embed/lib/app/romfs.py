@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import vfs
 
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 
 class Dev:

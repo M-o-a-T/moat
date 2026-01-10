@@ -108,7 +108,7 @@ def LoopLink(*a, **k):
     Requests use a queue if it exists. Otherwise the request is forwarded
     to the external end of the remote queue.
     """
-    from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
+    from moat.lib.rpc import BaseCmd  # noqa: PLC0415
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _LoopLink(BaseCmd):  # duck-typed to BaseCmdBBM

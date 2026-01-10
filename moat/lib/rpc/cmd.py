@@ -31,42 +31,11 @@ from moat.micro.cmd.util.part import enc_part, get_part
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from contextlib import AbstractAsyncContextManager
-
     from moat.lib.path import Path
     from moat.lib.rpc import Msg
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
     from collections.abc import Awaitable, Callable
-
-
-class ACM_h:
-    """
-    Helper class.
-
-    We want to use "async with disp.send_iter(…)", but send_iter forwards
-    to dispatch, which is async, and "async with await …" is cumbersome.
-
-    Thus we use this class to defer resolving the coroutine to the
-    __aenter__ call.
-    """
-
-    _cm: AbstractAsyncContextManager = None
-
-    def __init__(self, p: Callable, *a, **k):
-        self.p = p
-        self.a = a
-        self.k = k
-
-    async def __aenter__(self):
-        self._cm = cm = await self.p(*self.a, **self.k)
-        del self.p
-        del self.a
-        del self.k
-        return await cm.__aenter__()
-
-    def __aexit__(self, *tb) -> Awaitable:
-        return self._cm.__aexit__(*tb)
 
 
 class BaseCmd(Base):

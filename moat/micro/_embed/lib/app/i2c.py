@@ -14,7 +14,7 @@ except ImportError:
 import contextlib
 
 from moat.lib.micro import Lock, to_thread
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 

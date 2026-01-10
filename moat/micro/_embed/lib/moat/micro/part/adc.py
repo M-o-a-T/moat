@@ -7,7 +7,7 @@ from __future__ import annotations
 import machine as M
 
 from moat.compat import AC_use, Event, TaskGroup, sleep_ms, to_thread
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 
 class _ADC(M.ADC):

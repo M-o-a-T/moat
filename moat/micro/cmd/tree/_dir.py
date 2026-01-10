@@ -7,37 +7,34 @@ from __future__ import annotations
 from moat.util import NotGiven, attrdict, import_
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
 from moat.lib.path import Path
-from moat.lib.rpc import MsgSender, ShortCommandError
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd, MsgSender
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import Msg
-
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
 
 class BaseSuperCmd(BaseCmd):
     """
     A handler that can have a nested app (or more than one).
 
-    Sets up a taskgroup for the sub-app(s) tp run in.
+    Sets up a taskgroup for the sub-app(s) to run in.
     """
 
     tg: TaskGroup = None
     app_lock: Lock = None
 
-    async def setup(self):
+    async def setup(self) -> None:
         "setup apps"
         await super().setup()
         self.app_lock = Lock()
         self.tg = await AC_use(self, TaskGroup())
         await AC_use(self, self.tg.cancel)
 
-    async def start_app(self, app):
+    async def start_app(self, app: BaseCmd) -> None:
         """
         Run (or reload) this app.
         """

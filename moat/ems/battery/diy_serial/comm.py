@@ -18,7 +18,7 @@ from moat.lib.micro import (
     ticks_ms,
     wait_for_ms,
 )
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from .packet import PacketHeader, replyClass
 

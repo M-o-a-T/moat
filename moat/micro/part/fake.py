@@ -8,7 +8,7 @@ import random
 from math import atanh, tanh
 
 from moat.lib.micro import Event
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 PINS = {}
 

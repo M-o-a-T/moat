@@ -5,7 +5,7 @@ Active ping
 from __future__ import annotations
 
 from moat.lib.micro import sleep, wait_for
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 

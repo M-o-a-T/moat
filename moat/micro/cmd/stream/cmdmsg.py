@@ -7,8 +7,7 @@ from __future__ import annotations
 from moat.util import merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
-from moat.lib.rpc import HandlerStream, NotReadyError
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd, HandlerStream, NotReadyError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

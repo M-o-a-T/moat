@@ -9,6 +9,8 @@ from .base import Caller as Caller
 from .base import MsgHandler as MsgHandler
 from .base import MsgSender as MsgSender
 from .base import SubMsgSender as SubMsgSender
+from .cmd import BaseCmd as BaseCmd
+from .cmd import LockBaseCmd as LockBaseCmd
 
 # Import constants directly (not lazy)
 from .const import *  # noqa: F403

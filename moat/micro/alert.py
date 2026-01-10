@@ -15,8 +15,7 @@ from __future__ import annotations
 from moat.util import merge
 from moat.lib.micro import AC_use, Event, Queue, TaskGroup, WouldBlock
 from moat.lib.path import Path
-
-from .cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING  # isort:skip
 

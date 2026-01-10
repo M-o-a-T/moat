@@ -42,7 +42,7 @@ def Fwd(*a, **k) -> BaseCmd:
 
     This app forwards to somewhere else.
     """
-    from moat.micro.cmd.base import BaseCmd  # noqa: PLC0415
+    from moat.lib.rpc import BaseCmd  # noqa: PLC0415
 
     class _Fwd(BaseCmd):
         sd: SubMsgSender = None

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from smbus3 import SMBus, i2c_msg
 
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 
 
 class Cmd(BaseCmd):

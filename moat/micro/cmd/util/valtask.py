@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from anyio import CancelScope
 
-    from moat.micro.cmd.base import BaseCmd
+    from moat.lib.rpc import BaseCmd
 
     from collections.abc import Callable, Mapping
     from typing import Any

@@ -8,7 +8,7 @@ import time
 
 from moat.lib.path import Path
 from moat.lib.proxy import Proxy, drop_proxy
-from moat.micro.cmd.base import BaseCmd
+from moat.lib.rpc import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part, set_part
 from moat.micro.stacks.util import TEST_MAGIC
 

@@ -30,6 +30,9 @@ _imports = {
     "MsgSender": "base",
     "OptDict": "base",
     "SubMsgSender": "base",
+    # From cmd
+    "BaseCmd": "cmd",
+    "LockBaseCmd": "cmd",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -102,6 +105,9 @@ __all__ = [  # noqa:RUF022
     "MsgSender",
     "OptDict",
     "SubMsgSender",
+    # From cmd
+    "BaseCmd",
+    "LockBaseCmd",
     # From msg
     "Msg",
     "MsgLink",
@@ -125,6 +131,8 @@ if _TC or _DOC:
     from .base import MsgSender as MsgSender
     from .base import OptDict as OptDict
     from .base import SubMsgSender as SubMsgSender
+    from .cmd import BaseCmd as BaseCmd
+    from .cmd import LockBaseCmd as LockBaseCmd
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink
     from .msg import MsgResult as MsgResult

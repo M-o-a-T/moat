@@ -406,7 +406,12 @@ class MsgHandler(BaseMsgHandler):
     msg)`` for streamed calls.
 
     Use ``doc`` or ``doc_NAME`` for basic call introspection.
+
+    Set the SKIP_RDY class attribute to allow readiness checks for
+    subcommands to pass through even if the handler itself is not ready.
     """
+
+    SKIP_RDY = False
 
     @property
     def root(self):  # noqa: D102
@@ -507,13 +512,18 @@ class MsgHandler(BaseMsgHandler):
         # First check if it's a readiness check.
         is_rdy = False
         if rcmd[0] == "rdy_":
-            if L and hasattr(self, "wait_ready") and await self.wait_ready(wait=True):
+            if (
+                L
+                and not getattr(self, "SKIP_RDY", False)
+                and hasattr(self, "wait_ready")
+                and await self.wait_ready(wait=True)
+            ):
                 raise NotReadyError(msg.cmd, rcmd)
             is_rdy = True
 
         # Find a subcommand.
         scmd = rcmd.pop()
-        if (sub := getattr(self, f"sub{pref}_{scmd}", None)) is not None:
+        if (sub := self.find_sub(scmd, pref)) is not None:
             if hasattr(sub, "handle"):
                 sub = sub.handle
             return await sub(msg, rcmd)
@@ -522,6 +532,18 @@ class MsgHandler(BaseMsgHandler):
             return await msg.result(None)
 
         raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
+
+    def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
+        """
+        Resolve a subcommand.
+
+        Args:
+            scmd: the subcommand to look up.
+            prefix: any command prefix (deprecated-ish).
+
+        The default implementation uses sub{pref}_{scmd} attributes.
+        """
+        return getattr(self, f"sub{prefix}_{scmd}", None)
 
     def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """

@@ -320,6 +320,7 @@ class BaseCmd(Base):
 
 
 BaseCmd.handle = MsgHandler.handle
+BaseCmd.find_sub = MsgHandler.find_sub
 BaseCmd.find_handler = MsgHandler.find_handler
 
 

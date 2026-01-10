@@ -123,27 +123,16 @@ class BaseSubCmd(BaseSuperCmd):
         for app in list(self.sub.values()):
             await app.reload()
 
-    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
+    def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
         """
-        Dispatch a message to subcommands.
+        Resolve a subcommand.
 
-        See `BaseCmd.handle` for details.
+        This version uses the `sub` mapping.
         """
+        if not prefix and (sub := self.sub.get(scmd, None)) is not None:
+            return sub
 
-        if not rcmd:
-            raise ShortCommandError
-
-        cmd = rcmd[-1]
-        if isinstance(cmd, str) and cmd[0] == "!":
-            rcmd[-1] = cmd[1:]
-        elif not prefix and (sub := self.sub.get(cmd, None)) is not None:
-            if rcmd[0] == "rdy_":
-                wr = getattr(sub, "wait_ready", None)
-                if wr is not None and await wr():
-                    return True
-            rcmd.pop()
-            return await sub.handle(msg, rcmd)
-        return await super().handle(msg, rcmd, *prefix)
+        return super().find_sub(scmd, prefix)
 
     doc_dir_ = dict(
         _d="list cmd subdirectory",
@@ -169,6 +158,8 @@ class DirCmd(BaseSubCmd):
 
     Not typically subclassed.
     """
+
+    SKIP_RDY = True
 
     def __init__(self, cfg):
         super().__init__(cfg)

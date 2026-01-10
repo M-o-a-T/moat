@@ -53,7 +53,7 @@ class Register(BaseCmd):
                     self.link,
                     self.cfg.link,
                     host=self.cfg.get("host", False),
-                    service=self.root.sub_at(self.cfg.path),
+                    service=self.root.sub_at(self.cfg.path) if "path" in self.cfg else None,
                 ),
             )
         # rlink will be set up lazily

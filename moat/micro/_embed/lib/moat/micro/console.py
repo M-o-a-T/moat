@@ -147,24 +147,29 @@ def bg(p, *a, **k) -> ValueEvent:
 
 def call(p, *a, **k):
     """
-    Returns the result of running @p asynchronously.
+    Returns the result of running ``p`` asynchronously.
 
     A REPL input that consists of a single Ctrl-C will terminate the call.
 
     Installed as 'moat.call'.
     """
-    evt = bg(p, *a, **k)
-    return run_until_complete(evt.get())
+    if main.user_task is not None:
+        raise RuntimeError("A user task is already running!")
+    main.user_task = evt = bg(p, *a, **k)
+    try:
+        return run_until_complete(evt.get())
+    finally:
+        main.user_task = None
 
 
 class Console(io.IOBase):
     """
     The console driver that allows MoaT to run in the background.
 
-    Config:
-        keep: flag whether to keep the original console driver
-        sleep: cycle time for asyncio
-        repl: flag whether to 'return' to the REPL.
+    Parameters:
+        keep (bool): flag whether to keep the original console driver, required
+        sleep (int): timeout for asyncio; milliseconds. Default: 20
+        repl (bool): flag whether to 'return' to the REPL. Default: `False`.
     """
 
     _term = None

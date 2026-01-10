@@ -29,6 +29,7 @@ a persistent outer context, e.g. to keep a listening socket open.
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.lib.micro import ACM, AC_exit, AC_use
 
 # Typing
@@ -72,8 +73,11 @@ class Base:
     """
 
     s = None
+    cfg: attrdict
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: attrdict | None = None):
+        if cfg is None:
+            cfg = attrdict()
         self.cfg = cfg
 
     def wrap(self) -> AbstractAsyncContextManager:

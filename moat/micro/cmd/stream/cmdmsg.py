@@ -49,13 +49,12 @@ class MsgStream(HandlerStream):
 
 class BaseCmdMsg(BaseCmd):
     """
-    This is a command handler that relays arbitrary messages between MoaT's
-    Cmd tree and a `BaseMsg` stream.
+    This is a command handler that relays arbitrary MoaT-RPC messages
+    and a `BaseMsg`-compatible stream.
 
-    The difference between this and a
-    :moat.micro.cmd.stream:`BaseCmdBBM`-derived class is that this class
-    encapsulates arbitrary message/stream calls and requires a `BaseCmdMsg`
-    handler on the other side to talk to.
+    The difference to :moat.micro.cmd.stream:`BaseCmdBBM` is that this
+    class encapsulates arbitrary message/stream calls and requires a
+    `BaseCmdMsg` handler on the other side to talk to.
 
     In contrast, a :moat.micro.cmd.stream:`BaseCmdBBM` exposes commands
     that directly read or write the underlying stream (of whatever type).
@@ -70,7 +69,7 @@ class BaseCmdMsg(BaseCmd):
 
     async def stream(self) -> BaseMsg:
         """
-        Creates the actual data stream.
+        This method creates the data stream.
 
         Must be overridden.
         """
@@ -78,9 +77,7 @@ class BaseCmdMsg(BaseCmd):
 
     async def task(self):
         """
-        Start the stack.
-
-        You typically override `stream`, not this method.
+        Start the MsgStream.
         """
         try:
             self.s = await self.stream()

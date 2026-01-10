@@ -61,6 +61,7 @@ def pos2val(a: float, b: float, c: float, /, clamp: bool = False):
 
 
 def drepr(k, v):
+    "short repr of dictionaries"
     k = str(k)
     if v is None:
         return "?" + k

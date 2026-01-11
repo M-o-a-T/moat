@@ -426,6 +426,8 @@ class MsgHandler(BaseMsgHandler):
 
         Raises `NotImplementedError`.
         """
+        if sys.implementation.name == "micropython":
+            return None
         raise NotImplementedError
 
     @contextmanager

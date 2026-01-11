@@ -10,6 +10,7 @@ from moat.util import NotGiven
 from moat import DOC
 from moat.lib.micro import ACM, AC_exit, L, TaskGroup
 from moat.lib.path import Path
+from moat.lib.stream import Base
 from moat.util.exc import ungroup
 
 from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
@@ -395,7 +396,7 @@ class SubMsgSender(MsgSender):
         return self.sub_at(Path.build((x,)))
 
 
-class MsgHandler(BaseMsgHandler):
+class MsgHandler(Base, BaseMsgHandler):
     """
     Message dispatching, using a Path-based prefix.
 

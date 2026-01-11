@@ -4,6 +4,7 @@ Base classes for command handlers.
 
 from __future__ import annotations
 
+import sys
 from contextlib import contextmanager
 
 from moat.util import NotGiven
@@ -512,7 +513,7 @@ class MsgHandler(Base, BaseMsgHandler):
                 return await msg.call_stream(cmd)
 
         # Neither of the above.
-        # First check if it's a readiness check.
+        # First test if it's a readiness check.
         is_rdy = False
         if rcmd[0] == "rdy_":
             if (
@@ -558,3 +559,51 @@ class MsgHandler(Base, BaseMsgHandler):
         """
         cmd  # noqa:B018
         return self, path
+
+    doc_dir_ = dict(
+        _d="directory",
+        v="bool:verbose",
+        _r=dict(c=["str:commands"], d=["str:modules"], j="bool:callable"),
+    )
+
+    async def cmd_dir_(self, v=True):
+        """
+        Rudimentary introspection. Returns a dict with
+        a list of available commands @c,
+        iterators @i, and submodules @d.
+        j=True if callable directly.
+
+        If @v ("visible") is set (the default),
+        this does not return hidden commands.
+        """
+        c = []
+        s = []
+        res = {}
+
+        for k in dir(self):
+            if v is (k[-1] == "_"):
+                continue
+            if k.startswith("cmd_"):
+                c.append(k[4:])
+            elif k.startswith("stream_"):
+                s.append(k[7:])
+            elif k == "cmd":
+                res["C"] = True
+            elif k == "stream":
+                res["S"] = True
+        if c:
+            res["c"] = c
+        if s:
+            res["s"] = s
+        return res
+
+    if L:
+        doc_rdy_ = dict(_d="check readiness", w="bool:wait for it?")
+
+        def cmd_rdy_(self, w=True) -> Awaitable:
+            """
+            Check if / wait for readiness.
+
+            See `wait_ready` for return values.
+            """
+            return self.wait_ready(wait=w)

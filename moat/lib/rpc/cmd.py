@@ -32,15 +32,13 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
-    from collections.abc import Awaitable
 
 
 class BaseCmd(MsgHandler):
     """
-    Basic Request handler.
+    Base class of a Command handler.
 
-    This class duck-types `moat.lib.rpc.MsgHander`. In particular,
-    it uses its `handle` and `find_handler` methods.
+
     """
 
     root: Dispatch = None
@@ -198,16 +196,6 @@ class BaseCmd(MsgHandler):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
-        doc_rdy_ = dict(_d="check readiness", w="bool:wait for it?")
-
-        def cmd_rdy_(self, w=True) -> Awaitable:
-            """
-            Check if / wait for readiness.
-
-            See `wait_ready` for return values.
-            """
-            return self.wait_ready(wait=w)
-
     async def wait_stopped(self):
         "wait until this is no longer running"
         if self._stopped is not None:
@@ -220,43 +208,6 @@ class BaseCmd(MsgHandler):
         "calculate the path to myself"
         # XXX cache it?
         return self._parent.path / self._name
-
-    doc_dir_ = dict(
-        _d="directory",
-        v="bool:verbose",
-        _r=dict(c=["str:commands"], d=["str:modules"], j="bool:callable"),
-    )
-
-    async def cmd_dir_(self, v=True):
-        """
-        Rudimentary introspection. Returns a dict with
-        a list of available commands @c,
-        iterators @i, and submodules @d.
-        j=True if callable directly.
-
-        If @v ("visible") is set (the default),
-        this does not return hidden commands.
-        """
-        c = []
-        s = []
-        res = {}
-
-        for k in dir(self):
-            if v is (k[-1] == "_"):
-                continue
-            if k.startswith("cmd_"):
-                c.append(k[4:])
-            elif k.startswith("stream_"):
-                s.append(k[7:])
-            elif k == "cmd":
-                res["C"] = True
-            elif k == "stream":
-                res["S"] = True
-        if c:
-            res["c"] = c
-        if s:
-            res["s"] = s
-        return res
 
     doc_cfg_ = dict(_d="config", _r="parts")
 

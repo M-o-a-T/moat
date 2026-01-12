@@ -188,9 +188,17 @@ class DirCmd(BaseSubCmd):
     async def _setup_apps(self):
         log("Setup %s", self.path)
         gcfg = self.cfg
-        # from pprint import pprint
-        # pprint(gcfg,sys.stderr)
         apps = gcfg.get("apps", {})
+        for k, v in gcfg.items():
+            if k == "apps" or k in apps:
+                continue
+            try:
+                if not v.get("running", True):
+                    del apps[k]
+                    continue
+                apps[k] = v["app"]
+            except (AttributeError, KeyError):
+                continue
 
         def imp(name):
             return import_(f"{self.root.APP}.{name}", 1)

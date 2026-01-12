@@ -534,7 +534,7 @@ async def cfg_(
             await cf.set(rcfg, sync=sync, replace=True)
 
         if write_client:
-            if "apps" in rcfg:
+            if "apps" in rcfg or any(v.get("app", None) for v in rcfg.values()):
                 p = MoatFSPath(write_client).connect_repl(fs)
                 d = codec.encode(rcfg)
                 await p.write_bytes(d, chunk=64)

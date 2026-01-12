@@ -54,13 +54,22 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         for k, v in all_rtc():
             merge(cfg.setdefault(k, {}), v)
 
-    # Start the watchdog timer early
-    for k, v in cfg["apps"].items():
+    # Start the hardware watchdog timer early
+    for k, v in cfg.get("apps", {}).items():
         if v != "wdt.Cmd":
             continue
         k = cfg.get(k, attrdict())  # noqa:PLW2901
         if k.get("hw", False):
             machine.WDT(k.get("id", 0), k.get("t", 5000))
+        break
+    else:
+        for k, v in cfg.items():
+            if k == "apps":
+                continue
+            if v.get("app", "") != "wdt.Cmd":
+                continue
+            if v.get("hw", False):
+                machine.WDT(v.get("id", 0), v.get("t", 5000))
 
     def cfg_network(n):
         import time  # noqa: PLC0415

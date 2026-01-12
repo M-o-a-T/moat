@@ -33,11 +33,6 @@ r:
         frame: 0x85
       log:
         txt: "S"
-    tt:
-      a: b
-      c:
-        d: e
-      z: 99
 
   link: *link
   log:

@@ -24,7 +24,7 @@ def Array(*a, **k):
     """
     List of mostly-same things.
     """
-    from moat.micro.cmd.array import ArrayCmd  # noqa: PLC0415
+    from moat.lib.rpc import ArrayCmd  # noqa: PLC0415
 
     class _Array(ArrayCmd):
         pass

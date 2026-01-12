@@ -16,9 +16,8 @@ from moat.lib.micro import (
     wait_for_ms,
 )
 from moat.lib.proxy import as_proxy
-from moat.lib.rpc import BaseCmd
+from moat.lib.rpc import ArrayCmd, BaseCmd
 from moat.micro.alert import Alert
-from moat.micro.cmd.array import ArrayCmd
 from moat.micro.rtc import state as rtc_state
 
 from typing import TYPE_CHECKING  # isort:skip

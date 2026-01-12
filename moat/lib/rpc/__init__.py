@@ -30,9 +30,9 @@ _imports = {
     "MsgSender": "base",
     "OptDict": "base",
     "SubMsgSender": "base",
-    # From cmd
-    "BaseCmd": "cmd",
-    "LockBaseCmd": "cmd",
+    # From cmd.base
+    "BaseCmd": "cmd.base",
+    "LockBaseCmd": "cmd.base",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -105,7 +105,7 @@ __all__ = [  # noqa:RUF022
     "MsgSender",
     "OptDict",
     "SubMsgSender",
-    # From cmd
+    # From cmd.base
     "BaseCmd",
     "LockBaseCmd",
     # From msg

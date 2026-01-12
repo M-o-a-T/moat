@@ -183,11 +183,11 @@ def expect_node(self, *a, **kw):
 Emitter.expect_node = expect_node
 
 
-def yload(stream, multi=False, attr=False):
+def yload(stream, multi=False, attr=False, typ="safe"):
     """
     Load one or more YAML objects from a file.
     """
-    y = yaml.YAML(typ="safe")
+    y = yaml.YAML(typ=typ)
     if attr:
 
         class AttrConstructor(SafeConstructor):
@@ -202,7 +202,7 @@ def yload(stream, multi=False, attr=False):
         return y.load(stream)
 
 
-def yprint(data, stream=sys.stdout, compact=False):
+def yprint(data, stream=sys.stdout, compact=False, typ="safe"):
     """
     Write a YAML record.
 
@@ -217,7 +217,7 @@ def yprint(data, stream=sys.stdout, compact=False):
     #   elif isinstance(data, bytes):
     #       os.write(sys.stdout.fileno(), data)
     else:
-        y = yaml.YAML(typ="safe")
+        y = yaml.YAML(typ=typ)
         y.default_flow_style = compact
         y.dump(data, stream=stream)
 

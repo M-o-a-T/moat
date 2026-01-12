@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
 
-
 class BaseCmd(MsgHandler):
     """
     Base class of a Command handler.
@@ -200,6 +199,8 @@ class BaseCmd(MsgHandler):
         "wait until this is no longer running"
         if self._stopped is not None:
             await self._stopped.wait()
+
+    doc_stq_ = dict(_d="wait until no longer running")
 
     cmd_stq_ = wait_stopped
 

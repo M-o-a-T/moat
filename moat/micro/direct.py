@@ -175,7 +175,7 @@ class DirectREPL(SingleAnyioBuf):
         :param str code: code to execute
         :returns: Python object
 
-        Execute the string (using :meth:`eval`) and return the output
+        Execute the string (using :meth:`exec`) and return the output
         parsed using ``ast.literal_eval`` so that numbers, strings, lists etc.
         can be handled as Python objects.
         """
@@ -187,7 +187,7 @@ class DirectREPL(SingleAnyioBuf):
         """
         await self.exec_raw("import machine; machine.reset()", timeout=0, quiet=False)
 
-    async def soft_reset(self, run_main=True):
+    async def soft_reset(self, run_main: bool = True):
         """
         :param bool run_main: select if program should be started
 
@@ -213,12 +213,9 @@ class DirectREPL(SingleAnyioBuf):
                     await anyio.sleep(0.2)
                     await self.exec("6")
 
-    async def statvfs(self, path):
+    async def statvfs(self, path: str) -> os.statvfs_result:
         """
-        :param str path: Absolute path on target.
-        :rtype: os.statvfs_result
-
-        Return statvfs information (disk size, free space etc.) about remote
+        Return statvfs information (disk size, free space etc.) about a remote
         filesystem.
         """
         st = await self.evaluate(f"import os; print(os.statvfs({str(path)!r}))")
@@ -226,11 +223,12 @@ class DirectREPL(SingleAnyioBuf):
         # ~ f_bsize, f_frsize, f_blocks, f_bfree, f_bavail,
         #   f_files, f_ffree, f_favail, f_flag, f_namemax
 
-    async def truncate(self, path, length):
+    async def truncate(self, path: str, length: int):
         """
         Truncate a file.
 
-        MicroPython has no file.truncate(), but open(...,"ab"); write(b"") seems to work.
+        MicroPython has no ``file.truncate()``, but ``open(...,"ab"); write(b"")``
+        seems to work.
         """
         return await self.evaluate(
             f'_f = open({str(path)!r}, "ab")\n'

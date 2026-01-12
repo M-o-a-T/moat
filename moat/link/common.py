@@ -11,6 +11,7 @@ from moat.lib.rpc import MsgHandler
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable
@@ -29,7 +30,7 @@ class CmdCommon(MsgHandler):
 
     doc_i = dict(_d="Internal commands")
 
-    def sub_i(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    def sub_i(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         "Local subcommand redirect for 'i'"
         return self.handle(msg, rcmd, "i")
 

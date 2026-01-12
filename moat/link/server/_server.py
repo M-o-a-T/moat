@@ -67,6 +67,7 @@ from typing import TYPE_CHECKING, Any, cast
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
 
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
     from moat.link.backend import Message
 
@@ -321,37 +322,37 @@ class ServerClient(LinkCommon):
 
     doc_d = dict(_d="Data access commands")
 
-    def sub_d(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_d(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 'd'"
         return self.handle(msg, rcmd, "d")
 
     doc_e = dict(_d="Error handling commands")
 
-    def sub_e(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_e(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 'e'"
         return self.handle(msg, rcmd, "e")
 
     doc_i = dict(_d="Informational commands")
 
-    def sub_i(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_i(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 'i'"
         return self.handle(msg, rcmd, "i")
 
     doc_s = dict(_d="Data load/save commands")
 
-    def sub_s(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_s(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 's'"
         return self.handle(msg, rcmd, "s")
 
     doc_cl = dict(_d="Access to named clients")
 
-    def sub_cl(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_cl(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 'cl'"
         return self.server.sub_cl(msg, rcmd)
 
     doc_srv = dict(_d="Access to named servers")
 
-    def sub_srv(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_srv(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
         "Local subcommand redirect for 'srv'"
         return self.server.sub_srv(msg, rcmd)
 
@@ -2013,7 +2014,7 @@ class Server(MsgHandler):
 
     # server-to-server crosslinks
 
-    async def sub_cl(self, msg: Msg, rcmd: list) -> None:
+    async def sub_cl(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Direct to one of our clients.
         """
@@ -2034,7 +2035,7 @@ class Server(MsgHandler):
             for cn in cl:
                 await ml.send(cn)
 
-    async def sub_srv(self, msg: Msg, rcmd: list) -> None:
+    async def sub_srv(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Direct a message to another server.
         """

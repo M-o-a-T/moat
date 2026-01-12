@@ -18,6 +18,7 @@ from .common import CmdCommon
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Key, Msg, MsgSender
 
     from .auth import AuthMethod
@@ -79,7 +80,7 @@ class Hello(CmdCommon):
         if self.me_server and self.me is None:
             raise ValueError("A server must have a name")
 
-    async def handle(self, msg: Msg, rcmd: list[Key], *prefix: Key) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: Key) -> None:
         """
         Dispatch an incoming "hello" message
         """

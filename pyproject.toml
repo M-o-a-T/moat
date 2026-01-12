@@ -104,6 +104,7 @@ dev = [
     "pytest-trio",
     "pytest-coverage",
     "setuptools-scm",
+    "smbus3",
     "transitions-aio",
     "wheel",
 ]

@@ -16,22 +16,23 @@ from ._link import Alert as Alert
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import MsgSender
-    from moat.micro.cmd.msg import Msg
+    from moat.lib.rpc.msg import Msg
 
 
 class Register(BaseCmd):
     """
     This command registers a link between a MoaT-micro path and a MoaT-Link subcommand.
 
-    Config:
-       link: !P foo.bar  # for registration of foo.bar on MoaT-Link
-       host: bool        # whether to host-prefix the link name, default False
-       path: !P r.x      # path to the advertised MoaT-micro (sub)system (if any)
-       rlink: !P foo.baz # forward local commands to this
+    Parameters:
+       link (Path): for registration under this path on MoaT-Link
+       host (bool): whether to host-prefix the link name, defaults to `False`
+       path (Path): if set, forward remote commands to this local path
+       rlink (Path): if set, forward local commands to this server-side path
 
     `link` is mandatory, should be unique, and registers this subcommand in MoaT-Link.
-    If `path` is set, accessing @link via :meth:`moat.link.client.LinkSender.get_service`
+    If ``path`` is set, accessing @link via :meth:`moat.link.client.LinkSender.get_service`
     connects to it.
 
     If `rlink` is set, MoaT-micro commands that are directed to this app
@@ -63,7 +64,7 @@ class Register(BaseCmd):
         self.ann.set()
         await super().task()
 
-    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
         "forward, possibly"
         if self.link is None:
             raise RuntimeError("Not ready")  # XXX maybe just return

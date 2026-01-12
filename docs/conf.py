@@ -192,6 +192,7 @@ intersphinx_mapping = {
     "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
     # "asyncdbus": ("https://M-o-a-T.org/docs/asyncdbus/", None),
     # "asyncclick": ("https://M-o-a-T.org/docs/asyncclick/", None),
+    # "pyfuse3": ("https://M-o-a-T.org/docs/asyncclick/", None),
 }
 
 autodoc2_packages = [
@@ -231,6 +232,7 @@ autodoc_type_aliases = {
     "moat.lib.gpio.gpio.Chip": "moat.lib.gpio.Chip",
     "moat.lib.rpc.base.BaseMsgHandler": "moat.lib.rpc.BaseMsgHandler",
     "moat.lib.rpc.base.Caller": "moat.lib.rpc.Caller",
+    # "os.statvfs_result": "python.os.statvfs_result"
     # "RetainHandling": "moat.lib.mqtt.RetainHandling",
 }
 autoclass_content = "both"
@@ -245,6 +247,7 @@ nitpick_ignore = [
     ("py:obj", "moat.lib.broadcast._impl.TData"),
     ("py:obj", "NotGiven"),
     ("py:func", "moat.lib.path.Path.from_path"),
+    ("py:class", "os.statvfs_result"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),
@@ -252,6 +255,22 @@ nitpick_ignore = [
     ("py:class", "asyncclick.core.Group"),
     ("py:class", "asyncclick.Group"),
     ("py:class", "asyncdbus.service.ServiceInterface"),
+    ("py:func", "pyfuse3.main"),
+    ("py:obj", "pyfuse3.EntryAttributes"),
+    ("py:obj", "pyfuse3.EntryAttributes.entry_timeout"),
+    ("py:obj", "pyfuse3.StatvfsData"),
+    ("py:obj", "pyfuse3.FileInfo"),
+    ("py:obj", "pyfuse3.FileInfo.fh"),
+    ("py:obj", "pyfuse3.FUSEError"),
+    ("py:obj", "pyfuse3.RENAME_EXCHANGE"),
+    ("py:obj", "pyfuse3.RENAME_NOREPLACE"),
+    ("py:obj", "pyfuse3.EntryAttributes.st_ctime_ns"),
+    ("py:meth", "pyfuse3.readdir_reply"),
+    ("py:class","pyfuse3._pyfuse3.Operations"),
+    ("py:class","pyfuse3.__init__.FileInfo"),
+    ("py:class","pyfuse3.__init__.EntryAttributes"),
+    ("py:class", "pyfuse3.__init__.StatvfsData"),
+    ("py:func","pyfuse3.get_sup_groups"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),

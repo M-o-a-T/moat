@@ -6,8 +6,13 @@ from __future__ import annotations
 
 from moat.lib.stream import BaseMsg
 
+from typing import TYPE_CHECKING
 
-def console_stack(stream, cfg, cons=False):
+if TYPE_CHECKING:
+    from moat.util import attrdict
+
+
+def console_stack(stream, cfg: attrdict, cons: bool = False):
     # lossy=False, log=False, use_console=False, msg_prefix=None
     """
     Build a message stack on top of a MoaT bytestream.
@@ -29,15 +34,17 @@ def console_stack(stream, cfg, cons=False):
             set if the stream is not 100% reliable.
         frame(int|dict):
             control protocol framing.
-            If an integer, the character that starts a packet.
-            Otherwise configuration for a `SerialPacker` instance.
         console(bool):
             set if incoming non-framed data should be processed.
 
-    If `lossy` is ``True``, `frame` must be a dict.
+    If ``lossy`` is `True`, ``frame`` must be a dict.
 
-    There is no frame character escaping. Choose a value that cannot occur
-    in an ASCII or possibly UTF-8 bytestream, i.e. ≥ 0xF8.
+    If ``frame`` is an integer, the protocol is assumed to be
+    self-delimiting (e.g. CBOR). If it's a dict, the value is
+    the configuration for a ``SerialPacker`` instance.
+
+    There is no start-of-frame character escaping. Choose a value that cannot occur
+    in an ASCII or possibly UTF-8 bytestream (≥ 0xF8).
     """
 
     if not hasattr(stream, "rd") or not hasattr(stream, "wr"):

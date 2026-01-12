@@ -224,8 +224,9 @@ async def announcing(
     This requires the ``SYSTEMD_EXEC_PID`` environment variable to
     contain the PID of the current process.
 
-    A :class:`ServiceSupplanted` exception will be raised if/when there is
-    a duplicate of the named service on the link (or one appears).
+    A :class:`~moat.link.exceptions.ServiceSupplanted` exception will be
+    raised if there is a duplicate of the named service on the link
+    (or one appears).
 
     The ``force`` flag is intended for replacing an existing service. It
     does not ignore a subsequent announcement by some other MoaT-Link

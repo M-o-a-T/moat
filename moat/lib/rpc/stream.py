@@ -53,6 +53,8 @@ except ImportError:
 if TYPE_CHECKING:
     from logging import Logger
 
+    from moat.lib.path import PathElem
+
     from .base import OptDict
 
     from collections.abc import Sequence
@@ -165,7 +167,7 @@ class HandlerStream(MsgHandler):
             return False
         return True
 
-    async def handle(self, msg: Msg, rcmd: list) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Forward a new message to the other side.
         """

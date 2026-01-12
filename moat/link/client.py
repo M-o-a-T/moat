@@ -54,6 +54,7 @@ from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Msg, MsgHandler
     from moat.link.node.codec import CodecNode
 
@@ -69,7 +70,14 @@ class _Requeue(Exception):
     pass
 
 
-__all__ = ["BasicLink", "Link", "LinkCommon", "get_link"]
+__all__ = [
+    "BasicLink",
+    "ClientCaller",
+    "Link",
+    "LinkCommon",
+    "LinkSender",
+    "get_link",
+]
 
 _the_link = ContextVar("_the_link")
 
@@ -226,7 +234,14 @@ class LinkCommon(CmdCommon):
             raise EOFError
 
 
-class ClientCaller(Caller):  # nqa:D102
+class ClientCaller(Caller):
+    """
+    This is a helper class that ensures the connection to the MoaT-Link server
+    is up before attempting to talk to it.
+
+    Don't instantiate this class yourself.
+    """
+
     def __init__(self, sender, *a, **kw):
         self._link = sender._link  # noqa:SLF001
         super().__init__(sender, *a, **kw)
@@ -251,6 +266,9 @@ class LinkSender(MsgSender):
     It contains various somewhat-high-level helpers. Most are named like
     the corresponding backend commands, with an underscore replacing the
     dot.
+
+    Do not instantiate this class yourself; it's returned when you enter
+    the context of a `Link`.
     """
 
     Caller_ = ClientCaller
@@ -263,25 +281,30 @@ class LinkSender(MsgSender):
 
     @property
     def root(self):
+        "Self"
         return self
 
     @property
     def link(self):
+        "Link"
         return self._link
 
     @property
     def name(self) -> str:
+        "Link name"
         return self._link.name
 
     @property
     def cfg(self) -> attrdict:
+        "Link config"
         return self._link.cfg
 
     @property
     def id(self) -> str:
+        "Link ID"
         return self._link.id
 
-    async def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         """
         Standard handler, forwards to the remote side.
         """
@@ -496,7 +519,7 @@ class LinkSender(MsgSender):
             state: send the current state (True), updates (False), both with
                     current data from the server (None), or both via MQTT (NotGiven).
             age: cutoff this many seconds ago. Older entries are skipped.
-            cls: type of root node (default `Node`)
+            cls: type of root node (default `~moat.link.node.Node`)
 
         This method returns an async context manager which yields an async iterator.
         The iterator yields node data if neither ``subtree`` nor ``meta`` is set.

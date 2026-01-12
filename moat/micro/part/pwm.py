@@ -53,8 +53,8 @@ class PWM(BaseCmd):
     - so: stream_out: Flag whether to stream the pin value
 
     The input must be in [0..base]; the output is controlled so that
-    `t_on/(t_on+t_off) = val/base`, given that `min <= t_on,t_off <= max`
-    and one of t_on and t_off are equal to `min`. (Thus when `val=base/2`,
+    ``t_on/(t_on+t_off) = val/base``, given that ``min <= t_on,t_off <= max``
+    and one of t_on and t_off are equal to `min`. (Thus when ``val=base/2``,
     both are.)
 
     If val is too low (or too high) such that this constraint can no longer

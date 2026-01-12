@@ -18,13 +18,15 @@ if TYPE_CHECKING:
 
 class BaseCmdBBM(BaseCmd):
     """
-    This is a command handler that connects MoaT's Cmd tree to a `BaseBuf`,
-    `BaseBlk` or `BaseMsg` instance.
+    This is a command handler that connects MoaT's Cmd tree to a
+    `~moat.lib.stream.BaseBuf`, `~moat.lib.stream.BaseBlk` or
+    `~moat.lib.stream.BaseMsg` instance.
 
-    Override `stream` to return that instance, possibly wrapped with `AC_use`.
+    Override :meth:`stream` to return that instance. Use
+    :func:`moat.lib.micro.AC_use` if it's a context manager.
 
-    This is a single class that adapts `BaseMsg`, `BaseBlk`, and
-    `BaseBuf` streams.
+    This is a single class that adapts `~moat.lib.stream.BaseMsg`,
+    `~moat.lib.stream.BaseBlk`, and `~moat.lib.stream.BaseBuf` streams.
 
     The difference between this and a
     :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg`-derived class is that this

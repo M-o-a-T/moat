@@ -13,7 +13,8 @@ from .dir import BaseSuperCmd
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .base import BaseCmd
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import BaseCmd, Msg
 
 
 class BaseLayerCmd(BaseSuperCmd):
@@ -26,12 +27,12 @@ class BaseLayerCmd(BaseSuperCmd):
     You need to override "gen_cmd" to create the app object.
     """
 
-    app = None
-    name = "_"
+    app: BaseCmd = None
+    name: str = "_"
 
     async def run_app(self):
         """
-        The command handler's executor. By default, calls `self.app.run`
+        The command handler's executor. By default, calls ``self.app.run``
         within the command's context.
 
         You might override this e.g. for restarting or
@@ -88,7 +89,7 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         return None
 
-    async def handle(self, msg, rcmd):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """
         Forward to the sub-app.
 

@@ -28,7 +28,12 @@ from collections import defaultdict
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import SubMsgSender
+    from pyfuse3 import RequestContext, SetattrFields, StatvfsData
+
+    from moat.lib.rpc import MsgSender, SubMsgSender
+
+    from collections.abc import Callable, Sequence
+    from typing import Any
 
 
 logger = logging.getLogger(__name__)
@@ -38,14 +43,27 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     "FUSE operations to delegate to a MicroPython client"
 
     # pylint: disable=too-many-public-methods
-    supports_dot_lookup = False
-    enable_writeback_cache = False
-    enable_acl = False
+    supports_dot_lookup: bool = False
+    enable_writeback_cache: bool = False
+    enable_acl: bool = False
 
-    max_read = 256
-    max_write = 256
+    max_read: int = 256
+    max_write: int = 256
 
-    def __init__(self, link):
+    _inode_path_map: dict[int, Path] = {pyfuse3.ROOT_INODE: Path("/")}
+    _path_inode_map: dict[Path, int] = {Path("/"): pyfuse3.ROOT_INODE}
+    _lookup_cnt: dict[int, Callable]
+    _fd_inode_map: dict[int, int]
+    _inode_fd_map: dict[int, int]
+    _fd_open_count: dict[int, int]
+
+    _dir_content: dict[int, tuple[int, Any, RequestContext]]
+    _last_dir_fh: int = 0
+
+    _link: MsgSender
+    _last_inode: int = pyfuse3.ROOT_INODE
+
+    def __init__(self, link: MsgSender):
         # pylint: disable=I1101
         super().__init__()
         self._inode_path_map = {pyfuse3.ROOT_INODE: Path("/")}
@@ -54,12 +72,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         self._fd_inode_map = dict()
         self._inode_fd_map = dict()
         self._fd_open_count = dict()
-
         self._dir_content = dict()
-        self._last_dir_fh = 0
 
         self._link = link
-        self._last_inode = pyfuse3.ROOT_INODE
 
     def f_open(self, fd, inode):
         "remember opened file"
@@ -111,19 +126,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             raise FUSEError(errno.EEXIST)
         raise FUSEError(errno.EIO)
 
-    async def lookup(self, parent_inode, name, ctx):
+    async def lookup(self, parent_inode, name, ctx: RequestContext) -> EntryAttributes:
         """Look up a directory entry by name and get its attributes.
 
-        This method should return an `EntryAttributes` instance for the
+        This method should return an `~pyfuse3.EntryAttributes` instance for the
         directory entry *name* in the directory with inode *parent_inode*.
 
         If there is no such entry, the method should either return an
-        `EntryAttributes` instance with zero ``st_ino`` value (in which case
+        `~pyfuse3.EntryAttributes` instance with zero ``st_ino`` value (in which case
         the negative lookup will be cached as specified by ``entry_timeout``),
-        or it should raise `FUSEError` with an errno of `errno.ENOENT` (in this
+        or it should raise `~pyfuse3.FUSEError` with an errno of `errno.ENOENT` (in this
         case the negative result will not be cached).
-
-        *ctx* will be a `RequestContext` instance.
 
         The file system must be able to handle lookups for :file:`.` and
         :file:`..`, no matter if these entries are returned by `readdir` or not.
@@ -143,7 +156,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                 inode = self.i_add(p)
                 return await self.getattr(inode, ctx, _res=d)
 
-    async def forget(self, inode_list):
+    async def forget(self, inode_list: Sequence[int]):
         """Decrease lookup counts for inodes in *inode_list*
 
         *inode_list* is a list of ``(inode, nlookup)`` tuples. This method
@@ -157,10 +170,10 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         If the file system is unmounted, it may not have received `forget` calls
         to bring all lookup counts to zero. The filesystem needs to take care to
         clean up inodes that at that point still have non-zero lookup count
-        (e.g. by explicitly calling `forget` with the current lookup count for
-        every such inode after `main` has returned).
+        (e.g. by explicitly calling :meth:`forget` with the current lookup
+        count for every such inode after :func:`pyfuse3.main` has returned).
 
-        This method must not raise any exceptions (not even `FUSEError`), since
+        This method must not raise any exceptions (not even `~pyfuse3.FUSEError`), since
         it is not handling a particular client request.
         """
 
@@ -168,13 +181,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             with suppress(KeyError):
                 self.i_del(i)
 
-    async def getattr(self, inode, _ctx, _res=None):
+    async def getattr(self, inode: int, _ctx: RequestContext, _res=None) -> EntryAttributes:
         """Get attributes for *inode*
 
-        *ctx* will be a `RequestContext` instance.
-
-        This method should return an `EntryAttributes` instance with the
-        attributes of *inode*. The `~EntryAttributes.entry_timeout` attribute is
+        This method should return an `~pyfuse3.EntryAttributes` instance with the
+        attributes of *inode*. The `~pyfuse3.EntryAttributes.entry_timeout` attribute is
         ignored in this context.
         """
 
@@ -208,16 +219,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         r.st_blocks = (r.st_size - 1) // r.st_blksize + 1
         return r
 
-    async def setattr(self, inode, attr, fields, fh, ctx):
+    async def setattr(
+        self, inode: int, attr: EntryAttributes, fields: SetattrFields, fh, ctx: RequestContext
+    ) -> EntryAttributes:
         """Change attributes of *inode*
 
-        *fields* will be an `SetattrFields` instance that specifies which
-        attributes are to be updated. *attr* will be an `EntryAttributes`
-        instance for *inode* that contains the new values for changed
-        attributes, and undefined values for all other attributes.
+        *fields* specifies which attributes are to be updated. *attr*
+        contains the new values of changed attributes for *inode*, and
+        undefined values for all other attributes.
 
         Most file systems will additionally set the
-        `~EntryAttributes.st_ctime_ns` attribute to the current time (to
+        `~pyfuse3.EntryAttributes.st_ctime_ns` attribute to the current time (to
         indicate that the inode metadata was changed).
 
         If the syscall that is being processed received a file descriptor
@@ -227,9 +239,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         e.g. :manpage:`truncate(2)` or :manpage:`chmod(2)`), *fh* will be
         `None`.
 
-        *ctx* will be a `RequestContext` instance.
-
-        The method should return an `EntryAttributes` instance (containing both
+        The method should return an `~pyfuse3.EntryAttributes` instance (containing both
         the changed and unchanged values).
         """
 
@@ -243,25 +253,23 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         )
         raise FUSEError(errno.ENOSYS)
 
-    async def readlink(self, inode, ctx):
-        """Return target of symbolic link *inode*.
-
-        *ctx* will be a `RequestContext` instance.
-        """
+    async def readlink(self, inode: int, ctx: RequestContext):
+        """Return target of symbolic link *inode*."""
 
         logger.warning("NotImpl: readlink: i=%r ctx=%r", inode, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def mknod(self, parent_inode, name, mode, rdev, ctx):
+    async def mknod(
+        self, parent_inode: int, name: str, mode: int, rdev: int, ctx: RequestContext
+    ) -> EntryAttributes:
         """Create (possibly special) file
 
         This method must create a (special or regular) file *name* in the
         directory with inode *parent_inode*. Whether the file is special or
         regular is determined by its *mode*. If the file is neither a block nor
-        character device, *rdev* can be ignored. *ctx* will be a
-        `RequestContext` instance.
+        character device, *rdev* can be ignored.
 
-        The method must return an `EntryAttributes` instance with the attributes
+        The method must return an `~pyfuse3.EntryAttributes` instance with the attributes
         of the newly created directory entry.
 
         (Successful) execution of this handler increases the lookup count for
@@ -278,14 +286,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         )
         raise FUSEError(errno.ENOSYS)
 
-    async def mkdir(self, parent_inode, name, _mode, ctx):
+    async def mkdir(
+        self, parent_inode: int, name: str, _mode: int, ctx: RequestContext
+    ) -> EntryAttributes:
         """Create a directory
 
         This method must create a new directory *name* with mode *mode* in the
-        directory with inode *parent_inode*. *ctx* will be a `RequestContext`
-        instance.
+        directory with inode *parent_inode*.
 
-        This method must return an `EntryAttributes` instance with the
+        This method must return an `~pyfuse3.EntryAttributes` instance with the
         attributes of the newly created directory entry.
 
         (Successful) execution of this handler increases the lookup count for
@@ -298,12 +307,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             self.raise_error(err)
         return await self.getattr(self.i_add(p), ctx)
 
-    async def unlink(self, parent_inode, name, _ctx):
+    async def unlink(self, parent_inode: int, name: str, _ctx: RequestContext):
         """Remove a (possibly special) file
 
         This method must remove the (special or regular) file *name* from the
-        direcory with inode *parent_inode*.  *ctx* will be a `RequestContext`
-        instance.
+        direcory with inode *parent_inode*.
 
         If the inode associated with *file* (i.e., not the *parent_inode*) has a
         non-zero lookup count, or if there are still other directory entries
@@ -324,13 +332,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
-    async def rmdir(self, parent_inode, name, _ctx):
+    async def rmdir(self, parent_inode: int, name: str, _ctx: RequestContext):
         """Remove directory *name*
 
         This method must remove the directory *name* from the direcory with
-        inode *parent_inode*. *ctx* will be a `RequestContext` instance. If
-        there are still entries in the directory, the method should raise
-        ``FUSEError(errno.ENOTEMPTY)``.
+        inode *parent_inode*. If there are still entries in the directory,
+        the method should raise ``FUSEError(errno.ENOTEMPTY)``.
 
         If the inode associated with *name* (i.e., not the *parent_inode*) has a
         non-zero lookup count, the file system must remove only the directory
@@ -352,14 +359,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
-    async def symlink(self, parent_inode, name, target, ctx):
+    async def symlink(
+        self, parent_inode: int, name: str, target: str, ctx: RequestContext
+    ) -> EntryAttributes:
         """Create a symbolic link
 
         This method must create a symbolink link named *name* in the directory
-        with inode *parent_inode*, pointing to *target*.  *ctx* will be a
-        `RequestContext` instance.
+        with inode *parent_inode*, pointing to *target*.
 
-        The method must return an `EntryAttributes` instance with the attributes
+        The method must return an `~pyfuse3.EntryAttributes` instance with the attributes
         of the newly created directory entry.
 
         (Successful) execution of this handler increases the lookup count for
@@ -369,7 +377,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: symlink: p=%r n=%r t=%r ctx=%r", parent_inode, name, target, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def rename(self, parent_inode_old, name_old, parent_inode_new, name_new, flags, ctx):
+    async def rename(
+        self,
+        parent_inode_old: int,
+        name_old: str,
+        parent_inode_new: int,
+        name_new: str,
+        flags: int,
+        ctx: RequestContext,
+    ):
         """Rename a directory entry.
 
         This method must rename *name_old* in the directory with inode
@@ -377,13 +393,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         *parent_inode_new*.  If *name_new* already exists, it should be
         overwritten.
 
-        *flags* may be `RENAME_EXCHANGE` or `RENAME_NOREPLACE`. If
-        `RENAME_NOREPLACE` is specified, the filesystem must not overwrite
+        *flags* may be `~pyfuse3.RENAME_EXCHANGE` or `~pyfuse3.RENAME_NOREPLACE`. If
+        `~pyfuse3.RENAME_NOREPLACE` is specified, the filesystem must not overwrite
         *name_new* if it exists and return an error instead. If
-        `RENAME_EXCHANGE` is specified, the filesystem must atomically exchange
+        `~pyfuse3.RENAME_EXCHANGE` is specified, the filesystem must atomically exchange
         the two files, i.e. both must exist and neither may be deleted.
-
-        *ctx* will be a `RequestContext` instance.
 
         Let the inode associated with *name_old* in *parent_inode_old* be
         *inode_moved*, and the inode associated with *name_new* in
@@ -424,12 +438,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
-    async def link(self, inode, new_parent_inode, new_name, ctx):
+    async def link(
+        self, inode, new_parent_inode, new_name, ctx: RequestContext
+    ) -> EntryAttributes:
         """Create directory entry *name* in *parent_inode* refering to *inode*.
 
-        *ctx* will be a `RequestContext` instance.
-
-        The method must return an `EntryAttributes` instance with the
+        The method must return an `~pyfuse3.EntryAttributes` instance with the
         attributes of the newly created directory entry.
 
         (Successful) execution of this handler increases the lookup count for
@@ -445,20 +459,20 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         )
         raise FUSEError(errno.ENOSYS)
 
-    async def open(self, inode, flags, _ctx):
+    async def open(self, inode, flags: int, _ctx: RequestContext):
         """Open a inode *inode* with *flags*.
-
-        *ctx* will be a `RequestContext` instance.
 
         *flags* will be a bitwise or of the open flags described in the
         :manpage:`open(2)` manpage and defined in the `os` module (with the
         exception of ``O_CREAT``, ``O_EXCL``, ``O_NOCTTY`` and ``O_TRUNC``)
 
-        This method must return a `FileInfo` instance. The `FileInfo.fh` field
-        must contain an integer file handle, which will be passed to the `read`,
-        `write`, `flush`, `fsync` and `release` methods to identify the open
-        file. The `FileInfo` instance may also have relevant configuration
-        attributes set; see the `FileInfo` documentation for more information.
+        This method must return a `~pyfuse3.FileInfo` instance. The
+        `~pyfuse3.FileInfo.fh` field must contain an integer file handle,
+        which will be passed to the :meth:`read`, :meth:`write`,
+        :meth:`flush`, :meth:`fsync` and :meth:`release` methods to
+        identify the open file. The `~pyfuse3.FileInfo` instance may also
+        have relevant configuration attributes set; see the `~pyfuse3.FileInfo`
+        documentation for more information.
         """
         fh = FileInfo()
         if flags & os.O_RDWR:
@@ -558,7 +572,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         *fh* will be received (until the value is re-used in the return value of
         another `open` or `create` call).
 
-        This method may return an error by raising `FUSEError`, but the error
+        This method may return an error by raising `~pyfuse3.FUSEError`, but the error
         will be discarded because there is no corresponding client request.
         """
         self.f_close(fh)
@@ -575,10 +589,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         # pylint: disable=unnecessary-pass
 
-    async def opendir(self, inode, ctx):
+    async def opendir(self, inode, ctx: RequestContext):
         """Open the directory with inode *inode*
-
-        *ctx* will be a `RequestContext` instance.
 
         This method should return an integer file handle. The file handle will
         be passed to the `readdir`, `fsyncdir` and `releasedir` methods to
@@ -604,16 +616,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         prior `opendir` call), starting at the entry identified by *start_id*.
 
         Instead of returning the directory entries directly, the method must
-        call `readdir_reply` for each directory entry. If `readdir_reply`
-        returns True, the file system must increase the lookup count for the
-        provided directory entry by one and call `readdir_reply` again for the
-        next entry (if any). If `readdir_reply` returns False, the lookup count
-        must *not* be increased and the method should return without further
-        calls to `readdir_reply`.
+        call :meth:`~pyfuse3.readdir_reply` for each directory entry. If
+        :meth:`~pyfuse3.readdir_reply` returns True, the file system must
+        increase the lookup count for the provided directory entry by one
+        and call :meth:`~pyfuse3.readdir_reply` again for the next entry (if
+        any). If :meth:`~pyfuse3.readdir_reply` returns False, the lookup count
+        must *not* be increased and the method should return without
+        further calls to :meth:`~pyfuse3.readdir_reply`.
 
         The *start_id* parameter will be either zero (in which case listing
         should begin with the first entry) or it will correspond to a value that
-        was previously passed by the file system to the `readdir_reply`
+        was previously passed by the file system to the :meth:`~pyfuse3.readdir_reply`
         function in the *next_id* parameter.
 
         If entries are added or removed during a `readdir` cycle, they may or
@@ -623,7 +636,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         :file:`.` and :file:`..` entries may be included but are not
         required. However, if they are reported the filesystem *must not*
         increase the lookup count for the corresponding inodes (even if
-        `readdir_reply` returns True).
+        :meth:`~pyfuse3.readdir_reply` returns True).
         """
 
         dir_inode, dc, ctx = self._dir_content[fh]
@@ -663,12 +676,10 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         # pylint: disable=unnecessary-pass
 
-    async def statfs(self, ctx):
+    async def statfs(self, ctx: RequestContext) -> StatvfsData:
         """Get file system statistics
 
-        *ctx* will be a `RequestContext` instance.
-
-        The method must return an appropriately filled `StatvfsData` instance.
+        The method must return an appropriately filled `~pyfuse3.StatvfsData` instance.
         """
 
         logger.warning("NotImpl: statfs: ctx=%r", ctx)
@@ -697,10 +708,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         logger.error("\n".join(code))
 
-    async def setxattr(self, inode, name, value, ctx):
+    async def setxattr(self, inode, name, value, ctx: RequestContext):
         """Set extended attribute *name* of *inode* to *value*.
-
-        *ctx* will be a `RequestContext` instance.
 
         The attribute may or may not exist already. Both *name* and *value* will
         be of type `bytes`. *name* is guaranteed not to contain zero-bytes
@@ -710,23 +719,19 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: setxattr: i=%r n=%r v=%r ctx=%r", inode, name, value, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def getxattr(self, inode, name, ctx):
+    async def getxattr(self, inode: int, name: bytes, ctx: RequestContext) -> bytes:
         """Return extended attribute *name* of *inode*
 
-        *ctx* will be a `RequestContext` instance.
-
-        If the attribute does not exist, the method must raise `FUSEError` with
-        an error code of `ENOATTR`. *name* will be of type `bytes`, but is
-        guaranteed not to contain zero-bytes (``\\0``).
+        If the attribute does not exist, the method must raise `~pyfuse3.FUSEError`
+        with an error code of `~errno.ENOATTR`. *name* will be of type `bytes`,
+        but is guaranteed not to contain zero-bytes (``\\0``).
         """
 
         logger.warning("NotImpl: getxattr: i=%r n=%r ctx=%r", inode, name, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def listxattr(self, inode, ctx):
+    async def listxattr(self, inode: int, ctx: RequestContext) -> Sequence[bytes]:
         """Get list of extended attributes for *inode*
-
-        *ctx* will be a `RequestContext` instance.
 
         This method must return a sequence of `bytes` objects.  The objects must
         not include zero-bytes (``\\0``).
@@ -735,45 +740,34 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: listxattr: i=%r ctx=%r", inode, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def removexattr(self, inode, name, ctx):
+    async def removexattr(self, inode: int, name: bytes, ctx: RequestContext) -> None:
         """Remove extended attribute *name* of *inode*
 
-        *ctx* will be a `RequestContext` instance.
-
-        If the attribute does not exist, the method must raise `FUSEError` with
-        an error code of `ENOATTR`. *name* will be of type `bytes`, but is
+        If the attribute does not exist, the method must raise `~pyfuse3.FUSEError` with
+        an error code of `~errno.ENOATTR`. *name* will be of type `bytes`, but is
         guaranteed not to contain zero-bytes (``\\0``).
         """
 
         logger.warning("NotImpl: removexattr: i=%r n=%r ctx=%r", inode, name, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def access(self, inode, mode, ctx):
+    async def access(self, inode: int, mode: int, ctx: RequestContext) -> bool:
         """Check if requesting process has *mode* rights on *inode*.
-
-        *ctx* will be a `RequestContext` instance.
-
-        The method must return a boolean value.
 
         If the ``default_permissions`` mount option is given, this method is not
         called.
 
-        When implementing this method, the `get_sup_groups` function may be
-        useful.
+        When implementing this method, the :func:`~pyfuse3.get_sup_groups`
+        function may be useful.
         """
 
         logger.warning("NotImpl: access: i=%r m=%r ctx=%r", inode, mode, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def create(self, parent_inode, name, _mode, flags, ctx):
+    async def create(
+        self, parent_inode: int, name: str, _mode: int, flags: int, ctx: RequestContext
+    ) -> tuple[FileInfo, EntryAttributes]:
         """Create a file with permissions *mode* and open it with *flags*
-
-        *ctx* will be a `RequestContext` instance.
-
-        The method must return a tuple of the form *(fi, attr)*, where *fi* is a
-        FileInfo instance handle like the one returned by `open` and *attr* is
-        an `EntryAttributes` instance with the attributes of the newly created
-        directory entry.
 
         (Successful) execution of this handler increases the lookup count for
         the returned inode by one.
@@ -801,7 +795,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
 
 @asynccontextmanager
-async def wrap(link: SubMsgSender, path: Path, blocksize=0, debug=1):
+async def wrap(link: SubMsgSender, path: Path, blocksize=0, debug=1) -> None:
     """
     Context manager that mounts a satellite file system locally
     """

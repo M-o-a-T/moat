@@ -110,11 +110,16 @@ class ArrayCmd(BaseSuperCmd):
 
     async def handle(self, msg, rcmd):
         """
-        Dispatch a message to subcommands.
+        Dispatch a message.
 
-        The subcommand ``here`` handles a command locally.
+        Subcommands:
 
-        See `BaseCmd.handle` for details.
+        * ``!`` handles the command directly.
+        * ``*`` addresses all subcommands and returns an array/stream
+                of the results.
+        * ``n`` (integer) addresses the *n*th subcommand.
+
+        See :meth:`moat.lib.rpc.MsgHandler.handle` for further details.
         """
 
         if not rcmd:
@@ -181,7 +186,7 @@ class ArrayCmd(BaseSuperCmd):
 
     async def _stream_all(self, msg, rcmd):
         """
-        Call all sub-apps and send the result.
+        Call all sub-apps and send the results.
         """
         if not rcmd:
             cmd = msg.args.pop(0)

@@ -75,6 +75,8 @@ class BaseSubCmd(BaseSuperCmd):
     How to create new entries is not specified in this class.
     """
 
+    sub: dict[str, BaseCmd]
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.sub = {}
@@ -124,7 +126,7 @@ class BaseSubCmd(BaseSuperCmd):
         """
         Resolve a subcommand.
 
-        This version uses the `sub` mapping.
+        This version uses the :attr:`sub` mapping.
         """
         if not prefix and (sub := self.sub.get(scmd, None)) is not None:
             return sub

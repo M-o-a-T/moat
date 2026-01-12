@@ -11,6 +11,7 @@ from moat.lib.rpc import MsgHandler
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
 
 
@@ -18,7 +19,7 @@ class Fwd:  # noqa: D101
     def __init__(self, dest: MsgHandler):
         self._dest = dest
 
-    async def handle(self, msg: Msg, rcmd: list):  # noqa: D102
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):  # noqa: D102
         return await self._dest.handle(msg, rcmd)
 
 

@@ -225,8 +225,8 @@ class MoatDevPath(MoatPath):
     target board.
 
     This is the implementation that connects to the REPL directly.
-    To actually modify the target, `connect_repl()` must have
-    been called.
+    To actually modify the target, :meth:`~moat.micro.files.MoatPath.connect_repl`
+    must have been called.
     """
 
     # methods that access files
@@ -476,8 +476,8 @@ class MoatFSPath(MoatPath):
 
     This is the implementation that connects via MoaT "f*" commands.
 
-    To actually modify the target, `connect_repl()` must have
-    been called.
+    To actually modify the target, :meth:`~moat.micro.files.MoatPath.connect_repl`
+    must have been called.
     """
 
     # methods that access files

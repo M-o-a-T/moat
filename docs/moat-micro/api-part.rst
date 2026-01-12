@@ -1,42 +1,42 @@
 API
 ===
 
-.. automodule:: moat.link
+.. automodule:: moat.micro.part.average
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.client
+.. automodule:: moat.micro.part.fake
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.node
+.. automodule:: moat.micro.part.pid
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.meta
+.. automodule:: moat.micro.part.pin
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.common
+.. automodule:: moat.micro.part.pwm
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.announce
+.. automodule:: moat.micro.part.relay
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.backend
+.. automodule:: moat.micro.part.serial
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.exceptions
+.. automodule:: moat.micro.part.transfer
    :members:
    :undoc-members:
    :show-inheritance:

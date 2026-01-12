@@ -1,57 +1,52 @@
 API
 ===
 
-.. automodule:: moat.micro.alert
+.. automodule:: moat.micro.cmd.array
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.direct
+.. automodule:: moat.micro.cmd.stream.cmdbbm
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.files
+.. automodule:: moat.micro.cmd.stream.cmdmsg
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.fuse
+.. automodule:: moat.micro.cmd.tree.dir
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.romfs
+.. automodule:: moat.micro.cmd.tree._dir
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.setup
+.. automodule:: moat.micro.cmd.tree.layer
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.stacks
+.. automodule:: moat.micro.cmd.tree.listen
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.rtc
+.. automodule:: moat.micro.cmd.util.part
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.util
+.. automodule:: moat.micro.cmd.util.pt
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.os_error_list
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: moat.micro.conv.steinhart
+.. automodule:: moat.micro.cmd.util.valtask
    :members:
    :undoc-members:
    :show-inheritance:

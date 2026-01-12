@@ -23,6 +23,8 @@ if TYPE_CHECKING or DOC:
     from contextlib import AbstractContextManager
     from types import EllipsisType  # noqa:TC003
 
+    from moat.lib.path import PathElem
+
     from .msg import Msg  # noqa:TC001
 
     from collections.abc import Awaitable, Callable, Mapping
@@ -178,7 +180,7 @@ class BaseMsgHandler:
     Somewhat-abstract superclass for anything that accepts messages.
     """
 
-    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         """
         Handle this message stream.
 
@@ -225,7 +227,7 @@ class MsgSender(BaseMsgHandler):
         assert not isinstance(root, MsgSender)
         self._root = root
 
-    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         """
         Redirect to the underlying command handler.
         """
@@ -330,7 +332,7 @@ class SubMsgSender(MsgSender):
                 raise NotReadyError(self)
         return await super().__aenter__()
 
-    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         """
         Forward the message, as directed by :py:attr:`path`.
         """
@@ -460,7 +462,7 @@ class MsgHandler(Base, BaseMsgHandler):
             finally:
                 delattr(self, name)
 
-    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
         """
         Process the message.
 
@@ -604,6 +606,22 @@ class MsgHandler(Base, BaseMsgHandler):
             """
             Check if / wait for readiness.
 
-            See `wait_ready` for return values.
+            See :meth:`wait_ready` for return values.
             """
             return self.wait_ready(wait=w)
+
+        async def wait_ready(self, wait: bool = True) -> bool | None:
+            """
+            Check if this handler is ready.
+
+            Args:
+                wait: whether to sleep until ready.
+
+            Returns:
+                * ``True`` if stopped
+                * ``False`` if it already running
+                * ``None`` if the command has (or would have, if
+                  *wait* is False) waited for it to become ready.
+            """
+            wait  # noqa:B018
+            return False

@@ -49,16 +49,17 @@ class MsgStream(HandlerStream):
 class BaseCmdMsg(BaseCmd):
     """
     This is a command handler that relays arbitrary MoaT-RPC messages
-    and a `BaseMsg`-compatible stream.
+    and a `~moat.lib.stream.BaseMsg`-compatible stream.
 
-    The difference to :moat.micro.cmd.stream:`BaseCmdBBM` is that this
+    The difference to `~moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` is that this
     class encapsulates arbitrary message/stream calls and requires a
-    `BaseCmdMsg` handler on the other side to talk to.
+    `~moat.micro.cmd.stream.cmdmsg.BaseCmdMsg` handler on the other side to talk to.
 
-    In contrast, a :moat.micro.cmd.stream:`BaseCmdBBM` exposes commands
+    In contrast, a `~moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` exposes commands
     that directly read or write the underlying stream (of whatever type).
 
-    This class cannot wrap a pre-existing stream, by design.
+    This class cannot wrap a pre-existing stream. Its :meth:`stream` method
+    **must** be overridden to create the stream.
     """
 
     tg: TaskGroup = None
@@ -68,9 +69,11 @@ class BaseCmdMsg(BaseCmd):
 
     async def stream(self) -> BaseMsg:
         """
-        This method creates the data stream.
+        This method creates (and returns) the data stream.
 
         Must be overridden.
+
+        Cleanup is typically handled via `moat.lib.micro.AC_use`.
         """
         raise NotImplementedError("Create the stream: ", self.__class__.__name__)
 
@@ -229,7 +232,7 @@ class SingleCmdMsg(BaseCmdMsg):
 class ExtCmdMsg(SingleCmdMsg):
     """SingleCmdMsg, on a stream that was established externally.
 
-    The caller is responsible for calling `wait_stopped`
+    The caller is responsible for calling :meth:`~moat.lib.rpc.BaseCmd.wait_stopped`
     and then closing the stream!
     """
 

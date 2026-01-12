@@ -12,10 +12,8 @@ from moat.micro.stacks.console import console_stack
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from most.micro.proto.stack import BaseBuf, BaseMsg
-
-    from moat.lib.rpc import SubMsgSender
-    from moat.micro.cmd import BaseCmd
+    from moat.lib.rpc import BaseCmd, SubMsgSender
+    from moat.lib.stream import BaseBuf, BaseMsg
 
     from collections.abc import Awaitable
 
@@ -78,7 +76,8 @@ def Fwd(*a, **k) -> BaseCmd:
 
 def Link(*a, **k):
     """
-    Connects to a `BaseCmdBBM` object exporting a `BaseBuf`.
+    Connects to a `moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` object
+    exporting a `moat.lib.stream.BaseBuf`.
     """
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg  # noqa: PLC0415
     from moat.micro.cmd.stream.xcmd import BufCmd  # noqa: PLC0415

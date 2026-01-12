@@ -55,20 +55,22 @@ Consider this example:
       # ...
       config: !P cfg.sat
     run:
-      apps:
-        r: serial.Link
+      app: dir
       r:
+        app: serial.Link
         port: "/dev/ttyUSB0"
         mode: &rs
           rate: 115200
         frame: 0xc1
     cfg:
       sat:
-        apps:
-          wdt: wdt.Cmd
-          r: serial.Link
-          f: fs.Cmd
+        app: dir
+        wdt:
+          app: wdt.Cmd
+        f:
+          app: fs.Cmd
         r:
+          app: serial.Link
           port: 2
           mode: *rs
           frame: 0xc1
@@ -168,15 +170,17 @@ This section lists parameters used by other `moat micro` subcommands
 
 The standard content of this section is something like this:
 
-> micro:
-> connect:
-> apps:
-> r: net.unix.Link
->
-> r:
-> port: "Specify a Unix socket!"
->
-> remote: !P r.s path: fs: !P f sys: !P \_s cfg: !P \_c
+micro:
+  connect:
+    app: dir
+    r:
+      app: net.unix.Link
+
+  r:
+    port: "Specify a Unix socket!"
+
+  remote: !P r.s
+  path: fs: !P f sys: !P \_s cfg: !P \_c
 
 This means:
 

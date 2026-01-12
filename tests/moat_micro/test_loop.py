@@ -11,33 +11,33 @@ from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 CFGW = """
-apps:
-  a: _test.LoopLink
-  b: _test.LoopLink
-  c: _test.LoopLink
+app: dir
 a:
+  app: _test.LoopLink
   path: !P b
   usage: mbsc
 b:
+  app: _test.LoopLink
   path: !P c
   usage: mbsc
 c:
+  app: _test.LoopLink
   path: !P a
   usage: mbsc
 """
 
 CFGR = """
-apps:
-  a: _test.LoopLink
-  b: _test.LoopLink
-  c: _test.LoopLink
+app: dir
 a:
+  app: _test.LoopLink
   path: !P c
   usage: MBSC
 b:
+  app: _test.LoopLink
   path: !P a
   usage: MBSC
 c:
+  app: _test.LoopLink
   path: !P b
   usage: MBSC
 """
@@ -86,12 +86,12 @@ async def test_loop(tmp_path, cfg):
 
 
 CFGL = """
-apps:
-  a: _test.LoopMsg
-  b: _test.LoopLink
+app: dir
 a:
+  app: _test.LoopMsg
   path: !P b
 b:
+  app: _test.LoopLink
   usage: mbscMBSC
 """
 

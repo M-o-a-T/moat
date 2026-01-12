@@ -11,14 +11,14 @@ from moat.link._test import Scaffold
 from moat.micro._test import mpy_stack
 
 CFG = """
-apps:
-  x: _fake.ADC
-  ln: link.Register
+app: dir
 x:
+  app: _fake.ADC
   min: 0
   max: 100
   step: 10
 ln:
+  app: link.Register
   path: !P x
   link: !P foo.bar
   rlink: !P baz.quux

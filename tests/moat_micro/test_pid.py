@@ -18,33 +18,35 @@ from typing import cast
 pytestmark = pytest.mark.anyio
 
 CFG = """
-apps:
-  r: _test.MpyCmd
-  _sys: _sys.Cmd
-  p: part.PID
+app: dir
+_sys:
+  app: _sys.Cmd
 r:
+  app: _test.MpyCmd
   mplex: true
   cfg:
-    apps:
-      r: stdio.StdIO
-      c: cfg.Cmd
-      p: part.PID
-      _sys: _sys.Cmd
-    r:
-      link: &link
-        lossy: false
-        guarded: false
-        frame: 0x85
-      log:
-        txt: "S"
-    p: &p
-      t: 10
-      p: 1
-      i: 0.1
-      d: 1
-      tf: 10
-      max: 5
-      min: -5
+    app:
+      app: dir
+      c:
+        app: cfg.Cmd
+      _sys:
+        app: _sys.Cmd
+      r:
+        app: stdio.StdIO
+        link: &link
+          lossy: false
+          guarded: false
+          frame: 0x85
+        log:
+          txt: "S"
+      p: &p
+        t: 10
+        p: 1
+        i: 0.1
+        d: 1
+        tf: 10
+        max: 5
+        min: -5
 
   link: *link
   log:

@@ -17,35 +17,39 @@ pytestmark = pytest.mark.anyio
 TT = 500  # XXX depends on how much we're logging
 
 CFG = """
-apps:
+app: dir
 # r: _test.MpyCmd
-  r: sub.Err
   a: _test.Cmd
 r:
- app: _test.MpyCmd
- cfg:
-  mplex: true
+  app: sub.Err
   cfg:
-    apps:
-#     w: wdt.Cmd
-      r: stdio.StdIO
-      b: _test.Cmd
-      c: cfg.Cmd
-    r:
-      link: &link
-        lossy: false
-        guarded: false
-        frame: 0x85
-      log:
-        txt: "MH"
-      log_raw:
-        txt: "ML"
+    app: _test.MpyCmd
+    cfg:
+      mplex: true
+      cfg:
+        app:
+          app: dir
+#         w: wdt.Cmd
+          b:
+            app: _test.Cmd
+          c:
+            app: cfg.Cmd
+          r:
+            app: stdio.StdIO
+            link: &link
+              lossy: false
+              guarded: false
+              frame: 0x85
+            log:
+              txt: "MH"
+            log_raw:
+              txt: "ML"
 
-  link: *link
-  log:
-    txt: "TH"
-  log_raw:
-    txt: "TL"
+      link: *link
+      log:
+        txt: "TH"
+      log_raw:
+        txt: "TL"
 """
 
 

@@ -8,16 +8,16 @@ from moat.lib.micro import L, log, sleep_ms
 from moat.lib.stream import ProcessDeadError
 
 
-def Tree(*a, **k):
+def Dir(*a, **k):
     """
-    Structured subcommands.
+    Plain subcommands.
     """
     from moat.micro.cmd.tree.dir import DirCmd  # noqa: PLC0415
 
-    class _Tree(DirCmd):
+    class _Dir(DirCmd):
         pass
 
-    return _Tree(*a, **k)
+    return _Dir(*a, **k)
 
 
 def Array(*a, **k):

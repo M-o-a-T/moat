@@ -14,31 +14,36 @@ pytestmark = pytest.mark.anyio
 
 
 CFG1 = """
-apps:
+app: dir
 # l: net.unix.Link
 # r: net.unix.Port
-  s: _test.MpyCmd
-  a: _test.Cmd
-  c: cfg.Cmd
+a:
+  app: _test.Cmd
+c:
+  app: cfg.Cmd
 #l:
 #  port: /tmp/test.sock
 #r:
 #  port: /tmp/test.sock
 s:
+  app: _test.MpyCmd
   mplex: true
   link: &link
     lossy: false
     guarded: false
     frame: 0x85
   cfg:
-    apps:
-      a: _test.Cmd
-      c: cfg.Cmd
-      s: stdio.StdIO
-    s:
-      link: *link
-      log:
-        txt: "S"
+    app:
+      app: dir
+      a:
+        app: _test.Cmd
+      c:
+        app: cfg.Cmd
+      s:
+        app: stdio.StdIO
+        link: *link
+        log:
+          txt: "S"
 
   log:
     txt: "M"

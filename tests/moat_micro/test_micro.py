@@ -15,38 +15,43 @@ from moat.micro._test import mpy_stack
 pytestmark = pytest.mark.anyio
 
 CFG = """
-apps:
-  r: _test.MpyCmd
-  a: _test.Cmd
-  l: _test.LoopCmd
-  _sys: _sys.Cmd
+app: dir
+_sys:
+  app: _sys.Cmd
+a:
+  app: _test.Cmd
 l:
+  app: _test.LoopCmd
   loop:
     qlen: 2
   link: {}
   log:
     txt: "LOOP"
 r:
+  app: _test.MpyCmd
   mplex: true
   cfg:
-    apps:
-#     w: wdt.Cmd
-      r: stdio.StdIO
-      b: _test.Cmd
-      c: cfg.Cmd
-      _sys: _sys.Cmd
-    r:
-      link: &link
-        lossy: false
-        guarded: false
-        frame: 0x85
-        console: false
-      log:
-        txt: "MH"
-      log_raw:
-        txt: "ML"
-      log_rel:
-        txt: "MR"
+    app:
+      app: dir
+      _sys:
+        app: _sys.Cmd
+      b:
+        app: _test.Cmd
+      c:
+        app: cfg.Cmd
+      r:
+        app: stdio.StdIO
+        link: &link
+          lossy: false
+          guarded: false
+          frame: 0x85
+          console: false
+        log:
+          txt: "MH"
+        log_raw:
+          txt: "ML"
+        log_rel:
+          txt: "MR"
     tt:
       a: b
       c: [1,2,3]
@@ -185,11 +190,13 @@ class Foo(Bar):
 
 
 LCFG = """
-apps:
-  a: _test.Cmd
-  l: _test.LoopCmd
-  _sys: _sys.Cmd
+app: dir
+_sys:
+  app: _sys.Cmd
+a:
+  app: _test.Cmd
 l:
+  app: _test.LoopCmd
   loop:
     qlen: 2
   link:

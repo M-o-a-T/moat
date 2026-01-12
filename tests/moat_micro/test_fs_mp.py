@@ -17,22 +17,23 @@ pytestmark = pytest.mark.anyio
 # pylint:disable=R0801 # Similar lines in 2 files
 
 CFG = """
-apps:
-  r: _test.MpyCmd
+app: dir
 r:
+  app: _test.MpyCmd
   mplex: true
   cfg:
-    apps:
-      r: stdio.StdIO
-      f: fs.Cmd
-    f:
-      root: "/tmp/nonexisting"
-    r:
-      link: &link
-        frame: 0x85
-        console: false
-      log:
-        txt: "S"
+    app:
+      app: dir
+      f:
+        app: fs.Cmd
+        root: "/tmp/nonexisting"
+      r:
+        app: stdio.StdIO
+        link: &link
+          frame: 0x85
+          console: false
+        log:
+          txt: "S"
   link: *link
 """
 

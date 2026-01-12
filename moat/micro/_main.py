@@ -467,7 +467,7 @@ async def cfg_(
     If you want to update the client *and* write the config data to a file,
     simply do it in two steps.
 
-    An "apps" section must be present if you write a complete configuration
+    An "app" section must be present if you write a complete configuration
     to the client.
 
     This command assumes that the remote system has a ``cfg.Cmd`` app at
@@ -534,12 +534,12 @@ async def cfg_(
             await cf.set(rcfg, sync=sync, replace=True)
 
         if write_client:
-            if "apps" in rcfg or any(v.get("app", None) for v in rcfg.values()):
+            if "app" in rcfg:
                 p = MoatFSPath(write_client).connect_repl(fs)
                 d = codec.encode(rcfg)
                 await p.write_bytes(d, chunk=64)
             else:
-                print("No 'apps' section. Not writing.", file=sys.stderr)
+                print("No 'app' section. Not writing.", file=sys.stderr)
         if write:
             yprint(rcfg, stream=write)
         elif not has_attrs and not write_client:

@@ -16,11 +16,14 @@ pytestmark = pytest.mark.anyio
 # step 1, locally
 
 CFG1 = """
-apps:
+app:
+  app: dir
 # l: net.unix.Link
 # r: net.unix.Port
-  a: _test.Cmd
-  c: cfg.Cmd
+a:
+  app: _test.Cmd
+c:
+  app: cfg.Cmd
 #l:
 #  port: /tmp/test.sock
 #r:

@@ -11,15 +11,15 @@ from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 CFG = """
-apps:
-  r: part.Relay
-  p: _fake.Pin
+app: dir
 r:
+  app: part.Relay
   pin: !P p
   t:
     on: 50
     off: 150
 p:
+  app: _fake.Pin
   pin: X
 """
 

@@ -30,26 +30,24 @@ micro:
       state: std
       large: true
     std: true
-    apps:
-      r: _test.MpyRaw
-    r: &rm
-      cwd: /tmp/mpy-test
-      mplex: false
-      log:
-        txt: "M"
-      cfg: !P :@.moat.micro.cfg.r
-      state: skip
+    app:
+      app: dir
+      r: &rm
+        app: _test.MpyRaw
+        cwd: /tmp/mpy-test
+        mplex: false
+        log:
+          txt: "M"
+        cfg: !P :@.moat.micro.cfg.r
+        state: skip
     remote: !P r
 
   # main service. This could be a serial.Link instead, but this way
   # "moat micro setup --run" keeps the existing link going
   run:
-    apps:
-      r: _test.MpyRaw
-      s: remote.Link
-      n: net.unix.Port
-      co: _test.Cons
+    app: dir
     r:
+      app: _test.MpyRaw
       cwd: /tmp/mpy-test
       mplex: false
       log:
@@ -57,6 +55,7 @@ micro:
       cfg: !P :@.moat.micro.cfg.r
       state: once
     s:
+      app: remote.Link
       path: !P r
       link:
         console: true
@@ -65,31 +64,35 @@ micro:
         txt: "S"
 #     log_raw:
 #        txt: "SU"
-    n: &np
+    n:
+      app: net.unix.Port
       port: /tmp/moat.test
       log:
         txt: "N"
 
     co:
+      app: _test.Cons
       cons: !P s
       prefix: "C"
   cfg:
     r:
-      apps:
-        c: cfg.Cmd
-        r: stdio.StdIO
-        f: fs.Cmd
-      r:
-        link:
-          console: true
-          frame: 0xf7
-        mplex: false
-        log:
-          txt: "U"
+      app:
+        app: dir
+        c:
+          app: cfg.Cmd
+        r:
+          app: stdio.StdIO
+          link:
+            console: true
+            frame: 0xf7
+          mplex: false
+          log:
+            txt: "U"
 #       log_raw:
 #         txt: "RU"
-      f:
-        root: /tmp/mpy-test
+        f:
+          app: fs.Cmd
+          root: /tmp/mpy-test
 
   # Service for connecting to the main code.
   connect:
@@ -97,8 +100,13 @@ micro:
     path:
       cfg: !P c
       fs: !P f
-    apps:
-      r: net.unix.Link
+    app:
+      app: dir
+      r:
+        app: net.unix.Link
+        port: /tmp/moat.test
+        log:
+          txt: "N"
     r: *np
 
 """

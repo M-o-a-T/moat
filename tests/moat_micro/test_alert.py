@@ -12,11 +12,13 @@ from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
 
 CFG = """
-apps:
-  a: link.Alert
-  b: link.Alert
-  c: link.Alert
+app: dir
+b:
+  app: link.Alert
+c:
+  app: link.Alert
 a:
+  app: link.Alert
   mon:
     b:
       rem: !P ":"

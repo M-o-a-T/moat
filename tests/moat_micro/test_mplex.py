@@ -13,34 +13,38 @@ from moat.micro._test import mpy_stack
 pytestmark = pytest.mark.anyio
 
 CFG = """
-apps:
-  r: _test.MpyCmd
-  a: _test.Cmd
-  l: remote.Fwd
+app: dir
+a:
+  app: _test.Cmd
 l:
+  app: remote.Fwd
   path: !P ":"
   log: LX
 r:
+  app: _test.MpyCmd
   mplex: true
   cfg:
-    apps:
-#     w: wdt.Cmd
-      r: stdio.StdIO
-      b: _test.Cmd
-      l: remote.Fwd
-    l:
-      path: !P ":"
-      log: RX
-    r:
-      link: &link
-        lossy: false
-        guarded: false
-        frame: 0x85
-        console: false
-      log:
-        txt: "!MH"
-#     log_raw:
-#       txt: "ML"
+    app:
+      app: dir
+#     w:
+#       app: wdt.Cmd
+      b:
+        app: _test.Cmd
+      l:
+        app: remote.Fwd
+        path: !P ":"
+        log: RX
+      r:
+        app: stdio.StdIO
+        link: &link
+          lossy: false
+          guarded: false
+          frame: 0x85
+          console: false
+        log:
+          txt: "!MH"
+#       log_raw:
+#         txt: "ML"
 
   link: *link
   log:

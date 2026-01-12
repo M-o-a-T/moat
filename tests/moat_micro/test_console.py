@@ -17,18 +17,21 @@ pytestmark = pytest.mark.anyio
 
 
 CFG1 = """
-apps:
-  s: _test.MpyRaw
-  r: net.tcp.Link
+app: dir
+r:
+  app: net.tcp.Link
 s:
+  app: _test.MpyRaw
   mplex: false
   cfg:
-    apps:
-      co: stdio.console
-      r: net.tcp.Port
-    co:
-      keep: false
-      repl: true
+    app:
+      app: dir
+      r:
+        app: net.tcp.Port
+      co:
+        app: stdio.console
+        keep: false
+        repl: true
   log:
     txt: "M"
 
@@ -119,36 +122,38 @@ async def test_repl_stream(tmp_path, free_tcp_port):
 
 
 CFG2 = """
-apps:
-  r: _test.MpyCmd
-  _sys: _sys.Cmd
+app: dir
+_sys:
+  app: _sys.Cmd
 r:
+  app: _test.MpyCmd
   mplex: true
   cfg:
-    apps:
-      r: stdio.StdIO
-      co: stdio.console
-      co_in: part.Transfer
-      co_out: part.Transfer
-    co:
-      keep: false
-      repl: true
-    co_in:
-      t: .001
-      s:
-        - p: !P r.crd
-        - p: !P co.w
-    co_out:
-      t: .001
-      s:
-        - p: !P co.r
-        - p: !P r.cwr
-    r:
-      link: &link
-        lossy: false
-        guarded: false
-        frame: 0x85
-        console: true
+    app:
+      app: dir
+      co:
+        app: stdio.console
+        keep: false
+        repl: true
+      co_in:
+        app: part.Transfer
+        t: .001
+        s:
+          - p: !P r.crd
+          - p: !P co.w
+      co_out:
+        app: part.Transfer
+        t: .001
+        s:
+          - p: !P co.r
+          - p: !P r.cwr
+      r:
+        app: stdio.StdIO
+        link: &link
+          lossy: false
+          guarded: false
+          frame: 0x85
+          console: true
     tt:
       a: b
       c:

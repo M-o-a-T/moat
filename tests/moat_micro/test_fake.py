@@ -10,9 +10,9 @@ from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 CFG = """
-apps:
-  x: _fake.ADC
+app: dor
 x:
+  app: _fake.ADC
   min: 0
   max: 100
   step: 10

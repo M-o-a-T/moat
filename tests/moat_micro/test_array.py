@@ -10,17 +10,18 @@ from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 CFG = """
-apps:
-  a: sub.Array
-  c: cfg.Cmd
+app: dir
+c:
+  app: cfg.Cmd
 a:
-  app: _fake.Pin
-  cfg: {}
+  app: sub.Array
+  cfg:
+    app: _fake.Pin
+  1:
+    init: true
   n: 3
   i: !P pin
   i_off: 1
-  1:
-    init: true
 
 """
 

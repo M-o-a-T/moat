@@ -33,6 +33,16 @@ _imports = {
     # From cmd.base
     "BaseCmd": "cmd.base",
     "LockBaseCmd": "cmd.base",
+    # From cmd.tree.dir
+    "BaseSuperCmd": "cmd.tree.dir",
+    "CfgStore": "cmd.tree.dir",
+    "Dispatch": "cmd.tree.dir",
+    "SubStore": "cmd.tree.dir",
+    # From cmd.tree.layer
+    "BaseFwdCmd": "cmd.tree.layer",
+    # From cmd.tree.listen
+    "BaseListenCmd": "cmd.tree.listen",
+    "BaseListenOneCmd": "cmd.tree.listen",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -108,6 +118,16 @@ __all__ = [  # noqa:RUF022
     # From cmd.base
     "BaseCmd",
     "LockBaseCmd",
+    # From cmd.tree.dir
+    "BaseSuperCmd",
+    "CfgStore",
+    "Dispatch",
+    "SubStore",
+    # From cmd.tree.layer
+    "BaseFwdCmd",
+    # From cmd.tree.listen
+    "BaseListenCmd",
+    "BaseListenOneCmd",
     # From msg
     "Msg",
     "MsgLink",

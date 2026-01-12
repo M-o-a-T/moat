@@ -25,9 +25,9 @@ import time
 import asyncclick as click
 
 from moat.util import P
+from moat.lib.rpc import Dispatch
 from moat.link.client import Link
 from moat.main import main_, run
-from moat.micro.cmd.tree.dir import Dispatch
 from moat.util.times import humandelta
 
 

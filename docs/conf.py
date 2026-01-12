@@ -573,7 +573,6 @@ def setup(app):
     import moat.link.server
     import moat.lib.stream.anyio
     import moat.lib.repl.commands
-    import moat.micro.cmd.tree.dir
 
     import typing
 

@@ -29,9 +29,8 @@ from moat.lib.path import (
     P,
     Path,
 )
-from moat.lib.rpc import Msg
+from moat.lib.rpc import Dispatch, Msg
 from moat.lib.run import attr_args, load_subgroup, process_args
-from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.stacks.util import TEST_MAGIC
 
@@ -377,7 +376,7 @@ async def cmd(obj, path, time, parts, **attrs):
             t2 = tm()
             cmd = cfr.sub_at(path)
             if parts:
-                from moat.micro.cmd.tree.dir import SubStore  # noqa: PLC0415
+                from moat.lib.rpc import SubStore  # noqa: PLC0415
 
                 res = await SubStore(cmd).get(*args, **val)
             else:

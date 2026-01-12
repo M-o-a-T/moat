@@ -264,7 +264,7 @@ class MsgSender(BaseMsgHandler):
     def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"
 
-        from moat.micro.cmd.tree.dir import CfgStore  # noqa: PLC0415
+        from moat.lib.rpc import CfgStore  # noqa: PLC0415
 
         return CfgStore(self, p)
 
@@ -388,7 +388,7 @@ class SubMsgSender(MsgSender):
     def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"
 
-        from moat.micro.cmd.tree.dir import CfgStore  # noqa: PLC0415
+        from moat.lib.rpc import CfgStore  # noqa: PLC0415
 
         return CfgStore(self, p)
 

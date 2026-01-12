@@ -30,7 +30,7 @@ from moat.micro.cmd.util.part import enc_part, get_part
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
+    from moat.lib.rpc import BaseSuperCmd, Dispatch
 
 
 class BaseCmd(MsgHandler):

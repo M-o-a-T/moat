@@ -128,7 +128,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         at("MA1")
         import sys  # noqa: PLC0415
 
-        from moat.micro.cmd.tree.dir import Dispatch  # noqa: PLC0415
+        from moat.lib.rpc import Dispatch  # noqa: PLC0415
 
         cons.main = m = cons.Main(wr_exc)
         dsp = await AC_use(m, Dispatch(cfg, i=i))

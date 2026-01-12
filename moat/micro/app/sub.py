@@ -12,7 +12,7 @@ def Dir(*a, **k):
     """
     Plain subcommands.
     """
-    from moat.micro.cmd.tree.dir import DirCmd  # noqa: PLC0415
+    from moat.lib.rpc import DirCmd  # noqa: PLC0415
 
     class _Dir(DirCmd):
         pass
@@ -55,7 +55,7 @@ def Err(*a, **k):
     TODO: exponential back-off
     """
 
-    from moat.micro.cmd.tree.layer import BaseFwdCmd  # noqa: PLC0415
+    from moat.lib.rpc import BaseFwdCmd  # noqa: PLC0415
 
     class _Err(BaseFwdCmd):
         _wait = True

@@ -57,7 +57,7 @@ def LinkIn(*a, **k):
     New connections may or may not supersede existing ones, depending on the
     "replace" config item.
     """
-    from moat.micro.cmd.tree.listen import BaseListenOneCmd  # noqa: PLC0415
+    from moat.lib.rpc import BaseListenOneCmd  # noqa: PLC0415
     from moat.micro.stacks.tcp import TcpIter  # noqa: PLC0415
 
     class _LinkIn(BaseListenOneCmd):
@@ -71,7 +71,7 @@ def Port(*a, **k):
     """
     An app that accepts multiple TCP connections.
     """
-    from moat.micro.cmd.tree.listen import BaseListenCmd  # noqa: PLC0415
+    from moat.lib.rpc import BaseListenCmd  # noqa: PLC0415
     from moat.micro.stacks.tcp import TcpIter  # noqa: PLC0415
 
     class _Port(BaseListenCmd):

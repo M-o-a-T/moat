@@ -281,7 +281,7 @@ resulting in
 Both are used as-is since they are not two-element lists. If they were, the
 process would recurse.
 
-The helper class :moat.micro.cmd.tree.dir:`SubStore` can be used to
+The helper class `moat.lib.rpc.SubStore` can be used to
 auto-reassemble the results of such a split:
 
     # standard

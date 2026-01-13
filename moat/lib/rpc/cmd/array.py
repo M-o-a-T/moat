@@ -7,10 +7,10 @@ from __future__ import annotations
 from moat.util import attrdict, combine_dict, import_
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
-from moat.lib.rpc import Msg, MsgSender, ShortCommandError
+from moat.lib.rpc import MsgSender, ShortCommandError
+from moat.micro.cmd.util.part import set_part
 
 from .tree.dir import BaseSuperCmd
-from .util.part import set_part
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -97,7 +97,7 @@ class ArrayCmd(BaseSuperCmd):
             await self.detach(len(self.apps))
 
     async def _setup_apps(self):
-        name = self.cfg["app"]
+        name = self.cfg["cfg"]["app"]
         cls = import_(f"{self.root.APP}.{name}", 1)
 
         self.n = self.cfg["n"]
@@ -188,6 +188,8 @@ class ArrayCmd(BaseSuperCmd):
         """
         Call all sub-apps and send the results.
         """
+        from moat.lib.rpc import Msg  # noqa:PLC0415
+
         if not rcmd:
             cmd = msg.args.pop(0)
             if isinstance(cmd, str):

@@ -92,7 +92,7 @@ class Cmd(BaseCmd):
 
         WARNING this doesn't clear other local changes.
         """
-        dest = self._parent
+        dest = self.root
         if self.st.update(dest.cfg) is not dest.cfg:
             raise RuntimeError("must be updated in-place")
         await dest.reload()

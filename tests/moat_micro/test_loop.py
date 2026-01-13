@@ -43,10 +43,11 @@ c:
 """
 
 
-@pytest.mark.parametrize("cfg", [yload(CFGW), yload(CFGR)])
+@pytest.mark.parametrize("cfg", [CFGW, CFGR])
 @pytest.mark.anyio
 async def test_loop(tmp_path, cfg):
     "relay test"
+    cfg = yload(cfg, attr=True)
     async with mpy_stack(tmp_path, cfg) as d:
         a = d.sub_at(P("a"))
         b = d.sub_at(P("b"))

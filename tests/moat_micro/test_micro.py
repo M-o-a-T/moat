@@ -161,7 +161,7 @@ async def test_modes(tmp_path, lossy, guarded):
     cfu = dict(
         r=dict(
             link=dict(lossy=lossy, guarded=guarded),
-            cfg=dict(r=dict(link=dict(lossy=lossy, guarded=guarded))),
+            cfg=dict(app=dict(r=dict(link=dict(lossy=lossy, guarded=guarded)))),
         ),
     )
     async with mpy_stack(tmp_path, CFG, cfu) as d:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven, ungroup
+from moat.util import ungroup
 from moat.lib.micro import log, sleep_ms
 from moat.lib.path import P
 from moat.micro._test import mpy_stack
@@ -19,37 +19,38 @@ TT = 500  # XXX depends on how much we're logging
 CFG = """
 app: dir
 # r: _test.MpyCmd
-  a: _test.Cmd
+a:
+  app: _test.Cmd
 r:
   app: sub.Err
   cfg:
     app: _test.MpyCmd
+    mplex: true
     cfg:
-      mplex: true
-      cfg:
-        app:
-          app: dir
-#         w: wdt.Cmd
-          b:
-            app: _test.Cmd
-          c:
-            app: cfg.Cmd
-          r:
-            app: stdio.StdIO
-            link: &link
-              lossy: false
-              guarded: false
-              frame: 0x85
-            log:
-              txt: "MH"
-            log_raw:
-              txt: "ML"
+      app:
+        app: dir
+#       w:
+#         app: wdt.Cmd
+        b:
+          app: _test.Cmd
+        c:
+          app: cfg.Cmd
+        r:
+          app: stdio.StdIO
+          link: &link
+            lossy: false
+            guarded: false
+            frame: 0x85
+          log:
+            txt: "MH"
+          log_raw:
+            txt: "ML"
 
-      link: *link
-      log:
-        txt: "TH"
-      log_raw:
-        txt: "TL"
+    link: *link
+    log:
+      txt: "TH"
+    log_raw:
+      txt: "TL"
 """
 
 
@@ -58,20 +59,19 @@ async def test_wdt(tmp_path, guard):
     "basic watchdog test"
     ended = False
     with raises(EOFError), ungroup:
-        async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
+        async with (
+            mpy_stack(tmp_path, CFG) as d,
+            d.sub_at(P("r.b")) as r,
+            d.cfg_at(P("r.c")) as c,
+        ):
             res = await r.echo(m="hello")
             assert res == dict(r="hello")
 
             # XXX unfortunately we can't test ext=False or hw=True on Linux
+            wd = {"app": "wdt.Cmd", "t": TT, "ext": True, "hw": False}
             await c.set(
                 {
-                    "apps": {"w": "sub.Err"},
-                    "w": dict(app="wdt.Cmd", cfg=dict(t=TT, ext=True, hw=False)),
-                }
-                if guard
-                else {
-                    "apps": {"w": "wdt.Cmd"},
-                    "w": dict(t=TT, ext=True, hw=False),
+                    "app": {"w": {"app": "sub.Err", "cfg": wd} if guard else wd},
                 },
                 sync=True,
             )
@@ -91,11 +91,14 @@ async def test_wdt_off(tmp_path):
     """
     Check that the watchdog can be removed
     """
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
+    async with (
+        mpy_stack(tmp_path, CFG) as d,
+        d.sub_at(P("r.b")) as r,
+        d.cfg_at(P("r.c")) as c,
+    ):
         await c.set(
             {
-                "apps": {"w1": "wdt.Cmd"},
-                "w1": dict(t=TT * 2, ext=True, hw=False),
+                "app": {"w1": {"app": "wdt.Cmd", "t": TT * 2, "ext": True, "hw": False}},
             },
             sync=True,
         )
@@ -104,12 +107,7 @@ async def test_wdt_off(tmp_path):
             await wd.x()
             await sleep_ms(TT)
             await wd.x()
-        await c.set(
-            {
-                "apps": {"w1": NotGiven},
-            },
-            sync=True,
-        )
+        await c.set({"app": {"w1": {"running": False}}}, sync=True)
         await sleep_ms(TT * 3)
 
         res = await r.echo(m="hello again")
@@ -126,10 +124,7 @@ async def test_wdt_update(tmp_path):
     with raises(EOFError), ungroup():
         async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
             await c.set(
-                {
-                    "apps": {"w": "wdt.Cmd"},
-                    "w": dict(t=TT * 2, ext=True, hw=False),
-                },
+                {"app": {"w": {"app": "wdt.Cmd", "t": TT * 2, "ext": True, "hw": False}}},
                 sync=True,
             )
 
@@ -138,7 +133,7 @@ async def test_wdt_update(tmp_path):
                 await wd.x(n=1)
                 await sleep_ms(TT)
                 await wd.x(n=2)
-                await c.set({"w": dict(t=TT * 4)}, sync=True)
+                await c.set({"app": {"w": dict(t=TT * 4)}}, sync=True)
                 await wd.x(n=3)
                 await sleep_ms(TT * 3)
                 await wd.x(n=4)

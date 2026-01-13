@@ -20,10 +20,10 @@ app:
   app: dir
 # l: net.unix.Link
 # r: net.unix.Port
-a:
-  app: _test.Cmd
-c:
-  app: cfg.Cmd
+  a:
+    app: _test.Cmd
+  c:
+    app: cfg.Cmd
 #l:
 #  port: /tmp/test.sock
 #r:
@@ -47,16 +47,27 @@ async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
         if unix:
             await c.set(
                 {
-                    "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
-                    "r": {"port": str(sock), "wait": False},
+                    "app": {
+                        "r": {
+                            "app": "net.unix.LinkIn" if link_in else "net.unix.Port",
+                            "port": str(sock),
+                            "wait": False,
+                        },
+                    },
                 },
                 sync=True,
             )
         else:
             await c.set(
                 {
-                    "apps": {"r": "net.tcp.LinkIn" if link_in else "net.tcp.Port"},
-                    "r": {"host": "127.0.0.1", "port": port, "wait": False},
+                    "app": {
+                        "r": {
+                            "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
+                            "host": "127.0.0.1",
+                            "port": port,
+                            "wait": False,
+                        },
+                    },
                 },
                 sync=True,
             )
@@ -66,13 +77,14 @@ async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
             {
                 #           "apps": {"l": "net.unix.Link"},
                 #           "l": {"port": str(sock)},
-                "apps": {"l": "sub.Err"},
-                "l": {
-                    "app": "net.unix.Link" if unix else "net.tcp.Link",
-                    "cfg": {"port": str(sock)} if unix else {"host": "127.0.0.1", "port": port},
-                    "retry": 9,
-                    "timeout": 100,
-                    "wait": False,
+                "app": {
+                    "l": {
+                        "app": "net.unix.Link" if unix else "net.tcp.Link",
+                        "retry": {"delay": 0.2},
+                        "timeout": 100,
+                        "wait": False,
+                        **({"port": str(sock)} if unix else {"host": "127.0.0.1", "port": port}),
+                    },
                 },
             },
             sync=True,

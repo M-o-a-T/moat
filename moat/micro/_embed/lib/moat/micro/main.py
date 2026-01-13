@@ -14,7 +14,7 @@ from rtc import all_rtc
 import machine
 
 import moat.micro.console as cons
-from moat.util import attrdict, merge
+from moat.util import attrdict, merge, to_attrdict
 from moat.lib.codec.moat_cbor import Codec as CBOR
 from moat.lib.micro import AC_use, L, TaskGroup, at, sleep_ms
 
@@ -47,6 +47,8 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     if isinstance(cfg, str):
         with open(cfg, "rb") as f:
             cfg = CBOR().decode(f.read())
+    if type(cfg) is dict:
+        cfg = to_attrdict(cfg)
 
     # Update config from RTC memory, if present
     at("M2")
@@ -55,21 +57,12 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
             merge(cfg.setdefault(k, {}), v)
 
     # Start the hardware watchdog timer early
-    for k, v in cfg.get("apps", {}).items():
-        if v != "wdt.Cmd":
+    for v in cfg.values():
+        if v.get("app", "") != "wdt.Cmd":
             continue
-        k = cfg.get(k, attrdict())  # noqa:PLW2901
-        if k.get("hw", False):
-            machine.WDT(k.get("id", 0), k.get("t", 5000))
+        if v.get("running", True) and v.get("hw", False):
+            machine.WDT(v.get("id", 0), v.get("t", 5000))
         break
-    else:
-        for k, v in cfg.items():
-            if k == "apps":
-                continue
-            if v.get("app", "") != "wdt.Cmd":
-                continue
-            if v.get("hw", False):
-                machine.WDT(v.get("id", 0), v.get("t", 5000))
 
     def cfg_network(n):
         import time  # noqa: PLC0415
@@ -128,10 +121,10 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         at("MA1")
         import sys  # noqa: PLC0415
 
-        from moat.lib.rpc import Dispatch  # noqa: PLC0415
+        from moat.lib.rpc import RootCmd  # noqa: PLC0415
 
         cons.main = m = cons.Main(wr_exc)
-        dsp = await AC_use(m, Dispatch(cfg, i=i))
+        dsp = await AC_use(m, RootCmd(cfg, i=i))
         m.tg = await AC_use(m, TaskGroup())
 
         at("MA3")

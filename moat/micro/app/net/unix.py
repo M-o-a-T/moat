@@ -4,6 +4,7 @@ Apps for Unix socket connectivity
 
 from __future__ import annotations
 
+from moat.util import attrdict
 from moat.lib.micro import AC_use
 from moat.lib.stream import UnixLink
 from moat.micro.stacks.console import console_stack
@@ -22,7 +23,7 @@ def Raw(*a, **k):
 
     class _Raw(BaseCmdBBM):
         def stream(self) -> Awaitable:
-            return AC_use(self, UnixLink(self.port))
+            return AC_use(self, UnixLink(self.port, retry=self.cfg.get("retry", attrdict())))
 
     return _Raw(*a, **k)
 
@@ -35,7 +36,7 @@ def Link(*a, **k):
 
     class _Link(CmdMsg):
         def __init__(self, cfg):
-            stack = console_stack(UnixLink(cfg["port"]), cfg)
+            stack = console_stack(UnixLink(cfg["port"], retry=cfg.get("retry", attrdict())), cfg)
             super().__init__(stack, cfg)
 
     return _Link(*a, **k)

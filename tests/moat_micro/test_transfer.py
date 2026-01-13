@@ -69,8 +69,8 @@ t:
 async def test_store(tmp_path):
     "test basic store/retrieve"
     cfg = yload(CFG, attr=True)
-    del cfg.apps.t
-    del cfg.r.cfg.apps.t
+    del cfg.t
+    del cfg.r.cfg.app.t
 
     async with (
         mpy_stack(tmp_path, cfg) as d,
@@ -85,7 +85,7 @@ async def test_store(tmp_path):
 async def test_transfer_here(tmp_path):
     "test data foo"
     cfg = yload(CFG, attr=True)
-    del cfg.r.cfg.apps.t
+    del cfg.r.cfg.app.t
 
     async with (
         mpy_stack(tmp_path, cfg, run=True) as d,
@@ -100,7 +100,7 @@ async def test_transfer_here(tmp_path):
 async def test_transfer_there(tmp_path):
     "test data foo"
     cfg = yload(CFG, attr=True)
-    del cfg.apps.t
+    del cfg.t
 
     async with (
         mpy_stack(tmp_path, cfg) as d,

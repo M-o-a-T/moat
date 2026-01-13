@@ -40,6 +40,7 @@ r:
         log:
           txt: "S"
       p: &p
+        app: part.PID
         t: 10
         p: 1
         i: 0.1

@@ -20,29 +20,31 @@ TT = 250  # XXX assume that this is OK
 
 
 CFGC = """
-apps:
-  c: bms._test.cell.Cell
+app: dir
+c:
+  app: bms._test.cell.Cell
 cell: c
 """
 CFGC = as_attr(CFGC, c=CF.c)
 
 CFGIC = """
-apps:
-  s: _test.LoopLink
-  cx: bms._test.cell.DiyBMSCell
-  t: bms._test.CellSim
-  c: bms.diy_serial.Cell
-  sl: bms.diy_serial.Comm
+app: dir
+cx:
+  app: bms._test.cell.DiyBMSCell
 sl:
+  app: bms.diy_serial.Comm
   comm: s
   n: 1
 c:
+  app: bms.diy_serial.Cell
   comm: !P sl
   pos: 0
 t:
+  app: bms._test.CellSim
   cell: !P cx
   ctrl: !P s
 s:
+  app: _test.LoopLink
   usage: bB
 cell: cx
 """
@@ -112,10 +114,9 @@ async def test_cell(tmp_path, CFG):
 
 
 CFGA = """
-apps:
-  b: bms._test.batt.Batt
-  a: bms._test.batt.Bal
+app: dir
 a:
+  app: bms._test.batt.Bal
   t:
     chk: 500
   h:
@@ -126,7 +127,8 @@ a:
     max: 7.5
   bat: !P b
 b:
-  app: bms._test.cell.Cell
+  app: bms._test.batt.Batt
+  app_: bms._test.cell.Cell
   cfg: CFGA
   n: 4
   rnd: 0.2

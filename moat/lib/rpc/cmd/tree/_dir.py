@@ -4,10 +4,9 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util import NotGiven, attrdict, import_
+from moat.util import NotGiven, attrdict
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
-from moat.lib.path import Path
-from moat.lib.rpc import BaseCmd, MsgSender
+from moat.lib.rpc import BaseCmd
 
 # Typing
 
@@ -186,22 +185,21 @@ class DirCmd(BaseSubCmd):
     cmd_upd_ = reload
 
     async def _setup_apps(self):
-        log("Setup %s", self.path)
+        from moat.lib.rpc import LoadCmd  # noqa: PLC0415
+
+        log("Setup %s: %s", self, self.path)
         gcfg = self.cfg
-        apps = gcfg.get("apps", {})
+        apps = {}
         for k, v in gcfg.items():
-            if k == "apps" or k in apps:
-                continue
             try:
                 if not v.get("running", True):
-                    del apps[k]
                     continue
-                apps[k] = v["app"]
+                nam = v.get("app", None)
+                if not isinstance(nam, str):
+                    raise ValueError(f"Bad Config: app-{k}")  # noqa:TRY004
+                apps[k] = v
             except (AttributeError, KeyError):
                 continue
-
-        def imp(name):
-            return import_(f"{self.root.APP}.{name}", 1)
 
         # Zeroth, kill apps that are no longer live
         for name in list(self.sub.keys()):
@@ -216,7 +214,7 @@ class DirCmd(BaseSubCmd):
                 continue
 
             cfg = gcfg.get(name, attrdict())
-            await self.attach(name, imp(v)(cfg))
+            await self.attach(name, LoadCmd(cfg))
 
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
@@ -232,62 +230,3 @@ class DirCmd(BaseSubCmd):
         # Finally, mark done.
         if L:
             self.set_ready()
-
-
-class Dispatch(DirCmd):
-    """
-    This is the system's root dispatcher.
-
-    Call "send" with an action (a string or list) and either a single
-    parameter or some key/value data. The response is returned / raised.
-    """
-
-    APP = "app"  # Satellite. server must override.
-
-    def __init__(self, cfg, run=False, i=None):
-        super().__init__(cfg)
-        self._run = run
-        self.i = i
-        self._sender = MsgSender(self)
-
-    async def __aenter__(self):
-        await super().__aenter__()
-        try:
-            if self._run:
-                await self.tg.spawn(self.task)
-                if L:
-                    await self.wait_ready()
-        except BaseException as exc:
-            await super().__aexit__(type(exc), exc, None)
-            raise
-        return self
-
-    @property
-    def root(self) -> Dispatch:
-        "root dispatcher"
-        return self
-
-    @property
-    def sender(self) -> MsgSender:
-        "sender adapter"
-        return self._sender
-
-    @property
-    def path(self):
-        "root path"
-        return Path()
-
-    @property
-    def cmd(self):
-        "root command sender"
-        return self._sender.cmd
-
-    @property
-    def sub_at(self):
-        "root subcommand resolver"
-        return self._sender.sub_at
-
-    @property
-    def cfg_at(self):
-        "config subcommand resolver"
-        return self._sender.cfg_at

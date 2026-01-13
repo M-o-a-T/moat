@@ -51,6 +51,18 @@ p:
 
 """
 
+LCFG = """
+app: dir
+_sys:
+  app: _sys.Cmd
+p:
+  app: dir
+  pp:
+    app: part.Average
+    t: 10
+
+"""
+
 
 async def run_avg(xa):
     "generic averaging test"
@@ -84,10 +96,21 @@ async def run_avg(xa):
                 print(6, await anext(mon))
 
 
+async def test_avg_local(tmp_path):
+    "test data foo"
+    cfg = yload(LCFG, attr=True)
+
+    async with (
+        mpy_stack(tmp_path, cfg, run=True) as d,
+        d.sub_at(P("p.pp")) as xa,
+    ):
+        await run_avg(xa)
+
+
 async def test_avg_here(tmp_path):
     "test data foo"
     cfg = yload(CFG, attr=True)
-    del cfg.r.cfg.apps.p
+    del cfg.r.cfg.app.p
 
     async with (
         mpy_stack(tmp_path, cfg, run=True) as d,
@@ -99,7 +122,7 @@ async def test_avg_here(tmp_path):
 async def test_avg_there(tmp_path):
     "test data foo"
     cfg = yload(CFG, attr=True)
-    del cfg.apps.p
+    del cfg.p
 
     async with (
         mpy_stack(tmp_path, cfg) as d,

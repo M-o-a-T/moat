@@ -7,7 +7,7 @@ from __future__ import annotations
 from math import exp
 
 from moat.lib.micro import Event, ticks_diff, ticks_ms
-from moat.lib.rpc import BaseCmd
+from moat.lib.rpc import BaseCmd, NoStream
 
 from typing import TYPE_CHECKING
 
@@ -60,7 +60,10 @@ class Average(BaseCmd):
         if msg.can_stream:
             async with msg.stream_out(t=self._t) as m:
                 while True:
-                    await m.send(self._value)
+                    try:
+                        await m.send(self._value)
+                    except NoStream:
+                        break
                     await self.flag.wait()
         else:
             await msg.result(self._value, t=self._t)

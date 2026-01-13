@@ -43,7 +43,7 @@ class Cmd(BaseCmd):
         """
         p = msg.get("p", ())
         try:
-            res = enc_part(get_part(self._parent.cfg, p))
+            res = enc_part(get_part(self.root.cfg, p))
             if isinstance(res, (list, tuple)):
                 await msg.result(*res)
             else:
@@ -73,7 +73,7 @@ class Cmd(BaseCmd):
         can configure a "safe" skeleton setup and update it online after
         booting.
         """
-        cur = self._parent.cfg
+        cur = self.root.cfg
         if not p:
             raise ValueError("NoPath")
         for pp in p[:-1]:
@@ -111,5 +111,5 @@ class Cmd(BaseCmd):
         """
         Activate the new config.
         """
-        dest = self._parent
+        dest = self.root
         await dest.reload()

@@ -8,7 +8,7 @@ import anyio
 import pytest
 import sys
 
-from moat.util import attrdict, yload
+from moat.util import yload
 from moat.lib.path import P
 from moat.micro._test import mpy_stack
 from moat.util.liner import Liner
@@ -44,8 +44,8 @@ s:
 async def test_repl(tmp_path, free_tcp_port):
     "basic REPL test"
     cfg = yload(CFG1, attr=True)
-    cfg.s.cfg.r = attrdict(host="127.0.0.1", port=free_tcp_port, wait=False)
-    cfg.r = attrdict(host="127.0.0.1", port=free_tcp_port, wait=False)
+    cfg.s.cfg.app.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
+    cfg.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
 
     async def readcons(s, con, cob=None):
         if cob is None:
@@ -79,8 +79,8 @@ async def test_repl(tmp_path, free_tcp_port):
 async def test_repl_stream(tmp_path, free_tcp_port):
     "REPL as data stream"
     cfg = yload(CFG1, attr=True)
-    cfg.s.cfg.r = attrdict(host="127.0.0.1", port=free_tcp_port, wait=False)
-    cfg.r = attrdict(host="127.0.0.1", port=free_tcp_port, wait=False)
+    cfg.s.cfg.app.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
+    cfg.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
 
     async def readcons(s, con, cob=None):
         if cob is None:

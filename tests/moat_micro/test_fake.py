@@ -10,7 +10,7 @@ from moat.lib.path import P
 from moat.micro._test import mpy_stack
 
 CFG = """
-app: dor
+app: dir
 x:
   app: _fake.ADC
   min: 0

@@ -61,8 +61,14 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
     async def set_server(c):
         await c.set(
             {
-                "apps": {"r": "net.tcp.LinkIn" if link_in else "net.tcp.Port"},
-                "r": {"host": "127.0.0.1", "port": port, "wait": False},
+                "app": {
+                    "r": {
+                        "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
+                        "host": "127.0.0.1",
+                        "port": port,
+                        "wait": False,
+                    },
+                },
             },
             sync=True,
         )
@@ -70,13 +76,15 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
     async def set_client(c):
         await c.set(
             {
-                "apps": {"r": "sub.Err"},
-                "r": {
-                    "app": "net.tcp.Link",
-                    "cfg": {"host": "127.0.0.1", "port": port},
-                    "retry": 10,
-                    "timeout": 400,
-                    "wait": False,
+                "app": {
+                    "r": {
+                        "app": "net.tcp.Link",
+                        "host": "127.0.0.1",
+                        "port": port,
+                        "retry": {"delay": 0.2, "timeout": 2},
+                        "timeout": 400,
+                        "wait": False,
+                    },
                 },
             },
             sync=True,
@@ -91,8 +99,10 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
         await sleep_ms(100)
         await (set_client if server_first else set_server)(cr)
         if (server_first == remote_first, link_in) != (True, False):
+            log("Wait Ready remote")
             await d.cmd(P("s.r.!.rdy_"))
         if (server_first == remote_first, link_in) != (False, False):
+            log("Wait Ready local")
             await d.cmd(P("r.!.rdy_"))
 
         async def chk(*p):
@@ -102,6 +112,8 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
         # if link_in is False, the server supports random connections,
         # thus we can't send commands from the server to the client
         if (server_first == remote_first, link_in) != (False, False):
+            log("Check local")
             await chk("r")
         if (server_first == remote_first, link_in) != (True, False):
+            log("Check remote")
             await chk("s", "r")

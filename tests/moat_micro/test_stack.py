@@ -45,35 +45,36 @@ micro:
   # main service. This could be a serial.Link instead, but this way
   # "moat micro setup --run" keeps the existing link going
   run:
-    app: dir
-    r:
-      app: _test.MpyRaw
-      cwd: /tmp/mpy-test
-      mplex: false
-      log:
-        txt: "M"
-      cfg: !P :@.moat.micro.cfg.r
-      state: once
-    s:
-      app: remote.Link
-      path: !P r
-      link:
-        console: true
-        frame: 0xf7
-      log:
-        txt: "S"
-#     log_raw:
-#        txt: "SU"
-    n:
-      app: net.unix.Port
-      port: /tmp/moat.test
-      log:
-        txt: "N"
+    app:
+      app: dir
+      r:
+        app: _test.MpyRaw
+        cwd: /tmp/mpy-test
+        mplex: false
+        log:
+          txt: "M"
+        cfg: !P :@.moat.micro.cfg.r
+        state: once
+      s:
+        app: remote.Link
+        path: !P r
+        link:
+          console: true
+          frame: 0xf7
+        log:
+          txt: "S"
+  #     log_raw:
+  #        txt: "SU"
+      n:
+        app: net.unix.Port
+        port: /tmp/moat.test
+        log:
+          txt: "N"
 
-    co:
-      app: _test.Cons
-      cons: !P s
-      prefix: "C"
+      co:
+        app: _test.Cons
+        cons: !P s
+        prefix: "C"
   cfg:
     r:
       app:
@@ -107,7 +108,6 @@ micro:
         port: /tmp/moat.test
         log:
           txt: "N"
-    r: *np
 
 """
 
@@ -122,10 +122,11 @@ async def test_stack(tmp_path):
     root = tmp_path / "root"
     cfx = tmp_path / "run.cfg"
     cross = here / "ext" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
-    cfg.micro.cfg.r.f.root = str(root)
-    cfg.micro.run.n.port = str(port)
+    cfg.micro.cfg.r.app.f.root = str(root)
+    cfg.micro.run.app.n.port = str(port)
+    cfg.micro.connect.app.r.port = str(port)
     cfg.micro.setup.args.cross = str(cross)
-    cfg.micro.setup.r.cwd = str(root)
+    cfg.micro.setup.app.r.cwd = str(root)
     with cfx.open("w") as f:
         yprint(cfg, f)
 
@@ -167,7 +168,8 @@ async def test_stack(tmp_path):
             assert "\n- rmdir\n" in res.stdout
 
             res = await rm("cfg", do_stdout=True)
-            assert "\nf:\n  root:" in res.stdout
+            assert "\n  f:\n" in res.stdout
+            assert "\n    root:" in res.stdout
             assert "fubar" not in res.stdout
 
             # change some config in remote live data

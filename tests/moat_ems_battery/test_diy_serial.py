@@ -18,17 +18,18 @@ TT = 250  # XXX assume that this is OK
 
 
 CFG1 = """
-apps:
-  s: _test.LoopLink
-  c: bms._test.cell.Cell
-  t: bms._test.CellSim
-  bc: bms.diy_serial.Comm
+app: dir
+c:
+  app: bms._test.cell.Cell
 bc:
+  app: bms.diy_serial.Comm
   comm: !P s
 t:
+  app: bms._test.CellSim
   cell: !P c
   ctrl: !P s
 s:
+  app: _test.LoopLink
   usage: bB
 """
 CFG1 = as_attr(CFG1, c=CF.c)
@@ -49,23 +50,23 @@ async def test_cell1(tmp_path):
 
 
 CFG4 = """
-apps:
-  s: _test.LoopLink
-  ca: sub.Array
-  t: bms._test.CellsSim
-  bc: bms.diy_serial.Comm
+app: dir
 bc:
+  app: bms.diy_serial.Comm
   comm: !P s
 t:
+  app: bms._test.CellsSim
   cell: !P ca
   ctrl: !P s
   n: 4
 s:
+  app: _test.LoopLink
   usage: bB
 ca:
-  app: bms._test.cell.Cell
+  app: sub.Array
+  cfg:
+    app: bms._test.cell.Cell
   n: 4
-
 """
 CFG4 = as_attr(CFG4)
 CFG4.ca.cfg = CF.c
@@ -86,21 +87,22 @@ async def test_cell4(tmp_path):
 
 
 CFGC1 = """
-apps:
-  s: _test.LoopLink
-  c: bms._test.cell.DiyBMSCell
-  t: bms._test.CellSim
-  bo: bms.diy_serial.Comm
-  bc: bms.diy_serial.Cell
+app: dir
+c:
+  app: bms._test.cell.DiyBMSCell
 bc:
+  app: bms.diy_serial.Cell
   comm: !P bo
   pos: 0
 bo:
+  app: bms.diy_serial.Comm
   comm: !P s
 t:
+  app: bms._test.CellSim
   cell: !P c
   ctrl: !P s
 s:
+  app: _test.LoopLink
   usage: bB
 """
 CFGC1 = as_attr(CFGC1, c=CF.c, bc=CF.c)
@@ -166,10 +168,9 @@ async def test_cell_link1(tmp_path):
 
 
 CFGA = """
-apps:
-  b: bms._test.batt.Batt
-  a: bms._test.batt.Bal
+app: dir
 a:
+  app: bms._test.batt.Bal
   t:
     chk: 500
   h:
@@ -180,16 +181,17 @@ a:
     max: 7.5
   bat: !P b
 b:
-  app: bms._test.cell.DiyBMSCell
-  cfg: CFGA
+  app: bms._test.batt.Batt
+  cfg:
+    app: bms._test.cell.DiyBMSCell
+    cfg: CFGA
   n: 4
   rnd: 0.2
   t:
     w: 500
 """
 CFGA = as_attr(CFGA)
-assert CFGA.b.cfg == "CFGA"
-CFGA.b.cfg = CF.c
+CFGA.b.cfg.cfg = CF.c
 
 
 async def test_batt(tmp_path):

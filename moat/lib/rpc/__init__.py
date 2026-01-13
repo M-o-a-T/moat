@@ -30,16 +30,22 @@ _imports = {
     "MsgSender": "base",
     "OptDict": "base",
     "SubMsgSender": "base",
-    # From cmd.base
-    "BaseCmd": "cmd.base",
-    "LockBaseCmd": "cmd.base",
+    # From cmd.array
+    "ArrayCmd": "cmd.array",
+    # From cmd._base and cmd.base
+    "BaseCmd": "cmd._base",
+    "LoadCmd": "cmd._base",
+    "LockBaseCmd": "cmd._base",
+    "RootCmd": "cmd.base",
     # From cmd.tree.dir
+    "BaseSubCmd": "cmd.tree.dir",
     "BaseSuperCmd": "cmd.tree.dir",
     "CfgStore": "cmd.tree.dir",
-    "Dispatch": "cmd.tree.dir",
+    "DirCmd": "cmd.tree.dir",
     "SubStore": "cmd.tree.dir",
     # From cmd.tree.layer
     "BaseFwdCmd": "cmd.tree.layer",
+    "BaseLayerCmd": "cmd.tree.layer",
     # From cmd.tree.listen
     "BaseListenCmd": "cmd.tree.listen",
     "BaseListenOneCmd": "cmd.tree.listen",
@@ -115,16 +121,22 @@ __all__ = [  # noqa:RUF022
     "MsgSender",
     "OptDict",
     "SubMsgSender",
+    # From cmd.array
+    "ArrayCmd",
     # From cmd.base
     "BaseCmd",
+    "LoadCmd",
     "LockBaseCmd",
+    "RootCmd",
     # From cmd.tree.dir
+    "BaseSubCmd",
     "BaseSuperCmd",
     "CfgStore",
-    "Dispatch",
+    "DirCmd",
     "SubStore",
     # From cmd.tree.layer
     "BaseFwdCmd",
+    "BaseLayerCmd",
     # From cmd.tree.listen
     "BaseListenCmd",
     "BaseListenOneCmd",
@@ -151,8 +163,20 @@ if _TC or _DOC:
     from .base import MsgSender as MsgSender
     from .base import OptDict as OptDict
     from .base import SubMsgSender as SubMsgSender
-    from .cmd import BaseCmd as BaseCmd
-    from .cmd import LockBaseCmd as LockBaseCmd
+    from .cmd._base import BaseCmd as BaseCmd
+    from .cmd._base import LoadCmd as LoadCmd
+    from .cmd._base import LockBaseCmd as LockBaseCmd
+    from .cmd.array import ArrayCmd as ArrayCmd
+    from .cmd.base import RootCmd as RootCmd
+
+    # From cmd.tree.dir
+    from .cmd.tree.dir import BaseSubCmd, BaseSuperCmd, CfgStore, SubStore
+
+    # From cmd.tree.layer
+    from .cmd.tree.layer import BaseFwdCmd, BaseLayerCmd
+
+    # From cmd.tree.listen
+    from .cmd.tree.listen import BaseListenCmd, BaseListenOneCmd
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink
     from .msg import MsgResult as MsgResult

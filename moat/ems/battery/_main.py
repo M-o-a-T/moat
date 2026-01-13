@@ -13,7 +13,7 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.lib.path import P, Path
-from moat.lib.rpc import Dispatch
+from moat.lib.rpc import RootCmd
 from moat.lib.run import load_subgroup
 
 log = logging.getLogger()
@@ -48,7 +48,7 @@ async def cli(obj, bat):
 
 @asynccontextmanager
 async def _bat(obj):
-    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(obj.bat) as bat:
+    async with RootCmd(cfg, run=True) as dsp, dsp.sub_at(obj.bat) as bat:
         yield bat
 
 

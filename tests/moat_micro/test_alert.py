@@ -12,20 +12,21 @@ from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
 
 CFG = """
-app: dir
-b:
-  app: link.Alert
-c:
-  app: link.Alert
-a:
-  app: link.Alert
-  mon:
-    b:
-      rem: !P ":"
-      al: !P b
-    c:
-      rem: !P c
-      al: !P ":"
+app:
+  app: dir
+  b:
+    app: link.Alert
+  c:
+    app: link.Alert
+  a:
+    app: link.Alert
+    mon:
+      b:
+        rem: !P ":"
+        al: !P b
+      c:
+        rem: !P c
+        al: !P ":"
 
 """
 # ruff: noqa:D101,D103

@@ -5,6 +5,7 @@ from moat.micro.main import get_link
 from moat.util import attrdict, P, yload, Path
 from moat.cmd.util import get_p
 from moat.kv.client import open_client as kv_client
+from moat.lib.rpc import RootCmd
 
 import anyio
 
@@ -21,7 +22,7 @@ async def main(config, link, path):
     cf = get_p(cfg["micro"], link)
 
     async with (
-        Dispatch(cf, run=True, sig=True) as dsp,
+        RootCmd(cf, run=True, sig=True) as dsp,
         kv_client(**cfg["kv"]) as kv,
         dsp.sub_at(path) as c,
     ):

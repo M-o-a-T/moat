@@ -1,244 +1,54 @@
 """
-Basic infrastructure to run an RPC system via an unreliable,
-possibly-reordering, and/or stream-based transport
-
-We have a stack of classes. At the top there's the adapting App, a subclass
-of CmdMsg. Linked to it via a chain of *Msg…Buf modules there's a
-*Buf adapter that affords an external interface.
-
-Everything is fully asynchronous. Each class is an async context manager,
-responsible for managing the contexts of its sub-app(s) / linked stream(s).
-
-Incoming messages are handled by the child's "dispatch" method. They
-are expected to be fully asynchronous, i.e. a "run" method that calls
-"dispatch" must use a separate task to do so.
-
-Outgoing messages are handled by the parent's "send" method. Send calls
-return when the data has been sent, implying that sending on an
-unreliable transport will wait for the message to be confirmed. Sending
-may fail.
+Basic command handling in MoaT-RPC.
 """
 
 from __future__ import annotations
 
-from moat.util import attrdict
-from moat.lib.micro import AC_use, Event, L, Lock, idle
-from moat.lib.rpc import MsgHandler
-from moat.micro.cmd.util import wait_complain
-from moat.micro.cmd.util.part import enc_part, get_part
+from ._base import BaseCmd as BaseCmd
+from ._base import LoadCmd as LoadCmd
+from ._base import LockBaseCmd as LockBaseCmd
+from ._base import RootCmd as _RootCmd
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import BaseSuperCmd, Dispatch
+    from moat.lib.path import Path
 
 
-class BaseCmd(MsgHandler):
+class RootCmd(_RootCmd):
     """
-    Base class of a Command handler.
+    This is the system's root dispatcher.
 
-
+    This class ducktypes :py:class:`BaseCmd`.
     """
 
-    root: Dispatch = None
-    _parent: BaseSuperCmd = None
-    _name: str = None
-    _ts = None
-    _rl_ok = None  # result of last reload
-    p_task = None  # managed by parent. Do not touch.
-
-    if L:
-        _starting: Event = None
-        _ready: Event = None
-    _stopped: Event = None
-
-    def __init__(self, cfg):
-        if type(cfg) is dict:
-            cfg = attrdict(**cfg)
-        cfg._moat_cmd = self  # noqa:SLF001
-        super().__init__(cfg)
-        # self.cfg = cfg
-        self.init_events()
-
-    def init_events(self):
-        "Setup events for startup, stopping, and readiness"
-        if self._stopped is None:
-            if L:
-                self._starting = Event()
-                self._ready = Event()
-            self._stopped = Event()
-
-    def __repr__(self):
-        try:
-            return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
-        except AttributeError:
-            return f"<{self.__class__.__name__}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
+    def __init__(self, cfg, sig=False, **kw):
+        super().__init__(cfg, **kw)
+        self.sig = sig
 
     async def setup(self):
-        """
-        Start up this command.
+        "Root setup: adds signal handling if requested"
+        await super().setup()
 
-        Call first when overriding.
-        """
-        await AC_use(self, self.set_stopped)
-        if self._stopped is None:
-            self.init_events()
-        elif L:
-            if self._starting is None or self._starting.is_set():
-                raise RuntimeError("DupStartA")
+        if self.sig:
 
-            self._starting.set()
-            self._starting = None
+            async def sig_handler():
+                import anyio  # noqa: PLC0415
+                import signal  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
-    async def teardown(self):
-        """
-        Clean up this command.
+                with anyio.open_signal_receiver(
+                    signal.SIGINT,
+                    signal.SIGTERM,
+                    signal.SIGHUP,
+                ) as signals:
+                    async for _ in signals:
+                        self.tg.cancel()
+                        break  # default handler on next
 
-        Call last when overriding.
-        """
+            await self.tg.spawn(sig_handler, _name="sig")
 
-    async def reload(self):
-        """
-        Reload from updated config.
+    def cfg_at(self, p: Path):
+        "returns a CfgStore object at this subpath"
+        from moat.lib.rpc.cmd.tree.dir import CfgStore  # noqa:PLC0415
 
-        The default does nothing, which is probably the wrong thing to do.
-        """
-
-    def set_stopped(self):
-        """
-        The command has ended.
-        """
-        if self._stopped is None:
-            return
-        self._stopped.set()
-        self._stopped = None
-
-        if L:
-            if self._starting is not None:
-                self._starting.set()
-                self._starting = None
-
-            if self._ready is not None:
-                self._ready.set()
-                self._ready = None
-
-    async def run(self):
-        """
-        Task handler to run this command.
-
-        If you need a subtask, override `task`.
-        """
-        async with self:
-            await self.task()
-
-    async def task(self):
-        """
-        The app's task. Runs after `setup` has completed. By default does nothing.
-
-        If you override this, you're responsible for eventually calling `set_ready`.
-        Otherwise the MoaT system will stall!
-        """
-        if L:
-            self.set_ready()
-        await idle()
-
-    if L:
-
-        def set_ready(self):
-            """
-            This command is now ready.
-
-            Called internally only!
-            """
-            self.cfg.pop("_cmd", None)
-            if self._starting is not None:
-                raise RuntimeError(f"Ready w/o start {self!r}")
-                # self._starting.set()
-                # self._starting = None
-            if self._ready is not None:
-                self._ready.set()
-                self._ready = None
-
-    async def stop(self):
-        "Stop this subcommand"
-        if self.p_task is None:
-            self.p_task = False
-            return  # starting up or not running
-        self.p_task.cancel()
-        await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
-
-    cmd_stp_ = stop
-
-    if L:
-
-        async def wait_started(self):
-            """
-            Wait for the command's setup procedure to commence.
-            """
-            if self._starting is None:
-                return
-            await wait_complain(f"Starting {self.path}", 250, self._starting.wait)
-
-        async def wait_ready(self, wait=True) -> bool | None:
-            """
-            Check if the command is ready.
-
-            Returns True if it is stopped, False if it is already running, and
-            None if the command has (or would have, if @wait is False) waited
-            for it to become ready.
-            """
-            if self._stopped is None:
-                return True
-            if self._ready is None:
-                return False
-            if wait:
-                await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
-            return None
-
-    async def wait_stopped(self):
-        "wait until this is no longer running"
-        if self._stopped is not None:
-            await self._stopped.wait()
-
-    doc_stq_ = dict(_d="wait until no longer running")
-
-    cmd_stq_ = wait_stopped
-
-    @property
-    def path(self):
-        "calculate the path to myself"
-        # XXX cache it?
-        return self._parent.path / self._name
-
-    doc_cfg_ = dict(_d="config", _r="parts")
-
-    async def cmd_cfg_(self, p=()):
-        """
-        Read this item's config.
-
-        Writing is intentionally not supported.
-        """
-        return enc_part(get_part(self.cfg, p))
-
-    def attached(self, parent: BaseSuperCmd, name: str):
-        "Tell this Cmd it's attached under this parent, with this name."
-        if self._parent is not None:
-            raise RuntimeError(f"already {'.'.join(self.path)}")
-        self._parent = parent
-        self._name = name
-        self.root = parent.root
-
-
-class LockBaseCmd(BaseCmd):
-    """
-    A BaseCmd that blocks concurrent requests.
-    """
-
-    def __init__(self, *a, **kw):
-        super().__init__(*a, **kw)
-        self._lock = Lock()
-
-    async def handle(self, *a, **kw):
-        "strictly serial"
-        async with self._lock:
-            return await super().handle(*a, **kw)
+        return CfgStore(self, p)

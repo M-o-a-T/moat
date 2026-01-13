@@ -4,8 +4,9 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util import attrdict, import_
+from moat.util import attrdict
 from moat.lib.micro import L, TaskGroup, log
+from moat.lib.rpc import LoadCmd
 
 from .dir import BaseSuperCmd
 
@@ -131,17 +132,7 @@ class BaseFwdCmd(BaseLayerCmd):
         if self.root.APP is None:
             raise RuntimeError("WhereApp")
         gcfg = self.cfg
-        name = gcfg.get("app", None)
         cfg = gcfg.get("cfg", attrdict())
-        log("Setup %s: %s", self.path, name)
 
-        if name is None:
-            if self.app is not None:
-                self.app.stop()
-                self.app = None
-            return
-
-        def imp(name):
-            return import_(f"{self.root.APP}.{name}", 1)
-
-        return imp(name)(cfg)
+        log("Setup %s: %s", self.path, cfg["app"])
+        return LoadCmd(cfg)

@@ -13,63 +13,72 @@ from moat.micro._test import mpy_stack
 pytestmark = pytest.mark.anyio
 
 CFG = """
-app: dir
-a:
-  app: _test.Cmd
-_sys:
-  app: _sys.Cmd
-l:
-  app: _test.LoopCmd
-  loop:
-    qlen: 2
-  link: {}
-  log:
-    txt: "LOOP"
-r:
-  app: _test.MpyCmd
-  mplex: true
-  cfg:
-    app:
-      app: dir
-  #   w:
-        app: wdt.Cmd
-      b:
-        app: _test.Cmd
-      c:
-        app: cfg.Cmd
-      _sys:
-        app: _sys.Cmd
-      r:
-        app: stdio.StdIO
-        link: &link
-          lossy: false
-          guarded: false
-          frame: 0xFA
-          console: true
-        log:
-          txt: "MH"
-        log_raw:
-          txt: "ML"
-        log_rel:
-          txt: "MR"
+app:
+  app: dir
+  a:
+    app: _test.Cmd
+  _sys:
+    app: _sys.Cmd
+  c:
+    app: cfg.Cmd
+  l:
+    app: _test.LoopCmd
+    loop:
+      qlen: 2
+    link: {}
+    log:
+      txt: "LOOP"
+  r:
+    app: _test.MpyCmd
+    mplex: true
+    cfg:
+      app:
+        app: dir
+        # w:
+        # app: wdt.Cmd
+        b:
+          app: _test.Cmd
+        c:
+          app: cfg.Cmd
+        _sys:
+          app: _sys.Cmd
+        r:
+          app: stdio.StdIO
+          link: &link
+            lossy: false
+            guarded: false
+            frame: 0xFA
+            console: true
+          log:
+            txt: "MH"
+          log_raw:
+            txt: "ML"
+          log_rel:
+            txt: "MR"
       tt:
         a: b
         c: [1,2,3]
         x: y
         z: 99
 
-  link: *link
-  log:
-    txt: "TH"
-# log_rel:
-#   txt: "TR"
+    link: *link
+    log:
+      txt: "TH"
+  # log_rel:
+  #   txt: "TR"
 
+tt:
+  a: b
+  c: [1,2,3]
+  x: y
+  z: 99
 """
 
 
-async def test_cfg(tmp_path):
+@pytest.mark.parametrize("local", [True, False])
+async def test_cfg(tmp_path, local: bool):
     "test config updating"
-    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("r.c")) as cfg:
+    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("c" if local else "r.c")) as cfg:
         cf = to_attrdict(await cfg.get())
         assert cf.tt.a == "b"
         cf.tt.a = "x"

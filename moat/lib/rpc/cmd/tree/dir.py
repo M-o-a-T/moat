@@ -9,8 +9,9 @@ from itertools import chain
 from moat.util import NotGiven
 from moat.lib.path import Path
 
-from ._dir import Dispatch as _Dispatch  # isort:skip
-from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd  # noqa:F401
+from ._dir import BaseSubCmd as BaseSubCmd
+from ._dir import BaseSuperCmd as BaseSuperCmd
+from ._dir import DirCmd as DirCmd
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -22,40 +23,6 @@ if TYPE_CHECKING:
 class _NotGiven:
     # This is distinct from the "real" NotGiven. This is intentional.
     pass
-
-
-class Dispatch(_Dispatch):
-    "Root dispatcher"
-
-    APP = "moat.micro.app"
-
-    def __init__(self, cfg, sig=False, **kw):
-        super().__init__(cfg, **kw)
-        self.sig = sig
-
-    async def setup(self):
-        "Root setup: adds signal handling if requested"
-        await super().setup()
-        if self.sig:
-
-            async def sig_handler():
-                import anyio  # noqa: PLC0415
-                import signal  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
-
-                with anyio.open_signal_receiver(
-                    signal.SIGINT,
-                    signal.SIGTERM,
-                    signal.SIGHUP,
-                ) as signals:
-                    async for _ in signals:
-                        self.tg.cancel()
-                        break  # default handler on next
-
-            await self.tg.spawn(sig_handler, _name="sig")
-
-    def cfg_at(self, p: Path):
-        "returns a CfgStore object at this subpath"
-        return CfgStore(self, p)
 
 
 class SubStore:

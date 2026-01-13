@@ -11,7 +11,11 @@ from io import StringIO
 from re import Match
 from tokenize import TokenInfo as TI
 
-import _colorize  # type:ignore[unresolved-import]
+# Current Python only
+try:
+    import _colorize  # type:ignore[unresolved-import]
+except ImportError:
+    _colorize = None
 
 from .trace import trace
 
@@ -33,6 +37,7 @@ KEYWORD_CONSTANTS = {"True", "False", "None"}
 BUILTINS = {str(name) for name in dir(builtins) if not name.startswith("_")}
 
 if not hasattr(T, "TSTRING_START"):
+    # workaround for older Python
     T.TSTRING_START = None  # type:ignore[unresolved-attribute]
     T.TSTRING_MIDDLE = None  # type:ignore[unresolved-attribute]
     T.TSTRING_END = None  # type:ignore[unresolved-attribute]
@@ -41,7 +46,7 @@ if not hasattr(T, "TSTRING_START"):
 def THEME(**kwargs):  # noqa: D103
     # Not cached: the user can modify the theme inside the interactive session.
     try:
-        return _colorize.get_theme(**kwargs).syntax
+        return _colorize.get_theme(**kwargs).syntax  # type:ignore[possibly-missing-attribute]
     except AttributeError:
         return None
 

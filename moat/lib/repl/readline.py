@@ -32,7 +32,7 @@ import os
 import sys
 import warnings
 from rlcompleter import Completer as RLCompleter
-from site import gethistoryfile  # type: ignore[attr-defined]
+from site import gethistoryfile
 
 from attrs import define, field
 

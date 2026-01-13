@@ -469,7 +469,7 @@ class invalid_command(Command):
 
 class show_history(Command):
     async def do(self) -> None:
-        from site import gethistoryfile  # noqa: PLC0415  # type: ignore[attr-defined]
+        from site import gethistoryfile  # noqa: PLC0415
 
         from .pager import get_pager  # noqa: PLC0415
 

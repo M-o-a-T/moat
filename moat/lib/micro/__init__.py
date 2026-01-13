@@ -251,12 +251,12 @@ async def idle() -> None:
     await _anyio.sleep_forever()
 
 
-def ticks_add(a: int, b: int) -> int:
+def ticks_add(a: float, b: float) -> float:
     "returns a+b"
     return a + b
 
 
-def ticks_diff(a: int, b: int) -> int:
+def ticks_diff(a: float, b: float) -> float:
     "returns a-b"
     return a - b
 

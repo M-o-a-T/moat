@@ -167,7 +167,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         *,
         local_exit: bool = False,
     ) -> None:
-        super().__init__(locals=locals, filename=filename, local_exit=local_exit)  # type: ignore[call-arg]
+        super().__init__(locals=locals, filename=filename, local_exit=local_exit)
         self.can_colorize = _colorize.can_colorize()
 
     def showsyntaxerror(self, filename=None, **kwargs):  # noqa: D102
@@ -197,11 +197,11 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
 
     def runsource(self, source, filename="<input>", symbol="single"):  # noqa: D102
         try:
-            tree = self.compile.compiler(  # type: ignore[call-arg,call-overload,misc,arg-type]
+            tree = self.compile.compiler(
                 source,
                 filename,
                 "exec",
-                ast.PyCF_ONLY_AST,  # type: ignore[misc]
+                ast.PyCF_ONLY_AST,
                 incomplete_input=False,  # type: ignore[misc]
             )
         except SyntaxError as e:

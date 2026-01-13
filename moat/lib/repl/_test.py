@@ -11,7 +11,8 @@ from .fancy_termios import TermState
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import AbstractSet, Buffer
+    from collections.abc import Buffer
+    from collections.abc import Set as AbstractSet
 
 
 class MockTerm(TermBuf):

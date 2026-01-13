@@ -661,7 +661,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         return (await anext(self.__events))[0]
 
     @asynccontextmanager
-    async def suspend(self):  # type: ignore[misc]
+    async def suspend(self):
         """A context manager to delegate to another reader."""
         prev_state = {f.name: getattr(self, f.name) for f in fields(type(self))}
         try:
@@ -794,7 +794,7 @@ class Reader(anyio.AsyncContextManagerMixin):
 
     async def readline(self, startup_hook: Callback | None = None) -> str:
         """Read a line."""
-        async with (  # type: ignore[attr-defined,misc]
+        async with (
             nullcontext() if self._in_context else self.console,  # type: ignore[misc]
             nullcontext() if self._in_context else self,
         ):

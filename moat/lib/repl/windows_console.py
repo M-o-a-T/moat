@@ -61,7 +61,7 @@ except Exception:
     def get_last_error() -> int:
         return 42
 
-    class WinError(OSError):  # type: ignore[no-redef]
+    class WinError(OSError):
         def __init__(self, err: int | None, descr: str | None = None) -> None:
             self.err = err
             self.descr = descr
@@ -136,12 +136,12 @@ def _supports_vt():
     if nt is None:
         return False
     try:
-        return nt._supports_virtual_terminal()  # noqa: SLF001  # type: ignore[attr-defined]
+        return nt._supports_virtual_terminal()  # noqa: SLF001
     except AttributeError:
         return False
 
 
-class WindowsConsole(Console):  # moqa: D101  # noqa: D101
+class WindowsConsole(Console):  # noqa: D101
     def __init__(
         self,
         term: str = "",
@@ -252,8 +252,8 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
     def input_hook(self):  # moqa: D102  # noqa: D102
         if nt is None:
             return None
-        if nt._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
-            return nt._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
+        if nt._is_inputhook_installed():  # noqa: SLF001
+            return nt._inputhook  # noqa: SLF001
         return None
 
     def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
@@ -407,7 +407,7 @@ class WindowsConsole(Console):  # moqa: D101  # noqa: D101
         if not GetConsoleScreenBufferInfo(OutHandle, info):
             raise WinError(GetLastError())
 
-        return info.srWindow.Bottom  # type: ignore[no-any-return]
+        return info.srWindow.Bottom
 
     def _read_input(self) -> INPUT_RECORD | None:
         rec = INPUT_RECORD()

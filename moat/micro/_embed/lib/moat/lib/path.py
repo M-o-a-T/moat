@@ -42,8 +42,7 @@ class Path(tuple):  # noqa:SLOT001
                 res.append(":n")
             elif isinstance(x, (bytes, bytearray, memoryview)):
                 if all(32 <= b < 127 for b in x):
-                    res.append(":v" + _escol(x.decode("ascii")))  # type:ignore
-                    ## The memoryview must be of bytes, thus it supports "decode"
+                    res.append(":v" + _escol(x.decode("ascii")))
                 else:
                     from base64 import b64encode  # noqa: PLC0415
 

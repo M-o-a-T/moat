@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 try:
-    # MicroPython. Use milliseconds.
+    # MicroPython. Use milliseconds. Type resolved below.
     from time import ticks_ms as time  # type:ignore[unresolved-import]
 
     PID_TC = 1000
@@ -263,6 +263,7 @@ class CPID(PID):
     """
     A PID that's configured with a config dictionary.
 
+    This class accepts the desired and actual system state as input, *not* the error.
     ::
 
         flow:

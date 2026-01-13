@@ -154,7 +154,7 @@ async def run_multiline_interactive_console(  # noqa: D103
                 continue
 
             input_name = f"<python-input-{input_n}>"
-            more = console.push(  # type: ignore[call-arg,call-overload,misc,arg-type]
+            more = console.push(
                 _strip_final_indent(statement),
                 filename=input_name,
                 _symbol="single",  # type: ignore[misc]

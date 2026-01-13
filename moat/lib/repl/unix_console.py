@@ -52,7 +52,7 @@ else:
 
 # declare posix optional to allow None assignment on other platforms
 try:
-    import posix  # type: ignore[import-not-found]
+    import posix
 except ImportError:
     posix = None  # type: ignore[assignment]
 
@@ -528,8 +528,12 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
     @property
     def input_hook(self):  # noqa: D102
-        if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
-            return posix._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
+        # Python 3.14 only
+        try:
+            if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
+                return posix._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
+        except AttributeError:
+            pass
 
     async def __enable_bracketed_paste(self) -> None:
         async with self._wrl:

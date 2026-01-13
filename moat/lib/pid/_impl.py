@@ -13,7 +13,7 @@ from math import exp
 from moat.util import NotGiven, attrdict
 from moat.lib.micro import ticks_diff
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 __all__ = []
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 try:
     # MicroPython. Use milliseconds.
-    from time import ticks_ms as time  # pyright:ignore[reportAttributeAccessIssue]
+    from time import ticks_ms as time  # type:ignore[unresolved-import]
 
     PID_TC = 1000
     MAX_VAL = 2**31 - 1
@@ -189,7 +189,7 @@ class PID:
         if t is NotGiven:
             self.t = None
         elif t is not None:
-            self.t = cast(float, t)
+            self.t = t
         if e is not None:
             self.e = e
         if i is not None:
@@ -338,7 +338,7 @@ class CPID(PID):
             self.i = o + i * self.Kp
             self.e = i
 
-    def __call__(self, i: float, t: float | None = None) -> float:
+    def __call__(self, i: float, t: float | None = None) -> float:  # type:ignore[invalid-method-override]
         """
         Run a PID step.
 
@@ -350,11 +350,11 @@ class CPID(PID):
         """
         if t is None:
             t = time()
-        res = super()(e=self.state.setpoint - i, t=t)
+        res = super().__call__(e=self.state.setpoint - i, t=t)
         self._update_state()
         return res
 
-    def integrate(self, i: float, t=None) -> tuple[float, float, float]:  # pyright:ignore
+    def integrate(self, i: float, t=None) -> tuple[float, float, float]:  # type:ignore[call-non-callable]
         """
         Run a PID step.
 

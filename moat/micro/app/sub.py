@@ -5,7 +5,11 @@ Apps used for structure.
 from __future__ import annotations
 
 from moat.lib.micro import L, log, sleep_ms
-from moat.lib.stream import ProcessDeadError
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.rpc import MsgSender
 
 
 def Dir(*a, **k):
@@ -63,6 +67,7 @@ def Err(*a, **k):
         r: int = None
         t: int = None
         a: bool = None
+        p: MsgSender | None = None
 
         async def handle(self, *a, **k):
             if L:
@@ -80,6 +85,9 @@ def Err(*a, **k):
             self.t = self.cfg.get("timeout", 100)
             self.a = self.cfg.get("always", False)
 
+            p = self.cfg.get("path", None)
+            self.p = self.root.sub_at(p) if p is not None else None
+
         if L:
 
             async def wait_ready(self, wait: bool = True):
@@ -95,23 +103,28 @@ def Err(*a, **k):
             """
             Runs the sub-app and handles restarting and error shielding.
             """
-            log("Fwd Start %s", self.path)
             self._load()
 
             self._wait = self.cfg.get("wait", True)
             while True:
                 try:
-                    log("Fwd Run %s %r", self.path, self)
+                    log("Err Run %s %r", self.path, self)
                     await super().run_app()
-                except (OSError, ProcessDeadError, EOFError) as exc:
-                    log("Fwd Err %s %r", self.path, exc)
+                except Exception as exc:
+                    log("Err Err %s %r", self.path, exc, err=exc)
+                    if self.p is not None:
+                        try:
+                            await self.p(here=self.path, err=exc)
+                        except Exception:
+                            log("Err Report %s %r", self.path, exc, err=exc)
+
                     if not self.r:
                         if self.cfg.get("retry", 0):
                             raise
                         return
                 else:
                     # ends without error
-                    log("Fwd End %s %r", self.path, self.app)
+                    log("Err End %s %r", self.path, self.app)
                     if not self.a or not self.r:
                         return
 
@@ -121,10 +134,6 @@ def Err(*a, **k):
 
                 if self.r > 0:
                     self.r -= 1
-                try:
-                    await sleep_ms(self.t)
-                except BaseException as exc:
-                    log("Fwd ErrX %s %r", self.path, exc)
-                    raise
+                await sleep_ms(self.t)
 
     return _Err(*a, **k)

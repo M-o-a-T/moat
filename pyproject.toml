@@ -273,3 +273,15 @@ exclude = [
     "packaging/**",
     "docs/**",
 ]
+
+[tool.ty.rules]
+ambiguous-protocol-member = "error"
+division-by-zero = "error"
+ignore-comment-unknown-rule = "error"
+invalid-ignore-comment = "error"
+redundant-cast = "error"
+undefined-reveal = "error"
+unresolved-global = "error"
+unsupported-base = "error"
+unused-ignore-comment = "error"
+useless-overload-body = "error"

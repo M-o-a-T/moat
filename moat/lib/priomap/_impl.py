@@ -8,7 +8,9 @@ import anyio
 from time import monotonic as time
 
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+
+Priority = TypeVar("Priority")
 
 if TYPE_CHECKING:
     from abc import abstractmethod
@@ -23,8 +25,6 @@ if TYPE_CHECKING:
         ValuesView,
     )
     from typing import Any, Protocol
-
-    Priority = TypeVar("Priority")
 
     class Comparable(Protocol):
         """Protocol for annotating comparable types."""
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 __all__ = ["PrioMap", "TimerMap"]
 
 
-class PrioMap[Priority](MutableMapping):
+class PrioMap(MutableMapping, Generic[Priority]):
     """
     A heap that behaves like a dict but maintains heap ordering.
 

@@ -46,7 +46,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from collections.abc import Buffer
+    from collections.abc import Buffer  # ty: ignore[unresolved-import]  # Python 3.12+
 
 try:
     from ctypes import GetLastError, WinDLL, WinError, windll  # type: ignore[attr-defined]

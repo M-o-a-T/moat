@@ -32,7 +32,10 @@ from collections.abc import (  # noqa: TC002
     MutableMapping,
     MutableSequence,
 )
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+
+T = TypeVar("T")
+R = TypeVar("R")
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
@@ -123,7 +126,7 @@ def breakpoint():  # noqa:D103,A001
     _breakpoint()
 
 
-def const[T](_x: T) -> T:
+def const(_x: T) -> T:
     "µPython compatibility"
     return _x
 
@@ -209,19 +212,19 @@ async def sleep_ms(ms: float) -> None:
     await sleep(ms / 1000)
 
 
-async def wait_for[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
+async def wait_for(timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
     "timeout if the call to ``p(*a,**k)`` takes longer than @timeout seconds"
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
 
-async def wait_for_ms[R](timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
+async def wait_for_ms(timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -> R:
     "timeout if the call to ``p(*a,**k)`` takes longer than @timeout milliseconds"
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
 
 
-async def every_ms[R](
+async def every_ms(
     t: float, p: Callable[..., Awaitable[R]] | None = None, *a, **k
 ) -> AsyncIterator[R | None]:
     "every t milliseconds, call ``p(*a,**k)``"
@@ -261,7 +264,7 @@ def ticks_diff(a: float, b: float) -> float:
     return a - b
 
 
-def run[R](p: Callable[..., Awaitable[R]], *a, **k) -> R | None:
+def run(p: Callable[..., Awaitable[R]], *a, **k) -> R | None:
     "wrapper for anyio.run"
     return _anyio.run(p, a, k)
 
@@ -342,7 +345,7 @@ def shield() -> _anyio.CancelScope:
     return _anyio.CancelScope(shield=True)
 
 
-class Queue[T](_Queue):
+class Queue(_Queue, Generic[T]):
     """
     compatibility mode: raise `EOFError` and `QueueEmpty`/`QueueFull`
     instead of :py:exc:`anyio.EndOfStream` and :py:exc:`anyio.WouldBlock`
@@ -422,11 +425,11 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
 
 
 @overload
-async def AC_use[T](obj: Any, ctx: AbstractAsyncContextManager[T]) -> T: ...
+async def AC_use(obj: Any, ctx: AbstractAsyncContextManager[T]) -> T: ...
 
 
 @overload
-async def AC_use[T](obj: Any, ctx: AbstractContextManager[T]) -> T: ...
+async def AC_use(obj: Any, ctx: AbstractContextManager[T]) -> T: ...
 
 
 @overload
@@ -474,7 +477,7 @@ def is_async(obj: Any) -> bool:
     return False
 
 
-async def to_thread[R](p: Callable[..., R], *a, **k) -> R:
+async def to_thread(p: Callable[..., R], *a, **k) -> R:
     """run this function in a thread"""
     if k:
         return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)  # type: ignore[attr-defined]

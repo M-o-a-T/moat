@@ -37,9 +37,9 @@ from moat.util import NotGiven
 from moat.lib.proxy import as_proxy
 
 try:
-    from collections.abc import Buffer
+    from collections.abc import Buffer  # ty: ignore[unresolved-import]  # Python 3.12+
 except ImportError:
-    Buffer = bytes | bytearray | memoryview[bytes | bytearray]  # ty:ignore[invalid-assignment]
+    Buffer = bytes | bytearray | memoryview[bytes | bytearray]
 
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload

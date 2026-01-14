@@ -20,7 +20,9 @@ except ImportError:
 from .trace import trace
 
 from collections import deque
-from typing import TYPE_CHECKING, NamedTuple, Self
+from typing import TYPE_CHECKING, NamedTuple, Self, TypeVar
+
+_T = TypeVar("_T")
 
 if TYPE_CHECKING:
     from .types import CharBuffer, CharWidths
@@ -208,12 +210,12 @@ def gen_colors_from_token_stream(
         match token.type:
             case (
                 T.STRING
-                | T.FSTRING_START
-                | T.FSTRING_MIDDLE
-                | T.FSTRING_END
-                | T.TSTRING_START  # type:ignore[unresolved-attribute]
-                | T.TSTRING_MIDDLE  # type:ignore[unresolved-attribute]
-                | T.TSTRING_END  # type:ignore[unresolved-attribute]
+                | T.FSTRING_START  # ty: ignore[unresolved-attribute]  # Python 3.12+
+                | T.FSTRING_MIDDLE  # ty: ignore[unresolved-attribute]  # Python 3.12+
+                | T.FSTRING_END  # ty: ignore[unresolved-attribute]  # Python 3.12+
+                | T.TSTRING_START  # ty: ignore[unresolved-attribute]  # Python 3.14+
+                | T.TSTRING_MIDDLE  # ty: ignore[unresolved-attribute]  # Python 3.14+
+                | T.TSTRING_END  # ty: ignore[unresolved-attribute]  # Python 3.14+
             ):
                 span = Span.from_token(token, line_lengths)
                 yield ColorSpan(span, "string")
@@ -400,7 +402,7 @@ def disp_str(
     return chars, char_widths
 
 
-def prev_next_window[T](iterable: Iterable[T]) -> Iterator[tuple[T | None, ...]]:
+def prev_next_window(iterable: Iterable[_T]) -> Iterator[tuple[_T | None, ...]]:
     """Generates three-tuples of (previous, current, next) items.
 
     On the first iteration previous is None. On the last iteration next

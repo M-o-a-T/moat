@@ -74,10 +74,6 @@ packages = [ "moat",]
 
 [tool.moat]
 
-[tool.ruff]
-preview = true
-line-length = 99
-
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
 addopts = "-x --no-cov"
@@ -121,6 +117,11 @@ doc = [
     "enum_tools[sphinx] >= 0.12.0",
     "prometheus_client",
 ]
+
+[tool.ruff]
+preview = true
+line-length = 99
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -170,6 +171,11 @@ exclude = [
 ]
 explicit-preview-rules = true
 
+[tool.ruff.lint.isort.sections]
+moat = ["moat"]
+upy = ["asyncio","esp","machine","micropython"]
+typing = ["typing","collections"]
+
 [tool.ruff.lint.extend-per-file-ignores]
 "moat/micro/_embed/**" = ["SIM105","B904"]
 "moat/mqtt/**" = ["E501","UP031"]
@@ -199,11 +205,6 @@ section-order = [
 ]
 extra-standard-library = ["anyio","pytest"]
 force-to-top = ["moat.util"]
-
-[tool.ruff.lint.isort.sections]
-moat = ["moat"]
-upy = ["asyncio","esp","machine","micropython"]
-typing = ["typing","collections"]
 
 [tool.coverage.run]
 branch = true
@@ -256,7 +257,7 @@ executionEnvironments = [
 ]
 
 [tool.ty.environment]
-python-version = "3.13"
+python-version = "3.11"
 
 [tool.ty.src]
 include = [

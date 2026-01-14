@@ -32,7 +32,7 @@ import os
 import sys
 import warnings
 from rlcompleter import Completer as RLCompleter
-from site import gethistoryfile
+from site import gethistoryfile  # ty: ignore[unresolved-import]  # Python 3.13+
 
 from attrs import define, field
 

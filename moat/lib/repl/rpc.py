@@ -59,7 +59,7 @@ class MsgTerm(MsgHandler):
                     tg.cancel_scope.cancel()
 
                 async for data in ms:
-                    await self.term.wr(data)  # type: ignore[arg-type]
+                    await self.term.wr(data)
                 tg.cancel_scope.cancel()
             finally:
                 with anyio.move_on_after(1, shield=True):

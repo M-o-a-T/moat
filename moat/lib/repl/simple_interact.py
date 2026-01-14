@@ -156,7 +156,7 @@ async def run_multiline_interactive_console(  # noqa: D103
             input_name = f"<python-input-{input_n}>"
             more = console.push(
                 _strip_final_indent(statement),
-                filename=input_name,
+                filename=input_name,  # ty: ignore[unknown-argument]  # Python 3.13+
                 _symbol="single",  # type: ignore[misc]
             )
             assert not more

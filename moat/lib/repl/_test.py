@@ -11,7 +11,7 @@ from .fancy_termios import TermState
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Buffer
+    from collections.abc import Buffer  # ty: ignore[unresolved-import]  # Python 3.12+
     from collections.abc import Set as AbstractSet
 
 

@@ -33,7 +33,10 @@ from attrs import define, field
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from collections.abc import Buffer, Callable
+    from collections.abc import (  # ty: ignore[unresolved-import]  # Buffer: Python 3.12+
+        Buffer,
+        Callable,
+    )
 
 __all__ = ["Console", "Event", "InteractiveColoredConsole", "Readline"]
 
@@ -167,7 +170,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         *,
         local_exit: bool = False,
     ) -> None:
-        super().__init__(locals=locals, filename=filename, local_exit=local_exit)
+        super().__init__(locals=locals, filename=filename, local_exit=local_exit)  # ty: ignore[unknown-argument]  # Python 3.13+
         self.can_colorize = _colorize.can_colorize()
 
     def showsyntaxerror(self, filename=None, **kwargs):  # noqa: D102
@@ -201,7 +204,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
                 source,
                 filename,
                 "exec",
-                ast.PyCF_ONLY_AST,
+                ast.PyCF_ONLY_AST,  # ty: ignore[too-many-positional-arguments]  # Python 3.13+
                 incomplete_input=False,  # type: ignore[misc]
             )
         except SyntaxError as e:

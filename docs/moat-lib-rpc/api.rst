@@ -8,4 +8,4 @@ API
 
 .. automodule:: moat.lib.rpc.cmd._base
    :members:
-   :no-index:
+   :show-inheritance:

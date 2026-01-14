@@ -34,7 +34,7 @@ from moat.micro.cmd.util.part import enc_part, get_part
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import BaseSuperCmd, RootCmd
+    from moat.lib.rpc import BaseSuperCmd
 
 __all__ = ["BaseCmd", "LoadCmd", "LockBaseCmd", "RootCmd"]
 

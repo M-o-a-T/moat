@@ -5,35 +5,49 @@ This file isn't just for
 ## Issue tracking
 
 - Use 'beads' for tracking.
+  - 'bd list --label foo --ready': list issues
+  - 'bd show ID': examine single issue
+  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'bd dep add ID-task ID-blocker': add relationship
+  - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
+  - 'bd close --reason STRING'
+  - 'bd sync': sync tracker state with git
+
+- Conventions:
+  - labels: we use moat.xx.yy for the subsystem, common, and/or doc
+  - status: open, in\_progress, blocked, deferred, closed
+  - prio: 0…4, 0:highest
+  - type: bug|feature|task|epic|chore
 
 ## Project Structure & Modules
 
 - This is a monorepository. All code lives in `moat/`.
-  - Code is CPython 12+ compatible
+  - Code is CPython 13+ compatible
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
     - This also applies to all code which imports from `moat.lib.micro`
       (but not to moat.lib.micro itself)
-    - Specifically, Python 3.11 syntax must be used in these files.
-  - Each Python package named e.g. `moat.X.Y` has
-    - code in `moat/X/Y/*.py`
+    - Python 3.11 compatible syntax must be used.
+  - Each Python package named e.g. `moat.X.Y` contains
+    - code in `moat/X/Y/**.py`
     - `docs/moat-X-Y` for documentation
     - `packaging/moat-X-Y` for `pyproject.toml` and Debian packaging
     - `tests/moat_X_Y` for testing
-    - possibly `examples/moat-X-Y`
+    - `examples/moat-X-Y`
   - Tests use `pytest`. Required modules are listed in the global
     `pyproject.toml` and are supposed to be installed on the host system.
   - We use semantic versioning for submodules, except for major version zero.
     - Run `./mt src tag -s moat.X.Y -m` to request a new minor version; use
       `-M` for new major versions.
     - Patch versions are allocated automatically when building.
-  - Some code in `moat.lib` is shared between CPython and MicroPython
-    areas, via symlinks.
-    - Shared code must use `moat.lib.compat` to mask implementation
-      differences between them.
-    - Assume that any code that imports `moat.lib.compat` does run on
+  - Shared code between CPython and MicroPython:
+    - Must use `moat.lib.compat` to mask implementation differences.
+    - Assume that any code that imports `moat.lib.compat` must work on
       both.
+    - the MicroPython part of MoaT is in `moat/micro/_embed/lib`. It may
+      use relative symlinks to refer to code in the main area.
 - Build output should be created in, or moved to, the `dist/` folder.
+- `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
 ## Python patterns
 
@@ -46,8 +60,6 @@ This file isn't just for
 - MoaT does its type checking with "ty".
 - Type-checked files need to be typed completely, i.e. all variables,
   arguments and return types.
-- In files that import from moat.lib.micro, use explicit inheritance from
-  `Generic` instead of bracket syntax.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.
@@ -66,18 +78,18 @@ This file isn't just for
 
 - Standard Python, 4-space indents, formatted by `ruff format`.
 - `ruff check` clean. See `pyproject.toml` for global exceptions.
-- while there are pyling comments in the code, we are not using it any more.
-  Ignore them, or remove if you're changing the line anyway.
+- ignore any remaining pylint comments. We are not using it any more.
+  Remove these if you're changing the line anyway.
 - Keep functions reasonably small. Do not repeat yourself.
 - Follow existing practice when naming. Be concise.
-- In legacy code, these guidelines are aspirational:
-  - All code should be pyright clean.
-  - Functions and variables shall be typed concisely.
+- New modules must pass `ty check`.
+- Functions and variables shall be typed concisely.
 
 ## Documentation
 
 - Every module, class, public variable and function must be documented.
-- Docstrings are written in RestructuredText, with Google-style docstrings.
+- Docstrings are written in RestructuredText, with Google-style markup for
+  arguments, return values etc..
 - Types are specified in the function declaration, not in the docstring.
   - Legacy code might use something wildly different. Don't copy legacy
     styles! Always use / convert to Google style and proper object
@@ -124,14 +136,15 @@ Work is NOT complete until `git push` succeeds.
 ### Workflow
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up.
-2. **Run quality gates** (if code changed) - Tests, linters, builds.
+1. **Run quality gates** (if code changed) - Tests, linters, builds.
    "git commit" should do this automatically, via pre-commit.
-3. **Commit all work**. Reference the issue(s) in the first line.
+1. **Commit all work**. Reference the issue(s) in the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
-4. **Update issue status** - Close finished work, update in-progress items.
+1. **Update issue status** - Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
-5. **Push to remote**:
+1. Run `bd sync`.
+1. **Push to remote**:
    ```bash
    git pull
    resolve conflicts, if any
@@ -139,40 +152,13 @@ Work is NOT complete until `git push` succeeds.
    git push
    git status  # MUST show "up to date with 'intern/main'"
    ```
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+1. **Verify** - All changes committed AND pushed
 
 If a git push/pull command fails with a permission error, STOP: the problem is a
 missing SSH key. The user needs to re-add the key before you can continue.
 
 ### Mandatory Rules
 
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-
-## Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push

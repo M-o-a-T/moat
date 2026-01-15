@@ -36,7 +36,7 @@ def Array(*a, **k):
     return _Array(*a, **k)
 
 
-def Err(*a, **k):
+def Err(*a, **k):  # noqa:F811
     """
     An error handler and possibly-retrying subcommand manager.
 
@@ -62,11 +62,8 @@ def Err(*a, **k):
     from moat.lib.rpc import BaseFwdCmd  # noqa: PLC0415
 
     class _Err(BaseFwdCmd):
-        _wait = True
-
-        r: int = None
-        t: int = None
-        a: bool = None
+        retry: int = None
+        timeout: int = None
         p: MsgSender | None = None
 
         async def handle(self, *a, **k):
@@ -81,19 +78,18 @@ def Err(*a, **k):
             await super().reload()
 
         def _load(self):
-            self.r = self.cfg.get("retry", 0)
-            self.t = self.cfg.get("timeout", 100)
-            self.a = self.cfg.get("always", False)
+            self.retry = self.cfg.get("retry", 0)
+            self.timeout = self.cfg.get("timeout", 100)
 
-            p = self.cfg.get("path", None)
-            self.p = self.root.sub_at(p) if p is not None else None
+            p = self.cfg.get("notify", None)
+            self.notify = self.root.sub_at(p) if p is not None else None
 
         if L:
 
             async def wait_ready(self, wait: bool = True):
                 "allow for non-restarted sub-app"
                 while res := await super().wait_ready(wait=wait):
-                    if not self.r:
+                    if not self.retry:
                         return res
                     await sleep_ms(1)
 
@@ -105,35 +101,38 @@ def Err(*a, **k):
             """
             self._load()
 
-            self._wait = self.cfg.get("wait", True)
             while True:
                 try:
                     log("Err Run %s %r", self.path, self)
                     await super().run_app()
                 except Exception as exc:
                     log("Err Err %s %r", self.path, exc, err=exc)
-                    if self.p is not None:
+                    if self.notify is not None:
                         try:
-                            await self.p(here=self.path, err=exc)
+                            await self.notify(here=self.path, err=exc)
                         except Exception:
                             log("Err Report %s %r", self.path, exc, err=exc)
 
-                    if not self.r:
+                    if not self.retry:
                         if self.cfg.get("retry", 0):
                             raise
                         return
                 else:
                     # ends without error
                     log("Err End %s %r", self.path, self.app)
-                    if not self.a or not self.r:
+                    if not self.retry:
                         return
 
-                if self.r:
+                if self.retry:
                     self.app.init_events()
                 # otherwise dead
 
-                if self.r > 0:
-                    self.r -= 1
-                await sleep_ms(self.t)
+                if self.retry > 0:
+                    self.retry -= 1
+                await sleep_ms(self.timeout)
+
+    global Err
+    _Err.__doc__ = Err.__doc__
+    Err = _Err
 
     return _Err(*a, **k)

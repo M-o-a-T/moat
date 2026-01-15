@@ -277,8 +277,6 @@ class RootCmd(Base):
     This class ducktypes `BaseCmd`.
     """
 
-    APP = APP
-
     def __init__(self, cfg, run=False, i=None):
         self._run = run
         self.i = i

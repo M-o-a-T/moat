@@ -129,8 +129,6 @@ class BaseFwdCmd(BaseLayerCmd):
         """
         Create the underlying app object
         """
-        if self.root.APP is None:
-            raise RuntimeError("WhereApp")
         gcfg = self.cfg
         cfg = gcfg.get("cfg", attrdict())
 

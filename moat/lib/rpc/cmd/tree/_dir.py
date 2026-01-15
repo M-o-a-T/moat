@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import NotGiven, attrdict
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
-from moat.lib.rpc import BaseCmd
+from moat.lib.rpc import BaseCmd, APP
 
 # Typing
 
@@ -166,8 +166,6 @@ class DirCmd(BaseSubCmd):
 
     async def task(self):
         "Monitor task for updating"
-        if self.root.APP is None:
-            raise RuntimeError("Root no APP")
         while True:
             await self._setup_apps()
             self._did_update.set()

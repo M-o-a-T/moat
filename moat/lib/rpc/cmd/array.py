@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.util import attrdict, combine_dict, import_
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
-from moat.lib.rpc import MsgSender, ShortCommandError
+from moat.lib.rpc import MsgSender, ShortCommandError, APP
 from moat.micro.cmd.util.part import set_part
 
 from .tree.dir import BaseSuperCmd
@@ -98,7 +98,7 @@ class ArrayCmd(BaseSuperCmd):
 
     async def _setup_apps(self):
         name = self.cfg["cfg"]["app"]
-        cls = import_(f"{self.root.APP}.{name}", 1)
+        cls = import_(f"{APP}.{name}", 1)
 
         self.n = self.cfg["n"]
         for i in range(self.n):

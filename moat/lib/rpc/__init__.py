@@ -33,6 +33,7 @@ _imports = {
     # From cmd.array
     "ArrayCmd": "cmd.array",
     # From cmd._base and cmd.base
+    "APP": "cmd._base",  # not exported/documented
     "BaseCmd": "cmd._base",
     "LoadCmd": "cmd._base",
     "LockBaseCmd": "cmd._base",

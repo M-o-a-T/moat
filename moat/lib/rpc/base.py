@@ -251,7 +251,10 @@ class MsgSender(BaseMsgHandler):
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
         """
-        Returns a SubMsgSender if the path cannot be resolved locally.
+        Resolve the given prefix, as far as possible.
+
+        Returns a Callable, typically a :class:`SubMsgSender` — but
+        possibly a method if the path can be resolved and *cmd* is `True`.
         """
         res = self.root.find_handler(prefix, cmd=cmd)
         if isinstance(res, tuple):
@@ -262,7 +265,7 @@ class MsgSender(BaseMsgHandler):
         return res
 
     def cfg_at(self, p: Path):
-        "returns a CfgStore object at this subpath"
+        "returns a CfgStore object that accesses the config at this subpath"
 
         from moat.lib.rpc import CfgStore  # noqa: PLC0415
 

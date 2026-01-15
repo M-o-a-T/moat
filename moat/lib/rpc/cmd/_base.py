@@ -47,6 +47,11 @@ class BaseCmd(MsgHandler):
     """
 
     root: RootCmd = None
+    real_root: RootCmd
+    # real_root is set when `root` is a non-settable property.
+    # This is used for root hijackers like `log.Cmd` so that they can
+    # capture outgoing requests.
+
     _parent: BaseSuperCmd = None
     _name: str | None = None
     _ts = None
@@ -232,7 +237,10 @@ class BaseCmd(MsgHandler):
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent
         self._name = name
-        self.root = parent.root
+        try:
+            self.root = parent.root
+        except AttributeError:
+            self.real_root = parent.root
 
 
 class LockBaseCmd(BaseCmd):

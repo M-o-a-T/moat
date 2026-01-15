@@ -7,10 +7,17 @@ from __future__ import annotations
 import sys
 
 from moat.lib.micro import Event, L, Queue, log, sleep_ms, wait_for_ms
+from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, NoStream
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
+
+
+@as_proxy("_T_UCr")
+class UserCrash(RuntimeError):
+    pass
+
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg
@@ -85,20 +92,24 @@ class Cmd(BaseCmd):
     doc_error = dict(_d="raise exc", e="exc:raised")
 
     async def cmd_error(self, e: Exception = RuntimeError):
-        "return an exception"
+        "raise an exception"
         if isinstance(e, Exception):
             raise e
         else:
-            raise e("UserCrash")
+            raise UserCrash(e)
 
     doc_crash = dict(_d="cause a crash", e="exc:raised")
 
-    async def cmd_crash(self, e: Exception = RuntimeError, a=("UserCrash",)):
-        "raise an exception"
+    async def cmd_crash(self, e: Exception | type[Exception] = UserCrash, *a):
+        "crash this app"
         if isinstance(e, Exception):
+            assert not a
             self.err = e
+        elif isinstance(e, type):
+            assert issubclass(e, Exception)
+            self.err = e(*a)  # the remote might send a
         else:
-            self.err = e(*a)
+            self.err = UserCrash(e, *a)  # the remote might send a text instead
         self.err_evt.set()
 
     async def setup(self):
@@ -110,6 +121,7 @@ class Cmd(BaseCmd):
         if L:
             self.set_ready()
         await self.err_evt.wait()
+        await sleep_ms(100)
         raise self.err
 
 

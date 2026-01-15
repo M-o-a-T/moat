@@ -228,8 +228,11 @@ class HandlerStream(MsgHandler):
 
     async def msg_in(self, msg: list) -> None:
         """process an incoming message"""
-        i, flag = wire2i_f(msg[0])
-        # flip sign
+        try:
+            i, flag = wire2i_f(msg[0])
+        except TypeError:
+            raise ValueError(f"{msg!r} is {type(msg)}. Codec mismatch?") from None
+        # incoming: flip the sign
         i = -i
 
         if self._logger:

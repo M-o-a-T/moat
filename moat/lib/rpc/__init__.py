@@ -60,6 +60,8 @@ _imports = {
     "StreamLink": "stream",
     "i_f2wire": "stream",
     "wire2i_f": "stream",
+    # From log
+    "Logger": "cmd.log",
 }
 
 
@@ -152,6 +154,8 @@ __all__ = [  # noqa:RUF022
     "StreamLink",
     "i_f2wire",
     "wire2i_f",
+    # From log
+    "Logger",
 ]
 
 if _TC or _DOC:
@@ -168,14 +172,9 @@ if _TC or _DOC:
     from .cmd._base import LockBaseCmd as LockBaseCmd
     from .cmd.array import ArrayCmd as ArrayCmd
     from .cmd.base import RootCmd as RootCmd
-
-    # From cmd.tree.dir
+    from .cmd.log import Logger as Logger
     from .cmd.tree.dir import BaseSubCmd, BaseSuperCmd, CfgStore, SubStore
-
-    # From cmd.tree.layer
     from .cmd.tree.layer import BaseFwdCmd, BaseLayerCmd
-
-    # From cmd.tree.listen
     from .cmd.tree.listen import BaseListenCmd, BaseListenOneCmd
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink

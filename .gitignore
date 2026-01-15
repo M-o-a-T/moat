@@ -78,3 +78,4 @@ __pycache__/
 /tests/mqtt/plugins/test.db
 /OFF/
 .coverage-baseline
+/.beads/

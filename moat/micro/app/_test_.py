@@ -112,12 +112,24 @@ class Cmd(BaseCmd):
             self.err = UserCrash(e, *a)  # the remote might send a text instead
         self.err_evt.set()
 
+    async def stream_run(self, msg: Msg):
+        """
+        Originate a command.
+        """
+        if msg.can_stream:
+            raise NotImplementedError
+        res = await self.root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
+        await msg.result(*res.args, **res.kw)
+
     async def setup(self):
         self.err_evt = Event()
         self.store = []
         await super().setup()
 
     async def task(self):
+        """
+        Idle task, except that it crashes the app 100 ms after *crash* is called.
+        """
         if L:
             self.set_ready()
         await self.err_evt.wait()

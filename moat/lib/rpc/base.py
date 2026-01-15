@@ -385,13 +385,6 @@ class SubMsgSender(MsgSender):
         """
         return SubMsgSender(self.root, self._path + prefix, caller=caller or self.Caller_)
 
-    def cfg_at(self, p: Path):
-        "returns a CfgStore object at this subpath"
-
-        from moat.lib.rpc import CfgStore  # noqa: PLC0415
-
-        return CfgStore(self, p)
-
     def __getattr__(self, x):
         """
         Returns a SubMsgSender for this name

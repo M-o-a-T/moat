@@ -119,7 +119,8 @@ This file isn't just for
 - Include documentation updates with the main commit, i.e. don't commit docs
   separately.
 - DO NOT include agent information, a verbose description of the change,
-  etc., in commit messages.
+  etc., in commit messages. Do not repeat information that's obvious when
+  looking at the diff.
 
 ## Agent‑Specific Notes
 

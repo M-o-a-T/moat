@@ -17,6 +17,7 @@ from .base import Caller as Caller
 from .base import MsgHandler as MsgHandler
 from .base import MsgSender as MsgSender
 from .base import SubMsgSender as SubMsgSender
+from .cmd.base import APP as APP
 from .cmd.base import BaseCmd as BaseCmd
 from .cmd.base import LoadCmd as LoadCmd
 from .cmd.base import LockBaseCmd as LockBaseCmd

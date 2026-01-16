@@ -132,7 +132,10 @@ def Err(*a, **k):  # noqa:F811
                 await sleep_ms(self.timeout)
 
     global Err
-    _Err.__doc__ = Err.__doc__
+    try:
+        _Err.__doc__ = Err.__doc__
+    except AttributeError:  # µPy
+        pass
     Err = _Err
 
     return _Err(*a, **k)

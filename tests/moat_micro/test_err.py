@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import ungroup, attrdict, yload
-from moat.lib.micro import log, sleep_ms
+from moat.util import attrdict, ungroup, yload
+from moat.lib.micro import sleep_ms
 from moat.lib.path import P
 from moat.micro._test import mpy_stack
-from moat.src.test import raises
 from moat.micro.app._test_ import UserCrash
+from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio
 
@@ -47,7 +47,7 @@ cfg:
 #           txt: "MH"
 #         log_raw:
 #           txt: "ML"
-  
+
     link: *link
 #   log:
 #     txt: "TH"
@@ -71,7 +71,7 @@ async def test_crash(tmp_path, remote):
             res = await r.echo(m="hello")
             assert res == dict(r="hello")
             await r.crash()
-            await sleep_ms(TT/2)
+            await sleep_ms(TT / 2)
             res = await r.echo(m="hello")
             ended = True
             await sleep_ms(TT)
@@ -86,8 +86,8 @@ async def test_err(tmp_path, remote):
     "basic error handling test"
     n = 0
     cfg = yload(CFG, attr=True)
-    cfg.cfg.a.timeout=TT*3/2
-    cfg.cfg.r.cfg.app.b.timeout=int(TT*3/2)
+    cfg.cfg.a.timeout = TT * 3 / 2
+    cfg.cfg.r.cfg.app.b.timeout = int(TT * 3 / 2)
     with raises(Exception):
         async with (
             mpy_stack(tmp_path, cfg) as d,
@@ -99,7 +99,6 @@ async def test_err(tmp_path, remote):
                 assert res == dict(r="hello")
                 await r.crash()
 
-                await sleep_ms(TT * 2)
+                await sleep_ms(TT * 4)  # remote can be rather slow
                 n += 1
     assert n == 3
-

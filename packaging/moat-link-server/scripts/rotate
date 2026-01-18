@@ -19,7 +19,7 @@ else
 fi
 
 export PYTHONPATH
-moat -c /etc/moat/moat.cfg link -p /run/moat/link/socket cmd s.log -s path "~$DEST/$D/$x.moat" $i
+moat link -p /run/moat/link/socket cmd s.log -s path "~$DEST/$D/$x.moat" $i
 if test $x -eq 0 ; then
 	# Now, delete some old backups
 	cd "$DEST"

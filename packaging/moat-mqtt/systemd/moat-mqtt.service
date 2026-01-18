@@ -10,7 +10,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/moat -c /etc/moat/moat.cfg mqtt broker
+ExecStart=/usr/bin/moat mqtt broker
 
 User=MoaT-MQTT
 Group=MoaT

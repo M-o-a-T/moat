@@ -3,7 +3,6 @@
 #
 $base:
   - moat/micro/_embed/boards/esp32/tinypico/config.cfg
-  - /etc/moat/moat.cfg
 
 cfg:
   serial:

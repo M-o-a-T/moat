@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import errno
+import sys
 
 from moat.lib.micro import AC_use, log
 from moat.lib.stream import AnyioBuf
@@ -45,6 +46,7 @@ class TcpLink(AnyioBuf):
                         }:
                             raise
                         if n > retry.get("attempts", 10):
+                            print(f"Could not connect to {self.host}:{self.port}", file=sys.stderr)
                             raise TimeoutError from er
                         if n == 0:
                             log("Retrying: %s %d, %r", self.host, self.port, er)

@@ -23,9 +23,11 @@ git checkout v5.5.1
 git submodule update --init --recursive
 ./install.sh esp32s3  # add other chips as documented
 source ./export.sh
+pip install moat
 ```
 
-The last step adds the ESP-IDF environment to your current environment.
+The next-to-last step adds the ESP-IDF environment to your current environment.
+As the ESP environment doesn't include MoaT, the last step adds it.
 
 ## Configuration
 
@@ -43,9 +45,22 @@ a MAC of XX:XX:XX:XX:XX:XX. 🤪 Also, your WLAN is unlikely to be named
 The "board" tag must name a directory in either
 `moat/micro/embed/boards/esp32` or `micropython/ports/esp32/boards`.
 
+The following assumes a shell alias named ``mtc`` because we don't want to
+type the same command all the time:
+
+```shell
+$ mtc() {
+> moat -c ./esp-s3.cfg micro "$@"
+> }
+```
+
 ## Installation
 
-Save the config file, then run `moat -V -c ./esp-s3.cfg micro setup -i -U -s skip -N`.
+Save the config file, put hold the Boot button while you press the Reset
+button, then run `mtc setup -i -U -s skip -N`.
+
+Initially you might want to use more verbosity: replace `mtc` with
+`moat -V -c ./esp-s3.cfg micro`.
 
 - `-V`: more verbosity
 - `-c`: config file
@@ -54,16 +69,21 @@ Save the config file, then run `moat -V -c ./esp-s3.cfg micro setup -i -U -s ski
 - `-s`: the mode to run the MoaT runtime in
 - `-N`: reboot after setting up all of the above
 
-If the installation aborts with a traceback that ends with
+.. note::
+    If the installation halts with
 
-```
-serial.serialutil.SerialException: [Errno 2] could not open port /dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_XXXXXXXXXXXX0000-if00: [Errno 2] No such file or directory: …
-```
+    ```
+    serial.serialutil.SerialException: [Errno 2] could not open port /dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_XXXXXXXXXXXX0000-if00: [Errno 2] No such file or directory: …
+    Waiting ..
+    ```
 
-you seem to have found a problem with `esptool`: sometimes it doesn't
-hard-reset the ESP32-S3 despite being told to do so. If that happens, press
-the Reset button on the board (or disconnect it and then plug it back in),
-then repeat the above command without the `-i` argument.
+    you seem to have found a problem with `esptool`: sometimes it doesn't
+    hard-reset the ESP32-S3 despite being told to do so. If that happens, press
+    the Reset button on the board, or disconnect it and plug it back in.
+
+    The setup command retries 30 times, once per second. If you waited too long
+    and it aborts, repeat the command without the `-i` argument.
+
 
 ## Initial start
 
@@ -76,7 +96,7 @@ USB link down before the debug trace can be retrieved.
 Thus, we start a terminal:
 
 ```
-$ pyserial-miniterm -f direct /dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_9c139eef88a80000-if00
+$ pyserial-miniterm -f direct /dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_XXXXXXXXXXXX0000-if00
 --- Miniterm on /dev/serial/by-id/usb-Espressif_Systems_Espressif_Device_XXXXXXXXXXXX0000-if00  9600,8,N,1 ---
 --- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
 MoaT state: 'skip'
@@ -85,8 +105,8 @@ Type "help()" for more information.
 >>>
 ```
 Looks good. Sometimes the initial text isn't shown, but as long as you get
-a Python prompt when you press the Return key, all is well. If not, maybe
-the board is still in raw mode (press `Ctrl-B`) or confused (reset it).
+a Python prompt when you press the Return key, all is well. You can get the
+version string by doing a soft reset (`Ctrl-D`).
 
 Otherwise, let's go:
 ```
@@ -99,6 +119,11 @@ Setup :
 MoaT is up.
 
 ```
+
+.. note::
+    As you become more comfortable with MoaT, you might want to use the
+    argument ``-s once`` when installing. It allows you to bypass the
+    manual serial login if nothing goes wrong.
 
 You should now be able to ping the board:
 
@@ -113,9 +138,6 @@ PING 192.168.1.42 (192.168.1.42) 56(84) bytes of data.
 So let's talk to it. First we establish a link:
 
 ```shell
-$ mtc() {
-> moat -c ./esp-s3.cfg micro "$@"
-> }
 $ mtc run
 ```
 
@@ -124,11 +146,16 @@ review our board's configuration:
 
 ```shell
 $ moat -c ./esp-s3.cfg util cfg moat.micro.cfg.r -y
-apps:
-  c: cfg.Cmd
-  f: fs.Cmd
-  n: net.tcp.Port
-  s: _sys.Cmd
+app:
+  app: dir
+  c:
+    app: cfg.Cmd
+  f:
+    app: fs.Cmd
+  n:
+    app: net.tcp.Port
+  s:
+    app: _sys.Cmd
 n:
   host: 192.168.1.42
   port: 27589

@@ -50,6 +50,7 @@ TimeoutError = asyncio.TimeoutError  # noqa:A001
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
+ObjSequence = (list, tuple)
 
 
 def breakpoint():  # noqa:A001

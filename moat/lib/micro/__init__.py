@@ -74,6 +74,7 @@ __all__ = [
     "Event",
     "L",
     "Lock",
+    "ObjSequence",
     "Queue",
     "QueueEmpty",
     "QueueFull",
@@ -118,6 +119,7 @@ TimeoutError = TimeoutError  # noqa:PLW0127,A001
 ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 
+ObjSequence = (list, tuple)
 
 _breakpoint = breakpoint
 

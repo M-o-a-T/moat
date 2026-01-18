@@ -13,7 +13,7 @@ from weakref import WeakSet
 
 from moat.util import NotGiven, attrdict, combine_dict, ctx_as, merge, yload
 from moat.lib.micro import ObjSequence
-from moat.lib.path import Path
+from moat.lib.path import P, Path
 
 from ._reg import to_process
 
@@ -164,6 +164,8 @@ class CFG_:
 
         The environment is common to all configuration stores within a program.
         """
+        if isinstance(key, str):
+            key = P(key)
         CfgStore.env.env.set_(key, value)
         CfgStore.updated += 1
 

@@ -4,7 +4,9 @@ import copy
 import pytest
 
 from moat.lib import config
+from moat.lib.path import P
 from moat.lib.config import CFG
+from moat.util import NotGiven
 
 config.TEST = True
 
@@ -28,7 +30,7 @@ def in_test(free_tcp_port_factory):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:
             cfg.link.backend.port = free_tcp_port_factory()
 
-    CFG.env.in_test = fix_for_testing
+    CFG.set_env(P("in_test"),"fix_for_testing")
     try:
         fix_for_testing(CFG)
     except AttributeError:
@@ -37,7 +39,7 @@ def in_test(free_tcp_port_factory):
     try:
         yield
     finally:
-        del CFG.env.in_test
+        CFG.set_env(P("in_test"),NotGiven)
 
 
 @pytest.fixture

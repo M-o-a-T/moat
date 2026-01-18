@@ -119,8 +119,11 @@ class attrdict(dict):
     """
     A dict that can be accessed via attribute syntax.
 
-    This is a very minimal implementation.
+    This is a very minimal implementation. While it does supports an update
+    hook, it doesn't remember having been updated.
     """
+
+    updated_: Callable = lambda x:None
 
     def __getattr__(self, k, d=NotGiven):
         try:
@@ -131,13 +134,13 @@ class attrdict(dict):
             return d
 
     def __setattr__(self, k, v):
-        if k[0] == "_":
+        if k[0] == "_" or k[-1] == "_":
             object.__setattr__(self, k, v)
         else:
             self[k] = v
 
     def __delattr__(self, k):
-        if k[0] == "_":
+        if k[0] == "_" or k[-1] == "_":
             object.__delattr__(self, k)
         else:
             try:

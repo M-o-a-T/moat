@@ -12,16 +12,20 @@ from moat.lib.path import Path
 from . import NotGiven
 from ._merge import merge
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable
     from typing import Any
 
 __all__ = ["attrdict", "combine_dict", "to_attrdict"]
 
 
-def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
+_Nope = object()
+
+
+def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
@@ -37,14 +41,15 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
         cls: a class to instantiate the result with. Default: dict.
              Often used: :class:`attrdict`.
         deep: if set, always copy.
-        replace: whether the first (default, False) or last (True) entry wins
+        keep: whether to *not* delete `NotGiven` inputs.
     """
     res = cls()
     if not d:
         return res
+    if d[0] is NotGiven:
+        return NotGiven if keep else res
 
     keys = {}
-    idx = -1 if replace else 0
     post = False if issubclass(cls, attrdict) else None
 
     if len(d) == 1 and deep and not isinstance(d[0], Mapping):
@@ -58,6 +63,8 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
             post = True
         if kv is None:
             continue
+        if kv is NotGiven:
+            break
         if not isinstance(kv, dict):
             raise TypeError
         for k, v in kv.items():
@@ -68,50 +75,62 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
     for k, v in keys.items():
         for i, vv in enumerate(v):
             if isinstance(vv, Path) and vv.is_relative:
-                v[i] = d[idx].root_.get_(vv)
-        if v[idx] is NotGiven:
-            pass
+                v[i] = d[0].root_.get_(vv)
+        if v[0] is NotGiven:
+            if keep:
+                res[k] = NotGiven
         elif len(v) == 1 and not deep:
             res[k] = v[0]
-        elif not isinstance(v[idx], Mapping):
-            for vv in v[:-1] if replace else v[1:]:
+        elif not isinstance(v[0], Mapping):
+            for vv in v[1:]:
                 assert not isinstance(vv, Mapping)
-            if deep and isinstance(v[idx], (list, tuple)):
-                res[k] = deepcopy(v[idx])
+            if deep and isinstance(v[0], (list, tuple)):
+                res[k] = deepcopy(v[0])
             else:
-                res[k] = v[idx]
+                res[k] = v[0]
         else:
-            res[k] = combine_dict(*v, cls=cls, replace=replace)
+            res[k] = combine_dict(*v, cls=cls, keep=keep)
 
     if post:
-        res.set_post_()
+        try:
+            res.set_post_()
+        except AttributeError:
+            pass
     return res
 
 
 def _check_post(a, b) -> bool:
-    if isinstance(a, str):
-        if a[0] == "$":
-            return True
-    if isinstance(b, Path) and b.is_relative:
+    if getattr(b, "_post", False):
         return True
-    if isinstance(b, list):
+    if isinstance(a, str) and a and a[0] == "$":
+        return True
+    if isinstance(b, Path):
+        return False
+    if isinstance(b, str):
+        return False
+    if isinstance(b, Sequence):
         for x in b:
             if _check_post(None, x):  # don't need the index here
                 return True
-    if getattr(b, "needs_post_", False):
-        return True
     return False
 
 
 class attrdict(dict):
     """
-    A dictionary which can be accessed via attributes, for convenience.
+    A dictionary which can be accessed via attributes.
 
-    This also supports updating path accessors.
+    Attributes with leading or trailing underscores are not stored.
+
+    This class supports
+    - updating via path accessors
+    - recursively tagging updated parents
     """
 
     _post: bool = False
     _super = None
+
+    updated_: Callable = lambda _: None
+    "Callback. Used by moat.lib.config."
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -133,53 +152,76 @@ class attrdict(dict):
             else:
                 s = sp()
 
-    def __getattr__(self, a):
-        if a.startswith("_"):
+    def __getattr__(self, a: str):
+        if a.startswith("_") or a.endswith("_"):
             return object.__getattribute__(self, a)
         try:
             return self[a]
         except KeyError:
             raise AttributeError(a) from None
 
-    def __setitem__(self, a, b):
-        if not self._post and _check_post(a, b):
-            self._post = True
+    def __setitem__(self, a: Hashable, b: Any):
         if isinstance(b, attrdict):
             b._super = ref(self)  # noqa:SLF001
+        if a not in self or _check_post(a, b) or self[a] != b:
+            self._mark_post()
         super().__setitem__(a, b)
 
-        if not self._post:
-            return
-
+    def _mark_post(self):
         s = self
         while True:
-            if not s._super:  # noqa:SLF001
+            if s._post:  # noqa:SLF001
                 return
-            if not (sup := s._super()):  # noqa:SLF001
+            s._post = True  # noqa:SLF001
+            sup = s._super  # noqa:SLF001
+            if not sup:
                 return
-            if sup._post:  # noqa:SLF001
+            sup = sup()
+            if not sup:
                 return
             s = sup
-            s._post = True  # noqa:SLF001
 
-    def __setattr__(self, a, b):
-        if a.startswith("_"):
+    def __setattr__(self, a: str, b: Any):
+        if (a and a.startswith("_")) or a.endswith("_"):
             super().__setattr__(a, b)
         else:
             self[a] = b
 
-    def __delattr__(self, a):
+    def __delattr__(self, a: str):
+        if (a and a.startswith("_")) or a.endswith("_"):
+            super().__delattr__(a)
+        else:
+            try:
+                del self[a]
+            except KeyError:
+                raise AttributeError(a) from None
+
+    def __delitem__(self, a: Hashable):
+        super().__delitem__(a)
+        self._mark_post()
+
+    def pop(self, a: Hashable, default: Any = _Nope):
+        "remove and mark"
         try:
-            del self[a]
+            res = super().pop(a)
         except KeyError:
-            raise AttributeError(a) from None
+            if default is _Nope:
+                raise
+            return default
+        self._mark_post()
+        return res
 
     @property
     def needs_post_(self):
         """
         Returns a flag whether this attrdict requires postprocessing.
+
+        Warning: Reading this attribute auto-clears the flag.
         """
-        return self._post
+        try:
+            return self._post
+        finally:
+            self._post = False
 
     def set_post_(self):
         """
@@ -187,7 +229,7 @@ class attrdict(dict):
         """
         self._post = True
 
-    def get_(self, path, default=NotGiven):
+    def get_(self, path: Path, default=NotGiven):
         """
         Get a node's value and access the dict items beneath it.
         """
@@ -206,7 +248,7 @@ class attrdict(dict):
 
     _get = get_
 
-    def setdefault(self, a, b):
+    def setdefault(self, a: Hashable, b: Any):
         """
         Standard dict setdefault but updates _post
         """
@@ -215,7 +257,9 @@ class attrdict(dict):
         self[a] = b
         return b
 
-    def update(self, a=None, **kw):
+    def update(
+        self, a: Mapping[Hashable, Any] | Sequence[tuple[Hashable, Any]] | None = None, **kw
+    ):
         """
         Standard dict update but updates _post
         """
@@ -230,7 +274,7 @@ class attrdict(dict):
         for k, v in kw.items():
             self[k] = v
 
-    def update_(self, path, value=None):
+    def update_(self, path: Path, value: Any = None):
         """
         Set some sub-item's value, possibly merging dicts.
         Items set to 'NotGiven' are deleted.
@@ -241,7 +285,7 @@ class attrdict(dict):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         val = type(self)()
         val.update(self)
-        if getattr(self, "needs_post_", False):
+        if getattr(self, "_post", False):
             val.set_post_()
 
         if not path:
@@ -263,7 +307,7 @@ class attrdict(dict):
                 w = type(v)()
             except TypeError:
                 if isinstance(v, list) and p is None:
-                    p = len(v)
+                    p = len(v)  # noqa:PLW2901
                     v.append(None)
                     w = attrdict()
                 else:
@@ -271,7 +315,7 @@ class attrdict(dict):
             else:
                 # copy
                 wx = attrdict() if w is None else type(w)(w)
-                if getattr(w, "needs_post_", False):
+                if getattr(w, "_post", False):
                     wx.set_post_()
                 w = wx
             v[p] = w
@@ -301,7 +345,7 @@ class attrdict(dict):
 
     _update = update_
 
-    def set_(self, path: Path, value: Any, apply_notgiven=True) -> attrdict:
+    def set_(self, path: Path, value: Any, apply_notgiven: bool = True) -> attrdict:
         """
         Set some sub-item's value, possibly merging dicts.
         No copying; deleting an entry when the value is NotGiven is optional.
@@ -331,7 +375,7 @@ class attrdict(dict):
                 w = type(v)()
             except TypeError:
                 if isinstance(v, list) and p is None:
-                    p = len(v)
+                    p = len(v)  # noqa:PLW2901
                     v.append(None)
                     w = attrdict()
                 else:
@@ -345,8 +389,11 @@ class attrdict(dict):
             if post and isinstance(v, attrdict):
                 v.set_post_()
 
-        if apply_notgiven and value is NotGiven:
-            v.pop(px, None)
+        if value is NotGiven:
+            if apply_notgiven:
+                v.pop(px, None)
+            else:
+                v[px] = NotGiven
         elif isinstance(v, list):
             if px is None:
                 v.append(value)
@@ -365,7 +412,7 @@ class attrdict(dict):
 
         return self
 
-    def delete_(self, path):
+    def delete_(self, path: Path):
         """
         Remove some sub-item's value, possibly removing now-empty intermediate
         dicts.
@@ -397,7 +444,7 @@ class attrdict(dict):
     _delete = delete_
 
 
-def to_attrdict(d) -> attrdict:
+def to_attrdict(d: dict) -> attrdict:
     """
     Return a hierarchy with all dicts converted to attrdicts.
     """

@@ -67,6 +67,8 @@ def load_yaml(f: FSPath) -> attrdict:
     """
     with f.open("r") as fd:
         res = yload(fd, attr=True)
+    if res is None:
+        return res  # empty file
     if (base := res.pop("$base", None)) is not None:
         get_base(base, res, Path(), f.parent)
     return res
@@ -132,7 +134,7 @@ class CFG_:
         current_cfg.set(cfg)
 
     @staticmethod
-    def with_config(cfg: CfgStore):
+    def with_config_(cfg: CfgStore):
         """
         This context manager switches to a different configuration.
 
@@ -156,7 +158,7 @@ class CFG_:
         delattr(current_cfg.get(), k)
 
     @staticmethod
-    def set_env(key: str | Path, value: Any):
+    def set_env_(key: str | Path, value: Any):
         """
         Update an environment value.
 

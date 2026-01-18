@@ -32,7 +32,7 @@ async def stdtest(**kw):  # noqa:D103
     except AttributeError:
         cf = CfgStore()
         ocfg = cf.result
-    with CFG.with_config(cf):
+    with CFG.with_config_(cf):
         async with _stdtest(ocfg, **kw) as x:
             yield x
 

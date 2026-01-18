@@ -47,13 +47,13 @@ You can use them to replace the `CFG` object's context, e.g. to run two
 programs in one Python interpreter:
 
 ```python
-with CFG.with_config(cfg):
+with CFG.with_config_(cfg):
     ...
     if CFG.database.host == "localhost":
         ...
 
     # globally update the environment subsection
-    CFG.set_env(P("foo.bar"), "baz")
+    CFG.set_env_(P("foo.bar"), "baz")
 
 # Access myotherapp's config data
 assert CFG.env.foo.bar == "baz"
@@ -159,7 +159,7 @@ They are resolved *after* the otherwise-complete configuration is assembled.
 
 1. **Runtime modifications** - Via `mod()` method
 2. **Preloaded config** - Passed to constructor
-3. **Environment** - Via `CFG.set_env`
+3. **Environment** - Via `CFG.set_env_`
 4. **Added files** - Via `add()` method
 5. **Default files** - Standard locations or NAME\_CFG envvar
 6. **Module configs** - From `_cfg.yaml` files

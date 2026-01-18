@@ -23,10 +23,10 @@ async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
     args = ("-c", "/dev/null", *args)
 
-    with CFG.with_config(CfgStore()) as cfg:
+    with CFG.with_config_(CfgStore()) as cfg:
         if do_stdout:
             out = io.StringIO()
-            cfg.mod(P("env.stdout"), out)
+            CFG.set_env_("stdout", out)
         logger.debug(" moat %s", " ".join(shlex.quote(str(x)) for x in args))
         try:
             res = None

@@ -20,7 +20,7 @@ def chkc(a, b, c):
 
 
 def chkcr(a, b, c):
-    r = combine_dict(a, b, replace=True)
+    r = combine_dict(b, a)
     assert r == c
 
 

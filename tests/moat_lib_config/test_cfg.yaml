@@ -1,0 +1,14 @@
+$base:
+  - "./test1_cfg.yaml"
+
+logging: !R _
+env: !R _
+
+data:
+  foo: bar
+  baz: !P :@.data.pull
+mod:
+  override: !R _
+  local:
+    drop:
+      this: "Should be gone."

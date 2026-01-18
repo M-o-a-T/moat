@@ -1,0 +1,6 @@
+base:
+  foo: !P :@.data.foo
+mod:
+  override:
+    drop:
+      this: "Should be gone."

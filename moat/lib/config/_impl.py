@@ -4,6 +4,7 @@ This module imports possibly-partial configuration snippets.
 
 from __future__ import annotations
 
+import anyio
 import os
 from contextvars import ContextVar
 from importlib import import_module
@@ -11,6 +12,7 @@ from pathlib import Path as FSPath
 from weakref import WeakSet
 
 from moat.util import NotGiven, attrdict, combine_dict, ctx_as, merge, yload
+from moat.lib.micro import ObjSequence
 from moat.lib.path import Path
 
 from ._reg import to_process
@@ -25,138 +27,117 @@ __all__ = ["CFG", "CfgStore", "current_cfg"]
 current_cfg = ContextVar("current_cfg", default=None)
 
 
-def get_base(base, root: attrdict, loc: Path) -> attrdict:
+def get_base(base, result: attrdict, loc: Path, here: FSPath):
     """Resolve $base keys."""
-    if isinstance(base, (list, tuple)):
-        cfg = {}
-        for i, v in enumerate(base):
-            c2 = get_base(v, root, loc)
-            if isinstance(c2, Path) and c2.is_relative:
-                cfg = cfg.get_(c2)
-            elif not isinstance(c2, dict):
-                raise ValueError(f"Need a dict at {loc / i}")
-            else:
-                cfg = combine_dict(c2, cfg, cls=attrdict)  # first value wins
-        return cfg
     if isinstance(base, str):
-        with open(base, "r") as cf:
-            res = yload(cf, attr=True)
-            v = res.pop("$base", None)
-            if v is not None:
-                v = get_base(v, root, loc)
-                merge(res, v, replace=False)
-            return res
-    if isinstance(base, dict):
-        res = {}
-        for k, v in base.items():
-            res[k] = get_base(v, root, loc / k)
-    if isinstance(base, Path):
-        if base.is_relative:
-            return base
-        return root.get_(base)
-
-
-def _deref_l(cfg: list | tuple, root: attrdict, loc: Path) -> None:
-    if isinstance(cfg, tuple):
-        cfg = list(cfg)
-    for k, v in enumerate(cfg):
-        if isinstance(v, attrdict):
-            if v.needs_post_:
-                _deref(v, root, loc / k)
-        elif isinstance(v, (list, tuple)):
-            _deref_l(v, root, loc / k)
-
-
-def _deref(cfg: attrdict, root: attrdict, loc: Path) -> None:
-    for k, v in list(cfg.items()):
-        if not isinstance(k, str):
-            pass
-        elif not k or k[0] != "$":
-            pass
-        else:
-            if k == "$root":
-                merge(root, v, replace=True)
-            elif k == "$base":
-                res = get_base(v, root, loc)
-                if isinstance(res, Path) and res.is_relative:
-                    root.set_(loc, root.get_(res))
+        res = load_yaml(here / base)
+        merge(result, res, replace=False)
+    elif isinstance(base, ObjSequence):
+        cfg = attrdict()
+        initial = True
+        masked = []
+        for v in base:
+            if isinstance(v, Path) and not v.is_relative:
+                if initial:
+                    masked.append(v)
                 else:
-                    merge(cfg, res, replace=False)
+                    cfg = cfg.get_(v)
+                continue
+            initial = False
+            c2 = attrdict()
+            get_base(v, c2, loc, here)
+            cfg = combine_dict(cfg, c2, cls=attrdict, keep=True)  # first value wins
+        for v in masked:
+            cfg.delete_(v)
+        merge(result, cfg, replace=False)
+    elif isinstance(base, dict):
+        for k, v in base.items():
+            if k in result:
+                r = result[k]
             else:
-                raise ValueError(f"Unknown: {k}")
-            del cfg[k]
-            continue
-
-    for k, v in list(cfg.items()):
-        if isinstance(v, attrdict):
-            if v.needs_post_:
-                _deref(v, root, loc / k)
-        elif isinstance(v, (list, tuple)):
-            _deref_l(v, root, loc / k)
-        elif isinstance(v, Path) and v.is_relative:
-            cfg[k] = root.get_(v)
+                r = result[k] = attrdict()
+            get_base(v, r, loc / k, here)
+    else:
+        raise ValueError(f"Unknown value in $base.{loc}: {base}")  # noqa:TRY004
 
 
-def deref(cfg: attrdict) -> None:
-    """Merge $X keys"""
-    if cfg.needs_post_:
-        _deref(cfg, cfg, Path())
+def load_yaml(f: FSPath) -> attrdict:
+    """
+    Load a single config file and resolve ``$base``.
+    """
+    with f.open("r") as fd:
+        res = yload(fd, attr=True)
+    if (base := res.pop("$base", None)) is not None:
+        get_base(base, res, Path(), f.parent)
+    return res
 
 
-def default_cfg(name, ext_name="ext", load_all: bool = False):
+def default_cfg(name: str | None = None, load_all: bool | None = False):
     """
     Read a YAML config file, either from the specified path
     or from a couple of default paths.
     """
     cfg: attrdict = attrdict()
+    if name is None or load_all is None:
+        return cfg
+    cf = cfg.env = attrdict(load_all=load_all)
+    seen = False
 
     def _cfg(path):
-        nonlocal cfg
-        if cfg:
-            return
-        if path is False:
+        nonlocal seen
+        if seen and not cf.load_all:
             return
         if os.path.exists(path):
             try:
-                with open(path) as cf:
-                    cfg2 = yload(cf, attr=True)
+                cfg2 = load_yaml(path)
             except PermissionError:
                 pass
             else:
-                if load_all:
-                    merge(cfg, cfg2, replace=True)
-                else:
-                    cfg = cfg2
+                merge(cfg, cfg2, replace=False)
 
     if _config.TEST:
-        _cfg(f"tests/cfg/{name}.cfg")
-        _cfg(f"tests/cfg/{name}_add.cfg")
+        _cfg(f"tests/cfg/{name}.yaml")
+        _cfg(f"tests/cfg/{name}_add.yaml")
     else:
-        _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
-        _cfg(os.path.expanduser(f"~/.{name}.cfg"))
-        _cfg(f"/etc/{name}/{name}.cfg")
-        _cfg(f"/etc/{name}.cfg")
+        cfd = os.environ.get("XDG_CONFIG_HOME", None) or os.path.expanduser("~/.config")
+        _cfg(f"{cfd}/{name}/config.yaml")
+        _cfg(f"{cfd}/{name}.yaml")
+        _cfg(os.path.expanduser(f"~/.{name}.yaml"))
 
-    return undo_ext(cfg, name, ext_name)
+        cfds = os.environ.get("MOAT_CONFIG_DIRS", "/etc")
+        for cf in cfds.split(":"):
+            _cfg(f"{cf}/{name}/{name}.yaml")
+            _cfg(f"{cf}/{name}.yaml")
+
+    return cfg
 
 
-def undo_ext(cfg: dict, name: str, ext_name: str):
-    "foo=one ext=bar=two => moat=foo=one bar=two"
-    if cfg is None:
-        return attrdict()
-    ext = cfg.pop(ext_name, attrdict())
+def undo_ext(cfg: dict, name: str | None):
+    "foo=one $root=bar=two => NAME=foo=one bar=two"
+    if name is None:
+        return cfg
+    ext = cfg.pop("$root", attrdict())
     ext[name] = cfg
     return ext
 
 
-class _CFG:
+class CFG_:
+    """
+    This is the singleton that refers to the current configuration.
+    """
+
     def set_real_cfg(self, cfg: CfgStore):
         if current_cfg.get() is not None:
             raise RuntimeError("Config already set")
         current_cfg.set(cfg)
 
     @staticmethod
-    def with_config(cfg):
+    def with_config(cfg: CfgStore):
+        """
+        This context manager switches to a different configuration.
+
+        The new config is separate, *not* a superset of existing data.
+        """
         return ctx_as(current_cfg, cfg)
 
     def __getattr__(self, k):
@@ -174,12 +155,31 @@ class _CFG:
             return object.__delattr__(self, k)
         delattr(current_cfg.get(), k)
 
-    @property
-    def env(self):
-        return CfgStore.env.env
+    @staticmethod
+    def set_env(key: str | Path, value: Any):
+        """
+        Update an environment value.
+
+        The environment is common to all configuration stores within a program.
+        """
+        CfgStore.env.env.set_(key, value)
+        CfgStore.updated += 1
+
+    @staticmethod
+    def __call__(*a, **k) -> CfgStore:
+        """
+        Initial setup; see `CfgStore` for arguments.
+
+        Call this early in your program.
+        """
+        if current_cfg.get() is not None:
+            raise RuntimeError("Config was already set up")
+        cfg = CfgStore(*a, **k)
+        current_cfg.set(cfg)
+        return cfg
 
 
-CFG = _CFG()
+CFG = CFG_()
 
 
 class CfgStore:
@@ -200,8 +200,16 @@ class CfgStore:
         preload:
             Anything you'd like to add programmatically.
         load_all:
-            Flag whether to load all default config file(s): True=yes,
-            False=first found, None:skip.
+            Flag whether to load default config file(s): True=load all,
+            False=stop after first found, None=skip entirely.
+
+    Precendence (first option wins):
+    - Command line arguments
+    - *preload* argument to this class
+    - environment (TODO)
+    - explicit config file(s)
+    - default config file(s)
+    - default data from (loaded) modules
     """
 
     static: ClassVar[attrdict] = attrdict()
@@ -245,23 +253,16 @@ class CfgStore:
         preload: attrdict | None = None,
         load_all: bool | None = False,
         ext: str | None = None,
+        here: FSPath = FSPath("."),
     ):
         self.name = name
         self.ext_name = ext or "ext"
         self.load_all = load_all
         self.cfg = []
         self.args = []
+        self.here = here
 
         self.known.add(self)
-
-        if load_all is None or not name:
-            self.config = attrdict()
-        elif (cf := os.environ.get(f"{self.name.upper()}_CFG", None)) is not None:
-            with open(cf, "r") as cff:
-                self.config = undo_ext(yload(cff, attr=True), self.name, self.ext_name)
-        else:
-            self.config = default_cfg(self.name, self.ext_name, load_all=load_all)
-
         self.preload = preload or attrdict()
 
         self._result = attrdict()
@@ -273,12 +274,12 @@ class CfgStore:
         self.maybe_redo()
         return self._result
 
-    def add(self, path: str) -> None:
+    def add(self, path: str | FSPath) -> None:
         """
         Add a config file.
         """
-        with open(path) as cff:
-            cfg = undo_ext(yload(cff, attr=True), self.name, self.ext_name)
+        src = self.here / path
+        cfg = load_yaml(src)
 
         self.cfg.append((path, cfg))
         self._redo = True
@@ -301,33 +302,54 @@ class CfgStore:
 
     def maybe_redo(self) -> None:
         "Rebuild the config if necessary"
-        # Process any pending registrations
-        while to_process:
-            name = to_process.pop()
-            self.with_(name)
-
-        if self.updated > self._updated:
+        if self._redo:
+            pass
+        elif to_process:
+            self._redo = True
+        elif self.updated > self._updated:
             self._redo = True
 
         if self._redo:
             self.redo()
 
+    def get_config(self, load_all: bool | None = None):
+        if self.name is None and (cf := os.environ.get("CFG", None)) is not None:
+            return load_yaml(cf)
+        if load_all is None or not self.name:
+            return attrdict()
+        if (cf := os.environ.get(f"{self.name.upper()}_CFG", None)) is not None:
+            return load_yaml(cf)
+        return default_cfg(self.name, load_all=load_all)
+
     def redo(self):
         "Rebuild the config unconditionally"
         self._redo = False
+
+        # Add any pending registrations
+        # (both to_process and with_ are global)
+        while to_process:
+            name = to_process.pop()
+            self.with_(name)
+
+        lcfg = combine_dict(
+            self.preload, self.env, *(x[1] for x in self.cfg), cls=attrdict, keep=True
+        )
+        try:
+            load_all = lcfg.env.load_all
+        except AttributeError:
+            load_all = self.load_all
         res = combine_dict(
+            lcfg,
+            self.get_config(load_all),
             self.static,
-            self.config,
-            *(x[1] for x in self.cfg),
-            self.env,
-            self.preload,
-            replace=True,
             cls=attrdict,
+            keep=True,
         )
         for p, v in self.args:
-            res.set_(p, v)
-        deref(res)
+            res.set_(p, v, apply_notgiven=False)
+        res = self.deref(res, self.here)
         merge(self._result, res)
+        self.notify()
 
     @classmethod
     def with_(cls, path: str | Path) -> None:
@@ -348,19 +370,19 @@ class CfgStore:
             for d in p:
                 fn = FSPath(d) / "_cfg.yaml"
                 if fn.is_file():
-                    merge(cfg, yload(fn, attr=True), replace=True)
+                    merge(cfg, load_yaml(fn), replace=True)
 
         cc = cls.static
         for n in range(len(path)):
             cc = cc.setdefault(path[n], attrdict())
-            if "_def" in cc:
+            if hasattr(cc, "cfg_load_"):
                 continue
             _load(cc, ".".join(path[: n + 1]))
-            cc["_def"] = True
+            cc.cfg_load_ = True
+            rt = cc.pop("$root", None)
+            if rt is not None:
+                merge(cls.static, rt, replace=True)
             cls.updated += 1
-
-        for cfg in cls.known:
-            cfg.maybe_redo()
 
     def __getattr__(self, key):
         if key.startswith("_"):
@@ -392,5 +414,115 @@ class CfgStore:
         self.args.append((key, NotGiven))
         self._redo = True
 
+    def _deref_l(self, cfg: list | tuple, loc: Path, here: FSPath) -> None:
+        if isinstance(cfg, tuple):
+            cfg = list(cfg)
+        for k, v in enumerate(cfg):
+            if isinstance(v, attrdict):
+                self._deref(v, loc / k, here)
+            elif isinstance(v, (list, tuple)):
+                self._deref_l(v, loc / k, here)
 
+    def _deref(self, cfg: attrdict, loc: Path, here: FSPath) -> None:
+        def get_(pos):
+            r = self._root
+            for k in pos:
+                r = r[k]
+                if isinstance(r, Path) and r.is_relative:
+                    r = get_(r)
+            return r
+
+        for k in cfg.keys():
+            if not isinstance(k, str):
+                continue
+            if not k or k[0] != "$":
+                continue
+            raise ValueError(f"Unknown: {k}")
+
+        for k, v in list(cfg.items()):
+            if isinstance(v, attrdict):
+                self._deref(v, loc / k, here)
+            elif isinstance(v, (list, tuple)):
+                self._deref_l(v, loc / k, here)
+            elif isinstance(v, Path) and v.is_relative:
+                cfg[k] = get_(v)
+
+        cfg.updated_()
+
+    def deref(self, cfg: attrdict, here: FSPath) -> None:
+        """Resolve relative paths"""
+        self._root = cfg
+        self._deref(cfg, Path(), here)
+        return cfg
+
+    @classmethod
+    def _notify_l(cls, cfg: list | tuple) -> None:
+        for v in cfg:
+            if isinstance(v, attrdict):
+                if v.needs_post_:
+                    cls._notify(v)
+            elif isinstance(v, ObjSequence):
+                cls._notify_l(v)
+
+    @classmethod
+    def _notify(cls, cfg: attrdict) -> None:
+        for v in cfg.values():
+            if isinstance(v, attrdict):
+                if v.needs_post_:
+                    cls._notify(v)
+            elif isinstance(v, (list, tuple)):
+                cls._notify_l(v)
+
+        cfg.updated_()
+
+    def notify(self) -> None:
+        """Resolve relative paths"""
+        cfg = self._result
+        if cfg.needs_post_:
+            self._notify(cfg)
+        return cfg
+
+
+class monitor:
+    """
+    Watch a config (sub)entry for changes.
+
+    Usage::
+
+        with monitor(self.cfg) as mon:
+            async for _ in mon:
+                self.update_config()
+    """
+
+    def __init__(self, cfg: attrdict, delay: float = 0.25):
+        self.cfg = cfg
+        self.delay = delay
+        self.sig = anyio.Event()
+
+    def trigger(self):
+        self.sig.set()
+
+    def __enter__(self):
+        self.cfg.updated_ = self.trigger
+        return self
+
+    def __exit__(self, *tb):
+        del self.cfg.updated_
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await self.sig.wait()
+        self.sig = anyio.Event()
+        while True:
+            with anyio.move_on_after(self.delay):
+                await self.sig.wait()
+                self.sig = anyio.Event()
+                continue
+            break
+        return self.cfg
+
+
+# Access `moat.lib.config.TEST` dynamically
 import moat.lib.config as _config  # noqa:E402

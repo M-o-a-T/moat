@@ -5,8 +5,10 @@ Serial ports on Unix
 from __future__ import annotations
 
 import anyio
+import sys
 
 from anyio_serial import Serial as _Serial
+from serial import SerialException
 
 from moat.util import attrdict
 from moat.lib.micro import AC_use, log
@@ -71,7 +73,32 @@ class NamedSerial(AnyioBuf):
         delay = p.get("delay", 0)
         delay_flip = p.get("delay_flip", 0.2)
 
-        ser = await AC_use(self, _Serial(**uart_cfg))
+        try:
+            ser = await AC_use(self, _Serial(**uart_cfg))
+        except SerialException as exc:
+            print(
+                f"""
+*** Serial port not available ***
+Port: {uart_cfg.port}
+Error: {exc}"
+
+Waiting """,
+                end="",
+                file=sys.stderr,
+            )
+            for _ in range(30):
+                await anyio.sleep(1)
+                try:
+                    ser = await AC_use(self, _Serial(**uart_cfg))
+                except SerialException:
+                    print(".", end="", file=sys.stderr)
+                    pass
+                else:
+                    print(" OK.")
+                    break
+            else:
+                raise
+
         await anyio.sleep(delay)
         if rts_flip or dtr_flip:
             if dtr_rts >= 0:

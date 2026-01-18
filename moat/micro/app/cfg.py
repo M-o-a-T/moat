@@ -105,6 +105,8 @@ class Cmd(BaseCmd):
                     raise
                 cur.append(d)
 
+        self.root.cfg_updated(cur)
+
     doc_x = dict(_d="activate new config")
 
     async def cmd_x(self):

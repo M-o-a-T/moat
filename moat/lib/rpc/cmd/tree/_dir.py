@@ -5,8 +5,8 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 from moat.util import NotGiven, attrdict
-from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log
-from moat.lib.rpc import BaseCmd, APP
+from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log, wait_for_ms
+from moat.lib.rpc import BaseCmd
 
 # Typing
 
@@ -117,6 +117,8 @@ class BaseSubCmd(BaseSuperCmd):
 
     async def reload(self):
         "reload apps"
+        self.root.cfg_reloaded(self.cfg)
+
         await super().reload()
         for app in list(self.sub.values()):
             await app.reload()
@@ -164,15 +166,30 @@ class DirCmd(BaseSubCmd):
         self._did_update = Event()
         self._updated = Event()
 
+    def _updated(self):
+        self._did_update.set()
+
     async def task(self):
         "Monitor task for updating"
-        while True:
-            await self._setup_apps()
-            self._did_update.set()
-            self._did_update = Event()
+        self.cfg.updated_ = self._updated()
+        try:
+            while True:
+                await self._setup_apps()
+                self._did_update.set()
+                self._did_update = Event()
 
-            await self._updated.wait()
-            self._updated = Event()
+                await self._updated.wait()
+                self._updated = Event()
+                while True:
+                    try:
+                        await wait_for_ms(250, self._updated.wait)
+                    except TimeoutError:
+                        break
+                    else:
+                        self._updated = Event()
+                        continue
+        finally:
+            del self.cfg.updated_
 
     async def reload(self):
         "called after the config has been updated"
@@ -187,6 +204,8 @@ class DirCmd(BaseSubCmd):
 
         log("Setup %s: %s", self, self.path)
         gcfg = self.cfg
+        self.root.cfg_reloaded(gcfg)
+
         apps = {}
         for k, v in gcfg.items():
             try:

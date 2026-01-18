@@ -294,6 +294,7 @@ class RootCmd(Base):
             cfg = cfg["app"]
         self.app = LoadCmd(cfg)
         self.app.attached(self, None)
+        self._updates = {}
 
     async def setup(self):
         await super().setup()
@@ -345,3 +346,20 @@ class RootCmd(Base):
     def cfg_at(self):
         "config subcommand resolver"
         return self._sender.cfg_at
+
+    async def reload(self):
+        "Reload me."
+        await super().reload()
+        await self.app.reload()
+
+        upd, self._updates = self._updates, None
+        for v in upd.values():
+            v.updated_()
+
+    def cfg_updated(self, cfg):
+        "Mark TODO for update"
+        self._updates[id(cfg)] = cfg
+
+    def cfg_reloaded(self, cfg):
+        "Remove TODO for update"
+        self._updates.pop(id(cfg), None)

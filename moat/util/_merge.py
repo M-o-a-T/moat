@@ -5,27 +5,23 @@ from __future__ import annotations
 __all__ = ["merge"]
 
 
+from copy import deepcopy
+
 from . import NotGiven
 
-
-def _chk_post(v) -> bool:
-    if isinstance(v, list):
-        return any(_chk_post(x) for x in v)
-    else:
-        return getattr(v, "needs_post_", False)
+from collections.abc import Mapping, MutableMapping, MutableSequence, Sequence
+from typing import TypeVar
 
 
-def _merge_dict(d, other, drop=False, replace=True):
+def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
     for key, value in list(other.items()):
         if value is NotGiven:
             d.pop(key, None)
             continue
         if key in d:
-            d[key] = val = _merge_one(d[key], value, drop=drop, replace=replace)
+            d[key] = _merge_one(d[key], value, drop=drop, replace=replace)
         else:
-            d[key] = val = value
-        if not getattr(d, "needs_post_", True) and isinstance(val, list) and _chk_post(val):
-            d.set_post_()
+            d[key] = deepcopy(value)
 
     if drop:
         keys = []
@@ -36,7 +32,7 @@ def _merge_dict(d, other, drop=False, replace=True):
             del d[k]
 
 
-def _merge_list(item, value, drop=False, replace=True):
+def _merge_list(item: MutableSequence, value: Sequence | Mapping, drop=False, replace=True):
     off = 0
     if isinstance(value, (list, tuple)):
         # two lists
@@ -53,7 +49,7 @@ def _merge_list(item, value, drop=False, replace=True):
             if val is NotGiven:
                 off += 1
             else:
-                item.append(val)
+                item.append(deepcopy(val))
 
         if drop:
             while len(item) + off > len(value):
@@ -78,26 +74,29 @@ def _merge_list(item, value, drop=False, replace=True):
                 item.append(val)
 
 
-def _merge_one(d, other, drop=False, replace=True):
-    if isinstance(d, dict):
-        if isinstance(other, dict):
+def _merge_one(d: MutableMapping | MutableSequence, other, drop=False, replace=True):
+    if isinstance(d, MutableMapping):
+        if isinstance(other, Mapping):
             _merge_dict(d, other, drop=drop, replace=replace)
         else:
-            return other if replace else d
-    elif isinstance(d, list):
-        if isinstance(other, (dict, list, tuple)):
+            return deepcopy(other if replace else d)
+    elif isinstance(d, MutableSequence):
+        if isinstance(other, (Mapping, Sequence)):
             _merge_list(d, other, drop=drop, replace=replace)
         else:
-            return other if replace else d
+            return deepcopy(other if replace else d)
     else:
         if replace:
-            return d if other is None else other
+            return deepcopy(d if other is None else other)
         else:
-            return other if d is None else d
+            return deepcopy(other if d is None else d)
     return d
 
 
-def merge(d, *others, drop=False, replace=True):
+_T = TypeVar("_T", bound=MutableSequence | MutableMapping)
+
+
+def merge(d: _T, *others: Sequence | Mapping, drop=False, replace=True) -> _T:
     """
     Deep-merge a "source" and one or more "replacement" data structures.
 

@@ -751,7 +751,7 @@ def wrap_main(
     ext_pre=None,
     ext_post=None,
     ext_name: str | None = None,
-    cfg: attrdict | None | Literal[False] = None,
+    cfg: CfgStore | attrdict | None | Literal[False] = None,
     cfg_files: str | Sequence[str] = (),
     cfg_load_all: bool | None = True,
     args=None,
@@ -844,8 +844,7 @@ def wrap_main(
     obj._util_ext_post = ext_post  # pylint: disable=protected-access
 
     if not isinstance(cfg, CfgStore):
-        cfg = CfgStore(name, preload=cfg, load_all=cfg_load_all, ext=ext_name)
-        CFG.set_real_cfg(cfg)
+        cfg = CFG(name, preload=cfg, load_all=cfg_load_all, ext=ext_name)
 
     if isinstance(cfg_files, str):
         cfg_files = (cfg_files,)

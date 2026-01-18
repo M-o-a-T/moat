@@ -43,7 +43,6 @@ from moat.util import (
     attrdict,
     byte2num,
     combine_dict,
-    drop_dict,
     gen_ssl,
     num2byte,
     run_tcp_server,
@@ -447,7 +446,6 @@ class SCmd_auth_set(StreamCommand):
         data = auth.follow(Path(msg.typ, kind, msg.ident), create=True)
         user = cls.load(data)
         val = user.save()
-        val = drop_dict(val, msg.pop("drop", ()))
         val = combine_dict(msg, val)
 
         user = await cls.recv(self, val)

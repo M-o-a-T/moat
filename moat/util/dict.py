@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-__all__ = ["attrdict", "combine_dict", "drop_dict", "to_attrdict"]
+__all__ = ["attrdict", "combine_dict", "to_attrdict"]
 
 
 def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
@@ -86,29 +86,6 @@ def combine_dict(*d, cls=dict, deep=False, replace: bool = False) -> dict:
     if post:
         res.set_post_()
     return res
-
-
-def drop_dict(data: Mapping, drop: tuple[str | tuple[str]]) -> Mapping:
-    """
-    Helper to remove some entries from a mapping hierarchy
-
-    Returns a new mapping. The original is not changed.
-    """
-    data = data.copy()
-    if getattr(data, "needs_post_", False):
-        data.set_post_()
-    for d in drop:
-        # ruff:noqa:PLW2901 # var overwritten
-        vv = data
-        if isinstance(d, (tuple, list)):
-            for dd in d[:-1]:
-                vn = vv[dd].copy()
-                if getattr(vv[dd], "needs_post_", False):
-                    vn.set_post_()
-                vv = vv[dd] = vn
-            d = d[-1]
-        del vv[d]
-    return data
 
 
 def _check_post(a, b) -> bool:

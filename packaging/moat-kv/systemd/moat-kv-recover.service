@@ -3,7 +3,7 @@ Description=MoaT-KV state recovery
 Conflicts=moat-kv.service
 Conflicts=distkv.service
 
-AssertFileNotEmpty=/etc/moat/moat.cfg
+AssertFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]
 

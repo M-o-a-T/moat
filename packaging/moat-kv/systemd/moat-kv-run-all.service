@@ -4,7 +4,7 @@ After=moat-kv.service
 Requires=moat-kv.service
 Conflicts=distkv-run-all.service
 
-ConditionFileNotEmpty=/etc/moat/moat.cfg
+ConditionFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]
 WantedBy=multi-user.target

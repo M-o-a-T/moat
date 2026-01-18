@@ -3,7 +3,7 @@ Description=MoaT-MQTT broker
 After=moat-kv.service
 Wants=moat-kv.service
 
-ConditionFileNotEmpty=/etc/moat/moat.cfg
+ConditionFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]
 WantedBy=multi-user.target

@@ -2,7 +2,7 @@
 Description=MoaT modbus poll service
 After=mosquitto.service
 
-ConditionFileNotEmpty=/etc/moat.cfg
+ConditionFileNotEmpty=/etc/moat/moat.yaml
 ConditionFileNotEmpty=/etc/moat/modbus/%I.yaml
 
 [Install]

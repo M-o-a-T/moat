@@ -6,7 +6,7 @@ Conflicts=moat-kv-recover.service
 Conflicts=distkv.service
 OnFailure=moat-kv-recover.service
 
-ConditionFileNotEmpty=/etc/moat/moat.cfg
+ConditionFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]
 WantedBy=multi-user.target

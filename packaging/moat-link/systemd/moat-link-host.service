@@ -1,7 +1,7 @@
 [Unit]
 Description=MoaT-Link host service
 
-ConditionFileNotEmpty=/etc/moat/moat.cfg
+ConditionFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]
 WantedBy=multi-user.target

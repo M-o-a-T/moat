@@ -135,6 +135,11 @@ $base:
 Thus `foo.bar` in the old `moat.cfg` file is now accessible as
 `moat.foo.bar`, while the `logging` part stays at the top level.
 
+:::{note}
+Relative paths inside a `$base` section are resolved from the top
+level of *this file*.
+:::
+
 
 ### Path References
 

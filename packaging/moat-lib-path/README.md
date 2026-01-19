@@ -6,25 +6,16 @@
 MoaT Paths are immutable sequences that can be represented as dot-separated or
 slash-separated strings, with special encoding for various data types.
 
-MoaT paths are typically entered and displayed as simple strings with dots
-as separators and colon as "special" markers. For example, `ext:1.set` is a
-three-element path consisting of two strings with an integer in between.
+MoaT paths are typically entered and displayed with dots as separators and
+colon as "special" markers. For example, `ext:1.set` is a three-element
+path consisting of two strings with an integer in between.
 
-There's also a secondary representation that uses slashes (`ext/:1/set`)
+There's a secondary representation that uses slashes (`ext/:1/set`)
 for interfacing with the file system or MQTT.
 
-See `pydoc moat.util.path.Path` for details.
-Features:
+See `pydoc moat.lib.path.Path` for details.
 
-- Immutable path objects with efficient operations
-- Dot/colon-notation and slash-notation representations
-- Rich type support (strings, numbers, booleans, bytes, and tuples)
-- No forbidden characters (e.g. slashes, null bytes) in path elements
-- Path shortening/lengthening for efficient transmission
-- Context-aware root path substitution
-- Integration with YAML, CBOR, and msgpack serialization
-
-MoaT uses `Path` objects mainly as hierarchical object and data accessors.
+The MoaT ecosystem uses `Path` objects as hierarchical accessors for objects and data.
 
 % end synopsis
 

@@ -123,23 +123,23 @@ class Path(Sequence[PathElem]):
         :iXY evaluate XY as a Python expression.
              The 'i' may be missing if XY does not start with a letter.
 
-    Meta elements (must be in front, always followed by dot or colon)::
+    Meta elements (must be in front, followed by a dot or colon)::
 
         :mXX This path is marked with XX (deprecated)
         :R   An alias for the current root
         :Q   An alias for an alternate root
         :P   An alias for another alternate root
         :S   An alias for yet another alternate root
-        :@   Marks this path as relative to the current location
+        :@   Marks this path as relative
 
     The empty path is denoted by a single colon. A path that starts or ends
     with a dot, or that contains empty elements (two non-escaped dots, one
     dot followed by a colon) is illegal.
 
     The alternate slash-path representation uses slashes as separators.
-    **Path marks are ignored** when generating the slashed representation.
+    **Marks are ignored** when generating the slashed representation.
 
-    Paths can be concatenated with ``+`` or ``|`` (any sequence will work).
+    Paths can be concatenated with ``+`` or ``|``.
     Single elements can be appended with ``/.``
     ``% n`` removes n items from the end.
 
@@ -147,14 +147,13 @@ class Path(Sequence[PathElem]):
 
     The Root paths are context variables. If they are set and an "incoming"
     path has one of them as prefix, said prefix is replaced with a placeholder
-    for this root. It is expanded in "slashed" form but not as native
-    representation. That way, specific paths are encoded in a root-free
-    form. Thus, if you rename the root or move data from one MoaT-Link
-    setup to another, everything still works.
+    for this root. The placeholder is expanded in "slashed" form but not as native
+    representation. form. Thus, if you rename the root or move data from
+    one MoaT-Link setup to another, everything still works.
 
     Matching a path works:
 
-    >>> p=Path("a","b","c")
+    >>> p=Path.build(("a","b","c"))
     ... match p:
     ...     case Path((x,y,"c")):
     ...         print("Yes")

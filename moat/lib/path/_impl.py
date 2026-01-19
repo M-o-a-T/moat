@@ -25,7 +25,15 @@ from __future__ import annotations
 
 import ast
 import logging
-import re
+
+try:
+    import regex as re
+
+    usplit = re.compile(r"(\p{gc=C}|(?! )\p{gc=Z})").split
+except ImportError:
+    import re
+
+    usplit = lambda _x: (_x,)  # noqa:E731
 import warnings
 from base64 import b64decode, b64encode
 from contextvars import ContextVar
@@ -86,15 +94,17 @@ class Path(Sequence[PathElem]):
 
     Inline (within an element)::
 
-        ::  escapes : colon
-        :.  escapes . dot   (dot-path only)
-        :_  escapes   space (dot-path only)
-        :=  escapes + plus  (dot-path parsing only)
-        :|  escapes / slash (slash-path only)
-        :h  escapes # hash  (slash-path only, optional)
-        :p  escapes + plus  (slash-path only, optional)
-        :%  escapes \\ backslash (parsing only)
-        :!  escapes | pipe/bar (parsing only)
+        ::    escapes : colon
+        :.    escapes . dot   (dot-path only)
+        :_    escapes   space (dot-path only)
+        :=    escapes + plus  (dot-path parsing only)
+        :|    escapes / slash (slash-path only)
+        :h    escapes # hash  (slash-path only, optional)
+        :p    escapes + plus  (slash-path only, optional)
+        :%    escapes \\ backslash (parsing only)
+        :!    escapes | pipe/bar (parsing only)
+        :uN_  escapes unicode symbol N (decimal)
+        :uxN_ same, hex; the _ may be omitted if unambiguous
 
     As separator (starts a new element)::
 
@@ -337,7 +347,17 @@ class Path(Sequence[PathElem]):
                 x = x.replace("+", ":p")
             if spaces:
                 x = x.replace(" ", ":_")
-            return x
+            res = []
+            spl = iter(usplit(x))
+            try:
+                while True:
+                    if res:
+                        res.append("_")
+                    res.append(next(spl))
+                    res.append(f":u{ord(next(spl))}")
+            except StopIteration:
+                pass
+            return "".join(res)
 
         res = []
         if self.mark and not slash:
@@ -642,6 +662,7 @@ class Path(Sequence[PathElem]):
 
         if path == "":
             raise SyntaxError("The empty string is not a path")
+
         for e in _PartRE.findall(path):
             if esc:
                 esc = False
@@ -663,6 +684,31 @@ class Path(Sequence[PathElem]):
                     new(False)
                 elif e == "n":
                     new(None)
+                elif e[0] == "u":
+                    if e[1] == "x":
+                        b = 16
+                        e = e[2:]  # noqa:PLW2901
+                    else:
+                        b = 10
+                        e = e[1:]  # noqa:PLW2901
+                    if not e:
+                        raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+                    val = 0
+
+                    for i, ee in enumerate(e):
+                        try:
+                            val = b * val + int(ee, b)
+                        except ValueError:
+                            if i == 0:
+                                raise SyntaxError(f"Cannot parse {path!r} at {pos}") from None
+                            add(chr(val))
+                            if e[i] == "_":
+                                add(e[i + 1 :])
+                            else:
+                                add(e[i:])
+                            break
+                    else:
+                        add(chr(val))
                 elif e[0] == "m" and len(e) > 1:
                     done(None)
                     if not mark:
@@ -712,6 +758,7 @@ class Path(Sequence[PathElem]):
                     done("")
                     add(e)
                     eval_ = True
+
             else:
                 if e == ".":
                     if part is None or part is False:

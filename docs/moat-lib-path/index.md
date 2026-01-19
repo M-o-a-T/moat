@@ -24,8 +24,6 @@ This module includes:
 - **Serialization integration** - Works with YAML, CBOR, msgpack
 - **Context-aware roots** - Portable paths with root substitution
 
-## Key Components
-
 ### Creating Paths
 
 ```python
@@ -56,7 +54,7 @@ str(path)  # "foo.bar.baz"
 # Slash notation
 path.slash  # "foo/bar/baz"
 
-# Tuple representation
+# … or simply as tuples
 tuple(path)  # ("foo", "bar", "baz")
 ```
 
@@ -68,28 +66,28 @@ Paths support various data types with special encoding:
 from moat.lib.path import P
 
 # Boolean values
-p = P("config:t")  # Represents ("config", True)
-p = P("config:f")  # Represents ("config", False)
+p = P("config:t")  # ("config", True)
+p = P("config:f")  # ("config", False)
 
 # None and empty string
-p = P("config:n")  # Represents ("config", None)
-p = P("config:e")  # Represents ("config", "")
+p = P("config:n")  # ("config", None)
+p = P("config:e")  # ("config", "")
 
 # Integers (hex encoding)
-p = P("config:x2a")  # Represents ("config", 42)
-p = P("config:xff")  # Represents ("config", 255)
+p = P("config:x2a")  # ("config", 42)
+p = P("config:xff")  # ("config", 255)
 
 # Binary integers
-p = P("config:b1010")  # Represents ("config", 10)
+p = P("config:b1010")  # ("config", 10)
 
 # Byte strings (hex encoding)
-p = P("data:y48656c6c6f")  # Represents ("data", b"Hello")
+p = P("data:y48656c6c6f")  # ("data", b"Hello")
 
 # Byte strings (base64 encoding)
-p = P("data:sSGVsbG8=")  # Represents ("data", b"Hello")
+p = P("data:sSGVsbG8=")  # ("data", b"Hello")
 
-# Mixed types
-p = P("app:x1:t")  # Represents ("app", 1, True)
+# Path with mixed types
+p = P("app:x1:t.foo:")  # ("app", 1, True)
 ```
 
 ### Escape Sequences

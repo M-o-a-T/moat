@@ -36,6 +36,7 @@ dependencies = [
 	"pyfuse3",
 	"pymodbus ~= 3.8",
         "range_set ~= 0.3",
+        "regex",
 	"ruyaml",
 	"simpleeval",
 	"sqlalchemy",

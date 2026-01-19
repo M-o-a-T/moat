@@ -12,6 +12,7 @@ if _TC:
     from ._impl import CFG as CFG
     from ._impl import CfgStore as CfgStore
     from ._impl import current_cfg as current_cfg
+    from ._impl import load_yaml as load_yaml
     from ._impl import monitor as monitor
     from ._reg import register as register
 
@@ -22,6 +23,7 @@ _imports = {
     "CFG": "_impl",
     "CfgStore": "_impl",
     "current_cfg": "_impl",
+    "load_yaml": "_impl",
     "monitor": "_impl",
     "register": "_reg",
 }
@@ -37,4 +39,4 @@ def __getattr__(attr: str):
     return value
 
 
-__all__ = ["CFG", "CfgStore", "current_cfg", "monitor", "register"]
+__all__ = ["CFG", "CfgStore", "current_cfg", "load_yaml", "monitor", "register"]

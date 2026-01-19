@@ -90,7 +90,7 @@ def _dec_path(codec, data):
     codec  # noqa:B018
     s = Codec()
     s.feed(data)
-    return Path(*iter(s), decoded=True)
+    return Path.build(iter(s), decoded=True)
 
 
 @std_ext.decoder(4)

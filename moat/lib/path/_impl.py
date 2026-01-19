@@ -174,6 +174,7 @@ class Path(Sequence[PathElem]):
         scan: bool = False,
         prefix: RootPath | Literal[True] | None = None,
         decoded: bool = False,
+        _warn: bool = True,
     ):
         """
         Create a path from the given elements.
@@ -194,8 +195,10 @@ class Path(Sequence[PathElem]):
         if mark:
             warnings.warn("Marking a path is deprecated")
 
-        if len(a) > 1:
-            warnings.warn("Call 'Path.build(args)', not 'Path(*args)'", DeprecationWarning)
+        if _warn and a:
+            warnings.warn(
+                "Call 'Path.build(args)', not 'Path(*args)'", DeprecationWarning, stacklevel=2
+            )
 
         if decoded and a and isinstance(a[0], RootPath) and prefix is None:
             prefix = a[0]
@@ -251,14 +254,15 @@ class Path(Sequence[PathElem]):
                 return tuple(d)
 
             data = _fixup(data)
-        if scan or not isinstance(data, tuple):
-            return cls(*data, decoded=decoded)
+        if (prefix is None and scan) or not isinstance(data, tuple):
+            return cls(*data, decoded=decoded, prefix=prefix, _warn=False)
         p = object.__new__(cls)
         if decoded and data and isinstance(data[0], RootPath):
             p._prefix = data[0]  # noqa:SLF001
             p._data = tuple(data[1:])  # noqa:SLF001
         else:
             p._data = tuple(data)  # noqa:SLF001
+            p._prefix = prefix  # noqa:SLF001
         if mark is None:  # pyright:ignore
             raise ValueError("Use an empty mark, not 'None'")
         p._mark = mark  # noqa:SLF001
@@ -473,7 +477,7 @@ class Path(Sequence[PathElem]):
 
     def __getitem__(self, index):  # pyright:ignore[reportInconsistentOverload]
         if isinstance(index, slice) and index.start in (0, None) and index.step in (1, None):
-            return type(self)(*self._data[index])
+            return type(self).build(self._data[index])
         else:
             return self._data[index]
 
@@ -568,7 +572,7 @@ class Path(Sequence[PathElem]):
             if self.mark != mark:
                 return self.build(self._data, mark=mark, prefix=self._prefix)
             return self
-        return type(self)(*self._data, *other, mark=mark, prefix=self._prefix)
+        return type(self).build(self._data + other, mark=mark, prefix=self._prefix)
 
     def __radd__(self, other: PathTuple) -> PathTuple:
         # This method exists because pyright doesn't get our
@@ -584,7 +588,7 @@ class Path(Sequence[PathElem]):
     def __truediv__(self, other):
         if isinstance(other, Path):
             raise TypeError("You want + not /")
-        return Path(*self._data, other, mark=self.mark, prefix=self._prefix)
+        return Path.build(self._data + other, mark=self.mark, prefix=self._prefix)
 
     # TODO add alternate output with hex integers
 
@@ -777,7 +781,7 @@ class Path(Sequence[PathElem]):
         if esc or part is None:
             raise SyntaxError(f"Cannot parse {path!r} at {pos}")
         done(None)
-        return cls(*res, mark=mark, scan=scan, prefix=prefix)
+        return cls.build(res, mark=mark, scan=scan, prefix=prefix)
 
     @classmethod
     def from_slashed(cls, path, *, mark: str = "", scan=True):
@@ -849,7 +853,7 @@ class Path(Sequence[PathElem]):
 
         if mark is None:
             mark = ""
-        r = cls(*res, mark=mark, scan=scan)
+        r = cls.build(res, mark=mark, scan=scan)
         return r
 
     @classmethod
@@ -866,7 +870,7 @@ class Path(Sequence[PathElem]):
 
         Thus:
 
-        >>> p = Path("w.x.y.z")
+        >>> p = P("w.x.y.z")
         >>> P("a:2,.b").apply(p)
         P("a.x.b")
         >>> P("a:3,4.b").apply(p)
@@ -915,7 +919,7 @@ class P(Path):
     def __new__(cls, path, *, mark="", scan=False):
         if isinstance(path, Path):
             if path.mark != mark:
-                path = Path(*path, mark=mark, scan=scan)
+                path = Path.build(path, mark=mark, scan=scan)
             return path
         return Path.from_str(path, mark=mark, scan=scan)
 
@@ -931,7 +935,7 @@ class PP(Path):
     def __new__(cls, path, *, mark="", scan=True):
         if isinstance(path, Path):
             if path.mark != mark:
-                path = Path(*path, mark=mark, scan=scan)
+                path = Path.build(path, mark=mark, scan=scan)
             return path
         return Path.from_str(path, mark=mark, scan=scan)
 
@@ -947,7 +951,7 @@ class PS(Path):
     def __new__(cls, path: Path | str, *, mark=""):
         if isinstance(path, Path):
             if path.mark != mark:
-                path = Path(*path, mark=mark)
+                path = Path.build(path, mark=mark)
             return path
         return Path.from_slashed(path, mark=mark, scan=True)
 
@@ -1185,7 +1189,7 @@ for _idx in "SPQ":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar[Path | None](_name, default=None)
     _path = RootPath(_idx, _ctx)
-    _ctx.set(Path("XXX", _idx, "XXX"))
+    _ctx.set(Path.build(("XXX", _idx, "XXX")))
 
     globals()[_name] = _ctx
 

@@ -138,7 +138,7 @@ def test_valid_paths(a, b):
         b, xb = b
     else:
         xb = b
-    assert str(Path(*a)) == xb
+    assert str(Path.build(a)) == xb
     assert a == tuple(Path.from_str(b))
 
 
@@ -154,7 +154,7 @@ def test_valid_spaths(a, b):
         b, xb = b
     else:
         xb = b
-    assert Path(*a).slashed == xb
+    assert Path.build(a).slashed == xb
     assert a == tuple(Path.from_slashed(b))
 
 
@@ -164,7 +164,7 @@ def test_valid_spaths2(a, b):
         b, xb = b
     else:
         xb = b
-    assert Path(*a).__str__(slash=2) == xb
+    assert Path.build(a).__str__(slash=2) == xb
     assert a == tuple(Path.from_slashed(b))
 
 
@@ -172,7 +172,7 @@ def test_valid_spaths2(a, b):
 @pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
 def test_valid_spaths3(a, b, m):
     b, xb = b
-    assert str(Path(*a, mark=m)) == xb
+    assert str(Path.build(a, mark=m)) == xb
     assert a == tuple(Path.from_slashed(b))
 
 
@@ -240,7 +240,7 @@ def test_msgpack():
     assert isinstance(mm, (tuple, list))
     assert list(mm) == d
 
-    d = Path("a", 1, "b")
+    d = Path.build(("a", 1, "b"))
     m = codec.encode(d)
     mm = codec.decode(m)
     assert type(mm) is Path  # pylint: disable=unidiomatic-typecheck

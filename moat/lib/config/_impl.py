@@ -99,11 +99,13 @@ def default_cfg(name: str | None = None, load_all: bool | None = False):
     cf = cfg.env = attrdict(load_all=load_all)
     seen = False
 
-    def _cfg(path):
+    def _cfg(path: str | FSPath):
         nonlocal seen
+        if isinstance(path, str):
+            path = FSPath(path)
         if seen and not cf.load_all:
             return
-        if os.path.exists(path):
+        if path.exists():
             try:
                 cfg2 = load_yaml(path)
             except PermissionError:

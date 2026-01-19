@@ -17,7 +17,7 @@ from moat.lib.path import P, Path
 
 from ._reg import to_process
 
-from collections.abc import MutableSequence
+from collections.abc import Mapping, MutableSequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ __all__ = ["CFG", "CfgStore", "current_cfg"]
 current_cfg = ContextVar("current_cfg", default=None)
 
 
-def get_base(base, result: attrdict, loc: Path, here: FSPath):
+def get_base(base, root: attrdict, result: attrdict, loc: Path, here: FSPath):
     """Resolve $base keys."""
     if isinstance(base, str):
         res = load_yaml(here / base)
@@ -45,8 +45,13 @@ def get_base(base, result: attrdict, loc: Path, here: FSPath):
                     cfg = cfg.get_(v)
                 continue
             initial = False
-            c2 = attrdict()
-            get_base(v, c2, loc, here)
+            if isinstance(v, Path):
+                c2 = root.get_(v)
+                if isinstance(c2, Mapping):
+                    c2 = type(c2)(**c2)
+            else:
+                c2 = attrdict()
+                get_base(v, root, c2, loc, here)
             cfg = combine_dict(cfg, c2, cls=attrdict, keep=True)  # first value wins
         for v in masked:
             cfg.delete_(v)
@@ -65,7 +70,7 @@ def get_base(base, result: attrdict, loc: Path, here: FSPath):
                 r = result[k]
             else:
                 r = result[k] = attrdict()
-            get_base(v, r, loc / k, here)
+            get_base(v, root, r, loc / k, here)
     else:
         raise ValueError(f"Unknown value in $base.{loc}: {base}")  # noqa:TRY004
 
@@ -79,7 +84,7 @@ def load_yaml(f: FSPath) -> attrdict:
     if res is None:
         return res  # empty file
     if (base := res.pop("$base", None)) is not None:
-        get_base(base, res, Path(), f.parent)
+        get_base(base, res, res, Path(), f.parent)
     return res
 
 

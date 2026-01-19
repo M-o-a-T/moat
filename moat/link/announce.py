@@ -244,7 +244,7 @@ async def announcing(
         raise RuntimeError("A service announcement is already running")
     link.announced.add(path)
 
-    service_path = Path(gen_ident(12)) if service is not None else None
+    service_path = Path.build((gen_ident(12),)) if service is not None else None
 
     async def _delegate(path, service, *, task_status: anyio.TASK_STATUS_IGNORED):
         with link.link.delegate(path, service):

@@ -104,7 +104,7 @@ async def set_(obj, path, good, bad, script, schema, yaml_, data):
     res = await obj.client._request(  # noqa:SLF001
         action="set_internal",
         value=msg,
-        path=Path("type") + path,
+        path=Path.build(("type",) + path),
         iter=False,
         nchain=obj.meta,
         **({} if chain is NotGiven else {"chain": chain}),
@@ -164,7 +164,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
     res = await obj.client._request(  # noqa:SLF001
         action=act,
         value=msg,
-        path=Path("match") + path,
+        path=Path.build(("match",) + path),
         iter=False,
         nchain=obj.meta,
     )

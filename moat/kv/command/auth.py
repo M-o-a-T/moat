@@ -34,7 +34,7 @@ async def enum_auth(obj):
     # TODO create a method for this
     res = await obj.client._request(  # noqa:SLF001
         action="enum_internal",
-        path=Path("auth"),
+        path=Path.build("auth"),
         iter=False,
         with_data=False,
         empty=True,

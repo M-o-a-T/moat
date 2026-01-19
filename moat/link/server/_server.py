@@ -989,7 +989,7 @@ class Server(MsgHandler):
         """
         if len(path) == 0 or path[0] == "error":
             raise ValueError(f"Messed-up error path: {path}")
-        p = Path("error") + path
+        p = Path.build(("error",) + path)
 
         try:
             dt = self.data.get(p, create=False if err is None else None)

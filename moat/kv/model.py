@@ -696,7 +696,7 @@ class Entry:
             if parent is None:
                 self._path = Path()
             else:
-                self._path = parent.path + [self.name]
+                self._path = parent.path / self.name
         return self._path
 
     def follow_acl(self, path, *, create=True, nulls_ok=False, acl=None, acl_key=None):

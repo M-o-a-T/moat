@@ -80,7 +80,7 @@ async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument  #
             for i in range(N):
                 async with st.client((i + x) % N) as ci:
                     for j in range(NN):
-                        await ci.set(Path("test", i, j), value=(i, j, x))
+                        await ci.set(Path.build(("test", i, j)), value=(i, j, x))
 
         await trio.sleep(1)
 

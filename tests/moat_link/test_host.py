@@ -76,7 +76,7 @@ async def test_mon(cfg):
 
     # shorten timeouts
     ctim = yload(TIMES, attr=True)
-    ctim.root = Path(os.getpid(), "TEST")
+    ctim.root = Path.build((os.getpid(), "TEST"))
     merge(cfg.link, ctim)
     emsgs = []
     hmsgs = []

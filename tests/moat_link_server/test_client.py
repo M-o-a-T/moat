@@ -111,7 +111,7 @@ async def test_get_tree_dyn(cfg):
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 1
-        assert res[0][0] == Path("too")
+        assert res[0][0] == P("too")
         assert res[0][1] == "Ugh3"
 
 
@@ -137,9 +137,9 @@ async def test_get_tree_full(cfg):
         assert len(res) == 3
         assert res[0][0] == Path()
         assert res[0][1] == "HiLo"
-        assert res[1][0] == Path("too")
+        assert res[1][0] == P("too")
         assert res[1][1] == "Ugh2"
-        assert res[2][0] == Path("too")
+        assert res[2][0] == P("too")
         assert res[2][1] == "Ugh3"
 
 
@@ -169,9 +169,9 @@ async def test_get_tree_dyn_old(cfg):
         assert len(res) == 3
         assert res[0][0] == Path()
         assert res[0][1] == "HiLo"
-        assert res[1][0] == Path("too")
+        assert res[1][0] == P("too")
         assert res[1][1] == "Ugh2"
-        assert res[2][0] == Path("too")
+        assert res[2][0] == P("too")
         assert res[2][1] == "Ugh3"
 
 
@@ -196,7 +196,7 @@ async def test_get_tree_drop(cfg):
                 res = await res.get()
         assert len(res) == 3
         res = res[-1]
-        assert res[0] == Path("too")
+        assert res[0] == P("too")
         assert res[1] is NotGiven
 
 

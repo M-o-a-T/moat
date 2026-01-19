@@ -345,7 +345,7 @@ class BaseServerAuth(_AuthLoaded):
 
         try:
             data = data["conv"].data["key"]
-            res, _ = root.follow_acl(Path(None, "conv", data), create=False, nulls_ok=True)
+            res, _ = root.follow_acl(Path.build((None, "conv", data)), create=False, nulls_ok=True)
             return res
         except (KeyError, AttributeError):
             return ConvNull

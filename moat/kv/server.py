@@ -298,7 +298,7 @@ class SCmd_auth(StreamCommand):
             if msg.typ != a and client.user is None:
                 raise RuntimeError("Wrong auth type", a)
 
-        data = auth.follow(Path(msg.typ, "user", msg.ident), create=False)
+        data = auth.follow(Path.build((msg.typ, "user", msg.ident)), create=False)
 
         cls = loader(msg.typ, "user", server=True)
         user = cls.load(data)
@@ -357,11 +357,11 @@ class SCmd_auth_list(StreamCommand):
 
         auth = client.root.follow(root + (None, "auth"), nulls_ok=2, create=False)
         if "ident" in msg:
-            data = auth.follow(Path(msg.typ, kind, msg.ident), create=False)
+            data = auth.follow(Path.build((msg.typ, kind, msg.ident)), create=False)
             await self.send_one(data, nchain=nchain)
 
         else:
-            d = auth.follow(Path(msg.typ, kind), create=False)
+            d = auth.follow(Path.build((msg.typ, kind)), create=False)
             for data in d.values():
                 await self.send_one(data, nchain=nchain)
 
@@ -401,7 +401,7 @@ class SCmd_auth_get(StreamCommand):
         kind = msg.get("kind", "user")
 
         auth = client.root.follow(root + (None, "auth"), nulls_ok=2, create=False)
-        data = auth.follow(Path(msg.typ, kind, msg.ident), create=False)
+        data = auth.follow(Path.build((msg.typ, kind, msg.ident)), create=False)
         cls = loader(msg.typ, kind, server=True, make=False)
         user = cls.load(data)
 
@@ -443,7 +443,7 @@ class SCmd_auth_set(StreamCommand):
         cls = loader(msg.typ, kind, server=True, make=True)
         auth = client.root.follow(root + (None, "auth"), nulls_ok=2, create=True)
 
-        data = auth.follow(Path(msg.typ, kind, msg.ident), create=True)
+        data = auth.follow(Path.build((msg.typ, kind, msg.ident)), create=True)
         user = cls.load(data)
         val = user.save()
         val = combine_dict(msg, val)
@@ -674,7 +674,7 @@ class ServerClient:
     def __init__(self, server: Server, stream: Stream):
         self.server = server
         self.root = server.root
-        self.metaroot = self.root.follow(Path(None), create=True, nulls_ok=True)
+        self.metaroot = self.root.follow(Path.build((None,)), create=True, nulls_ok=True)
         self.stream = stream
         self.tasks = {}
         self.in_stream = {0: HelloProc(self)}
@@ -813,7 +813,7 @@ class ServerClient:
         return await AuthList(self, msg)()
 
     async def cmd_auth_info(self, msg):  # noqa: D102
-        msg["path"] = Path(None, "auth")
+        msg["path"] = Path.build((None, "auth"))
         return await self.cmd_get_internal(msg)
 
     async def cmd_root(self, msg):
@@ -853,7 +853,7 @@ class ServerClient:
 
             if acl2 is not None:
                 ok = acl.allows("a")  # pylint: disable=no-value-for-parameter # pylint is confused
-                acl2 = root.follow(Path(None, "acl", acl2), create=False, nulls_ok=True)
+                acl2 = root.follow(Path.build((None, "acl", acl2)), create=False, nulls_ok=True)
                 acl2 = ACLFinder(acl2)
                 _entry, acl = root.follow_acl(
                     msg.path,
@@ -1154,7 +1154,7 @@ class ServerClient:
     async def cmd_set_auth_typ(self, msg):  # noqa: D102
         if not self.user.is_super_root:
             raise RuntimeError("You're not allowed to do that")
-        a = self.root.follow(Path(None, "auth"), nulls_ok=True)
+        a = self.root.follow(Path.build((None, "auth")), nulls_ok=True)
         if a.data is NotGiven:
             val = {}
         else:
@@ -1211,7 +1211,7 @@ class ServerClient:
                 "qlen": self.server.cfg.server.buffer,
             }
             try:
-                auth = self.root.follow(Path(None, "auth"), nulls_ok=True, create=False)
+                auth = self.root.follow(Path.build((None, "auth")), nulls_ok=True, create=False)
             except KeyError:
                 a = None
             else:
@@ -1997,7 +1997,9 @@ class Server:
         try:
             # First try to read the host name from the meta-root's
             # "hostmap" entry, if any.
-            hme = self.root.follow(Path(None, "hostmap", host), create=False, nulls_ok=True)
+            hme = self.root.follow(
+                Path.build((None, "hostmap", host)), create=False, nulls_ok=True
+            )
             if hme.data is NotGiven:
                 raise KeyError(host)
         except KeyError:

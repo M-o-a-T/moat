@@ -5,7 +5,7 @@ import pytest
 import time
 
 from moat.util import NotGiven
-from moat.lib.path import P, Path
+from moat.lib.path import P
 from moat.lib.rpc import RemoteError
 from moat.link._test import Scaffold
 
@@ -19,7 +19,7 @@ async def test_simple(cfg):
         sf.client_() as c,
     ):
         t1 = time.time()
-        async with sf.do_watch(Path("error"), meta=True, subtree=True) as r:
+        async with sf.do_watch(P("error"), meta=True, subtree=True) as r:
             await c.e_info(P("test.here"), "TestError", state="bad", help="me!")
             await anyio.sleep(0.2)
         r = await r.get()
@@ -40,7 +40,7 @@ async def test_exc(cfg):
         sf.client_() as c,
     ):
         t1 = time.time()
-        async with sf.do_watch(Path("error"), meta=True, subtree=True) as r:
+        async with sf.do_watch(P("error"), meta=True, subtree=True) as r:
             try:
                 raise KeyError("abc")
             except Exception as exc:
@@ -94,7 +94,7 @@ async def test_exc_np(cfg):
         sf.client_() as c,
     ):
         t1 = time.time()
-        async with sf.do_watch(Path("error"), meta=True, subtree=True) as r:
+        async with sf.do_watch(P("error"), meta=True, subtree=True) as r:
             try:
                 raise SyntaxError("abc")
             except Exception as exc:
@@ -122,7 +122,7 @@ async def test_exc_clear(cfg):
         sf.client_() as c,
     ):
         t1 = time.time()
-        async with sf.do_watch(Path("error"), meta=True, subtree=True) as r:
+        async with sf.do_watch(P("error"), meta=True, subtree=True) as r:
             try:
                 raise RuntimeError("dud")
             except Exception as exc:
@@ -164,7 +164,7 @@ async def test_wrap_ok(cfg):
         sf.client_() as c,
     ):
         async with (
-            sf.do_watch(Path("error"), meta=True, subtree=True) as r,
+            sf.do_watch(P("error"), meta=True, subtree=True) as r,
             c.e_wrap(P("test.here"), help="me?") as mon,
         ):
             await mon.send("tree")

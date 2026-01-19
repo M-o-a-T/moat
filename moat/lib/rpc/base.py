@@ -279,7 +279,7 @@ class MsgSender(BaseMsgHandler):
             sb = getattr(self, elem)
             assert isinstance(sb, SubMsgSender)
         else:
-            sb = self.sub_at(Path(elem))
+            sb = self.sub_at(Path.build((elem,)))
             setattr(self, elem, sb)
         return sb
 

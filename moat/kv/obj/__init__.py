@@ -467,7 +467,7 @@ class MirrorRoot(ClientEntry):
         if name is None:
             # if key != "prefix":
             #     subpath = Path(key) + subpath
-            name = str(Path("_moat.kv", client.name, cls.CFG, *subpath))
+            name = str(Path.build(("_moat.kv", client.name, cls.CFG) + subpath))
 
         def make():
             return client.mirror(cfg[key] + subpath, root_type=cls, need_wait=True, cfg=cfg, **kw)

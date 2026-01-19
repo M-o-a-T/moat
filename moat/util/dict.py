@@ -422,6 +422,7 @@ class attrdict(dict):
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         val = type(self)(**self)
+        path = list(path)
         v = val
         vc = []
         for p in path[:-1]:

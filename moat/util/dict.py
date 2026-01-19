@@ -105,7 +105,7 @@ def _check_post(a, b) -> bool:
     if isinstance(a, str) and a and a[0] == "$":
         return True
     if isinstance(b, Path):
-        return False
+        return b.is_relative
     if isinstance(b, str):
         return False
     if isinstance(b, Sequence):

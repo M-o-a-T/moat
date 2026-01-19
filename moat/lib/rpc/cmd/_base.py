@@ -349,10 +349,9 @@ class RootCmd(Base):
 
     async def reload(self):
         "Reload me."
-        await super().reload()
         await self.app.reload()
 
-        upd, self._updates = self._updates, None
+        upd, self._updates = self._updates, {}
         for v in upd.values():
             v.updated_()
 

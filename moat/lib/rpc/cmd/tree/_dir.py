@@ -5,7 +5,16 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 from moat.util import NotGiven, attrdict
-from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, log, wait_for_ms
+from moat.lib.micro import (
+    AC_use,
+    Event,
+    L,
+    Lock,
+    TaskGroup,
+    TimeoutError,  # noqa:A004
+    log,
+    wait_for_ms,
+)
 from moat.lib.rpc import BaseCmd
 
 # Typing
@@ -171,7 +180,7 @@ class DirCmd(BaseSubCmd):
 
     async def task(self):
         "Monitor task for updating"
-        self.cfg.updated_ = self._updated()
+        self.cfg.updated_ = self._updated
         try:
             while True:
                 await self._setup_apps()

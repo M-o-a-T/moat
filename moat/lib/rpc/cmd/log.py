@@ -70,3 +70,7 @@ class Logger(BaseFwdCmd):
 
     def _log(self, m, *a):
         log(f"{self.prefix}:{m}", *a)
+
+    def cfg_reloaded(self, cfg: attrdict):
+        "Forward to real root"
+        self.real_root.cfg_reloaded(cfg)

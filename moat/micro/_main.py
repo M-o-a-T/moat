@@ -655,7 +655,11 @@ async def repl(obj):
         @tg.start_soon
         async def t_12():
             async for msg in t1:
-                await t2.wr(msg[0])
+                tx = msg[0]
+                if tx and tx[0] == 0:
+                    await t2.wr("[………]".encode("utf-8"))
+                    tx = tx[1:]
+                await t2.wr(tx)
             tg.cancel_scope.cancel()
 
         buf = bytearray(80)

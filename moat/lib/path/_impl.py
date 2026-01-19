@@ -195,6 +195,9 @@ class Path(Sequence[PathElem]):
         if mark:
             warnings.warn("Marking a path is deprecated")
 
+        if len(a) > 1:
+            warnings.warn("Call 'Path.build(args)', not 'Path(*args)'", DeprecationWarning)
+
         if decoded and a and isinstance(a[0], RootPath) and prefix is None:
             prefix = a[0]
             a = a[1:]

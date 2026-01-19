@@ -322,7 +322,7 @@ class Path(Sequence[PathElem]):
             raise ValueError("Use an empty mark, not 'None'")
         return type(self).build(self._data, mark=mark)
 
-    def __str__(self, slash: bool | Literal[2] = False, hex=False) -> str:  # noqa:A002
+    def __str__(self, slash: bool | Literal[2] = False, as_hex: bool = False) -> str:
         """
         Stringify the path to a dot- or slashstring.
 
@@ -361,7 +361,7 @@ class Path(Sequence[PathElem]):
 
                     # UTF-8 char
                     nr = next(spl)
-                    res.append(f":u{hex(ord(nr))[2:]}")
+                    res.append(f":u{ord(nr):x}")
             except StopIteration:
                 pass
             return "".join(res)
@@ -414,7 +414,7 @@ class Path(Sequence[PathElem]):
             elif isinstance(x, (bytes, bytearray)):
                 if all(32 <= b < 127 for b in x):
                     res.append(":v" + _escol(cast(bytes, x).decode("ascii"), True))
-                elif hex:
+                elif as_hex:
                     res.append(":y" + x.hex())
                 else:
                     res.append(":s" + b64encode(x).decode("ascii"))
@@ -427,8 +427,6 @@ class Path(Sequence[PathElem]):
                     res.append(":" + _escol(x) + ("," if len(x) == 1 else ""))
                 else:
                     x = "()"  # noqa: PLW2901
-            elif hex and isinstance(x, int):
-                res.append(":{x:x}")
             else:
                 x = repr(x)  # noqa: PLW2901
                 if x[0].isalpha():

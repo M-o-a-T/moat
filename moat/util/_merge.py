@@ -18,10 +18,13 @@ def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
         if value is NotGiven:
             d.pop(key, None)
             continue
-        if key in d:
-            d[key] = _merge_one(d[key], value, drop=drop, replace=replace)
-        else:
+        if key not in d:
             d[key] = deepcopy(value)
+            continue
+        if replace and not isinstance(value, (Mapping, Sequence)):
+            d[key] = deepcopy(value)
+            continue
+        _merge_one(d[key], value, drop=drop, replace=replace)
 
     if drop:
         keys = []

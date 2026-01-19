@@ -5,12 +5,14 @@ Some rudimentary tests for config loading
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
-from moat.util import yload
+from pathlib import Path as FSPath
+
 from moat.lib import config
-from moat.lib.config import CfgStore
+from moat.lib.config import CfgStore, load_yaml
 
 c1 = """\
-bar: baz
+foo:
+  bar: baz
 """
 c2 = """
 foo:
@@ -23,13 +25,18 @@ c3 = """
 path:
     ref:
         bar: !P :@.foo.bar
-base:
-    - $base:
-      - "tests/cfg/foo1.cfg"
-      - !P :@.what.is
-    - port:
-        $base: "tests/cfg/foo.cfg"
-        in_the: storm
+$base:
+  base:
+    0:
+      - "@DIR@/tests/cfg/foo1.yaml"
+      - !P what.is
+    1:
+      port:
+        - "@DIR@/tests/cfg/foo.yaml"
+        - !P :@.port
+base: []
+port:
+  in_the: storm
 ext:
     three: four
 """
@@ -54,10 +61,11 @@ def test_basic(tmp_path):
 
 def test_tagged(tmp_path):
     tf3 = tmp_path / "c3"
-    tf3.write_text(c3)
-    d = yload(tf3, attr=True)
+    c3x = c3.replace("@DIR@", str(FSPath(".").absolute()))
+    tf3.write_text(c3x)
+    d = load_yaml(tf3)
     assert d.needs_post_
-    assert not d.ext.needs_post_
+    assert d.ext.needs_post_
     assert d.path.needs_post_
     assert d.base[0].needs_post_
 
@@ -68,10 +76,11 @@ def test_refs(tmp_path):
     tf1 = tmp_path / "c1"
     tf1.write_text(c1)
     tf3 = tmp_path / "c3"
-    tf3.write_text(c3)
+    c3x = c3.replace("@DIR@", str(FSPath(".").absolute()))
+    tf3.write_text(c3x)
     c.add(tf1)
     c.add(tf3)
 
-    assert c.result.foo.base[0].new == "today"
-    assert c.result.foo.base[1].port.in_the == "storm"
-    assert c.result.foo.base[1].port.some.thing.to == "do"
+    assert c.result.base[0].new == "today"
+    assert c.result.base[1].port.in_the == "storm"
+    assert c.result.base[1].port.foo.some.thing.to == "do"

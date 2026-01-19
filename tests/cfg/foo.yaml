@@ -1,3 +1,4 @@
-some:
-  thing:
-    to: do
+foo:
+  some:
+    thing:
+      to: do

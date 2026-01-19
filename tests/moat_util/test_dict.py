@@ -75,7 +75,7 @@ def test_post():
     d = attrdict()
     d["$a"] = 42
     assert d.needs_post_
-    assert attrdict(x=d).needs_post_
+    assert not attrdict(x=d).needs_post_
     e = attrdict()
     e["y"] = d
     assert e.needs_post_

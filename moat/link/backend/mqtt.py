@@ -9,7 +9,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from moat.util import NotGiven, attrdict
+from moat.util import NotGiven, attrdict, srepr
 from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
@@ -134,7 +134,11 @@ class Backend(_Backend):
             tops = "#"
         else:
             raise ValueError("empty path")
-        self.logger.debug("Monitor %s start", tops)
+        if self.logger.isEnabledFor(logging.DEBUG):
+            t_dbg = str(topic)
+            if subtree:
+                t_dbg += ":*"  # illegal but we don't care
+            self.logger.debug("Monitor %s start", t_dbg)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine
         kw["retain_handling"] = (
@@ -146,10 +150,10 @@ class Backend(_Backend):
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
-            self.logger.exception("Monitor %s end", topic, exc_info=exc)
+            self.logger.exception("Monitor %s end", t_dbg, exc_info=exc)
             raise
         else:
-            self.logger.debug("Monitor %s end", topic)
+            self.logger.debug("Monitor %s end", t_dbg)
 
     @overload
     def send(
@@ -203,10 +207,6 @@ class Backend(_Backend):
         if retain is None:
             raise ValueError("Need to set whether to retain or not")
 
-        if self.logger.isEnabledFor(logging.DEBUG):
-            m = Message(topic, data, meta, retain=retain, prop=prop)
-            self.logger.debug("Send:%r", m)
-
         if isinstance(data, str):
             msg = data  # utf-8 is pass-thru in MQTT5
         elif data is NotGiven:
@@ -222,8 +222,7 @@ class Backend(_Backend):
             # else codec is a Codec and used as-is
             msg = codec.encode(data)
 
-        if self.trace:
-            self.logger.info("S:%s %r", topic, data)
+        self.logger.debug("S %s %s %s", topic, srepr(data), meta)
         return self.client.publish(
             topic.slashed2,
             payload=msg,
@@ -315,8 +314,8 @@ class _SubGet:
                         err = exc
                     else:
                         # everything OK
-                        if back.trace:
-                            back.logger.debug("R:%s %r", top, data)
+                        if back.logger.isEnabledFor(logging.DEBUG):
+                            back.logger.debug("R %s %s %s", top, srepr(data), prop)
                         return Message(
                             top, data, meta=prop, prop=msg.user_properties, retain=msg.retain
                         )

@@ -38,7 +38,8 @@ _valid = (
     (("a", b"abc"), "a:vabc"),
     (("a", b"ab\x99"), ("a:y616299", "a:sYWKZ")),
     (("a", "abê", "d"), ("a.ab:uea.d", "a.abê.d")),
-    (("a", "b\tc", "d"), ("a.b\tc.d", "a.b:u9_c.d")),
+    (("a", "b\tc", "d"), ("a.b\tc.d", "a.b:u9-c.d")),
+    (("a", "b\tx", "d"), ("a.b\tx.d", "a.b:u9x.d")),
     (("a", b"a b"), "a:va:_b"),
     (("a", b"", "c"), "a:v.c"),
 )

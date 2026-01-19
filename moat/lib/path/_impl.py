@@ -103,7 +103,7 @@ class Path(Sequence[PathElem]):
         :p    escapes + plus  (slash-path only, optional)
         :%    escapes \\ backslash (parsing only)
         :!    escapes | pipe/bar (parsing only)
-        :uN_  escapes unicode symbol N (hex); _ may be omitted if unambiguous
+        :uN-  escapes unicode symbol N (hex); - may be omitted if unambiguous
 
     As separator (starts a new element)::
 
@@ -353,10 +353,15 @@ class Path(Sequence[PathElem]):
             spl = iter(usplit(x))
             try:
                 while True:
-                    if res:
-                        res.append("_")
-                    res.append(next(spl))
-                    res.append(f":u{hex(ord(next(spl)))[2:]}")
+                    # Text
+                    nr = next(spl)
+                    if res and nr and nr[0] in "0123456789abcdefABCDEF":
+                        res.append("-")
+                    res.append(nr)
+
+                    # UTF-8 char
+                    nr = next(spl)
+                    res.append(f":u{hex(ord(nr))[2:]}")
             except StopIteration:
                 pass
             return "".join(res)

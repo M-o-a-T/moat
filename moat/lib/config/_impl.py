@@ -447,7 +447,10 @@ class CfgStore:
         def get_(pos):
             r = self._root
             for k in pos:
-                r = r[k]
+                try:
+                    r = r[k]
+                except KeyError:
+                    raise KeyError((pos, k)) from None
                 if isinstance(r, Path) and r.is_relative:
                     r = get_(r)
             return r

@@ -5,8 +5,6 @@ from __future__ import annotations
 __all__ = ["merge"]
 
 
-from copy import deepcopy
-
 from . import NotGiven
 
 from collections.abc import Mapping, MutableMapping, MutableSequence, Sequence
@@ -19,10 +17,10 @@ def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
             d.pop(key, None)
             continue
         if key not in d:
-            d[key] = deepcopy(value)
+            d[key] = value
             continue
         if replace and not isinstance(value, (Mapping, Sequence)):
-            d[key] = deepcopy(value)
+            d[key] = value
             continue
         _merge_one(d[key], value, drop=drop, replace=replace)
 
@@ -52,7 +50,7 @@ def _merge_list(item: MutableSequence, value: Sequence | Mapping, drop=False, re
             if val is NotGiven:
                 off += 1
             else:
-                item.append(deepcopy(val))
+                item.append(val)
 
         if drop:
             while len(item) + off > len(value):
@@ -82,17 +80,17 @@ def _merge_one(d: MutableMapping | MutableSequence, other, drop=False, replace=T
         if isinstance(other, Mapping):
             _merge_dict(d, other, drop=drop, replace=replace)
         else:
-            return deepcopy(other if replace else d)
+            return other if replace else d
     elif isinstance(d, MutableSequence):
         if isinstance(other, (Mapping, Sequence)):
             _merge_list(d, other, drop=drop, replace=replace)
         else:
-            return deepcopy(other if replace else d)
+            return other if replace else d
     else:
         if replace:
-            return deepcopy(d if other is None else other)
+            return d if other is None else other
         else:
-            return deepcopy(other if d is None else d)
+            return other if d is None else d
     return d
 
 

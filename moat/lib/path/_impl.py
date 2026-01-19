@@ -237,6 +237,8 @@ class Path(Sequence[PathElem]):
         """Optimized shortcut to generate a path from an existing tuple"""
         if mark:
             warnings.warn("Marking a path is deprecated")
+        if prefix is None:
+            scan = True
         if isinstance(data, Path):
             if prefix is None:
                 return data
@@ -255,7 +257,7 @@ class Path(Sequence[PathElem]):
 
             data = _fixup(data)
         if (prefix is None and scan) or not isinstance(data, tuple):
-            return cls(*data, decoded=decoded, prefix=prefix, _warn=False)
+            return cls(*data, decoded=decoded, prefix=prefix, _warn=False, scan=scan)
         p = object.__new__(cls)
         if decoded and data and isinstance(data[0], RootPath):
             p._prefix = data[0]  # noqa:SLF001
@@ -572,6 +574,13 @@ class Path(Sequence[PathElem]):
             if self.mark != mark:
                 return self.build(self._data, mark=mark, prefix=self._prefix)
             return self
+
+        for proxy in _Roots.values():
+            if not proxy:
+                continue
+            if proxy == self:
+                return type(self).build(other, mark=mark, prefix=proxy)
+
         return type(self).build(self._data + other, mark=mark, prefix=self._prefix)
 
     def __radd__(self, other: PathTuple) -> PathTuple:
@@ -948,12 +957,12 @@ class PS(Path):
     objects.
     """
 
-    def __new__(cls, path: Path | str, *, mark=""):
+    def __new__(cls, path: Path | str, *, mark="", scan: bool = True):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path.build(path, mark=mark)
             return path
-        return Path.from_slashed(path, mark=mark, scan=True)
+        return Path.from_slashed(path, mark=mark, scan=scan)
 
 
 def logger_for(path: Path):

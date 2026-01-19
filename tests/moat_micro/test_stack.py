@@ -21,93 +21,94 @@ if TYPE_CHECKING:
 
 
 CFG = """
-micro:
-  setup:
-    args:
-      cross: "ext/micropython/mpy-cross/build/mpy-cross"
-      config: !P cfg.r
-      update: true
-      state: std
-      large: true
-    std: true
-    app:
-      app: dir
-      r: &rm
-        app: _test.MpyRaw
-        cwd: /tmp/mpy-test
-        mplex: false
-        log:
-          txt: "M"
-        cfg: !P :@.moat.micro.cfg.r
-        state: skip
-    remote: !P r
-
-  # main service. This could be a serial.Link instead, but this way
-  # "moat micro setup --run" keeps the existing link going
-  run:
-    app:
-      app: dir
-      r:
-        app: _test.MpyRaw
-        cwd: /tmp/mpy-test
-        mplex: false
-        log:
-          txt: "M"
-        cfg: !P :@.moat.micro.cfg.r
-        state: once
-      s:
-        app: remote.Link
-        path: !P r
-        link:
-          console: true
-          frame: 0xf7
-        log:
-          txt: "S"
-  #     log_raw:
-  #        txt: "SU"
-      n:
-        app: net.unix.Port
-        port: /tmp/moat.test
-        log:
-          txt: "N"
-
-      co:
-        app: _test.Cons
-        cons: !P s
-        prefix: "C"
-  cfg:
-    r:
+moat:
+  micro:
+    setup:
+      args:
+        cross: "ext/micropython/mpy-cross/build/mpy-cross"
+        config: !P cfg.r
+        update: true
+        state: std
+        large: true
+      std: true
       app:
         app: dir
-        c:
-          app: cfg.Cmd
+        r: &rm
+          app: _test.MpyRaw
+          cwd: /tmp/mpy-test
+          mplex: false
+          log:
+            txt: "M"
+          cfg: !P :@.moat.micro.cfg.r
+          state: skip
+      remote: !P r
+
+    # main service. This could be a serial.Link instead, but this way
+    # "moat micro setup --run" keeps the existing link going
+    run:
+      app:
+        app: dir
         r:
-          app: stdio.StdIO
+          app: _test.MpyRaw
+          cwd: /tmp/mpy-test
+          mplex: false
+          log:
+            txt: "M"
+          cfg: !P :@.moat.micro.cfg.r
+          state: once
+        s:
+          app: remote.Link
+          path: !P r
           link:
             console: true
             frame: 0xf7
-          mplex: false
           log:
-            txt: "U"
+            txt: "S"
+    #     log_raw:
+    #        txt: "SU"
+        n:
+          app: net.unix.Port
+          port: /tmp/moat.test
+          log:
+            txt: "N"
+
+        co:
+          app: _test.Cons
+          cons: !P s
+          prefix: "C"
+    cfg:
+      r:
+        app:
+          app: dir
+          c:
+            app: cfg.Cmd
+          r:
+            app: stdio.StdIO
+            link:
+              console: true
+              frame: 0xf7
+            mplex: false
+            log:
+              txt: "U"
 #       log_raw:
 #         txt: "RU"
-        f:
-          app: fs.Cmd
-          root: /tmp/mpy-test
+          f:
+            app: fs.Cmd
+            root: /tmp/mpy-test
 
-  # Service for connecting to the main code.
-  connect:
-    remote: !P r.s
-    path:
-      cfg: !P c
-      fs: !P f
-    app:
-      app: dir
-      r:
-        app: net.unix.Link
-        port: /tmp/moat.test
-        log:
-          txt: "N"
+    # Service for connecting to the main code.
+    connect:
+      remote: !P r.s
+      path:
+        cfg: !P c
+        fs: !P f
+      app:
+        app: dir
+        r:
+          app: net.unix.Link
+          port: /tmp/moat.test
+          log:
+            txt: "N"
 
 """
 
@@ -122,11 +123,12 @@ async def test_stack(tmp_path):
     root = tmp_path / "root"
     cfx = tmp_path / "run.cfg"
     cross = here / "ext" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
-    cfg.micro.cfg.r.app.f.root = str(root)
-    cfg.micro.run.app.n.port = str(port)
-    cfg.micro.connect.app.r.port = str(port)
-    cfg.micro.setup.args.cross = str(cross)
-    cfg.micro.setup.app.r.cwd = str(root)
+    cmm = cfg.moat.micro
+    cmm.cfg.r.app.f.root = str(root)
+    cmm.run.app.n.port = str(port)
+    cmm.connect.app.r.port = str(port)
+    cmm.setup.args.cross = str(cross)
+    cmm.setup.app.r.cwd = str(root)
     with cfx.open("w") as f:
         yprint(cfg, f)
 
@@ -152,7 +154,7 @@ async def test_stack(tmp_path):
             raise RuntimeError("Startup failed, no socket")
 
         async with (
-            mpy_stack(tmp_path / "x", cfg.micro.connect) as d,
+            mpy_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
             d.sub_at(P("r.s")) as s,
             d.cfg_at(P("r.s.c")) as cfg,
         ):

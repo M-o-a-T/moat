@@ -248,7 +248,7 @@ class _SubGet:
         while True:
             msg = await anext(self.sub)
             try:
-                top = PS(msg.topic)
+                top = PS(msg.topic, scan=True)
             except Exception as exc:
                 await back.send(
                     P(":R.error.link.mqtt.topic"),

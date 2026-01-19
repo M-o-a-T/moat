@@ -693,6 +693,7 @@ class Path(Sequence[PathElem]):
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")
                     val = 0
 
+                    e = e[1:]  # noqa:PLW2901
                     for i, ee in enumerate(e):
                         try:
                             val = 16 * val + int(ee, 16)
@@ -700,7 +701,7 @@ class Path(Sequence[PathElem]):
                             if i == 0:
                                 raise SyntaxError(f"Cannot parse {path!r} at {pos}") from None
                             add(chr(val))
-                            if e[i] == "_":
+                            if ee == "-":
                                 add(e[i + 1 :])
                             else:
                                 add(e[i:])

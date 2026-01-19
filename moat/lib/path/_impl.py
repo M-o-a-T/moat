@@ -103,8 +103,7 @@ class Path(Sequence[PathElem]):
         :p    escapes + plus  (slash-path only, optional)
         :%    escapes \\ backslash (parsing only)
         :!    escapes | pipe/bar (parsing only)
-        :uN_  escapes unicode symbol N (decimal)
-        :uxN_ same, hex; the _ may be omitted if unambiguous
+        :uN_  escapes unicode symbol N (hex); _ may be omitted if unambiguous
 
     As separator (starts a new element)::
 
@@ -354,7 +353,7 @@ class Path(Sequence[PathElem]):
                     if res:
                         res.append("_")
                     res.append(next(spl))
-                    res.append(f":u{ord(next(spl))}")
+                    res.append(f":u{hex(ord(next(spl)))[2:]}")
             except StopIteration:
                 pass
             return "".join(res)
@@ -685,19 +684,13 @@ class Path(Sequence[PathElem]):
                 elif e == "n":
                     new(None)
                 elif e[0] == "u":
-                    if e[1] == "x":
-                        b = 16
-                        e = e[2:]  # noqa:PLW2901
-                    else:
-                        b = 10
-                        e = e[1:]  # noqa:PLW2901
                     if not e:
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")
                     val = 0
 
                     for i, ee in enumerate(e):
                         try:
-                            val = b * val + int(ee, b)
+                            val = 16 * val + int(ee, 16)
                         except ValueError:
                             if i == 0:
                                 raise SyntaxError(f"Cannot parse {path!r} at {pos}") from None

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import io
 import os
-import sys
 
 from asyncio import create_task, run_until_complete
 
@@ -298,7 +297,6 @@ class Cmd(BaseCmd):
     async def setup(self):
         "Create a console"
         await super().setup()
-        print("Console Setup", self.cfg, file=sys.stderr)
         self.cons = await AC_use(self, Console(self.cfg))
 
     doc_r = dict(_d="Read console data", _0="int:maxlength (default 32)")

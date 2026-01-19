@@ -569,6 +569,7 @@ class Path(Sequence[PathElem]):
             other = other._data
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen. TODO: add a deprecation warning
+            warnings.warn("Use '/' for single elements", DeprecationWarning)
             other = (other,)  # pyright:ignore # ty:ignore[invalid-assignment]
         if len(other) == 0:
             if self.mark != mark:

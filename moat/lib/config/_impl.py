@@ -17,6 +17,7 @@ from moat.lib.path import P, Path
 
 from ._reg import to_process
 
+from collections.abc import MutableSequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -52,7 +53,15 @@ def get_base(base, result: attrdict, loc: Path, here: FSPath):
         merge(result, cfg, replace=False)
     elif isinstance(base, dict):
         for k, v in base.items():
-            if k in result:
+            if isinstance(result, MutableSequence) and isinstance(k, int):
+                if len(result) == k:
+                    r = attrdict()
+                    result.append(r)
+                elif result[k] in (None, NotGiven):
+                    r = result[k] = attrdict()
+                else:
+                    r = result[k]
+            elif k in result:
                 r = result[k]
             else:
                 r = result[k] = attrdict()

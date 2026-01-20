@@ -142,8 +142,11 @@ def undo_ext(cfg: dict, name: str | None):
 class CFG_:
     """
     This is the singleton that refers to the current configuration.
+
+    Attribute accesses are redirected to it.
     """
 
+    @staticmethod
     def set_real_cfg(self, cfg: CfgStore):
         """
         Set the real configuration store.

@@ -355,7 +355,7 @@ class BaseServerAuth(_AuthLoaded):
             data = data["acl"].data["key"]
             if data == "*":
                 return NullACL
-            acl, _ = root.follow_acl(Path(None, "acl", data), create=False, nulls_ok=True)
+            acl, _ = root.follow_acl(Path.build((None, "acl", data)), create=False, nulls_ok=True)
             return ACLFinder(acl)
         except (KeyError, AttributeError):
             return NullACL

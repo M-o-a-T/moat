@@ -247,6 +247,9 @@ class Path(Sequence[PathElem]):
                 raise ValueError("Can't combine prefixes")
             data = data.raw
 
+        if isinstance(data, str):
+            raise ValueError("No. Use a list.")  # noqa:TRY004
+
         if isinstance(data, list):
 
             def _fixup(d):
@@ -257,7 +260,7 @@ class Path(Sequence[PathElem]):
 
             data = _fixup(data)
         if (prefix is None and scan) or not isinstance(data, tuple):
-            return cls(*data, decoded=decoded, prefix=prefix, _warn=False, scan=scan)
+            return cls(*data, decoded=decoded, prefix=prefix, _warn=False, scan=scan, mark=mark)
         p = object.__new__(cls)
         if decoded and data and isinstance(data[0], RootPath):
             p._prefix = data[0]  # noqa:SLF001
@@ -569,7 +572,7 @@ class Path(Sequence[PathElem]):
             other = other._data
         elif not isinstance(other, (list, tuple)):
             # Legacy code. Should not happen. TODO: add a deprecation warning
-            warnings.warn("Use '/' for single elements", DeprecationWarning)
+            warnings.warn("Use '/' for single elements", DeprecationWarning, stacklevel=2)
             other = (other,)  # pyright:ignore # ty:ignore[invalid-assignment]
         if len(other) == 0:
             if self.mark != mark:
@@ -589,16 +592,13 @@ class Path(Sequence[PathElem]):
         # __getitem__ overrides right. TODO.
         return other + self.raw
 
-    def __or__(self, other: Path | Sequence[PathElem]) -> Path:
-        return self + other
-
-    def __div__(self, other: PathElem) -> Path:
-        return self + (other,)
-
     def __truediv__(self, other):
         if isinstance(other, Path):
             raise TypeError("You want + not /")
-        return Path.build(self._data + other, mark=self.mark, prefix=self._prefix)
+        return Path.build(self._data + (other,), mark=self.mark, prefix=self._prefix)
+
+    __div__ = __truediv__
+    __or__ = __truediv__
 
     # TODO add alternate output with hex integers
 

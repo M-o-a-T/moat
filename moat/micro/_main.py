@@ -27,7 +27,6 @@ from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.lib.micro import idle
 from moat.lib.path import (
     P,
-    Path,
 )
 from moat.lib.rpc import Msg, RootCmd
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -103,7 +102,7 @@ async def cli(ctx, section, remote, path):
         if path:
             raise click.UsageError("You don't use paths with 'moat micro run'")
         if section is None:
-            section = Path("run")
+            section = P("run")
     elif inv in ("setup", "install"):
         if remote is not None:
             remote2, remote = remote, None
@@ -112,12 +111,12 @@ async def cli(ctx, section, remote, path):
         if path:
             raise click.UsageError("You don't use paths with 'moat micro setup|install'")
         if section is None:
-            section = Path("setup")
+            section = P("setup")
     elif inv == "path":
         pass
     else:
         if section is None:
-            section = Path("connect")
+            section = P("connect")
     if section is not None:
         try:
             cfg = get_part(cfg, section)

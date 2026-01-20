@@ -125,7 +125,7 @@ class AlertHandler(BaseCmd):
     async def _rdr(self, p, evt):
         rem = p["rem"]
         al = p["al"]
-        async with self.root.cmd(Path(*rem, *al, "r")).stream_in() as it:
+        async with self.root.cmd(Path.build(rem + al + ("r",))).stream_in() as it:
             evt.set()
             async for res in it:
                 await self.cmd_w(a=res["a"], p=rem + res["p"], d=res.get("d", None))

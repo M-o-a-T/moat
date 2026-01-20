@@ -81,7 +81,7 @@ async def test_iter(tmp_path, conn):
     async with mpy_stack(tmp_path, CFG) as d:
         res = []
         t1 = ticks_ms()
-        async with d.cmd(Path(*conn) / "it", lim=3, delay=0.2).stream_in() as it:
+        async with d.cmd(Path.build(conn + ["it"]), lim=3, delay=0.2).stream_in() as it:
             async for (n,) in it:
                 log("I %d %d", n, ticks_diff(ticks_ms(), t1))
                 res.append(n)
@@ -91,7 +91,7 @@ async def test_iter(tmp_path, conn):
         assert 450 < ticks_diff(t2, t1) < 1200
 
         res = []
-        async with d.cmd(Path(*conn) / "it", lim=5, delay=0.2).stream_in() as it:
+        async with d.cmd(Path.build(conn + ["it"]), lim=5, delay=0.2).stream_in() as it:
             async for (n,) in it:
                 log("I %d %d", n, ticks_diff(ticks_ms(), t2))
                 if n == 3:
@@ -105,7 +105,7 @@ async def test_iter(tmp_path, conn):
         t1 = ticks_ms()
 
         for i in range(1, 4):
-            (n,) = await d.cmd(Path(*conn) / "nit", delay=0.2)
+            (n,) = await d.cmd(Path.build(conn + ["nit"]), delay=0.2)
             assert n == i
         log("I X %d", ticks_diff(ticks_ms(), t1))
         t2 = ticks_ms()

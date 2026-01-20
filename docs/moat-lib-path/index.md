@@ -6,150 +6,14 @@
 :end-before: % end main
 ```
 
-## Manual
-
-The `moat.lib.path` module provides hierarchical path objects for MoaT systems.
-Paths are immutable sequences that can represent hierarchical structures with
-efficient serialization and manipulation.
-
-### Overview
-
-This module includes:
-
-- **Path objects** - Immutable sequences representing hierarchical paths
-- **Multiple representations** - Dot notation and slash notation
-- **Type encoding** - Support for strings, numbers, booleans, bytes, and more
-- **Path operations** - Concatenation, slicing, element access
-- **Efficient transmission** - Path shortening for related sequences
-- **Serialization integration** - Works with YAML, CBOR, msgpack
-- **Context-aware roots** - Portable paths with root substitution
-
-### Creating Paths
-
-```python
-from moat.lib.path import Path, P, PS
-
-# Create from elements
-path = Path("config", "database", "host")
-
-# Create from dot notation
-path = P("config.database.host")
-
-# Create from slash notation
-path = PS("config/database/host")
-
-# All three create the same path
-```
-
-### Path Representations
-
-```python
-from moat.lib.path import Path
-
-path = Path("foo", "bar", "baz")
-
-# Dot notation (default string representation)
-str(path)  # "foo.bar.baz"
-
-# Slash notation
-path.slash  # "foo/bar/baz"
-
-# … or simply as tuples
-tuple(path)  # ("foo", "bar", "baz")
-```
-
-### Type Encoding
-
-Paths support various data types with special encoding:
-
-```python
-from moat.lib.path import P
-
-# Boolean values
-p = P("config:t")  # ("config", True)
-p = P("config:f")  # ("config", False)
-
-# None and empty string
-p = P("config:n")  # ("config", None)
-p = P("config:e")  # ("config", "")
-
-# Integers (hex encoding)
-p = P("config:x2a")  # ("config", 42)
-p = P("config:xff")  # ("config", 255)
-
-# Binary integers
-p = P("config:b1010")  # ("config", 10)
-
-# Byte strings (hex encoding)
-p = P("data:y48656c6c6f")  # ("data", b"Hello")
-
-# Byte strings (base64 encoding)
-p = P("data:sSGVsbG8=")  # ("data", b"Hello")
-
-# Path with mixed types
-p = P("app:x1:t.foo:")  # ("app", 1, True)
-```
-
-### Escape Sequences
-
-Special characters can be escaped within path elements:
-
-```python
-from moat.lib.path import P
-
-# Escape colon
-p = P("server::port")  # Represents ("server:port",)
-
-# Escape dot
-p = P("file:.txt")  # Represents ("file.txt",)
-
-# Escape space
-p = P("hello:_world")  # Represents ("hello world",)
-
-# Escape slash (in slash notation)
-p = PS("path:|to:|file")  # Represents ("path/to/file",)
-```
-
-### Path Operations
-
-```python
-from moat.lib.path import Path
-
-# Concatenation
-path1 = Path("foo", "bar")
-path2 = Path("baz", "qux")
-combined = path1 + path2  # Path("foo", "bar", "baz", "qux")
-
-# Element access
-path = Path("a", "b", "c")
-path[0]   # "a"
-path[-1]  # "c"
-
-# Slicing
-path[1:3]  # Path("b", "c")
-
-# Length
-len(path)  # 3
-
-# Iteration
-for elem in path:
-    print(elem)  # prints "a", "b", "c"
-
-# Appending elements
-path = path / "d"  # Path("a", "b", "c", "d")
-
-# Removing elements from end
-path = path % 1  # Path("a", "b", "c")
-```
-
 ### Pattern Matching
 
 Paths support Python's structural pattern matching:
 
 ```python
-from moat.lib.path import Path
+from moat.lib.path import Path, P
 
-path = Path("config", "database", "host")
+path = P("config.database.host")
 
 match path:
     case Path(("config", "database", host)):
@@ -160,63 +24,62 @@ match path:
         print("Unknown path")
 ```
 
-### Path Shortening and Lengthening
+### Path shortening/lengthening
 
 For efficient transmission of sequences of related paths:
 
 ```python
-from moat.lib.path import PathShortener, PathLongener, P
+from moat.lib.path import PathShortener, PathLongener
 
-# Create a shortener
+# Shortener removes common prefixes
 shortener = PathShortener()
-
-# Shorten a sequence of related paths
 depth1, short1 = shortener.short(P("a.b.c.d"))  # (4, ("a","b","c","d"))
 depth2, short2 = shortener.short(P("a.b.c.e"))  # (3, ("e",))
 depth3, short3 = shortener.short(P("a.b.f"))    # (2, ("f",))
 
-# The shortener removes common prefixes
-# Only the differing parts are transmitted
-
-# Create a longener to reconstruct
+# Longener reconstructs full paths
 longener = PathLongener()
-
-# Reconstruct full paths
 path1 = longener.long(depth1, short1)  # Path("a","b","c","d")
 path2 = longener.long(depth2, short2)  # Path("a","b","c","e")
 path3 = longener.long(depth3, short3)  # Path("a","b","f")
 ```
 
-### Root Path Substitution
+### Root path substitution
 
-Paths can use context-aware root substitution for portability:
+Paths can use context-aware root placeholders:
 
 ```python
-from moat.lib.path import Root, Path, P
+from moat.lib.path import Root, Path
 
-# Set a root path for the current context
+# Set a root path
 Root.set(Path("my", "app", "config"))
 
-# Paths are automatically normalized
-path = Path("my", "app", "config", "database", "host")
-
-# When serialized, the root prefix is replaced with :R
-# Making the path portable across different deployments
-
-# The slash representation shows the substitution
-path.slash  # ":R/database/host"
-
-# But the original path is preserved
-tuple(path)  # ("my", "app", "config", "database", "host")
+# Paths starting with the root get special encoding
+path = Path("my", "app", "config", "database", "url")
+# When serialized, "my.app.config" is replaced with :R placeholder
+path.str == ":R.database.url"
+# This makes paths portable across different root configurations
 ```
+
+The `Root` object (`:R`) is used by MoaT as its MQTT prefix. Three other
+prefixes (`P`, `Q` and `S`; `P_Root` etc.) are available for application use.
+
+### Integration with Serialization
+
+MoaT paths integrate with serialization formats:
+
+- **YAML**: Uses `!P` prefix for path objects
+- **CBOR**: List marked with tag 39 ("Identifier")
+- **Msgpack**: extension 3 encapsulates path elements (no list marker)
+
 
 ### Logging Integration
 
 ```python
-from moat.lib.path import logger_for, Path
+from moat.lib.path import logger_for, P
 
 # Get a logger for a specific path
-path = Path("myapp", "module", "component")
+path = P("myapp.module.component")
 logger = logger_for(path)
 
 # Logger name is "myapp.module.component"
@@ -225,21 +88,21 @@ logger.info("Component started")
 
 ## Common Patterns
 
-### Configuration Paths
+### Configuration
 
 ```python
 from moat.lib.path import P
 
-# Hierarchical configuration
+# Config paths
 db_config = P("config.database")
 db_host = db_config / "host"
 db_port = db_config / "port"
 
-# Access configuration
-config = {
-    P("config.database.host"): "localhost",
-    P("config.database.port"): 5432,
-}
+# Config data
+data = attrdict(config=attrdict(database=attrdict(host="loclhost",port="5432")))
+
+# Accessing the data
+assert data.get_(db_port) == 5432
 ```
 
 ### Message Routing
@@ -276,27 +139,34 @@ grandparent = file_path % 2  # Path("home", "user")
 
 ### YAML Integration
 
-```yaml
-# Paths use !P prefix in YAML
-database_path: !P config.database
-sensor_path: !P sensors:x1:temperature
-```
-
 ```python
 from moat.util import yload, yprint
 
 data = yload("""
+config:
   paths:
-    - !P config.database
-    - !P sensors:x1:temperature
+    db: !P config.database:0
+  database:
+    - host: test.example
+      port: 33221
+    - host: more.test.example
+      port: 33222
 """)
 
-# Paths are automatically deserialized
-print(data["paths"][0])  # Path("config", "database")
-print(data["paths"][1])  # Path("sensors", 1, "temperature")
+db = data.get_(data.paths.db)
+assert db.host == "test.example"
 ```
 
 ### CBOR/Msgpack Integration
+
+For CBOR, we use tag 39 with a list.
+
+With MsgPack we use extension 3. The contents are the concatenated
+encodings of the path's elements, in order.
+
+Both codecs encode roots as leading proxies: "R" for the `R` root, and
+`_PS` etc. for the S, P and Q roots. See {ref}`moat.lib.proxy` for details.
+Relative paths are not supported.
 
 ```python
 from moat.lib.codec.moat_cbor import Codec as StdCBOR
@@ -306,7 +176,7 @@ packer = StdCBOR()
 path = Path.build(("foo", "bar"))
 packed = packer.pack(path)
 unpacked = packer.unpack(packed)
-assert packed == path
+assert unpacked == path
 ```
 
 ```{toctree}

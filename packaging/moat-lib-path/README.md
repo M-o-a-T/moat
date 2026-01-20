@@ -27,13 +27,14 @@ The MoaT ecosystem uses `Path` objects as hierarchical accessors for objects and
 from moat.lib.path import Path, P
 
 # Create paths from elements
-path = Path("foo", "bar", "baz")
-path = P("foo.bar.baz")  # Equivalent dot notation
-path = Path.build(("foo", "bar", "baz"))  # from tuples, lists etc.
+path = Path()  # empty path
+
+path = P("foo.bar.baz")  # dot notation
+assert path == Path.build(("foo", "bar", "baz"))  # assemble from tuples, lists etc.
 
 # Create from various types
-path = Path("config", 42, True)  # Mixed types
-path = P("config:x2a:t")  # Encoded: config, 0x2a (42), True
+path = Path.build(("config", 42, True))  # Mixed types
+assert path == P("config:x2a:t")  # config, 0x2a (42), True
 ```
 
 ### Path representation
@@ -52,10 +53,9 @@ path = P("foo.bar.baz")
 path.slash  # "foo/bar/baz"
 ```
 
-### Special encodings
+### Special codes
 
-MoaT paths support special encoding for non-string values. The most common
-are:
+MoaT paths support non-string path elements. The most common are:
 
 ```python
 # Inline escapes (within an element):
@@ -83,8 +83,8 @@ path = P("config:x2a:t")  # Represents ("config", 42, True)
 ```python
 from moat.lib.path import Path
 
-path1 = Path("foo", "bar")
-path2 = Path("baz", "qux")
+path1 = P("foo.bar")
+path2 = P("baz.qux")
 
 # Concatenation
 combined = path1 + path2  # Path("foo", "bar", "baz", "qux")
@@ -94,8 +94,8 @@ path1[0]  # "foo"
 path1[-1]  # "bar"
 
 # Slicing
-path = Path("a", "b", "c", "d")
-path[1:3]  # Path("b", "c")
+path = Path("a.b.c.d")
+path[1:3]  # ("b", "c")
 
 # Length
 len(path)  # 4
@@ -108,55 +108,12 @@ for elem in path:
 path = path / "new"  # a.b.c.d.new
 ```
 
-### Path shortening/lengthening
-
-For efficient transmission of sequences of related paths:
-
-```python
-from moat.lib.path import PathShortener, PathLongener
-
-# Shortener removes common prefixes
-shortener = PathShortener()
-depth1, short1 = shortener.short(P("a.b.c.d"))  # (4, ("a","b","c","d"))
-depth2, short2 = shortener.short(P("a.b.c.e"))  # (3, ("e",))
-depth3, short3 = shortener.short(P("a.b.f"))    # (2, ("f",))
-
-# Longener reconstructs full paths
-longener = PathLongener()
-path1 = longener.long(depth1, short1)  # Path("a","b","c","d")
-path2 = longener.long(depth2, short2)  # Path("a","b","c","e")
-path3 = longener.long(depth3, short3)  # Path("a","b","f")
-```
-
-### Root path substitution
-
-Paths can use context-aware root placeholders:
-
-```python
-from moat.lib.path import Root, Path
-
-# Set a root path
-Root.set(Path("my", "app", "config"))
-
-# Paths starting with the root get special encoding
-path = Path("my", "app", "config", "database", "url")
-# When serialized, "my.app.config" is replaced with :R placeholder
-path.str == ":R.database.url"
-# This makes paths portable across different root configurations
-```
-
-The `Root` object (`:R`) is used by MoaT as its MQTT prefix. Three other
-prefixes (`P`, `Q` and `S`; `P_Root` etc.) are available for application use.
-
 % end main
 
-## Integration with Serialization
+## Serialization
 
 MoaT paths integrate with serialization formats:
 
-- **YAML**: Uses `!P` prefix for path objects
+- **YAML**: Use a `!P` prefix for Path objects (dot notation)
 - **CBOR**: List marked with tag 39 ("Identifier")
-- **Msgpack**: extension 3 encapsulates path elements (no list marker)
-
-
-% end main
+- **Msgpack**: extension 3 encapsulates path elements

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING as _TC
 
 if _TC:
     from ._impl import CFG as CFG
+    from ._impl import CFG_ as CFG_
     from ._impl import CfgStore as CfgStore
     from ._impl import current_cfg as current_cfg
     from ._impl import load_yaml as load_yaml
@@ -21,6 +22,7 @@ TEST = False
 # Lazy loading for classes and functions
 _imports = {
     "CFG": "_impl",
+    "CFG_": "_impl",
     "CfgStore": "_impl",
     "current_cfg": "_impl",
     "load_yaml": "_impl",
@@ -44,4 +46,4 @@ def __dir__():
     return sorted(set(list(__all__) + [k for k in globals().keys() if not k.startswith("_")]))
 
 
-__all__ = ["CFG", "CfgStore", "current_cfg", "load_yaml", "monitor", "register"]
+__all__ = ["CFG", "CFG_", "CfgStore", "current_cfg", "load_yaml", "monitor", "register"]

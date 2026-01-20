@@ -145,6 +145,15 @@ class CFG_:
     """
 
     def set_real_cfg(self, cfg: CfgStore):
+        """
+        Set the real configuration store.
+
+        Args:
+            cfg: The configuration store to set
+
+        Raises:
+            RuntimeError: if config is already set
+        """
         if current_cfg.get() is not None:
             raise RuntimeError("Config already set")
         current_cfg.set(cfg)

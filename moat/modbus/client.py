@@ -12,7 +12,7 @@ from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, suppress
 from functools import partial
-from pathlib import Path
+from pathlib import Path as FSPath
 
 from anyio_serial import Serial
 from pymodbus.constants import ExcCodes
@@ -465,7 +465,7 @@ class SerialHost(_HostCommon, CtxObj):
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
 
-        log = logging.getLogger(f"modbus.{Path(port).name}")
+        log = logging.getLogger(f"modbus.{FSPath(port).name}")
         self._trace = log.info if debug else log.debug
         self._monitor = monitor
 

@@ -40,10 +40,10 @@ def main(info, fn, fo):  # noqa: D103
             p = P(r[4].lower())
             pa = p[1].split("_")
             if pa[0] in ("i", "sw", "o", "do", "di"):
-                p = P(p[0]) + Path(*pa) + p[2:]
+                p = P(p[0]) + Path.build(pa) + p[2:]
             elif pa[0] in ("alarme", "anlage", "modbus"):
                 pa = p[1].split("_", 1)
-                p = P(p[0]) + Path(*pa) + p[2:]
+                p = P(p[0]) + Path.build(pa) + p[2:]
             if r[8] in ("system_yes_no_t", "system_ein_aus_t"):
                 tt = "bit"
             elif r[3] in ("s16", "s32"):
@@ -60,7 +60,7 @@ def main(info, fn, fo):  # noqa: D103
                     return x
 
             p = [_int(x) for x in p]
-            p = Path(*p)
+            p = Path.build(p)
 
             e = attrdict(
                 register=int(r[0]),

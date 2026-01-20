@@ -44,19 +44,19 @@ async def list_(obj, device, family):
     prefix = obj.cfg.kv.ow.prefix
     if family:
         f = int(family, 16)
-        path = Path(f)
+        path = Path.build((f,))
 
         def pm(p):
             if len(p) < 1:
                 return path
-            return Path(f"{f:02x}.{p[0]:12x}", *p[1:])
+            return Path.build((f"{f:02x}.{p[0]:12x}",)) + p[1:]
 
     elif device:
         f, d = device.split(".", 2)[0:2]
-        path = Path(int(f, 16), int(d, 16))
+        path = Path.build((int(f, 16), int(d, 16)))
 
         def pm(p):
-            return Path(device) + p
+            return Path.build((device,)) + p
 
     else:
         path = Path()
@@ -67,14 +67,14 @@ async def list_(obj, device, family):
             elif not isinstance(p[0], int):
                 return None
             elif len(p) == 1:
-                return Path(f"{p[0]:02x}")
+                return Path.build((f"{p[0]:02x}",))
             else:
-                return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
+                return Path.build((f"{p[0]:02x}.{p[1]:12x}",)) + p[2:]
 
     if obj.meta:
 
         def pm(p):
-            return Path(str(prefix + path)) + p
+            return prefix + path + p
 
     await data_get(obj.client, prefix + path, as_dict="_", path_mangle=pm, out=obj.stdout)
 

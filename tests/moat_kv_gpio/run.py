@@ -10,7 +10,7 @@ from moat.kv.gpio.model import GPIOroot
 from moat.kv.gpio.task import task as GPIOtask
 from moat.lib.config import CFG
 from moat.lib.gpio.test import GpioWatcher, Pin
-from moat.lib.path import Path
+from moat.lib.path import P, Path
 from moat.mqtt.test import test_client
 
 logger = logging.getLogger(__name__)
@@ -433,13 +433,13 @@ async def main(label="gpio-mockup-A", host="HosT"):  # noqa: D103
     async with (
         test_client() as c,
         GpioWatcher(interval=0.05).run() as w,
-        c.watch(Path("test", "state")) as ts,
+        c.watch(P("test.state")) as ts,
     ):
         ts = ts.__aiter__()  # currently a NOP but you never know
         server = await GPIOroot.as_handler(c)
         await server.wait_loaded()
 
-        controller = server.follow(Path(host, label), create=None)
+        controller = server.follow(Path.build((host, label)), create=None)
 
         async with anyio.create_task_group() as tg:
             evt = anyio.Event()

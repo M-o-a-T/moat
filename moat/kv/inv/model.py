@@ -15,7 +15,7 @@ from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
 from moat.util import NotGiven, attrdict, srepr, yaml_repr
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot, NamedRoot
-from moat.lib.path import Path
+from moat.lib.path import P, Path
 
 from collections import deque
 
@@ -58,12 +58,12 @@ class InventoryRoot(ClientRoot):  # noqa:D101
     host = net = cable = group = vlan = wire = None
 
     async def run_starting(self):  # noqa:D102
-        self.host = self.follow(Path("host"), create=True)
-        self.net = self.follow(Path("net"), create=True)
-        self.cable = self.follow(Path("cable"), create=True)
-        self.group = self.follow(Path("group"), create=True)
-        self.vlan = self.follow(Path("vlan"), create=True)
-        self.wire = self.follow(Path("wire"), create=True)
+        self.host = self.follow(P("host"), create=True)
+        self.net = self.follow(P("net"), create=True)
+        self.cable = self.follow(P("cable"), create=True)
+        self.group = self.follow(P("group"), create=True)
+        self.vlan = self.follow(P("vlan"), create=True)
+        self.wire = self.follow(P("wire"), create=True)
 
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
@@ -1045,7 +1045,7 @@ class CableRoot(ClientEntry):  # noqa:D101
             await c2.delete()
 
         client = self.root.client
-        c = self.follow(Path(client.server_name, await client.get_tock()), create=True)
+        c = self.follow(Path.build((client.server_name, await client.get_tock())), create=True)
         await c.link(obj_a, obj_b, wait=wait)
 
     async def unlink(self, dest, *, ignore=False, wait=False):  # noqa:D102

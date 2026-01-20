@@ -71,7 +71,7 @@ async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
             elif not isinstance(rp, Path):
                 rp = Path.build(rp)
         except AttributeError:
-            rp = Path("incomplete") + r.path
+            rp = P("incomplete") + r.path
             if not as_dict:
                 val.path = rp
         if rp[: len(path)] != path:
@@ -80,7 +80,7 @@ async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
         if node is None:
             val.syspath = r.path
         else:
-            val.syspath = Path(node) + r.path
+            val.syspath = Path.build((node,)) + r.path
 
         rn = {}
 

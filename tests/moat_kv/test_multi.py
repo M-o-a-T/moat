@@ -61,7 +61,7 @@ async def test_10_many(autojump_clock):  # pylint: disable=unused-argument  # no
                 task_status.started()
                 assert (await c.get(P(":"))).value == 420
                 assert (await c.get(P("ping"))).value == "pong"
-                await c.set(Path("foo", i), value=420 + i)
+                await c.set(Path.build(("foo", i)), value=420 + i)
 
         async with trio.open_nursery() as tg:
             for i in range(1, N):
@@ -76,7 +76,7 @@ async def test_10_many(autojump_clock):  # pylint: disable=unused-argument  # no
         for j in [0] + s._actor._rand.sample(range(1, N), NN):  # noqa: SLF001
             async with st.client(j) as c:
                 for i in s._actor._rand.sample(range(1, N), NN):  # noqa: SLF001
-                    assert (await c.get(Path("foo", i))).value == 420 + i
+                    assert (await c.get(Path.build(("foo", i)))).value == 420 + i
 
         async with st.client(N - 1) as ci:
             r = await ci.get(P("delete.me"), nchain=2)
@@ -138,7 +138,7 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
                 r = await c.get(P("ping"))
                 assert r.value == "pong"
                 assert r.tock == pongtock
-                await c.set(Path("foo", i), value=420 + i)
+                await c.set(Path.build(("foo", i)), value=420 + i)
                 pass  # client end
 
         async with trio.open_nursery() as tg:
@@ -150,7 +150,7 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
         if tocky:
             async with st.client(2 if tocky < 0 else N - 2) as ci:
                 for i in range(abs(tocky)):
-                    await ci.set(Path("one", i), value="two")
+                    await ci.set(Path.build(("one", i)), value="two")
         await trio.sleep(30)
         async with st.client(1) as ci:
             await ci.delete(P("drop.me"))

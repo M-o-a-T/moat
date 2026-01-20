@@ -28,14 +28,14 @@ async def get(obj, path, script, schema, yaml_):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
-        path=Path("type") + path,
+        path=P("type") + path,
         iter=False,
         nchain=obj.meta,
     )
     try:
         r = res.value
     except AttributeError:
-        raise click.UsageError(f"No data at {Path('type') + path}") from None
+        raise click.UsageError(f"No data at {P('type') + path}") from None
 
     if not obj.meta:
         res = res.value
@@ -128,7 +128,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
         pl = PathLongener()
         async for r in await obj.client._request(  # noqa:SLF001
             "get_tree_internal",
-            path=Path("match") + path,
+            path=P("match") + path,
             iter=True,
             nchain=0,
         ):
@@ -148,7 +148,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
         raise click.UsageError("You can only print the raw path when reading a match.")
 
     if delete:
-        res = await obj.client._request(action="delete_internal", path=Path("type") + path)  # noqa:SLF001
+        res = await obj.client._request(action="delete_internal", path=P("type") + path)  # noqa:SLF001
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -186,7 +186,7 @@ async def list_(obj, path):  # pylint: disable=redefined-builtin
     pl = PathLongener()
     async for r in await obj.client._request(  # noqa:SLF001
         "get_tree_internal",
-        path=Path("type") + path,
+        path=P("type") + path,
         iter=True,
         nchain=0,
     ):

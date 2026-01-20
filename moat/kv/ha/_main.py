@@ -80,9 +80,9 @@ async def cli(obj, test):
     """
     obj.hass_test = test
     if test:
-        obj.hass_name = Path("test", "retain")
+        obj.hass_name = Path.build(("test", "retain"))
     else:
-        obj.hass_name = Path("home", "ass", "dyn")
+        obj.hass_name = Path.build(("home", "ass", "dyn"))
 
 
 @cli.command("conv")
@@ -111,7 +111,7 @@ async def setup_conv(obj, user):
             await obj.client._request(action="set_internal", path=["codec"] + k, value=v)  # noqa:SLF001
             n += 1
 
-    ppa = Path("conv", user) + obj.hass_name
+    ppa = Path.build(("conv", user)) + obj.hass_name
     for k, v in cfg["conv"].items():
         for kk, vv in v.items():
             vv = dict(codec=vv)  # noqa:PLW2901

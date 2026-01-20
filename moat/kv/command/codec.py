@@ -26,7 +26,7 @@ async def get(obj, path, script, encode, decode):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(  # noqa:SLF001
         action="get_internal",
-        path=Path("codec") + path,
+        path=P("codec") + path,
         iter=False,
         nchain=obj.meta,
     )
@@ -47,7 +47,7 @@ async def list_(obj, path):
     """List type information entries"""
     res = await obj.client._request(  # noqa:SLF001
         action="get_tree_internal",
-        path=Path("codec") + P(path),
+        path=P("codec") + P(path),
         iter=True,
         nchain=obj.meta,
     )
@@ -107,7 +107,7 @@ async def set_(obj, path, encode, decode, data, in_, out):
     res = await obj.client._request(  # noqa:SLF001
         action="set_internal",
         value=msg,
-        path=Path("codec") + path,
+        path=P("codec") + path,
         iter=False,
         nchain=obj.meta,
         **({} if chain is NotGiven else {"chain": chain}),
@@ -145,7 +145,7 @@ async def convert(obj, path, codec, name, delete, list_):
                 raise click.UsageError("You can't use a path here.")
             res = await obj.client._request(  # noqa:SLF001
                 action="enum_internal",
-                path=Path("conv"),
+                path=P("conv"),
                 iter=False,
                 nchain=0,
                 empty=True,
@@ -156,7 +156,7 @@ async def convert(obj, path, codec, name, delete, list_):
         else:
             res = await obj.client._request(  # noqa:SLF001
                 action="get_tree_internal",
-                path=Path("conv", name) + path,
+                path=Path.build(("conv", name)) + path,
                 iter=True,
                 nchain=obj.meta,
             )
@@ -164,19 +164,21 @@ async def convert(obj, path, codec, name, delete, list_):
             async for r in res:
                 pl(r)
                 try:
-                    print(f"{r.path} : {Path.build(r.value['codec'])}", file=obj.stdout)
+                    print(f"{r.path} : {r.value['codec']}", file=obj.stdout)
                 except Exception as e:
-                    print(f"{Path(r.path)} {e!r}", file=obj.stdout)
+                    print(f"{r.path} {e!r}", file=obj.stdout)
 
         return
     if delete:
-        res = await obj.client._request(action="delete_internal", path=Path("conv", name) + path)  # noqa:SLF001
+        res = await obj.client._request(  # noqa:SLF001
+            action="delete_internal", path=Path.build(("conv", name)) + path
+        )
     else:
         msg = {"codec": codec}
         res = await obj.client._request(  # noqa:SLF001
             action="set_internal",
             value=msg,
-            path=Path("conv", name) + path,
+            path=Path.build(("conv", name)) + path,
             iter=False,
             nchain=obj.meta,
         )

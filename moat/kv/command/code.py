@@ -31,7 +31,7 @@ async def cli(ctx, path):
         pl = PathLongener(path)
         async for res in obj.client.get_tree(obj.path, long_path=False):
             pl(res)
-            print(Path(*res.path), res.value.info, file=obj.stdout)
+            print(Path.build(res.path), res.value.info, file=obj.stdout)
 
 
 @cli.command()

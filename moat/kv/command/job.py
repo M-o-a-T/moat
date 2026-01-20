@@ -52,7 +52,7 @@ async def cli(ctx, node, group):
         subpath = (node, group)
 
     cfg = obj.cfg["kv"]["runner"]
-    obj.subpath = Path(cfg["sub"][obj.runner_root.SUB]) + subpath
+    obj.subpath = cfg["sub"][obj.runner_root.SUB] + subpath
     obj.path = cfg["prefix"] + obj.subpath
     obj.statepath = cfg["state"] + obj.subpath
 

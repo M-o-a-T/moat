@@ -78,8 +78,8 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
 
     def __str__(self):
         return (
-            f"N {Path(*self.subpath[1:])} {Path(*self.source)}"
-            f" {Path(*self.attr)} {self.series}"
+            f"N {Path.build(self.subpath[1:])} {Path.build(self.source)}"
+            f" {Path.build(self.attr)} {self.series}"
             f" {' '.join(f'{k}={v}' for k, v in self.tags.items())}"
         )
 

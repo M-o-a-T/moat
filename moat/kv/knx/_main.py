@@ -78,7 +78,7 @@ async def attr_(obj, bus, group, vars_, eval_, path_):
     """
     cfg = obj.cfg.kv.knx
     group = (int(x) for x in group.split("/")) if group else ()
-    path = Path(bus, *group)
+    path = Path.build((bus, *group))
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
 
@@ -139,7 +139,7 @@ async def addr(obj, bus, group, typ, mode, attr):
     """Set/get/delete device settings. This is a shortcut for the "attr" command."""
     cfg = obj.cfg.kv.knx
     group = (int(x) for x in group.split("/"))
-    path = Path(bus, *group)
+    path = Path.build((bus, *group))
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
     res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)

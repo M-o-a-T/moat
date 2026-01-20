@@ -113,14 +113,14 @@ async def list_(obj):
         elif not isinstance(p[0], int):
             return None
         elif len(p) == 1:
-            return Path(f"{p[0]:02x}")
+            return Path.build((f"{p[0]:02x}",))
         else:
-            return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
+            return Path.build((f"{p[0]:02x}.{p[1]:12x}",)) + p[2:]
 
     if obj.meta:
 
         def pm(p):
-            return Path(str(prefix + path)) + p
+            return Path.build(str(prefix + path)) + p
 
     await data_get(obj.client, prefix + path, as_dict="_", path_mangle=pm, out=obj.stdout)
 

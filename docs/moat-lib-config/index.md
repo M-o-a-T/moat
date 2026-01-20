@@ -227,10 +227,10 @@ and thus should be used sparingly.
 ## Dynamic Configuration
 
 The configuration is updated in-place. You can set a (sub)config's
-{meth}`~moat.util.dict.attrdict.updated_` attribute to a notification
+{meth}`~moat.util.attrdict.updated_` attribute to a notification
 function or method.
 
-Alternately, use {class}`~moat.lib.config.monitor`.
+Alternately, use {py:class}`~moat.lib.config.monitor`.
 
 ```{toctree}
 :maxdepth: 2

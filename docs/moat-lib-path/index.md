@@ -165,8 +165,10 @@ With MsgPack we use extension 3. The contents are the concatenated
 encodings of the path's elements, in order.
 
 Both codecs encode roots as leading proxies: "R" for the `R` root, and
-`_PS` etc. for the S, P and Q roots. See {ref}`moat.lib.proxy` for details.
-Relative paths are not supported.
+`_PS` etc. for the S, P and Q roots. See {py:class}`moat.lib.proxy.Proxy`
+for details.
+
+Serializing relative paths is not supported.
 
 ```python
 from moat.lib.codec.moat_cbor import Codec as StdCBOR

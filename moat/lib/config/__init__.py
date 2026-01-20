@@ -39,4 +39,9 @@ def __getattr__(attr: str):
     return value
 
 
+def __dir__():
+    """Expose all lazy-loaded attributes for introspection."""
+    return sorted(set(list(__all__) + [k for k in globals().keys() if not k.startswith("_")]))
+
+
 __all__ = ["CFG", "CfgStore", "current_cfg", "load_yaml", "monitor", "register"]

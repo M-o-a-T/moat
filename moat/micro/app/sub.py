@@ -51,11 +51,6 @@ def Err(*a, **k):  # noqa:F811
     Set @always to `True` if the app should be restarted if it ends without
     raising an error.
 
-    Errors caught:
-    * OSError
-    * EOFError
-    * ProcessDeadError
-
     TODO: exponential back-off
     """
 

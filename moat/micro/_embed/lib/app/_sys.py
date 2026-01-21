@@ -63,8 +63,8 @@ class Cmd(_Cmd):
         t2 = ticks_ms()
         return dict(
             t=ticks_diff(t2, t1),
-            a=(a2, self.root.i.fa),
-            f=(f2, self.root.i.fm),
+            a=(a2, self.root.i["fa"]),
+            f=(f2, self.root.i["fm"]),
             c=f2 - f1,
         )
 

@@ -10,7 +10,12 @@ breadboard friendly. You can get it from
 
 ## Prerequisites
 
-For ESP you need the ESP-IDF. This step is documented
+Unfortunately, as of 2026-01 MoaT cannot run on standard MicroPython.
+A few bits are missing (asyncio's taskgroups), others are incompatible
+(MoaT is able to incrementally update subpackages, stock MicroPython
+doesn't allow that). Thus we need to build and upload our own.
+
+For ESP you need the ESP-IDF software. This step is documented
 [here](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/get-started/index.html). Briefly:
 
 ```shell
@@ -26,9 +31,6 @@ source ./export.sh
 pip install moat
 ```
 
-The next-to-last step adds the ESP-IDF environment to your current environment.
-As the ESP environment doesn't include MoaT, the last step adds it.
-
 ## Configuration
 
 Next we need to create a configuration file:
@@ -39,14 +41,14 @@ $ vi esp-s3.cfg
 ```
 
 You will have to edit the serial ports, as your device is unlikely to have
-a MAC of XX:XX:XX:XX:XX:XX. 🤪 Also, your WLAN is unlikely to be named
-"MyNetworkSSID".
+a MAC of XX:XX:XX:XX:XX:XX. 🤪 Also, your WLAN is probably not named
+"MyNetworkSSID". Don't forget the password. (Don't connect to an open WLAN.)
 
 The "board" tag must name a directory in either
-`moat/micro/embed/boards/esp32` or `micropython/ports/esp32/boards`.
+`moat/micro/_embed/boards/esp32` or `micropython/ports/esp32/boards`.
 
-The following assumes a shell alias named ``mtc`` because we don't want to
-type the same command all the time:
+Next, let's set up a shell alias named ``mtc`` because we don't want to
+type the same long command line all the time:
 
 ```shell
 $ mtc() {
@@ -88,10 +90,10 @@ Initially you might want to use more verbosity: replace `mtc` with
 ## Initial start
 
 The start mode `skip` means "don't start MoaT"; we'd like to make sure that
-network setup and basic MoaT commands work before we commit ourselves. This
-is especially important on boards with a direct USB connection because
-debugging them is somewhat difficult — if we're unlucky, a crash takes the
-USB link down before the debug trace can be retrieved.
+our network setup works before we commit ourselves. This is especially
+important on boards with a direct USB connection because debugging them is
+somewhat difficult — if we're unlucky, a crash takes the USB link down
+before the debug trace can be retrieved.
 
 Thus, we start a terminal:
 
@@ -117,7 +119,8 @@ Start MoaT: 'once'
 WLAN. - 192.168.1.42
 Setup :
 MoaT is up.
-
+MoaT is in the background.
+>>>
 ```
 
 .. note::

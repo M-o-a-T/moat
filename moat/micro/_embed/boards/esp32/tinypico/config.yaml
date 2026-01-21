@@ -1,0 +1,33 @@
+# tinypico base config
+#
+$base:
+  - ../config.yaml
+
+env:
+  load_all: true
+moat:
+  micro:
+    cfg:
+      r:
+        app:
+          i2c:
+            app: i2c.Cmd
+            id: 0
+            d: 21
+            c: 22
+    config:
+      serial:
+        config: &ser "/dev/ttyUSB0"
+        run: *ser
+      net:
+        name: "tinypicotest"
+        ap: "YourNet"
+        pwd: "YourSuperSecretPassword"
+
+        addr: "192.168.1.42"
+        netmask: "255.255.255.0"
+        router: "192.168.1.1"
+        dns: "1.1.1.1"
+      socket: "/run/moat/esp-tinypico-test.sock"
+      board: tinypico
+      tempdir: "/var/tmp/esp32-tinypico"

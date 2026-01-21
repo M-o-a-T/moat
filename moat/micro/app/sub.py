@@ -75,6 +75,7 @@ def Err(*a, **k):  # noqa:F811
         def _load(self):
             self.retry = self.cfg.get("retry", 0)
             self.timeout = self.cfg.get("timeout", 100)
+            self.always = self.cfg.get("always", False)
 
             p = self.cfg.get("notify", None)
             self.notify = self.root.sub_at(p) if p is not None else None
@@ -115,7 +116,7 @@ def Err(*a, **k):  # noqa:F811
                 else:
                     # ends without error
                     log("Err End %s %r", self.path, self.app)
-                    if not self.retry:
+                    if not self.always:
                         return
 
                 if self.retry:

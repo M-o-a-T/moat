@@ -19,6 +19,14 @@ class ProcessCmd(BaseCmdMsg):
     argv = None
     path = None
 
+    doc = dict(
+        _c=dict(
+            _d="Command link to a subprocess",
+            command="list[str]:argv",
+            path="str:file of executable",
+        )
+    )
+
     async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv
         path = self.cfg.get("path") if self.path is None else self.path
@@ -36,6 +44,12 @@ class ProcessIO(BaseCmdBBM):
 
     argv = None
     path = None
+
+    doc = dict(
+        _c=dict(
+            _d="Data link to a subprocess", command="list[str]:argv", path="str:file of executable"
+        )
+    )
 
     async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv

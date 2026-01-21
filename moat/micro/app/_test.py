@@ -26,6 +26,8 @@ def MpyCmd(*a, **k):
     from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _MpyCmd(BaseCmdMsg):
+        doc = dict(_c=dict(_d="RPC to MicroPython"))
+
         async def stream(self):
             mpy = MpyBuf(self.cfg)
             return await AC_use(self, console_stack(mpy, self.cfg))
@@ -39,6 +41,8 @@ def MpyRaw(*a, **k):
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _MpyRaw(BaseCmdBBM):
+        doc = dict(_c=dict(_d="Data to MicroPython"))
+
         async def stream(self):
             return await AC_use(self, MpyBuf(self.cfg))
 
@@ -52,6 +56,8 @@ def LoopCmd(*a, **k):
     from moat.micro.stacks.console import console_stack  # noqa: PLC0415
 
     class _LoopCmd(BaseCmdMsg):
+        doc = dict(_c=dict(_d="Loopback test (RPC+CBOR)"))
+
         async def stream(self):
             # accepts qlen and loss
             s = Loopback(**self.cfg.get("loop", attrdict()))
@@ -81,6 +87,8 @@ def LoopMsg(*a, **k):
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _LoopMsg(BaseCmdBBM):
+        doc = dict(_c=dict(_d="Loopback test (RPC)"))
+
         async def stream(self):
             return await AC_use(self, LoopBBM(self.cfg))
 
@@ -118,6 +126,15 @@ def LoopLink(*a, **k):
         # X: back end: r=read w=write e=event
 
         # write queues.
+
+        doc = dict(
+            _c=dict(
+                _d="Loopback test (data)",
+                qlen="int:len of queues",
+                usage="str:what to forward",
+            )
+        )
+
         q_wm, q_wmr = None, None
         q_wb, q_wbr = None, None
         q_ws, q_wse = None, None

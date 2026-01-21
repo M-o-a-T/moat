@@ -28,7 +28,19 @@ class Cmd(BaseCmd):
         s: flag whether to do streaming.
     """
 
-    doc_ = dict(_d="ping echo")
+    doc = dict(
+        _d="echo",
+        _i="Any:data",
+        _o="Any:data (echoed)",
+        _s=[],
+        _c=dict(
+            _d="echo service",
+            p="path:dest for active echo-ing",
+            t="int:error timeout (3 s)",
+            d="int:delay(59 s)",
+            s="bool:streamed?",
+        ),
+    )
 
     async def stream(self, msg: Msg):
         """

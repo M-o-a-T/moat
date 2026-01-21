@@ -18,6 +18,8 @@ class Cmd(BaseCmd):
     Generic system specific commands
     """
 
+    doc = dict(_c=dict(_d="System level commands"))
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.cache = {}

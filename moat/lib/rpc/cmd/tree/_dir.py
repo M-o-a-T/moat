@@ -168,6 +168,8 @@ class DirCmd(BaseSubCmd):
     Not typically subclassed.
     """
 
+    doc = dict(_c=dict(_d="subdirectory", _a="app:sub-apps"))
+
     SKIP_RDY = True
 
     def __init__(self, cfg):

@@ -26,6 +26,8 @@ class Cmd(BaseCmd):
 
     lock: Lock
 
+    doc = dict(_c=dict(_d="TMP102 temp sensor", bus="path:i2c bus", adr="int:bus address"))
+
     async def setup(self):
         "Allocate lock"
         await super().setup()

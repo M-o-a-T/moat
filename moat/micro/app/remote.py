@@ -27,6 +27,8 @@ def Raw(*a, **k):
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM  # noqa: PLC0415
 
     class _Raw(BaseCmdBBM):
+        doc = dict(_c=dict(_d="Data forwarding", path="path:dest"))
+
         async def stream(self) -> BaseBuf:
             "returns the link"
             return await AC_use(self, self.root.sub_at(self.cfg["path"]))
@@ -44,6 +46,8 @@ def Fwd(*a, **k) -> BaseCmd:
 
     class _Fwd(BaseCmd):
         sd: SubMsgSender = None
+
+        doc = dict(_c=dict(_d="Command forwarding", path="path:dest"))
 
         async def setup(self):
             "create a subdispatcher"
@@ -83,6 +87,8 @@ def Link(*a, **k):
     from moat.micro.cmd.stream.xcmd import BufCmd  # noqa: PLC0415
 
     class _Link(BaseCmdMsg):
+        doc = dict(_c=dict(_d="Command forwarding to remote stream", path="path:dest"))
+
         async def stream(self) -> BaseMsg:
             "returns the stack-wrapped link"
             sd = BufCmd(self.cfg)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.util import attrdict, combine_dict, import_
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
-from moat.lib.rpc import MsgSender, ShortCommandError, APP
+from moat.lib.rpc import APP, MsgSender, ShortCommandError
 from moat.micro.cmd.util.part import set_part
 
 from .tree.dir import BaseSuperCmd
@@ -24,6 +24,12 @@ class ArrayCmd(BaseSuperCmd):
     """
 
     n: int = None
+
+    doc = dict(
+        _c=dict(
+            _d="subdirectory", cfg="cfg:sub-app", n="int:nr.apps", _n="dict:cfg update for app #i"
+        )
+    )
 
     def __init__(self, cfg):
         super().__init__(cfg)

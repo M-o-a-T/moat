@@ -17,6 +17,8 @@ class Cmd(BaseCmd):
     This app serves the config of the parent subcommand.
     """
 
+    doc = dict(_c=dict(_d="Config read/write"))
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.repeats = {}

@@ -19,12 +19,14 @@ class Cmd(BaseCmd):
     """
     This is the front-end for a HDC2010 i²c temperature+humidity sensor.
 
-    Config:
+    Parameters:
         bus: Path to the bus to use
         adr: Bus address to access
     """
 
     lock: Lock
+
+    doc = dict(_c=dict(_d="HDC2010 temp+humid sensor", bus="path:i2c bus", adr="int:bus address"))
 
     async def setup(self):
         "allocate lock"

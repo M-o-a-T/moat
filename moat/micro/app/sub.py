@@ -57,6 +57,17 @@ def Err(*a, **k):  # noqa:F811
     from moat.lib.rpc import BaseFwdCmd  # noqa: PLC0415
 
     class _Err(BaseFwdCmd):
+        doc = dict(
+            _c=dict(
+                _d="Error catcher",
+                cfg="app:sub-app to run",
+                retry="int:autorestart# (0, -1=inf)",
+                timeout="int:restart timer (100)",
+                notify="path:call on error",
+                always="bool:restart if no error",
+            )
+        )
+
         retry: int = None
         timeout: int = None
         p: MsgSender | None = None

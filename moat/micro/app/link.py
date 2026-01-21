@@ -40,6 +40,16 @@ class Register(BaseCmd):
     (Typically you'd use this to connect another MoaT-micro gateway.)
     """
 
+    doc = dict(
+        _c=dict(
+            _d="Remote link",
+            link="path:registration",
+            host="bool:add hostname to link",
+            path="path:remote cmds go here",
+            rlink="path:local cmds go there",
+        )
+    )
+
     link: Link | None = None
     rlink: MsgSender | None = None
 

@@ -137,13 +137,21 @@ keys are defined:
 
 * ``_d``
 
-  A short string that describes the object or command in question.
+  A short string that describes the command in question.
 
   The text does not contain a type.
 
 * ``NAME``
 
   A named parameter / keyword argument.
+
+
+Classes use these additional keys:
+
+* ``_c``
+
+  This key describes the class / app itself. Only ``_d`` and named
+  parameters are alowed.
 
 
 Commands use these additional keys:
@@ -158,11 +166,16 @@ Commands use these additional keys:
 
   If this key is missing, no such keywords may be present.
 
+* ``_n``
+
+  A (or any other) numbered argument. Used when describing numeric
+  keys in config data.
+
 * ``_NUM``
 
   A positional argument.
 
-* ``_a`
+* ``_a``
 
   Trailing positional arguments.
 
@@ -188,7 +201,7 @@ Commands that support streaming use these additional keys:
 * ``_s``
 
   This key is present if the command can be invoked with or without
-  streaming. It contains a list with two elements; the first applies to
+  streaming. It contains a list with two up to elements; the first applies to
   direct commands, the second when streaming. The contents are intended as
   possibly-recursive updates to the parent dict.
 
@@ -218,6 +231,9 @@ applied recursively. (Obviously such a sub-dict may not contain ``_r``,
 
 Documentation for sub-apps describes its configuration keys; the only key
 that starts with an underscore should be ``_d``.
+
+If a (sub-)dict is optional, ``_x`` describes the options when the
+value is not a dict.
 
 
 ## Partial replies

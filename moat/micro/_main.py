@@ -16,6 +16,7 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
+    attrdict,
     combine_dict,
     merge,
     to_attrdict,
@@ -420,128 +421,146 @@ async def cons(obj, path):
 
 @cli.command("cfg", short_help="Get / Update the configuration")
 @click.pass_obj
+@click.option("-c", "--config", is_flag=True, help="Use MoaT config")
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
-@click.option("-R", "--read-client", help="Read config file from the client")
+@click.option("-R", "--read-sat", help="Read config file from the satellite")
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
 @click.option("--stdout", is_flag=True, hidden=True)
-@click.option("-W", "--write-client", help="Write config file to the client")
-@click.option("-S", "--sync", is_flag=True, help="Sync the client after writing")
+@click.option("-W", "--write-sat", help="Write config file to the satellite")
+@click.option("-S", "--sync", is_flag=True, help="Sync the satellite after writing")
+@click.option("-A", "--auth", is_flag=True, help="Authoritative: clear satellite data")
 @click.option(
-    "-c",
-    "--client",
+    "-C",
+    "--sat",
     is_flag=True,
-    help="The client's data win if both -r and -R are used",
+    help="The satellite's data win if both -r and -R are used",
 )
 @attr_args(with_proxy=True)
 @catch_errors
 async def cfg_(
     obj,
     read,
-    read_client,
+    read_sat,
+    config,
     write,
-    write_client,
+    write_sat,
     sync,
     stdout,
-    client,
+    sat,
+    auth,
     **attrs,
 ):
     """
     Update a remote configuration.
 
-    The remote config is updated online if you only use "-v -e -P"
-    arguments. No output is printed in this case, and the config is not
-    read from the client.
+    The remote config is updated online if you only use ``-s``
+    arguments. No output is printed in this case.
 
     Otherwise, the configuration is read as YAML from stdin (``-r -``) or a
-    file (``-r PATH``), as CBOR from Flash (``-R xx.cfg``), or from the
-    client's memory (``-R -``; this is the default if neither ``-r`` nor
-    ``-R`` are used).
+    file (``-r PATH``), as CBOR from Flash (``-R xx.cfg``), from the
+    satellite's memory (``-R -``), or from MoaT config (``-c``). There is no
+    default.
 
     It is then modified according to the "-v -e -P" arguments (if any) and
     written to Flash (``-W xx.cfg``), a file(``-w PATH``), stdout (``-w -``),
-    or the client's live config (no ``-w``/``-W`` argument).
+    or the satellite's live config (no ``-w``/``-W`` argument).
 
-    The client will not be updated if a ``-w``/``-W`` argument is present.
-    If you want to update the client *and* write the config data to a file,
+    The satellite will not be updated if a ``-w``/``-W`` argument is present.
+    If you want to update the satellite *and* write the config data to a file,
     simply do it in two steps.
 
     An "app" section must be present if you write a complete configuration
-    to the client.
+    to the satellite.
 
-    This command assumes that the remote system has a ``cfg.Cmd`` app at
+    This command assumes that the remote system supplies a ``cfg.Cmd`` app at
     path "r.s.cfg_", and a ``fs.Cmd`` app at path "r.s.fs". You can change
     these paths with ``… cfg -P fs ‹path›`` and ``… cfg -P cfg ‹path›``.
     """
+    has_attrs = any(a for a in attrs.values())
     if write and stdout:
-        raise click.UsageError("no --stdout and --write")
+        raise click.UsageError("Only one of --stdout and --write")
+    if not read and not read_sat and not config:
+        if auth:
+            raise click.UsageError("Auth needs --config, --read, or -read-sat")
+        if not has_attrs:
+            read_sat = "-"  # default: dump the config
+        elif not write and not write_sat:
+            write_sat = "-"
+    if bool(read) + bool(read_sat) + bool(config) > 1:
+        raise click.UsageError("Only one of --config, --read, or -read-sat")
     if stdout:
         write = obj.stdout
+    elif not write and not has_attrs and not write_sat:
+        write = sys.stdout
 
-    if sync and (write or write_client):
-        raise click.UsageError("You're not changing the running config!")
+    if sync and (write or write_sat):
+        raise click.UsageError("You can't sync when not writing to the satellite.")
 
-    cfg = obj.mcfg
+    mcfg = obj.mcfg
 
-    if read and write and not (read_client or write_client):
-        # local file update: don't talk to the client
-        if client or sync:
-            raise click.UsageError("You're not talking to the client!")
+    if read and write and not (read_sat or write_sat):
+        # local file update: don't talk to the satellite
+        if sat or sync:
+            raise click.UsageError("You're not talking to the satellite!")
 
         rcfg = yload(read)
         rcfg = process_args(rcfg, **attrs)
         yprint(rcfg, stream=write)
         return
 
-    if read_client or write_client:
+    if read_sat or write_sat:
         from .files import MoatFSPath  # noqa: PLC0415
 
-    p_cfg = cfg.path.get("cfg", P("cfg_"))
-    p_fs = cfg.path.get("fs", P("fs"))
+    p_cfg = mcfg.path.get("cfg", P("cfg_"))
+    p_fs = mcfg.path.get("fs", P("fs"))
     async with (
-        RootCmd(cfg, run=True, sig=True) as dsp,
-        dsp.sub_at(cfg.remote) as cfr,
+        RootCmd(mcfg, run=True, sig=True) as dsp,
+        dsp.sub_at(mcfg.remote) as cfr,
         cfr.cfg_at(p_cfg) as cf,
         cfr.sub_at(p_fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
         codec = get_codec("std-cbor")
 
-        if has_attrs and not (read or read_client or write or write_client):
-            # No file access at all. Just update the client's RAM.
+        if has_attrs and not (read or read_sat or write or write_sat or config):
+            # No file access at all. Just update the satellite's RAM.
 
             val = process_args({}, **attrs)
             await cf.set(val, sync=sync)
             return
 
-        if read:
-            rcfg = yload(read)
-        if read_client:
-            p = MoatFSPath(read_client).connect_repl(fs)
-            d = await p.read_bytes(chunk=64)
-            if not read:
-                rcfg = codec.decode(d)
-            elif client:
-                rcfg = merge(rcfg, codec.decode(d), replace=True)
+        rcfg = attrdict()
+        if config:
+            mc = obj.cfg.micro
+            merge(rcfg, mc.get_(mc.setup.args.config), replace=True)
+        if read and not sat:
+            merge(rcfg, yload(read), replace=True)
+        if read_sat:
+            if read_sat == "-":
+                merge(rcfg, await cf.get(), replace=True)
             else:
-                rcfg = merge(rcfg, codec.decode(d), replace=False)
-        if not read and not read_client:
-            rcfg = await cf.get()
+                p = MoatFSPath(read_sat).connect_repl(fs)
+                d = await p.read_bytes(chunk=64)
+                merge(rcfg, codec.decode(d), replace=True)
+        if read and sat:
+            merge(rcfg, yload(read), replace=True)
 
         rcfg = process_args(rcfg, **attrs)
-        if has_attrs and not write and not write_client:
-            await cf.set(rcfg, sync=sync, replace=True)
 
-        if write_client:
+        if has_attrs and not write and not write_sat:
+            await cf.set(rcfg, sync=sync, replace=auth)
+        elif sync:
+            await cf.set(attrdict(), sync=sync, replace=False)
+
+        if write_sat:
             if "app" in rcfg:
-                p = MoatFSPath(write_client).connect_repl(fs)
+                p = MoatFSPath(write_sat).connect_repl(fs)
                 d = codec.encode(rcfg)
                 await p.write_bytes(d, chunk=64)
             else:
                 print("No 'app' section. Not writing.", file=sys.stderr)
         if write:
             yprint(rcfg, stream=write)
-        elif not has_attrs and not write_client:
-            yprint(rcfg, stream=obj.stdout)
 
 
 @cli.command("run", short_help="Run the multiplexer")

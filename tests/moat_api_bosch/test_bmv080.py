@@ -5,8 +5,6 @@ from __future__ import annotations
 import os
 import pytest
 
-from cffi import FFI
-
 from moat.api.bosch.bmv080 import (
     BMV080,
     BMV080_Link,
@@ -107,11 +105,13 @@ class MockLink:
 
     def read(self, header: int, length: int) -> list[int]:
         """Mock read."""
+        print("RD", header, length)
         self.reads.append((header, length))
         return [0] * length
 
     def write(self, header: int, payload: list[int]) -> None:
         """Mock write."""
+        print("WR", header, payload)
         self.writes.append((header, payload))
 
     def delay_ms(self, duration_ms: int) -> None:
@@ -146,14 +146,14 @@ class TestBMV080:
         """Opening with non-existent library should raise FileNotFoundError."""
         link = MockLink()
         bmv = BMV080(link, "/nonexistent/library.so")
-        with pytest.raises(FileNotFoundError):
-            bmv.open()
+        with pytest.raises(FileNotFoundError), bmv:
+            pass
 
     def test_close_without_open(self) -> None:
         """Closing without opening should be safe."""
         link = MockLink()
         bmv = BMV080(link, "/path/to/lib.so")
-        bmv.close()  # Should not raise
+        bmv._close()  # noqa:SLF001  # Should not raise
 
     def test_context_manager_calls_open_close(self) -> None:
         """Context manager should call open and close."""
@@ -176,48 +176,7 @@ class TestBMV080WithLibrary:
     def test_get_driver_version(self) -> None:
         """Get driver version from library."""
         assert BMV080_LIBRARY is not None
+
         link = MockLink()
-
-        # Use a subclass to capture version before open fails
-        captured_version: tuple[int, int, int] | None = None
-
-        class VersionCapture(BMV080):
-            """Capture version during open."""
-
-            def open(self) -> None:
-                # Load library manually to get version
-                ffi = FFI()
-                ffi.cdef(
-                    """
-                    typedef int8_t bmv080_status_code_t;
-                    bmv080_status_code_t bmv080_get_driver_version(
-                        uint16_t* major, uint16_t* minor, uint16_t* patch,
-                        char git_hash[12], int32_t* num_commits_ahead);
-                    """
-                )
-                lib = ffi.dlopen(BMV080_LIBRARY)
-
-                major = ffi.new("uint16_t*")
-                minor = ffi.new("uint16_t*")
-                patch = ffi.new("uint16_t*")
-                git_hash = ffi.new("char[12]")
-                commits = ffi.new("int32_t*")
-
-                status = lib.bmv080_get_driver_version(major, minor, patch, git_hash, commits)
-                assert status == 0
-
-                nonlocal captured_version
-                captured_version = (major[0], minor[0], patch[0])
-
-        bmv = VersionCapture(link, BMV080_LIBRARY)
-        bmv.open()
-        bmv.close()
-
-        assert captured_version is not None
-        assert isinstance(captured_version, tuple)
-        assert len(captured_version) == 3
-        assert all(isinstance(v, int) for v in captured_version)
-
-        # Check version is in expected range
-        assert captured_version >= (11, 2, 0), f"Version {captured_version} too old"
-        assert captured_version < (12, 0, 0), f"Version {captured_version} too new"
+        with BMV080(link, BMV080_LIBRARY) as _bmv:
+            pass

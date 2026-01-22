@@ -7,16 +7,20 @@ allowing measurement of PM1, PM2.5, and PM10 concentrations.
 
 from __future__ import annotations
 
+import os
+from anyio import ContextManagerMixin
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import IntEnum
-from pathlib import Path
 
-from cffi import FFI
+from moat.api._dll import DLL
 
 from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 if TYPE_CHECKING:
-    from types import TracebackType
+    from cffi import FFI
+
+    from collections.abc import Generator
 
 __all__ = [
     "BMV080",
@@ -278,7 +282,7 @@ bmv080_status_code_t bmv080_close(bmv080_handle_t* handle);
 """
 
 
-class BMV080:
+class BMV080(ContextManagerMixin):
     """CFFI-based interface to the BMV080 particulate matter sensor.
 
     This class wraps the BMV080 C library, providing a Pythonic interface
@@ -286,7 +290,8 @@ class BMV080:
 
     Args:
         link: Serial communication interface implementing read/write/delay_ms/time_ms.
-        lib_path: Path to the BMV080 shared library (.so/.dll).
+        libs_path: Path to the BMV080 shared libraries (.so/.dll). lib_postProcessor.so
+        must be loaded first.
 
     Example:
         >>> class MySPI:
@@ -300,15 +305,16 @@ class BMV080:
         ...     sensor.stop_measurement()
     """
 
-    def __init__(self, link: BMV080_Link, lib_path: str | Path) -> None:
+    def __init__(self, link: BMV080_Link, libs_path: str) -> None:
         """Initialize BMV080 interface.
 
         Args:
             link: Object with read/write/delay_ms/time_ms methods.
-            lib_path: Path to the BMV080 shared library.
+            libs_path: Paths to the BMV080 shared libraries, colon-separated
+            (semicolon on Windows).
         """
         self._link = link
-        self._lib_path = Path(lib_path)
+        self._libs_path = libs_path
 
         self._ffi: FFI | None = None
         self._lib = None
@@ -325,23 +331,17 @@ class BMV080:
         # Store exception from callback for re-raising
         self._logged_exc: BaseException | None = None
 
-    def __enter__(self) -> Self:
-        """Enter context manager, opening sensor connection."""
-        try:
-            self.open()
-        except BaseException:
-            self.close()
-            raise
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        """Exit context manager, closing sensor connection."""
-        self.close()
+    @contextmanager
+    def __contextmanager__(self) -> Generator[Self]:
+        with DLL("moat.api.bosch.bmv080", _CDEF, *self._libs_path.split(os.pathsep)) as (
+            self._ffi,
+            self._lib,
+        ):
+            try:
+                self._open()
+                yield self
+            finally:
+                self._close()
 
     def _log_exc(self, exc: BaseException) -> None:
         """Store an exception from a callback for later re-raising.
@@ -369,7 +369,7 @@ class BMV080:
         if status >= 100:
             raise BMV080Error(StatusCode(status))
 
-    def open(self) -> None:
+    def _open(self) -> None:
         """Open connection to the BMV080 sensor.
 
         Initializes the C library and creates a sensor handle.
@@ -383,85 +383,74 @@ class BMV080:
         if self._handle is not None:
             return
 
-        if not self._lib_path.exists():
-            raise FileNotFoundError(f"BMV080 library not found: {self._lib_path}")
-
-        self._ffi = FFI()
-        self._ffi.cdef(_CDEF)
-        self._lib = self._ffi.dlopen(str(self._lib_path))
-
-        try:
-            # Check library version before proceeding
-            version = self._get_driver_version_raw()
-            if version < _MIN_VERSION or version >= _MAX_VERSION:
-                min_str = ".".join(str(x) for x in _MIN_VERSION)
-                max_str = ".".join(str(x) for x in _MAX_VERSION)
-                ver_str = ".".join(str(x) for x in version)
-                raise RuntimeError(
-                    f"BMV080 library version {ver_str} not supported "
-                    f"(requires >= {min_str}, < {max_str})"
-                )
-
-            # Create callbacks
-            # sercom_handle is passed by the C library but unused; we use self._link
-            @self._ffi.callback("bmv080_callback_read_t")
-            def read_cb(
-                sercom_handle: object,  # noqa: ARG001
-                header: int,
-                payload: object,
-                length: int,
-            ) -> int:
-                try:
-                    data = self._link.read(header, length)
-                    for i, val in enumerate(data[:length]):
-                        payload[i] = val
-                    return 0
-                except BaseException as exc:
-                    self._log_exc(exc)
-                    return -1
-
-            @self._ffi.callback("bmv080_callback_write_t")
-            def write_cb(
-                sercom_handle: object,  # noqa: ARG001
-                header: int,
-                payload: object,
-                length: int,
-            ) -> int:
-                try:
-                    data = [payload[i] for i in range(length)]
-                    self._link.write(header, data)
-                    return 0
-                except BaseException as exc:
-                    self._log_exc(exc)
-                    return -1
-
-            @self._ffi.callback("bmv080_callback_delay_t")
-            def delay_cb(duration_ms: int) -> int:
-                try:
-                    self._link.delay_ms(duration_ms)
-                    return 0
-                except BaseException as exc:
-                    self._log_exc(exc)
-                    return -1
-
-            self._read_cb = read_cb
-            self._write_cb = write_cb
-            self._delay_cb = delay_cb
-
-            # Create handle
-            self._handle_ptr = self._ffi.new("bmv080_handle_t*")
-            status = self._lib.bmv080_open(
-                self._handle_ptr,
-                self._ffi.NULL,  # sercom_handle passed to callbacks, not used
-                self._read_cb,
-                self._write_cb,
-                self._delay_cb,
+        # Check library version before proceeding
+        version = self._get_driver_version_raw()
+        if version < _MIN_VERSION or version >= _MAX_VERSION:
+            min_str = ".".join(str(x) for x in _MIN_VERSION)
+            max_str = ".".join(str(x) for x in _MAX_VERSION)
+            ver_str = ".".join(str(x) for x in version)
+            raise RuntimeError(
+                f"BMV080 library version {ver_str} not supported "
+                f"(requires >= {min_str}, < {max_str})"
             )
-            self._check_status(status)
-            self._handle = self._handle_ptr[0]
-        except BaseException:
-            self.close()
-            raise
+
+        # Create callbacks
+        # sercom_handle is passed by the C library but unused; we use self._link
+        @self._ffi.callback("bmv080_callback_read_t")
+        def read_cb(
+            sercom_handle: object,  # noqa: ARG001
+            header: int,
+            payload: object,
+            length: int,
+        ) -> int:
+            try:
+                data = self._link.read(header, length)
+                for i, val in enumerate(data[:length]):
+                    payload[i] = val
+                return 0
+            except BaseException as exc:
+                self._log_exc(exc)
+                return -1
+
+        @self._ffi.callback("bmv080_callback_write_t")
+        def write_cb(
+            sercom_handle: object,  # noqa: ARG001
+            header: int,
+            payload: object,
+            length: int,
+        ) -> int:
+            try:
+                data = [payload[i] for i in range(length)]
+                self._link.write(header, data)
+                return 0
+            except BaseException as exc:
+                self._log_exc(exc)
+                return -1
+
+        @self._ffi.callback("bmv080_callback_delay_t")
+        def delay_cb(duration_ms: int) -> int:
+            try:
+                self._link.delay_ms(duration_ms)
+                return 0
+            except BaseException as exc:
+                self._log_exc(exc)
+                return -1
+
+        self._read_cb = read_cb
+        self._write_cb = write_cb
+        self._delay_cb = delay_cb
+
+        # Create handle
+        self._handle_ptr = self._ffi.new("bmv080_handle_t*")
+        status = self._lib.bmv080_open(
+            self._handle_ptr,
+            self._handle_ptr,  # self._ffi.NULL -- not used but lib complains if NULL
+            self._read_cb,
+            self._write_cb,
+            self._delay_cb,
+        )
+        self._check_status(status)
+        self._handle = self._handle_ptr[0]
 
     def _get_driver_version_raw(self) -> tuple[int, int, int]:
         """Get the driver version without requiring an open handle.
@@ -482,7 +471,7 @@ class BMV080:
         self._check_status(status)
         return (major[0], minor[0], patch[0])
 
-    def close(self) -> None:
+    def _close(self) -> None:
         """Close connection to the BMV080 sensor.
 
         Releases the sensor handle and resources.

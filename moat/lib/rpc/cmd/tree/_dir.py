@@ -168,7 +168,7 @@ class DirCmd(BaseSubCmd):
     Not typically subclassed.
     """
 
-    doc = dict(_c=dict(_d="subdirectory", _a="app:sub-apps"))
+    doc = dict(_c=dict(_d="subdirectory", _n="app:sub-apps"))
 
     SKIP_RDY = True
 

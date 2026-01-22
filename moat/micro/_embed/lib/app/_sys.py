@@ -81,7 +81,7 @@ class Cmd(_Cmd):
             res = res[:l]
         return res
 
-    doc_log = dict(_d="call log", _0="str:text", _99="any:params", _a="any:params")
+    doc_log = dict(_d="call log", _0="str:text", _99="any:params", _k="any:params")
 
     async def cmd_log(self, *a, **k):
         """
@@ -89,7 +89,7 @@ class Cmd(_Cmd):
         """
         log(f"Input: {a!r} {k!r}")
 
-    doc_stdout = dict(_d="write stdout", _0="str:text", _99="any:params", _a="any:params")
+    doc_stdout = dict(_d="write stdout", _0="str:text", _99="any:params", _k="any:params")
 
     async def cmd_stdout(self, *a, **k):
         """
@@ -99,7 +99,7 @@ class Cmd(_Cmd):
         """
         print(f"Input: {a!r} {k!r}", file=sys.stderr)
 
-    doc_stderr = dict(_d="write stderr", _0="str:text", _99="any:params", _a="any:params")
+    doc_stderr = dict(_d="write stderr", _0="str:text", _99="any:params", _k="any:params")
 
     async def cmd_stderr(self, *a, **k):
         """

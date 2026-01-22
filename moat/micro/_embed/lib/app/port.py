@@ -27,6 +27,8 @@ class Port(BaseCmdBBM):
     The config item "device" must contain the class path.
     """
 
+    doc = dict(_c=dict(_d="device access", device="str:class path", _k="any:class setup"))
+
     pack = None
 
     async def stream(self):

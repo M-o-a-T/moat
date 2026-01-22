@@ -111,6 +111,17 @@ class Pin(BaseCmd):
         value: bool  # on/off on init
     """
 
+    doc = dict(
+        _c=dict(
+            _d="Digital I/O pin",
+            pin="int:Nr",
+            out="bool:output?",
+            init="bool:initial out state",
+            drive="int:strength",
+            pull="bool|None: Pullup/down?",
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         kw = {}
@@ -133,10 +144,9 @@ class Pin(BaseCmd):
 
     doc_r = dict(
         _d="read",
-        _s=[
-            dict(_o="bool:new values"),
-            dict(_r="bool:current value"),
-        ],
+        _o=True,
+        _s=True,
+        _r="bool:current value",
         o="bool:old: wait until pin value differs",
     )
 
@@ -160,9 +170,8 @@ class Pin(BaseCmd):
 
     doc_w = dict(
         _d="write",
-        _s=[
-            dict(_i="bool:new values"),
-        ],
+        _s=True,
+        _i=True,
         _0="bool:new value",
     )
 

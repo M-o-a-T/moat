@@ -23,6 +23,8 @@ class Cmd(BaseCmd):
     RTC chip.
     """
 
+    doc = dict(_c=dict(_d="RTC access"))
+
     def __init__(self, cfg):
         if cfg.get("fake", False):
             from moat.micro.test.rtc import state  # noqa: PLC0415

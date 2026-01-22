@@ -14,6 +14,8 @@ class Dev:
 
     _wr = None
 
+    doc = dict(_c=dict(_d="romfs abstraction, TODO"))
+
     def __init__(self, n):
         self.dev = vfs.rom_ioctl(2, n)
         self.buf = bytearray(self.dev.ioctl(5, 0))

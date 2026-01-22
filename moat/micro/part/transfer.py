@@ -38,7 +38,7 @@ class _Step:
     """
     One transfer step.
 
-    A step has an input (it's called, async) and an output (its queue).
+    A step has an input (it's called, async) and an output (its set of queues).
 
     Four cases:
     - si=so=False:
@@ -46,7 +46,7 @@ class _Step:
       the result is the data coming back.
     - si=True
       Open a stream to send incoming data.
-      A timer calls `cmd`, the result
+      A timer calls `cmd`.
     - so=True
       Open a stream to receive data.
       Input is sent to `cmd`, or lost. No timer.
@@ -194,6 +194,26 @@ class Transfer(BaseCmd):
     steps: list[_Step]
     t_last: int = None
 
+    doc = dict(
+        _c=dict(
+            _d="Data transfer",
+            t="int:delay(ms)",
+            _a=[
+                dict(s="path:called"),
+                dict(
+                    s=dict(
+                        p="path:called",
+                        a="any:pos args",
+                        k="any:kq args",
+                        append="bool:at end?",
+                        si="bool:stream in?",
+                        so="bool:stream out?",
+                    )
+                ),
+            ],
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.steps = []
@@ -232,7 +252,7 @@ class Transfer(BaseCmd):
             if not s.si:
                 await s(a, kw)
 
-    doc_w = dict(_d="data", qs="int:step (default first)")
+    doc_w = dict(_d="data", qs="int:dest step (default first)", _s=True)
 
     async def stream_w(self, msg: Msg):
         "send data to (first) step"
@@ -246,7 +266,10 @@ class Transfer(BaseCmd):
             await s0(msg.a, kw)
 
     doc_r = dict(
-        _d="data monitor", qs="int:step (default last)", cur="bool:get current value if present"
+        _d="data monitor",
+        qs="int:src step (last)",
+        cur="bool:get current value if present",
+        _s=True,
     )
 
     async def stream_r(self, msg: Msg):

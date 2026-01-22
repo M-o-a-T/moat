@@ -14,6 +14,8 @@ from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
 from moat.micro.stacks.console import console_stack
 from moat.micro.stacks.file import FileBuf
 
+from ._doc import _link_d, _log_d
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,6 +24,8 @@ if TYPE_CHECKING:
 
 class StdioBuf(FileBuf):
     "direct access to stdio"
+
+    doc = dict(_c=dict(_d="stdio data access"))
 
     async def stream(self):
         "Create a dedicated stdin/stdout stream"
@@ -43,6 +47,8 @@ class StdioBuf(FileBuf):
 
 class StdIO(BaseCmdMsg):
     """Sends/receives MoaT messages using stdin/stdout"""
+
+    doc = dict(_c=dict(_d="stdio RPC access", link=_link_d, **_log_d))
 
     async def stream(self):
         "Set up a MoaT message stream on stdin+stdout"

@@ -39,6 +39,17 @@ class Cmd(BaseCmd):
 
     _bus = None
 
+    doc = dict(
+        _c=dict(_d="i²c driver"),
+        id="int|None:hardware",
+        c="int:ctrl pin",
+        d="int:data pin",
+        f="int:frequency",
+        t="int:timeout(ms)",
+        cx="dict:ctrl hw init",
+        dx="dict:dta hw init",
+    )
+
     async def setup(self):
         """
         Open a bus.

@@ -74,6 +74,18 @@ class PWM(BaseCmd):
     evt: Event
     ps: Msg  # Data stream to the pin
 
+    doc = dict(
+        _c=dict(
+            _d="Slow PWM",
+            pin="path:output cmd",
+            max="int:max T(100000,ms)",
+            min="int:min T(500,ms)",
+            base="float:input range 0...(1000)",
+            init="float:initial value",
+            so="bool:stream to pin? (no)",
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
@@ -81,19 +93,18 @@ class PWM(BaseCmd):
         self.min = cfg.get("min", self.min)
         self.max = cfg.get("max", self.max)
         self.base = cfg.get("base", self.base)
+        self.so = self.cfg.get("so", False)
         self.evt = Event()
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.pin = self.root.sub_at(self.cfg["pin"])
+        self.pin = self.root.sub_at(self.cfg["pin"], cmd=not self.so)
         if await self.pin.rdy_():
             raise StoppedError("pin")
         self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
-        async with (
-            _Send(self.pin) if not self.cfg.get("so", False) else self.pin.stream_out()
-        ) as self.ps:
+        async with _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps:
             try:
                 if L:
                     self.set_ready()

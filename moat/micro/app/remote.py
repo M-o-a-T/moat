@@ -13,12 +13,12 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.rpc import BaseCmd, SubMsgSender
-    from moat.lib.stream import BaseBuf, BaseMsg
+    from moat.lib.stream import BaseBuf, BaseCmdBBM, BaseMsg
 
     from collections.abc import Awaitable
 
 
-def Raw(*a, **k):
+def Raw(*a, **k) -> BaseCmdBBM:
     """
     Link to a stream that's someplace else.
 

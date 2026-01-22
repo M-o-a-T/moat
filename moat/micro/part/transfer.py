@@ -258,6 +258,8 @@ class Transfer(BaseCmd):
         try:
             if msg.can_stream:
                 async with msg.stream_out(*(s0.last_a or ()), **(s0.last_kw or {})) as md:
+                    if s0.last_a is not None and msg.get("cur", False):
+                        await md.send(*s0.last_a, **s0.last_kw)
                     async for a, kw in q:
                         await md.send(*a, **kw)
             else:

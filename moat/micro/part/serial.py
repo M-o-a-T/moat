@@ -120,7 +120,7 @@ Waiting """,
             ser.dtr = dtr
 
         # flush messages
-        if t := cfg.get("flush"):
+        if (t := cfg.get("flush")) is not None:
             if t is True:
                 t = 0.2
             else:

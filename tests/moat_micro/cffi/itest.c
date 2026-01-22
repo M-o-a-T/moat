@@ -13,7 +13,7 @@ struct itest *itest_setup(struct itest_cb *cb, int param)
     struct itest *tst = malloc(sizeof(struct itest));
     memset(tst,0,sizeof(*tst));
     tst->cb = cb;
-    tst->param = 7;
+    tst->param = param;
     return tst;
 }
 

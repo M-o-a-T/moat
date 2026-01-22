@@ -12,17 +12,22 @@ except ImportError:
 
 
 class Fn:
+    """Helper class for callback testing."""
+
     def __init__(self, param: int):
         self.param = param
 
     def cb(self, param):
+        """Callback that multiplies self.param by the given param."""
         return self.param * param
 
 
-def fn(param: int) -> int:
-    return
-
-
 def test_itest():
-    with Test(Fn(5).cb) as test:
-        assert test.call(3) == 126
+    """Test the CFFI callback framework."""
+    with Test(Fn(2).cb, 5) as test:
+        assert test.call(3) == 90
+
+
+if __name__ == "__main__":
+    with Test(Fn(2).cb, 5) as test:
+        print(test.call(3))

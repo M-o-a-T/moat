@@ -17,7 +17,6 @@ class Relay(BaseCmd):
 
     - pin: how to talk to the actual hardware output
     - t_on, t_off, minimum non-forced on/off time
-    - note: send a message when changed
     """
 
     _delay = None
@@ -31,7 +30,6 @@ class Relay(BaseCmd):
             raise ValueError("Pin not set")  # noqa:TRY004
         t = cfg.get("t", attrdict())
         self.t = [t.get("off", 0), t.get("on", 0)]
-        self.note = cfg.get("note", None)
 
     async def setup(self):  # noqa:D102
         await super().setup()

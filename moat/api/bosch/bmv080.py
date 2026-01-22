@@ -29,8 +29,8 @@ __all__ = [
 ]
 
 # Required library version: >= 11.2.0, < 12.0.0
-_MIN_VERSION = (11, 2, 0)
-_MAX_VERSION = (12, 0, 0)
+_MIN_VERSION = (24, 2, 0)
+_MAX_VERSION = (25, 0, 0)
 
 
 class StatusCode(IntEnum):

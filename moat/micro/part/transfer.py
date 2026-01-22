@@ -75,15 +75,17 @@ class _Step:
         self.trans = t
         self.id = id
         self.q = set()  # output queue(s)
-        self.a = cfg.get("a", ())
-        self.kw = cfg.get("k", {})
         self._ready = Event()
         self.is_ready = self._ready.wait
 
         if isinstance(cfg, Path):
             p = cfg
+            self.a = ()
+            self.kw = {}
         else:
             p = cfg.get("p", None)
+            self.a = cfg.get("a", ())
+            self.kw = cfg.get("k", {})
             self.si = cfg.get("si", self.si)
             self.so = cfg.get("so", self.so)
             self.append = cfg.get("append", self.append)
@@ -140,7 +142,7 @@ class _Step:
             log(f"Dropped {a} {kw}")
             pass
 
-        elif self.p is not None:
+        if self.p is not None:
             if self.a:
                 if self.append:
                     a = self.a + a
@@ -149,11 +151,10 @@ class _Step:
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             msg = await self.p.cmd((), *a, **kw)
-            if not self.so:
-                await self.cont(msg.args, msg.kw)
-        else:
-            # simply pass on
-            await self.cont(a, kw)
+            a, kw = msg.args, msg.kw
+
+        # pass on
+        await self.cont(a, kw)
 
     async def cont(self, a, kw) -> Awaitable:
         """

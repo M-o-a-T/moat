@@ -8,7 +8,7 @@ from moat.util import attrdict
 from moat.lib.micro import AC_use
 from moat.micro.part.serial import NamedSerial
 
-from ._doc.py import _cons_d, _frame_d, _link_d, _log_d, _mode_d
+from ._doc import _cons_d, _frame_d, _link_d, _log_d, _mode_d
 
 
 # Serial packet forwarder

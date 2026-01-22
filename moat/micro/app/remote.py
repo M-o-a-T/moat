@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.rpc import BaseCmd, SubMsgSender
-    from moat.lib.stream import BaseBuf, BaseCmdBBM, BaseMsg
+    from moat.lib.stream import BaseBuf, BaseMsg
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
     from collections.abc import Awaitable
 

@@ -9,6 +9,11 @@ import machine as M
 from moat.compat import AC_use, Event, TaskGroup, sleep_ms, to_thread
 from moat.lib.rpc import BaseCmd
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.rpc import Msg
+
 
 class _ADC(M.ADC):
     def __new__(cls, cfg, **kw):
@@ -72,6 +77,24 @@ class ADC(BaseCmd):
     threshold.
     """
 
+    doc = dict(
+        _c=dict(
+            _d="analog input",
+            td="int:pin",
+            ts="int:sample timer (ms)",
+            delta="int:abs difference",
+            factor="float:factor (1)",
+            offset="float:offset (0)",
+            delay="int:avg delay (1,ms)",
+            nn="int:avg count",
+        ),
+        _d="read",
+        o="any:wait for val to not be this",
+        d="int:delta",
+        _s=[dict(_r="float:value")],
+        _o="float:value",
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         kw = {}
@@ -88,10 +111,20 @@ class ADC(BaseCmd):
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.scan)
 
-    doc_r = dict(_d="read", o="any:wait for val to not be this", d="int:delta")
-
-    async def cmd_r(self, o: int | None = None, d: int = 0):
-        "read. Wait for change if @o (old value) is not None"
-        if o is not None and abs(self.adc.val - o) > d:
-            await self.adc.evt.wait()
-        return self.adc.val
+    async def stream(self, msg: Msg):
+        "read. Wait for changes if @o (old value) is not None"
+        o = msg.get("o", None)
+        d = msg.get("d", 0)
+        if msg.can_stream:
+            while True:
+                v = self.adc.val
+                if abs(v - o) < d:
+                    await self.adc.evt.wait()
+                    continue
+                await msg.result(v)
+                o = v
+                await self.adc.evt.wait()
+        else:
+            while abs(self.adc.val - o) < d:
+                await self.adc.evt.wait()
+            await msg.result(self.adc.val)

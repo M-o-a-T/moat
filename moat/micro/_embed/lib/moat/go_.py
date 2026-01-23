@@ -39,7 +39,7 @@ def go(state=None, cmd=True):
       As above, but don't use /lib. Uses "moat_rom.cfg" if available.
 
     * flash
-      Only use .frozen. Uses "moat_fb.cfg" if available.
+      Only use .frozen. Uses "moat_flash.cfg" if available.
 
     * norom
       Uses /lib and .frozen. Uses "moat_nr.cfg" if available.

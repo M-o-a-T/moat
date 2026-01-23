@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING as _TC
 
 if _TC:
-    from .hdc2010 import Cmd as hdc2010
-    from .tmp102 import Cmd as tmp102
+    from .hdc2010 import Cmd as HDC2010
+    from .tmp102 import Cmd as TMP102
 
 _imports = {
-    "hdc2010": ("hdc2010", "Cmd"),
-    "tmp102": ("tmp102", "Cmd"),
+    "HDC2010": ("hdc2010", "Cmd"),
+    "TMP102": ("tmp102", "Cmd"),
 }
 
 
@@ -33,4 +33,4 @@ def __dir__():
     return sorted(set(list(__all__) + [k for k in globals().keys() if not k.startswith("_")]))
 
 
-__all__ = ["hdc2010", "tmp102"]
+__all__ = ["HDC2010", "TMP102"]

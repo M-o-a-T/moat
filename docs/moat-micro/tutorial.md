@@ -375,6 +375,48 @@ This looks like a normal MicroPython prompt. It also behaves like one.
 The interesting part is that you can do all of the above at the same time
 (except for the `repl.r` command). Thus the file system still works.
 
+### Error handling
+
+The prompt mode is kindof special because it circumvents the taskgroup structure
+that MoaT uses. The most noticeable effect is that it captures crashes that
+would otherwise be fatal and cause a reboot.
+
+Thus, if you see the line
+
+    Task has errored out but its parent is already completed
+
+or
+
+    Task exception wasn't retrieved
+
+most likely accompanied by a strange
+
+    KeyError: future
+
+then your satellite is in a confused state. You should reboot it as soon as
+possible.
+
+### Rebooting
+
+A reboot is normally handled as an exception: things can get cleaned
+up, there's no danger of corrupting the Flash file system, etc..
+
+As REPL mode captures exceptions, you can only reboot in immediate mode:
+
+``` shell
+$ mtc cmd s.boot.doc_
+_0: str:SysBooT
+_1: int:(0)=hard,1=soft,2=boot,3=KbdIntr,4=immediate,5=RuntimeExc
+_d: reboot
+_t: int:timeout msec(100)
+$ mtc cmd s.boot -s + SysBooT -s + =4
+True
+$
+```
+
+The ``mtc run`` that we started above should now terminate, along with our
+``mount`` and the terminal.
+
 ## Getting Things Done
 
 Presumably you want to get things done with your MicroPython device. Let's

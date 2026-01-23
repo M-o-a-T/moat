@@ -355,7 +355,7 @@ async def cmd(obj, path, time, parts, **attrs):
     """
     cfg = obj.mcfg
     val = process_args({None: []}, no_path=True, **attrs)
-    args = val.pop(None, ())
+    args = val.pop(None)
     logger.debug(
         "Command: %s %s %s",
         cfg.remote + path,

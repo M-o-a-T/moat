@@ -210,7 +210,7 @@ class Cmd(LockBaseCmd):
                     h.update(mem[:n])
             return h.digest()
 
-        res = to_thread(hash_file, p)
+        res = await to_thread(hash_file, p)
         if l is not None:
             res = res[:l]
         return res

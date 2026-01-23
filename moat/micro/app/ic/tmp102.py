@@ -46,7 +46,7 @@ class Cmd(BaseCmd):
     )
 
     async def _rd(self):
-        with self.lock:
+        async with self.lock:
             await self.bus.wr(self.adr, bytes((1, 0x81, 0x10)))
             # OneShot+Shutdown, Extended
             for _ in range(20):

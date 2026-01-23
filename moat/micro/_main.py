@@ -488,13 +488,10 @@ async def cfg_(
             write_sat = "-"
     if bool(read) + bool(read_sat) + bool(config) > 1:
         raise click.UsageError("Only one of --config, --read, or -read-sat")
-    if stdout:
+    reading = bool(read) + bool(read_sat)
+    writing = bool(write) + bool(write_sat)
+    if not write and (stdout or not writing and not has_attrs and not sync):
         write = obj.stdout
-    elif not write and not has_attrs and not write_sat:
-        if has_attrs:
-            write_sat = "-"
-        else:
-            write = sys.stdout
 
     if sync and not write_sat and not has_attrs:
         raise click.UsageError("You can't sync when not writing to the satellite.")
@@ -550,7 +547,7 @@ async def cfg_(
 
         rcfg = process_args(rcfg, **attrs)
 
-        if sync or has_attrs or read or read_sat or config:
+        if sync or ((has_attrs and config or reading) and not writing):
             if not auth or ("app" in rcfg and "app" in rcfg.app):
                 await cf.set(rcfg, sync=sync, replace=auth)
             else:

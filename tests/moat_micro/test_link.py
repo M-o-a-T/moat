@@ -18,7 +18,7 @@ x:
   max: 100
   step: 10
 ln:
-  app: link.Register
+  app: link.Cmd
   path: !P x
   link: !P foo.bar
   rlink: !P baz.quux

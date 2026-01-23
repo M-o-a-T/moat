@@ -53,7 +53,7 @@ this_load = ContextVar("this_load", default=None)
 
 
 # cmd_eval is a simple and safe "eval" replacement.
-_eval = simpleeval.SimpleEval(functions={})
+_eval = simpleeval.SimpleEval(functions=dict(P=P, Path=Path))
 _eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript]
     _eval._eval(x) for x in node.elts
 )

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, yprint
+from moat.util import yprint
 from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
@@ -26,31 +26,11 @@ async def cli(ctx, path, stream, raw, client, **kw):
         cfg.client.port = obj.port
 
     async with Link(cfg) as conn:
-        val = process_args(NotGiven, **kw)
-        kw = {}
-        if isinstance(val, list):
-            args = val
-        elif isinstance(val, dict):
-            args = []
-            for k, v in list(val.items()):
-                if k.startswith("_"):
-                    try:
-                        k = int(k[1:])  # noqa:PLW2901
-                    except ValueError:
-                        pass
-                    else:
-                        if k >= len(args):
-                            args += [NotGiven] * (k - len(args) + 1)
-                        args[k] = v
-                        continue
-                kw[k] = v
-        elif val is NotGiven:
-            args = []
-        else:
-            args = [val]
         if client:
             conn = await conn.get_service(client)  # noqa:PLW2901
 
+        kw = process_args({None: []}, no_path=True, **kw)
+        args = kw.pop(None)
         if stream:
             async with conn.cmd(path, *args, **kw).stream_in() as res:
                 yprint(rep_(res, raw), stream=obj.stdout)

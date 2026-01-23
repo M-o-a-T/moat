@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import struct
 
-from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Lock, sleep_ms
+from moat.lib.micro import Lock, sleep_ms
+from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 

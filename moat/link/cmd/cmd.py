@@ -12,10 +12,11 @@ from moat.link.client import Link
 @click.command(short_help="Send a command")
 @click.option("-S", "--stream", is_flag=True, help="Read a stream")
 @click.option("-R", "--raw", is_flag=True, help="Show raw message data")
+@click.option("-C", "--client", type=P, help="Connect to this client")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
 @attr_args(with_path=True, with_arglist=True)
-async def cli(ctx, path, stream, raw, **kw):
+async def cli(ctx, path, stream, raw, client, **kw):
     """
     Send a command to the server.
     """
@@ -47,6 +48,8 @@ async def cli(ctx, path, stream, raw, **kw):
             args = []
         else:
             args = [val]
+        if client:
+            conn = await conn.get_service(client)  # noqa:PLW2901
 
         if stream:
             async with conn.cmd(path, *args, **kw).stream_in() as res:

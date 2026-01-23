@@ -147,7 +147,7 @@ class CFG_:
     """
 
     @staticmethod
-    def set_real_cfg(self, cfg: CfgStore):
+    def set_real_cfg(cfg: CfgStore):
         """
         Set the real configuration store.
 
@@ -415,6 +415,9 @@ class CfgStore:
             if rt is not None:
                 merge(cls.static, rt, replace=True)
             cls.updated += 1
+
+        for cfg in cls.known:
+            cfg.redo()
 
     def __getattr__(self, key):
         if key.startswith("_"):

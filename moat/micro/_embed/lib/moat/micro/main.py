@@ -17,6 +17,7 @@ import moat.micro.console as cons
 from moat.util import attrdict, merge, to_attrdict
 from moat.lib.codec.moat_cbor import Codec as CBOR
 from moat.lib.micro import AC_use, L, TaskGroup, sleep_ms
+from moat.lib.rpc import MsgSender
 
 WDT = None
 
@@ -108,6 +109,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
         cons.main = m = cons.Main(wr_exc)
         dsp = await AC_use(m, RootCmd(cfg, i=i))
         m.tg = await AC_use(m, TaskGroup())
+        m.root = MsgSender(dsp)
 
         m.main_task = await m.tg.spawn(dsp.task)
         if L:

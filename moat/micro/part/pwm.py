@@ -192,7 +192,7 @@ class PWM(BaseCmd):
         else:
             # a/(a+b) == val/base; solve for b
             # the test above prevents val from being zero
-            r = a * (base - val) / val
+            r = a * (base - val) // val  # times are integer msec
             b = min(b, r)
 
         return (b, a) if rev else (a, b)

@@ -474,7 +474,8 @@ async def cfg_(
 
     This command assumes that the remote system supplies a ``cfg.Cmd`` app at
     path "r.s.cfg_", and a ``fs.Cmd`` app at path "r.s.fs". You can change
-    these paths with ``… cfg -P fs ‹path›`` and ``… cfg -P cfg ‹path›``.
+    these paths with the ``-P fs ‹path›`` and ``-P cfg ‹path›`` options to
+    ``moat micro``.
     """
     has_attrs = any(a for a in attrs.values())
     if write and stdout:

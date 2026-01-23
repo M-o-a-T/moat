@@ -13,7 +13,6 @@ from asyncscope import main_scope, scope
 
 from moat.util import OptCtx, attrdict
 from moat.lib.config import CFG, CfgStore
-from moat.lib.path import P
 from moat.lib.run import wrap_main
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
-    args = ("-c", "/dev/null", *args)
+    args = ("-s", "env.load_all", "=n", *args)
 
     with CFG.with_config_(CfgStore()) as cfg:
         if do_stdout:

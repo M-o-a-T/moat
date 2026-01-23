@@ -556,12 +556,6 @@ async def cfg_(
             else:
                 raise click.UsageError(f"Unknown prio key: {k!r}")
 
-        if sync:
-            if not auth or ("app" in rcfg and "app" in rcfg.app):
-                await cf.set(rcfg, sync=sync, replace=auth)
-            else:
-                print("No 'app' section. Not replacing.", file=sys.stderr)
-
         if write_sat:
             if "app" in rcfg:
                 p = MoatFSPath(write_sat).connect_repl(fs)
@@ -569,6 +563,12 @@ async def cfg_(
                 await p.write_bytes(d, chunk=64)
             else:
                 print("No 'app' section. Not writing.", file=sys.stderr)
+
+        if sync:
+            if not auth or ("app" in rcfg and "app" in rcfg.app):
+                await cf.set(rcfg, sync=sync, replace=auth)
+            else:
+                print("No 'app' section. Not replacing.", file=sys.stderr)
 
         if write:
             yprint(rcfg, stream=write)

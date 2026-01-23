@@ -57,16 +57,15 @@ class Cmd(BaseCmd):
         "set up the link"
         await super().setup()
         self.link = await AC_use(self, Link(CFG.moat.link, common=True))
-        if "path" in self.cfg:
-            self.ann = await AC_use(
-                self,
-                announcing(
-                    self.link,
-                    self.cfg.link,
-                    host=self.cfg.get("host", False),
-                    service=self.root.sub_at(self.cfg.path) if "path" in self.cfg else None,
-                ),
-            )
+        self.ann = await AC_use(
+            self,
+            announcing(
+                self.link,
+                self.cfg.link,
+                host=self.cfg.get("host", False),
+                service=self.root.sub_at(self.cfg.path) if "path" in self.cfg else None,
+            ),
+        )
         # rlink will be set up lazily
 
     async def task(self):

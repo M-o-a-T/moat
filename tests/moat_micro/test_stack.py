@@ -160,7 +160,7 @@ async def test_stack(tmp_path):
         ):
             # First a couple of command tests
             res = await rm("cmd dir_", do_stdout=True)
-            assert "\n  c: Cmd\n" in res.stdout
+            assert "\n  c: cfg.Cmd\n" in res.stdout
             assert " wr\n" not in res.stdout
 
             (res,) = await s.cmd("rdy_")

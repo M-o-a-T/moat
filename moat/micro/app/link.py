@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from moat.lib.config import CFG
 from moat.lib.micro import AC_use
+from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd
 from moat.link.announce import announcing
 from moat.link.client import Link
@@ -30,6 +31,7 @@ class Cmd(BaseCmd):
        host (bool): whether to host-prefix the link name, defaults to `False`
        path (Path): if set, forward remote commands to this local path
        rlink (Path): if set, forward local commands to this server-side path
+       service (str): additional element(s) for *link*, if set
 
     `link` is mandatory, should be unique, and registers this subcommand in MoaT-Link.
     If ``path`` is set, accessing @link via :meth:`moat.link.client.LinkSender.get_service`
@@ -38,6 +40,9 @@ class Cmd(BaseCmd):
     If `rlink` is set, MoaT-micro commands that are directed to this app
     instance get forwarded to the given MoaT-Link command on the server.
     (Typically you'd use this to connect another MoaT-micro gateway.)
+
+    The *service* parameter exists so config files can hardcode the link
+    but use a relative path to add e.g. the hostname.
     """
 
     doc = dict(
@@ -47,6 +52,7 @@ class Cmd(BaseCmd):
             host="bool:add hostname to link",
             path="path:remote cmds go here",
             rlink="path:local cmds go there",
+            service="path|str: append to name",
         )
     )
 
@@ -57,11 +63,17 @@ class Cmd(BaseCmd):
         "set up the link"
         await super().setup()
         self.link = await AC_use(self, Link(CFG.moat.link, common=True))
+        srv = self.cfg.link
+        if (service := self.cfg.get("service", None)) is not None:
+            if isinstance(service, (Path, list, tuple)):
+                srv += service
+            else:
+                srv /= service
         self.ann = await AC_use(
             self,
             announcing(
                 self.link,
-                self.cfg.link,
+                srv,
                 host=self.cfg.get("host", False),
                 service=self.root.sub_at(self.cfg.path) if "path" in self.cfg else None,
             ),

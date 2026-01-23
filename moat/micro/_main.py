@@ -422,18 +422,21 @@ async def cons(obj, path):
 @cli.command("cfg", short_help="Get / Update the configuration")
 @click.pass_obj
 @click.option("-c", "--config", is_flag=True, help="Use MoaT config")
+@click.option("-C", "--config-sat", is_flag=True, help="Use the satellite config")
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
 @click.option("-R", "--read-sat", help="Read config file from the satellite")
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
 @click.option("--stdout", is_flag=True, hidden=True)
 @click.option("-W", "--write-sat", help="Write config file to the satellite")
 @click.option("-S", "--sync", is_flag=True, help="Sync the satellite after writing")
-@click.option("-A", "--auth", is_flag=True, help="Authoritative: clear satellite data")
+@click.option("-A", "--auth", is_flag=True, help="Authoritative: clear other satellite data")
 @click.option(
-    "-C",
-    "--sat",
-    is_flag=True,
-    help="The satellite's data win if both -r and -R are used",
+    "-I",
+    "--prio",
+    type=str,
+    default="mlrsa",
+    help="Source priority: (first match wins)"
+    " m:moat config l:local file r:remote file s:satellite config a:s-arguments",
 )
 @attr_args(with_proxy=True)
 @catch_errors
@@ -442,32 +445,32 @@ async def cfg_(
     read,
     read_sat,
     config,
+    config_sat,
     write,
     write_sat,
     sync,
     stdout,
-    sat,
     auth,
+    prio,
     **attrs,
 ):
     """
-    Update a remote configuration.
+    Print, update and/or modify a remote configuration.
 
-    The remote config is updated online if you only use ``-s``
-    arguments. No output is printed in this case.
+    The default for reading a config is the remote system. If modifiers (``-s …``)
+    are used but no write option (``-w``, ``-W``), the remote config is
+    updated in-place without being transferred.
 
-    Otherwise, the configuration is read as YAML from stdin (``-r -``) or a
-    file (``-r PATH``), as CBOR from Flash (``-R xx.cfg``), from the
-    satellite's memory (``-R -``), or from MoaT config (``-c``). There is no
-    default.
+    The default for writing is the remote system if modifiers have been
+    used (and no write option). The remote config is updated anyway if you
+    use ``--sync``.
 
-    It is then modified according to the "-v -e -P" arguments (if any) and
-    written to Flash (``-W xx.cfg``), a file(``-w PATH``), stdout (``-w -``),
-    or the satellite's live config (no ``-w``/``-W`` argument).
+    Configuration is read as YAML from stdin (``-r -``) or a
+    file (``-r PATH``), as CBOR from Flash (``-R xx.cfg``), or from MoaT
+    config (``-c``). Use satellite's memory (``-R -``),
 
-    The satellite will not be updated if a ``-w``/``-W`` argument is present.
-    If you want to update the satellite *and* write the config data to a file,
-    simply do it in two steps.
+    If you use multiple config sources, the ``--prio`` argument controls
+    which data are preferred. The last match wins.
 
     An "app" section must be present if you write a complete configuration
     to the satellite.
@@ -477,37 +480,46 @@ async def cfg_(
     these paths with the ``-P fs ‹path›`` and ``-P cfg ‹path›`` options to
     ``moat micro``.
     """
-    has_attrs = any(a for a in attrs.values())
-    if write and stdout:
-        raise click.UsageError("Only one of --stdout and --write")
-    if not read and not read_sat and not config:
-        if auth:
-            raise click.UsageError("Auth needs --config, --read, or -read-sat")
-        if not has_attrs:
-            read_sat = "-"  # default: dump the config
-        elif not write and not write_sat:
-            write_sat = "-"
-    if bool(read) + bool(read_sat) + bool(config) > 1:
-        raise click.UsageError("Only one of --config, --read, or -read-sat")
-    reading = bool(read) + bool(read_sat)
-    writing = bool(write) + bool(write_sat)
-    if not write and (stdout or not writing and not has_attrs and not sync):
-        write = obj.stdout
+    # add missing keys to prio
+    for a in "mlrsa":
+        if a not in prio:
+            prio = a + prio
 
-    if sync and not write_sat and not has_attrs:
-        raise click.UsageError("You can't sync when not writing to the satellite.")
+    if write == "-":
+        stdout = True
+        write = None
+
+    has_attrs = any(a for a in attrs.values())
+
+    arg_src = read or read_sat or config or config_sat
+    arg_dest_ns = write or write_sat or stdout
+    arg_dest = arg_dest_ns or sync
+
+    if has_attrs:
+        # attrs = we might be OK with incomplete data
+        if not arg_dest_ns:
+            # default to sync
+            sync = True
+        elif not arg_src:
+            # we have a non-sync dest but no complete source? that won't do
+            config_sat = True
+    else:
+        # no attrs = we want complete data
+        if not arg_dest:
+            # default to writing to stdout
+            stdout = True
+        if not arg_src:
+            # default to input from config
+            config_sat = True
+
+    # do we need complete full data?
+    if write or write_sat or auth or not has_attrs or stdout:
+        # do we not read it from anywhere?
+        if not read and not read_sat and not config and not config_sat:
+            # well, do read it then.
+            config_sat = True
 
     mcfg = obj.mcfg
-
-    if read and write and not (read_sat or write_sat):
-        # local file update: don't talk to the satellite
-        if sat or sync:
-            raise click.UsageError("You're not talking to the satellite!")
-
-        rcfg = yload(read)
-        rcfg = process_args(rcfg, **attrs)
-        yprint(rcfg, stream=write)
-        return
 
     if read_sat or write_sat:
         from .files import MoatFSPath  # noqa: PLC0415
@@ -520,35 +532,31 @@ async def cfg_(
         cfr.cfg_at(p_cfg) as cf,
         cfr.sub_at(p_fs) as fs,
     ):
-        has_attrs = any(a for a in attrs.values())
         codec = get_codec("std-cbor")
 
-        if has_attrs and not (read or read_sat or write or write_sat or config):
-            # No file access at all. Just update the satellite's RAM.
-
-            val = process_args({}, **attrs)
-            await cf.set(val, sync=sync)
-            return
-
         rcfg = attrdict()
-        if config:
-            mc = obj.cfg.micro
-            merge(rcfg, mc.get_(mc.setup.args.config), replace=True)
-        if read and not sat:
-            merge(rcfg, yload(read), replace=True)
-        if read_sat:
-            if read_sat == "-":
-                merge(rcfg, await cf.get(), replace=True)
+        for k in prio:
+            if k == "a":
+                rcfg = process_args(rcfg, **attrs)
+            elif k == "m":
+                if config:
+                    mc = obj.cfg.micro
+                    merge(rcfg, mc.get_(mc.setup.args.config), replace=True)
+            elif k == "l":
+                if read:
+                    merge(rcfg, yload(read if read != "-" else sys.stdin), replace=True)
+            elif k == "r":
+                if read_sat:
+                    p = MoatFSPath(read_sat).connect_repl(fs)
+                    d = await p.read_bytes(chunk=64)
+                    merge(rcfg, codec.decode(d), replace=True)
+            elif k == "s":
+                if config_sat:
+                    merge(rcfg, await cf.get(), replace=True)
             else:
-                p = MoatFSPath(read_sat).connect_repl(fs)
-                d = await p.read_bytes(chunk=64)
-                merge(rcfg, codec.decode(d), replace=True)
-        if read and sat:
-            merge(rcfg, yload(read), replace=True)
+                raise click.UsageError(f"Unknown prio key: {k!r}")
 
-        rcfg = process_args(rcfg, **attrs)
-
-        if sync or ((has_attrs and config or reading) and not writing):
+        if sync:
             if not auth or ("app" in rcfg and "app" in rcfg.app):
                 await cf.set(rcfg, sync=sync, replace=auth)
             else:
@@ -561,8 +569,12 @@ async def cfg_(
                 await p.write_bytes(d, chunk=64)
             else:
                 print("No 'app' section. Not writing.", file=sys.stderr)
+
         if write:
             yprint(rcfg, stream=write)
+
+        if stdout:
+            yprint(rcfg, stream=obj.stdout)
 
 
 @cli.command("run", short_help="Run the multiplexer")

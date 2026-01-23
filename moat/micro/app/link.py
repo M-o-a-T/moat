@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from moat.lib.rpc.msg import Msg
 
 
-class Register(BaseCmd):
+class Cmd(BaseCmd):
     """
     This command registers a link between a MoaT-micro path and a MoaT-Link subcommand.
 

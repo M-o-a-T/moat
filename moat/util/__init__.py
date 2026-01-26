@@ -21,6 +21,7 @@ _imports = {
     "Cache": "impl",
     "NoLock": "impl",
     "OptCtx": "impl",
+    "SigCancel": "sig",
     "TimeOnlyFormatter": "impl",
     "acount": "impl",
     "byte2num": "impl",

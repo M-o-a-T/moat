@@ -16,6 +16,7 @@ import asyncclick as click
 
 from moat.util import (
     NotGiven,
+    SigCancel,
     attrdict,
     combine_dict,
     merge,
@@ -369,6 +370,7 @@ async def cmd(obj, path, time, parts, **attrs):
 
     t1 = tm()
     async with (
+        SigCancel(),
         RootCmd(cfg, run=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
     ):
@@ -527,7 +529,8 @@ async def cfg_(
     p_cfg = mcfg.path.get("cfg", P("cfg_"))
     p_fs = mcfg.path.get("fs", P("fs"))
     async with (
-        RootCmd(mcfg, run=True, sig=True) as dsp,
+        SigCancel(),
+        RootCmd(mcfg, run=True) as dsp,
         dsp.sub_at(mcfg.remote) as cfr,
         cfr.cfg_at(p_cfg) as cf,
         cfr.sub_at(p_fs) as fs,
@@ -584,7 +587,7 @@ async def run_(obj):
     """
     Run the MoaT stack.
     """
-    async with RootCmd(obj.mcfg, run=True, sig=True):
+    async with SigCancel(), RootCmd(obj.mcfg, run=True):
         await idle()
 
 
@@ -600,7 +603,8 @@ async def mount_(obj, path, blocksize):
     cfg = obj.mcfg
 
     async with (
-        RootCmd(cfg, run=True, sig=True) as dsp,
+        SigCancel(),
+        RootCmd(cfg, run=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
         cfr.sub_at(cfg.path.fs) as sd,
         wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
@@ -623,7 +627,7 @@ async def rom(obj, path, device):
     cfg = obj.mcfg
 
     async with (
-        RootCmd(cfg, run=True, sig=True) as dsp,
+        RootCmd(cfg, run=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
         cfr.sub_at(cfg.path.rom) as sd,
     ):
@@ -675,7 +679,8 @@ async def repl(obj):
     from moat.lib.stream import FilenoBuf  # noqa:PLC0415
 
     async with (
-        RootCmd(cfg, run=True, sig=True) as dsp,
+        SigCancel(),
+        RootCmd(cfg, run=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
         cfr.sub_at(cfg.terminal) as cft,
         cft().stream() as t1,

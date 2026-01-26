@@ -157,10 +157,7 @@ class BaseSubCmd(BaseSuperCmd):
         for k, v in self.sub.items():
             if isinstance(k, str) and v is (k[-1] == "_"):
                 continue
-            try:
-                dd[k] = v.cfg["app"]
-            except (AttributeError, KeyError):
-                dd[k] = v.__class__.__name__
+            dd[k] = v.cfg_name
         return res
 
 

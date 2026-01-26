@@ -214,6 +214,14 @@ class BaseCmd(MsgHandler):
     cmd_stq_ = wait_stopped
 
     @property
+    def cfg_name(self) -> str:
+        "Return a human-readable name"
+        try:
+            return self.cfg["app"]
+        except KeyError:
+            return self.__class__.__name__
+
+    @property
     def path(self):
         "calculate the path to myself"
         # XXX cache it?

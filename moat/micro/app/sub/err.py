@@ -46,6 +46,14 @@ class Err(BaseFwdCmd):
     timeout: int = None
     p: MsgSender | None = None
 
+    @property
+    def cfg_name(self) -> str:
+        "Human readable name"
+
+        return (
+            f"{super().cfg_name} → {self.app.cfg_name if self.app else self.cfg.get('app', '?')}"
+        )
+
     async def handle(self, *a, **k):
         """Handle a command, waiting for ready if needed."""
         if L:

@@ -39,5 +39,6 @@ class SigCancel(anyio.AsyncContextManagerMixin):
         async with anyio.create_task_group() as self.tg:
             self.tg.start_soon(self._sig_handler, name="sig")
             yield None
-        if self.tg.cancel_scope.cancel_called and self.exc is not None:
-            raise self.exc
+            if self.tg.cancel_scope.cancel_called and self.exc is not None:
+                raise self.exc
+            self.tg.cancel_scope.cancel()

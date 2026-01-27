@@ -21,7 +21,7 @@ ln:
   app: link.Cmd
   path: !P x
   link: !P foo.bar
-  rlink: !P ":"
+  rlink: !P ":"  # correct, because of service= in announcing
   via: !P baz.quux
 """
 

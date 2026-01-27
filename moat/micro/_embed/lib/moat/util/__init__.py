@@ -17,6 +17,11 @@ from .exc import ExpKeyError as ExpKeyError
 from .pp import pop_kw as pop_kw
 from .pp import push_kw as push_kw
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class OutOfData(EOFError):  # noqa: D101
     pass
@@ -123,7 +128,7 @@ class attrdict(dict):
     hook, it doesn't remember having been updated.
     """
 
-    updated_: Callable = lambda x:None
+    updated_: Callable = lambda _x: None
 
     def __getattr__(self, k, d=NotGiven):
         try:

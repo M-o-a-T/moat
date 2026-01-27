@@ -9,6 +9,8 @@ from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
 from moat.lib.rpc import BaseCmd, HandlerStream, NotReadyError
 
+__all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
+
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -51,11 +53,11 @@ class BaseCmdMsg(BaseCmd):
     This is a command handler that relays arbitrary MoaT-RPC messages
     and a `~moat.lib.stream.BaseMsg`-compatible stream.
 
-    The difference to `~moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` is that this
+    The difference to `~moat.lib.rpc.stream.cmdbbm.BaseCmdBBM` is that this
     class encapsulates arbitrary message/stream calls and requires a
-    `~moat.micro.cmd.stream.cmdmsg.BaseCmdMsg` handler on the other side to talk to.
+    `~moat.lib.rpc.stream.cmdmsg.BaseCmdMsg` handler on the other side to talk to.
 
-    In contrast, a `~moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` exposes commands
+    In contrast, a `~moat.lib.rpc.stream.cmdbbm.BaseCmdBBM` exposes commands
     that directly read or write the underlying stream (of whatever type).
 
     This class cannot wrap a pre-existing stream. Its :meth:`stream` method

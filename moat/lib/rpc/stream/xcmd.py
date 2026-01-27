@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from moat.lib.stream import Base, BaseBlk, BaseBuf, BaseMsg
 
+__all__ = ["BlkCmd", "BufCmd", "MsgCmd"]
+
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -14,6 +16,10 @@ if TYPE_CHECKING:
 
 
 class _BBMCmd(Base):
+    """
+    Generic base for *Cmd.
+    """
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.cmd = cfg._moat_cmd  # noqa:SLF001

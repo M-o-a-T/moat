@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.lib.stream import UnixLink
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
 from typing import TYPE_CHECKING  # isort:skip
 

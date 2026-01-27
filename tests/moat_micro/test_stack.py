@@ -159,6 +159,10 @@ async def test_stack(tmp_path):
             d.cfg_at(P("r.s.c")) as cfg,
         ):
             # First a couple of command tests
+            dd = await s.dir_()
+            assert dd["d"]["c"] == "cfg.Cmd"
+            assert "wr" not in dd["d"]
+
             res = await rm("cmd dir_", do_stdout=True)
             assert "\n  c: cfg.Cmd\n" in res.stdout
             assert " wr\n" not in res.stdout

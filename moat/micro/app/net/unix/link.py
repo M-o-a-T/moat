@@ -5,8 +5,8 @@ Unix socket link app for MoaT message exchange.
 from __future__ import annotations
 
 from moat.util import attrdict
+from moat.lib.rpc.stream.cmdmsg import CmdMsg
 from moat.lib.stream import UnixLink
-from moat.micro.cmd.stream.cmdmsg import CmdMsg
 from moat.micro.stacks.console import console_stack
 
 

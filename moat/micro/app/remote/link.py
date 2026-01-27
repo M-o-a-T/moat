@@ -5,8 +5,8 @@ Remote link app for MoaT message exchange.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
-from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-from moat.micro.cmd.stream.xcmd import BufCmd
+from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
+from moat.lib.rpc.stream.xcmd import BufCmd
 from moat.micro.stacks.console import console_stack
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class Link(BaseCmdMsg):
     """
-    Connects to a `moat.micro.cmd.stream.cmdbbm.BaseCmdBBM` object
+    Connects to a `moat.lib.rpc.stream.cmdbbm.BaseCmdBBM` object
     exporting a `moat.lib.stream.BaseBuf`.
     """
 

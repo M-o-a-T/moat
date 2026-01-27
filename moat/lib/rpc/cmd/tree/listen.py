@@ -61,7 +61,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.micro.cmd.stream.cmdmsg import (  # noqa: PLC0415
+        from moat.lib.rpc.stream.cmdmsg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 
@@ -114,7 +114,7 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.micro.cmd.stream.cmdmsg import (  # noqa: PLC0415
+        from moat.lib.rpc.stream.cmdmsg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 

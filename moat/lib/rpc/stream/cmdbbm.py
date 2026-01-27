@@ -7,6 +7,8 @@ from __future__ import annotations
 from moat.lib.micro import ACM, AC_exit, L, Lock, TaskGroup
 from moat.lib.rpc import BaseCmd
 
+__all__ = ["BaseCmdBBM"]
+
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -29,13 +31,13 @@ class BaseCmdBBM(BaseCmd):
     `~moat.lib.stream.BaseBlk`, and `~moat.lib.stream.BaseBuf` streams.
 
     The difference between this and a
-    :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg`-derived class is that this
+    :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg`-derived class is that this
     class exposes commands that directly access the underlying stream
     (of whatever type).
 
-    In contrast, :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg` encapsulates
+    In contrast, :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg` encapsulates
     arbitrary commands and requires a
-    :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg` handler on the other side to
+    :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg` handler on the other side to
     talk to.
 
     This class cannot wrap a pre-existing stream, by design.

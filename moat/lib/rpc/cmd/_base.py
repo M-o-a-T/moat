@@ -297,6 +297,11 @@ class RootCmd(Base):
         self.app.attached(self, None)
         self._updates = {}
 
+    def __repr__(self):
+        if self.__class__ is RootCmd:
+            return f"<{self.__class__.__name__}>"
+        return f"<Root:{self.__class__.__name__}>"
+
     async def setup(self):
         await super().setup()
         self.tg = await AC_use(self, TaskGroup())

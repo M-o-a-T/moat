@@ -5,8 +5,8 @@ Raw TCP stream app.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.lib.stream import TcpLink
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
 from typing import TYPE_CHECKING  # isort:skip
 

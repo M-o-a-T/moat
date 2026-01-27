@@ -5,8 +5,8 @@ Raw serial port app.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.micro.app._doc import _mode_d
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
 from ._util import get_serial
 

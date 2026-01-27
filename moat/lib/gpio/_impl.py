@@ -142,8 +142,8 @@ class Line:
         if settings is None:
             settings = LineSettings(direction=Direction.INPUT)
         self._settings = settings
-        for k,v in kw.items():
-            setattr(self._settings,k,v)
+        for k, v in kw.items():
+            setattr(self._settings, k, v)
 
     def __repr__(self):
         return "<%s %s:%d %s>" % (  # noqa:UP031
@@ -153,7 +153,7 @@ class Line:
             self._line,
         )
 
-    def open(self, direction: bool | Direction |None= None):
+    def open(self, direction: bool | Direction | None = None):
         """
         Create a context manager for controlling this line's input or output.
 

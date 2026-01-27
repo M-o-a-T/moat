@@ -54,8 +54,7 @@ if TYPE_CHECKING:
     from logging import Logger
 
     from moat.lib.path import PathElem
-
-    from .base import OptDict
+    from moat.lib.rpc import OptDict
 
     from collections.abc import Sequence
     from typing import Any

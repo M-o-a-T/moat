@@ -5,8 +5,8 @@ Raw stdio of a local micropython process.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.micro._test import MpyBuf
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
 
 class MpyRaw(BaseCmdBBM):

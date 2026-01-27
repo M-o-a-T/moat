@@ -5,9 +5,9 @@ App to open a channel to a process.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
+from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.lib.stream import ProcessBuf
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
-from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
 from moat.micro.stacks.console import console_stack
 
 

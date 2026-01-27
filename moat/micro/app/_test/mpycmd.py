@@ -5,8 +5,8 @@ MoaT link to a local micropython process.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.micro._test import MpyBuf
-from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
 from moat.micro.stacks.console import console_stack
 
 

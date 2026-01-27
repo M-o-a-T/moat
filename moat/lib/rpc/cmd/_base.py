@@ -286,8 +286,7 @@ class RootCmd(Base):
     This class ducktypes `BaseCmd`.
     """
 
-    def __init__(self, cfg, run=False, i=None):
-        self._run = run
+    def __init__(self, cfg, i=None):
         self.i = i
         self._sender = MsgSender(self)
         self.cfg = cfg

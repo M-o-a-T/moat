@@ -201,7 +201,7 @@ async def setup(
 
     try:
         async with (
-            RootCmd(cfg, run=True) as dsp,
+            RootCmd(cfg) as dsp,
             dsp.sub_at(cfg.remote) as sd,
             RemoteBufAnyio(sd) as ser,
             DirectREPL(ser) as repl,

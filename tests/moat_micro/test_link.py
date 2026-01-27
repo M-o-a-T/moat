@@ -21,14 +21,15 @@ ln:
   app: link.Cmd
   path: !P x
   link: !P foo.bar
-  rlink: !P baz.quux
+  rlink: !P ":"
+  via: !P baz.quux
 """
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("seed", [1])  # range(10))
 async def test_fake(seed, tmp_path, cfg):
-    "basic random-walk ADC test"
+    "basic random-walk ADC test, remotely via Link"
 
     cfg  # noqa:B018  # required for side effect of setting up a config
     async with (

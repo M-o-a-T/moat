@@ -117,11 +117,11 @@ class HandlerStream(MsgHandler):
 
     * open an async context on an instance of this class
     * start a task that reads your external source and feeds the result
-      to `msg_in`.
-    * start a task that loops on `msg_out` and sends the result. It should
-      terminate on `EOFError` from `msg_out`.
+      to :meth:`~HandlerStream.msg_in`.
+    * start a task that loops on :meth:`~HandlerStream.msg_out` and sends the result. It should
+      terminate on `EOFError` from :meth:`~HandlerStream.msg_out`.
 
-    You can use the `start` method to run these tasks (and any others you
+    You can use the :meth:`~HandlerStream.start` method to run these tasks (and any others you
     might need) within the context's internal taskgroup. They will be
     auto-cancelled when leaving the context.
 
@@ -383,7 +383,13 @@ class HandlerStream(MsgHandler):
         # log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
         await self._send_q.put((link, a, kw, flag))
 
-    async def msg_out(self) -> list:  # noqa: D102
+    async def msg_out(self) -> list:
+        """
+        Get the next outgoing message to be sent over the stream.
+
+        Returns:
+            A list representing the encoded message ready to be sent.
+        """
         link, a, kw, flag = await self._send_q.get()
         i = i_f2wire(link.id, flag)
 
@@ -401,7 +407,15 @@ class HandlerStream(MsgHandler):
             )
         return res
 
-    def start(self, cmd, *a, **kw) -> None:  # noqa: D102
+    def start(self, cmd, *a, **kw) -> None:
+        """
+        Start a task within the context's internal taskgroup.
+
+        Args:
+            cmd: The coroutine function to run.
+            *a: Positional arguments to pass to the function.
+            **kw: Keyword arguments to pass to the function.
+        """
         if kw:
             self._tg.start_soon(partial(cmd, *a, *kw))
         else:
@@ -453,17 +467,19 @@ class HandlerStream(MsgHandler):
 
     async def read_stream(self):
         """
-        Stream reader.
+        Stream reader task.
 
-        Must be overridden: Iterate: call `msg_out` and write its return value.
+        *Must be overridden*: Iterate calling :meth:`~HandlerStream.msg_out`
+        and writing its return value to your stream.
         """
         raise NotImplementedError
 
     async def write_stream(self):
         """
-        Stream writer.
+        Stream writer task.
 
-        Must be overridden: Iterate: read data and call `msg_in` with the result.
+        *Must be overridden*: Iterate reading from your stream and calling
+        :meth:`~HandlerStream.msg_in` with the result.
         """
         raise NotImplementedError
 

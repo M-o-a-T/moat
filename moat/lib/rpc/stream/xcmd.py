@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
 
 
-class _BBMCmd(Base):
+class BBMCmd(Base):
     """
     Generic base for *Cmd.
     """
@@ -31,8 +31,10 @@ class _BBMCmd(Base):
         self.s = self.cmd.root.sub_at(self.cfg["path"])
 
 
-class MsgCmd(_BBMCmd, BaseMsg):
+class MsgCmd(BBMCmd, BaseMsg):
     """
+    A stream handler that forwards send/recv (and console) requests via MoaT.
+
     This is the reverse of a CmdBBM for messages, i.e. a stream handler that forwards
     send/recv (and console) requests via MoaT.
 
@@ -60,9 +62,11 @@ class MsgCmd(_BBMCmd, BaseMsg):
         return len(msg)
 
 
-class BufCmd(_BBMCmd, BaseBuf):
+class BufCmd(BBMCmd, BaseBuf):
     """
-    This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
+    A stream handler that forwards snd/rcv (and console) requests via MoaT.
+
+    This is the reverse of a CmdBBM for buffers, i.e. a stream handler that forwards
     snd/rcv (and console) requests via MoaT.
 
     The remote link is addressed by the config item "path".
@@ -81,8 +85,10 @@ class BufCmd(_BBMCmd, BaseBuf):
         return len(msg)
 
 
-class BlkCmd(_BBMCmd, BaseBlk):
+class BlkCmd(BBMCmd, BaseBlk):
     """
+    A stream handler that forwards snd/rcv (and console) requests via MoaT.
+
     This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
     snd/rcv (and console) requests via MoaT.
 

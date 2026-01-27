@@ -229,7 +229,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
         self.kw = kw
         self.exec = executable
 
-    def open_args(self):
+    def open_args(self, dbg: int = 0):
         """Return keyword arguments for :func:`~anyio.open_process`.
 
         Default is whatever has been passed to the ProcessBuf constructor.
@@ -244,6 +244,8 @@ class ProcessBuf(CtxObj, AnyioBuf):
             pass
         for k in ("cwd", "env"):
             if (v := getattr(self, k)) is not None:
+                if k == "env" and dbg:
+                    v["MOAT_FORK_DEBUG"] = str(dbg)
                 self.kw[k] = v
 
         return self.kw
@@ -259,7 +261,10 @@ class ProcessBuf(CtxObj, AnyioBuf):
             raise ValueError("Don't know what")
 
         try:
-            async with await anyio.open_process(self.argv, **self.open_args()) as proc:
+            dbg = int(os.getenv("MT_DEBUG", "0"))
+            async with await anyio.open_process(self.argv, **self.open_args(dbg)) as proc:
+                if dbg:
+                    print(f"PID:{proc.pid}", file=sys.stderr)
                 try:
                     async with SingleAnyioBuf(
                         anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout),

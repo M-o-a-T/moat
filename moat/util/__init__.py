@@ -101,6 +101,7 @@ _imports = {
     "ExpKeyError": "exc",
     "ExpectedError": "exc",
     "exc_iter": "exc",
+    "run_no_exc": "exc",
     "ungroup": "exc",
     # part
     "enc_part": "part",

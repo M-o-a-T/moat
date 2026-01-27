@@ -9,11 +9,14 @@ from __future__ import annotations
 import os
 from anyio import get_cancelled_exc_class
 
+from moat.lib.micro import log
+
 __all__ = [
     "ExpAttrError",
     "ExpKeyError",
     "ExpectedError",
     "exc_iter",
+    "run_no_exc",
     "ungroup",
 ]
 
@@ -100,3 +103,22 @@ class ungroup:
 
 
 ungroup = ungroup()
+
+
+async def run_no_exc(p, msg, x_err=()):
+    """
+    Call p(msg) but log exceptions.
+
+    Args:
+        p: Callable to execute.
+        msg: Keyword arguments to pass to the callable.
+        x_err: Exception types to log with reduced detail.
+    """
+    try:
+        r = p(**msg)
+        if hasattr(r, "throw"):  # coroutine
+            r = await r
+    except x_err as err:
+        log("Error in %r %r: %r", p, msg, err)
+    except Exception as err:  # pylint:disable=broad-exception-caught
+        log("Error in %r %r", p, msg, err=err)

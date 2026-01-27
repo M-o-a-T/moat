@@ -12,7 +12,7 @@ from moat.lib.rpc import BaseCmd
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd.msg import Msg
+    from moat.lib.rpc import Msg
 
 
 class Cmd(BaseCmd):

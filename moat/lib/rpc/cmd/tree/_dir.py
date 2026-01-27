@@ -155,7 +155,7 @@ class BaseSubCmd(BaseSuperCmd):
         res = await super().cmd_dir_(v=v)
         dd = res["d"] = {}
         for k, v in self.sub.items():
-            if not isinstance(k, str) or v is not (k[-1] == "_"):
+            if not isinstance(k, str) or v is (k[-1] == "_"):
                 continue
             try:
                 dd[k] = v.cfg["app"]

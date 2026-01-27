@@ -88,7 +88,8 @@ class Cmd(BaseCmd):
     async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
         "forward, possibly"
         if self.link is None:
-            raise RuntimeError("Not ready")  # XXX maybe just return
+            if await self.wait_ready():
+                raise RuntimeError("Not ready")  # XXX maybe just return
         if self.rlink is None:
             try:
                 rpath = self.cfg["rlink"]

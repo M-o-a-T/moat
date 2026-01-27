@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.lib.rpc.stream.xcmd import BufCmd
-from moat.micro.stacks.console import console_stack
+from moat.lib.stream import console_stack
 
 from typing import TYPE_CHECKING  # isort:skip
 

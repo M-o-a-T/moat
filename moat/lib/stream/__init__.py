@@ -27,6 +27,7 @@ if _TC:
     from .anyio import SingleAnyioBuf as SingleAnyioBuf
     from .cbor import CBORMsgBlk as CBORMsgBlk
     from .cbor import CBORMsgBuf as CBORMsgBuf
+    from .console import console_stack as console_stack
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
@@ -41,6 +42,8 @@ if _TC:
 
 # Lazy loading
 _imports = {
+    # Console stack
+    "console_stack": "console",
     # Logging
     "LogMsg": "log",
     "LogBlk": "log",

@@ -6,8 +6,7 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.rpc.stream.cmdmsg import CmdMsg
-from moat.lib.stream import TcpLink
-from moat.micro.stacks.console import console_stack
+from moat.lib.stream import TcpLink, console_stack
 
 
 class Link(CmdMsg):

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
+from moat.lib.stream import console_stack
 from moat.micro.app._doc import _link_d, _log_d, _mode_d
-from moat.micro.stacks.console import console_stack
 
 from ._util import get_serial
 

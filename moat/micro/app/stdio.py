@@ -6,8 +6,7 @@ from __future__ import annotations
 
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import FilenoBuf
-from moat.micro.stacks.console import console_stack
+from moat.lib.stream import FilenoBuf, console_stack
 
 
 class StdIO(BaseCmdMsg):

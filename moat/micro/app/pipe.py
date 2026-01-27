@@ -7,8 +7,7 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import ProcessBuf
-from moat.micro.stacks.console import console_stack
+from moat.lib.stream import ProcessBuf, console_stack
 
 
 class ProcessCmd(BaseCmdMsg):

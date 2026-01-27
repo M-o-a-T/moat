@@ -22,6 +22,7 @@ if _TC:
     from .asyncio import SingleAIOBuf as SingleAIOBuf
     from .cbor import CBORMsgBlk as CBORMsgBlk
     from .cbor import CBORMsgBuf as CBORMsgBuf
+    from .console import console_stack as console_stack
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
@@ -39,6 +40,8 @@ class ProcessDeadError(Exception):
 
 # Lazy loading
 _imports = {
+    # Console stack
+    "console_stack": "console",
     # Logging
     "LogMsg": "log",
     "LogBlk": "log",
@@ -78,6 +81,8 @@ __all__ = [  # noqa:RUF022
     "StackedBuf",
     "StackedConn",
     "StackedMsg",
+    # Console
+    "console_stack",
     # Logging (lazy)
     "LogBlk",
     "LogBuf",

@@ -42,10 +42,10 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         How to wrap the connection so that you can communicate on it.
 
-        By default, use `~moat.micro.stacks.console.console_stack`.
+        By default, use `~moat.lib.stream.console_stack`.
         """
         # pylint:disable=import-outside-toplevel
-        from moat.micro.stacks.console import console_stack  # noqa: PLC0415
+        from moat.lib.stream import console_stack  # noqa: PLC0415
 
         return console_stack(conn, self.cfg)
 

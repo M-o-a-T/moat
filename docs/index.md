@@ -296,6 +296,12 @@ We'd rather not do that.
 (moat-top-lib-cmd)=
 ### Libraries
 
+#### [Bosch Sensortec APIs](moat-api-bosch/index.md)
+
+```{include} ../packaging/moat-api-bosch/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
 
 #### [RPC, with streaming](moat-lib-rpc/index.md)
 
@@ -447,6 +453,7 @@ moat/index
 moat-modbus/index
 moat-dev/index
 moat-bus/index
+moat-api-bosch/index
 moat-util/index
 moat-src/index
 moat-db/index

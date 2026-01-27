@@ -566,7 +566,10 @@ def setup(app):
     import prometheus_client
     import tenacity
     import httpx
-    import httpx_ws
+    try:
+        import httpx_ws
+    except ImportError:
+        pass
     import h11
     import wsproto
     import moat.lib.mqtt._types

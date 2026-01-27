@@ -21,10 +21,10 @@ TODO.
 
 #### MoaT-Link
 
-See the {class}`~moat.link.client.Link` class. Besides standard client
-methods, you can use the {meth}`~moat.link.client.Link.get_service`
+See the `moat.link.client.Link` class. Besides standard client
+methods, you can use the `get_service`
 method to talk to other clients that registered themselves via an
-{meth}`~moat.link.client.Link.announcing` context (assuming that they
+`announcing` context (assuming that they
 offer some service under that name).
 
 
@@ -80,11 +80,11 @@ On top of that, {class}`~moat.lib.rpc.MsgHandler`
 * has a `handle` method that handles basic messages (`dir_`, `rdy_`, `doc_`)
 * includes a sub-command accessor that can be overridden
 
-Next, {class}`~moat.lib.rpc.BaseCmd`
+Next, `moat.lib.rpc.BaseCmd`
 
-* has a background task ({meth}`~moat.lib.rpc.BaseCmd.task`)
+* has a background task (`task` method)
 * carries event for starting/started/stopped
-* encapsulates the objects's context and its task via {meth}`~moat.lib.rpc.BaseCmd.run`
+* encapsulates the objects's context and its task via the `run` method
 
 #### Incoming commands
 
@@ -118,8 +118,8 @@ class Baz(BaseCmd):
 ```
 
 Also, by default `sub_NAME` methods are called when the path isn't
-finished. Typically this is a sub-{class}`~moat.lib.rpc.BaseCmd`,
-in which case its {meth}`~moat.lib.rpc.BaseCmd.handle` method will be
+finished. Typically this is a sub-`moat.lib.rpc.BaseCmd`,
+in which case its `handle` method will be
 called:
 
 ```python
@@ -131,14 +131,14 @@ class Foo(BaseCmd):
 
 #### Root command handler
 
-The root is typically a {class}`~moat.lib.rpc.RootCmd`. It does *not*
-inherit from {class}`~moat.lib.rpc.BaseCmd` , or even
-{class}`~moat.lib.rpc.MsgHandler`, because it delegates (almost) everything
-to its subordinate app. Instead,when you enter its context it
+The root is typically a `moat.lib.rpc.RootCmd`. It does *not*
+inherit from `moat.lib.rpc.BaseCmd`, or even
+`moat.lib.rpc.MsgHandler`, because it delegates (almost) everything
+to its subordinate app. Instead, when you enter its context it
 
 * starts its subordinate app
-* starts its {meth}`~moat.lib.rpc.RootCmd.task`, if present
-* contains a built-in {class}`~moat.lib.rpc.MsgSender` for referring
+* starts its `task` method, if present
+* contains a built-in `moat.lib.rpc.MsgSender` for referring
   directly to subcommands (if possible)
 
 

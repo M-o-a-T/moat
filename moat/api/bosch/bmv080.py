@@ -290,8 +290,8 @@ class BMV080(ContextManagerMixin):
 
     Args:
         link: Serial communication interface implementing read/write/delay_ms/time_ms.
-        libs_path: Path to the BMV080 shared libraries (.so/.dll). lib_postProcessor.so
-        must be loaded first.
+        libs_path: Path to the BMV080 shared libraries (.so/.dll). The lib_postProcessor.so
+            library must be loaded first.
 
     Example:
         >>> class MySPI:
@@ -311,7 +311,7 @@ class BMV080(ContextManagerMixin):
         Args:
             link: Object with read/write/delay_ms/time_ms methods.
             libs_path: Paths to the BMV080 shared libraries, colon-separated
-            (semicolon on Windows).
+                (use semicolon on Windows).
         """
         self._link = link
         self._libs_path = libs_path

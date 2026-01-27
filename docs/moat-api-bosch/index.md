@@ -2,7 +2,7 @@
 
 ```{include} ../../packaging/moat-api-bosch/README.md
 :start-after: % start synopsis
-:end-before: % start synopsis
+:end-before: % end synopsis
 ```
 
 ## API Reference
@@ -12,6 +12,7 @@
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: runtime_in_sec, pm2_5_mass_concentration, pm1_mass_concentration, pm10_mass_concentration, pm2_5_number_concentration, pm1_number_concentration, pm10_number_concentration, is_obstructed, is_outside_measurement_range
 ```
 ### Usage
 

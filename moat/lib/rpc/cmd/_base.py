@@ -99,13 +99,6 @@ class BaseCmd(MsgHandler):
             self._starting.set()
             self._starting = None
 
-    async def teardown(self):
-        """
-        Clean up this command.
-
-        Call last when overriding.
-        """
-
     async def reload(self):
         """
         Reload from updated config.

@@ -144,7 +144,7 @@ class AsyncMQTTSubscription:  # noqa: D101
 
 
 @define(eq=False)
-class MQTTOperation(Generic[TAckPacket]):  # noqa: D101, UP046
+class MQTTOperation(Generic[TAckPacket]):  # noqa: D101
     packet_id: int | None = None
     exception_class: type[MQTTOperationFailed] | None = field(
         kw_only=True, repr=False, default=None
@@ -584,7 +584,10 @@ class AsyncMQTTClient:
                 self._pending_connect = operation
                 exit_stack.callback(setattr, self, "_pending_connect", None)
 
-            await self._flush_outbound_data()
+            try:
+                await self._flush_outbound_data()
+            except anyio.BrokenResourceError:
+                return
 
             if not operation.requires_response:
                 return

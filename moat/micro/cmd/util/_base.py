@@ -4,28 +4,7 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.lib.micro import (
-    TimeoutError,  # pylint: disable=redefined-builtin # noqa:A004
-    log,
-    wait_for_ms,
-)
-
-# Typing
-
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-
-async def wait_complain(s: str, i: int, p: Callable, *a, **k):
-    "Complain on stderr if waiting too long"
-    try:
-        await wait_for_ms(i, p, *a, **k)
-    except TimeoutError:
-        log("Delayed  %s", s)
-        await p(*a, **k)
-        log("Delay OK %s", s)
+from moat.lib.micro import log
 
 
 async def run_no_exc(p, msg, x_err=()):

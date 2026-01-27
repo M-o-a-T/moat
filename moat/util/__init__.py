@@ -47,6 +47,7 @@ _imports = {
     "pos2val": "misc",
     "srepr": "misc",
     "val2pos": "misc",
+    "wait_complain": "misc",
     # pp
     "pop_kw": "pp",
     "push_kw": "pp",

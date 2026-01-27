@@ -80,6 +80,14 @@ class Base:
             cfg = attrdict()
         self.cfg = cfg
 
+    @property
+    def cfg_name(self):
+        "Some name to disambiguate this part"
+        try:
+            return self.cfg.name
+        except AttributeError:
+            return self.__class__.__name__
+
     def wrap(self) -> AbstractAsyncContextManager:
         """
         Async context manager for holding a cross-connection context.

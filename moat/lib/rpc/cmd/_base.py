@@ -79,9 +79,9 @@ class BaseCmd(MsgHandler):
 
     def __repr__(self):
         try:
-            return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
+            return f"<{self.cfg_name}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
         except AttributeError:
-            return f"<{self.__class__.__name__}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
+            return f"<{self.cfg_name}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def setup(self):
         """
@@ -212,7 +212,7 @@ class BaseCmd(MsgHandler):
         try:
             return self.cfg["app"]
         except KeyError:
-            return self.__class__.__name__
+            return super().cfg_name
 
     @property
     def path(self):

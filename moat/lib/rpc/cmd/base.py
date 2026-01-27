@@ -19,7 +19,7 @@ class RootCmd(_RootCmd):
     """
     This is the system's root dispatcher.
 
-    This class ducktypes :py:class:`BaseCmd`.
+    This class ducktypes :py:class:`~moat.lib.rpc.cmd._base.BaseCmd`.
     """
 
     def cfg_at(self, p: Path):

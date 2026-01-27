@@ -81,12 +81,12 @@ API: app
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: moat.micro.app.ic.HDC2010
+.. automodule:: moat.micro.app.ic.hdc2010
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: moat.micro.app.ic.TMP102
+.. automodule:: moat.micro.app.ic.tmp102
    :members:
    :undoc-members:
    :show-inheritance:

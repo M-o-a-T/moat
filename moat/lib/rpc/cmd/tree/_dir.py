@@ -136,7 +136,7 @@ class BaseSubCmd(BaseSuperCmd):
         """
         Resolve a subcommand.
 
-        This version uses the :attr:`sub` mapping.
+        This version uses the ``sub`` mapping.
         """
         if not prefix and (sub := self.sub.get(scmd, None)) is not None:
             return sub

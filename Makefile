@@ -29,3 +29,6 @@ prep:
 	    VARIANT_DIR=${PWD}/moat/micro/_embed/boards/unix/test \
 	    BUILD=${PWD}/build/mpy-unix \
 	    STRIP= DEBUG=1
+
+docwarn:
+	cd docs/ && ../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1|grep -E 'ERR|WARN'

@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import ProcessBuf, console_stack
+from moat.lib.stream import ProcessBuf, serial_stack
 
 
 class ProcessCmd(BaseCmdMsg):
@@ -33,7 +33,7 @@ class ProcessCmd(BaseCmdMsg):
             path = argv[0]
 
         proc = ProcessBuf(argv, executable=path)
-        return await AC_use(self, console_stack(proc, cfg=self.cfg))
+        return await AC_use(self, serial_stack(proc, cfg=self.cfg))
 
 
 class ProcessIO(BaseCmdBBM):

@@ -22,12 +22,12 @@ if _TC:
     from .asyncio import SingleAIOBuf as SingleAIOBuf
     from .cbor import CBORMsgBlk as CBORMsgBlk
     from .cbor import CBORMsgBuf as CBORMsgBuf
-    from .console import console_stack as console_stack
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
     from .reliable import EphemeralMsg as EphemeralMsg
     from .reliable import ReliableMsg as ReliableMsg
+    from .serial import serial_stack as serial_stack
     from .tcp import TcpLink as TcpLink
 
 
@@ -40,8 +40,8 @@ class ProcessDeadError(Exception):
 
 # Lazy loading
 _imports = {
-    # Console stack
-    "console_stack": "console",
+    # Serial stack
+    "serial_stack": "serial",
     # Logging
     "LogMsg": "log",
     "LogBlk": "log",
@@ -81,8 +81,6 @@ __all__ = [  # noqa:RUF022
     "StackedBuf",
     "StackedConn",
     "StackedMsg",
-    # Console
-    "console_stack",
     # Logging (lazy)
     "LogBlk",
     "LogBuf",
@@ -96,6 +94,8 @@ __all__ = [  # noqa:RUF022
     # Reliable messaging (lazy)
     "ReliableMsg",
     "EphemeralMsg",
+    # Serial
+    "serial_stack",
     # Network connections (lazy)
     "TcpLink",
     # compatibility

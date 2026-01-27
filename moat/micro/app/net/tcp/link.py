@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.rpc.stream.cmdmsg import CmdMsg
-from moat.lib.stream import TcpLink, console_stack
+from moat.lib.stream import TcpLink, serial_stack
 
 
 class Link(CmdMsg):
@@ -15,7 +15,7 @@ class Link(CmdMsg):
     """
 
     def __init__(self, cfg):
-        stack = console_stack(
+        stack = serial_stack(
             TcpLink(
                 cfg.get("host", "127.0.0.1"),
                 cfg["port"],

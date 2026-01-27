@@ -27,13 +27,13 @@ if _TC:
     from .anyio import SingleAnyioBuf as SingleAnyioBuf
     from .cbor import CBORMsgBlk as CBORMsgBlk
     from .cbor import CBORMsgBuf as CBORMsgBuf
-    from .console import console_stack as console_stack
     from .log import LogBlk as LogBlk
     from .log import LogBuf as LogBuf
     from .log import LogMsg as LogMsg
     from .reliable import EphemeralMsg as EphemeralMsg
     from .reliable import ReliableMsg as ReliableMsg
     from .serial import SerialPackerBlkBuf as SerialPackerBlkBuf
+    from .serial import serial_stack as serial_stack
     from .tcp import TcpLink as TcpLink
     from .terminal import FilenoTerm as FilenoTerm
     from .terminal import TermBuf as TermBuf
@@ -42,8 +42,6 @@ if _TC:
 
 # Lazy loading
 _imports = {
-    # Console stack
-    "console_stack": "console",
     # Logging
     "LogMsg": "log",
     "LogBlk": "log",
@@ -64,6 +62,7 @@ _imports = {
     "EphemeralMsg": "reliable",
     # serial
     "SerialPackerBlkBuf": "serial",
+    "serial_stack": "serial",
     # Network connections
     "TcpLink": "tcp",
     "UnixLink": "unix",

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import FilenoBuf, console_stack
+from moat.lib.stream import FilenoBuf, serial_stack
 
 
 class StdIO(BaseCmdMsg):
@@ -16,4 +16,4 @@ class StdIO(BaseCmdMsg):
 
     async def stream(self):  # noqa:D102
         cs = FilenoBuf(self.cfg)
-        return await AC_use(self, console_stack(cs, self.cfg))
+        return await AC_use(self, serial_stack(cs, self.cfg))

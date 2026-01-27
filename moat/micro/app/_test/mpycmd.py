@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import console_stack
+from moat.lib.stream import serial_stack
 from moat.micro._test import MpyBuf
 
 
@@ -18,4 +18,4 @@ class MpyCmd(BaseCmdMsg):
     async def stream(self):
         """Returns the console-stack-wrapped micropython buffer."""
         mpy = MpyBuf(self.cfg)
-        return await AC_use(self, console_stack(mpy, self.cfg))
+        return await AC_use(self, serial_stack(mpy, self.cfg))

@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.lib.rpc.stream.xcmd import BufCmd
-from moat.lib.stream import console_stack
+from moat.lib.stream import serial_stack
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -26,4 +26,4 @@ class Link(BaseCmdMsg):
     async def stream(self) -> BaseMsg:
         """Returns the stack-wrapped link."""
         sd = BufCmd(self.cfg)
-        return await AC_use(self, console_stack(sd, self.cfg))
+        return await AC_use(self, serial_stack(sd, self.cfg))

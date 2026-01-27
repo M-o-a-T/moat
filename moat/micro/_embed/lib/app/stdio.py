@@ -11,7 +11,7 @@ import micropython
 
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import console_stack
+from moat.lib.stream import serial_stack
 from moat.micro.stacks.file import FileBuf
 
 from ._doc import _link_d, _log_d
@@ -55,7 +55,7 @@ class StdIO(BaseCmdMsg):
         cs = StdioBuf(self.cfg)
         micropython.kbd_intr(-1)
         await AC_use(self, partial(micropython.kbd_intr, 3))
-        return await AC_use(self, console_stack(cs, self.cfg))
+        return await AC_use(self, serial_stack(cs, self.cfg))
 
 
 def console(*a, **kw) -> Cmd:

@@ -42,12 +42,12 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         How to wrap the connection so that you can communicate on it.
 
-        By default, use `~moat.lib.stream.console_stack`.
+        By default, use `~moat.lib.stream.serial_stack`.
         """
         # pylint:disable=import-outside-toplevel
-        from moat.lib.stream import console_stack  # noqa: PLC0415
+        from moat.lib.stream import serial_stack  # noqa: PLC0415
 
-        return console_stack(conn, self.cfg)
+        return serial_stack(conn, self.cfg)
 
     async def reject(self, conn: BaseBuf):
         """

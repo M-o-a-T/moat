@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.rpc.stream.cmdmsg import CmdMsg
-from moat.lib.stream import UnixLink, console_stack
+from moat.lib.stream import UnixLink, serial_stack
 
 
 class Link(CmdMsg):
@@ -15,5 +15,5 @@ class Link(CmdMsg):
     """
 
     def __init__(self, cfg):
-        stack = console_stack(UnixLink(cfg["port"], retry=cfg.get("retry", attrdict())), cfg)
+        stack = serial_stack(UnixLink(cfg["port"], retry=cfg.get("retry", attrdict())), cfg)
         super().__init__(stack, cfg)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.util import attrdict
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
-from moat.lib.stream import CBORMsgBlk, console_stack
+from moat.lib.stream import CBORMsgBlk, serial_stack
 from moat.micro._test import Loopback
 
 
@@ -30,5 +30,5 @@ class LoopCmd(BaseCmdMsg):
                     s = LogMsg(s, log)
                 s = await AC_use(self, s)
             else:
-                s = await AC_use(self, console_stack(s, self.cfg))
+                s = await AC_use(self, serial_stack(s, self.cfg))
         return s

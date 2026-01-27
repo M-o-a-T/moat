@@ -63,14 +63,14 @@ moat:
             console: true
             frame: 0xf7
           log:
-            txt: "S"
-    #     log_raw:
-    #        txt: "SU"
+            txt: "!S"
+#         log_raw:
+#            txt: "SU"
         n:
           app: net.unix.Port
           port: /tmp/moat.test
-          log:
-            txt: "N"
+#         log:
+#           txt: "N"
 
         co:
           app: _test.Cons
@@ -88,10 +88,10 @@ moat:
               console: true
               frame: 0xf7
             mplex: false
-            log:
-              txt: "U"
-#       log_raw:
-#         txt: "RU"
+#           log:
+#             txt: "U"
+#           log_raw:
+#             txt: "RU"
           f:
             app: fs.Cmd
             root: /tmp/mpy-test
@@ -107,8 +107,8 @@ moat:
         r:
           app: net.unix.Link
           port: /tmp/moat.test
-          log:
-            txt: "N"
+#         log:
+#           txt: "N"
 
 """
 

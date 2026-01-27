@@ -37,12 +37,14 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     """
     The MoaT.micro satellite's main entry point.
 
-    If @cfg is a string, it's the name of the config file, with the config
-    stored in CBOR.
+    Args:
+        cfg: the configuration. If this is a string, it's the name of the
+             config file, with the data stored in CBOR.
 
-    @fake_end sends a fake MicroPython prompt to trick the setup code into
-    thinking that the current command has concluded, so it can cleanly
-    terminate / start the local dispatcher.
+        fake_end: if set, sends a fake MicroPython prompt to trick the setup code into
+                  thinking that the current command has concluded. This way
+                  it can cleanly terminate the setup phase and start the
+                  local dispatcher.
     """
     if isinstance(cfg, str):
         with open(cfg, "rb") as f:

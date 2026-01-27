@@ -31,4 +31,7 @@ prep:
 	    STRIP= DEBUG=1
 
 docwarn:
-	cd docs/ && ../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1|grep -E 'ERR|WARN'
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1 | \
+	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )

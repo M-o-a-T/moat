@@ -11,7 +11,7 @@ from cffi import FFI
 from typing import Self
 
 
-class Test:
+class ItestWrapper:
     """CFFI wrapper for itest.so library."""
 
     def __init__(self, fn, param):

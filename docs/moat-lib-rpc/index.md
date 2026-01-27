@@ -21,10 +21,10 @@ TODO.
 
 #### MoaT-Link
 
-See the `moat.link.client.Link` class. Besides standard client
-methods, you can use the `get_service`
+See the {py:class}`moat.link.client.Link` class. Besides standard client
+methods, you can use the {py:meth}`~moat.link.client.LinkSender.get_service`
 method to talk to other clients that registered themselves via an
-`announcing` context (assuming that they
+{py:meth}`~moat.link.client.LinkSender.announcing` context (assuming that they
 offer some service under that name).
 
 
@@ -80,9 +80,9 @@ On top of that, {class}`~moat.lib.rpc.MsgHandler`
 * has a `handle` method that handles basic messages (`dir_`, `rdy_`, `doc_`)
 * includes a sub-command accessor that can be overridden
 
-Next, `moat.lib.rpc.BaseCmd`
+Next, {py:class}`moat.lib.rpc.cmd._base.BaseCmd`
 
-* has a background task (`task` method)
+* has a background task (the `task` method)
 * carries event for starting/started/stopped
 * encapsulates the objects's context and its task via the `run` method
 
@@ -118,8 +118,8 @@ class Baz(BaseCmd):
 ```
 
 Also, by default `sub_NAME` methods are called when the path isn't
-finished. Typically this is a sub-`moat.lib.rpc.BaseCmd`,
-in which case its `handle` method will be
+finished. Typically this is a sub-{py:class}`~moat.lib.rpc.cmd._base.BaseCmd`,
+in which case its {py:meth}`~moat.lib.rpc.MsgHandler.handle` method will be
 called:
 
 ```python
@@ -131,14 +131,14 @@ class Foo(BaseCmd):
 
 #### Root command handler
 
-The root is typically a `moat.lib.rpc.RootCmd`. It does *not*
-inherit from `moat.lib.rpc.BaseCmd`, or even
-`moat.lib.rpc.MsgHandler`, because it delegates (almost) everything
+The root is typically a {py:class}`moat.lib.rpc.cmd.base.RootCmd`. It does *not*
+inherit from {py:class}`~moat.lib.rpc.cmd._base.BaseCmd`, or even
+{py:class}`~moat.lib.rpc.MsgHandler`, because it delegates (almost) everything
 to its subordinate app. Instead, when you enter its context it
 
 * starts its subordinate app
 * starts its `task` method, if present
-* contains a built-in `moat.lib.rpc.MsgSender` for referring
+* contains a built-in {py:class}`~moat.lib.rpc.MsgSender` for referring
   directly to subcommands (if possible)
 
 

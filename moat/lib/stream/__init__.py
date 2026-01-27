@@ -32,6 +32,7 @@ if _TC:
     from .log import LogMsg as LogMsg
     from .reliable import EphemeralMsg as EphemeralMsg
     from .reliable import ReliableMsg as ReliableMsg
+    from .serial import SerialPackerBlkBuf as SerialPackerBlkBuf
     from .tcp import TcpLink as TcpLink
     from .terminal import FilenoTerm as FilenoTerm
     from .terminal import TermBuf as TermBuf
@@ -58,6 +59,8 @@ _imports = {
     # Reliable messaging
     "ReliableMsg": "reliable",
     "EphemeralMsg": "reliable",
+    # serial
+    "SerialPackerBlkBuf": "serial",
     # Network connections
     "TcpLink": "tcp",
     "UnixLink": "unix",
@@ -84,6 +87,7 @@ __all__ = [
     "BaseBuf",
     "BaseConn",
     "BaseMsg",
+    "SerialPackerBlkBuf",
     "StackedBlk",
     "StackedBuf",
     "StackedConn",

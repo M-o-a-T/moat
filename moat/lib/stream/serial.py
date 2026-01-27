@@ -35,16 +35,19 @@ class SerialPackerBlkBuf(StackedBlk):
             _CReader.__init__(self, console)
 
     async def crd(self, buf):
+        "console read"
         if not self.cons:
             raise EOFError
         return await _CReader.crd(self, buf)
 
     async def cwr(self, buf):
+        "console write"
         if not self.cons:
             return
         return await super().wr(buf)
 
     async def recv(self):
+        "block read"
         while True:
             while self.i < self.n:
                 msg = self.p.feed(self.buf[self.i])
@@ -62,6 +65,7 @@ class SerialPackerBlkBuf(StackedBlk):
             self.n = n
 
     async def send(self, msg):
+        "block write"
         h, msg, t = self.p.frame(msg)
         async with self.w_lock:
             if not self.cons:

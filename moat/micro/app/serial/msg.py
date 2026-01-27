@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.micro import AC_use
-from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
-from moat.lib.stream._serial import SerialPackerBlkBuf
+from moat.lib.rpc import BaseCmdBBM
+from moat.lib.stream import SerialPackerBlkBuf
 from moat.micro.app._doc import _cons_d, _frame_d, _mode_d
 
 from ._util import get_serial

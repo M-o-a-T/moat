@@ -64,8 +64,7 @@ def console_stack(stream, cfg: attrdict, cons: bool = False):
         stream = LogMsg(stream, log_raw)
 
     if isinstance(frame, dict):
-        from moat.lib.stream import CBORMsgBlk  # noqa: PLC0415
-        from moat.micro.proto._stream import SerialPackerBlkBuf  # noqa: PLC0415
+        from moat.lib.stream import CBORMsgBlk, SerialPackerBlkBuf  # noqa: PLC0415
 
         stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
         stream = CBORMsgBlk(stream, cfg)

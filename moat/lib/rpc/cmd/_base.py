@@ -23,13 +23,12 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import import_
+from moat.util import enc_part, get_part, import_
 from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, idle
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
 from moat.lib.stream import Base
 from moat.micro.cmd.util import wait_complain
-from moat.micro.cmd.util.part import enc_part, get_part
 
 from typing import TYPE_CHECKING  # isort:skip
 

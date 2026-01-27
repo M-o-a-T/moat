@@ -4,11 +4,10 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import attrdict, combine_dict, import_
+from moat.util import attrdict, combine_dict, import_, set_part
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
 from moat.lib.rpc import APP, MsgSender, ShortCommandError
-from moat.micro.cmd.util.part import set_part
 
 from .tree.dir import BaseSuperCmd
 

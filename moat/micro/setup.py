@@ -17,12 +17,11 @@ from shutil import rmtree
 
 import asyncclick as click
 
-from moat.util import NotGiven, merge, ungroup
+from moat.util import NotGiven, get_part, merge, ungroup
 from moat.lib.codec import get_codec
 from moat.lib.micro import idle, log
 from moat.lib.path import P, Path
 from moat.lib.rpc import RootCmd
-from moat.micro.cmd.util.part import get_part
 from moat.micro.util import run_update
 from moat.util.exec import run as run_cmd
 

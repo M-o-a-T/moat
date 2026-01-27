@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import time
 
+from moat.util import enc_part, get_part, set_part
 from moat.lib.path import Path
 from moat.lib.proxy import Proxy, drop_proxy
 from moat.lib.rpc import BaseCmd
-from moat.micro.cmd.util.part import enc_part, get_part, set_part
 from moat.micro.stacks.util import TEST_MAGIC
 
 

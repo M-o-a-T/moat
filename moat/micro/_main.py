@@ -19,6 +19,7 @@ from moat.util import (
     SigCancel,
     attrdict,
     combine_dict,
+    get_part,
     merge,
     to_attrdict,
     yload,
@@ -32,7 +33,6 @@ from moat.lib.path import (
 )
 from moat.lib.rpc import Msg, RootCmd
 from moat.lib.run import attr_args, load_subgroup, process_args
-from moat.micro.cmd.util.part import get_part
 from moat.micro.stacks.util import TEST_MAGIC
 
 logger = logging.getLogger(__name__)

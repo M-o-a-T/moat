@@ -14,6 +14,9 @@ from moat.lib.path import Path
 from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
 from .exc import ExpKeyError as ExpKeyError
+from .part import enc_part as enc_part
+from .part import get_part as get_part
+from .part import set_part as set_part
 from .pp import pop_kw as pop_kw
 from .pp import push_kw as push_kw
 

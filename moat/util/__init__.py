@@ -101,6 +101,10 @@ _imports = {
     "ExpectedError": "exc",
     "exc_iter": "exc",
     "ungroup": "exc",
+    # part
+    "enc_part": "part",
+    "get_part": "part",
+    "set_part": "part",
 }
 
 __all__ = list(_imports.keys())

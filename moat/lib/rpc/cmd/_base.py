@@ -24,7 +24,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import import_
-from moat.lib.micro import AC_use, Event, L, Lock, idle
+from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, idle
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
 from moat.lib.stream import Base
@@ -87,8 +87,9 @@ class BaseCmd(MsgHandler):
         """
         Start up this command.
 
-        Call first when overriding.
+        Call this first when overriding.
         """
+        await super().setup()
         await AC_use(self, self.set_stopped)
         if self._stopped is None:
             self.init_events()
@@ -283,7 +284,7 @@ class RootCmd(Base):
     """
     This is the system's root dispatcher.
 
-    This class ducktypes `BaseCmd`.
+    It delegates most (if not all) to its app.
     """
 
     def __init__(self, cfg, i=None):
@@ -298,19 +299,31 @@ class RootCmd(Base):
 
     async def setup(self):
         await super().setup()
-        await AC_use(self, self.app)
+        self.tg = await AC_use(self, TaskGroup())
+        await AC_use(self, self.tg.cancel)
+        self.tg.start_soon(self.app.run)
+        self.tg.start_soon(self.task)
+        await self.wait_ready()
 
-    async def __aenter__(self):
-        await super().__aenter__()
-        try:
-            if self._run:
-                await self.tg.spawn(self.task)
-                if L:
-                    await self.wait_ready()
-        except BaseException as exc:
-            await super().__aexit__(type(exc), exc, None)
-            raise
-        return self
+    async def teardown(self):
+        self.tg = None
+        await super().teardown()
+
+    async def task(self):
+        """
+        Background task. May be overridden.
+        """
+        pass
+
+    async def run(self):
+        """
+        This method should not be called. Roots use context management for
+        (sub)task control.
+        """
+        raise NotImplementedError
+
+    async def wait_ready(self):
+        return await self.app.wait_ready()
 
     def __getattr__(self, k):
         if k[0] == "_":

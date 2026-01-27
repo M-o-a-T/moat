@@ -224,7 +224,7 @@ class DirCmd(BaseSubCmd):
                     continue
                 nam = v.get("app", None)
                 if not isinstance(nam, str):
-                    raise ValueError(f"Bad Config: {self.path}: app-{k}")  # noqa:TRY004
+                    raise ValueError(f"Bad Config: app-{k}")  # noqa:TRY004
                 apps[k] = v
             except (AttributeError, KeyError):
                 continue

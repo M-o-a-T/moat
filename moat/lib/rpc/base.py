@@ -533,7 +533,12 @@ class MsgHandler(Base, BaseMsgHandler):
         if is_rdy:
             return await msg.result(None)
 
-        raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self, "sub") else ())
+        raise KeyError(
+            scmd,
+            self.cfg_name,
+            msg.cmd,
+            list(self.sub.keys()) if hasattr(self, "sub") else (),
+        )
 
     def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
         """

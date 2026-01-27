@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 
+from ._util import del_p, get_p, set_p
 from .files import APath, copytree
 
 # Typing
@@ -14,6 +15,8 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.micro.files import MoatPath
+
+__all__ = ["del_p", "get_p", "hash256", "run_update", "set_p"]
 
 
 def hash256(data):

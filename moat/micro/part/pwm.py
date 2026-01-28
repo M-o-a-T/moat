@@ -51,6 +51,8 @@ class PWM(BaseCmd):
     - base: the maximum value for the ratio.
     - init: initial value (defaults to `min`)
     - so: stream_out: Flag whether to stream the pin value
+    - vmin: Minimum value. Turn off if below.
+    - vmax: Maximum value. Turn off if above.
 
     The input must be in [0..base]; the output is controlled so that
     ``t_on/(t_on+t_off) = val/base``, given that ``min <= t_on,t_off <= max``
@@ -70,6 +72,8 @@ class PWM(BaseCmd):
     init: int = 0  # initial value
     min: int = 500  # milliseconds
     max: int = 100000  # milliseconds
+    vmin: int | None = None
+    vmax: int | None = None
     base: int = 1000  # max for value
     evt: Event
     ps: Msg  # Data stream to the pin
@@ -80,6 +84,8 @@ class PWM(BaseCmd):
             pin="path:output cmd",
             max="int:max T(100000,ms)",
             min="int:min T(500,ms)",
+            vmax="float:max value",
+            vmin="float:min value",
             base="float:input range 0...(1000)",
             init="float:initial value",
             so="bool:stream to pin? (no)",
@@ -92,6 +98,8 @@ class PWM(BaseCmd):
             raise ValueError("Pin not set")  # noqa:TRY004
         self.min = cfg.get("min", self.min)
         self.max = cfg.get("max", self.max)
+        self.vmin = cfg.get("vmin", self.vmin)
+        self.vmax = cfg.get("vmax", self.vmax)
         self.base = cfg.get("base", self.base)
         self.so = self.cfg.get("so", False)
         self.evt = Event()
@@ -202,6 +210,13 @@ class PWM(BaseCmd):
         Change the on/off ratio to approximate ``v/base``.
         """
         t_on, t_off = self.calc_times(val)
+
+        if self.vmin is not None and val <= self.vmin:
+            t_on, t_off = (0, self.max)
+        elif self.vmax is not None and val >= self.vmax:
+            t_on, t_off = (self.max, 0)
+        else:
+            t_on, t_off = self.calc_times(val)
         self.t_on = t_on
         self.t_off = t_off
 

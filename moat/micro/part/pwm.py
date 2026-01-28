@@ -205,9 +205,9 @@ class PWM(BaseCmd):
 
         return (b, a) if rev else (a, b)
 
-    def set_times(self, val: int):
+    def set_times(self, val: float):
         """
-        Change the on/off ratio to approximate ``v/base``.
+        Change the on/off ratio to approximately ``val/base``.
         """
         if val < 0 or val > self.base:
             raise ValueError(val, self.base)

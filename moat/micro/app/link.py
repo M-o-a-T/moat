@@ -5,7 +5,7 @@ Apps used for interconnecting.
 from __future__ import annotations
 
 from moat.lib.config import CFG
-from moat.lib.micro import AC_use
+from moat.lib.micro import AC_use, L
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd, NotReadyError
 from moat.link.announce import announcing
@@ -95,10 +95,10 @@ class Cmd(BaseCmd):
     async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
         "forward, possibly"
         if rcmd[0] == "rdy_":
-            if await self.wait_ready(wait=msg.get("wait", True)):
+            if L and await self.wait_ready(wait=msg.get("wait", True)):
                 raise NotReadyError(msg.cmd, rcmd)
 
-        elif await self.wait_ready():
+        elif L and await self.wait_ready():
             raise RuntimeError("Not ready")
 
         if rcmd == ["mon_"] and self.cfg.get("mon", False):

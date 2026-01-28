@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg
+
     from collections.apc import Mapping
 
 

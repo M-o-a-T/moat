@@ -306,7 +306,8 @@ class RootCmd(Base):
         await AC_use(self, self.tg.cancel)
         self.tg.start_soon(self.app.run)
         self.tg.start_soon(self.task)
-        await self.wait_ready()
+        if L:
+            await self.wait_ready()
 
     async def teardown(self):
         self.tg = None
@@ -325,8 +326,10 @@ class RootCmd(Base):
         """
         raise NotImplementedError
 
-    async def wait_ready(self):
-        return await self.app.wait_ready()
+    if L:
+
+        async def wait_ready(self):
+            return await self.app.wait_ready()
 
     def __getattr__(self, k):
         if k[0] == "_":

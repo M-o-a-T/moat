@@ -46,11 +46,6 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.cmd_util.pt
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: moat.micro.os_error_list
    :members:
    :undoc-members:

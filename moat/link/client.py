@@ -425,6 +425,18 @@ class LinkSender(MsgSender):
         async with self.d.walk(*args).stream_in() as mon:
             yield Walker(mon, meta=meta)
 
+    async def stream_watch(self, msg: Msg):
+        """
+        A hook for reading data. Used mainly by `moat.micro.app.link.Cmd`.
+        """
+        if msg.can_stream:
+            async with msg.stream_out() as ms, self.d_watch(msg[0], **msg.kw) as mr:
+                async for d in mr:
+                    await ms.send(d)
+        else:
+            d = await self.d_get(msg[0], **msg.kw)
+            await msg.result(d)
+
     # No use marking as Any|None if @mark is set
     @overload
     def d_watch(

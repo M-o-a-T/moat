@@ -8,28 +8,18 @@ from anyio.abc import TaskStatus
 from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
-async def subscriber1(
-    client: AsyncMQTTClient, *, task_status: TaskStatus[None]
-) -> None:
+async def subscriber1(client: AsyncMQTTClient, *, task_status: TaskStatus[None]) -> None:
     async with client.subscribe("more/+/topics") as sub:
         task_status.started()
         async for message in sub:
-            print(
-                f"subscriber1: received a message from {message.topic}: "
-                f"{message.payload!r}"
-            )
+            print(f"subscriber1: received a message from {message.topic}: {message.payload!r}")
 
 
-async def subscriber2(
-    client: AsyncMQTTClient, *, task_status: TaskStatus[None]
-) -> None:
+async def subscriber2(client: AsyncMQTTClient, *, task_status: TaskStatus[None]) -> None:
     async with client.subscribe("other/#") as sub:
         task_status.started()
         async for message in sub:
-            print(
-                f"subscriber2: received a message from {message.topic}: "
-                f"{message.payload!r}"
-            )
+            print(f"subscriber2: received a message from {message.topic}: {message.payload!r}")
 
 
 async def main() -> None:

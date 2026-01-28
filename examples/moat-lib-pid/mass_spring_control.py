@@ -16,7 +16,7 @@ pid = PID(Kp=1.0, Ki=0.0, Kd=2.0, Tf=0.5)
 
 # Control loop
 time, meas, cont = [], [], []
-for i in range(800):
+for _i in range(800):
     # Get current measurement from system
     timestamp, measurement = system.get_measurement()
 

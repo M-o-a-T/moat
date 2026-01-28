@@ -6,9 +6,7 @@ from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
 async def main() -> None:
-    async with AsyncMQTTClient(
-        host_or_path="localhost", websocket_path="/ws", ssl=True
-    ) as client:
+    async with AsyncMQTTClient(host_or_path="localhost", websocket_path="/ws", ssl=True) as client:
         ...
 
 

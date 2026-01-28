@@ -268,11 +268,11 @@ nitpick_ignore = [
     ("py:obj", "pyfuse3.RENAME_NOREPLACE"),
     ("py:obj", "pyfuse3.EntryAttributes.st_ctime_ns"),
     ("py:meth", "pyfuse3.readdir_reply"),
-    ("py:class","pyfuse3._pyfuse3.Operations"),
-    ("py:class","pyfuse3.__init__.FileInfo"),
-    ("py:class","pyfuse3.__init__.EntryAttributes"),
+    ("py:class", "pyfuse3._pyfuse3.Operations"),
+    ("py:class", "pyfuse3.__init__.FileInfo"),
+    ("py:class", "pyfuse3.__init__.EntryAttributes"),
     ("py:class", "pyfuse3.__init__.StatvfsData"),
-    ("py:func","pyfuse3.get_sup_groups"),
+    ("py:func", "pyfuse3.get_sup_groups"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),
@@ -566,6 +566,7 @@ def setup(app):
     import prometheus_client
     import tenacity
     import httpx
+
     try:
         import httpx_ws
     except ImportError:

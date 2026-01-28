@@ -6,9 +6,7 @@ from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
 async def main() -> None:
-    async with AsyncMQTTClient(
-        host_or_path="/path/to/broker.sock", transport="unix"
-    ) as client:
+    async with AsyncMQTTClient(host_or_path="/path/to/broker.sock", transport="unix") as client:
         ...
 
 

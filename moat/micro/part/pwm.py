@@ -209,7 +209,8 @@ class PWM(BaseCmd):
         """
         Change the on/off ratio to approximate ``v/base``.
         """
-        t_on, t_off = self.calc_times(val)
+        if val < 0 or val > self.base:
+            raise ValueError(val, self.base)
 
         if self.vmin is not None and val <= self.vmin:
             t_on, t_off = (0, self.max)

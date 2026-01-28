@@ -321,10 +321,12 @@ class Node:
             nf.step(elem)
         return nf.result
 
-    def collect(self, path: Path) -> dict:
+    def collect(self, path: Path, keep: bool = False) -> dict:
         """
-        Collate all dicts from the root to this node (as far as data
+        Collate all data from the root to this node (as far as data
         exist) and return the combined result.
+
+        This method is used to collect default data along a path.
         """
         if self.data_ is not NotGiven:
             res = to_attrdict(self.data_)
@@ -337,7 +339,7 @@ class Node:
             except KeyError:
                 break
             if slf.data_ is not NotGiven:
-                res = combine_dict(slf.data_, res, cls=attrdict)
+                res = combine_dict(slf.data_, res, cls=attrdict, keep=keep)
 
         return res
 
@@ -345,9 +347,9 @@ class Node:
 class NodeFinder:
     """A generic object that can walk down a possibly-wildcard-equipped path.
 
-    Example: given a path `one.two.three` and a root with subtree `*.three`,
-    `NodeFinder(root).step(one).step(two).step(three).result` will return
-    the node at `*.three` (assuming that nothing more specific hangs off
+    Example: given a path ``one.two.three`` and a root with subtree ``*.three``,
+    ``NodeFinder(root).step(one).step(two).step(three).result`` will return
+    the node at ``*.three`` (assuming that nothing more specific hangs off
     the root).
 
     If nothing is found, raises `KeyError`.
@@ -356,14 +358,19 @@ class NodeFinder:
     def __init__(self, src):
         self.steps = ((src, False),)
 
-    def step(self, name, new=False):
+    def step(self, name: str | int | bool | None, new=False):
         """
-        Walk a single hierarchy step, observing wildcards.
+        Walk a single hierarchy step, observing wildcards. Note that ``*``
+        means *one or more*, i.e. it will not match an empty path element.
 
-        @new must not be true; it's here for override compatibility.
+        Args:
+            name: the path element to look at.
+
+        Don't use the *new* argument; it only exists for override compatibility.
         """
         if new:
             raise ValueError("I can't create new nodes.")
+
         steps = []
         for node, _keep in self.steps:
             if name in node:

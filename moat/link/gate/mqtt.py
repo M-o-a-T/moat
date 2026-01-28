@@ -41,7 +41,8 @@ class Gate(_Gate):  # noqa: D101
 
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):  # noqa: D102
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        "fetch destination"
         async with AsyncExitStack() as ex:
             if self.codecs is not None:
                 codec = "noop"
@@ -54,6 +55,7 @@ class Gate(_Gate):  # noqa: D101
                         cd = self.codecs.get(Path.build(vd.data["codec"]))
                     except (KeyError, ValueError):
                         return NotGiven
+                    # (b) decode it
                     try:
                         return cd.dec_value(d)
                     except Exception as exc:
@@ -98,7 +100,8 @@ class Gate(_Gate):  # noqa: D101
                         continue
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):  # noqa: D102
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+        "update destination"
         meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
             await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
@@ -137,7 +140,8 @@ class Gate(_Gate):  # noqa: D101
             pass
         return True
 
-    def newer_dst(self, node):  # noqa: D102
+    def newer_dst(self, node):
+        "Check for newer metadata"
         # If the external message has no metadata, it can't be from us,
         # thus assume it's newer.
         if not node.ext_meta:

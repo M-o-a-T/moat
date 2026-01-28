@@ -67,22 +67,6 @@ class PID(BaseCmd):
         "Update the PID state."
         self.pid.set_state(t, e, i)
 
-    #   async def setup(self):
-    #       await super().setup()
-
-    #   async def run(self):
-    #       async with self.pin.w.stream_out() as self.ps:
-    #           try:
-    #               self.t_last = ticks_ms()
-    #               self.is_on = False
-    #               await self.ps.send(False)
-
-    #               while True:
-    #                   dly = await self._measure(ticks_ms())
-    #                   await self._delay(dly)
-    #           finally:
-    #               await self.ps.send(False)
-
     doc_w = dict(_d="step", _0="float:current value", _r="float:new output")
 
     async def cmd_w(self, val: float, t: int | None = None) -> float:

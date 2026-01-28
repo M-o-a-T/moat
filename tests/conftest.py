@@ -43,7 +43,7 @@ def in_test(free_tcp_port_factory):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:
             cfg.link.backend.port = free_tcp_port_factory()
 
-    CFG.set_env_(P("in_test"),"fix_for_testing")
+    CFG.set_env_(P("in_test"), "fix_for_testing")
     try:
         fix_for_testing(CFG)
     except AttributeError:
@@ -52,7 +52,7 @@ def in_test(free_tcp_port_factory):
     try:
         yield
     finally:
-        CFG.set_env_(P("in_test"),NotGiven)
+        CFG.set_env_(P("in_test"), NotGiven)
 
 
 @pytest.fixture

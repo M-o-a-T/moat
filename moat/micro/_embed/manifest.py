@@ -2,7 +2,7 @@
 
 try:
     freeze("$(PORT_DIR)/modules")
-except Exception:
+except Exception:  # noqa:S110
     pass
 
 require("copy")

@@ -85,7 +85,7 @@ async def data(s):  # noqa: D103
 
 
 async def fetch(c, p):  # noqa: D103
-    async with c.d_watch(p, subtree=True, meta=True, state=True) as mon:
+    async with c.d_watch(P(p), subtree=True, meta=True, state=True) as mon:
         return await mon.get_node()
 
 

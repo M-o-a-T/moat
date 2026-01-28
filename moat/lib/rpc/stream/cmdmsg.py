@@ -120,7 +120,7 @@ class BaseCmdMsg(BaseCmd):
             return await super().handle(msg, rcmd)
 
         if rcmd and rcmd[0] == "rdy_":
-            if await self.wait_ready(wait=True):
+            if await self.wait_ready(wait=msg.get("wait", True)):
                 raise NotReadyError(msg.cmd, rcmd)
         if self.__stream is None:
             raise EOFError

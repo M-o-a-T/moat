@@ -12,7 +12,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from attrs import define, field
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from contextvars import ContextVar, Token
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 __all__ = ["CtxObj", "ctx_as", "timed_ctx"]
 
 T_Ctx = TypeVar("T_Ctx")
+T_CtxType = TypeVar("T_CtxType")
 
 
 class CtxObj(ABC):
@@ -98,7 +99,7 @@ class timed_ctx(CtxObj):
                 yield mgr
 
 
-class ContextMgr[T_CtxType]:
+class ContextMgr(Generic[T_CtxType]):
     """
     This class manages a context for the caller.
 

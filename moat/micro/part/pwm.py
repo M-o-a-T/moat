@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg
+    from collections.apc import Mapping
 
 
 class _Send:
@@ -246,7 +247,7 @@ class PWM(BaseCmd):
         ),
     )
 
-    async def cmd_s(self):
+    async def cmd_s(self) -> Mapping:
         """
         Returns the current state.
         """

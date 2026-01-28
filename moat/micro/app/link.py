@@ -28,12 +28,14 @@ class Cmd(BaseCmd):
     This command registers a link between a MoaT-micro path and a MoaT-Link subcommand.
 
     Parameters:
-       link (Path): for registration under this path on MoaT-Link
+       link (Path): register at this path on MoaT-Link
        host (bool): whether to host-prefix the link name, defaults to `False`
+       service (str): additional element(s) for *link*, if set
        path (Path): if set, forward remote commands to this local path
        rlink (Path): if set, forward local commands to this server-side path
-       service (str): additional element(s) for *link*, if set
-       via (Path): announcement to link *rlink* to
+       via (Path): announcement to send *rlink* commands to
+       mon (bool): allow "mon_" access to monitor data from MoaT-Link.
+                   This feature ignores the *via* and *rlink* parameters.
 
     *link* registers this subcommand in MoaT-Link. If *path* is set,
     accessing @link via :meth:`moat.link.client.LinkSender.get_service`
@@ -98,6 +100,10 @@ class Cmd(BaseCmd):
 
         elif await self.wait_ready():
             raise RuntimeError("Not ready")
+
+        if rcmd == ["mon_"] and self.cfg.get("mon", False):
+            # read data from there
+            return await msg.call_stream(self.link.stream_watch)
 
         if self.rlink is None:
             try:

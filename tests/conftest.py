@@ -2,6 +2,9 @@ from __future__ import annotations  # noqa: D100
 
 import copy
 import pytest
+from pathlib import Path as FSPath
+
+import ruyaml as yaml
 
 from moat.lib import config
 from moat.lib.path import P
@@ -9,6 +12,9 @@ from moat.lib.config import CFG
 from moat.util import NotGiven
 
 config.TEST = True
+
+SafeRepresenter = yaml.representer.SafeRepresenter
+SafeRepresenter.add_representer(FSPath, SafeRepresenter.represent_str)
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -85,7 +85,7 @@ class _Step:
             self.kw = {}
         else:
             p = cfg.get("p", None)
-            self.a = cfg.get("a", ())
+            self.a = tuple(cfg.get("a", ()))
             self.kw = cfg.get("k", {})
             self.si = cfg.get("si", self.si)
             self.so = cfg.get("so", self.so)
@@ -149,9 +149,9 @@ class _Step:
         if self.p is not None:
             if self.a:
                 if self.append:
-                    a = self.a + a
+                    a = self.a + tuple(a)
                 else:
-                    a = a + self.a
+                    a = tuple(a) + self.a
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             msg = await self.p.cmd((), *a, **kw)

@@ -585,7 +585,7 @@ class Path(Sequence[PathElem]):
             if proxy == self:
                 return type(self).build(other, mark=mark, prefix=proxy)
 
-        return type(self).build(self._data + other, mark=mark, prefix=self._prefix)
+        return type(self).build(self._data + tuple(other), mark=mark, prefix=self._prefix)
 
     def __radd__(self, other: PathTuple) -> PathTuple:
         # This method exists because pyright doesn't get our

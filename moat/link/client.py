@@ -529,8 +529,9 @@ class LinkSender(MsgSender):
             subtree: flag whether to watch a subtree, not just this node
             mark: yield `None` when the initial state has been transmitted
             state: send the current state (True), updates (False), both with
-                    current data from the server (None), or both via MQTT (NotGiven).
-            age: cutoff this many seconds ago. Older entries are skipped.
+                    current data from the server (None; this is the
+                    default), or both via MQTT (NotGiven).
+            age: skip nodes with data older than this many seconds.
             cls: type of root node (default `~moat.link.node.Node`)
 
         This method returns an async context manager which yields an async iterator.

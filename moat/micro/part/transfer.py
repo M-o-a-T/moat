@@ -117,7 +117,7 @@ class _Step:
             if self.si:
                 self.msg = msg
             async for m in msg:
-                await self.cont(m.a, m.kw)
+                await self.cont(m.args, m.kw)
 
     async def run_t(self) -> None:
         "Run the task."
@@ -210,7 +210,7 @@ class Transfer(BaseCmd):
                     s=dict(
                         p="path:called",
                         a="any:pos args",
-                        k="any:kq args",
+                        k="any:kw args",
                         append="bool:at end?",
                         keep="bool:out only",
                         si="bool:stream in?",

@@ -247,6 +247,19 @@ class PWM(BaseCmd):
         ),
     )
 
+    @property
+    def val(self) -> float:
+        """
+        The current value.
+        """
+        return self.base * (self.t_on / (self.t_on + self.t_off))
+
+    async def cmd_r(self) -> float:
+        """
+        Returns the current value.
+        """
+        return self.val
+
     async def cmd_s(self) -> Mapping:
         """
         Returns the current state.
@@ -255,6 +268,7 @@ class PWM(BaseCmd):
             on=self.t_on,
             off=self.t_off,
             p=self.is_on,
+            val=self.val,
         )
         if self.t_on and self.t_off:
             res["t"] = (self.t_on if self.is_on else self.t_off) - ticks_diff(

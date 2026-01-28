@@ -61,6 +61,7 @@ class _Step:
     a: tuple
     k: dict
     append: bool = False
+    keep: bool = False
 
     t: int | None = None
     si: bool = False
@@ -89,6 +90,7 @@ class _Step:
             self.si = cfg.get("si", self.si)
             self.so = cfg.get("so", self.so)
             self.append = cfg.get("append", self.append)
+            self.keep = cfg.get("keep", self.keep)
         if p is not None:
             self.p = t.root.sub_at(p)
 
@@ -133,6 +135,8 @@ class _Step:
             kw = {}
         else:
             a, kw = akw
+        if self.keep:
+            ra, rkw = a, kw
         if self.si:
             await self.msg.send(*a, **kw)
             return
@@ -151,7 +155,10 @@ class _Step:
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             msg = await self.p.cmd((), *a, **kw)
-            a, kw = msg.args, msg.kw
+            if self.keep:
+                a, kw = ra, rkw
+            else:
+                a, kw = msg.args, msg.kw
 
         # pass on
         await self.cont(a, kw)
@@ -181,6 +188,7 @@ class Transfer(BaseCmd):
       - a: positional arguments
       - k: keyword arguments
       - append: flag to add values at the end of a instead of in front
+      - keep: flag to not replace values
       - si: Stream-in; bool, defaults to False.
       - so: Stream-out; bool, defaults to False.
 
@@ -206,6 +214,7 @@ class Transfer(BaseCmd):
                         a="any:pos args",
                         k="any:kq args",
                         append="bool:at end?",
+                        keep="bool:out only",
                         si="bool:stream in?",
                         so="bool:stream out?",
                     )

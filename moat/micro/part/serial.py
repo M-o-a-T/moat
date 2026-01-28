@@ -79,7 +79,7 @@ class NamedSerial(AnyioBuf):
             print(
                 f"""
 *** Serial port not available ***
-Port: {uart_cfg.port}
+Port: {uart_cfg["port"]}
 Error: {exc}"
 
 Waiting """,
@@ -92,7 +92,7 @@ Waiting """,
                     ser = await AC_use(self, _Serial(**uart_cfg))
                 except SerialException:
                     print(".", end="", file=sys.stderr)
-                    pass
+                    sys.stderr.flush()
                 else:
                     print(" OK.")
                     break

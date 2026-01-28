@@ -1147,7 +1147,41 @@ path_eval = _eval.eval
 
 # Here we declare our bunch of "root" variables.
 
-Root = ContextVar[Path | None]("Root", default=None)
+
+class Var:
+    """
+    This mimics a ContextVar but without the context.
+    """
+
+    def __init__(self, name, default=NotGiven):
+        self.name = name
+        self.default = default
+        self.data = NotGiven
+
+    def get(self):
+        "get current value"
+        if self.data is NotGiven:
+            raise ValueError("Not set")
+        return self.data
+
+    def set(self, val, *, force: bool = False):
+        "set current value"
+        if not force and self.data is not NotGiven and self.data != val:
+            raise ValueError("Already set")
+        self.data = val
+        return 42
+
+    def __bool__(self):
+        "check if value is set"
+        return self.data is not NotGiven
+
+    def reset(self, token):
+        "reset value; no-op"
+        if token != 42:
+            raise ValueError(token)
+
+
+Root = Var("Root", default=None)
 
 
 class RootPath(Path):
@@ -1179,6 +1213,8 @@ class RootPath(Path):
 
     def __bool__(self) -> bool:
         "check if the contextvar is set"
+        if isinstance(self._var, Var):
+            return bool(self._var)
         p = self._var.get()
         return p is not None
 

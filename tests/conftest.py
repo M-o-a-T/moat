@@ -6,10 +6,10 @@ from pathlib import Path as FSPath
 
 import ruyaml as yaml
 
-from moat.lib import config
-from moat.lib.path import P
-from moat.lib.config import CFG
 from moat.util import NotGiven
+from moat.lib import config
+from moat.lib.config import CFG
+from moat.lib.path import P, Root
 
 config.TEST = True
 
@@ -21,6 +21,13 @@ SafeRepresenter.add_representer(FSPath, SafeRepresenter.represent_str)
 def anyio_backend():
     "never use asyncio for testing"
     return "trio"
+
+
+@pytest.fixture(autouse=True)
+def clear_root():
+    "clear root after test"
+    yield
+    Root.set(NotGiven, force=True)
 
 
 @pytest.fixture(autouse=True, scope="session")

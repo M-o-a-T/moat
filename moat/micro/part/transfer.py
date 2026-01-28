@@ -106,15 +106,13 @@ class _Step:
 
     async def run_i(self) -> None:
         "Open a write-only pipe to the remote"
-        async with self.p.stream_out(self.p, *self.a, **self.kw) as self.msg:
+        async with self.p.stream_out(*self.a, **self.kw) as self.msg:
             self._ready.set()
             await self.run_t()
 
     async def run_o(self) -> None:
         "Open a pipe to the remote and read from it"
-        async with (self.p.stream if self.si else self.p.stream_in)(
-            self.p, *self.a, **self.kw
-        ) as msg:
+        async with (self.p.stream if self.si else self.p.stream_in)(*self.a, **self.kw) as msg:
             self._ready.set()
             if self.si:
                 self.msg = msg

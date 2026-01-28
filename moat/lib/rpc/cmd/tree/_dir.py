@@ -153,7 +153,7 @@ class BaseSubCmd(BaseSuperCmd):
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
-        dd = res["d"] = {}
+        dd = {}
         for k, v in self.sub.items():
             if not isinstance(k, str) or v is (k[-1] == "_"):
                 continue
@@ -161,6 +161,8 @@ class BaseSubCmd(BaseSuperCmd):
                 dd[k] = v.cfg["app"]
             except (AttributeError, KeyError):
                 dd[k] = v.__class__.__name__
+        if dd:
+            res["d"] = dd
         return res
 
 

@@ -708,8 +708,9 @@ class Msg(MsgLink, MsgResult):
     async def call_simple(self, cmd: Callable) -> None:
         """Handle a non-streamed call endpoint.
 
-        @cmd is a callable that takes whichever arguments the message
-        contains (hopefully).
+        Args:
+            cmd: a callable that takes whichever arguments the message
+            contains. Typically a ``cmd_*`` method.
         """
         try:
             res = cmd(*self._a, **self._kw)  # pyright:ignore
@@ -745,7 +746,8 @@ class Msg(MsgLink, MsgResult):
     async def call_stream(self, cmd: Callable) -> None:
         """Handle a streamed call endpoint.
 
-        @cmd is an async callable that processes the message object.
+        Args:
+            cmd: an async callable, typically a ``stream_*`` method.
         """
         # If this message is direct and doesn't yet have a counterpart,
         # create one and re-do the call on that.

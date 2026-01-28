@@ -8,7 +8,7 @@ import anyio
 import os
 import pytest
 
-from moat.lib.gpio import open_chip,Direction,Drive
+from moat.lib.gpio import open_chip
 from moat.lib.gpio.test import GpioWatcher
 from moat.util.exec import CalledProcessError
 from moat.util.exec import run as run_

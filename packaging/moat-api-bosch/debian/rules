@@ -1,0 +1,5 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=moat-api-bosch
+%:
+	dh $@ --with python3 --buildsystem=pybuild

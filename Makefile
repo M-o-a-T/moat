@@ -43,3 +43,6 @@ docwarn:
 	cd docs/; \
 	../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1 | \
 	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
+
+release:
+	./mt src tag

@@ -29,8 +29,6 @@ repos:
       types: [python]
       pass_filenames: false
 
-  - repo: local
-    hooks:
     - id: check-yaml
       name: check yaml
       description: checks yaml files (understands MoaT tags)
@@ -38,14 +36,6 @@ repos:
       language: python
       types: [yaml]
       args: [--allow-multiple-documents]
-
-#   - id: sphinx-build
-#     name: sphinx documentation build
-#     description: builds sphinx documentation and fails on warnings or errors
-#     entry: pre_commit_hooks/sphinx-build
-#     language: python
-#     pass_filenames: false
-#     files: "^(docs/.*|moat/.*\\.py)$"
 
     - id: pytest-modified
       name: pytest on modified modules
@@ -55,3 +45,11 @@ repos:
       types: [python]
       pass_filenames: true
       require_serial: true
+
+    - id: sphinx-build
+      name: sphinx documentation build
+      description: builds sphinx documentation and fails on warnings or errors
+      entry: pre_commit_hooks/sphinx-build
+      language: python
+      pass_filenames: false
+      files: "^(docs/.*|moat/.*\\.py)$"

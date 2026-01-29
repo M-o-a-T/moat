@@ -123,6 +123,10 @@ class MockLink:
         """Mock time."""
         return self._time
 
+    def process(self, output: BMV080Output) -> None:
+        """Mock data processing."""
+        print("PR", output)
+
 
 class TestBMV080Link:
     """Tests for BMV080_Link protocol."""

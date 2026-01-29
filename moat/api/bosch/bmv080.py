@@ -207,6 +207,16 @@ class BMV080_Link(Protocol):
         """
         ...
 
+    def process(self, output: BMV080Output) -> None:
+        """Process a measurement output.
+
+        Override this method to handle measurements. Called for each
+        output from serve_interrupt().
+
+        Args:
+            output: Measurement data from the sensor.
+        """
+
 
 # C declarations for CFFI
 _CDEF = """
@@ -673,7 +683,7 @@ class BMV080(ContextManagerMixin):
         """Service an interrupt.
 
         Should be called regularly (at least once per second in duty cycling mode).
-        Calls the overrideable process() method for each available output.
+        Calls the process() hook for each available output.
 
         Raises:
             BMV080Error: If serving interrupt fails.
@@ -701,13 +711,3 @@ class BMV080(ContextManagerMixin):
             self._handle, self._data_ready_cb, self._ffi.NULL
         )
         self._check_status(status)
-
-    def process(self, output: BMV080Output) -> None:
-        """Process a measurement output.
-
-        Override this method to handle measurements. Called for each
-        output from serve_interrupt().
-
-        Args:
-            output: Measurement data from the sensor.
-        """

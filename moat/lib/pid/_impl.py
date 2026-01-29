@@ -328,6 +328,8 @@ class CPID(PID):
         "Config has been updated"
         cg = self.cfg.get
         super().set_gains(cg("p", None), cg("i", None), cg("d", None), cg("tf", None))
+        self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
+        self.set_offset(self.cfg.get("fct", None), self.cfg.get("off", None))
 
     def setpoint(self, setpoint: float):
         """

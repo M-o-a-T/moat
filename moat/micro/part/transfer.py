@@ -45,6 +45,7 @@ class _Step:
     - si=so=False:
       simple-call the path with incoming data
       the result is the data coming back.
+      A timer or an incoming call starts the chain.
     - si=True
       Open a stream to send incoming data.
       A timer calls `cmd`.

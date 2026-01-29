@@ -22,9 +22,13 @@ moat:
         app:
           app: dir
           t:
-            app: net.tcp.Link
-            host: !P :@.moat.micro.config.net.addr
-            port: &moat_port 27589
+            app: sub.Err
+            retry: -1
+            timeout: 1000
+            cfg:
+              app: net.tcp.Link
+              host: !P :@.moat.micro.config.net.addr
+              port: &moat_port 27589
 
           n:
             app: net.unix.Port

@@ -66,11 +66,11 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("S:%s stop %r", self.txt, exc)
             raise
         else:
-            log("S:%s =%s", self.txt, self._repr(res, "d"))
+            # log("S:%s =%s", self.txt, self._repr(res, "d"))
             return res
 
     async def recv(self):  # noqa:D102
-        log("R:%s", self.txt)
+        # log("R:%s", self.txt)
         try:
             msg = await self.s.recv()
         except BaseException as exc:
@@ -92,7 +92,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             raise
 
     async def rcv(self):  # noqa:D102
-        log("RB:%s", self.txt)
+        # log("RB:%s", self.txt)
         try:
             msg = await self.s.rcv()
         except BaseException as exc:
@@ -110,11 +110,11 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("S:%s stop %r", self.txt, exc)
             raise
         else:
-            log("S:%s =%r", self.txt, res)
+            # log("S:%s =%r", self.txt, res)
             return res
 
     async def rd(self, buf) -> int:  # noqa:D102
-        log("R:%s %d", self.txt, len(buf))
+        # log("R:%s %d", self.txt, len(buf))
         try:
             res = await self.s.rd(buf)
         except BaseException as exc:
@@ -132,11 +132,11 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("SC:%s stop %r", self.txt, exc)
             raise
         else:
-            log("SC:%s =%r", self.txt, res)
+            # log("SC:%s =%r", self.txt, res)
             return res
 
     async def crd(self, buf) -> int:  # noqa:D102
-        log("RC:%s %d", self.txt, len(buf))
+        # log("RC:%s %d", self.txt, len(buf))
         try:
             res = await self.s.crd(buf)
         except BaseException as exc:

@@ -48,15 +48,14 @@ class Average(BaseCmd):
 
     def in_value(self, val, t=None):
         "update value"
+        tn = ticks_ms()
         if t is None:
-            tn = ticks_ms()
-            t = ticks_diff(tn, self._t)
-            self._t = tn
+            t = ticks_diff(tn, self._t) if self._t is not None else 1
         if self._value is not None:
             val = self._value + (1 - exp(-t / 1000 / self.cfg["t"])) * (val - self._value)
 
         self._value = val
-        self._t = t
+        self._t = tn
         self.flag.set()
         self.flag = Event()
 
@@ -87,6 +86,7 @@ class Average(BaseCmd):
             async with msg.stream_in() as mon:
                 async for m in mon:
                     self.in_value(m[0], m.get("t", None))
+                    await mon.send(self._value, t=self._t)
         else:
             self.in_value(msg[0], msg.get("t", None))
-        await msg.result()
+        await msg.result(self._value, t=self._t)

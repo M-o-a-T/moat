@@ -3,7 +3,7 @@
 Pre-commit hook to run Sphinx documentation build and fail on warnings or errors.
 
 This hook:
-1. Runs sphinx-build with -W (treat warnings as errors) and -E (rebuild all)
+1. Runs sphinx-build with -W (treat warnings as errors)
 2. Fails the commit if there are any warnings or errors
 3. Can be skipped by setting NO_DOCS=1 environment variable
 """
@@ -42,7 +42,6 @@ def main() -> int:
 
     # Run sphinx-build from within docs/ directory with:
     # -W: turn warnings into errors
-    # -E: rebuild all (don't use cached environment)
     # -b html: build HTML output
     result = subprocess.run(  # noqa: S603
         [  # noqa:S607

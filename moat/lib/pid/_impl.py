@@ -51,8 +51,8 @@ class PID:
     Kd: float | None
     Tf: float | None
 
-    lower: float
-    upper: float
+    lower: float = -MAX_VAL
+    upper: float = MAX_VAL
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class PID:
         self.Kd = Kd * PID_TC if Kd else None
         self.Tf = Tf * PID_TC if Tf else None
 
-    def set_output_limits(self, lower: float | None = -MAX_VAL, upper: float | None = MAX_VAL):
+    def set_output_limits(self, lower: float | None = None, upper: float | None = None):
         """Set PID controller output limits, for anti-windup.
 
         Args:
@@ -158,8 +158,10 @@ class PID:
             upper: Upper limit for anti-windup.
 
         """
-        self.lower = -MAX_VAL if lower is None else lower
-        self.upper = +MAX_VAL if upper is None else upper
+        if lower is not None:
+            self.lower = lower
+        if upper is not None:
+            self.upper = upper
 
     def get_output_limits(self) -> tuple[float, float]:
         """Get PID controller output limits for anti-windup.

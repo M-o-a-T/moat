@@ -169,7 +169,7 @@ class LinkCommon(CmdCommon):
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> Awaitable[Any]:
+    def handle(self, msg, rpath, *add) -> Awaitable[None]:
         """
         Message handler that intercepts incoming commands
         while authorization has not completed
@@ -304,7 +304,7 @@ class LinkSender(MsgSender):
         "Link ID"
         return self._link.id
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Standard handler, forwards to the remote side.
         """

@@ -248,6 +248,7 @@ nitpick_ignore = [
     ("py:func", "moat.lib.path.Path.from_path"),
     ("py:obj", "NotGiven"),
     ("py:obj", "moat.lib.broadcast._impl.TData"),
+    ("py:obj", "moat.link.backend.TData"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
     # TODO

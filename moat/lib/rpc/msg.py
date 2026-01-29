@@ -709,8 +709,8 @@ class Msg(MsgLink, MsgResult):
         """Handle a non-streamed call endpoint.
 
         Args:
-            cmd: a callable that takes whichever arguments the message
-            contains. Typically a ``cmd_*`` method.
+            cmd: a callable that takes whichever arguments the message contains.
+                Typically a ``cmd_*`` method.
         """
         try:
             res = cmd(*self._a, **self._kw)  # pyright:ignore

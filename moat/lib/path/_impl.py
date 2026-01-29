@@ -1194,7 +1194,7 @@ class RootPath(Path):
 
     _mark = ""
 
-    def __init__(self, key: str, var: ContextVar):
+    def __init__(self, key: str, var: ContextVar[Path | None] | Var):
         self._key = key
         self._var = var
 

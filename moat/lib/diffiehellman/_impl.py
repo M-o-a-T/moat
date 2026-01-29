@@ -45,15 +45,15 @@ class DiffieHellman:
 
     """
 
-    shared_secret = None
-    shared_key = None
-    public_key = None
-    __private_key = None
+    shared_secret: int = None  # type:ignore[invalid-assignment]
+    shared_key: str = None  # type:ignore[invalid-assignment]
+    public_key: int = None  # type:ignore[invalid-assignment]
+    __private_key: int = None  # type:ignore[invalid-assignment]
 
     def __init__(self, group=18, key_length=640):
         self.key_length = max(200, key_length)
-        self.generator = PRIMES[group]["generator"]
-        self.prime = PRIMES[group]["prime"]
+        self.generator: int = PRIMES[group]["generator"]
+        self.prime: int = PRIMES[group]["prime"]
 
     def generate_private_key(self):
         """

@@ -264,6 +264,7 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/lib/diffiehellman/",
     "moat/lib/path/",
     "moat/lib/pid/",
     "moat/lib/priomap/",

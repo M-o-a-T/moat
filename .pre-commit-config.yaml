@@ -25,7 +25,6 @@ repos:
       entry: .venv/bin/ty check
       language: system
       types: [python]
-      files: "moat/util/path.py"
       pass_filenames: false
 
   - repo: local

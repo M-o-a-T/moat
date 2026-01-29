@@ -438,9 +438,15 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
             else:
                 print(f"{tag.tag} LAST")
         elif r.has_changes():
-            print(f"{tag.tag}-{tag.pkg} STALE")
+            if subtree:
+                print(f"{tag.tag}-{tag.pkg} STALE")
+            else:
+                print(f"{repo.last_tag} STALE")
         else:
-            print(f"{tag.tag}-{tag.pkg}")
+            if subtree:
+                print(f"{tag.tag}-{tag.pkg}")
+            else:
+                print(f"{repo.last_tag}")
         return
 
     r.next_tag(major, minor, new_tag=force)

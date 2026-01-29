@@ -92,6 +92,7 @@ _imports = {
     "tparm": "terminfo",
     # unix_console
     "UnixConsole": "unix_console",
+    "InvalidTerminal": "unix_console",
     # unix_eventqueue
     "EventQueue": "unix_eventqueue",
     # utils

@@ -446,9 +446,26 @@ class BMV080(ContextManagerMixin):
                 self._log_exc(exc)
                 return -1
 
+        # params is passed by the C library but unused
+        @self._ffi.callback("bmv080_callback_data_ready_t")
+        def data_ready_cb(output: object, _params: object) -> None:
+            out = BMV080Output(
+                runtime_in_sec=output.runtime_in_sec,
+                pm2_5_mass_concentration=output.pm2_5_mass_concentration,
+                pm1_mass_concentration=output.pm1_mass_concentration,
+                pm10_mass_concentration=output.pm10_mass_concentration,
+                pm2_5_number_concentration=output.pm2_5_number_concentration,
+                pm1_number_concentration=output.pm1_number_concentration,
+                pm10_number_concentration=output.pm10_number_concentration,
+                is_obstructed=output.is_obstructed,
+                is_outside_measurement_range=output.is_outside_measurement_range,
+            )
+            self._link.process(out)
+
         self._read_cb = read_cb
         self._write_cb = write_cb
         self._delay_cb = delay_cb
+        self._data_ready_cb = data_ready_cb
 
         # Create handle
         self._handle_ptr = self._ffi.new("bmv080_handle_t*")
@@ -688,24 +705,6 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If serving interrupt fails.
         """
-
-        # params is passed by the C library but unused
-        @self._ffi.callback("bmv080_callback_data_ready_t")
-        def data_ready_cb(output: object, params: object) -> None:  # noqa: ARG001
-            out = BMV080Output(
-                runtime_in_sec=output.runtime_in_sec,
-                pm2_5_mass_concentration=output.pm2_5_mass_concentration,
-                pm1_mass_concentration=output.pm1_mass_concentration,
-                pm10_mass_concentration=output.pm10_mass_concentration,
-                pm2_5_number_concentration=output.pm2_5_number_concentration,
-                pm1_number_concentration=output.pm1_number_concentration,
-                pm10_number_concentration=output.pm10_number_concentration,
-                is_obstructed=output.is_obstructed,
-                is_outside_measurement_range=output.is_outside_measurement_range,
-            )
-            self.process(out)
-
-        self._data_ready_cb = data_ready_cb
 
         status = self._lib.bmv080_serve_interrupt(
             self._handle, self._data_ready_cb, self._ffi.NULL

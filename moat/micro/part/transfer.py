@@ -73,8 +73,8 @@ class _Step:
     last_kw: Mapping | None = None
     _ready: Event
 
-    def __init__(self, t: Transfer, id: int, cfg: Path | dict):
-        self.trans = t
+    def __init__(self, trans: Transfer, id: int, cfg: Path | dict):
+        self.trans = trans
         self.id = id
         self.q = set()  # output queue(s)
         self._ready = Event()
@@ -93,7 +93,7 @@ class _Step:
             self.append = cfg.get("append", self.append)
             self.keep = cfg.get("keep", self.keep)
         if p is not None:
-            self.p = t.root.sub_at(p)
+            self.p = trans.root.sub_at(p)
 
     async def run(self) -> None:
         if self.p is not None:

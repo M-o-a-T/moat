@@ -55,19 +55,16 @@ class DiffieHellman:
         self.generator: int = PRIMES[group]["generator"]
         self.prime: int = PRIMES[group]["prime"]
 
-    def generate_private_key(self):
+    def generate_private_key(self) -> None:
         """
         Generates a private key of key_length bits and attaches it to the
         object as the __private_key variable.
-
-        :return: void
-        :rtype: void
         """
         key_length = self.key_length // 8 + 8
 
         self.__private_key = int.from_bytes(rng(key_length), byteorder="big")
 
-    def verify_public_key(self, other_public_key):
+    def verify_public_key(self, other_public_key) -> bool:
         """
         Some basic key verification
         """
@@ -77,26 +74,19 @@ class DiffieHellman:
         )
 
     @requires_private_key
-    def generate_public_key(self):
+    def generate_public_key(self) -> None:
         """
         Generates public key.
-
-        :return: void
-        :rtype: void
         """
         self.public_key = pow(self.generator, self.__private_key, self.prime)
 
     @requires_private_key
-    def generate_shared_secret(self, other_public_key):
+    def generate_shared_secret(self, other_public_key: int) -> str:
         """
         Generates shared secret from the other party's public key.
 
-        :param other_public_key: Other party's public key
-        :type other_public_key: int
-        :param echo_return_key: Echo return shared key
-        :type bool
-        :return: void
-        :rtype: void
+        Args:
+            other_public_key: Other party's public key
         """
         if self.verify_public_key(other_public_key) is False:
             raise MalformedPublicKey

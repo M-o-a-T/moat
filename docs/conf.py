@@ -32,6 +32,12 @@ else:
 import subprocess
 
 version = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
+try:
+    _idx = version.index("-")
+except IndexError:
+    pass
+else:
+    version = version[:_idx] + "-dev"
 
 # Assign a build variable to the builtin module that inerts the @set_module decorator. This is done because set_module
 # confuses Sphinx when parsing overloaded functions. When not building the documentation, the @set_module("moat")

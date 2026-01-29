@@ -6,15 +6,15 @@ PACKAGE = moat
 MAKEINCL = $(shell ./mt src path)/make/py
 PWD := $(shell pwd)
 
-ifneq ($(wildcard $(MAKEINCL)),)
-include $(MAKEINCL)
+#ifneq ($(wildcard $(MAKEINCL)),)
+#include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr
 
-else
-%:
-	@echo "Please fix 'python3 -mmoat src path'."
-	@exit 1
-endif
+#else
+#%:
+#	@echo "Please fix 'python3 -mmoat src path'."
+#	@exit 1
+#endif
 
 venv:
 	python3 -m venv .venv --upgrade-deps
@@ -30,6 +30,14 @@ prep:
 	    BUILD=${PWD}/build/mpy-unix \
 	    STRIP= DEBUG=1
 
+doc:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -b html . ../dist/docs
+docall:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -E -b html . ../dist/docs
 docwarn:
 	set -o pipefail -o errexit ; \
 	cd docs/; \

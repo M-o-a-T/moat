@@ -24,10 +24,12 @@ from __future__ import annotations
 import sys
 
 from moat.util import enc_part, get_part, import_, wait_complain
-from moat.lib.micro import AC_use, Event, L, Lock, TaskGroup, idle
+from moat.lib.micro import AC_use, Event, L, Lock, ObjSequence, TaskGroup, idle
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
 from moat.lib.stream import Base
+
+from collections.abc import Mapping
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -371,8 +373,18 @@ class RootCmd(Base):
         await self.app.reload()
 
         upd, self._updates = self._updates, {}
-        for v in upd.values():
-            v.updated_()
+
+        def _upd(val):
+            if hasattr(val, "updated_"):
+                val.updated_()
+            if isinstance(val, ObjSequence):
+                for v in val:
+                    _upd(v)
+            elif isinstance(val, Mapping):
+                for v in val.values():
+                    _upd(v)
+
+        _upd(upd)
 
     def cfg_updated(self, cfg):
         "Mark TODO for update"

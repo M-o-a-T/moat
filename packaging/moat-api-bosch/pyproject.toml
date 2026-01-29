@@ -17,6 +17,7 @@ requires-python = ">=3.11"
 name = "moat-api-bosch"
 description = "MoaT API wrappers for Bosch Sensortec chips"
 readme = "README.md"
+license = "MIT"
 
 [[project.authors]]
 email = "matthias@urlichs.de"

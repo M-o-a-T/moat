@@ -1,3 +1,9 @@
+**
+** This license only applies to the Python wrapper.
+** Any binaries included in this package (or not)
+** are covered by their own license.
+**
+
 The MIT License (MIT)
 
 Permission is hereby granted, free of charge, to any person obtaining

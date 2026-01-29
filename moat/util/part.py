@@ -20,6 +20,10 @@ def get_part(cur, p: list[str | int], add: bool = False):
         except (TypeError, AttributeError):
             try:
                 cur = cur[pp]
+            except TypeError:
+                if pp is None:
+                    raise KeyError(p, pp) from None
+                raise
             except KeyError:
                 if not add:
                     raise KeyError(p, pp) from None
@@ -31,10 +35,14 @@ def get_part(cur, p: list[str | int], add: bool = False):
 def set_part(cur, p: list[str | int], v: Any):
     "Modify a mapping or object structure"
     cur = get_part(cur, p[:-1], add=True)
+    pp = p[-1]
     try:
-        cur[p[-1]] = v
+        cur[pp] = v
     except TypeError:
-        setattr(cur, p[-1], v)
+        if pp is None or (isinstance(pp, int) and len(cur) == pp):
+            cur.append(v)
+        else:
+            setattr(cur, pp, v)
 
 
 def enc_part(cur, name=None) -> tuple[Any, tuple | None] | Any:

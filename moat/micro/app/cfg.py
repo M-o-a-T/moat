@@ -83,11 +83,11 @@ class Cmd(BaseCmd):
             except KeyError:
                 cur[pp] = attrdict()
                 cur = cur[pp]
-            except IndexError:
-                if len(cur) != pp:
+            except (IndexError, TypeError):
+                if pp is not None and len(cur) != pp:
                     raise
                 cur.append(attrdict())
-                cur = cur[pp]
+                cur = cur[-1]
         # log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
         d = to_attrdict(d)

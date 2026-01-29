@@ -94,10 +94,10 @@ class Err(BaseFwdCmd):
 
         while True:
             try:
-                log("Err Run %s %r", self.path, self)
+                # log("Err Run %s %r", self.path, self)
                 await super().run_app()
             except Exception as exc:
-                log("Err Err %s %r", self.path, exc, err=exc)
+                log("Err %s %r", self.path, exc, err=exc)
                 if self.notify is not None:
                     try:
                         await self.notify(here=self.path, err=exc)

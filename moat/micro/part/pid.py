@@ -124,4 +124,5 @@ class PID(BaseCmd):
     async def reload(self):
         "reload me"
         await super().reload()
+        print(self.pid.cfg)
         self.pid.cfg_updated()

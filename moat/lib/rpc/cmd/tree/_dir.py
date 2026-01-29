@@ -7,13 +7,9 @@ from __future__ import annotations
 from moat.util import NotGiven, attrdict
 from moat.lib.micro import (
     AC_use,
-    Event,
     L,
     Lock,
     TaskGroup,
-    TimeoutError,  # noqa:A004
-    log,
-    wait_for_ms,
 )
 from moat.lib.rpc import BaseCmd
 
@@ -128,8 +124,9 @@ class BaseSubCmd(BaseSuperCmd):
         self.root.cfg_reloaded(self.cfg)
 
         await super().reload()
-        for app in list(self.sub.values()):
-            await app.reload()
+        async with TaskGroup() as tg:
+            for app in list(self.sub.values()):
+                tg.start_soon(app.reload)
 
     def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
         """
@@ -178,50 +175,30 @@ class DirCmd(BaseSubCmd):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        self._did_update = Event()
-        self._updated = Event()
-
-    def _updated(self):
-        self._did_update.set()
-
-    async def task(self):
-        "Monitor task for updating"
-        try:
-            while True:
-                self.cfg.updated_ = self._updated.set
-                await self._setup_apps()
-                self._did_update.set()
-                self._did_update = Event()
-
-                await self._updated.wait()
-                self._updated = Event()
-                while True:
-                    try:
-                        await wait_for_ms(250, self._updated.wait)
-                    except TimeoutError:
-                        break
-                    else:
-                        self._updated = Event()
-        finally:
-            del self.cfg.updated_
+        self._lock = Lock()
 
     async def reload(self):
         "called after the config has been updated"
-        await super().reload()
-        self._updated.set()
-        await self._did_update.wait()
+        async with self._lock:
+            await super().reload()
+            await self._setup_apps()
 
     cmd_upd_ = reload
+
+    async def task(self):
+        await self._setup_apps()
+        await super().task()
 
     async def _setup_apps(self):
         from moat.lib.rpc import LoadCmd  # noqa: PLC0415
 
-        log("Setup %s: %s", self, self.path)
+        # log("Setup %s: %s", self, self.path)
         gcfg = self.cfg
         self.root.cfg_reloaded(gcfg)
 
         apps = {}
         for k, v in gcfg.items():
+            print(k, v)
             try:
                 if not v.get("running", True):
                     continue
@@ -250,7 +227,8 @@ class DirCmd(BaseSubCmd):
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
         for app in self.sub.values():
-            await self.start_app(app)
+            async with TaskGroup() as tg:
+                tg.start_soon(self.start_app, app)
 
         # Third, wait for them to be up.
         if L:

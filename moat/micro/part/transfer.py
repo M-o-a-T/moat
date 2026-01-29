@@ -7,7 +7,7 @@ This is intended for regularly moving data from A to B.
 from __future__ import annotations
 
 from moat.util import Queue, QueueFull, combine_dict
-from moat.lib.micro import Event, L, TaskGroup, every, idle, is_async, log, ticks_ms
+from moat.lib.micro import Event, L, TaskGroup, every_ms, idle, is_async, log, ticks_ms
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd
 
@@ -38,7 +38,7 @@ class _Step:
     """
     One transfer step.
 
-    A step has an input (it's called, async) and an output (its queue).
+    A step has an input (it's called, async) and an output (its set of queues).
 
     Four cases:
     - si=so=False:
@@ -46,7 +46,7 @@ class _Step:
       the result is the data coming back.
     - si=True
       Open a stream to send incoming data.
-      A timer calls `cmd`, the result
+      A timer calls `cmd`.
     - so=True
       Open a stream to receive data.
       Input is sent to `cmd`, or lost. No timer.
@@ -61,6 +61,7 @@ class _Step:
     a: tuple
     k: dict
     append: bool = False
+    keep: bool = False
 
     t: int | None = None
     si: bool = False
@@ -75,18 +76,21 @@ class _Step:
         self.trans = t
         self.id = id
         self.q = set()  # output queue(s)
-        self.a = cfg.get("a", ())
-        self.kw = cfg.get("k", {})
         self._ready = Event()
         self.is_ready = self._ready.wait
 
         if isinstance(cfg, Path):
             p = cfg
+            self.a = ()
+            self.kw = {}
         else:
             p = cfg.get("p", None)
+            self.a = tuple(cfg.get("a", ()))
+            self.kw = cfg.get("k", {})
             self.si = cfg.get("si", self.si)
             self.so = cfg.get("so", self.so)
             self.append = cfg.get("append", self.append)
+            self.keep = cfg.get("keep", self.keep)
         if p is not None:
             self.p = t.root.sub_at(p)
 
@@ -102,20 +106,18 @@ class _Step:
 
     async def run_i(self) -> None:
         "Open a write-only pipe to the remote"
-        async with self.p.stream_out(self.p, *self.a, **self.kw) as self.msg:
+        async with self.p.stream_out(*self.a, **self.kw) as self.msg:
             self._ready.set()
             await self.run_t()
 
     async def run_o(self) -> None:
         "Open a pipe to the remote and read from it"
-        async with (self.p.stream if self.si else self.p.stream_in)(
-            self.p, *self.a, **self.kw
-        ) as msg:
+        async with (self.p.stream if self.si else self.p.stream_in)(*self.a, **self.kw) as msg:
             self._ready.set()
             if self.si:
                 self.msg = msg
             async for m in msg:
-                await self.cont(m.a, m.kw)
+                await self.cont(m.args, m.kw)
 
     async def run_t(self) -> None:
         "Run the task."
@@ -131,6 +133,8 @@ class _Step:
             kw = {}
         else:
             a, kw = akw
+        if self.keep:
+            ra, rkw = a, kw
         if self.si:
             await self.msg.send(*a, **kw)
             return
@@ -140,20 +144,22 @@ class _Step:
             log(f"Dropped {a} {kw}")
             pass
 
-        elif self.p is not None:
+        if self.p is not None:
             if self.a:
                 if self.append:
-                    a = self.a + a
+                    a = self.a + tuple(a)
                 else:
-                    a = a + self.a
+                    a = tuple(a) + self.a
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             msg = await self.p.cmd((), *a, **kw)
-            if not self.so:
-                await self.cont(msg.args, msg.kw)
-        else:
-            # simply pass on
-            await self.cont(a, kw)
+            if self.keep:
+                a, kw = ra, rkw
+            else:
+                a, kw = msg.args, msg.kw
+
+        # pass on
+        await self.cont(a, kw)
 
     async def cont(self, a, kw) -> Awaitable:
         """
@@ -180,6 +186,7 @@ class Transfer(BaseCmd):
       - a: positional arguments
       - k: keyword arguments
       - append: flag to add values at the end of a instead of in front
+      - keep: flag to not replace values
       - si: Stream-in; bool, defaults to False.
       - so: Stream-out; bool, defaults to False.
 
@@ -192,6 +199,27 @@ class Transfer(BaseCmd):
     tg: TaskGroup
     steps: list[_Step]
     t_last: int = None
+
+    doc = dict(
+        _c=dict(
+            _d="Data transfer",
+            t="int:delay(ms)",
+            _a=[
+                dict(s="path:called"),
+                dict(
+                    s=dict(
+                        p="path:called",
+                        a="any:pos args",
+                        k="any:kw args",
+                        append="bool:at end?",
+                        keep="bool:out only",
+                        si="bool:stream in?",
+                        so="bool:stream out?",
+                    )
+                ),
+            ],
+        )
+    )
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -218,7 +246,7 @@ class Transfer(BaseCmd):
             if t is None:
                 await idle()
             else:
-                async for _ in every(t):
+                async for _ in every_ms(t):
                     self.t_last = ticks_ms()
                     await self.steps[0]()
 
@@ -231,7 +259,7 @@ class Transfer(BaseCmd):
             if not s.si:
                 await s(a, kw)
 
-    doc_w = dict(_d="data", qs="int:step (default first)")
+    doc_w = dict(_d="data", qs="int:dest step (default first)", _s=True)
 
     async def stream_w(self, msg: Msg):
         "send data to (first) step"
@@ -245,7 +273,10 @@ class Transfer(BaseCmd):
             await s0(msg.a, kw)
 
     doc_r = dict(
-        _d="data monitor", qs="int:step (default last)", cur="bool:get current value if present"
+        _d="data monitor",
+        qs="int:src step (last)",
+        cur="bool:get current value if present",
+        _s=True,
     )
 
     async def stream_r(self, msg: Msg):
@@ -257,6 +288,8 @@ class Transfer(BaseCmd):
         try:
             if msg.can_stream:
                 async with msg.stream_out(*(s0.last_a or ()), **(s0.last_kw or {})) as md:
+                    if s0.last_a is not None and msg.get("cur", False):
+                        await md.send(*s0.last_a, **s0.last_kw)
                     async for a, kw in q:
                         await md.send(*a, **kw)
             else:

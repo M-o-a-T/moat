@@ -16,7 +16,7 @@ from attrs import define, field
 from moat.util import CtxObj, NotGiven, attrdict
 from moat.lib.path import Path, Root
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
@@ -26,12 +26,14 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import Any, ClassVar, Literal, Self
 
+TData = TypeVar("TData")
+
 
 __all__ = ["Backend", "Message", "RawMessage", "get_backend"]
 
 
 @define
-class Message[TData]:
+class Message(Generic[TData]):
     """
     An incoming message.
     """

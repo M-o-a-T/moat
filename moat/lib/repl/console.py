@@ -33,8 +33,8 @@ from attrs import define, field
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from collections.abc import (  # ty: ignore[unresolved-import]  # Buffer: Python 3.12+
-        Buffer,
+    from collections.abc import (
+        Buffer,  # type:ignore[unresolved-import]  # Buffer: Python 3.12+
         Callable,
     )
 

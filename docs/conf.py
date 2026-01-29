@@ -32,6 +32,12 @@ else:
 import subprocess
 
 version = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
+try:
+    _idx = version.index("-")
+except IndexError:
+    pass
+else:
+    version = version[:_idx] + "-dev"
 
 # Assign a build variable to the builtin module that inerts the @set_module decorator. This is done because set_module
 # confuses Sphinx when parsing overloaded functions. When not building the documentation, the @set_module("moat")
@@ -248,6 +254,7 @@ nitpick_ignore = [
     ("py:func", "moat.lib.path.Path.from_path"),
     ("py:obj", "NotGiven"),
     ("py:obj", "moat.lib.broadcast._impl.TData"),
+    ("py:obj", "moat.link.backend.TData"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
     # TODO
@@ -268,11 +275,11 @@ nitpick_ignore = [
     ("py:obj", "pyfuse3.RENAME_NOREPLACE"),
     ("py:obj", "pyfuse3.EntryAttributes.st_ctime_ns"),
     ("py:meth", "pyfuse3.readdir_reply"),
-    ("py:class","pyfuse3._pyfuse3.Operations"),
-    ("py:class","pyfuse3.__init__.FileInfo"),
-    ("py:class","pyfuse3.__init__.EntryAttributes"),
+    ("py:class", "pyfuse3._pyfuse3.Operations"),
+    ("py:class", "pyfuse3.__init__.FileInfo"),
+    ("py:class", "pyfuse3.__init__.EntryAttributes"),
     ("py:class", "pyfuse3.__init__.StatvfsData"),
-    ("py:func","pyfuse3.get_sup_groups"),
+    ("py:func", "pyfuse3.get_sup_groups"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),
@@ -566,7 +573,11 @@ def setup(app):
     import prometheus_client
     import tenacity
     import httpx
-    import httpx_ws
+
+    try:
+        import httpx_ws
+    except ImportError:
+        pass
     import h11
     import wsproto
     import moat.lib.mqtt._types

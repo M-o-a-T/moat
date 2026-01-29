@@ -136,7 +136,7 @@ class BaseSubCmd(BaseSuperCmd):
         """
         Resolve a subcommand.
 
-        This version uses the :attr:`sub` mapping.
+        This version uses the ``sub`` mapping.
         """
         if not prefix and (sub := self.sub.get(scmd, None)) is not None:
             return sub
@@ -153,11 +153,16 @@ class BaseSubCmd(BaseSuperCmd):
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
-        res["d"] = {
-            k: v.__class__.__name__
-            for k, v in self.sub.items()
-            if not isinstance(k, str) or v is not (k[-1] == "_")
-        }
+        dd = {}
+        for k, v in self.sub.items():
+            if not isinstance(k, str) or v is (k[-1] == "_"):
+                continue
+            try:
+                dd[k] = v.cfg["app"]
+            except (AttributeError, KeyError):
+                dd[k] = v.__class__.__name__
+        if dd:
+            res["d"] = dd
         return res
 
 
@@ -167,6 +172,8 @@ class DirCmd(BaseSubCmd):
 
     Not typically subclassed.
     """
+
+    doc = dict(_c=dict(_d="subdirectory", _n="app:sub-apps"))
 
     SKIP_RDY = True
 

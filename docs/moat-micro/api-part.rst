@@ -1,6 +1,11 @@
 API
 ===
 
+.. automodule:: moat.micro.part.noop
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: moat.micro.part.average
    :members:
    :undoc-members:

@@ -21,6 +21,7 @@ _imports = {
     "Cache": "impl",
     "NoLock": "impl",
     "OptCtx": "impl",
+    "SigCancel": "sig",
     "TimeOnlyFormatter": "impl",
     "acount": "impl",
     "byte2num": "impl",
@@ -46,6 +47,7 @@ _imports = {
     "pos2val": "misc",
     "srepr": "misc",
     "val2pos": "misc",
+    "wait_complain": "misc",
     # pp
     "pop_kw": "pp",
     "push_kw": "pp",
@@ -99,7 +101,12 @@ _imports = {
     "ExpKeyError": "exc",
     "ExpectedError": "exc",
     "exc_iter": "exc",
+    "run_no_exc": "exc",
     "ungroup": "exc",
+    # part
+    "enc_part": "part",
+    "get_part": "part",
+    "set_part": "part",
 }
 
 __all__ = list(_imports.keys())

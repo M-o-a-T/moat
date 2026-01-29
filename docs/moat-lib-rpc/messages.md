@@ -137,13 +137,25 @@ keys are defined:
 
 * ``_d``
 
-  A short string that describes the object or command in question.
+  A short string that describes the command in question.
 
   The text does not contain a type.
 
 * ``NAME``
 
   A named parameter / keyword argument.
+
+* ``_a``
+
+  Alternates. The value is an array with (at least two) mappings that
+  update the base.
+
+Classes use these additional keys:
+
+* ``_c``
+
+  This key describes the class / app itself. Only ``_d`` and named
+  parameters are allowed.
 
 
 Commands use these additional keys:
@@ -162,11 +174,20 @@ Commands use these additional keys:
 
   A positional argument.
 
-* ``_a`
+* ``_n``
 
-  Trailing positional arguments.
+  Trailing (or indeed any) positional arguments.
 
   If this key is missing, no additional positional arguments may be present.
+
+  Inside data structures, the presence of this key (and the absence of any
+  other keys except for ``_NUM`` and ``_d``) indicates that the
+  element is a list, not a mapping.
+
+  :::{note}
+  If other keys are present, integer-values keys typically refer to an
+  existing array.
+  :::
 
 * ``_m``
 
@@ -179,21 +200,26 @@ Commands that support streaming use these additional keys:
 
 * ``_i``
 
-  The incoming stream accepted by this command.
+  The incoming stream accepted by this command. If `True`, the documented
+  input is used and the initial command is empty when a dual command is
+  called in streaming mode.
 
 * ``_o``
 
-  The outgoing stream sent by this command.
+  The outgoing stream sent by this command. If `True`, the documented
+  return value is used and the terminal return value is empty when a dual
+  command is called in streaming mode.
 
 * ``_s``
 
   This key is present if the command can be invoked with or without
-  streaming. It contains a list with two elements; the first applies to
-  direct commands, the second when streaming. The contents are intended as
-  possibly-recursive updates to the parent dict.
+  streaming. It may contain a list with two up to elements; the first applies to
+  direct commands, the second to streaming. The contents are intended as
+  updates to the parent dict (after considering ``_i`` and ``_o``, which
+  should be in the top level, not in ``_s``).
 
-  This value may contain a dict, in which case it applies to the streaming
-  case, i.e. it is equivalent to a list with an empty first element.
+  Alternately the value may be `True`, which means the same as an empty list.
+
 
 * ``_R``
 
@@ -203,9 +229,7 @@ Commands that support streaming use these additional keys:
 
   The data expected in the terminal command.
 
-One or both of ``_i`` and ``_o`` must be present. String values of ``_i``
-and ``_o`` shall be interpreted as if they were values of a nested ``_0``
-key.
+One or both of ``_i`` and ``_o`` must be present.
 
 
 If the value of any key (except ``_d`` and ``_m``) is a string, it should
@@ -213,11 +237,13 @@ be of the form ``type:purpose``. ``type`` is used as in Python's `typing`
 module. ``purpose`` is a hopefully-human-readable text.
 
 Otherwise the value can be a dict, in which case the above conventions are
-applied recursively. (Obviously such a sub-dict may not contain ``_r``,
-``_s``, _i`` or ``_o``.)
+applied recursively. A list is sent if the ``_a`` key is used.
 
 Documentation for sub-apps describes its configuration keys; the only key
 that starts with an underscore should be ``_d``.
+
+If a (sub-)dict is optional, ``_x`` describes the options when the
+value is not a dict.
 
 
 ## Partial replies

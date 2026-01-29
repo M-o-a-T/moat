@@ -22,9 +22,13 @@ moat:
         app:
           app: dir
           t:
-            app: net.tcp.Link
-            host: !P :@.moat.micro.config.net.addr
-            port: &moat_port 27589
+            app: sub.Err
+            retry: -1
+            timeout: 1000
+            cfg:
+              app: net.tcp.Link
+              host: !P :@.moat.micro.config.net.addr
+              port: &moat_port 27589
 
           n:
             app: net.unix.Port
@@ -43,15 +47,14 @@ moat:
         net: !P :@.moat.micro.config.net
         app:
           app: dir
-          i:
-            app: i2c.Cmd
-            id: 0
-            d: 21
-            c: 22
           wdt:
             app: wdt.Cmd
             t: 5000
             hw: true
+          repl:
+            app: stdio.console
+            keep: false
+            repl: true
           n:
             app: net.tcp.Port
             host: !P :@.moat.micro.config.net.addr
@@ -71,6 +74,7 @@ moat:
           port: !P :@.moat.micro.config.socket
 
       remote: !P r.t
+      terminal: !P repl.rw
       path:
         fs: !P f
         sys: !P s

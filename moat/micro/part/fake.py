@@ -20,6 +20,8 @@ class Pin(BaseCmd):
     Iterating it yields a new value whenever the pin changes.
     """
 
+    doc = dict(_c=dict(_d="A fake I/O pin", pin="int:pin#"))
+
     flag: Event | None = None
 
     def __init__(self, cfg):
@@ -80,6 +82,16 @@ class ADC(BaseCmd):
       the min/max. Float. Default 2.
     - seed: used to reproduce the random sequence.
     """
+
+    doc = dict(
+        _c=dict(
+            _d="A random analog input",
+            min="float:min value",
+            max="float:max value",
+            border="float:border",
+            seed="int:random seed",
+        )
+    )
 
     def __init__(self, cfg):
         super().__init__(cfg)

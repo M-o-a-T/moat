@@ -8,6 +8,7 @@ _attrs = {
     "PID": "pid",
     "Pin": "pin",
     "PWM": "pwm",
+    "NoOp": "noop",
     "Relay": "relay",
     "Transfer": "transfer",
     "Average": "average",

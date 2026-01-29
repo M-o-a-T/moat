@@ -16,6 +16,7 @@ from typing import (
     AnyStr,
     ClassVar,
     Final,
+    Generic,
     Literal,
     LiteralString,
     Protocol,
@@ -27,9 +28,6 @@ from typing import (
     TypeVar,
     final,  # noqa:F401
     overload,
-)
-from typing import (
-    Generic as Generic,
 )
 
 _KT = TypeVar("_KT")
@@ -357,7 +355,7 @@ OptExcInfo: TypeAlias = ExcInfo | tuple[None, None, None]
 # In typeshed, `structseq` is only ever used as a mixin in combination with a fixed-length `Tuple`
 # See discussion at #6546 & #6560
 # `structseq` classes are unsubclassable, so are all decorated with `@final`.
-class structseq[T_co]:
+class structseq(Generic[_T_co]):
     n_fields: Final[int]
     n_unnamed_fields: Final[int]
     n_sequence_fields: Final[int]
@@ -368,7 +366,11 @@ class structseq[T_co]:
     # The second parameter will accept a dict of any kind without raising an exception,
     # but only has any meaning if you supply it a dict where the keys are strings.
     # https://github.com/python/typeshed/pull/6560#discussion_r767149830
-    def __new__(cls: type[Self], sequence: Iterable[T_co], dict: dict[str, Any] = ...) -> Self: ...  # noqa:A002
+    def __new__(
+        cls: type[Self],
+        sequence: Iterable[_T_co],
+        dict: dict[str, Any] = ...,  # noqa: A002
+    ) -> Self: ...
 
     def __replace__(self: Self, **kwargs: Any) -> Self: ...
 

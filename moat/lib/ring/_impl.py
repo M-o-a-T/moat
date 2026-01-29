@@ -4,6 +4,8 @@ Characer-based ring buffer.
 
 from __future__ import annotations
 
+from typing import cast
+
 
 class RingBuffer:
     """
@@ -53,7 +55,7 @@ class RingBuffer:
 
         # If writing more than buffer can hold, only write last buf_len bytes
         if drop and write_len > buf_len:
-            buf = memoryview(buf)[write_len - buf_len :]
+            buf = cast(bytes, memoryview(buf)[write_len - buf_len :])
             write_len = buf_len
 
         # Check if we'll overflow
@@ -66,7 +68,7 @@ class RingBuffer:
             else:
                 res = write_len = buf_len - self._count
                 overflow = 0
-                buf = memoryview(buf)[:write_len]
+                buf = cast(bytes, memoryview(buf)[:write_len])
 
         # Write data, handling wraparound
         write_pos = (self._read_pos + self._count) % buf_len

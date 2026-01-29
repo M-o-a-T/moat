@@ -8,19 +8,13 @@ from moat.lib.mqtt.sync_client import MQTTClient
 def subscriber1(client: MQTTClient) -> None:
     with client.subscribe("more/+/topics") as sub:
         for message in sub:
-            print(
-                f"subscriber1: received a message from {message.topic}: "
-                f"{message.payload!r}"
-            )
+            print(f"subscriber1: received a message from {message.topic}: {message.payload!r}")
 
 
 def subscriber2(client: MQTTClient) -> None:
     with client.subscribe("other/#") as sub:
         for message in sub:
-            print(
-                f"subscriber2: received a message from {message.topic}: "
-                f"{message.payload!r}"
-            )
+            print(f"subscriber2: received a message from {message.topic}: {message.payload!r}")
 
 
 with MQTTClient() as client, ThreadPoolExecutor() as executor:

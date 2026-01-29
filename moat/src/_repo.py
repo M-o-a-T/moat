@@ -57,7 +57,12 @@ class _Common:
         verstag = self.vers.get("new", None)
         nt = _tagsplit(tag) if tag is not None else [0, 0, 0]
         if incr or tag is None:
-            nt[0 if major else 1 if minor else 2] += 1
+            if major:
+                nt = [nt[0] + 1, 0, 0]
+            elif minor:
+                nt = [nt[0], nt[1] + 1, 0]
+            else:
+                nt = [nt[0], nt[1], nt[2] + 1]
         nv = _tagsplit(verstag)
         no = _tagsplit(new_tag)
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import sys
 
-from ._impl import Chip, Direction, Edge, Line, LineSettings
+from ._impl import Chip, Direction, Drive, Edge, Line, LineSettings
 
-__all__ = ["Chip", "Direction", "Edge", "Line", "LineSettings", "open_chip"]
+__all__ = ["Chip", "Direction", "Drive", "Edge", "Line", "LineSettings", "open_chip"]
 
 
 def open_chip(num=None, label=None, consumer=sys.argv[0]):

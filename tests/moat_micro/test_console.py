@@ -137,13 +137,13 @@ r:
         repl: true
       co_in:
         app: part.Transfer
-        t: .001
+        t: 5
         s:
           - p: !P r.crd
           - p: !P co.w
       co_out:
         app: part.Transfer
-        t: .001
+        t: 5
         s:
           - p: !P co.r
           - p: !P r.cwr

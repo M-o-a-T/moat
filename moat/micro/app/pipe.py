@@ -5,10 +5,9 @@ App to open a channel to a process.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
-from moat.lib.stream import ProcessBuf
-from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
-from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-from moat.micro.stacks.console import console_stack
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
+from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
+from moat.lib.stream import ProcessBuf, serial_stack
 
 
 class ProcessCmd(BaseCmdMsg):
@@ -19,6 +18,14 @@ class ProcessCmd(BaseCmdMsg):
     argv = None
     path = None
 
+    doc = dict(
+        _c=dict(
+            _d="Command link to a subprocess",
+            command="list[str]:argv",
+            path="str:file of executable",
+        )
+    )
+
     async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv
         path = self.cfg.get("path") if self.path is None else self.path
@@ -26,7 +33,7 @@ class ProcessCmd(BaseCmdMsg):
             path = argv[0]
 
         proc = ProcessBuf(argv, executable=path)
-        return await AC_use(self, console_stack(proc, cfg=self.cfg))
+        return await AC_use(self, serial_stack(proc, cfg=self.cfg))
 
 
 class ProcessIO(BaseCmdBBM):
@@ -36,6 +43,12 @@ class ProcessIO(BaseCmdBBM):
 
     argv = None
     path = None
+
+    doc = dict(
+        _c=dict(
+            _d="Data link to a subprocess", command="list[str]:argv", path="str:file of executable"
+        )
+    )
 
     async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv

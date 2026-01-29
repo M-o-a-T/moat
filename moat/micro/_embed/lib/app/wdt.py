@@ -38,6 +38,16 @@ class Cmd(BaseCmd):
     wdt = None
     timeout = None
 
+    doc = dict(
+        _c=dict(
+            _d="Watchdog control",
+            hw="bool:use hardware watchdog=",
+            ext="bool:require external keepalive",
+            timeout="int:timeout (ms)",
+            tt="int:tickle timer (ms, timeout/2)",
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self._ping = Event()

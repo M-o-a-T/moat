@@ -290,7 +290,7 @@ class CPID(PID):
             cfg: our configuration. See above.
             state: the state storage. Typically an :py:class:`moat.util.attrdict`.
         """
-        super().__init__(cfg["p"], cfg["i"], cfg["d"], cfg["tf"])
+        super().__init__(cfg.get("p", 0), cfg.get("i", 0), cfg.get("d", 0), cfg.get("tf", 0))
         self.cfg = cfg
         self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
 
@@ -299,6 +299,11 @@ class CPID(PID):
         self.state = state
         self.set_state(state.get("t", t or time()), state.get("e", 0), state.get("i", 0))
         state.setdefault("setpoint", None)
+
+    def cfg_updated(self):
+        "Config has been updated"
+        cg = self.cfg.get
+        super().set_gains(cg("p", None), cg("i", None), cg("d", None), cg("tf", None))
 
     def setpoint(self, setpoint: float):
         """

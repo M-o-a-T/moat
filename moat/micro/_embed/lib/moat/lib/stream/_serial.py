@@ -1,1 +1,0 @@
-../../../../../../lib/stream/_serial.py

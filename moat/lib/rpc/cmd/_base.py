@@ -23,13 +23,13 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import import_
-from moat.lib.micro import AC_use, Event, L, Lock, idle
+from moat.util import enc_part, get_part, import_, wait_complain
+from moat.lib.micro import AC_use, Event, L, Lock, ObjSequence, TaskGroup, idle
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
 from moat.lib.stream import Base
-from moat.micro.cmd.util import wait_complain
-from moat.micro.cmd.util.part import enc_part, get_part
+
+from collections.abc import Mapping
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -79,16 +79,17 @@ class BaseCmd(MsgHandler):
 
     def __repr__(self):
         try:
-            return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
+            return f"<{self.cfg_name}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
         except AttributeError:
-            return f"<{self.__class__.__name__}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
+            return f"<{self.cfg_name}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def setup(self):
         """
         Start up this command.
 
-        Call first when overriding.
+        Call this first when overriding.
         """
+        await super().setup()
         await AC_use(self, self.set_stopped)
         if self._stopped is None:
             self.init_events()
@@ -98,13 +99,6 @@ class BaseCmd(MsgHandler):
 
             self._starting.set()
             self._starting = None
-
-    async def teardown(self):
-        """
-        Clean up this command.
-
-        Call last when overriding.
-        """
 
     async def reload(self):
         """
@@ -214,6 +208,14 @@ class BaseCmd(MsgHandler):
     cmd_stq_ = wait_stopped
 
     @property
+    def cfg_name(self) -> str:
+        "Return a human-readable name"
+        try:
+            return self.cfg["app"]
+        except KeyError:
+            return super().cfg_name
+
+    @property
     def path(self):
         "calculate the path to myself"
         # XXX cache it?
@@ -282,11 +284,10 @@ class RootCmd(Base):
     """
     This is the system's root dispatcher.
 
-    This class ducktypes `BaseCmd`.
+    It delegates most (if not all) to its app.
     """
 
-    def __init__(self, cfg, run=False, i=None):
-        self._run = run
+    def __init__(self, cfg, i=None):
         self.i = i
         self._sender = MsgSender(self)
         self.cfg = cfg
@@ -296,21 +297,41 @@ class RootCmd(Base):
         self.app.attached(self, None)
         self._updates = {}
 
+    def __repr__(self):
+        if self.__class__ is RootCmd:
+            return f"<{self.__class__.__name__}>"
+        return f"<Root:{self.__class__.__name__}>"
+
     async def setup(self):
         await super().setup()
-        await AC_use(self, self.app)
+        self.tg = await AC_use(self, TaskGroup())
+        await AC_use(self, self.tg.cancel)
+        self.tg.start_soon(self.app.run)
+        self.tg.start_soon(self.task)
+        if L:
+            await self.wait_ready()
 
-    async def __aenter__(self):
-        await super().__aenter__()
-        try:
-            if self._run:
-                await self.tg.spawn(self.task)
-                if L:
-                    await self.wait_ready()
-        except BaseException as exc:
-            await super().__aexit__(type(exc), exc, None)
-            raise
-        return self
+    async def teardown(self):
+        self.tg = None
+        await super().teardown()
+
+    async def task(self):
+        """
+        Background task. May be overridden.
+        """
+        pass
+
+    async def run(self):
+        """
+        This method should not be called. Roots use context management for
+        (sub)task control.
+        """
+        raise NotImplementedError
+
+    if L:
+
+        async def wait_ready(self):
+            return await self.app.wait_ready()
 
     def __getattr__(self, k):
         if k[0] == "_":
@@ -352,8 +373,18 @@ class RootCmd(Base):
         await self.app.reload()
 
         upd, self._updates = self._updates, {}
-        for v in upd.values():
-            v.updated_()
+
+        def _upd(val):
+            if hasattr(val, "updated_"):
+                val.updated_()
+            if isinstance(val, ObjSequence):
+                for v in val:
+                    _upd(v)
+            elif isinstance(val, Mapping):
+                for v in val.values():
+                    _upd(v)
+
+        _upd(upd)
 
     def cfg_updated(self, cfg):
         "Mark TODO for update"

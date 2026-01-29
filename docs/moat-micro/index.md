@@ -15,6 +15,7 @@ TODO
 :hidden:
 
 tutorial
+tutorial-app
 INSTALL
 config
 apps

@@ -2,19 +2,32 @@ from __future__ import annotations  # noqa: D100
 
 import copy
 import pytest
+from pathlib import Path as FSPath
 
-from moat.lib import config
-from moat.lib.path import P
-from moat.lib.config import CFG
+import ruyaml as yaml
+
 from moat.util import NotGiven
+from moat.lib import config
+from moat.lib.config import CFG
+from moat.lib.path import P, Root
 
 config.TEST = True
+
+SafeRepresenter = yaml.representer.SafeRepresenter
+SafeRepresenter.add_representer(FSPath, SafeRepresenter.represent_str)
 
 
 @pytest.fixture(autouse=True, scope="session")
 def anyio_backend():
     "never use asyncio for testing"
     return "trio"
+
+
+@pytest.fixture(autouse=True)
+def clear_root():
+    "clear root after test"
+    yield
+    Root.set(NotGiven, force=True)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -30,7 +43,7 @@ def in_test(free_tcp_port_factory):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:
             cfg.link.backend.port = free_tcp_port_factory()
 
-    CFG.set_env_(P("in_test"),"fix_for_testing")
+    CFG.set_env_(P("in_test"), "fix_for_testing")
     try:
         fix_for_testing(CFG)
     except AttributeError:
@@ -39,7 +52,7 @@ def in_test(free_tcp_port_factory):
     try:
         yield
     finally:
-        CFG.set_env_(P("in_test"),NotGiven)
+        CFG.set_env_(P("in_test"), NotGiven)
 
 
 @pytest.fixture

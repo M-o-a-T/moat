@@ -31,7 +31,7 @@ app:
 async def test_crash(tmp_path):
     "basic error handling test"
     cfg = yload(CFG, attr=True)
-    async with mpy_stack(tmp_path, cfg, run=True) as d:
+    async with mpy_stack(tmp_path, cfg) as d:
         s = MsgSender(d)
         s.add_sub("a")
         s.add_sub("b")

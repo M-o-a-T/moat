@@ -10,6 +10,8 @@ import asyncclick as click
 from moat.util import P, Path, yload
 from moat.kv.client import open_client
 
+from collections.abc import Sequence
+
 
 def conv(m, s: str) -> bool:  # noqa: D103
     try:
@@ -25,13 +27,16 @@ def conv(m, s: str) -> bool:  # noqa: D103
     return 1
 
 
+ORIG = P("some.where")
+
+
 @click.command()
 @click.argument("path", type=P)
 @click.argument("keys", type=str, nargs=-1)
 async def main(path, keys):  # noqa: D103
     if not keys:
         keys = "src dest dst state".split()
-    with open("/etc/moat.kv.cfg") as cff:
+    with open("/etc/moat.kv.cfg") as cff:  # noqa:ASYNC230
         cfg = yload(cff)
     async with open_client(**cfg) as client:
         async for m in client.get_tree(path, nchain=2):

@@ -282,7 +282,7 @@ def test_root():
     assert b":a" in pc
     assert b"::a" not in pc
 
-    Root.set(P("duddy"))
+    Root.set(P("duddy"), force=True)
     pp = c.decode(pc)
     assert cast(Path, pp).slashed == "duddy/d/::a/e"
     assert p == pp

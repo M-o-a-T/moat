@@ -3,7 +3,7 @@
 import asyncclick as click
 from moat.micro.main import get_link
 from moat.util import attrdict, P, yload, Path
-from moat.cmd.util import get_p
+from moat.micro.util import get_p
 from moat.kv.client import open_client as kv_client
 from moat.lib.rpc import RootCmd
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncclick as click
 
-from moat.util import NotGiven, yprint
+from moat.util import yprint
 from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
@@ -12,10 +12,11 @@ from moat.link.client import Link
 @click.command(short_help="Send a command")
 @click.option("-S", "--stream", is_flag=True, help="Read a stream")
 @click.option("-R", "--raw", is_flag=True, help="Show raw message data")
+@click.option("-C", "--client", type=P, help="Connect to this client")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
 @attr_args(with_path=True, with_arglist=True)
-async def cli(ctx, path, stream, raw, **kw):
+async def cli(ctx, path, stream, raw, client, **kw):
     """
     Send a command to the server.
     """
@@ -25,29 +26,11 @@ async def cli(ctx, path, stream, raw, **kw):
         cfg.client.port = obj.port
 
     async with Link(cfg) as conn:
-        val = process_args(NotGiven, **kw)
-        kw = {}
-        if isinstance(val, list):
-            args = val
-        elif isinstance(val, dict):
-            args = []
-            for k, v in list(val.items()):
-                if k.startswith("_"):
-                    try:
-                        k = int(k[1:])  # noqa:PLW2901
-                    except ValueError:
-                        pass
-                    else:
-                        if k >= len(args):
-                            args += [NotGiven] * (k - len(args) + 1)
-                        args[k] = v
-                        continue
-                kw[k] = v
-        elif val is NotGiven:
-            args = []
-        else:
-            args = [val]
+        if client:
+            conn = await conn.get_service(client)  # noqa:PLW2901
 
+        kw = process_args({None: []}, no_path=True, **kw)
+        args = kw.pop(None)
         if stream:
             async with conn.cmd(path, *args, **kw).stream_in() as res:
                 yprint(rep_(res, raw), stream=obj.stdout)

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import import_
 from moat.lib.micro import AC_use
-from moat.micro.cmd.stream import BaseCmdBBM
+from moat.lib.rpc import BaseCmdBBM
 
 
 # Serial packet forwarder
@@ -26,6 +26,8 @@ class Port(BaseCmdBBM):
 
     The config item "device" must contain the class path.
     """
+
+    doc = dict(_c=dict(_d="device access", device="str:class path", _k="any:class setup"))
 
     pack = None
 

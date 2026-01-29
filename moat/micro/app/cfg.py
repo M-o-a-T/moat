@@ -4,10 +4,9 @@ R/W access to configuration data.
 
 from __future__ import annotations
 
-from moat.util import ExpKeyError, NotGiven, attrdict, to_attrdict
+from moat.util import ExpKeyError, NotGiven, attrdict, enc_part, get_part, to_attrdict
 from moat.lib.micro import log as log
 from moat.lib.rpc import BaseCmd
-from moat.micro.cmd.util.part import enc_part, get_part
 
 
 class Cmd(BaseCmd):
@@ -16,6 +15,8 @@ class Cmd(BaseCmd):
 
     This app serves the config of the parent subcommand.
     """
+
+    doc = dict(_c=dict(_d="Config read/write"))
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -82,11 +83,11 @@ class Cmd(BaseCmd):
             except KeyError:
                 cur[pp] = attrdict()
                 cur = cur[pp]
-            except IndexError:
-                if len(cur) != pp:
+            except (IndexError, TypeError):
+                if pp is not None and len(cur) != pp:
                     raise
                 cur.append(attrdict())
-                cur = cur[pp]
+                cur = cur[-1]
         # log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
         d = to_attrdict(d)

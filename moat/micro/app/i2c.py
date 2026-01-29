@@ -23,6 +23,14 @@ class Cmd(BaseCmd):
         t: 1000 # bus timeout, msec
     """
 
+    doc = dict(
+        c=dict(
+            _d="i²c bus read/write/dir",
+            t="int:timeout(ms)",
+            id="int:bus#",
+        )
+    )
+
     _bus = None
 
     async def setup(self):

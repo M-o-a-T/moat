@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import sys
 
+from moat.util import enc_part, get_part
 from moat.lib.rpc import BaseCmd
-from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.exc import ExpKeyError
 
 
@@ -22,6 +22,8 @@ class Cmd(BaseCmd):
     This app serves access to the config snippet(s) stored in the system's
     RTC chip.
     """
+
+    doc = dict(_c=dict(_d="RTC access"))
 
     def __init__(self, cfg):
         if cfg.get("fake", False):

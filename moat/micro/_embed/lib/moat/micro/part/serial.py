@@ -24,6 +24,8 @@ class NamedSerial(FileBuf):
     via a module name.
     """
 
+    doc = dict(_c=dict(_d="Serial port", port="int:port# (1)", timeout="int:timeout(ms,50)"))
+
     def __init__(self, cfg):
         super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
@@ -60,6 +62,33 @@ class Serial(NamedSerial):
     # inherits from NamedSerial for __init__ which is the same
 
     pack = None
+
+    doc = dict(
+        _c=dict(
+            _d="Serial port",
+            port="int:port# (1)",
+            timeout="int:timeout(ms,50)",
+            tx="int:TX pin (out)",
+            rx="int:RX pin (in)",
+            rts="int:RTS pin (out)",
+            cts="int:CTS pin (in)",
+            dtr="int:DTR pin (out)",
+            txb="int:TX buffer (128)",
+            rxb="int:RX buffer (128)",
+            baudrate="int:rate",
+            parity="bool|None: odd parity?",
+            bits="int: size (8)",
+            flow="str: RC flow control (no)",
+            rts_state="bool:RTS on?",
+            dtr_state="bool:DTR on?",
+            rts_flip="bool:RTS flip on open?",
+            dtr_flip="bool:DTR flip on open?",
+            delay="float:wait after open",
+            dtr_rts="float:wait between dtr and rts flip",
+            delay_flip="float:wait after flip",
+            flush="float|bool:flush inbuf after open (ms, True=200)",
+        )
+    )
 
     async def stream(self):
         "opens the port, does flushing and RTS/CTS"
@@ -137,7 +166,7 @@ class Serial(NamedSerial):
         ser.dtr = dtr
         await AC_use(self, ser.deinit)
 
-        if t := cfg.get("flush"):
+        if (t := cfg.get("flush", None)) is not None:
             if t is True:
                 t = 200
             while True:

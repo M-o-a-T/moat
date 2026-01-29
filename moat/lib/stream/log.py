@@ -23,6 +23,9 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     def __init__(self, link, cfg):
         super().__init__(link, cfg)
         self.txt = cfg.get("txt", "S")
+        self.decode = self.txt[0] == "!"
+        if self.decode:
+            self.txt = self.txt[1:]
 
     async def setup(self):  # noqa:D102
         log("X:%s start", self.txt)
@@ -53,10 +56,10 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         return f, self._repr(m)
 
     async def send(self, m):  # noqa:D102
-        if self.txt[0] == "!" and isinstance(m, (list, tuple)) and m and isinstance(m[0], int):
-            log("S:%s %s %s", self.txt[1:], *self._repr_bang(m))
+        if self.decode and isinstance(m, (list, tuple)) and m and isinstance(m[0], int):
+            log("S:%s %s %s", self.txt, *self._repr_bang(m))
         else:
-            log("S:%s %s", self.txt, self._repr(m, "d"))
+            log("S:%s %s%s", self.txt, "? " if self.decode else "", self._repr(m, "d"))
         try:
             res = await self.s.send(m)
         except BaseException as exc:
@@ -74,15 +77,10 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            if (
-                self.txt[0] == "!"
-                and isinstance(msg, (list, tuple))
-                and msg
-                and isinstance(msg[0], int)
-            ):
-                log("R:%s %s %s", self.txt[1:], *self._repr_bang(msg))
+            if self.decode and isinstance(msg, (list, tuple)) and msg and isinstance(msg[0], int):
+                log("R:%s %s %s", self.txt, *self._repr_bang(msg))
             else:
-                log("R:%s %s", self.txt, self._repr(msg, "d"))
+                log("R:%s %s%s", self.txt, "? " if self.decode else "", self._repr(msg, "d"))
             return msg
 
     async def snd(self, m):  # noqa:D102

@@ -8,27 +8,17 @@ Do this once:
   `git clone git@github.com:M-o-a-T/moat.git`
   `cd moat`
 
-* Get the subrepositories:
-  `git submodule update --init --recursive`.
+* Ensure that the Python modules `venv` and `build` are available.
+  On Debian(-derived) systems: run `apt install python3-venv python3-build`.
 
-* Set up a Python virtual environment:
-  `python3 -mvenv .venv`
+* Set things up:
+  `make setup`
 
-* … and activate it:
+* Activate the Python virtual evnironment:
   `. .venv/bin/activate`
 
-* Install some packages:
-  `sh setup.sh`
 
-Do this every time you start working with MoaT code:
-
-* Set up the Python path:
-  `export PYTHONPATH=$(./mt path)`
-
-
-## Code structure
-
-MoaT's main program loads commands from installed components.
+MoaT's main program dynamically loads commands from `PYTHONPATH`.
 
 To work with code in this repository, use the `./mt`
 script instead of the `moat` command that might or might not be installed

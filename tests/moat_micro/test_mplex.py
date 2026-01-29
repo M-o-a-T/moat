@@ -74,9 +74,6 @@ async def test_mplex(tmp_path):
 @pytest.mark.parametrize("conn", ["a", "la", "rlb", "rb", "rra"])
 async def test_iter(tmp_path, conn):
     """Iterator test, direct"""
-    if conn in ("rlb", "rb"):
-        raise pytest.skip("Segfaulting")
-
     conn = list(conn)
     async with mpy_stack(tmp_path, CFG) as d:
         res = []

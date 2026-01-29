@@ -98,11 +98,14 @@ dev = [
     "httpx-ws",
     "numpy",
     "passlib",
+    "pre-commit",
     "pytest-trio",
     "pytest-coverage",
     "setuptools-scm",
     "smbus3",
     "transitions-aio",
+    "ty",
+    "uv",
     "wheel",
 ]
 doc = [
@@ -123,6 +126,17 @@ doc = [
 preview = true
 line-length = 99
 target-version = "py311"
+
+exclude = [
+    "moat/db/alembic/versions/*",
+    "moat/micro/_embed/**/manifest.py",
+    "**/OFF/**",
+    "TODO/**",
+    "packaging/**",
+    "ext/**",
+    "docs/**",
+    "moat/micro/_embed/lib/mpdb.py",  # symlink
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -161,15 +175,6 @@ ignore = [
     "UP012", "UP015", "UP040", # "UP038",
     ]
 
-exclude = [
-    "moat/db/alembic/versions/*",
-    "moat/micro/_embed/**/manifest.py",
-    "**/OFF/**",
-    "TODO/**",
-    "packaging/**",
-    "ext/**",
-    "docs/**",
-]
 explicit-preview-rules = true
 
 [tool.ruff.lint.isort.sections]
@@ -262,12 +267,14 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/lib/diffiehellman/",
     "moat/lib/path/",
     "moat/lib/pid/",
     "moat/lib/priomap/",
     "moat/lib/broadcast/",
     "moat/lib/micro/",
     "moat/lib/repl/",
+    "moat/lib/ring/",
 ]
 exclude = [
     "ext/**",

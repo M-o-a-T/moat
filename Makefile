@@ -3,18 +3,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PACKAGE = moat
-MAKEINCL = $(shell python3 -mmoat src path)/make/py
+MAKEINCL = $(shell ./mt src path)/make/py
 PWD := $(shell pwd)
 
-ifneq ($(wildcard $(MAKEINCL)),)
-include $(MAKEINCL)
+#ifneq ($(wildcard $(MAKEINCL)),)
+#include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr
 
-else
-%:
-	@echo "Please fix 'python3 -mmoat src path'."
-	@exit 1
-endif
+#else
+#%:
+#	@echo "Please fix 'python3 -mmoat src path'."
+#	@exit 1
+#endif
 
 venv:
 	python3 -m venv .venv --upgrade-deps
@@ -29,3 +29,28 @@ prep:
 	    VARIANT_DIR=${PWD}/moat/micro/_embed/boards/unix/test \
 	    BUILD=${PWD}/build/mpy-unix \
 	    STRIP= DEBUG=1
+
+doc:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -b html . ../dist/docs
+docall:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -E -b html . ../dist/docs
+docwarn:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1 | \
+	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
+
+setup:
+	python -mvenv .venv --upgrade-deps
+	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
+	. .venv/bin/activate; uv pip install -U -e .
+
+release: doc
+	./mt src tag
+	./mt -V src build -ar
+
+.PHONY: doc docall docwarn setup release venv prep

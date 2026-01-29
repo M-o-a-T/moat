@@ -52,12 +52,14 @@ class Main:
     """
     This is a singleton-ish class that holds the main execution context
     and (possibly) the console reference.
+
+    This class is not standalone. It is created in `./main.py`.
     """
 
     console: Console | None = None
     main_task: Task = None
     user_task: Task = None
-    tg: TaskGroup = None
+    tg: TaskGroup = None  # created in ./main.py
 
     def __init__(self, wr_exc: Callable):
         ACM(self)
@@ -72,9 +74,6 @@ class Main:
 
         Called from `Console.start`.
         """
-        if self.main_task is None:
-            raise RuntimeError("main not set")
-
         import moat  # noqa:PLC0415
 
         moat.call = call

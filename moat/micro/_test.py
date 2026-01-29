@@ -14,7 +14,6 @@ from random import random
 import moat.micro
 from moat.util import attrdict, combine_dict, ctx_as, yload
 from moat.lib.codec import get_codec
-from moat.lib.micro import L, TaskGroup
 from moat.lib.rpc import RootCmd
 
 # from moat.micro.main import Request, get_link, get_link_serial
@@ -165,17 +164,12 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None, **kw)
     if cfg2 is not None:
         cfg = combine_dict(cfg2, cfg, cls=attrdict)
 
-    async with ctx_as(temp_dir, temp), TaskGroup() as tg:
+    async with ctx_as(temp_dir, temp):
         if isinstance(cfg.app, str):
             cfg = attrdict(app=cfg)
         stack = RootCmd(cfg, **kw)
-        try:
-            await tg.spawn(stack.run)
-            if L:
-                await stack.wait_ready()
+        async with stack:
             yield stack
-        finally:
-            tg.cancel()
 
 
 class Loopback(BaseMsg, BaseBuf, BaseBlk):

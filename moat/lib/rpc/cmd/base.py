@@ -19,33 +19,8 @@ class RootCmd(_RootCmd):
     """
     This is the system's root dispatcher.
 
-    This class ducktypes :py:class:`BaseCmd`.
+    This class ducktypes :py:class:`~moat.lib.rpc.cmd._base.BaseCmd`.
     """
-
-    def __init__(self, cfg, sig=False, **kw):
-        super().__init__(cfg, **kw)
-        self.sig = sig
-
-    async def setup(self):
-        "Root setup: adds signal handling if requested"
-        await super().setup()
-
-        if self.sig:
-
-            async def sig_handler():
-                import anyio  # noqa: PLC0415
-                import signal  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
-
-                with anyio.open_signal_receiver(
-                    signal.SIGINT,
-                    signal.SIGTERM,
-                    signal.SIGHUP,
-                ) as signals:
-                    async for _ in signals:
-                        self.tg.cancel()
-                        break  # default handler on next
-
-            await self.tg.spawn(sig_handler, _name="sig")
 
     def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"

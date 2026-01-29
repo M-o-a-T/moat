@@ -14,7 +14,14 @@ from __future__ import annotations
 import os
 import sys
 
-if sys.platform != "linux":
+if sys.platform == "linux":
+    if (_t := int(os.getenv("MOAT_FORK_DEBUG", "0"))) > 0:
+        from time import sleep as _sleep
+
+        _sleep(_t)
+        del _sleep
+    del _t
+else:
     try:
         sys.path.remove("/lib")
     except ValueError:

@@ -36,9 +36,8 @@ class GateVanished(RuntimeError):
 @define
 class GateNode(Node):
     """
-    A gatewayed node. It stores the external value and metadata.
-
-    Data and meta
+    A gatewayed node. It also stores the external value and metadata
+    in order to resolve bidirectional updates and/or update conflicts.
     """
 
     ext_meta: dict[str, Any] | None = field(init=False, default=None)
@@ -49,12 +48,12 @@ class GateNode(Node):
 
     @property
     def has_src(self):
-        "Check whether source data is present"
+        "Check whether source (i.e. MoaT-Link) data is present"
         return self.data_ is not NotGiven or self.meta not in (None, NotGiven)
 
     @property
     def has_dst(self):
-        "Check whether destination data is present"
+        "Check whether destination (i.e. external) data is present"
         return self.ext_data is not NotGiven or self.ext_meta not in (None, NotGiven)
 
     @property
@@ -71,13 +70,14 @@ class Gate:
     """
     This is the base class for data gateways.
 
-    Gateways are described by a dict in ``:r.gate.NAME`` with the following
+    Gateways are described by a dict in ``:R.gate.NAME`` with the following
     entries:
 
-    * src: source path, covered by ``moat.link``
-    * dst: destination, *must not* be at or under the ``moat.link`` root (if MQTT)
-    * driver:
-      * mqtt: the destination is a raw MQTT thing
+    * src: source path, in *MoaT-Link*.
+    * dst: destination (=external data), *must not* be at or under the
+      *MoaT-Link* root (if on MQTT) * driver:
+      * kv: the destination is MoaT-KV legacy storage
+      * mqtt: the destination is a raw MQTT topic (or tree of topics)
     * codec: Encoding of the destination (source is always ``std-cbor``).
     * retain: ``True/False/None``; the latter is the default and copies
       the data's retain flag
@@ -90,9 +90,11 @@ class Gate:
     * otherwise copy source to dest.
 
     Subclasses override
-    * get_dst
-    * set_dst
-    * newer_dst
+    * `get_dst`
+    * `set_dst`
+    * `newer_dst`
+    * `is_update`
+    * `run_` (if required)
     """
 
     state: Node
@@ -160,14 +162,15 @@ class Gate:
         async with node.lock:
             await self.set_dst(path, data, meta, node)
 
-    def dst_is_current(self):  # noqa: D102
+    def dst_is_current(self):
+        "Must be called when the initial destination data has been read"
         self._dst_done.set()
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
-        Fetch the external data.
+        A task that fetches external data.
 
-        Override this; call `set_src` with each item.
+        Override this. Call `set_src` with each item you discover.
 
         You must call `dst_is_current` when the current state has been read
         and you're now waiting for updates. If your backend doesn't support
@@ -207,25 +210,31 @@ class Gate:
 
     async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
         """
-        Update destination state. @meta is the source metadata, in case
-        it is useful in some way.
+        Called to update the destination state. @meta is the source
+        metadata, in case it is useful in some way.
+
+        You need to override this.
         """
         raise NotImplementedError
 
     def is_update(self, node: GateNode, data: Any, aux: MsgMeta):  # noqa: ARG002
         """
         Check whether this new destination data is an update.
+
+        You probably want to override this.
         """
         return True
 
     def newer_dst(self, node) -> bool | None:
         """
         Test whether the destination data is newer, based on the node's
-        metadata. Return `True` if the data should be copied to the source,
+        metadata. Must return `True` if the data should be copied to the source,
         `False` if the source should be copied to the destination, or
         `None` if inconclusive.
 
         This method is only called when starting up.
+
+        You need to override this.
         """
         raise NotImplementedError
 
@@ -276,7 +285,9 @@ class Gate:
         The core runner for the gateway.
 
         If your implementation needs a context or a support task,
-        override this and call the original. `tg` can be used.
+        wrap this method.
+
+        The ``tg`` attribute can be used if you need a taskgroup.
         """
         # start initial loops
         await self.tg.start(self.get_src)

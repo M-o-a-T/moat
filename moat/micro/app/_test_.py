@@ -31,6 +31,8 @@ class Cmd(BaseCmd):
     A rather basic test command.
     """
 
+    doc = dict(_c=dict(_d="Basic test cmd"))
+
     n = 0
     err: Exception = None
     err_evt: Event = None
@@ -147,7 +149,17 @@ class Cons(BaseCmd):
         lines: max lines to queue up
         prefix: log prefix.
 
+    If the prefix is empty, data is queued up for reading via :meth:`cmd_rd`.
     """
+
+    doc = dict(
+        _c=dict(
+            _d="Basic console reader",
+            prefix="str:log prefix, empty=queued for 'rd'",
+            cons="path:obj with crd",
+            lines="int:queue len",
+        )
+    )
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -157,8 +169,9 @@ class Cons(BaseCmd):
         self.con = self.root.sub_at(self.cfg["cons"])
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
+        self.timeout = self.cfg.get("timeout", 200)
 
-    doc_rd = dict(_d="read console data")
+    doc_rd = dict(_d="read console data", _r="str:one line")
 
     def cmd_rd(self) -> Awaitable:
         return self.q.get()
@@ -174,7 +187,7 @@ class Cons(BaseCmd):
             timed = False
             try:
                 if d:
-                    b = await wait_for_ms(200, self.con.crd, n=len(buf) - d)
+                    b = await wait_for_ms(self.timeout, self.con.crd, n=len(buf) - d)
                 else:
                     b = await self.con.crd(n=len(buf))
             except TimeoutError:

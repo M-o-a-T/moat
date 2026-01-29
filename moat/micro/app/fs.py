@@ -57,6 +57,8 @@ class Cmd(LockBaseCmd):
     _fd_last = 0
     _fd_cache = None
 
+    doc = dict(_c=dict(_d="Local file system access", root="str:root path"))
+
     def __init__(self, cfg: attrdict):
         super().__init__(cfg)
         self._fd_cache = dict()
@@ -67,8 +69,6 @@ class Cmd(LockBaseCmd):
         else:
             if self._pre and self._pre[-1] != "/":
                 self._pre += "/"
-
-    doc = dict(_d="File system access.", _c=dict(root="Path to file system root"))
 
     def _fsp(self, p: str):
         if self._pre:
@@ -197,20 +197,20 @@ class Cmd(LockBaseCmd):
         """
         import hashlib  # noqa: PLC0415
 
-        _h = hashlib.sha256()
-        _mem = memoryview(bytearray(512))
-
         p = self._fsp(p)
-        _f = await to_thread(open, p, "rb")
-        try:
-            while True:
-                n = await to_thread(_f.readinto, _mem)
-                if not n:
-                    break
-                _h.update(_mem[:n])
-        finally:
-            await to_thread(_f.close)
-        res = _h.digest()
+
+        def hash_file(p):
+            h = hashlib.sha256()
+            mem = memoryview(bytearray(512))
+            with open(p, "rb") as f:
+                while True:
+                    n = f.readinto(mem)
+                    if not n:
+                        break
+                    h.update(mem[:n])
+            return h.digest()
+
+        res = await to_thread(hash_file, p)
         if l is not None:
             res = res[:l]
         return res

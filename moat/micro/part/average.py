@@ -27,6 +27,15 @@ class Average(BaseCmd):
       age: age of the initial value, in seconds; higher = less weight
     """
 
+    doc = dict(
+        _c=dict(
+            _d="Exponential average",
+            init="float:initial value",
+            t="float:time const (s)",
+            age="float:init age",
+        )
+    )
+
     flag: Event | None = None
 
     def __init__(self, cfg):
@@ -51,7 +60,9 @@ class Average(BaseCmd):
         self.flag.set()
         self.flag = Event()
 
-    doc_r = dict(_d="read", t="int:last timestamp", _r="float:current avg")
+    doc_r = dict(
+        _d="read", t="int:last timestamp (systime)", _r="float:current avg", _s=True, _o=True
+    )
 
     async def stream_r(self, msg: Msg):
         "read. Wait for change if timestamp didn't change"
@@ -68,7 +79,7 @@ class Average(BaseCmd):
         else:
             await msg.result(self._value, t=self._t)
 
-    doc_w = dict(_d="write", _0="float:update avg")
+    doc_w = dict(_d="write", _0="float:update", _t="float:Timestamp(ms)", _s=True, _i=True)
 
     async def stream_w(self, msg):
         "update"

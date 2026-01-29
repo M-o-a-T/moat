@@ -116,6 +116,3 @@ async def test_poll():
             with anyio.move_on_after(0.1):
                 s = await anext(ali)
                 raise RuntimeError("two events", s)
-
-
-pass  # pylint: disable=unnecessary-pass

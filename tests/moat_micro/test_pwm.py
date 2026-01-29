@@ -18,7 +18,8 @@ class FPWM(PWM):
         self.min = min
         self.max = max
         self.base = base
-        self.val = 0
+        self.t_on = 0
+        self.t_off = 1
         self.is_on = False
         self.t_last = 0
         self.__t = 0

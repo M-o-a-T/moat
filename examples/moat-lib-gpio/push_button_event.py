@@ -6,13 +6,14 @@ import moat.lib.gpio as gpio
 
 """
 This example is taken out of my furnace controller.
-It has been tested with Raspberry Pi Zero W and I assume it will work with any board supported by moat.gpio.
-Use at your own risk.
+It has been tested with Raspberry Pi Zero W and I assume it will work with
+any board supported by moat.gpio. Use at your own risk.
 
-If you aren't sure about how to hook up a button and led to your board, there are a lot of examples online.
+If you aren't sure about how to hook up a button and led to your board,
+there are a lot of examples online.
 
-Thank you @smurfix, who wrote moat.lib.gpio and @njsmith and other in glitter:python-trio/general room
-who helped me out.
+Thank you @smurfix, who wrote moat.lib.gpio and @njsmith and other in
+glitter:python-trio/general room who helped me out.
 """
 
 
@@ -26,27 +27,29 @@ class Led:  # noqa: D101
         self._off = anyio.create_event()
 
     async def liteon(self):  # noqa: D102
-        with gpio.open_chip() as chip:
-            with chip.line(self.x).open(direction=gpio.Direction.OUTPUT) as line:
-                self._on.clear()
-                await self._off.set()
-                while True:
-                    if self._on.is_set():
-                        line.value = 1
-                        # print('lite on')
-                        await self._off.wait()
-                        self._on = anyio.create_event()
-                    elif self._off.is_set():
-                        line.value = 0
-                        # print('lite off')d
-                        await self._on.wait()
-                        self._off = anyio.create_event()
-                    else:
-                        # should never be reached.
-                        # if the code does reach here,
-                        # turn off the power to whatever is being powered
-                        print("error: both are off.")
-                        await self._off.set()
+        with (
+            gpio.open_chip() as chip,
+            chip.line(self.x).open(direction=gpio.Direction.OUTPUT) as line,
+        ):
+            self._on.clear()
+            await self._off.set()
+            while True:
+                if self._on.is_set():
+                    line.value = 1
+                    # print('lite on')
+                    await self._off.wait()
+                    self._on = anyio.create_event()
+                elif self._off.is_set():
+                    line.value = 0
+                    # print('lite off')d
+                    await self._on.wait()
+                    self._off = anyio.create_event()
+                else:
+                    # should never be reached.
+                    # if the code does reach here,
+                    # turn off the power to whatever is being powered
+                    print("error: both are off.")
+                    await self._off.set()
 
 
 class Button:  # noqa: D101
@@ -64,8 +67,10 @@ class Button:  # noqa: D101
                 last = 0
                 async for e in in_:
                     # This section is for debouncing the button.
-                    # As a button is pushed and released the voltage can rapidly go up and down many times
-                    # when the user only meant one push. To limit this, a delay is add to ignore changes.
+                    # As a button is pushed and released the voltage can
+                    # rapidly go up and down many times when the user only
+                    # meant one push. To limit this, a delay is add to
+                    # ignore changes.
                     # This can be adjusted depending on the button and the respose.
                     secs, ns_secs = e.timestamp
                     now = float(str(secs) + "." + str(ns_secs))
@@ -81,14 +86,14 @@ class Button:  # noqa: D101
 # Asyncgpio uses the BCM pin numbering. So, the led is on the pin 21
 # and the button that controls the yellow is hooked to pin 23.
 yellow = Led(21)
-yellowbutton = Button(23, yellow._on, yellow._off)
+yellowbutton = Button(23, yellow._on, yellow._off)  # noqa:SLF001
 
 
-async def main(y):  # noqa: D103
+async def main():  # noqa: D103
     async with anyio.create_task_group() as nursery:
         await nursery.spawn(yellowbutton.push)
         await nursery.spawn(yellow.liteon)
 
 
 if __name__ == "__main__":
-    anyio.run(main, 1, backend="trio")
+    anyio.run(main, backend="trio")

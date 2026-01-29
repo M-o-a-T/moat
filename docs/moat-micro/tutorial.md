@@ -1,16 +1,40 @@
 # Setting up MoaT-Micro
 
 We're setting up a couple of microcontrollers that can run MicroPython.
-Let's start with an ESP32-S3 named "Baguette", which is particularly
-breadboard friendly. You can get it from
+Let's start with an ESP32-S3 named "Baguette", which is a particularly
+breadboard-friendly not-so-little development board. You can get it from
 [The Pi Hut](https://thepihut.com/products/baguette-s3-esp32-s3-prototyping-board).
 
-.. note::
-    Not an affiliate link. Satisfied customer here.
+:::{note}
+Not an affiliate link. Satisfied customer here.
+:::
+
+:::{note}
+We're calling the controllers "satellites". That's nicer than the old
+"slave"; regardless of woke-y connotations it's also more accurate,
+because all MoaT links are inherently bidirectional and satellites,
+like their real-world counterparts up in the sky, can and do work
+independently.
+:::
+
 
 ## Prerequisites
 
-For ESP you need the ESP-IDF. This step is documented
+Unfortunately, as of 2026-01 MoaT cannot run on standard MicroPython.
+A few bits are missing (asyncio's taskgroups), others are incompatible
+(MoaT is able to incrementally update subpackages, stock MicroPython
+doesn't allow that). Thus we need to build and upload our own.
+
+:::{note}
+Another reason is that MoaT is rather large and would eat too much RAM
+if it's all loaded from the file system. Thus we need to freeze our modules,
+and to do *that* we need to rebuild MPy anyway.
+
+MPy's new ROM file system should fix this problem, but MoaT doesn't
+support that yet.
+:::
+
+For ESP you need the ESP-IDF software. This step is documented
 [here](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/get-started/index.html). Briefly:
 
 ```shell
@@ -26,9 +50,6 @@ source ./export.sh
 pip install moat
 ```
 
-The next-to-last step adds the ESP-IDF environment to your current environment.
-As the ESP environment doesn't include MoaT, the last step adds it.
-
 ## Configuration
 
 Next we need to create a configuration file:
@@ -39,14 +60,14 @@ $ vi esp-s3.cfg
 ```
 
 You will have to edit the serial ports, as your device is unlikely to have
-a MAC of XX:XX:XX:XX:XX:XX. 🤪 Also, your WLAN is unlikely to be named
-"MyNetworkSSID".
+a MAC of XX:XX:XX:XX:XX:XX. 🤪 Also, your WLAN is probably not named
+"MyNetworkSSID". Don't forget the password. (Don't connect to an open WLAN.)
 
 The "board" tag must name a directory in either
-`moat/micro/embed/boards/esp32` or `micropython/ports/esp32/boards`.
+`moat/micro/_embed/boards/esp32` or `micropython/ports/esp32/boards`.
 
-The following assumes a shell alias named ``mtc`` because we don't want to
-type the same command all the time:
+Next, let's set up a shell alias named ``mtc`` because we don't want to
+type the same long command line all the time:
 
 ```shell
 $ mtc() {
@@ -88,10 +109,10 @@ Initially you might want to use more verbosity: replace `mtc` with
 ## Initial start
 
 The start mode `skip` means "don't start MoaT"; we'd like to make sure that
-network setup and basic MoaT commands work before we commit ourselves. This
-is especially important on boards with a direct USB connection because
-debugging them is somewhat difficult — if we're unlucky, a crash takes the
-USB link down before the debug trace can be retrieved.
+our network setup works before we commit ourselves. This is especially
+important on boards with a direct USB connection because debugging them is
+somewhat difficult — if we're unlucky, a crash takes the USB link down
+before the debug trace can be retrieved.
 
 Thus, we start a terminal:
 
@@ -117,7 +138,8 @@ Start MoaT: 'once'
 WLAN. - 192.168.1.42
 Setup :
 MoaT is up.
-
+MoaT is in the background.
+>>>
 ```
 
 .. note::
@@ -325,8 +347,8 @@ get some results back. For interactive use, however, there's a better way.
 MoaT is able to hijack the MicroPython prompt. So let's add a REPL app.
 
 ```shell
-$ mtc cfg -S -s apps.repl ~stdio.console \
-    -s  repl.keep =f -s repl.repl =t
+$ mtc cfg -S -s app.repl.app ~stdio.console \
+    -s app.repl.keep =f -s app.repl.repl =t
 $
 ```
 
@@ -362,15 +384,65 @@ Connected. [ You might need to press Return here ]
 >>>
 ```
 
-This looks like a normal MicroPython prompt. It also behaves like one.
-
-.. note::
-    As of January 2026 it's still a bit laggy; we didn't yet do much optimization.
-    Also, it sometimes swallows a byte you send to it. That issue still needs to be
-    investigated.
+This looks like a normal MicroPython prompt. It also behaves like one
+(almost).
 
 The interesting part is that you can do all of the above at the same time
-(except for the `repl.r` command). Thus the file system still works.
+(except for the `repl.r` command, but that's only because the ``moat micro
+repl`` uses that internally).
+
+Remember our *mount* from above? It still works.
+
+### Error handling
+
+The prompt mode is kindof special because it circumvents the taskgroup structure
+that MoaT uses. The most noticeable effect is that it captures crashes that
+would otherwise be fatal and cause a reboot.
+
+Thus, if you see the line
+
+    Task has errored out but its parent is already completed
+
+or
+
+    Task exception wasn't retrieved
+
+most likely accompanied by a strange
+
+    KeyError: future
+
+then your satellite is in a confused state. You should reboot it as soon as
+possible.
+
+Our output buffer isn't unlimited, thus Python stack dumps tend to get cut off.
+To mitigate that, the first async error that occurs is logged to Flash, to
+the file ``moat.exc``. If the crash causes MoaT to abort, the log goes to
+``moat.err``. The file isn't overwritten if it's already there: an error
+that goes off every five seconds won't obliterate your Flash file system.
+
+### Rebooting
+
+A reboot is normally handled as an exception: things can get cleaned
+up, there's no danger of corrupting the Flash file system, etc..
+
+As REPL mode captures exceptions, you can only reboot in immediate mode:
+
+``` shell
+$ mtc cmd s.boot.doc_
+_0: str:SysBooT
+_1: int:(0)=hard,1=soft,2=boot,3=KbdIntr,4=immediate,5=RuntimeExc
+_d: reboot
+_t: int:timeout msec(100)
+$ mtc cmd s.boot -s + SysBooT -s + =4
+True
+$
+$ mtc cmd s.boot.doc_
+[ Error: the hard reboot didn't notify our 'micro run' command, thus it fails
+  when trying to continue on the existing link. We'll fix that later. ]
+```
+
+The `mtc run` that we started above should now terminate, along with our
+`mount` and the terminal.
 
 ## Getting Things Done
 
@@ -378,7 +450,7 @@ Presumably you want to get things done with your MicroPython device. Let's
 start with the usual Blinkenlights example:
 
 ```python
-from asyncio import sleep_ms as sleep
+from moat.lib.micro import sleep_ms as sleep
 from machine import Pin
 async def blink():
     p=Pin(4,Pin.OUT)
@@ -394,31 +466,50 @@ import moat
 res = moat.bg(blink)
 ```
 
-Use the LED pin on your board, of course. Save this file as
+Use the LED pin on your board (it might not be 4). Save this file as
 `/mnt/py/tt.py`, then do `import tt` on the `micro repl` command line.
 
 The blinker runs in the background (of course) and doesn't disturb
 anything else. You can call `tt.res.cancel()` to stop it (and turn off the
 LED).
 
+### Apps, revisited
+
+A "normal" MicroPython program is started from ``main.py``. It typically
+runs some main loop that does things (like, blinking a light or controlling
+a radiator), maybe using a timeout or interrupts to handle multiple
+concurrent work.
+
+MoaT is different. A MoaT installation consists of a couple of building
+blocks that talk to each other. Some of these blocks may be on other
+satellites or on a network server. (You can also daisy-chain satellites.)
+
+Each of these blocks has its own configuration data, runs an independent
+async main task, and can optionally be auto-restarted if it misbehaves.
+MoaT is using taskgroups to ensure that no subtasks are left behind.
+
+### Sample code
+
+… is [here](tutorial-app), along with some basic coding guidelines.
+
 
 ## Recovery from blocking code
 
 The one problem with async code on MicroPython is that as soon as there is
-a non-async loop, or maybe a call to `time.sleep()` instead of `await
-asyncio.sleep` that you missed, things stop working — and because reading
-from our console hook is also an async activity, there's no good way to
-recover.  (Ctrl-C on a "real" serial or USB link still works, of course,
-but that's usually not an option …)
+a non-async loop, or maybe a mistaken call to `time.sleep()` instead of
+`await asyncio.sleep`, things stop working — and because reading from our
+console hook is also an async activity, there's no good way to recover.
+(Ctrl-C on a "real" serial or USB link still works, but that's often not
+an option.)
 
 The solution is a (hardware) watchdog timer.
 
 ```shell
-$ mtc cfg -S -s apps.wdt ~wdt.Cmd \
-    -s  wdt.t =5000 -s wdt.hw =t
+$ mtc cfg -S -s app.wdt.app ~wdt.Cmd \
+    -s app.wdt.t =5000 -s app.wdt.hw =t
 ```
 
-This adds a hardware watchdog timer (timeout: 5000 milliseconds). It is
+This starts the hardware watchdog timer (timeout: 5000 milliseconds). It is
 auto-refreshed in the background while the async loop is running. As soon
 as it is not …
 
@@ -427,31 +518,45 @@ as it is not …
 >>> time.sleep(10)
 ```
 
-… your board will do a hard reboot after 2.5 to 5 five seconds. This will
-end up at the "normal" MicroPython prompt, so let's make MoaT persistent.
+… your board will do a hard reboot after at most 5 five seconds. The
+restart will end up at the "normal" MicroPython prompt, which we presumably
+don't want, so let's make MoaT persistent.
+
 
 ## Startup states
 
-As described above, we have set the initial state to `skip`. Let's change
-that:
+As we had set the initial state to `skip`, the reboot doesn#t restart MoaT.
+Let's change that:
 
 ```shell
-$ mtc cfg -S -s apps.wdt ~wdt.Cmd \
-    -s  wdt.t =5000 -s wdt.hw =t   \
-    -s apps.repl ~stdio.console     \
-    -s  repl.keep =f -s repl.repl =t
+$ pyserial-miniterm ...
+...
+>>> moat.go("once")
+*** STATE *** once ***
+Start MoaT: 'once'
+WLAN. - 192.168.1.42
+Setup :
+MoaT is up.
+MoaT is in the background.
+>>>
+$ mtc cfg -S -W moat.cfg \
+    -s app.wdt.app ~wdt.Cmd \
+    -s  app.wdt.t =5000 -s app.wdt.hw =t   \
+    -s app.repl.app ~stdio.console     \
+    -s  app.repl.keep =f -s app.repl.repl =t
 $ mtc cfg -W moat.cfg
+$ mtc cmd s.rtc.doc_  # I can never remember what that command wants
 $ mtc cmd s.rtc -s v ~std -s fs =t
 $ mtc cmd s.rtc -s v ~std -s fs =f
 ```
 
-.. note::
-    Of course you need to restart MoaT and restart the `moat micro run`
-    interface before these commands work. See above.
+The `mtc cfg` command repeats our previous configuration steps and writes
+the running config to the file `moat.cfg`.
 
-The first command repeats our previous configuration steps. The second
-writes the running config to the file `moat.cfg` (you don't need a running
-mount for this tow work).
+::{note}
+You don't need a running `moat micro mount` command here: `moat micro cfg` uses
+MoaT's file system commands directly.
+:::
 
 The `s.rtc` commands write the intended system state to the Flash file system
 (`moat.state`) and to the real-time clock, respectively. The RTC setting
@@ -460,6 +565,53 @@ reset and/or unplugging the board.
 
 If you now reset the board, MoaT should come up on its own.
 
+
 ## Recovery
 
-To be continued.
+When you play with MoaT, sometimes things go wrong. Maybe your shiny new
+app crashes the system after five seconds — and the satellite is buried
+behind a cabinet, so you can't easily get at it …
+
+The solution is to chain boot states. MoaT knows six:
+
+- skip
+
+  Don't run MoaT at all: drop to MicroPython's standard REPL.
+
+- std
+
+  Run normally. Look for modules in ``/lib``, ``/rom`` (if it exists), and
+  ``.frozen``. Load ``moat.cfg``.
+
+- safe
+
+  Same, but load ``moat_safe.cfg``.
+
+- flash
+
+  Only use modules from ``.frozen``.  Load ``moat_fb.cfg`` ("fallback").
+
+- rom
+
+  Only use modules from ``/rom`` and ``.frozen``.  Load ``moat_rom.cfg``.
+
+  :::{note}
+  ROM file system support is on the TODO list.
+  :::
+
+- norom
+
+  Only use modules from ``/lib`` and ``.frozen``.  Load ``moat_nr.cfg``
+  ("no rom").
+
+The boot state is read from the file ``moat.state``. If that file doesn't
+exist, *flash*, *rom*, *safe* and *std* are tried (in this order).
+
+You can save a comma-separated list of states to use in ``moat.state``.
+The MoaT startup code will go with the first state from the list and store
+the rest in the RTC chip's memory (or write it back to that file if your
+satellite doesn't have RTC memory).
+
+Thus, when your ``moat run`` (re)starts for whatever reason you can call
+the ``sys.state`` command, read the result's ``s`` attribute (current
+mode), and alert the user if that's not ``std``.

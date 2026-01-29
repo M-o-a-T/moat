@@ -12,6 +12,9 @@ try:
 except ImportError:
     from moat.micro.test.rtc import state as RTC
 
+_state_d = dict(t="int:last time", e="float:error", i="float:integral")
+_pid_d = dict(p="float:P", i="float:I", d="float:D", tf="float:Filter D")
+
 
 class PID(BaseCmd):
     """
@@ -34,6 +37,17 @@ class PID(BaseCmd):
     val_in: float | None = None
     split: tuple[float, float, float] | None = None
 
+    doc = dict(
+        _c=dict(
+            _d="PID control",
+            state=dict(_d="initial state", **_state_d),
+            factor="float:setpoint adj factor (0)",
+            offset="float:setpoint adj offset (0)",
+            setpoint="float:initial goal",
+            **_pid_d,
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.pid = CPID(cfg)
@@ -47,25 +61,11 @@ class PID(BaseCmd):
                 return
         self.pid.setpoint(cfg.get("set", 0))
 
+    doc_sw = dict(_d="update state", **_state_d)
+
     def cmd_sw(self, t: int | None, e: float | None, i: float | None, **_kw):
         "Update the PID state."
         self.pid.set_state(t, e, i)
-
-    #   async def setup(self):
-    #       await super().setup()
-
-    #   async def run(self):
-    #       async with self.pin.w.stream_out() as self.ps:
-    #           try:
-    #               self.t_last = ticks_ms()
-    #               self.is_on = False
-    #               await self.ps.send(False)
-
-    #               while True:
-    #                   dly = await self._measure(ticks_ms())
-    #                   await self._delay(dly)
-    #           finally:
-    #               await self.ps.send(False)
 
     doc_w = dict(_d="step", _0="float:current value", _r="float:new output")
 
@@ -80,8 +80,10 @@ class PID(BaseCmd):
 
     doc_sp = dict(
         _d="setpoint",
-        _0="float:new setpoint",
-        _r="float:current setpoint",
+        _a=[
+            dict(_d="set", _0="float:new setpoint"),
+            dict(_d="read", _r="float:current setpoint"),
+        ],
     )
 
     async def cmd_sp(self, sp: float | None = None):
@@ -92,19 +94,13 @@ class PID(BaseCmd):
 
     doc_s = dict(
         _d="read state",
-        t="int:current time",
-        e="float:differential error",
-        i="float:integral error",
         _r=dict(
-            state=dict(
-                t="int:current time",
-                e="float:differential error",
-                i="float:integral error",
-            ),
+            state=_state_d,
             i="float:last input",
             o="float:last output",
-            split="tuple:p-i-d output",
+            split="list[float]:p-i-d output",
         ),
+        **_state_d,
     )
 
     async def cmd_s(self, **kw):
@@ -121,3 +117,8 @@ class PID(BaseCmd):
         if self.split:
             res["o"] = self.pid.sum(self.split)
         return res
+
+    async def reload(self):
+        "reload me"
+        await super().reload()
+        self.pid.cfg_updated()

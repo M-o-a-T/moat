@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import pytest
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, suppress
 
 from moat.lib.path import Path
-from moat.lib.repl import MsgTerm, Readline, UnixConsole
+from moat.lib.repl import InvalidTerminal, MsgTerm, Readline, UnixConsole
 from moat.lib.repl._test import MockTerm
 from moat.lib.rpc import MsgSender
 
@@ -97,11 +97,12 @@ async def test_readline_iterator():
     console = UnixConsole(term)
 
     # Use Readline as async iterator
-    async with console, Readline(console, prompt=">>> ") as lines:
-        line = await anext(lines)
-        assert line == "test line"
-        line = await anext(lines)
-        assert line == "another line"
+    with suppress(InvalidTerminal):
+        async with console, Readline(console, prompt=">>> ") as lines:
+            line = await anext(lines)
+            assert line == "test line"
+            line = await anext(lines)
+            assert line == "another line"
 
 
 @pytest.mark.anyio

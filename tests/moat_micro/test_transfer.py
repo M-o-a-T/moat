@@ -46,7 +46,7 @@ r:
           txt: "S"
       t:
         app: part.Transfer
-        t: 0.1
+        t: 100
         s:
         - p: !P a.nit
         # - p: !P a.echo
@@ -58,7 +58,7 @@ r:
 
 t:
   app: part.Transfer
-  t: 0.1
+  t: 100
   s:
   - p: !P r.a.nit
   # - p: !P r.a.echo
@@ -88,7 +88,7 @@ async def test_transfer_here(tmp_path):
     del cfg.r.cfg.app.t
 
     async with (
-        mpy_stack(tmp_path, cfg, run=True) as d,
+        mpy_stack(tmp_path, cfg) as d,
         d.sub_at(P("b")) as xb,
     ):
         await anyio.sleep(1)

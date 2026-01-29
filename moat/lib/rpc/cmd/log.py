@@ -42,6 +42,8 @@ class _LogStream(HandlerStream):
 class Logger(BaseFwdCmd):
     """This is the handler for messages that forwards them to the stream."""
 
+    doc = dict(_c=dict(_d="Subcommand logging", prefix="str:log prefix (default Msg)"))
+
     def __init__(self, cfg: attrdict):
         super().__init__(cfg)
         self.prefix = cfg.get("prefix", "Msg")

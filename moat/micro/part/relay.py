@@ -15,9 +15,13 @@ class Relay(BaseCmd):
     """
     A relay is an output pin with an overriding "force" state.
 
-    - pin: how to talk to the actual hardware output
-    - t_on, t_off, minimum non-forced on/off time
-    - note: send a message when changed
+    Parameters:
+        pin(Path): path of the actual hardware output
+        t_on(int): minimum non-forced on time
+        t_off(int): minimum non-forced off time
+
+    To prevent hardware damage, this controller can enforce the
+    minimum time between relay actuations.
     """
 
     _delay = None
@@ -25,17 +29,24 @@ class Relay(BaseCmd):
     value = None
     force = None
 
+    doc = dict(
+        _c=dict(
+            _d="maybe-forced Relay",
+            pin="path:Output pin, calls r+w",
+            t=dict(off="int:min off-time (ms,0)", on="int:min on-time (ms,0)"),
+        )
+    )
+
     def __init__(self, cfg):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError("Pin not set")  # noqa:TRY004
         t = cfg.get("t", attrdict())
         self.t = [t.get("off", 0), t.get("on", 0)]
-        self.note = cfg.get("note", None)
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.pin = self.root.sub_at(self.cfg.pin)
+        self.pin = self.root.sub_at(self.cfg["pin"])
         if await self.pin.rdy_():
             raise StoppedError("pin")
         await self.cmd_w()

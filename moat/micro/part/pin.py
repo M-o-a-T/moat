@@ -74,7 +74,7 @@ class _Pin:
             self.flag.set()
 
     async def flag_watch(self):
-        "Flag reader, since a ThreadSafeFlag only acepts one task"
+        "Flag reader task, since a ThreadSafeFlag only acepts one read task"
         try:
             self._pin.irq(self._irq, _XPin.IRQ_FALLING | _XPin.IRQ_RISING)
             while True:
@@ -105,20 +105,38 @@ class Pin(BaseCmd):
 
     Iterating it yields a new value whenever the pin changes.
 
-    Config:
-        out: bool  # direction
-        drive: 0…3 (ESP32)
-        value: bool  # on/off on init
+    Parameters:
+        out(bool): direction (input: `False`)
+        drive(int): drive strength. ``0…3`` on ESP32.
+        init(bool): initial value. Leave alone if not given.
+        pull(bool|None): Pull-up (`True`), -down (`False`).
+        open(bool|None): open-collector/drain (`True`) or
+                         -emitter/source (`False`), on output.
     """
+
+    doc = dict(
+        _c=dict(
+            _d="Digital I/O pin",
+            pin="int:Nr",
+            out="bool:output?",
+            init="bool:initial out state",
+            drive="int:strength",
+            pull="bool|None: Pullup/down?",
+            open="bool|None: open-collector/emitter?",
+        )
+    )
 
     def __init__(self, cfg):
         super().__init__(cfg)
+        out = cfg.get("out", False)
+        oce = cfg.get("open", None)  # open collector/emitter
+
+        a = [cfg["pin"], (M.Pin.OPEN_DRAIN if oce else M.Pin.OUT) if out else M.Pin.IN]
         kw = {}
-        a = [cfg["pin"], M.Pin.OUT if cfg.get("out", False) else M.Pin.IN]
         if (val := cfg.get("init", None)) is not None:
             kw["value"] = val
         if (drive := cfg.get("drive", None)) is not None:
-            kw["drive"] = drive
+            kw["drive"] = getattr(M.Pin, f"DRIVE_{drive}", 0)
         if (pull := cfg.get("pull", None)) is not None:
             a.append(M.Pin.PULL_UP if pull else M.Pin.PULL_DOWN)
 
@@ -133,10 +151,9 @@ class Pin(BaseCmd):
 
     doc_r = dict(
         _d="read",
-        _s=[
-            dict(_o="bool:new values"),
-            dict(_r="bool:current value"),
-        ],
+        _o=True,
+        _s=True,
+        _r="bool:current value",
         o="bool:old: wait until pin value differs",
     )
 
@@ -160,9 +177,8 @@ class Pin(BaseCmd):
 
     doc_w = dict(
         _d="write",
-        _s=[
-            dict(_i="bool:new values"),
-        ],
+        _s=True,
+        _i=True,
         _0="bool:new value",
     )
 

@@ -14,6 +14,7 @@ from moat.lib.rpc import BaseCmd
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable, Mapping, Sequence
@@ -308,3 +309,9 @@ class Transfer(BaseCmd):
         async with msg.stream_out(t=self.t_last) as md:
             for a, kw in self.data:
                 await md.send(*a, **kw)
+
+    async def handle(self, msg: Msg, rpath: list[PathElem]):
+        "Intercept qs"
+        if rpath and isinstance(rpath[-1], int):
+            msg.kw["qs"] = rpath.pop()
+        await super().handle(msg, rpath)

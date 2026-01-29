@@ -8,6 +8,12 @@ from smbus3 import SMBus, i2c_msg
 
 from moat.lib.rpc import BaseCmd
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import Msg
+
 
 class Cmd(BaseCmd):
     """
@@ -112,3 +118,11 @@ class Cmd(BaseCmd):
             else:
                 res.append(i)
         return res
+
+    async def handle(self, msg: Msg, rpath: list[PathElem]):
+        """
+        Intercept the bus address: `bus:33.wr(x)` ≍ `bus.wr(33,x)`.
+        """
+        if rpath and isinstance(rpath[-1], int):
+            msg.args.insert(0, rpath.pop())
+        await super().handle(msg, rpath)

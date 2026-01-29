@@ -350,7 +350,7 @@ class CfgStore:
         if load_all is None or not self.name:
             return attrdict()
         if (cf := os.environ.get(f"{self.name.upper()}_CFG", None)) is not None:
-            return load_yaml(cf)
+            return load_yaml(FSPath(cf))
         return default_cfg(self.name, load_all=load_all)
 
     def redo(self):

@@ -42,7 +42,7 @@ class NoPathError(KeyError):
 
 
 try:
-    FileNotFoundError  # noqa:B018  # pyright:ignore
+    FileNotFoundError = FileNotFoundError  # noqa:A001,PLW0127
 except NameError:
 
     class FileNotFoundError(SilentRemoteError):  # noqa:A001
@@ -55,7 +55,7 @@ except NameError:
 as_proxy("_FnErr", FileNotFoundError)
 
 try:
-    FileExistsError  # noqa:B018  # pyright:ignore
+    FileExistsError = FileExistsError  # noqa:A001,PLW0127
 except NameError:
 
     class FileExistsError(SilentRemoteError):  # noqa:A001

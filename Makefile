@@ -44,5 +44,13 @@ docwarn:
 	../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1 | \
 	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
 
-release:
+setup:
+	python -mvenv .venv --upgrade-deps
+	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
+	. .venv/bin/activate; uv pip install -U -e .
+
+release: doc
 	./mt src tag
+	./mt -V src build -ar
+
+.PHONY: doc docall docwarn setup release venv prep

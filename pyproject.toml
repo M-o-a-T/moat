@@ -98,11 +98,14 @@ dev = [
     "httpx-ws",
     "numpy",
     "passlib",
+    "pre-commit",
     "pytest-trio",
     "pytest-coverage",
     "setuptools-scm",
     "smbus3",
     "transitions-aio",
+    "ty",
+    "uv",
     "wheel",
 ]
 doc = [

@@ -99,6 +99,7 @@ class PID(BaseCmd):
             i="float:last input",
             o="float:last output",
             split="list[float]:p-i-d output",
+            fct=["float:factor", "float:offset"],
         ),
         **_state_d,
     )
@@ -113,6 +114,7 @@ class PID(BaseCmd):
             state=self.pid.state,
             i=self.val_in,
             split=self.split,
+            fct=self.pid.get_offset(),
         )
         if self.split:
             res["o"] = self.pid.sum(self.split)

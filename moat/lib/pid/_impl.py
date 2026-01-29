@@ -54,6 +54,9 @@ class PID:
     lower: float = -MAX_VAL
     upper: float = MAX_VAL
 
+    fct: float = 1
+    off: float = 0
+
     def __init__(
         self,
         Kp: float | None = None,
@@ -111,11 +114,12 @@ class PID:
 
     def sum(self, args: Sequence[float]) -> float:
         """
-        Sum the input values and limit the result to the interval between `min`…`max`.
+        Sum the input values, apply fct+off, and limit the result to the
+        interval between `min`…`max`.
 
-        ``self(signal)`` ≍ ``self.sum(*self.integrate(signal))``
+        ``pid(signal)`` ≍ ``pid.sum(*self.integrate(signal))``
         """
-        return min(max(sum(args), self.lower), self.upper)
+        return self.off + self.fct * min(max(sum(args), self.lower), self.upper)
 
     def get_gains(self) -> tuple[float, float | None, float | None, float | None]:
         """Get PID controller gains.
@@ -132,6 +136,24 @@ class PID:
             self.Kd / PID_TC if self.Kd else None,
             self.Tf / PID_TC if self.Tf else None,
         )
+
+    def set_offset(self, fct: float | None = None, off: float | None = None) -> None:
+        """Set output value factor and offset.
+
+        Args:
+            fct: Factor (default 1.0)
+            off: Offset (default 0.0)
+
+        Factor and offset are applied by :meth:`sum`.
+        """
+        if fct is not None:
+            self.fct = fct
+        if off is not None:
+            self.off = off
+
+    def get_offset(self) -> tuple[float, float]:
+        """Get output value factor and offset."""
+        return self.fct, self.off
 
     def set_gains(
         self, Kp: float | None, Ki: float | None, Kd: float | None, Tf: float | None = None

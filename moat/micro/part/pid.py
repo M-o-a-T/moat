@@ -115,6 +115,7 @@ class PID(BaseCmd):
             i=self.val_in,
             split=self.split,
             fct=self.pid.get_offset(),
+            gain=self.pid.get_gains(),
         )
         if self.split:
             res["o"] = self.pid.sum(self.split)

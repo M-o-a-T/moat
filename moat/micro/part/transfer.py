@@ -154,6 +154,10 @@ class _Step:
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             msg = await self.p.cmd((), *a, **kw)
+
+            self.last_a = msg.args
+            self.last_kw = msg.kw
+
             if self.keep:
                 a = ra
                 kw = rkw

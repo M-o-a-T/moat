@@ -270,6 +270,7 @@ include = [
     "moat/lib/broadcast/",
     "moat/lib/micro/",
     "moat/lib/repl/",
+    "moat/lib/ring/",
 ]
 exclude = [
     "ext/**",

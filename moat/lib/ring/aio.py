@@ -8,6 +8,8 @@ from moat.lib.micro import Event
 
 from ._impl import RingBuffer as _RingBuf
 
+from typing import cast
+
 
 class RingBuffer(_RingBuf):
     """
@@ -22,7 +24,7 @@ class RingBuffer(_RingBuf):
     def __init__(self, length: int):
         super().__init__(length)
 
-    async def write(self, buf: bytes) -> int:
+    async def write(self, buf: bytes) -> int:  # type:ignore[invalid-method-override]
         """
         Adds the bytes in `buf` to the end of the buffer.
         """
@@ -40,12 +42,12 @@ class RingBuffer(_RingBuf):
                 self._r_evt = None
             if n == buf_len:
                 return buf_len
-            buf = memoryview(buf)[nb:]
+            buf = cast(bytes, memoryview(buf)[n:])
             if self._w_evt is None:
                 self._w_evt = Event()
             await self._w_evt.wait()
 
-    async def readinto(self, buf: bytearray) -> int:
+    async def readinto(self, buf: bytearray) -> int:  # type:ignore[invalid-method-override]
         """
         Copies as many bytes as will fit (or are available, whichever is
         smaller) into the buffer and advance the read counter.

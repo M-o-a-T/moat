@@ -300,6 +300,11 @@ class CPID(PID):
         self.set_state(state.get("t", t or time()), state.get("e", 0), state.get("i", 0))
         state.setdefault("setpoint", None)
 
+    def cfg_updated(self):
+        "Config has been updated"
+        cg = self.cfg.get
+        super().set_gains(cg("p", None), cg("i", None), cg("d", None), cg("tf", None))
+
     def setpoint(self, setpoint: float):
         """
         Adjust the setpoint.

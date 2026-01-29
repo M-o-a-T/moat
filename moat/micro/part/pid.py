@@ -117,3 +117,8 @@ class PID(BaseCmd):
         if self.split:
             res["o"] = self.pid.sum(self.split)
         return res
+
+    async def reload(self):
+        "reload me"
+        await super().reload()
+        self.pid.cfg_updated()

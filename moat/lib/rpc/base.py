@@ -390,9 +390,11 @@ class SubMsgSender(MsgSender):
 
     def __getattr__(self, x):
         """
-        Returns a SubMsgSender for this name
+        Returns a SubMsgSender for this name.
         """
         return self.sub_at(Path.build((x,)))
+
+    __getitem__ = __getattr__
 
 
 class MsgHandler(Base, BaseMsgHandler):

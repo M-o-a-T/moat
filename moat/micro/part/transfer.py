@@ -298,7 +298,7 @@ class Transfer(BaseCmd):
                     a, kw = s0.last_a, s0.last_kw
                 else:
                     a, kw = await q.get()
-                await md.result(*a, **kw)
+                await msg.result(*a, **kw)
         finally:
             s0.q.remove(qp)
 

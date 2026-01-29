@@ -55,7 +55,6 @@ class BaseSuperCmd(BaseCmd):
 
         async with self.app_lock:
             if app.p_task:
-                await app.reload()
                 return
             try:
                 t = await self.tg.spawn(_run, app)
@@ -187,9 +186,9 @@ class DirCmd(BaseSubCmd):
 
     async def task(self):
         "Monitor task for updating"
-        self.cfg.updated_ = self._updated
         try:
             while True:
+                self.cfg.updated_ = self._updated.set
                 await self._setup_apps()
                 self._did_update.set()
                 self._did_update = Event()
@@ -203,7 +202,6 @@ class DirCmd(BaseSubCmd):
                         break
                     else:
                         self._updated = Event()
-                        continue
         finally:
             del self.cfg.updated_
 

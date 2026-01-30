@@ -431,6 +431,7 @@ async def cons(obj, path):
 @click.option("--stdout", is_flag=True, hidden=True)
 @click.option("-W", "--write-sat", help="Write config file to the satellite")
 @click.option("-S", "--sync", is_flag=True, help="Sync the satellite after writing")
+@click.option("-D", "--send", is_flag=True, help="Also send to the satellite")
 @click.option("-A", "--auth", is_flag=True, help="Authoritative: clear other satellite data")
 @click.option(
     "-I",
@@ -451,6 +452,7 @@ async def cfg_(
     write,
     write_sat,
     sync,
+    send,
     stdout,
     auth,
     prio,
@@ -497,25 +499,29 @@ async def cfg_(
     arg_dest_ns = write or write_sat or stdout
     arg_dest = arg_dest_ns or sync
 
-    if has_attrs:
-        # attrs = we might be OK with incomplete data
+    if auth:
+        sync = True
+    if sync:
+        send = True
+
+    if (has_attrs or sync) and not auth and not arg_dest_ns:
+        # we might be OK with incomplete data
         if not arg_dest_ns:
-            # default to sync
-            sync = True
-        elif not arg_src:
-            # we have a non-sync dest but no complete source? that won't do
+            send = True
+        elif arg_dest_ns and not arg_src:
+            # we have a destination but not complete source? that won't do
             config_sat = True
     else:
-        # no attrs = we want complete data
+        # no attrs or auth = we want complete data
         if not arg_dest:
             # default to writing to stdout
             stdout = True
         if not arg_src:
-            # default to input from config
+            # default to input from remote config
             config_sat = True
 
     # do we need complete full data?
-    if write or write_sat or auth or not has_attrs or stdout:
+    if arg_dest_ns or auth:
         # do we not read it from anywhere?
         if not read and not read_sat and not config and not config_sat:
             # well, do read it then.
@@ -567,7 +573,7 @@ async def cfg_(
             else:
                 print("No 'app' section. Not writing.", file=sys.stderr)
 
-        if sync:
+        if send:
             if not auth or ("app" in rcfg and "app" in rcfg.app):
                 await cf.set(rcfg, sync=sync, replace=auth)
             else:

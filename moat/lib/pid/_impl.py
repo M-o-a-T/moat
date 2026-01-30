@@ -261,7 +261,7 @@ class PID:
         if self.Ki:
             i = i0 + dt * self.Ki * e
             # anti-windup
-            i = min(max(i, self.lower - p), self.upper - p)
+            i = min(max(i, min(self.lower - p, 0)), max(self.upper - p, 0))
         else:
             i = 0
 

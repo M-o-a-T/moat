@@ -10,7 +10,7 @@ from moat.lib.rpc import BaseCmd
 try:
     from moat.micro.rtc import state as RTC
 except ImportError:
-    from moat.micro.test.rtc import state as RTC
+    from moat.micro.rtc._test import state as RTC
 
 _state_d = dict(t="int:last time", e="float:error", i="float:integral")
 _pid_d = dict(p="float:P", i="float:I", d="float:D", tf="float:Filter D")

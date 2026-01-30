@@ -9,8 +9,6 @@ from __future__ import annotations
 import os
 import sys
 
-from rtc import all_rtc
-
 import machine
 
 import moat.micro.console as cons
@@ -52,10 +50,19 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     if type(cfg) is dict:
         cfg = to_attrdict(cfg)
 
+    if "rtc" in cfg:
+        from moat.micro.rtc import RTC  # noqa:PLC0415
+
+        RTC.init(cfg["rtc"])
+
     # Update config from RTC memory, if present
     if not i["fb"]:
-        for k, v in all_rtc():
-            merge(cfg.setdefault(k, {}), v)
+        try:
+            rcfg = RTC.get_sync("cfg")
+        except KeyError:
+            pass
+        else:
+            merge(cfg, rcfg)
 
     # Start the hardware watchdog timer early
     for v in cfg.values():

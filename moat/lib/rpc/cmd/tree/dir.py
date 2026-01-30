@@ -114,15 +114,15 @@ class CfgStore(SubStore):
                         if k is None:
                             k = len(ocd)  # noqa:PLW2901
                     if empty or not v:
-                        await self.sd.w(p + (k,), d=type(v)())
+                        await self.sd.w(p=p + (k,), d=type(v)())
                     if v:
                         await _set(p + (k,), v, empty=empty)
                 elif isinstance(ocd, dict):
                     if ocd.get(k, _NotGiven) != v:
-                        await self.sd.w(p + (k,), d=v)
+                        await self.sd.w(p=p + (k,), d=v)
                 elif isinstance(ocd, list):
                     if len(ocd) <= k or ocd[k] != v:
-                        await self.sd.w(p + (k,), d=v)
+                        await self.sd.w(p=p + (k,), d=v)
                 else:
                     raise ValueError(f"Orig is {ocd!r}")  # noqa:TRY004
 
@@ -131,7 +131,7 @@ class CfgStore(SubStore):
             # drop those client cfg snippets that are not on the server
             for k in chain(ocd.keys(), ocl):
                 if k not in c:
-                    await self.sd.w(p + (k,), d=NotGiven)
+                    await self.sd.w(p=p + (k,), d=NotGiven)
 
         self.cfg = None
         await _set(Path(), cfg)

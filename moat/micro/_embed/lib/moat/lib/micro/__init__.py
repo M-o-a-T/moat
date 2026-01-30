@@ -17,8 +17,6 @@ from micropython import const
 
 from typing import TYPE_CHECKING  # isort:skip
 
-from rtc import set_rtc
-
 if TYPE_CHECKING:
     from typing import Never
 
@@ -127,11 +125,6 @@ def log(s, *x, err=None, write: bool = True):
 def log_exc(e, s, *a):
     "Log an exception"
     log(s + ": %r", *a, e, err=e)
-
-
-def at(*a, **kw):
-    "Record debug state in the RTC"
-    set_rtc("debug", a if not kw else kw if not a else (a, kw), fs=False)
 
 
 async def idle():

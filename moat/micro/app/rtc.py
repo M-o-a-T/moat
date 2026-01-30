@@ -1,0 +1,143 @@
+"""
+RTC access
+"""
+
+from __future__ import annotations
+
+import sys
+
+from moat.util import NotGiven, enc_part, get_part, merge, set_part
+from moat.lib.rpc import BaseCmd
+from moat.micro.rtc import RTC
+from moat.util.exc import ExpKeyError
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import Msg
+
+
+class _NotGiven:
+    pass
+
+
+class Cmd(BaseCmd):
+    """
+    Subsystem to handle RTC data.
+
+    This app serves access to the config snippet(s) stored in the system's
+    RTC chip.
+    """
+
+    doc = dict(_c=dict(_d="RTC access"))
+
+    doc_r = dict(_d="read data", p="path", _r="parts")
+
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self._data = {}
+
+    async def stream_r(self, msg: Msg):
+        """
+        Read (part of) the RTC data area.
+
+        As data are frequently too clunky to transmit in one go, this code
+        interrogates the state step-by-step.
+
+        Args:
+            0(str): the config entry.
+            1(Path): the path to access within the entry.
+
+        If the accessed item is a dict, return data consists of a dict
+        (simple keys and their values) and a list (keys for complex
+        values).
+
+        Same for a list.
+
+        RTC.get() is called when the path is empty, otherwise the cached
+        value is used.  Keyword args are passed to it.
+        """
+        # This is a stream command because it returns the enc_part output
+        # as multi-element return values.
+        n = msg.kw.pop("n")
+        p = msg.kw.pop("p", ())
+
+        print("*** GET", n, p, file=sys.stderr)
+
+        try:
+            if not p:
+                self._data[n] = res = await RTC.get(n, **msg.kw)
+            else:
+                res = get_part(self._data[n], p)
+            res = enc_part(res)
+            if isinstance(res, (list, tuple)):
+                await msg.result(*res)
+            else:
+                await msg.result(res)
+        except KeyError as exc:
+            raise ExpKeyError(*exc.args) from None
+
+    doc_w = dict(_d="write data", _0="str:name", _1="path:pos", d="any:deletes if missing")
+
+    async def stream_w(self, msg: Msg):
+        """
+        Write to the cached data.
+
+        As data are frequently too large to transmit in one go, this code
+        updates the state step-by-step.
+
+        Args:
+            0(str): the config entry.
+            1(Path): the path to access within the entry.
+            d(Any): data.
+
+        If the path is empty, the cached data is replaced/dropped depending
+        on whether *d* is `NotGiven`.
+
+        This method does not write to RTC. Use :meth:`cmd_x` for that.
+        """
+        print("**SET", msg)
+        n = msg.kw.pop("n")
+        p = msg.kw.pop("p", ())
+        d = msg.kw.pop("d", NotGiven)
+        keep = msg.kw.pop("keep", False)
+
+        print("**SET", n, self._data.get(n, None), p, d, keep)
+        if not p:
+            if d is NotGiven:
+                del self._data[n]
+            else:
+                self._data[n] = d
+        else:
+            set_part(self._data.setdefault(n, {}), p, d)
+
+    doc_x = dict(_d="activate data")
+
+    async def cmd_x(self, n: str, **kw):
+        """
+        Write the current cache entry with this name to RTC.
+
+        If no such entry exists, the datum is deleted from RTC.
+
+        This command replaces the RTC config if the name "rtc" is written.
+        It updates (not replaces) the global config if "cfg" is written.
+
+        """
+        d = self._data.pop(n, NotGiven)
+        res = await RTC.set(n, d, **kw)
+        if d is not NotGiven:
+            if n == "rtc":
+                RTC.init(d)
+            elif n == "cfg":
+                merge(self.root.cfg, d, replace=True)
+                await self.root.reload()
+        return res
+
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
+        """
+        Handler override for adding the name to the path
+        """
+        if len(rcmd) == 2 and rcmd[1][-1] != "_" and rcmd[0] in "rwx" and "n" not in msg:
+            msg.kw["n"] = rcmd.pop()
+        await super().handle(msg, rcmd)

@@ -29,12 +29,12 @@ class Cmd(_Cmd):
         """
         Set/return a MoaT state var.
         """
-        from rtc import get_rtc, set_rtc  # noqa: PLC0415
+        from moat.micro.rtc import RTC  # noqa: PLC0415
 
         if v is not None:
-            set_rtc(k, v, fs=fs)
+            RTC.set_sync(k, v, fs=fs)
         else:
-            return get_rtc(k, fs=fs)
+            return RTC.get_sync(k, fs=fs, default=None)
 
     doc_mem = dict(
         _d="memory info",

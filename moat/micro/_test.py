@@ -167,6 +167,10 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None, **kw)
     async with ctx_as(temp_dir, temp):
         if isinstance(cfg.app, str):
             cfg = attrdict(app=cfg)
+        if "rtc" in cfg:
+            from moat.micro.rtc import RTC  # noqa:PLC0415
+
+            RTC.init(cfg["rtc"])
         stack = RootCmd(cfg, **kw)
         async with stack:
             yield stack

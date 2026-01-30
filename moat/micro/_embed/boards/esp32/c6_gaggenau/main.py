@@ -19,10 +19,10 @@ except ImportError:
 
 import network
 from mplex import Multiplex
-from rtc import get_rtc as _get_rtc
-from rtc import set_rtc as rtc_set
 
 from machine import Pin
+
+from moat.micro.rtc import RTC
 
 # Network configuration
 
@@ -95,10 +95,7 @@ B_0 = const(7)
 
 def rtc(name, default):
     "read rtc state"
-    res = _get_rtc(name)
-    if res is None:
-        res = default
-    return res
+    return RTC.get_sync(name, default=default)
 
 
 class Gaggenau:
@@ -123,7 +120,7 @@ class Gaggenau:
         self.t_wifi_last = ticks_ms()
 
         if rtc("wifi", False):
-            rtc_set("wifi", False)
+            RTC.set_sync("wifi", False)
             self.wifi_do = True
             wifi(True)
 
@@ -147,7 +144,7 @@ class Gaggenau:
     def light(self, val):
         "Light state"
         self._light(not val)
-        rtc_set("light", val)
+        RTC.set_sync("light", val)
 
     @property
     def fan(self):
@@ -158,7 +155,7 @@ class Gaggenau:
     def fan(self, val):
         "Fan state"
         self._fan(not val)
-        rtc_set("fan", val)
+        RTC.set_sync("fan", val)
 
     def run(self):
         "Run loop"
@@ -209,7 +206,7 @@ class Gaggenau:
                     wifi(None)
                     self.wifi_do = False
                     self.mp[B_Fn] = False
-                    rtc_set("wifi", False)
+                    RTC.set_sync("wifi", False)
                     self.t_wifi_last = None
                 else:
                     wifi(self.cfg["wlan"])
@@ -244,7 +241,7 @@ class Gaggenau:
                 self.mp[B_Fn] = True
                 if self.t_wifi_ok is not None and ticks_diff(tm, self.t_wifi_last) > 30000:
                     self.t_wifi_ok = None
-                    rtc_set("wifi", True)
+                    RTC.set_sync("wifi", True)
 
 
 if rtc("run", True):

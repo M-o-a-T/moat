@@ -52,7 +52,11 @@ def go(state=None, cmd=True):
     import sys as sys  # noqa: PLC0415
     import time  # noqa: PLC0415
 
-    from rtc import get_rtc, set_rtc  # noqa: PLC0415
+    from moat.micro.rtc import RTC  # noqa: PLC0415
+
+    RTC.init({
+        "use": ["mem", {"name": "fs", "dest": "moat.data", "direct": {"state": "moat.state"}}]
+    })
 
     import machine  # noqa: PLC0415
 
@@ -70,7 +74,7 @@ def go(state=None, cmd=True):
         ("std", "moat.cfg"),
     ]
     if state is None:
-        state = get_rtc("state")
+        state = RTC.get_sync("state", default=None)
     if state is None:
         for st, fn in states:
             try:
@@ -90,7 +94,8 @@ def go(state=None, cmd=True):
         except ValueError:
             new_state = state
 
-    set_rtc("state", new_state)
+    if state != new_state:
+        RTC.set_sync("state", new_state)
     if state == "skip":
         log("MoaT state: %r", state)
         return True
@@ -118,8 +123,8 @@ def go(state=None, cmd=True):
 
     print("Start MoaT:", repr(state), file=sys.stderr)
 
-    from moat.lib.micro import at  # noqa: PLC0415
     from moat.micro.main import main, wr_exc  # noqa: PLC0415
+    from moat.micro.rtc import at  # noqa: PLC0415
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 
@@ -145,7 +150,7 @@ def go(state=None, cmd=True):
         at("main3", i)
         print("MoaT stopped, mode is 'skip'", file=sys.stderr)
         # because the watchdog might kill us
-        set_rtc("state", "skip")
+        RTC.set_sync("state", "skip")
 
     except SystemExit as exc:
         at("main4", i)
@@ -170,7 +175,7 @@ def go(state=None, cmd=True):
             sys.exit(1)
 
         new_state = "safe"
-        set_rtc("state", new_state)
+        RTC.set_sync("state", new_state)
 
         log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)
         time.sleep_ms(1000)

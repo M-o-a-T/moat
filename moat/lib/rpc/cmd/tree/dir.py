@@ -89,25 +89,42 @@ class CfgStore(SubStore):
         the config, by calling the ``x`` command.
         """
 
-        async def _set(p, c):
+        async def _set(p, c, empty: bool = False):
             # current client cfg
-            try:
-                ocd = await self.sd.r(p=p)
-                if isinstance(ocd, (list, tuple)):
-                    ocd, ocl = ocd
-                else:
-                    ocl = ()
-            except KeyError:
+            if not empty:
+                try:
+                    ocd = await self.sd.r(p=p)
+                    if isinstance(ocd, (list, tuple)):
+                        ocd, ocl = ocd
+                    else:
+                        ocl = ()
+                except (KeyError, IndexError):
+                    empty = True
+            if empty:
                 ocd = {}
                 ocl = []
-                await self.sd.w(p, d={})
-            for k, v in c.items():
+            for k, v in c.items() if isinstance(c, dict) else enumerate(c):
                 if isinstance(k, str) and k.startswith("_"):
                     continue
-                if isinstance(v, dict):
-                    await _set(p + (k,), v)
-                elif ocd.get(k, _NotGiven) != v:
-                    await self.sd.w(p + (k,), d=v)
+                if isinstance(v, (dict, list)):
+                    if isinstance(c, list) or isinstance(ocd, list):
+                        if isinstance(ocd, dict) and not empty:
+                            await _set(p, [])
+                            ocd = []
+                        if k is None:
+                            k = len(ocd)  # noqa:PLW2901
+                    if empty or not v:
+                        await self.sd.w(p + (k,), d=type(v)())
+                    if v:
+                        await _set(p + (k,), v, empty=empty)
+                elif isinstance(ocd, dict):
+                    if ocd.get(k, _NotGiven) != v:
+                        await self.sd.w(p + (k,), d=v)
+                elif isinstance(ocd, list):
+                    if len(ocd) <= k or ocd[k] != v:
+                        await self.sd.w(p + (k,), d=v)
+                else:
+                    raise ValueError(f"Orig is {ocd!r}")  # noqa:TRY004
 
             if not replace:
                 return

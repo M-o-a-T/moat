@@ -69,6 +69,7 @@ as_proxy("_FxErr", FileExistsError)
 
 as_proxy("_KyErr", KeyError)
 as_proxy("_EKyErr", ExpKeyError)
+as_proxy("_IdxErr", IndexError)
 as_proxy("_AtErr", AttributeError)
 as_proxy("_EAtErr", ExpAttrError)
 as_proxy("_NiErr", NotImplementedError)

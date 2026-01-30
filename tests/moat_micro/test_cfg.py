@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from moat.util import NotGiven, to_attrdict
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.micro._test import mpy_stack
 
 pytestmark = pytest.mark.anyio
@@ -78,7 +78,11 @@ tt:
 @pytest.mark.parametrize("local", [True, False])
 async def test_cfg(tmp_path, local: bool):
     "test config updating"
-    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("c" if local else "r.c")) as cfg:
+    async with (
+        mpy_stack(tmp_path, CFG) as d,
+        d.sub_at(P("c" if local else "r.c")) as cfx,
+        cfx.cfg_at(Path()) as cfg,
+    ):
         cf = to_attrdict(await cfg.get())
         assert cf.tt.a == "b"
         cf.tt.a = "x"
@@ -92,3 +96,12 @@ async def test_cfg(tmp_path, local: bool):
         assert cf.tt.e.f == 42
         assert cf.tt.x == "y"
         assert "z" not in cf.tt
+
+        await cfg.set({"ta": []})
+        await cfx.w(P("ta:0"), "One")
+        await cfx.w(P("ta:n"), "Two")
+        await cfx.w(P("ta:2"), "Three")
+        cf = to_attrdict(await cfg.get(again=True))
+        assert cf.ta == ["One", "Two", "Three"]
+        with pytest.raises(IndexError):
+            await cfx.w(P("ta:4"), "Five")

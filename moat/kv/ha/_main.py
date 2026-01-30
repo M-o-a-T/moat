@@ -250,17 +250,13 @@ for _v in _types.values():
     "set",
     help="""Add or modify a device.
 
-Boolean states can be set with "-o NAME" and cleared with "-o -name".
-Others can be set with "-o NAME=VALUE" (string), "-O NAME=VALUE" (evaluated),
-or "-O NAME=.VALUE" (split by dots or slashes).
-
 Known types: {}
 """.format(" ".join(_types.keys())),
 )
 @click.pass_obj
 @attr_args
 @click.option("-L", "--list-options", is_flag=True, help="List possible options")
-@click.option("-p", "--plus", multiple=True, help="Add a sub-option")
+@click.option("-a", "--plus", multiple=True, help="Add a sub-option")
 @click.option(
     "-f",
     "--force",

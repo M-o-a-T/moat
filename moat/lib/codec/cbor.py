@@ -10,13 +10,9 @@ import ruyaml as yaml
 
 from moat.lib.micro import const
 
-from ._cbor import Codec, Tag  # noqa:F401
+from ._cbor import Codec, Tag, CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER  # noqa:F401
 
 SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
-
-CBOR_TAG_CBOR_FILEHEADER = const(55799)  # single CBOR content
-CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
-
 
 def _tag_repr(dumper, data):
     return dumper.represent_list([XTag(data.tag), data.value])

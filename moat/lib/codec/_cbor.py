@@ -29,7 +29,11 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-__all__ = ["Codec", "ExtraData", "Tag"]
+__all__ = ["Codec", "ExtraData", "Tag", "CBOR_TAG_CBOR_FILEHEADER", "CBOR_TAG_CBOR_LEADER"]
+
+
+CBOR_TAG_CBOR_FILEHEADER = const(55799)  # single CBOR content
+CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
 
 
 class Tag:

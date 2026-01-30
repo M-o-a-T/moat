@@ -236,27 +236,34 @@ class Transfer(BaseCmd):
 
     async def task(self):
         "Step tasks runner"
-        async with TaskGroup() as self.tg:
-            for i, step in enumerate(self.cfg["s"]):
-                s = _Step(self, i, step)
-                if self.steps:
-                    self.steps[-1].q.add(s)
-                self.steps.append(s)
+        while True:
+            # TG gets cancelled when reloading
+            async with TaskGroup() as self.tg:
+                for i, step in enumerate(self.cfg["s"]):
+                    s = _Step(self, i, step)
+                    if self.steps:
+                        self.steps[-1].q.add(s)
+                    self.steps.append(s)
 
-            for s in self.steps[::-1]:
-                self.tg.start_soon(s.run)
-            for s in self.steps:
-                await s.is_ready()
-            if L:
-                self.set_ready()
+                for s in self.steps[::-1]:
+                    self.tg.start_soon(s.run)
+                for s in self.steps:
+                    await s.is_ready()
+                if L:
+                    self.set_ready()
 
-            t = self.cfg.get("t", None)
-            if t is None:
-                await idle()
-            else:
-                async for _ in every_ms(t):
-                    self.t_last = ticks_ms()
-                    await self.steps[0]()
+                t = self.cfg.get("t", None)
+                if t is None:
+                    await idle()
+                else:
+                    async for _ in every_ms(t):
+                        self.t_last = ticks_ms()
+                        await self.steps[0]()
+
+    async def reload(self):
+        "restart"
+        super().reload()
+        self.tg.cancel()
 
     async def cont(self, i, a, kw):
         "Data forwarding"

@@ -73,6 +73,7 @@ class PID(BaseCmd):
         """
         Run a PID step.
         """
+        self.val_in = val
         self.split = s = self.pid.integrate(val, t=t)
         if self.sn is not None:
             RTC[self.sn] = self.pid.state

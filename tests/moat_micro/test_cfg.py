@@ -63,7 +63,7 @@ app:
 
     link: *link
     log:
-      txt: "TH"
+      txt: "!TH"
   # log_rel:
   #   txt: "TR"
 

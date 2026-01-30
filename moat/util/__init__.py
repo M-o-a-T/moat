@@ -48,6 +48,7 @@ _imports = {
     "srepr": "misc",
     "val2pos": "misc",
     "wait_complain": "misc",
+    "de_async": "misc",
     # pp
     "pop_kw": "pp",
     "push_kw": "pp",

@@ -52,13 +52,16 @@ class Cmd(BaseCmd):
                     await msg.send(*m.args, **m.kw)
         await msg.result(*msg.args, **msg.kw)
 
-    async def task(self):  # noqa:D102
+    async def task(self):
+        """
+        Sender task. Counts and sends.
+        """
         if (p := self.cfg.get("p", None)) is None:
             return await super().task()
         async with self.root.sub_at(p) as sub:
-            self.set_ready()
             if self.cfg.get("s", False):
                 async with sub.stream() as msg:
+                    self.set_ready()
                     await self._do(msg.send)
             else:
                 self.set_ready()

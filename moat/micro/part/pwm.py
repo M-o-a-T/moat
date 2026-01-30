@@ -98,13 +98,22 @@ class PWM(BaseCmd):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError("Pin not set")  # noqa:TRY004
+        self._load()
+        self.evt = Event()
+
+    def _load(self):
+        cfg = self.cfg
         self.min = cfg.get("min", self.min)
         self.max = cfg.get("max", self.max)
         self.vmin = cfg.get("vmin", self.vmin)
         self.vmax = cfg.get("vmax", self.vmax)
         self.base = cfg.get("base", self.base)
         self.so = self.cfg.get("so", False)
-        self.evt = Event()
+
+    async def reload(self):
+        "reload from config"
+        self._load()
+        await super().reload()
 
     async def setup(self):  # noqa:D102
         await super().setup()

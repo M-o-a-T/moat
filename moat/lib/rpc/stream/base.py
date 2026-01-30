@@ -72,7 +72,7 @@ def B_FL_NAME(flag):
 
 def B_ERR_NAME(err):
     "stringify message errors"
-    if isinstance(err, Exception):
+    if not isinstance(err, int):
         return repr(err)
     if err >= 0:
         return f"S+{err}"

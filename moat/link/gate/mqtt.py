@@ -112,11 +112,17 @@ class Gate(_Gate):  # noqa: D101
             except (ValueError, KeyError):
                 self.logger.error("No codec: %s %r", path, data)
                 return
-            res = cd.enc_value(data)
-            if isinstance(res, (str, bytes, bytearray)):
-                await self.link.send(self.cf.dst + path, res, retain=True, codec="noop", meta=meta)
+            try:
+                res = cd.enc_value(data)
+            except Exception as exc:
+                self.logger.error("Encode: %s %r: %r", path, data, exc)
             else:
-                self.logger.error("Bad codec: %s %r > %r", path, data, res)
+                if isinstance(res, (str, bytes, bytearray)):
+                    await self.link.send(
+                        self.cf.dst + path, res, retain=True, codec="noop", meta=meta
+                    )
+                else:
+                    self.logger.error("Bad codec: %s %r > %r", path, data, res)
 
         else:
             await self.link.send(

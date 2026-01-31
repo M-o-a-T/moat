@@ -40,6 +40,8 @@ class _Step:
     One transfer step.
 
     A step has an input (it's called, async) and an output (its set of queues).
+    The `si` and `so` flags control streaming, viewed *as by the app*, i.e.
+    "stream in" means "we send data to it in a stream"
 
     Four cases:
     - si=so=False:

@@ -22,7 +22,7 @@ def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
         if replace and not isinstance(value, (Mapping, Sequence)):
             d[key] = value
             continue
-        _merge_one(d[key], value, drop=drop, replace=replace)
+        d[key] = _merge_one(d[key], value, drop=drop, replace=replace)
 
     if drop:
         keys = []

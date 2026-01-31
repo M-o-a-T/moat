@@ -4,8 +4,6 @@ Broadcasting support
 
 from __future__ import annotations
 
-from attrs import define, field
-
 from moat.util import NotGiven, Queue
 from moat.lib.micro import EndOfStream, WouldBlock
 
@@ -17,7 +15,7 @@ if TYPE_CHECKING:
 try:
     from weakref import WeakSet
 except ImportError:
-    WeakSet = set  # type:ignore[invalid-assignment]
+    WeakSet = set  # type:ignore[assignment]
 
 TData = TypeVar("TData")
 
@@ -48,7 +46,6 @@ class LostData(Exception):
         self.n = n
 
 
-@define
 class BroadcastReader(Generic[TData]):
     """
     The read side of a broadcaster.
@@ -62,18 +59,21 @@ class BroadcastReader(Generic[TData]):
     Call this object to inject a value.
     """
 
-    parent: Broadcaster = field()
-    length: int = field(default=1)
-    skip: bool = field(default=False)
-    value: TData = field(default=NotGiven, init=False)  # type: ignore[assignment]
+    def __init__(
+        self,
+        parent: Broadcaster,
+        length: int = 1,
+        skip: bool = False,
+    ) -> None:
+        self.parent = parent
+        self.length = length
+        self.skip = skip
+        self.value: TData = NotGiven
+        self.loss: int = 0
 
-    loss: int = field(init=False, default=0)
-    _q: Queue = field(init=False, repr=False)
-
-    def __attrs_post_init__(self) -> None:
         if self.length <= 0:
             raise RuntimeError("Length must be at least one")
-        self._q = Queue(self.length)
+        self._q: Queue = Queue(self.length)
 
     def __hash__(self) -> int:
         return id(self)
@@ -139,7 +139,6 @@ class BroadcastReader(Generic[TData]):
         self.close()
 
 
-@define
 class Broadcaster(Generic[TData]):
     """
     A simple broadcaster. Messages will be sent to all readers.
@@ -195,11 +194,15 @@ class Broadcaster(Generic[TData]):
 
     """
 
-    length: int = field(default=1)
-    send_last: bool = field(default=False)
-
-    _rdr: WeakSet[BroadcastReader] | None = field(init=False, default=None, repr=False)
-    value: TData = field(init=False, default=NotGiven)  # type: ignore[assignment]
+    def __init__(
+        self,
+        length: int = 1,
+        send_last: bool = False,
+    ) -> None:
+        self.length = length
+        self.send_last = send_last
+        self._rdr: WeakSet[BroadcastReader] | None = None
+        self.value: TData = NotGiven
 
     def open(self) -> Self:
         """Open the broadcaster.

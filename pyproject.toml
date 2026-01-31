@@ -177,11 +177,6 @@ ignore = [
 
 explicit-preview-rules = true
 
-[tool.ruff.lint.isort.sections]
-moat = ["moat"]
-upy = ["asyncio","esp","machine","micropython"]
-typing = ["typing","collections"]
-
 [tool.ruff.lint.extend-per-file-ignores]
 "moat/micro/_embed/**" = ["SIM105","B904"]
 "moat/mqtt/**" = ["E501","UP031"]
@@ -211,6 +206,11 @@ section-order = [
 ]
 extra-standard-library = ["anyio","pytest"]
 force-to-top = ["moat.util"]
+
+[tool.ruff.lint.isort.sections]
+moat = ["moat"]
+upy = ["asyncio","esp","machine","micropython"]
+typing = ["typing","collections"]
 
 [tool.coverage.run]
 branch = true

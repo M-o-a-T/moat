@@ -91,11 +91,11 @@ class DirectREPL(SingleAnyioBuf):
                 if not started:
                     logger.debug("Flushing…")
                     started = True
-                b = (b + res)[-200:]
+                b = b + res  # [-200:]
                 continue
             break
         if b:
-            logger.debug("Flush: IN %r", b)
+            logger.debug("Flush: IN\n%s", b.decode("utf-8"))
         self.srbuf._buffer = bytearray()  # noqa:SLF001 pylint: disable=protected-access
 
     def _parse_error(self, text):

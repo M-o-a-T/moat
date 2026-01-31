@@ -4,9 +4,9 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-# Typing
+from moat.util import NotGiven
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any
@@ -32,17 +32,28 @@ def get_part(cur, p: list[str | int], add: bool = False):
     return cur
 
 
-def set_part(cur, p: list[str | int], v: Any):
+def set_part(cur, p: list[str | int], v: Any, keep: bool = False):
     "Modify a mapping or object structure"
     cur = get_part(cur, p[:-1], add=True)
     pp = p[-1]
-    try:
-        cur[pp] = v
-    except TypeError:
-        if pp is None or (isinstance(pp, int) and len(cur) == pp):
-            cur.append(v)
-        else:
-            setattr(cur, pp, v)
+
+    if v is NotGiven and not keep:
+        try:
+            cur.pop(pp, None)
+        except (TypeError, AttributeError):
+            if pp is None or (isinstance(pp, int) and len(cur) == pp):
+                cur.pop()
+            else:
+                cur.remove(pp)
+
+    else:
+        try:
+            cur[pp] = v
+        except (TypeError, AttributeError):
+            if pp is None or (isinstance(pp, int) and len(cur) == pp):
+                cur.append(v)
+            else:
+                setattr(cur, pp, v)
 
 
 def enc_part(cur, name=None) -> tuple[Any, tuple | None] | Any:

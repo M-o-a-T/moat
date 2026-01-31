@@ -114,15 +114,15 @@ class CfgStore(SubStore):
                         if k is None:
                             k = len(ocd)  # noqa:PLW2901
                     if empty or not v:
-                        await self.sd.w(p=p + (k,), d=type(v)())
+                        await self.sd.w(p=p + (k,), d=type(v)(), keep=True)
                     if v:
                         await _set(p + (k,), v, empty=empty)
                 elif isinstance(ocd, dict):
                     if ocd.get(k, _NotGiven) != v:
-                        await self.sd.w(p=p + (k,), d=v)
+                        await self.sd.w(p=p + (k,), d=v, keep=True)
                 elif isinstance(ocd, list):
                     if len(ocd) <= k or ocd[k] != v:
-                        await self.sd.w(p=p + (k,), d=v)
+                        await self.sd.w(p=p + (k,), d=v, keep=True)
                 else:
                     raise ValueError(f"Orig is {ocd!r}")  # noqa:TRY004
 

@@ -50,10 +50,9 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     if type(cfg) is dict:
         cfg = to_attrdict(cfg)
 
-    if "rtc" in cfg:
-        from moat.micro.rtc import RTC  # noqa:PLC0415
+    from moat.micro.rtc import RTC  # noqa:PLC0415
 
-        RTC.init(cfg["rtc"])
+    RTC.init(cfg.get("rtc", {}))
 
     # Update config from RTC memory, if present
     if not i["fb"]:

@@ -34,8 +34,11 @@ class _RTC:
     backends: list[RTCBase]
     root = None
 
+    def __repr__(self):
+        return "<RTC>"
+
     def init(self, cfg: dict | None = None):
-        self.cfg = cfg or {"use": ["rtc", "fs"]}
+        self.cfg = cfg or {"use": ["mem", "fs"]}
         self._be = {}
         self._setup()
 
@@ -70,7 +73,20 @@ class _RTC:
                     if "." not in m:
                         m = mp + m
 
-                    be = __import__(m, globals(), None, ("RTC",), 0).RTC(c)  # RTCBase instance
+                    cls = __import__(m, globals(), None, ("RTC",), 0).RTC
+                    be = cls(c)  # RTCBase instance
+                    if be.is_ASYNC is False:
+                        be.is_ASYNC = None
+                    elif be.is_ASYNC is None:
+                        be.is_ASYNC = True
+                        self._be[n] = be
+                        bes.append(be)
+                        nbe.discard(n)
+                        be = cls(c)  # RTCBase instance
+                        be.is_ASYNC = False
+                        n += "_sync"
+                        be.cfg["name"] = n
+
                 except Exception as exc:
                     if err:
                         raise
@@ -91,15 +107,6 @@ class _RTC:
         State accessor.
         """
         return State(self, name)
-
-    async def all(self):
-        """
-        Get all data from the first sync backend.
-        """
-        for be in self.backends:
-            if be.is_SYNC:
-                return await be.all()
-        return {}
 
     def get_sync(self, name, fs=None, default=NotGiven):
         """
@@ -149,10 +156,11 @@ class _RTC:
         for be in self.backends:
             if fs is (not be.is_FS):
                 continue
-            if sync and not be.is_SYNC:
+            if be.is_ASYNC is sync:
                 continue
             try:
-                return await be.get(name)
+                res = await be.get(name)
+                return res
             except KeyError:
                 pass
             except NotSync:
@@ -195,7 +203,7 @@ class _RTC:
             return
 
         for be in self.backends:
-            if sync and not be.is_SYNC:
+            if be.is_ASYNC is sync:
                 continue
             try:
                 if fs is (not be.is_FS):
@@ -251,20 +259,35 @@ class RTCBase:
     Class variables:
         is_FS: This class accesses a (Flash) file system, thus should not be
                write often (if at all).
-        is_SYNC: The implementation does not yield.
-                 If `None`, the ``sync`` config value can be used to choose.
+        is_ASYNC: Flag whether the implementation yields, i.e. cannot
+                  be called synchronously.
+                  If `None`, the loader shall create both a
+                  sync and an async version.
     """
 
     is_FS: ClassVar[bool] = False
-    is_SYNC: bool | None = None
+    is_ASYNC: bool | None = None
 
     def __init__(self, cfg):
         self.cfg = cfg
         sync = cfg.get("sync", None)
-        if self.is_SYNC is None:
-            self.is_SYNC = sync or False
-        elif sync is not None and sync != self.is_SYNC:
+        if self.is_ASYNC is None:
+            self.is_ASYNC = sync
+        elif sync is (not self.is_ASYNC):
             raise ValueError("Sync settings don't match")
+
+    def __repr__(self):
+        return f"<{self._name}>"
+
+    @property
+    def _name(self):
+        try:
+            return self.cfg["name"]
+        except KeyError:
+            try:
+                return self.cfg["mod"]
+            except KeyError:
+                return self.__class__.__name__
 
     async def get(self, name: str) -> Any:
         """

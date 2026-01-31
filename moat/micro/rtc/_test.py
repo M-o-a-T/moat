@@ -16,14 +16,10 @@ class RTC(RTCBase):
     Fake RTC backend for testing.
 
     Stores data in memory. Behaves like mem.py but without hardware.
-
-    Class variables:
-        is_FS: False - this does not use the file system
-        is_SYNC: True - all operations are synchronous
     """
 
     is_FS = False
-    is_SYNC = True
+    is_ASYNC = False
 
     def __init__(self, cfg=None):
         if cfg is None:

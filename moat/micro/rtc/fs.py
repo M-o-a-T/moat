@@ -24,14 +24,10 @@ class RTC(RTCBase):
     Stores data in a CBOR file at cfg["dest"] (default: "moat.data").
     Supports direct file mapping via cfg["direct"] (key→filename dict):
     values for these keys must be strings and are written directly to files.
-
-    Class variables:
-        is_FS: True - this uses the file system
-        is_SYNC: None - configurable via cfg["sync"]
     """
 
     is_FS = True
-    is_SYNC = None  # configurable
+    is_ASYNC = None  # configurable
 
     def __init__(self, cfg):
         super().__init__(cfg)

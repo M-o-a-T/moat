@@ -29,14 +29,10 @@ class RTC(RTCBase):
     Uses machine.RTC().memory for hardware access.
     Data is stored as a CBOR-encoded dict tagged with CBOR_TAG_CBOR_FILEHEADER.
     Loads on init, saves on every write.
-
-    Class variables:
-        is_FS: False - this does not use the file system
-        is_SYNC: True - all operations are synchronous
     """
 
     is_FS = False
-    is_SYNC = True
+    is_ASYNC = False
 
     def __init__(self, cfg):
         super().__init__(cfg)

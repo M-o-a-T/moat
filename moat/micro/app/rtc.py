@@ -4,8 +4,6 @@ RTC access
 
 from __future__ import annotations
 
-import sys
-
 from moat.util import NotGiven, enc_part, get_part, merge, set_part
 from moat.lib.rpc import BaseCmd
 from moat.micro.rtc import RTC
@@ -116,11 +114,11 @@ class Cmd(BaseCmd):
         keep = msg.kw.pop("keep", False)
         if not p:
             if d is NotGiven:
-                del self._data[n]
+                self._data.pop(n, None)
             else:
                 self._data[n] = d
         else:
-            set_part(self._data.setdefault(n, {}), p, d)
+            set_part(self._data.setdefault(n, {}), p, d, keep=keep)
 
     doc_x = dict(_d="activate data")
 
@@ -146,7 +144,9 @@ class Cmd(BaseCmd):
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """
-        Handler override for adding the name to the path
+        Handler override for adding the name to the path.
+
+        rcmd is reversed, so rtc.cfg.w arrives as ["w", "cfg"]
         """
         if len(rcmd) == 2 and rcmd[1][-1] != "_" and rcmd[0] in "rwx" and "n" not in msg:
             msg.kw["n"] = rcmd.pop()

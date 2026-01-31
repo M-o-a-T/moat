@@ -23,14 +23,10 @@ class RTC(RTCBase):
 
     Provides remote access to RTC data via self.root.sub_at(self.cfg["path"]).
     This backend is asynchronous and cannot be used in synchronous contexts.
-
-    Class variables:
-        is_FS: False - this does not directly use the file system
-        is_SYNC: False - all operations are asynchronous
     """
 
     is_FS = False
-    is_SYNC = False
+    is_ASYNC = True
 
     def __init__(self, cfg):
         super().__init__(cfg)

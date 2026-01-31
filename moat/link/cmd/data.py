@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import anyio
 import sys
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 
 import asyncclick as click
 
@@ -115,10 +115,11 @@ async def list_(obj, **k):
 @cli.command("set", short_help="Add or update an entry")
 @attr_args
 @click.option("-r", "--retain", is_flag=True, help="Retain the result")
+@click.option("-f", "--force", is_flag=True, help="Ignore existing data")
 @click.option("-o", "--one-shot", "one", is_flag=True, help="Do not retain the result")
 @click.option("-y", "--yaml", is_flag=True, help="read YAML data from stdin")
 @click.pass_obj
-async def set_(obj, yaml, one, retain, **kw):
+async def set_(obj, yaml, one, retain, force, **kw):
     """
     Store a value at some MoaT-Link position.
 
@@ -128,10 +129,10 @@ async def set_(obj, yaml, one, retain, **kw):
         if kw.get("retain", False):
             raise click.UsageError("--retain and --one-shot are opposites.")
         kw["retain"] = False
-    try:
-        d = await obj.conn.d_get(obj.path)
-    except KeyError:
-        d = {}
+    d = {}
+    if not force:
+        with suppress(KeyError):
+            d = await obj.conn.d_get(obj.path)
     if yaml:
         d = combine_dict(yload(sys.stdin), d)
     d = process_args(d, **kw)

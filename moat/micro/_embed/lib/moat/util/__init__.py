@@ -1,12 +1,15 @@
 """
 A hacked-up copy of some parts of `moat.util`.
 """
+# ruff: noqa: E402
 
 from __future__ import annotations
 
 from copy import deepcopy
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
+
+NotGiven = Ellipsis
 
 from moat.lib.micro import Event, log
 from moat.lib.path import Path
@@ -30,9 +33,6 @@ if TYPE_CHECKING:
 
 class OutOfData(EOFError):  # noqa: D101
     pass
-
-
-NotGiven = Ellipsis
 
 
 class CancelledError(Exception):

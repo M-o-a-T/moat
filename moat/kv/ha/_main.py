@@ -187,6 +187,7 @@ _types = {
             "state_topic",
         ),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
+        step=(float, None, "Step", "step"),
         cls=(str, None, "Device class", "device_class"),
         icon=(str, None, "Device icon", "icon"),
         min=(float, None, "minimum value", "min"),

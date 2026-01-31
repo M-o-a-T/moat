@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import anyio
+import sys
 from contextlib import nullcontext
 
 import asyncclick as click
 
-from moat.util import MsgReader, NotGiven, yprint
+from moat.util import MsgReader, NotGiven, combine_dict, yload, yprint
 from moat.lib.path import P
-from moat.lib.run import attr_args
-from moat.link._data import data_get, node_attr
+from moat.lib.run import attr_args, process_args
+from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
 
@@ -115,20 +116,28 @@ async def list_(obj, **k):
 @attr_args
 @click.option("-r", "--retain", is_flag=True, help="Retain the result")
 @click.option("-o", "--one-shot", "one", is_flag=True, help="Do not retain the result")
+@click.option("-y", "--yaml", is_flag=True, help="read YAML data from stdin")
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, yaml, one, retain, **kw):
     """
     Store a value at some MoaT-Link position.
 
     Use '--set : VALUE' if you want to set a non-dict element.
     """
-    one = kw.pop("one", False)
     if one:
         if kw.get("retain", False):
             raise click.UsageError("--retain and --one-shot are opposites.")
         kw["retain"] = False
-    res = await node_attr(obj, obj.path, **kw)
-
+    try:
+        d = await obj.conn.d_get(obj.path)
+    except KeyError:
+        d = {}
+    if yaml:
+        d = combine_dict(yload(sys.stdin), d)
+    d = process_args(d, **kw)
+    res = await obj.conn.d_set(
+        obj.path, d, retain=True if retain else False if one else None, meta=obj.meta
+    )
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

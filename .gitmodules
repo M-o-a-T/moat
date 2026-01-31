@@ -7,3 +7,6 @@
 [submodule "mpdb"]
 	path = ext/mpdb
 	url = https://github.com/M-o-a-T/mpdb.git
+[submodule "ext/dataclasses"]
+	path = ext/dataclasses
+	url = https://github.com/dhrosa/udataclasses.git

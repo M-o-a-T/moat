@@ -4,8 +4,6 @@ Broadcasting support
 
 from __future__ import annotations
 
-from weakref import WeakSet
-
 from attrs import define, field
 
 from moat.util import NotGiven, Queue
@@ -15,6 +13,11 @@ from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
     from typing import Self
+
+try:
+    from weakref import WeakSet
+except ImportError:
+    WeakSet = set  # type:ignore[invalid-assignment]
 
 TData = TypeVar("TData")
 
@@ -88,6 +91,18 @@ class BroadcastReader(Generic[TData]):
         except (AttributeError, EndOfStream, EOFError):
             raise StopAsyncIteration from None
 
+    def __enter__(self):
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    def __exit__(self, *tb) -> None:
+        self.close()
+
+    async def __aexit__(self, *tb) -> None:
+        self.close()
+
     def flush(self) -> None:
         """
         Clean the queue.
@@ -143,12 +158,7 @@ class Broadcaster(Generic[TData]):
     Writing requires a context manager (sync or async).
     Then simply call with a value.
 
-    To read, async-iterate::
-
-        async def rdr(bcr: BroadcastReader|Broadcaster):
-            async with aclosing(aiter(bcr)) as mq:
-                async for msg in mq:
-                    print(msg)
+    ::
 
         async with anyio.create_task_group() as tg, Broadcaster() as bc:
             tg.start_soon(rdr, aiter(bc))
@@ -156,6 +166,22 @@ class Broadcaster(Generic[TData]):
                 bc(x)
                 await anyio.sleep(0.01)
             bc(42)
+
+    To read, async-iterate::
+
+        async def rdr(bcr: Broadcaster):
+            async with bcr.reader() as mq:
+                async for msg in mq:
+                    print(msg)
+
+    alternately::
+
+        async def rdr(bcr: BroadcastReader|Broadcaster):
+            async with aclosing(aiter(bcr)) as mq:
+                async for msg in mq:
+                    print(msg)
+
+    Do **not** skip the *aclosing*, esp. on MicroPython.
 
     To safely re-sync, do something like this::
 
@@ -231,7 +257,7 @@ class Broadcaster(Generic[TData]):
             if not length:
                 raise ValueError("This would deadlock. Use length>0.")
             r(cast("TData", self.value))
-        return aiter(r)
+        return r
 
     def __call__(self, value: TData) -> None:
         """Enqueue a value to all readers"""

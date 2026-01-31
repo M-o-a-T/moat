@@ -4,13 +4,21 @@ PID controller.
 
 from __future__ import annotations
 
+from moat.lib.broadcast import Broadcaster
+from moat.lib.micro import TaskGroup
 from moat.lib.pid import CPID
 from moat.lib.rpc import BaseCmd
 
 try:
-    from moat.micro.rtc import state as RTC
+    from moat.micro.rtc import RTC
 except ImportError:
-    from moat.micro.rtc._test import state as RTC
+    from moat.micro.rtc._test import RTC
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import Path
+    from moat.lib.rpc import Msg, MsgSender
 
 _state_d = dict(t="int:last time", e="float:error", i="float:integral")
 _pid_d = dict(p="float:P", i="float:I", d="float:D", tf="float:Filter D")
@@ -26,7 +34,7 @@ class PID(BaseCmd):
     - i: integral gain
     - d: differential gain
     - tf: first-order filter time constant for the differential, in seconds
-    - state: name of our state storage (in RTC).
+    - state: path to our state storage (RTC protocol).
     - set: initial goal (default zero)
 
     t should be larger than the interval between inputs.
@@ -36,6 +44,8 @@ class PID(BaseCmd):
     sn: str | None
     val_in: float | None = None
     split: tuple[float, float, float] | None = None
+    state_path: Path | None = None
+    state_rtc: MsgSender | None = None
 
     doc = dict(
         _c=dict(
@@ -60,6 +70,9 @@ class PID(BaseCmd):
                 self.pid.setpoint(setpoint)
                 return
         self.pid.setpoint(cfg.get("set", 0))
+
+        self._val_bc = Broadcaster(1)
+        self._set_bc = Broadcaster(1)
 
     doc_sw = dict(_d="update state", **_state_d)
 
@@ -92,6 +105,7 @@ class PID(BaseCmd):
         if sp is None:
             return self.pid.state.setpoint
         self.pid.setpoint(sp)
+        self._setpoint_bc(sp)
 
     doc_s = dict(
         _d="read state",
@@ -104,6 +118,20 @@ class PID(BaseCmd):
         ),
         **_state_d,
     )
+
+    async def stream_sp(self, msg: Msg):
+        "Sets/Returns the current setpoint"
+        async with msg.stream() as ms, TaskGroup() as tg:
+
+            @tg.start_soon
+            async def _sp_evt():
+                async with self._setpoint_bc.reader() as spr:
+                    async for sp in spr:
+                        await ms.send(sp)
+
+            async for m in ms:
+                self.pid.setpoint(m)
+                self._setpoint_bc(m)
 
     async def cmd_s(self, **kw):
         """
@@ -125,5 +153,6 @@ class PID(BaseCmd):
     async def reload(self):
         "reload me"
         await super().reload()
-        print(self.pid.cfg)
         self.pid.cfg_updated()
+        self.state_rtc = None
+        self.state_path = self.cfg.get("state", None)

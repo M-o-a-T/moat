@@ -78,8 +78,6 @@ class Cmd(BaseCmd):
         n = msg.kw.pop("n")
         p = msg.kw.pop("p", ())
 
-        print("*** GET", n, p, file=sys.stderr)
-
         try:
             if not p:
                 self._data[n] = res = await RTC.get(n, **msg.kw)
@@ -112,13 +110,10 @@ class Cmd(BaseCmd):
 
         This method does not write to RTC. Use :meth:`cmd_x` for that.
         """
-        print("**SET", msg)
         n = msg.kw.pop("n")
         p = msg.kw.pop("p", ())
         d = msg.kw.pop("d", NotGiven)
         keep = msg.kw.pop("keep", False)
-
-        print("**SET", n, self._data.get(n, None), p, d, keep)
         if not p:
             if d is NotGiven:
                 del self._data[n]

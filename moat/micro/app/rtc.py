@@ -32,6 +32,21 @@ class Cmd(BaseCmd):
 
     doc = dict(_c=dict(_d="RTC access"))
 
+    async def cmd(self, k=_NotGiven, v=_NotGiven):
+        """
+        Direct R/W access to RTC.
+
+        Args:
+            k: Key to access. If not given, returns all data.
+            v: Value to set. If not given, returns current value.
+        """
+        if k is _NotGiven:
+            return await RTC.all()
+        elif v is _NotGiven:
+            return await RTC.get(k)
+        else:
+            await RTC.set(k, v)
+
     doc_r = dict(_d="read data", p="path", _r="parts")
 
     def __init__(self, cfg: dict):

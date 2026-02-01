@@ -135,10 +135,7 @@ class Backend(_Backend):
         else:
             raise ValueError("empty path")
         if self.logger.isEnabledFor(logging.DEBUG):
-            t_dbg = str(topic)
-            if subtree:
-                t_dbg += ":*"  # illegal but we don't care
-            self.logger.debug("Monitor %s start", t_dbg)
+            self.logger.debug("Monitor %s%s start", topic, ":*" if subtree else "")
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine
         kw["retain_handling"] = (
@@ -150,10 +147,10 @@ class Backend(_Backend):
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
-            self.logger.exception("Monitor %s end", t_dbg, exc_info=exc)
+            self.logger.exception("Monitor %s%s end", topic, ":*" if subtree else "", exc_info=exc)
             raise
         else:
-            self.logger.debug("Monitor %s end", t_dbg)
+            self.logger.debug("Monitor %s%s end", topic, ":*" if subtree else "")
 
     @overload
     def send(

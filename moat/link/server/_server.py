@@ -283,8 +283,13 @@ class ServerClient(LinkCommon):
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.handle(msg, rpath, *sub)
 
-        if rpath and rpath[-1] == "d_":
-            msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
+        if rpath[-1] == "d_":
+            # Simple Data. If both a path vector and a `p` argument is
+            # given, concatenate them.
+            if "p" not in msg.kw:
+                msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
+            elif len(rpath) > 1:
+                msg.kw["p"] = Path.build(rpath[-2::-1]) + msg["p"]
             return msg.call_simple(self.cmd_d_)
 
         return super().handle(msg, rpath, *sub)

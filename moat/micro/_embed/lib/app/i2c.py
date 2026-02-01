@@ -16,11 +16,6 @@ import contextlib
 from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable
-
 
 class Cmd(BaseCmd):
     """
@@ -89,7 +84,7 @@ class Cmd(BaseCmd):
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
-    async def cmd_rd(self, i, n=16):
+    async def cmd_rd(self, i, n=16) -> bytes:
         "read @n bytes from bus @cd at address @i"
         async with self.lock:
             return await to_thread(self._bus.readfrom, i, n)
@@ -109,26 +104,31 @@ class Cmd(BaseCmd):
         _r="int|bytes:nbytes short-written|read result",
     )
 
-    async def cmd_wrrd(self, *a, **kw):
+    async def cmd_wrrd(self, i, buf, n=16) -> bytes:
         """
         write @buf to bus @cd at address @i, then read @n bytes.
 
         Returns -x if only x bytes could be written.
         """
-        async with self.lock:
-            return await to_thread(self._cmd_wrrd, *a, **kw)
 
-    def _cmd_wrrd(self, i, buf, n=16) -> Awaitable:
-        bus = self._bus
-        d = self._bus.writeto(i, buf, False)
-        if d < len(buf):
-            bus.stop()
-            return d
-        return self._bus.readfrom(i, n)
+        def _run() -> bytes:
+            bus = self._bus
+            d = self._bus.writeto(i, buf, False)
+            if d < len(buf):
+                bus.stop()
+                return d
+            return self._bus.readfrom(i, n)
+
+        async with self.lock:
+            return await to_thread(_run)
 
     doc_scan = dict(_d="bus scan")
 
-    async def cmd_scan(self):
-        "scan the bus"
+    async def cmd_scan(self) -> list[int]:
+        """
+        Scan the bus.
+
+        Returns: list of valid addresses.
+        """
         async with self.lock:
             return await to_thread(self._bus.scan)

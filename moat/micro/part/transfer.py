@@ -140,6 +140,7 @@ class _Step:
         if self.keep:
             ra, rkw = a, kw
         if self.si:
+            await self._ready.wait()
             await self.msg.send(*a, **kw)
             return
 

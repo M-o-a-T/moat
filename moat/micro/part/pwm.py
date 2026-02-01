@@ -79,6 +79,7 @@ class PWM(BaseCmd):
     base: int = 1000  # max for value
     evt: Event
     ps: Msg  # Data stream to the pin
+    force: int | None = None
 
     doc = dict(
         _c=dict(
@@ -216,12 +217,22 @@ class PWM(BaseCmd):
 
         return (b, a) if rev else (a, b)
 
-    def set_times(self, val: float):
+    def set_times(self, val: float, force: bool = False):
         """
         Change the on/off ratio to approximately ``val/base``.
         """
+        if val is None:
+            if not force:
+                raise ValueError(val)
+            self.force = None
+            return
+
         if val < 0 or val > self.base:
             raise ValueError(val, self.base)
+        if force:
+            self.force = val
+        else:
+            self.value = val
 
         if self.vmin is not None and val <= self.vmin:
             t_on, t_off = (0, self.max)
@@ -236,16 +247,21 @@ class PWM(BaseCmd):
         if td >= (t_on if self.is_on else t_off):
             self.evt.set()
 
-    doc_w = dict(_d="change", _0="float:new value", _i=dict(_0="float:new value"))
+    doc_w = dict(
+        _d="change",
+        _0="float|None:new value",
+        f="bool:forced value",
+        _i=dict(_0="float:new value"),
+    )
 
     async def stream_w(self, msg: Msg):
         "change ratio"
         if msg.can_stream:
             async with msg.stream_in() as md:
                 async for m in md:
-                    self.set_times(m[0])
+                    self.set_times(m[0], msg.get("f", False))
         else:
-            self.set_times(msg[0])
+            self.set_times(msg[0], msg.get("f", False))
 
     doc_s = dict(
         _d="read state",
@@ -262,7 +278,9 @@ class PWM(BaseCmd):
         """
         The current value.
         """
-        return self.base * (self.t_on / (self.t_on + self.t_off))
+        if self.force is not None:
+            return self.force
+        return self.value
 
     async def cmd_r(self) -> float:
         """
@@ -278,8 +296,10 @@ class PWM(BaseCmd):
             on=self.t_on,
             off=self.t_off,
             p=self.is_on,
-            val=self.val,
+            val=self.value,
         )
+        if self.force is not None:
+            res["force"] = self.force
         if self.t_on and self.t_off:
             res["t"] = (self.t_on if self.is_on else self.t_off) - ticks_diff(
                 ticks_ms(), self.t_last

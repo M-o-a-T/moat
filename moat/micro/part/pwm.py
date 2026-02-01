@@ -55,6 +55,8 @@ class PWM(BaseCmd):
     - so: stream_out: Flag whether to stream the pin value
     - vmin: Minimum value. Turn off if below.
     - vmax: Maximum value. Turn off if above.
+    - resync: Time (ms) to force output on/off when transitioning from
+      outside vmin/vmax back into range. Limited by actual off time.
 
     The input must be in [0..base]; the output is controlled so that
     ``t_on/(t_on+t_off) = val/base``, given that ``min <= t_on,t_off <= max``
@@ -63,6 +65,11 @@ class PWM(BaseCmd):
 
     If val is too low (or too high) such that this constraint can no longer
     be satisfied, the output is turned off (or on) permanently.
+
+    When resync is set, transitioning from below vmin back into range forces
+    the output ON for min(resync, time_was_off) milliseconds first. Similarly,
+    transitioning from above vmax forces the output OFF for that duration.
+    If the value goes back out of range during resync, resync is cancelled.
     """
 
     t_last = 0
@@ -76,10 +83,18 @@ class PWM(BaseCmd):
     max: int = 100000  # milliseconds
     vmin: int | None = None
     vmax: int | None = None
+    resync: int = 0  # resync duration in milliseconds
     base: int = 1000  # max for value
     evt: Event
     ps: Msg  # Data stream to the pin
     force: int | None = None
+
+    # Resync state tracking
+    _out_time: int = 0  # accumulated out-of-range time (capped at resync)
+    _out_on: bool | None = None  # True=above vmax (on), False=below vmin (off), None=in range
+    _resync_left: int = 0  # remaining resync time
+    _resync_on: bool | None = None  # forced state during resync (True=on, False=off)
+    _last_measure: int = 0  # timestamp of last _measure call
 
     doc = dict(
         _c=dict(
@@ -89,6 +104,7 @@ class PWM(BaseCmd):
             min="int:min T(500,ms)",
             vmax="float:max value",
             vmin="float:min value",
+            resync="int:resync time(0,ms)",
             base="float:input range 0...(1000)",
             init="float:initial value",
             so="bool:stream to pin? (no)",
@@ -108,6 +124,7 @@ class PWM(BaseCmd):
         self.max = cfg.get("max", self.max)
         self.vmin = cfg.get("vmin", self.vmin)
         self.vmax = cfg.get("vmax", self.vmax)
+        self.resync = cfg.get("resync", self.resync)
         self.base = cfg.get("base", self.base)
         self.so = self.cfg.get("so", False)
 
@@ -145,6 +162,10 @@ class PWM(BaseCmd):
         Returns: delay until the next switch, or ``None`` for
         "until the value is changed".
         """
+        # Track time delta for out-of-range accumulation
+        measure_td = ticks_diff(now, self._last_measure)
+        self._last_measure = now
+
         td = ticks_diff(now, self.t_last)
 
         async def _sw(state: bool) -> int:
@@ -158,6 +179,26 @@ class PWM(BaseCmd):
                 return self.t_on if self.t_off else None
             else:
                 return self.t_off if self.t_on else None
+
+        # Accumulate out-of-range time (capped at resync)
+        if self._out_on is not None and self.resync > 0:
+            self._out_time = min(self.resync, self._out_time + measure_td)
+
+        # Check if we're in resync mode
+        if self._resync_left > 0:
+            self._resync_left -= measure_td
+            if self._resync_left <= 0:
+                # Resync complete, resume normal operation
+                self._resync_left = 0
+                self._resync_on = None
+                self.t_last = now  # reset timing for normal PWM
+                td = 0  # recalculate since t_last changed
+            else:
+                # Still in resync: force the output state
+                if self.is_on != self._resync_on:
+                    await self.ps.send(self._resync_on)
+                    self.is_on = self._resync_on
+                return self._resync_left
 
         dly = None
         if self.t_on == 0:
@@ -240,6 +281,34 @@ class PWM(BaseCmd):
             t_on, t_off = (self.max, 0)
         else:
             t_on, t_off = self.calc_times(val)
+
+        is_below_vmin = t_on == 0 and t_off != 0
+        is_above_vmax = t_off == 0 and t_on != 0
+        is_in_range = t_on != 0 and t_off != 0
+
+        # Handle resync transitions
+        if self.resync > 0:
+            if is_in_range:
+                if self._out_on is not None and self._out_time > 0:
+                    # Transition from out-of-range to in range: start resync
+                    # _resync_on is opposite of _out_on: was off -> resync on, was on -> resync off
+                    self._resync_left = self._out_time
+                    self._resync_on = not self._out_on
+                self._out_on = None
+                self._out_time = 0
+            else:
+                # Going out of range: cancel any resync, set out state
+                self._resync_left = 0
+                self._resync_on = None
+                if is_below_vmin:
+                    if self._out_on is not False:
+                        self._out_on = False
+                        self._out_time = 0
+                elif is_above_vmax:
+                    if self._out_on is not True:
+                        self._out_on = True
+                        self._out_time = 0
+
         self.t_on = t_on
         self.t_off = t_off
 
@@ -292,6 +361,7 @@ class PWM(BaseCmd):
         """
         Returns the current state.
         """
+        now = ticks_ms()
         res = dict(
             on=self.t_on,
             off=self.t_off,
@@ -300,8 +370,11 @@ class PWM(BaseCmd):
         )
         if self.force is not None:
             res["force"] = self.force
-        if self.t_on and self.t_off:
-            res["t"] = (self.t_on if self.is_on else self.t_off) - ticks_diff(
-                ticks_ms(), self.t_last
-            )
+        if self._resync_left > 0:
+            res["resync"] = self._resync_left
+            res["resync_on"] = self._resync_on
+        elif self._out_on is not None:
+            res["out_time"] = self._out_time
+        elif self.t_on and self.t_off:
+            res["t"] = (self.t_on if self.is_on else self.t_off) - ticks_diff(now, self.t_last)
         return res

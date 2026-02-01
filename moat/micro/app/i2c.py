@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from smbus3 import SMBus, i2c_msg
 
+from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
@@ -19,10 +20,7 @@ class Cmd(BaseCmd):
     """
     This command implements basic access to an I²C bus.
 
-    Warning: This is synchronous, thus subjects the whole system to
-    arbitrary slowdowns if the destination device employs clock stretching.
-
-    Config::
+    Parameters:
 
         id: bus ID (no soft i2c here)
         # f: 100000  # frequency, Hz
@@ -38,6 +36,10 @@ class Cmd(BaseCmd):
     )
 
     _bus = None
+
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self._lock = Lock()
 
     async def setup(self):
         """
@@ -71,15 +73,16 @@ class Cmd(BaseCmd):
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
-    async def cmd_rd(self, i, n=16):
+    async def cmd_rd(self, i, n=16) -> bytes:
         "read @n bytes from bus @cd at address @i"
         return bytes(self._bus.i2c_rd(i, n))
 
     doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
 
-    async def cmd_wr(self, i: int, buf: bytes):
+    async def cmd_wr(self, i: int, buf: bytes) -> int:
         "write @buf to bus @cd at address @i"
-        return self._bus.i2c_wr(i, list(buf)).len
+        async with self._lock:
+            return (await to_thread(self._bus.i2c_wr, i, list(buf))).len
 
     doc_wrrd = dict(
         _d="write+read",
@@ -89,30 +92,39 @@ class Cmd(BaseCmd):
         _r="int|bytes:nbytes short-written|read result",
     )
 
-    async def cmd_wrrd(self, i, buf, n=16):
+    async def cmd_wrrd(self, i, buf, n=16) -> int:
         """
         write @buf to bus @cd at address @i, then read @n bytes.
 
         Returns -x if only x bytes could be written.
         """
-        bus = self._bus
-        wr = i2c_msg.write(i, list(buf))
-        rd = i2c_msg.read(i, n)
 
-        bus.i2c_rdwr(wr, rd)
+        def _run():
+            bus = self._bus
+            wr = i2c_msg.write(i, list(buf))
+            rd = i2c_msg.read(i, n)
+
+            bus.i2c_rdwr(wr, rd)
+
+        async with self._lock():
+            rd = await to_thread(_run)
         return bytes(rd)
 
     doc_scan = dict(_d="bus scan")
 
-    async def cmd_scan(self):
-        "scan the bus"
+    async def cmd_scan(self) -> list[int]:
+        """
+        Scan the bus.
+
+        Returns: the list of working addresses.
+        """
         res = []
         for i in range(0x08, 0x78):
             try:
                 if i >> 4 in (3, 5):
-                    self._bus.read_byte(i)
+                    await to_thread(self._bus.read_byte, i)
                 else:
-                    self._bus.write_quick(i)
+                    await to_thread(self._bus.write_quick, i)
             except OSError:
                 pass
             else:

@@ -80,6 +80,10 @@ class BadFile(ValueError):
     pass
 
 
+class _NotGiven:
+    pass
+
+
 @asynccontextmanager
 async def EventSetter(evt):
     try:
@@ -271,13 +275,17 @@ class ServerClient(LinkCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def handle(self, msg, rpath, *sub) -> Awaitable[Any]:
+    def handle(self, msg, rpath, *sub) -> Awaitable[None]:
         """
-        Message handlers that intercepts commands, as long as no
-        authorization has taken place
+        Message handlers that intercepts (a) authorization, (b) a "d_"
+        path-based "simple data" command
         """
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.handle(msg, rpath, *sub)
+
+        if rpath and rpath[-1] == "d_":
+            msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
+            return msg.call_simple(self.cmd_d_)
 
         return super().handle(msg, rpath, *sub)
 
@@ -420,6 +428,33 @@ class ServerClient(LinkCommon):
     doc_d_set = dict(
         _d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change"
     )
+
+    def cmd_d_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
+        """
+        Handler for direct storage
+        """
+        if value is _NotGiven:
+            return self._cmd_d_get(p)
+        elif value is NotGiven:
+            return self.cmd_d_delete(p)
+        else:
+            return self.cmd_d_set(p, value)
+
+    async def _cmd_d_get(self, path: Path):
+        """Get the data of a sub-node.
+
+        Arguments:
+        * path
+
+        Result:
+        * data
+        """
+        if len(path) and path[0] == "run":
+            data = self.server.rdata
+        else:
+            data = self.server.data
+        d = data[path]
+        return d.data
 
     async def cmd_d_set(
         self, path, value, meta: MsgMeta | None = None, t: float | bool | None = None

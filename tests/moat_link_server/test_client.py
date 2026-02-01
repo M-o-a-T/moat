@@ -225,3 +225,26 @@ async def test_set_time(cfg):
         await c.d_set(P("test.here"), "Yep3", t=True)
         res = await c.d.get(P("test.here"))
         assert res[0] == "Yep3"
+
+
+@pytest.mark.anyio
+async def test_set_d_direct(cfg):
+    "Check updating with d_direct"
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
+        await c.d_.test.foo.bar(42)
+        assert (await c.d_get(P("test.foo.bar"))) == 42
+        (res,) = await c.d_.test.foo.bar()
+        assert res == 42
+        async with c.sub_at(P("d_.test.foo.bar")) as cc:
+            (res,) = await cc()
+            assert res == 42
+
+        await c.d_.test.foo.bar(NotGiven)
+        with pytest.raises(KeyError):
+            await c.d_get(P("test.foo.bar"))
+        with pytest.raises(KeyError):
+            await c.d_.test.foo.bar()

@@ -92,7 +92,7 @@ async def test_rtc_cfg(tmp_path, remote):
         rt.tt = attrdict()
         rt.tt.c = dict(d="f", g={"h": "i"})
         rt.tt.a = NotGiven
-        await rtc.set(rt, sync=True)
+        await rtc.set(rt, sync=True, keep=True)
 
         cf = to_attrdict(await cfg.get(again=True))
         assert "a" not in cf.tt, cf.tt

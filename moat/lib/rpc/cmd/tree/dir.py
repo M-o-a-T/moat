@@ -78,15 +78,15 @@ class CfgStore(SubStore):
         self.cfg = cfg
         return cfg
 
-    async def set(self, cfg, replace=False, sync=False):
+    async def set(self, cfg: dict, replace: bool = False, sync: bool = False, keep: bool = False):
         """
         Update the client's configuration data.
 
-        If @replace is set, the config file is complete and any other items
-        will be deleted from the client.
-
-        If @sync is set, the client will reload apps etc. after updating
-        the config, by calling the ``x`` command.
+        Args:
+            cfg: new config data
+            keep: `NotGiven` values will be kept
+            replace: delete existing config
+            sync: reload after updating
         """
 
         async def _set(p, c, empty: bool = False):
@@ -114,15 +114,15 @@ class CfgStore(SubStore):
                         if k is None:
                             k = len(ocd)  # noqa:PLW2901
                     if empty or not v:
-                        await self.sd.w(p=p + (k,), d=type(v)(), keep=True)
+                        await self.sd.w(p=p + (k,), d=type(v)(), keep=keep)
                     if v:
                         await _set(p + (k,), v, empty=empty)
                 elif isinstance(ocd, dict):
                     if ocd.get(k, _NotGiven) != v:
-                        await self.sd.w(p=p + (k,), d=v, keep=True)
+                        await self.sd.w(p=p + (k,), d=v, keep=keep)
                 elif isinstance(ocd, list):
                     if len(ocd) <= k or ocd[k] != v:
-                        await self.sd.w(p=p + (k,), d=v, keep=True)
+                        await self.sd.w(p=p + (k,), d=v, keep=keep)
                 else:
                     raise ValueError(f"Orig is {ocd!r}")  # noqa:TRY004
 

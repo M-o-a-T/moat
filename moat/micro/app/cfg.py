@@ -54,7 +54,7 @@ class Cmd(BaseCmd):
 
     doc_w = dict(_d="write cfg", p="Path:subpart", d="any:Data")
 
-    async def cmd_w(self, p, d=NotGiven):
+    async def cmd_w(self, p, d=NotGiven, keep: bool = False):
         """
         Online configuration mangling.
 
@@ -91,7 +91,7 @@ class Cmd(BaseCmd):
         # log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
         d = to_attrdict(d)
-        if d is NotGiven:
+        if d is NotGiven and not keep:
             try:
                 del cur[k]
             except KeyError:

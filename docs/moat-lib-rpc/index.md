@@ -147,5 +147,7 @@ to its subordinate app. Instead, when you enter its context it
 :hidden:
 
 messages
+doc
+simple-data
 api
 ```

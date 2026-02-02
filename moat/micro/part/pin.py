@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 
+from moat.util import NotGiven
 from moat.lib.micro import AC_use, Event, TaskGroup
 from moat.lib.rpc import BaseCmd
 
@@ -157,38 +158,32 @@ class Pin(BaseCmd):
         o="bool:old: wait until pin value differs",
     )
 
-    async def stream_r(self, msg):
-        "Wait for change if @o (old value) is not None"
+    async def cmd(self, val: bool = NotGiven) -> None | bool:
+        "Simple Data protocol."
+        if val is NotGiven:
+            return self.pin()
+        self.pin(val)
+
+    async def stream(self, msg):
+        """
+        R/W data stream. The initial argument says whether you want to
+        read. Waits for change if @o (old value) is not None.
+        """
         o = msg.get("o", None)
-        if msg.can_stream:
-            async with msg.stream_out() as m:
+        async with TaskGroup() as tg, msg.stream() as m:
+
+            async def _rd():
                 val = bool(self.pin())
-                if o is None or val != o:
+                if o is not val:
                     await m.send(val)
                 while True:
                     await self.pin.evt.wait()
                     await m.send(bool(self.pin()))
 
-        val = bool(self.pin())
-        if val is o:
-            await self.pin.evt.wait()
-            val = bool(self.pin())
-        await msg.result(val)
+            if o is not None or msg.get(0, False):
+                tg.start_soon(_rd)
 
-    doc_w = dict(
-        _d="write",
-        _s=True,
-        _i=True,
-        _0="bool:new value",
-    )
-
-    async def stream_w(self, msg):
-        "Set pin value"
-        if msg.can_stream:
-            async with msg.stream_in() as m:
-                for mm in m:
-                    self.pin(mm[0])
-            return
-
-        self.pin(msg[0])
-        await msg.result()
+            for mm in m:
+                self.pin(mm[0])
+            tg.cancel()
+            await msg.result()

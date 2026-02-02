@@ -34,7 +34,12 @@ class Relay(BaseCmd):
             _d="maybe-forced Relay",
             pin="path:Output pin, calls r+w",
             t=dict(off="int:min off-time (ms,0)", on="int:min on-time (ms,0)"),
-        )
+        ),
+        _d="SDP:get/set value",
+        _a=[
+            dict(_d="get intended value", _r="bool:state"),
+            dict(_d="set intended value", _0="bool:state"),
+        ],
     )
 
     def __init__(self, cfg):
@@ -42,6 +47,11 @@ class Relay(BaseCmd):
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError("Pin not set")  # noqa:TRY004
         t = cfg.get("t", attrdict())
+        self.t = [t.get("off", 0), t.get("on", 0)]
+
+    async def reload(self):
+        "reload timings"
+        t = self.cfg.get("t", attrdict())
         self.t = [t.get("off", 0), t.get("on", 0)]
 
     async def setup(self):  # noqa:D102
@@ -85,14 +95,14 @@ class Relay(BaseCmd):
         val = self.value if self.force is None else self.force
         if val is None:
             return
-        p = await self.pin.r()
+        p = await self.pin()
         if p == val:
             return
 
         if self._delay is not None:
             self._delay.cancel()
             self._delay = None
-        await self.pin.w(v=val)
+        await self.pin(val)
         t = self.t[val]
         if not t:
             return
@@ -146,3 +156,12 @@ class Relay(BaseCmd):
             p=p,
             d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
         )
+
+    async def cmd(self, v=None) -> bool | None:
+        """
+        Simple Data Protocol.
+        """
+        if v is None:
+            return self.value
+        self.value = v
+        await self._set()

@@ -12,17 +12,8 @@ except ImportError:
 from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
 
-# Per-bus locks to prevent concurrent access
-_bus_locks: dict[int | None, Lock] = {}
-
-
-def _get_bus_lock(bus_id: int | None) -> Lock:
-    """Get or create a lock for the given bus ID."""
-    if bus_id is None:
-        return Lock()
-    if bus_id not in _bus_locks:
-        _bus_locks[bus_id] = Lock()
-    return _bus_locks[bus_id]
+# Per-bus cache for hardware SPI: bus_id -> [bus, lock, owner]
+_bus_cache: dict[int, list] = {}
 
 
 class Cmd(BaseCmd):
@@ -75,28 +66,44 @@ class Cmd(BaseCmd):
 
     def _setup(self):
         cfg = self.cfg
+
+        # CS pin handling
+        if "cs" in cfg:
+            self.cs_pin = machine.Pin(cfg["cs"], machine.Pin.OUT)
+            self.cs_low = cfg.get("cs_low", True)
+            # Initialize CS to inactive state
+            self.cs_pin.value(not self.cs_low)
+        else:
+            self.cs_pin = None
+            self.cs_low = True
+
+        # Store SPI config for reinit
+        self._spi_cfg = {
+            "baudrate": cfg.get("f", 1000000),
+            "polarity": cfg.get("pol", 0),
+            "phase": cfg.get("pha", 0),
+        }
+
         sck = machine.Pin(cfg["sck"])
         mosi = machine.Pin(cfg["mosi"])
         miso = machine.Pin(cfg["miso"])
-        if "cs" in cfg:
-            self.cs_pin = machine.Pin(cfg["cs"])
-        else:
-            self.cs_pin = None
-
-        f = cfg.get("f", 1000000)
-        pol = cfg.get("pol", 0)
-        pha = cfg.get("pha", 0)
 
         bus_id = cfg.get("id", None)
-        if bus_id is None:
-            cls = machine.SoftSPI
-            self._bus = cls(baudrate=f, polarity=pol, phase=pha, sck=sck, mosi=mosi, miso=miso)
-        else:
-            self._bus = machine.SPI(
-                bus_id, baudrate=f, polarity=pol, phase=pha, sck=sck, mosi=mosi, miso=miso
-            )
         self._bus_id = bus_id
-        self.lock = _get_bus_lock(bus_id)
+
+        if bus_id is None:
+            # Software SPI - each instance is independent
+            self._bus = machine.SoftSPI(sck=sck, mosi=mosi, miso=miso, **self._spi_cfg)
+            self.lock = Lock()
+            self._cache = None
+        else:
+            # Hardware SPI - shared bus with reinit on owner change
+            if bus_id not in _bus_cache:
+                bus = machine.SPI(bus_id, sck=sck, mosi=mosi, miso=miso, **self._spi_cfg)
+                _bus_cache[bus_id] = [bus, Lock(), None]
+            self._cache = _bus_cache[bus_id]
+            self._bus = self._cache[0]
+            self.lock = self._cache[1]
 
     async def teardown(self):
         "shutdown"
@@ -104,25 +111,36 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        b, self._bus = self._bus, None
-        if b is not None:
-            try:
-                b.deinit()
-            except AttributeError:
-                pass
+        if self._cache is not None:
+            # Hardware SPI - clear ownership on shared bus
+            if self._cache[2] is self:
+                self._cache[2] = None
+                self._bus.deinit()
+            self._bus = None
+        else:
+            # Software SPI - we own it, always deinit
+            self._bus.deinit()
+            self._bus = None
+
+    def _ensure_config(self):
+        """Reinit bus if another driver used it since we did."""
+        if self._cache is not None and self._cache[2] is not self:
+            self._bus.init(**self._spi_cfg)
+            self._cache[2] = self
 
     async def _with_cs(self, func):
         """
         Execute func with CS asserted.
         """
         async with self.lock:
+            self._ensure_config()
             if self.cs_pin is not None:
-                await self.cs_pin(not self.cs_low)  # CS active low
+                self.cs_pin.value(self.cs_low)  # Assert CS (active state)
             try:
                 return await func()
             finally:
                 if self.cs_pin is not None:
-                    await self.cs_pin(self.cs_low)  # CS active low
+                    self.cs_pin.value(not self.cs_low)  # Deassert CS
 
     doc_r = dict(
         _d="read",
@@ -136,7 +154,7 @@ class Cmd(BaseCmd):
 
         Args:
             n: number of bytes to read
-            wr: byte to write while reading (default 0x00)
+            wr: no-op byte to write while reading (default 0x00)
         """
 
         async def _run():
@@ -165,28 +183,33 @@ class Cmd(BaseCmd):
         return await self._with_cs(_run)
 
     doc_rw = dict(
-        _d="read+write",
-        _0="bytes:write data",
-        n="int:read bytes",
-        cs="path:CS pin",
+        _d="read+write simultaneous",
+        _0="bytes:data buffer (read into same buffer)",
         _r="bytes:read result",
+        n="int:bytes to fill (>0) / chop off the end (<0)",
+        wr="int:fill byte for n>0",
     )
 
-    async def cmd_rw(self, buf: bytes) -> bytes:
+    async def cmd_rw(self, buf: bytes, n: int = 0, wr: int = 0) -> bytes:
         """
-        Write @wbuf then read @n bytes (sequential, not simultaneous).
+        Simultaneous write and read (full duplex).
 
-        This is useful for command-response protocols where you send
-        a command and then read the response.
+        Writes buf while reading into the same buffer.
 
         Args:
-            wbuf: data to write first
-            n: number of bytes to read after
-            cs: path to chip select pin (optional)
+            buf: data to write
+            n: if >0, add n fill bytes to the end; if <0, chop -n bytes off
+               the result before returning it
+            wr: the byte to use as filler for n>0
+
         """
 
         async def _run():
+            if n > 0:
+                buf += bytes((wr,)) * n
             await to_thread(self._bus.write_readinto, buf, buf)
+            if n < 0:
+                buf = memoryview(buf)[:-n]
             return buf
 
         return await self._with_cs(_run)

@@ -8,11 +8,10 @@ import struct
 
 import ruyaml as yaml
 
-from moat.lib.micro import const
-
-from ._cbor import Codec, Tag, CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER  # noqa:F401
+from ._cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:F401
 
 SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
+
 
 def _tag_repr(dumper, data):
     return dumper.represent_list([XTag(data.tag), data.value])

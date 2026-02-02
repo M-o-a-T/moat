@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-__all__ = ["Codec", "ExtraData", "Tag", "CBOR_TAG_CBOR_FILEHEADER", "CBOR_TAG_CBOR_LEADER"]
+__all__ = ["CBOR_TAG_CBOR_FILEHEADER", "CBOR_TAG_CBOR_LEADER", "Codec", "ExtraData", "Tag"]
 
 
 CBOR_TAG_CBOR_FILEHEADER = const(55799)  # single CBOR content

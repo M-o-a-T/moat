@@ -67,7 +67,7 @@ def float_presenter(dumper, data):
     Round appropriately
     """
     if data != 0:
-        data = round(data, int(math.log10(abs(data))) + 9)
+        data = round(data, int(7 - math.log10(abs(data))))
     return dumper.represent_scalar("tag:yaml.org,2002:float", str(data))
 
 

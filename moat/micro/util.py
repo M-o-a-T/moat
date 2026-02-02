@@ -88,14 +88,20 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
 
 class Repeater:
     """
-    Support repeating a measurement.
+    Support for repeating a measurement.
 
     Parameters:
         min(float): Minimum value.
         max(float): Maximum value.
         retry(int): #Retries before erroring. Zero=infinite.
         timer(int): Time between retries (ms)
+        diff(float): Maximum difference between old and new values.
 
+    Arguments:
+        cfg: Config data.
+        rdr: The async procedure to retrieve the value.
+        min: default minimum
+        max: default maximum
     """
 
     val: float | None = None
@@ -118,15 +124,20 @@ class Repeater:
         self.max = max
 
     def state(self) -> dict:
-        "State monitoring stuff"
+        "Current state"
         res = dict(r=self.retries, rr=self.rr, val=self.val)
         if self.err is not None:
             res["err"] = self.err
             self.err = None
+        if self.evt:
+            res["wait"] = self.evt is not True
         return res
 
-    async def get(self):
-        "Read the next bit"
+    async def get(self, force: bool = False):
+        """
+        Read the next bit. Ignore the *diff* parameter if *force* is
+        ``True``.
+        """
 
         # This dance ensures that an event is only allocated when more than
         # one task tries to read at the same time
@@ -148,7 +159,10 @@ class Repeater:
                 if self.exc is None:
                     self.exc = exc
             if self.cfg.get("min", self.min) < val < self.cfg.get("max", self.max):
-                break
+                if force or (
+                    self.val is not None and abs(val - self.val) < self.cfg.get("diff", 0)
+                ):
+                    break
             self.err = val
             if rep:
                 rep -= 1
@@ -163,6 +177,7 @@ class Repeater:
 
         if isinstance(self.evt, Event):
             self.evt.set()
+        self.evt = False
         self.val = val
         return val
 
@@ -171,11 +186,7 @@ class Sensor(BaseCmd):
     """
     This is the base class for a simple (one-value) sensor.
 
-    Parameters:
-        min(float): Minimum value.
-        max(float): Maximum value.
-        retry(int): #Retries before erroring. Zero=infinite.
-        timer(int): Time between retries (ms)
+    The parameters from `Repeater` are used.
 
     You might want to override:
     - MIN: default minimum value
@@ -240,8 +251,8 @@ class Sensor(BaseCmd):
                             o = val
                     await sleep_ms(t)
 
-        val = await self._rep.get()
+        val = await self._get(msg.get("force", False))
         while o is not None and abs(val - o) <= d:
             await sleep_ms(t)
-            val = await self._get()
+            val = await self._get(msg.get("force", False))
         await msg.result(val)

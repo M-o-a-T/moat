@@ -74,5 +74,4 @@ HACKING
 DOC
 cbor
 path
-simple-data
 ```

@@ -4,6 +4,7 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 
@@ -61,6 +62,15 @@ def str_presenter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
+def float_presenter(dumper, data):
+    """
+    Round appropriately
+    """
+    if data != 0:
+        data = round(data, int(math.log10(abs(data))) + 9)
+    return dumper.represent_scalar("tag:yaml.org,2002:float", str(data))
+
+
 def yaml_repr(name: str, use_repr: bool = False):
     """
     A class decorator that allows representing an object in YAML
@@ -91,6 +101,7 @@ def yaml_parse(name: str, use_repr: bool = False):
 
 
 SafeRepresenter.add_representer(str, str_presenter)
+SafeRepresenter.add_representer(float, float_presenter)
 
 
 def _path_repr(dumper, data):

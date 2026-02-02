@@ -9,11 +9,6 @@ from moat.lib.micro import TaskGroup
 from moat.lib.pid import CPID
 from moat.lib.rpc import BaseCmd
 
-try:
-    from moat.micro.rtc import RTC
-except ImportError:
-    from moat.micro.rtc._test import RTC
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -34,14 +29,13 @@ class PID(BaseCmd):
     - i: integral gain
     - d: differential gain
     - tf: first-order filter time constant for the differential, in seconds
-    - state: path to our state storage (RTC protocol).
+    - state: path to our state storage
     - set: initial goal (default zero)
 
     t should be larger than the interval between inputs.
     """
 
     pid: CPID
-    sn: str | None
     val_in: float | None = None
     split: tuple[float, float, float] | None = None
     state_path: Path | None = None
@@ -61,18 +55,28 @@ class PID(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         self.pid = CPID(cfg)
-        self.sn = sn = cfg.get("state", None)
-        if sn is not None and sn in RTC:
-            data = RTC[sn]
-            self.pid.set_state(**data)
-            setpoint = data.get("setpoint")
-            if setpoint is not None:
-                self.pid.setpoint(setpoint)
-                return
+        self.state_path = cfg.get("state", None)
         self.pid.setpoint(cfg.get("set", 0))
 
         self._val_bc = Broadcaster(1)
         self._set_bc = Broadcaster(1)
+
+    async def setup(self):
+        "retrieve state"
+        await super().setup()
+        if self.state_path is not None:
+            sr = self.root.sub_at(self.state_path)
+            await sr.rdy_()
+            try:
+                (st,) = await sr()
+            except KeyError:
+                pass
+            else:
+                setpoint = st.pop("setpoint", None)
+                if setpoint is not None:
+                    self.pid.setpoint(setpoint)
+                self.pid.set_state(**st)
+            self.state_rtc = sr
 
     doc_sw = dict(_d="update state", **_state_d)
 
@@ -88,8 +92,8 @@ class PID(BaseCmd):
         """
         self.val_in = val
         self.split = s = self.pid.integrate(val, t=t)
-        if self.sn is not None:
-            RTC[self.sn] = self.pid.state
+        if (sr := self.state_rtc) is not None:
+            await sr(self.pid.state, fs=False)
         return self.pid.sum(s)
 
     doc_sp = dict(

@@ -9,8 +9,6 @@ try:
 except ImportError:
     from moat.micro._test import machine
 
-import contextlib
-
 from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
 
@@ -20,6 +18,8 @@ _bus_locks: dict[int | None, Lock] = {}
 
 def _get_bus_lock(bus_id: int | None) -> Lock:
     """Get or create a lock for the given bus ID."""
+    if bus_id is None:
+        return Lock()
     if bus_id not in _bus_locks:
         _bus_locks[bus_id] = Lock()
     return _bus_locks[bus_id]
@@ -29,15 +29,17 @@ class Cmd(BaseCmd):
     """
     This command implements basic access to a SPI bus.
 
-    Config::
+    Parameters:
 
-        id: None  # use soft SPI if None
-        sck: 18   # pin# of clock
-        mosi: 23  # pin# of MOSI (master out, slave in)
-        miso: 19  # pin# of MISO (master in, slave out)
-        f: 1000000  # frequency, Hz (baudrate)
-        pol: 0    # clock polarity (0 or 1)
-        pha: 0    # clock phase (0 or 1)
+        id(int|None): None  # uses soft SPI if None
+        sck(int): clock pin
+        mosi(int): output / MOSI (master out, slave in)
+        miso(int): input / MISO (master in, slave out)
+        f(int): frequency(Hz)
+        pol(bool): clock polarity (0 or 1)
+        pha(bool): clock phase (0 or 1)
+        cs(int): chip select pin
+        cs_low(bool): chip select is active low? (default: `True`)
 
     Device operations require a CS (chip select) pin path.
     The driver controls CS: active low before operation, high after.
@@ -51,7 +53,9 @@ class Cmd(BaseCmd):
         sck="int:clock pin",
         mosi="int:MOSI pin",
         miso="int:MISO pin",
-        f="int:frequency/baudrate",
+        f="int:frequency",
+        cs="int:CS pin",
+        cs_low="bool:CS pin is active low",
         pol="int:polarity(0)",
         pha="int:phase(0)",
     )
@@ -74,6 +78,11 @@ class Cmd(BaseCmd):
         sck = machine.Pin(cfg["sck"])
         mosi = machine.Pin(cfg["mosi"])
         miso = machine.Pin(cfg["miso"])
+        if "cs" in cfg:
+            self.cs_pin = machine.Pin(cfg["cs"])
+        else:
+            self.cs_pin = None
+
         f = cfg.get("f", 1000000)
         pol = cfg.get("pol", 0)
         pha = cfg.get("pha", 0)
@@ -97,130 +106,73 @@ class Cmd(BaseCmd):
     def _teardown(self):
         b, self._bus = self._bus, None
         if b is not None:
-            with contextlib.suppress(AttributeError):
+            try:
                 b.deinit()
+            except AttributeError:
+                pass
 
-    async def _cs_ctx(self, cs_path):
+    async def _with_cs(self, func):
         """
-        Get the CS pin handler from the path.
-        Returns a pin object that can be written to.
+        Execute func with CS asserted.
         """
-        if cs_path is None:
-            return None
-        return self.root.sub_at(cs_path)
+        async with self.lock:
+            if self.cs_pin is not None:
+                await self.cs_pin(not self.cs_low)  # CS active low
+            try:
+                return await func()
+            finally:
+                if self.cs_pin is not None:
+                    await self.cs_pin(self.cs_low)  # CS active low
 
-    async def _with_cs(self, cs, func):
-        """
-        Execute func with CS asserted (low), then deassert (high).
-        """
-        if cs is not None:
-            cs_pin = await self._cs_ctx(cs)
-            await cs_pin.w(v=False)  # CS active low
-        try:
-            return await func()
-        finally:
-            if cs is not None:
-                await cs_pin.w(v=True)  # CS inactive high
-
-    doc_rd = dict(
+    doc_r = dict(
         _d="read",
         n="int:nbytes",
-        cs="path:CS pin",
         wr="int:write byte(0)",
     )
 
-    async def cmd_rd(self, n: int, cs=None, wr: int = 0) -> bytes:
+    async def cmd_r(self, n: int, wr: int = 0) -> bytes:
         """
         Read @n bytes from SPI while writing @wr byte.
 
         Args:
             n: number of bytes to read
-            cs: path to chip select pin (optional)
             wr: byte to write while reading (default 0x00)
         """
 
         async def _run():
             return await to_thread(self._bus.read, n, wr)
 
-        async with self.lock:
-            return await self._with_cs(cs, _run)
+        return await self._with_cs(_run)
 
-    doc_wr = dict(
+    doc_w = dict(
         _d="write",
         buf="bytes:data",
-        cs="path:CS pin",
         _r="int:nbytes written",
     )
 
-    async def cmd_wr(self, buf: bytes, cs=None) -> int:
+    async def cmd_w(self, buf: bytes) -> int:
         """
-        Write @buf to SPI.
+        Write to SPI.
 
         Args:
             buf: data to write
-            cs: path to chip select pin (optional)
         """
 
         async def _run():
             await to_thread(self._bus.write, buf)
             return len(buf)
 
-        async with self.lock:
-            return await self._with_cs(cs, _run)
+        return await self._with_cs(_run)
 
     doc_rw = dict(
-        _d="write+read simultaneous",
-        wbuf="bytes:write data",
-        n="int:read bytes (len(wbuf) if None)",
-        cs="path:CS pin",
-        _r="bytes:read result",
-    )
-
-    async def cmd_rw(self, wbuf: bytes, n: int | None = None, cs=None) -> bytes:
-        """
-        Simultaneous write and read.
-
-        Args:
-            wbuf: data to write
-            n: number of bytes to read (defaults to len(wbuf))
-            cs: path to chip select pin (optional)
-
-        If n > len(wbuf), the write buffer is padded with zeros.
-        If n < len(wbuf), only n bytes are transferred.
-        """
-        if n is None:
-            n = len(wbuf)
-
-        async def _run():
-            # Adjust buffers to same size
-            if n == len(wbuf):
-                rbuf = bytearray(n)
-                await to_thread(self._bus.write_readinto, wbuf, rbuf)
-            elif n > len(wbuf):
-                # Pad write buffer
-                wb = bytearray(n)
-                wb[: len(wbuf)] = wbuf
-                rbuf = bytearray(n)
-                await to_thread(self._bus.write_readinto, wb, rbuf)
-            else:
-                # Truncate to n bytes
-                wb = wbuf[:n]
-                rbuf = bytearray(n)
-                await to_thread(self._bus.write_readinto, wb, rbuf)
-            return bytes(rbuf)
-
-        async with self.lock:
-            return await self._with_cs(cs, _run)
-
-    doc_wrrd = dict(
-        _d="write then read (separate)",
-        wbuf="bytes:write data",
+        _d="read+write",
+        _0="bytes:write data",
         n="int:read bytes",
         cs="path:CS pin",
         _r="bytes:read result",
     )
 
-    async def cmd_wrrd(self, wbuf: bytes, n: int, cs=None) -> bytes:
+    async def cmd_rw(self, buf: bytes) -> bytes:
         """
         Write @wbuf then read @n bytes (sequential, not simultaneous).
 
@@ -234,8 +186,7 @@ class Cmd(BaseCmd):
         """
 
         async def _run():
-            await to_thread(self._bus.write, wbuf)
-            return await to_thread(self._bus.read, n)
+            await to_thread(self._bus.write_readinto, buf, buf)
+            return buf
 
-        async with self.lock:
-            return await self._with_cs(cs, _run)
+        return await self._with_cs(_run)

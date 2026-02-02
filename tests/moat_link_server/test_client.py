@@ -242,6 +242,9 @@ async def test_set_d_direct(cfg):
         async with c.sub_at(P("d_.test.foo.bar")) as cc:
             (res,) = await cc()
             assert res == 42
+        async with c.sub_at(P("d_.test")) as cc:
+            (res,) = await cc(p=P("foo.bar"))
+            assert res == 42
 
         await c.d_.test.foo.bar(NotGiven)
         with pytest.raises(KeyError):

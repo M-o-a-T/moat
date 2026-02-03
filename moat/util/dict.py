@@ -83,7 +83,8 @@ def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
             res[k] = v[0]
         elif not isinstance(v[0], Mapping):
             for vv in v[1:]:
-                assert not isinstance(vv, Mapping)
+                if isinstance(vv, Mapping):
+                    raise ValueError(f"Merge {k!r}: {v!r}")  # noqa:TRY004
             if deep and isinstance(v[0], (list, tuple)):
                 res[k] = deepcopy(v[0])
             else:

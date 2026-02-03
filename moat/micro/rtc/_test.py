@@ -45,6 +45,6 @@ class RTC(RTCBase):
             self._d[name] = data
         return True
 
-    async def all(self):
-        """Get all stored data."""
-        return dict(self._d)
+    async def keys(self) -> set[str]:
+        """Get keys of stored data."""
+        return set(self._d.keys())

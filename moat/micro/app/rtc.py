@@ -39,7 +39,7 @@ class Cmd(BaseCmd):
             v: Value to set. If not given, returns current value.
         """
         if k is _NotGiven:
-            return await RTC.all()
+            return await RTC.keys()
         elif v is _NotGiven:
             return await RTC.get(k)
         else:

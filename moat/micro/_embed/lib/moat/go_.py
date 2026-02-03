@@ -139,7 +139,9 @@ def go(state=None, cmd=True):
 
     try:
         at("main1", i)
-        main(fn, i=i)
+        from moat.util import ungroup
+        with ungroup:
+            main(fn, i=i)
 
     except ImportError as exc:
         print("PATH:", sys.path, file=sys.stderr)

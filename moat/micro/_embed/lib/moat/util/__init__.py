@@ -17,6 +17,7 @@ from moat.lib.path import Path
 from .exc import ExpAttrError as ExpAttrError
 from .exc import ExpectedError as ExpectedError
 from .exc import ExpKeyError as ExpKeyError
+from .exc import ungroup as ungroup
 from .misc import de_async as de_async
 from .misc import wait_complain as wait_complain
 from .part import enc_part as enc_part

@@ -130,16 +130,17 @@ class _RTC:
                 raise
             return default
 
-    def set_sync(self, name, value, fs=None):
+    def set_sync(self, name: str, value: Any, **kw):
         """
         Synchronous setter for RTC data.
 
         Args:
             name: The key to store.
             value: The value to store.
-            fs: Access the file system?
+
+        Other keyword args are forwarded to :meth:`set`.
         """
-        de_async(self.set, name, value, fs=fs, sync=True)
+        de_async(self.set, name, value, sync=True, **kw)
 
     async def get(self, name: str, fs: bool | None = None, sync: bool = False) -> Any:
         """
@@ -188,9 +189,14 @@ class _RTC:
             name: The data to get.
             data: The data to write.
             fs: Access the file system?
-            all: if `True`, write to all backends.
-                 if `False`, only use the first available backend.
-                 if `None`, write to the first backend and erase other data.
+            sync: Flag whether yielding is blocked.
+            all: Write to all backends?
+
+            *all* can be
+            - `True`: write to all backends.
+            - `False`: only use the first available backend.
+            - `None`: write to the first matching backend. Erase this key
+              from other backends.
         """
         seen = False
         exc = None

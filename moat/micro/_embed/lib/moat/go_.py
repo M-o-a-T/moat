@@ -139,7 +139,9 @@ def go(state=None, cmd=True):
 
     try:
         at("main1", i)
-        from moat.util import ungroup
+
+        from moat.util import ungroup  # noqa:PLC0415
+
         with ungroup:
             main(fn, i=i)
 
@@ -152,7 +154,7 @@ def go(state=None, cmd=True):
         at("main3", i)
         print("MoaT stopped, mode is 'skip'", file=sys.stderr)
         # because the watchdog might kill us
-        RTC.set_sync("state", "skip")
+        RTC.set_sync("state", "skip", all=True)
 
     except SystemExit as exc:
         at("main4", i)
@@ -176,8 +178,7 @@ def go(state=None, cmd=True):
             log("CRASH! Exiting!", err=exc)
             sys.exit(1)
 
-        new_state = "safe"
-        RTC.set_sync("state", new_state)
+        RTC.set_sync("state", new_state, all=False)
 
         log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)
         time.sleep_ms(1000)

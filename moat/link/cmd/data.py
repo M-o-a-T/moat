@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import anyio
+import os
 import sys
 from contextlib import nullcontext, suppress
 
 import asyncclick as click
 
-from moat.util import MsgReader, NotGiven, combine_dict, yload, yprint
+from moat.util import MsgReader, NotGiven, combine_dict, yformat, yload, yprint
 from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+from moat.util.exec import run
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
@@ -141,6 +143,77 @@ async def set_(obj, yaml, one, retain, force, **kw):
     )
     if obj.meta:
         yprint(res, stream=obj.stdout)
+
+
+@cli.command(short_help="Edit an entry interactively")
+@click.option("-y", "--yes", is_flag=True, help="Save without asking")
+@click.option("-e", "--editor", type=str, default=None, help="Editor (default: $EDITOR or vi)")
+@click.pass_obj
+async def edit(obj, yes, editor):
+    """
+    Edit a MoaT-Link value interactively.
+
+    Opens the current value in an editor (YAML format). After editing,
+    parses the result and saves it back.
+    """
+    try:
+        data = await obj.conn.d_get(obj.path)
+    except KeyError:
+        data = {}
+
+    if editor is None:
+        editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
+
+    async with anyio.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
+        await f.write(yformat(data, compact=False) + "\n")
+        await f.flush()
+        await f.seek(0)
+
+        while True:
+            await run(editor, f.name, stdin=sys.stdin, stdout=sys.stdout)
+
+            edited_content = await f.read()
+            await f.seek(0)
+
+            try:
+                new_data = yload(edited_content)
+            except Exception as e:
+                click.echo(f"YAML parse error: {e}", err=True)
+                choice = await click.prompt(
+                    "Re-open with [o]riginal, [e]dited content, or [q]uit?",
+                    type=click.Choice(["o", "e", "q"], case_sensitive=False),
+                    default="e",
+                )
+                if choice == "q":
+                    click.echo("Not saved.", err=True)
+                    return
+                if choice == "o":
+                    # Restore original content
+                    d = yformat(data, compact=False) + "\n"
+                    await f.write(d)
+                    await f.truncate(len(d))
+                    await f.flush()
+                    await f.seek(0)
+                # choice == "e": keep edited content, loop back to editor
+                continue
+
+            if new_data == data:
+                click.echo("No changes.", err=True)
+                return
+
+            if not yes:
+                # TODO this still blocks
+                if not click.confirm("Save changes?", default=True):
+                    click.echo("Not saved.", err=True)
+                    return
+
+            # Save
+            res = await obj.conn.d_set(obj.path, new_data, meta=obj.meta)
+            if obj.meta:
+                yprint(res, stream=obj.stdout)
+            else:
+                click.echo("Saved.", err=True)
+            return
 
 
 @cli.command(short_help="Delete an entry / subtree")

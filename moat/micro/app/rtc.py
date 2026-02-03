@@ -35,12 +35,12 @@ class Cmd(BaseCmd):
         Direct R/W access to RTC.
 
         Args:
-            k: Key to access. If not given, returns all data.
+            k: Key to access.
             v: Value to set. If not given, returns current value.
+
+        This function does not list keys. Use a stream for that.
         """
-        if k is _NotGiven:
-            return await RTC.keys()
-        elif v is _NotGiven:
+        if v is _NotGiven:
             return await RTC.get(k)
         else:
             await RTC.set(k, v)
@@ -141,6 +141,22 @@ class Cmd(BaseCmd):
                 merge(self.root.cfg, d, replace=True)
                 await self.root.reload()
         return res
+
+    async def stream(self, msg: Msg):
+        """
+        Get all data.
+
+        Arguments:
+            keys: flag whether to get only keys. If `False`, return
+                  ``(key,value)`` pairs. The default is `True`.
+        """
+        keys = msg.kw.get("keys", True)
+        fs = msg.kw.get("fs", None)
+        async with msg.stream() as ms:
+            for k in await RTC.keys(fs=fs):
+                if not keys:
+                    k = (k, await RTC.get(k, fs=fs))  # noqa:PLW2901
+                await ms.send(k)
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """

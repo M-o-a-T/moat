@@ -95,7 +95,7 @@ def go(state=None, cmd=True):
             new_state = state
 
     if state != new_state:
-        RTC.set_sync("state", new_state)
+        RTC.set_sync("state", new_state, fs=None, all=False)
     if state == "skip":
         log("MoaT state: %r", state)
         return True

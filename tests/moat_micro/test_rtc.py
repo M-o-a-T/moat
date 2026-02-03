@@ -81,6 +81,7 @@ async def test_rtc_cfg(tmp_path, remote):
         mpy_stack(tmp_path, CFG) as d,
         d.cfg_at(P("r.c") if remote else P("c")) as cfg,
         d.cfg_at(P("r.rtc.cfg") if remote else P("rtc.cfg")) as rtc,
+        d.sub_at(P("r.rtc") if remote else P("rtc")) as srtc,
     ):
         cf = to_attrdict(await cfg.get())
         assert cf.tt.a == "b"
@@ -94,6 +95,10 @@ async def test_rtc_cfg(tmp_path, remote):
         rt.tt.c = dict(d="f", g={"h": "i"})
         rt.tt.a = NotGiven
         await rtc.set(rt, sync=True, keep=True)
+
+        await srtc("foo", "bar")
+        res = await srtc()
+        assert res == {"cfg", "foo"}
 
         cf = to_attrdict(await cfg.get(again=True))
         assert "a" not in cf.tt, cf.tt

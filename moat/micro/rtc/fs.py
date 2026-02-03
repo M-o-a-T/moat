@@ -146,11 +146,11 @@ class RTC(RTCBase):
         self._save()
         return True
 
-    async def all(self):
+    async def keys(self) -> set[str]:
         """
-        Get all stored data.
+        Get all available keys.
 
         Returns:
             A copy of the internal data dict (does not include direct files).
         """
-        return dict(self._d)
+        return set(self._direct.keys()) + set(self._d.keys())

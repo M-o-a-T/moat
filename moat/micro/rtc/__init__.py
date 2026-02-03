@@ -174,6 +174,21 @@ class _RTC:
             raise exc2 from None
         raise KeyError(name) from None
 
+    async def keys(self, fs: bool | None = None, sync: bool = False) -> set[str]:
+        """
+        Get the list of available/existing RTC keys.
+        """
+        res = set()
+
+        for be in self.backends:
+            if fs is (not be.is_FS):
+                continue
+            if be.is_ASYNC is sync:
+                continue
+            res.update(await be.keys())
+
+        return res
+
     async def set(
         self,
         name: str,
@@ -316,9 +331,9 @@ class RTCBase:
         """
         return State(self, name)
 
-    async def all(self):
+    async def keys(self) -> set[str]:
         """
-        Get all data.
+        Get all available keys.
         """
         raise NotImplementedError
 

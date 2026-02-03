@@ -117,11 +117,11 @@ class RTC(RTCBase):
         self._save()
         return True
 
-    async def all(self):
+    async def keys(self):
         """
-        Get all stored data.
+        Get keys for all stored data.
 
         Returns:
-            A copy of the internal data dict.
+            A set of names.
         """
-        return dict(self._d)
+        return set(self._d.keys())

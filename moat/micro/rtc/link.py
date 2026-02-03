@@ -6,8 +6,6 @@ Provides remote access to RTC data via the root command handler.
 
 from __future__ import annotations
 
-from moat.util import NotGiven
-
 from . import RTC as _RTC
 from . import NotSync, RTCBase
 
@@ -23,6 +21,13 @@ class RTC(RTCBase):
 
     Provides remote access to RTC data via self.root.sub_at(self.cfg["path"]).
     This backend is asynchronous and cannot be used in synchronous contexts.
+
+    The backend is expected to be callable with zero to two arguments::
+
+    - *No argument*: return a list of available names.
+    - name(str): return the data stored under that name.
+    - name(str), `NotGiven`: delete the data stored under that name.
+    - name(str), data(Any): store the data under that name.
     """
 
     is_FS = False
@@ -74,7 +79,7 @@ class RTC(RTCBase):
 
         Args:
             name: The key to store.
-            data: The value to store.
+            data: The value to store. `NotGiven` deletes.
 
         Returns:
             True if the value was written.
@@ -83,21 +88,18 @@ class RTC(RTCBase):
             NotSync: If no root connection is available.
         """
         sender = self._get_sender()
-        if data is NotGiven:
-            await sender(name, None, delete=True)
-        else:
-            await sender(name, data)
+        await sender(name, data)
         return True
 
-    async def all(self) -> dict:
+    async def keys(self) -> set[str]:
         """
         Get all stored data from the remote.
 
         Returns:
-            A dict of all stored values.
+            A set of all stored values.
 
         Raises:
             NotSync: If no root connection is available.
         """
         sender = self._get_sender()
-        return await sender()
+        return set(await sender())

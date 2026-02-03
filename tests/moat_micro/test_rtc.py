@@ -71,6 +71,7 @@ async def test_rtc(tmp_path, remote):
         await rtc("t2", {"Answer": 42})
         assert (await rtc("t1")) == "hello"
         assert (await rtc("t2"))["Answer"] == 42
+        assert (await rtc()) == {"t1", "t2"}
 
 
 @pytest.mark.parametrize("remote", [False, True])

@@ -93,6 +93,18 @@ def _dec_path(codec, val):
     return Path.build(val, decoded=True)
 
 
+@std_ext.encoder(258, set)
+def _pack_set(codec, data):
+    codec  # noqa:B018
+    return list(data)
+
+
+@std_ext.decoder(258)
+def _dec_set(codec, val):
+    codec  # noqa:B018
+    return set(val)
+
+
 @std_ext.encoder(None, object)
 def enc_any(codec, obj):
     codec  # noqa:B018

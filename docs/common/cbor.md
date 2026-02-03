@@ -56,6 +56,23 @@ manner. Paths that refer to an object without conforming to the chosen
 scheme (e.g. negative array indices that count from the array's end) MAY
 be rejected.
 
+## Set
+
+> |           |                                                                             |
+> |-----------|-----------------------------------------------------------------------------|
+> | Tag       | 258                                                                         |
+> | Data Item | array                                                                       |
+> | Semantics | Mathematical finite set                                                     |
+> | Reference | https://github.com/input-output-hk/cbor-sets-spec/blob/master/CBOR\_SETS.md |
+> | Contact   | Contact: Input Output HK <operations@iohk.io>                               |
+
+This tag is already specified and included here for MoaT-specific usage
+details.
+
+MoaT uses this tag to encode the Python `set` type.  The content is simply
+a list of the set's elements.
+
+
 ## Object Proxy
 
 > |           |                                                                           |
@@ -64,7 +81,7 @@ be rejected.
 > | Data Item | text string, integer, array                                               |
 > | Semantics | reference a well-known or unencodable object                              |
 > | Reference | <https://gitlab.com/Hawk777/cbor-specs/-/blob/main/external-reference.md> |
-> | Contact   | Christopher_Head                                                          |
+> | Contact   | Christopher Head                                                          |
 
 This tag is specified as "external object reference". In MoaT it is used
 as an object proxy, in two different but related ways.

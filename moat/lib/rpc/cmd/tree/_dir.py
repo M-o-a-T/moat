@@ -198,7 +198,6 @@ class DirCmd(BaseSubCmd):
 
         apps = {}
         for k, v in gcfg.items():
-            print(k, v)
             try:
                 if not v.get("running", True):
                     continue

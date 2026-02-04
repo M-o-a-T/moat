@@ -343,8 +343,9 @@ async def boot(obj, state):
 @attr_args(with_path=True, with_proxy=True, with_arglist=True)
 @click.option("-a", "--parts", is_flag=True, help="Retrieve a possibly-partial result")
 @click.option("-t", "--time", is_flag=True, help="Time the command")
+@click.option("-S", "--stream", is_flag=True, help="Get data stream from remote")
 @catch_errors
-async def cmd(obj, path, time, parts, **attrs):
+async def cmd(obj, path, time, parts, stream, **attrs):
     """
     Send a MoaT command.
 
@@ -354,6 +355,8 @@ async def cmd(obj, path, time, parts, **attrs):
     Positional arguments may follow the command name. They are parsed as
     with `--set`.
     """
+    if parts and stream:
+        raise click.UsageError("Parts and Stream modes don't like each other (yet).")
     cfg = obj.mcfg
     val = process_args({None: []}, no_path=True, **attrs)
     args = val.pop(None)
@@ -381,16 +384,30 @@ async def cmd(obj, path, time, parts, **attrs):
                 from moat.lib.rpc import SubStore  # noqa: PLC0415
 
                 res = await SubStore(cmd).get(*args, **val)
+            elif stream:
+                async with cmd.stream_in(*args, **val) as ms:
+                    d = ms.to_list()
+                    if d:
+                        yprint(d)
+                        print("---", file=obj.stdout)
+                    async for m in ms:
+                        yprint(m.to_list())
+                        print("---", file=obj.stdout)
+                    d = ms.to_list()
+                    if d:
+                        yprint(d)
+                        print("---", file=obj.stdout)
             else:
                 res = await cmd(*args, **val)
         except RemoteError as err:
             t3 = tm()
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
-            t3 = tm()
-            if isinstance(res, Msg):
-                res = [res.args, res.kw]
-            yprint(res, stream=obj.stdout)
+            if not stream:
+                t3 = tm()
+                if isinstance(res, Msg):
+                    res = [res.args, res.kw]
+                yprint(res, stream=obj.stdout)
     if time:
         print(f"{humandelta(t3 - t2)} (setup {humandelta(t2 - t1)})")
 

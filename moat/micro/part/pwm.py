@@ -114,7 +114,7 @@ class PWM(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
-            raise ValueError("Pin not set")  # noqa:TRY004
+            raise ValueError(f"Pin not set {cfg}")  # noqa:TRY004
         self._load()
         self.evt = Event()
 

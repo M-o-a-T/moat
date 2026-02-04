@@ -134,8 +134,8 @@ class PID(BaseCmd):
                         await ms.send(sp)
 
             async for m in ms:
-                self.pid.setpoint(m)
-                self._set_bc(m)
+                self.pid.setpoint(m[0])
+                self._set_bc(m[0])
 
     async def cmd_s(self, **kw):
         """

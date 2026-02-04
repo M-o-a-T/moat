@@ -73,7 +73,7 @@ class Cmd(BaseCmd):
         """
         # This is a stream command because it returns the enc_part output
         # as multi-element return values.
-        n = msg.kw.pop("n")
+        n = msg.kw.pop("n", msg[0])
         p = msg.kw.pop("p", ())
 
         try:

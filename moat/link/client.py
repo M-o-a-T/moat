@@ -177,6 +177,10 @@ class LinkCommon(CmdCommon):
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.handle(msg, rpath, *add)
 
+        if rpath and rpath[-1] == "d_":
+            msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
+            return msg.call_stream(self.sdr.stream_d_)
+
         return super().handle(msg, rpath, *add)
 
     @property
@@ -308,6 +312,8 @@ class LinkSender(MsgSender):
         """
         Standard handler, forwards to the remote side.
         """
+        if rcmd and rcmd[-1] == "d_":
+            return await self._link.handle(msg, rcmd)
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
@@ -327,6 +333,34 @@ class LinkSender(MsgSender):
 
         async with ann(self, *a, **kw) as res:
             yield res
+
+    async def stream_d_(self, msg: Msg):
+        """
+        Simple Data Protocol on the client, possibly with subpath.
+        """
+        try:
+            p = msg["p"]
+        except KeyError:
+            p = msg[0]
+            off = 1
+        else:
+            off = 0
+
+        p = Path.build(p)
+
+        try:
+            try:
+                d = msg["d"]
+            except KeyError:
+                d = msg[off]
+            # write
+
+            await self.d_set(p, d)
+
+        except (KeyError, IndexError):
+            # read
+            res = await self.d_get(p)
+            await msg.result(res)
 
     @overload
     def d_get(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
@@ -896,7 +930,6 @@ class Link(LinkCommon, CtxObj):
                         sdr = LinkSender(self)
                     sdr.add_sub("cl")
                     sdr.add_sub("d")
-                    sdr.add_sub("d_")
                     sdr.add_sub("e")
                     sdr.add_sub("i")
                     try:

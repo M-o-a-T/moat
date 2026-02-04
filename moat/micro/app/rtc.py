@@ -38,7 +38,10 @@ class Cmd(BaseCmd):
             k: Key to access.
             v: Value to set. If not given, returns current value.
 
-        This function does not list keys. Use a stream for that.
+        This function does not list keys. Use :meth:`stream` for that.
+
+        The name can also be passed as next-to-last path element.
+        (The last is `w`.)
         """
         if v is _NotGiven:
             return await RTC.get(k)
@@ -73,7 +76,10 @@ class Cmd(BaseCmd):
         """
         # This is a stream command because it returns the enc_part output
         # as multi-element return values.
-        n = msg.kw.pop("n", msg[0])
+        try:
+            n = msg.kw.pop("n")
+        except KeyError:
+            n = msg[0]
         p = msg.kw.pop("p", ())
 
         try:
@@ -89,13 +95,40 @@ class Cmd(BaseCmd):
         except KeyError as exc:
             raise ExpKeyError(*exc.args) from None
 
-    doc_w = dict(_d="write data", _0="str:name", _1="path:pos", d="any:deletes if missing")
+    doc_w = dict(_d="write data", _0="str:name", _1="any:data")
 
     async def stream_w(self, msg: Msg):
         """
+        Write to RTC.
+
+        Args:
+            name(str): Name of the entry.
+            data(Any): Data to store. `NotGiven` deletes.
+
+        The name can also be passed as next-to-last path element.
+        (The last is `w`.)
+        """
+        try:
+            n = msg.kw.pop("n")
+        except KeyError:
+            n = msg[0]
+            off = 1
+        else:
+            off = 0
+        try:
+            d = msg.kw.pop("d")
+        except KeyError:
+            d = msg[off]
+
+        return await RTC.set(n, d, **msg.kw)
+
+    doc_c = dict(_d="write cached data", _0="str:name", _1="path:pos", d="any:deletes if missing")
+
+    async def stream_c(self, msg: Msg):
+        """
         Write to the cached data.
 
-        As data are frequently too large to transmit in one go, this code
+        As data are sometimes too large to transmit in one go, this code
         updates the state step-by-step.
 
         Args:

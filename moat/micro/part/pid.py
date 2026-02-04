@@ -58,7 +58,6 @@ class PID(BaseCmd):
         self.state_path = cfg.get("state", None)
         self.pid.setpoint(cfg.get("set", 0))
 
-        self._val_bc = Broadcaster(1)
         self._set_bc = Broadcaster(1)
 
     async def setup(self):

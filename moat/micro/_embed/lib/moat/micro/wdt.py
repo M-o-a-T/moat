@@ -60,7 +60,6 @@ class WDT:
     _ping = None
 
     def __init__(self, cfg):
-        print("CFG", cfg)
         self.cfg = cfg
         if cfg.get("hw", False):
             if M.WDT is not None:

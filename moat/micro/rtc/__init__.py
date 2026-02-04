@@ -346,6 +346,11 @@ def at(*a, **kw):
     code. After a crash the data from the last such call will be available
     by calling ``RTC.get_sync("debug")``.
     """
+    try:
+        if (RTC.get_sync("state") + ",").startswith("safe,"):
+            return
+    except KeyError:
+        pass
     data = (a, kw) if a and kw else (a if a else kw)
     try:
         RTC.set_sync("debug", data, fs=False)

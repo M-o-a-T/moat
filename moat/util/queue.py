@@ -111,8 +111,6 @@ class Queue:
         """No more messages will be received"""
         self._s.close()
 
-    close_writer = close_sender
-
     def close_receiver(self) -> Awaitable:
         """No more messages may be sent"""
         self._r.close()

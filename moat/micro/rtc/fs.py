@@ -153,4 +153,6 @@ class RTC(RTCBase):
         Returns:
             A copy of the internal data dict (does not include direct files).
         """
-        return set(self._direct.keys()) + set(self._d.keys())
+        res = set(self._direct.keys())
+        res.update(self._d.keys())
+        return res

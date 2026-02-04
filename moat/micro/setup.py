@@ -264,7 +264,7 @@ async def setup(
 
         await anyio.sleep(3)
         async with (
-            RootCmd(cfg, run=True) as dsp,
+            RootCmd(cfg) as dsp,
             dsp.sub_at(cfg.remote) as sd,
         ):
             log("Running after reset.")

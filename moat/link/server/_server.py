@@ -306,12 +306,12 @@ class ServerClient(LinkCommon):
         * data
         * metadata dump
         """
-        path = msg[0]
+        path = Path.build(msg[0])
         if len(path) and path[0] == "run":
             data = self.server.rdata
         else:
             data = self.server.data
-        d = data[msg[0]]
+        d = data[path]
         await msg.result(d.data, *d.meta.dump())
 
     doc_d_collect = dict(_d="collate subnode data", _r="Any:Data", _0="Path:root", _1="Path")
@@ -328,7 +328,7 @@ class ServerClient(LinkCommon):
         Result:
         * data (as dict)
         """
-        root = msg[0]
+        root = Path.build(msg[0])
         path = msg[1]
         d = self.server.data[root].collect(path)
         await msg.result(**d)
@@ -419,7 +419,7 @@ class ServerClient(LinkCommon):
             await msg.send(d, sp, nd, *n.meta.dump())
 
         try:
-            d = self.server.data.get(msg[0], create=False)
+            d = self.server.data.get(Path.build(msg[0]), create=False)
         except KeyError:
             async with msg.stream_out():
                 return
@@ -438,6 +438,7 @@ class ServerClient(LinkCommon):
         """
         Handler for direct storage
         """
+        p = Path.build(p)
         if value is _NotGiven:
             return self._cmd_d_get(p)
         elif value is NotGiven:
@@ -481,6 +482,7 @@ class ServerClient(LinkCommon):
         if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
+        path = Path.build(path)
 
         try:
             node = self.server.data.get(path)
@@ -520,6 +522,7 @@ class ServerClient(LinkCommon):
         if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
+        path = Path.build(path)
 
         try:
             node = self.server.data[path]

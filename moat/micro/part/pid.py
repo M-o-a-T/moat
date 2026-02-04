@@ -108,7 +108,7 @@ class PID(BaseCmd):
         if sp is None:
             return self.pid.state.setpoint
         self.pid.setpoint(sp)
-        self._setpoint_bc(sp)
+        self._set_bc(sp)
 
     doc_s = dict(
         _d="read state",
@@ -128,13 +128,13 @@ class PID(BaseCmd):
 
             @tg.start_soon
             async def _sp_evt():
-                async with self._setpoint_bc.reader() as spr:
+                async with self._set_bc.reader(1) as spr:
                     async for sp in spr:
                         await ms.send(sp)
 
             async for m in ms:
                 self.pid.setpoint(m)
-                self._setpoint_bc(m)
+                self._set_bc(m)
 
     async def cmd_s(self, **kw):
         """

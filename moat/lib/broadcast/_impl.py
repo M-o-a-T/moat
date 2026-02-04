@@ -127,7 +127,7 @@ class BroadcastReader(Generic[TData]):
             self.loss += 1
 
     def _close(self) -> None:
-        self._q.close_writer()
+        self._q.close_sender()
 
     def close(self) -> None:
         "close this reader, detaching it from its parent"

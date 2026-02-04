@@ -4,13 +4,16 @@ Test our ping thing
 
 from __future__ import annotations
 
+import anyio
 import pytest
 from math import cos, pi
 
 from numpy import allclose, arange, array, zeros_like
 
 from moat.util import yload
+from moat.lib.config import CFG as gCFG
 from moat.lib.path import P
+from moat.link._test import Scaffold
 from moat.micro._test import mpy_stack
 
 from typing import cast
@@ -48,11 +51,43 @@ r:
         tf: 10
         max: 5
         min: -5
+      tr:
+        app: part.NoOp
+        s:
+          - p: !P r.link.mon_
+            a:
+            - !P test.setpoint.src
+            so: true
+          - p: !P p.sp
+            si: true
+            so: true
+          - p: !P r.link.set
+            a:
+            - !P test.setpoint.dest
+            append: true
 
   link: *link
   log:
     txt: "M"
 p: *p
+tr:
+  app: part.NoOp
+  s:
+    - p: !P link.mon_
+      a:
+      - !P test.setpoint.src
+      so: true
+    - p: !P p.sp
+      si: true
+      so: true
+    - p: !P link.set
+      a:
+      - !P test.setpoint.dest
+      append: true
+link:
+  app: part.NoOp
+  mon: true
+  rlink: !P d  # access to server data
 
 """
 
@@ -142,3 +177,49 @@ async def integrate_full(pid, ok, here):  # noqa:D103
     """
     expected = -array(eval(exp.strip()))
     assert ok == allclose(expected, output, rtol=0.0, atol=0.1)
+
+
+@pytest.mark.parametrize("here", [True, False])
+@pytest.mark.anyio
+async def test_track_setpoint(tmp_path, here, cfg):
+    "test data foo"
+    Kp, Ki, Kd, Tf = (0, 2.0, 3.2, 0.5)
+    mcfg = yload(CFG, attr=True)
+    mcfg.p.p = Kp
+    mcfg.p.i = Ki
+    mcfg.p.d = Kd
+    mcfg.p.tf = Tf
+    mcfg.link.app = "link.Cmd"
+    if here:
+        mcfg.tr.app = "part.Transfer"
+        del mcfg.r
+    else:
+        mcfg.r.cfg.app.tr.app = "part.Transfer"
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
+        gCFG.mod(P("moat.link"), cfg.link)
+        async with (
+            mpy_stack(tmp_path, mcfg) as d,
+            d.sub_at(P("p") if here else P("r.p")) as pid,
+            c.d_watch(mcfg.tr.s[-1].a[0], state=False) as cw,
+        ):
+            wat = []
+
+            @sf.tg.start_soon
+            async def mon_wat():
+                async for v in cw:
+                    wat.append(v)
+
+            await c.d_set(mcfg.tr.s[0].a[0], 10)
+            await anyio.sleep(0.1 if here else 0.3)
+            assert len(wat) == 1
+            assert wat == [10]
+            assert (await pid.s())["state"]["setpoint"] == 10
+
+            await pid.sp(15)
+            await anyio.sleep(0.1 if here else 0.2)
+            assert wat[-1] == 15

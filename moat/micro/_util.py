@@ -211,8 +211,8 @@ class Sensor(BaseCmd):
                             o = val
                     await sleep_ms(t)
 
-        val = await self._get(msg.get("force", False))
+        val = await self.get(msg.get("force", False))
         while o is not None and abs(val - o) <= d:
             await sleep_ms(t)
-            val = await self._get(msg.get("force", False))
+            val = await self.get(msg.get("force", False))
         await msg.result(val)

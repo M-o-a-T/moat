@@ -5,7 +5,7 @@ PID controller.
 from __future__ import annotations
 
 from moat.lib.broadcast import Broadcaster
-from moat.lib.micro import TaskGroup
+from moat.lib.micro import AC_use, TaskGroup
 from moat.lib.pid import CPID
 from moat.lib.rpc import BaseCmd
 
@@ -63,6 +63,7 @@ class PID(BaseCmd):
     async def setup(self):
         "retrieve state"
         await super().setup()
+        await AC_use(self, self._set_bc)
         if self.state_path is not None:
             sr = self.root.sub_at(self.state_path)
             await sr.rdy_()

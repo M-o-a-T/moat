@@ -227,9 +227,8 @@ class Broadcaster(Generic[TData]):
         self.close()
 
     def _closed_reader(self, reader: BroadcastReader[TData]) -> None:
-        assert self._rdr is not None
-
-        self._rdr.remove(reader)
+        if self._rdr is not None:
+            self._rdr.remove(reader)
 
     def __aiter__(self) -> BroadcastReader[TData]:
         """Create a reader with the predefined queue length"""

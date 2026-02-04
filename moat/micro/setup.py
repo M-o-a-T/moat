@@ -155,7 +155,7 @@ async def setup(
         if run or watch:
             if run and not reset:
                 o, e = await repl.exec_raw(
-                    f"from main import go; go(state={state!r})",
+                    f"import moat; moat.go(state={state!r})",
                     timeout=None if watch else 30,
                 )
                 if o:

@@ -57,7 +57,7 @@ class RTC(RTCBase):
 
         try:
             data = self._mem()
-            if data and data != b"":
+            if data and data[0:3] == b"\xd9\xd9\xf7":
                 decoded = _codec.decode(data)
                 if isinstance(decoded, Tag) and decoded.tag == CBOR_TAG_CBOR_FILEHEADER:
                     self._d = decoded.value

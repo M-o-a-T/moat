@@ -6,6 +6,8 @@ This code is *duplicated* in `moat.util.exc`.
 
 from __future__ import annotations
 
+from moat.lib.micro import BaseExceptionGroup  # noqa:A004
+
 __all__ = [
     "ExpAttrError",
     "ExpKeyError",

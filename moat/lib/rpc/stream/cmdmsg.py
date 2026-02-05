@@ -66,6 +66,7 @@ class BaseCmdMsg(BaseCmd):
 
     tg: TaskGroup = None
     __stream = None
+    __rpath = ()
 
     doc = dict(_d="Foo")
 
@@ -76,16 +77,34 @@ class BaseCmdMsg(BaseCmd):
         Must be overridden.
 
         Cleanup is typically handled via `moat.lib.micro.AC_use`.
+
+        Parameters:
+            rlink(Path): Prefix for incoming messages
+            path(Path): Prefix for outgoing messages
         """
         raise NotImplementedError("Create the stream: ", self.__class__.__name__)
+
+    async def setup(self):
+        "Sets ``__rpath``"
+        await super().setup()
+
+        rpath = self.cfg.get("path", ())
+        if rpath:
+            rpath = list(rpath)
+            rpath.reverse()
+            self.__rpath = rpath
 
     async def task(self):
         """
         Start the MsgStream.
         """
+        root = self.root
+        lpath = self.cfg.get("rlink", ())
+        if lpath:
+            root = root.sub_at(lpath)
         try:
             self.s = await self.stream()
-            async with MsgStream(self.root, self.s) as st:
+            async with MsgStream(root, self.s) as st:
                 self.__stream = st
                 if L:
                     self.set_ready()
@@ -126,6 +145,7 @@ class BaseCmdMsg(BaseCmd):
             raise EOFError
 
         # forward to remote
+        rcmd.extend(self.__rpath)
         res = await self.__stream.handle(msg, rcmd)
 
         # if it was a directory request, add local data

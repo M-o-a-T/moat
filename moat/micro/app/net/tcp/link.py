@@ -5,7 +5,7 @@ TCP link app for MoaT message exchange.
 from __future__ import annotations
 
 from moat.util import attrdict
-from moat.lib.rpc.stream.cmdmsg import CmdMsg
+from moat.lib.rpc import CmdMsg
 from moat.lib.stream import TcpLink, serial_stack
 
 

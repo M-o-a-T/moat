@@ -133,7 +133,6 @@ Otherwise, let's go:
 ```
 >>> import moat
 >>> moat.go("once")
-*** STATE *** once ***
 Start MoaT: 'once'
 WLAN. - 192.168.1.42
 Setup :
@@ -532,7 +531,6 @@ Let's change that:
 $ pyserial-miniterm ...
 ...
 >>> moat.go("once")
-*** STATE *** once ***
 Start MoaT: 'once'
 WLAN. - 192.168.1.42
 Setup :

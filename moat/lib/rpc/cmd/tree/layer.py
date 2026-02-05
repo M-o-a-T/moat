@@ -5,7 +5,7 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 from moat.util import attrdict
-from moat.lib.micro import L, TaskGroup, log
+from moat.lib.micro import L, TaskGroup
 from moat.lib.rpc import LoadCmd
 
 from .dir import BaseSuperCmd
@@ -132,5 +132,5 @@ class BaseFwdCmd(BaseLayerCmd):
         gcfg = self.cfg
         cfg = gcfg.get("cfg", attrdict())
 
-        log("Setup %s: %s", self.path, cfg["app"])
+        # log("Setup %s: %s", self.path, cfg["app"])
         return LoadCmd(cfg)

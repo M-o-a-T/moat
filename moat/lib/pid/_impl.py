@@ -316,7 +316,7 @@ class CPID(PID):
         """
         super().__init__(cfg.get("p", 0), cfg.get("i", 0), cfg.get("d", 0), cfg.get("tf", 0))
         self.cfg = cfg
-        self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
+        self.cfg_updated()
 
         if state is None:
             state = attrdict()

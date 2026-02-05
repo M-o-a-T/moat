@@ -175,7 +175,7 @@ class HandlerStream(MsgHandler):
 
         if not rcmd:
             raise ShortCommandError(msg.cmd)
-        if rcmd[-1] == "!l":
+        if rcmd[-1] == "!":
             rcmd.pop()
             return await super().handle(msg, rcmd)
 

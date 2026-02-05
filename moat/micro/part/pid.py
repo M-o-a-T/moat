@@ -68,7 +68,7 @@ class PID(BaseCmd):
             sr = self.root.sub_at(self.state_path)
             await sr.rdy_()
             try:
-                (st,) = await sr()
+                st = await sr.r()
             except KeyError:
                 pass
             else:

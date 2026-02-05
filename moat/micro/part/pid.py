@@ -92,8 +92,11 @@ class PID(BaseCmd):
         """
         self.val_in = val
         self.split = s = self.pid.integrate(val, t=t)
-        if (sr := self.state_rtc) is not None:
-            await sr(self.pid.state, fs=False)
+        if (sr := self.state_rtc) is None and self.state_path is not None:
+            self.state_rtc = sr = self.root.sub_at(self.state_path)
+            await sr.rdy_()
+        if sr is not None:
+            await sr.w(self.pid.state, fs=False)
         return self.pid.sum(s)
 
     doc_sp = dict(

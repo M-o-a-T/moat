@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from moat.lib.micro import Event, sleep_ms
+from moat.lib.micro import CancelledError, Event, sleep_ms
 from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
@@ -62,6 +62,7 @@ class Repeater:
         rdr: The async procedure to retrieve the value.
         min: default minimum
         max: default maximum
+        diff: default max delta
     """
 
     val: float | None = None
@@ -77,11 +78,13 @@ class Repeater:
         rdr: Callable[Awaitable[float], []],
         min: float = -99999,  # noqa:A002
         max: float = 99999,  # noqa:A002
+        diff: float = 99999,
     ) -> float:
         self.cfg = cfg
         self.rdr = rdr
         self.min = min
         self.max = max
+        self.diff = diff
 
     def state(self) -> dict:
         "Current state"
@@ -102,6 +105,9 @@ class Repeater:
         # This dance ensures that an event is only allocated when more than
         # one task tries to read at the same time
 
+        if force:
+            return await self.rdr()
+
         if self.evt is True:
             self.evt = Event()
         if isinstance(self.evt, Event):
@@ -109,35 +115,40 @@ class Repeater:
                 await self.evt.wait()
             return self.val
 
-        self.evt = True
-        self.rr = 0
-        rep = self.cfg.get("repeat", 3)
-        while True:
-            try:
-                val = await self.rdr()
-            except Exception as exc:
-                if self.exc is None:
-                    self.exc = exc
-            if self.cfg.get("min", self.min) < val < self.cfg.get("max", self.max):
-                if force or (
-                    self.val is not None and abs(val - self.val) < self.cfg.get("diff", 0)
-                ):
-                    break
-            self.err = val
-            if rep:
-                rep -= 1
-                if rep == 0:
-                    exc, self.exc = self.exc, None
-                    raise exc
-            self.rr += 1
-            self.retries += 1
-            await sleep_ms(self.cfg.get("timer", 20))
-        self.retries -= 1
-        self.exc = None
-
-        if isinstance(self.evt, Event):
-            self.evt.set()
-        self.evt = False
+        try:
+            self.evt = True
+            self.rr = 0
+            rep = self.cfg.get("repeat", 3)
+            val = None
+            err = None
+            while True:
+                try:
+                    val = await self.rdr()
+                except Exception as exc:
+                    if err is None:
+                        err = exc
+                if self.cfg.get("min", self.min) < val < self.cfg.get("max", self.max):
+                    if self.val is None or abs(val - self.val) < self.cfg.get("diff", self.diff):
+                        break
+                self.err = val
+                if rep:
+                    rep -= 1
+                    if rep == 0:
+                        raise err or ValueError(val)
+                self.rr += 1
+                self.retries += 1
+                await sleep_ms(self.cfg.get("timer", 20))
+            if self.retries > 0:
+                self.retries -= 1
+        except BaseException:
+            val = None
+            raise
+        finally:
+            if isinstance(self.evt, Event):
+                self.evt.set()
+            self.evt = False
+        if val is None:
+            raise err or CancelledError
         self.val = val
         return val
 

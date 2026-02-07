@@ -7,7 +7,8 @@ from __future__ import annotations
 import random
 from math import atanh, tanh
 
-from moat.lib.micro import Event
+from moat.util import NotGiven
+from moat.lib.micro import Event, TaskGroup
 from moat.lib.rpc import BaseCmd
 
 PINS = {}
@@ -28,10 +29,12 @@ class Pin(BaseCmd):
         super().__init__(cfg)
         PINS[cfg["pin"]] = self
         self._value = cfg.get("init", False)
+        self.flag = Event()
 
     def in_value(self, val):
         "set+send pin value unconditionally"
         self.flag.set()
+        self.flag = Event()
         self._value = val
 
     @property
@@ -42,31 +45,40 @@ class Pin(BaseCmd):
     def __aiter__(self):
         return self
 
-    async def __anext__(self):
-        if self.flag is None:
-            self.flag = Event()
+    async def get(self):
+        "Wait for + get the next value"
         await self.flag.wait()
         return self._value
 
-    doc_r = dict(_d="read", prev="bool:wait if unchanged")
+    async def cmd(self, val: bool = NotGiven) -> None | bool:
+        "Simple Data protocol."
+        if val is NotGiven:
+            return self.value
+        self.in_value(val)
 
-    async def cmd_r(self, prev=None):
-        "read. Wait for change if @prev (previous value) is not None"
-        if prev is self._value:
-            if self.flag is None:
-                self.flag = Event()
-            await self.flag.wait()
-        return self._value
+    async def stream(self, msg):
+        """
+        R/W data stream. The initial argument says whether you want to
+        read. Waits for change if @o (old value) is not None.
+        """
+        o = msg.get("o", None)
+        async with TaskGroup() as tg, msg.stream() as m:
 
-    doc_w = dict(_d="write", _0="bool:new state")
+            async def _rd():
+                val = self.value
+                if o is not val:
+                    await m.send(val)
+                while True:
+                    val = await self.get()
+                    await m.send(val)
 
-    async def cmd_w(self, v):
-        "set fake pin; trigger iter if changed"
-        if self._value != v:
-            if self.flag is not None:
-                self.flag.set()
-                self.flag = Event()
-            self._value = v
+            if o is not None or msg.get(0, False):
+                tg.start_soon(_rd)
+
+            for mm in m:
+                self.in_value(mm[0])
+            tg.cancel()
+            await msg.result()
 
 
 class ADC(BaseCmd):

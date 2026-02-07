@@ -94,7 +94,7 @@ async def test_rtc_cfg(tmp_path, remote):
         rt.tt = attrdict()
         rt.tt.c = dict(d="f", g={"h": "i"})
         rt.tt.a = NotGiven
-        await rtc.set(rt, sync=True, keep=True)
+        await rtc.set(rt, keep=True)
 
         await srtc("foo", "bar")
         res = await srtc()

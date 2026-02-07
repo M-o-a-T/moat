@@ -52,9 +52,9 @@ class Cmd(BaseCmd):
         except KeyError as exc:
             raise ExpKeyError(*exc.args) from None
 
-    doc_w = dict(_d="write cfg", p="Path:subpart", d="any:Data")
+    doc_c = dict(_d="write cfg", p="Path:subpart", d="any:Data")
 
-    async def cmd_w(self, p, d=NotGiven, keep: bool = False):
+    async def cmd_c(self, p, d=NotGiven, keep: bool = False):
         """
         Online configuration mangling.
 

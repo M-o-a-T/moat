@@ -59,36 +59,30 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
     port = free_tcp_port
 
     async def set_server(c):
-        await c.set(
-            {
-                "app": {
-                    "r": {
-                        "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
-                        "host": "127.0.0.1",
-                        "port": port,
-                        "wait": False,
-                    },
+        await c.set({
+            "app": {
+                "r": {
+                    "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
+                    "host": "127.0.0.1",
+                    "port": port,
+                    "wait": False,
                 },
             },
-            sync=True,
-        )
+        })
 
     async def set_client(c):
-        await c.set(
-            {
-                "app": {
-                    "r": {
-                        "app": "net.tcp.Link",
-                        "host": "127.0.0.1",
-                        "port": port,
-                        "retry": {"delay": 0.2, "timeout": 2},
-                        "timeout": 400,
-                        "wait": False,
-                    },
+        await c.set({
+            "app": {
+                "r": {
+                    "app": "net.tcp.Link",
+                    "host": "127.0.0.1",
+                    "port": port,
+                    "retry": {"delay": 0.2, "timeout": 2},
+                    "timeout": 400,
+                    "wait": False,
                 },
             },
-            sync=True,
-        )
+        })
 
     async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as cl, d.cfg_at(P("s.c")) as cr:
         if remote_first:

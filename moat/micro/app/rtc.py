@@ -43,6 +43,8 @@ class Cmd(BaseCmd):
         The name can also be passed as next-to-last path element.
         (The last is `w`.)
         """
+        if k is _NotGiven:
+            return await RTC.keys()
         if v is _NotGiven:
             return await RTC.get(k)
         else:
@@ -197,6 +199,6 @@ class Cmd(BaseCmd):
 
         rcmd is reversed, so rtc.cfg.w arrives as ["w", "cfg"]
         """
-        if len(rcmd) == 2 and rcmd[1][-1] != "_" and rcmd[0] in "rwx" and "n" not in msg:
+        if len(rcmd) == 2 and rcmd[1][-1] != "_" and rcmd[0] in "rwcx" and "n" not in msg:
             msg.kw["n"] = rcmd.pop()
         await super().handle(msg, rcmd)

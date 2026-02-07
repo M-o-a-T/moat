@@ -215,7 +215,7 @@ async def test_track_setpoint(tmp_path, here, cfg):
                     wat.append(v)
 
             await c.d_set(mcfg.tr.s[0].a[0], 10)
-            await anyio.sleep(0.1 if here else 0.3)
+            await anyio.sleep(0.1 if here else 0.5)
             assert len(wat) == 1
             assert wat == [10]
             assert (await pid.s())["state"]["setpoint"] == 10

@@ -78,7 +78,7 @@ class CfgStore(SubStore):
         self.cfg = cfg
         return cfg
 
-    async def set(self, cfg: dict, replace: bool = False, sync: bool = False, keep: bool = False):
+    async def set(self, cfg: dict, replace: bool = False, keep: bool = False):
         """
         Update the client's configuration data.
 
@@ -86,7 +86,6 @@ class CfgStore(SubStore):
             cfg: new config data
             keep: `NotGiven` values will be kept
             replace: delete existing config
-            sync: reload after updating
         """
 
         async def _set(p, c, empty: bool = False):
@@ -114,15 +113,15 @@ class CfgStore(SubStore):
                         if k is None:
                             k = len(ocd)  # noqa:PLW2901
                     if empty or not v:
-                        await self.sd.w(p=p + (k,), d=type(v)(), keep=keep)
+                        await self.sd.c(p=p + (k,), d=type(v)(), keep=keep)
                     if v:
                         await _set(p + (k,), v, empty=empty)
                 elif isinstance(ocd, dict):
                     if ocd.get(k, _NotGiven) != v:
-                        await self.sd.w(p=p + (k,), d=v, keep=keep)
+                        await self.sd.c(p=p + (k,), d=v, keep=keep)
                 elif isinstance(ocd, list):
                     if len(ocd) <= k or ocd[k] != v:
-                        await self.sd.w(p=p + (k,), d=v, keep=keep)
+                        await self.sd.c(p=p + (k,), d=v, keep=keep)
                 else:
                     raise ValueError(f"Orig is {ocd!r}")  # noqa:TRY004
 
@@ -131,10 +130,9 @@ class CfgStore(SubStore):
             # drop those client cfg snippets that are not on the server
             for k in chain(ocd.keys(), ocl):
                 if k not in c:
-                    await self.sd.w(p=p + (k,), d=NotGiven)
+                    await self.sd.c(p=p + (k,), d=NotGiven)
 
         self.cfg = None
         await _set(Path(), cfg)
 
-        if sync:
-            await self.sd.x()  # runs
+        await self.sd.x()  # runs

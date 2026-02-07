@@ -5,42 +5,11 @@ Module for pins
 from __future__ import annotations
 
 import asyncio
+import machine as M
 
 from moat.util import NotGiven
 from moat.lib.micro import AC_use, Event, TaskGroup
 from moat.lib.rpc import BaseCmd
-
-try:
-    import machine as M
-except ImportError:
-    M = None
-
-try:
-    _XPin = M.Pin
-
-except AttributeError:
-
-    class _XPin:
-        # fake
-        __val = False
-
-        def __new__(cls, **kw):  # noqa: ARG004
-            return object.__new__(cls)
-
-        def __init__(self, **kw):
-            pass
-
-        def value(self, n=None):
-            if n is None:
-                return self.__val
-            else:
-                self.__val = None
-
-        def irq(self, p, flg):
-            pass
-
-        IRQ_RISING = 1
-        IRQ_FALLING = 2
 
 
 class _Pin:
@@ -56,7 +25,7 @@ class _Pin:
     """
 
     def __init__(self, *a, **kw):
-        self._pin = _XPin(*a, **kw)
+        self._pin = M.Pin(*a, **kw)
         self.flag = asyncio.ThreadSafeFlag()
         self.evt = Event()
         self.val = self._pin.value()
@@ -77,7 +46,7 @@ class _Pin:
     async def flag_watch(self):
         "Flag reader task, since a ThreadSafeFlag only acepts one read task"
         try:
-            self._pin.irq(self._irq, _XPin.IRQ_FALLING | _XPin.IRQ_RISING)
+            self._pin.irq(self._irq, M.Pin.IRQ_FALLING | M.Pin.IRQ_RISING)
             while True:
                 await self.flag.wait()
                 self.flag.clear()
@@ -124,7 +93,17 @@ class Pin(BaseCmd):
             drive="int:strength",
             pull="bool|None: Pullup/down?",
             open="bool|None: open-collector/emitter?",
-        )
+        ),
+        _d="r/w",
+        _a=[
+            dict(_r="bool:current state"),
+            dict(
+                _0="bool:new state",
+                o="bool:old: wait until pin value differs",
+            ),
+        ],
+        _o=True,
+        _s=True,
     )
 
     def __init__(self, cfg):
@@ -149,14 +128,6 @@ class Pin(BaseCmd):
         if getattr(self, "tg", None) is None:
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.flag_watch)
-
-    doc_r = dict(
-        _d="read",
-        _o=True,
-        _s=True,
-        _r="bool:current value",
-        o="bool:old: wait until pin value differs",
-    )
 
     async def cmd(self, val: bool = NotGiven) -> None | bool:
         "Simple Data protocol."

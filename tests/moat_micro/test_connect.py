@@ -45,50 +45,41 @@ async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
 
     async def set_server(c):
         if unix:
-            await c.set(
-                {
-                    "app": {
-                        "r": {
-                            "app": "net.unix.LinkIn" if link_in else "net.unix.Port",
-                            "port": str(sock),
-                            "wait": False,
-                        },
+            await c.set({
+                "app": {
+                    "r": {
+                        "app": "net.unix.LinkIn" if link_in else "net.unix.Port",
+                        "port": str(sock),
+                        "wait": False,
                     },
                 },
-                sync=True,
-            )
+            })
         else:
-            await c.set(
-                {
-                    "app": {
-                        "r": {
-                            "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
-                            "host": "127.0.0.1",
-                            "port": port,
-                            "wait": False,
-                        },
+            await c.set({
+                "app": {
+                    "r": {
+                        "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
+                        "host": "127.0.0.1",
+                        "port": port,
+                        "wait": False,
                     },
                 },
-                sync=True,
-            )
+            })
 
     async def set_client(c):
-        await c.set(
-            {
-                #           "apps": {"l": "net.unix.Link"},
-                #           "l": {"port": str(sock)},
-                "app": {
-                    "l": {
-                        "app": "net.unix.Link" if unix else "net.tcp.Link",
-                        "retry": {"delay": 0.2},
-                        "timeout": 100,
-                        "wait": False,
-                        **({"port": str(sock)} if unix else {"host": "127.0.0.1", "port": port}),
-                    },
+        await c.set({
+            #           "apps": {"l": "net.unix.Link"},
+            #           "l": {"port": str(sock)},
+            "app": {
+                "l": {
+                    "app": "net.unix.Link" if unix else "net.tcp.Link",
+                    "retry": {"delay": 0.2},
+                    "timeout": 100,
+                    "wait": False,
+                    **({"port": str(sock)} if unix else {"host": "127.0.0.1", "port": port}),
                 },
             },
-            sync=True,
-        )
+        })
 
     async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as c:
         await (set_server if server_first else set_client)(c)

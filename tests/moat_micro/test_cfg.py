@@ -98,10 +98,10 @@ async def test_cfg(tmp_path, local: bool):
         assert "z" not in cf.tt
 
         await cfg.set({"ta": []})
-        await cfx.w(P("ta:0"), "One")
-        await cfx.w(P("ta:n"), "Two")
-        await cfx.w(P("ta:2"), "Three")
+        await cfx.c(P("ta:0"), "One")
+        await cfx.c(P("ta:n"), "Two")
+        await cfx.c(P("ta:2"), "Three")
         cf = to_attrdict(await cfg.get(again=True))
         assert cf.ta == ["One", "Two", "Three"]
         with pytest.raises(IndexError):
-            await cfx.w(P("ta:4"), "Five")
+            await cfx.c(P("ta:4"), "Five")

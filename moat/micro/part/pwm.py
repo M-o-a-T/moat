@@ -46,17 +46,25 @@ class PWM(BaseCmd):
     """
     A PWM is an output pin that changes periodically.
 
-    Config:
-    - pin: the hardware output we're controlling. Path to the write method.
-    - min: Minimum time between switching, milliseconds
-    - max: Maximum time between switching, milliseconds
-    - base: the maximum value for the ratio.
-    - init: initial value (defaults to `min`)
-    - so: stream_out: Flag whether to stream the pin value
-    - vmin: Minimum value. Turn off if below.
-    - vmax: Maximum value. Turn off if above.
-    - resync: Time (ms) to force output on/off when transitioning from
-      outside vmin/vmax back into range. Limited by actual off time.
+    Parameters:
+        pin: the hardware output we're controlling. Path to the write method.
+        min: Minimum time between switching, milliseconds
+        max: Maximum time between switching, milliseconds
+        base: the maximum value for the ratio.
+        init: initial value (defaults to `min`)
+        so: stream_out: Flag whether to stream the pin value
+        vmin: Minimum value. Turn off if below.
+        vmax: Maximum value. Turn off if above.
+        resync: Time (ms) to force output on/off when transitioning from
+                outside vmin/vmax back into range. Limited by actual off time.
+
+        ramp(dict): Ramp-up settings.
+        ramp.val(float): Threshold. Force the PWM value to be at least this
+                         large while the float returned from calling *path*
+                         is less than *dest*.
+        ramp.path(Path): Path to read periodically while ramp-up is in effect.
+        ramp.dest(float): The value which the result from *path* needs to reach
+                          in order to leave ramp-up.
 
     The input must be in [0..base]; the output is controlled so that
     ``t_on/(t_on+t_off) = val/base``, given that ``min <= t_on,t_off <= max``

@@ -1,3 +1,9 @@
+moat-lib-proxy (0.1.1-1) unstable; urgency=medium
+
+  * New release for 26.0.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 08 Feb 2026 06:26:51 +0100
+
 moat-lib-proxy (0.1.0-8) unstable; urgency=medium
 
   * New release for 25.8.0

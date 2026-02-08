@@ -5,5 +5,5 @@ export PYBUILD_NAME=moat
 	dh $@ --with python3 --buildsystem=pybuild
 
 execute_after_dh_install:
-	mkdir -p $(DESTDIR)/etc/moat
-	install moat.yaml $(DESTDIR)/etc/moat
+	mkdir -p debian/tmp/etc/moat
+	install moat.yaml debian/tmp/etc/moat

@@ -13,9 +13,9 @@ classifiers = [
 ]
 dependencies = [
   "anyio ~= 4.2",
-  "moat-util ~= 0.62.2",
-  "moat-modbus ~= 0.8.11",
-  "moat-lib-victron ~= 0.1.4",
+  "moat-util ~= 0.62.3",
+  "moat-modbus ~= 0.8.12",
+  "moat-lib-victron ~= 0.1.6",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -23,7 +23,7 @@ name = "moat-ems-inv"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.2.13"
+version = "0.2.14"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

@@ -11,13 +11,13 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.71.20",
+	"moat-kv ~= 0.71.25",
 	"asyncwago ~= 0.31.6",
-	"moat-lib-config ~= 0.1.1",
-	"moat-lib-run ~= 0.1.1",
-	"moat-util ~= 0.62.2",
+	"moat-lib-config ~= 0.1.2",
+	"moat-lib-run ~= 0.1.2",
+	"moat-util ~= 0.62.3",
 ]
-version = "0.8.7"
+version = "0.8.8"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-wago"

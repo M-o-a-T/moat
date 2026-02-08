@@ -17,11 +17,11 @@ dependencies = [
 	"asyncclick",
 	"gitpython",
 	"packaging",
-	"moat-lib-config ~= 0.1.1",
-	"moat-lib-run ~= 0.1.1",
-	"moat-util ~= 0.62.2",
+	"moat-lib-config ~= 0.1.2",
+	"moat-lib-run ~= 0.1.2",
+	"moat-util ~= 0.62.3",
 	]
-version = "0.10.6"
+version = "0.10.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"

@@ -407,7 +407,7 @@ moat-nodered:
   tag: 0.1.2
 moat-src:
   deb: 0.10.6-2
-  new: 0.10.8
+  new: 0.11.0
   pkg: 1
   pypi: 0.10.6
   rev: 3a4872337506d833367efde0b670281d53651f3a

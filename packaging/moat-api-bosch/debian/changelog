@@ -1,3 +1,9 @@
+moat-api-bosch (0.1.1-2) unstable; urgency=medium
+
+  * New release for 26.0.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 08 Feb 2026 10:09:23 +0100
+
 moat-api-bosch (0.1.0-1) unstable; urgency=medium
 
   * Initial Debianization.

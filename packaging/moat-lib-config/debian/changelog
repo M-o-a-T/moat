@@ -1,8 +1,8 @@
-moat-lib-config (0.1.2-1) unstable; urgency=medium
+moat-lib-config (0.1.2-2) unstable; urgency=medium
 
   * New release for 26.0.0
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sun, 08 Feb 2026 06:26:37 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 08 Feb 2026 10:36:01 +0100
 
 moat-lib-config (0.1.1-7) unstable; urgency=medium
 

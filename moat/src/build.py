@@ -201,7 +201,14 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                         # New version for the same tag.
                         # Restore the previous version before continuing
                         # so we don't end up with duplicates.
-                        await run_("git", "restore", "-s", repo.last_tag, cwd=rd)
+                        await run_(
+                            "git",
+                            "restore",
+                            "-s",
+                            repo.last_tag,
+                            str(rd / "debian" / "changelog"),
+                            cwd=rd,
+                        )
                     await run_(
                         "debchange",
                         "--distribution",

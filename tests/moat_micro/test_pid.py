@@ -87,7 +87,8 @@ tr:
 link:
   app: part.NoOp
   mon: true
-  rlink: !P d  # access to server data
+  target:
+    send: !P d  # access to server data
 
 """
 

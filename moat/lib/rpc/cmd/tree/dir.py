@@ -78,7 +78,7 @@ class CfgStore(SubStore):
         self.cfg = cfg
         return cfg
 
-    async def set(self, cfg: dict, replace: bool = False, keep: bool = False):
+    async def set(self, cfg: dict, sync: bool = True, replace: bool = False, keep: bool = False):
         """
         Update the client's configuration data.
 
@@ -135,4 +135,5 @@ class CfgStore(SubStore):
         self.cfg = None
         await _set(Path(), cfg)
 
-        await self.sd.x()  # runs
+        if sync:
+            await self.sd.x()  # runs

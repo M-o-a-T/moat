@@ -62,11 +62,15 @@ class BaseCmdMsg(BaseCmd):
 
     This class cannot wrap a pre-existing stream. Its :meth:`stream` method
     **must** be overridden to create the stream.
+
+    Parameters:
+        prefix.recv(Path): Prefix for incoming messages
+        prefix.send(Path): Prefix for outgoing messages
     """
 
     tg: TaskGroup = None
     __stream = None
-    __rpath = ()
+    __rprefix = ()
 
     doc = dict(_d="Foo")
 
@@ -77,31 +81,27 @@ class BaseCmdMsg(BaseCmd):
         Must be overridden.
 
         Cleanup is typically handled via `moat.lib.micro.AC_use`.
-
-        Parameters:
-            rlink(Path): Prefix for incoming messages
-            path(Path): Prefix for outgoing messages
         """
         raise NotImplementedError("Create the stream: ", self.__class__.__name__)
 
     async def setup(self):
-        "Sets ``__rpath``"
+        "Sets ``__rprefix``"
         await super().setup()
 
-        rpath = self.cfg.get("path", ())
-        if rpath:
-            rpath = list(rpath)
-            rpath.reverse()
-            self.__rpath = rpath
+        rprefix = self.cfg.get("prefix", {}).get("send", ())
+        if rprefix:
+            rprefix = list(rprefix)
+            rprefix.reverse()
+            self.__rprefix = rprefix
 
     async def task(self):
         """
         Start the MsgStream.
         """
         root = self.root
-        lpath = self.cfg.get("rlink", ())
-        if lpath:
-            root = root.sub_at(lpath)
+        lprefix = self.cfg.get("prefix", {}).get("recv", ())
+        if lprefix:
+            root = root.sub_at(lprefix)
         try:
             self.s = await self.stream()
             async with MsgStream(root, self.s) as st:
@@ -145,7 +145,7 @@ class BaseCmdMsg(BaseCmd):
             raise EOFError
 
         # forward to remote
-        rcmd.extend(self.__rpath)
+        rcmd.extend(self.__rprefix)
         res = await self.__stream.handle(msg, rcmd)
 
         # if it was a directory request, add local data

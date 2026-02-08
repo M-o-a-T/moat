@@ -31,8 +31,8 @@ class Cmd(BaseCmd):
        link (Path): register at this path on MoaT-Link
        host (bool): whether to host-prefix the link name, defaults to `False`
        service (str): additional element(s) for *link*, if set
-       path (Path): if set, forward remote commands to this local path
-       rlink (Path): if set, forward local commands to this server-side path
+       target.recv (Path): if set, forward remote commands to this local path
+       target.send (Path): if set, forward local commands to this server-side path
        via (Path): announcement to send *rlink* commands to
        mon (bool): allow "mon_" access to monitor data from MoaT-Link.
                    This feature ignores the *via* and *rlink* parameters.
@@ -41,7 +41,7 @@ class Cmd(BaseCmd):
     accessing @link via :meth:`moat.link.client.LinkSender.get_service`
     connects to it.
 
-    If *rlink* is set, commands to this app get forwarded to the given
+    If *target.send* is set, commands to this app get forwarded to the given
     MoaT-Link command on the server. If *via* is set, the result of looking
     up the announcement is prepended.
 
@@ -54,9 +54,11 @@ class Cmd(BaseCmd):
             _d="Remote link",
             link="path:registration",
             host="bool:add hostname to link",
-            path="path:remote cmds go here",
-            rlink="path:local cmds go there",
             service="path|str: append to name",
+            dest=dict(
+                send="path:target for outgoing messages",
+                recv="path:target for incoming messages",
+            ),
         )
     )
 
@@ -75,13 +77,14 @@ class Cmd(BaseCmd):
                     srv += service
                 else:
                     srv /= service
+            target = self.cfg.get("target", {}).get("recv", None)
             self.ann = await AC_use(
                 self,
                 announcing(
                     self.link,
                     srv,
                     host=self.cfg.get("host", False),
-                    service=self.root.sub_at(self.cfg.path) if "path" in self.cfg else None,
+                    service=self.root.sub_at(target) if target is not None else None,
                 ),
             )
         # rlink will be set up lazily
@@ -107,7 +110,7 @@ class Cmd(BaseCmd):
 
         if self.rlink is None:
             try:
-                rpath = self.cfg["rlink"]
+                rpath = self.cfg["target"]["send"]
             except KeyError:
                 raise ExpKeyError(rcmd) from None
             via = self.cfg.get("via", None)

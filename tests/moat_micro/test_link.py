@@ -19,9 +19,10 @@ x:
   step: 10
 ln:
   app: link.Cmd
-  path: !P x
   link: !P foo.bar
-  rlink: !P ":"  # correct, because of service= in announcing
+  target:
+    send: !P ":"  # correct, because of service= in announcing
+    recv: !P "x"
   via: !P baz.quux
 """
 

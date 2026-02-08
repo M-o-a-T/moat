@@ -19,13 +19,13 @@ dependencies = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
-  "moat-util ~= 0.62.2",
-  "moat-micro ~= 0.18.1",
-  "moat-lib-config ~= 0.1.1",
-  "moat-lib-micro ~= 0.2.1",
-  "moat-lib-proxy ~= 0.1.0",
-  "moat-lib-run ~= 0.1.1",
-  "moat-lib-rpc ~= 0.5.1",
+  "moat-util ~= 0.62.3",
+  "moat-micro ~= 0.19.0",
+  "moat-lib-config ~= 0.1.2",
+  "moat-lib-micro ~= 0.2.2",
+  "moat-lib-proxy ~= 0.1.1",
+  "moat-lib-run ~= 0.1.2",
+  "moat-lib-rpc ~= 0.6.0",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -33,7 +33,7 @@ name = "moat-ems-battery"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.2.19"
+version = "0.2.20"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

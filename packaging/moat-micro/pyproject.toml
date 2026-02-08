@@ -20,26 +20,26 @@ dependencies = [
   "msgpack",
   "serialpacker >= 0.10.3",
   "pyfuse3 >= 3.2",
-  "moat-util ~= 0.62.2",
-  "moat-src ~= 0.10.6",
+  "moat-util ~= 0.62.3",
+  "moat-src ~= 0.10.7",
   "asyncdbus",
   "smbus3",
-  "moat-lib-rpc ~= 0.5.1",
-  "moat-lib-codec ~= 0.4.10",
-  "moat-lib-config ~= 0.1.1",
-  "moat-lib-micro ~= 0.2.1",
-  "moat-lib-pid ~= 0.6.7",
-  "moat-lib-proxy ~= 0.1.0",
-  "moat-lib-ring ~= 0.2.2",
-  "moat-lib-run ~= 0.1.1",
-  "moat-lib-stream ~= 0.1.3",
+  "moat-lib-rpc ~= 0.6.0",
+  "moat-lib-codec ~= 0.4.11",
+  "moat-lib-config ~= 0.1.2",
+  "moat-lib-micro ~= 0.2.2",
+  "moat-lib-pid ~= 0.7.0",
+  "moat-lib-proxy ~= 0.1.1",
+  "moat-lib-ring ~= 0.2.3",
+  "moat-lib-run ~= 0.1.2",
+  "moat-lib-stream ~= 0.2.0",
 ]
 requires-python = ">=3.8"
 name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.18.1"
+version = "0.20.0"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

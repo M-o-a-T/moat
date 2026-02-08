@@ -19,12 +19,12 @@ dependencies = [
 	"outcome",
 	"ruyaml",
 	"simpleeval",
-	"moat-util ~= 0.62.2",
+	"moat-util ~= 0.62.3",
 	"sqlalchemy ~= 2.0",
-	"moat-lib-config ~= 0.1.1",
-	"moat-lib-run ~= 0.1.1",
+	"moat-lib-config ~= 0.1.2",
+	"moat-lib-run ~= 0.1.2",
 	]
-version = "0.2.6"
+version = "0.2.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db"

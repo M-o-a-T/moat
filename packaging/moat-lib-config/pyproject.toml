@@ -12,7 +12,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "moat-util ~= 0.62.2",
+    "moat-util ~= 0.62.3",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
 ]
@@ -22,7 +22,7 @@ name = "moat-lib-config"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Configuration management for MoaT applications'
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

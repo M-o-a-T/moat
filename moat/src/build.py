@@ -207,7 +207,6 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                             "-s",
                             repo.last_tag,
                             str(rd / "debian" / "changelog"),
-                            cwd=rd,
                         )
                     await run_(
                         "debchange",
@@ -266,11 +265,28 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                                 shutil.move(str(src), str(dest))
                                 moved_files.add(filename)
 
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
             if no.run:
-                print("*** Failure packaging", r.name, file=sys.stderr)
+                if debug:
+                    print(f"\n*** Failure packaging {r.name}", file=sys.stderr)
+                else:
+                    print(
+                        """
+*** Failure packaging {r.name}
+
+* stdout:
+{exc.stdout.strip()}
+
+* stderr:
+{exc.stderr.strip()}
+""",
+                        file=sys.stderr,
+                    )
             else:
-                print("Failure packaging", r.name, file=sys.stderr)
+                if debug:
+                    print(f"\n=== Failure packaging {r.name}", file=sys.stderr)
+                else:
+                    print(f"Failure packaging {r.name}: {exc.stderr.strip()}", file=sys.stderr)
                 no.commit = True
                 no.deb = True
                 no.pypi = True

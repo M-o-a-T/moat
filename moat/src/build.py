@@ -160,7 +160,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
         if not await p.is_dir():
             continue
         try:
-            if not await (rd / "debian" / "changelog").exists():
+            if not await (p / "changelog").exists():
                 ltag = r.next_tag()
                 await run_(
                     "debchange",
@@ -175,6 +175,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                     cwd=rd,
                     echo=debug,
                 )
+                repo.index.add(p / "changelog")
             else:
                 res = await run_(
                     "dpkg-parsechangelog",
@@ -197,28 +198,18 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                         capture=True,
                         echo=debug,
                     )
-                    if res.strip().endswith(f" for {forcetag}"):
-                        # New version for the same tag.
-                        # Restore the previous version before continuing
-                        # so we don't end up with duplicates.
+                    if not res.strip().endswith(f" for {forcetag}"):
                         await run_(
-                            "git",
-                            "restore",
-                            "-s",
-                            repo.last_tag,
-                            str(rd / "debian" / "changelog"),
+                            "debchange",
+                            "--distribution",
+                            "unstable",
+                            "--newversion",
+                            f"{ltag}-{r.vers.pkg}",
+                            f"New release for {forcetag}",
+                            cwd=rd,
+                            echo=debug,
                         )
-                    await run_(
-                        "debchange",
-                        "--distribution",
-                        "unstable",
-                        "--newversion",
-                        f"{ltag}-{r.vers.pkg}",
-                        f"New release for {forcetag}",
-                        cwd=rd,
-                        echo=debug,
-                    )
-                    repo.index.add(p / "changelog")
+                        repo.index.add(p / "changelog")
 
                 elif tag == ltag and r.vers.pkg < ptag:
                     r.vers.pkg = ptag

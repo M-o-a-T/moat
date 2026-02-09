@@ -97,7 +97,11 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
             # Get or create UnitContext for this unit
             # If the unit already exists (e.g., from server config), add to it
             # Otherwise create a new one
+            # Note: forward parameter is recognized but true transparent forwarding
+            # is not yet implemented (complex due to request splitting across
+            # configured/unconfigured register boundaries)
             unit_ctx = s.units.get(u)
+
             if unit_ctx is None:
                 from moat.modbus.server import UnitContext  # noqa: PLC0415
 

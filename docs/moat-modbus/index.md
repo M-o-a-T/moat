@@ -8,7 +8,13 @@
 
 ## Manual
 
-TODO
+```{toctree}
+:maxdepth: 2
+
+dev-poll
+```
+
+## API Reference
 
 ```{toctree}
 :maxdepth: 2

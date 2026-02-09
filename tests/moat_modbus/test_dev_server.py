@@ -350,18 +350,71 @@ async def test_forward_true(autojump_clock, free_tcp_port_factory):
 
 
 @pytest.mark.trio
-async def test_const_scalar(autojump_clock):
+async def test_const_scalar(autojump_clock, free_tcp_port_factory):
     """Test serving constant scalar values."""
-    # TODO: Implement test
-    # Register with const: 42 should always return 42
-    pass
+    autojump_clock.autojump_threshold = 0.2
+
+    gateway_port = free_tcp_port_factory()
+
+    # Gateway config with const values
+    gateway_cfg = yload(
+        f"""
+server:
+  - host: 127.0.0.1
+    port: {gateway_port}
+    units:
+      1:
+        regs:
+          firmware_version:
+            reg_type: h
+            register: 0
+            type: uint
+            len: 1
+            const: 42
+          pi_value:
+            reg_type: h
+            register: 1
+            type: uint
+            len: 1
+            const: 314
+""",
+        attr=True,
+    )
+
+    async with anyio.create_task_group() as tg:
+        # Start gateway
+        await tg.start(dev_poll, gateway_cfg, None)
+        await anyio.sleep(0.1)
+
+        # Test: Read const values
+        async with (
+            ModbusClient() as cli,
+            cli.host("localhost", gateway_port) as h,
+            h.unit(1) as u,
+            u.slot("test") as s,
+        ):
+            s.add(HoldingRegisters, 0, IntValue)
+            s.add(HoldingRegisters, 1, IntValue)
+            res = await s.getValues()
+
+            # Should return const values
+            assert res[HoldingRegisters][0].value == 42
+            assert res[HoldingRegisters][1].value == 314
+
+        tg.cancel_scope.cancel()
 
 
 @pytest.mark.trio
-async def test_const_mqtt(cfg, autojump_clock):
-    """Test serving values from MQTT via const: !P path."""
-    # TODO: Implement test
-    # Register with const: !P topic.path should serve current MQTT value
+async def test_const_mqtt(cfg, autojump_clock, free_tcp_port_factory):
+    """Test serving values from MQTT via const: !P path.
+    
+    Note: MQTT subscription for const requires full MoaT-Link integration.
+    This test is a placeholder. The implementation in link.py adds support
+    for monitoring a Path and updating the register value.
+    """
+    # TODO: Full integration test with MoaT-Link
+    # Currently const: !P path will monitor the MQTT topic and update the register
+    # via the from_link() method (same as src:)
     pass
 
 

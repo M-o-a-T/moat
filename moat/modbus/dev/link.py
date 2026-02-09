@@ -53,6 +53,13 @@ class Register(BaseRegister):
             for d in dest:
                 tg.start_soon(self.to_link, d)
 
+        # Handle const: !P path - subscribe to MQTT and update register value
+        if "const" in self.data:
+            const_val = self.data.const
+            if isinstance(const_val, Path):
+                mon = self._link.d_watch(const_val, meta=True)
+                await tg.start(self.from_link, mon)
+
         if self.src is not None:
             slot = self.data.get("slot", None) if self.dest is None else None
             # if a slot is set AND src is set AND dst is not set,

@@ -726,10 +726,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv) -> None:
     except AttributeError:
         main = None
     if help or (
-        main is None
-        and ctx.invoked_subcommand is None
-        and not ctx.args
-        and not ctx._protected_args
+        main is None and ctx.invoked_subcommand is None and not ctx.args and not ctx.protected_args
     ):
         print(ctx.get_help())
         await ctx.aexit()

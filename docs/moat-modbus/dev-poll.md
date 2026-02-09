@@ -80,11 +80,12 @@ slots:
 
 - **`read_delay`**: Time in seconds between periodic reads
 - **`write_delay`**: Time in seconds to coalesce writes
-- **`read_align`**:
+- **`read_align`**: 
   - `true`: Align reads to multiples of read_delay
   - `false`: Read immediately, then wait read_delay
   - `null`: Read immediately, then wait read_delay (no alignment)
 - **`age`**: Maximum data age (seconds) before forcing a re-read when accessed via server
+  (**Note**: Not yet implemented due to complexity of on-demand re-read handling)
 
 ### Server Configuration
 

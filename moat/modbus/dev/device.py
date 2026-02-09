@@ -16,7 +16,7 @@ from moat.util import CtxObj, attrdict, combine_dict, merge, yload
 from moat.lib.path import P, Path
 from moat.modbus.server import UnitContext
 from moat.modbus.typemap import get_kind, get_type2
-from moat.modbus.types import Coils, DiscreteInputs, InputRegisters
+from moat.modbus.types import Coils, DiscreteInputs, InputRegisters, IntValue, LongValue
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
@@ -301,8 +301,37 @@ class Register:
         return self.reg.len
 
     def encode(self):
-        """Encode myself"""
-        return self.reg.encode()
+        """Encode myself (with transformations applied)"""
+        # Only apply transformations if they exist (factor != 1 or offset != 0)
+        if self.factor == 1 and self.offset == 0:
+            return self.reg.encode()
+
+        # Get the transformed value
+        val = self.value
+        if val is None:
+            return self.reg.encode()
+
+        # Temporarily set the register's value to the transformed value and encode
+        # Save original state
+        orig_value = self.reg._value  # noqa: SLF001
+        orig_value_w = getattr(self.reg, "_value_w", None)
+
+        try:
+            # For integer types, ensure we have an integer
+            if isinstance(self.reg, (IntValue, LongValue)):
+                val = int(val)
+
+            # Set the transformed value and encode
+            self.reg._value = val  # noqa: SLF001
+            self.reg._value_w = None  # noqa: SLF001
+            result = self.reg.encode()
+        finally:
+            # Restore original state
+            self.reg._value = orig_value  # noqa: SLF001
+            if orig_value_w is not None:
+                self.reg._value_w = orig_value_w  # noqa: SLF001
+
+        return result
 
     def decode(self, regs: list[int]):
         """Encode registers into self"""

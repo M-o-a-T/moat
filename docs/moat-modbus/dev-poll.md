@@ -109,8 +109,10 @@ Each unit (under `hostports`, `hosts`, or `ports`) contains:
   - Array `[server_index, unit_number]`
   - `none`: Don't serve this unit
 - **`forward`**: Control transparent forwarding (default: `true`)
-  - `true`: Forward unmentioned registers transparently
-  - `false`: Only serve explicitly configured registers
+  - `true`: Forward unmentioned registers transparently (**Note**: Full transparent
+    forwarding not yet implemented. Currently behaves like `false`)
+  - `false`: Only serve explicitly configured registers (returns zeros/errors for
+    unconfigured registers)
 - **`regs`**: Register definitions (see below)
 
 ### Register Configuration

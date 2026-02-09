@@ -93,7 +93,38 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                 s, u = servers[p // 1000], p % 1000
             else:
                 s, u = servers[p[0]], p[1]
-            s.add_unit(u, dev.unit)
+
+            # Get or create UnitContext for this unit
+            # If the unit already exists (e.g., from server config), add to it
+            # Otherwise create a new one
+            unit_ctx = s.units.get(u)
+            if unit_ctx is None:
+                from moat.modbus.server import UnitContext  # noqa: PLC0415
+
+                unit_ctx = UnitContext()
+                s.add_unit(u, unit_ctx)
+
+            # Recursively find all Register objects in the dev.data tree and add them to the unit
+            # This ensures transformations are applied when serving
+            # Only add if the register doesn't already exist (server registers take precedence)
+            def add_registers(d):
+                from .device import Register  # noqa: PLC0415
+
+                if isinstance(d, Register):
+                    # Check if this register already exists in the unit
+                    try:
+                        existing = unit_ctx.store[d.reg_type.key].get(d.register + 1)
+                    except (KeyError, AttributeError):
+                        existing = None
+
+                    # Only add if it doesn't exist
+                    if existing is None:
+                        unit_ctx.add(d.reg_type, d.register, d)
+                elif isinstance(d, dict):
+                    for v in d.values():
+                        add_registers(v)
+
+            add_registers(dev.data)
 
             nonlocal nd
             nd += 1

@@ -11,26 +11,37 @@ import logging
 import pytest
 
 from moat.util import yload
+from moat.modbus.client import ModbusClient
 from moat.modbus.dev.poll import dev_poll
+from moat.modbus.types import HoldingRegisters, IntValue
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.trio
 async def test_transformation_serving(autojump_clock, free_tcp_port):
-    """Test that transformations are applied when serving registers."""
+    """Test that transformations are applied when serving registers.
+
+    This test verifies that when a client reads from a remote device and applies
+    transformations (offset/factor), and then serves those values via its own
+    Modbus server, the transformed values are served (not the raw values).
+    """
     autojump_clock.autojump_threshold = 0.2
 
-    # Server config - creates a simple Modbus device
-    srv_cfg = yload(
+    # Create two ports: one for the "remote device", one for the gateway
+    remote_port = free_tcp_port
+    gateway_port = free_tcp_port + 1
+
+    # Remote device config - simulates the actual device
+    remote_cfg = yload(
         f"""
 server:
   - host: 127.0.0.1
-    port: {free_tcp_port}
+    port: {remote_port}
     units:
       1:
         regs:
-          test_value:
+          raw_value:
             reg_type: h
             register: 100
             type: uint
@@ -40,27 +51,32 @@ server:
     )
 
     async with anyio.create_task_group() as tg:
-        # Start the server (device to be read from)
-        srv = await tg.start(dev_poll, srv_cfg, None)
+        # Start the remote device
+        remote = await tg.start(dev_poll, remote_cfg, None)
         await anyio.sleep(0.1)
 
-        # Set a value in the server
-        srv_reg = srv.server[0].units[1].regs.test_value
-        srv_reg.value = 10
+        # Set a raw value in the remote device
+        remote_reg = remote.server[0].units[1].regs.raw_value
+        remote_reg.value = 10
 
-        # Client config - connects and reads with transformation
-        cli_cfg = yload(
+        # Gateway config - reads from remote device with transformation and serves
+        gateway_cfg = yload(
             f"""
 slots:
   fast:
     read_delay: 0.5
 
+server:
+  - host: 127.0.0.1
+    port: {gateway_port}
+
 hostports:
   localhost:
-    {free_tcp_port}:
+    {remote_port}:
       1:
+        server: 1
         regs:
-          test_value:
+          transformed_value:
             reg_type: h
             register: 100
             type: uint
@@ -72,17 +88,28 @@ hostports:
             attr=True,
         )
 
-        # Start the client (reads from server)
-        cli = await tg.start(dev_poll, cli_cfg, None)
+        # Start the gateway (reads from remote, serves transformed)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
         await anyio.sleep(1)  # Let it read
 
-        # Client should have read and transformed: (10 * 2) + 42 = 62
-        cli_reg = cli.hostports.localhost[free_tcp_port][1].regs.test_value
-        assert cli_reg.value == 62
+        # Gateway should have read and transformed: (10 * 2) + 42 = 62
+        gw_reg = gateway.hostports.localhost[remote_port][1].regs.transformed_value
+        assert gw_reg.value == 62
 
-        # Now test serving: when we read from the client's server unit,
-        # it should serve the transformed value
-        # TODO: Implement this once we have server-side transformation working
+        # Now test serving: read from the gateway's server
+        # The gateway should serve the transformed value (62), not raw (10)
+        async with (
+            ModbusClient() as cli,
+            cli.host("localhost", gateway_port) as h,
+            h.unit(1) as u,
+            u.slot("test") as s,
+        ):
+            s.add(HoldingRegisters, 100, IntValue)
+            res = await s.getValues()
+            served_value = res[HoldingRegisters][100].value
+
+            # The gateway should serve the transformed value
+            assert served_value == 62, f"Expected 62, got {served_value}"
 
         tg.cancel_scope.cancel()
 

@@ -11,6 +11,7 @@ import logging
 import pytest
 
 from moat.util import yload
+from moat.lib.path import P
 from moat.modbus.client import ModbusClient
 from moat.modbus.dev.poll import dev_poll
 from moat.modbus.types import HoldingRegisters, IntValue
@@ -408,14 +409,90 @@ server:
 async def test_const_mqtt(cfg, autojump_clock, free_tcp_port_factory):
     """Test serving values from MQTT via const: !P path.
     
-    Note: MQTT subscription for const requires full MoaT-Link integration.
-    This test is a placeholder. The implementation in link.py adds support
-    for monitoring a Path and updating the register value.
+    This tests that:
+    1. The register's READ value is updated from MQTT
+    2. The write value is NOT triggered (should not write back to device)
+    3. Changes in MQTT are reflected when reading the register
     """
-    # TODO: Full integration test with MoaT-Link
-    # Currently const: !P path will monitor the MQTT topic and update the register
-    # via the from_link() method (same as src:)
-    pass
+    autojump_clock.autojump_threshold = 0.2
+
+    gateway_port = free_tcp_port_factory()
+
+    # Gateway config with const MQTT subscription
+    gateway_cfg = yload(
+        f"""
+server:
+  - host: 127.0.0.1
+    port: {gateway_port}
+    units:
+      1:
+        regs:
+          external_sensor:
+            reg_type: h
+            register: 10
+            type: uint
+            len: 1
+            const: !P sensors.external.temperature
+""",
+        attr=True,
+    )
+
+    from moat.link._test import Scaffold  # noqa: PLC0415
+
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"Hello": "World"}),
+        sf.client_() as c,
+    ):
+        # Set initial MQTT value
+        await c.d_set(P("sensors.external.temperature"), data=250)
+        await c.i_sync()
+        async with anyio.create_task_group() as tg:
+            # Start gateway
+            gateway = await tg.start(dev_poll, gateway_cfg, c)
+            await anyio.sleep(0.5)
+
+            # Get the register to check internal state
+            reg = gateway.server[0].units[1].regs.external_sensor
+
+            # Check that the read value was updated from MQTT
+            assert reg.reg._value == 250, f"Expected read value 250, got {reg.reg._value}"
+            
+            # Check that write value was NOT set (shouldn't trigger writes)
+            assert reg.reg._value_w is None or reg.reg._value_w == 250, \
+                "Write value should not be set differently from read value"
+
+            # Test: Read value from Modbus server
+            async with (
+                ModbusClient() as cli,
+                cli.host("localhost", gateway_port) as h,
+                h.unit(1) as u,
+                u.slot("test") as s,
+            ):
+                s.add(HoldingRegisters, 10, IntValue)
+                res = await s.getValues()
+
+                # Should return MQTT value
+                assert res[HoldingRegisters][10].value == 250, \
+                    f"Expected 250 from Modbus, got {res[HoldingRegisters][10].value}"
+
+                # Update MQTT value
+                await c.d_set(P("sensors.external.temperature"), data=275)
+                await anyio.sleep(0.5)
+
+                # Check internal state again
+                assert reg.reg._value == 275, f"Expected updated read value 275, got {reg.reg._value}"
+
+                # Read again from Modbus
+                s2 = await u.slot_scope("test2")
+                s2.add(HoldingRegisters, 10, IntValue)
+                res2 = await s2.getValues()
+
+                # Should return updated MQTT value
+                assert res2[HoldingRegisters][10].value == 275, \
+                    f"Expected updated value 275, got {res2[HoldingRegisters][10].value}"
+
+            tg.cancel_scope.cancel()
 
 
 @pytest.mark.trio

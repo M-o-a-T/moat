@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Register(BaseRegister):
     """
-    One possibly-complex Modbus register that's mirrored from and/or to MoaT-KV
+    One possibly-complex Modbus register that's mirrored from and/or to MoaT-Link
     """
 
     def __init__(self, *a, link=None, tg=None, is_server=False, **kw):
@@ -53,12 +53,13 @@ class Register(BaseRegister):
             for d in dest:
                 tg.start_soon(self.to_link, d)
 
-        # Handle const: !P path - subscribe to MQTT and update register value
+        # Handle const: !P path - subscribe to MQTT and update READ value
+        # (not write value - we don't want to trigger writes back to the device)
         if "const" in self.data:
             const_val = self.data.const
             if isinstance(const_val, Path):
                 mon = self._link.d_watch(const_val, meta=True)
-                await tg.start(self.from_link, mon)
+                await tg.start(self.from_link_const, mon)
 
         if self.src is not None:
             slot = self.data.get("slot", None) if self.dest is None else None
@@ -91,7 +92,7 @@ class Register(BaseRegister):
             await self._link.d_set(dest, val, retain="idle" not in self.data)
 
     async def from_link(self, mon, *, task_status):
-        """Copy an MQTT value to Modbus"""
+        """Copy an MQTT value to Modbus (sets write value, triggers bus update)"""
         async with mon as mon_:
             if task_status is not None:
                 task_status.started()
@@ -110,6 +111,28 @@ class Register(BaseRegister):
                     continue
                 logger.debug("%s W %r", self.path, val)
                 await self._set(val)
+
+    async def from_link_const(self, mon, *, task_status):
+        """Copy an MQTT value to Modbus for const: !P (sets read value only, no bus update)"""
+        async with mon as mon_:
+            if task_status is not None:
+                task_status.started()
+                task_status = None
+            async for val in mon_:
+                if val is None:  # Link message
+                    continue
+                if isinstance(val, tuple):  # Link client
+                    val = val[0]  # noqa:PLW2901
+                elif "value" not in val:  # KV message
+                    logger.debug("%s Cx", self.path)
+                    continue
+                else:
+                    val = val.value  # noqa:PLW2901
+                logger.debug("%s C %r", self.path, val)
+                # Update the READ value, not the write value
+                # This makes the value available when read via Modbus server
+                # but doesn't trigger a write back to the remote device
+                self.reg._value = val  # noqa: SLF001
 
     async def from_link_p(self, mon, slot):
         """Copy an MQTT value to Modbus, with periodic refresh"""

@@ -245,6 +245,14 @@ class Register:
         self.offset = self.data.get("offset", 0)
         self.path = path
 
+        # Handle const parameter - set initial value if it's a scalar
+        if "const" in d:
+            const_val = d.const
+            # If const is a scalar, set it as the value
+            # If it's a Path, it will be handled by link.py
+            if not isinstance(const_val, Path):
+                self.reg._value = const_val  # noqa: SLF001
+
     async def start(self):  # noqa: D102
         pass
 

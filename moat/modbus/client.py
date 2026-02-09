@@ -82,10 +82,9 @@ class ModbusClient(CtxObj):
             await anyio.sleep_forever()
 
     async def host_service(self, addr, port):
-        """Run a TCP client in an AsyncScope."""
+        """Run a TCP client in a background task."""
         if not port:
             port = 502
-        # return await scope.service(f"MC_{num2id(self)}:{addr}:{port}", self._host, addr, port)
         return await self._tg.start(self._host, addr, port)
 
     def serial(self, /, port, **ser):
@@ -102,8 +101,7 @@ class ModbusClient(CtxObj):
             await anyio.sleep_forever()
 
     async def serial_service(self, port, **ser):
-        """Run a serial client in an AsyncScope."""
-        # return await scope.service(f"MC_{num2id(self)}:{port}", self._serial, port, **ser)
+        """Run a serial client in a background task."""
         return await self._tg.start(self._serial, port, ser)
 
     def conn(self, cfg):

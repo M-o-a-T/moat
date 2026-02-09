@@ -80,7 +80,7 @@ class UnitContext(ModbusDeviceContext):
         :param offset: The value's numeric offset, zero-based.
         :param val: The data type (baseValue instance)
 
-        `cls` is either the decoder (subclass of `BaseValue`),
+        `val` is either the decoder (subclass of `BaseValue`),
         or an existing `BaseValue` instance.
         """
         k = self.store[typ.key]

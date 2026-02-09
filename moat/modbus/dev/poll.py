@@ -111,15 +111,25 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                 from .device import Register  # noqa: PLC0415
 
                 if isinstance(d, Register):
+                    # Check for register remapping via 'server' parameter in register config
+                    srv_reg = d.data.get("server", d.register)
+
+                    # If server: none, don't add this register
+                    if srv_reg is None or (isinstance(srv_reg, str) and srv_reg.lower() == "none"):
+                        return
+
+                    # Use remapped register number if specified
+                    register_num = srv_reg if isinstance(srv_reg, int) else d.register
+
                     # Check if this register already exists in the unit
                     try:
-                        existing = unit_ctx.store[d.reg_type.key].get(d.register + 1)
+                        existing = unit_ctx.store[d.reg_type.key].get(register_num + 1)
                     except (KeyError, AttributeError):
                         existing = None
 
                     # Only add if it doesn't exist
                     if existing is None:
-                        unit_ctx.add(d.reg_type, d.register, d)
+                        unit_ctx.add(d.reg_type, register_num, d)
                 elif isinstance(d, dict):
                     for v in d.values():
                         add_registers(v)

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.trio
-async def test_transformation_serving(autojump_clock, free_tcp_port):
+async def test_transformation_serving(autojump_clock, free_tcp_port_factory):
     """Test that transformations are applied when serving registers.
 
     This test verifies that when a client reads from a remote device and applies
@@ -29,8 +29,8 @@ async def test_transformation_serving(autojump_clock, free_tcp_port):
     autojump_clock.autojump_threshold = 0.2
 
     # Create two ports: one for the "remote device", one for the gateway
-    remote_port = free_tcp_port
-    gateway_port = free_tcp_port + 1
+    remote_port = free_tcp_port_factory()
+    gateway_port = free_tcp_port_factory()
 
     # Remote device config - simulates the actual device
     remote_cfg = yload(
@@ -115,11 +115,114 @@ hostports:
 
 
 @pytest.mark.trio
-async def test_register_remapping(autojump_clock):
-    """Test that registers can be remapped via 'server' parameter."""
-    # TODO: Implement test for register remapping
-    # Original register 100 should appear as register 200 in server
-    pass
+async def test_register_remapping(autojump_clock, free_tcp_port_factory):
+    """Test that registers can be remapped via 'server' parameter.
+
+    Verifies that:
+    - A register at address 100 on the remote device can appear at address 200 on the gateway
+    - 'server: none' prevents a register from being served
+    """
+    autojump_clock.autojump_threshold = 0.2
+
+    remote_port = free_tcp_port_factory()
+    gateway_port = free_tcp_port_factory()
+
+    # Remote device with two registers
+    remote_cfg = yload(
+        f"""
+server:
+  - host: 127.0.0.1
+    port: {remote_port}
+    units:
+      1:
+        regs:
+          value_a:
+            reg_type: h
+            register: 100
+            type: uint
+            len: 1
+          value_b:
+            reg_type: h
+            register: 101
+            type: uint
+            len: 1
+""",
+        attr=True,
+    )
+
+    async with anyio.create_task_group() as tg:
+        # Start remote device
+        remote = await tg.start(dev_poll, remote_cfg, None)
+        await anyio.sleep(0.1)
+
+        # Set values
+        remote.server[0].units[1].regs.value_a.value = 42
+        remote.server[0].units[1].regs.value_b.value = 99
+
+        # Gateway config: remap register 100 to 200, hide register 101
+        gateway_cfg = yload(
+            f"""
+slots:
+  fast:
+    read_delay: 0.5
+
+server:
+  - host: 127.0.0.1
+    port: {gateway_port}
+
+hostports:
+  localhost:
+    {remote_port}:
+      1:
+        server: 1
+        regs:
+          value_a:
+            reg_type: h
+            register: 100
+            type: uint
+            len: 1
+            slot: fast
+            server: 200
+          value_b:
+            reg_type: h
+            register: 101
+            type: uint
+            len: 1
+            slot: fast
+            server: none
+""",
+            attr=True,
+        )
+
+        # Start gateway
+        await tg.start(dev_poll, gateway_cfg, None)
+        await anyio.sleep(1)  # Let it read
+
+        # Test: Read from gateway server
+        async with (
+            ModbusClient() as cli,
+            cli.host("localhost", gateway_port) as h,
+            h.unit(1) as u,
+            u.slot("test") as s,
+        ):
+            # Register 100 should NOT be accessible (it's remapped to 200)
+            s.add(HoldingRegisters, 100, IntValue)
+            s.add(HoldingRegisters, 101, IntValue)
+            s.add(HoldingRegisters, 200, IntValue)
+            res = await s.getValues()
+
+            # Register 100 should not exist (remapped to 200)
+            assert res[HoldingRegisters][100].value == 0, "Register 100 should be empty/default"
+
+            # Register 101 should not exist (server: none)
+            assert res[HoldingRegisters][101].value == 0, "Register 101 should be hidden"
+
+            # Register 200 should have the value from register 100
+            assert res[HoldingRegisters][200].value == 42, (
+                "Register 200 should have remapped value"
+            )
+
+        tg.cancel_scope.cancel()
 
 
 @pytest.mark.trio

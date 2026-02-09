@@ -273,7 +273,7 @@ class Register:
 
     @property
     def value_w(self):
-        """Returns the factor+offset-adjusted value from the bus"""
+        """Returns the factor+offset-adjusted value written to the bus"""
         val = self.reg.value_w
         if val is not None:
             if self.factor != 1:

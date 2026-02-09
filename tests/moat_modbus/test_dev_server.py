@@ -496,9 +496,19 @@ server:
 
 
 @pytest.mark.trio
-async def test_age_based_rereading(cfg, autojump_clock):
-    """Test age-based slot re-reading."""
-    # TODO: Implement test
-    # When data is older than slot's age parameter, should trigger re-read
-    # Re-read should not forward to MQTT
+async def test_age_based_rereading(autojump_clock, free_tcp_port_factory):
+    """Test age-based slot re-reading.
+    
+    Note: Age-based re-reading is complex and requires:
+    1. Tracking last read time for each slot
+    2. Checking age when server reads are requested
+    3. Triggering on-demand reads when data is stale
+    4. Preventing MQTT forwarding for age-triggered reads
+    5. Handling split reads across multiple slots
+    
+    This is deferred due to complexity. The 'age' parameter is documented
+    but not yet implemented.
+    """
+    # TODO: Full implementation of age-based re-reading
+    # For now, this is a placeholder test
     pass

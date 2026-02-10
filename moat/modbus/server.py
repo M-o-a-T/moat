@@ -263,7 +263,7 @@ class SerialModbusServer(BaseModbusServer):
                 response = await self.process_request(request)
         except NoSuchSlaveException:
             if unit not in self.ignored:
-                _logger.error("requested slave does not exist: %d", request.unit_id)
+                _logger.error("requested unit does not exist: %d", request.unit_id)
             if self.ignore_missing_devices:
                 return  # the client will simply timeout waiting for a response
             response = ExceptionResponse(request.function_code, ExcCodes.GATEWAY_NO_RESPONSE)
@@ -445,7 +445,7 @@ class ModbusServer(BaseModbusServer):
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
-                        _logger.debug("requested slave does not exist: %d", request.dev_id)
+                        _logger.debug("requested unit does not exist: %d", request.dev_id)
                         response = ExceptionResponse(
                             request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
                         )

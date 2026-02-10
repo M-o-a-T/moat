@@ -711,6 +711,7 @@ class Slot(CtxObj):
         read_delay: float | None = None,
         read_align: bool = False,
         write_delay: float | None = None,
+        age: float | None = None,
         **kw,
     ):
         self.unit = unit
@@ -722,12 +723,14 @@ class Slot(CtxObj):
 
         self.read_delay = read_delay
         self.read_align = read_align
+        self.age = age
         self.read_lock = anyio.Lock()
         self.read_trigger = anyio.Event()
 
         self.run_lock: anyio.Event = None
 
         self.modes = {}
+        self.mqtt_registers = set()  # Link Registers with dest configured
         if kw:
             _logger.warning("%s:%s: extra arguments: %r", unit, slot, kw)
 
@@ -875,6 +878,35 @@ class Slot(CtxObj):
             self.t_read = anyio.current_time()
             await self.getValues()
 
+    async def read_if_stale(self) -> bool:
+        """Read this slot's data only if it's stale (older than age).
+
+        Returns True if a read was performed, False if data was fresh.
+        Caller must hold self.read_lock.
+        """
+        if self.age is not None:
+            current_time = anyio.current_time()
+            age_threshold = self.t_read + self.age
+            if current_time < age_threshold:
+                _logger.debug(
+                    "%s: data fresh (age %.1fs < %.1fs)",
+                    self,
+                    current_time - self.t_read,
+                    self.age,
+                )
+                return False  # Data is fresh enough
+            _logger.debug(
+                "%s: data stale (age %.1fs >= %.1fs), re-reading",
+                self,
+                current_time - self.t_read,
+                self.age,
+            )
+
+        # Data is stale or no age limit, perform read
+        self.t_read = anyio.current_time()
+        await self.getValues()
+        return True
+
     async def read_task(self):
         """A background task for reading Modbus register values.
         We read every .`read_delay` seconds.
@@ -885,6 +917,14 @@ class Slot(CtxObj):
             await self.read()
         except Exception as exc:  # pylint:disable=broad-except
             _logger.warning("Error %s: %r", self, exc)
+        else:
+            # Notify MQTT tasks after initial read
+            for reg in self.mqtt_registers:
+                if reg.reg._changed:  # noqa: SLF001  # Flag set by BaseValue.decode
+                    _logger.debug("%s: notifying %s after initial read", self, reg.path)
+                    reg.reg._changed = False  # noqa: SLF001
+                    reg.mqtt_event.set()
+
         tn = self.t_read + self.read_delay
         if self.read_align:
             tn -= tn % self.read_delay
@@ -904,10 +944,11 @@ class Slot(CtxObj):
                     if self.read_align:
                         tn -= tn % self.read_delay
                     continue
+
+                # Determine if we're on schedule or late
                 if t < tn:
-                    # We slept, above, thus update the current time
-                    self.t_read = tn
-                    tn += self.read_delay
+                    # We slept, update next target time
+                    tn_next = tn + self.read_delay
                 else:
                     # We didn't sleep: the last read took too long. reset the timer
                     _logger.info(
@@ -916,20 +957,32 @@ class Slot(CtxObj):
                         t - tn + self.read_delay,
                         self.read_delay,
                     )
-
-                    self.t_read = t = anyio.current_time()
-                    tn = t + self.read_delay
+                    tn_next = t + self.read_delay
                     if self.read_align:
-                        tn -= tn % self.read_delay
+                        tn_next -= tn_next % self.read_delay
 
                 try:
-                    await self.getValues()  # already locked
+                    did_read = await self.read_if_stale()
                 except Exception as exc:  # pylint:disable=broad-except
                     _logger.warning("Error %s: %r", self, exc)
                     backoff = 1 + backoff * 1.2
                     # TODO re-raise if persistent?
                 else:
                     backoff = 0
+                    # Only update t_read if we actually read
+                    if did_read:
+                        tn = tn_next
+                    else:
+                        # Data was fresh, keep checking at regular intervals
+                        tn = tn_next
+
+                # Always check and notify changed registers
+                # (may have been set by server-triggered read without notification)
+                for reg in self.mqtt_registers:
+                    if reg.reg._changed:  # noqa: SLF001  # Flag set by BaseValue.decode
+                        _logger.debug("%s: notifying %s (changed)", self, reg.path)
+                        reg.reg._changed = False  # noqa: SLF001
+                        reg.mqtt_event.set()
 
     async def write(self, changed: bool = True):
         """Write this slot's data.

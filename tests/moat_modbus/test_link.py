@@ -69,7 +69,7 @@ async def mon(c):  # noqa: D103
 @pytest.mark.trio
 async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
     cfg  # noqa:B018
-    autojump_clock.autojump_threshold = 0.2
+    autojump_clock.autojump_threshold = 0.05
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
     cfg1.server[0].port = free_tcp_port

@@ -126,4 +126,4 @@ XXX do we need this?
 
 Documentation of this message / object.
 
-See [Built-in Documentation](doc) for details.
+See {doc}`Built-in Documentation <doc>` for details.

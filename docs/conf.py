@@ -224,6 +224,7 @@ autodoc_default_options = {
     # "inherited-members": True,
     # "member-order": "groupwise",
 }
+autodoc_mock_imports = ["machine"]
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented"
 autodoc_typehints_format = "short"

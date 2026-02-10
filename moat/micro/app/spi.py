@@ -22,16 +22,16 @@ def _get_bus_lock(bus: int, device: int) -> Lock:
 
 
 class Cmd(BaseCmd):
-    """
+    r"""
     This command implements basic access to a SPI bus on Linux.
 
     Config::
 
-        bus: 0      # SPI bus number
-        dev: 0      # SPI device number (directly controls CS)
-        f: 1000000  # frequency, Hz (max_speed_hz)
-        mode: 0     # SPI mode (0-3, combines polarity and phase)
-        bits: 8     # bits per word
+        bus: 0      \# SPI bus number
+        dev: 0      \# SPI device number (directly controls CS)
+        f: 1000000  \# frequency, Hz (max_speed_hz)
+        mode: 0     \# SPI mode (0-3, combines polarity and phase)
+        bits: 8     \# bits per word
 
     On Linux, CS is controlled by the kernel driver based on the device number,
     so no separate CS path is needed.

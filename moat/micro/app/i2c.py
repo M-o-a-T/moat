@@ -17,14 +17,14 @@ if TYPE_CHECKING:
 
 
 class Cmd(BaseCmd):
-    """
+    r"""
     This command implements basic access to an I²C bus.
 
-    Parameters:
+    Parameters::
 
         id: bus ID (no soft i2c here)
-        # f: 100000  # frequency, Hz
-        t: 1000 # bus timeout, msec
+        \# f: 100000  \# frequency, Hz
+        t: 1000 \# bus timeout, msec
     """
 
     doc = dict(
@@ -133,7 +133,7 @@ class Cmd(BaseCmd):
 
     async def handle(self, msg: Msg, rpath: list[PathElem]):
         """
-        Intercept the bus address: `bus:33.wr(x)` ≍ `bus.wr(33,x)`.
+        Intercept the bus address: ``bus:33.wr(x)`` ≍ ``bus.wr(33,x)``.
         """
         if rpath and isinstance(rpath[-1], int):
             msg.args.insert(0, rpath.pop())

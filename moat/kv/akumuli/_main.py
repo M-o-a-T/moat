@@ -162,7 +162,7 @@ async def delete_(obj):
 @click.pass_obj
 async def attr_(obj, **kw):
     """Modify a given akumuli series (copier)."""
-    if all(x not in kw for x in "vars_ eval_ path_".split):
+    if all(x not in kw for x in "vars_ eval_ path_".split()):
         return
 
     res = await node_attr(obj, obj.server._path + obj.subpath, **kw)  # noqa:SLF001

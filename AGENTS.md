@@ -1,6 +1,6 @@
 # Repository Guidelines for MoaT
 
-This file isn't just for
+This file isn't just for agents …
 
 ## Issue tracking
 
@@ -14,7 +14,7 @@ This file isn't just for
   - 'bd sync': sync tracker state with git
 
 - Conventions:
-  - labels: we use moat.xx.yy for the subsystem, common, and/or doc
+  - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems
   - status: open, in\_progress, blocked, deferred, closed
   - prio: 0…4, 0:highest
   - type: bug|feature|task|epic|chore
@@ -27,7 +27,7 @@ This file isn't just for
       MicroPython 1.25+, enhanced with taskgroups
     - This also applies to all code which imports from `moat.lib.micro`
       (but not to moat.lib.micro itself)
-    - Python 3.11 compatible syntax must be used.
+    - Python 3.11 compatible syntax must be used in those parts.
   - Each Python package named e.g. `moat.X.Y` contains
     - code in `moat/X/Y/**.py`
     - `docs/moat-X-Y` for documentation

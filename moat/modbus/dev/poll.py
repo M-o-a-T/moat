@@ -103,9 +103,9 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
             unit_ctx = s.units.get(u)
 
             if unit_ctx is None:
-                from moat.modbus.server import UnitContext  # noqa: PLC0415
+                from .server_unit import ServerUnitContext  # noqa: PLC0415
 
-                unit_ctx = UnitContext()
+                unit_ctx = ServerUnitContext()
                 s.add_unit(u, unit_ctx)
 
             # Recursively find all Register objects in the dev.data tree and add them to the unit
@@ -134,6 +134,12 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                     # Only add if it doesn't exist
                     if existing is None:
                         unit_ctx.add(d.reg_type, register_num, d)
+                        # Track slot mapping for age-based refresh
+                        # Map all registers this value occupies (for multi-register values)
+                        if hasattr(d, "slot") and d.slot is not None:
+                            reg_len = d.len if hasattr(d, "len") else 1
+                            for offset in range(register_num, register_num + reg_len):
+                                unit_ctx.add_mapping(offset, d.reg_type.key, d.slot)
                 elif isinstance(d, dict):
                     for v in d.values():
                         add_registers(v)

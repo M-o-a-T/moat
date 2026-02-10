@@ -1,0 +1,21 @@
+[Unit]
+Description=MoaT-Link Akumuli connector (%I)
+After=moat-link-server.service
+Requires=moat-link-server.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat link akumuli monitor %I
+
+EnvironmentFile=-/etc/moat/link.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

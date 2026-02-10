@@ -11,8 +11,9 @@ It will update an Akumuli series whenever a MoaT-KV value changes.
 
 ## Deprecation Warning
 
-Akumuli itself is deprecated. It kindof works but there's no bugfixes etc.
+This package is deprecated.  Use ``moat-link-akumuli`` instead.
 
-TODO: Replace with VictoriaMetrics.
+Akumuli itself is also deprecated; see moat-7wl for a future
+VictoriaMetrics replacement.
 
 % end main

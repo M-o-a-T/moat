@@ -228,7 +228,7 @@ class Node:
                 except KeyError:
                     if create is False:
                         raise
-                    s = s._add(k)  # noqa:SLF001
+                    s = s.add_child(k)
                 else:
                     if create is True and n == len(item) - 1 and s._data is not NotGiven:  # noqa: SLF001
                         raise KeyError(k)
@@ -239,13 +239,27 @@ class Node:
         except KeyError:
             if create is False:
                 raise
-            return self._add(item)
+            return self.add_child(item)
         else:
             if create is True and res._data is not NotGiven:  # noqa: SLF001
                 raise KeyError(item)
             return res
 
-    def _add(self, item):
+    def add_child(self, item):
+        """Create and register a new child node.
+
+        Override this method to return a different node type for
+        specific child names.
+
+        Args:
+            item: the key for the new child.
+
+        Returns:
+            The newly-created child node.
+
+        Raises:
+            ValueError: if *item* already exists.
+        """
         if item in self._sub:
             raise ValueError("exists")
         self._sub[item] = s = type(self)()

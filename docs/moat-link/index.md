@@ -15,6 +15,8 @@ TODO
 :hidden:
 
 tracking
+kv-migration-guide
+../moat-link-akumuli/index
 ../moat-link-gate/index
 ../moat-link-notify/index
 ../moat-link-server/index

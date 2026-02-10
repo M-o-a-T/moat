@@ -64,6 +64,13 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Akumuli Connector](moat-link-akumuli/index.md)
+
+```{include} ../packaging/moat-link-akumuli/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [TODO: Web Frontend](moat-link-web/index.md)
 
 ```{include} ../packaging/moat-link-web/README.md

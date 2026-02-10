@@ -352,20 +352,133 @@ hostports:
 async def test_forward_true(autojump_clock, free_tcp_port_factory):
     """Test that forward=true enables transparent forwarding of unconfigured registers.
 
-    Note: This test is currently a placeholder. Implementing true transparent
-    forwarding is complex because Modbus requests can span multiple registers,
-    some configured and some not. This requires splitting requests and merging results.
-
-    For now, forward=true behaves the same as forward=false (returns zeros for
-    unconfigured registers). Full implementation is deferred.
+    Verifies that:
+    - Configured registers with transformations return transformed values
+    - Unconfigured registers are forwarded to the remote device on-demand
+    - Mixed reads (configured + unconfigured) work correctly
     """
-    # TODO: Implement transparent forwarding
-    # This requires:
-    # 1. Detecting which registers in a request are configured vs unconfigured
-    # 2. Forwarding unconfigured register requests to the client unit
-    # 3. Merging results from local store and forwarded requests
-    # 4. Handling edge cases where a single Modbus read spans both types
-    pass
+    autojump_clock.autojump_threshold = 0.05
+
+    remote_port = free_tcp_port_factory()
+    gateway_port = free_tcp_port_factory()
+
+    # Remote device with multiple registers
+    remote_cfg = yload(
+        f"""
+server:
+  - host: 127.0.0.1
+    port: {remote_port}
+    units:
+      1:
+        regs:
+          reg_100:
+            reg_type: h
+            register: 100
+            type: uint
+            len: 1
+          reg_101:
+            reg_type: h
+            register: 101
+            type: uint
+            len: 1
+          reg_102:
+            reg_type: h
+            register: 102
+            type: uint
+            len: 1
+          reg_103:
+            reg_type: h
+            register: 103
+            type: uint
+            len: 1
+""",
+        attr=True,
+    )
+
+    async with anyio.create_task_group() as tg:
+        # Start remote device
+        remote = await tg.start(dev_poll, remote_cfg, None)
+        await anyio.sleep(0.1)
+
+        # Set values on remote device
+        remote.server[0].units[1].regs.reg_100.value = 10
+        remote.server[0].units[1].regs.reg_101.value = 20
+        remote.server[0].units[1].regs.reg_102.value = 30
+        remote.server[0].units[1].regs.reg_103.value = 40
+
+        # Gateway with forward=true: only configure register 100 with transformation
+        # Registers 101, 102, 103 should be forwarded transparently
+        gateway_cfg = yload(
+            f"""
+server:
+  - host: 127.0.0.1
+    port: {gateway_port}
+
+hostports:
+  localhost:
+    {remote_port}:
+      1:
+        server: 1
+        forward: true
+        regs:
+          reg_100:
+            reg_type: h
+            register: 100
+            type: uint
+            len: 1
+            factor: 10
+            offset: 5
+""",
+            attr=True,
+        )
+
+        # Start gateway
+        await tg.start(dev_poll, gateway_cfg, None)
+        await anyio.sleep(0.5)
+
+        # Test: Read from gateway server
+        async with (
+            ModbusClient() as cli,
+            cli.host("localhost", gateway_port) as h,
+            h.unit(1) as u,
+            u.slot("test") as s,
+        ):
+            # Test 1: Configured register with transformation
+            s.add(HoldingRegisters, 100, IntValue)
+            res = await s.getValues()
+            # Should return transformed value: (10 * 10) + 5 = 105
+            assert res[HoldingRegisters][100].value == 105, (
+                f"Configured register should be transformed: expected 105, got {res[HoldingRegisters][100].value}"
+            )
+
+            # Test 2: Unconfigured register (should be forwarded)
+            s2 = await u.slot_scope("test2")
+            s2.add(HoldingRegisters, 101, IntValue)
+            res2 = await s2.getValues()
+            # Should return raw value from remote device: 20
+            assert res2[HoldingRegisters][101].value == 20, (
+                f"Unconfigured register should be forwarded: expected 20, got {res2[HoldingRegisters][101].value}"
+            )
+
+            # Test 3: Multiple unconfigured registers
+            s3 = await u.slot_scope("test3")
+            s3.add(HoldingRegisters, 102, IntValue)
+            s3.add(HoldingRegisters, 103, IntValue)
+            res3 = await s3.getValues()
+            # Should return raw values from remote device
+            assert res3[HoldingRegisters][102].value == 30
+            assert res3[HoldingRegisters][103].value == 40
+
+            # Test 4: Mixed read (configured + unconfigured in same request)
+            s4 = await u.slot_scope("test4")
+            s4.add(HoldingRegisters, 100, IntValue)
+            s4.add(HoldingRegisters, 101, IntValue)
+            res4 = await s4.getValues()
+            # Register 100 should be transformed, 101 should be forwarded
+            assert res4[HoldingRegisters][100].value == 105
+            assert res4[HoldingRegisters][101].value == 20
+
+        tg.cancel_scope.cancel()
 
 
 @pytest.mark.trio

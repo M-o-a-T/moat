@@ -31,6 +31,7 @@ from moat.util import (
     to_attrdict,
     ungroup,
 )
+from moat.lib.config import CFG
 from moat.lib.mqtt import QoS, RetainHandling
 from moat.lib.path import (
     P,
@@ -152,6 +153,8 @@ class LinkCommon(CmdCommon):
 
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
+        CFG.maybe_redo()
+
         if name is not None:
             self.is_server = True
         else:

@@ -9,7 +9,7 @@
 ## Configuration
 
 Series entries are stored in MoaT-Link under the configured prefix
-(default: `:.moat.link.akumuli`).  Each server has its own subtree;
+(default: `metrics`).  Each server has its own subtree;
 series entries are children of the server node.
 
 A series entry contains:

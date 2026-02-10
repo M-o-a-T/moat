@@ -68,13 +68,8 @@ class ServerUnitContext(UnitContext):
                 if slot is not None:
                     slots_to_check.add(slot)
                 else:
-                    # Check if this register exists but has no slot
-                    try:
-                        reg = self.store[reg_type_key].get(offset + 1)
-                        if reg is not None:
-                            has_unslotted = True
-                    except (KeyError, AttributeError):
-                        pass
+                    # Register has no slot - needs forwarding if forward=true
+                    has_unslotted = True
 
         elif function_code == 23:  # Read/Write Multiple Registers
             # This function code reads from one range and writes to another
@@ -105,25 +100,39 @@ class ServerUnitContext(UnitContext):
                 response = await self._client_unit.host.execute(request)
                 # Decode the response into unslotted registers in our datastore
                 if hasattr(response, "registers"):
-                    # For register reads, update unslotted registers
+                    from moat.modbus.types import IntValue  # noqa: PLC0415
+
+                    # For register reads, update/create unslotted registers
                     address = request.address
                     regs = response.registers
-                    i = 0
-                    while i < len(regs):
+
+                    for i, val in enumerate(regs):
                         offset = address + i
-                        try:
-                            server_reg = self.store[reg_type_key].get(offset + 1)
-                            # Only update if register exists and has no slot
-                            has_slot = self._slot_cache.get((reg_type_key, offset))
-                            if server_reg is not None and not has_slot:
-                                # Decode the appropriate number of registers
-                                reg_len = server_reg.len if hasattr(server_reg, "len") else 1
-                                server_reg.decode(regs[i : i + reg_len])
-                                i += reg_len
-                                continue
-                        except (KeyError, AttributeError, IndexError):
-                            pass
-                        i += 1
+                        has_slot = self._slot_cache.get((reg_type_key, offset))
+
+                        if not has_slot:
+                            # Register has no slot - update or create it
+                            # Note: DataBlock dict keys are 0-indexed (Modbus addresses)
+                            try:
+                                server_reg = self.store[reg_type_key].get(offset)
+                                if server_reg is not None:
+                                    # Register exists, update it
+                                    server_reg.decode([val])
+                                else:
+                                    # Register doesn't exist, create a temporary one
+                                    temp_reg = IntValue()
+                                    temp_reg.decode([val])
+                                    self.store[reg_type_key][offset] = temp_reg
+                            except (KeyError, AttributeError):
+                                # Create the register type store if it doesn't exist
+                                if reg_type_key not in self.store:
+                                    from moat.modbus.types import DataBlock  # noqa: PLC0415
+
+                                    self.store[reg_type_key] = DataBlock()
+                                # Now add the register
+                                temp_reg = IntValue()
+                                temp_reg.decode([val])
+                                self.store[reg_type_key][offset] = temp_reg
             except Exception as exc:
                 logger.warning("Failed to forward request to client: %r", exc)
 

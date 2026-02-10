@@ -73,6 +73,9 @@ This file isn't just for agents …
 
 - pre-commit enforces formatting and typechecking.
 - YAML files may contain Path objects, marked with `!P`.
+- When testing, *always write the test output to a temporary file* so you
+  can analyze it more easily. Running the same test multiple times is
+  inefficient.
 
 ## Coding Style
 

@@ -71,8 +71,8 @@ Slots group registers that should be read together in a single Modbus transactio
 
 ```yaml
 slots:
-  1sec:
-    read_delay: 1        # Poll interval in seconds
+  10sec:
+    read_delay: 10       # Poll interval in seconds
     write_delay: 1       # Write coalescing delay
     read_align: false    # Align reads to wall clock
     age: 5               # Maximum age before forcing re-read (seconds)
@@ -80,12 +80,11 @@ slots:
 
 - **`read_delay`**: Time in seconds between periodic reads
 - **`write_delay`**: Time in seconds to coalesce writes
-- **`read_align`**: 
+- **`read_align`**:
   - `true`: Align reads to multiples of read_delay
   - `false`: Read immediately, then wait read_delay
   - `null`: Read immediately, then wait read_delay (no alignment)
 - **`age`**: Maximum data age (seconds) before forcing a re-read when accessed via server
-  (**Note**: Not yet implemented due to complexity of on-demand re-read handling)
 
 ### Server Configuration
 
@@ -199,7 +198,7 @@ When a Modbus client reads from the server:
    - Trigger an immediate slot read
    - Wait for read to complete
    - Serve the fresh data
-   - **Do not** forward to MQTT (avoid duplicate messages)
+   - **Does not** forward to MQTT (to avoid flooding MQTT with messages)
 3. If data is fresh enough:
    - Serve cached values immediately
 
@@ -281,7 +280,7 @@ hostports:
 ```
 
 - Remote device unit 1 appears as unit 2 in server
-- Register 84 (raw counts) appears as register 100 (watts)
+- Register 84 appears as register 100
 - Value transformation: `(raw * 0.1) + 1000`
 - Only configured registers are served (forward: false)
 
@@ -304,7 +303,7 @@ server:
 ```
 
 - Register 0 always returns constant value 42
-- Register 1 returns current value from MQTT topic `sensors/external/value`
+- Register 1 returns the current value from MQTT topic `sensors/external/value`
 - These are server-only registers (no client polling)
 
 ## Command Line

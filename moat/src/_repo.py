@@ -245,7 +245,7 @@ class Repo(git.Repo, _Common):
 
     def write_tags(self):
         if self.versions == self.orig_versions:
-            logger.warning("No changed versions. Not tagging.")
+            logger.warning("No changes.")
             return False
         with open("versions.yaml", "w") as f:
             yprint(self.versions, f)

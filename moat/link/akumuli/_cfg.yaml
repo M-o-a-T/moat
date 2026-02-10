@@ -1,4 +1,4 @@
-prefix: !P :.moat.link.akumuli
+prefix: !P metrics
 server_default:
   host: localhost
   port: 8282

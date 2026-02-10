@@ -5,22 +5,16 @@ Akumuli task for MoaT-KV
 from __future__ import annotations
 
 import anyio
+import logging
 from pprint import pformat
 
 import asyncakumuli as akumuli
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections.abc import Mapping
-
-import logging
-
 from asyncakumuli import DS, Entry
 
 from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -36,9 +30,9 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # noqa:
         cfg["server_default"],
     )
 
-    @staticmethod
-    async def process_raw():
+    async def process_raw(*, task_status=anyio.TASK_STATUS_IGNORED):
         async with client.msg_monitor(server.topic) as mon:
+            task_status.started()
             async for msg in mon:
                 try:
                     msg = msg["data"]  # noqa:PLW2901
@@ -48,7 +42,7 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # noqa:
                     msg.setdefault("mode", DS.gauge)
                     tags = msg.setdefault("tags", {})
                     for k, v in tags.items():
-                        if isinstance(str, bytes):
+                        if isinstance(v, bytes):
                             tags[k] = v.decode("utf-8")
                         else:
                             tags[k] = str(v)

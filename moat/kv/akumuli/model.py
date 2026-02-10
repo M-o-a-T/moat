@@ -110,7 +110,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                         continue
                     if self.t_min is not None:
                         t = anyio.current_time()
-                        if self._t_last is not None and self._t_last + self.t_min < t:
+                        if self._t_last is not None and self._t_last + self.t_min > t:
                             continue
                         self._t_last = t
 

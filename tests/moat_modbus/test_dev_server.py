@@ -68,7 +68,8 @@ server:
             f"""
 slots:
   fast:
-    read_delay: 0.5
+    read_delay: 5
+    age: 1
 
 server:
   - host: 127.0.0.1
@@ -93,12 +94,12 @@ hostports:
         )
 
         # Start the gateway (reads from remote, serves transformed)
-        gateway = await tg.start(dev_poll, gateway_cfg, None)
-        await anyio.sleep(1)  # Let it read
+        _gateway = await tg.start(dev_poll, gateway_cfg, None)
+        # await anyio.sleep(1)  # Let it read
 
-        # Gateway should have read and transformed: (10 * 2) + 42 = 62
-        gw_reg = gateway.hostports.localhost[remote_port][1].regs.transformed_value
-        assert gw_reg.value == 62
+        ## Gateway should have read and transformed: (10 * 2) + 42 = 62
+        # gw_reg = gateway.hostports.localhost[remote_port][1].regs.transformed_value
+        # assert gw_reg.value == 62
 
         # Now test serving: read from the gateway's server
         # The gateway should serve the transformed value (62), not raw (10)
@@ -110,10 +111,22 @@ hostports:
         ):
             s.add(HoldingRegisters, 100, IntValue)
             res = await s.getValues()
-            served_value = res[HoldingRegisters][100].value
+            served = res[HoldingRegisters][100]
 
             # The gateway should serve the transformed value
-            assert served_value == 62, f"Expected 62, got {served_value}"
+            assert served.value == 62, f"Expected 62, got {served.value}"
+
+            # modify the server value
+            remote_reg.value = 20
+
+            # assert that the value is not yet re-read
+            await s.getValues()
+            assert served.value == 62
+
+            # delay until after age
+            await anyio.sleep(1.1)
+            await s.getValues()
+            assert served.value == 82
 
         tg.cancel_scope.cancel()
 

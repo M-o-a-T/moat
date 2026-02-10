@@ -24,6 +24,8 @@ class ServerUnitContext(UnitContext):
     def __init__(self, server=None, unit=None):
         super().__init__(server, unit)
         self._slot_cache = {}  # Cache of register -> slot mappings
+        self._client_unit = None  # The client unit for forwarding
+        self._forward = False  # Whether to forward unslotted registers
 
     def add_mapping(self, register, reg_type_key, slot):
         """Track which slot a register belongs to for age checking.
@@ -41,6 +43,8 @@ class ServerUnitContext(UnitContext):
 
         # Collect slots that need refreshing
         slots_to_check = set()
+        # Track if we found any unslotted registers
+        has_unslotted = False
 
         # Handle read operations
         if function_code in (1, 2, 3, 4):  # Read Coils, Discrete, Holding, Input
@@ -58,11 +62,19 @@ class ServerUnitContext(UnitContext):
             address = request.address
             count = getattr(request, "count", 1)
 
-            # Find all slots involved in this request
+            # Find all slots involved and check for unslotted registers
             for offset in range(address, address + count):
                 slot = self._slot_cache.get((reg_type_key, offset))
                 if slot is not None:
                     slots_to_check.add(slot)
+                else:
+                    # Check if this register exists but has no slot
+                    try:
+                        reg = self.store[reg_type_key].get(offset + 1)
+                        if reg is not None:
+                            has_unslotted = True
+                    except (KeyError, AttributeError):
+                        pass
 
         elif function_code == 23:  # Read/Write Multiple Registers
             # This function code reads from one range and writes to another
@@ -75,21 +87,77 @@ class ServerUnitContext(UnitContext):
                     slot = self._slot_cache.get((reg_type_key, offset))
                     if slot is not None:
                         slots_to_check.add(slot)
+                    else:
+                        try:
+                            reg = self.store[reg_type_key].get(offset + 1)
+                            if reg is not None:
+                                has_unslotted = True
+                        except (KeyError, AttributeError):
+                            pass
+
+        # Read unslotted registers on-demand by forwarding to client
+        if has_unslotted and self._forward and self._client_unit is not None:
+            logger.debug(
+                "Server request forwarding to client for unslotted registers",
+            )
+            try:
+                # Forward the request to the client host
+                response = await self._client_unit.host.execute(request)
+                # Decode the response into unslotted registers in our datastore
+                if hasattr(response, "registers"):
+                    # For register reads, update unslotted registers
+                    address = request.address
+                    regs = response.registers
+                    i = 0
+                    while i < len(regs):
+                        offset = address + i
+                        try:
+                            server_reg = self.store[reg_type_key].get(offset + 1)
+                            # Only update if register exists and has no slot
+                            has_slot = self._slot_cache.get((reg_type_key, offset))
+                            if server_reg is not None and not has_slot:
+                                # Decode the appropriate number of registers
+                                reg_len = server_reg.len if hasattr(server_reg, "len") else 1
+                                server_reg.decode(regs[i : i + reg_len])
+                                i += reg_len
+                                continue
+                        except (KeyError, AttributeError, IndexError):
+                            pass
+                        i += 1
+            except Exception as exc:
+                logger.warning("Failed to forward request to client: %r", exc)
 
         # Check and refresh stale data for each slot
         for slot in slots_to_check:
-            if slot.age is not None:
-                async with slot.read_lock:
+            async with slot.read_lock:
+                # Determine if we should read:
+                # 1. Slot has no read_delay: always read on-demand
+                # 2. Slot has age parameter: check if stale
+                # 3. Otherwise: rely on periodic reads only
+                should_read = False
+
+                if slot.read_delay is None:
+                    # On-demand read (no periodic task)
+                    should_read = True
+                    logger.debug(
+                        "Server request triggered on-demand read for %s (no read_delay)",
+                        slot,
+                    )
+                elif slot.age is not None:
+                    # Age-based refresh for periodically-read slots
                     current_time = anyio.current_time()
                     if slot.t_read is None or (current_time - slot.t_read) >= slot.age:
+                        should_read = True
                         logger.debug(
                             "Server request triggered refresh for %s (age %.1fs >= %.1fs)",
                             slot,
                             current_time - slot.t_read if slot.t_read else float("inf"),
                             slot.age,
                         )
-                        slot.t_read = current_time
-                        await slot.getValues()
+
+                if should_read:
+                    slot.t_read = anyio.current_time()
+                    await slot.getValues()
 
         # Now process the request normally
         return await request.update_datastore(self)

@@ -108,6 +108,12 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                 unit_ctx = ServerUnitContext()
                 s.add_unit(u, unit_ctx)
 
+            # Store client unit and forward flag for on-demand reading
+            forward = v.get("forward", False)
+            if forward and hasattr(dev, "unit") and dev.unit is not None:
+                unit_ctx._client_unit = dev.unit  # noqa: SLF001
+                unit_ctx._forward = True  # noqa: SLF001
+
             # Recursively find all Register objects in the dev.data tree and add them to the unit
             # This ensures transformations are applied when serving
             # Only add if the register doesn't already exist (server registers take precedence)

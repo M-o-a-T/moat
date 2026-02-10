@@ -50,6 +50,7 @@ class BaseValue:
 
     len = 0
     _value = None
+    _changed = False  # Set when value changes on read, for MQTT notification
     gen = 0
     block: DataBlock = None
     to_write: int = None
@@ -58,6 +59,7 @@ class BaseValue:
         self.changed = anyio.Event()
         self._value = value
         self._value_w = value
+        self._changed = False
         self.idem = idem
         self.offset = offset
 
@@ -115,6 +117,7 @@ class BaseValue:
         if self.idem and val == self.value:
             return
         self.value = self._decode(regs)
+        self._changed = True  # Mark for MQTT notification
         self.changed.set()
         self.changed = anyio.Event()
         self.gen += 1
@@ -614,7 +617,7 @@ class DataBlock(dict, BaseModbusDataBlock):
     def setValues(self, address: int, values: list[int]):
         """Set the variables starting at @address to @values.
 
-        Called with the reply of a Read request.
+        Called with the reply of a Read request, OR when server receives write.
         """
         address -= 1
         while values:

@@ -199,7 +199,7 @@ class Register:
     last_gen = -1
     block = None
 
-    def __init__(self, d, path, unit=None):
+    def __init__(self, d: dict, path, unit=None):
         try:
             self.reg_type = get_kind(d.reg_type)
         except AttributeError:
@@ -574,9 +574,9 @@ class ServerDevice(BaseDevice):
                     continue
 
                 if "register" in v:
-                    d[k] = reg = self.factory(v, path / k)
-                    await reg.start()
+                    d[k] = reg = self.factory(v, path / k, unit=self.unit)
                     self.unit.add(get_kind(v.get("reg_type")), offset=v.register, val=reg)
+                    await reg.start()
                     seen = True
             return seen
 

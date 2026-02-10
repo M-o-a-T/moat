@@ -25,6 +25,8 @@ class Register(BaseRegister):
         self._link = link
         self.tg = tg
         self.is_server = is_server
+        self.mqtt_event = anyio.Event()
+        self.last_sent_value = None
 
         if self.src is None and self.dest is None:
             if self.data.get("slot", "write") != "write":
@@ -41,10 +43,23 @@ class Register(BaseRegister):
         if (dest := self.dest) is not None:
             if self.is_server:
                 slot = None
+                # Server-side registers wait on DataBlock.changed event
+                tg.start_soon(self._watch_datablock_changes)
             else:
                 slot = self.data.get("slot", None)
                 if slot is None:
                     logger.warning("%s:%s: no read slot", self.unit, self.path)
+                else:
+                    # Register this Link Register for MQTT notification
+                    # self.slot should have been set in BaseRegister.__init__
+                    try:
+                        self.slot.mqtt_registers.add(self)
+                    except AttributeError:
+                        logger.error(
+                            "%s: slot attribute not set despite slot='%s' in data",
+                            self.path,
+                            slot,
+                        )
 
             # logger.info("%s:%s: Write %s", self.unit, self.path, dest)
             if isinstance(dest, Path):
@@ -85,11 +100,36 @@ class Register(BaseRegister):
     def set(self, val):  # noqa: D102
         self.reg.set(val)
 
+    async def _watch_datablock_changes(self):
+        """Wait on DataBlock.changed event and notify if this register changed."""
+        # Wait for register to be added to a DataBlock
+        while True:
+            await self.block.changed.wait()
+            # DataBlock.changed fires for ANY register change
+            # Check if this specific register changed
+            if self.reg._changed:  # noqa: SLF001  # Flag set by BaseValue.decode
+                self.reg._changed = False  # noqa: SLF001
+                self.mqtt_event.set()
+
     async def to_link(self, dest):
-        """Copy a Modbus value to MoaT-Link"""
-        async for val in self:
-            logger.debug("%s L %r", self.path, val)
-            await self._link.d_set(dest, val, retain="idle" not in self.data)
+        """Copy a Modbus value to MoaT-Link when notified by slot."""
+        # Read current MQTT value on startup
+        try:
+            self.last_sent_value = await self._link.d_get(dest)
+        except KeyError:
+            self.last_sent_value = None
+
+        while True:
+            # Wait for slot notification
+            await self.mqtt_event.wait()
+            self.mqtt_event = anyio.Event()  # Recreate for next notification
+
+            # Get transformed value and send if changed
+            val = self.value
+            if val != self.last_sent_value:
+                logger.info("%s L %r -> MQTT", self.path, val)
+                await self._link.d_set(dest, val, retain="idle" not in self.data)
+                self.last_sent_value = val
 
     async def from_link(self, mon, *, task_status):
         """Copy an MQTT value to Modbus (sets write value, triggers bus update)"""

@@ -29,6 +29,7 @@ The server configuration must specify a **backend** (default: ``akumuli``).
 Different backends support different time-series databases:
 
 - {ref}`moat-link-metrics-backend-akumuli`: Akumuli time-series database (default)
+- {ref}`moat-link-metrics-backend-victoria`: VictoriaMetrics time-series database
 
 See the backend-specific documentation for configuration details and supported features.
 
@@ -55,5 +56,6 @@ systemctl enable --now moat-link-metrics@myserver.service
 :hidden:
 
 ../moat-link-metrics-backend-akumuli/index
+../moat-link-metrics-backend-victoria/index
 api
 ```

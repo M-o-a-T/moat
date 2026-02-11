@@ -132,7 +132,7 @@ y, yr   Year (2023–)
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
-@attr_args(with_var=False, with_eval="eval_", with_path=False)
+@attr_args(with_var=False, with_eval="eval_", with_path=False)  # type: ignore[call-arg]  # with_eval accepts str to specify target param
 def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     """File conversion / mangling utility.
 
@@ -177,7 +177,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return eval, pformat, False, False
 
         if n == "json":
-            import simplejson as json  # noqa: PLC0415
+            import simplejson as json  # type: ignore[import-not-found]  # optional dependency  # noqa: PLC0415
 
             if stream:
 
@@ -288,10 +288,10 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
                         data = [d, p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "path" in data and "path" in data:
                         d, p = short.short(data["path"])  # noqa:PLW2901
-                        data["depth"] = d
-                        data["path"] = p
+                        data["depth"] = d  # type: ignore[index]  # data is Mapping after isinstance check
+                        data["path"] = p  # type: ignore[index]  # data is Mapping after isinstance check
 
-                data = process_args(data, **kw)  # noqa:PLW2901
+                data = process_args(data, **kw)  # type: ignore[arg-type]  # data is dict-like  # noqa:PLW2901
                 if cse:
                     if f_dump:
                         buf = bt()

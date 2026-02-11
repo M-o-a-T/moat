@@ -1,9 +1,17 @@
-# noqa:D100
+"""Signal handling utilities."""
+
 from __future__ import annotations
 
 import anyio
 import signal
 from contextlib import asynccontextmanager
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
+    from collections.abc import AsyncIterator
 
 
 class SigCancel(anyio.AsyncContextManagerMixin):
@@ -21,10 +29,11 @@ class SigCancel(anyio.AsyncContextManagerMixin):
             `ExceptionGroup`. If unset, terminate silently.
     """
 
-    def __init__(self, exc: type[BaseException] | None = None):
-        self.exc = exc
+    def __init__(self, exc: type[BaseException] | None = None) -> None:
+        self.exc: type[BaseException] | None = exc
+        self.tg: TaskGroup
 
-    async def _sig_handler(self):
+    async def _sig_handler(self) -> None:
         with anyio.open_signal_receiver(
             signal.SIGINT,
             signal.SIGTERM,
@@ -35,7 +44,7 @@ class SigCancel(anyio.AsyncContextManagerMixin):
                 break  # default handlers on next
 
     @asynccontextmanager
-    async def __asynccontextmanager__(self):
+    async def __asynccontextmanager__(self) -> AsyncIterator[None]:
         async with anyio.create_task_group() as self.tg:
             self.tg.start_soon(self._sig_handler, name="sig")
             yield None

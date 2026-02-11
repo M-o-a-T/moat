@@ -267,12 +267,13 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/lib/broadcast/",
+    "moat/lib/codec/",
     "moat/lib/diffiehellman/",
+    "moat/lib/micro/",
     "moat/lib/path/",
     "moat/lib/pid/",
     "moat/lib/priomap/",
-    "moat/lib/broadcast/",
-    "moat/lib/micro/",
     "moat/lib/repl/",
     "moat/lib/ring/",
 ]

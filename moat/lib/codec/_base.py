@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -99,6 +99,11 @@ class Codec:
         raise NotImplementedError
 
 
+if TYPE_CHECKING:
+    EncoderFunc = Callable[[Codec, Any], ByteType | tuple[int, ByteType]]
+    DecoderFunc = Callable[[Codec, ByteType], Any]
+
+
 class Extension:
     def __init__(self):
         self.enc: dict[type, tuple[int | None, Callable]] = {}
@@ -110,25 +115,39 @@ class Extension:
         res.dec.update(self.dec)
         return res
 
-    def encoder(self, key: int | None, cls: type, fn=None) -> None | Callable:
-        def _enc(fn):
+    @overload
+    def encoder(self, key: int | None, cls: type) -> Callable[[EncoderFunc], EncoderFunc]: ...
+
+    @overload
+    def encoder(self, key: int | None, cls: type, fn: EncoderFunc) -> EncoderFunc: ...
+
+    def encoder(
+        self, key: int | None, cls: type, fn: EncoderFunc | None = None
+    ) -> EncoderFunc | Callable[[EncoderFunc], EncoderFunc]:
+        def _enc(fn: EncoderFunc) -> EncoderFunc:
             self.enc[cls] = (key, fn)
             return fn
 
         if fn is None:
             return _enc
-        else:
-            _enc(fn)
+        return _enc(fn)
 
-    def decoder(self, key: int, fn=None) -> None | Callable:
-        def _dec(fn):
-            self.dec[key] = fn
+    @overload
+    def decoder(self, key: int | None) -> Callable[[DecoderFunc], DecoderFunc]: ...
+
+    @overload
+    def decoder(self, key: int | None, fn: DecoderFunc) -> DecoderFunc: ...
+
+    def decoder(
+        self, key: int | None, fn: DecoderFunc | None = None
+    ) -> DecoderFunc | Callable[[DecoderFunc], DecoderFunc]:
+        def _dec(fn: DecoderFunc) -> DecoderFunc:
+            self.dec[key] = fn  # type: ignore[index]  # key can be None for catch-all
             return fn
 
         if fn is None:
             return _dec
-        else:
-            _dec(fn)
+        return _dec(fn)
 
     def encode(self, codec: Codec, obj) -> tuple[int, ByteType]:
         try:

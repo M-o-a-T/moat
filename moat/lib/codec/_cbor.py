@@ -13,10 +13,10 @@ from ._base import Codec as _Codec
 from ._base import NoCodecError
 
 # Typing
-from typing import cast, TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 try:
-    from micropython import const  # pyright:ignore
+    from micropython import const  # type: ignore[import-not-found]  # MicroPython only
 except ImportError:
 
     def const(x: int) -> int:
@@ -111,7 +111,7 @@ class ExtraData(ValueError):
 class Codec(_Codec):
     "Basic CBOR codec"
 
-    _buffer: bytes | bytearray = b""
+    _buffer: bytes | bytearray | memoryview = b""
     _buf_pos: int = 0
 
     _buf_out: bytearray | None = None
@@ -146,7 +146,7 @@ class Codec(_Codec):
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
-        self._buffer = data  # pyright:ignore  # type mismatch
+        self._buffer = data
         try:
             res = self._dec_any()
             # chop off the part we've read
@@ -161,11 +161,15 @@ class Codec(_Codec):
         "Add additional input"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
-                self._buffer += data
+                self._buffer = cast(
+                    bytes | bytearray,
+                    self._buffer + data,  # type: ignore[operator]
+                )
                 return
-            data = self._buffer[self._buf_pos :] + data
-        elif isinstance(data, memoryview):
-            data = bytearray(data)
+            data = cast(
+                bytes | bytearray | memoryview,
+                self._buffer[self._buf_pos :] + data,  # type: ignore[operator]
+            )
         self._buffer = data
         self._buf_pos = 0
 
@@ -280,7 +284,8 @@ class Codec(_Codec):
         self._enc_any(val)
 
     def _w(self, d):
-        self._buf_out.extend(d)  # pyright:ignore[reportOptionalMemberAccess]
+        assert self._buf_out is not None  # set by encode() before calling _enc_any()
+        self._buf_out.extend(d)
 
     def _enc_any(self, ob):
         w = self._w

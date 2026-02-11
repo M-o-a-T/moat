@@ -123,8 +123,7 @@ def _dec_marked_path(codec, data):
     codec.feed(data)
     s = iter(codec)
     mark = next(s)
-    p = Path(*s)
-    p.mark = mark
+    p = Path(*s, mark=mark)
     return p
 
 

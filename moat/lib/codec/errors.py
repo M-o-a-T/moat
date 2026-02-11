@@ -16,7 +16,7 @@ except ImportError:
 
 
 @as_proxy("_rErrS")
-class SilentRemoteError(RemoteError):
+class SilentRemoteError(RemoteError):  # type: ignore[misc]  # RemoteError may be from two different sources
     """
     Forwarded error from a remote system.
 

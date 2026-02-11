@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 
 import asyncclick as click
-from asyncakumuli import DS
 
 from moat.util import NotGiven
 from moat.lib.path import P
@@ -57,7 +56,7 @@ async def show_(obj, server, name):
 @click.argument("source", type=P)
 @click.argument("series", type=str)
 @click.argument("tags", nargs=-1)
-@click.option("-m", "--mode", default="gauge", help="DS mode (default: gauge).")
+@click.option("-m", "--mode", default="gauge", help="Mode (default: gauge).")
 @click.option(
     "-a",
     "--attr",
@@ -74,13 +73,10 @@ async def add_(obj, server, name, source, series, tags, mode, attr, force):
     SERVER: server name.
     NAME:   unique entry name (path).
     SOURCE: MoaT-Link path of the value to watch.
-    SERIES: Akumuli series name.
-    TAGS:   key=value pairs for Akumuli tags.
+    SERIES: Backend series name.
+    TAGS:   key=value pairs for backend tags.
     """
     path = obj.prefix + P(server) + name
-    mode = getattr(DS, mode, None)
-    if mode is None:
-        raise click.UsageError("Unknown mode")
     if not tags:
         raise click.UsageError("At least one tag is required")
 
@@ -100,7 +96,7 @@ async def add_(obj, server, name, source, series, tags, mode, attr, force):
         else:
             raise click.UsageError("Entry exists. Use --force to overwrite.")
 
-    val: dict = {"source": source, "series": series, "tags": tagged, "mode": mode.name}
+    val: dict = {"source": source, "series": series, "tags": tagged, "mode": mode}
     if attr:
         val["attr"] = attr
     await obj.conn.d_set(path, val)

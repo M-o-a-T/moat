@@ -1,6 +1,9 @@
 API
 ===
 
+Core Modules
+------------
+
 .. automodule:: moat.link.metrics
    :members:
    :undoc-members:
@@ -21,12 +24,10 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.metrics.backend
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Backend Interface
+-----------------
 
-.. automodule:: moat.link.metrics.backend.akumuli
+.. automodule:: moat.link.metrics.backend
    :members:
    :undoc-members:
    :show-inheritance:

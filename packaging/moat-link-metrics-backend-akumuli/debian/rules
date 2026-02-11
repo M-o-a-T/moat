@@ -1,0 +1,6 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=moat-link-metrics-backend-akumuli
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild

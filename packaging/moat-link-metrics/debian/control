@@ -15,11 +15,16 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat-link,
-  python3-asyncakumuli,
 Recommends:
   python3-trio (>= 0.22),
+  moat-link-metrics-backend-akumuli,
+Suggests:
+  moat-link-metrics-backend-akumuli,
 Description: Metrics time-series connector for MoaT-Link
  Watches MoaT-Link data entries and writes their values to metrics
- time-series backends whenever they change. Supports Akumuli backend.
+ time-series backends whenever they change.
+ .
+ Backends are provided by separate packages (e.g.,
+ moat-link-metrics-backend-akumuli for Akumuli support).
  .
  Part of the MoaT ecosystem for distributed home automation.

@@ -47,11 +47,24 @@ class Backend(_Backend):
             finally:
                 self.srv = None  # noqa:PLW2901
 
-    async def put(self, entry: Any) -> None:
+    async def put(self, point: Any) -> None:
         """
-        Send an entry to Akumuli.
+        Send a metric point to Akumuli.
 
         Args:
-            entry: An asyncakumuli.Entry object.
+            point: A MetricPoint or asyncakumuli.Entry object.
         """
-        await self.srv.put(entry)
+        # Support both MetricPoint and direct Entry objects
+        if hasattr(point, "series") and hasattr(point, "value"):
+            # Convert MetricPoint to Akumuli Entry if needed
+            if not isinstance(point, akumuli.Entry):
+                from asyncakumuli import DS  # noqa: PLC0415
+
+                mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
+                point = akumuli.Entry(
+                    series=point.series,
+                    value=point.value,
+                    tags=point.tags,
+                    mode=mode,
+                )
+        await self.srv.put(point)

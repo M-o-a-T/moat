@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 
-from asyncakumuli import DS, Entry
 from attrs import define, field
 
 from moat.util import NotGiven
@@ -22,11 +21,31 @@ if TYPE_CHECKING:
 
     from moat.lib.rpc import Key
 
+    from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
-def _test_hook(e: Entry) -> None:
-    """Hook for testing; called with every Entry before sending."""
+@define
+class MetricPoint:
+    """
+    A backend-agnostic metric data point.
+
+    Args:
+        series: Series name.
+        value: Numeric value.
+        tags: Dictionary of tags.
+        mode: Backend-specific mode string.
+    """
+
+    series: str
+    value: float
+    tags: dict[str, Any]
+    mode: str
+
+
+def _test_hook(e: MetricPoint) -> None:
+    """Hook for testing; called with every MetricPoint before sending."""
 
 
 @define
@@ -67,11 +86,11 @@ class MetricsEntry(Node):
         return d.get("tags")
 
     @property
-    def mode(self) -> DS:
-        """Akumuli data-series mode."""
+    def mode(self) -> str:
+        """Backend-specific data-series mode."""
         d = self.data_ if self.data_ is not NotGiven else {}
         m = d.get("mode", "gauge") if isinstance(d, dict) else "gauge"
-        return getattr(DS, m) if isinstance(m, str) else m
+        return m if isinstance(m, str) else str(m)
 
     @property
     def attr(self) -> tuple:

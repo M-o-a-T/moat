@@ -64,9 +64,9 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
-#### [Akumuli Connector](moat-link-akumuli/index.md)
+#### [Metrics Connector](moat-link-metrics/index.md)
 
-```{include} ../packaging/moat-link-akumuli/README.md
+```{include} ../packaging/moat-link-metrics/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```

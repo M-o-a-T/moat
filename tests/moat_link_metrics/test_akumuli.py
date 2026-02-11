@@ -6,8 +6,6 @@ import anyio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from asyncakumuli import DS
-
 from moat.lib.path import P
 from moat.link.meta import MsgMeta
 from moat.link.metrics import model as metrics_model
@@ -52,7 +50,7 @@ def test_entry_properties():
     assert entry.source == ("test", "path")
     assert entry.series == "temperature"
     assert entry.tags == {"host": "box1"}
-    assert entry.mode is DS.gauge
+    assert entry.mode == "gauge"
     assert entry.factor == 2.0
     assert entry.offset == -10
     assert entry.t_min == 5.0

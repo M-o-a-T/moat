@@ -42,9 +42,12 @@ class Backend(CtxObj, metaclass=ABCMeta):
             yield self
 
     @abstractmethod
-    async def put(self, entry: Any) -> None:
+    async def put(self, point: Any) -> None:
         """
-        Send a metric entry to the backend.
+        Send a metric data point to the backend.
+
+        Args:
+            point: A MetricPoint or backend-specific data structure.
         """
 
 

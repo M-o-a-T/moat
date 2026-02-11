@@ -1,0 +1,5 @@
+moat-link-metrics-backend-akumuli (0.1.0-1) unstable; urgency=medium
+
+  * Initial release as separate backend package.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 06:54:00 +0100

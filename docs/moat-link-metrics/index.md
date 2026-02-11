@@ -15,14 +15,22 @@ series entries are children of the server node.
 A series entry contains:
 
 - **source**: MoaT-Link path of the value to watch.
-- **series**: Backend-specific series name (e.g., Akumuli series name).
+- **series**: Backend-specific series name.
 - **tags**: dict of backend-specific tag key/value pairs.
-- **mode**: Backend-specific data-series mode (default for Akumuli: ``gauge``).
+- **mode**: Backend-specific data-series mode.
 - **attr**: optional attribute path to extract from nested values.
 - **factor** / **offset**: optional linear scaling (default: 1 / 0).
 - **t_min**: optional minimum interval between writes, in seconds.
 
-The server configuration can specify a **backend** (default: ``akumuli``).
+The server configuration must specify a **backend** (default: ``akumuli``).
+
+## Backends
+
+Different backends support different time-series databases:
+
+- {ref}`moat-link-metrics-backend-akumuli`: Akumuli time-series database (default)
+
+See the backend-specific documentation for configuration details and supported features.
 
 ## CLI reference
 
@@ -46,5 +54,6 @@ systemctl enable --now moat-link-metrics@myserver.service
 :maxdepth: 2
 :hidden:
 
+../moat-link-metrics-backend-akumuli/index
 api
 ```

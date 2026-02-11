@@ -10,11 +10,10 @@ from __future__ import annotations
 import anyio
 import logging
 
-from asyncakumuli import Entry
-
 from moat.lib.path import Path
 
 from . import model as _model
+from .model import MetricPoint
 
 from typing import TYPE_CHECKING
 
@@ -73,6 +72,6 @@ async def run_entry(
                     logger.warning("Non-numeric value at %s: %r", subpath, val)
                     continue
                 out = val * factor + offset
-                e = Entry(series=series, mode=mode, value=out, tags=tags)
-                _model._test_hook(e)  # noqa:SLF001
-                await backend.put(e)
+                point = MetricPoint(series=series, mode=mode, value=out, tags=tags)
+                _model._test_hook(point)  # noqa:SLF001
+                await backend.put(point)

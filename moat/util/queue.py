@@ -7,18 +7,22 @@ stream is unwieldy. Thus this re-implements a simple queue on top of
 from __future__ import annotations
 
 import anyio
+import logging
 from anyio import create_memory_object_stream as _cmos
 
 from outcome import Error, Value
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
-import logging  # isort:skip
+    from collections.abc import Callable
+    from typing import Self
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 __all__ = [
     "DelayedRead",
@@ -34,7 +38,7 @@ QueueFull = anyio.WouldBlock
 QueueEmpty = anyio.WouldBlock
 
 
-class Queue:
+class Queue(Generic[T]):
     """
     Queues have been replaced in trio/anyio by memory object streams, but
     those are more complicated to use.
@@ -43,82 +47,85 @@ class Queue:
     memory object streams.
     """
 
-    def __init__(self, length=0):
+    _s: MemoryObjectSendStream[Value[T] | Error]
+    _r: MemoryObjectReceiveStream[Value[T] | Error]
+
+    def __init__(self, length: int = 0) -> None:
         self._s, self._r = _cmos(length)
 
-    async def put(self, x):
+    async def put(self, x: T) -> None:
         """Send a value, blocking"""
         try:
             await self._s.send(Value(x))
         except anyio.ClosedResourceError:
             raise EOFError from None
 
-    def put_nowait(self, x):
+    def put_nowait(self, x: T) -> None:
         """Send a value, nonblocking"""
         try:
             self._s.send_nowait(Value(x))
         except anyio.ClosedResourceError:
             raise EOFError from None
 
-    async def put_error(self, x):
+    async def put_error(self, x: Exception) -> None:
         """Send an error value, blocking"""
         try:
             await self._s.send(Error(x))
         except anyio.ClosedResourceError:
             raise EOFError from None
 
-    def put_nowait_error(self, x):
+    def put_nowait_error(self, x: Exception) -> None:
         """Send an error, nonblocking"""
         try:
             self._s.send_nowait(Error(x))
         except anyio.ClosedResourceError:
             raise EOFError from None
 
-    async def get(self):
+    async def get(self) -> T:
         """Get the next value, blocking.
         May raise an exception if one was sent."""
         try:
             res = await self._r.receive()
         except anyio.EndOfStream:
             raise EOFError from None
-        return res.unwrap()
+        return res.unwrap()  # unwrap returns the value or raises
 
-    def get_nowait(self):
+    def get_nowait(self) -> T:
         """Get the next value, nonblocking.
         May raise an exception if one was sent."""
         try:
             res = self._r.receive_nowait()
         except anyio.EndOfStream:
             raise EOFError from None
-        return res.unwrap()
+        return res.unwrap()  # unwrap returns the value or raises
 
-    def qsize(self):
+    def qsize(self) -> int:
         """Return the number of elements in the queue"""
         return self._s.statistics().current_buffer_used
 
-    def empty(self):
+    def empty(self) -> bool:
         """Check whether the queue is empty"""
         return self._s.statistics().current_buffer_used == 0
 
-    def __aiter__(self):
+    def __aiter__(self) -> Self:
         return self
 
-    async def __anext__(self):
-        res = await self._r.__anext__()  # pylint: disable=E1101
-        return res.unwrap()
+    async def __anext__(self) -> T:
+        res = await self._r.__anext__()
+        return res.unwrap()  # unwrap returns the value or raises
 
-    def close_sender(self) -> Awaitable:
+    def close_sender(self) -> None:
         """No more messages will be received"""
         self._s.close()
 
-    def close_receiver(self) -> Awaitable:
+    def close_receiver(self) -> None:
         """No more messages may be sent"""
         self._r.close()
 
     close_reader = close_receiver
 
 
-class Lockstep(Queue):
+class Lockstep(Queue[T]):
     """
     A sender/receiver rendez-vous.
 
@@ -126,11 +133,11 @@ class Lockstep(Queue):
     the data item is transferred and both return.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(0)
 
 
-def create_queue(length=0):
+def create_queue(length: int = 0) -> Queue[Any]:
     """Create a queue. Compatibility method.
 
     Deprecated; instantiate `Queue` directly."""
@@ -144,22 +151,22 @@ class DelayedWrite:
     other side.
     """
 
-    _delay = None
-    _send_lock = None
-    _info = None
-    _seq = 0
+    _delay: anyio.Event | None = None
+    _send_lock: anyio.Lock
+    _info: str
+    _seq: int = 0
 
-    def __init__(self, length, info=None):
-        self.len = length
-        self._n_ack = 0
-        self._n_sent = 0
+    def __init__(self, length: int, info: str | None = None) -> None:
+        self.len: int = length
+        self._n_ack: int = 0
+        self._n_sent: int = 0
         self._send_lock = anyio.Lock()
         if info is None:
             DelayedWrite._seq += 1
             info = f"DlyW.{DelayedWrite._seq}"
         self._info = info
 
-    async def next_seq(self):
+    async def next_seq(self) -> int:
         """
         Returns the next seq num for sending.
 
@@ -175,7 +182,7 @@ class DelayedWrite:
                 await self._delay.wait()
             return res
 
-    async def recv_ack(self, msg_nr):
+    async def recv_ack(self, msg_nr: int) -> None:
         """
         Signal that this ack msg has been received.
         """
@@ -186,7 +193,7 @@ class DelayedWrite:
             self._delay = None
 
 
-class DelayedRead(Queue):
+class DelayedRead(Queue[T]):
     """
     A queue that limits the number of outstanding incoming messages by
     flow-controlling a `DelayedWrite` instance on the other side.
@@ -197,39 +204,48 @@ class DelayedRead(Queue):
     * async send_ack(seq) -- send an ack for this message
     """
 
-    def __init__(self, length, *, get_seq=None, send_ack=None):
+    get_seq: Callable[[T], int]
+    send_ack: Callable[[int], Any]
+
+    def __init__(
+        self,
+        length: int,
+        *,
+        get_seq: Callable[[T], int] | None = None,
+        send_ack: Callable[[int], Any] | None = None,
+    ) -> None:
         if length < 4:
             raise RuntimeError("Length <4 doesn't make sense")
         super().__init__(length)
-        self._n_last = 0
-        self._n_ack = 0
-        self._len = length // 3
+        self._n_last: int = 0
+        self._n_ack: int = 0
+        self._len: int = length // 3
         if get_seq is not None:
-            self.get_seq = get_seq
+            self.get_seq = get_seq  # type: ignore[method-assign]  # method override by assignment
         if send_ack is not None:
-            self.send_ack = send_ack
+            self.send_ack = send_ack  # type: ignore[method-assign]  # method override by assignment
 
     @staticmethod
-    def get_seq(msg) -> int:  # pylint: disable=method-hidden
+    def get_seq(msg: T) -> int:  # abstract method
         """msgnum extractor. Static method. Override me!"""
         raise NotImplementedError("Override get_seq")
 
-    async def send_ack(self, seq: int):  # pylint: disable=method-hidden
+    async def send_ack(self, seq: int) -> None:  # abstract method
         """Ack sender for a specific seqnum. Override me!"""
         raise NotImplementedError("Override send_flow")
 
-    async def _did_read(self, res):
+    async def _did_read(self, res: T) -> None:
         self._n_last = max(self._n_last, self.get_seq(res))
         if self._n_last - self._n_ack > self._len:
             self._n_ack = self._n_last
-            await self.send_ack(self._n_last)
+            await self.send_ack(self._n_last)  # type: ignore[misc]  # method can be overridden
 
-    async def __anext__(self):
+    async def __anext__(self) -> T:
         res = await super().__anext__()
         await self._did_read(res)
         return res
 
-    async def get(self):
+    async def get(self) -> T:
         """Receive the next message, send an Ack to the other side."""
         res = await super().get()
         await self._did_read(res)

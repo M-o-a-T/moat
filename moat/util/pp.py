@@ -6,10 +6,15 @@ from __future__ import annotations
 
 from moat.lib.micro import Mapping
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
 __all__ = ["pop_kw", "push_kw"]
 
 
-def push_kw(args: list, kwargs: dict, is_warn: bool = False):
+def push_kw(args: list[Any], kwargs: dict[str, Any], is_warn: bool = False) -> None:
     """
     Add kwargs to the list, if required.
 
@@ -34,7 +39,7 @@ def push_kw(args: list, kwargs: dict, is_warn: bool = False):
         args.append(kwargs if isinstance(kwargs, dict) else {})
 
 
-def pop_kw(ak: list) -> dict:
+def pop_kw(ak: list[Any]) -> MutableMapping[str, Any]:
     """
     Unpack an args-and-maybe-trailing-kwargs list.
 

@@ -10,10 +10,14 @@ import anyio
 
 from moat.lib.codec import Codec
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from anyio.abc import AsyncResource
     from pathlib import Path as FSPath
+    from types import TracebackType
+
+    from typing import Self
 
 __all__ = ["MsgReader", "MsgWriter"]
 
@@ -23,11 +27,14 @@ class _MsgRW:
     Common base class for :class:`MsgReader` and :class:`MsgWriter`.
     """
 
-    _mode: str = None
+    _mode: str
 
     def __init__(
-        self, path: anyio.Path | FSPath | str | None = None, stream=None, codec: Codec | str = None
-    ):
+        self,
+        path: anyio.Path | FSPath | str | None = None,
+        stream: AsyncResource | None = None,
+        codec: Codec | str | None = None,
+    ) -> None:
         if (path is None) == (stream is None):
             raise RuntimeError("You need to specify either path or stream")
 
@@ -38,28 +45,37 @@ class _MsgRW:
 
             codec = get_codec(codec)
 
+        path_obj: anyio.Path | None
         if isinstance(path, anyio.Path):
-            pass
+            path_obj = path
         elif path is not None:
-            path = anyio.Path(path)
-        self.path = path
+            path_obj = anyio.Path(path)
+        else:
+            path_obj = None
+        self.path: anyio.Path | None = path_obj
 
-        self.stream = stream
-        self.codec = codec
+        self.stream: AsyncResource | None = stream
+        self.codec: Codec = codec
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         if self.path is not None:
-            p = self.path
+            p: anyio.Path | str = self.path
             if p == "-":
-                if self._mode[0] == "r":  # pylint: disable=unsubscriptable-object
+                if self._mode[0] == "r":
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"
-            self.stream = await anyio.open_file(p, self._mode)
+            self.stream = await anyio.open_file(p, self._mode)  # type: ignore[arg-type]  # _mode is str literal in subclasses
         return self
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self.path is not None:
+            assert self.stream is not None  # stream is set in __aenter__
             with anyio.CancelScope(shield=True):
                 await self.stream.aclose()
 
@@ -81,23 +97,24 @@ class MsgReader(_MsgRW):
     Exactly one of ``path`` and ``stream`` must be used.
     """
 
-    _mode = "rb"
+    _mode: str = "rb"
 
-    def __init__(self, *a, buflen=4096, **kw):
+    def __init__(self, *a: Any, buflen: int = 4096, **kw: Any) -> None:
         super().__init__(*a, **kw)
-        self.buflen = buflen
+        self.buflen: int = buflen
 
-    def __aiter__(self):
+    def __aiter__(self) -> Self:
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> Any:
         while True:
             try:
                 return next(self.codec)
             except StopIteration:
                 pass
 
-            d = await self.stream.read(self.buflen)
+            assert self.stream is not None  # stream is set in __aenter__
+            d = await self.stream.read(self.buflen)  # type: ignore[attr-defined]  # AsyncFile has read
             if d == b"":
                 raise StopAsyncIteration
             self.codec.feed(d)
@@ -122,29 +139,38 @@ class MsgWriter(_MsgRW):
     The stream is buffered. Call :meth:`flush` to flush the buffer.
     """
 
-    _mode = "wb"
+    _mode: str = "wb"
 
-    def __init__(self, *a, buflen=65536, **kw):
+    def __init__(self, *a: Any, buflen: int = 65536, **kw: Any) -> None:
         super().__init__(*a, **kw)
 
-        self.buf = []
-        self.buflen = buflen
-        self.curlen = 0
-        self.excess = 0
+        self.buf: list[bytes] = []
+        self.buflen: int = buflen
+        self.curlen: int = 0
+        self.excess: int = 0
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        assert self.stream is not None  # stream is set in __aenter__
         with anyio.fail_after(2, shield=True):
             if self.buf:
-                await self.stream.write(b"".join(self.buf))
-            await super().__aexit__(*tb)
+                await self.stream.write(b"".join(self.buf))  # type: ignore[attr-defined]  # AsyncFile has write
+            await super().__aexit__(exc_type, exc_val, exc_tb)
 
-    async def __call__(self, msg):
+    async def __call__(self, msg: Any) -> None:
         """Write a message (bytes) to the buffer.
 
         Flushing writes a multiple of ``buflen`` bytes."""
-        msg = self.codec.encode(msg)
-        self.buf.append(msg)
-        self.curlen += len(msg)
+        assert self.stream is not None  # stream is set in __aenter__
+        msg_bytes = self.codec.encode(msg)
+        if not isinstance(msg_bytes, bytes):
+            msg_bytes = bytes(msg_bytes)
+        self.buf.append(msg_bytes)
+        self.curlen += len(msg_bytes)
         if self.curlen + self.excess >= self.buflen:
             buf = b"".join(self.buf)
             pos = self.buflen * ((self.curlen + self.excess) // self.buflen) - self.excess
@@ -153,17 +179,18 @@ class MsgWriter(_MsgRW):
             self.curlen = len(buf)
             self.buf = [buf]
             self.excess = 0
-            await self.stream.write(wb)
+            await self.stream.write(wb)  # type: ignore[attr-defined]  # AsyncFile has write
 
-    async def flush(self, force=True):
+    async def flush(self, force: bool = True) -> None:
         """Flush the buffer.
 
         @force: do write partial data.
         """
+        assert self.stream is not None  # stream is set in __aenter__
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
             self.excess = (self.excess + len(buf)) % self.buflen
-            await self.stream.write(buf)
+            await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
             if force:
-                await self.stream.flush()
+                await self.stream.flush()  # type: ignore[attr-defined]  # AsyncFile has flush

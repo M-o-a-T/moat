@@ -13,9 +13,9 @@ classifiers = [
 	]
 dependencies = [
 	"asyncvictoria ~= 0.6.4",
-	"moat-link-metrics ~= 0.1.0",
+	"moat-link-metrics ~= 0.0.1",
 	]
-version = "0.1.0"
+version = "0.0.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.13"
 name = "moat-link-metrics-backend-victoria"

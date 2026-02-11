@@ -22,6 +22,7 @@ dependencies = [
 	"asyncclick",
 	"asyncowfs",
 	"asyncscope",
+	"asyncvictoria ~= 0.7.0",
 	"asyncwebsockets",
 	"cffi",
 	"pygit",

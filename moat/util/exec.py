@@ -128,6 +128,7 @@ async def run(
             err = io.BytesIO()
             tg.start_soon(report, name + "⫸", proc.stderr, err)
         if input is not None:
+            assert proc.stdin is not None  # stdin is PIPE when input is provided
             await proc.stdin.send(input)
             await proc.stdin.aclose()
 
@@ -143,6 +144,7 @@ async def run(
         )
 
     if capture:
+        assert out is not None  # stdout is PIPE when capture is True
         res = out.getvalue()
         if capture is True:
             res = res.decode("utf-8")

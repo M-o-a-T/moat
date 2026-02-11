@@ -6,6 +6,11 @@ from moat.util import yload, yprint
 
 from ._base import Codec as _Codec
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ._base import ByteType
+
 
 class Codec(_Codec):
     "basic JSON codec"
@@ -24,8 +29,8 @@ class Codec(_Codec):
         "basic decoder"
         return yload(data.decode("utf-8"))
 
-    def feed(self, buffer):  # noqa: D102
-        self._buf.extend(buffer)
+    def feed(self, data: ByteType) -> None:  # noqa: D102
+        self._buf.extend(data)
 
     def __next__(self):
         i = self._buf.find(b"\n---\n")

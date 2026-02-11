@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import struct
 
-import ruyaml as yaml
+from ruyaml import representer
 
 from ._cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:F401
 
-SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
+SafeRepresenter = representer.SafeRepresenter
 
 
 def _tag_repr(dumper, data):

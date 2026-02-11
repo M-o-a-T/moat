@@ -137,7 +137,7 @@ _TYPE_EXT = const(5)
 DEFAULT_RECURSE_LIMIT = 20
 
 
-_MSGPACK_HEADERS = {
+_MSGPACK_HEADERS: dict[int, tuple[int, str] | tuple[int, str, int]] = {
     0xC4: (1, "", _TYPE_BIN),
     0xC5: (2, ">H", _TYPE_BIN),
     0xC6: (4, ">I", _TYPE_BIN),
@@ -273,7 +273,7 @@ class Unpacker:
         elif b == 0xC3:
             obj = True
         elif b <= 0xC6:
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size)
             if len(fmt) > 0:
                 n = struct.unpack_from(fmt, self._buffer, self._buf_pos)[0]
@@ -282,13 +282,13 @@ class Unpacker:
             self._buf_pos += size
             obj = self._read(n)
         elif b <= 0xC9:
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size)
             L, n = struct.unpack_from(fmt, self._buffer, self._buf_pos)
             self._buf_pos += size
             obj = self._read(L)
         elif b <= 0xD3:
-            size, fmt = _MSGPACK_HEADERS[b]
+            size, fmt = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 2-tuple for these keys
             self._reserve(size)
             if len(fmt) > 0:
                 obj = struct.unpack_from(fmt, self._buffer, self._buf_pos)[0]
@@ -296,12 +296,12 @@ class Unpacker:
                 obj = self._buffer[self._buf_pos]
             self._buf_pos += size
         elif b <= 0xD8:
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size + 1)
             n, obj = struct.unpack_from(fmt, self._buffer, self._buf_pos)
             self._buf_pos += size + 1
         elif b <= 0xDB:
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size)
             if len(fmt) > 0:
                 (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
@@ -310,12 +310,12 @@ class Unpacker:
             self._buf_pos += size
             obj = self._read(n)
         elif b <= 0xDD:
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
             self._buf_pos += size
         else:  # if b <= 0xDF:  # can't be anything else
-            size, fmt, typ = _MSGPACK_HEADERS[b]
+            size, fmt, typ = _MSGPACK_HEADERS[b]  # type: ignore[misc]  # always 3-tuple for these keys
             self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
             self._buf_pos += size

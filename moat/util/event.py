@@ -10,7 +10,14 @@ from concurrent.futures import CancelledError
 import attr
 import outcome
 
+from typing import TYPE_CHECKING, Any, TypeVar
+
+if TYPE_CHECKING:
+    from anyio.abc import CancelScope
+
 __all__ = ["ValueEvent"]
+
+T = TypeVar("T")
 
 
 @attr.s
@@ -28,25 +35,25 @@ class ValueEvent:
     Note that the value can only be read once.
     """
 
-    event = attr.ib(factory=anyio.Event, init=False)
-    value = attr.ib(default=None, init=False)
-    scope = attr.ib(default=None, init=True)
+    event: anyio.Event = attr.ib(factory=anyio.Event, init=False)
+    value: outcome.Value[Any] | outcome.Error | None = attr.ib(default=None, init=False)
+    scope: CancelScope | None = attr.ib(default=None, init=True)
 
-    def set(self, value):
+    def set(self, value: Any) -> None:
         """Set the result to return this value, and wake any waiting task."""
         self.value = outcome.Value(value)
         self.event.set()
 
-    def set_error(self, exc):
+    def set_error(self, exc: Exception) -> None:
         """Set the result to raise this exceptio, and wake any waiting task."""
         self.value = outcome.Error(exc)
         self.event.set()
 
-    def is_set(self):
+    def is_set(self) -> bool:
         """Check whether the event has occurred."""
         return self.value is not None
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Send a cancelation to the recipient.
 
         TODO: Trio can't do that cleanly.
@@ -55,7 +62,7 @@ class ValueEvent:
             self.scope.cancel()
         self.set_error(CancelledError())
 
-    async def wait(self):
+    async def wait(self) -> None:
         """Block until the value is set.
 
         If it's already set, then this method returns immediately.
@@ -64,7 +71,7 @@ class ValueEvent:
         """
         await self.event.wait()
 
-    async def get(self):
+    async def get(self) -> Any:
         """Block until the value is set.
 
         If it's already set, then this method returns immediately.
@@ -72,4 +79,4 @@ class ValueEvent:
         The value can only be read once.
         """
         await self.event.wait()
-        return self.value.unwrap()
+        return self.value.unwrap()  # type: ignore[union-attr]  # value is set after wait

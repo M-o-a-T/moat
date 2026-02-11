@@ -81,7 +81,8 @@ This file isn't just for agents …
 
 - Standard Python, 4-space indents, formatted by `ruff format`.
 - `ruff check` clean. See `pyproject.toml` for global exceptions.
-- ignore any remaining pylint comments. We are not using it any more.
+- ignore any remaining pylint, pyright or isort comments.
+  We are not using these tools any more.
   Remove these if you're changing the line anyway.
 - Keep functions reasonably small. Do not repeat yourself.
 - Follow existing practice when naming. Be concise.

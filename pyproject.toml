@@ -277,6 +277,7 @@ include = [
     "moat/lib/priomap/",
     "moat/lib/repl/",
     "moat/lib/ring/",
+    "moat/util/",
 ]
 exclude = [
     "ext/**",

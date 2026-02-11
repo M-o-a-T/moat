@@ -15,6 +15,7 @@ from attrs import define, field
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
+    from anyio.abc import ObjectReceiveStream, ObjectSendStream, TaskStatus
     from contextvars import ContextVar, Token
     from types import TracebackType
 
@@ -28,7 +29,7 @@ T_Ctx = TypeVar("T_Ctx")
 T_CtxType = TypeVar("T_CtxType")
 
 
-class CtxObj(ABC):
+class CtxObj(ABC, Generic[T_Ctx]):
     """
     Teach a class instance to act as an async context manager, by
     forwarding ``__aenter__`` and ``__aexit__`` to a ``_ctx`` method
@@ -45,7 +46,7 @@ class CtxObj(ABC):
             pass
     """
 
-    __ctx: AbstractAsyncContextManager | None = None
+    __ctx: AbstractAsyncContextManager[T_Ctx, bool | None] | None = None
 
     @abstractmethod
     def _ctx(self) -> AsyncIterator[T_Ctx]: ...
@@ -53,27 +54,29 @@ class CtxObj(ABC):
     async def __aenter__(self) -> T_Ctx:
         if self.__ctx is not None:
             raise RuntimeError("Nested contexts")
-        ctx = self._ctx()
-        if not hasattr(ctx, "__aenter__"):
+        ctx_iter = self._ctx()
+        if not hasattr(ctx_iter, "__aenter__"):
             # DEPRECATED
             # legacy code for `_ctx` without @asynccm
-            ctx = asynccontextmanager(self._ctx)()
-        self.__ctx = ctx
-        return await ctx.__aenter__()
+            ctx: AbstractAsyncContextManager[T_Ctx, bool | None] = asynccontextmanager(self._ctx)()  # type: ignore[assignment]  # legacy support
+        else:
+            ctx = ctx_iter  # AsyncIterator with __aenter__ is an ACM
+        self.__ctx = ctx  # type: ignore[assignment]  # mixed types for legacy support
+        return await ctx.__aenter__()  # type: ignore[union-attr]  # both branches have __aenter__
 
     def __aexit__(
         self,
-        *tb: *tuple[type[BaseException] | None, BaseException | None, TracebackType | None],
+        *tb: type[BaseException] | None | BaseException | TracebackType,
     ) -> Awaitable[bool | None]:
         try:
             assert self.__ctx is not None
-            return self.__ctx.__aexit__(*tb)
+            return self.__ctx.__aexit__(*tb)  # type: ignore[arg-type]  # variadic unpacking
         finally:
             self.__ctx = None
 
 
 @define
-class timed_ctx(CtxObj):
+class timed_ctx(CtxObj[T_Ctx]):
     """
     A wrapper for an async context manager that times out if entering it
     takes too long.
@@ -82,16 +85,16 @@ class timed_ctx(CtxObj):
     """
 
     timeout: int | float
-    mgr: AbstractAsyncContextManager
+    mgr: AbstractAsyncContextManager[T_Ctx, bool | None]
 
-    async def _timer(self, *, task_status):
+    async def _timer(self, *, task_status: TaskStatus[anyio.CancelScope]) -> None:
         with anyio.CancelScope() as sc:
             task_status.started(sc)
             await anyio.sleep(self.timeout)
             raise TimeoutError(self.timeout)
 
     @asynccontextmanager
-    async def _ctx(self):
+    async def _ctx(self) -> AsyncIterator[T_Ctx]:
         async with anyio.create_task_group() as tg:
             sc = await tg.start(self._timer)
             async with self.mgr as mgr:
@@ -108,18 +111,21 @@ class ContextMgr(Generic[T_CtxType]):
     """
 
     @asynccontextmanager
-    async def context(self, *args, **kwargs):
+    async def context(self, *args: Any, **kwargs: Any) -> AsyncIterator[T_CtxType]:  # noqa: ARG002  # abstract method signature
         raise NotImplementedError("Override me!")
+        yield  # NotImplementedError prevents reaching this
 
     exc: Exception | None = None
-    ctx: T_Ctx | Literal[False] | None = None
-    stopper: anyio.Event = None
-    stopped: anyio.Event = None
+    ctx: T_CtxType | Literal[False] | None = None
+    stopper: anyio.Event | None = None
+    stopped: anyio.Event | None = None
+    qw: ObjectSendStream[tuple[anyio.Event, tuple[Any, ...], dict[str, Any]]]
+    qr: ObjectReceiveStream[tuple[anyio.Event, tuple[Any, ...], dict[str, Any]]]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.qw, self.qr = anyio.create_memory_object_stream(0)
 
-    async def task(self):
+    async def task(self) -> None:
         """
         The task that encapsulates the context handler.
 
@@ -133,6 +139,7 @@ class ContextMgr(Generic[T_CtxType]):
                 async with self.context(*args, **kwargs) as self.ctx:
                     evt.set()
                     evt = self.stopped  # noqa:PLW2901
+                    assert self.stopper is not None  # set above
                     await self.stopper.wait()
                     if self.exc is not None:
                         raise self.exc
@@ -143,19 +150,20 @@ class ContextMgr(Generic[T_CtxType]):
                 raise
             finally:
                 evt.set()
+                assert self.stopped is not None  # set above
                 self.stopped.set()
                 self.ctx = None
 
-    def close(self):
+    def close(self) -> None:
         """
         Ends the context task.
         """
-        self.qw.close()
+        self.qw.close()  # type: ignore[attr-defined]  # close() exists on MemoryObjectSendStream
         if self.stopper is not None and not self.stopper.is_set():
             self.exc = CancelledError()
             self.stopper.set()
 
-    async def start(self, *args, **kwargs):
+    async def start(self, *args: Any, **kwargs: Any) -> T_CtxType:
         """
         Creates and starts your context, passing the given arguments.
 
@@ -172,17 +180,20 @@ class ContextMgr(Generic[T_CtxType]):
         except BaseException:
             if self.exc is None:
                 self.exc = CancelledError()
+            assert self.stopper is not None  # set in task()
             self.stopper.set()
             with anyio.move_on_after(0.5, shield=True):
+                assert self.stopped is not None  # set in task()
                 await self.stopped.wait()
             raise
 
         if self.exc is not None:
             exc, self.exc = self.exc, None
             raise exc
+        assert self.ctx is not False  # set in task() after evt is set
         return self.ctx
 
-    async def stop(self, exc: Exception | None = None):
+    async def stop(self, exc: Exception | None = None) -> None:
         """
         Stops your context.
 
@@ -194,15 +205,17 @@ class ContextMgr(Generic[T_CtxType]):
             raise RuntimeError("Context not entered")
         if exc is not None:
             self.exc = exc
+        assert self.stopper is not None  # set in task()
         self.stopper.set()
+        assert self.stopped is not None  # set in task()
         await self.stopped.wait()
         if self.exc is None:
             return
         if self.exc is exc:
             self.exc = None
         else:
-            exc, self.exc = self.exc, None
-            raise exc
+            exc_to_raise, self.exc = self.exc, None
+            raise exc_to_raise
 
 
 @define
@@ -219,11 +232,11 @@ class ctx_as:
         assert x.get() is False  # or whatever
     """
 
-    var: ContextVar = field()
+    var: ContextVar[Any] = field()
     value: Any = field()
-    token: Token = field(default=None, init=False)
+    token: Token[Any] | None = field(default=None, init=False)
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> Any:
         if self.token is not None:
             raise ValueError("nested 'ctx_as' contexts ??")
         self.token = self.var.set(self.value)
@@ -232,12 +245,23 @@ class ctx_as:
         finally:
             del self.value
 
-    def __exit__(self, *tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        assert self.token is not None  # set in __enter__
         self.var.reset(self.token)
         del self.token
 
-    async def __aenter__(self) -> None:
-        self.__enter__()
+    async def __aenter__(self) -> Any:
+        return self.__enter__()
 
-    async def __aexit__(self, *tb) -> None:
-        self.__exit__(*tb)
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.__exit__(exc_type, exc_val, exc_tb)

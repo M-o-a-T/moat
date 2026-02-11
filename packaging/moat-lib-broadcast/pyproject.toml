@@ -12,7 +12,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "moat-util ~= 0.62.3",
+    "moat-util ~= 0.62.4",
     "moat-lib-micro ~= 0.2.2",
     "attrs ~= 23.0",
 ]

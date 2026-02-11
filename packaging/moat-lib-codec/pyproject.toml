@@ -16,7 +16,7 @@ dependencies = [
     "moat-lib-rpc ~= 0.6.0",
     "moat-lib-micro ~= 0.2.2",
     "moat-lib-proxy ~= 0.1.1",
-    "moat-util ~= 0.62.3",
+    "moat-util ~= 0.62.4",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -25,7 +25,7 @@ maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple command/stream multiplexer'
 readme = "README.rst"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
-version = "0.4.11"
+version = "0.4.12"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

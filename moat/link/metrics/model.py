@@ -1,5 +1,5 @@
 """
-Node model for Akumuli series configuration.
+Node model for metrics series configuration.
 
 The tree mirrors the MoaT-Link subtree under the configured prefix.
 Each server entry contains per-series child nodes.
@@ -30,11 +30,11 @@ def _test_hook(e: Entry) -> None:
 
 
 @define
-class AkumuliEntry(Node):
-    """A single Akumuli series mapping.
+class MetricsEntry(Node):
+    """A single metrics series mapping.
 
     Reads a source value from MoaT-Link, applies *factor* and *offset*,
-    and writes the result to an Akumuli series.
+    and writes the result to a metrics backend.
     """
 
     _work: anyio.CancelScope | None = field(init=False, default=None)
@@ -103,30 +103,30 @@ class AkumuliEntry(Node):
 
 
 @define
-class AkumuliServer(Node):
-    """Represents one Akumuli server instance in the configuration tree.
+class MetricsServer(Node):
+    """Represents one metrics server instance in the configuration tree.
 
-    Children are :class:`AkumuliEntry` nodes.
+    Children are :class:`MetricsEntry` nodes.
     """
 
-    def add_child(self, item: Key) -> AkumuliEntry:
-        """Create child entries as :class:`AkumuliEntry`."""
+    def add_child(self, item: Key) -> MetricsEntry:
+        """Create child entries as :class:`MetricsEntry`."""
         if item in self._sub:
             raise ValueError("exists")
-        self._sub[item] = s = AkumuliEntry()
+        self._sub[item] = s = MetricsEntry()
         return s
 
 
 @define
-class AkumuliRoot(Node):
-    """Root of the Akumuli configuration tree.
+class MetricsRoot(Node):
+    """Root of the metrics configuration tree.
 
-    Children are :class:`AkumuliServer` nodes.
+    Children are :class:`MetricsServer` nodes.
     """
 
-    def add_child(self, item: Key) -> AkumuliServer:
-        """Create child servers as :class:`AkumuliServer`."""
+    def add_child(self, item: Key) -> MetricsServer:
+        """Create child servers as :class:`MetricsServer`."""
         if item in self._sub:
             raise ValueError("exists")
-        self._sub[item] = s = AkumuliServer()
+        self._sub[item] = s = MetricsServer()
         return s

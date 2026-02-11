@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE = moat-link-akumuli
+PACKAGE = moat-link-metrics
 MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
 ifneq ($(wildcard $(MAKEINCL)),)

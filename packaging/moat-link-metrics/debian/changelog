@@ -1,0 +1,7 @@
+moat-link-metrics (0.1.0-1) unstable; urgency=medium
+
+  * Renamed from moat-link-akumuli to moat-link-metrics.
+  * Added backend abstraction layer.
+  * Initial release as moat-link-metrics.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 06:43:00 +0100

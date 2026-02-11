@@ -23,8 +23,8 @@ dependencies = [
 version = "0.1.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.13"
-name = "moat-link-akumuli"
-description = "Akumuli time-series connector for MoaT-Link"
+name = "moat-link-metrics"
+description = "Metrics time-series connector for MoaT-Link"
 readme = "README.md"
 
 [[project.authors]]

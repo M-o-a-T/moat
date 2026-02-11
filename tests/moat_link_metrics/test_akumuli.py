@@ -1,4 +1,4 @@
-"""Tests for moat.link.akumuli."""
+"""Tests for moat.link.metrics."""
 
 from __future__ import annotations
 
@@ -9,32 +9,32 @@ from unittest.mock import AsyncMock, MagicMock
 from asyncakumuli import DS
 
 from moat.lib.path import P
-from moat.link.akumuli import model as akumuli_model
-from moat.link.akumuli.model import AkumuliEntry, AkumuliRoot, AkumuliServer
-from moat.link.akumuli.worker import run_entry
 from moat.link.meta import MsgMeta
+from moat.link.metrics import model as metrics_model
+from moat.link.metrics.model import MetricsEntry, MetricsRoot, MetricsServer
+from moat.link.metrics.worker import run_entry
 from moat.link.node import Node
 
 # -- Model tests (sync) ---------------------------------------------------
 
 
 def test_root_creates_server():
-    """AkumuliRoot.add_child creates AkumuliServer instances."""
-    root = AkumuliRoot()
+    """MetricsRoot.add_child creates MetricsServer instances."""
+    root = MetricsRoot()
     child = root.add_child("srv1")
-    assert isinstance(child, AkumuliServer)
+    assert isinstance(child, MetricsServer)
 
 
 def test_server_creates_entry():
-    """AkumuliServer.add_child creates AkumuliEntry instances."""
-    srv = AkumuliServer()
+    """MetricsServer.add_child creates MetricsEntry instances."""
+    srv = MetricsServer()
     child = srv.add_child("entry1")
-    assert isinstance(child, AkumuliEntry)
+    assert isinstance(child, MetricsEntry)
 
 
 def test_entry_properties():
-    """AkumuliEntry properties extract config from stored data."""
-    entry = AkumuliEntry()
+    """MetricsEntry properties extract config from stored data."""
+    entry = MetricsEntry()
     entry.set_(
         (),
         {
@@ -62,7 +62,7 @@ def test_entry_properties():
 
 def test_entry_incomplete():
     """is_complete returns False when required fields are missing."""
-    entry = AkumuliEntry()
+    entry = MetricsEntry()
     assert not entry.is_complete()
 
     entry.set_((), {"source": ("x",)}, MsgMeta(origin="test", t=1))
@@ -104,18 +104,18 @@ class _WatchCtx:
 def recorded_entries():
     """Collect Entry objects sent via _test_hook."""
     entries: list = []
-    orig = akumuli_model._test_hook  # noqa:SLF001
+    orig = metrics_model._test_hook  # noqa:SLF001
 
     def _hook(e) -> None:
         entries.append(e)
 
-    akumuli_model._test_hook = _hook  # noqa:SLF001
+    metrics_model._test_hook = _hook  # noqa:SLF001
     yield entries
-    akumuli_model._test_hook = orig  # noqa:SLF001
+    metrics_model._test_hook = orig  # noqa:SLF001
 
 
-def _make_entry(**data) -> AkumuliEntry:
-    """Create an AkumuliEntry with data set."""
+def _make_entry(**data) -> MetricsEntry:
+    """Create a MetricsEntry with data set."""
     defaults = {
         "source": ("src", "path"),
         "series": "test_series",
@@ -123,22 +123,22 @@ def _make_entry(**data) -> AkumuliEntry:
         "mode": "gauge",
     }
     defaults.update(data)
-    entry = AkumuliEntry()
+    entry = MetricsEntry()
     entry.set_((), defaults, MsgMeta(origin="test", t=1))
     return entry
 
 
 @pytest.mark.trio
 async def test_worker_forwards_values(recorded_entries, autojump_clock):  # noqa:ARG001
-    """Worker writes watched values to Akumuli."""
+    """Worker writes watched values to the backend."""
     entry = _make_entry()
-    srv = MagicMock()
-    srv.put = AsyncMock()
+    backend = MagicMock()
+    backend.put = AsyncMock()
     link = MagicMock()
     link.d_watch = MagicMock(return_value=_WatchCtx([(0, 10), (0, 20)]))
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(run_entry, link, entry, srv, P("test"))
+        tg.start_soon(run_entry, link, entry, backend, P("test"))
         await anyio.sleep(1)
         tg.cancel_scope.cancel()
 
@@ -151,13 +151,13 @@ async def test_worker_forwards_values(recorded_entries, autojump_clock):  # noqa
 async def test_worker_factor_offset(recorded_entries, autojump_clock):  # noqa:ARG001
     """Worker applies factor and offset."""
     entry = _make_entry(factor=2.0, offset=5)
-    srv = MagicMock()
-    srv.put = AsyncMock()
+    backend = MagicMock()
+    backend.put = AsyncMock()
     link = MagicMock()
     link.d_watch = MagicMock(return_value=_WatchCtx([(0, 10)]))
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(run_entry, link, entry, srv, P("test"))
+        tg.start_soon(run_entry, link, entry, backend, P("test"))
         await anyio.sleep(1)
         tg.cancel_scope.cancel()
 
@@ -168,8 +168,8 @@ async def test_worker_factor_offset(recorded_entries, autojump_clock):  # noqa:A
 async def test_worker_t_min_throttle(recorded_entries, autojump_clock):  # noqa:ARG001
     """Worker respects t_min rate limiting."""
     entry = _make_entry(t_min=1.0)
-    srv = MagicMock()
-    srv.put = AsyncMock()
+    backend = MagicMock()
+    backend.put = AsyncMock()
     link = MagicMock()
     link.d_watch = MagicMock(
         return_value=_WatchCtx([
@@ -182,7 +182,7 @@ async def test_worker_t_min_throttle(recorded_entries, autojump_clock):  # noqa:
     )
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(run_entry, link, entry, srv, P("test"))
+        tg.start_soon(run_entry, link, entry, backend, P("test"))
         await anyio.sleep(5)
         tg.cancel_scope.cancel()
 
@@ -194,13 +194,13 @@ async def test_worker_t_min_throttle(recorded_entries, autojump_clock):  # noqa:
 async def test_worker_attr_extraction(recorded_entries, autojump_clock):  # noqa:ARG001
     """Worker extracts nested attributes."""
     entry = _make_entry(attr=("nested", "val"))
-    srv = MagicMock()
-    srv.put = AsyncMock()
+    backend = MagicMock()
+    backend.put = AsyncMock()
     link = MagicMock()
     link.d_watch = MagicMock(return_value=_WatchCtx([(0, {"nested": {"val": 42}})]))
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(run_entry, link, entry, srv, P("test"))
+        tg.start_soon(run_entry, link, entry, backend, P("test"))
         await anyio.sleep(1)
         tg.cancel_scope.cancel()
 

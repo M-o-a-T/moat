@@ -1,5 +1,5 @@
 """
-Command-line interface for moat.link.akumuli.
+Command-line interface for moat.link.metrics.
 """
 
 from __future__ import annotations
@@ -17,19 +17,19 @@ from moat.link.client import Link
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage Akumuli series.")
+@click.group(short_help="Manage metrics series.")
 @click.pass_context
 async def cli(ctx):
-    """Configure Akumuli time-series forwarding.
+    """Configure metrics time-series forwarding.
 
-    Series entries live below the configured ``link.akumuli.prefix``
+    Series entries live below the configured ``link.metrics.prefix``
     path, grouped by server name.
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
     obj.conn = await ctx.with_async_resource(Link(cfg))
-    obj.akumuli_cfg = obj.cfg.link.akumuli
-    obj.prefix = obj.akumuli_cfg.prefix
+    obj.metrics_cfg = obj.cfg.link.metrics
+    obj.prefix = obj.metrics_cfg.prefix
 
 
 @cli.command("list")
@@ -120,7 +120,7 @@ async def delete_(obj, server, name):
 @click.argument("server", type=str)
 @click.pass_obj
 async def monitor_(obj, server):
-    """Run the Akumuli connector for one server."""
+    """Run the metrics connector for one server."""
     from .task import task  # noqa:PLC0415
 
-    await task(obj.conn, obj.akumuli_cfg, server)
+    await task(obj.conn, obj.metrics_cfg, server)

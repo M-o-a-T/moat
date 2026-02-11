@@ -6,17 +6,17 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from typing import Any
+    from collections.abc import Sequence
 
 
-def get_part(cur, p: list[str | int], add: bool = False):
-    "Walk into a mapping or object structure"
+def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
+    """Walk into a mapping or object structure."""
     for pp in p:
         try:
-            cur = getattr(cur, pp)
+            cur = getattr(cur, pp)  # type: ignore[arg-type]  # pp might be int but then getattr raises
         except (TypeError, AttributeError):
             try:
                 cur = cur[pp]
@@ -32,8 +32,8 @@ def get_part(cur, p: list[str | int], add: bool = False):
     return cur
 
 
-def set_part(cur, p: list[str | int], v: Any, keep: bool = False):
-    "Modify a mapping or object structure"
+def set_part(cur: Any, p: Sequence[str | int], v: Any, keep: bool = False) -> None:
+    """Modify a mapping or object structure."""
     cur = get_part(cur, p[:-1], add=True)
     pp = p[-1]
 
@@ -53,10 +53,12 @@ def set_part(cur, p: list[str | int], v: Any, keep: bool = False):
             if pp is None or (isinstance(pp, int) and len(cur) == pp):
                 cur.append(v)
             else:
-                setattr(cur, pp, v)
+                setattr(cur, pp, v)  # type: ignore[arg-type]  # pp might be int but then we append above
 
 
-def enc_part(cur, name=None) -> tuple[Any, tuple | None] | Any:
+def enc_part(
+    cur: Any, name: str | None = None
+) -> tuple[Any, tuple[Any, ...] | None] | tuple[Any, Sequence[int | str]] | Any:
     """
     Helper method to encode a larger dict/list partially.
 
@@ -68,14 +70,14 @@ def enc_part(cur, name=None) -> tuple[Any, tuple | None] | Any:
     The tuple may have a third element: the name, if passed in.
     """
 
-    def _complex(v):
-        if isinstance(v, (dict, list, tuple)):
+    def _complex(v: Any) -> bool:
+        if isinstance(v, dict | list | tuple):
             return True
         return False
 
     if isinstance(cur, dict):
-        c = {}
-        s = []
+        c: dict[Any, Any] = {}
+        s: list[str | int] = []
         for k, v in cur.items():
             if _complex(v):
                 s.append(k)
@@ -87,17 +89,17 @@ def enc_part(cur, name=None) -> tuple[Any, tuple | None] | Any:
             # dict has no complex values: return directly
             return c
 
-    elif isinstance(cur, (list, tuple)):
-        c = []
-        s = []
+    elif isinstance(cur, list | tuple):
+        c_list: list[Any] = []
+        s_list: list[int] = []
         for k, v in enumerate(cur):
             if _complex(v):
-                c.append(None)
-                s.append(k)
+                c_list.append(None)
+                s_list.append(k)
             else:
-                c.append(v)
+                c_list.append(v)
         # cannot do a direct return here
-        return c, s
+        return c_list, s_list
 
     else:
         return cur

@@ -124,6 +124,7 @@ This file isn't just for agents …
 - DO NOT include agent information, a verbose description of the change,
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
+- DO NOT use "--rebase" when merging or pulling.
 
 ## Agent‑Specific Notes
 

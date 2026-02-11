@@ -15,19 +15,21 @@ from calendar import monthrange
 
 from . import attrdict
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from logging import Logger
+
+    from typing import Self
 
 __all__ = ["humandelta", "now", "time_until", "ts2iso"]
 
 startup = dt.datetime.now().astimezone()
-_log = None
-TRACE = None
+_log: Logger | None = None
+TRACE: Any = None
 
 
-def now(force=False):  # noqa:ARG001 pylint: disable=unused-argument
+def now(force: bool = False) -> dt.datetime:  # noqa:ARG001  # future use
     "current time"
     return dt.datetime.now().astimezone()
 
@@ -35,22 +37,23 @@ def now(force=False):  # noqa:ARG001 pylint: disable=unused-argument
 class t_iter:
     "an iterator that returns on well-defined time intervals"
 
-    def __init__(self, interval):
-        self.interval = interval
+    def __init__(self, interval: float) -> None:
+        self.interval: float = interval
+        self._t: float
 
-    def time(self):
+    def time(self) -> float:
         "get-time hook"
         return time.monotonic()
 
-    async def sleep(self, dt):
+    async def sleep(self, dt: float) -> None:
         "sleep hook"
         await anyio.sleep(max(dt, 0))
 
-    def __aiter__(self):
+    def __aiter__(self) -> Self:
         self._t = self.time() - self.interval
         return self
 
-    def __anext__(self) -> Awaitable[None]:
+    async def __anext__(self) -> None:
         t = self.time()
         dt = self._t - t
         if dt > 0:
@@ -58,7 +61,7 @@ class t_iter:
         else:
             self._t = t + self.interval
             dt = 0
-        return self.sleep(dt)
+        await self.sleep(dt)
 
 
 units = (
@@ -71,7 +74,7 @@ units = (
 )  # seconds are handled explicitly, below
 
 
-def ts2iso(ts: float, delta=False, msec=1):
+def ts2iso(ts: float, delta: bool = False, msec: int = 1) -> str:
     """
     Convert a timestamp to a human-readable absolute-time string, optionally with delta.
     """
@@ -85,7 +88,12 @@ def ts2iso(ts: float, delta=False, msec=1):
     return res
 
 
-def humandelta(delta: dt.timedelta, ago: bool = False, msec=1, segments=2) -> str:
+def humandelta(
+    delta: dt.timedelta | float,
+    ago: bool = False,
+    msec: int = 1,
+    segments: int = 2,
+) -> str:
     """
     Convert a timedelta into a human-readable string.
 
@@ -99,9 +107,10 @@ def humandelta(delta: dt.timedelta, ago: bool = False, msec=1, segments=2) -> st
     segment has. The default is 2. Pass 9 for "everything", zero for "one,
     but everything shorter than a minute is 'now'"
     """
-    res = []
+    res: list[str] = []
     res1 = ""
     res2 = ""
+    delta_seconds: float
     if isinstance(delta, dt.timedelta):
         if delta.days < 0:
             assert delta.seconds >= 0
@@ -114,20 +123,22 @@ def humandelta(delta: dt.timedelta, ago: bool = False, msec=1, segments=2) -> st
             delta = -delta
         elif ago:
             res1 = "in "
-        delta = delta.days + 24 * 60 * 60 + delta.seconds + delta.microseconds / 1e6
-    elif delta < 0:
-        delta = -delta
-        if ago:
-            res2 = " ago"
-        else:
-            res1 = "-"
-    elif ago:
-        res1 = "in "
+        delta_seconds = delta.days * 24 * 60 * 60 + delta.seconds + delta.microseconds / 1e6
+    else:
+        delta_seconds = float(delta)
+        if delta_seconds < 0:
+            delta_seconds = -delta_seconds
+            if ago:
+                res2 = " ago"
+            else:
+                res1 = "-"
+        elif ago:
+            res1 = "in "
     done = 0
     for lim, name in units:
-        if delta > lim:
-            res.append(f"{int(delta // lim)} {name}")
-            delta %= lim
+        if delta_seconds > lim:
+            res.append(f"{int(delta_seconds // lim)} {name}")
+            delta_seconds %= lim
             if lim > 100:
                 msec = 0
             elif msec > 1:
@@ -135,13 +146,13 @@ def humandelta(delta: dt.timedelta, ago: bool = False, msec=1, segments=2) -> st
             done += 1
             if done == segments:
                 break
-    if done < segments and delta >= 0.1**msec:
-        if delta >= 1:
-            res.append(f"{delta:.{msec}f} sec")
-        elif delta > 0.001:
-            res.append(f"{delta * 1000:.{max(0, msec - 3)}f} msec")
+    if done < segments and delta_seconds >= 0.1**msec:
+        if delta_seconds >= 1:
+            res.append(f"{delta_seconds:.{msec}f} sec")
+        elif delta_seconds > 0.001:
+            res.append(f"{delta_seconds * 1000:.{max(0, msec - 3)}f} msec")
         else:
-            res.append(f"{delta * 1000000:.{max(0, msec - 6)}f} µsec")
+            res.append(f"{delta_seconds * 1000000:.{max(0, msec - 6)}f} µsec")
 
     if len(res) < 1:
         return "now"
@@ -507,9 +518,11 @@ def time_until(args, t_now=None, invert=False, back=False):
     if invert:
         p.delta = None
 
-        def get_delta(fn, sn=None, ln=None):
+        def get_delta(fn: Any, sn: str | None = None, ln: str | None = None) -> None:
             if p.delta is not None and p.delta == p.now:
                 return
+            assert sn is not None  # always provided by callers
+            assert ln is not None  # always provided by callers
             if getattr(p, sn) is None:
                 return
             if getattr(p.now, ln) != getattr(p, sn):

@@ -1,4 +1,4 @@
-"""Akumuli time-series connector for MoaT-Link."""
+"""Metrics time-series connector for MoaT-Link."""
 
 from __future__ import annotations
 

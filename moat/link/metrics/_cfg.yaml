@@ -1,5 +1,6 @@
 prefix: !P metrics
 server_default:
+  backend: akumuli
   host: localhost
   port: 8282
   delta: true

@@ -1,7 +1,7 @@
-(moat-link-akumuli)=
-# The Link: Akumuli Connector
+(moat-link-metrics)=
+# The Link: Metrics Connector
 
-```{include} ../../packaging/moat-link-akumuli/README.md
+```{include} ../../packaging/moat-link-metrics/README.md
 :start-after: % start main
 :end-before: % end main
 ```
@@ -15,21 +15,23 @@ series entries are children of the server node.
 A series entry contains:
 
 - **source**: MoaT-Link path of the value to watch.
-- **series**: Akumuli series name.
-- **tags**: dict of Akumuli tag key/value pairs.
-- **mode**: Akumuli data-series mode (default: ``gauge``).
+- **series**: Backend-specific series name (e.g., Akumuli series name).
+- **tags**: dict of backend-specific tag key/value pairs.
+- **mode**: Backend-specific data-series mode (default for Akumuli: ``gauge``).
 - **attr**: optional attribute path to extract from nested values.
 - **factor** / **offset**: optional linear scaling (default: 1 / 0).
 - **t_min**: optional minimum interval between writes, in seconds.
 
+The server configuration can specify a **backend** (default: ``akumuli``).
+
 ## CLI reference
 
 ```
-moat link akumuli list SERVER
-moat link akumuli show SERVER NAME
-moat link akumuli add SERVER NAME SOURCE SERIES TAG [TAG …]
-moat link akumuli delete SERVER NAME
-moat link akumuli monitor SERVER
+moat link metrics list SERVER
+moat link metrics show SERVER NAME
+moat link metrics add SERVER NAME SOURCE SERIES TAG [TAG …]
+moat link metrics delete SERVER NAME
+moat link metrics monitor SERVER
 ```
 
 ## systemd
@@ -37,7 +39,7 @@ moat link akumuli monitor SERVER
 Enable the connector for a server named ``myserver``:
 
 ```shell
-systemctl enable --now moat-link-akumuli@myserver.service
+systemctl enable --now moat-link-metrics@myserver.service
 ```
 
 ```{toctree}

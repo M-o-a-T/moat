@@ -1,4 +1,4 @@
-Source: moat-link-akumuli
+Source: moat-link-metrics
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
@@ -10,7 +10,7 @@ Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/moat
 X-DH-Compat: 13
 
-Package: moat-link-akumuli
+Package: moat-link-metrics
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
@@ -18,8 +18,8 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-asyncakumuli,
 Recommends:
   python3-trio (>= 0.22),
-Description: Akumuli time-series connector for MoaT-Link
- Watches MoaT-Link data entries and writes their values to an Akumuli
- time-series database whenever they change.
+Description: Metrics time-series connector for MoaT-Link
+ Watches MoaT-Link data entries and writes their values to metrics
+ time-series backends whenever they change. Supports Akumuli backend.
  .
  Part of the MoaT ecosystem for distributed home automation.

@@ -33,31 +33,31 @@ children.  moat.link uses a simpler model.
 2. Override ``add_child(self, item)`` to return the correct subclass.
 3. Pass your root class as ``cls=MyRoot`` to ``link.d_watch(…, cls=…)``.
 
-Example (from ``moat.link.akumuli``):
+Example (from ``moat.link.metrics``):
 
 ```python
 @define
-class AkumuliEntry(Node):
+class MetricsEntry(Node):
     """One series mapping."""
     ...
 
 @define
-class AkumuliServer(Node):
+class MetricsServer(Node):
     def add_child(self, item):
-        self._sub[item] = s = AkumuliEntry()
+        self._sub[item] = s = MetricsEntry()
         return s
 
 @define
-class AkumuliRoot(Node):
+class MetricsRoot(Node):
     def add_child(self, item):
-        self._sub[item] = s = AkumuliServer()
+        self._sub[item] = s = MetricsServer()
         return s
 ```
 
 Then watch with:
 
 ```python
-async with link.d_watch(path, subtree=True, mark=True, cls=AkumuliRoot) as mon:
+async with link.d_watch(path, subtree=True, mark=True, cls=MetricsRoot) as mon:
     async for msg in mon:
         ...
 ```

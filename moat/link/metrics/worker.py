@@ -1,8 +1,8 @@
 """
-Per-series worker for Akumuli.
+Per-series worker for metrics.
 
 Each worker watches a single MoaT-Link value and writes updates
-to the corresponding Akumuli series.
+to the corresponding metrics backend.
 """
 
 from __future__ import annotations
@@ -21,23 +21,24 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.link.client import LinkSender
 
-    from .model import AkumuliEntry
+    from .backend import Backend
+    from .model import MetricsEntry
 
 logger = logging.getLogger(__name__)
 
 
 async def run_entry(
     link: LinkSender,
-    entry: AkumuliEntry,
-    srv: object,
+    entry: MetricsEntry,
+    backend: Backend,
     subpath: Path,
 ) -> None:
-    """Watch one source value and forward it to Akumuli.
+    """Watch one source value and forward it to the metrics backend.
 
     Args:
         link: an active MoaT-Link sender.
         entry: the configuration node for this series.
-        srv: the open Akumuli connection.
+        backend: the metrics backend connection.
         subpath: path of this entry relative to the server node
             (used for error reporting).
     """
@@ -74,4 +75,4 @@ async def run_entry(
                 out = val * factor + offset
                 e = Entry(series=series, mode=mode, value=out, tags=tags)
                 _model._test_hook(e)  # noqa:SLF001
-                await srv.put(e)
+                await backend.put(e)

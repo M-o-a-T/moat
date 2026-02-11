@@ -1,7 +1,7 @@
 """
-Main supervisor task for Akumuli.
+Main supervisor task for metrics.
 
-Connects to an Akumuli server and monitors the MoaT-Link configuration
+Connects to a metrics backend and monitors the MoaT-Link configuration
 subtree.  Spawns / cancels per-series workers as entries appear or change.
 """
 
@@ -10,12 +10,11 @@ from __future__ import annotations
 import anyio
 import logging
 
-import asyncakumuli as akumuli
-
 from moat.util import combine_dict
 from moat.lib.path import Path
 
-from .model import AkumuliEntry, AkumuliRoot
+from .backend import get_backend
+from .model import MetricsEntry, MetricsRoot
 from .worker import run_entry
 
 from typing import TYPE_CHECKING
@@ -35,26 +34,29 @@ async def task(
     *,
     evt: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
 ) -> None:
-    """Run the Akumuli connector for one server.
+    """Run the metrics connector for one server.
 
     Args:
         link: an active MoaT-Link sender.
-        cfg: the ``link.akumuli`` configuration section.
+        cfg: the ``link.metrics`` configuration section.
         server_name: the server entry name inside the config subtree.
         evt: task-status for ``tg.start``.
     """
     prefix = Path.build(cfg["prefix"])
     server_path = prefix / server_name
 
-    # Fetch the server-level config (host/port) from its stored value
+    # Fetch the server-level config (host/port/backend) from its stored value
     server_data = await link.d_get(server_path)
     srv_cfg = combine_dict(
         (server_data if isinstance(server_data, dict) else {}).get("server", {}),
         cfg.get("server_default", {}),
     )
 
+    # Get the backend from config
+    backend = get_backend(srv_cfg, server_name)
+
     async with (
-        akumuli.connect(**srv_cfg) as srv,
+        backend,
         anyio.create_task_group() as tg,
     ):
         workers: dict[Path, anyio.CancelScope] = {}
@@ -64,7 +66,7 @@ async def task(
             if sc is not None:
                 sc.cancel()
 
-        async def _start(p: Path, entry: AkumuliEntry) -> None:
+        async def _start(p: Path, entry: MetricsEntry) -> None:
             _cancel(p)
             if not entry.is_complete():
                 logger.warning("Incomplete entry at %s, skipping", p)
@@ -78,7 +80,7 @@ async def task(
                     workers[p] = sc
                     task_status.started()
                     try:
-                        await run_entry(link, entry, srv, p)
+                        await run_entry(link, entry, backend, p)
                     except Exception:
                         logger.exception("Worker for %s failed", p)
 
@@ -90,7 +92,7 @@ async def task(
             server_path,
             subtree=True,
             mark=True,
-            cls=AkumuliRoot,
+            cls=MetricsRoot,
         ) as mon:
             evt.started()
 
@@ -104,7 +106,7 @@ async def task(
                     continue
 
                 node = mon._node.get(p)  # noqa:SLF001
-                if isinstance(node, AkumuliEntry):
+                if isinstance(node, MetricsEntry):
                     if node.is_complete():
                         await _start(p, node)
                     else:

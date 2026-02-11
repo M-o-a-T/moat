@@ -9,18 +9,31 @@ import os
 import sys
 
 import ruyaml as yaml
+from ruyaml import constructor, emitter, representer
+
+from moat.lib.path import Path
 
 from .dict import attrdict
 
 from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ruyaml.constructor import BaseConstructor
+    from ruyaml.constructor import SafeConstructor as SafeConstructorType
+    from ruyaml.emitter import Emitter as EmitterType
+    from ruyaml.nodes import Node
+    from ruyaml.representer import BaseRepresenter
+    from ruyaml.representer import SafeRepresenter as SafeRepresenterType
+
+    from collections.abc import Callable
+    from typing import IO
 
 try:
     from moat.lib.proxy import DProxy, Proxy
 except ImportError:
-    Proxy = None
-    DProxy = None
-
-from moat.lib.path import Path
+    Proxy = None  # type: ignore[assignment, misc]  # optional import
+    DProxy = None  # type: ignore[assignment, misc]  # optional import
 
 __all__ = [
     "add_repr",
@@ -32,19 +45,26 @@ __all__ = [
     "yprint",
 ]
 
-SafeRepresenter = yaml.representer.SafeRepresenter
-SafeConstructor = yaml.constructor.SafeConstructor
-Emitter = yaml.emitter.Emitter
+SafeRepresenter: type[SafeRepresenterType] = representer.SafeRepresenter
+SafeConstructor: type[SafeConstructorType] = constructor.SafeConstructor
+Emitter: type[EmitterType] = emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
 
 
-def load_ansible_repr():
+def load_ansible_repr() -> None:
     "Call me if you're using `moat.util` in conjunction with Ansible."
-    from ansible.parsing.yaml.objects import AnsibleUnicode  # noqa: PLC0415
-    from ansible.utils.unsafe_proxy import AnsibleUnsafeText  # noqa: PLC0415
-    from ansible.vars.hostvars import HostVars, HostVarsVars  # noqa: PLC0415
+    from ansible.parsing.yaml.objects import (  # noqa: PLC0415  # optional dependency, imported at runtime
+        AnsibleUnicode,  # type: ignore[import-not-found]  # optional dependency
+    )
+    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415  # optional dependency, imported at runtime
+        AnsibleUnsafeText,  # type: ignore[import-not-found]  # optional dependency
+    )
+    from ansible.vars.hostvars import (  # type: ignore[import-not-found]  # optional dependency  # noqa: PLC0415
+        HostVars,
+        HostVarsVars,
+    )
 
     SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
     SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)
@@ -52,7 +72,7 @@ def load_ansible_repr():
     SafeRepresenter.add_representer(AnsibleUnicode, SafeRepresenter.represent_str)
 
 
-def str_presenter(dumper, data):
+def str_presenter(dumper: BaseRepresenter, data: str) -> Node:
     """
     Always show multi-line strings with |-style quoting
     """
@@ -62,7 +82,7 @@ def str_presenter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
-def float_presenter(dumper, data):
+def float_presenter(dumper: BaseRepresenter, data: float) -> Node:
     """
     Round appropriately
     """
@@ -71,13 +91,13 @@ def float_presenter(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:float", str(data))
 
 
-def yaml_repr(name: str, use_repr: bool = False):
+def yaml_repr(name: str, use_repr: bool = False) -> Callable[[type], type]:
     """
     A class decorator that allows representing an object in YAML
     """
 
-    def register(cls):
-        def str_me(dumper, data):
+    def register(cls: type) -> type:
+        def str_me(dumper: BaseRepresenter, data: Any) -> Node:
             return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))
 
         SafeRepresenter.add_representer(cls, str_me)
@@ -86,17 +106,17 @@ def yaml_repr(name: str, use_repr: bool = False):
     return register
 
 
-def yaml_parse(name: str, use_repr: bool = False):
+def yaml_parse(name: str, use_repr: bool = False) -> Callable[[type], type]:
     """
     A decorator that allows parsing a YAML representation,
     i.e. the opposite of `yaml_repr`.
     """
 
-    def register(cls):
+    def register(cls: type) -> type:
         SafeConstructor.add_constructor(f"!{name}", cls)
         return cls
 
-    use_repr  # noqa: B018
+    _ = use_repr  # unused
     return register
 
 
@@ -104,24 +124,24 @@ SafeRepresenter.add_representer(str, str_presenter)
 SafeRepresenter.add_representer(float, float_presenter)
 
 
-def _path_repr(dumper, data):
+def _path_repr(dumper: BaseRepresenter, data: Path) -> Node:
     return dumper.represent_scalar("!P", str(data))
 
 
-def _proxy_repr(dumper, data):
+def _proxy_repr(dumper: BaseRepresenter, data: Any) -> Node:
     return dumper.represent_scalar("!R", data.name)
 
 
-def _dproxy_repr(dumper, data):
+def _dproxy_repr(dumper: BaseRepresenter, data: Any) -> Node:
     return dumper.represent_scalar("!DP", repr([data.name, data.a, data.k]))
 
 
-def read_env(loader, node):
+def read_env(loader: BaseConstructor, node: Node) -> str:
     value = loader.construct_scalar(node)
     return os.environ[value]
 
 
-def _el_repr(dumper, data):  # noqa: ARG001
+def _el_repr(dumper: BaseRepresenter, data: Any) -> Node:  # noqa: ARG001  # data unused but required by interface
     return dumper.represent_scalar("!R", "...")
 
 
@@ -137,8 +157,8 @@ if DProxy is not None:
     SafeRepresenter.add_representer(DProxy, _dproxy_repr)
 
 
-def _name2obj(constructor, node):
-    constructor  # noqa:B018
+def _name2obj(constructor: BaseConstructor, node: Node) -> Any:
+    _ = constructor  # unused but required by interface
 
     from moat.lib.proxy import name2obj  # noqa: PLC0415
 
@@ -148,26 +168,30 @@ def _name2obj(constructor, node):
 SafeConstructor.add_constructor("!R", _name2obj)
 
 
-def _bin_from_ascii(loader, node):
+def _bin_from_ascii(loader: BaseConstructor, node: Node) -> bytes:
     value = loader.construct_scalar(node)
     return value.encode("ascii")
 
 
-def _bin_from_hex(loader, node):
+def _bin_from_hex(loader: BaseConstructor, node: Node) -> bytearray:
     value = loader.construct_scalar(node)
     return bytearray.fromhex(value.replace(":", ""))
 
 
-def _bin_to_ascii(dumper, data):
+def _bin_to_ascii(dumper: SafeRepresenterType, data: bytes | bytearray | memoryview) -> Node:
     try:
-        data = data.decode("utf-8")
-    except UnicodeError:
-        if len(data) < 33:
-            return dumper.represent_scalar("!hex", data.hex(":"))
+        if isinstance(data, memoryview):
+            data_str = data.tobytes().decode("utf-8")
         else:
-            return dumper.represent_binary(data)
+            data_str = data.decode("utf-8")
+    except UnicodeError:
+        data_bytes = data.tobytes() if isinstance(data, memoryview) else data
+        if len(data_bytes) < 33:
+            return dumper.represent_scalar("!hex", data_bytes.hex(":"))
+        else:
+            return dumper.represent_binary(data_bytes)
     else:
-        return dumper.represent_scalar("!bin", data)
+        return dumper.represent_scalar("!bin", data_str)
 
 
 SafeRepresenter.add_representer(bytes, _bin_to_ascii)
@@ -181,7 +205,7 @@ SafeConstructor.add_constructor("!hex", _bin_from_hex)
 _expect_node = Emitter.expect_node
 
 
-def expect_node(self, *a, **kw):
+def expect_node(self: Any, *a: Any, **kw: Any) -> None:
     """
     YAML stream mangler.
 
@@ -191,18 +215,23 @@ def expect_node(self, *a, **kw):
     self.root_context = False
 
 
-Emitter.expect_node = expect_node
+Emitter.expect_node = expect_node  # type: ignore[method-assign]  # monkey-patch
 
 
-def yload(stream, multi=False, attr=False, typ="safe"):
+def yload(
+    stream: Any,
+    multi: bool = False,
+    attr: bool | type[attrdict] = False,
+    typ: str = "safe",
+) -> Any:
     """
     Load one or more YAML objects from a file.
     """
     y = yaml.YAML(typ=typ)
     if attr:
 
-        class AttrConstructor(SafeConstructor):
-            def __init__(self, *a, **k):
+        class AttrConstructor(SafeConstructor):  # type: ignore[misc, valid-type]  # runtime class creation
+            def __init__(self, *a: Any, **k: Any) -> None:
                 super().__init__(*a, **k)
                 self.yaml_base_dict_type = attrdict if attr is True else attr
 
@@ -213,7 +242,12 @@ def yload(stream, multi=False, attr=False, typ="safe"):
         return y.load(stream)
 
 
-def yprint(data, stream=sys.stdout, compact=False, typ="safe"):
+def yprint(
+    data: Any,
+    stream: IO[str] = sys.stdout,
+    compact: bool = False,
+    typ: str = "safe",
+) -> None:
     """
     Write a YAML record.
 
@@ -221,9 +255,9 @@ def yprint(data, stream=sys.stdout, compact=False, typ="safe"):
     :param stream: the file to write to, defaults to stdout.
     :param compact: Write single lines if possible, default False.
     """
-    if isinstance(data, (int, float)):
+    if isinstance(data, int | float):
         print(data, file=stream)
-    elif isinstance(data, (str, bytes)):
+    elif isinstance(data, str | bytes):
         print(repr(data), file=stream)
     #   elif isinstance(data, bytes):
     #       os.write(sys.stdout.fileno(), data)
@@ -233,7 +267,7 @@ def yprint(data, stream=sys.stdout, compact=False, typ="safe"):
         y.dump(data, stream=stream)
 
 
-def yformat(data, compact=None):
+def yformat(data: Any, compact: bool | None = None) -> str:
     """
     Return ``data`` as a multi-line YAML string.
 
@@ -241,20 +275,19 @@ def yformat(data, compact=None):
     :param stream: the file to write to, defaults to stdout.
     :param compact: Write single lines if possible, default False.
     """
-    from io import StringIO  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from io import StringIO  # noqa: PLC0415
 
     s = StringIO()
-    yprint(data, compact=compact, stream=s)
+    yprint(data, compact=compact, stream=s)  # type: ignore[arg-type]  # StringIO is compatible with TextIOWrapper
     return s.getvalue()
 
 
-def add_repr(typ, r=None):
+def add_repr(typ: type, r: type | None = None) -> None:
     """
     Add a way to add representations for subtypes.
 
     This is useful for subclassed dict/int/str/… objects.
     """
-    # pylint: disable=redefined-builtin
     if r is None:
         r = typ
     if issubclass(r, str):

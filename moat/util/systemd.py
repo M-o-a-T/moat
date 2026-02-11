@@ -8,41 +8,49 @@ import anyio
 import os
 from contextlib import asynccontextmanager
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
+    from collections.abc import AsyncIterator
+
 __all__ = ["as_service"]
 
 try:
-    from systemd.daemon import notify  # pylint: disable=no-name-in-module
+    from systemd.daemon import notify  # type: ignore[import-not-found]
 except ImportError:
     notify = None
 
 
-class RunMsg(anyio.abc.TaskStatus):
+class RunMsg:
     """A helper to signal readiness or status updates to systemd.
 
     It also duck-types as :class:`anyio.abc.TaskStatus.`
     """
 
-    def __init__(self, tg, obj):
-        self.tg = tg
-        self.obj = obj
-        self.evt = anyio.Event()
+    def __init__(self, tg: TaskGroup, obj: Any) -> None:
+        self.tg: TaskGroup = tg
+        self.obj: Any = obj
+        self.evt: anyio.Event = anyio.Event()
 
-    def set(self):  # pylint:disable=missing-function-docstring
+    def set(self) -> None:
+        """Signal readiness to systemd."""
         self.evt.set()
         if notify is not None:
             notify("READY=1")
         if self.obj is not None and self.obj.debug:
             print("Running.")
 
-    def started(self, value: anyio.abc.T_Contra | None = None):
-        "mock task_status.started"
+    def started(self, value: None = None) -> None:
+        """mock task_status.started"""
         if value is not None:
             raise ValueError("value is ignored")
         self.set()
 
 
 @asynccontextmanager
-async def as_service(obj=None):
+async def as_service(obj: Any = None) -> AsyncIterator[RunMsg]:
     """
     This async context manager provides readiness and keepalive messages to
     systemd.
@@ -54,7 +62,7 @@ async def as_service(obj=None):
     trigger the ``READY=1`` mesage to systemd.
     """
 
-    async def run_keepalive(usec):
+    async def run_keepalive(usec: float) -> None:
         usec /= 1_500_000  # 2/3rd of usec ⇒ sec
         pid = os.getpid()
         while os.getpid() == pid:
@@ -62,7 +70,7 @@ async def as_service(obj=None):
                 notify("WATCHDOG=1")
             await anyio.sleep(usec)
 
-    def need_keepalive():
+    def need_keepalive() -> int:
         pid = os.getpid()
         epid = int(os.environ.get("WATCHDOG_PID", pid))
         if pid == epid:

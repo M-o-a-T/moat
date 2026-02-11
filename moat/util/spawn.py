@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import anyio
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, ParamSpec
 
 if TYPE_CHECKING:
     from anyio.abc import TaskGroup, TaskStatus
@@ -15,12 +15,14 @@ if TYPE_CHECKING:
 
 __all__ = ["spawn"]
 
+P = ParamSpec("P")
+
 
 async def spawn(
     taskgroup: TaskGroup,
-    proc: Callable[..., Awaitable[Any]],
-    *args: Any,
-    **kw: Any,
+    proc: Callable[P, Awaitable[object]],
+    *args: P.args,
+    **kw: P.kwargs,
 ) -> anyio.CancelScope:
     """
     Run a task within this object's task group.
@@ -30,9 +32,6 @@ async def spawn(
     """
 
     async def _run(
-        proc: Callable[..., Awaitable[Any]],
-        args: tuple[Any, ...],
-        kw: dict[str, Any],
         *,
         task_status: TaskStatus[anyio.CancelScope],
     ) -> None:
@@ -43,4 +42,4 @@ async def spawn(
             task_status.started(sc)
             await proc(*args, **kw)
 
-    return await taskgroup.start(_run, proc, args, kw)
+    return await taskgroup.start(_run)

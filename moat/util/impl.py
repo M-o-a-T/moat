@@ -11,6 +11,12 @@ from getpass import getpass
 from math import log10
 
 from collections import deque
+from typing import TYPE_CHECKING, Any, TypeVar
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from collections.abc import AsyncIterator, Callable, Iterator
 
 __all__ = [
     "Cache",
@@ -34,6 +40,8 @@ NoneType = type(None)
 
 NoLock = nullcontext()
 
+T = TypeVar("T")
+
 
 class OptCtx:
     """
@@ -42,31 +50,41 @@ class OptCtx:
     there is one.
     """
 
-    def __init__(self, obj=None):
-        self.obj = obj
+    def __init__(self, obj: object = None) -> None:
+        self.obj: object = obj
 
-    def __enter__(self):
+    def __enter__(self) -> object:
         if self.obj is not None:
-            return self.obj.__enter__()
+            return self.obj.__enter__()  # type: ignore[union-attr]  # duck typing
         return None
 
-    def __exit__(self, *tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> object:
         if self.obj is not None:
-            return self.obj.__exit__(*tb)
+            return self.obj.__exit__(exc_type, exc_val, exc_tb)  # type: ignore[union-attr]  # duck typing
         return None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> object:
         if self.obj is not None:
-            return await self.obj.__aenter__()
+            return await self.obj.__aenter__()  # type: ignore[union-attr]  # duck typing
         return None
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> object:
         if self.obj is not None:
-            return await self.obj.__aexit__(*tb)
+            return await self.obj.__aexit__(exc_type, exc_val, exc_tb)  # type: ignore[union-attr]  # duck typing
         return None
 
 
-def import_(name, off=0):
+def import_(name: str, off: int = 0) -> object:
     """
     Import a module and access an object in it.
 
@@ -76,7 +94,7 @@ def import_(name, off=0):
     n = name.split(".")
     mn = ".".join(n[: -off if off else 99])
     try:
-        res = __import__(mn)
+        res: object = __import__(mn)
         for nn in n[1:]:
             res = getattr(res, nn)
     except Exception:
@@ -85,7 +103,13 @@ def import_(name, off=0):
     return res
 
 
-def load_from_cfg(*a, _cfg=None, _attr: str = "server", _raise: bool = False, **k):
+def load_from_cfg(
+    *a: Any,
+    _cfg: dict[str, Any] | None = None,
+    _attr: str = "server",
+    _raise: bool = False,
+    **k: Any,
+) -> object | None:
     """
     A simple frontend to load a module, access a class/object from it,
     and call that with the config (and whchever other arguments you want to
@@ -103,21 +127,23 @@ def load_from_cfg(*a, _cfg=None, _attr: str = "server", _raise: bool = False, **
     """
     if _cfg is None:
         cfg = k["cfg"]
+    else:
+        cfg = _cfg
     try:
         name = cfg[_attr]
     except KeyError:
         if _raise:
             raise
         return None
-    if isinstance(name, (list, tuple)):
+    if isinstance(name, list | tuple):
         name, off = name
     else:
         off = 1
     m = import_(name, off=off)
-    return m(*a, **k)
+    return m(*a, **k)  # type: ignore[operator]  # m is callable
 
 
-def singleton(cls):
+def singleton(cls: Callable[[], T]) -> T:
     """Basic singleton decorator"""
     return cls()
 
@@ -125,11 +151,11 @@ def singleton(cls):
 class TimeOnlyFormatter(logging.Formatter):
     """A log formatter that doesn't show dates"""
 
-    default_time_format = "%H:%M:%S"
-    default_msec_format = "%s.%03d"
+    default_time_format: str = "%H:%M:%S"
+    default_msec_format: str = "%s.%03d"
 
 
-def count(it):
+def count(it: Iterator[object]) -> int:
     """counts the length of an iterator"""
     n = 0
     for _ in it:
@@ -137,7 +163,7 @@ def count(it):
     return n
 
 
-async def acount(it):
+async def acount(it: AsyncIterator[object]) -> int:
     """counts the length of an async iterator"""
     n = 0
     async for _ in it:
@@ -154,14 +180,14 @@ class Cache:
     they're not removed, the actual cache size might only be 2/3rd of SIZE.
     """
 
-    def __init__(self, size):
-        self._size = size
-        self._head = 0
-        self._tail = 0
-        self._attr = "_cache__pos"
-        self._q = deque()
+    def __init__(self, size: int) -> None:
+        self._size: int = size
+        self._head: int = 0
+        self._tail: int = 0
+        self._attr: str = "_cache__pos"
+        self._q: deque[object] = deque()
 
-    def keep(self, entry):
+    def keep(self, entry: object) -> None:
         """Store an entry in the cache"""
         if getattr(entry, self._attr, -1) > self._tail + self._size / 3:
             return
@@ -170,24 +196,24 @@ class Cache:
         self._q.append(entry)
         self._flush()
 
-    def _flush(self):
+    def _flush(self) -> None:
         while self._head - self._tail > self._size:
             self._q.popleft()
             self._tail += 1
 
-    def resize(self, size):
+    def resize(self, size: int) -> None:
         """Change the size of this cache."""
         self._size = size
         self._flush()
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the cache"""
         while self._head > self._tail:
             self._q.popleft()
             self._tail += 1
 
 
-def digits(n, digits=6):  # pylint: disable=redefined-outer-name
+def digits(n: float, digits: float = 6) -> float:
     """
     Returns ``n`` rounded to ``digits`` significant digits. Default: 6.
     Ensures that the number doesn't carry nonsense precision or
@@ -204,7 +230,7 @@ def digits(n, digits=6):  # pylint: disable=redefined-outer-name
     return round(n, int(digits - 1 - log10(abs(n))))
 
 
-def num2byte(num: int, length=None):
+def num2byte(num: int, length: int | None = None) -> bytes:
     """
     convert an unsigned integer to a bytestring
     """
@@ -213,20 +239,22 @@ def num2byte(num: int, length=None):
     return num.to_bytes(length=length, byteorder="big")
 
 
-def byte2num(data: bytes):
+def byte2num(data: bytes) -> int:
     """
     convert a bytestring to an unsigned integer
     """
     return int.from_bytes(data, byteorder="big")
 
 
-def split_arg(p, kw):
+def split_arg(p: str, kw: dict[str, Any]) -> None:
     """
     Split argument 'p' and add to dict 'kw'.
 
     'p' may be of the form x=y (y is added, possibly as an integer),
     x? (call getpass(x? )), x?=y (call getpass(y: )).
     """
+    k: str
+    v: str | int
     try:
         k, v = p.split("=", 1)
     except ValueError:
@@ -247,7 +275,7 @@ def split_arg(p, kw):
 _alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
-def num2id(number, alphabet=_alphabet):
+def num2id(number: int | object, alphabet: str = _alphabet) -> str:
     """
     Encode a number / object ID in base36 (by default).
 
@@ -257,7 +285,7 @@ def num2id(number, alphabet=_alphabet):
     as the second parameter, e.g. :py:data:`moat.util.al_unique`.
     """
     if not isinstance(number, int):
-        if isinstance(number, (float, complex, str, bytes, bytearray)):
+        if isinstance(number, float | complex | str | bytes | bytearray):
             raise TypeError("number must be an object or integer")
         number = id(number)
     is_negative = number < 0

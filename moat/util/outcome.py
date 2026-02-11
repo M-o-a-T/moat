@@ -8,10 +8,17 @@ may be unwrapped more than once.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
 __all__ = ["Error", "Outcome", "Value", "capture"]
 
+T = TypeVar("T")
 
-def capture(sync_fn, *args, **kwargs):
+
+def capture(sync_fn: Callable[..., T], *args: Any, **kwargs: Any) -> Value[T] | Error:
     """Run ``sync_fn(*args, **kwargs)`` and capture the result."""
     try:
         return Value(sync_fn(*args, **kwargs))
@@ -19,7 +26,9 @@ def capture(sync_fn, *args, **kwargs):
         return Error(exc)
 
 
-async def acapture(async_fn, *args, **kwargs):
+async def acapture(
+    async_fn: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
+) -> Value[T] | Error:
     """Run ``await async_fn(*args, **kwargs)`` and capture the result."""
     try:
         return Value(await async_fn(*args, **kwargs))
@@ -30,32 +39,30 @@ async def acapture(async_fn, *args, **kwargs):
 class Outcome:
     """An abstract class representing the result of a Python computation."""
 
-    pass
 
-
-class Value(Outcome):
+class Value(Outcome, Generic[T]):
     """Concrete :class:`Outcome` subclass representing a regular value."""
 
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, value: T) -> None:
+        self.value: T = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Value({self.value!r})"
 
-    def unwrap(self):  # noqa: D102
+    def unwrap(self) -> T:  # noqa: D102
         return self.value
 
 
 class Error(Outcome):
     """Concrete :class:`Outcome` subclass representing a raised exception."""
 
-    def __init__(self, error):
-        self.error = error
+    def __init__(self, error: Exception) -> None:
+        self.error: Exception = error
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Error({self.error!r})"
 
-    def unwrap(self):  # noqa: D102
+    def unwrap(self) -> None:  # noqa: D102
         captured_error = self.error
         try:
             raise captured_error

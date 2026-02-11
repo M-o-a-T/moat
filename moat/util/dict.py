@@ -12,20 +12,27 @@ from moat.lib.path import Path
 from . import NotGiven
 from ._merge import merge
 
-from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING
+from collections.abc import Hashable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Hashable
-    from typing import Any
+    from types import EllipsisType
+
+    from collections.abc import Callable
 
 __all__ = ["attrdict", "combine_dict", "to_attrdict"]
 
+T = TypeVar("T", bound=dict)
 
 _Nope = object()
 
 
-def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
+def combine_dict(
+    *d: Mapping[Hashable, Any] | EllipsisType,
+    cls: type[dict] = dict,
+    deep: bool = False,
+    keep: bool = False,
+) -> dict | EllipsisType:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
@@ -43,30 +50,30 @@ def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
         deep: if set, always copy.
         keep: whether to *not* delete `NotGiven` inputs.
     """
-    res = cls()
+    res: dict = cls()
     if not d:
         return res
     if d[0] is NotGiven:
         return NotGiven if keep else res
 
-    keys = {}
-    post = False if issubclass(cls, attrdict) else None
+    keys: dict[Hashable, list[Any]] = {}
+    post: bool | None = False if issubclass(cls, attrdict) else None
 
     if len(d) == 1 and deep and not isinstance(d[0], Mapping):
-        if deep and isinstance(d[0], (list, tuple)):
-            return deepcopy(d[0])
+        if deep and isinstance(d[0], list | tuple):
+            return deepcopy(d[0])  # deepcopy returns Any
         else:
-            return d[0]
+            return d[0]  # single non-mapping item
 
     for kv in d:
-        if post is False and getattr(d, "_post", False):
+        if post is False and getattr(kv, "_post", False):
             post = True
         if kv is None:
             continue
         if kv is NotGiven:
             break
         if not isinstance(kv, dict):
-            raise TypeError
+            raise TypeError("All arguments must be dicts")
         for k, v in kv.items():
             if k not in keys:
                 keys[k] = []
@@ -75,17 +82,17 @@ def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
     for k, v in keys.items():
         for i, vv in enumerate(v):
             if isinstance(vv, Path) and vv.is_relative:
-                v[i] = d[0].root_.get_(vv)
+                v[i] = d[0].root_.get_(vv)  # d[0] is checked to be attrdict-like
         if v[0] is NotGiven:
             if keep:
-                res[k] = NotGiven
+                res[k] = NotGiven  # NotGiven is allowed when keep=True
         elif len(v) == 1 and not deep:
             res[k] = v[0]
         elif not isinstance(v[0], Mapping):
             for vv in v[1:]:
                 if isinstance(vv, Mapping):
-                    raise ValueError(f"Merge {k!r}: {v!r}")  # noqa:TRY004
-            if deep and isinstance(v[0], (list, tuple)):
+                    raise ValueError(f"Merge {k!r}: {v!r}")  # noqa: TRY004  # ValueError is intentional
+            if deep and isinstance(v[0], list | tuple):
                 res[k] = deepcopy(v[0])
             else:
                 res[k] = v[0]
@@ -94,13 +101,13 @@ def combine_dict(*d, cls=dict, deep=False, keep: bool = False) -> dict:
 
     if post:
         try:
-            res.set_post_()
+            res.set_post_()  # type: ignore[attr-defined]  # set_post_ exists on attrdict
         except AttributeError:
             pass
     return res
 
 
-def _check_post(a, b) -> bool:
+def _check_post(a: Hashable | None, b: Any) -> bool:
     if getattr(b, "_post", False):
         return True
     if isinstance(a, str) and a and a[0] == "$":
@@ -116,7 +123,7 @@ def _check_post(a, b) -> bool:
     return False
 
 
-class attrdict(dict):
+class attrdict(dict[Hashable, Any]):
     """
     A dictionary which can be accessed via attributes.
 
@@ -128,32 +135,35 @@ class attrdict(dict):
     """
 
     _post: bool = False
-    _super = None
+    _super: ref[attrdict] | None = None
 
-    updated_: Callable = lambda _: None
+    updated_: Callable[[attrdict], None] = lambda _: None
     "Callback. Used by moat.lib.config."
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a: Any, **kw: Any) -> None:
         super().__init__(*a, **kw)
-        for a, b in self.items():
-            if _check_post(a, b):
+        for a_key, b in self.items():
+            if _check_post(a_key, b):
                 self._post = True
                 return
 
     @property
-    def root_(self):
+    def root_(self) -> attrdict:
         "Follow the _super chain"
-        s = self
+        s: attrdict = self
         while True:
             try:
-                if (sp := s._super) is None:  # noqa:SLF001
+                if (sp := s._super) is None:
                     return s
             except AttributeError:
                 return s
             else:
-                s = sp()
+                s_ref = sp()
+                if s_ref is None:
+                    return s
+                s = s_ref
 
-    def __getattr__(self, a: str):
+    def __getattr__(self, a: str) -> Any:
         if a.startswith("_") or a.endswith("_"):
             return object.__getattribute__(self, a)
         try:
@@ -161,34 +171,34 @@ class attrdict(dict):
         except KeyError:
             raise AttributeError(a) from None
 
-    def __setitem__(self, a: Hashable, b: Any):
+    def __setitem__(self, a: Hashable, b: Any) -> None:
         if isinstance(b, attrdict):
-            b._super = ref(self)  # noqa:SLF001
+            b._super = ref(self)  # noqa: SLF001  # accessing own class member
         if a not in self or _check_post(a, b) or self[a] != b:
             self._mark_post()
         super().__setitem__(a, b)
 
-    def _mark_post(self):
-        s = self
+    def _mark_post(self) -> None:
+        s: attrdict = self
         while True:
-            if s._post:  # noqa:SLF001
+            if s._post:
                 return
-            s._post = True  # noqa:SLF001
-            sup = s._super  # noqa:SLF001
+            s._post = True
+            sup = s._super
             if not sup:
                 return
-            sup = sup()
-            if not sup:
+            sup_ref = sup()
+            if not sup_ref:
                 return
-            s = sup
+            s = sup_ref
 
-    def __setattr__(self, a: str, b: Any):
+    def __setattr__(self, a: str, b: Any) -> None:
         if (a and a.startswith("_")) or a.endswith("_"):
             super().__setattr__(a, b)
         else:
             self[a] = b
 
-    def __delattr__(self, a: str):
+    def __delattr__(self, a: str) -> None:
         if (a and a.startswith("_")) or a.endswith("_"):
             super().__delattr__(a)
         else:
@@ -197,11 +207,11 @@ class attrdict(dict):
             except KeyError:
                 raise AttributeError(a) from None
 
-    def __delitem__(self, a: Hashable):
+    def __delitem__(self, a: Hashable) -> None:
         super().__delitem__(a)
         self._mark_post()
 
-    def pop(self, a: Hashable, default: Any = _Nope):
+    def pop(self, a: Hashable, default: Any = _Nope) -> Any:
         "remove and mark"
         try:
             res = super().pop(a)
@@ -213,7 +223,7 @@ class attrdict(dict):
         return res
 
     @property
-    def needs_post_(self):
+    def needs_post_(self) -> bool:
         """
         Returns a flag whether this attrdict requires postprocessing.
 
@@ -224,19 +234,19 @@ class attrdict(dict):
         finally:
             self._post = False
 
-    def set_post_(self):
+    def set_post_(self) -> None:
         """
         Set the flag signalling that this attrdict requires postprocessing.
         """
         self._post = True
 
-    def get_(self, path: Path, default=NotGiven):
+    def get_(self, path: Path, default: Any = NotGiven) -> Any:
         """
         Get a node's value and access the dict items beneath it.
         """
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
-        val = self
+        val: Any = self
         for p in path:
             if val is None:
                 return None
@@ -249,24 +259,26 @@ class attrdict(dict):
 
     _get = get_
 
-    def setdefault(self, a: Hashable, b: Any):
+    def setdefault(self, a: Hashable, b: Any = None) -> Any:
         """
         Standard dict setdefault but updates _post
         """
         if a in self:
             return self[a]
+        if b is None:
+            b = None
         self[a] = b
         return b
 
-    def update(
-        self, a: Mapping[Hashable, Any] | Sequence[tuple[Hashable, Any]] | None = None, **kw
-    ):
+    def update(  # type: ignore[override]  # More flexible signature than dict.update
+        self, a: Mapping[Hashable, Any] | Sequence[tuple[Hashable, Any]] | None = None, **kw: Any
+    ) -> None:
         """
         Standard dict update but updates _post
         """
         if a is None:
             pass
-        elif hasattr(a, "items"):
+        elif isinstance(a, Mapping):
             for k, v in a.items():
                 self[k] = v
         else:
@@ -275,7 +287,7 @@ class attrdict(dict):
         for k, v in kw.items():
             self[k] = v
 
-    def update_(self, path: Path, value: Any = None):
+    def update_(self, path: Path, value: Any = None) -> Any:
         """
         Set some sub-item's value, possibly merging dicts.
         Items set to 'NotGiven' are deleted.
@@ -298,7 +310,7 @@ class attrdict(dict):
         px = path[-1]
         post = _check_post(px, value)
 
-        v = val
+        v: Any = val
         if post and isinstance(v, attrdict):
             v.set_post_()
         for p in path[:-1]:
@@ -346,7 +358,7 @@ class attrdict(dict):
 
     _update = update_
 
-    def set_(self, path: Path, value: Any, apply_notgiven: bool = True) -> attrdict:
+    def set_(self, path: Path, value: Any, apply_notgiven: bool = True) -> Any:
         """
         Set some sub-item's value, possibly merging dicts.
         No copying; deleting an entry when the value is NotGiven is optional.
@@ -365,7 +377,7 @@ class attrdict(dict):
 
         px = path[-1]
         post = _check_post(px, value)
-        v = self
+        v: Any = self
 
         if post and isinstance(v, attrdict):
             v.set_post_()
@@ -413,7 +425,7 @@ class attrdict(dict):
 
         return self
 
-    def delete_(self, path: Path):
+    def delete_(self, path: Path) -> attrdict:
         """
         Remove some sub-item's value, possibly removing now-empty intermediate
         dicts.
@@ -422,23 +434,23 @@ class attrdict(dict):
         """
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
-        val = type(self)(**self)
-        path = list(path)
-        v = val
-        vc = []
-        for p in path[:-1]:
+        val = type(self)(self)
+        path_list = list(path)
+        v: Any = val
+        vc: list[Any] = []
+        for p in path_list[:-1]:
             vc.append(v)
             try:
                 w = v[p]
             except KeyError:
                 return self
-            w = type(w)(**w)
+            w = type(w)(w)
             v[p] = w
             v = w
         vc.append(v)
-        while path:
+        while path_list:
             v = vc.pop()
-            v.pop(path.pop(), None)
+            v.pop(path_list.pop(), None)
             if v:
                 break
         return val
@@ -446,12 +458,12 @@ class attrdict(dict):
     _delete = delete_
 
 
-def to_attrdict(d: dict) -> attrdict:
+def to_attrdict(d: Any) -> Any:
     """
     Return a hierarchy with all dicts converted to attrdicts.
     """
     if isinstance(d, dict):
         return attrdict((k, to_attrdict(v)) for k, v in d.items())
-    if isinstance(d, (tuple, list)):
+    if isinstance(d, tuple | list):
         return [to_attrdict(v) for v in d]
     return d

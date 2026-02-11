@@ -79,3 +79,6 @@ __pycache__/
 /OFF/
 .coverage-baseline
 /.beads/
+
+# bv (beads viewer) local config and caches
+.bv/

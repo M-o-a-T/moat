@@ -6,14 +6,14 @@ or too interrelated … or the author was too lazy.
 """
 # TODO split this up
 
-# pylint: disable=cyclic-import,wrong-import-position
 from __future__ import annotations
 
 import logging as _logging
+from typing import Any
 
 _log = _logging.getLogger(__name__)
 
-NotGiven = Ellipsis
+NotGiven = Ellipsis  # Sentinel value for "no value given"
 
 # Mapping of exported names to their source modules
 _imports = {
@@ -113,15 +113,15 @@ _imports = {
 __all__ = list(_imports.keys())
 
 
-def __getattr__(attr: str):
+def __getattr__(attr: str) -> Any:
     try:
         mod = _imports[attr]
     except KeyError:
         raise AttributeError(attr) from None
-    value = getattr(__import__(mod, globals(), None, True, 1), attr)
+    value = getattr(__import__(mod, globals(), None, (), 1), attr)
     globals()[attr] = value
     return value
 
 
-def __dir__():
+def __dir__() -> list[str]:
     return __all__

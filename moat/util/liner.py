@@ -1,4 +1,4 @@
-""
+"""Line buffering utility for async output."""
 
 from __future__ import annotations
 
@@ -15,10 +15,16 @@ from moat.lib.micro import (
     wait_for_ms,
 )
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+    from typing import Self
+
 __all__ = ["Liner"]
 
 
-async def _no_op():
+async def _no_op() -> None:
     pass
 
 
@@ -41,15 +47,23 @@ class Liner:
     If the writer is async, so is calling this obj with data.
     """
 
-    def __init__(self, prefix="", incomplete="…", writer=sys.stdout.write, delay=100):
-        self.prefix = prefix
-        self.incomplete = incomplete
-        self.writer = writer
-        self.delay = delay
+    def __init__(
+        self,
+        prefix: str = "",
+        incomplete: str = "…",
+        writer: Callable[[str], Any | Awaitable[Any]] = sys.stdout.write,
+        delay: int = 100,
+    ) -> None:
+        self.prefix: str = prefix
+        self.incomplete: str = incomplete
+        self.writer: Callable[[str], Any | Awaitable[Any]] = writer
+        self.delay: int = delay
 
-        self.buf = bytearray()
+        self.buf: bytearray | None = bytearray()
+        self.evt: Event
+        self._tg: Any  # TaskGroup from moat.lib.micro
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         AC = ACM(self)
         try:
             self.evt = Event()
@@ -60,13 +74,13 @@ class Liner:
             raise
         return self
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, *exc: object) -> Any:
         self._tg.cancel()
         if self.buf:
             await self._partial(True)
         return await AC_exit(self, *exc)
 
-    async def _flush(self):
+    async def _flush(self) -> None:
         # Background task to write incomplete lines
         while True:
             try:
@@ -86,15 +100,15 @@ class Liner:
             await self.evt.wait()
             self.evt = Event()
 
-    async def _partial(self, end: bool = False):
-        pr = self.buf.decode("utf-8")
+    async def _partial(self, end: bool = False) -> None:
+        pr = self.buf.decode("utf-8")  # type: ignore[union-attr]  # checked that buf is not None
         self.buf = None if end else bytearray()
 
         res = self.writer(self.prefix + pr + self.incomplete + ("-END-" if end else "") + "\n")
         if is_async(res):
             await res
 
-    def __call__(self, data):
+    def __call__(self, data: bytes | memoryview) -> Any | Awaitable[Any]:
         """
         Writer.
         """
@@ -111,7 +125,7 @@ class Liner:
         try:
             if idx != -1:
                 pr = buf[:idx].decode("utf-8").replace("\n", f"\n{self.prefix}")
-                self.buf = buf[idx + 1 :]
+                self.buf = bytearray(buf[idx + 1 :])
                 return self.writer(self.prefix + pr + "\n")
             elif iscoroutinefunction(self.writer):
                 return _no_op()

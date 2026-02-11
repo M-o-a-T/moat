@@ -4,13 +4,16 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import anyio
 from anyio.abc import SocketAttribute
 
-from typing import TYPE_CHECKING  # isort:skip
-
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from ssl import SSLContext
+
+    from anyio.abc import TaskGroup
 
 __all__ = ["gen_ssl", "run_tcp_server"]
 
@@ -22,26 +25,36 @@ class _Server:
     :meta public:
     """
 
-    server = None
+    server: Any = None
 
-    def __init__(self, tg, handler, _rdy=None, port=0, ssl=None, **kw):
-        self.tg = tg
-        self._kw = kw
-        self.ssl = ssl
-        self._rdy = _rdy
-        self.handler = handler
-        self.port = port
+    def __init__(
+        self,
+        tg: TaskGroup,
+        handler: Callable[[Any], Awaitable[None]],
+        _rdy: Callable[[Any], None] | None = None,
+        port: int = 0,
+        ssl: SSLContext | None = None,
+        **kw: Any,
+    ) -> None:
+        self.tg: TaskGroup = tg
+        self._kw: dict[str, Any] = kw
+        self.ssl: SSLContext | None = ssl
+        self._rdy: Callable[[Any], None] | None = _rdy
+        self.handler: Callable[[Any], Awaitable[None]] = handler
+        self.port: int = port
 
-    async def _accept(self, conn):
+    async def _accept(self, conn: Any) -> None:
+        conn_: Any = conn
         if self.ssl:
-            conn = await anyio.streams.tls.TLSStream.wrap(
+            conn_ = await anyio.streams.tls.TLSStream.wrap(  # type: ignore[attr-defined]  # anyio.streams.tls available at runtime
                 conn,
                 server_side=True,
                 ssl_context=self.ssl,
             )
-        await self.handler(conn)
+        await self.handler(conn_)
 
-    async def run(self):  # pylint: disable=missing-function-docstring
+    async def run(self) -> None:
+        """Run the server."""
         try:
             listener = await anyio.create_tcp_listener(local_port=self.port)
         except Exception as exc:
@@ -54,11 +67,12 @@ class _Server:
             await listener.serve(self._accept)
 
 
-async def run_tcp_server(*a, **kv) -> _Server:
+async def run_tcp_server(*a: Any, **kv: Any) -> _Server:
     """
     A simple, possibly-SSL TCP server that runs a handler for each incoming connection
     """
     tg = kv.pop("tg", None)
+    server: _Server
     if tg is not None:
         server = _Server(tg, *a, **kv)
         await server.run()
@@ -66,6 +80,7 @@ async def run_tcp_server(*a, **kv) -> _Server:
         async with anyio.create_task_group() as tg:
             server = _Server(tg, *a, **kv)
             await server.run()
+    return server
 
 
 def gen_ssl(
@@ -86,8 +101,7 @@ def gen_ssl(
     if not isinstance(ctx, dict):
         return ctx
 
-    # pylint: disable=no-member
-    import ssl  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    import ssl  # noqa: PLC0415
 
     ctx_ = ssl.create_default_context(
         purpose=ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,

@@ -32,11 +32,15 @@ if TYPE_CHECKING:
         from ruyaml.representer import SafeRepresenter as SafeRepresenterType
     except ImportError:
         from ruamel.yaml.constructor import BaseConstructor  # fallback if ruyaml unavailable
-        from ruamel.yaml.constructor import SafeConstructor as SafeConstructorType  # fallback if ruyaml unavailable
+        from ruamel.yaml.constructor import (
+            SafeConstructor as SafeConstructorType,  # fallback if ruyaml unavailable
+        )
         from ruamel.yaml.emitter import Emitter as EmitterType  # fallback if ruyaml unavailable
         from ruamel.yaml.nodes import Node  # fallback if ruyaml unavailable
         from ruamel.yaml.representer import BaseRepresenter  # fallback if ruyaml unavailable
-        from ruamel.yaml.representer import SafeRepresenter as SafeRepresenterType  # fallback if ruyaml unavailable
+        from ruamel.yaml.representer import (
+            SafeRepresenter as SafeRepresenterType,  # fallback if ruyaml unavailable
+        )
 
     from collections.abc import Callable
     from typing import IO
@@ -67,13 +71,15 @@ SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
 
 def load_ansible_repr() -> None:
     "Call me if you're using `moat.util` in conjunction with Ansible."
-    from ansible.parsing.yaml.objects import (  # noqa: PLC0415  # optional dependency, imported at runtime
-        AnsibleUnicode,  # type: ignore[import-not-found]  # optional dependency
+
+    # optional dependencies, imported at runtime
+    from ansible.parsing.yaml.objects import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+        AnsibleUnicode,
     )
-    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415  # optional dependency, imported at runtime
-        AnsibleUnsafeText,  # type: ignore[import-not-found]  # optional dependency
+    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+        AnsibleUnsafeText,
     )
-    from ansible.vars.hostvars import (  # type: ignore[import-not-found]  # optional dependency  # noqa: PLC0415
+    from ansible.vars.hostvars import (  # noqa: PLC0415  # type:ignore[unresolved-import]
         HostVars,
         HostVarsVars,
     )

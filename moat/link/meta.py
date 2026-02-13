@@ -7,7 +7,10 @@ from __future__ import annotations
 import time
 from base64 import b85decode, b85encode
 
-import ruyaml as yaml
+try:
+    import ruyaml as yaml
+except ImportError:
+    import ruamel.yaml as yaml  # type: ignore[import-not-found]  # fallback import
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw

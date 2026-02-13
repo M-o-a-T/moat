@@ -342,6 +342,7 @@ class attrdict(dict[Hashable, Any]):
             if px is None:
                 v.append(value)
                 return val
+            assert isinstance(px,int)
             if px >= len(v):
                 if px > len(v) + 10:
                     raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")

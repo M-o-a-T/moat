@@ -8,8 +8,12 @@ import math
 import os
 import sys
 
-import ruyaml as yaml
-from ruyaml import constructor, emitter, representer
+try:
+    import ruyaml as yaml
+    from ruyaml import constructor, emitter, representer
+except ImportError:
+    import ruamel.yaml as yaml  # type: ignore[import-not-found]  # fallback import
+    from ruamel.yaml import constructor, emitter, representer  # type: ignore[import-not-found]  # fallback import
 
 from moat.lib.path import Path
 
@@ -19,12 +23,20 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ruyaml.constructor import BaseConstructor
-    from ruyaml.constructor import SafeConstructor as SafeConstructorType
-    from ruyaml.emitter import Emitter as EmitterType
-    from ruyaml.nodes import Node
-    from ruyaml.representer import BaseRepresenter
-    from ruyaml.representer import SafeRepresenter as SafeRepresenterType
+    try:
+        from ruyaml.constructor import BaseConstructor
+        from ruyaml.constructor import SafeConstructor as SafeConstructorType
+        from ruyaml.emitter import Emitter as EmitterType
+        from ruyaml.nodes import Node
+        from ruyaml.representer import BaseRepresenter
+        from ruyaml.representer import SafeRepresenter as SafeRepresenterType
+    except ImportError:
+        from ruamel.yaml.constructor import BaseConstructor  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.constructor import SafeConstructor as SafeConstructorType  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.emitter import Emitter as EmitterType  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.nodes import Node  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.representer import BaseRepresenter  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.representer import SafeRepresenter as SafeRepresenterType  # type: ignore[import-not-found]  # fallback import
 
     from collections.abc import Callable
     from typing import IO

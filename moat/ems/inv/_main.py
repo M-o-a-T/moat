@@ -11,7 +11,10 @@ import asyncclick as click
 try:
     from moat.util import yload
 except ImportError:
-    import ruyaml
+    try:
+        import ruyaml
+    except ImportError:
+        import ruamel.yaml as ruyaml  # type: ignore[import-not-found]  # fallback import
 
     yaml = ruyaml.YAML()
     yload = yaml.load

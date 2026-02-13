@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import struct
 
-from ruyaml import representer
+try:
+    from ruyaml import representer
+except ImportError:
+    from ruamel.yaml import representer  # type: ignore[import-not-found]  # fallback import
 
 from ._cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:F401
 

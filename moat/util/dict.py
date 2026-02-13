@@ -82,6 +82,7 @@ def combine_dict(
     for k, v in keys.items():
         for i, vv in enumerate(v):
             if isinstance(vv, Path) and vv.is_relative:
+                assert isinstance(d[0], attrdict)
                 v[i] = d[0].root_.get_(vv)  # d[0] is checked to be attrdict-like
         if v[0] is NotGiven:
             if keep:
@@ -342,7 +343,7 @@ class attrdict(dict[Hashable, Any]):
             if px is None:
                 v.append(value)
                 return val
-            assert isinstance(px,int)
+            assert isinstance(px, int)
             if px >= len(v):
                 if px > len(v) + 10:
                     raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
@@ -412,10 +413,10 @@ class attrdict(dict[Hashable, Any]):
             if px is None:
                 v.append(value)
                 return self
-            if px >= len(v):
-                if px > len(v) + 10:
+            if px >= len(v):  # type:ignore[unsupported-operator]
+                if px > len(v) + 10:  # type:ignore[unsupported-operator]
                     raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
-                v.extend([NotGiven] * (1 + px - len(v)))
+                v.extend([NotGiven] * (1 + px - len(v)))  # type:ignore[unsupported-operator]
             v[px] = value
         elif not isinstance(v, Mapping):
             raise ValueError((v, px))

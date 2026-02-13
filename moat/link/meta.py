@@ -10,7 +10,7 @@ from base64 import b85decode, b85encode
 try:
     import ruyaml as yaml
 except ImportError:
-    import ruamel.yaml as yaml  # type: ignore[import-not-found]  # fallback import
+    import ruamel.yaml as yaml  # fallback if ruyaml unavailable
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw

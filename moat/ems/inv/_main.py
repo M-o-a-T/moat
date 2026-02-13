@@ -14,7 +14,7 @@ except ImportError:
     try:
         import ruyaml
     except ImportError:
-        import ruamel.yaml as ruyaml  # type: ignore[import-not-found]  # fallback import
+        import ruamel.yaml as ruyaml  # fallback if ruyaml unavailable
 
     yaml = ruyaml.YAML()
     yload = yaml.load

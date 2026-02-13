@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 import asyncvictoria as victoria
 
-from . import Backend as _Backend
+from .._base import Backend as _Backend  # noqa:TID252
 
 from typing import TYPE_CHECKING
 

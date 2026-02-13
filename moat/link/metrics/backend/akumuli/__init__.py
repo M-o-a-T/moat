@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 import asyncakumuli as akumuli
 
-from . import Backend as _Backend
+from .._base import Backend as _Backend  # noqa:TID252
 
 from typing import TYPE_CHECKING
 

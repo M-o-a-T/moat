@@ -198,7 +198,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             try:
                 import ruyaml as yaml  # noqa: PLC0415
             except ImportError:
-                import ruamel.yaml as yaml  # type: ignore[import-not-found]  # fallback import  # noqa: PLC0415
+                import ruamel.yaml as yaml  # fallback if ruyaml unavailable  # noqa: PLC0415
 
             y = yaml.YAML(typ="safe")
             y.default_flow_style = True, False

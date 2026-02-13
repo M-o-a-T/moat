@@ -12,8 +12,8 @@ try:
     import ruyaml as yaml
     from ruyaml import constructor, emitter, representer
 except ImportError:
-    import ruamel.yaml as yaml  # type: ignore[import-not-found]  # fallback import
-    from ruamel.yaml import constructor, emitter, representer  # type: ignore[import-not-found]  # fallback import
+    import ruamel.yaml as yaml  # fallback if ruyaml unavailable
+    from ruamel.yaml import constructor, emitter, representer  # fallback if ruyaml unavailable
 
 from moat.lib.path import Path
 
@@ -31,12 +31,12 @@ if TYPE_CHECKING:
         from ruyaml.representer import BaseRepresenter
         from ruyaml.representer import SafeRepresenter as SafeRepresenterType
     except ImportError:
-        from ruamel.yaml.constructor import BaseConstructor  # type: ignore[import-not-found]  # fallback import
-        from ruamel.yaml.constructor import SafeConstructor as SafeConstructorType  # type: ignore[import-not-found]  # fallback import
-        from ruamel.yaml.emitter import Emitter as EmitterType  # type: ignore[import-not-found]  # fallback import
-        from ruamel.yaml.nodes import Node  # type: ignore[import-not-found]  # fallback import
-        from ruamel.yaml.representer import BaseRepresenter  # type: ignore[import-not-found]  # fallback import
-        from ruamel.yaml.representer import SafeRepresenter as SafeRepresenterType  # type: ignore[import-not-found]  # fallback import
+        from ruamel.yaml.constructor import BaseConstructor  # fallback if ruyaml unavailable
+        from ruamel.yaml.constructor import SafeConstructor as SafeConstructorType  # fallback if ruyaml unavailable
+        from ruamel.yaml.emitter import Emitter as EmitterType  # fallback if ruyaml unavailable
+        from ruamel.yaml.nodes import Node  # fallback if ruyaml unavailable
+        from ruamel.yaml.representer import BaseRepresenter  # fallback if ruyaml unavailable
+        from ruamel.yaml.representer import SafeRepresenter as SafeRepresenterType  # fallback if ruyaml unavailable
 
     from collections.abc import Callable
     from typing import IO

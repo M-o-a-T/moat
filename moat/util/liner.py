@@ -15,11 +15,11 @@ from moat.lib.micro import (
     wait_for_ms,
 )
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Self
+    from typing import Any, Self
 
 __all__ = ["Liner"]
 

@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
 
 def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:

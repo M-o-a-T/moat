@@ -318,9 +318,12 @@ async def monitor(
                 if pdm is None:
                     res = "*** Snapshot data ends ***"
                 else:
-                    p, d, m = pdm
-                    if pm(p):
-                        continue
+                    if subtree:
+                        p, d, m = pdm
+                        if pm(p):
+                            continue
+                    else:
+                        d, m = pdm
 
                     if only:
                         res = d

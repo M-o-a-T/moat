@@ -14,7 +14,7 @@ from moat.util import combine_dict
 from moat.lib.path import Path
 
 from .backend import get_backend
-from .model import MetricsEntry, MetricsRoot
+from .model import MetricsEntry, MetricsServer
 from .worker import run_entry
 
 from typing import TYPE_CHECKING
@@ -32,7 +32,7 @@ async def task(
     cfg: Mapping,
     server_name: str,
     *,
-    evt: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
+    task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Run the metrics connector for one server.
 
@@ -40,7 +40,7 @@ async def task(
         link: an active MoaT-Link sender.
         cfg: the ``link.metrics`` configuration section.
         server_name: the server entry name inside the config subtree.
-        evt: task-status for ``tg.start``.
+        task_status: task-status for ``tg.start``.
     """
     prefix = Path.build(cfg["prefix"])
     server_path = prefix / server_name
@@ -92,9 +92,9 @@ async def task(
             server_path,
             subtree=True,
             mark=True,
-            cls=MetricsRoot,
+            cls=MetricsServer,
         ) as mon:
-            evt.started()
+            task_status.started()
 
             async for msg in mon:
                 if msg is None:

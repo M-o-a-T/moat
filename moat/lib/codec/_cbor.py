@@ -111,7 +111,7 @@ class ExtraData(ValueError):
 class Codec(_Codec):
     "Basic CBOR codec"
 
-    _buffer: bytes | bytearray | memoryview = b""
+    _buffer: bytes | bytearray = b""
     _buf_pos: int = 0
 
     _buf_out: bytearray | None = None
@@ -146,7 +146,7 @@ class Codec(_Codec):
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
-        self._buffer = data
+        self._buffer = cast(bytes, data)
         try:
             res = self._dec_any()
             # chop off the part we've read
@@ -161,15 +161,10 @@ class Codec(_Codec):
         "Add additional input"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
-                self._buffer = cast(
-                    bytes | bytearray,
-                    self._buffer + data,  # type: ignore[operator]
-                )
+                self._buffer += data
                 return
-            data = cast(
-                bytes | bytearray | memoryview,
-                self._buffer[self._buf_pos :] + data,  # type: ignore[operator]
-            )
+        if isinstance(data, memoryview):
+            data = bytearray(data)
         self._buffer = data
         self._buf_pos = 0
 

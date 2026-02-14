@@ -20,7 +20,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             cur = getattr(cur, pp)  # type: ignore[arg-type]  # pp might be int but then getattr raises
         except (TypeError, AttributeError):
             try:
-                cur = cur[pp]
+                cur = cur[pp]  # type:ignore[invalid-argument-type]
             except TypeError:
                 if pp is None:
                     raise KeyError(p, pp) from None
@@ -28,7 +28,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             except KeyError:
                 if not add:
                     raise KeyError(p, pp) from None
-                cur[pp] = nc = []
+                cur[pp] = nc = []  # type:ignore[invalid-assignment]
                 cur = nc
     return cur
 

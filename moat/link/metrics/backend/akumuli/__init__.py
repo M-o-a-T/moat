@@ -13,8 +13,10 @@ from .._base import Backend as _Backend  # noqa:TID252
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.link.metrics.model import MetricPoint
+
     from collections.abc import AsyncIterator
-    from typing import Any, Self
+    from typing import Self
 
 __all__ = ["Backend"]
 
@@ -47,24 +49,21 @@ class Backend(_Backend):
             finally:
                 self.srv = None  # noqa:PLW2901
 
-    async def put(self, point: Any) -> None:
+    async def put(self, point: MetricPoint) -> None:
         """
         Send a metric point to Akumuli.
 
         Args:
-            point: A MetricPoint or asyncakumuli.Entry object.
+            point: The data point to send.
         """
-        # Support both MetricPoint and direct Entry objects
-        if hasattr(point, "series") and hasattr(point, "value"):
-            # Convert MetricPoint to Akumuli Entry if needed
-            if not isinstance(point, akumuli.Entry):
-                from asyncakumuli import DS  # noqa: PLC0415
+        from asyncakumuli import DS  # noqa: PLC0415
 
-                mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
-                point = akumuli.Entry(
-                    series=point.series,
-                    value=point.value,
-                    tags=point.tags,
-                    mode=mode,
-                )
-        await self.srv.put(point)
+        mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
+        entry = akumuli.Entry(
+            series=point.series,
+            value=point.value,
+            tags=point.tags,
+            time=point.timestamp,
+            mode=mode,
+        )
+        await self.srv.put(entry)

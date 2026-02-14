@@ -13,11 +13,11 @@ classifiers = [
 ]
 dependencies = [
     "anyio ~= 4.0",
-    "moat-lib-codec ~= 0.4.12",
+    "moat-lib-codec ~= 0.4.13",
     "moat-lib-micro ~= 0.2.2",
     "moat-lib-stream ~= 0.2.0",
     "moat-lib-proxy ~= 0.1.1",
-    "moat-util ~= 0.62.4",
+    "moat-util ~= 0.62.5",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -25,7 +25,7 @@ name = "moat-lib-rpc"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple RPC and stream multiplexer'
 readme = "README.md"
-version = "0.6.0"
+version = "0.6.1"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

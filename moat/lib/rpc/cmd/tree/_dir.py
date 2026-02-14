@@ -186,6 +186,7 @@ class DirCmd(BaseSubCmd):
     cmd_upd_ = reload
 
     async def task(self):
+        "Setup apps"
         await self._setup_apps()
         await super().task()
 

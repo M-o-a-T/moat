@@ -26,6 +26,14 @@ name = "moat-link-metrics"
 description = "Metrics time-series connector for MoaT-Link"
 readme = "README.md"
 
+[project.optional-dependencies]
+akumuli = [
+	"moat-link-metrics-akumuli ~= 0.0.1",
+]
+victoria = [
+	"moat-link-metrics-victoria ~= 0.0.1",
+]
+
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"

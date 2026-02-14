@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 4.2",
 	"pymodbus ~= 3.6.0",
 	"anyio-serial",
-	"moat-util ~= 0.62.4",
+	"moat-util ~= 0.62.5",
 	"asyncscope ~= 0.8.3",
 	"pymodbus ~= 3.8",
 	"moat-lib-run ~= 0.1.3",

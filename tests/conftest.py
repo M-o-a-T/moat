@@ -4,7 +4,10 @@ import copy
 import pytest
 from pathlib import Path as FSPath
 
-import ruyaml as yaml
+try:
+    import ruyaml as yaml
+except ImportError:
+    import ruamel.yaml as yaml
 
 from moat.util import NotGiven
 from moat.lib import config

@@ -30,7 +30,7 @@ async def test_basic(cfg, free_tcp_port_factory):
         # Metrics config: "prefix" tells the task where to find the tree.
         metrics_cfg = {
             "prefix": ("metrics",),
-            "server_default": {
+            "server": {
                 "backend": "akumuli",
                 "host": "127.0.0.1",
                 "port": t.TCP_PORT,
@@ -39,12 +39,10 @@ async def test_basic(cfg, free_tcp_port_factory):
 
         # Store per-server config (can carry overrides; empty is fine).
         await c.d_set(P("metrics.test"), {"server": {"port": t.TCP_PORT}})
-        await anyio.sleep(0.2)
 
         # Set the source value *before* creating the entry so that
         # d_watch inside the worker sees an initial value.
         await c.d_set(P("test.one.two"), 41)
-        await anyio.sleep(0.2)
 
         # Create a metrics entry that maps test.one.two → series "whatever".
         await c.d_set(
@@ -56,13 +54,13 @@ async def test_basic(cfg, free_tcp_port_factory):
                 "mode": "gauge",
             },
         )
-        await anyio.sleep(0.2)
+        await c.i_sync()
 
         # Start the metrics supervisor task.
         await sf.tg.start(task, c, metrics_cfg, "test")
 
         # Give the worker time to pick up the initial value.
-        await anyio.sleep(1)
+        await anyio.sleep(0.3)
 
         # Update the source a couple of times.
         await c.d_set(P("test.one.two"), 42)

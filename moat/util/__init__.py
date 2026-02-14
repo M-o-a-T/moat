@@ -9,6 +9,7 @@ or too interrelated … or the author was too lazy.
 from __future__ import annotations
 
 import logging as _logging
+
 from typing import Any
 
 _log = _logging.getLogger(__name__)
@@ -89,6 +90,7 @@ _imports = {
     "spawn": "spawn",
     # systemd
     "as_service": "systemd",
+    "RunMsg": "systemd",
     # yaml
     "add_repr": "yaml",
     "load_ansible_repr": "yaml",

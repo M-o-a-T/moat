@@ -282,6 +282,8 @@ nitpick_ignore = [
     ("py:class", "pyfuse3.__init__.StatvfsData"),
     ("py:func", "pyfuse3.get_sup_groups"),
     ("py:class", "asyncakumuli.model.DS"),
+    ("py:obj", "moat.util.ctx.T_Ctx"),
+    ("py:obj", "moat.util.queue.T"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),

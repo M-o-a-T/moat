@@ -30,7 +30,6 @@ cfg:
     timeout: 150
   r:
     app: _test.MpyCmd
-    mplex: true
     cfg:
       app:
         app: dir

@@ -22,7 +22,6 @@ r:
   app: net.tcp.Link
 s:
   app: _test.MpyRaw
-  mplex: false
   cfg:
     app:
       app: dir
@@ -127,7 +126,6 @@ _sys:
   app: _sys.Cmd
 r:
   app: _test.MpyCmd
-  mplex: true
   cfg:
     app:
       app: dir

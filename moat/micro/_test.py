@@ -58,21 +58,10 @@ class MpyBuf(ProcessBuf):
     """
     A stream that links to MicroPython.
 
-    If the config option "mplex" is `True`, this starts a standard
-    multiplexer. Otherwise you get a plain micropython interpreter;
-    if `False` (instead of missing or `None`), your directory contains a
-    "stdlib" folder and MICROPYPATH will point to it.
-
-    Using this option requires either running as part of a MpyStack,
-    or setting the ``cwd`` config to a suitable directory.
-
-    If "mplex" is a string, it is interpreted as the "state" argument to
-    ``main.go()``. The default for ``mplex=True`` is "once".
     """
 
     async def setup(self):
         codec = get_codec("std-cbor")
-        mplex = self.cfg.get("mplex", None)
         pre = Path(__file__).parents[2]
         upy = pre / "ext/micropython"
 
@@ -89,9 +78,8 @@ class MpyBuf(ProcessBuf):
             lib.mkdir()
         with suppress(FileExistsError):
             lib2.mkdir()
-        if mplex:
-            with suppress(FileExistsError):
-                (root / "tests").symlink_to(Path("tests").absolute())
+        with suppress(FileExistsError):
+            (root / "tests").symlink_to(Path("tests").absolute())
 
         std = (upy / "lib/micropython-lib/python-stdlib").absolute()
         ustd = (upy / "lib/micropython-lib/micropython").absolute()
@@ -129,22 +117,13 @@ class MpyBuf(ProcessBuf):
             with (root / "moat.lrg").open("wb") as f:
                 pass
 
-        if False:  # mplex:
-            self.argv = [
-                # "strace","-s300","-o/tmp/mpy.log",
-                pre / "build/mpy-unix/micropython",
-                pre / "moat/micro/_embed/main_unix.py",
-            ]
-            if isinstance(mplex, str):
-                self.argv.append(mplex)
-        else:
-            rlink(libp[0] / "boot.py", root / "boot.py")
-            rlink(libp[0] / "main_unix.py", root / "main.py")
-            self.argv = [
-                # "strace", "-s300", "-o/tmp/mpy.log",
-                pre / "build/mpy-unix/micropython",
-                "-e",
-            ]
+        rlink(libp[0] / "boot.py", root / "boot.py")
+        rlink(libp[0] / "main_unix.py", root / "main.py")
+        self.argv = [
+            # "strace", "-s300", "-o/tmp/mpy.log",
+            pre / "build/mpy-unix/micropython",
+            "-e",
+        ]
 
         await super().setup()
 

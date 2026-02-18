@@ -25,7 +25,6 @@ r:
   app: sub.Err
   cfg:
     app: _test.MpyCmd
-    mplex: true
     cfg:
       app:
         app: dir

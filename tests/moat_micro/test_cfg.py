@@ -30,7 +30,6 @@ app:
       txt: "LOOP"
   r:
     app: _test.MpyCmd
-    mplex: true
     cfg:
       app:
         app: dir

@@ -20,7 +20,6 @@ CFG = """
 app: dir
 r:
   app: _test.MpyCmd
-  mplex: true
   cfg:
     app:
       app: dir

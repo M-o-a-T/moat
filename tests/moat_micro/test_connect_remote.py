@@ -27,7 +27,6 @@ c:
 #  port: /tmp/test.sock
 s:
   app: _test.MpyCmd
-  mplex: true
   link: &link
     lossy: false
     guarded: false

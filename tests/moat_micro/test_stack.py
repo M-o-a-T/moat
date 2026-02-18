@@ -36,7 +36,6 @@ moat:
         r: &rm
           app: _test.MpyRaw
           cwd: /tmp/mpy-test
-          mplex: false
           log:
             txt: "M"
           cfg: !P :@.moat.micro.cfg.r
@@ -51,7 +50,6 @@ moat:
         r:
           app: _test.MpyRaw
           cwd: /tmp/mpy-test
-          mplex: false
           log:
             txt: "M"
           cfg: !P :@.moat.micro.cfg.r
@@ -87,7 +85,6 @@ moat:
             link:
               console: true
               frame: 0xf7
-            mplex: false
 #           log:
 #             txt: "U"
 #           log_raw:

@@ -28,7 +28,6 @@ app:
     app: _test.Cmd
   r:
     app: _test.MpyCmd
-    mplex: true
     cfg:
       rtc:
         use:

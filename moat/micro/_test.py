@@ -58,10 +58,15 @@ class MpyBuf(ProcessBuf):
     """
     A stream that links to MicroPython.
 
+    Parameters:
+        dupterm(bool): Use a MPy variant that supports dupterm.
+                       The downside is that such a variant currently
+                       does not support writing to stderr …
     """
 
     async def setup(self):
         codec = get_codec("std-cbor")
+        dupterm = self.cfg.get("dupterm", False)
         pre = Path(__file__).parents[2]
         upy = pre / "ext/micropython"
 
@@ -121,7 +126,7 @@ class MpyBuf(ProcessBuf):
         rlink(libp[0] / "main_unix.py", root / "main.py")
         self.argv = [
             # "strace", "-s300", "-o/tmp/mpy.log",
-            pre / "build/mpy-unix/micropython",
+            pre / "build" / ("mpy-unix" + ("-dup" if dupterm else "")) / "micropython",
             "-e",
         ]
 

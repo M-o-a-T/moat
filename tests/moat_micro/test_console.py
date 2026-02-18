@@ -22,6 +22,7 @@ r:
   app: net.tcp.Link
 s:
   app: _test.MpyRaw
+  dupterm: true
   cfg:
     app:
       app: dir
@@ -33,7 +34,6 @@ s:
         repl: true
   log:
     txt: "M"
-
 """
 
 # TODO add a test that uses stdio with framing plus console=True, reads
@@ -126,6 +126,7 @@ _sys:
   app: _sys.Cmd
 r:
   app: _test.MpyCmd
+  dupterm: true
   cfg:
     app:
       app: dir

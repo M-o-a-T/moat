@@ -27,6 +27,7 @@ repos:
       description: Run ty type checker
       additional_dependencies:
       - pytest>=8.0
+      - attrs
 
   - repo: local
     hooks:

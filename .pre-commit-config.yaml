@@ -19,18 +19,27 @@ repos:
       - id: ruff-format
         exclude: "docs/.*"
 
-  - repo: https://github.com/allganize/ty-pre-commit
-    rev: v0.0.17
-    hooks:
-    - id: ty-check
-      name: ty type checker
-      description: Run ty type checker
-      additional_dependencies:
-      - pytest>=8.0
-      - attrs
+# - repo: https://github.com/allganize/ty-pre-commit
+#   rev: v0.0.17
+#   hooks:
+#   - id: ty-check
+#     name: ty type checker
+#     description: Run ty type checker
+#     additional_dependencies:
+#     - pytest>=8.0
+#     - attrs
+#     - anyio
 
   - repo: local
     hooks:
+    - id: ty
+      name: ty type checker
+      description: Run ty type checker on configured files
+      entry: .venv/bin/ty check
+      language: system
+      types: [python]
+      pass_filenames: false
+
     - id: check-yaml
       name: check yaml
       description: checks yaml files (understands MoaT tags)

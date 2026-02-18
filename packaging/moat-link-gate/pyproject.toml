@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 4.2",
 	"asyncclick",
 	"attrs",
-	"moat-util ~= 0.62.5",
+	"moat-util ~= 0.62.6",
 	"moat-link ~= 0.3.2",
 	"moat-lib-mqtt ~= 0.8.0",
 	]

@@ -1,32 +1,8 @@
-moat-lib-pid (0.8.0-4) unstable; urgency=medium
+moat-lib-pid (0.8.0-5) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:04:03 +0100
-
-moat-lib-pid (0.8.0-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:12 -0500
-
-moat-lib-pid (0.8.0-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:17 -0500
-
-moat-lib-pid (0.8.0-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:10:34 -0500
-
-moat-lib-pid (0.8.0-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:03:58 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 18:06:14 +0100
 
 moat-lib-pid (0.8.0-3) unstable; urgency=medium
 

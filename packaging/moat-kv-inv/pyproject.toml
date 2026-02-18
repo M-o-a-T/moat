@@ -12,7 +12,7 @@ classifiers = [
 ]
 dependencies = [
 	"moat-kv ~= 0.71.25",
-	"moat-util ~= 0.62.5",
+	"moat-util ~= 0.62.6",
 	"moat-lib-config ~= 0.1.2",
 ]
 version = "0.22.13"

@@ -36,12 +36,15 @@ class MetricPoint:
         value: Numeric value.
         tags: Dictionary of tags.
         mode: Backend-specific mode string.
+        timestamp: Optional timestamp (seconds since epoch, or ``None``
+            for "now").
     """
 
     series: str
     value: float
     tags: dict[str, Any]
     mode: str
+    timestamp: float | None = None
 
 
 def _test_hook(e: MetricPoint) -> None:

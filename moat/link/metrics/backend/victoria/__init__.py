@@ -13,8 +13,10 @@ from .._base import Backend as _Backend  # noqa:TID252
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.link.metrics.model import MetricPoint
+
     from collections.abc import AsyncIterator
-    from typing import Any, Self
+    from typing import Self
 
 __all__ = ["Backend"]
 
@@ -27,7 +29,7 @@ class Backend(_Backend):
         Initialize VictoriaMetrics backend.
 
         Args:
-            cfg: Configuration dict with host, port, delta, etc.
+            cfg: Configuration dict with host, port, etc.
             name: Name of the backend instance.
         """
         super().__init__(cfg, name)
@@ -39,7 +41,6 @@ class Backend(_Backend):
         conn_cfg = {
             "host": self.cfg.get("host", "localhost"),
             "port": self.cfg.get("port", 8282),
-            "delta": self.cfg.get("delta", True),
         }
         async with victoria.connect(**conn_cfg) as self.srv:
             try:
@@ -47,24 +48,21 @@ class Backend(_Backend):
             finally:
                 self.srv = None  # noqa:PLW2901
 
-    async def put(self, point: Any) -> None:
+    async def put(self, point: MetricPoint) -> None:
         """
         Send a metric point to VictoriaMetrics.
 
         Args:
-            point: A MetricPoint or asyncvictoria.Entry object.
+            point: The data point to send.
         """
-        # Support both MetricPoint and direct Entry objects
-        if hasattr(point, "series") and hasattr(point, "value"):
-            # Convert MetricPoint to VictoriaMetrics Entry if needed
-            if not isinstance(point, victoria.Entry):
-                from asyncvictoria import DS  # noqa: PLC0415
+        from asyncvictoria import DS  # noqa: PLC0415
 
-                mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
-                point = victoria.Entry(
-                    series=point.series,
-                    value=point.value,
-                    tags=point.tags,
-                    mode=mode,
-                )
-        await self.srv.put(point)
+        mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
+        entry = victoria.Entry(
+            series=point.series,
+            value=point.value,
+            tags=point.tags,
+            time=point.timestamp,
+            mode=mode,
+        )
+        await self.srv.put(entry)

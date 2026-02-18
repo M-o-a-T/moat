@@ -13,9 +13,9 @@ classifiers = [
 	]
 dependencies = [
 	"asyncakumuli ~= 0.6.4",
-	"moat-link-metrics ~= 0.0.1",
+	"moat-link-metrics ~= 0.0.2",
 	]
-version = "0.0.1"
+version = "0.0.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.13"
 name = "moat-link-metrics-backend-akumuli"

@@ -22,7 +22,6 @@ from __future__ import annotations
 import ast
 import code
 import linecache
-import os.path
 import re
 import sys
 from abc import ABC, abstractmethod
@@ -226,23 +225,15 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
             *_, last_stmt = tree.body  # type: ignore[attr-defined]
         for stmt in tree.body:  # type: ignore[attr-defined]
             if stmt is last_stmt:
-                wrapper = ast.Interactive
                 the_symbol = symbol
-                item = wrapper([stmt])
+                item = ast.Interactive([stmt])
             else:
-                wrapper = ast.Module
                 the_symbol = "exec"
-                item = wrapper([stmt], type_ignores=[])
+                item = ast.Module([stmt], [])
             try:
                 code = self.compile.compiler(item, filename, the_symbol)  # type: ignore[arg-type]
                 linecache._register_code(code, source, filename)  # noqa: SLF001  # type: ignore[attr-defined]
-            except SyntaxError as e:
-                if e.args[0] == "'await' outside function":
-                    python = os.path.basename(sys.executable)
-                    e.add_note(
-                        f"Try the asyncio REPL ({python} -m asyncio) to use"
-                        f" top-level 'await' and run background asyncio tasks."
-                    )
+            except SyntaxError:
                 self.showsyntaxerror(filename, source=source)
                 return False
             except (OverflowError, ValueError):

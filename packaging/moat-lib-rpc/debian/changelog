@@ -1,26 +1,8 @@
-moat-lib-rpc (0.6.0-3) unstable; urgency=medium
+moat-lib-rpc (0.6.1-1) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:12 -0500
-
-moat-lib-rpc (0.6.0-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:18 -0500
-
-moat-lib-rpc (0.6.0-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:10:40 -0500
-
-moat-lib-rpc (0.6.0-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:03:59 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:08:03 +0100
 
 moat-lib-rpc (0.6.0-2) unstable; urgency=medium
 

@@ -313,7 +313,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         """Send bytes."""
         return self._link.xcwr(b=b)
 
-    async def crd(self, b) -> bytes | bytearray:
+    async def crd(self, b: bytearray) -> int:
         """Read bytes."""
         r = await self._link.xcrd(n=len(b))
         n = len(r)

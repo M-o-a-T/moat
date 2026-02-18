@@ -16,7 +16,7 @@ dependencies = [
 	"asyncclick",
 	"attrs",
 	"httpx",
-	"moat-util ~= 0.62.5",
+	"moat-util ~= 0.62.6",
 	"moat-link ~= 0.3.2",
 	]
 version = "0.0.2"

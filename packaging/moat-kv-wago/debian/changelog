@@ -1,38 +1,8 @@
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
+moat-kv-wago (0.8.8-4) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:03:33 +0100
-
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:11 -0500
-
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:17 -0500
-
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:10:17 -0500
-
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:04:36 -0500
-
-moat-kv-wago (0.8.8-3) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:03:56 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 18:05:50 +0100
 
 moat-kv-wago (0.8.8-2) unstable; urgency=medium
 

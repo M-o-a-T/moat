@@ -1,20 +1,8 @@
-moat-link-notify (0.0.2-4) unstable; urgency=medium
+moat-link-notify (0.0.2-5) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:08:57 +0100
-
-moat-link-notify (0.0.2-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:20 -0500
-
-moat-link-notify (0.0.2-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:25 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 18:09:35 +0100
 
 moat-link-notify (0.0.2-2) unstable; urgency=medium
 

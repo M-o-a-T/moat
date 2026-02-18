@@ -6,5 +6,5 @@ export PYBUILD_NAME=moat-link-akumuli
 
 override_dh_auto_install:
 	dh_auto_install
-	install -D -m 644 systemd/moat-link-akumuli@.service \
-		debian/moat-link-akumuli/usr/lib/systemd/system/moat-link-akumuli@.service
+	install -D -m 644 systemd/moat-link-metrics@.service \
+		debian/moat-link-akumuli/usr/lib/systemd/system/moat-link-metrics@.service

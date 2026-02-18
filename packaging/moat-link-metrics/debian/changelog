@@ -1,13 +1,5 @@
-moat-link-metrics (0.0.2-1) unstable; urgency=medium
+moat-link-metrics (0.0.4-1) unstable; urgency=medium
 
-  * New release for 26.0.1
+  * Initial release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:09:36 +0100
-
-moat-link-metrics (0.0.1-1) unstable; urgency=medium
-
-  * Renamed from moat-link-akumuli to moat-link-metrics.
-  * Added backend abstraction layer.
-  * Initial release as moat-link-metrics.
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 06:43:00 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 18:09:58 +0100

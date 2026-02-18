@@ -12,7 +12,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 dependencies = [
-    "moat-util ~= 0.62.4",
+    "moat-util ~= 0.62.5",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
 ]

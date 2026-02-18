@@ -161,11 +161,12 @@ class Codec(_Codec):
         "Add additional input"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
-                self._buffer += data
+                self._buffer = cast(bytes, self._buffer + data)
                 return
+            data = cast(bytes, self._buffer[self._buf_pos :] + data)
         if isinstance(data, memoryview):
             data = bytearray(data)
-        self._buffer = data
+        self._buffer = cast(bytes, data)
         self._buf_pos = 0
 
     def unfeed(self, buf: VarByteType) -> int:

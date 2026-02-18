@@ -27,7 +27,9 @@
 // Set base feature level.
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES)
 
+#if 0
 #define MICROPY_PY_OS_DUPTERM (2)
+#endif
 #define MICROPY_PY_SYS_SETTRACE (1)
 
 // Enable extra Unix features.

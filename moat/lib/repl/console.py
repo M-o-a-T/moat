@@ -225,9 +225,14 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         if tree.body:  # type: ignore[attr-defined]
             *_, last_stmt = tree.body  # type: ignore[attr-defined]
         for stmt in tree.body:  # type: ignore[attr-defined]
-            wrapper = ast.Interactive if stmt is last_stmt else ast.Module
-            the_symbol = symbol if stmt is last_stmt else "exec"
-            item = wrapper([stmt])
+            if stmt is last_stmt:
+                wrapper = ast.Interactive
+                the_symbol = symbol
+                item = wrapper([stmt])
+            else:
+                wrapper = ast.Module
+                the_symbol = "exec"
+                item = wrapper([stmt], type_ignores=[])
             try:
                 code = self.compile.compiler(item, filename, the_symbol)  # type: ignore[arg-type]
                 linecache._register_code(code, source, filename)  # noqa: SLF001  # type: ignore[attr-defined]

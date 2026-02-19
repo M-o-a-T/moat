@@ -174,32 +174,58 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
-                    res = await run_(
-                        "dpkg-parsechangelog",
-                        "-S",
-                        "Changes",
-                        cwd=rd,
-                        capture=True,
-                        echo=debug,
-                    )
-                    if res.strip().endswith(f" for {forcetag}"):
-                        # New version for the same tag.
+                    vers = None
+                    while True:
+                        res = await run_(
+                            "dpkg-parsechangelog",
+                            "-S",
+                            "Changes",
+                            cwd=rd,
+                            capture=True,
+                            echo=debug,
+                        )
+                        if not res.strip().endswith(f" for {forcetag}"):
+                            break
+                        # New version for this tag.
                         # Restore the previous version before continuing
                         # so we don't end up with duplicates.
                         # This may actually delete the changelog, but
                         # that's OK.
+                        #
+                        if vers is None:
+                            vers = repo.last_tag
+                        else:
+                            # Walk back to the commit just before `vers`
+                            # that last touched this changelog file.
+                            changelog_path = str(rd / "debian" / "changelog")
+                            found = list(
+                                repo.iter_commits(
+                                    f"{vers}^",
+                                    paths=changelog_path,
+                                    max_count=1,
+                                )
+                            )
+                            if not found:
+                                break
+                            vers = found[0].hexsha
+
                         await run_(
                             "git",
                             "restore",
                             "-s",
-                            repo.last_tag,
+                            vers,
                             str(rd / "debian" / "changelog"),
                         )
+                        #
+                        if not await (rd / "debian" / "changelog").exists():
+                            break
 
                 elif tag == ltag and r.vers.pkg < ptag:
                     r.vers.pkg = ptag
 
-            if await (rd / "debian" / "changelog").exists():
+            if tag == ltag and r.vers.pkg == ptag:
+                pass  # no change
+            elif await (rd / "debian" / "changelog").exists():
                 await run_(
                     "debchange",
                     "--distribution",

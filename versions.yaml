@@ -1,5 +1,5 @@
 _:
-  new: 26.0.4
+  new: 26.0.5
 moat:
   deb: 0.11.9-16
   new: 0.11.9
@@ -254,8 +254,8 @@ moat-lib-mqtt:
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.8.0
 moat-lib-path:
-  deb: 0.2.0-3
-  new: 0.2.0
+  deb: 0.3.0-3
+  new: 0.3.0
   pkg: 3
   pypi: 0.2.0
   rev: ffdb59f5d831b0c7be242b34f18d7b2a5c4ecf53

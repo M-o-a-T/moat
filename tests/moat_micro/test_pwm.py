@@ -450,3 +450,165 @@ async def test_e2e_value_change(tmp_path):
         assert True is await p()
         await sleep_ms(60)  # well past the remaining min window
         assert False is await p()
+
+
+# ---------------------------------------------------------------------------
+# Resync end-to-end tests
+# ---------------------------------------------------------------------------
+# State transitions triggered by set_times are synchronous, so cmd_s checks
+# immediately after w.w() reliably observe them without any sleep.
+#
+# t_sync is intentionally omitted from most configs.  Without it, resync ends
+# only when the value crosses the input clamp level — a deterministic,
+# timing-independent condition.  This avoids the problem that the first
+# _update_sync call after resync starts may have a large measure_td (equal to
+# however long the PWM was sleeping in always-off mode), which would otherwise
+# consume the entire t_sync budget at once.
+
+E2E_SYNC_LOW_CFG = """
+app: dir
+w:
+  app: part.PWM
+  pin: !P p
+  min: 50
+  max: 500
+  base: 100
+  sync_low:
+    threshold: 20
+    input: 50
+p:
+  app: _fake.Pin
+  pin: X
+"""
+
+E2E_SYNC_HIGH_CFG = """
+app: dir
+w:
+  app: part.PWM
+  pin: !P p
+  min: 50
+  max: 500
+  base: 100
+  sync_high:
+    threshold: 80
+    input: 50
+p:
+  app: _fake.Pin
+  pin: X
+"""
+
+# t_sync=2.0 s is large enough that the initial stale measure_td (at most a
+# few hundred ms) does not expire the timer before the test finishes.
+E2E_SYNC_SUSP_CFG = """
+app: dir
+w:
+  app: part.PWM
+  pin: !P p
+  min: 50
+  max: 500
+  base: 100
+  sync_low:
+    threshold: 20
+    input: 50
+    t_sync: 2.0
+    t_check: 0.05
+    bound: 0.5
+  sync_path: !P sp
+sp:
+  app: _fake.Pin
+  pin: SP
+p:
+  app: _fake.Pin
+  pin: X
+"""
+
+
+@pytest.mark.anyio
+async def test_e2e_resync_low(tmp_path):
+    "sync_low: below threshold → always off; crossing above → clamped cycling then normal"
+    async with mpy_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        # Below threshold=20 → always off.
+        await w.w(10)
+        await sleep_ms(100)
+        assert False is await p()
+        assert (await w.s())["out_mode"] == "low"
+
+        # Cross above threshold: resync starts, clamps effective val to
+        # max(30, input=50)=50 → t_on=t_off=50 ms.
+        # td≈100 ms >> t_off=50 ms → wakeup event fires immediately.
+        await w.w(30)
+        assert (await w.s())["resync"]["mode"] == "low"
+        await sleep_ms(20)  # let the scheduler switch the pin on
+        assert True is await p()
+
+        # Raise val above input=50 → resync ends immediately (no t_sync timer).
+        await w.w(60)
+        assert "resync" not in await w.s()
+
+
+@pytest.mark.anyio
+async def test_e2e_resync_high(tmp_path):
+    "sync_high: above threshold → always on; crossing below → clamped cycling then normal"
+    async with mpy_stack(tmp_path, E2E_SYNC_HIGH_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        # Above threshold=80 → always on (after min=50 ms).
+        await w.w(90)
+        await sleep_ms(70)
+        assert True is await p()
+        assert (await w.s())["out_mode"] == "high"
+
+        # Cross below threshold: resync starts, clamps effective val to
+        # min(70, input=50)=50 → t_on=t_off=50 ms.
+        await w.w(70)
+        assert (await w.s())["resync"]["mode"] == "high"
+
+        # Drop val below input=50 → resync ends immediately.
+        await w.w(40)
+        assert "resync" not in await w.s()
+
+
+@pytest.mark.anyio
+async def test_e2e_resync_cancelled(tmp_path):
+    "resync is cancelled immediately when the value drops back below the low threshold"
+    async with mpy_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
+        w = d.sub_at(P("w"))
+
+        await w.w(10)
+        await sleep_ms(100)
+
+        await w.w(30)  # start resync
+        assert (await w.s())["resync"]["mode"] == "low"
+
+        await w.w(5)  # back below threshold → resync cancelled, out_mode restored
+        s = await w.s()
+        assert "resync" not in s
+        assert s["out_mode"] == "low"
+
+
+@pytest.mark.anyio
+async def test_e2e_resync_suspended(tmp_path):
+    "sync_path reading above bound suspends the resync clamp; below bound resumes it"
+    async with mpy_stack(tmp_path, E2E_SYNC_SUSP_CFG) as d:
+        w = d.sub_at(P("w"))
+        sp = d.sub_at(P("sp"))
+
+        await w.w(10)
+        await sleep_ms(100)
+
+        await w.w(30)  # start resync
+        assert (await w.s())["resync"]["mode"] == "low"
+
+        # sp=True → value=1 > bound=0.5 → resync suspended after next t_check.
+        await sp(True)
+        await sleep_ms(60)  # one t_check interval (50 ms) passes
+        assert (await w.s())["resync"]["suspended"] is True
+
+        # sp=False → value=0 < bound=0.5 → resync resumes after next t_check.
+        await sp(False)
+        await sleep_ms(60)
+        assert (await w.s())["resync"]["suspended"] is False

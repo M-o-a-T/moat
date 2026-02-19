@@ -78,6 +78,20 @@ if TYPE_CHECKING:
             **k: P.kwargs,
         ) -> Awaitable[R]: ...
 
+    class _TaskGroupProto(Protocol):
+        async def spawn(
+            self,
+            p: Callable[P, Awaitable[Any]],
+            *a: P.args,
+            _name: str | None = None,
+            **k: P.kwargs,
+        ) -> _anyio.CancelScope: ...
+
+        def cancel(self) -> None: ...
+
+    class _TaskGroupFactoryProto(Protocol):
+        def __call__(self) -> _TaskGroupProto: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -351,11 +365,12 @@ def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
 
 
 if TYPE_CHECKING:
-    _every_typed: _EveryProto = every
-    _every_ms_typed: _EveryProto = every_ms
-    _run_typed: _RunProto = run
-    _wait_for_typed: _WaitForProto = wait_for
-    _wait_for_ms_typed: _WaitForProto = wait_for_ms
+    every: _EveryProto = every  # noqa: PLW0127
+    every_ms: _EveryProto = every_ms  # noqa: PLW0127
+    run: _RunProto = run  # noqa: PLW0127
+    wait_for: _WaitForProto = wait_for  # noqa: PLW0127
+    wait_for_ms: _WaitForProto = wait_for_ms  # noqa: PLW0127
+    TaskGroup: _TaskGroupFactoryProto = TaskGroup  # noqa: PLW0127
 
 
 async def run_server(

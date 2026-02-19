@@ -43,9 +43,9 @@ runner: # for moat.kv.runner.RunnerRoot
     version: 1
   sub:
     # tags for various runner modes
-    group: "any"
-    single: "at"
-    all: "all"
+    group: !P "any"
+    single: !P "at"
+    all: !P "all"
 server:
   # server-side configuration
   buffer: 10

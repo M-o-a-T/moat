@@ -379,7 +379,7 @@ async def cfg_(obj, path, yaml, empty):
 
     Single values are printed with a trailing line feed.
 
-    Dump the whole config with "moat util cfg :".
+    Dump the whole config with "moat util cfg : -y".
     """
     from .exc import ungroup  # noqa: PLC0415
 

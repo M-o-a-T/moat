@@ -258,6 +258,7 @@ nitpick_ignore = [
     ("py:obj", "moat.link.backend.TData"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
+    ("py:class", "moat.lib.priomap._impl.Comparable"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),

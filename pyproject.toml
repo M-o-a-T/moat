@@ -135,7 +135,6 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "ext/**",
-    "docs/**",
     "moat/micro/_embed/lib/mpdb.py",  # symlink
 ]
 
@@ -182,6 +181,7 @@ explicit-preview-rules = true
 "moat/micro/_embed/**" = ["SIM105","B904"]
 "moat/mqtt/**" = ["E501","UP031"]
 "moat/lib/broadcast/**" = ["UP046"]
+"docs/conf.py" = ["ALL"]
 "tests/moat_mqtt/**" = ["PT"]
 "tests/**" = ["D104","E501","PLW2901","RUF040","S105","S110","S607"]
 "examples/**" = ["S108"]

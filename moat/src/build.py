@@ -152,7 +152,7 @@ def do_copy_repos(repos):
         r.copy()
 
 
-async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
+async def do_build_deb(repo, repos, deb_opts, no, debug, tag):
     "Build Debian packages"
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
@@ -189,7 +189,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                             capture=True,
                             echo=debug,
                         )
-                        if not res.strip().endswith(f" for {forcetag}"):
+                        if not res.strip().endswith(f" for {tag}"):
                             break
                         # New version for this tag.
                         # Restore the previous version before continuing
@@ -237,7 +237,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                     "unstable",
                     "--newversion",
                     f"{ltag}-{r.vers.pkg}",
-                    f"New release for {forcetag}",
+                    f"New release for {tag}",
                     cwd=rd,
                     echo=debug,
                 )
@@ -249,10 +249,10 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                     "--distribution",
                     "unstable",
                     "--newversion",
-                    f"{r.vers.new}-{r.vers.pkg}",
+                    f"{ltag}-{r.vers.pkg}",
                     "--package",
                     r.mdash,
-                    f"Initial release for {forcetag}",
+                    f"Initial release for {tag}",
                     cwd=rd,
                     echo=debug,
                 )

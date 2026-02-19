@@ -183,7 +183,7 @@ assert await pin() is True
 
 ## Unix MicroPython
 
-Setting the LOG_BRK envvar to 1 forces a breakpoint when logging an
+Setting the `LOG_BRK` envvar to 1 forces a breakpoint when logging an
 error.
 
 ### Running tests
@@ -203,9 +203,14 @@ runs a MoaT link to its stdin/stdout.
 
 Its MoaT system uses the app's `cfg` config value as its configuration.
 
+This app accepts a `dupterm` argument which can be used to run a
+micropython compiled with support for `os.dupterm`. This option must only
+be used when required, because MicroPython issue #18837 causes all output
+to stderr to end up in stdout instead.
+
 ##### \_test.MpyRaw
 
-Likewise but stdio is exported as a bytestream.
+Likewise, but stdio is exported as a bytestream.
 
 ##### Loop
 

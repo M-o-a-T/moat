@@ -1168,8 +1168,13 @@ class Var:
 
     def set(self, val, *, force: bool = False):
         "set current value"
-        if not force and self.data is not NotGiven and self.data != val:
-            raise ValueError("Already set")
+        # If the root is a.b.c, a new identical value will arrive as an
+        # empty path with a root of a.b.c. That's bad. Thus silently don't
+        # update in that case.
+        if not force and self.data is not NotGiven:
+            if self.data.slashed != val.slashed:
+                raise ValueError("Already set", self.data, val)
+            return 42
         self.data = val
         return 42
 

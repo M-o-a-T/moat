@@ -198,16 +198,16 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                             # Walk back to the commit just before `vers`
                             # that last touched this changelog file.
                             changelog_path = str(rd / "debian" / "changelog")
-                            found = list(
+                            found = next(
                                 repo.iter_commits(
                                     f"{vers}^",
                                     paths=changelog_path,
-                                    max_count=1,
-                                )
+                                ),
+                                None,
                             )
-                            if not found:
+                            if found is None:
                                 break
-                            vers = found[0].hexsha
+                            vers = found.hexsha
 
                         await run_(
                             "git",

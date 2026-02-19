@@ -41,7 +41,43 @@ if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
 
     from collections.abc import Awaitable, Callable
-    from typing import NoReturn, Self
+    from typing import NoReturn, ParamSpec, Protocol, Self
+
+    P = ParamSpec("P")
+
+    class _EveryProto(Protocol):
+        @overload
+        def __call__(
+            self, t: float, p: None = None, /, *a: Any, **k: Any
+        ) -> AsyncIterator[None]: ...
+
+        @overload
+        def __call__(
+            self,
+            t: float,
+            p: Callable[P, Awaitable[R]],
+            /,
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> AsyncIterator[R]: ...
+
+    class _RunProto(Protocol):
+        def __call__(
+            self,
+            p: Callable[P, Awaitable[R]],
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> R | None: ...
+
+    class _WaitForProto(Protocol):
+        def __call__(
+            self,
+            timeout: float,
+            p: Callable[P, Awaitable[R]],
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> Awaitable[R]: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -312,6 +348,14 @@ def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
 
         _tg = TaskGroup_
     return _tg()
+
+
+if TYPE_CHECKING:
+    _every_typed: _EveryProto = every
+    _every_ms_typed: _EveryProto = every_ms
+    _run_typed: _RunProto = run
+    _wait_for_typed: _WaitForProto = wait_for
+    _wait_for_ms_typed: _WaitForProto = wait_for_ms
 
 
 async def run_server(

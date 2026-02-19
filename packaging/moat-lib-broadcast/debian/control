@@ -12,8 +12,6 @@ X-DH-Compat: 13
 Package: python3-moat-lib-broadcast
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  moat-util (>= 0.6),
-  python3-attrs (>= 23.0),
 Description: Broadcasting support for MoaT applications
   This module provides broadcasting support with weak references,
   allowing multiple readers to receive messages from a single source

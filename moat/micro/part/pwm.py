@@ -168,13 +168,16 @@ class PWM(BaseCmd):
         self.sync_low = self._load_sync("sync_low")
         self.sync_high = self._load_sync("sync_high")
 
+    def _load_sync_path(self):
         # Calling `await self.sync_path()` returns the float to check
-        # cfg.sync_low.bound or cfg.sync_high.bound against
+        # cfg.sync_low.bound or cfg.sync_high.bound against.
+        # Must be called after the command is attached (root is available).
         self.sync_path = self.root.sub_at(self.cfg.sync_path) if "sync_path" in self.cfg else None
 
     async def reload(self):
         "reload from config"
         self._load()
+        self._load_sync_path()
         await super().reload()
 
     async def setup(self):  # noqa:D102
@@ -182,6 +185,7 @@ class PWM(BaseCmd):
         self.pin = self.root.sub_at(self.cfg["pin"], cmd=not self.so)
         if await self.pin.rdy_():
             raise StoppedError("pin")
+        self._load_sync_path()
         self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
@@ -277,7 +281,7 @@ class PWM(BaseCmd):
             value = await self.sync_path()
             bound = cfg.get("bound")
             if bound is not None:
-                if self.sync_invert:
+                if self.sync_invert == (self._sync_active == "low"):
                     self._sync_suspended = value < bound
                 else:
                     self._sync_suspended = value > bound

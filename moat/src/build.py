@@ -85,8 +85,12 @@ def do_autotag(repo, repos, major, minor, tags):
     "Create tags for updated subrepos"
     for r in repos:
         if r.has_changes(True) or "tag" not in r.vers:
-            r.vers.tag = r.next_tag(major, minor)
-            r.vers.pkg = 1
+            r.next_tag(major, minor)
+            if r.vers.get("tag", "") != r.vers.new:
+                r.vers.tag = r.vers.new
+                r.vers.pkg = 1
+            else:
+                r.vers.pkg += 1
             r.vers.rev = repo.head.commit.hexsha
             with suppress(AttributeError):
                 del r.vers.pkgrev

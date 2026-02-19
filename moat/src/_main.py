@@ -83,7 +83,7 @@ async def run_tests(pkg: str | None, *opts) -> bool:
     else:
         tests = Path("tests") / pkg
 
-    if not Path(tests).exists():
+    if not Path(tests).exists():  # noqa:ASYNC240
         # No tests. Assume it's OK.
         print("No tests:", pkg)
         return True
@@ -209,7 +209,7 @@ def decomma(proj, path):
 
 def encomma(proj, path):
     """list > comma-delimited string"""
-    _mangle(proj, path, lambda x: ",".join(x))  # pylint: disable=unnecessary-lambda
+    _mangle(proj, path, lambda x: ",".join(x))  # noqa:PLW0108
 
 
 def apply_hooks(repo, force=False):
@@ -410,8 +410,8 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
     number. This command auto-increments ``c`` and sets the build to ``1``,
     except when you use ``-M|-m|-b``.
     """
-    if minor and major:
-        raise click.UsageError("Can't change both minor and major!")
+    if bool(minor) + bool(major) + bool(build) > 1:
+        raise click.UsageError("Can only change one of build, minor, or major!")
     if force and (minor or major):
         raise click.UsageError("Can't use an explicit tag with changing minor or major!")
     if FORCE and (minor or major):
@@ -421,7 +421,7 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
     if show and (run or minor or major):
         raise click.UsageError("Can't display and change the tag at the same time!")
     if build and not subtree:
-        raise click.UsageError("The main release number doesn't have a build")
+        raise click.UsageError("The main release number doesn't have a build nr")
 
     repo = Repo(obj.cfg.src.toplevel, None)
 
@@ -449,5 +449,7 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
                 print(f"{repo.last_tag}")
         return
 
-    r.next_tag(major, minor, new_tag=force)
+    r.next_tag(major, minor, new_tag=force, incr=not build)
+    if build:
+        r.tag.pkg += 1
     repo.write_tags()

@@ -565,6 +565,8 @@ class Path(Sequence[PathElem]):
     def __add__(self, other: Path | Sequence[PathElem]) -> Path:
         """Concatenate two paths"""
         mark = self._tag_add(other)
+        if len(self) == 0 and not self._prefix:
+            return Path.build(other)
         if isinstance(other, Path):
             if isinstance(other._prefix, Path):
                 raise ValueError(f"Add with prefix: {self} + {other}")  # noqa:TRY004

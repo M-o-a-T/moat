@@ -9,9 +9,20 @@ from dataclasses import dataclass
 from time import monotonic as time
 
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
-Priority = TypeVar("Priority")
+if TYPE_CHECKING:  # pragma: no cover
+    from typing import Protocol
+
+    class Comparable(Protocol):
+        """Protocol for annotating comparable priorities."""
+
+        def __lt__(self, other: Any, /) -> bool: ...
+
+else:
+    Comparable = Any
+
+Priority = TypeVar("Priority", bound=Comparable)
 
 if TYPE_CHECKING:  # pragma: no cover
     from types import EllipsisType
@@ -177,7 +188,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         idx = self.position[key]
         old = self.heap[idx].priority
         self.heap[idx].priority = new_priority
-        if cast(Any, new_priority) < cast(Any, old):
+        if new_priority < old:
             self._sift_up(idx)
         else:
             self._sift_down(idx)
@@ -225,7 +236,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         while idx > 0:
             parent = (idx - 1) // 2
-            if cast(Any, self.heap[idx].priority) < cast(Any, self.heap[parent].priority):
+            if self.heap[idx].priority < self.heap[parent].priority:
                 self._swap(idx, parent)
                 idx = parent
             else:
@@ -241,13 +252,9 @@ class PrioMap(MutableMapping, Generic[Priority]):
             right = 2 * idx + 2
             best = idx
 
-            if left < n and cast(Any, self.heap[left].priority) < cast(
-                Any, self.heap[best].priority
-            ):
+            if left < n and self.heap[left].priority < self.heap[best].priority:
                 best = left
-            if right < n and cast(Any, self.heap[right].priority) < cast(
-                Any, self.heap[best].priority
-            ):
+            if right < n and self.heap[right].priority < self.heap[best].priority:
                 best = right
 
             if best != idx:

@@ -460,12 +460,13 @@ class ServiceMon(HostList):
     Its main job is to remove stale retained entries under 'run.id' and 'run.host'.
     """
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, fake: bool = False, **kw):
         """ """
         super().__init__(*a, **kw)
         self.hostdown: TimerMap[Path, float] = TimerMap()
         self.hostup: TimerMap[Path, float] = TimerMap()
         self.errored: dict[Path, bool] = dict()
+        self.fake: bool = fake
 
     async def start_tasks(self):
         "internal helper"
@@ -502,13 +503,20 @@ class ServiceMon(HostList):
 
     async def drop_id(self, host):
         "Delete a host's ID message"
-        await self.link.d_set(P("run.id") / host.id, retain=True)
+        if "i" in host.data:
+            if self.fake:
+                print("-id", host)
+            else:
+                await self.link.d_set(P("run.id") / host.id, retain=True)
         await super().drop_id(host)
 
     async def drop_host(self, host):
         "Delete a host's Service messages (yes all of them)"
         for p in host.data.h.keys():
-            await self.link.d_set(P("run.host") + p, retain=True)
+            if self.fake:
+                print("-rh", p)
+            else:
+                await self.link.d_set(P("run.host") + p, retain=True)
             self.hostdown[p] = self.cfg.timeout.restart.error
             with suppress(KeyError):
                 del self.hostup[p]
@@ -521,12 +529,18 @@ class ServiceMon(HostList):
                 dat["aux"] = data
             if host is not None and (dt := host.data.h.get(path, None)) is not None:
                 dat["data"] = dt
-            await self.link.d_set(P("error.run.host") + path, dat)
+            if self.fake:
+                print("+eh", path, dat)
+            else:
+                await self.link.d_set(P("error.run.host") + path, dat)
             self.errored[path] = msg
 
     async def _no_err(self, path: Path):
         if self.errored.get(path, True) is not False:
-            await self.link.d_set(P("error.run.host") + path)
+            if self.fake:
+                print("-eh", path)
+            else:
+                await self.link.d_set(P("error.run.host") + path)
             self.errored[path] = False
 
     def add_path(self, host: Service, path: Path, msg: dict):

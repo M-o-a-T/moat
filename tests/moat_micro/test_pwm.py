@@ -1,5 +1,5 @@
 """
-Test the PWM resync logic.
+Test the PWM implementation: end-to-end cycling tests and resync logic.
 """
 # ruff:noqa:SLF001
 
@@ -10,6 +10,9 @@ import pytest
 from unittest.mock import patch
 
 import moat.micro.part.pwm as pwm_module
+from moat.lib.micro import sleep_ms
+from moat.lib.path import P
+from moat.micro._test import mpy_stack
 from moat.micro.part.pwm import PWM, _Send
 
 
@@ -285,3 +288,163 @@ async def test_resync_suspended_by_sync_path():
         await p.step(10, 1, True)
         assert p._sync_suspended is False
         assert p.t_off == 1
+
+
+# ---------------------------------------------------------------------------
+# End-to-end tests using mpy_stack + _fake.Pin
+# ---------------------------------------------------------------------------
+# Config: min=50 ms, max=500 ms, base=100
+#   val=50  → t_on=50 ms, t_off=50 ms
+#   val=25  → t_on=50 ms, t_off=150 ms
+#   val=0   → t_on=0  (always off; settles to "wait for event")
+#   val=100 → t_off=0 (always on after min=50 ms)
+#
+# Anchor pattern for always-off→X transitions:
+#   After w.w(0)+sleep(≥200 ms), t_last is old enough that switching to
+#   any target t_off ≤ 150 ms fires the wakeup event immediately.
+
+E2E_CFG = """
+app: dir
+w:
+  app: part.PWM
+  pin: !P p
+  min: 50
+  max: 500
+  base: 100
+p:
+  app: _fake.Pin
+  pin: X
+"""
+
+
+@pytest.mark.anyio
+async def test_e2e_half(tmp_path):
+    "50 % duty cycle: pin alternates every 50 ms"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        # Anchor in a known-off state so t_last is fresh and td > t_off=50 ms.
+        await w.w(0)
+        await sleep_ms(70)
+        assert False is await p()
+
+        # val=50 → t_on=t_off=50 ms.  td≈70 ms ≥ t_off → event fires at once.
+        await w.w(50)
+        await sleep_ms(20)  # let the scheduler switch the pin on
+        assert True is await p()
+
+        await sleep_ms(60)  # 80 ms after w.w(50): past t_on=50 ms → off
+        assert False is await p()
+
+        await sleep_ms(60)  # 140 ms after w.w(50): past t_off=50 ms → on
+        assert True is await p()
+
+
+@pytest.mark.anyio
+async def test_e2e_always_off(tmp_path):
+    "val=0 keeps the pin off permanently"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        await w.w(0)
+        await sleep_ms(70)
+        assert False is await p()
+        await sleep_ms(100)
+        assert False is await p()
+
+
+@pytest.mark.anyio
+async def test_e2e_always_on(tmp_path):
+    "val=100 turns the pin on after min=50 ms and keeps it on"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        await w.w(100)
+        # The min timer has not yet elapsed; the wakeup event was set by
+        # _apply_value (t_off=0 → td≥0 always), but _measure still sees
+        # td < min and returns dly=50 ms rather than switching on.
+        assert False is await p()
+
+        await sleep_ms(70)  # past min=50 ms → pin on
+        assert True is await p()
+
+        await sleep_ms(100)  # stays on
+        assert True is await p()
+
+
+@pytest.mark.anyio
+async def test_e2e_asymmetric(tmp_path):
+    "val=25 → t_on=50 ms, t_off=150 ms"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        # Anchor: let always-off run for 200 ms so that t_last is old enough
+        # that td > t_off=150 ms when we switch to val=25.
+        await w.w(0)
+        await sleep_ms(200)
+        assert False is await p()
+
+        # td≈200 ms ≥ t_off=150 ms → wakeup event fires immediately.
+        await w.w(25)
+        await sleep_ms(20)  # let the scheduler switch the pin on
+        assert True is await p()
+
+        await sleep_ms(60)  # 80 ms after w.w(25): past t_on=50 ms → off
+        assert False is await p()
+
+        await sleep_ms(160)  # 240 ms after w.w(25): past t_off=150 ms → on
+        assert True is await p()
+
+
+@pytest.mark.anyio
+async def test_e2e_read(tmp_path):
+    "cmd_r returns the current effective value; force overrides the normal value"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+
+        await w.w(42)
+        assert await w.r() == 42
+
+        # Force a different value; cmd_r must reflect it.
+        await w.w(77, f=True)
+        assert await w.r() == 77
+
+        # Clear the force; cmd_r reverts to the underlying value.
+        await w.w(None, f=True)
+        assert await w.r() == 42
+
+
+@pytest.mark.anyio
+async def test_e2e_state(tmp_path):
+    "cmd_s returns a well-formed state dict with correct on/off times"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+
+        await w.w(50)
+        s = await w.s()
+        assert s["val"] == 50
+        assert s["on"] == 50
+        assert s["off"] == 50
+        assert isinstance(s["p"], bool)
+
+
+@pytest.mark.anyio
+async def test_e2e_value_change(tmp_path):
+    "switching from always-on to always-off turns the pin off after min ms"
+    async with mpy_stack(tmp_path, E2E_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        await w.w(100)  # always-on
+        await sleep_ms(70)  # past min=50 ms → pin on
+        assert True is await p()
+
+        # Switch to always-off.  The pin has been on for ~20 ms; the min
+        # timer needs ~30 ms more before the pin is allowed to go low.
+        await w.w(0)
+        await sleep_ms(70)  # well past the remaining min window
+        assert False is await p()

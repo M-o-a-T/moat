@@ -5,15 +5,15 @@ Priority mapping library
 from __future__ import annotations
 
 import anyio
+from dataclasses import dataclass
 from time import monotonic as time
 
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 Priority = TypeVar("Priority")
 
-if TYPE_CHECKING:
-    from abc import abstractmethod
+if TYPE_CHECKING:  # pragma: no cover
     from types import EllipsisType
 
     from collections.abc import (
@@ -24,22 +24,21 @@ if TYPE_CHECKING:
         KeysView,
         ValuesView,
     )
-    from typing import Any, Protocol
-
-    class Comparable(Protocol):
-        """Protocol for annotating comparable types."""
-
-        @abstractmethod
-        def __lt__(self: Priority, other: Priority, /) -> bool: ...
 
     RT = TypeVar("RT")
 
     Key = Hashable
     InitialData = dict[Key, Priority] | None
     InitialPrio = dict[Key, float] | None
-    HeapItem = tuple[
-        Key, Priority
-    ]  # Each heap item is [key, priority] - typed as tuple for compatibility
+
+
+@dataclass(slots=True)
+class _KeyPrio(Generic[Priority]):
+    """Storage unit for heap entries."""
+
+    key: Key
+    priority: Priority
+
 
 __all__ = ["PrioMap", "TimerMap"]
 
@@ -61,7 +60,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         Raises:
             TypeError: If any priority in ``initial`` is not an int or float.
         """
-        self.heap: list[Any] = []  # list of [key, priority] pairs
+        self.heap: list[_KeyPrio[Priority]] = []
         self.position: dict[Key, int] = {}
         self.evt: anyio.Event = anyio.Event()
 
@@ -69,15 +68,15 @@ class PrioMap(MutableMapping, Generic[Priority]):
         if initial:
             self.bulk(initial.items())
 
-    def bulk(self, initial: Iterable[HeapItem]) -> None:
+    def bulk(self, initial: Iterable[tuple[Key, Priority]]) -> None:
         """
         Bulk insert.
         """
         for key, priority in initial:
-            self.heap.append([key, priority])
+            self.heap.append(_KeyPrio(key, priority))
         # Record positions and heapify
-        for idx, (key, _) in enumerate(self.heap):
-            self.position[key] = idx
+        for idx, item in enumerate(self.heap):
+            self.position[item.key] = idx
         for i in reversed(range(len(self.heap) // 2)):
             self._sift_down(i)
 
@@ -138,12 +137,14 @@ class PrioMap(MutableMapping, Generic[Priority]):
         else:
             pos = 0
 
-        key, prio = self.heap[pos]
+        item = self.heap[pos]
+        key = item.key
+        prio = item.priority
 
         last = self.heap.pop()
         if pos < len(self.heap):
             self.heap[pos] = last
-            self.position[last[0]] = 0
+            self.position[last.key] = pos
             self._sift_down(pos)
         del self.position[key]
         if a:
@@ -157,7 +158,8 @@ class PrioMap(MutableMapping, Generic[Priority]):
         :raises IndexError: If empty.
         """
         try:
-            return self.heap[0][0], self.heap[0][1]
+            item = self.heap[0]
+            return item.key, item.priority
         except IndexError:
             raise IndexError("Queue is empty") from None
 
@@ -173,14 +175,14 @@ class PrioMap(MutableMapping, Generic[Priority]):
         if key not in self.position:
             raise KeyError(f"Key {key} not found in heap.")
         idx = self.position[key]
-        old = self.heap[idx][1]
-        self.heap[idx][1] = new_priority
-        if new_priority < old:
+        old = self.heap[idx].priority
+        self.heap[idx].priority = new_priority
+        if cast(Any, new_priority) < cast(Any, old):
             self._sift_up(idx)
         else:
             self._sift_down(idx)
 
-        if idx == 0 or self.heap[0][0] == key:
+        if idx == 0 or self.heap[0].key == key:
             self.evt.set()
             self.evt = anyio.Event()
 
@@ -214,8 +216,8 @@ class PrioMap(MutableMapping, Generic[Priority]):
         Swap elements at indices `i` and `j` and update their positions.
         """
         self.heap[i], self.heap[j] = self.heap[j], self.heap[i]
-        self.position[self.heap[i][0]] = i
-        self.position[self.heap[j][0]] = j
+        self.position[self.heap[i].key] = i
+        self.position[self.heap[j].key] = j
 
     def _sift_up(self, idx: int) -> None:
         """
@@ -223,7 +225,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         while idx > 0:
             parent = (idx - 1) // 2
-            if self.heap[idx][1] < self.heap[parent][1]:
+            if cast(Any, self.heap[idx].priority) < cast(Any, self.heap[parent].priority):
                 self._swap(idx, parent)
                 idx = parent
             else:
@@ -239,9 +241,13 @@ class PrioMap(MutableMapping, Generic[Priority]):
             right = 2 * idx + 2
             best = idx
 
-            if left < n and self.heap[left][1] < self.heap[best][1]:
+            if left < n and cast(Any, self.heap[left].priority) < cast(
+                Any, self.heap[best].priority
+            ):
                 best = left
-            if right < n and self.heap[right][1] < self.heap[best][1]:
+            if right < n and cast(Any, self.heap[right].priority) < cast(
+                Any, self.heap[best].priority
+            ):
                 best = right
 
             if best != idx:
@@ -259,7 +265,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         :raises KeyError: If `key` is not present.
         """
         if key in self.position:
-            return self.heap[self.position[key]][1]
+            return self.heap[self.position[key]].priority
         raise KeyError(f"Key {key} not found in heap.")
 
     def __setitem__(self, key: Key, priority: Priority) -> None:
@@ -274,10 +280,10 @@ class PrioMap(MutableMapping, Generic[Priority]):
             self.set_priority(key, priority)
         else:
             idx = len(self.heap)
-            self.heap.append([key, priority])
+            self.heap.append(_KeyPrio(key, priority))
             self.position[key] = idx
             self._sift_up(idx)
-            if self.heap[0][0] == key:
+            if self.heap[0].key == key:
                 self.evt.set()
                 self.evt = anyio.Event()
 
@@ -294,7 +300,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         last = self.heap.pop()
         if idx < len(self.heap):
             self.heap[idx] = last
-            self.position[last[0]] = idx
+            self.position[last.key] = idx
             self._sift_down(idx)
             self._sift_up(idx)
             if idx == 0:
@@ -317,7 +323,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         String representation: list of {key: priority}.
         """
-        return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
+        return "[" + ", ".join(f"{{{item.key}: {item.priority}}}" for item in self.heap) + "]"
 
     def _create_iterator(self, keys: bool | None = None) -> Any:
         """
@@ -343,15 +349,15 @@ class PrioMap(MutableMapping, Generic[Priority]):
             def __next__(self) -> Key | Priority | tuple[Key, Priority]:
                 s = self.state
                 if s["index"] < s["len"]:
-                    key, prio = self.heap_dict.heap[s["index"]]
+                    item = self.heap_dict.heap[s["index"]]
                     s["index"] += 1
                     if s["pos"] != self.heap_dict.position:
                         raise RuntimeError("Modification detected during iteration.")
                     if self.keys:
-                        return key
+                        return item.key
                     if self.keys is False:
-                        return prio
-                    return (key, prio)
+                        return item.priority
+                    return item.key, item.priority
                 raise StopIteration
 
         return SafeIterator(self, keys)
@@ -390,7 +396,8 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         while not self.heap:
             await self.evt.wait()
-        return self.heap[0][0], self.heap[0][1]
+        item = self.heap[0]
+        return item.key, item.priority
 
 
 class TimerMap:
@@ -407,7 +414,7 @@ class TimerMap:
     def __init__(self, initial: InitialPrio = None) -> None:
         self._pm: PrioMap[float] = PrioMap()
         if initial:
-            self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())  # type: ignore[arg-type]
+            self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())
 
     @staticmethod
     def T_ADD(p) -> float:

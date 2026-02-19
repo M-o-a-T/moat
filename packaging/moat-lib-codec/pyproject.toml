@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
     "anyio ~= 4.2",
     "moat-lib-rpc ~= 0.6.1",
-    "moat-lib-micro ~= 0.2.2",
+    "moat-lib-micro ~= 0.3.0",
     "moat-lib-proxy ~= 0.1.1",
     "moat-util ~= 0.62.6",
 ]

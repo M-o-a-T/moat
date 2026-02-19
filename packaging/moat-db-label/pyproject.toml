@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
 	"moat-util ~= 0.62.6",
 	"moat-db ~= 0.2.7",
-	"moat-lib-config ~= 0.1.2",
+	"moat-lib-config ~= 0.1.3",
 	"moat-lib-run ~= 0.1.3",
 	]
 version = "0.0.3"

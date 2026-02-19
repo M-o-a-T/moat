@@ -69,7 +69,7 @@ class _Common:
         nt = max(nt, nv, no)
 
         self.vers.new = ".".join(str(x) for x in nt)
-        if self.vers.new != self.vers.tag:
+        if "tag" in self.vers and "pkg" in self.vers and self.vers.new != self.vers.tag:
             self.vers.pkg = 1
         return self.vers.new
 

@@ -429,6 +429,8 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
         r = repo.part(subtree)
     else:
         r = repo
+    if build:
+        o_b = r.vers.pkg
 
     if show:
         tag = r.vers
@@ -451,5 +453,5 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
 
     r.next_tag(major, minor, new_tag=force, incr=not build)
     if build:
-        r.tag.pkg += 1
+        r.vers.pkg = o_b + 1
     repo.write_tags()

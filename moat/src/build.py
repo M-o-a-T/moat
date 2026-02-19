@@ -32,14 +32,18 @@ ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
-def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
+def fix_deps(deps: list[str], tags: dict[str, str], changed: bool = False) -> bool:
     """Adjust dependencies"""
     work = False
     for i, dep in enumerate(deps):
         r = Requirement(dep)
         if r.name in tags:
             dep = f"{r.name} ~= {tags[r.name]}"  # noqa:PLW2901
-            if deps[i] != dep:
+            if (
+                (deps[i] != dep)
+                if changed
+                else (deps[i][: deps[i].rindex(".")] != dep[: dep.rindex(".")])
+            ):
                 deps[i] = dep
                 work = True
     return work
@@ -121,6 +125,7 @@ async def do_versions(repo, repos, tags, no):
             content = await p.read_text()
             pr = tomlkit.loads(content)
             pr["project"]["version"] = r.vers.get("new", r.last_tag)
+            changed = r.has_changes(True)
 
             if not no.version:
                 try:
@@ -128,14 +133,14 @@ async def do_versions(repo, repos, tags, no):
                 except KeyError:
                     pass
                 else:
-                    fix_deps(deps, tags)
+                    fix_deps(deps, tags, changed)
                 try:
                     deps = pr["project"]["optional_dependencies"]
                 except KeyError:
                     pass
                 else:
                     for v in deps.values():
-                        fix_deps(v, tags)
+                        fix_deps(v, tags, changed)
             await p.write_text(pr.as_string())
 
             repo.index.add(str(p))

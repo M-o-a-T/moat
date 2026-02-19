@@ -57,19 +57,20 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
-- Use `async with (a,b,c)` instead of nested `async with` statements.
+- Use `[async] with (a,b,c)` instead of nested `[a]sync with` statements.
 
 ### Typing
 
 - MoaT does its type checking with "ty".
-- Type-checked files need to be typed completely, i.e. all variables,
+- Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.
 - The above also applies to `cast` expressions.
-- Each type:ignore or cast requires a one-line comment explaining why the
-  affected code is valid anyway.
+- Do not type-check function parameters. That's what `ty` is for.
+- Do not range-check function parameters. It is sufficient to describe valid ranges
+  in the docstring.
 - After a module typechecks, add its files to the tool.ty.src.include list in
   pyproject.toml.
 
@@ -111,12 +112,14 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   (included in `docs/moat-XXX-YYY/index.md`). The synopsis does not contain
   headers. The main part is assumed to be under a level 1 header. It must
   not itself contain a Level 1 header itself.
+- Do not create enumerations like "Key features" or similar.
+- Do not mention implementation details in docstrings.
 
 ## Testing Guidelines
 
-- Tests should focus on exercising a module's API.
-- 100% coverage is a goal but not the main focus of our tests.
-- Don't repeat similar tests or assertions.
+- Tests should focus on exercising a module's API and its actual purpose.
+- 100% coverage is a goal to aspire to, but not the main focus of our tests.
+- Don't repeat tests or assertions.
 
 ## Commit & Pull Requests
 
@@ -158,23 +161,19 @@ Work is NOT complete until `git push` succeeds.
    Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
-1. Run `bd sync`.
 1. **Push to remote**:
-   ```bash
-   git pull
-   resolve conflicts, if any
-   bd sync
-   git push
-   git status  # MUST show "up to date with 'intern/main'"
+   - run `git push`
+   - If there are conflicts,
+     - git pull --no-edit
+     - resolve merge conflicts, if any
+     - retry `git push`
+     - repeat until successful
    ```
-1. **Verify** - All changes committed AND pushed
-
-If a git push/pull command fails with a permission error, STOP: the problem is a
-missing SSH key. The user needs to re-add the key before you can continue.
+However, if a git push/pull command fails with a permission error, STOP:
+the problem is a missing SSH key. The user needs to re-add the key before
+you can continue.
 
 ### Mandatory Rules
 
 - Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- If push fails, pull + resolve + retry until it succeeds

@@ -14,7 +14,6 @@ classifiers = [
 dependencies = [
     "moat-util ~= 0.62.6",
     "moat-lib-micro ~= 0.2.2",
-    "attrs ~= 23.0",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

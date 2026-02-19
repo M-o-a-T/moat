@@ -64,14 +64,6 @@ class PWM(BaseCmd):
         sync_path(Path): Path to read periodically while resync is active.
         sync_invert(bool): Invert sync_path comparison.
 
-        ramp(dict): Ramp-up settings.
-        ramp.val(float): Threshold. Force the PWM value to be at least this
-                         large while the float returned from calling *path*
-                         is less than *dest*.
-        ramp.path(Path): Path to read periodically while ramp-up is in effect.
-        ramp.dest(float): The value which the result from *path* needs to reach
-                          in order to leave ramp-up.
-
     The input must be in [0..base]; the output is controlled so that
     ``t_on/(t_on+t_off) = val/base``, given that ``min <= t_on,t_off <= max``
     and one of t_on and t_off are equal to `min`. (Thus when ``val=base/2``,
@@ -293,9 +285,6 @@ class PWM(BaseCmd):
         """
         Separate task that counts down ``t_ms`` of non-suspended time and
         then ends the active resync.
-
-        Uses ``every_ms`` so the interval stays accurate even when the
-        ``sync_path`` call takes non-trivial time.
         """
         t_check = self._sync_check_ms
         # Choose interval and optional path call.

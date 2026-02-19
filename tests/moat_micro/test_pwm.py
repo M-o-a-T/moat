@@ -446,5 +446,7 @@ async def test_e2e_value_change(tmp_path):
         # Switch to always-off.  The pin has been on for ~20 ms; the min
         # timer needs ~30 ms more before the pin is allowed to go low.
         await w.w(0)
-        await sleep_ms(70)  # well past the remaining min window
+        await sleep_ms(10)  # still in the remaining min window
+        assert True is await p()
+        await sleep_ms(60)  # well past the remaining min window
         assert False is await p()

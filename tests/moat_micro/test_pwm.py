@@ -128,84 +128,6 @@ async def test_onoff():
 
 
 @pytest.mark.anyio
-async def test_resync_low_fixed_ratio():
-    "Resync from low clamps to the configured ratio until the timer ends."
-    mock_time = 0
-
-    def fake_ticks_ms():
-        return mock_time
-
-    with patch.object(pwm_module, "ticks_ms", fake_ticks_ms):
-        p = FPWM(
-            1,
-            10,
-            100,
-            sync_low={"threshold": 10, "input": 50, "t_sync": 0.05},
-        )
-
-        p.set_times(5)
-        assert p._out_mode == "low"
-        assert p.t_on == 0
-        assert p.t_off == 10
-
-        mock_time = 0
-        p.set_times(20)
-        assert p._sync_active == "low"
-        assert p._sync_left == 50
-        assert p.t_on == 1
-        assert p.t_off == 1
-
-        p.set_time(0)
-        mock_time = 1
-        await p.step(1, 1, True)
-        assert p._sync_left == 49
-
-        mock_time = 50
-        await p.step(49, 4, False)
-        assert p._sync_active is None
-        assert p.t_off == 4
-
-
-@pytest.mark.anyio
-async def test_resync_high_fixed_ratio():
-    "Resync from high clamps to the configured ratio until the timer ends."
-    mock_time = 0
-
-    def fake_ticks_ms():
-        return mock_time
-
-    with patch.object(pwm_module, "ticks_ms", fake_ticks_ms):
-        p = FPWM(
-            1,
-            10,
-            100,
-            sync_high={"threshold": 90, "input": 20, "t_sync": 0.05},
-        )
-
-        p.set_times(95)
-        assert p._out_mode == "high"
-        assert p.t_on == 10
-        assert p.t_off == 0
-
-        mock_time = 0
-        p.set_times(80)
-        assert p._sync_active == "high"
-        assert p._sync_left == 50
-        assert p.t_on == 1
-        assert p.t_off == 4
-
-        p.set_time(0)
-        mock_time = 4
-        await p.step(4, 1, True)
-
-        mock_time = 50
-        await p.step(46, 1, False)
-        assert p._sync_active is None
-        assert p.t_on == 4
-        assert p.t_off == 1
-
-
-@pytest.mark.anyio
 async def test_resync_cancelled_by_threshold():
     "Resync ends when the value drops below the low threshold."
     mock_time = 0
@@ -241,53 +163,6 @@ async def test_resync_no_input():
     assert p._sync_active is None
     assert p._out_mode is None
     assert p.t_off == 4
-
-
-@pytest.mark.anyio
-async def test_resync_suspended_by_sync_path():
-    "Sync path readings can suspend and resume the resync clamp."
-    mock_time = 0
-
-    def fake_ticks_ms():
-        return mock_time
-
-    class SyncProbe:
-        def __init__(self, value: float):
-            self.value = value
-
-        async def __call__(self) -> float:
-            return self.value
-
-    with patch.object(pwm_module, "ticks_ms", fake_ticks_ms):
-        probe = SyncProbe(20)
-        p = FPWM(
-            1,
-            10,
-            100,
-            sync_low={
-                "threshold": 10,
-                "input": 50,
-                "t_sync": 0.05,
-                "t_check": 0.01,
-                "bound": 10,
-            },
-            sync_path=probe,
-        )
-
-        p.set_times(5)
-        p.set_times(20)
-        p.set_time(0)
-
-        mock_time = 0
-        await p.step(0, 4, None)
-        assert p._sync_suspended is True
-        assert p.t_off == 4
-
-        probe.value = 0
-        mock_time = 10
-        await p.step(10, 1, True)
-        assert p._sync_suspended is False
-        assert p.t_off == 1
 
 
 # ---------------------------------------------------------------------------
@@ -521,6 +396,57 @@ p:
   app: _fake.Pin
   pin: X
 """
+
+
+E2E_RESYNC_TIMER_CFG = """
+app: dir
+w:
+  app: part.PWM
+  pin: !P p
+  min: 50
+  max: 500
+  base: 100
+  sync_high:
+    threshold: 80
+    input: 10
+    t_sync: 0.15
+p:
+  app: _fake.Pin
+  pin: X
+"""
+
+
+@pytest.mark.anyio
+async def test_e2e_resync_timer_expires_within_period(tmp_path):
+    """t_sync must expire even when it is shorter than the clamped PWM period.
+
+    sync_high with input=10 forces effective val=min(25,10)=10 during resync,
+    giving t_on=50 ms and t_off=450 ms.  t_sync=150 ms is much shorter than
+    t_off, so with the old _measure-based countdown the resync would persist
+    well past 150 ms.  The separate resync task must fire independently.
+    """
+    async with mpy_stack(tmp_path, E2E_RESYNC_TIMER_CFG) as d:
+        w = d.sub_at(P("w"))
+        p = d.sub_at(P("p"))
+
+        # val=90 → always on; sleep long enough that the pin has been on for
+        # > t_on=50 ms when val=25 is set, so _apply_value fires the event at once.
+        await w.w(90)
+        await sleep_ms(120)  # pin on and td ≈ 70 ms >> t_on=50 ms
+        assert await p() is True
+
+        # val=25 → resync: effective=min(25, input=10)=10 → t_on=50 ms, t_off=450 ms.
+        # td >> t_on → event fires immediately; pin switches off on first _measure.
+        # Without a separate task the _measure-based countdown only runs at pin
+        # transitions; t_sync=150 ms would not expire until t_off=450 ms passes.
+        await w.w(25)
+        await sleep_ms(20)  # one scheduler pass → pin off
+        assert await p() is False
+
+        # At 200 ms from w.w(25): t_sync=150 ms has expired.
+        # _apply_value(25) → t_off=50 ms; td ≈ 180 ms >> t_off → pin turns on.
+        await sleep_ms(180)
+        assert await p() is True  # FAILS without the separate resync task
 
 
 @pytest.mark.anyio

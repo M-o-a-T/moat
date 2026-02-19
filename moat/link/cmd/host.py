@@ -33,9 +33,10 @@ async def cli(ctx):
 
 @cli.command()
 @click.option("-m", "--main", is_flag=True, help="Main server flag (override)")
+@click.option("-n", "--no-main", is_flag=True, help="Main server verbose no-action mode")
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
 @click.pass_obj
-async def run(obj, main, debug):
+async def run(obj, main, no_main, debug):
     """
     Host management background task.
 
@@ -51,7 +52,9 @@ async def run(obj, main, debug):
         Link(cfg) as link,
         as_service(attrdict(debug=debug, link=link)) as srv,
         announcing(link, host=not main, via=srv.evt, force=True),  # TODO: add service
-        ServiceMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
+        ServiceMon(cfg=cfg, link=link, debug=debug, fake=no_main)
+        if main or no_main
+        else nullcontext(),
     ):
         srv.started()
         await anyio.sleep_forever()

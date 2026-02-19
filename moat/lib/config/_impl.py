@@ -197,6 +197,12 @@ class CFG_:
         CfgStore.env.env.set_(key, value)
         CfgStore.updated += 1
 
+    def add(self, path: str | FSPath) -> None:
+        """
+        Add a config file.
+        """
+        current_cfg.get().add(path)
+
     @staticmethod
     def __call__(*a, **k) -> CfgStore:
         """
@@ -276,8 +282,6 @@ class CfgStore:
     result: attrdict
     _redo: bool = True
     _updated: int = 0
-
-    args: attrdict
 
     def __init__(
         self,

@@ -5,19 +5,23 @@ This file isn't just for agents …
 ## Issue tracking
 
 - Use 'beads' for tracking.
-  - 'bd list --label foo --ready': list issues
-  - 'bd show ID': examine single issue
-  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
-  - 'bd dep add ID-task ID-blocker': add relationship
-  - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
-  - 'bd close --reason STRING'
-  - 'bd sync': sync tracker state with git
+  - 'br list --label foo --ready --json': list issues
+  - 'br show --json ID': examine single issue
+  - 'br create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'br dep add ID-task ID-blocker': add relationship
+  - 'br update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
+  - 'br close --reason STRING'
+  - 'br sync': sync tracker state with git
 
 - Conventions:
   - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems
   - status: open, in\_progress, blocked, deferred, closed
   - prio: 0…4, 0:highest
   - type: bug|feature|task|epic|chore
+
+The purpose of issues is to remember things to do.
+Thus, DO NOT create issues for one-off changes that you'd immediately close.
+
 
 ## Project Structure & Modules
 
@@ -144,9 +148,14 @@ Work is NOT complete until `git push` succeeds.
 1. **File issues for remaining work** - Create issues for anything that needs follow-up.
 1. **Run quality gates** (if code changed) - Tests, linters, builds.
    "git commit" should do this automatically, via pre-commit.
-1. **Commit all work**. Reference the issue(s) in the first line.
+1. **Commit all work**. Reference the issue(s) you worked on, if any, in
+   the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
-1. **Update issue status** - Close finished work, update in-progress items.
+   Add a short explanation of the change if warranted, but
+   DO NOT mention implementation details, esp. not if they are obvious
+   when reading the changelog.
+1. **Update issue status** (if you're working on one):
+   Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
 1. Run `bd sync`.

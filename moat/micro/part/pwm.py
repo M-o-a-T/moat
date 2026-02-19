@@ -11,7 +11,9 @@ from moat.lib.codec.errors import StoppedError
 from moat.lib.micro import (
     Event,
     L,
+    TaskGroup,
     TimeoutError,  # noqa:A004
+    every_ms,
     ticks_diff,
     ticks_ms,
     wait_for_ms,
@@ -112,9 +114,10 @@ class PWM(BaseCmd):
     _sync_active: str | None = None
     _sync_left: int | None = None
     _sync_suspended: bool = False
-    _sync_next_check: int = 0
     _sync_check_ms: int | None = None
-    _last_measure: int = 0  # timestamp of last _measure call
+    _resync_scope = None  # anyio.CancelScope | None — cancel scope of resync task
+
+    _tg: TaskGroup
 
     _d_threshold = dict(
         _d="describes behavior at min/max boundaries",
@@ -189,7 +192,10 @@ class PWM(BaseCmd):
         self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
-        async with _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps:
+        async with (
+            TaskGroup() as self._tg,
+            _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps,
+        ):
             try:
                 if L:
                     self.set_ready()
@@ -198,18 +204,34 @@ class PWM(BaseCmd):
                 await self.ps.send(False)
 
                 while True:
+                    await self._maybe_start_resync()
                     dly = await self._measure(ticks_ms())
-                    await self._delay(dly)
+
+                    # Delay for @dly milliseconds, or until the event is set.
+                    if dly is None:
+                        await self.evt.wait()
+                        self.evt = Event()
+                    else:
+                        try:
+                            await wait_for_ms(dly, self.evt.wait)
+                        except TimeoutError:
+                            pass
+                        else:
+                            self.evt = Event()
+
             finally:
                 await self.ps.send(False)
 
     def _sync_cfg(self, mode: str) -> dict:
         return self.sync_low if mode == "low" else self.sync_high
 
-    def _start_resync(self, mode: str, now: int) -> None:
+    def _start_resync(self, mode: str) -> None:
         cfg = self._sync_cfg(mode)
         if cfg.get("input") is None:
             return
+        if self._resync_scope is not None:
+            self._resync_scope.cancel()
+            self._resync_scope = None
         self._sync_active = mode
         t_sync = cfg.get("t_sync")
         self._sync_left = None if t_sync is None else int(t_sync * 1000)
@@ -217,16 +239,16 @@ class PWM(BaseCmd):
         if self.sync_path is not None and cfg.get("bound") is not None:
             t_check = cfg.get("t_check", 10)
             self._sync_check_ms = int(t_check * 1000)
-            self._sync_next_check = now
         else:
             self._sync_check_ms = None
-            self._sync_next_check = 0
 
     def _end_resync(self) -> None:
+        if self._resync_scope is not None:
+            self._resync_scope.cancel()
+            self._resync_scope = None
         self._sync_active = None
         self._sync_left = None
         self._sync_suspended = False
-        self._sync_next_check = 0
         self._sync_check_ms = None
 
     def _select_out_mode(self, val: float) -> str | None:
@@ -267,35 +289,68 @@ class PWM(BaseCmd):
         if td >= (t_on if self.is_on else t_off):
             self.evt.set()
 
-    async def _update_sync(self, now: int, measure_td: int) -> None:
-        if self._sync_active is None:
-            return
+    async def _resync_countdown(self, t_ms: int) -> None:
+        """
+        Separate task that counts down ``t_ms`` of non-suspended time and
+        then ends the active resync.
 
-        cfg = self._sync_cfg(self._sync_active)
-        prior_suspend = self._sync_suspended
+        Uses ``every_ms`` so the interval stays accurate even when the
+        ``sync_path`` call takes non-trivial time.
+        """
+        t_check = self._sync_check_ms
+        # Choose interval and optional path call.
+        interval = t_check if t_check is not None else t_ms
+        p = self.sync_path if t_check is not None else None
+
+        remaining = t_ms
+        last = ticks_ms()
+        async for value in every_ms(interval, p):
+            now = ticks_ms()
+            dt = ticks_diff(now, last)
+            last = now
+
+            if p is not None and self._sync_active is not None:
+                cfg = self._sync_cfg(self._sync_active)
+                bound = cfg.get("bound")
+                if bound is not None:
+                    prev = self._sync_suspended
+                    cond = (
+                        value < bound
+                        if self.sync_invert == (self._sync_active == "low")
+                        else value > bound
+                    )
+                    self._sync_suspended = cond
+                    if prev != cond:
+                        self._apply_value(self.val)
+
+            if not self._sync_suspended:
+                remaining -= dt
+            if remaining <= 0:
+                break
+
+        # Clear scope before _end_resync so it does not try to cancel itself.
+        self._resync_scope = None
+        self._end_resync()
+        self._apply_value(self.val)
+        self.evt.set()
+
+    async def _maybe_start_resync(self) -> None:
+        """
+        Launch ``_resync_countdown`` if resync is active with a timer and no
+        task is already running.
+
+        Called at the top of the ``task()`` main loop so that resync tasks
+        started by ``set_times`` (sync) are picked up on the next scheduler
+        turn.
+        """
         if (
-            self._sync_check_ms is not None
-            and self.sync_path is not None
-            and ticks_diff(now, self._sync_next_check) >= 0
+            self._sync_active is not None
+            and self._sync_left is not None
+            and self._resync_scope is None
         ):
-            value = await self.sync_path()
-            bound = cfg.get("bound")
-            if bound is not None:
-                if self.sync_invert == (self._sync_active == "low"):
-                    self._sync_suspended = value < bound
-                else:
-                    self._sync_suspended = value > bound
-            self._sync_next_check = now + self._sync_check_ms
-
-        if self._sync_left is not None and not self._sync_suspended:
-            self._sync_left -= measure_td
-            if self._sync_left <= 0:
-                self._end_resync()
-                self._apply_value(self.val)
-                return
-
-        if prior_suspend != self._sync_suspended:
-            self._apply_value(self.val)
+            self._resync_scope = await self._tg.spawn(
+                self._resync_countdown, self._sync_left, _name="Resync"
+            )
 
     async def _measure(self, now: int) -> int | None:
         """
@@ -304,11 +359,6 @@ class PWM(BaseCmd):
         Returns: delay until the next switch, or ``None`` for
         "until the value is changed".
         """
-        measure_td = ticks_diff(now, self._last_measure)
-        self._last_measure = now
-
-        await self._update_sync(now, measure_td)
-
         td = ticks_diff(now, self.t_last)
 
         async def _sw(state: bool) -> int:
@@ -335,21 +385,6 @@ class PWM(BaseCmd):
         else:
             dly = await _sw(True) if td >= self.t_off else self.t_off - td
         return dly
-
-    async def _delay(self, dly: int | None) -> None:
-        """
-        Delay for @dly milliseconds, or until the event is set.
-        """
-        if dly is None:
-            await self.evt.wait()
-            self.evt = Event()
-        else:
-            try:
-                await wait_for_ms(dly, self.evt.wait)
-            except TimeoutError:
-                pass
-            else:
-                self.evt = Event()
 
     def calc_times(self, val: int) -> tuple[int, int]:
         """
@@ -398,7 +433,6 @@ class PWM(BaseCmd):
         else:
             self.value = val
 
-        now = ticks_ms()
         prev_out = self._out_mode
         new_out = self._select_out_mode(val)
         self._out_mode = new_out
@@ -407,7 +441,7 @@ class PWM(BaseCmd):
             if self._sync_active is not None:
                 self._end_resync()
         elif prev_out is not None and self._sync_active is None:
-            self._start_resync(prev_out, now)
+            self._start_resync(prev_out)
 
         if self._sync_active == "low" and self._sync_left is None:
             resync_input = self.sync_low.get("input")
@@ -477,7 +511,6 @@ class PWM(BaseCmd):
         if self._sync_active is not None:
             res["resync"] = dict(
                 mode=self._sync_active,
-                left=self._sync_left,
                 suspended=self._sync_suspended,
             )
         elif self._out_mode is not None:

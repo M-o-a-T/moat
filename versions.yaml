@@ -256,7 +256,7 @@ moat-lib-mqtt:
 moat-lib-path:
   deb: 0.3.0-3
   new: 0.3.0
-  pkg: 3
+  pkg: 1
   pypi: 0.2.0
   rev: ffdb59f5d831b0c7be242b34f18d7b2a5c4ecf53
   tag: 0.2.0

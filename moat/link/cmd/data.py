@@ -37,7 +37,7 @@ async def _dump_data(obj) -> None:
     ) as mon:
         async for p, d, m in mon:
             with suppress(BrokenPipeError):
-                yprint([p, d, m.dump()], stream=obj.stdout)
+                yprint([p, d, *m.dump()], stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
 
@@ -67,8 +67,10 @@ async def _load_data(obj, infile: str, force: bool) -> None:
                     ) from exc
             else:
                 if not isinstance(msg, list | tuple) or len(msg) < 3:
-                    raise click.UsageError("Entries must be [path, value, meta].")
-                p, d, m = msg[:3]
+                    raise click.UsageError("Entries must be [path, value, meta...].")
+                p, d, *m = msg
+                if len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
+                    m = m[0]
 
             p = Path.build(p)
             if isinstance(m, MsgMeta):

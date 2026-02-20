@@ -8,7 +8,15 @@ from contextlib import nullcontext, suppress
 
 import asyncclick as click
 
-from moat.util import MsgReader, NotGiven, combine_dict, yformat, yload, yprint
+from moat.util import (
+    MsgReader,
+    NotGiven,
+    _help_preserve_blocks,
+    combine_dict,
+    yformat,
+    yload,
+    yprint,
+)
 from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link._data import data_get
@@ -336,6 +344,9 @@ async def monitor(
                 yprint(res, stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
+
+
+monitor.help = _help_preserve_blocks(monitor.help)
 
 
 @cli.command()

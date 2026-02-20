@@ -15,13 +15,19 @@ pytestmark = pytest.mark.anyio
 
 
 class _WatchCtx:
-    def __init__(self, items):
+    def __init__(self, items, *, meta: bool):
         self._items = list(items)
+        self._meta = meta
 
     async def __aenter__(self):
         async def _it():
             for item in self._items:
-                yield item
+                if self._meta:
+                    yield item
+                elif isinstance(item, tuple) and len(item) == 3:
+                    yield item[:2]
+                else:
+                    yield item
 
         return _it()
 
@@ -71,7 +77,7 @@ class _Conn:
         self.name = "conn"
 
     def d_watch(self, *a, **kw):  # noqa: ARG002
-        return _WatchCtx(self.watch_items)
+        return _WatchCtx(self.watch_items, meta=kw.get("meta", False))
 
 
 async def test_dump_removes_human_timestamp():
@@ -81,7 +87,7 @@ async def test_dump_removes_human_timestamp():
     nested = MsgMeta(origin="inner", timestamp=2.0, x=1)
     meta = MsgMeta(origin="outer", timestamp=3.0, gw=nested.dump(), mm=nested.dump())
     conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
-    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO(), meta=True)
 
     await _dump_data(obj)
 
@@ -101,7 +107,7 @@ async def test_dump_dict_inlines_simple_mapping():
     conn = _Conn()
     meta = MsgMeta(origin="outer", timestamp=3.0)
     conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
-    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO(), meta=True)
 
     await _dump_data(obj, as_dict=True)
 
@@ -119,13 +125,45 @@ async def test_dump_dict_wraps_reserved_values():
     conn = _Conn()
     meta = MsgMeta(origin="outer", timestamp=3.0)
     conn.watch_items = [(P("a.b"), {"_foo": 1}, meta)]
-    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO(), meta=True)
 
     await _dump_data(obj, as_dict=True)
 
     out = obj.stdout.getvalue()
     assert "_value:" in out
     assert "_foo: 1" in out
+
+
+async def test_dump_without_meta_emits_two_elements():
+    """`dump` omits metadata unless `-m/--meta` is set."""
+
+    conn = _Conn()
+    meta = MsgMeta(origin="outer", timestamp=3.0)
+    conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO(), meta=False)
+
+    await _dump_data(obj)
+
+    out = obj.stdout.getvalue()
+    assert out.startswith("- !P a.b\n- v: 1\n")
+    assert "outer" not in out
+    assert "_timestamp" not in out
+
+
+async def test_dump_dict_without_meta_omits_meta_key():
+    """`dump --dict` omits `_meta` unless `-m/--meta` is set."""
+
+    conn = _Conn()
+    meta = MsgMeta(origin="outer", timestamp=3.0)
+    conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO(), meta=False)
+
+    await _dump_data(obj, as_dict=True)
+
+    out = obj.stdout.getvalue()
+    assert "_path: a.b" in out
+    assert "_meta:" not in out
+    assert "\nv: 1\n" in out
 
 
 async def test_load_respects_timestamps(monkeypatch):
@@ -206,6 +244,7 @@ async def test_load_dict_format_and_optional_meta(monkeypatch):
         {"_path": "b", "_value": 2},
         {"_path": "c", "_meta": {"origin": "m", "timestamp": 3.0, "_drop": 9}, "y": 4},
         {"path": P("d"), "value": 5, "meta": ["z", 6.0]},
+        [P("e"), 7],
     ]
 
     conn = _Conn()
@@ -213,11 +252,18 @@ async def test_load_dict_format_and_optional_meta(monkeypatch):
 
     await _load_data(obj, "-", force=False)
 
-    assert [str(p) for p, _v, _m, _kw in conn.d.calls] == ["root.a", "root.b", "root.c", "root.d"]
+    assert [str(p) for p, _v, _m, _kw in conn.d.calls] == [
+        "root.a",
+        "root.b",
+        "root.c",
+        "root.d",
+        "root.e",
+    ]
     _p, v1, m1, _kw = conn.d.calls[0]
     _p, v2, m2, _kw = conn.d.calls[1]
     _p, v3, m3, _kw = conn.d.calls[2]
     _p, v4, m4, _kw = conn.d.calls[3]
+    _p, v5, m5, _kw = conn.d.calls[4]
     assert v1 == {"x": 1}
     assert m1.origin == "src"
     assert m1.timestamp == 1.0
@@ -230,3 +276,5 @@ async def test_load_dict_format_and_optional_meta(monkeypatch):
     assert v4 == 5
     assert m4.origin == "z"
     assert m4.timestamp == 6.0
+    assert v5 == 7
+    assert m5 is None

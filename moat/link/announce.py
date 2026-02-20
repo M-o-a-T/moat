@@ -8,6 +8,7 @@ import anyio
 import logging
 import os
 import platform
+import re
 from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
@@ -33,6 +34,22 @@ if TYPE_CHECKING:
 __all__ = ["announcing"]
 
 logger = logging.getLogger(__name__)
+
+
+_unesc_re = re.compile(r"\\x([0-9a-fA-F]{2})")
+
+
+def _unesc(s: PathElem) -> PathElem:
+    if not isinstance(s, str):
+        return s
+
+    if "\\x" not in s:
+        return s
+
+    def _replace(match: re.Match[str]) -> str:
+        return chr(int(match.group(1), 16))
+
+    return _unesc_re.sub(_replace, s)
 
 
 async def get_service_path(host: Path | str | bool, name: Path | None = None):
@@ -72,7 +89,7 @@ async def get_service_path(host: Path | str | bool, name: Path | None = None):
                             for h in hi:
                                 path.extend(h.split("-"))
                         logger.info("Control Path: %s", path)
-                        return Path.build(path)
+                        return Path.build([_unesc(x) for x in path])
     raise ServiceNotFound
 
 

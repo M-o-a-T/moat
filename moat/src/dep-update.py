@@ -13,6 +13,17 @@ import tomlkit as toml
 
 from moat.util import attrdict, yload
 
+DEP_NAME_RE = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
+
+
+def dependency_name(dep: str) -> str | None:
+    """Extract a normalized package name from a dependency string."""
+
+    match = DEP_NAME_RE.match(dep)
+    if match is None:
+        return None
+    return match.group(1).lower()
+
 
 @click.command
 async def cli():
@@ -38,7 +49,7 @@ async def cli():
 
     # Find all packages with pyproject.toml
     packages = {}
-    for pkg_dir in Path("packaging").iterdir():
+    for pkg_dir in Path("packaging").iterdir():  # noqa:ASYNC240
         if pkg_dir.is_dir():
             pyproject = pkg_dir / "pyproject.toml"
             if not pyproject.exists():
@@ -117,11 +128,13 @@ async def cli():
         return imports
 
     # For each package, find what other moat packages it imports
+    skipped_packages = set()
     for pkg_name, pkg_info in packages.items():
         src_dir = pkg_info.src_dir
 
         if not src_dir.exists():
             print(f"Warning: Source directory {src_dir} does not exist for {pkg_name}")
+            skipped_packages.add(pkg_name)
             continue
 
         # Find all Python files in the source directory
@@ -156,7 +169,7 @@ async def cli():
     for pkg_name, pkg_info in packages.items():
         if pkg_info.imports:
             print(f"\n{pkg_name} imports from:")
-            for imp_pkg in pkg_info.imports:
+            for imp_pkg in sorted(pkg_info.imports):
                 version = package_versions.get(imp_pkg, "N/A")
                 print(f"  - {imp_pkg} (version ~= {version})")
 
@@ -167,8 +180,10 @@ async def cli():
     # Update pyproject.toml files
     updated_count = 0
     for pkg_name, pkg_info in packages.items():
-        if not pkg_info.imports:
+        if pkg_name in skipped_packages:
             continue
+
+        required_imports = set(pkg_info.imports)
 
         try:
             with open(pkg_info.pyproject, "r") as f:  # noqa:ASYNC230
@@ -180,10 +195,20 @@ async def cli():
                 print(f"Warning: {pkg_name} has no dependencies section")
                 continue
 
-            # Track what needs to be added/updated
+            existing_moat_deps = {}
+            for i, dep in enumerate(current_deps):
+                if not isinstance(dep, str):
+                    continue
+                dep_name = dependency_name(dep)
+                if dep_name is None:
+                    continue
+                if dep_name.startswith("moat-") and dep_name in packages:
+                    existing_moat_deps[dep_name] = i
+
+            # Track what needs to be added/updated/removed
             changes = []
 
-            for imp_pkg in pkg_info.imports:
+            for imp_pkg in sorted(required_imports):
                 if imp_pkg not in package_versions:
                     print(f"Warning: No version found for {imp_pkg}")
                     continue
@@ -192,16 +217,26 @@ async def cli():
                 dep_string = f"{imp_pkg} ~= {version}"
 
                 # Check if dependency exists
-                for i, dep in enumerate(current_deps):
-                    if isinstance(dep, str) and dep.startswith(imp_pkg + " "):
-                        if dep != dep_string:
-                            changes.append(f"  Update: {current_deps[i]} -> {dep_string}")
-                            current_deps[i] = dep_string
-                        break
+                dep_idx = existing_moat_deps.get(imp_pkg)
+                if dep_idx is not None:
+                    dep = current_deps[dep_idx]
+                    if dep != dep_string:
+                        changes.append(f"  Update: {dep} -> {dep_string}")
+                        current_deps[dep_idx] = dep_string
                 else:
                     # Add new dependency
                     changes.append(f"  Add: {dep_string}")
                     current_deps.append(dep_string)
+
+            removed = [
+                (dep_name, dep_idx)
+                for dep_name, dep_idx in existing_moat_deps.items()
+                if dep_name not in required_imports
+            ]
+            for _dep_name, dep_idx in sorted(removed, key=lambda x: x[1], reverse=True):
+                dep = current_deps[dep_idx]
+                changes.append(f"  Remove: {dep}")
+                del current_deps[dep_idx]
 
             if changes:
                 print(f"{pkg_name}:")

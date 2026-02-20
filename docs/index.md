@@ -57,6 +57,13 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Schema Validation](moat-link-schema/index.md)
+
+```{include} ../packaging/moat-link-schema/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Notifications](moat-link-notify/index.md)
 
 ```{include} ../packaging/moat-link-notify/README.md

@@ -17,12 +17,106 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.lib.run import attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
 from moat.util.exec import run
+
+
+def _meta_value_plain(data):
+    """Convert nested metadata values to plain structures without `_timestamp`."""
+
+    if isinstance(data, MsgMeta):
+        return _meta_plain(data)
+    if isinstance(data, dict):
+        return {
+            key: _meta_value_plain(value) for key, value in data.items() if key != "_timestamp"
+        }
+    if isinstance(data, list | tuple):
+        return [_meta_value_plain(value) for value in data]
+    return data
+
+
+def _meta_plain(meta: MsgMeta) -> dict:
+    """Convert metadata to a serializable mapping without human timestamps."""
+
+    res = {key: _meta_value_plain(value) for key, value in meta.kw.items() if key != "_timestamp"}
+    res["origin"] = meta.origin
+    res["timestamp"] = meta.timestamp
+    return res
+
+
+def _meta_load(data) -> MsgMeta:
+    """Parse metadata loaded from a dump entry."""
+
+    if isinstance(data, MsgMeta):
+        return data
+    if isinstance(data, list):
+        return MsgMeta.restore(list(data))
+    if not isinstance(data, dict):
+        raise click.UsageError("Metadata must be a mapping, list, or MsgMeta object.")
+    data = dict(data)
+    data.pop("_timestamp", None)
+    origin = data.pop("origin", None)
+    timestamp = data.pop("timestamp", None)
+    if origin is None or timestamp is None:
+        raise click.UsageError("Metadata must contain 'origin' and 'timestamp'.")
+    return MsgMeta(origin=origin, timestamp=timestamp, **data)
+
+
+async def _dump_data(obj) -> None:
+    """Emit subtree entries as YAML docs without human-formatted timestamps."""
+
+    async with obj.conn.d_watch(
+        obj.path,
+        state=True,
+        meta=True,
+        subtree=True,
+    ) as mon:
+        async for p, d, m in mon:
+            with suppress(BrokenPipeError):
+                yprint([p, d, _meta_plain(m)], stream=obj.stdout)
+                print("---", file=obj.stdout)
+                obj.stdout.flush()
+
+
+async def _load_data(obj, infile: str, force: bool) -> None:
+    """Load subtree entries from YAML docs."""
+
+    path = "/dev/stdin" if infile == "-" else infile
+    async with MsgReader(path=path, codec="yaml") as reader:
+        async for msg in reader:
+            if isinstance(msg, dict):
+                try:
+                    p = msg["path"]
+                    d = msg["value"]
+                    m = msg["meta"]
+                except KeyError as exc:
+                    raise click.UsageError(
+                        "Dict entries need 'path', 'value', and 'meta'."
+                    ) from exc
+            else:
+                if not isinstance(msg, list | tuple) or len(msg) < 3:
+                    raise click.UsageError("Entries must be [path, value, meta].")
+                p, d, m = msg[:3]
+
+            p = Path.build(p)
+            m = _meta_load(m)
+            p = obj.path + p
+
+            if not force:
+                try:
+                    _old_d, old_m = await obj.conn.d_get(p, meta=True)
+                except KeyError:
+                    pass
+                else:
+                    if old_m.timestamp >= m.timestamp:
+                        continue
+                await obj.conn.d_set(p, d, meta=m)
+            else:
+                await obj.conn.d.set(p, d, m, f=True)
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
@@ -348,6 +442,29 @@ async def monitor(
 
 
 monitor.help = _help_preserve_blocks(monitor.help)
+
+
+@cli.command()
+@click.pass_obj
+async def dump(obj):
+    """
+    Dump one subtree as YAML docs with path+data+metadata tuples.
+
+    This is equivalent to ``monitor -m c -s`` but always emits metadata
+    without human-readable timestamp helpers.
+    """
+    await _dump_data(obj)
+
+
+@cli.command()
+@click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
+@click.option("-f", "--force", is_flag=True, help="Overwrite entries regardless of timestamp.")
+@click.pass_obj
+async def load(obj, infile, force):
+    """
+    Load path+data+metadata tuples from YAML docs into a subtree.
+    """
+    await _load_data(obj, infile, force)
 
 
 @cli.command()

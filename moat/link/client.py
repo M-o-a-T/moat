@@ -49,6 +49,7 @@ from .exceptions import AuthError, ClientCancelledError
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
+from .schema import schema_path, validate_instance
 
 from typing import TYPE_CHECKING, overload
 
@@ -415,6 +416,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[True] = True,
         retain: bool | None = None,
+        verify: bool | None = False,
     ) -> bool | None: ...
 
     @overload
@@ -425,6 +427,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[False] = False,
         retain: bool | None = None,
+        verify: bool | None = False,
     ) -> bool | None: ...
 
     async def d_set(
@@ -435,6 +438,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
+        verify: bool | None | NotGiven = NotGiven,
     ) -> bool | None | tuple[Any, MsgMeta | None]:
         """
         Data update.
@@ -445,6 +449,31 @@ class LinkSender(MsgSender):
         """
         if path and isinstance(path[0], Path):
             raise ValueError("Don't use a root-prefixed path here.")
+
+        if verify is NotGiven:
+            verify = (
+                "pytest" in sys.modules and getattr(self._link, "current_server", None) is not None
+            )
+
+        if verify is not False:
+            schema: Any = NotGiven
+            try:
+                schema = await self.d_search(schema_path(path))
+            except KeyError:
+                pass
+            except Exception as exc:
+                if verify is None:
+                    self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
+                else:
+                    raise
+            if schema is not NotGiven:
+                try:
+                    validate_instance(schema, data)
+                except Exception as exc:
+                    if verify is None:
+                        self._link.logger.warning("Schema validation failed for %s: %r", path, exc)
+                    else:
+                        raise
 
         if meta is None:
             meta = MsgMeta(origin=self._link.name)

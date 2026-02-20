@@ -32,3 +32,10 @@ probe:
 # TODO Port configuration uses the database.
 # port: 0
 port: 27587
+
+ports_example:
+  local:
+    port: /run/moat/link/socket
+  main:
+    host: 0.0.0.0
+    port: 27587

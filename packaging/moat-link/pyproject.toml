@@ -29,14 +29,13 @@ dependencies = [
 	"moat-lib-config ~= 0.1.3",
 	"moat-lib-proxy ~= 0.1.1",
 	"moat-lib-run ~= 0.1.3",
-	"moat-link-server ~= 0.3.26",
 	"moat-lib-broadcast ~= 0.1.3",
 	]
 version = "0.3.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"
-description = "Message exchange between MoaT instances"
+description = "Messaging for MoaT instances"
 readme = "README.rst"
 
 [[project.authors]]

@@ -4,6 +4,7 @@ from __future__ import annotations
 import anyio
 import os
 import sys
+import time
 from contextlib import nullcontext, suppress
 
 import asyncclick as click
@@ -82,6 +83,14 @@ async def _dump_data(obj) -> None:
                 obj.stdout.flush()
 
 
+def _write_result(res) -> bool | None:
+    """Convert `d.set` response to write status."""
+
+    if isinstance(res, bool) or res is None:
+        return res
+    return res[0]
+
+
 async def _load_data(obj, infile: str, force: bool) -> None:
     """Load subtree entries from YAML docs."""
 
@@ -106,17 +115,15 @@ async def _load_data(obj, infile: str, force: bool) -> None:
             m = _meta_load(m)
             p = obj.path + p
 
-            if not force:
-                try:
-                    _old_d, old_m = await obj.conn.d_get(p, meta=True)
-                except KeyError:
-                    pass
-                else:
-                    if old_m.timestamp >= m.timestamp:
-                        continue
-                await obj.conn.d_set(p, d, meta=m)
+            if force:
+                ts = time.time()
+                res = _write_result(await obj.conn.d.set(p, d, m))
+                if res is False:
+                    m2 = MsgMeta.restore(list(m.a), dict(m.kw))
+                    m2.timestamp = ts
+                    await obj.conn.d.set(p, d, m2)
             else:
-                await obj.conn.d.set(p, d, m, f=True)
+                await obj.conn.d.set(p, d, m)
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable

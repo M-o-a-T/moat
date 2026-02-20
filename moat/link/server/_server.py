@@ -1996,7 +1996,6 @@ class Server(MsgHandler):
 
         async with listener:
             task_status.started(listener.extra(SocketAttribute.local_address))
-            task_status = anyio.TASK_STATUS_IGNORED
             await listener.serve(partial(self._client_task, name), task_group=tg)
 
     async def _client_task(self, name, stream):

@@ -2006,7 +2006,7 @@ class Server(MsgHandler):
         mainly tries to record what went wrong on the server so the next
         client session can ask.
 
-        @name is the name of the link.
+        @name is the key name of this server's config item.
         """
         c = None
         cnr = -1

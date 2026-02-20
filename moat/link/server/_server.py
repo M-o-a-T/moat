@@ -505,7 +505,7 @@ class ServerClient(LinkCommon):
             ):
                 raise OutOfDateError(node.meta)
 
-        return self.server.maybe_update(path, value, meta)
+        return self.server.maybe_update(path, value, meta, force=True)
 
     doc_d_delete = dict(
         _d="delete value",
@@ -834,7 +834,14 @@ class Server(MsgHandler):
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path: Path, data: Any, meta: MsgMeta, local: bool = False):
+    def maybe_update(
+        self,
+        path: Path,
+        data: Any,
+        meta: MsgMeta,
+        local: bool = False,
+        force: bool = False,
+    ):
         """
         A data item arrives.
 
@@ -842,7 +849,7 @@ class Server(MsgHandler):
         """
         if len(path) and path[0] == "run":
             return False
-        if res := self.data.set(path, data, meta):
+        if res := self.data.set(path, data, meta, force=force):
             if not local:
                 self.write_monitor((path, data, meta))
         return res

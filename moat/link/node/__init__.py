@@ -50,18 +50,31 @@ class Node:
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
 
-        If @tick is earlier than the item's timestamp, always return False.
-        If data changes, apply change and return True.
-        If @force is not set, return False.
-        Otherwise, update metadata and return None.
+        Return semantics:
+        * if @force is set:
+          * `True`: incoming timestamp is newer
+          * `None`: incoming data are equal
+          * `False`: otherwise
+        * if @force is not set:
+          * `None`: incoming data are equal
+          * `False`: incoming timestamp is older
+          * `True`: otherwise
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
         if s._meta is not None:  # noqa:SLF001
-            if meta.timestamp <= s._meta.timestamp:  # noqa:SLF001
+            same = s._data == data  # noqa:SLF001
+            if force:
+                if meta.timestamp > s._meta.timestamp:  # noqa:SLF001
+                    s.set_(item, data, meta)
+                    return True
+                if same:
+                    return None
                 return False
-            if not force and s._data == data:  # noqa:SLF001
+            if same:
                 return None
+            if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
+                return False
         s.set_(item, data, meta)
         return True
 

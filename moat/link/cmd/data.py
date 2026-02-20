@@ -26,10 +26,12 @@ from moat.link.meta import MsgMeta
 from moat.util.exec import run
 
 
-def _encode_dict_entry(path: Path, data, meta: MsgMeta) -> dict:
+def _encode_dict_entry(path: Path, data, meta: MsgMeta | None) -> dict:
     """Encode one dump entry using mapping format."""
 
-    res = {"_path": str(path), "_meta": meta.dump()}
+    res = {"_path": str(path)}
+    if meta is not None:
+        res["_meta"] = meta.dump()
     if (
         isinstance(data, dict)
         and "_path" not in data
@@ -66,19 +68,28 @@ def _decode_meta(data) -> MsgMeta | None:
 
 async def _dump_data(obj, as_dict: bool = False) -> None:
     """Emit subtree entries as YAML docs without human-formatted timestamps."""
+    include_meta = getattr(obj, "meta", False)
 
     async with obj.conn.d_watch(
         obj.path,
         state=True,
-        meta=True,
+        meta=include_meta,
         subtree=True,
     ) as mon:
-        async for p, d, m in mon:
+        async for pdm in mon:
+            if include_meta:
+                p, d, m = pdm
+            else:
+                p, d = pdm
+                m = None
             with suppress(BrokenPipeError):
                 if as_dict:
                     yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
                 else:
-                    yprint([p, d, *m.dump()], stream=obj.stdout)
+                    if m is None:
+                        yprint([p, d], stream=obj.stdout)
+                    else:
+                        yprint([p, d, *m.dump()], stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
 
@@ -122,10 +133,14 @@ async def _load_data(obj, infile: str, force: bool) -> None:
                         }
                     m = msg.get("_meta")
             else:
-                if not isinstance(msg, list | tuple) or len(msg) < 3:
-                    raise click.UsageError("Entries must be [path, value, meta...].")
+                if not isinstance(msg, list | tuple) or len(msg) < 2:
+                    raise click.UsageError(
+                        "Entries must be [path, value] or [path, value, meta...]."
+                    )
                 p, d, *m = msg
-                if len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
+                if len(m) == 0:
+                    m = None
+                elif len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
                     m = m[0]
 
             p = P(p) if isinstance(p, str) else Path.build(p)
@@ -476,10 +491,10 @@ monitor.help = _help_preserve_blocks(monitor.help)
 @click.pass_obj
 async def dump(obj, as_dict):
     """
-    Dump one subtree as YAML docs with path+data+metadata tuples.
+    Dump one subtree as YAML docs.
 
-    This is equivalent to ``monitor -m c -s`` but always emits metadata
-    without human-readable timestamp helpers.
+    Metadata is included iff the top-level ``-m/--meta`` flag is set.
+    This is otherwise equivalent to ``monitor -m c -s``.
     """
     await _dump_data(obj, as_dict=as_dict)
 

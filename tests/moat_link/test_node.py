@@ -80,3 +80,44 @@ def test_basic():
     assert n.set(P("c.e.t"), 20, MsgMeta(origin="B"))
     for a, b in zip_longest(n._dump_x(), n.dump()):  # noqa: SLF001
         assert a == b, (a, b)
+
+
+def test_search_wildcard_plus():
+    """Search supports `+` as a single-level wildcard."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(P("+"), "plus", m)
+
+    assert n.search(P("a")).data == "plus"
+    with pytest.raises(KeyError):
+        n.search(P("a.b"))
+
+
+def test_search_wildcard_hash():
+    """Search supports `#` as a one-or-more-level wildcard."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(P("#"), "hash", m)
+    assert n.set(P("#.end"), "hash_end", m)
+
+    assert n.search(P("a")).data == "hash"
+    assert n.search(P("a.b")).data == "hash"
+    assert n.search(P("a.b.c")).data == "hash"
+    assert n.search(P("a.end")).data == "hash_end"
+    assert n.search(P("a.b.end")).data == "hash_end"
+
+
+def test_search_wildcard_precedence():
+    """Search prefers exact, then `+`, then `#`."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(P("a"), "exact", m)
+    assert n.set(P("+"), "plus", m)
+    assert n.set(P("#"), "hash", m)
+
+    assert n.search(P("a")).data == "exact"
+    assert n.search(P("b")).data == "plus"
+    assert n.search(P("b.c")).data == "hash"

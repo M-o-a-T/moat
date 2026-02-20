@@ -31,7 +31,7 @@ dependencies = [
 	"moat-lib-run ~= 0.1.3",
 	"moat-lib-broadcast ~= 0.1.3",
 	]
-version = "0.3.2"
+version = "0.3.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"

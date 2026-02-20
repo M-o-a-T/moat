@@ -436,7 +436,6 @@ class ServerClient(LinkCommon):
         _1="Any",
         _99="MsgMeta:optional",
         t="Time of last change",
-        f="bool:overwrite regardless of timestamp",
     )
 
     def cmd_d_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
@@ -473,7 +472,6 @@ class ServerClient(LinkCommon):
         value,
         meta: MsgMeta | None = None,
         t: float | bool | None = None,
-        f: bool = False,
     ):
         """Set a node's value.
 
@@ -483,7 +481,6 @@ class ServerClient(LinkCommon):
         * optional: new metadata
         * optional: t: timestamp of last change, or a flag.
           If False, must not exist; if True, must exist.
-        * optional: f: overwrite without checking timestamps.
 
         You should not call this unless absolutely necessary.
         Instead, send to the MQTT topic directly.
@@ -494,7 +491,6 @@ class ServerClient(LinkCommon):
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
         path = Path.build(path)
-        res = None
 
         try:
             node = self.server.data.get(path)
@@ -508,18 +504,8 @@ class ServerClient(LinkCommon):
                 node.meta is None or abs(node.meta.timestamp - t) > 0.001
             ):
                 raise OutOfDateError(node.meta)
-            res = node.data_, *(node.meta.dump() if node.meta is not None else ())
 
-        if f:
-            if len(path) and path[0] == "run":
-                return res
-            node = self.server.data.get(path)
-            node.set_(path, value, meta)
-            self.server.write_monitor((path, value, meta))
-            return res
-
-        self.server.maybe_update(path, value, meta)
-        return res
+        return self.server.maybe_update(path, value, meta)
 
     doc_d_delete = dict(
         _d="delete value",

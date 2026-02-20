@@ -55,32 +55,22 @@ class _ReaderCtx:
 class _DirectSetter:
     def __init__(self):
         self.calls = []
+        self.res = []
 
     async def set(self, path, value, meta, **kw):
         self.calls.append((path, value, meta, kw))
+        if self.res:
+            return self.res.pop(0)
+        return True
 
 
 class _Conn:
     def __init__(self):
         self.watch_items = []
-        self.set_calls = []
-        self.get_map = {}
         self.d = _DirectSetter()
 
     def d_watch(self, *a, **kw):  # noqa: ARG002
         return _WatchCtx(self.watch_items)
-
-    async def d_set(self, path, value, meta=None):
-        self.set_calls.append((path, value, meta))
-
-    async def d_get(self, path, meta=False):
-        path = str(path)
-        if path not in self.get_map:
-            raise KeyError(path)
-        value, msg_meta = self.get_map[path]
-        if not meta:
-            return value
-        return value, msg_meta
 
 
 async def test_dump_removes_human_timestamp():
@@ -113,22 +103,45 @@ async def test_load_respects_timestamps(monkeypatch):
     ]
 
     conn = _Conn()
-    conn.get_map[str(P("root.a"))] = (99, MsgMeta(origin="old", timestamp=9.0))
-    conn.get_map[str(P("root.b"))] = (99, MsgMeta(origin="old", timestamp=7.0))
+    conn.d.res = [True, False, True]
     obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
 
     await _load_data(obj, "-", force=False)
 
-    assert [str(p) for p, _v, _m in conn.set_calls] == ["root.a", "root.c"]
-    assert conn.d.calls == []
+    assert [str(p) for p, _v, _m, _kw in conn.d.calls] == ["root.a", "root.b", "root.c"]
+
+
+async def test_load_force_retries_with_start_timestamp(monkeypatch):
+    """`load --force` retries stale data with current-time metadata."""
+
+    monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
+    monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)
+    _ReaderCtx.data = [[P("a"), 1, {"origin": "src", "timestamp": 1.0}]]
+
+    conn = _Conn()
+    conn.d.res = [False, True]
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+
+    await _load_data(obj, "-", force=True)
+
+    assert len(conn.d.calls) == 2
+    p1, v1, m1, kw1 = conn.d.calls[0]
+    p2, v2, m2, kw2 = conn.d.calls[1]
+    assert str(p1) == "root.a"
+    assert str(p2) == "root.a"
+    assert v1 == v2 == 1
+    assert m1.timestamp == 1.0
+    assert m2.timestamp == 9999.25
+    assert kw1 == kw2 == {}
 
 
 async def test_load_force_overwrites():
-    """`load --force` writes through `d.set(..., f=True)`."""
+    """`load --force` does not retry when equal data is reported."""
 
     _ReaderCtx.data = [[P("a"), 1, {"origin": "src", "timestamp": 1.0}]]
 
     conn = _Conn()
+    conn.d.res = [None]
     obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
 
     # Replace MsgReader here to avoid fixture requirements in this test.
@@ -139,11 +152,10 @@ async def test_load_force_overwrites():
     finally:
         data_cmd.MsgReader = orig
 
-    assert conn.set_calls == []
     assert len(conn.d.calls) == 1
     p, v, m, kw = conn.d.calls[0]
     assert str(p) == "root.a"
     assert v == 1
     assert m.origin == "src"
     assert m.timestamp == 1.0
-    assert kw == {"f": True}
+    assert kw == {}

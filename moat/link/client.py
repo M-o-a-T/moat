@@ -394,7 +394,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[True] = True,
         retain: bool | None = None,
-    ) -> tuple[Any, MsgMeta]: ...
+    ) -> bool | None: ...
 
     @overload
     async def d_set(
@@ -404,7 +404,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[False] = False,
         retain: bool | None = None,
-    ) -> None: ...
+    ) -> bool | None: ...
 
     async def d_set(
         self,
@@ -414,7 +414,7 @@ class LinkSender(MsgSender):
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
-    ) -> None | tuple[Any, MsgMeta]:
+    ) -> bool | None | tuple[Any, MsgMeta | None]:
         """
         Data update.
 
@@ -431,13 +431,21 @@ class LinkSender(MsgSender):
             if retain is None:
                 retain = len(path) == 0 or path[0] != "run"
             await self.send(Root.get() + path, data=data, meta=meta, retain=retain)
-            return
+            return True
         tt = {} if t is None else {"t": t}
+        old: tuple[Any, MsgMeta | None] | None = None
+        if with_prev:
+            try:
+                old = await self.d_get(path, meta=True)
+            except KeyError:
+                old = (NotGiven, None)
         res = await self.d.set(path, data, meta, **tt)
-        if not with_prev:
-            return res[0]
-        meta = MsgMeta.restore(res[1:]) if len(res) > 1 else None
-        return res[0], meta
+        if not isinstance(res, bool) and res is not None:
+            res = res[0]
+        if with_prev:
+            assert old is not None
+            return old
+        return res
 
     @asynccontextmanager
     async def d_walk(

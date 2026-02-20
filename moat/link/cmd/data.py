@@ -26,7 +26,45 @@ from moat.link.meta import MsgMeta
 from moat.util.exec import run
 
 
-async def _dump_data(obj) -> None:
+def _encode_dict_entry(path: Path, data, meta: MsgMeta) -> dict:
+    """Encode one dump entry using mapping format."""
+
+    res = {"_path": str(path), "_meta": meta.dump()}
+    if (
+        isinstance(data, dict)
+        and "_path" not in data
+        and "_meta" not in data
+        and "_value" not in data
+        and not any(isinstance(key, str) and key.startswith("_") for key in data)
+    ):
+        res.update(data)
+    else:
+        res["_value"] = data
+    return res
+
+
+def _decode_meta(data) -> MsgMeta | None:
+    """Decode metadata from one dump entry."""
+
+    if data is None:
+        return None
+    if isinstance(data, MsgMeta):
+        return data
+    if isinstance(data, list | tuple):
+        return MsgMeta.restore(list(data))
+    if isinstance(data, dict):
+        try:
+            return MsgMeta(**{
+                k: v for k, v in data.items() if not (isinstance(k, str) and k.startswith("_"))
+            })
+        except ValueError as exc:
+            raise click.UsageError(
+                "Metadata mappings need at least origin and timestamp."
+            ) from exc
+    raise click.UsageError("Metadata must be a MsgMeta, list, tuple, mapping, or null.")
+
+
+async def _dump_data(obj, as_dict: bool = False) -> None:
     """Emit subtree entries as YAML docs without human-formatted timestamps."""
 
     async with obj.conn.d_watch(
@@ -37,7 +75,10 @@ async def _dump_data(obj) -> None:
     ) as mon:
         async for p, d, m in mon:
             with suppress(BrokenPipeError):
-                yprint([p, d, *m.dump()], stream=obj.stdout)
+                if as_dict:
+                    yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
+                else:
+                    yprint([p, d, *m.dump()], stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
 
@@ -57,14 +98,29 @@ async def _load_data(obj, infile: str, force: bool) -> None:
     async with MsgReader(path=path, codec="yaml") as reader:
         async for msg in reader:
             if isinstance(msg, dict):
-                try:
-                    p = msg["path"]
-                    d = msg["value"]
-                    m = msg["meta"]
-                except KeyError as exc:
-                    raise click.UsageError(
-                        "Dict entries need 'path', 'value', and 'meta'."
-                    ) from exc
+                if "path" in msg and "value" in msg:
+                    try:
+                        p = msg["path"]
+                        d = msg["value"]
+                    except KeyError as exc:
+                        raise click.UsageError("Dict entries need 'path' and 'value'.") from exc
+                    m = msg.get("meta")
+                else:
+                    try:
+                        p = msg["_path"]
+                    except KeyError as exc:
+                        raise click.UsageError(
+                            "Dict entries need either path/value or _path/_value layout."
+                        ) from exc
+                    if "_value" in msg:
+                        d = msg["_value"]
+                    else:
+                        d = {
+                            k: v
+                            for k, v in msg.items()
+                            if not (isinstance(k, str) and k.startswith("_"))
+                        }
+                    m = msg.get("_meta")
             else:
                 if not isinstance(msg, list | tuple) or len(msg) < 3:
                     raise click.UsageError("Entries must be [path, value, meta...].")
@@ -72,30 +128,19 @@ async def _load_data(obj, infile: str, force: bool) -> None:
                 if len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
                     m = m[0]
 
-            p = Path.build(p)
-            if isinstance(m, MsgMeta):
-                pass
-            elif isinstance(m, list | tuple):
-                m = MsgMeta.restore(list(m))
-            elif isinstance(m, dict):
-                m = dict(m)
-                m.pop("_timestamp", None)
-                try:
-                    m = MsgMeta.restore([m.pop("origin"), m.pop("timestamp")], m)
-                except KeyError as exc:
-                    raise click.UsageError(
-                        "Metadata mappings need 'origin' and 'timestamp'."
-                    ) from exc
-            else:
-                raise click.UsageError("Metadata must be a MsgMeta, list, tuple, or mapping.")
+            p = P(p) if isinstance(p, str) else Path.build(p)
+            m = _decode_meta(m)
             p = obj.path + p
 
             if force:
                 ts = time.time()
                 res = _write_result(await obj.conn.d.set(p, d, m))
                 if res is False:
-                    m2 = MsgMeta.restore(list(m.a), dict(m.kw))
-                    m2.timestamp = ts
+                    if m is None:
+                        m2 = MsgMeta(origin=obj.conn.name, timestamp=ts)
+                    else:
+                        m2 = MsgMeta.restore(list(m.a), dict(m.kw))
+                        m2.timestamp = ts
                     await obj.conn.d.set(p, d, m2)
             else:
                 await obj.conn.d.set(p, d, m)
@@ -427,15 +472,16 @@ monitor.help = _help_preserve_blocks(monitor.help)
 
 
 @cli.command()
+@click.option("-d", "--dict", "as_dict", is_flag=True, help="Write dict-based dump docs.")
 @click.pass_obj
-async def dump(obj):
+async def dump(obj, as_dict):
     """
     Dump one subtree as YAML docs with path+data+metadata tuples.
 
     This is equivalent to ``monitor -m c -s`` but always emits metadata
     without human-readable timestamp helpers.
     """
-    await _dump_data(obj)
+    await _dump_data(obj, as_dict=as_dict)
 
 
 @cli.command()

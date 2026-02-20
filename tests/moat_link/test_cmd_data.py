@@ -68,6 +68,7 @@ class _Conn:
     def __init__(self):
         self.watch_items = []
         self.d = _DirectSetter()
+        self.name = "conn"
 
     def d_watch(self, *a, **kw):  # noqa: ARG002
         return _WatchCtx(self.watch_items)
@@ -92,6 +93,39 @@ async def test_dump_removes_human_timestamp():
     assert "inner" in out
     assert "3.0" in out
     assert "---" in out
+
+
+async def test_dump_dict_inlines_simple_mapping():
+    """`dump --dict` emits `_path` / `_meta` plus direct mapping values."""
+
+    conn = _Conn()
+    meta = MsgMeta(origin="outer", timestamp=3.0)
+    conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+
+    await _dump_data(obj, as_dict=True)
+
+    out = obj.stdout.getvalue()
+    assert "_path: a.b" in out
+    assert "_meta:" in out
+    assert "_value:" not in out
+    assert "\nv: 1\n" in out
+    assert "!P" not in out
+
+
+async def test_dump_dict_wraps_reserved_values():
+    """`dump --dict` stores reserved-key mappings under `_value`."""
+
+    conn = _Conn()
+    meta = MsgMeta(origin="outer", timestamp=3.0)
+    conn.watch_items = [(P("a.b"), {"_foo": 1}, meta)]
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+
+    await _dump_data(obj, as_dict=True)
+
+    out = obj.stdout.getvalue()
+    assert "_value:" in out
+    assert "_foo: 1" in out
 
 
 async def test_load_respects_timestamps(monkeypatch):
@@ -161,3 +195,38 @@ async def test_load_force_overwrites():
     assert m.origin == "src"
     assert m.timestamp == 1.0
     assert kw == {}
+
+
+async def test_load_dict_format_and_optional_meta(monkeypatch):
+    """`load` auto-detects dict docs and accepts missing `_meta`."""
+
+    monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
+    _ReaderCtx.data = [
+        {"_path": "a", "_meta": ["src", 1.0], "x": 1},
+        {"_path": "b", "_value": 2},
+        {"_path": "c", "_meta": {"origin": "m", "timestamp": 3.0, "_drop": 9}, "y": 4},
+        {"path": P("d"), "value": 5, "meta": ["z", 6.0]},
+    ]
+
+    conn = _Conn()
+    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+
+    await _load_data(obj, "-", force=False)
+
+    assert [str(p) for p, _v, _m, _kw in conn.d.calls] == ["root.a", "root.b", "root.c", "root.d"]
+    _p, v1, m1, _kw = conn.d.calls[0]
+    _p, v2, m2, _kw = conn.d.calls[1]
+    _p, v3, m3, _kw = conn.d.calls[2]
+    _p, v4, m4, _kw = conn.d.calls[3]
+    assert v1 == {"x": 1}
+    assert m1.origin == "src"
+    assert m1.timestamp == 1.0
+    assert v2 == 2
+    assert m2 is None
+    assert v3 == {"y": 4}
+    assert m3.origin == "m"
+    assert m3.timestamp == 3.0
+    assert "_drop" not in m3.kw
+    assert v4 == 5
+    assert m4.origin == "z"
+    assert m4.timestamp == 6.0

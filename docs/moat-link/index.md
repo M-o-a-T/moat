@@ -16,6 +16,7 @@ TODO
 
 tracking
 kv-migration-guide
+errors
 ../moat-link-metrics/index
 ../moat-link-gate/index
 ../moat-link-schema/index

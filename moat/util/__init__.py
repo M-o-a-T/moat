@@ -110,6 +110,8 @@ _imports = {
     "enc_part": "part",
     "get_part": "part",
     "set_part": "part",
+    # help
+    "_help_preserve_blocks": "help",
 }
 
 __all__ = list(_imports.keys())

@@ -32,6 +32,8 @@ _imports = {
     "SubMsgSender": "base",
     # From cmd.array
     "ArrayCmd": "cmd.array",
+    # From cmd.retry
+    "RetryCmd": "cmd.retry",
     # From cmd._base and cmd.base
     "APP": "cmd._base",  # not exported/documented
     "BaseCmd": "cmd._base",
@@ -139,6 +141,8 @@ __all__ = [  # noqa:RUF022
     "SubMsgSender",
     # From cmd.array
     "ArrayCmd",
+    # From cmd.retry
+    "RetryCmd",
     # From cmd.base
     "BaseCmd",
     "LoadCmd",
@@ -198,6 +202,7 @@ if _TC or _DOC:
     from .cmd._base import LoadCmd as LoadCmd
     from .cmd._base import LockBaseCmd as LockBaseCmd
     from .cmd.array import ArrayCmd as ArrayCmd
+    from .cmd.retry import RetryCmd as RetryCmd
     from .cmd.base import RootCmd as RootCmd
     from .cmd.log import Logger as Logger
     from .cmd.tree.dir import BaseSubCmd, BaseSuperCmd, CfgStore, SubStore

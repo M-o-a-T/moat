@@ -27,6 +27,11 @@ CODE_IS_ASYNC_PATH = P("code.is_async")
 CODE_VARS_PATH = P("code.vars")
 CODE_DEFAULT_PATH = P("code.default")
 CODE_ROOT_PATH = P("code")
+CODE_TEST_PATH = P("code.test")
+CODE_TEST_CODE_PATH = P("code.test.code")
+CODE_TEST_ARGS_PATH = P("code.test.args")
+CODE_TEST_KW_PATH = P("code.test.kw")
+CODE_TEST_RESULT_PATH = P("code.test.result")
 
 EDIT_WHOLE = "w"
 EDIT_CODE = "c"
@@ -151,6 +156,80 @@ def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
     vars_ = _sanitize_vars(_get_sub(data, CODE_VARS_PATH, ()))
     is_async = _check_async_mode(_get_sub(data, CODE_IS_ASYNC_PATH, None))
     make_proc(code, vars_, path + CODE_EXEC_PATH, use_async=is_async is True)
+
+
+class _RecordLink:
+    """
+    Tiny in-memory link object used for editor-side test execution.
+    """
+
+    def __init__(self, path: Path, data: Mapping[str, Any]):
+        self.path = path
+        self.data = data
+
+    async def d_get(self, path: Path):
+        """Return the temporary record for its configured path."""
+        if Path.build(path) != self.path:
+            raise KeyError(path)
+        return self.data
+
+
+async def _run_code_test(data: Mapping[str, Any], path: Path) -> None:
+    """
+    Run a ``code.test`` specification against a temporary Runner.
+    """
+    test_cfg = _get_sub(data, CODE_TEST_PATH, NotGiven)
+    if test_cfg is NotGiven:
+        return
+    if not isinstance(test_cfg, Mapping):
+        raise TypeError("code.test must be a mapping")
+
+    args = _get_sub(data, CODE_TEST_ARGS_PATH, ())
+    if not isinstance(args, list | tuple):
+        raise TypeError("code.test.args must be a list")
+    args = tuple(args)
+
+    kw = _get_sub(data, CODE_TEST_KW_PATH, attrdict())
+    if kw is None:
+        kw = attrdict()
+    if not isinstance(kw, Mapping):
+        raise TypeError("code.test.kw must be a mapping")
+    kw = attrdict(kw)
+
+    expected = _get_sub(data, CODE_TEST_RESULT_PATH, NotGiven)
+
+    from moat.link.code.run import Runner  # noqa: PLC0415
+
+    runner = Runner(_RecordLink(path, data), path)
+    result = await runner(*args, **kw)
+    if expected is not NotGiven and result != expected:
+        raise AssertionError(f"code.test.result mismatch: {result!r} != {expected!r}")
+
+    test_code = _get_sub(data, CODE_TEST_CODE_PATH, NotGiven)
+    if test_code in (NotGiven, None):
+        return
+    if not isinstance(test_code, str):
+        raise TypeError("code.test.code must be a string")
+
+    proc = make_proc(
+        test_code,
+        ("runner", "args", "kw", "result", "expected"),
+        path + CODE_TEST_CODE_PATH,
+        use_async=True,
+    )
+    await proc(
+        runner,
+        args,
+        kw,
+        result,
+        expected,
+        link=runner.link,
+        path=path,
+        anyio=anyio,
+        P=P,
+        Path=Path,
+        NotGiven=NotGiven,
+    )
 
 
 def _without_code(data: Mapping[str, Any]) -> attrdict:
@@ -426,6 +505,7 @@ async def edit(obj, editor):
             else:
                 raise RuntimeError(f"Invalid edit mode: {mode!r}")
             _check_exec_syntax(current, obj.path)
+            await _run_code_test(current, obj.path)
         except Exception as exc:
             click.echo(f"Edit failed: {exc}", err=True)
             mode = await click.prompt(
@@ -451,6 +531,7 @@ async def edit(obj, editor):
                 click.echo("No changes.", err=True)
                 return
             _check_exec_syntax(current, obj.path)
+            await _run_code_test(current, obj.path)
             res = await obj.conn.d_set(obj.path, current)
             if obj.meta:
                 yprint(res, stream=obj.stdout)

@@ -18,6 +18,7 @@ tracking
 kv-migration-guide
 ../moat-link-metrics/index
 ../moat-link-gate/index
+../moat-link-schema/index
 ../moat-link-notify/index
 ../moat-link-server/index
 ../moat-link-web/index

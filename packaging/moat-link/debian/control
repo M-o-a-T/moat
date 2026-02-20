@@ -22,9 +22,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-moat-lib-mqtt,
   systemd (>= 241),
 Replaces: moat-link-server (<< 0.3.11)
-Recommends:
-  python3-httpx,
-  python3-trio (>= 0.22),
+Suggests:
   moat-link-server,
 Description: A distributed, persistent messaging layer
  MoaT-Link is a master-less distributed key-value storage system. It uses

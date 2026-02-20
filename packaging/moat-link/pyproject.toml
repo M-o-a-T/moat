@@ -13,12 +13,9 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"asyncclick",
 	"attrs",
-	"msgpack",
 	"outcome",
 	"ruyaml",
-	"httpx",
 	"simpleeval",
 	"transitions_aio ~= 0.9.3.4",
 	"moat-util ~= 0.62.6",

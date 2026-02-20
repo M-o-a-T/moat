@@ -25,6 +25,20 @@ def dependency_name(dep: str) -> str | None:
     return match.group(1).lower()
 
 
+def implicit_parent_package(pkg_name: str, known_packages: dict[str, attrdict]) -> str | None:
+    """Return a package's implicit parent dependency, if any."""
+
+    parts = pkg_name.split("-")
+    if len(parts) < 3:
+        return None
+    if parts[0] != "moat":
+        return None
+    parent = "-".join(parts[:2])
+    if parent == pkg_name or parent not in known_packages:
+        return None
+    return parent
+
+
 @click.command
 async def cli():
     """
@@ -184,6 +198,9 @@ async def cli():
             continue
 
         required_imports = set(pkg_info.imports)
+        implicit_parent = implicit_parent_package(pkg_name, packages)
+        if implicit_parent is not None:
+            required_imports.add(implicit_parent)
 
         try:
             with open(pkg_info.pyproject, "r") as f:  # noqa:ASYNC230

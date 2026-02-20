@@ -329,6 +329,8 @@ class Node:
     def search(self, path: Path) -> Node:
         """
         Find the destination node of a path, including wildcards.
+
+        This node represents the pattern.
         """
         nf = NodeFinder(self)
         for elem in path:
@@ -370,11 +372,27 @@ class NodeFinder:
     """
 
     def __init__(self, src):
-        self.steps = ((src, False),)
+        self.steps = ((src, 0, 0),)
+
+    @staticmethod
+    def _range_wildcards(node):
+        """Yield `(min,max,node)` tuples for valid range wildcard children."""
+
+        for key, sub in node._sub.items():  # noqa:SLF001
+            if not isinstance(key, tuple) or len(key) != 2:
+                continue
+            n, m = key
+            if type(n) is not int or type(m) is not int:
+                continue
+            if n < 1:
+                continue
+            if m != 0 and m < n:
+                continue
+            yield n, m, sub
 
     def step(self, name: str | int | bool | None, new=False):
         """
-        Walk a single hierarchy step, observing wildcards. Note that ``*``
+        Walk a single hierarchy step, observing wildcards. Note that ``#``
         means *one or more*, i.e. it will not match an empty path element.
 
         Args:
@@ -386,25 +404,32 @@ class NodeFinder:
             raise ValueError("I can't create new nodes.")
 
         steps = []
-        for node, _keep in self.steps:
-            if name in node:
-                steps.append((node.get(name), False))
-        for node, _keep in self.steps:
-            if "+" in node:
-                steps.append((node.get("+"), False))
-        for node, _keep in self.steps:
-            if "#" in node:
-                steps.append((node.get("#"), True))
-        for node, keep in self.steps:
-            if keep:
-                steps.append((node, True))
-            # Nodes found with '*' stay on the list
-            # so that they can match multiple path elements.
+        for node, min_more, max_more in self.steps:
+            if min_more == 0:
+                if name in node:
+                    steps.append((node.get(name), 0, 0))
+                if "+" in node:
+                    steps.append((node.get("+"), 0, 0))
+                for n, m, sub in self._range_wildcards(node):
+                    steps.append((sub, n - 1, None if m == 0 else m - 1))
+                if "#" in node:
+                    steps.append((node.get("#"), 0, None))
+
+            if max_more is None or max_more > 0:
+                steps.append((
+                    node,
+                    max(min_more - 1, 0),
+                    None if max_more is None else max_more - 1,
+                ))
+            # Nodes found with '#' or range wildcards stay on the list
+            # so that they can match additional path elements.
         if not steps:
             raise KeyError(name)
         self.steps = steps
 
     @property
-    def result(self) -> tuple[Path, Node]:
-        s = self.steps[0]
-        return s[0]
+    def result(self) -> Node:
+        for node, min_more, _max_more in self.steps:
+            if min_more == 0:
+                return node
+        raise KeyError("No matching wildcard state")

@@ -333,9 +333,10 @@ async def monitor(
                         res = [p, d, m]
                     else:
                         res = [p, d]
-                yprint(res, stream=obj.stdout)
-                print("---", file=obj.stdout)
-                obj.stdout.flush()
+                with suppress(BrokenPipeError):
+                    yprint(res, stream=obj.stdout)
+                    print("---", file=obj.stdout)
+                    obj.stdout.flush()
 
 
 @cli.command()

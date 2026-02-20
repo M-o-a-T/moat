@@ -1,9 +1,9 @@
 _:
-  new: 26.0.8
+  new: 26.0.9
 moat:
-  deb: 0.12.0-5
+  deb: 0.12.0-6
   new: 0.12.0
-  pkg: 5
+  pkg: 6
   pkgrev: 50032b562c8616ccb7b1bdf168d580935e58da38
   pypi: 0.11.9
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
@@ -123,13 +123,12 @@ moat-ems-sched:
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.2.16
 moat-kv:
-  deb: 0.71.25-7
-  new: 0.71.25
-  pkg: 7
-  pkgrev: 4c8b815b5536ca8ecfb7032555c6bb192945b839
-  pypi: 0.71.25
-  rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
-  tag: 0.71.25
+  deb: 0.71.26-1
+  new: 0.71.26
+  pkg: 1
+  pypi: 0.71.26
+  rev: eb2450485c9cd1c0eb48bae0504b768b11115406
+  tag: 0.71.26
 moat-kv-akumuli:
   deb: 0.8.12-4
   new: 0.8.12
@@ -254,9 +253,9 @@ moat-lib-mqtt:
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.8.0
 moat-lib-path:
-  deb: 0.3.0-9
+  deb: 0.3.0-10
   new: 0.3.0
-  pkg: 9
+  pkg: 10
   pkgrev: 5971a9f569097c82eab97ad4c5b798cf18999652
   pypi: 0.2.0
   rev: ffdb59f5d831b0c7be242b34f18d7b2a5c4ecf53
@@ -337,13 +336,12 @@ moat-lib-victron:
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.1.6
 moat-link:
-  deb: 0.3.2-3
-  new: 0.3.2
-  pkg: 3
-  pkgrev: e9b5a01a3d7c5c415135172cb16e1f008e998979
-  pypi: 0.3.0
-  rev: 1f430af9ce0b050f335715ad6fdddde850260653
-  tag: 0.3.2
+  deb: 0.3.3-1
+  new: 0.3.3
+  pkg: 1
+  pypi: 0.3.3
+  rev: eb2450485c9cd1c0eb48bae0504b768b11115406
+  tag: 0.3.3
 moat-link-gate:
   deb: 0.0.2-5
   new: 0.0.2
@@ -380,10 +378,10 @@ moat-link-notify:
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.0.2
 moat-link-server:
-  deb: 0.3.26-7
+  deb: 0.3.26-8
   new: 0.3.26
-  pkg: 7
-  pkgrev: e9b5a01a3d7c5c415135172cb16e1f008e998979
+  pkg: 8
+  pkgrev: eb2450485c9cd1c0eb48bae0504b768b11115406
   pypi: 0.3.26
   rev: 0d0219136fbc28929e8dcc190fe4e317aae3d983
   tag: 0.3.26
@@ -442,9 +440,10 @@ moat-thing:
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
 moat-util:
-  deb: 0.62.7-1
+  deb: 0.62.7-2
   new: 0.62.7
-  pkg: 1
+  pkg: 2
+  pkgrev: eb2450485c9cd1c0eb48bae0504b768b11115406
   pypi: 0.62.7
   rev: 4c8b815b5536ca8ecfb7032555c6bb192945b839
   tag: 0.62.7

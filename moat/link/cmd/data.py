@@ -26,47 +26,6 @@ from moat.link.meta import MsgMeta
 from moat.util.exec import run
 
 
-def _meta_value_plain(data):
-    """Convert nested metadata values to plain structures without `_timestamp`."""
-
-    if isinstance(data, MsgMeta):
-        return _meta_plain(data)
-    if isinstance(data, dict):
-        return {
-            key: _meta_value_plain(value) for key, value in data.items() if key != "_timestamp"
-        }
-    if isinstance(data, list | tuple):
-        return [_meta_value_plain(value) for value in data]
-    return data
-
-
-def _meta_plain(meta: MsgMeta) -> dict:
-    """Convert metadata to a serializable mapping without human timestamps."""
-
-    res = {key: _meta_value_plain(value) for key, value in meta.kw.items() if key != "_timestamp"}
-    res["origin"] = meta.origin
-    res["timestamp"] = meta.timestamp
-    return res
-
-
-def _meta_load(data) -> MsgMeta:
-    """Parse metadata loaded from a dump entry."""
-
-    if isinstance(data, MsgMeta):
-        return data
-    if isinstance(data, list):
-        return MsgMeta.restore(list(data))
-    if not isinstance(data, dict):
-        raise click.UsageError("Metadata must be a mapping, list, or MsgMeta object.")
-    data = dict(data)
-    data.pop("_timestamp", None)
-    origin = data.pop("origin", None)
-    timestamp = data.pop("timestamp", None)
-    if origin is None or timestamp is None:
-        raise click.UsageError("Metadata must contain 'origin' and 'timestamp'.")
-    return MsgMeta(origin=origin, timestamp=timestamp, **data)
-
-
 async def _dump_data(obj) -> None:
     """Emit subtree entries as YAML docs without human-formatted timestamps."""
 
@@ -78,7 +37,7 @@ async def _dump_data(obj) -> None:
     ) as mon:
         async for p, d, m in mon:
             with suppress(BrokenPipeError):
-                yprint([p, d, _meta_plain(m)], stream=obj.stdout)
+                yprint([p, d, m.dump()], stream=obj.stdout)
                 print("---", file=obj.stdout)
                 obj.stdout.flush()
 
@@ -112,7 +71,21 @@ async def _load_data(obj, infile: str, force: bool) -> None:
                 p, d, m = msg[:3]
 
             p = Path.build(p)
-            m = _meta_load(m)
+            if isinstance(m, MsgMeta):
+                pass
+            elif isinstance(m, list | tuple):
+                m = MsgMeta.restore(list(m))
+            elif isinstance(m, dict):
+                m = dict(m)
+                m.pop("_timestamp", None)
+                try:
+                    m = MsgMeta.restore([m.pop("origin"), m.pop("timestamp")], m)
+                except KeyError as exc:
+                    raise click.UsageError(
+                        "Metadata mappings need 'origin' and 'timestamp'."
+                    ) from exc
+            else:
+                raise click.UsageError("Metadata must be a MsgMeta, list, tuple, or mapping.")
             p = obj.path + p
 
             if force:

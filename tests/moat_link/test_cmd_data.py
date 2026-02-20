@@ -78,7 +78,7 @@ async def test_dump_removes_human_timestamp():
 
     conn = _Conn()
     nested = MsgMeta(origin="inner", timestamp=2.0, x=1)
-    meta = MsgMeta(origin="outer", timestamp=3.0, gw=nested.repr(), mm=nested)
+    meta = MsgMeta(origin="outer", timestamp=3.0, gw=nested.dump(), mm=nested.dump())
     conn.watch_items = [(P("a.b"), {"v": 1}, meta)]
     obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
 
@@ -86,9 +86,9 @@ async def test_dump_removes_human_timestamp():
 
     out = obj.stdout.getvalue()
     assert "_timestamp" not in out
-    assert "origin: outer" in out
-    assert "origin: inner" in out
-    assert "timestamp: 3.0" in out
+    assert "outer" in out
+    assert "inner" in out
+    assert "3.0" in out
     assert "---" in out
 
 
@@ -97,9 +97,9 @@ async def test_load_respects_timestamps(monkeypatch):
 
     monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
     _ReaderCtx.data = [
-        [P("a"), 1, {"origin": "src", "timestamp": 10.0}],
-        [P("b"), 2, {"origin": "src", "timestamp": 5.0}],
-        [P("c"), 3, {"origin": "src", "timestamp": 8.0}],
+        [P("a"), 1, ["src", 10.0]],
+        [P("b"), 2, ["src", 5.0]],
+        [P("c"), 3, ["src", 8.0]],
     ]
 
     conn = _Conn()
@@ -116,7 +116,7 @@ async def test_load_force_retries_with_start_timestamp(monkeypatch):
 
     monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
     monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)
-    _ReaderCtx.data = [[P("a"), 1, {"origin": "src", "timestamp": 1.0}]]
+    _ReaderCtx.data = [[P("a"), 1, ["src", 1.0]]]
 
     conn = _Conn()
     conn.d.res = [False, True]
@@ -138,7 +138,7 @@ async def test_load_force_retries_with_start_timestamp(monkeypatch):
 async def test_load_force_overwrites():
     """`load --force` does not retry when equal data is reported."""
 
-    _ReaderCtx.data = [[P("a"), 1, {"origin": "src", "timestamp": 1.0}]]
+    _ReaderCtx.data = [[P("a"), 1, ["src", 1.0]]]
 
     conn = _Conn()
     conn.d.res = [None]

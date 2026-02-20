@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import anyio
 import pytest
 from io import StringIO
 
@@ -78,6 +79,34 @@ class _Conn:
 
     def d_watch(self, *a, **kw):  # noqa: ARG002
         return _WatchCtx(self.watch_items, meta=kw.get("meta", False))
+
+
+_MISSING = object()
+
+
+class _EditConn:
+    def __init__(self, data=_MISSING, template=_MISSING):
+        self._data = data
+        self._template = template
+        self.get_calls = []
+        self.search_calls = []
+        self.set_calls = []
+
+    async def d_get(self, path):
+        self.get_calls.append(path)
+        if self._data is _MISSING:
+            raise KeyError(path)
+        return self._data
+
+    async def d_search(self, path):
+        self.search_calls.append(path)
+        if self._template is _MISSING:
+            raise KeyError(path)
+        return self._template
+
+    async def d_set(self, path, data, meta=None):
+        self.set_calls.append((path, data, meta))
+        return True
 
 
 async def test_dump_removes_human_timestamp():
@@ -278,3 +307,40 @@ async def test_load_dict_format_and_optional_meta(monkeypatch):
     assert m4.timestamp == 6.0
     assert v5 == 7
     assert m5 is None
+
+
+async def test_edit_uses_template_and_skips_unchanged(monkeypatch):
+    """`edit` uses template fallback and does not write unchanged content."""
+
+    async def _noop_run(*_a, **_kw):
+        return None
+
+    monkeypatch.setattr(data_cmd, "run", _noop_run)
+    conn = _EditConn(data=_MISSING, template={"x": 1})
+    obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
+
+    await data_cmd.edit.callback.__wrapped__(obj, yes=True, editor="dummy")
+
+    assert [str(p) for p in conn.get_calls] == ["foo.bar"]
+    assert [str(p) for p in conn.search_calls] == ["template.foo.bar"]
+    assert conn.set_calls == []
+
+
+async def test_edit_writes_changed_template(monkeypatch):
+    """`edit` writes when template content gets modified."""
+
+    async def _edit_run(_editor, path, **_kw):
+        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
+            await f.write("x: 2\n")
+
+    monkeypatch.setattr(data_cmd, "run", _edit_run)
+    conn = _EditConn(data=_MISSING, template={"x": 1})
+    obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
+
+    await data_cmd.edit.callback.__wrapped__(obj, yes=True, editor="dummy")
+
+    assert [str(p) for p in conn.search_calls] == ["template.foo.bar"]
+    assert len(conn.set_calls) == 1
+    p, d, _m = conn.set_calls[0]
+    assert str(p) == "foo.bar"
+    assert d == {"x": 2}

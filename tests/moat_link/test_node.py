@@ -7,7 +7,7 @@ import time
 from itertools import zip_longest
 
 from moat.util import NotGiven
-from moat.lib.path import P, Path, PathLongener
+from moat.lib.path import P, PathLongener
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
@@ -128,7 +128,7 @@ def test_search_wildcard_range_bounded():
 
     n = Node()
     m = MsgMeta(origin="A")
-    assert n.set(Path.build(((2, 3),)), "range23", m)
+    assert n.set(P(":2,3"), "range23", m)
 
     with pytest.raises(KeyError):
         n.search(P("a"))
@@ -143,7 +143,7 @@ def test_search_wildcard_range_unbounded():
 
     n = Node()
     m = MsgMeta(origin="A")
-    assert n.set(Path.build(((2, 0), "end")), "range2plus_end", m)
+    assert n.set(P(":2,0.end"), "range2plus_end", m)
 
     with pytest.raises(KeyError):
         n.search(P("a"))

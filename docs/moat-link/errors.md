@@ -1,23 +1,23 @@
-# Error handling and Notifications
+# Error Handling and Notifications
 
-Sometimes, things go wrong. MoaT-Link has a mechanism to record error
-conditions and to alert the user.
+MoaT-Link stores error states and sends notifications for relevant events.
 
-## Error recording
+## Error Recording
 
-Errors are recorded via moat.link.client's e_* methods:
+Errors are recorded via `moat.link.client` methods:
 
-* TODO: link to each, and a one-paragraph documentation of their semantics
+- `e_exc`: report an exception.
+- `e_info`: report a non-exception problem.
+- `e_ack`: acknowledge an active error.
+- `e_ok`: mark an error path as resolved.
 
-They are stored under the error.raw.XX path where XX is the path of whichever
-data item is uniquely responsible for the problem.
+Raw entries are stored below `error.raw.<path>`, where `<path>` identifies the
+affected data branch.
 
-Next, updated errors get filtered via the error.filter.* hierarchy. We collect
-entries matching the XX path and use them to filter the error, as per some
-criteria (age, severity, …). Filters should be named "NN name". Let's check
-the web if we can find a simple YAML-based interpreter that can do basic
-equality, comparison, and and/or/not operations, but otherwise write our
-own.
+## Filtering and Notification
 
-In addition to the filter we need an output section that assembles the notification
-message.
+Updated raw entries are processed using `error.filter.*` rules that match on
+the path and content. A filter can decide whether to suppress, delay, or emit a
+notification.
+
+Notification output is assembled from the matching filtered entry.

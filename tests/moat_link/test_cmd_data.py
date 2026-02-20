@@ -86,6 +86,8 @@ async def test_dump_removes_human_timestamp():
 
     out = obj.stdout.getvalue()
     assert "_timestamp" not in out
+    assert "\n- - outer\n" not in out
+    assert "\n- outer\n" in out
     assert "outer" in out
     assert "inner" in out
     assert "3.0" in out
@@ -97,9 +99,9 @@ async def test_load_respects_timestamps(monkeypatch):
 
     monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
     _ReaderCtx.data = [
-        [P("a"), 1, ["src", 10.0]],
-        [P("b"), 2, ["src", 5.0]],
-        [P("c"), 3, ["src", 8.0]],
+        [P("a"), 1, "src", 10.0],
+        [P("b"), 2, "src", 5.0],
+        [P("c"), 3, "src", 8.0],
     ]
 
     conn = _Conn()
@@ -116,7 +118,7 @@ async def test_load_force_retries_with_start_timestamp(monkeypatch):
 
     monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
     monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)
-    _ReaderCtx.data = [[P("a"), 1, ["src", 1.0]]]
+    _ReaderCtx.data = [[P("a"), 1, "src", 1.0]]
 
     conn = _Conn()
     conn.d.res = [False, True]
@@ -138,7 +140,7 @@ async def test_load_force_retries_with_start_timestamp(monkeypatch):
 async def test_load_force_overwrites():
     """`load --force` does not retry when equal data is reported."""
 
-    _ReaderCtx.data = [[P("a"), 1, ["src", 1.0]]]
+    _ReaderCtx.data = [[P("a"), 1, "src", 1.0]]
 
     conn = _Conn()
     conn.d.res = [None]

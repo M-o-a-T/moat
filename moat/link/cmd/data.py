@@ -303,7 +303,10 @@ async def edit(obj, yes, editor):
     try:
         data = await obj.conn.d_get(obj.path)
     except KeyError:
-        data = {}
+        try:
+            data = await obj.conn.d_search(P("template") + obj.path)
+        except KeyError:
+            data = {}
 
     if editor is None:
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))

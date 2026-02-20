@@ -387,6 +387,27 @@ class LinkSender(MsgSender):
         return res[0], MsgMeta.restore(res[1:])
 
     @overload
+    def d_search(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
+
+    @overload
+    def d_search(self, path: Path) -> Any: ...
+
+    async def d_search(self, path: Path, meta: bool = False) -> tuple[Any, MsgMeta]:
+        """
+        Search-based data retrieval. Calls the server's ``d.search`` method.
+
+        Returns a data+metadata tuple if @meta is True, otherwise just the
+        data.
+        """
+        if len(path) and isinstance(path[0], Path):
+            raise ValueError("Don't use a root-prefixed path here.")
+
+        res = await self.d.search(path)
+        if not meta:
+            return res[0]
+        return res[0], MsgMeta.restore(res[1:])
+
+    @overload
     async def d_set(
         self,
         path: Path,

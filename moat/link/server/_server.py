@@ -466,6 +466,24 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
+    doc_d_search = dict(_d="search subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+
+    async def cmd_d_search(self, path: Path):
+        """Search for wildcard-matching sub-node data.
+
+        Arguments:
+        * path
+
+        Result:
+        * data
+        """
+        if len(path) and path[0] == "run":
+            data = self.server.rdata
+        else:
+            data = self.server.data
+        d = data.search(path)
+        return d.data
+
     async def cmd_d_set(
         self,
         path,

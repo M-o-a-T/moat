@@ -780,6 +780,14 @@ class LinkSender(MsgSender):
 
         return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 
+    def code_at(self, path: Path):
+        """
+        Return a callable wrapper for code stored at this data path.
+        """
+        from moat.link.code.run import Runner  # noqa: PLC0415
+
+        return Runner(self, Path.build(path))
+
 
 class Link(LinkCommon, CtxObj):
     """

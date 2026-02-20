@@ -431,7 +431,12 @@ class ServerClient(LinkCommon):
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
     doc_d_set = dict(
-        _d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change"
+        _d="set value",
+        _0="Path",
+        _1="Any",
+        _99="MsgMeta:optional",
+        t="Time of last change",
+        f="bool:overwrite regardless of timestamp",
     )
 
     def cmd_d_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
@@ -463,7 +468,12 @@ class ServerClient(LinkCommon):
         return d.data
 
     async def cmd_d_set(
-        self, path, value, meta: MsgMeta | None = None, t: float | bool | None = None
+        self,
+        path,
+        value,
+        meta: MsgMeta | None = None,
+        t: float | bool | None = None,
+        f: bool = False,
     ):
         """Set a node's value.
 
@@ -473,6 +483,7 @@ class ServerClient(LinkCommon):
         * optional: new metadata
         * optional: t: timestamp of last change, or a flag.
           If False, must not exist; if True, must exist.
+        * optional: f: overwrite without checking timestamps.
 
         You should not call this unless absolutely necessary.
         Instead, send to the MQTT topic directly.
@@ -483,6 +494,7 @@ class ServerClient(LinkCommon):
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
         path = Path.build(path)
+        res = None
 
         try:
             node = self.server.data.get(path)
@@ -497,6 +509,15 @@ class ServerClient(LinkCommon):
             ):
                 raise OutOfDateError(node.meta)
             res = node.data_, *(node.meta.dump() if node.meta is not None else ())
+
+        if f:
+            if len(path) and path[0] == "run":
+                return res
+            node = self.server.data.get(path)
+            node.set_(path, value, meta)
+            self.server.write_monitor((path, value, meta))
+            return res
+
         self.server.maybe_update(path, value, meta)
         return res
 

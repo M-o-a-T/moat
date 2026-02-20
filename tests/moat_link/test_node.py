@@ -7,7 +7,7 @@ import time
 from itertools import zip_longest
 
 from moat.util import NotGiven
-from moat.lib.path import P, PathLongener
+from moat.lib.path import P, Path, PathLongener
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
@@ -121,3 +121,32 @@ def test_search_wildcard_precedence():
     assert n.search(P("a")).data == "exact"
     assert n.search(P("b")).data == "plus"
     assert n.search(P("b.c")).data == "hash"
+
+
+def test_search_wildcard_range_bounded():
+    """Search supports bounded tuple wildcards `(n,m)`."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(Path.build(((2, 3),)), "range23", m)
+
+    with pytest.raises(KeyError):
+        n.search(P("a"))
+    assert n.search(P("a.b")).data == "range23"
+    assert n.search(P("a.b.c")).data == "range23"
+    with pytest.raises(KeyError):
+        n.search(P("a.b.c.d"))
+
+
+def test_search_wildcard_range_unbounded():
+    """Search supports `(n,0)` as an unlimited-upper-bound wildcard."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(Path.build(((2, 0), "end")), "range2plus_end", m)
+
+    with pytest.raises(KeyError):
+        n.search(P("a"))
+    assert n.search(P("a.end")).data_ is NotGiven
+    assert n.search(P("a.b.end")).data == "range2plus_end"
+    assert n.search(P("a.b.c.end")).data == "range2plus_end"

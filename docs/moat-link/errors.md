@@ -6,10 +6,10 @@ MoaT-Link stores error states and sends notifications for relevant events.
 
 Errors are recorded via `moat.link.client` methods:
 
-- `e_exc`: report an exception.
-- `e_info`: report a non-exception problem.
-- `e_ack`: acknowledge an active error.
-- `e_ok`: mark an error path as resolved.
+- {py:meth}`moat.link.client.LinkSender.e_exc`: report an exception.
+- {py:meth}`moat.link.client.LinkSender.e_info`: report a non-exception problem.
+- {py:meth}`moat.link.client.LinkSender.e_ack`: acknowledge an active error.
+- {py:meth}`moat.link.client.LinkSender.e_ok`: mark an error path as resolved.
 
 Raw entries are stored below `error.raw.<path>`, where `<path>` identifies the
 affected data branch.

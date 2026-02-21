@@ -58,6 +58,7 @@ if TYPE_CHECKING:
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg, MsgHandler
+    from moat.link.code.run import Code
     from moat.link.node.codec import CodecNode
 
     from .backend import Message
@@ -267,6 +268,51 @@ class ClientCaller(Caller):
         return await link.root._sender.cmd(cmd, *a, **kw)  # noqa:SLF001
 
 
+@define
+class _CodeWatch:
+    """
+    Shared watcher state for one code path.
+    """
+
+    code: Code
+    users: int
+    cancel_scope: anyio.CancelScope
+    done: anyio.Event
+
+
+class CodeCaller:
+    """
+    Helper returned by :meth:`LinkSender.code_at`.
+
+    This object supports direct calls, ``await`` to get the current
+    :class:`~moat.link.code.run.Code` wrapper, and async context usage to
+    keep one shared wrapper updated in the background.
+    """
+
+    sender: LinkSender
+    path: Path
+
+    def __init__(self, sender: LinkSender, path: Path):
+        self.sender = sender
+        self.path = path
+
+    def __await__(self):
+        return self.sender._code_get(self.path).__await__()  # noqa: SLF001
+
+    def __call__(self, **kw: Any):
+        async def _run():
+            code = await self
+            return await code(**kw)
+
+        return _run()
+
+    async def __aenter__(self) -> Code:
+        return await self.sender._code_enter(self.path)  # noqa: SLF001
+
+    async def __aexit__(self, *tb):
+        await self.sender._code_exit(self.path)  # noqa: SLF001
+
+
 class LinkSender(MsgSender):
     """
     This is the client-side front-end to a "standard" MoaT-Link connection.
@@ -282,10 +328,12 @@ class LinkSender(MsgSender):
     Caller_ = ClientCaller
 
     _codec_tree: CodecNode | None = None
+    _code_watch: dict[Path, _CodeWatch | anyio.Event]
 
     def __init__(self, link: LinkCommon):
         self._link = link
         self.announced = self._link.announced
+        self._code_watch = {}
 
     @property
     def root(self):
@@ -838,17 +886,104 @@ class LinkSender(MsgSender):
 
         return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 
-    def code_at(self, path: Path):
-        """
-        Return a callable wrapper for code stored below ``code.exec``.
-        """
+    def _code_path(self, path: Path) -> Path:
+        "Normalize a relative path below ``code.exec``."
         from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
-        from moat.link.code.run import Code  # noqa: PLC0415
 
         p = Path.build(path)
         if len(p) >= len(CODE_EXEC_ROOT) and p[: len(CODE_EXEC_ROOT)] == CODE_EXEC_ROOT:
-            return Code(self, p)
-        return Code(self, CODE_EXEC_ROOT + p)
+            return p
+        return CODE_EXEC_ROOT + p
+
+    async def _code_get(self, path: Path) -> Code:
+        "Return cached code while monitored, otherwise a fresh wrapper."
+        p = self._code_path(path)
+        while True:
+            entry = self._code_watch.get(p, NotGiven)
+            if isinstance(entry, anyio.abc.Event):
+                await entry.wait()
+                continue
+            if entry is NotGiven:
+                from moat.link.code.run import Code  # noqa: PLC0415
+
+                return Code(self, p)
+            return entry.code
+
+    async def _watch_code(
+        self, path: Path, code: Code, done: anyio.Event, *, task_status=anyio.TASK_STATUS_IGNORED
+    ):
+        "Background updater for one code path."
+        with anyio.CancelScope() as scope:
+            task_status.started(scope)
+            try:
+                async with self.d_watch(path, state=False) as mon:
+                    async for data in mon:
+                        code.update(data)
+            finally:
+                done.set()
+
+    async def _code_enter(self, path: Path) -> Code:
+        "Acquire (and maybe start) one shared code watcher."
+        p = self._code_path(path)
+        while True:
+            entry = self._code_watch.get(p, NotGiven)
+            if isinstance(entry, anyio.abc.Event):
+                await entry.wait()
+                continue
+            if entry is not NotGiven:
+                entry.users += 1
+                return entry.code
+
+            evt = anyio.Event()
+            self._code_watch[p] = evt
+            try:
+                from moat.link.code.run import Code  # noqa: PLC0415
+
+                code = Code(self, p)
+                code.update(await self.d_get(p))
+                done = anyio.Event()
+                scope = await self._link.tg.start(self._watch_code, p, code, done)
+                self._code_watch[p] = _CodeWatch(code=code, users=1, cancel_scope=scope, done=done)
+                evt.set()
+                return code
+            except BaseException:
+                self._code_watch.pop(p, None)
+                evt.set()
+                raise
+
+    async def _code_exit(self, path: Path) -> None:
+        "Release one shared code watcher."
+        p = self._code_path(path)
+        while True:
+            entry = self._code_watch.get(p, NotGiven)
+            if isinstance(entry, anyio.abc.Event):
+                await entry.wait()
+                continue
+            if entry is NotGiven:
+                return
+            if entry.users > 1:
+                entry.users -= 1
+                return
+
+            evt = anyio.Event()
+            self._code_watch[p] = evt
+            try:
+                entry.cancel_scope.cancel()
+                await entry.done.wait()
+            finally:
+                self._code_watch.pop(p, None)
+                evt.set()
+            return
+
+    def code_at(self, path: Path) -> CodeCaller:
+        """
+        Return a code caller.
+
+        The result can be called directly, awaited to retrieve a
+        :class:`~moat.link.code.run.Code` wrapper, or used as an async
+        context manager to keep one shared wrapper updated.
+        """
+        return CodeCaller(self, path)
 
 
 class Link(LinkCommon, CtxObj):

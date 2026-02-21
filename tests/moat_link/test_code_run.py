@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import anyio
 import pytest
 import threading
 
@@ -115,3 +116,62 @@ return value + 2
 
     assert await code(flag=True) == 41
     assert await code(flag=False) == 42
+
+
+@pytest.mark.anyio
+async def test_code_at_context_updates_and_cache(cfg):
+    "Context mode keeps one cached wrapper updated via background watch."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
+        await c.d_set(P("code.exec.test.ctx"), dict(code="return value", vars=dict(value=1)))
+        await c.i_sync()
+
+        async with c.code_at(P("test.ctx")) as code:
+            assert (await c.code_at(P("test.ctx"))) is code
+            assert await code() == 1
+
+            await c.d_set(P("code.exec.test.ctx"), dict(code="return value", vars=dict(value=2)))
+            await c.i_sync()
+
+            with anyio.fail_after(0.5):
+                while await code() != 2:
+                    await anyio.lowlevel.checkpoint()
+
+        assert (await c.code_at(P("test.ctx"))) is not code
+
+
+@pytest.mark.anyio
+async def test_code_at_context_parallel_enter(cfg):
+    "Parallel context entry for the same path shares one cached wrapper."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "test": 123}),
+        sf.client_() as c,
+    ):
+        await c.d_set(P("code.exec.test.par"), dict(code="return 42"))
+        await c.i_sync()
+
+        seen = []
+        ready = anyio.Event()
+        done = anyio.Event()
+        cnt = 0
+
+        async def _work():
+            nonlocal cnt
+            async with c.code_at(P("test.par")) as code:
+                seen.append(code)
+                cnt += 1
+                if cnt == 2:
+                    ready.set()
+                await done.wait()
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(_work)
+            tg.start_soon(_work)
+            with anyio.fail_after(2):
+                await ready.wait()
+            assert seen[0] is seen[1]
+            done.set()

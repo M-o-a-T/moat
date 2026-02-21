@@ -124,7 +124,7 @@ class Code:
         self._proc = make_proc(code, self.path / "code", use_async=is_async is True)
         self._is_async = is_async
 
-    def update(self, new_data: Mapping[str, Any], compile: bool = False) -> None:  # noqa: A002
+    def update(self, new_data: Any, compile: bool = False) -> None:  # noqa: A002
         """
         Replace stored record data and optionally compile it immediately.
         """

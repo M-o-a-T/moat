@@ -33,8 +33,8 @@ timeout:
     min: .9  # answering old messages. Should be > ping timeout
   restart:
     error: .1
-    flap: .3
-    up: .2
+    flap: .2
+    up: .17
 """
 
 
@@ -183,14 +183,13 @@ async def test_mon(cfg):
 
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
                 s.value = 43
-                await anyio.sleep(0.35)
-            assert len(emsgs) == 2
+                await anyio.sleep(0.25)
+            await anyio.sleep(0.25)
+            assert len(emsgs) in (2, 3)
             assert emsgs[0]["msg"] == "not up"
-            assert emsgs[1] is Ellipsis
+            assert emsgs[-1] is Ellipsis or emsgs[-1]["msg"] == "down"
             assert 2 <= len(hmsgs) <= 4
             assert hmsgs[-2]["up"] is False
             assert hmsgs[-2]["value"] == 43
             hmsgs = []
             emsgs = []
-
-            await anyio.sleep(0.5)

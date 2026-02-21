@@ -114,6 +114,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   not itself contain a Level 1 header itself.
 - Do not create enumerations like "Key features" or similar.
 - Do not mention implementation details in docstrings.
+- Use references, not literals.
 
 ## Testing Guidelines
 

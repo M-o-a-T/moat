@@ -216,14 +216,17 @@ async def test_set_time(cfg):
         res = await c.d.get(P("test.here"))
         assert res[0] == "HiLo"
         meta = MsgMeta.restore(res[1:])
-        await c.d_set(P("test.here"), "Ugh", t=meta.timestamp)
+        assert (await c.d_set(P("test.here"), "Ugh", t=meta.timestamp)) is True
         res = await c.d.get(P("test.here"))
         assert res[0] == "Ugh"
+        meta = MsgMeta.restore(res[1:])
+        same_meta = MsgMeta(origin="X", timestamp=meta.timestamp)
+        assert (await c.d_set(P("test.here"), "Ugh", t=meta.timestamp, meta=same_meta)) is None
         with pytest.raises(OutOfDateError):
             await c.d_set(P("test.here"), "Nope1", t=meta.timestamp - 10)
         with pytest.raises(KeyError):
             await c.d_set(P("test.here"), "Nope2", t=False)
-        await c.d_set(P("test.here"), "Yep3", t=True)
+        assert (await c.d_set(P("test.here"), "Yep3", t=True)) is True
         res = await c.d.get(P("test.here"))
         assert res[0] == "Yep3"
 

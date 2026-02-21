@@ -12,7 +12,6 @@ from moat.util import (
     NotGiven,
     attrdict,
     combine_dict,
-    to_attrdict,
 )
 from moat.lib.path import (
     Path,
@@ -51,18 +50,31 @@ class Node:
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
 
-        If @tick is earlier than the item's timestamp, always return False.
-        If data changes, apply change and return True.
-        If @force is not set, return False.
-        Otherwise, update metadata and return None.
+        Return semantics:
+        * if @force is set:
+          * `True`: incoming timestamp is newer
+          * `None`: incoming data are equal
+          * `False`: otherwise
+        * if @force is not set:
+          * `None`: incoming data are equal
+          * `False`: incoming timestamp is older
+          * `True`: otherwise
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
         if s._meta is not None:  # noqa:SLF001
-            if meta.timestamp <= s._meta.timestamp:  # noqa:SLF001
+            same = s._data == data  # noqa:SLF001
+            if force:
+                if meta.timestamp > s._meta.timestamp:  # noqa:SLF001
+                    s.set_(item, data, meta)
+                    return True
+                if same:
+                    return None
                 return False
-            if not force and s._data == data:  # noqa:SLF001
+            if same:
                 return None
+            if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
+                return False
         s.set_(item, data, meta)
         return True
 
@@ -339,23 +351,23 @@ class Node:
 
     def collect(self, path: Path, keep: bool = False) -> dict:
         """
-        Collate all data from the root to this node (as far as data
-        exist) and return the combined result.
+        Collate data from all matching branches for a path.
 
-        This method is used to collect default data along a path.
+        This method combines all data nodes found in the matching
+        ``NodeFinder`` branches, with more specific matches overriding
+        less specific ones.
         """
-        if self.data_ is not NotGiven:
-            res = to_attrdict(self.data_)
-        else:
-            res = attrdict()
-        slf = self
+        nf = NodeFinder(self)
         for p in path:
             try:
-                slf = slf.get(p, create=False)
+                nf.step(p)
             except KeyError:
                 break
-            if slf.data_ is not NotGiven:
-                res = combine_dict(slf.data_, res, cls=attrdict, keep=keep)
+
+        res: dict = attrdict()
+        for node in reversed(nf.matches):
+            if node.data_ is not NotGiven:
+                res = combine_dict(node.data_, res, cls=attrdict, keep=keep)
 
         return res
 
@@ -429,7 +441,22 @@ class NodeFinder:
 
     @property
     def result(self) -> Node:
-        for node, min_more, _max_more in self.steps:
-            if min_more == 0:
-                return node
+        for node in self.matches:
+            return node
         raise KeyError("No matching wildcard state")
+
+    @property
+    def matches(self) -> tuple[Node, ...]:
+        """Return all applicable branch nodes in precedence order."""
+
+        seen: set[int] = set()
+        res: list[Node] = []
+        for node, min_more, _max_more in self.steps:
+            if min_more != 0:
+                continue
+            node_id = id(node)
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            res.append(node)
+        return tuple(res)

@@ -60,7 +60,7 @@ def test_basic():
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="A"))
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="B")) is None
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="B"), force=True) is True
-    assert n.set(P("a.b.c"), 43, MsgMeta(origin="B", timestamp=999), force=True) is False
+    assert n.set(P("a.b.c"), 43, MsgMeta(origin="B", timestamp=999), force=True) is None
     assert n.set(P("a.b.c"), 44, MsgMeta(origin="C", timestamp=9999), force=True) is False
     assert n.set(P("a.b.c"), 44, MsgMeta(origin="C", timestamp=9999), force=False) is False
     assert n[P("a.b.c")].data == 43
@@ -150,3 +150,48 @@ def test_search_wildcard_range_unbounded():
     assert n.search(P("a.end")).data_ is NotGiven
     assert n.search(P("a.b.end")).data == "range2plus_end"
     assert n.search(P("a.b.c.end")).data == "range2plus_end"
+
+
+def test_collect_uses_matching_branches():
+    """Collect combines all matching branches, not the direct node chain."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(P("a"), dict(root=1, x="a"), m)
+    assert n.set(P("#"), dict(hash_=1, x="hash"), m)
+    assert n.set(P("a.#"), dict(a_hash=1, x="a_hash"), m)
+    assert n.set(P("+.b"), dict(plus_b=1, x="plus_b"), m)
+    assert n.set(P("a.+"), dict(a_plus=1, x="a_plus"), m)
+    assert n.set(P("a.+.d"), dict(a_plus_d=1, x="a_plus_d"), m)
+    assert n.set(P("a.b.+"), dict(a_b_plus=1, x="a_b_plus"), m)
+    assert n.set(P("a.b"), dict(exact=1, x="exact"), m)
+    assert n.set(P("a.b.d"), dict(exact_d=1, x="exact_d"), m)
+
+    assert n.collect(P("a.b")) == dict(
+        hash_=1,
+        a_hash=1,
+        plus_b=1,
+        a_plus=1,
+        exact=1,
+        x="exact",
+    )
+    assert n.collect(P("a.b.d")) == dict(
+        hash_=1,
+        a_hash=1,
+        a_plus_d=1,
+        a_b_plus=1,
+        exact_d=1,
+        x="exact_d",
+    )
+
+
+def test_collect_uses_partial_matches_if_path_breaks():
+    """Collect keeps the current branch set if lookup stops early."""
+
+    n = Node()
+    m = MsgMeta(origin="A")
+    assert n.set(P("a"), dict(a=1), m)
+    assert n.set(P("#"), dict(hash_=1), m)
+    assert n.set(P("a.+"), dict(a_plus=1), m)
+
+    assert n.collect(P("a.c.z")) == dict(hash_=1)

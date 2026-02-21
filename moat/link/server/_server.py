@@ -431,7 +431,11 @@ class ServerClient(LinkCommon):
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
     doc_d_set = dict(
-        _d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change"
+        _d="set value",
+        _0="Path",
+        _1="Any",
+        _99="MsgMeta:optional",
+        t="Time of last change",
     )
 
     def cmd_d_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
@@ -462,8 +466,30 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
+    doc_d_search = dict(_d="search subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+
+    async def cmd_d_search(self, path: Path):
+        """Search for wildcard-matching sub-node data.
+
+        Arguments:
+        * path
+
+        Result:
+        * data
+        """
+        if len(path) and path[0] == "run":
+            data = self.server.rdata
+        else:
+            data = self.server.data
+        d = data.search(path)
+        return d.data
+
     async def cmd_d_set(
-        self, path, value, meta: MsgMeta | None = None, t: float | bool | None = None
+        self,
+        path,
+        value,
+        meta: MsgMeta | None = None,
+        t: float | bool | None = None,
     ):
         """Set a node's value.
 
@@ -496,9 +522,8 @@ class ServerClient(LinkCommon):
                 node.meta is None or abs(node.meta.timestamp - t) > 0.001
             ):
                 raise OutOfDateError(node.meta)
-            res = node.data_, *(node.meta.dump() if node.meta is not None else ())
-        self.server.maybe_update(path, value, meta)
-        return res
+
+        return self.server.maybe_update(path, value, meta, force=True)
 
     doc_d_delete = dict(
         _d="delete value",
@@ -827,7 +852,14 @@ class Server(MsgHandler):
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path: Path, data: Any, meta: MsgMeta, local: bool = False):
+    def maybe_update(
+        self,
+        path: Path,
+        data: Any,
+        meta: MsgMeta,
+        local: bool = False,
+        force: bool = False,
+    ):
         """
         A data item arrives.
 
@@ -835,7 +867,7 @@ class Server(MsgHandler):
         """
         if len(path) and path[0] == "run":
             return False
-        if res := self.data.set(path, data, meta):
+        if res := self.data.set(path, data, meta, force=force):
             if not local:
                 self.write_monitor((path, data, meta))
         return res

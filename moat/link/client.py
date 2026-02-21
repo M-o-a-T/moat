@@ -49,6 +49,7 @@ from .exceptions import AuthError, ClientCancelledError
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
+from .schema import schema_path, validate_instance
 
 from typing import TYPE_CHECKING, overload
 
@@ -387,6 +388,27 @@ class LinkSender(MsgSender):
         return res[0], MsgMeta.restore(res[1:])
 
     @overload
+    def d_search(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
+
+    @overload
+    def d_search(self, path: Path) -> Any: ...
+
+    async def d_search(self, path: Path, meta: bool = False) -> tuple[Any, MsgMeta]:
+        """
+        Search-based data retrieval. Calls the server's ``d.search`` method.
+
+        Returns a data+metadata tuple if @meta is True, otherwise just the
+        data.
+        """
+        if len(path) and isinstance(path[0], Path):
+            raise ValueError("Don't use a root-prefixed path here.")
+
+        res = await self.d.search(path)
+        if not meta:
+            return res[0]
+        return res[0], MsgMeta.restore(res[1:])
+
+    @overload
     async def d_set(
         self,
         path: Path,
@@ -394,7 +416,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[True] = True,
         retain: bool | None = None,
-    ) -> tuple[Any, MsgMeta]: ...
+        verify: bool | None = False,
+    ) -> bool | None: ...
 
     @overload
     async def d_set(
@@ -404,7 +427,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[False] = False,
         retain: bool | None = None,
-    ) -> None: ...
+        verify: bool | None = False,
+    ) -> bool | None: ...
 
     async def d_set(
         self,
@@ -414,7 +438,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
-    ) -> None | tuple[Any, MsgMeta]:
+        verify: bool | None | NotGiven = NotGiven,
+    ) -> bool | None | tuple[Any, MsgMeta | None]:
         """
         Data update.
 
@@ -425,19 +450,52 @@ class LinkSender(MsgSender):
         if path and isinstance(path[0], Path):
             raise ValueError("Don't use a root-prefixed path here.")
 
+        if verify is NotGiven:
+            verify = (
+                "pytest" in sys.modules and getattr(self._link, "current_server", None) is not None
+            )
+
+        if verify is not False:
+            schema: Any = NotGiven
+            try:
+                schema = await self.d_search(schema_path(path))
+            except KeyError:
+                pass
+            except Exception as exc:
+                if verify is None:
+                    self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
+                else:
+                    raise
+            if schema is not NotGiven:
+                try:
+                    validate_instance(schema, data)
+                except Exception as exc:
+                    if verify is None:
+                        self._link.logger.warning("Schema validation failed for %s: %r", path, exc)
+                    else:
+                        raise
+
         if meta is None:
             meta = MsgMeta(origin=self._link.name)
         if t is None and not with_prev:
             if retain is None:
                 retain = len(path) == 0 or path[0] != "run"
             await self.send(Root.get() + path, data=data, meta=meta, retain=retain)
-            return
+            return True
         tt = {} if t is None else {"t": t}
+        old: tuple[Any, MsgMeta | None] | None = None
+        if with_prev:
+            try:
+                old = await self.d_get(path, meta=True)
+            except KeyError:
+                old = (NotGiven, None)
         res = await self.d.set(path, data, meta, **tt)
-        if not with_prev:
-            return res[0]
-        meta = MsgMeta.restore(res[1:]) if len(res) > 1 else None
-        return res[0], meta
+        if not isinstance(res, bool) and res is not None:
+            res = res[0]
+        if with_prev:
+            assert old is not None
+            return old
+        return res
 
     @asynccontextmanager
     async def d_walk(

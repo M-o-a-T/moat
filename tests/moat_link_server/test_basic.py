@@ -244,13 +244,13 @@ async def test_collate(cfg):  # noqa: D103
                 assert res.kw == want, (res, want)
 
         await chk("a", dict(x=2))
-        await chk("a.b", dict(x=2, y=3))
-        await chk("a.b.u", dict(x=2, y=3))
-        await chk("a.b.f", dict(x=2, y=3))
-        await chk("a.b.f.c", dict(y=3, z=5))
-        await chk("a.b.f.c.e", dict(y=3, z=5))
-        await chk("a.b.f.c.d", dict(y=4, z=5))
-        await chk("a.b.f.c.d.u", dict(y=4, z=5))
+        await chk("a.b", dict(y=3))
+        await chk("a.b.u", dict(y=3))
+        await chk("a.b.f", dict())
+        await chk("a.b.f.c", dict(z=5))
+        await chk("a.b.f.c.e", dict())
+        await chk("a.b.f.c.d", dict(y=4))
+        await chk("a.b.f.c.d.u", dict(y=4))
 
 
 @pytest.mark.anyio

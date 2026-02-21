@@ -4,6 +4,7 @@ from __future__ import annotations
 import anyio
 import os
 import sys
+import time
 from contextlib import nullcontext, suppress
 
 import asyncclick as click
@@ -17,12 +18,147 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.lib.run import attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
 from moat.util.exec import run
+
+
+def _encode_dict_entry(path: Path, data, meta: MsgMeta | None) -> dict:
+    """Encode one dump entry using mapping format."""
+
+    res = {"_path": str(path)}
+    if meta is not None:
+        res["_meta"] = meta.dump()
+    if (
+        isinstance(data, dict)
+        and "_path" not in data
+        and "_meta" not in data
+        and "_value" not in data
+        and not any(isinstance(key, str) and key.startswith("_") for key in data)
+    ):
+        res.update(data)
+    else:
+        res["_value"] = data
+    return res
+
+
+def _decode_meta(data) -> MsgMeta | None:
+    """Decode metadata from one dump entry."""
+
+    if data is None:
+        return None
+    if isinstance(data, MsgMeta):
+        return data
+    if isinstance(data, list | tuple):
+        return MsgMeta.restore(list(data))
+    if isinstance(data, dict):
+        try:
+            return MsgMeta(**{
+                k: v for k, v in data.items() if not (isinstance(k, str) and k.startswith("_"))
+            })
+        except ValueError as exc:
+            raise click.UsageError(
+                "Metadata mappings need at least origin and timestamp."
+            ) from exc
+    raise click.UsageError("Metadata must be a MsgMeta, list, tuple, mapping, or null.")
+
+
+async def _dump_data(obj, as_dict: bool = False) -> None:
+    """Emit subtree entries as YAML docs without human-formatted timestamps."""
+    include_meta = getattr(obj, "meta", False)
+
+    async with obj.conn.d_watch(
+        obj.path,
+        state=True,
+        meta=include_meta,
+        subtree=True,
+    ) as mon:
+        async for pdm in mon:
+            if include_meta:
+                p, d, m = pdm
+            else:
+                p, d = pdm
+                m = None
+            with suppress(BrokenPipeError):
+                if as_dict:
+                    yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
+                else:
+                    if m is None:
+                        yprint([p, d], stream=obj.stdout)
+                    else:
+                        yprint([p, d, *m.dump()], stream=obj.stdout)
+                print("---", file=obj.stdout)
+                obj.stdout.flush()
+
+
+def _write_result(res) -> bool | None:
+    """Convert `d.set` response to write status."""
+
+    if isinstance(res, bool) or res is None:
+        return res
+    return res[0]
+
+
+async def _load_data(obj, infile: str, force: bool) -> None:
+    """Load subtree entries from YAML docs."""
+
+    path = "/dev/stdin" if infile == "-" else infile
+    async with MsgReader(path=path, codec="yaml") as reader:
+        async for msg in reader:
+            if isinstance(msg, dict):
+                if "path" in msg and "value" in msg:
+                    try:
+                        p = msg["path"]
+                        d = msg["value"]
+                    except KeyError as exc:
+                        raise click.UsageError("Dict entries need 'path' and 'value'.") from exc
+                    m = msg.get("meta")
+                else:
+                    try:
+                        p = msg["_path"]
+                    except KeyError as exc:
+                        raise click.UsageError(
+                            "Dict entries need either path/value or _path/_value layout."
+                        ) from exc
+                    if "_value" in msg:
+                        d = msg["_value"]
+                    else:
+                        d = {
+                            k: v
+                            for k, v in msg.items()
+                            if not (isinstance(k, str) and k.startswith("_"))
+                        }
+                    m = msg.get("_meta")
+            else:
+                if not isinstance(msg, list | tuple) or len(msg) < 2:
+                    raise click.UsageError(
+                        "Entries must be [path, value] or [path, value, meta...]."
+                    )
+                p, d, *m = msg
+                if len(m) == 0:
+                    m = None
+                elif len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
+                    m = m[0]
+
+            p = P(p) if isinstance(p, str) else Path.build(p)
+            m = _decode_meta(m)
+            p = obj.path + p
+
+            if force:
+                ts = time.time()
+                res = _write_result(await obj.conn.d.set(p, d, m))
+                if res is False:
+                    if m is None:
+                        m2 = MsgMeta(origin=obj.conn.name, timestamp=ts)
+                    else:
+                        m2 = MsgMeta.restore(list(m.a), dict(m.kw))
+                        m2.timestamp = ts
+                    await obj.conn.d.set(p, d, m2)
+            else:
+                await obj.conn.d.set(p, d, m)
 
 
 @click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
@@ -167,7 +303,10 @@ async def edit(obj, yes, editor):
     try:
         data = await obj.conn.d_get(obj.path)
     except KeyError:
-        data = {}
+        try:
+            data = await obj.conn.d_search(P("template") + obj.path)
+        except KeyError:
+            data = {}
 
     if editor is None:
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
@@ -348,6 +487,30 @@ async def monitor(
 
 
 monitor.help = _help_preserve_blocks(monitor.help)
+
+
+@cli.command()
+@click.option("-d", "--dict", "as_dict", is_flag=True, help="Write dict-based dump docs.")
+@click.pass_obj
+async def dump(obj, as_dict):
+    """
+    Dump one subtree as YAML docs.
+
+    Metadata is included iff the top-level ``-m/--meta`` flag is set.
+    This is otherwise equivalent to ``monitor -m c -s``.
+    """
+    await _dump_data(obj, as_dict=as_dict)
+
+
+@cli.command()
+@click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
+@click.option("-f", "--force", is_flag=True, help="Overwrite entries regardless of timestamp.")
+@click.pass_obj
+async def load(obj, infile, force):
+    """
+    Load path+data+metadata tuples from YAML docs into a subtree.
+    """
+    await _load_data(obj, infile, force)
 
 
 @cli.command()

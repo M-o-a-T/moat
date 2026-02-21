@@ -840,11 +840,15 @@ class LinkSender(MsgSender):
 
     def code_at(self, path: Path):
         """
-        Return a callable wrapper for code stored at this data path.
+        Return a callable wrapper for code stored below ``code.exec``.
         """
-        from moat.link.code.run import Runner  # noqa: PLC0415
+        from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+        from moat.link.code.run import Code  # noqa: PLC0415
 
-        return Runner(self, Path.build(path))
+        p = Path.build(path)
+        if len(p) >= len(CODE_EXEC_ROOT) and p[: len(CODE_EXEC_ROOT)] == CODE_EXEC_ROOT:
+            return Code(self, p)
+        return Code(self, CODE_EXEC_ROOT + p)
 
 
 class Link(LinkCommon, CtxObj):

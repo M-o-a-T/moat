@@ -5,33 +5,22 @@ Command-line interface for managing stored code snippets.
 from __future__ import annotations
 
 import anyio
-import copy
 import os
 import sys
 
 import asyncclick as click
 
-from moat.util import NotGiven, attrdict, yformat, yload, yprint
+from moat.util import NotGiven, yformat, yload, yprint
 from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
+from moat.link.code import CODE_EXEC_ROOT
+from moat.link.code.run import make_proc
 from moat.link.meta import MsgMeta
 from moat.util.exec import run
-from moat.util.module import make_proc
 
 from collections.abc import Mapping
 from typing import Any
-
-CODE_EXEC_PATH = P("code.exec")
-CODE_IS_ASYNC_PATH = P("code.is_async")
-CODE_VARS_PATH = P("code.vars")
-CODE_DEFAULT_PATH = P("code.default")
-CODE_ROOT_PATH = P("code")
-CODE_TEST_PATH = P("code.test")
-CODE_TEST_CODE_PATH = P("code.test.code")
-CODE_TEST_ARGS_PATH = P("code.test.args")
-CODE_TEST_KW_PATH = P("code.test.kw")
-CODE_TEST_RESULT_PATH = P("code.test.result")
 
 EDIT_WHOLE = "w"
 EDIT_CODE = "c"
@@ -40,221 +29,27 @@ EDIT_SAVE = "s"
 EDIT_ABORT = "a"
 
 
-def _empty_map() -> attrdict:
-    "Return an empty mapping suitable for storing a record."
-    return attrdict()
-
-
-def _as_map(data: Any) -> attrdict:
-    """Validate and return a mapping."""
-    if data is None:
-        return _empty_map()
-    if isinstance(data, attrdict):
-        return copy.deepcopy(data)
-    if isinstance(data, Mapping):
-        return attrdict(copy.deepcopy(dict(data)))
-    raise TypeError("Record data must be a mapping")
-
-
-def _split_parent(data: Mapping[str, Any], path: Path) -> tuple[Mapping[str, Any], str] | None:
-    """Follow *path* and return ``(parent,last_key)``."""
-    cur: Mapping[str, Any] | Any = data
-    plen = len(path)
-    for idx, part in enumerate(path):
-        if idx + 1 == plen:
-            if isinstance(cur, Mapping):
-                return cur, part
-            return None
-        if not isinstance(cur, Mapping):
-            return None
-        cur = cur.get(part, NotGiven)
-        if cur is NotGiven:
-            return None
-    return None
-
-
-def _get_sub(data: Mapping[str, Any], path: Path, default: Any = NotGiven) -> Any:
-    """Read a subpath from nested mappings."""
-    cur: Mapping[str, Any] | Any = data
-    for part in path:
-        if not isinstance(cur, Mapping):
-            if default is NotGiven:
-                raise KeyError(path)
-            return default
-        cur = cur.get(part, NotGiven)
-        if cur is NotGiven:
-            if default is NotGiven:
-                raise KeyError(path)
-            return default
-    return cur
-
-
-def _set_sub(data: attrdict, path: Path, value: Any) -> None:
-    """Write a subpath into nested mappings."""
-    cur: dict[str, Any] = data
-    plen = len(path)
-    for idx, part in enumerate(path):
-        if idx + 1 == plen:
-            cur[part] = value
-            return
-        nxt = cur.get(part, NotGiven)
-        if not isinstance(nxt, Mapping):
-            nxt = attrdict()
-            cur[part] = nxt
-        cur = nxt
-
-
-def _del_sub(data: attrdict, path: Path) -> Any:
-    """Remove a subpath from nested mappings."""
-    par = _split_parent(data, path)
-    if par is None:
-        return NotGiven
-    parent, key = par
-    if key not in parent:
-        return NotGiven
-    val = parent.pop(key)
-    cur_path = list(path)
-    while cur_path:
-        cur_path.pop()
-        if not cur_path:
-            break
-        par = _split_parent(data, Path.build(cur_path))
-        if par is None:
-            break
-        parent, key = par
-        sub = parent.get(key, NotGiven)
-        if isinstance(sub, Mapping) and not sub:
-            parent.pop(key, None)
-        else:
-            break
-    return val
-
-
-def _sanitize_vars(value: Any) -> tuple[str, ...]:
-    "Normalize the configured argument names."
-    if value is NotGiven or value is None:
-        return ()
-    if not isinstance(value, list | tuple):
-        raise TypeError("code.vars must be a list")
-    return tuple(str(v) for v in value)
-
-
-def _check_async_mode(value: Any) -> bool | None:
-    "Normalize the configured async mode."
-    if value in (NotGiven, None, True, False):
-        return None if value in (None, NotGiven) else value
-    raise TypeError("code.is_async must be true, false, or null")
+def _sanitize_vars(value: Any) -> dict[str, Any]:
+    "Normalize the configured argument defaults."
+    if value in (NotGiven, None):
+        return {}
+    if not isinstance(value, Mapping):
+        raise TypeError("vars must be a mapping")
+    return dict(value)
 
 
 def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
-    """Compile the configured ``code.exec`` script."""
-    code = _get_sub(data, CODE_EXEC_PATH, NotGiven)
+    """Compile the configured ``code`` script."""
+    code = data.get("code", NotGiven)
     if code is NotGiven:
-        return
+        raise KeyError(path / "code")
     if not isinstance(code, str):
-        raise TypeError("code.exec must be a string")
-    vars_ = _sanitize_vars(_get_sub(data, CODE_VARS_PATH, ()))
-    is_async = _check_async_mode(_get_sub(data, CODE_IS_ASYNC_PATH, None))
-    make_proc(code, vars_, path + CODE_EXEC_PATH, use_async=is_async is True)
-
-
-class _RecordLink:
-    """
-    Tiny in-memory link object used for editor-side test execution.
-    """
-
-    def __init__(self, path: Path, data: Mapping[str, Any]):
-        self.path = path
-        self.data = data
-
-    async def d_get(self, path: Path):
-        """Return the temporary record for its configured path."""
-        if Path.build(path) != self.path:
-            raise KeyError(path)
-        return self.data
-
-
-async def _run_code_test(data: Mapping[str, Any], path: Path) -> None:
-    """
-    Run a ``code.test`` specification against a temporary Runner.
-    """
-    test_cfg = _get_sub(data, CODE_TEST_PATH, NotGiven)
-    if test_cfg is NotGiven:
-        return
-    if not isinstance(test_cfg, Mapping):
-        raise TypeError("code.test must be a mapping")
-
-    args = _get_sub(data, CODE_TEST_ARGS_PATH, ())
-    if not isinstance(args, list | tuple):
-        raise TypeError("code.test.args must be a list")
-    args = tuple(args)
-
-    kw = _get_sub(data, CODE_TEST_KW_PATH, attrdict())
-    if kw is None:
-        kw = attrdict()
-    if not isinstance(kw, Mapping):
-        raise TypeError("code.test.kw must be a mapping")
-    kw = attrdict(kw)
-
-    expected = _get_sub(data, CODE_TEST_RESULT_PATH, NotGiven)
-
-    from moat.link.code.run import Runner  # noqa: PLC0415
-
-    runner = Runner(_RecordLink(path, data), path)
-    result = await runner(*args, **kw)
-    if expected is not NotGiven and result != expected:
-        raise AssertionError(f"code.test.result mismatch: {result!r} != {expected!r}")
-
-    test_code = _get_sub(data, CODE_TEST_CODE_PATH, NotGiven)
-    if test_code in (NotGiven, None):
-        return
-    if not isinstance(test_code, str):
-        raise TypeError("code.test.code must be a string")
-
-    proc = make_proc(
-        test_code,
-        ("runner", "args", "kw", "result", "expected"),
-        path + CODE_TEST_CODE_PATH,
-        use_async=True,
-    )
-    await proc(
-        runner,
-        args,
-        kw,
-        result,
-        expected,
-        link=runner.link,
-        path=path,
-        anyio=anyio,
-        P=P,
-        Path=Path,
-        NotGiven=NotGiven,
-    )
-
-
-def _without_code(data: Mapping[str, Any]) -> attrdict:
-    """Return a copy without the ``code`` subtree."""
-    res = _as_map(data)
-    _del_sub(res, CODE_ROOT_PATH)
-    return res
-
-
-def _merge_non_code(current: Mapping[str, Any], new_non_code: Mapping[str, Any]) -> attrdict:
-    """Combine edited non-code data with the existing code subtree."""
-    res = _as_map(new_non_code)
-    code = _get_sub(current, CODE_ROOT_PATH, NotGiven)
-    if code is not NotGiven:
-        _set_sub(res, CODE_ROOT_PATH, copy.deepcopy(code))
-    return res
-
-
-async def _read_value(obj) -> attrdict:
-    """Read the current data value."""
-    try:
-        data = await obj.conn.d_get(obj.path)
-    except KeyError:
-        return _empty_map()
-    return _as_map(data)
+        raise TypeError("code must be a string")
+    _sanitize_vars(data.get("vars", {}))
+    is_async = data.get("is_async", None)
+    if is_async not in (None, True, False):
+        raise TypeError("is_async must be true, false, or null")
+    make_proc(code, path / "code", use_async=is_async is True)
 
 
 async def _edit_text(editor: str, text: str, *, suffix: str) -> str:
@@ -270,11 +65,10 @@ async def _edit_text(editor: str, text: str, *, suffix: str) -> str:
         return await f.read()
 
 
-async def _edit_yaml(editor: str, data: Mapping[str, Any], *, suffix: str = ".yaml") -> attrdict:
+async def _edit_yaml(editor: str, data: Mapping[str, Any], *, suffix: str = ".yaml") -> dict:
     """Edit YAML content and parse the result."""
     txt = await _edit_text(editor, yformat(data, compact=False) + "\n", suffix=suffix)
-    parsed = yload(txt)
-    return _as_map(parsed)
+    return yload(txt)
 
 
 def _info_line(data: Mapping[str, Any]) -> str:
@@ -282,7 +76,7 @@ def _info_line(data: Mapping[str, Any]) -> str:
     info = data.get("info", NotGiven)
     if info is not NotGiven:
         return str(info)
-    code = _get_sub(data, CODE_EXEC_PATH, "")
+    code = data.get("code", "")
     if isinstance(code, str):
         return f"<{len(code.splitlines())} lines>"
     return "<code>"
@@ -302,19 +96,19 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
         args.pop()
 
     pl = PathLongener(obj.path)
-    out = attrdict() if as_dict is not None else None
+    out = {} if as_dict is not None else None
 
     async with obj.conn.d.walk(obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
             path = pl.long(n, p)
             if not isinstance(data, Mapping):
                 continue
-            if _get_sub(data, CODE_EXEC_PATH, NotGiven) is NotGiven:
+            if "code" not in data:
                 continue
 
-            entry = _as_map(data)
+            entry = dict(data)
             if not full:
-                _del_sub(entry, CODE_EXEC_PATH)
+                entry.pop("code", None)
 
             if short:
                 print(path, "::", _info_line(data), file=obj.stdout)
@@ -323,7 +117,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
             if as_dict is not None:
                 cur = out
                 for pp in path:
-                    cur = cur.setdefault(pp, attrdict())
+                    cur = cur.setdefault(pp, {})
                 cur[as_dict] = entry
             else:
                 yprint([{path: entry}], stream=obj.stdout)
@@ -346,7 +140,7 @@ async def cli(ctx, path, meta):
         cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
     obj.meta = meta
-    obj.path = path
+    obj.path = CODE_EXEC_ROOT + path
 
     if ctx.invoked_subcommand is None:
         await _list_entries(obj, None, None, None, False, True)
@@ -361,16 +155,15 @@ async def get(obj, script):
     """
     if obj.meta:
         data, *meta = await obj.conn.d.get(obj.path)
-        data = _as_map(data)
         out = dict(data=data, meta=MsgMeta.restore(meta).repr())
     else:
-        out = await _read_value(obj)
+        out = await obj.conn.d_get(obj.path)
 
     if script:
         if obj.meta:
-            code = _del_sub(out["data"], CODE_EXEC_PATH)
+            code = out["data"].pop("code", NotGiven)
         else:
-            code = _del_sub(out, CODE_EXEC_PATH)
+            code = out.pop("code", NotGiven)
         if isinstance(code, str):
             print(code, file=script)
 
@@ -378,51 +171,44 @@ async def get(obj, script):
 
 
 @cli.command("set")
-@click.option(
-    "-a/-A",
-    "--async/--sync",
-    "async_",
-    is_flag=True,
-    default=True,
-    help="The code is async / sync (default: async)",
-)
+@click.option("-a", "--async", "use_async", is_flag=True, help="Run this script async")
+@click.option("-A", "--sync", "use_sync", is_flag=True, help="Run this script sync")
 @click.option("-t", "--thread", is_flag=True, help="The code should run in a worker thread")
 @click.option("-S", "--script", type=click.File(mode="r"), help="File with the code")
 @click.option("-i", "--info", type=str, help="One-line description")
 @click.option("-d", "--data", type=click.File(mode="r"), help="Load the metadata (YAML)")
 @attr_args
 @click.pass_obj
-async def set_(obj, thread, script, data, async_, info, **kw):
+async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     """
     Save Python code.
     """
-    if thread:
-        async_ = False
-    elif not async_:
-        async_ = None
+    if use_async and use_sync:
+        raise click.UsageError("--async and --sync are opposites.")
+    if thread and (use_async or use_sync):
+        raise click.UsageError("--thread conflicts with --async/--sync.")
 
     if data:
-        msg = _as_map(yload(data))
+        msg = yload(data)
     else:
-        msg = await _read_value(obj)
+        msg = await obj.conn.d_get(obj.path)
 
-    if async_ is not None or _get_sub(msg, CODE_IS_ASYNC_PATH, NotGiven) is NotGiven:
-        _set_sub(msg, CODE_IS_ASYNC_PATH, async_)
+    if thread:
+        msg["is_async"] = False
+    elif use_async:
+        msg["is_async"] = True
+    elif use_sync:
+        msg["is_async"] = None
     if info is not None:
         msg["info"] = info
 
     if script:
-        _set_sub(msg, CODE_EXEC_PATH, script.read())
-    elif _get_sub(msg, CODE_EXEC_PATH, NotGiven) is NotGiven:
+        msg["code"] = script.read()
+    elif "code" not in msg:
         raise click.UsageError("Missing script")
 
-    vs = set(_sanitize_vars(_get_sub(msg, CODE_VARS_PATH, ())))
-    vd = _get_sub(msg, CODE_DEFAULT_PATH, attrdict())
-    if not isinstance(vd, Mapping):
-        raise click.UsageError("code.default must be a mapping")
-    vd = process_args(attrdict(vd), vs=vs, **kw)
-    _set_sub(msg, CODE_VARS_PATH, list(vs))
-    _set_sub(msg, CODE_DEFAULT_PATH, vd)
+    vars_ = _sanitize_vars(msg.get("vars", {}))
+    msg["vars"] = process_args(vars_, **kw)
 
     _check_exec_syntax(msg, obj.path)
     res = await obj.conn.d_set(obj.path, msg)
@@ -476,14 +262,20 @@ async def edit(obj, editor):
     Edit a code entry interactively.
 
     The first edit opens the complete YAML record. Follow-up actions let you
-    edit either only ``code.exec`` (``.py`` file), only non-code data
+    edit either only ``code`` (``.py`` file), only non-code data
     (``.yaml`` file), or the full record.
     """
     if editor is None:
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
 
-    original = await _read_value(obj)
-    current = _as_map(original)
+    try:
+        original = await obj.conn.d_get(obj.path)
+    except KeyError:
+        try:
+            original = await obj.conn.d_search(P("template") + obj.path)
+        except KeyError:
+            original = {"code": "return 42;\n"}
+    current = dict(original)
     mode = EDIT_WHOLE
 
     while True:
@@ -491,21 +283,23 @@ async def edit(obj, editor):
             if mode == EDIT_WHOLE:
                 current = await _edit_yaml(editor, current)
             elif mode == EDIT_CODE:
-                code = _get_sub(current, CODE_EXEC_PATH, "")
+                code = current.get("code", "")
                 if code in (NotGiven, None):
                     code = ""
                 if not isinstance(code, str):
-                    raise click.UsageError("code.exec must be a string")
+                    raise click.UsageError("code must be a string")
                 code = await _edit_text(editor, code, suffix=".py")
-                _set_sub(current, CODE_EXEC_PATH, code)
+                current["code"] = code
             elif mode == EDIT_NON_CODE:
-                non_code = _without_code(current)
-                non_code = await _edit_yaml(editor, non_code)
-                current = _merge_non_code(current, non_code)
+                code = current.pop("code", NotGiven)
+                try:
+                    current = await _edit_yaml(editor, current)
+                finally:
+                    if code is not NotGiven:
+                        current["code"] = code
             else:
                 raise RuntimeError(f"Invalid edit mode: {mode!r}")
             _check_exec_syntax(current, obj.path)
-            await _run_code_test(current, obj.path)
         except Exception as exc:
             click.echo(f"Edit failed: {exc}", err=True)
             mode = await click.prompt(
@@ -513,29 +307,23 @@ async def edit(obj, editor):
                 type=click.Choice([EDIT_WHOLE, EDIT_CODE, EDIT_NON_CODE, EDIT_ABORT]),
                 default=mode if mode in (EDIT_WHOLE, EDIT_CODE, EDIT_NON_CODE) else EDIT_WHOLE,
             )
-            if mode == EDIT_ABORT:
-                click.echo("Not saved.", err=True)
-                return
-            continue
-
-        action = await click.prompt(
-            "Next: [w]hole, [c]ode, [n]on-code, [s]ave, [a]bort?",
-            type=click.Choice([EDIT_WHOLE, EDIT_CODE, EDIT_NON_CODE, EDIT_SAVE, EDIT_ABORT]),
-            default=EDIT_SAVE,
-        )
-        if action == EDIT_ABORT:
+        else:
+            mode = await click.prompt(
+                "Next: [w]hole, [c]ode, [n]on-code, [s]ave, [a]bort?",
+                type=click.Choice([EDIT_WHOLE, EDIT_CODE, EDIT_NON_CODE, EDIT_SAVE, EDIT_ABORT]),
+                default=EDIT_SAVE,
+            )
+        if mode == EDIT_ABORT:
             click.echo("Not saved.", err=True)
             return
-        if action == EDIT_SAVE:
+        if mode == EDIT_SAVE:
             if current == original:
                 click.echo("No changes.", err=True)
                 return
             _check_exec_syntax(current, obj.path)
-            await _run_code_test(current, obj.path)
             res = await obj.conn.d_set(obj.path, current)
             if obj.meta:
                 yprint(res, stream=obj.stdout)
             else:
                 click.echo("Saved.", err=True)
             return
-        mode = action

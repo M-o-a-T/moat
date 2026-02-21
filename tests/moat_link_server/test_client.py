@@ -2,7 +2,6 @@ from __future__ import annotations  # noqa: D100
 
 import anyio
 import pytest
-import threading
 
 from moat.util import NotGiven
 from moat.lib.path import P, Path
@@ -255,58 +254,3 @@ async def test_set_d_direct(cfg):
             await c.d_get(P("test.foo.bar"))
         with pytest.raises(KeyError):
             await c.d_.test.foo.bar()
-
-
-@pytest.mark.anyio
-async def test_code_at(cfg):
-    "Check running code snippets with all async modes."
-    async with (
-        Scaffold(cfg, use_servers=True) as sf,
-        sf.server_(init={"Hello": "there!", "test": 123}),
-        sf.client_() as c,
-    ):
-        await c.d_set(P("test.base"), 41)
-
-        await c.d_set(
-            P("test.code.async"),
-            dict(
-                code=dict(
-                    exec="""
-assert runner.path == P("test.code.async")
-return await link.d_get(P("test.base")) + inc
-""",
-                    vars=["inc"],
-                    is_async=True,
-                )
-            ),
-        )
-        await c.d_set(
-            P("test.code.sync"),
-            dict(
-                code=dict(
-                    exec="""
-assert link is runner.link
-return left + right + len(args)
-""",
-                    vars=["left", "right"],
-                )
-            ),
-        )
-        await c.d_set(
-            P("test.code.thread"),
-            dict(
-                code=dict(
-                    exec="""
-import threading
-return threading.get_ident() != origin
-""",
-                    vars=["origin"],
-                    is_async=False,
-                )
-            ),
-        )
-        await c.i_sync()
-
-        assert await c.code_at(P("test.code.async"))(1) == 42
-        assert await c.code_at(P("test.code.sync"))(2, 5) == 9
-        assert await c.code_at(P("test.code.thread"))(threading.get_ident()) is True

@@ -31,7 +31,7 @@ class Queue:
 
     def __init__(self, maxsize=99):
         self.maxsize = maxsize
-        self._queue = deque((), maxsize)
+        self._queue = deque(maxlen=maxsize)
         self._full = core.TaskQueue()
         self._empty = core.TaskQueue()
         self._closed_w = False

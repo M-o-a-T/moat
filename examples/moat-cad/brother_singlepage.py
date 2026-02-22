@@ -68,7 +68,8 @@ with BuildSketch() as frame:
 
 frame = extrude(frame, slot_z)
 frame = fillet(
-    frame.edges()
+    frame
+    .edges()
     .filter_by(Axis.Z)
     .filter_by(lambda p: abs((p @ 0).X) != slot_x / 2 and (p @ 0).Y > 0),
     wall / 2.5,

@@ -7,6 +7,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 from types import CodeType, ModuleType
+
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ def _call_proc(code: CodeType, variables: Sequence[str], *a: Any, **kw: Any) -> 
         for k in v:
             a_list.append(kw.pop(k, None))
         a = tuple(a_list)
-    eval(code, kw)  # noqa: S307
+    eval(code, kw)
     code_fn = kw["_proc"]
     return code_fn(*a)
 
@@ -78,6 +79,6 @@ def make_module(code: str, path: Sequence[Any]) -> ModuleType:
     m = sys.modules.get(name, None)
     if m is None:
         m = ModuleType(name)
-    eval(code_obj, m.__dict__)  # noqa: S307
+    eval(code_obj, m.__dict__)
     sys.modules[name] = m
     return m

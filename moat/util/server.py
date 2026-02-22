@@ -4,16 +4,16 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
 import anyio
 from anyio.abc import SocketAttribute
 
+from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from anyio.abc import TaskGroup
     from ssl import SSLContext
 
-    from anyio.abc import TaskGroup
+    from collections.abc import Awaitable, Callable
 
 __all__ = ["gen_ssl", "run_tcp_server"]
 

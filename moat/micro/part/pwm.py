@@ -184,10 +184,8 @@ class PWM(BaseCmd):
         self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
-        async with (
-            TaskGroup() as self._tg,
-            _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps,
-        ):
+        async with TaskGroup() as self._tg, \
+                _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps:  # fmt:skip
             try:
                 if L:
                     self.set_ready()

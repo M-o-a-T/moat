@@ -48,7 +48,7 @@ def decomma(proj, path):
 
 def encomma(proj, path):
     """list > comma-delimited string"""
-    _mangle(proj, path, lambda x: ",".join(x))  # pylint: disable=unnecessary-lambda
+    _mangle(proj, path, lambda x: ",".join(x))  # noqa:PLW0108
 
 
 class Replace:

@@ -182,9 +182,11 @@ explicit-preview-rules = true
 "moat/mqtt/**" = ["E501","UP031"]
 "moat/lib/broadcast/**" = ["UP046"]
 "docs/conf.py" = ["ALL"]
+"docs/**" = ["D1","F841","TC003"]
 "tests/moat_mqtt/**" = ["PT"]
-"tests/**" = ["D104","E501","PLW2901","RUF040","S105","S110","S607"]
+"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
 "examples/**" = ["S108"]
+"moat/micro/_test.py" = ["ASYNC240"]
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true

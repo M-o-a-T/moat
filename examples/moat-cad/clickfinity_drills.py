@@ -100,10 +100,13 @@ def drills(a, b, d1=None, d2=None):
         Rectangle(5 * a - 20, w, align=(Align.MAX, Align.MIN)),
     )
     base = chamfer(
-        base.edges()
+        base
+        .edges()
         .filter_by(
-            lambda e: abs((e @ 0).Y - (e @ 1).Y) + abs((e @ 0).Z - (e @ 1).Z) < 0.1
-            and e.center().Z < 0.1
+            lambda e: (
+                abs((e @ 0).Y - (e @ 1).Y) + abs((e @ 0).Z - (e @ 1).Z) < 0.1
+                and e.center().Z < 0.1
+            )
         )
         .group_by(Axis.Z)[0]
         .sort_by(Axis.Y)[0 if a > 7 else -1],

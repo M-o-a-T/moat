@@ -52,7 +52,8 @@ def Slider(x, y, size=2, inset=0, chamfer=None, back=True, centered=True):
     def hook(ws, offset, length):
         d = -1 if offset > 0 else 1
         ws = (
-            ws.moveTo(offset, 0)
+            ws
+            .moveTo(offset, 0)
             .line(0, size * 3 + cap + inset)
             .line(d * (size), -cap)
             .line(d * (size + inset), -size - inset)
@@ -71,7 +72,8 @@ def Slider(x, y, size=2, inset=0, chamfer=None, back=True, centered=True):
         res = res.union(h3, clean=False)
     elif back is None:
         h3 = (
-            cq.Workplane("XY")
+            cq
+            .Workplane("XY")
             .box(x, size * 3, size * 3, centered=False)
             .translate((0, y - size * 3, 0))
         )
@@ -88,7 +90,8 @@ def Mount(length, inner, outer=None, cone=0):
     ws = cq.Workplane("XY").circle((outer + cone) / 2).extrude(length - cone)
     if cone:
         ws = (
-            ws.faces(">Z")
+            ws
+            .faces(">Z")
             .workplane()
             .circle((outer + cone) / 2)
             .workplane(offset=cone)
@@ -114,7 +117,8 @@ def WoodScrew(height, outer, inner, angle=45, head=None, negate=False):
 
     if negate:
         return (
-            cq.Workplane("XY")
+            cq
+            .Workplane("XY")
             .at(0, 0)
             .circle(inner / 2)
             .extrude(height)
@@ -126,7 +130,8 @@ def WoodScrew(height, outer, inner, angle=45, head=None, negate=False):
         )
 
     ws = (
-        cq.Workplane("XY")
+        cq
+        .Workplane("XY")
         .at(0, 0)
         .circle(outer / 2)
         .circle(inner / 2)

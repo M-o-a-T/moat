@@ -79,7 +79,8 @@ def ts2iso(ts: float, delta: bool = False, msec: int = 1) -> str:
     Convert a timestamp to a human-readable absolute-time string, optionally with delta.
     """
     res = (
-        dt.datetime.fromtimestamp(ts, dt.UTC)
+        dt.datetime
+        .fromtimestamp(ts, dt.UTC)
         .astimezone()
         .isoformat(sep=" ", timespec="milliseconds")
     )

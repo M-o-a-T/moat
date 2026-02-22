@@ -552,30 +552,39 @@ class Loader(click.Group):
 
     def get_sub_ext(self, ctx):
         """Fetch extension variables"""
-        sub_pre = getattr(
-            # pylint: disable=protected-access
-            self,
-            "_util_sub_pre",
-            ctx.obj._util_sub_pre,
-        )
-        sub_post = getattr(
-            # pylint: disable=protected-access
-            self,
-            "_util_sub_post",
-            ctx.obj._util_sub_post,
-        )
-        ext_pre = getattr(
-            # pylint: disable=protected-access
-            self,
-            "_util_ext_pre",
-            ctx.obj._util_ext_pre,
-        )
-        ext_post = getattr(
-            # pylint: disable=protected-access
-            self,
-            "_util_ext_post",
-            ctx.obj._util_ext_post,
-        )
+        try:
+            uspr = ctx.obj._util_sub_pre
+        except AttributeError:
+            try:
+                uspr = ctx.obj.moat.sub_pre
+            except AttributeError:
+                uspr = None
+        try:
+            uspo = ctx.obj._util_sub_post
+        except AttributeError:
+            try:
+                uspo = ctx.obj.moat.sub_post
+            except AttributeError:
+                uspo = None
+        try:
+            expr = ctx.obj._util_ext_pre
+        except AttributeError:
+            try:
+                expr = ctx.obj.moat.ext_pre
+            except AttributeError:
+                expr = None
+        try:
+            expo = ctx.obj._util_ext_post
+        except AttributeError:
+            try:
+                expo = ctx.obj.moat.ext_post
+            except AttributeError:
+                expo = None
+
+        sub_pre = getattr(self, "_util_sub_pre", uspr)
+        sub_post = getattr(self, "_util_sub_post", uspo)
+        ext_pre = getattr(self, "_util_ext_pre", expr)
+        ext_post = getattr(self, "_util_ext_post", expo)
 
         if sub_pre is None:
             sub_post = None
@@ -608,13 +617,13 @@ class Loader(click.Group):
                 name = name.rsplit(".", 1)[1]
                 if name[0] == "_":
                     continue
-                if load_ext(sub_pre, name, *sub_post, err=ctx.obj.debug_loader):
+                if load_ext(sub_pre, name, *sub_post, err=ctx.obj.get("debug_loader", False)):
                     rv.append(name)
 
         if ext_pre:
             logger.debug("Adding ext %s", ext_pre)
             for n, _ in list_ext(ext_pre):
-                if load_ext(ext_pre, n, *ext_post, err=ctx.obj.debug_loader):
+                if load_ext(ext_pre, n, *ext_post, err=ctx.obj.get("debug_loader", False)):
                     rv.append(n)
         rv.sort()
         logger.debug("List: %r", rv)
@@ -629,7 +638,10 @@ class Loader(click.Group):
         if command is None and ext_pre is not None:
             command = load_ext(ext_pre, cmd_name, *ext_post)
             if command is not None:
-                CFG.with_(f"{ext_pre}.{cmd_name}")
+                try:
+                    CFG.with_(f"{ext_pre}.{cmd_name}")
+                except AttributeError:
+                    pass  # TODO happens during autocomplete
 
         if command is None:
             if sub_pre is None or sub_pre is NotGiven:
@@ -639,7 +651,10 @@ class Loader(click.Group):
             else:
                 command = load_ext(sub_pre, cmd_name, *sub_post)
                 if command is not None:
-                    CFG.with_(f"{sub_pre}.{cmd_name}")
+                    try:
+                        CFG.with_(f"{sub_pre}.{cmd_name}")
+                    except AttributeError:
+                        pass  # TODO happens during autocomplete
 
         if command is None:
             # raise click.UsageError(f"No such subcommand: {cmd_name}")

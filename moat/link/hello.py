@@ -60,8 +60,8 @@ class Hello(CmdCommon):
 
     auth_data: Any = field(init=False, default=None)
 
-    auth_in: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
-    auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
+    auth_in: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)  # noqa:RUF008
+    auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)  # noqa:RUF008
 
     me_server: bool = field(default=False)
     they_server: bool = field(init=False, default=False)

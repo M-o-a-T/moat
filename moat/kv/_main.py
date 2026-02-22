@@ -11,7 +11,6 @@ import asyncclick as click
 from moat.util import attrdict, combine_dict
 from moat.kv.auth import gen_auth
 from moat.kv.client import client_scope
-from moat.lib.config import CFG
 from moat.lib.run import load_subgroup
 
 logger = logging.getLogger(__name__)
@@ -39,13 +38,13 @@ class NullObj:
 
 
 @load_subgroup(sub_pre="moat.kv.command", sub_post="cli", ext_pre="moat.kv", ext_post="_main.cli")
-@click.option("-h", "--host", default=None, help=f"Host to use. Default: {CFG.moat.kv.conn.host}")
+@click.option("-h", "--host", default=None, help="Host to use")
 @click.option(
     "-p",
     "--port",
     type=int,
     default=None,
-    help=f"Port to use. Default: {CFG.moat.kv.conn.port}",
+    help="Port to use",
 )
 @click.option(
     "-a",

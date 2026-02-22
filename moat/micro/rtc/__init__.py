@@ -351,7 +351,7 @@ def at(*a, **kw):
             return
     except KeyError:
         pass
-    data = (a, kw) if a and kw else (a if a else kw)
+    data = (a, kw) if a and kw else (a or kw)
     try:
         RTC.set_sync("debug", data, fs=False)
     except NotImplementedError:

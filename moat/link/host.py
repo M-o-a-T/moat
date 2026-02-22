@@ -505,7 +505,7 @@ class ServiceMon(HostList):
         "Delete a host's ID message"
         if "i" in host.data:
             if self.fake:
-                print("-id", host)
+                print("DEL", host.id, host)
             else:
                 await self.link.d_set(P("run.id") / host.id, retain=True)
         await super().drop_id(host)
@@ -514,7 +514,7 @@ class ServiceMon(HostList):
         "Delete a host's Service messages (yes all of them)"
         for p in host.data.h.keys():
             if self.fake:
-                print("-rh", p)
+                print("DEL", p)
             else:
                 await self.link.d_set(P("run.host") + p, retain=True)
             self.hostdown[p] = self.cfg.timeout.restart.error
@@ -530,7 +530,7 @@ class ServiceMon(HostList):
             if host is not None and (dt := host.data.h.get(path, None)) is not None:
                 dat["data"] = dt
             if self.fake:
-                print("+eh", path, dat)
+                print("ERR", path, dat)
             else:
                 await self.link.d_set(P("error.run.host") + path, dat)
             self.errored[path] = msg
@@ -538,7 +538,7 @@ class ServiceMon(HostList):
     async def _no_err(self, path: Path):
         if self.errored.get(path, True) is not False:
             if self.fake:
-                print("-eh", path)
+                print("OK ", path)
             else:
                 await self.link.d_set(P("error.run.host") + path)
             self.errored[path] = False

@@ -63,13 +63,13 @@ def test_check_exec_syntax_missing_code():
 async def test_edit_uses_template_fallback(monkeypatch):
     "Edit loads template data when the target path does not exist."
 
-    async def _noop_run(*_a, **_kw):
-        return None
+    async def _edit_yaml(editor, data, *, suffix=".yaml"):  # noqa: ARG001
+        return data
 
     async def _prompt(*_a, **_kw):
         return "s"
 
-    monkeypatch.setattr(code_cmd, "run", _noop_run)
+    monkeypatch.setattr(code_cmd, "edit_yaml", _edit_yaml)
     monkeypatch.setattr(code_cmd.click, "prompt", _prompt)
 
     conn = _EditConn(template={"code": "return 42;\n"})
@@ -86,13 +86,13 @@ async def test_edit_uses_template_fallback(monkeypatch):
 async def test_edit_uses_default_fallback(monkeypatch):
     "Edit falls back to a built-in code snippet if template lookup fails."
 
-    async def _noop_run(*_a, **_kw):
-        return None
+    async def _edit_yaml(editor, data, *, suffix=".yaml"):  # noqa: ARG001
+        return data
 
     async def _prompt(*_a, **_kw):
         return "s"
 
-    monkeypatch.setattr(code_cmd, "run", _noop_run)
+    monkeypatch.setattr(code_cmd, "edit_yaml", _edit_yaml)
     monkeypatch.setattr(code_cmd.click, "prompt", _prompt)
 
     conn = _EditConn()

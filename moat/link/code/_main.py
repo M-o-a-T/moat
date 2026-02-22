@@ -4,20 +4,17 @@ Command-line interface for managing stored code snippets.
 
 from __future__ import annotations
 
-import anyio
 import os
-import sys
 
 import asyncclick as click
 
-from moat.util import NotGiven, yformat, yload, yprint
+from moat.util import NotGiven, edit_text, edit_yaml, yload, yprint
 from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.run import make_proc
 from moat.link.meta import MsgMeta
-from moat.util.exec import run
 
 from collections.abc import Mapping
 from typing import Any
@@ -50,25 +47,6 @@ def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
     if is_async not in (None, True, False):
         raise TypeError("is_async must be true, false, or null")
     make_proc(code, path / "code", use_async=is_async is True)
-
-
-async def _edit_text(editor: str, text: str, *, suffix: str) -> str:
-    """Open a tempfile in an editor and return its content."""
-    async with anyio.NamedTemporaryFile(mode="w+", suffix=suffix) as f:
-        if text and not text.endswith("\n"):
-            text += "\n"
-        await f.write(text)
-        await f.flush()
-        await f.seek(0)
-        await run(editor, f.name, stdin=sys.stdin, stdout=sys.stdout)
-        await f.seek(0)
-        return await f.read()
-
-
-async def _edit_yaml(editor: str, data: Mapping[str, Any], *, suffix: str = ".yaml") -> dict:
-    """Edit YAML content and parse the result."""
-    txt = await _edit_text(editor, yformat(data, compact=False) + "\n", suffix=suffix)
-    return yload(txt)
 
 
 def _info_line(data: Mapping[str, Any]) -> str:
@@ -281,19 +259,19 @@ async def edit(obj, editor):
     while True:
         try:
             if mode == EDIT_WHOLE:
-                current = await _edit_yaml(editor, current)
+                current = await edit_yaml(editor, current)
             elif mode == EDIT_CODE:
                 code = current.get("code", "")
                 if code in (NotGiven, None):
                     code = ""
                 if not isinstance(code, str):
                     raise click.UsageError("code must be a string")
-                code = await _edit_text(editor, code, suffix=".py")
+                code = await edit_text(editor, code, suffix=".py")
                 current["code"] = code
             elif mode == EDIT_NON_CODE:
                 code = current.pop("code", NotGiven)
                 try:
-                    current = await _edit_yaml(editor, current)
+                    current = await edit_yaml(editor, current)
                 finally:
                     if code is not NotGiven:
                         current["code"] = code

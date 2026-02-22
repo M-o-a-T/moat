@@ -19,7 +19,7 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.lib.path import P, Path
+from moat.lib.path import P, Path, Root
 from moat.lib.run import attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
@@ -361,8 +361,9 @@ async def edit(obj, yes, editor):
     help="Don't delete entries created after this timestamp",
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
+@click.option("-m", "--mqtt", is_flag=True, help="Delete via MQTT message")
 @click.pass_obj
-async def delete(obj, before, recursive):
+async def delete(obj, before, recursive, mqtt):
     """
     Delete an entry, or a subtree.
 
@@ -371,12 +372,18 @@ async def delete(obj, before, recursive):
 
     The root entry cannot be deleted.
     """
+    if mqtt and (recursive or before):
+        raise click.UsageError("--mqtt and --recursive/--before don't like each other")
     args = {}
     if recursive:
         args["rec"] = recursive
     if before:
         args["ts"] = before
-    res = await obj.conn.d.delete(obj.path, **args)
+    if mqtt:
+        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
+        return
+    else:
+        res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
         res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:

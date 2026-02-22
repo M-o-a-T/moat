@@ -16,4 +16,4 @@ class Link(CmdMsg):
 
     def __init__(self, cfg):
         stack = serial_stack(UnixLink(cfg["port"], retry=cfg.get("retry", attrdict())), cfg)
-        super().__init__(stack, cfg)
+        super().__init__(cfg, stack)

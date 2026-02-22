@@ -17,7 +17,6 @@ dependencies = [
 	"outcome",
 	"ruyaml",
 	"simpleeval",
-	"transitions_aio ~= 0.9.3.4",
 	"moat-util ~= 0.62.6",
 	"moat-lib-rpc ~= 0.6.1",
 	"moat-lib-priomap ~= 0.2.5",

@@ -8,7 +8,6 @@ from enum import Enum, auto
 from functools import partial
 
 from attrs import define, field
-from transitions_aio.extensions.factory import MachineFactory
 
 from moat.util import CtxObj, NotGiven, attrdict, srepr
 from moat.lib.broadcast import Broadcaster
@@ -18,8 +17,6 @@ from moat.lib.priomap import TimerMap
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from transitions_aio import EventData
-
     from moat.lib.path import Path
     from moat.link.client import Link
 
@@ -67,103 +64,114 @@ _S = HostState
 _E = HostEvent
 
 
-# @add_state_features(MonTimeout)
-class HostMachine(MachineFactory.get_predefined(graph=True, asyncio=True)):
+@define
+class _HostTransition:
+    source: HostState
+    dest: HostState | None
+
+
+@define
+class _HostEventData:
+    model: HostMachine
+    event: HostEvent
+    transition: _HostTransition
+    kwargs: dict[str, Any] = field(factory=dict)
+
+
+class HostMachine:
     def __init__(self, host):
-        states = [
-            dict(name=_S.INIT),
-            dict(name=_S.NEW),
-            dict(name=_S.DOWN),
-            dict(name=_S.UP),
-            dict(name=_S.TIMEOUT),
-            dict(name=_S.STALE),
-            dict(name=_S.DROP, final=True),
-            dict(name=_S.ONLY_I),
-            dict(name=_S.ONLY_P),
-        ]
-        transitions = [
-            dict(trigger=_E.INIT, source=_S.INIT, dest=_S.NEW),
-            dict(trigger=_E.MSG_HOST, source=_S.NEW, dest=_S.ONLY_I),
-            dict(trigger=_E.MSG_ID, source=_S.NEW, dest=_S.ONLY_I),
-            dict(trigger=_E.MSG_PING, source=_S.NEW, dest=_S.ONLY_P),
-            dict(trigger=_E.MSG_DOWN, source=_S.NEW, dest=_S.DROP),
-            dict(trigger=_E.DEL_HOST, source=_S.NEW, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.NEW, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.NEW, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.ONLY_I, dest=_S.ONLY_I),
-            dict(trigger=_E.MSG_ID, source=_S.ONLY_I, dest=_S.ONLY_I),
-            dict(trigger=_E.MSG_PING, source=_S.ONLY_I, dest=_S.UP),
-            dict(trigger=_E.MSG_DOWN, source=_S.ONLY_I, dest=_S.DROP),
-            dict(trigger=_E.DEL_HOST, source=_S.ONLY_I, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.ONLY_I, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.ONLY_I, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.ONLY_P, dest=_S.ONLY_P),
-            dict(trigger=_E.MSG_ID, source=_S.ONLY_P, dest=_S.UP),
-            dict(trigger=_E.MSG_PING, source=_S.ONLY_P, dest=None),
-            dict(trigger=_E.MSG_DOWN, source=_S.ONLY_P, dest=_S.DROP),
-            dict(trigger=_E.DEL_HOST, source=_S.ONLY_P, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.ONLY_P, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.ONLY_P, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.DOWN, dest=_S.DOWN),
-            dict(trigger=_E.MSG_ID, source=_S.DOWN, dest=_S.DOWN),
-            dict(trigger=_E.MSG_PING, source=_S.DOWN, dest=_S.DOWN),
-            dict(trigger=_E.MSG_DOWN, source=_S.DOWN, dest=_S.DROP),
-            dict(trigger=_E.DEL_HOST, source=_S.DOWN, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.DOWN, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.DOWN, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.UP, dest=_S.UP),
-            dict(trigger=_E.MSG_ID, source=_S.UP, dest=_S.UP),
-            dict(trigger=_E.MSG_PING, source=_S.UP, dest=None),
-            dict(trigger=_E.MSG_DOWN, source=_S.UP, dest=_S.DOWN),
-            dict(trigger=_E.DEL_HOST, source=_S.UP, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.UP, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.UP, dest=_S.STALE),
-            dict(trigger=_E.MSG_HOST, source=_S.TIMEOUT, dest=_S.TIMEOUT, after=host.drop_host),
-            dict(trigger=_E.MSG_ID, source=_S.TIMEOUT, dest=_S.TIMEOUT, after=host.drop_id),
-            dict(trigger=_E.MSG_PING, source=_S.TIMEOUT, dest=_S.TIMEOUT, after=host.drop_id),
-            dict(trigger=_E.MSG_DOWN, source=_S.TIMEOUT, dest=_S.DROP),
-            dict(trigger=_E.DEL_HOST, source=_S.TIMEOUT, dest=_S.DROP),
-            dict(trigger=_E.DEL_ID, source=_S.TIMEOUT, dest=_S.DROP),
-            dict(trigger=_E.TIMEOUT, source=_S.TIMEOUT, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.STALE, dest=None),
-            dict(trigger=_E.MSG_ID, source=_S.STALE, dest=None),
-            dict(trigger=_E.MSG_PING, source=_S.STALE, dest=_S.UP),
-            dict(trigger=_E.MSG_DOWN, source=_S.STALE, dest=None),
-            dict(trigger=_E.DEL_HOST, source=_S.STALE, dest=None),
-            dict(trigger=_E.DEL_ID, source=_S.STALE, dest=None),
-            dict(trigger=_E.TIMEOUT, source=_S.STALE, dest=_S.DROP),
-            dict(trigger=_E.MSG_HOST, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.MSG_ID, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.MSG_PING, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.MSG_DOWN, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.DEL_HOST, source=_S.DROP, dest=None, after=host.re_init),
-            dict(trigger=_E.DEL_ID, source=_S.DROP, dest=None, after=host.drop_id),
-            dict(trigger=_E.TIMEOUT, source=_S.DROP, dest=None, after=host.drop_both),
-        ]
-        for s in states:
-            sn = s["name"].name.lower()
-            if (cb := getattr(host, f"on_enter_{sn}", None)) is not None:
-                s["on_enter"] = [cb]
-            if (cb := getattr(host, f"on_exit_{sn}", None)) is not None:
-                s["on_exit"] = [cb]
-
-        super().__init__(
-            # model=host,
-            states=states,
-            initial=HostState.INIT,
-            transitions=transitions,
-            auto_transitions=False,
-            ignore_invalid_triggers=False,
-            send_event=True,
-            queued=True,
-            after_state_change=[self._set_timeout, host.updated],
-            on_final=host.drop_both,
-        )
         self.host = host
+        self.state = HostState.INIT
 
-    def _set_timeout(self, ed: EventData):
-        host = ed.model.host
-        host.mon.set_timeout(host)
+    def _base_state(self) -> HostState:
+        data = self.host.data
+        has_id = "i" in data
+        has_ping = "p" in data
+        has_host = bool(data.h)
+        has_identity = has_id or has_host
+
+        if not has_identity and not has_ping:
+            return HostState.DROP
+        if not has_ping:
+            return HostState.ONLY_I
+        if not has_identity:
+            return HostState.ONLY_P
+        if not data.p.get("up", False):
+            return HostState.DOWN if has_id else HostState.ONLY_P
+        return HostState.UP
+
+    async def _emit(self, event: HostEvent, dest: HostState | None, **kwargs) -> None:
+        evt = _HostEventData(
+            model=self,
+            event=event,
+            transition=_HostTransition(source=self.state, dest=dest),
+            kwargs=kwargs,
+        )
+        self.host.mon.set_timeout(self.host)
+        self.host.updated(evt)
+
+    async def _set_state(self, new_state: HostState, event: HostEvent, **kwargs) -> None:
+        if new_state is self.state:
+            await self._emit(event, None, **kwargs)
+            return
+
+        old_state = self.state
+        evt = _HostEventData(
+            model=self,
+            event=event,
+            transition=_HostTransition(source=old_state, dest=new_state),
+            kwargs=kwargs,
+        )
+        if (cb := getattr(self.host, f"on_exit_{old_state.name.lower()}", None)) is not None:
+            await cb(evt)
+        self.state = new_state
+        if (cb := getattr(self.host, f"on_enter_{new_state.name.lower()}", None)) is not None:
+            await cb(evt)
+        self.host.mon.set_timeout(self.host)
+        self.host.updated(evt)
+        if new_state is HostState.DROP:
+            await self.host.drop_both(evt)
+
+    async def trigger(self, event: HostEvent, **kwargs) -> None:
+        if self.state is HostState.INIT:
+            if event is _E.INIT:
+                await self._set_state(_S.NEW, event, **kwargs)
+            return
+
+        if self.state is HostState.DROP:
+            if event in (_E.MSG_HOST, _E.MSG_ID, _E.MSG_PING, _E.MSG_DOWN, _E.DEL_HOST):
+                evt = _HostEventData(
+                    model=self,
+                    event=event,
+                    transition=_HostTransition(source=self.state, dest=None),
+                    kwargs=kwargs,
+                )
+                await self.host.re_init(evt)
+            elif event is _E.DEL_ID:
+                await self.host.drop_id(None)
+            elif event is _E.TIMEOUT:
+                await self.host.drop_both()
+            return
+
+        if event is _E.TIMEOUT:
+            if self.state in (_S.NEW, _S.ONLY_P):
+                dest = _S.DROP
+            elif self.state in (_S.ONLY_I, _S.UP, _S.DOWN):
+                dest = _S.DROP if not self.host.data.h else _S.TIMEOUT
+            elif self.state is _S.TIMEOUT:
+                dest = _S.DROP if not self.host.data.h else _S.STALE
+            elif self.state is _S.STALE:
+                dest = _S.DROP
+            else:
+                dest = self.state
+            await self._set_state(dest, event, **kwargs)
+            return
+
+        if event in (_E.DEL_ID, _E.DEL_HOST) and self.state in (_S.TIMEOUT, _S.STALE):
+            await self._emit(event, None, **kwargs)
+            return
+
+        await self._set_state(self._base_state(), event, **kwargs)
 
 
 @define(eq=False)
@@ -176,6 +184,7 @@ class Service:
     # These get filled via path
     data: dict[str, dict] = field(factory=attrdict, init=False)
     machine: HostMachine = field(init=False)
+    _lock: anyio.Lock = field(init=False, factory=anyio.Lock, repr=False)
 
     _last = field(default=0, init=False)
 
@@ -193,17 +202,19 @@ class Service:
         if self.state is HostState.DROP:
             return 0  # error when looked up
 
-        if self.state in (HostState.ONLY_I, HostState.TIMEOUT):
-            val = "stale"
-        elif self.state in (HostState.DOWN, HostState.STALE):
-            val = "delete"
-        else:
-            val = "timeout"
-        res = self.mon.cfg.timeout.ping[val]
-        if self.last:
+        pto = self.mon.cfg.timeout.ping
+        if self.state in (HostState.NEW, HostState.ONLY_I, HostState.ONLY_P):
+            return pto.stale
+        if self.state in (HostState.UP, HostState.DOWN):
+            return pto.timeout
+        if self.state is HostState.TIMEOUT:
+            if not self.last:
+                return pto.delete
             age = time.time() - self.last
-            res = min(res, max(self.mon.cfg.timeout.ping.min, age))
-        return res
+            return max(pto.delete, 0.0, pto.delay - age)
+        if self.state is HostState.STALE:
+            return pto.delay
+        return pto.timeout
 
     def updated(self, evt):
         "queue update to Broadcaster"
@@ -229,11 +240,18 @@ class Service:
         if self._last < tm:
             self._last = tm
 
-    def trigger(self, *args, **kwargs) -> Awaitable:
-        return self.machine.trigger(*args, **kwargs)
+    async def trigger(self, *args, **kwargs) -> None:
+        async with self._lock:
+            await self.machine.trigger(*args, **kwargs)
 
     async def on_enter_drop(self, ev):  # noqa: ARG002
         await self.mon.drop_cb(self)
+
+    async def on_enter_timeout(self, ev):  # noqa: ARG002
+        await self.mon.drop_id(self)
+
+    async def on_enter_stale(self, ev):  # noqa: ARG002
+        await self.mon.drop_host(self)
 
     async def re_init(self, ev):
         """
@@ -305,7 +323,7 @@ class HostList(CtxObj):
                 continue
             self.tg.start_soon(h.trigger, _E.TIMEOUT)
 
-    def updated(self, host: Service, evt: EventData):
+    def updated(self, host: Service, evt):
         "queue update to Broadcaster"
         if evt.transition.dest is not None or evt.kwargs.get("changed", False):
             logger.debug("Service %s: %s %s", host.id, host.state.name, srepr(host.data))
@@ -366,7 +384,9 @@ class HostList(CtxObj):
                     if msg is NotGiven:  # ID deleted
                         with suppress(KeyError):
                             h = self.ids[id]
-                            self.tg.start_soon(h.trigger, _E.DEL_ID)
+                            changed = "i" in h.data
+                            h.data.pop("i", None)
+                            self.tg.start_soon(partial(h.trigger, _E.DEL_ID, changed=changed))
                         continue
 
                     try:
@@ -431,7 +451,7 @@ class HostList(CtxObj):
         """
         Seen a message that deletes this ID entry.
         """
-        pass
+        host.data.pop("i", None)
 
     def add_path(self, host: Service, path: Path, msg: dict):
         """
@@ -443,7 +463,10 @@ class HostList(CtxObj):
         """
         Seen a message that deletes this service entry.
         """
-        pass
+        for p in tuple(host.data.h):
+            if self.hsi.get(p, None) is host:
+                del self.hsi[p]
+        host.data.h.clear()
 
     async def drop_path(self, host: Service, path: Path):
         """

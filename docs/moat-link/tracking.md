@@ -9,10 +9,10 @@ MoaT-Link has two mechanisms to help with this task.
 ## Liveness tracker
 
 When a MoaT Link is opened, a retained message is posted to the
-`:R.run.id.RANDID` topic. `RANDID` is a random ID. The message contains the
-host name, pid, and the program's name and arguments.
+`:R.run.id.RANDID` topic. `RANDID` is a random client-generated ID. The
+message contains the host name, pid, and the program's name and arguments.
 
-The program will also post a message to `:R.run.ping.id.RANDID` every few
+The client will also post a message to `:R.run.ping.id.RANDID` every few
 seconds (the interval is configurable). The message should contain a map:
 
 * up
@@ -40,8 +40,41 @@ immediately.
 
 ## Cleanup
 
-Deleting the retained ID and Host messages is the job of the `moat-link-host`
+Deleting stale retained ID and Host messages is the job of the `moat-link-host`
 service on the main system. The identity of the main system is currently
 configured statically.
 
-The sole condition for clean-up is that no more Ping messages arrive.
+The `run.id.RANDID` message shall be deleted after the `timeout.ping.timeout`
+timer expires. Service messages will persist for `timeout.ping.service`
+seconds. In order to avoid race conditions, the cleanup service shall block
+such deletions for `timeout.ping.delay` seconds after any new `run.id.*`
+message is received.
+
+## State Transitions
+
+A program's service is considered to be "up" if
+
+* at least one run.ping.id.RANDID message was seen
+* the last received ping contains `up=True`
+* the `run.id.RANDID` message exists
+* the `run.host.SERVICE` message exists (and contains `id=RANDID`)
+
+Starting programs must send their `run.id.RANDID` message before checking
+whether the service(s) they offer are still live; this should leave ample
+time for avoiding replace/delete collisions.
+
+### Errors
+
+Error records shall be generated (via
+{py:meth}`~moat.link.client.Link.e_info`) for `run.host.XXX` entries when
+* the associated program goes down / disappears, and doesn't come back up
+  after `timeout.restart.error` seconds
+* the program doesn't transition to `up=True` within `timeout.restart.up`
+  seconds
+* the program restarts again (i.e. the `run.host.XXX` message is
+  republished with a different ID), within `timeout.restart.flap` seconds.
+
+Errors shall be resolved ({py:meth}`~moat.link.client.Link.e_ok`) when the
+program has been up for at least `timeout.restart.up` seconds (single
+restart), or `timeout.restart.flap` seconds (multiple restarts within
+`timeout.restart.flap` seconds).

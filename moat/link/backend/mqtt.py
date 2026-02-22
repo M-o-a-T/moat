@@ -99,6 +99,7 @@ class Backend(_Backend):
     @asynccontextmanager
     async def connect(self):
         "connect to the server"
+        self.logger.debug("Start: %s %s", self.a, self.kw)
         async with AsyncMQTTClient(*self.a, **self.kw) as self.client:
             try:
                 yield self

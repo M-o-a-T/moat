@@ -13,7 +13,7 @@ from moat.util import NotGiven, attrdict, srepr
 from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
-from moat.lib.path import PS, P, Path
+from moat.lib.path import PS, P, Path, Root
 from moat.link.meta import MsgMeta
 
 from . import Backend as _Backend
@@ -89,7 +89,7 @@ class Backend(_Backend):
 
             data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
-                topic=will["topic"].slashed2,
+                topic=(Root.get() + will["topic"]).slashed2,
                 payload=data,
                 qos=will.get("qos", 1),
                 retain=will.get("retain", data == b""),

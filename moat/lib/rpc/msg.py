@@ -720,7 +720,8 @@ class Msg(MsgLink, MsgResult):
             if self._remote is None:
                 raise
             if not isinstance(exc, SilentRemoteError) and not isinstance(exc, ExpectedError):
-                log_exc(exc, "Command Error %r", self)
+                if exc.args != ("schema",):
+                    log_exc(exc, "Command Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             if self._remote is None:

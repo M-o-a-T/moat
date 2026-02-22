@@ -572,7 +572,6 @@ class LinkSender(MsgSender):
             )
 
         if verify is not False:
-            schema: Any = NotGiven
             try:
                 schema = await self.d_search(schema_path(path))
             except KeyError:
@@ -582,7 +581,7 @@ class LinkSender(MsgSender):
                     self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
                 else:
                     raise
-            if schema is not NotGiven:
+            else:
                 try:
                     validate_instance(schema, data)
                 except Exception as exc:

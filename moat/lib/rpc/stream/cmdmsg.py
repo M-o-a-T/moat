@@ -207,7 +207,7 @@ class CmdMsg(BaseCmdMsg):
     A baseCmdMsg with a ready-made link that it opens.
     """
 
-    def __init__(self, link, cfg):
+    def __init__(self, cfg: dict, link: BaseMsg):
         super().__init__(cfg)
         self.link = link
 
@@ -258,7 +258,7 @@ class ExtCmdMsg(SingleCmdMsg):
     and then closing the stream!
     """
 
-    def __init__(self, stream: BaseMsg, cfg: dict[str, Any] | None = None):
+    def __init__(self, cfg: dict[str, Any], stream: BaseMsg):
         if cfg is None:
             cfg = {}
         super().__init__(cfg)

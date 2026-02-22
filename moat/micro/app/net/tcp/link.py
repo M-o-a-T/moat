@@ -23,4 +23,4 @@ class Link(CmdMsg):
             ),
             cfg,
         )
-        super().__init__(stack, cfg)
+        super().__init__(cfg, stack)

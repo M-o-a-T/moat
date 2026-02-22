@@ -65,7 +65,7 @@ class BaseListenOneCmd(BaseLayerCmd):
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 
-        app = ExtCmdMsg(self.wrapper(conn), self.cfg)
+        app = ExtCmdMsg(self.cfg, self.wrapper(conn))
         if (
             self.app is None
             # or not await self.app.is_ready()
@@ -119,7 +119,7 @@ class BaseListenCmd(BaseSubCmd):
         )
 
         conn = self.wrapper(conn)
-        app = ExtCmdMsg(conn, self.cfg)
+        app = ExtCmdMsg(self.cfg, conn)
         seq = self.seq
         if seq > len(self.sub) * 3:
             seq = 10

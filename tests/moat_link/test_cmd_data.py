@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import anyio
 import pytest
 from io import StringIO
 
@@ -312,10 +311,10 @@ async def test_load_dict_format_and_optional_meta(monkeypatch):
 async def test_edit_uses_template_and_skips_unchanged(monkeypatch):
     """`edit` uses template fallback and does not write unchanged content."""
 
-    async def _noop_run(*_a, **_kw):
-        return None
+    async def _edit_text(_editor, text, *, suffix):  # noqa: ARG001
+        return text
 
-    monkeypatch.setattr(data_cmd, "run", _noop_run)
+    monkeypatch.setattr(data_cmd, "edit_text", _edit_text)
     conn = _EditConn(data=_MISSING, template={"x": 1})
     obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
 
@@ -329,11 +328,10 @@ async def test_edit_uses_template_and_skips_unchanged(monkeypatch):
 async def test_edit_writes_changed_template(monkeypatch):
     """`edit` writes when template content gets modified."""
 
-    async def _edit_run(_editor, path, **_kw):
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write("x: 2\n")
+    async def _edit_text(_editor, _text, *, suffix):  # noqa: ARG001
+        return "x: 2\n"
 
-    monkeypatch.setattr(data_cmd, "run", _edit_run)
+    monkeypatch.setattr(data_cmd, "edit_text", _edit_text)
     conn = _EditConn(data=_MISSING, template={"x": 1})
     obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
 

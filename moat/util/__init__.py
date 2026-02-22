@@ -112,6 +112,9 @@ _imports = {
     "set_part": "part",
     # help
     "_help_preserve_blocks": "help",
+    # edit
+    "edit_text": "edit",
+    "edit_yaml": "edit",
 }
 
 __all__ = list(_imports.keys())

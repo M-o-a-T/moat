@@ -5,13 +5,13 @@ This file isn't just for agents …
 ## Issue tracking
 
 - Use 'beads' for tracking.
-  - 'br list --label foo --ready --json': list issues
-  - 'br show --json ID': examine single issue
-  - 'br create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
-  - 'br dep add ID-task ID-blocker': add relationship
-  - 'br update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
-  - 'br close --reason STRING'
-  - 'br sync': sync tracker state with git
+  - 'bd list --label foo --ready --json': list issues
+  - 'bd show --json ID': examine single issue
+  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'bd dep add ID-task ID-blocker': add relationship
+  - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
+  - 'bd close --reason STRING'
+  - 'bd sync': sync tracker state with git
 
 - Conventions:
   - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems

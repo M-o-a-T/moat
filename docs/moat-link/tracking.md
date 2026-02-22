@@ -30,11 +30,13 @@ Programs that depend on uniqueness (as in, only one copy should be running)
 register themselves by posting a message to `run.host.PATH` which, at
 minimum, contains their ID (in an `id` map element, unsurprisingly).
 
-If the program offers a service, a `path` element points to their service
+If the program accepts RPC commands, a `path` element points to the service
 endpoint.
 
 Programs may register multiple and more-or-less-independent host endpoints.
-They must monitor the `run.host.PATH` topic and should terminate if supplanted.
+An endpoint must monitor the `run.host.PATH` topic. If the entry is supplanted,
+i.e. the ID changes or the message is deleted, the endpoint must terminate
+immediately.
 
 ## Cleanup
 

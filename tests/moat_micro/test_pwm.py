@@ -445,7 +445,8 @@ async def test_e2e_resync_timer_expires_within_period(tmp_path):
 
         # At 200 ms from w.w(25): t_sync=150 ms has expired.
         # _apply_value(25) → t_off=50 ms; td ≈ 180 ms >> t_off → pin turns on.
-        await sleep_ms(180)
+        # but let's use a bit less time
+        await sleep_ms(160)
         assert await p() is True  # FAILS without the separate resync task
 
 

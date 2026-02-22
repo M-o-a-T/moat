@@ -13,7 +13,7 @@ from moat.util import NotGiven, attrdict, srepr
 from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
-from moat.lib.path import PS, P, Path, Root
+from moat.lib.path import PS, P, Path
 from moat.link.meta import MsgMeta
 
 from . import Backend as _Backend
@@ -88,8 +88,10 @@ class Backend(_Backend):
             cdc = self.codec if cdc is NotGiven else get_codec(cdc)
 
             data = b"" if data is NotGiven else cdc.encode(data)
+            if not will["topic"].has_prefix:
+                raise ValueError("Can't use a non-prefixed topic in Will")
             kw["will"] = Will(
-                topic=(Root.get() + will["topic"]).slashed2,
+                topic=(will["topic"]).slashed2,
                 payload=data,
                 qos=will.get("qos", 1),
                 retain=will.get("retain", data == b""),

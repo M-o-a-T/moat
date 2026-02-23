@@ -7,7 +7,7 @@ from __future__ import annotations
 from moat.util import merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
-from moat.lib.rpc import BaseCmd, HandlerStream, NotReadyError
+from moat.lib.rpc import BaseCmd, HandlerStream
 
 __all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
 
@@ -138,9 +138,7 @@ class BaseCmdMsg(BaseCmd):
         ):
             return await super().handle(msg, rcmd)
 
-        if rcmd and rcmd[0] == "rdy_":
-            if L and await self.wait_ready(wait=msg.get("wait", True)):
-                raise NotReadyError(msg.cmd, rcmd)
+        await self.check_rdy(msg, rcmd)
         if self.__stream is None:
             raise EOFError
 

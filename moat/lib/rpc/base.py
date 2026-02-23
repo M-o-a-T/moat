@@ -604,6 +604,16 @@ class MsgHandler(Base, BaseMsgHandler):
             res["s"] = s
         return res
 
+    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]):
+        """
+        Basic boilerplate command for handling basic readiness checks in
+        `handle` and similar methods.
+        """
+        if not L or not rcmd or rcmd[0] != "rdy_":
+            return
+        if await self.wait_ready(wait=msg.get("wait", True)):
+            raise NotReadyError(msg.cmd, rcmd)
+
     if L:
         doc_rdy_ = dict(_d="check readiness", w="bool:wait for it?")
 

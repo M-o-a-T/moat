@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 # like get/set_part but without the attributes
 
+TEST_MAGIC = b"r:\x0dn:\x0arn:\x0d\x0a-\x00x\x0ce\x1b" + "🖖🏼  ".encode("utf-8") + b"!"
+
 
 def get_p(cur, p, add=False):
     "retrieve an item"

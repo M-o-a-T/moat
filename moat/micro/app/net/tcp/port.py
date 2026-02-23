@@ -5,7 +5,7 @@ TCP multi-connection listener app.
 from __future__ import annotations
 
 from moat.lib.rpc import BaseListenCmd
-from moat.micro.stacks.tcp import TcpIter
+from moat.lib.rpc.conn.tcp import TcpIter
 
 
 class Port(BaseListenCmd):

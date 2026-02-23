@@ -5,7 +5,7 @@ Unix socket single-connection listener app.
 from __future__ import annotations
 
 from moat.lib.rpc import BaseListenOneCmd
-from moat.micro.stacks.unix import UnixIter
+from moat.lib.rpc.conn.unix import UnixIter
 
 
 class LinkIn(BaseListenOneCmd):

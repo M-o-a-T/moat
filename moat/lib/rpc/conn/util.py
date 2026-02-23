@@ -17,9 +17,6 @@ if TYPE_CHECKING:
     from typing import Never
 
 
-TEST_MAGIC = b"r:\x0dn:\x0arn:\x0d\x0a-\x00x\x0ce\x1b" + "🖖🏼".encode("utf-8") + b"!"
-
-
 class BaseConnIter:
     """
     Iterate incoming connections.

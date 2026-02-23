@@ -10,9 +10,9 @@ from functools import partial
 import micropython
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc.conn.file import FileBuf
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.lib.stream import serial_stack
-from moat.micro.stacks.file import FileBuf
 
 from ._doc import _link_d, _log_d
 

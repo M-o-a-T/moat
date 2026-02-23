@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 
+from ._util import TEST_MAGIC as TEST_MAGIC
 from ._util import Repeater as Repeater
 from ._util import Sensor as Sensor
 from ._util import del_p as del_p

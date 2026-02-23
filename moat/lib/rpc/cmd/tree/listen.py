@@ -14,8 +14,8 @@ from .layer import BaseLayerCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.rpc import BaseConnIter
     from moat.lib.stream import BaseBuf, BaseMsg
-    from moat.micro.stacks.util import BaseConnIter
 
     from typing import Never
 

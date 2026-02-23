@@ -52,6 +52,10 @@ _imports = {
     # From cmd.tree.listen
     "BaseListenCmd": "cmd.tree.listen",
     "BaseListenOneCmd": "cmd.tree.listen",
+    # From conn
+    "BaseConnIter": "conn.util",
+    "TcpIter": "conn.tcp",
+    "UnixIter": "conn.unix",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -162,6 +166,10 @@ __all__ = [  # noqa:RUF022
     # From cmd.tree.listen
     "BaseListenCmd",
     "BaseListenOneCmd",
+    # From conn
+    "BaseConnIter",
+    "TcpIter",
+    "UnixIter",
     # From msg
     "Msg",
     "MsgLink",
@@ -212,6 +220,9 @@ if _TC or _DOC:
     from .cmd.tree.dir import BaseSubCmd, BaseSuperCmd, CfgStore, SubStore
     from .cmd.tree.layer import BaseFwdCmd, BaseLayerCmd
     from .cmd.tree.listen import BaseListenCmd, BaseListenOneCmd
+    from .conn.tcp import TcpIter as TcpIter
+    from .conn.unix import UnixIter as UnixIter
+    from .conn.util import BaseConnIter as BaseConnIter
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink
     from .msg import MsgResult as MsgResult

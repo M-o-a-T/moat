@@ -5,7 +5,7 @@ Unix socket multi-connection listener app.
 from __future__ import annotations
 
 from moat.lib.rpc import BaseListenCmd
-from moat.micro.stacks.unix import UnixIter
+from moat.lib.rpc.conn.unix import UnixIter
 
 
 class Port(BaseListenCmd):

@@ -36,6 +36,7 @@ auth:
 
   pass:
   - !P i.ping
+  - !P i.hello
 ```
 
 Dynamic data are the caller's responsibility. In this case:
@@ -48,23 +49,23 @@ users:
 
 ## API
 
-The main Auth handler is used as
-```
-from moat.lib.rpc import Auth
-from moat.lib.micro import idle
-
-class SomeIncomingHandler(MsgHandler):
-    async def accept(self, stream:BaseMsg, *, task_status):
-        async with Auth(self.cfg.auth, stream) as sdr:
-            self.fwd[conn_id] = sdr  # might be named or indexed
-            task_status.started()
-            await idle()
-```
-The `SomeIncomingHandler.handle` method should forward to `self.fwd` in
-some form. An app that accepts TCP connections might index its connections
-by a randomly generated ID, or simply number them consecutively.
+The main Auth handler is hooked into {py:class}`BaseCmdMsg` objects and
+its subclasses when an `auth` item is present in the requisite
+configuration. Users need not do anything special.
 
 The sub-handlers for individual Auth modes are `BaseCmd` instances that are
-set up with their Auth parent and a SubMsgHandler pointing to their remote
-counterpart. They should call `accept`, `fail` or `deny` after determining
-the result.
+set up with their Auth parent and a SubMsgSender pointing to their remote
+counterpart.
+
+Calling `Auth.deny` causes the connection to be rejected unconditionally.
+
+Calling `Auth.accept` accepts the connection. If more than one method
+accepts, precedence is by their order in the list of methods (first wins).
+
+Doing neither has the same effect as if the method was not present in the
+list.
+
+### Dynamic data
+
+`BaseCmdMsg`.*auth* is a basic `attrdict` which the caller can fill with
+relevant data.

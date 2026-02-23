@@ -4,7 +4,7 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
-from moat.util import merge
+from moat.util import attrdict, merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
 from moat.lib.rpc import BaseCmd, HandlerStream
@@ -15,7 +15,7 @@ __all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgSender
+    from moat.lib.rpc import Auth, MsgSender
     from moat.lib.stream import BaseMsg
 
     from collections.abc import Awaitable
@@ -66,6 +66,9 @@ class BaseCmdMsg(BaseCmd):
     Parameters:
         prefix.recv(Path): Prefix for incoming messages
         prefix.send(Path): Prefix for outgoing messages
+
+    If the configuration has an ``auth`` item, this will redirect
+    all messages through a :py.cls:`~moat.lib.rpc.Auth` instance.
     """
 
     tg: TaskGroup = None
@@ -73,6 +76,27 @@ class BaseCmdMsg(BaseCmd):
     __rprefix = ()
 
     doc = dict(_d="Foo")
+    auth: attrdict | None = None
+    _auth: Auth | None = None
+
+    def __init__(self, cfg, **kw):
+        super().__init__(cfg, **kw)
+        if "auth" in cfg:
+            from moat.lib.rpc import Auth  # noqa:PLC0415
+
+            self._auth = Auth(cfg.auth, self)
+            self.auth = attrdict()
+
+    def auth_stop(self) -> None:
+        """ """
+        if self._auth is None:
+            return
+        self._auth.stop()
+
+    async def teardown(self):
+        "also cancel auth"
+        self.auth_stop()
+        await super().teardown()
 
     async def stream(self) -> BaseMsg:
         """
@@ -103,7 +127,10 @@ class BaseCmdMsg(BaseCmd):
         if lprefix:
             root = root.sub_at(lprefix)
 
-        await self.process(root)
+        if self._auth:
+            await self._auth.process(root)
+        else:
+            await self.process(root)
 
     async def process(self, root: MsgSender):
         """
@@ -126,10 +153,14 @@ class BaseCmdMsg(BaseCmd):
             self.s = None
             self.__stream = None
 
-    async def handle(self, msg, rcmd) -> Awaitable[Any]:
+    async def handle(self, msg, rcmd, _auth: bool = False) -> Awaitable[Any]:
         """
         Forward a request to some remote side.
         """
+        # If auth, route through it.
+        if self._auth and not _auth:
+            return await self._auth.handle(msg, rcmd)
+
         # Handle local commands (and documentation) locally
         if (
             (len(rcmd) == 1 or (len(rcmd) == 2 and rcmd[1] == "doc_"))

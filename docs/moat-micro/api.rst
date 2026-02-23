@@ -1,7 +1,7 @@
 API
 ===
 
-.. automodule:: moat.micro.alert
+.. automodule:: moat.lib.rpc.alert
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.stacks
+.. automodule:: moat.lib.rpc.conn
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,1 +1,1 @@
-../../lib/rpc/apps/fake.py
+../../lib/rpc/app/fake.py

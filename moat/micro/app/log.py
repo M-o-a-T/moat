@@ -1,1 +1,1 @@
-../../lib/rpc/apps/log.py
+../../lib/rpc/app/log.py

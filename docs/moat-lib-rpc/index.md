@@ -147,6 +147,7 @@ to its subordinate app. Instead, when you enter its context it
 :hidden:
 
 messages
+auth
 doc
 simple-data
 api

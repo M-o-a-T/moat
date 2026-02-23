@@ -102,6 +102,18 @@ class BaseCmdMsg(BaseCmd):
         lprefix = self.cfg.get("prefix", {}).get("recv", ())
         if lprefix:
             root = root.sub_at(lprefix)
+
+        await self.process(root)
+
+    async def process(self, root: MsgSender):
+        """
+        Low-level handler to run the message processor.
+
+        Args:
+            root: The MsgSender to route incoming commands to.
+
+        The stream to use is retrieved by calling :py.meth:`stream`.
+        """
         try:
             self.s = await self.stream()
             async with MsgStream(root, self.s) as st:

@@ -24,7 +24,16 @@ from __future__ import annotations
 import sys
 
 from moat.util import enc_part, get_part, import_, wait_complain
-from moat.lib.micro import AC_use, Event, L, Lock, ObjSequence, TaskGroup, idle
+from moat.lib.micro import (
+    AC_use,
+    Event,
+    L,
+    Lock,
+    ModuleNotFoundError,  # noqa:A004
+    ObjSequence,
+    TaskGroup,
+    idle,
+)
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
 from moat.lib.stream import Base

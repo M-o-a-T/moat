@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from subprocess import run
 
+import moat.micro  # noqa:F401
+
 
 def make_upy(force: bool = False, dupterm: bool = False):  # noqa: D103
     here = Path.cwd().absolute()

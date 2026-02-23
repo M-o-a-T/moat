@@ -10,7 +10,7 @@ from moat.util import attrdict, ungroup, yload
 from moat.lib.micro import sleep_ms
 from moat.lib.path import P
 from moat.lib.rpc._test import rpc_stack
-from moat.micro.app._test_ import UserCrash
+from moat.lib.rpc.app._test_ import UserCrash
 from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio

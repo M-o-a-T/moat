@@ -124,6 +124,7 @@ __all__ = [
     "Event",
     "L",
     "Lock",
+    "ModuleNotFoundError",
     "ObjSequence",
     "Queue",
     "QueueEmpty",
@@ -166,6 +167,7 @@ EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001
+ModuleNotFoundError = ModuleNotFoundError  # noqa:PLW0127,A001
 ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 

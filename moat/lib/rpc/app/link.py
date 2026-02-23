@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class Cmd(BaseCmd):
     """
-    This command registers a link between a MoaT-micro path and a MoaT-Link subcommand.
+    This command registers a link between a MoaT-RPC path and a MoaT-Link subcommand.
 
     Parameters:
        link (Path): register at this path on MoaT-Link

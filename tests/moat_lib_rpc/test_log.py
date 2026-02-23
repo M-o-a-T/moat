@@ -21,9 +21,9 @@ app:
   a:
     app: log.Cmd
     cfg:
-      app: _test.Cmd
+      app: _test_.Cmd
   b:
-    app: _test.Cmd
+    app: _test_.Cmd
 """
 
 

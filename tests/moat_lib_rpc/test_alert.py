@@ -9,7 +9,7 @@ import pytest
 from moat.lib.micro import Event, L, TaskGroup, sleep_ms
 from moat.lib.path import P
 from moat.lib.rpc._test import rpc_stack
-from moat.micro.alert import Alert as _Alert
+from moat.lib.rpc.alert import Alert as _Alert
 
 CFG = """
 app:

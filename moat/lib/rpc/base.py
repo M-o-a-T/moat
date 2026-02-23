@@ -542,7 +542,7 @@ class MsgHandler(Base, BaseMsgHandler):
             list(self.sub.keys()) if hasattr(self, "sub") else (),
         )
 
-    def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
+    def find_sub(self, scmd: PathElem, prefix: str = "") -> Callable | None:
         """
         Resolve a subcommand.
 
@@ -552,6 +552,8 @@ class MsgHandler(Base, BaseMsgHandler):
 
         The default implementation uses sub{pref}_{scmd} attributes.
         """
+        if not isinstance(scmd, str):
+            return None
         return getattr(self, f"sub{prefix}_{scmd}", None)
 
     def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:

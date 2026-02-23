@@ -33,7 +33,7 @@ from moat.lib.path import (
 )
 from moat.lib.rpc import Msg, RootCmd
 from moat.lib.run import attr_args, load_subgroup, process_args
-from moat.micro.stacks.util import TEST_MAGIC
+from moat.micro.util import TEST_MAGIC
 
 logger = logging.getLogger(__name__)
 

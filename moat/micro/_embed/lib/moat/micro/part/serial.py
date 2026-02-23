@@ -8,7 +8,7 @@ import machine as M
 
 from moat.util import attrdict, import_
 from moat.lib.micro import AC_use, TimeoutError, log, sleep, wait_for_ms  # noqa:A004
-from moat.micro.stacks.file import FileBuf
+from moat.lib.rpc.conn.file import FileBuf
 
 
 # Serial link driver

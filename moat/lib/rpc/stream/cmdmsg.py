@@ -114,18 +114,6 @@ class BaseCmdMsg(BaseCmd):
             self.s = None
             self.__stream = None
 
-    async def reply_result(self, i, res):
-        "send the result back"
-        if i is None:
-            return
-        try:
-            await self.s.send({"i": i, "d": res})
-        except Exception as e:
-            await self.reply_error(i, e)
-        except BaseException as e:
-            await self.reply_error(i, e)
-            raise
-
     async def handle(self, msg, rcmd) -> Awaitable[Any]:
         """
         Forward a request to some remote side.

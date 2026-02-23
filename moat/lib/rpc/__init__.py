@@ -78,6 +78,8 @@ _imports = {
     "BlkCmd": "stream.xcmd",
     # From log
     "Logger": "cmd.log",
+    # From auth
+    "Auth": "auth._base",
 }
 
 
@@ -187,6 +189,8 @@ __all__ = [  # noqa:RUF022
     "BlkCmd",
     # From log
     "Logger",
+    # From auth
+    "Auth",
 ]
 
 if _TC or _DOC:
@@ -227,3 +231,4 @@ if _TC or _DOC:
     from .stream.xcmd import MsgCmd as MsgCmd
     from .nest import CmdStream as CmdStream
     from .nest import rpc_on_rpc as rpc_on_rpc
+    from .auth._base import Auth as Auth

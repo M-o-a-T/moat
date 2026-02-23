@@ -86,6 +86,9 @@ _imports = {
     "Logger": "cmd.log",
     # From auth
     "Auth": "auth._base",
+    # From alert
+    "Alert": "alert",
+    "AlertHandler": "alert",
 }
 
 
@@ -203,6 +206,9 @@ __all__ = [  # noqa:RUF022
     "Logger",
     # From auth
     "Auth",
+    # From alert
+    "Alert",
+    "AlertHandler",
 ]
 
 if _TC or _DOC:
@@ -248,4 +254,6 @@ if _TC or _DOC:
     from .stream.xcmd import MsgCmd as MsgCmd
     from .nest import CmdStream as CmdStream
     from .nest import rpc_on_rpc as rpc_on_rpc
+    from .alert import Alert as Alert
+    from .alert import AlertHandler as AlertHandler
     from .auth._base import Auth as Auth

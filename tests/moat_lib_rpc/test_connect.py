@@ -21,7 +21,7 @@ app:
 # l: net.unix.Link
 # r: net.unix.Port
   a:
-    app: _test.Cmd
+    app: _test_.Cmd
   c:
     app: cfg.Cmd
 #l:

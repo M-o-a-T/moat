@@ -9,7 +9,7 @@ import pytest
 from moat.util import ungroup
 from moat.lib.micro import log, sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio
@@ -59,7 +59,7 @@ async def test_wdt(tmp_path, guard):
     ended = False
     with raises(EOFError), ungroup:
         async with (
-            mpy_stack(tmp_path, CFG) as d,
+            rpc_stack(tmp_path, CFG) as d,
             d.sub_at(P("r.b")) as r,
             d.cfg_at(P("r.c")) as c,
         ):
@@ -91,7 +91,7 @@ async def test_wdt_off(tmp_path):
     Check that the watchdog can be removed
     """
     async with (
-        mpy_stack(tmp_path, CFG) as d,
+        rpc_stack(tmp_path, CFG) as d,
         d.sub_at(P("r.b")) as r,
         d.cfg_at(P("r.c")) as c,
     ):
@@ -121,7 +121,7 @@ async def test_wdt_update(tmp_path):
     """
     ended = False
     with raises(EOFError), ungroup():
-        async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
+        async with rpc_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
             await c.set(
                 {"app": {"w": {"app": "wdt.Cmd", "t": TT * 2, "ext": True, "hw": False}}},
                 sync=True,

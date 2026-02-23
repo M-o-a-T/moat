@@ -9,7 +9,7 @@ import pytest
 from moat.util import yload
 from moat.lib.path import P
 from moat.lib.rpc import MsgSender
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -18,7 +18,6 @@ TT = 100  # XXX depends on how much we're logging
 CFG = """
 app:
   app: dir
-  # r: _test.MpyCmd
   a:
     app: log.Cmd
     cfg:
@@ -31,7 +30,7 @@ app:
 async def test_crash(tmp_path):
     "basic error handling test"
     cfg = yload(CFG, attr=True)
-    async with mpy_stack(tmp_path, cfg) as d:
+    async with rpc_stack(tmp_path, cfg) as d:
         s = MsgSender(d)
         s.add_sub("a")
         s.add_sub("b")

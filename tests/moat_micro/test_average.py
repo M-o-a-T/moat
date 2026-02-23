@@ -12,7 +12,7 @@ from moat.util import yload
 from moat.lib.micro import CancelledError
 from moat.lib.path import P
 from moat.lib.rpc import NoStream
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -100,7 +100,7 @@ async def test_avg_local(tmp_path):
     cfg = yload(LCFG, attr=True)
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("p.pp")) as xa,
     ):
         await run_avg(xa)
@@ -112,7 +112,7 @@ async def test_avg_here(tmp_path):
     del cfg.r.cfg.app.p
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("p")) as xa,
     ):
         await run_avg(xa)
@@ -124,7 +124,7 @@ async def test_avg_there(tmp_path):
     del cfg.p
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.p")) as xa,
     ):
         with suppress(CancelledError):

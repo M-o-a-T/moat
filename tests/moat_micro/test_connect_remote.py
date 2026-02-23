@@ -8,7 +8,7 @@ import pytest
 
 from moat.lib.micro import log, sleep_ms
 from moat.lib.path import P, Path
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -83,7 +83,7 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
             },
         })
 
-    async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as cl, d.cfg_at(P("s.c")) as cr:
+    async with rpc_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as cl, d.cfg_at(P("s.c")) as cr:
         if remote_first:
             cl, cr = cr, cl
 

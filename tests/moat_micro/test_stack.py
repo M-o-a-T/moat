@@ -11,7 +11,7 @@ from pathlib import Path
 from moat.util import yload, yprint
 from moat.lib.codec import get_codec
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.src.test import run
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -151,7 +151,7 @@ async def test_stack(tmp_path):
             raise RuntimeError("Startup failed, no socket")
 
         async with (
-            mpy_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
+            rpc_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
             d.sub_at(P("r.s")) as s,
             d.cfg_at(P("r.s.c")) as cfg,
         ):

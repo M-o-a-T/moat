@@ -12,7 +12,7 @@ from unittest.mock import patch
 import moat.micro.part.pwm as pwm_module
 from moat.lib.micro import sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.micro.part.pwm import PWM, _Send
 
 
@@ -166,7 +166,7 @@ async def test_resync_no_input():
 
 
 # ---------------------------------------------------------------------------
-# End-to-end tests using mpy_stack + _fake.Pin
+# End-to-end tests using rpc_stack + _fake.Pin
 # ---------------------------------------------------------------------------
 # Config: min=50 ms, max=500 ms, base=100
 #   val=50  → t_on=50 ms, t_off=50 ms
@@ -195,7 +195,7 @@ p:
 @pytest.mark.anyio
 async def test_e2e_half(tmp_path):
     "50 % duty cycle: pin alternates every 50 ms"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -219,7 +219,7 @@ async def test_e2e_half(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_always_off(tmp_path):
     "val=0 keeps the pin off permanently"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -233,7 +233,7 @@ async def test_e2e_always_off(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_always_on(tmp_path):
     "val=100 turns the pin on after min=50 ms and keeps it on"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -253,7 +253,7 @@ async def test_e2e_always_on(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_asymmetric(tmp_path):
     "val=25 → t_on=50 ms, t_off=150 ms"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -278,7 +278,7 @@ async def test_e2e_asymmetric(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_read(tmp_path):
     "cmd_r returns the current effective value; force overrides the normal value"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
 
         await w.w(42)
@@ -296,7 +296,7 @@ async def test_e2e_read(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_state(tmp_path):
     "cmd_s returns a well-formed state dict with correct on/off times"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
 
         await w.w(50)
@@ -310,7 +310,7 @@ async def test_e2e_state(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_value_change(tmp_path):
     "switching from always-on to always-off turns the pin off after min ms"
-    async with mpy_stack(tmp_path, E2E_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -425,7 +425,7 @@ async def test_e2e_resync_timer_expires_within_period(tmp_path):
     t_off, so with the old _measure-based countdown the resync would persist
     well past 150 ms.  The separate resync task must fire independently.
     """
-    async with mpy_stack(tmp_path, E2E_RESYNC_TIMER_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_RESYNC_TIMER_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -453,7 +453,7 @@ async def test_e2e_resync_timer_expires_within_period(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_resync_low(tmp_path):
     "sync_low: below threshold → always off; crossing above → clamped cycling then normal"
-    async with mpy_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -479,7 +479,7 @@ async def test_e2e_resync_low(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_resync_high(tmp_path):
     "sync_high: above threshold → always on; crossing below → clamped cycling then normal"
-    async with mpy_stack(tmp_path, E2E_SYNC_HIGH_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_SYNC_HIGH_CFG) as d:
         w = d.sub_at(P("w"))
         p = d.sub_at(P("p"))
 
@@ -502,7 +502,7 @@ async def test_e2e_resync_high(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_resync_cancelled(tmp_path):
     "resync is cancelled immediately when the value drops back below the low threshold"
-    async with mpy_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_SYNC_LOW_CFG) as d:
         w = d.sub_at(P("w"))
 
         await w.w(10)
@@ -520,7 +520,7 @@ async def test_e2e_resync_cancelled(tmp_path):
 @pytest.mark.anyio
 async def test_e2e_resync_suspended(tmp_path):
     "sync_path reading above bound suspends the resync clamp; below bound resumes it"
-    async with mpy_stack(tmp_path, E2E_SYNC_SUSP_CFG) as d:
+    async with rpc_stack(tmp_path, E2E_SYNC_SUSP_CFG) as d:
         w = d.sub_at(P("w"))
         sp = d.sub_at(P("sp"))
 

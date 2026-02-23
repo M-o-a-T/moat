@@ -8,7 +8,7 @@ import pytest
 
 from moat.lib.micro import log, sleep_ms, ticks_diff, ticks_ms
 from moat.lib.path import P, Path
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -55,7 +55,7 @@ r:
 
 async def test_mplex(tmp_path):
     """Basic multiplexer test"""
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with rpc_stack(tmp_path, CFG) as d:
         r = await d.cmd(P("a.echo"), m="He")
         assert r["r"] == "He"
         r = await d.cmd(P("l.a.echo"), m="Hel")
@@ -74,7 +74,7 @@ async def test_mplex(tmp_path):
 async def test_iter(tmp_path, conn):
     """Iterator test, direct"""
     conn = list(conn)
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with rpc_stack(tmp_path, CFG) as d:
         res = []
         t1 = ticks_ms()
         async with d.cmd(Path.build(conn + ["it"]), lim=3, delay=0.2).stream_in() as it:

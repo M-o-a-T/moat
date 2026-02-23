@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from moat.lib.micro import AC_use
+from moat.lib.rpc._test import Loopback
 from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
 from moat.lib.stream import CBORMsgBlk, serial_stack
-from moat.micro._test import Loopback
 
 
 class LoopCmd(BaseCmdMsg):

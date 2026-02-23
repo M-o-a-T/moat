@@ -8,8 +8,8 @@ import os
 import pytest
 
 from moat.lib.micro import Event, TaskGroup
+from moat.lib.rpc._test import Loopback
 from moat.lib.stream import EphemeralMsg, LogMsg, ReliableMsg, StackedMsg
-from moat.micro._test import Loopback
 
 pytestmark = pytest.mark.anyio
 

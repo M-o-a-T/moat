@@ -9,7 +9,7 @@ import pytest
 from moat.util import attrdict, ungroup, yload
 from moat.lib.micro import sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.micro.app._test_ import UserCrash
 from moat.src.test import raises
 
@@ -64,7 +64,7 @@ async def test_crash(tmp_path, remote):
     cfg.cfg.r.cfg.app.b = attrdict(app="_test.Cmd")
     with raises(Exception) as exc, ungroup:
         async with (
-            mpy_stack(tmp_path, cfg) as d,
+            rpc_stack(tmp_path, cfg) as d,
             d.sub_at(P("r.b" if remote else "a")) as r,
         ):
             res = await r.echo(m="hello")
@@ -89,7 +89,7 @@ async def test_err(tmp_path, remote):
     cfg.cfg.r.cfg.app.b.timeout = int(TT * 3 / 2)
     with raises(Exception):
         async with (
-            mpy_stack(tmp_path, cfg) as d,
+            rpc_stack(tmp_path, cfg) as d,
             d.sub_at(P("r.b" if remote else "a")) as r,
         ):
             while True:

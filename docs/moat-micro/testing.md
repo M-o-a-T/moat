@@ -3,7 +3,7 @@
 ## In-process (CPython) testing
 
 The fastest and most portable way to test a MoaT-micro app is to run the
-entire stack inside the test process using `mpy_stack`.  No MicroPython
+entire stack inside the test process using `rpc_stack`.  No MicroPython
 binary is needed; everything executes under CPython with anyio as the
 scheduler.
 
@@ -13,7 +13,7 @@ scheduler.
 import pytest
 from moat.lib.micro import sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 CFG = """
 app: dir
@@ -28,13 +28,13 @@ pin:
 
 @pytest.mark.anyio
 async def test_something(tmp_path):
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with rpc_stack(tmp_path, CFG) as d:
         app = d.sub_at(P("myapp"))
         pin = d.sub_at(P("pin"))
         # ...
 ```
 
-`mpy_stack` accepts either a YAML string (used above) or an `attrdict`
+`rpc_stack` accepts either a YAML string (used above) or an `attrdict`
 already parsed from YAML.  The `tmp_path` fixture provides the working
 directory for the stack.
 
@@ -95,7 +95,7 @@ Each app's lifecycle is: `setup()` → `task()`.  `task()` calls
 
 The proxy **blocks until the app is ready** before dispatching any
 command.  This means you can call commands immediately after
-`mpy_stack` yields the stack; no explicit `wait_ready` call is needed.
+`rpc_stack` yields the stack; no explicit `wait_ready` call is needed.
 
 ### Fake hardware
 

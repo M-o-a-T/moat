@@ -20,6 +20,7 @@ import simpleeval
 
 from moat.util import NotGiven, attrdict, ungroup
 from moat.lib.config import CFG, CfgStore, current_cfg
+from moat.lib.micro import ModuleNotFoundError  # noqa:A004
 from moat.lib.path import P, Path
 
 from collections import defaultdict

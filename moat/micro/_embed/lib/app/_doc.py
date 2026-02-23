@@ -1,1 +1,1 @@
-../../../../lib/rpc/apps/_doc.py
+../../../../lib/rpc/app/_doc.py

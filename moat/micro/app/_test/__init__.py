@@ -16,8 +16,8 @@ if _TC:
     from .mpyraw import MpyRaw as MpyRaw
 
 # Re-export from _test_ for backwards compatibility
-from moat.micro.app._test_ import Cmd as Cmd
-from moat.micro.app._test_ import Cons as Cons
+from moat.lib.rpc.app._test_ import Cmd as Cmd
+from moat.lib.rpc.app._test_ import Cons as Cons
 
 _imports = {
     "LoopCmd": "loopcmd",

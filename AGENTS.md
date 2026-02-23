@@ -22,6 +22,7 @@ This file isn't just for agents …
 The purpose of issues is to remember things to do.
 Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
+The issue tracker cannot run inside a sandbox.
 
 ## Project Structure & Modules
 

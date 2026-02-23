@@ -9,7 +9,7 @@ import pytest
 
 from moat.util import yload
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -72,7 +72,7 @@ async def test_store(tmp_path):
     del cfg.r.cfg.app.t
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.a")) as xa,
     ):
         await xa.store(1, 2, 3)
@@ -87,7 +87,7 @@ async def test_transfer_here(tmp_path):
     del cfg.r.cfg.app.t
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("b")) as xb,
     ):
         await anyio.sleep(1)
@@ -102,7 +102,7 @@ async def test_transfer_there(tmp_path):
     del cfg.t
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.b")) as xb,
     ):
         await anyio.sleep(1)

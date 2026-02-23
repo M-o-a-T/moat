@@ -10,7 +10,7 @@ import sys
 
 from moat.util import yload
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.util.liner import Liner
 
 pytestmark = pytest.mark.anyio
@@ -62,7 +62,7 @@ async def test_repl(tmp_path, free_tcp_port):
                     nbuf = bytes(nbuf)
                 line(nbuf)
 
-    async with mpy_stack(tmp_path, cfg) as d:
+    async with rpc_stack(tmp_path, cfg) as d:
         d.tg.start_soon(readcons, "CONS ", d.sub_at(P("s.rd")))
         await d.cmd(P("r.rdy_"))
         co = d.sub_at(P("r.co"))
@@ -98,7 +98,7 @@ async def test_repl_stream(tmp_path, free_tcp_port):
                 line(nbuf)
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.co")) as cons,
         cons.rw().stream() as co,
         anyio.create_task_group() as tg,
@@ -184,7 +184,7 @@ async def test_repl_direct(tmp_path):
                 line(nbuf)
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r")) as cr,
         anyio.create_task_group() as tg,
     ):

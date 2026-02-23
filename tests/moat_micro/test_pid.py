@@ -13,8 +13,8 @@ from numpy import allclose, arange, array, zeros_like
 from moat.util import yload
 from moat.lib.config import CFG as gCFG
 from moat.lib.path import P
+from moat.lib.rpc._test import rpc_stack
 from moat.link._test import Scaffold
-from moat.micro._test import mpy_stack
 
 from typing import cast
 
@@ -114,7 +114,7 @@ async def test_integrate(tmp_path, Kp, Ki, Kd, Tf, ok, here):
     cfg.p.tf = Tf
 
     async with (
-        mpy_stack(tmp_path, cfg) as d,
+        rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("p") if here else P("r.p")) as pid,
     ):
         await integrate_full(pid, ok, here)
@@ -203,7 +203,7 @@ async def test_track_setpoint(tmp_path, here, cfg):
     ):
         gCFG.mod(P("moat.link"), cfg.link)
         async with (
-            mpy_stack(tmp_path, mcfg) as d,
+            rpc_stack(tmp_path, mcfg) as d,
             d.sub_at(P("p") if here else P("r.p")) as pid,
             c.d_watch(mcfg.tr.s[-1].a[0], state=False) as cw,
         ):

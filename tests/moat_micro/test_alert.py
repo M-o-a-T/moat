@@ -8,7 +8,7 @@ import pytest
 
 from moat.lib.micro import Event, L, TaskGroup, sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.micro.alert import Alert as _Alert
 
 CFG = """
@@ -57,7 +57,7 @@ async def rd(x, s=False, evt=None):
 
 @pytest.mark.anyio
 async def test_ary(tmp_path):
-    async with mpy_stack(tmp_path, CFG) as d, TaskGroup() as tg:
+    async with rpc_stack(tmp_path, CFG) as d, TaskGroup() as tg:
         # ruff: noqa: F841
         a = d.sub_at(P("a"))
         b = d.sub_at(P("b"))

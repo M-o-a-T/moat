@@ -5,8 +5,8 @@ Test Loopback connection app.
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
+from moat.lib.rpc._test import LoopBBM
 from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
-from moat.micro._test import LoopBBM
 
 
 class LoopMsg(BaseCmdBBM):

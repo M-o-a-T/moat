@@ -10,7 +10,7 @@ import sys
 from moat.lib.micro import ACM, AC_exit, ticks_diff, ticks_ms
 from moat.lib.path import P
 from moat.lib.proxy import as_proxy
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -68,7 +68,7 @@ r:
 
 async def test_ping(tmp_path):
     "basic connectivity test"
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with rpc_stack(tmp_path, CFG) as d:
         res = await d.cmd(P("r.b.echo"), m="hello")
         assert res.kw == dict(r="hello")
 
@@ -86,7 +86,7 @@ def timed(t: int, min_: int, max_: int) -> int:
 
 async def test_iter_m(tmp_path):
     "basic iterator tests"
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
+    async with rpc_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
         # await anyio.sleep(30)  ## attach gdb to micropython now
         t = ticks_ms()
 
@@ -163,7 +163,7 @@ async def test_modes(tmp_path, lossy, guarded):
             cfg=dict(app=dict(r=dict(link=dict(lossy=lossy, guarded=guarded)))),
         ),
     )
-    async with mpy_stack(tmp_path, CFG, cfu) as d:
+    async with rpc_stack(tmp_path, CFG, cfu) as d:
         res = await d.cmd(P("r.b.echo"), m="hi")
         assert res.kw == {"r": "hi"}
 
@@ -209,7 +209,7 @@ l:
 async def test_eval(tmp_path, cons):
     "test proxying"
     cf2 = {} if cons is None else {"l": {"link": {"cons": cons}}}
-    async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
+    async with rpc_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
         dr = await d.cmd(P("l.dir_"))
@@ -241,7 +241,7 @@ async def test_eval(tmp_path, cons):
 
 async def test_msgpack(tmp_path):
     "test proxying"
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
+    async with rpc_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel  # noqa: PLC0415
 
         dr = await d.cmd(P("r.dir_"))

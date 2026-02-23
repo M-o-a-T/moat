@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from moat.util import CtxObj
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
-from moat.lib.rpc._test import StreamLoop
+from moat.lib.rpc.loop import StreamLoop
 
 from typing import TYPE_CHECKING
 

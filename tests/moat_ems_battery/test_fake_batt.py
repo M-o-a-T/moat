@@ -10,7 +10,7 @@ import os
 import pytest
 
 from moat.lib.micro import log
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 from .support import CF, as_attr
 
@@ -55,7 +55,7 @@ CFGIC = as_attr(CFGIC, cx=CF.c, c=CF.c)
 async def test_cell(tmp_path, CFG):
     "Basic fake cell verification"
     async with (
-        mpy_stack(tmp_path, CFG) as d,
+        rpc_stack(tmp_path, CFG) as d,
         d.sub_at("c") as c,
         d.sub_at(CFG.cell) as cx,
     ):
@@ -144,7 +144,7 @@ async def test_batt(tmp_path):
     "Basic BMS test"
     with contextlib.suppress(FileNotFoundError):
         os.unlink("fake.rtc")
-    async with mpy_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
+    async with rpc_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
         u = await b.u()
         assert u == 20.2  # 1% plus
         await b.i(100)

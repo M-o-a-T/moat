@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import yload
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 CFGW = """
 app: dir
@@ -48,7 +48,7 @@ c:
 async def test_loop(tmp_path, cfg):
     "relay test"
     cfg = yload(cfg, attr=True)
-    async with mpy_stack(tmp_path, cfg) as d:
+    async with rpc_stack(tmp_path, cfg) as d:
         a = d.sub_at(P("a"))
         b = d.sub_at(P("b"))
         c = d.sub_at(P("c"))
@@ -100,7 +100,7 @@ b:
 @pytest.mark.anyio
 async def test_loopmsg(tmp_path):
     "relay test"
-    async with mpy_stack(tmp_path, CFGL) as d:
+    async with rpc_stack(tmp_path, CFGL) as d:
         a = d.sub_at(P("a"))
         b = d.sub_at(P("b"))
 

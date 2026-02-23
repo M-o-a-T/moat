@@ -37,7 +37,7 @@ class Fwd(BaseCmd):
             return
 
         from moat.lib.rpc import MsgSender  # noqa: PLC0415
-        from moat.lib.rpc._test import StreamLoop  # noqa: PLC0415
+        from moat.lib.rpc.loop import StreamLoop  # noqa: PLC0415
 
         a = StreamLoop(self.root, log + ">")
         b = StreamLoop(None, log + "<")

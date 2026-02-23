@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import NotGiven, attrdict, to_attrdict
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -65,7 +65,7 @@ tt: *tt
 @pytest.mark.parametrize("remote", [False, True])
 async def test_rtc(tmp_path, remote):
     "test basic RTC"
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.rtc") if remote else P("rtc")) as rtc:
+    async with rpc_stack(tmp_path, CFG) as d, d.sub_at(P("r.rtc") if remote else P("rtc")) as rtc:
         await rtc("t1", "hello")
         await rtc("t2", {"Answer": 42})
         assert (await rtc("t1")) == "hello"
@@ -77,7 +77,7 @@ async def test_rtc(tmp_path, remote):
 async def test_rtc_cfg(tmp_path, remote):
     "test config updating"
     async with (
-        mpy_stack(tmp_path, CFG) as d,
+        rpc_stack(tmp_path, CFG) as d,
         d.cfg_at(P("r.c") if remote else P("c")) as cfg,
         d.cfg_at(P("r.rtc.cfg") if remote else P("rtc.cfg")) as rtc,
         d.sub_at(P("r.rtc") if remote else P("rtc")) as srtc,

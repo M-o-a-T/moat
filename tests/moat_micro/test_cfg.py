@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import NotGiven, to_attrdict
 from moat.lib.path import P, Path
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -78,7 +78,7 @@ tt:
 async def test_cfg(tmp_path, local: bool):
     "test config updating"
     async with (
-        mpy_stack(tmp_path, CFG) as d,
+        rpc_stack(tmp_path, CFG) as d,
         d.sub_at(P("c" if local else "r.c")) as cfx,
         cfx.cfg_at(Path()) as cfg,
     ):

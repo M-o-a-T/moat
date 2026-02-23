@@ -1,1 +1,1 @@
-../../lib/rpc/apps/stdio.py
+../../lib/rpc/app/stdio.py

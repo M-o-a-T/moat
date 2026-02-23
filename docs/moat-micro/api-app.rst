@@ -1,32 +1,32 @@
 API: app
 ========
 
-.. automodule:: moat.micro.app.cfg
+.. automodule:: moat.lib.rpc.app.cfg
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.fake
+.. automodule:: moat.lib.rpc.app.fake
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.i2c
+.. automodule:: moat.lib.rpc.app.i2c
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.link
+.. automodule:: moat.lib.rpc.app.link
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.net.tcp
+.. automodule:: moat.lib.rpc.app.net.tcp
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.net.unix
+.. automodule:: moat.lib.rpc.app.net.unix
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,17 +36,17 @@ API: app
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.ping
+.. automodule:: moat.lib.rpc.app.ping
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.pipe
+.. automodule:: moat.lib.rpc.app.pipe
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.remote
+.. automodule:: moat.lib.rpc.app.remote
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,12 +56,12 @@ API: app
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.stdio
+.. automodule:: moat.lib.rpc.app.stdio
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.sub
+.. automodule:: moat.lib.rpc.app.sub
    :members:
    :undoc-members:
    :show-inheritance:
@@ -71,12 +71,12 @@ API: app
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app._test
+.. automodule:: moat.lib.rpc.app._test
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.app.wdt
+.. automodule:: moat.lib.rpc.app.wdt
    :members:
    :undoc-members:
    :show-inheritance:

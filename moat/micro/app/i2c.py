@@ -1,1 +1,1 @@
-../../lib/rpc/apps/i2c.py
+../../lib/rpc/app/i2c.py

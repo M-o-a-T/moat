@@ -46,7 +46,8 @@ the app requires.
 
 #### App naming
 
-App class names map to `moat.micro.app.<name>` on CPython:
+App class names on CPython are loaded from registered prefixes
+(`moat.lib.rpc.app` first, then `moat.micro.app` compatibility paths):
 
 | YAML `app:` value | Python module |
 |---|---|
@@ -54,7 +55,7 @@ App class names map to `moat.micro.app.<name>` on CPython:
 | `part.Relay` | `moat.micro.app.part` → `moat.micro.part.relay.Relay` |
 | `_fake.Pin` | `moat.micro.app._fake.Pin` |
 | `_fake.ADC` | `moat.micro.app._fake.ADC` |
-| `_test.Cmd` | `moat.micro.app._test.Cmd` |
+| `_test.Cmd` | `moat.lib.rpc.app._test.Cmd` |
 | `dir` | built-in dispatcher |
 
 The `part.*` names go through a lazy-loader in `moat/micro/app/part.py`;

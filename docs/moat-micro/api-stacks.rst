@@ -1,17 +1,17 @@
 API
 ===
 
-.. automodule:: moat.micro.stacks.tcp
+.. automodule:: moat.lib.rpc.conn.tcp
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.stacks.unix
+.. automodule:: moat.lib.rpc.conn.unix
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.stacks.util
+.. automodule:: moat.lib.rpc.conn.util
    :members:
    :undoc-members:
    :show-inheritance:

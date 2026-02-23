@@ -1,1 +1,1 @@
-../../lib/rpc/apps/spi.py
+../../lib/rpc/app/spi.py

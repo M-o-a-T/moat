@@ -1,1 +1,1 @@
-../../lib/rpc/apps/wdt.py
+../../lib/rpc/app/wdt.py

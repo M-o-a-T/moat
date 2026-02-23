@@ -58,6 +58,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
 - Use `[async] with (a,b,c)` instead of nested `[a]sync with` statements.
+  - Exception: MicroPython needs a single line instead of parentheses.
+    Use backslash continuation, disable reformatting for long lines.
 
 ### Typing
 
@@ -67,7 +69,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.
-- The above also applies to `cast` expressions.
+- This also applies to `cast` expressions.
 - Do not type-check function parameters. That's what `ty` is for.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
@@ -78,6 +80,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 - pre-commit enforces formatting and typechecking.
 - YAML files may contain Path objects, marked with `!P`.
+  The pre-commit yaml checker understands this.
 - When testing, *always write the test output to a temporary file* so you
   can analyze it more easily. Running the same test multiple times is
   inefficient.

@@ -4,10 +4,10 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import attrdict, combine_dict, import_, set_part
+from moat.util import attrdict, combine_dict, set_part
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
-from moat.lib.rpc import APP, MsgSender, ShortCommandError
+from moat.lib.rpc import MsgSender, ShortCommandError, load_app
 
 from .tree.dir import BaseSuperCmd
 
@@ -103,7 +103,7 @@ class ArrayCmd(BaseSuperCmd):
 
     async def _setup_apps(self):
         name = self.cfg["cfg"]["app"]
-        cls = import_(f"{APP}.{name}", 1)
+        cls = load_app(name)
 
         self.n = self.cfg["n"]
         for i in range(self.n):

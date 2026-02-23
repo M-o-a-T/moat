@@ -36,6 +36,8 @@ _imports = {
     "RetryCmd": "cmd.retry",
     # From cmd._base and cmd.base
     "APP": "cmd._base",  # not exported/documented
+    "add_app_prefix": "cmd._base",
+    "load_app": "cmd._base",
     "BaseCmd": "cmd._base",
     "LoadCmd": "cmd._base",
     "LockBaseCmd": "cmd._base",
@@ -151,6 +153,8 @@ __all__ = [  # noqa:RUF022
     "RetryCmd",
     # From cmd.base
     "BaseCmd",
+    "add_app_prefix",
+    "load_app",
     "LoadCmd",
     "LockBaseCmd",
     "RootCmd",
@@ -211,6 +215,8 @@ if _TC or _DOC:
     from .base import OptDict as OptDict
     from .base import SubMsgSender as SubMsgSender
     from .cmd._base import BaseCmd as BaseCmd
+    from .cmd._base import add_app_prefix as add_app_prefix
+    from .cmd._base import load_app as load_app
     from .cmd._base import LoadCmd as LoadCmd
     from .cmd._base import LockBaseCmd as LockBaseCmd
     from .cmd.array import ArrayCmd as ArrayCmd

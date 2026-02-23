@@ -36,9 +36,33 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from moat.lib.rpc import BaseSuperCmd
 
-__all__ = ["BaseCmd", "LoadCmd", "LockBaseCmd", "RootCmd"]
+__all__ = ["BaseCmd", "LoadCmd", "LockBaseCmd", "RootCmd", "add_app_prefix", "load_app"]
 
-APP: str = "app" if sys.implementation.name == "micropython" else "moat.micro.app"
+APP: list[str] = ["app"] if sys.implementation.name == "micropython" else ["moat.lib.rpc.app"]
+
+
+def add_app_prefix(prefix: str) -> None:
+    """
+    Register a module prefix for dynamic command loading.
+
+    The prefix should end in `.app`, by convention.
+    """
+    APP.append(prefix)
+
+
+def load_app(name: str):
+    """
+    Load an app class/object from the registered app prefixes.
+    """
+    err = None
+    for app in APP:
+        try:
+            return import_(f"{app}.{name}", 1)
+        except (AttributeError, ModuleNotFoundError) as exc:
+            err = exc
+    if err is not None:
+        raise err
+    raise ImportError(name)
 
 
 class BaseCmd(MsgHandler):
@@ -272,7 +296,7 @@ class LoadCmd(BaseCmd):
         def imp(name):
             if name == "dir":
                 name = "sub.Dir"
-            return import_(f"{APP}.{name}", 1)
+            return load_app(name)
 
         return imp(cfg["app"])(cfg, **kw)
 

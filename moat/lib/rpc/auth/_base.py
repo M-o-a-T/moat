@@ -195,6 +195,9 @@ class AuthCmdIn(BaseCmd):
             self.parent.auth_done(None)
             raise ok
 
+        # notify the remote that we're done
+        await sdr.cmd((None,))
+
         p = ok.cfg.get("path")
         sdr = self.parent.base_root.sender
         if p:
@@ -208,11 +211,20 @@ class AuthCmdIn(BaseCmd):
             res["auth"] = list(self.modes.keys())
         return res
 
+    async def cmd(self):
+        """
+        Done.
+        """
+        self.parent.tg.cancel()
+
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """Handler for incoming messages"""
         if len(rcmd) and rcmd[-1] is None:
             if len(rcmd) == 1:
-                return await msg.call_simple(self.parent._err)  # noqa:SLF001
+                if len(msg) and isinstance(msg[0], Exception):
+                    return await msg.call_simple(self.parent._err)  # noqa:SLF001
+                else:
+                    return await msg.call_simple(self.cmd)
             rcmd.pop()
             name = rcmd.pop()
             if name == "dir_":

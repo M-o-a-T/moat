@@ -63,8 +63,6 @@ class Auth(BaseMsgHandler):
         self._auth_done.set()
         self._auth_done = None
         self._auth_root = root
-        if L:
-            self.set_ready()
 
     def stop(self, root: BaseMsgHandler | None = None):
         """
@@ -134,8 +132,9 @@ class _WithAuth(BaseMsgHandler):
         await self.wrapped.handle(msg, rcmd, _auth=True)
 
     def find_handler(self, path, cmd: bool = False):
-        "Delegate sub-path lookup to the wrapped handler."
-        return self.wrapped.find_handler(path, cmd=cmd)
+        "Stub to force using this object's ``handle`` method"
+        cmd  # noqa:B018
+        return self, path
 
 
 class AuthCmdIn(BaseCmd):
@@ -234,7 +233,13 @@ class SubAuth(BaseCmd):
     "base class for individual auth methods"
 
     def __init__(
-        self, cfg: dict, auth: dict | None, parent, idx: int, name: str, remote: MsgSender
+        self,
+        cfg: dict,
+        auth: dict | None,
+        parent: AuthCmdIn,
+        idx: int,
+        name: str,
+        remote: MsgSender,
     ):
         super().__init__(cfg)
         self.idx = idx

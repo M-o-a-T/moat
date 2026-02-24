@@ -31,7 +31,7 @@ class BaseConnIter:
     async def __aenter__(self):
         self.tg = await ACM(self)(TaskGroup())
         try:
-            await self.tg.spawn(self.accept)
+            self.tg.start_soon(self.accept)
             return self
         except BaseException as exc:
             await AC_exit(self, type(exc), exc, getattr(exc, "__traceback__", None))

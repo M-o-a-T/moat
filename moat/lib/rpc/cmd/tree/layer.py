@@ -49,7 +49,7 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         async with TaskGroup() as tg:
             if self.app is not None:
-                await tg.spawn(self.run_app)
+                tg.start_soon(self.run_app)
             if L:
                 await self.app.wait_ready()
                 self.set_ready()

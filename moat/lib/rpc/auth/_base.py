@@ -251,62 +251,67 @@ class AuthCmdIn(BaseCmd):
 
     async def task(self) -> MsgSender:
         try:
-            async with ungroup, TaskGroup() as tg:
-                self.parent.tg = tg
+            async with ungroup, TaskGroup() as tg_send:
                 sdr = MsgSender(_WithAuth(self.parent.parent))
                 self.modes = {}
-                tg.start_soon(self._send_cmd, sdr)
+                tg_send.start_soon(self._send_cmd, sdr)
 
-                await self.msg_in.wait()
-                modes = set(self.msg_in[3])
+                async with TaskGroup() as tg:
+                    self.parent.tg = tg
+                    try:
+                        await self.msg_in.wait()
+                        modes = set(self.msg_in[3])
 
-                for idx, cfg in enumerate(self.cfg.modes):
-                    name = cfg.get("name", cfg.mode)
-                    if name in self.modes:
-                        raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
-                    if name not in modes:
-                        continue  # not accepted by the other side
+                        for idx, cfg in enumerate(self.cfg.modes):
+                            name = cfg.get("name", cfg.mode)
+                            if name in self.modes:
+                                raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
+                            if name not in modes:
+                                continue  # not accepted by the other side
 
-                    sub = get_auth(cfg.mode)(
-                        cfg,
-                        self.parent.auth.get(name),
-                        self.parent,
-                        idx,
-                        name,
-                        sdr.sub_at(Path.build((None, cfg.mode))),
-                    )
-                    self.modes[name] = sub
+                            sub = get_auth(cfg.mode)(
+                                cfg,
+                                self.parent.auth.get(name),
+                                self.parent,
+                                idx,
+                                name,
+                                sdr.sub_at(Path.build((None, cfg.mode))),
+                            )
+                            self.modes[name] = sub
 
-                    tg.start_soon(self._run, sub)
+                            tg.start_soon(self._run, sub)
+                    finally:
+                        self.parent.tg = None
+
+                if L:
+                    self.set_ready()
+
+                del self.modes  # no longer needed
+
+                ok = self.parent.ok
+                if ok is None:
+                    ok = AuthDenied("No auth method worked.")
+
+                # Unblock the remote ``:n`` reply before waiting for ``_send_cmd``
+                # to finish when ``tg_send`` exits.
+                self.msg_out.set()
+                self.msg_out = ok
+
+                if isinstance(ok, Exception):
+                    # forward the exception to the remote side
+                    self.parent.auth_done(None)
+                else:
+                    p = ok.cfg.get("path")
+                    sdr = self.parent.base_root.sender
+                    if p:
+                        sdr = sdr.sub_at(p)
+                    self.parent.auth_done(sdr)
 
         except AuthNoRemote:
             if "none" in self.modes:
                 self.parent.auth_done(self.modes["none"])
                 return
             raise
-
-        if L:
-            self.set_ready()
-
-        del self.modes  # no longer needed
-
-        ok = self.parent.ok
-        if ok is None:
-            ok = AuthDenied("No auth method worked.")
-
-        # don't yield from here on
-        self.msg_out.set()
-        self.msg_out = ok
-
-        if isinstance(ok, Exception):
-            # forward the exception to the remote side
-            self.parent.auth_done(None)
-        else:
-            p = ok.cfg.get("path")
-            sdr = self.parent.base_root.sender
-            if p:
-                sdr = sdr.sub_at(p)
-            self.parent.auth_done(sdr)
         # don't yield before here!
 
     async def _handle_cmd(self, msg: Msg):

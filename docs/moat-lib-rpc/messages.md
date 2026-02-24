@@ -14,7 +14,7 @@ streaming, and error reporting.
 ## Reliability
 
 If message loss or reordering is possible, a
-:moat.micro.proto.reliable:`ReliableMsg` wrapper is used.
+{py:class}`moat.lib.stream.ReliableMsg` wrapper is used.
 
 ## Serialization
 

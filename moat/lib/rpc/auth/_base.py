@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import anyio
 from concurrent.futures import CancelledError
 
 from moat.lib.micro import Event, L, TaskGroup, log, wait_for
@@ -78,8 +79,11 @@ class Auth(BaseMsgHandler):
     async def process(self, root: BaseMsgHandler):
         """Run the auth handler, then the normal stream."""
         self.base_root = root
-        async with AuthCmdIn(self) as a_in:
-            await self.parent.process(a_in)
+        async with AuthCmdIn(self) as a_in, TaskGroup() as tg:
+            tg.start_soon(self.parent.process, a_in)  ## triggers the mis-nesting exception
+            await anyio.sleep(0.1)
+            raise RuntimeError("CrashTest")
+            tg.start_soon(a_in.task)
 
     def accept(self, by: SubAuth):
         if isinstance(self.ok, Exception):
@@ -120,6 +124,10 @@ class _WithAuth(BaseMsgHandler):
     def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
         return self.wrapped.handle(msg, rcmd, _auth=True)
 
+    def find_handler(self, path, cmd: bool = False):
+        "Delegate sub-path lookup to the wrapped handler."
+        return self.wrapped.find_handler(path, cmd=cmd)
+
 
 class AuthCmdIn(BaseCmd):
     """Handles the incoming-message side of the auth protocol."""
@@ -131,18 +139,22 @@ class AuthCmdIn(BaseCmd):
         super().__init__(parent.cfg)
 
     async def _run(self, s_a: SubAuth):
-        if not self.cfg.timeout:
+        timeout = self.cfg.get("timeout")
+        if not timeout:
             return await s_a.run()
         try:
-            await wait_for(self.cfg.timeout, s_a.run)
+            await wait_for(timeout, s_a.run)
         except TimeoutError:
-            log("Timeout: %s(%d)", self.cfg.modes[s_a.name].mode, s_a.name)
+            log("Timeout: %s(%s)", s_a.cfg.mode, s_a.name)
+
+    #   async def teardown(self):
+    #       breakpoint()
+    #       await super().teardown()
 
     async def task(self) -> MsgSender:
-
         async with TaskGroup() as tg:
             self.parent.tg = tg
-            sdr = MsgSender(_WithAuth(self.parent))
+            sdr = MsgSender(_WithAuth(self.parent.parent))
             self.modes = {}
             for idx, cfg in enumerate(self.cfg.modes):
                 name = cfg.get("name", cfg.mode)
@@ -150,7 +162,7 @@ class AuthCmdIn(BaseCmd):
                     raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
                 sub = get_auth(cfg.mode)(
                     cfg,
-                    self.auth.get(name),
+                    self.parent.auth,
                     self.parent,
                     idx,
                     name,
@@ -197,7 +209,7 @@ class AuthCmdIn(BaseCmd):
             name = rcmd.pop()
             if name == "dir_":
                 return await msg.call_simple(self.cmd_dir_)
-            return await self.parent.modes[name].handle(msg, rcmd)
+            return await self.modes[name].handle(msg, rcmd)
 
         pad = self.parent._auth_done  # noqa:SLF001
         if pad is not None:

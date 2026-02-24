@@ -31,7 +31,7 @@ class AuthReject(AuthError):
     "Some auth method didn't work. Non-fatal."
 
 
-class Auth:
+class Auth(BaseMsgHandler):
     """
     Handle authorization.
 
@@ -101,7 +101,7 @@ class Auth:
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """Handler for outgoing messages"""
-        await self.check_rdy(msg, rcmd)
+        await self.parent.check_rdy(msg, rcmd)
 
         if self._auth_done is not None:
             await self._auth_done.wait()

@@ -637,7 +637,7 @@ class LinkSender(MsgSender):
 
     async def stream_watch(self, msg: Msg):
         """
-        A hook for reading data. Used mainly by `moat.micro.app.link.Cmd`.
+        A hook for reading data. Used mainly by `moat.lib.rpc.app.link.Cmd`.
         """
         if msg.can_stream:
             async with msg.stream_out() as ms, self.d_watch(msg[0], **msg.kw) as mr:

@@ -34,6 +34,7 @@ API
 .. automodule:: moat.lib.rpc.conn
    :members:
    :undoc-members:
+   :exclude-members: BaseConnIter, TcpIter, UnixIter
    :show-inheritance:
 
 .. automodule:: moat.micro.rtc

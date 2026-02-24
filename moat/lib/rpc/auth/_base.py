@@ -170,7 +170,7 @@ class AuthCmdIn(BaseCmd):
                     raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
                 sub = get_auth(cfg.mode)(
                     cfg,
-                    self.parent.auth,
+                    self.parent.auth.get(name),
                     self.parent,
                     idx,
                     name,

@@ -4,9 +4,10 @@ import anyio
 from concurrent.futures import CancelledError
 
 from moat.lib.micro import Event, L, TaskGroup, log, sleep_ms, wait_for
-from moat.lib.path import Path
+from moat.lib.path import Path, P
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
+from moat.util import ungroup
 
 from typing import TYPE_CHECKING
 
@@ -32,7 +33,7 @@ class AuthDenied(AuthError):
     "Auth Denied"
 
 @as_proxy("_AuV")
-class AuthVersion(AuthError):
+class AuthVersionError(AuthError):
     "Auth version mismatch"
 
 @as_proxy("_AuC")
@@ -166,7 +167,7 @@ class AuthCmdIn(BaseCmd):
     parent: Auth
     msg_in:Event|Msg
     msg_out:Event|tuple[list,dict]
-    p_version:int  # protocol version
+    p_version:int|None =None # protocol version
 
     def __init__(self, parent: Auth):
         self.parent = parent
@@ -216,7 +217,6 @@ class AuthCmdIn(BaseCmd):
         cmd.auth_data_res_in(min(vers,self.p_version), res.kw)
 
     async def task(self) -> MsgSender:
-        raise RuntimeError("Owch Again")
         try:
             async with ungroup,TaskGroup() as tg:
                 self.parent.tg = tg
@@ -287,7 +287,7 @@ class AuthCmdIn(BaseCmd):
         cmd = self.parent.parent
         self.p_version = msg[0]
         if not (VERS_MIN <= self.p_version <= VERS_MAX):
-            raise AuthVersion(VERS_MIN,VERS_MAX)
+            raise AuthVersionError(VERS_MIN,VERS_MAX)
         if msg[1] is not None and self.parent.is_server is msg[1]:
             raise AuthClientServer
 

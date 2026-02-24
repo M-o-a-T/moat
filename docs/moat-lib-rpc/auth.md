@@ -47,6 +47,27 @@ users:
   fred: FlInTsToNe123
 ```
 
+`userpass` in the example above is illustrative only; no built-in
+`moat.lib.rpc.auth.userpass` method exists at this time.
+
+## Built-in methods
+
+The following auth methods are currently implemented and can be selected via
+`auth.modes[].mode`:
+
+- `noop`
+  (`moat.lib.rpc.auth.noop.SubAuth`) accepts immediately on both sides.
+- `anon`
+  (`moat.lib.rpc.auth.anon.SubAuth`) anonymous handshake; the client requests
+  it and the server accepts.
+- `test`
+  (`moat.lib.rpc.auth.test.SubAuth`) test-only method for forcing
+  accept/deny/ignore behavior.
+- `token`
+  (`moat.lib.rpc.auth.token.SubAuth`) token-based authentication.
+
+Custom methods are loaded by `moat.lib.rpc.auth._base.get_auth()`.
+
 ## API
 
 The main Auth handler is hooked into {py:class}`moat.lib.rpc.BaseCmdMsg` objects and

@@ -51,6 +51,7 @@ async def test_net(tmp_path, link_in):
     cfg = yload(CFG1, attr=True)
     cfg.app.r.port = str(sock)
     cfg.app.l.port = str(sock)
+    cfg.app.l.auth.ok = True
     if link_in:
         cfg.app.r.app = "net.unix.LinkIn"
 

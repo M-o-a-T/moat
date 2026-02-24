@@ -51,14 +51,15 @@ class Node:
         """Save new data below this node.
 
         Return semantics:
-        * if @force is set:
-          * `True`: incoming timestamp is newer
-          * `None`: incoming data are equal
-          * `False`: otherwise
-        * if @force is not set:
-          * `None`: incoming data are equal
-          * `False`: incoming timestamp is older
-          * `True`: otherwise
+
+        * If ``force`` is set:
+          * ``True``: incoming timestamp is newer
+          * ``None``: incoming data are equal
+          * ``False``: otherwise
+        * If ``force`` is not set:
+          * ``None``: incoming data are equal
+          * ``False``: incoming timestamp is older
+          * ``True``: otherwise
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)

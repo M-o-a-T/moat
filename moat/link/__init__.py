@@ -1,12 +1,14 @@
 """
 Moat-Link is a library that enhances MQTT messaging (other backends are
-possible) with structured data types, defined metadata (message source
-and timestamp), and
+possible) with structured data types and defined metadata (message source
+and timestamp).
 
 The point of this library is to support a minimal unified pub/sub messaging
 service.
 
-Configuration looks like this::
+Configuration looks like this:
+
+.. code-block:: yaml
 
     link:
       backend:

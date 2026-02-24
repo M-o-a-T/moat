@@ -66,7 +66,7 @@ time for avoiding replace/delete collisions.
 ### Errors
 
 Error records shall be generated (via
-{py:meth}`~moat.link.client.Link.e_info`) for `run.host.XXX` entries when
+{py:meth}`~moat.link.client.LinkSender.e_info`) for `run.host.XXX` entries when
 * the associated program goes down / disappears, and doesn't come back up
   after `timeout.restart.error` seconds
 * the program doesn't transition to `up=True` within `timeout.restart.up`
@@ -74,7 +74,7 @@ Error records shall be generated (via
 * the program restarts again (i.e. the `run.host.XXX` message is
   republished with a different ID), within `timeout.restart.flap` seconds.
 
-Errors shall be resolved ({py:meth}`~moat.link.client.Link.e_ok`) when the
+Errors shall be resolved ({py:meth}`~moat.link.client.LinkSender.e_ok`) when the
 program has been up for at least `timeout.restart.up` seconds (single
 restart), or `timeout.restart.flap` seconds (multiple restarts within
 `timeout.restart.flap` seconds).

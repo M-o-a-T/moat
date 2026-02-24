@@ -142,6 +142,7 @@ __all__ = [
     "is_async",
     "log",
     "log_exc",
+    "new_ACM",
     "print_exc",
     "run",
     "run_server",
@@ -469,8 +470,8 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
     cm = AsyncExitStack()
     obj._AC_.append(cm)
 
-    # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
-    # least it shouldn't yield
+    # AsyncExitStack.__aenter__ is a no-op. We don't depend on that, but at
+    # least it shouldn't yield.
     # log("AC_Enter",nback=2)
     try:
         # pylint:disable=no-member,unnecessary-dunder-call
@@ -485,6 +486,20 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
         return AC_use(obj, ctx)
 
     return _ACc
+
+
+class new_ACM:
+    "A context manager that creates a new ACM"
+
+    def __init__(self, obj: Any):
+        self.obj = obj
+
+    async def __aenter__(self):
+        ACM(self.obj)
+        return self.obj
+
+    async def __aexit__(self, *err):
+        await AC_exit(self.obj, *err)
 
 
 @overload

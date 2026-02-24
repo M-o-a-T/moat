@@ -3,7 +3,7 @@ from __future__ import annotations
 import anyio
 from concurrent.futures import CancelledError
 
-from moat.lib.micro import Event, L, TaskGroup, log, wait_for
+from moat.lib.micro import Event, L, TaskGroup, log, new_ACM, wait_for
 from moat.lib.path import Path
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
@@ -80,10 +80,14 @@ class Auth(BaseMsgHandler):
         """Run the auth handler, then the normal stream."""
         self.base_root = root
         async with AuthCmdIn(self) as a_in, TaskGroup() as tg:
-            tg.start_soon(self.parent.process, a_in)  ## triggers the mis-nesting exception
-            await anyio.sleep(0.1)
-            raise RuntimeError("CrashTest")
+
+            async def run_parent():
+                async with new_ACM(self.parent):
+                    await self.parent.process(a_in)
+
+            tg.start_soon(run_parent)
             tg.start_soon(a_in.task)
+            await anyio.sleep(1)
 
     def accept(self, by: SubAuth):
         if isinstance(self.ok, Exception):

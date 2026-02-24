@@ -146,7 +146,12 @@ class AuthCmdIn(BaseCmd):
                 if name in self.modes:
                     raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
                 sub = get_auth(cfg.mode)(
-                    cfg, self, idx, name, sdr.sub_at(Path.build((None, cfg.mode)))
+                    cfg,
+                    self.auth.get(name),
+                    self.parent,
+                    idx,
+                    name,
+                    sdr.sub_at(Path.build((None, cfg.mode))),
                 )
                 self.modes[name] = sub
 
@@ -201,13 +206,15 @@ class AuthCmdIn(BaseCmd):
 class SubAuth(BaseCmd):
     "base class for individual auth methods"
 
-    def __init__(self, cfg: dict, parent, idx: int, name: str, remote: MsgSender):
+    def __init__(
+        self, cfg: dict, auth: dict | None, parent, idx: int, name: str, remote: MsgSender
+    ):
         super().__init__(cfg)
         self.idx = idx
         self.name = name
         self.parent = parent
         self.remote = remote
-        self.auth = parent.parent.auth
+        self.auth = auth or {}
         self.is_server = parent.parent.is_server
 
     async def task(self):

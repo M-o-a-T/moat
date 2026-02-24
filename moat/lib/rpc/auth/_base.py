@@ -229,14 +229,15 @@ class SubAuth(BaseCmd):
             self.set_ready()
 
         # This example is a no-op.
-        if not await self.remote():
-            self.parent.deny(self)
-
         return
 
-    async def cmd(self):
-        """Handle receiving a request for this auth method"""
-        return True
+    def accept(self):
+        "Success. Forwarded to parent."
+        self.parent.accept(self)
+
+    def deny(self):
+        "Rejection. Forwarded to parent."
+        self.parent.deny(self)
 
 
 def get_auth(mode: str) -> SubAuth:

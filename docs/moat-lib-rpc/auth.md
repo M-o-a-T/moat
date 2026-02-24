@@ -49,7 +49,7 @@ users:
 
 ## API
 
-The main Auth handler is hooked into {py:class}`BaseCmdMsg` objects and
+The main Auth handler is hooked into {py:class}`moat.lib.rpc.BaseCmdMsg` objects and
 its subclasses when an `auth` item is present in the requisite
 configuration. Users need not do anything special.
 

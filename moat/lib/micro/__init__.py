@@ -142,7 +142,6 @@ __all__ = [
     "is_async",
     "log",
     "log_exc",
-    "new_ACM",
     "print_exc",
     "run",
     "run_server",
@@ -486,20 +485,6 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
         return AC_use(obj, ctx)
 
     return _ACc
-
-
-class new_ACM:
-    "A context manager that creates a new ACM"
-
-    def __init__(self, obj: Any):
-        self.obj = obj
-
-    async def __aenter__(self):
-        ACM(self.obj)
-        return self.obj
-
-    async def __aexit__(self, *err):
-        await AC_exit(self.obj, *err)
 
 
 @overload

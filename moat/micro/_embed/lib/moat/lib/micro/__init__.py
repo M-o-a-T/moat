@@ -405,20 +405,6 @@ def ACM(obj):
     return _ACc
 
 
-class new_ACM:
-    "A context manager that creates a new ACM"
-
-    def __init__(self, obj):
-        self.obj = obj
-
-    async def __aenter__(self):
-        ACM(self.obj)
-        return self.obj
-
-    async def __aexit__(self, *err):
-        await AC_exit(self.obj, *err)
-
-
 async def AC_use(obj, ctx):
     """
     Attach a callback / (async) context manager to this object's AC.

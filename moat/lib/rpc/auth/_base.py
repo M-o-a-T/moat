@@ -10,6 +10,7 @@ from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.util import attrdict
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseCmdMsg, Msg
 
@@ -40,6 +41,8 @@ class Auth:
     modes: dict[str, SubAuth]
     base_root: MsgSender  # dest for local commands; cfg.path gets added to this
     tg: TaskGroup | None = None
+    auth: attrdict | None
+    is_server: bool
 
     _auth_root: BaseMsgHandler
     _auth_done: Event
@@ -48,6 +51,8 @@ class Auth:
         # super().__init__(cfg)
         self.cfg = cfg
         self.parent = parent
+        self.auth = parent.auth
+        self.is_server = parent.is_server
         self._auth_root = None
         self._auth_done = Event()
 
@@ -202,6 +207,8 @@ class SubAuth(BaseCmd):
         self.name = name
         self.parent = parent
         self.remote = remote
+        self.auth = parent.parent.auth
+        self.is_server = parent.parent.is_server
 
     async def task(self):
         """Handle this auth method."""

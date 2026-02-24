@@ -57,6 +57,15 @@ The sub-handlers for individual Auth modes are `BaseCmd` instances that are
 set up with their Auth parent and a SubMsgSender pointing to their remote
 counterpart.
 
+The `BaseCmdMsg.auth` dynamic auth data object is shared with the `Auth`
+handler and forwarded to each `SubAuth` instance as its `auth` attribute.
+Custom auth modes can use this for per-connection runtime data (for example,
+the current token).
+
+`BaseCmdMsg` also carries an `is_server` flag (default `False`). Listener
+handlers set it to `True` for accepted incoming connections, and `Auth` /
+`SubAuth` instances can use it to distinguish client and server roles.
+
 Calling `Auth.deny` causes the connection to be rejected unconditionally.
 
 Calling `Auth.accept` accepts the connection. If more than one method

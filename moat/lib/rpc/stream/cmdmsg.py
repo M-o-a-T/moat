@@ -77,15 +77,17 @@ class BaseCmdMsg(BaseCmd):
 
     doc = dict(_d="Foo")
     auth: attrdict | None = None
+    is_server: bool = False
     _auth: Auth | None = None
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, cfg, *, is_server: bool = False, **kw):
+        self.is_server = is_server
         super().__init__(cfg, **kw)
         if "auth" in cfg:
             from moat.lib.rpc import Auth  # noqa:PLC0415
 
-            self._auth = Auth(cfg.auth, self)
             self.auth = attrdict()
+            self._auth = Auth(cfg.auth, self)
 
     def auth_stop(self) -> None:
         """ """
@@ -287,10 +289,10 @@ class ExtCmdMsg(SingleCmdMsg):
     and then closing the stream!
     """
 
-    def __init__(self, cfg: dict[str, Any], stream: BaseMsg):
+    def __init__(self, cfg: dict[str, Any], stream: BaseMsg, *, is_server: bool = False):
         if cfg is None:
             cfg = {}
-        super().__init__(cfg)
+        super().__init__(cfg, is_server=is_server)
         self.__s = stream
 
     async def stream(self):  # noqa:D102

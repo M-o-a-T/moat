@@ -3,7 +3,7 @@ from __future__ import annotations
 import anyio
 from concurrent.futures import CancelledError
 
-from moat.lib.micro import Event, L, TaskGroup, log, new_ACM, wait_for
+from moat.lib.micro import Event, L, TaskGroup, log, new_ACM, sleep_ms, wait_for
 from moat.lib.path import Path
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
@@ -86,6 +86,8 @@ class Auth(BaseMsgHandler):
                     await self.parent.process(a_in)
 
             tg.start_soon(run_parent)
+            if not L:
+                await sleep_ms(50)
             tg.start_soon(a_in.task)
             await anyio.sleep(1)
 
@@ -125,8 +127,11 @@ class _WithAuth(BaseMsgHandler):
     def __init__(self, wrapped: BaseCmdMsg):
         self.wrapped = wrapped
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
-        return self.wrapped.handle(msg, rcmd, _auth=True)
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+        "Call the wrapped handler when it's ready"
+        if L:
+            await self.wrapped.wait_ready()
+        await self.wrapped.handle(msg, rcmd, _auth=True)
 
     def find_handler(self, path, cmd: bool = False):
         "Delegate sub-path lookup to the wrapped handler."
@@ -208,7 +213,7 @@ class AuthCmdIn(BaseCmd):
         """Handler for incoming messages"""
         if len(rcmd) and rcmd[-1] is None:
             if len(rcmd) == 1:
-                return await msg.call_simple(self._err)
+                return await msg.call_simple(self.parent._err)  # noqa:SLF001
             rcmd.pop()
             name = rcmd.pop()
             if name == "dir_":

@@ -4,11 +4,11 @@ Connection tests
 
 from __future__ import annotations
 
+import anyio
 import pytest
 from contextlib import suppress
 
 from moat.util import timed_ctx, yload
-from moat.lib.micro import sleep_ms
 from moat.lib.path import P
 from moat.lib.rpc._test import rpc_stack
 
@@ -25,9 +25,19 @@ app:
     port: /tmp/test.sock
     retry:
       delay: 0.05
+    auth:
+      modes:
+      - mode: test
+    log:
+      txt: "!L"
   r:
     app: net.unix.Port
     port: /tmp/test.sock
+    auth:
+      modes:
+      - mode: test
+    log:
+      txt: "!R"
 """
 
 
@@ -45,10 +55,9 @@ async def test_net(tmp_path, link_in):
         cfg.app.r.app = "net.unix.LinkIn"
 
     async with timed_ctx(2, rpc_stack(tmp_path, cfg)) as d:
-        await sleep_ms(100)
-        await d.cmd(P("l.!.rdy_"))
-        await d.cmd(P("r.!.rdy_"))
-        await sleep_ms(100)
+        with anyio.fail_after(2):
+            await d.cmd(P("l.!.rdy_"))
+            await d.cmd(P("r.!.rdy_"))
         res = await d.cmd(P("l.a.echo"), m="hello")
         assert res.kw == dict(r="hello")
 

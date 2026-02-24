@@ -3,11 +3,11 @@ from __future__ import annotations
 import anyio
 from concurrent.futures import CancelledError
 
-from moat.lib.micro import Event, L, TaskGroup, log, sleep_ms, wait_for
-from moat.lib.path import Path, P
+from moat.util import ungroup
+from moat.lib.micro import ACM, AC_exit, Event, L, TaskGroup, log, sleep_ms, wait_for
+from moat.lib.path import P, Path
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
-from moat.util import ungroup
 
 from typing import TYPE_CHECKING
 
@@ -22,23 +22,29 @@ if TYPE_CHECKING:
 class AuthError(RuntimeError):
     pass
 
-VERS_MIN=1
-VERS_MAX=1
+
+VERS_MIN = 1
+VERS_MAX = 1
+
 
 class AuthNoRemote(AuthError):
     "Remote side doesn't support the auth protocol"
+
 
 @as_proxy("_AuD")
 class AuthDenied(AuthError):
     "Auth Denied"
 
+
 @as_proxy("_AuV")
 class AuthVersionError(AuthError):
     "Auth version mismatch"
 
+
 @as_proxy("_AuC")
 class AuthClientServer(AuthError):
     "Protocol role clash"
+
 
 @as_proxy("_AuR")
 class AuthReject(AuthError):
@@ -96,6 +102,10 @@ class Auth(BaseMsgHandler):
         """Run the auth handler, then the normal stream."""
         self.base_root = root
         a_in = AuthCmdIn(self)
+
+        class _ProcAC:
+            pass
+
         async with TaskGroup() as tg:
             started = Event()
 
@@ -111,7 +121,23 @@ class Auth(BaseMsgHandler):
 
             tg.start_soon(run_auth)
             await started.wait()
-            await self.parent.process(a_in)
+
+            # ``parent.process`` opens transport contexts via ``CmdMsg.stream``.
+            # Those must not attach to the command object's lifetime here,
+            # because that would make them outlive this auth taskgroup and
+            # break nursery LIFO order on cancellation.
+            ac = _ProcAC()
+            ACM(ac)
+            self.parent.stream_owner_obj_ = ac
+            try:
+                await self.parent.process(a_in)
+            except BaseException as exc:
+                await AC_exit(ac, type(exc), exc, getattr(exc, "__traceback__", None))
+                raise
+            else:
+                await AC_exit(ac)
+            finally:
+                del self.parent.stream_owner_obj_
 
     def accept(self, by: SubAuth):
         if isinstance(self.ok, Exception):
@@ -165,9 +191,9 @@ class AuthCmdIn(BaseCmd):
     """Handles the incoming-message side of the auth protocol."""
 
     parent: Auth
-    msg_in:Event|Msg
-    msg_out:Event|tuple[list,dict]
-    p_version:int|None =None # protocol version
+    msg_in: Event | Msg
+    msg_out: Event | tuple[list, dict]
+    p_version: int | None = None  # protocol version
 
     def __init__(self, parent: Auth):
         self.parent = parent
@@ -188,9 +214,9 @@ class AuthCmdIn(BaseCmd):
     #       breakpoint()
     #       await super().teardown()
 
-    async def _send_cmd(self, sdr:MsgSender):
-        modes = { c.get("name", c.mode) for c in self.cfg.modes }
-        cmd:BaseCmdMsg = self.parent.parent
+    async def _send_cmd(self, sdr: MsgSender):
+        modes = {c.get("name", c.mode) for c in self.cfg.modes}
+        cmd: BaseCmdMsg = self.parent.parent
         try:
             name = self.cfg.name
         except AttributeError:
@@ -198,27 +224,34 @@ class AuthCmdIn(BaseCmd):
 
         vers = self.p_version or VERS_MAX
         try:
-            res = await sdr.cmd(P(":n"), vers,
-                            self.parent.is_server,name, modes, **cmd.auth_data_out())
+            res = await sdr.cmd(
+                P(":n"), vers, self.parent.is_server, name, modes, **cmd.auth_data_out()
+            )
         except AuthVersionError as err:
             vers = err.args
             if vers[1] < VERS_MIN or vers[0] > VERS_MAX:
                 raise
             if self.p_version is not None:
-                vers = min(vers,self.p_version)
+                vers = min(vers, self.p_version)
             self.p_version = vers
-            res = await sdr.cmd(P(":n"), vers,
-                            self.parent.is_server,name, modes, **cmd.auth_data_out())
+            res = await sdr.cmd(
+                Path.build((None,)),
+                vers,
+                self.parent.is_server,
+                name,
+                modes,
+                **cmd.auth_data_out(),
+            )
         except KeyError:
-            raise AuthNoRemote
-            
+            raise AuthNoRemote from None
+
         if len(res) != 0:
             log("AuthResIn ??: %r", res.args)
-        cmd.auth_data_res_in(min(vers,self.p_version), res.kw)
+        cmd.auth_data_res_in(min(vers, self.p_version), res.kw)
 
     async def task(self) -> MsgSender:
         try:
-            async with ungroup,TaskGroup() as tg:
+            async with ungroup, TaskGroup() as tg:
                 self.parent.tg = tg
                 sdr = MsgSender(_WithAuth(self.parent.parent))
                 self.modes = {}
@@ -276,18 +309,17 @@ class AuthCmdIn(BaseCmd):
             self.parent.auth_done(sdr)
         # don't yield before here!
 
-
-    async def _handle_cmd(self, msg:Msg):
+    async def _handle_cmd(self, msg: Msg):
         """
         Remote call.
         """
-        if not isinstance(self.msg_in,Event):
-            raise ValueError("Duplicate")
+        if not isinstance(self.msg_in, Event):
+            raise RuntimeError("Duplicate")  # noqa:TRY004
 
         cmd = self.parent.parent
         self.p_version = msg[0]
         if not (VERS_MIN <= self.p_version <= VERS_MAX):
-            raise AuthVersionError(VERS_MIN,VERS_MAX)
+            raise AuthVersionError(VERS_MIN, VERS_MAX)
         if msg[1] is not None and self.parent.is_server is msg[1]:
             raise AuthClientServer
 
@@ -295,13 +327,12 @@ class AuthCmdIn(BaseCmd):
         self.msg_in = msg
         cmd.auth_data_in(msg.args, msg.kw)
 
-        if not isinstance(self.msg_out,Event):
-            raise ValueError("AlreadySent")
+        if not isinstance(self.msg_out, Event):
+            raise RuntimeError("AlreadySent")  # noqa:TRY004
         await self.msg_out.wait()
         if isinstance(self.parent.ok, Exception):
             raise self.parent.ok  # will be forwarded to the remote side
         await msg.result(self.parent.ok.name, **cmd.auth_data_res_out())
-
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """Handler for incoming messages"""

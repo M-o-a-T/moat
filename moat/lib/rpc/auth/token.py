@@ -42,7 +42,6 @@ class SubAuth(_SubAuth):
 
     async def cmd(self, token: str):
         """Check token."""
-
         if token in self.auth:
             self.accept()
         elif self.cfg.get("fail_invalid", False):

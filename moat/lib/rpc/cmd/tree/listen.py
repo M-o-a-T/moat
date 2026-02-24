@@ -93,7 +93,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         async with self.listener() as conns:
             async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
+                self.tg.start_soon(self.handler, conn)
 
 
 class BaseListenCmd(BaseSubCmd):
@@ -142,4 +142,4 @@ class BaseListenCmd(BaseSubCmd):
             if L:
                 self.set_ready()
             async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
+                self.tg.start_soon(self.handler, conn)

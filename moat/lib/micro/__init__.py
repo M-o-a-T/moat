@@ -95,6 +95,26 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+def _ac_task_id() -> int | None:
+    """Return the current task ID if the backend exposes one."""
+    try:
+        return _anyio.get_current_task().id
+    except Exception:
+        return None
+
+
+def _ac_check_owner(obj: Any, acm: AsyncExitStack, op: str) -> None:
+    """Reject cross-task use of an object's attached AC stack."""
+    owner = getattr(acm, "_moat_ac_task", None)
+    if owner is None:
+        return
+    cur = _ac_task_id()
+    if cur is None or cur == owner:
+        return
+    raise RuntimeError(f"{op}: cross-task AC use on {obj!r} (owner={owner}, current={cur})")
+
+
 # Monkeypatch aclosing's docstring to be Sphinx-compatible
 aclosing.__doc__ = """
 Async context manager for safely finalizing an asynchronously cleaned-up
@@ -467,6 +487,7 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
         obj._AC_ = []
 
     cm = AsyncExitStack()
+    cm._moat_ac_task = _ac_task_id()  # noqa:SLF001  # type:ignore[unresolved-attribute]
     obj._AC_.append(cm)
 
     # AsyncExitStack.__aenter__ is a no-op. We don't depend on that, but at
@@ -513,6 +534,7 @@ async def AC_use(obj: Any, ctx: Any) -> Any:
     Otherwise it's a callable and will run on exit.
     """
     acm: AsyncExitStack = obj._AC_[-1]
+    _ac_check_owner(obj, acm, "AC_use")
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):
@@ -530,7 +552,9 @@ async def AC_exit(obj: Any, *exc) -> bool | None:
     """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
-    return await obj._AC_.pop().__aexit__(*exc)
+    acm = obj._AC_.pop()
+    _ac_check_owner(obj, acm, "AC_exit")
+    return await acm.__aexit__(*exc)
 
 
 def is_async(obj: Any) -> bool:

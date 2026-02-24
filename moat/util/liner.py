@@ -76,8 +76,16 @@ class Liner:
 
     async def __aexit__(self, *exc: object) -> Any:
         self._tg.cancel()
-        if self.buf:
-            await self._partial(True)
+        try:
+            if self.buf:
+                await self._partial(True)
+        except BaseException as err:
+            try:
+                await AC_exit(self, type(err), err, getattr(err, "__traceback__", None))
+            except BaseException as ex:
+                if ex is not err:
+                    raise
+            raise
         return await AC_exit(self, *exc)
 
     async def _flush(self) -> None:

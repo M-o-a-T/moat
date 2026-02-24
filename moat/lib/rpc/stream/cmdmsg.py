@@ -82,7 +82,7 @@ class BaseCmdMsg(BaseCmd):
     is_server: bool = False
     _auth: Auth | None = None
 
-    auth_name:str|None=None
+    auth_name: str | None = None
 
     def __init__(self, cfg, *, is_server: bool = False, **kw):
         self.is_server = is_server
@@ -116,7 +116,7 @@ class BaseCmdMsg(BaseCmd):
         """
         return {}
 
-    def auth_data_in(self, role:str, data:dict) -> None:
+    def auth_data_in(self, role: str, data: dict) -> None:
         """
         Data from the incoming auth message.
         """
@@ -130,7 +130,7 @@ class BaseCmdMsg(BaseCmd):
         """
         return {}
 
-    def auth_data_res_in(self, version:int, data:dict) -> None:
+    def auth_data_res_in(self, version: int, data: dict) -> None:
         """
         Data from the incoming auth acknowledgment.
         """
@@ -140,6 +140,14 @@ class BaseCmdMsg(BaseCmd):
         "wait for auth to complete"
         if self._auth is not None:
             await self._auth.wait_done()
+
+    def stream_owner_(self):
+        """Owner for stream contexts opened by :meth:`stream`.
+
+        Auth temporarily overrides this so transport-layer contexts opened in
+        ``process()`` are closed before the auth taskgroup exits.
+        """
+        return getattr(self, "stream_owner_obj_", self)
 
     async def teardown(self):
         "also cancel auth"
@@ -290,7 +298,7 @@ class CmdMsg(BaseCmdMsg):
 
     def stream(self) -> Awaitable[BaseMsg]:  # noqa:D102
         # pylint:disable=invalid-overridden-method
-        return AC_use(self, self.link)
+        return AC_use(self.stream_owner_(), self.link)
 
 
 class SingleCmdMsg(BaseCmdMsg):
@@ -342,4 +350,4 @@ class ExtCmdMsg(SingleCmdMsg):
         self.__s = stream
 
     async def stream(self):  # noqa:D102
-        return await AC_use(self, self.__s)
+        return await AC_use(self.stream_owner_(), self.__s)

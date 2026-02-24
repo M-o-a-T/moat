@@ -82,6 +82,8 @@ class BaseCmdMsg(BaseCmd):
     is_server: bool = False
     _auth: Auth | None = None
 
+    auth_name:str|None=None
+
     def __init__(self, cfg, *, is_server: bool = False, **kw):
         self.is_server = is_server
         super().__init__(cfg, **kw)
@@ -96,10 +98,48 @@ class BaseCmdMsg(BaseCmd):
             self._auth = Auth(cfg.auth, self)
 
     def auth_stop(self) -> None:
-        """ """
+        """
+        Stop auth processing.
+
+        This does not remove the auth handler due to security
+        considerations.
+        """
         if self._auth is None:
             return
         self._auth.stop()
+
+    def auth_data_out(self) -> dict:
+        """
+        Generates data for the outgoing auth message.
+
+        Called on auth startup.
+        """
+        return {}
+
+    def auth_data_in(self, role:str, data:dict) -> None:
+        """
+        Data from the incoming auth message.
+        """
+        pass
+
+    def auth_data_res_out(self) -> dict:
+        """
+        Generates data for the outgoing auth acknowledgment.
+
+        Called after auth is complete.
+        """
+        return {}
+
+    def auth_data_res_in(self, version:int, data:dict) -> None:
+        """
+        Data from the incoming auth acknowledgment.
+        """
+        pass
+
+    async def wait_for_auth(self):
+        "wait for auth to complete"
+        if self._auth is not None:
+            await self._auth.wait_done()
 
     async def teardown(self):
         "also cancel auth"

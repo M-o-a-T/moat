@@ -99,3 +99,24 @@ list.
 
 `BaseCmdMsg`.*auth* is a basic `attrdict` which the caller can fill with
 relevant data.
+
+## Message format
+
+Auth messages are ordinary MoaT messages, with the first path element set
+to ``None``.
+
+Both sides send initial commands to each other with these positional elements
+(version 1):
+
+* version#
+* server flag
+* role name
+* a list of supported auth methods
+
+Keyword args may be used, depending on the calling `BaseCmdMsg` class.
+The "auth" keyword may be used to transmit initial data to auth methods.
+
+These commands are *not* answered until auth negotiation completes. The
+reply consists of one positional argument, the successful auth method (if
+auth is successful), but may contain follow-up keywords.
+

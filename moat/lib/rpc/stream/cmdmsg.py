@@ -4,6 +4,8 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
+import sys
+
 from moat.util import attrdict, merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
@@ -87,6 +89,10 @@ class BaseCmdMsg(BaseCmd):
             from moat.lib.rpc import Auth  # noqa:PLC0415
 
             self.auth = attrdict()
+            if "pytest" in sys.modules:
+                tcfg = cfg.auth.get("test", None)
+                if tcfg is not None:
+                    self.auth.update(tcfg)
             self._auth = Auth(cfg.auth, self)
 
     def auth_stop(self) -> None:

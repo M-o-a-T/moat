@@ -43,6 +43,38 @@ app:
 """
 
 
+CFG2 = """# Tokens
+app:
+  app: dir
+  a:
+    app: _test_.Cmd
+  l:
+    app: net.unix.Link
+    port: /tmp/test.sock
+    retry:
+      delay: 0.05
+    auth:
+      modes:
+      - mode: token
+      test:
+        token: FooBaR
+    log:
+      txt: "!L"
+  r:
+    app: net.unix.Port
+    port: /tmp/test.sock
+    auth:
+      modes:
+      - mode: token
+      test:
+        token:
+        - FooBaR
+        - fOobAz
+    log:
+      txt: "!R"
+"""
+
+
 @pytest.mark.parametrize("link_in", [True, False])
 async def test_net(tmp_path, link_in):
     "basic connectivity test"
@@ -67,6 +99,24 @@ async def test_net(tmp_path, link_in):
         if link_in:
             res = await d.cmd(P("r.a.echo"), m="hello")
             assert res.kw == dict(r="hello")
+
+
+async def test_token_net(tmp_path):
+    "Token auth works end-to-end using test-only injected auth data."
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(CFG2, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+
+    async with timed_ctx(2, rpc_stack(tmp_path, cfg)) as d:
+        with anyio.fail_after(2):
+            await d.cmd(P("l.!.rdy_"))
+            await d.cmd(P("r.!.rdy_"))
+        res = await d.cmd(P("l.a.echo"), m="hello")
+        assert res.kw == dict(r="hello")
 
 
 class _AuthParent:

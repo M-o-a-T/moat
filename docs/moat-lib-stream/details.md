@@ -66,7 +66,8 @@ stream system.
 You need to override rd/wr (BaseBuf), snd/rcv (BaseBlk) or send/recv
 (BaseMsg), and the context handler "\_ctx".
 
-Defined in ``moat.lib.stream``.
+Defined in {py:class}`moat.lib.stream.BaseMsg`,
+{py:class}`moat.lib.stream.BaseBlk`, and {py:class}`moat.lib.stream.BaseBuf`.
 
 ##### FileBuf
 
@@ -77,7 +78,7 @@ object, socket, or whatever.
 
 Your context handler needs to create the stream and assign it to ``s``.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:mod}`moat.lib.stream`.
 
 ##### AIOBuf
 
@@ -87,7 +88,7 @@ On CPython, MoaT uses anyio's streams. See ``AnyioBuf``.
 
 Your context handler needs to open the stream and assign it to ``s``.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:mod}`moat.lib.stream`.
 
 ##### AnyioBuf
 
@@ -96,14 +97,14 @@ files (via `anyio.Path`).
 
 Your context handler needs to open the stream and assign it to ``s``.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:class}`moat.lib.stream.AnyioBuf`.
 
 
 ##### ProcessBuf
 
 A stream that connects to stdin+stdout an external process.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:class}`moat.lib.stream.ProcessBuf`.
 
 
 #### StackedMsg / StackedBuf
@@ -116,7 +117,8 @@ Streams have a parent links. The parent is the next lower level.
 
 The default implementation simply forwards everything to the parent.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:class}`moat.lib.stream.StackedMsg` and
+{py:class}`moat.lib.stream.StackedBuf`.
 
 ##### Naming convention
 
@@ -144,21 +146,21 @@ one to the other.
 
 A BaseBuf that connects to a named socket.
 
-Defined in ``moat.micro.net.unix``.
+Defined in {py:class}`moat.lib.stream.UnixLink`.
 
 
 #### NetLink
 
 A BaseBuf that connects to a TCP socket.
 
-Defined in ``moat.micro.net.net``.
+Defined in {py:class}`moat.lib.stream.TcpLink`.
 
 
 #### ProcessLink
 
 A BaseBuf that connects to stdin/stdout of a process.
 
-Defined in ``moat.micro.net.process``.
+Defined in {py:class}`moat.lib.stream.ProcessBuf`.
 
 
 #### ReliableMsg
@@ -181,7 +183,7 @@ A stream translator that encapsulates structured messages to a MsgPack bytestrea
 
 Console messages are passed through transparently.
 
-Defined in ``moat.lib.stream``.
+Defined in {py:mod}`moat.lib.stream`.
 
 
 #### MsgpackMsgBlk

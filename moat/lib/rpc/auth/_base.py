@@ -38,11 +38,13 @@ class Auth:
     This is a mix-in class for `BaseCmdMsg`.
     """
 
-    modes: dict[str, SubAuth]
+    parent: BaseCmdMsg
+    modes: dict[str, SubAuth]  # our SubAuth instances
     base_root: MsgSender  # dest for local commands; cfg.path gets added to this
     tg: TaskGroup | None = None
     auth: attrdict | None
     is_server: bool
+    ok: Exception | SubAuth | None = None
 
     _auth_root: BaseMsgHandler
     _auth_done: Event
@@ -122,7 +124,9 @@ class _WithAuth(BaseMsgHandler):
 class AuthCmdIn(BaseCmd):
     """Handles the incoming-message side of the auth protocol."""
 
-    def __init__(self, parent):
+    parent: Auth
+
+    def __init__(self, parent: Auth):
         self.parent = parent
         super().__init__(parent.cfg)
 
@@ -140,7 +144,6 @@ class AuthCmdIn(BaseCmd):
             self.parent.tg = tg
             sdr = MsgSender(_WithAuth(self.parent))
             self.modes = {}
-            self.ok = None
             for idx, cfg in enumerate(self.cfg.modes):
                 name = cfg.get("name", cfg.mode)
                 if name in self.modes:
@@ -160,16 +163,19 @@ class AuthCmdIn(BaseCmd):
             if L:
                 self.set_ready()
 
-        if self.ok is None:
-            self.ok = AuthDenied("No auth method worked.")
+        del self.modes  # no longer needed
 
-        if isinstance(self.ok, Exception):
+        ok = self.parent.ok
+        if ok is None:
+            ok = AuthDenied("No auth method worked.")
+
+        if isinstance(ok, Exception):
             # forward the exception to the remote side
-            await sdr.cmd((None,), self.ok)
+            await sdr.cmd((None,), ok)
             self.parent.auth_done(None)
-            raise self.ok
+            raise ok
 
-        p = self.ok.cfg.get("path")
+        p = ok.cfg.get("path")
         sdr = self.parent.base_root.sender
         if p:
             sdr = sdr.sub_at(p)

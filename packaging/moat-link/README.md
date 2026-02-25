@@ -68,8 +68,9 @@ is down.
 
 ### Data Schema
 
-Any large system suffers from data rot. An extension to MoaT-Link (planned)
-describes every message with a JSON schema and records mismatches.
+Any large system suffers from data rot. The optional `moat-link-schema`
+package adds JSON Schema based validation, schema lookup, and mismatch
+reporting for MoaT-Link data.
 
 ### Web view
 

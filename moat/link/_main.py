@@ -98,33 +98,30 @@ async def cli(ctx):
 async def test(obj):
     "Test"
 
-    lock = anyio.Lock()
     cfg = obj.cfg.link
     set_root(cfg)
 
     async def check_root():
         try:
-            with anyio.fail_after(1):
+            with anyio.fail_after(0.5):
                 async with back.monitor(cfg.root) as mon:
                     async for msg in mon:
-                        async with lock:
-                            print("# Retained root dataset:")
-                            yprint(msg.data)
-                            print("---")
-                            return
+                        print("# Retained root dataset:")
+                        yprint(msg.data)
+                        print("---")
+                        return
         except TimeoutError:
             print(f"## No retained root dataset on {cfg.root}.")
 
     async def check_server():
         try:
-            with anyio.fail_after(1):
+            with anyio.fail_after(0.5):
                 async with back.monitor(P(":R.run.service.main.conn")) as mon:
                     async for msg in mon:
-                        async with lock:
-                            print("# Server link:")
-                            yprint(msg.data)
-                            print("---")
-                            return
+                        print("# Server link:")
+                        yprint(msg.data)
+                        print("---")
+                        return
         except TimeoutError:
             print(f"### No server link on {cfg.root}!")
 

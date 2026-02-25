@@ -97,6 +97,11 @@ class BaseCmdMsg(BaseCmd):
                     self.auth.update(tcfg)
             self._auth = Auth(cfg.auth, self)
 
+    @property
+    def auth_helper(self) -> Auth:
+        "Getter."
+        return self._auth
+
     def auth_stop(self) -> None:
         """
         Stop auth processing.
@@ -122,17 +127,32 @@ class BaseCmdMsg(BaseCmd):
         """
         pass
 
-    def auth_data_res_out(self) -> dict:
+    def auth_data_res_out(self, role: str) -> dict:
         """
         Generates data for the outgoing auth acknowledgment.
 
         Called after auth is complete.
+
+        Args:
+            role: the auth method that succeeded.
         """
+        role  # noqa:B018
         return {}
 
-    def auth_data_res_in(self, version: int, data: dict) -> None:
+    def auth_data_res_in(self, role: str, data: dict) -> None:
         """
         Data from the incoming auth acknowledgment.
+
+        Args:
+            role: the auth method that succeeded on the remote side.
+            data: other data that the remote side returned.
+        """
+        pass
+
+    def auth_skip(self) -> None:
+        """
+        Callback to signal that auth did not take place because the other
+        side doesn't support it.
         """
         pass
 

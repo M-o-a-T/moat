@@ -13,6 +13,7 @@ from moat.lib.micro import Event
 from moat.lib.path import P
 from moat.lib.rpc._test import rpc_stack
 from moat.lib.rpc.auth import token as auth_token
+from moat.lib.rpc.auth._base import AuthDenied
 
 pytestmark = pytest.mark.anyio
 
@@ -117,6 +118,55 @@ async def test_token_net(tmp_path):
             await d.cmd(P("r.!.rdy_"))
         res = await d.cmd(P("l.a.echo"), m="hello")
         assert res.kw == dict(r="hello")
+
+
+@pytest.mark.parametrize("auth_side", ["l", "r"])
+async def test_net_one_sided_auth_supported(tmp_path, auth_side):
+    "If only one side enables auth, the auth-capable side skips auth and the link still works."
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(CFG1, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+    cfg.app.l.auth.ok = True
+    if auth_side == "l":
+        del cfg.app.r.auth
+    else:
+        del cfg.app.l.auth
+
+    async with timed_ctx(2, rpc_stack(tmp_path, cfg)) as d:
+        with anyio.fail_after(2):
+            await d.cmd(P("l.!.rdy_"))
+            await d.cmd(P("r.!.rdy_"))
+        res = await d.cmd(P("l.a.echo"), m="hello")
+        assert res.kw == dict(r="hello")
+
+
+async def test_net_incompatible_auth_methods_fail(tmp_path):
+    "Different auth methods on each side reject RPC traffic."
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(CFG1, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+
+    cfg.app.l.auth = attrdict(modes=[attrdict(mode="token")], test=attrdict(token="FooBaR"))  # noqa:S106
+    cfg.app.r.auth = attrdict(modes=[attrdict(mode="test")])
+
+    async def _run():
+        async with timed_ctx(2, rpc_stack(tmp_path, cfg)) as d:
+            with anyio.fail_after(2):
+                await d.cmd(P("l.!.rdy_"))
+                await d.cmd(P("r.!.rdy_"))
+            await d.cmd(P("l.a.echo"), m="hello")
+
+    with pytest.raises(ExceptionGroup) as err:
+        await _run()
+    assert err.group_contains(AuthDenied)
 
 
 class _AuthParent:

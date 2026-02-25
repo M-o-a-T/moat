@@ -70,6 +70,9 @@ async def test_ls_legacy_hello_fallback(cfg, monkeypatch):
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
+        assert c.id.startswith("C_"), c.id
+        assert c._link._ping_path[-1] == c.id  # noqa: SLF001
+        assert c._link._id_path[-1] == c.id  # noqa: SLF001
         r = await c.cmd(P("i.乒"), "pling")
         assert r.args == ["乓", "pling"]
 

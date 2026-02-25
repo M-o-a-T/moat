@@ -1,6 +1,7 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
+import logging
 import pytest
 import time
 
@@ -116,6 +117,68 @@ async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
 
     assert saw_late_reject
     assert saw_server_fallback
+
+
+@pytest.mark.anyio
+async def test_ls_client_fallback_on_remote_no_helloauth(cfg, monkeypatch, caplog):
+    "Client falls back to legacy Hello if RPC auth gets a remote No Hello/Auth error first."
+    orig_modes = Hello._rpc_modes  # noqa: SLF001
+    orig_run = Hello.run
+
+    def _rpc_modes(self):
+        if self.rpc_auth_server is True:
+            return ()
+        return orig_modes(self)
+
+    async def _run(self, sender, **kw):
+        if self.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, sender, **kw)
+
+    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
+    monkeypatch.setattr(Hello, "run", _run)
+    caplog.set_level(logging.WARNING)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert not any("Link failed:" in r.message for r in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_ls_client_fallback_if_hello_precedes_nohelloauth(cfg, monkeypatch, caplog):
+    "Client fallback must not time out if legacy hello completes before :n gets rejected."
+    orig_modes = Hello._rpc_modes  # noqa: SLF001
+    orig_handle = Hello.handle
+    saw_delayed_nohelloauth = False
+
+    def _rpc_modes(self):
+        if self.rpc_auth_server is True:
+            return ()
+        return orig_modes(self)
+
+    async def _handle(self, msg, rcmd, *prefix):
+        nonlocal saw_delayed_nohelloauth
+        if self.rpc_auth_server is True and rcmd and rcmd[-1] is None:
+            saw_delayed_nohelloauth = True
+            await anyio.sleep(0.05)
+        return await orig_handle(self, msg, rcmd, *prefix)
+
+    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
+    monkeypatch.setattr(Hello, "handle", _handle)
+    caplog.set_level(logging.WARNING)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert saw_delayed_nohelloauth
+    assert not any("Link failed:" in r.message for r in caplog.records)
 
 
 async def data(s):  # noqa: D103

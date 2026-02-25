@@ -1,0 +1,26 @@
+Source: moat-link-schema
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/moat
+X-DH-Compat: 13
+
+Package: moat-link-schema
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-util,
+  moat-link,
+  python3-asyncclick,
+  python3-jsonschema,
+Recommends:
+  python3-trio (>= 0.22),
+Description: Schema validation support for MoaT-Link
+ This package provides JSON Schema helpers and command-line tools for
+ validating MoaT-Link data against stored schemas.
+ .
+ It can retrieve path-based schemas, monitor live data for mismatches,
+ and check stored records for conformance.

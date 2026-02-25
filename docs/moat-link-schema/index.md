@@ -8,7 +8,11 @@
 
 ## Manual
 
-TODO
+`moat-link-schema` extends `moat-link` with schema lookup and validation
+commands.
+
+It adds the `moat link schema` command group, which can retrieve stored
+schemas, monitor a subtree for mismatches, and validate retained data.
 
 ```{toctree}
 :maxdepth: 2

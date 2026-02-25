@@ -57,7 +57,7 @@ class BaseCmdMsg(BaseCmd):
 
     The difference to `~moat.lib.rpc.stream.cmdbbm.BaseCmdBBM` is that this
     class encapsulates arbitrary message/stream calls and requires a
-    `~moat.lib.rpc.stream.cmdmsg.BaseCmdMsg` handler on the other side to talk to.
+    `~moat.lib.rpc.cmd.msg.BaseCmdMsg` handler on the other side to talk to.
 
     In contrast, a `~moat.lib.rpc.stream.cmdbbm.BaseCmdBBM` exposes commands
     that directly read or write the underlying stream (of whatever type).

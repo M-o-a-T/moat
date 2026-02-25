@@ -5,7 +5,7 @@ Console stdio access
 from __future__ import annotations
 
 from moat.lib.micro import AC_use
-from moat.lib.rpc.stream.cmdmsg import BaseCmdMsg
+from moat.lib.rpc.cmd.msg import BaseCmdMsg
 from moat.lib.stream import FilenoBuf, serial_stack
 
 

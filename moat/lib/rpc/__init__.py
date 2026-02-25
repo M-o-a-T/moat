@@ -71,12 +71,12 @@ _imports = {
     "wire2i_f": "stream.base",
     # From stream.cmdbbm
     "BaseCmdBBM": "stream.cmdbbm",
-    # From stream.cmdmsg
-    "MsgStream": "stream.cmdmsg",
-    "BaseCmdMsg": "stream.cmdmsg",
-    "CmdMsg": "stream.cmdmsg",
-    "SingleCmdMsg": "stream.cmdmsg",
-    "ExtCmdMsg": "stream.cmdmsg",
+    # From cmd.msg
+    "MsgStream": "cmd.msg",
+    "BaseCmdMsg": "cmd.msg",
+    "CmdMsg": "cmd.msg",
+    "SingleCmdMsg": "cmd.msg",
+    "ExtCmdMsg": "cmd.msg",
     # From stream.xcmd
     "BBMCmd": "stream.xcmd",
     "MsgCmd": "stream.xcmd",
@@ -191,7 +191,7 @@ __all__ = [  # noqa:RUF022
     "wire2i_f",
     # From stream.cmdbbm
     "BaseCmdBBM",
-    # From stream.cmdmsg
+    # From cmd.msg
     "MsgStream",
     "BaseCmdMsg",
     "CmdMsg",
@@ -243,11 +243,11 @@ if _TC or _DOC:
     from .stream.base import i_f2wire as i_f2wire
     from .stream.base import wire2i_f as wire2i_f
     from .stream.cmdbbm import BaseCmdBBM as BaseCmdBBM
-    from .stream.cmdmsg import BaseCmdMsg as BaseCmdMsg
-    from .stream.cmdmsg import CmdMsg as CmdMsg
-    from .stream.cmdmsg import ExtCmdMsg as ExtCmdMsg
-    from .stream.cmdmsg import MsgStream as MsgStream
-    from .stream.cmdmsg import SingleCmdMsg as SingleCmdMsg
+    from .cmd.msg import BaseCmdMsg as BaseCmdMsg
+    from .cmd.msg import CmdMsg as CmdMsg
+    from .cmd.msg import ExtCmdMsg as ExtCmdMsg
+    from .cmd.msg import MsgStream as MsgStream
+    from .cmd.msg import SingleCmdMsg as SingleCmdMsg
     from .stream.xcmd import BBMCmd as BBMCmd
     from .stream.xcmd import BlkCmd as BlkCmd
     from .stream.xcmd import BufCmd as BufCmd

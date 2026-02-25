@@ -26,7 +26,7 @@ API
    :members:
    :show-inheritance:
 
-.. automodule:: moat.lib.rpc.stream.cmdmsg
+.. automodule:: moat.lib.rpc.cmd.msg
    :members:
    :show-inheritance:
 

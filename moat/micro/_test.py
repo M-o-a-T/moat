@@ -90,7 +90,7 @@ class MpyBuf(ProcessBuf):
         with suppress(FileExistsError):
             (lib / "asyncio").symlink_to(aio)
 
-        libp = []
+        libp = [lib, lib2]
         for p in moat.micro.__path__:
             p = Path(p) / "_embed"  # noqa:PLW2901
             if p.exists():
@@ -100,7 +100,7 @@ class MpyBuf(ProcessBuf):
         libp.append(".frozen")
 
         self.env = {
-            "MICROPYPATH": os.pathsep.join(str(x) for x in (lib, lib2, *libp)),
+            "MICROPYPATH": os.pathsep.join(str(x) for x in libp),
         }
         self.cwd = root
 

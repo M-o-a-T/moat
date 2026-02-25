@@ -11,7 +11,6 @@ This file isn't just for agents …
   - 'bd dep add ID-task ID-blocker': add relationship
   - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
   - 'bd close --reason STRING'
-  - 'bd sync': sync tracker state with git
 
 - Conventions:
   - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems
@@ -22,7 +21,7 @@ This file isn't just for agents …
 The purpose of issues is to remember things to do.
 Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
-The issue tracker cannot run inside a sandbox.
+`bd` cannot run in a sandbox.
 
 ## Project Structure & Modules
 
@@ -161,13 +160,13 @@ Work is NOT complete until `git push` succeeds.
    Example: "Fix moat-abc: wrangled the zumblicator"
    Add a short explanation of the change if warranted, but
    DO NOT mention implementation details, esp. not if they are obvious
-   when reading the changelog.
+   when reading the diff.
 1. **Update issue status** (if you're working on one):
    Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
 1. **Push to remote**:
-   - run `git push`
+   - run `git push intern HEAD:main`
    - If there are conflicts,
      - git pull --no-edit
      - resolve merge conflicts, if any
@@ -177,8 +176,3 @@ Work is NOT complete until `git push` succeeds.
 However, if a git push/pull command fails with a permission error, STOP:
 the problem is a missing SSH key. The user needs to re-add the key before
 you can continue.
-
-### Mandatory Rules
-
-- Work is NOT complete until `git push` succeeds
-- If push fails, pull + resolve + retry until it succeeds

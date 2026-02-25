@@ -241,6 +241,7 @@ class Hello(CmdCommon):
             raise _NoRPCAuth
 
         from moat.lib.rpc.auth._base import Auth, AuthCmdIn, AuthDenied  # noqa: PLC0415
+        from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
 
         cfg = attrdict(modes=[attrdict(mode=m) for m in modes])
         shim = _RPCShim(self, sender, self.rpc_auth_data)
@@ -256,7 +257,6 @@ class Hello(CmdCommon):
             async with a_in:
                 await a_in.task()
             if self._rpc_fallback:
-                self._done = anyio.Event()
                 raise _NoRPCAuth
             if isinstance(auth.ok, Exception):
                 raise auth.ok
@@ -270,11 +270,13 @@ class Hello(CmdCommon):
             self._done.set()
             raise
         except _NoRPCAuth:
-            self._done = anyio.Event()
             raise
-        except BaseException:
+        except BaseException as exc:
+            if isinstance(exc, RemoteError) and exc.args == ("ValueError", "No Hello/Auth"):
+                raise _NoRPCAuth from None
+            if isinstance(exc, ValueError) and exc.args == ("No Hello/Auth",):
+                raise _NoRPCAuth from None
             if self._rpc_fallback:
-                self._done = anyio.Event()
                 raise _NoRPCAuth from None
             self.auth_data = False
             self._done.set()
@@ -290,20 +292,20 @@ class Hello(CmdCommon):
         if prefix:
             raise NotImplementedError
         if self._rpc_in is not None and rcmd and rcmd[-1] is None:
+            # new auth protocol
             return await self._rpc_in.handle(msg, rcmd)
-        if self._rpc_in is not None and len(rcmd) == 2 and rcmd[-1] == "i" and rcmd[0] == "hello":
-            # The peer is using the legacy startup protocol. Let the incoming
-            # hello proceed immediately, then fall back once our pending RPC
-            # auth attempt receives its rejection.
-            self._rpc_fallback = True
-            self._sync.set()
         scmd = rcmd.pop()
         if scmd != "i":
             raise KeyError(scmd)
         if len(rcmd) == 1 and rcmd[0] == "hello":
+            if self._rpc_in is not None:
+                # The peer is using the legacy startup protocol. Let the incoming
+                # hello proceed immediately, then fall back once our pending RPC
+                # auth attempt receives its rejection.
+                self._rpc_fallback = True
+                self._sync.set()
             res = await self.do_hello(msg)
-            await msg.result(res)
-            return
+            return await msg.result(res)
         if len(rcmd) != 2 or rcmd[1] != "auth":
             raise ValueError("No Hello/Auth")
 

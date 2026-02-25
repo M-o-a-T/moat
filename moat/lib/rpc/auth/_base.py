@@ -55,7 +55,7 @@ class Auth(BaseMsgHandler):
     """
     Handle authorization.
 
-    This is a mix-in class for `BaseCmdMsg`.
+    This is a support class for {py:cls}`~moat.lib.stream.BaseCmdMsg`.
     """
 
     parent: BaseCmdMsg
@@ -245,9 +245,9 @@ class AuthCmdIn(BaseCmd):
         except KeyError:
             raise AuthNoRemote from None
 
-        if len(res) != 0:
+        if len(res) != 1:
             log("AuthResIn ??: %r", res.args)
-        cmd.auth_data_res_in(min(vers, self.p_version), res.kw)
+        cmd.auth_data_res_in(res[0], res.kw)
 
     async def task(self) -> MsgSender:
         try:
@@ -291,6 +291,7 @@ class AuthCmdIn(BaseCmd):
                 ok = self.parent.ok
                 if ok is None:
                     ok = AuthDenied("No auth method worked.")
+                    self.parent.ok = ok
 
                 # Unblock the remote ``:n`` reply before waiting for ``_send_cmd``
                 # to finish when ``tg_send`` exits.
@@ -308,10 +309,13 @@ class AuthCmdIn(BaseCmd):
                     self.parent.auth_done(sdr)
 
         except AuthNoRemote:
-            if "none" in self.modes:
-                self.parent.auth_done(self.modes["none"])
-                return
-            raise
+            cmd = self.parent.parent
+            cmd.auth_skip()
+            if L:
+                self.set_ready()
+            del self.modes
+            self.parent.auth_done(self.parent.base_root)
+            return
         # don't yield before here!
 
     async def _handle_cmd(self, msg: Msg):
@@ -337,7 +341,7 @@ class AuthCmdIn(BaseCmd):
         await self.msg_out.wait()
         if isinstance(self.parent.ok, Exception):
             raise self.parent.ok  # will be forwarded to the remote side
-        await msg.result(self.parent.ok.name, **cmd.auth_data_res_out())
+        await msg.result(self.parent.ok.name, **cmd.auth_data_res_out(self.parent.ok.name))
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """Handler for incoming messages"""

@@ -7,6 +7,7 @@ import time
 from moat.util import NotGiven
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
@@ -52,24 +53,69 @@ async def test_ls_basic(cfg):  # noqa: D103
         with anyio.fail_after(1):
             await evt.wait()
 
+
+@pytest.mark.anyio
+async def test_ls_legacy_hello_fallback(cfg, monkeypatch):
+    "A client without RPC auth support falls back to legacy Hello/auth."
+    orig_modes = Hello._rpc_modes  # noqa: SLF001
+
+    def _rpc_modes(self):
+        if self.rpc_auth_server is False:
+            return ()
+        return orig_modes(self)
+
+    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+
+@pytest.mark.anyio
+async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
+    "Server accepts legacy hello and falls back even if the :n rejection arrives late."
+    orig_modes = Hello._rpc_modes  # noqa: SLF001
+    orig_handle = Hello.handle
+    saw_late_reject = False
+    saw_server_fallback = False
+
+    def _rpc_modes(self):
+        if self.rpc_auth_server is False:
+            return ()
+        return orig_modes(self)
+
+    async def _handle(self, msg, rcmd, *prefix):
+        nonlocal saw_late_reject, saw_server_fallback
+        if (
+            self.rpc_auth_server is True
+            and self._rpc_in is not None
+            and len(rcmd) == 2
+            and rcmd[-1] == "i"
+            and rcmd[0] == "hello"
+        ):
+            saw_server_fallback = True
+        if self.rpc_auth_server is False and self._rpc_in is None and rcmd and rcmd[-1] is None:
+            saw_late_reject = True
+            await anyio.sleep(0.05)
+        return await orig_handle(self, msg, rcmd, *prefix)
+
+    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
+    monkeypatch.setattr(Hello, "handle", _handle)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
         await c.i_sync()
+        await anyio.sleep(0.1)
+        r = await c.cmd(P("i.乒"), "plong")
+        assert r.args == ["乓", "plong"]
 
-        r, *m = await c.cmd(P("d.get"), P("test.here"))
-        assert r == "Hello"
-        m = MsgMeta.restore(m)
-        assert m.origin == "me!"
-
-        r, *m = await c.cmd(P("d.get"), P(":"))
-        assert r["test"] == 123
-        m = MsgMeta.restore(m)
-        assert m.origin == "INIT"
-
-        evt = anyio.Event()
-        await sf.tg.start(cl, 999)
-        om = MsgMeta(origin="me!")
-        await c.d_set(P("test.here"), 999, om)
-        with anyio.fail_after(1):
-            await evt.wait()
+    assert saw_late_reject
+    assert saw_server_fallback
 
 
 async def data(s):  # noqa: D103

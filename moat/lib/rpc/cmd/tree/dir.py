@@ -13,12 +13,6 @@ from ._dir import BaseSubCmd as BaseSubCmd
 from ._dir import BaseSuperCmd as BaseSuperCmd
 from ._dir import DirCmd as DirCmd
 
-# Typing
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    from moat.lib.rpc import MsgSender
-
 
 class _NotGiven:
     # This is distinct from the "real" NotGiven. This is intentional.
@@ -30,9 +24,9 @@ class SubStore:
     A helper class to retrieve a possibly-encoded object.
     """
 
-    cfg: dict = None
+    cfg: dict | None = None
 
-    def __init__(self, sd: MsgSender):
+    def __init__(self, sd):
         self.__sd = sd
 
     async def __aenter__(self):
@@ -128,7 +122,8 @@ class CfgStore(SubStore):
             if not replace:
                 return
             # drop those client cfg snippets that are not on the server
-            for k in chain(ocd.keys(), ocl):
+            okd = ocd.keys() if isinstance(ocd, dict) else ()
+            for k in chain(okd, ocl):
                 if k not in c:
                     await self.sd.c(p=p + (k,), d=NotGiven)
 

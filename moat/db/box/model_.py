@@ -7,19 +7,21 @@ from __future__ import annotations
 from sqlalchemy.orm import relationship
 
 from moat.util import NotGiven
+from moat.db.label.model import Label, LabelTyp
 from moat.db.schema import Base
+from moat.db.thing.model import Thing
 from moat.db.util import session
-from moat.label.model import Label, LabelTyp
-from moat.thing.model import Thing
 
 from .model import Box, BoxTyp
 
-BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
-Box.labels = relationship(Label, back_populates="box", collection_class=set)
-Box.things = relationship(Thing, back_populates="container", collection_class=set)
+from typing import Any, cast
+
+cast(Any, BoxTyp).labeltyp = relationship(LabelTyp, back_populates="boxtypes")
+cast(Any, Box).labels = relationship(Label, back_populates="box", collection_class=set)
+cast(Any, Box).things = relationship(Thing, back_populates="container", collection_class=set)
 
 
-def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw):
+def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw) -> None:
     "?"
     sess = session.get()
     with sess.no_autoflush:
@@ -44,10 +46,10 @@ def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw):
                 raise ValueError("Box types cannot be changed")
 
 
-Box.apply = box_apply
+Box.apply = cast(Any, box_apply)
 
 
-def boxtyp_apply(self, usable, unusable, parent=(), **kw):
+def boxtyp_apply(self, usable, unusable, parent=(), **kw) -> None:
     "?"
     Base.apply(self, **kw)
     if usable:
@@ -64,4 +66,4 @@ def boxtyp_apply(self, usable, unusable, parent=(), **kw):
             self.parents.remove(session.get().one(BoxTyp, name=p[1:]))
 
 
-BoxTyp.apply = boxtyp_apply
+BoxTyp.apply = cast(Any, boxtyp_apply)

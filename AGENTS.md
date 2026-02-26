@@ -7,7 +7,7 @@ This file isn't just for agents …
 - Use 'beads' for tracking.
   - 'bd list --label foo --ready --json': list issues
   - 'bd show --json ID': examine single issue
-  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'bd create --priority P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
   - 'bd dep add ID-task ID-blocker': add relationship
   - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
   - 'bd close --reason STRING'
@@ -70,6 +70,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 ### Typing
 
 - MoaT does its type checking with "ty".
+- Use "ty check --output-format github".
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
 - Only add type:ignore comments when (a) you see an actual error from "ty",

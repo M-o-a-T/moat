@@ -68,6 +68,7 @@ except NameError:
 as_proxy("_FxErr", FileExistsError)
 
 as_proxy("_KyErr", KeyError)
+as_proxy("_ValErr", ValueError)
 as_proxy("_EKyErr", ExpKeyError)
 as_proxy("_IdxErr", IndexError)
 as_proxy("_AtErr", AttributeError)

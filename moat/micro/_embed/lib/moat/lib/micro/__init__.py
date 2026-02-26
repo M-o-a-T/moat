@@ -184,6 +184,24 @@ def every(t, *a, **k):
     return every_ms(int(t * 1000), *a, **k)
 
 
+async def retry_ms(n, t, p=None, *a, _exc=Exception, **k):
+    "call a function every @t milliseconds until it succeeds"
+    while True:
+        try:
+            return await p(*a, **k)
+        except _exc:
+            if n >= 0:
+                n -= 1
+            if n == 0:
+                raise
+            await sleep_ms(t)
+
+
+async def retry(n, t, *a, **k):
+    "call a function every @t seconds until it succeeds"
+    return retry_ms(n, int(t * 1000), *a, **k)
+
+
 if DEBUG:
 
     async def _catch(n, p, *a, **k):

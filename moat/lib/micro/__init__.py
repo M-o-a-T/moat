@@ -163,6 +163,8 @@ __all__ = [
     "log",
     "log_exc",
     "print_exc",
+    "retry",
+    "retry_ms",
     "run",
     "run_server",
     "shield",
@@ -321,6 +323,24 @@ async def every_ms(
 def every(t: float, *a, **k) -> AsyncIterator[Any]:
     "every t seconds, call ``p(*a,**k)``"
     return every_ms(t * 1000, *a, **k)
+
+
+async def retry_ms(n: int, t: float, p: Callable[..., Awaitable[R]], *a, _exc=Exception, **k) -> R:
+    "every t milliseconds, call ``p(*a,**k)``"
+    while True:
+        try:
+            return await p(*a, **k)
+        except _exc:
+            if n >= 0:
+                n -= 1
+            if n == 0:
+                raise
+            await sleep_ms(t)
+
+
+def retry(n: int, t: float, p: Callable[..., Awaitable[R]], *a, **k) -> Awaitable[R]:
+    "every t seconds, call ``p(*a,**k)``"
+    return retry_ms(n, t * 1000, p, *a, **k)
 
 
 async def idle() -> None:

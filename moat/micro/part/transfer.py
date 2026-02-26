@@ -99,7 +99,7 @@ class _Step:
             self.p = trans.root.sub_at(p)
 
     def __repr__(self):
-        return f"‹TS:{self.id}:{self.trans.path}›"
+        return f"‹TS:{self.trans.path / self.id}›"
 
     async def run(self) -> None:
         if self.p is not None:

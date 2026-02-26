@@ -215,7 +215,6 @@ def print_(obj, printer, output):
         prt = None
     else:
         prt = merge(cfg.printer[printer], cfg.printer["_default"], replace=False)
-    if prt is not None:
         prt.name_ = printer
 
     obj.printer = prt
@@ -755,10 +754,9 @@ def sheet_gen(obj, pattern, file, start, count, typ):
         print(f"Sheet {sh.id} has space for {maxcount} labels.", file=sys.stderr)
         count = maxcount
 
-    if sh.labeltyp is None:
+    if (labeltyp := sh.labeltyp) is None:
         raise ValueError(f"Sheet {sh.id} has no label type")
-    sh_labeltyp = sh.labeltyp
-    code = sh_labeltyp.next_code()
+    code = labeltyp.next_code()
 
     with open(file, "r") if file else nullcontext() as fd:
         while count:
@@ -772,8 +770,8 @@ def sheet_gen(obj, pattern, file, start, count, typ):
             if pattern:
                 seq = pattern.replace("#", seq)
 
-            lab = Label(code=code, labeltyp=sh_labeltyp, text=seq)
-            if sh_labeltyp.url is not None:
+            lab = Label(code=code, labeltyp=labeltyp, text=seq)
+            if labeltyp.url is not None:
                 lab.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
 
             sh.labels.add(lab)

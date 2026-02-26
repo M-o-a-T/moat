@@ -14,13 +14,14 @@ from moat.util.exc import ExpKeyError
 
 from ._link import Alert as Alert
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import MsgSender
     from moat.lib.rpc.msg import Msg
     from moat.link.announce import FakeReady
+    from moat.link.client import LinkSender
 
 
 class Cmd(BaseCmd):
@@ -70,6 +71,9 @@ class Cmd(BaseCmd):
         "set up the link"
         await super().setup()
         self.link = await AC_use(self, Link(CFG.moat.link, common=True))
+        link = self.link
+        if link is None:
+            raise RuntimeError("No link")
         srv = self.cfg.get("link")
         if srv is not None:
             if (service := self.cfg.get("service", None)) is not None:
@@ -78,13 +82,16 @@ class Cmd(BaseCmd):
                 else:
                     srv /= service
             target = self.cfg.get("target", {}).get("recv", None)
+            root = self.root
+            if root is None:
+                raise RuntimeError("Not attached")
             self.ann = await AC_use(
                 self,
                 announcing(
-                    self.link,
+                    cast("LinkSender", link.sender),
                     srv,
                     host=self.cfg.get("host", False),
-                    service=self.root.sub_at(target) if target is not None else None,
+                    service=cast("MsgSender", root.sub_at(target)) if target is not None else None,
                 ),
             )
         # rlink will be set up lazily
@@ -95,7 +102,7 @@ class Cmd(BaseCmd):
             self.ann.set()
         await super().task()
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
         "forward, possibly"
         await self.check_rdy(msg, rcmd)
 
@@ -104,23 +111,32 @@ class Cmd(BaseCmd):
 
         if rcmd == ["mon_"] and self.cfg.get("mon", False):
             # read data from there
-            return await msg.call_stream(self.link.stream_watch)
+            link = self.link
+            if link is None:
+                raise RuntimeError("No link")
+            return await msg.call_stream(link.stream_watch)
 
         if self.rlink is None:
             try:
                 rpath = self.cfg["target"]["send"]
-            except KeyError:
-                raise ExpKeyError(rcmd) from None
+            except KeyError as exc:
+                raise ExpKeyError(exc) from None
             via = self.cfg.get("via", None)
             link = self.link
+            if link is None:
+                raise RuntimeError("No link")
+            rlink = cast("MsgSender", link.sender)
             if via is not None:
-                link = await link.get_service(via)
+                rlink = cast("MsgSender", (await link.get_service(via)).sender)
             if len(rpath):
-                link = link.sub_at(rpath)
-            self.rlink = link
+                rlink = cast("MsgSender", rlink.sub_at(rpath))
+            self.rlink = rlink
 
         try:
-            return await self.rlink.handle(msg, rcmd, *prefix)
+            rlink = self.rlink
+            if rlink is None:
+                raise RuntimeError("No link")
+            return await rlink.handle(msg, rcmd, *prefix)
         except BaseException:
             self.rlink = None
             raise

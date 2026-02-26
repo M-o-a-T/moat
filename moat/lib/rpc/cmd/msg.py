@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Auth, BaseMsgHandler
     from moat.lib.stream import BaseMsg
 
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Sequence
     from typing import Any
 
 
@@ -73,9 +73,10 @@ class BaseCmdMsg(BaseCmd):
     all messages through a :py.cls:`~moat.lib.rpc.Auth` instance.
     """
 
-    tg: TaskGroup = None
+    tg: object | None = None
     __stream = None
     __rprefix = ()
+    stream_owner_obj_: object
 
     doc = dict(_d="Foo")
     auth: attrdict | None = None
@@ -121,10 +122,12 @@ class BaseCmdMsg(BaseCmd):
         """
         return {}
 
-    def auth_data_in(self, role: str, data: dict) -> None:
+    def auth_data_in(self, args: Sequence, data: dict) -> None:
         """
         Data from the incoming auth message.
         """
+        args  # noqa:B018
+        data  # noqa:B018
         pass
 
     def auth_data_res_out(self, role: str) -> dict:

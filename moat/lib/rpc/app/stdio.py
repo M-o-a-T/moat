@@ -15,5 +15,5 @@ class StdIO(BaseCmdMsg):
     doc = dict(_c=dict(_d="link via stdandard i/o"))
 
     async def stream(self):  # noqa:D102
-        cs = FilenoBuf(self.cfg)
+        cs = FilenoBuf(self.cfg, 0, 1)
         return await AC_use(self, serial_stack(cs, self.cfg))

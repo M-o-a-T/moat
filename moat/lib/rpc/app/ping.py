@@ -58,7 +58,10 @@ class Cmd(BaseCmd):
         """
         if (p := self.cfg.get("p", None)) is None:
             return await super().task()
-        async with self.root.sub_at(p) as sub:
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        async with root.sub_at(p) as sub:
             if self.cfg.get("s", False):
                 async with sub.stream() as msg:
                     self.set_ready()

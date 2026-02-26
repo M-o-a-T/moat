@@ -32,7 +32,7 @@ from moat.lib.micro import ACM, AC_exit, log
 
 from .stream import HandlerStream
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg
@@ -78,7 +78,7 @@ class CmdStream(HandlerStream):
                 log("R%s: incoming keywords ignored!? %r", self.__debug or "", m)
             elif self.__debug:
                 log("R%s %r", self.__debug, m)
-            await self.msg_in(m.args_l)
+            await self.msg_in(cast("list", m.args_l))
 
     async def write_stream(self):  # noqa: D102
         msg = self.__msg
@@ -123,7 +123,8 @@ class rpc_on_rpc:
     async def __aenter__(self) -> CmdStream:
         AC = ACM(self)
         try:
-            return await AC(CmdStream(self.cmd, self.msg, debug=self.debug, logger=self.logger))
+            dbg = "" if self.debug else None
+            return await AC(CmdStream(self.cmd, self.msg, debug=dbg, logger=self.logger))
 
         except BaseException as exc:
             await AC_exit(self, type(exc), exc, None)

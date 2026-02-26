@@ -34,8 +34,8 @@ class Cmd(BaseCmd):
     doc = dict(_c=dict(_d="Basic test cmd"))
 
     n = 0
-    err: Exception = None
-    err_evt: Event = None
+    err: Exception
+    err_evt: Event
     store: list[Any]
 
     doc_echo = dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
@@ -93,7 +93,7 @@ class Cmd(BaseCmd):
 
     doc_error = dict(_d="raise exc", e="exc:raised")
 
-    async def cmd_error(self, e: Exception = RuntimeError):
+    async def cmd_error(self, e: Exception | type[Exception] = RuntimeError):
         "raise an exception"
         if isinstance(e, Exception):
             raise e
@@ -203,6 +203,6 @@ class Cons(BaseCmd):
                     log(
                         "%s: %s",
                         p,
-                        str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"),
+                        bytes(memoryview(buf)[: d - (buf[d - 1] == 10)]).decode("utf-8"),
                     )
                 d = 0

@@ -12,7 +12,9 @@ __all__ = ["BlkCmd", "BufCmd", "MsgCmd"]
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from moat.lib.stream.base import Buffer, MutBuffer
+
+    from typing import Any
 
 
 class BBMCmd(Base):
@@ -43,19 +45,19 @@ class MsgCmd(BBMCmd, BaseMsg):
 
     # pylint:disable=abstract-method
 
-    def send(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    async def send(self, m: Any) -> Any:  # pylint:disable=invalid-overridden-method
         "send a message"
-        return self.s.s(m=m)
+        return await self.s.s(m=m)
 
-    def recv(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    async def recv(self) -> Any:  # pylint:disable=invalid-overridden-method
         "receive a message"
-        return self.s.r()
+        return await self.s.r()
 
-    def cwr(self, buf) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    async def cwr(self, buf: Buffer) -> None:  # pylint:disable=invalid-overridden-method
         "write console data"
-        return self.s.cwr(b=buf)
+        await self.s.cwr(b=buf)
 
-    async def crd(self, buf):
+    async def crd(self, buf: MutBuffer) -> int:
         "read console data"
         msg = await self.s.crd(n=len(buf))
         buf[: len(msg)] = msg
@@ -75,11 +77,11 @@ class BufCmd(BBMCmd, BaseBuf):
     # pylint:disable=abstract-method
     # `stream` needs to be implemented by a subclass
 
-    def wr(self, buf) -> Awaitable:  # noqa:D102
+    async def wr(self, data: Buffer) -> int:  # noqa:D102
         # pylint: disable=invalid-overridden-method
-        return self.s.wr(buf)
+        return await self.s.wr(data)
 
-    async def rd(self, buf):  # noqa:D102
+    async def rd(self, buf: MutBuffer) -> int:  # noqa:D102
         msg = await self.s.rd(n=len(buf))
         buf[: len(msg)] = msg
         return len(msg)
@@ -100,10 +102,10 @@ class BlkCmd(BBMCmd, BaseBlk):
     crd = MsgCmd.crd
     cwr = MsgCmd.cwr
 
-    def snd(self, m) -> Awaitable:  # noqa:D102
+    async def snd(self, m: Buffer | bytes) -> None:  # noqa:D102
         # pylint: disable=invalid-overridden-method
-        return self.s.sb(m=m)
+        await self.s.sb(m=m)
 
-    def rcv(self) -> Awaitable:  # noqa:D102
+    async def rcv(self) -> Buffer | bytes:  # noqa:D102
         # pylint: disable=invalid-overridden-method
-        return self.s.rb()
+        return await self.s.rb()

@@ -79,7 +79,7 @@ if TYPE_CHECKING:
             **k: P.kwargs,
         ) -> Awaitable[R]: ...
 
-    class _TaskGroupProto(Protocol):
+    class _TaskGroupProto(AbstractAsyncContextManager[Any], Protocol):
         async def __aenter__(self) -> Self: ...
 
         async def __aexit__(
@@ -97,6 +97,14 @@ if TYPE_CHECKING:
             _name: str | None = None,
             **k: P.kwargs,
         ) -> _anyio.CancelScope: ...
+
+        def start_soon(
+            self,
+            p: Callable[P, Awaitable[Any]],
+            *a: P.args,
+            _name: str | None = None,
+            **k: P.kwargs,
+        ) -> None: ...
 
         def cancel(self) -> None: ...
 
@@ -318,7 +326,7 @@ async def every_ms(
     tt = ticks_add(ticks_ms(), int(t))
     while True:
         try:
-            yield None if p is None else await p(*a, **k)
+            yield (None if p is None else await p(*a, **k))
         except StopAsyncIteration:
             return
         tn = ticks_ms()
@@ -378,7 +386,7 @@ _tg = None
 _tgt = None
 
 
-def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
+def TaskGroup() -> _TaskGroupProto:  # Returns augmented TaskGroup instance
     "A TaskGroup subclass that supports ``spawn`` and ``cancel``"
 
     global _tg, _tgt

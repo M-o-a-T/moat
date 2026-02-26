@@ -40,10 +40,20 @@ from moat.lib.stream import Base
 
 from collections.abc import Mapping
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
+    from moat.lib.micro import _TaskGroupProto
     from moat.lib.rpc import BaseSuperCmd
+    from moat.lib.rpc.base import MsgRoot
+
+    from typing import Literal, Protocol
+
+    class _Cancelable(Protocol):
+        def cancel(self) -> None: ...
+
 
 __all__ = ["BaseCmd", "LoadCmd", "LockBaseCmd", "RootCmd", "add_app_prefix", "load_app"]
 
@@ -79,22 +89,22 @@ class BaseCmd(MsgHandler):
     Base class of a Command handler.
     """
 
-    root: RootCmd = None
+    root: RootCmd = None  # type:ignore[invalid-assignment]
     real_root: RootCmd
     # real_root is set when `root` is a non-settable property.
     # This is used for root hijackers like `log.Cmd` so that they can
     # capture outgoing requests.
 
-    _parent: BaseSuperCmd = None
+    _parent: BaseSuperCmd | None = None
     _name: str | None = None
     _ts = None
     _rl_ok = None  # result of last reload
-    p_task = None  # managed by parent. Do not touch.
+    p_task: _Cancelable | Literal[False] | None = None  # managed by parent. Do not touch.
 
     if L:
-        _starting: Event = None
-        _ready: Event = None
-    _stopped: Event = None
+        _starting: Event | None = None
+        _ready: Event | None = None
+    _stopped: Event | None = None
 
     def __init__(self, cfg):
         cfg._moat_cmd = self  # noqa:SLF001
@@ -197,10 +207,13 @@ class BaseCmd(MsgHandler):
 
     async def stop(self):
         "Stop this subcommand"
-        if self.p_task is None:
+        p_task = self.p_task
+        if p_task is None:
             self.p_task = False
             return  # starting up or not running
-        self.p_task.cancel()
+        if p_task is False:
+            return
+        p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 
     cmd_stp_ = stop
@@ -252,6 +265,8 @@ class BaseCmd(MsgHandler):
     def path(self):
         "calculate the path to myself"
         # XXX cache it?
+        if self._parent is None:
+            raise RuntimeError("Not attached")
         if self._name is None:
             return self._parent.path
         return self._parent.path / self._name
@@ -272,10 +287,14 @@ class BaseCmd(MsgHandler):
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent
         self._name = name
+
+        root = parent.root
+        if root is None:
+            raise RuntimeError("No root set")
         try:
-            self.root = parent.root
+            self.root = root
         except AttributeError:
-            self.real_root = parent.root
+            self.real_root = root
 
 
 class LockBaseCmd(BaseCmd):
@@ -320,14 +339,16 @@ class RootCmd(Base):
     It delegates most (if not all) to its app.
     """
 
+    tg: object | None = None
+
     def __init__(self, cfg, i=None):
         self.i = i
-        self._sender = MsgSender(self)
+        self._sender = MsgSender(cast("MsgRoot", self))
         self.cfg = cfg
         if not isinstance(cfg["app"], str):
             cfg = cfg["app"]
         self.app = LoadCmd(cfg)
-        self.app.attached(self, None)
+        self.app.attached(cast("BaseSuperCmd", self), None)
         self._updates = {}
 
     def __repr__(self):
@@ -337,10 +358,12 @@ class RootCmd(Base):
 
     async def setup(self):
         await super().setup()
-        self.tg = await AC_use(self, TaskGroup())
-        await AC_use(self, self.tg.cancel)
-        self.tg.start_soon(self.app.run)
-        self.tg.start_soon(self.task)
+        tg = await AC_use(self, cast("AbstractAsyncContextManager[object]", TaskGroup()))
+        self.tg = tg
+        tg = cast("_TaskGroupProto", tg)
+        await AC_use(self, tg.cancel)
+        tg.start_soon(self.app.run)
+        tg.start_soon(self.task)
         if L:
             await self.wait_ready()
 
@@ -368,7 +391,7 @@ class RootCmd(Base):
 
     def __getattr__(self, k):
         if k[0] == "_":
-            return object.__getattr__(self, k)
+            raise AttributeError(k)
         return getattr(self.app, k)
 
     @property

@@ -4,10 +4,36 @@ Access a satellite's SPI bus (Linux/CPython version using spidev).
 
 from __future__ import annotations
 
-import spidev
+from importlib import import_module
 
 from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
+
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from typing import Protocol
+
+    class _SpiDevProto(Protocol):
+        max_speed_hz: int
+        mode: int
+        bits_per_word: int
+
+        def open(self, bus: int, dev: int) -> None: ...
+
+        def close(self) -> None: ...
+
+        def readbytes(self, n: int) -> list[int]: ...
+
+        def writebytes(self, data: list[int]) -> object: ...
+
+        def xfer(self, data: list[int]) -> list[int]: ...
+
+    class _SpiDevMod(Protocol):
+        SpiDev: type[_SpiDevProto]
+
+
+spidev = cast("_SpiDevMod", import_module("spidev"))
 
 # Per-bus locks to prevent concurrent access
 _bus_locks: dict[tuple[int, int], Lock] = {}
@@ -37,7 +63,7 @@ class Cmd(BaseCmd):
     so no separate CS path is needed.
     """
 
-    _spi = None
+    _spi: _SpiDevProto
 
     doc = dict(
         _c=dict(_d="SPI driver (Linux)"),
@@ -72,11 +98,11 @@ class Cmd(BaseCmd):
         mode = cfg.get("mode", 0)
         bits = cfg.get("bits", 8)
 
-        self._spi = spidev.SpiDev()
-        self._spi.open(bus, dev)
-        self._spi.max_speed_hz = f
-        self._spi.mode = mode
-        self._spi.bits_per_word = bits
+        self._spi = spi = cast("_SpiDevProto", spidev.SpiDev())
+        spi.open(bus, dev)
+        spi.max_speed_hz = f
+        spi.mode = mode
+        spi.bits_per_word = bits
 
         self._bus_id = (bus, dev)
         self.lock = _get_bus_lock(bus, dev)
@@ -87,8 +113,9 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        s, self._spi = self._spi, None
+        s = getattr(self,"_spi")
         if s is not None:
+            del self._spi
             s.close()
 
     doc_rd = dict(
@@ -159,6 +186,7 @@ class Cmd(BaseCmd):
             wbuf: data to write first
             n: number of bytes to read after
         """
+        spi = self._spi
         async with self.lock:
-            await to_thread(self._spi.writebytes, list(wbuf))
-            return bytes(await to_thread(self._spi.readbytes, n))
+            await to_thread(spi.writebytes, list(wbuf))
+            return bytes(await to_thread(spi.readbytes, n))

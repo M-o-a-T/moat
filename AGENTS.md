@@ -57,9 +57,15 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
-- Use `[async] with (a,b,c)` instead of nested `[a]sync with` statements.
-  - Exception: MicroPython needs a single line instead of parentheses.
-    Use backslash continuation, disable reformatting for long lines.
+
+- In `moat.lib` and `moat.micro`, do not use syntax that doesn't work with
+  MicroPython. Specifically:
+  - `(foo,bar,*baz)` list expansion
+  - `with (x,y)`
+  - def foo(bar,/) positional-only arguments
+
+- Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
+  from submodules. Exception: `TYPE_CHECKING` blocks.
 
 ### Typing
 
@@ -69,8 +75,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.
-- This also applies to `cast` expressions.
-- Do not type-check function parameters. That's what `ty` is for.
+- This also applies to `cast` expressions and the "Any" catch-all.
+- Do not type-check data explicitly. That's what `ty` is for.  If that's
+  not possible, duck typing (or the failure thereof) will raise a `TypeError`.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
 - After a module typechecks, add its files to the tool.ty.src.include list in

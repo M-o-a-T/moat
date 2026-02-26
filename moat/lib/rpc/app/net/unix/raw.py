@@ -12,12 +12,15 @@ from moat.lib.stream import UnixLink
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from moat.lib.stream import BaseBuf
 
 
 class Raw(BaseCmdBBM):
     """Sends/receives raw data over a Unix socket."""
 
-    def stream(self) -> Awaitable:
+    async def stream(self) -> BaseBuf:
         """Returns the Unix socket stream."""
-        return AC_use(self, UnixLink(self.port, retry=self.cfg.get("retry", attrdict())))
+        return await AC_use(
+            self,
+            UnixLink(self.cfg["port"], retry=self.cfg.get("retry", attrdict())),
+        )

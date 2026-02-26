@@ -249,6 +249,7 @@ include = [
     "moat/db/thing/",
     "moat/lib/broadcast/",
     "moat/lib/codec/",
+    "moat/lib/config/",
     "moat/lib/diffiehellman/",
     "moat/lib/micro/",
     "moat/lib/path/",

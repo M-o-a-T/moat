@@ -151,7 +151,10 @@ class Hello(CmdCommon):
         """
         Extra auth-request metadata shared between RPC auth and legacy Hello.
         """
-        return {"moat.link": {"version": proto_version, "rname": self.them}}
+        res = {"version": proto_version}
+        if self.them:
+            res["rname"] = self.them
+        return {"moat.link": res}
 
     def auth_data_in(self, args, data: dict) -> None:
         """
@@ -381,15 +384,15 @@ class Hello(CmdCommon):
             try:
                 local_name = next(it)
             except StopIteration:
-                self.auth_data_in(
-                    (prot, they_server, remote_name),
-                    {"moat.link": {"version": prot}},
-                )
+                self.auth_data_in((prot, they_server, remote_name))
                 raise
             else:
+                res = {}
+                if local_name is not None:
+                    res["rname"] = local_name
                 self.auth_data_in(
                     (prot, they_server, remote_name),
-                    {"moat.link": {"rname": local_name, "version": prot}},
+                    {"moat.link": res},
                 )
             if remote_name is None and self.them is None:
                 auth = False

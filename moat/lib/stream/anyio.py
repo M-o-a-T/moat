@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, cast  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.rpc import SubMsgSender
+    from moat.lib.stream.base import Buffer, MutBuffer
 
 
 class ProcessDeadError(RuntimeError):
@@ -41,7 +42,7 @@ class AnyioBuf(BaseBuf):
         """
         raise NotImplementedError(f"Override {self.__class__.__name__}.stream")
 
-    async def wr(self, data: bytes | bytearray | memoryview[int]) -> int:
+    async def wr(self, data: Buffer) -> int:
         "basic send"
         try:
             await self.s.send(data)
@@ -50,15 +51,14 @@ class AnyioBuf(BaseBuf):
         else:
             return len(data)
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         "basic receive-into"
         try:
             res = await self.s.receive(len(buf))
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             raise EOFError from None
         else:
-            mbuf = cast("bytearray | memoryview[int]", buf)
-            mbuf[: len(res)] = res
+            buf[: len(res)] = res
             return len(res)
 
 
@@ -114,7 +114,7 @@ class FilenoBuf(BaseBuf):
         if self.term is not None:
             termios.tcsetattr(self.rfd, termios.TCSANOW, self.term)
 
-    async def wr(self, data: bytes | bytearray | memoryview[int]) -> int:
+    async def wr(self, data: Buffer) -> int:
         "basic send"
         on = len(data)
         while n := len(data):
@@ -127,7 +127,7 @@ class FilenoBuf(BaseBuf):
             data = memoryview(data)[nn:]
         raise EOFError
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         "basic receive-into"
         await anyio.wait_readable(self.rfd)
         bf = os.read(self.rfd, len(buf))

@@ -13,11 +13,10 @@ from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
+    from moat.lib.stream.base import Buffer, MutBuffer
     from moat.util.liner import Liner
 
     from typing import Any
-
-    MutBuf = bytes | bytearray | memoryview
 
 
 class _CBORMsgBuf(StackedMsg):
@@ -42,7 +41,7 @@ class _CBORMsgBuf(StackedMsg):
     """
 
     cons: bool | int = False
-    codec: Codec | None = None
+    codec: Codec
     liner: Liner | None = None
 
     def __init__(self, stream: BaseBuf, cfg: dict):
@@ -56,7 +55,7 @@ class _CBORMsgBuf(StackedMsg):
 
         cons = cfg.get("console", False)
         if cons:
-            _CReader.__init__(cast("Any", self), cons)
+            _CReader.__init__(cast(_CReader, self), cons)
 
     async def setup(self):
         await super().setup()
@@ -65,22 +64,17 @@ class _CBORMsgBuf(StackedMsg):
 
             self.liner = await AC_use(self, Liner())
 
-    async def cwr(self, buf: MutBuf) -> None:
+    async def cwr(self, buf: Buffer) -> None:
         if not self.cons:
             return
         await self.s.wr(buf)
 
-    async def crd(self, buf: MutBuf) -> int:
-        if not isinstance(buf, bytearray):
-            raise TypeError("Need a bytearray")
-        return await _CReader.crd(cast("Any", self), buf)
+    async def crd(self, buf: MutBuffer) -> int:
+        return await _CReader.crd(cast(_CReader, self), buf)
 
     async def send(self, m: Any) -> Any:
-        codec = self.codec
-        if codec is None:
-            raise RuntimeError("No codec")
         try:
-            msg = codec.encode(m)
+            msg = self.codec.encode(m)
         except Exception:
             log("MSG:\n%r", m)
             raise
@@ -99,8 +93,6 @@ class _CBORMsgBuf(StackedMsg):
         # Pre+postcondition: the codec does not have an object in progress.
 
         codec = self.codec
-        if codec is None:
-            raise RuntimeError("No codec")
         buf = bytearray(64)
         if self.pref is None:
             # easy case
@@ -112,7 +104,7 @@ class _CBORMsgBuf(StackedMsg):
                     codec.feed(memoryview(buf)[:n])
                 else:
                     if self.cons and isinstance(r, int) and r >= 0:
-                        _CReader.cput(cast("Any", self), r)
+                        _CReader.cput(cast(_CReader, self), r)
                     else:
                         return r
 
@@ -125,7 +117,7 @@ class _CBORMsgBuf(StackedMsg):
             elif b == self.pref:
                 break
             elif self.cons:
-                _CReader.cput(cast("Any", self), b[0])
+                _CReader.cput(cast(_CReader, self), b[0])
             elif self.liner is not None:
                 self.liner(bytes(b))
 
@@ -150,17 +142,11 @@ class _CBORMsgBlk(StackedMsg):
     :meta public:
     """
 
-    codec: Codec | None = None
+    codec: Codec
 
     async def send(self, m: Any) -> Any:
-        codec = self.codec
-        if codec is None:
-            raise RuntimeError("No codec")
-        await self.s.snd(codec.encode(m))
+        await self.s.snd(self.codec.encode(m))
 
     async def recv(self):
-        codec = self.codec
-        if codec is None:
-            raise RuntimeError("No codec")
         m = await self.s.rcv()
-        return codec.decode(m)
+        return self.codec.decode(m)

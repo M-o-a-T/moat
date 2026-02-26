@@ -75,7 +75,7 @@ class TermBuf(BaseBuf):
         "Return terminal height/width tuple"
         raise NotImplementedError
 
-    async def rdp(self) -> bytearray:
+    async def rdp(self) -> bytes:
         """read pending data, without blocking"""
         raise NotImplementedError
 
@@ -155,9 +155,9 @@ class FilenoTerm(FilenoBuf, TermBuf):
         except (KeyError, TypeError, ValueError):
             return 25, 80
 
-    async def rdp(self) -> bytearray:
+    async def rdp(self) -> bytes:
         """read pending data, without blocking"""
         if FIONREAD is None:
-            return bytearray()
+            return b""
         amount = struct.unpack("i", ioctl(self.rfd, FIONREAD, b"\0\0\0\0"))[0]
-        return bytearray(os.read(self.rfd, amount))
+        return os.read(self.rfd, amount)

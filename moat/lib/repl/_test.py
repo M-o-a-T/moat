@@ -114,7 +114,7 @@ class MockTerm(TermBuf):
         self.record.append(("get", "size"))
         return self._height, self._width
 
-    async def rdp(self) -> bytearray:
+    async def rdp(self) -> bytes:
         """read pending data, without blocking"""
         self.record.append(("read", "pending"))
-        return bytearray()
+        return b""

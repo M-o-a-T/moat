@@ -34,19 +34,25 @@ from moat.lib.micro import ACM, AC_exit, AC_use
 
 # Typing
 
-from typing import TYPE_CHECKING, cast  # isort:skip
+from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
+    from types import TracebackType
 
-    from collections.abc import Awaitable
-    from typing import Any
+    from typing import Any, Self
 
     Buffer = bytes | bytearray | memoryview
+    MutBuffer = bytearray | memoryview
+    _AACMBase = AbstractAsyncContextManager
+else:
+    Buffer = bytes | bytearray | memoryview
+    MutBuffer = bytearray | memoryview
+    _AACMBase = object
 
 
 class _NullCtx:
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *tb):
@@ -56,7 +62,7 @@ class _NullCtx:
 _nullctx = _NullCtx()
 
 
-class Base:
+class Base(_AACMBase):
     """
     The MoaT stream base class for "something connected".
 
@@ -98,7 +104,7 @@ class Base:
         """
         return _nullctx
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         res = self
         AC = ACM(self)
         await AC(self.teardown)
@@ -111,8 +117,14 @@ class Base:
             await AC_exit(self, type(exc), exc, getattr(exc, "__traceback__", None))
             raise
 
-    def __aexit__(self, *tb) -> Awaitable:
-        return AC_exit(self, *tb)
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+        /,
+    ) -> bool | None:
+        return await AC_exit(self, exc_type, exc, tb)
 
     async def setup(self):
         """
@@ -223,7 +235,7 @@ class BaseBuf(BaseConn):
     Implement rd/wr.
     """
 
-    async def rd(self, buf: Buffer) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         """
         Read some bytes.
 
@@ -272,7 +284,7 @@ class StackedConn(BaseConn):
         """
         if self.link is None:
             raise RuntimeError("No link")
-        return await AC_use(self, cast("Any", self.link))
+        return await AC_use(self, self.link)
 
 
 class StackedMsg(StackedConn, BaseMsg):
@@ -298,7 +310,7 @@ class StackedMsg(StackedConn, BaseMsg):
         "Console Send. Returns when the buffer is transmitted."
         await self.s.cwr(buf)
 
-    async def crd(self, buf: Buffer) -> int:
+    async def crd(self, buf: MutBuffer) -> int:
         "Console Receive. Returns data by reading into a buffer."
         return await self.s.crd(buf)
 
@@ -318,7 +330,7 @@ class StackedBuf(StackedConn, BaseBuf):
         "Send. Returns when the buffer is transmitted."
         return await self.s.wr(data)
 
-    async def rd(self, buf: Buffer) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         "Receive. Returns data by reading into a buffer."
         return await self.s.rd(buf)
 

@@ -24,7 +24,7 @@ from moat.lib.micro import (
 )
 from moat.lib.stream import StackedMsg
 
-from typing import Any, cast  # isort:skip
+from typing import Any  # isort:skip
 
 
 class EphemeralMsg:
@@ -311,7 +311,7 @@ class ReliableMsg(StackedMsg):
             link = self.link
             if link is None:
                 raise RuntimeError("No link")
-            async with cast(Any, TaskGroup()) as tg, link as s:
+            async with TaskGroup() as tg, link as s:
                 self.__tg = tg
                 self.s = s
                 await tg.spawn(self._read, _name="rel_read")

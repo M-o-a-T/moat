@@ -9,10 +9,11 @@ from moat.lib.stream import BaseBuf, BaseMsg, StackedBlk
 
 from ._console import _CReader
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.util import attrdict
+    from moat.lib.stream.base import Buffer
 
 
 class SerialPackerBlkBuf(StackedBlk):
@@ -36,13 +37,13 @@ class SerialPackerBlkBuf(StackedBlk):
         self.n = 0
         self.w_lock = Lock()
         if console:
-            _CReader.__init__(cast("Any", self), console)
+            _CReader.__init__(cast(_CReader, self), console)
 
     async def crd(self, buf: bytearray) -> int:
         "console read"
         if not self.cons:
             raise EOFError
-        return await _CReader.crd(cast("Any", self), buf)
+        return await _CReader.crd(cast(_CReader, self), buf)
 
     async def cwr(self, buf) -> None:
         "console write"
@@ -58,7 +59,7 @@ class SerialPackerBlkBuf(StackedBlk):
                 self.i += 1
                 if isinstance(msg, int):
                     if self.cons:
-                        _CReader.cput(cast("Any", self), msg)
+                        _CReader.cput(cast(_CReader, self), msg)
                 elif msg is not None:
                     return msg
 
@@ -68,7 +69,7 @@ class SerialPackerBlkBuf(StackedBlk):
             self.i = 0
             self.n = n
 
-    async def snd(self, m: bytes | bytearray | memoryview[int]) -> None:
+    async def snd(self, m: Buffer) -> None:
         "block write"
         h, msg, t = self.p.frame(m)
         async with self.w_lock:

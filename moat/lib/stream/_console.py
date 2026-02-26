@@ -6,6 +6,11 @@ from __future__ import annotations
 
 from moat.lib.micro import Event
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .base import MutBuffer
+
 
 class _CReader:
     """
@@ -26,7 +31,7 @@ class _CReader:
         self.cons = cons
         self.intr = 0
 
-    async def crd(self, buf: bytearray) -> int:
+    async def crd(self, buf: MutBuffer) -> int:
         """read waiting console data"""
         if not self.cons:
             raise EOFError

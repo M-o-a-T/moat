@@ -12,7 +12,7 @@ from .base import StackedBlk, StackedBuf, StackedMsg
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    Buffer = bytes | bytearray | memoryview
+    from .base import Buffer, MutBuffer
 
 
 class LogMsg(StackedMsg, StackedBuf, StackedBlk):
@@ -118,7 +118,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             # log("S:%s =%r", self.txt, res)
             return res
 
-    async def rd(self, buf: Buffer) -> int:  # noqa:D102
+    async def rd(self, buf: MutBuffer) -> int:  # noqa:D102
         # log("R:%s %d", self.txt, len(buf))
         try:
             res = await self.s.rd(buf)
@@ -140,7 +140,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             # log("SC:%s =%r", self.txt, res)
             return res
 
-    async def crd(self, buf: Buffer) -> int:  # noqa:D102
+    async def crd(self, buf: MutBuffer) -> int:  # noqa:D102
         # log("RC:%s %d", self.txt, len(buf))
         try:
             res = await self.s.crd(buf)

@@ -39,6 +39,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
+    from types import TracebackType
 
     from collections.abc import Awaitable, Callable
     from typing import NoReturn, ParamSpec, Protocol, Self
@@ -79,6 +80,16 @@ if TYPE_CHECKING:
         ) -> Awaitable[R]: ...
 
     class _TaskGroupProto(Protocol):
+        async def __aenter__(self) -> Self: ...
+
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+            /,
+        ) -> bool | None: ...
+
         async def spawn(
             self,
             p: Callable[P, Awaitable[Any]],

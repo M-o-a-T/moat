@@ -10,6 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from moat.db.schema import Base
 from moat.db.util import session
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.db.box.model import Box, BoxTyp
+    from moat.db.thing.model import Thing
+
+    from typing import Any
+
 
 class SheetTyp(Base):
     "One kind of form for labels. Sizes etc. are in the config file."
@@ -55,6 +63,8 @@ class LabelTyp(Base):
     sheettyp: Mapped[SheetTyp] = relationship(back_populates="labeltypes")
 
     labels: Mapped[set[Label]] = relationship(back_populates="labeltyp")
+    if TYPE_CHECKING:
+        boxtypes: set[BoxTyp]
 
     def dump(self):  # noqa: D102
         res = super().dump()
@@ -103,8 +113,10 @@ class Sheet(Base):
     sheettyp: Mapped[SheetTyp] = relationship()
     labels: Mapped[set[Label]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
+    if TYPE_CHECKING:
+        labeltyp: LabelTyp | None
 
-    def dump(self):  # noqa: D102
+    def dump(self) -> dict[str, Any]:  # noqa: D102
         res = super().dump()
         if self.labeltyp is not None:
             res["typ"] = self.labeltyp.name
@@ -147,8 +159,11 @@ class Label(Base):
 
     labeltyp: Mapped[LabelTyp] = relationship(back_populates="labels")
     sheet: Mapped[Sheet] = relationship(back_populates="labels")
+    if TYPE_CHECKING:
+        box: Box | None
+        thing: Thing | None
 
-    def dump(self):  # noqa: D102
+    def dump(self) -> dict[str, Any]:  # noqa: D102
         res = super().dump()
         if self.labeltyp is not None:
             res["typ"] = self.labeltyp.name

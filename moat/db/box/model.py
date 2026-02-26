@@ -12,6 +12,9 @@ from moat.db.schema import Base
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.db.label.model import Label, LabelTyp
+    from moat.db.thing.model import Thing
+
     from typing import Any
 
 boxtyp_tree = Table(
@@ -66,6 +69,8 @@ class BoxTyp(Base):
     )
 
     boxes: Mapped[set[Box]] = relationship(back_populates="boxtyp")
+    if TYPE_CHECKING:
+        labeltyp: LabelTyp | None
 
     def dump(self) -> dict[str, Any]:
         "Standard info dump"
@@ -97,6 +102,9 @@ class Box(Base):
     boxtyp: Mapped[BoxTyp] = relationship(back_populates="boxes")
     container: Mapped[Box | None] = relationship(back_populates="boxes", remote_side=[id])
     boxes: Mapped[set[Box]] = relationship(back_populates="container")
+    if TYPE_CHECKING:
+        labels: set[Label]
+        things: set[Thing]
 
     # location within its parent
     pos_x: Mapped[int] = mapped_column(nullable=True, comment="X position in parent")

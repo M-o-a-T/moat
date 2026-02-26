@@ -7,18 +7,25 @@ from __future__ import annotations
 from sqlalchemy.orm import relationship
 
 from moat.util import NotGiven, al_lower, gen_ident
-from moat.box.model import Box, BoxTyp
+from moat.db.box.model import Box, BoxTyp
+from moat.db.label.model import Label, LabelTyp, Sheet, SheetTyp
 from moat.db.schema import Base
+from moat.db.thing.model import Thing
 from moat.db.util import session
-from moat.label.model import Label, LabelTyp, Sheet, SheetTyp
-from moat.thing.model import Thing
 
-LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp", collection_class=set)
-Label.box = relationship(Box, back_populates="labels")
-Label.thing = relationship(Thing, back_populates="labels")
+from typing import Any, cast
+
+cast(Any, LabelTyp).boxtypes = relationship(
+    BoxTyp, back_populates="labeltyp", collection_class=set
+)
+cast(Any, Label).box = relationship(Box, back_populates="labels")
+cast(Any, Label).thing = relationship(Thing, back_populates="labels")
 
 
-def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, sheet=NotGiven, **kw):  # noqa: D103
+def label_apply(
+    self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, sheet=NotGiven, **kw
+) -> None:
+    "Apply mutable label properties."
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -51,10 +58,10 @@ def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, she
             self.sheet_id = sheet
 
 
-Label.apply = label_apply
+Label.apply = cast(Any, label_apply)
 
 
-def sheet_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
+def sheet_apply(self, sheettyp=NotGiven, force=False, **kw) -> None:  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -71,10 +78,10 @@ def sheet_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
                 raise ValueError("A sheet's format cannot be changed")
 
 
-Sheet.apply = sheet_apply
+Sheet.apply = cast(Any, sheet_apply)
 
 
-def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
+def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw) -> None:  # noqa: D103
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self, **kw)
@@ -91,4 +98,4 @@ def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw):  # noqa: D103
                 raise ValueError("A label's paper format cannot be changed")
 
 
-LabelTyp.apply = labeltyp_apply
+LabelTyp.apply = cast(Any, labeltyp_apply)

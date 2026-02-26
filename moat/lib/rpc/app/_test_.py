@@ -34,8 +34,8 @@ class Cmd(BaseCmd):
     doc = dict(_c=dict(_d="Basic test cmd"))
 
     n = 0
-    err: Exception = None
-    err_evt: Event = None
+    err: Exception | None = None
+    err_evt: Event | None = None
     store: list[Any]
 
     doc_echo = dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
@@ -93,7 +93,7 @@ class Cmd(BaseCmd):
 
     doc_error = dict(_d="raise exc", e="exc:raised")
 
-    async def cmd_error(self, e: Exception = RuntimeError):
+    async def cmd_error(self, e: Exception | type[Exception] = RuntimeError):
         "raise an exception"
         if isinstance(e, Exception):
             raise e
@@ -112,7 +112,10 @@ class Cmd(BaseCmd):
             self.err = e(*a)  # the remote might send a
         else:
             self.err = UserCrash(e, *a)  # the remote might send a text instead
-        self.err_evt.set()
+        err_evt = self.err_evt
+        if err_evt is None:
+            raise RuntimeError("No event")
+        err_evt.set()
 
     async def stream_run(self, msg: Msg):
         """
@@ -120,7 +123,10 @@ class Cmd(BaseCmd):
         """
         if msg.can_stream:
             raise NotImplementedError
-        res = await self.root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        res = await root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
         await msg.result(*res.args, **res.kw)
 
     async def setup(self):
@@ -134,9 +140,15 @@ class Cmd(BaseCmd):
         """
         if L:
             self.set_ready()
-        await self.err_evt.wait()
+        err_evt = self.err_evt
+        if err_evt is None:
+            raise RuntimeError("No event")
+        await err_evt.wait()
         await sleep_ms(100)
-        raise self.err
+        err = self.err
+        if err is None:
+            raise RuntimeError("No crash")
+        raise err
 
 
 class Cons(BaseCmd):
@@ -166,7 +178,10 @@ class Cons(BaseCmd):
 
     async def setup(self):
         await super().setup()
-        self.con = self.root.sub_at(self.cfg["cons"])
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        self.con = root.sub_at(self.cfg["cons"])
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
         self.timeout = self.cfg.get("timeout", 200)
@@ -203,6 +218,6 @@ class Cons(BaseCmd):
                     log(
                         "%s: %s",
                         p,
-                        str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"),
+                        bytes(memoryview(buf)[: d - (buf[d - 1] == 10)]).decode("utf-8"),
                     )
                 d = 0

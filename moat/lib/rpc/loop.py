@@ -32,7 +32,7 @@ __all__ = ["StreamLoop"]
 class StreamLoop(HandlerStream):
     "A test stream that implements loopback"
 
-    __other: StreamLoop = None
+    __other: StreamLoop | None = None
 
     def __init__(self, h: MsgHandler, s: str):
         super().__init__(h)
@@ -44,6 +44,9 @@ class StreamLoop(HandlerStream):
 
     async def write_stream(self):
         "write loop"
+        other = self.__other
+        if other is None:
+            raise RuntimeError("No remote")
         while True:
             try:
                 msg = await self.msg_out()
@@ -57,15 +60,21 @@ class StreamLoop(HandlerStream):
             f += str(i)
 
             log("%s: %s %s", self.__s, f, " ".join(repr(x) for x in m))
-            await self.__other.msg_in(msg)
+            await other.msg_in(msg)
 
     async def read_stream(self):
         "read loop. No-op; all work is done by the other side's writer."
-        await self.__other.writer_done.wait()
+        other = self.__other
+        if other is None:
+            raise RuntimeError("No remote")
+        await other.writer_done.wait()
 
     async def __aexit__(self, *tb):
+        other = self.__other
+        if other is None:
+            raise RuntimeError("No remote")
         with shield():
-            await self.__other.closed_input()
+            await other.closed_input()
         try:
             with ungroup:
                 await super().__aexit__(*tb)

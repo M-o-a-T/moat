@@ -18,6 +18,11 @@ from .const import (
     E_UNSPEC,
 )
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 @as_proxy("_NRdyErr")
 class NotReadyError(RuntimeError):
@@ -48,7 +53,7 @@ class RemoteError(RuntimeError):
 
 
 class StreamError(RuntimeError):  # noqa: D101
-    def __new__(cls, msg=()):  # noqa: D102
+    def __new__(cls, msg: Sequence[object] = ()):  # noqa: D102
         if len(msg) != 1:
             pass
         elif isinstance((m := msg[0]), int):

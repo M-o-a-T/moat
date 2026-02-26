@@ -43,8 +43,11 @@ class Cmd(BaseCmd):
         complex items that should be retrieved recursively.
         """
         p = msg.get("p", ())
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
         try:
-            res = enc_part(get_part(self.root.cfg, p))
+            res = enc_part(get_part(root.cfg, p))
             if isinstance(res, (list, tuple)):
                 await msg.result(*res)
             else:
@@ -74,7 +77,10 @@ class Cmd(BaseCmd):
         can configure a "safe" skeleton setup and update it online after
         booting.
         """
-        cur = self.root.cfg
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        cur = root.cfg
         if not p:
             raise ValueError("NoPath")
         for pp in p[:-1]:
@@ -106,7 +112,7 @@ class Cmd(BaseCmd):
                     raise
                 cur.append(d)
 
-        self.root.cfg_updated(cur)
+        root.cfg_updated(cur)
 
     doc_x = dict(_d="activate new config")
 
@@ -115,4 +121,6 @@ class Cmd(BaseCmd):
         Activate the new config.
         """
         dest = self.root
+        if dest is None:
+            raise RuntimeError("Not attached")
         await dest.reload()

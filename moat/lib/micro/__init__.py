@@ -326,7 +326,7 @@ async def every_ms(
     tt = ticks_add(ticks_ms(), int(t))
     while True:
         try:
-            yield None if p is None else await p(*a, **k)
+            yield (None if p is None else await p(*a, **k))
         except StopAsyncIteration:
             return
         tn = ticks_ms()

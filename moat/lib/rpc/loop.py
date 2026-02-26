@@ -34,7 +34,7 @@ class StreamLoop(HandlerStream):
 
     __other: StreamLoop | None = None
 
-    def __init__(self, h: MsgHandler, s: str):
+    def __init__(self, h: MsgHandler | None, s: str):
         super().__init__(h)
         self.__s = s
 

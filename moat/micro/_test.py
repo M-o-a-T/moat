@@ -112,8 +112,8 @@ class MpyBuf(ProcessBuf):
             with (root / "moat.lrg").open("wb") as f:
                 pass
 
-        rlink(libp[0] / "boot.py", root / "boot.py")
-        rlink(libp[0] / "main_unix.py", root / "main.py")
+        rlink(libp[2] / "boot.py", root / "boot.py")
+        rlink(libp[2] / "main_unix.py", root / "main.py")
         self.argv = [
             # "strace", "-s300", "-o/tmp/mpy.log",
             pre / "build" / ("mpy-unix" + ("-dup" if dupterm else "")) / "micropython",

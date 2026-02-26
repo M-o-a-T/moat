@@ -43,13 +43,11 @@ from moat.lib.rpc import (
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from logging import Logger
-
     from moat.lib.micro import _TaskGroupProto
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseMsgHandler, OptDict
 
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from typing import Any
 
 __all__ = ["HandlerStream", "StreamLink", "i_f2wire", "wire2i_f"]
@@ -132,13 +130,13 @@ class HandlerStream(MsgHandler):
     _tg: _TaskGroupProto | None = None
     _id = 0
 
-    def __init__(self, sender: BaseMsgHandler | None, logger: Logger | None = None):
+    def __init__(self, sender: BaseMsgHandler | None, logger: object | None = None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._sender = sender
 
-        self._logger = getattr(logger, "debug", logger)
+        self._logger = cast("Callable[..., object] | None", getattr(logger, "debug", logger))
 
         self.reader_done = Event()
         self.writer_done = Event()

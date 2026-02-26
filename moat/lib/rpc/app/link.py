@@ -63,17 +63,15 @@ class Cmd(BaseCmd):
         )
     )
 
-    link: Link | None = None
+    link: Link
     rlink: MsgSender | None = None
     ann: FakeReady | None = None
 
     async def setup(self):
         "set up the link"
         await super().setup()
-        self.link = await AC_use(self, Link(CFG.moat.link, common=True))
+        self.link = link = await AC_use(self, Link(CFG.moat.link, common=True))
         link = self.link
-        if link is None:
-            raise RuntimeError("No link")
         srv = self.cfg.get("link")
         if srv is not None:
             if (service := self.cfg.get("service", None)) is not None:
@@ -88,7 +86,7 @@ class Cmd(BaseCmd):
             self.ann = await AC_use(
                 self,
                 announcing(
-                    cast("LinkSender", link.sender),
+                    link.sender,
                     srv,
                     host=self.cfg.get("host", False),
                     service=cast("MsgSender", root.sub_at(target)) if target is not None else None,
@@ -111,32 +109,24 @@ class Cmd(BaseCmd):
 
         if rcmd == ["mon_"] and self.cfg.get("mon", False):
             # read data from there
-            link = self.link
-            if link is None:
-                raise RuntimeError("No link")
-            return await msg.call_stream(link.stream_watch)
+            return await msg.call_stream(self.link.stream_watch)
 
         if self.rlink is None:
             try:
                 rpath = self.cfg["target"]["send"]
-            except KeyError as exc:
-                raise ExpKeyError(exc) from None
+            except KeyError:
+                raise ExpKeyError(rcmd) from None
             via = self.cfg.get("via", None)
             link = self.link
-            if link is None:
-                raise RuntimeError("No link")
-            rlink = cast("MsgSender", link.sender)
             if via is not None:
-                rlink = cast("MsgSender", (await link.get_service(via)).sender)
+                link = (await link.get_service(via))
+            link = link.sender
             if len(rpath):
-                rlink = cast("MsgSender", rlink.sub_at(rpath))
-            self.rlink = rlink
+                link = link.sub_at(rpath)
+            self.rlink = link
 
         try:
-            rlink = self.rlink
-            if rlink is None:
-                raise RuntimeError("No link")
-            return await rlink.handle(msg, rcmd, *prefix)
+            await self.rlink.handle(msg, rcmd, *prefix)
         except BaseException:
-            self.rlink = None
+            del self.rlink
             raise

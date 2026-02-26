@@ -34,8 +34,8 @@ class Cmd(BaseCmd):
     doc = dict(_c=dict(_d="Basic test cmd"))
 
     n = 0
-    err: Exception | None = None
-    err_evt: Event | None = None
+    err: Exception
+    err_evt: Event
     store: list[Any]
 
     doc_echo = dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
@@ -112,10 +112,7 @@ class Cmd(BaseCmd):
             self.err = e(*a)  # the remote might send a
         else:
             self.err = UserCrash(e, *a)  # the remote might send a text instead
-        err_evt = self.err_evt
-        if err_evt is None:
-            raise RuntimeError("No event")
-        err_evt.set()
+        self.err_evt.set()
 
     async def stream_run(self, msg: Msg):
         """
@@ -123,10 +120,7 @@ class Cmd(BaseCmd):
         """
         if msg.can_stream:
             raise NotImplementedError
-        root = self.root
-        if root is None:
-            raise RuntimeError("Not attached")
-        res = await root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
+        res = await self.root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
         await msg.result(*res.args, **res.kw)
 
     async def setup(self):
@@ -140,15 +134,9 @@ class Cmd(BaseCmd):
         """
         if L:
             self.set_ready()
-        err_evt = self.err_evt
-        if err_evt is None:
-            raise RuntimeError("No event")
-        await err_evt.wait()
+        await self.err_evt.wait()
         await sleep_ms(100)
-        err = self.err
-        if err is None:
-            raise RuntimeError("No crash")
-        raise err
+        raise self.err
 
 
 class Cons(BaseCmd):
@@ -178,10 +166,7 @@ class Cons(BaseCmd):
 
     async def setup(self):
         await super().setup()
-        root = self.root
-        if root is None:
-            raise RuntimeError("Not attached")
-        self.con = root.sub_at(self.cfg["cons"])
+        self.con = self.root.sub_at(self.cfg["cons"])
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
         self.timeout = self.cfg.get("timeout", 200)

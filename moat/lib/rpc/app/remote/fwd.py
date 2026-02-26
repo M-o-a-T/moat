@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import MsgHandler, MsgSender
     from moat.lib.rpc.msg import Msg
+    from types import CoroutineType
+    from typing import Any
 
 
 class Fwd(BaseCmd):
@@ -22,7 +24,7 @@ class Fwd(BaseCmd):
     This app forwards to somewhere else.
     """
 
-    sd: MsgSender | None = None
+    sd: MsgSender
 
     doc = dict(_c=dict(_d="Command forwarding", path="path:dest"))
 
@@ -36,13 +38,13 @@ class Fwd(BaseCmd):
             raise RuntimeError("Not attached")
 
         if not log:
-            self.sd = cast("MsgSender", root.sub_at(self.cfg["path"]))
+            self.sd = root.sub_at(self.cfg["path"])
             return
 
         from moat.lib.rpc import MsgSender  # noqa: PLC0415
         from moat.lib.rpc.loop import StreamLoop  # noqa: PLC0415
 
-        a = StreamLoop(cast("MsgHandler", root), log + ">")
+        a = StreamLoop(root, log + ">")
         b = StreamLoop(None, log + "<")
         a.attach_remote(b)
         b.attach_remote(a)
@@ -50,9 +52,6 @@ class Fwd(BaseCmd):
         xb = await AC_use(self, b)
         self.sd = MsgSender(xb)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
+    def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> CoroutineType[Any,Any,None]:
         """Call via the subdispatcher."""
-        sd = self.sd
-        if sd is None:
-            raise RuntimeError("Not ready")
-        return await sd.handle(msg, rcmd, *prefix)
+        return self.sd.handle(msg, rcmd, *prefix)

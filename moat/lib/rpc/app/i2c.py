@@ -40,7 +40,7 @@ class Cmd(BaseCmd):
         )
     )
 
-    _bus: SMBus | None = None
+    _bus: SMBus
 
     def __init__(self, cfg: dict):
         super().__init__(cfg)
@@ -72,28 +72,23 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        b, self._bus = self._bus, None
+        b = getattr(self,"_bus")
         if b is not None:
+            del self._bus
             b.close()
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
     async def cmd_rd(self, i, n=16) -> bytes:
         "read @n bytes from bus @cd at address @i"
-        bus = self._bus
-        if bus is None:
-            raise RuntimeError("No bus")
-        return bytes(bus.i2c_rd(i, n))
+        return bytes(self._bus.i2c_rd(i, n))
 
     doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
 
     async def cmd_wr(self, i: int, buf: bytes) -> int:
         "write @buf to bus @cd at address @i"
-        bus = self._bus
-        if bus is None:
-            raise RuntimeError("No bus")
         async with self._lock:
-            res = cast("_I2CWriteRes", await to_thread(bus.i2c_wr, i, list(buf)))
+            res = cast("_I2CWriteRes", await to_thread(self._bus.i2c_wr, i, list(buf)))
             return res.len
 
     doc_wrrd = dict(
@@ -111,15 +106,11 @@ class Cmd(BaseCmd):
         Returns -x if only x bytes could be written.
         """
 
-        bus = self._bus
-        if bus is None:
-            raise RuntimeError("No bus")
-
         def _run():
             wr = i2c_msg.write(i, list(buf))
             rd = i2c_msg.read(i, n)
 
-            bus.i2c_rdwr(wr, rd)
+            self._bus.i2c_rdwr(wr, rd)
             return rd
 
         async with self._lock:
@@ -135,8 +126,6 @@ class Cmd(BaseCmd):
         Returns: the list of working addresses.
         """
         bus = self._bus
-        if bus is None:
-            raise RuntimeError("No bus")
         res = []
         for i in range(0x08, 0x78):
             try:

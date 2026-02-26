@@ -42,16 +42,10 @@ from moat.lib.rpc import (
 
 from typing import TYPE_CHECKING, cast
 
-try:
-    from collections.abc import Iterable, Mapping, Sequence
-except ImportError:
-    Iterable = object
-    Sequence = (list, tuple)
-    Mapping = dict
-
 if TYPE_CHECKING:
     from logging import Logger
 
+    from moat.lib.micro import _TaskGroupProto
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseMsgHandler, OptDict
 
@@ -76,7 +70,7 @@ def B_ERR_NAME(err):
     if err >= 0:
         return f"S+{err}"
     if err <= E_NO_CMD:
-        return f"NO_CMD_{-E_NO_CMD.value - err}"
+        return f"NO_CMD_{-E_NO_CMD - err}"
     if err == E_UNSPEC:
         return "UNSPEC"
     if err == E_NO_STREAM:
@@ -135,7 +129,7 @@ class HandlerStream(MsgHandler):
 
     """
 
-    _tg: TaskGroup = None
+    _tg: _TaskGroupProto | None = None
     _id = 0
 
     def __init__(self, sender: BaseMsgHandler | None, logger: Logger | None = None):
@@ -165,10 +159,11 @@ class HandlerStream(MsgHandler):
             return False
         return True
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None:
         """
         Forward a new message to the other side.
         """
+        prefix  # noqa:B018
         if self.closing:
             raise EOFError
 
@@ -262,7 +257,7 @@ class HandlerStream(MsgHandler):
             else:
                 # assemble the message
                 cmd = a.pop(0) if a else Path()
-                rem = Msg.Call(cmd, a, kw, flag)
+                rem = Msg.Call(cmd, a, {} if kw is None else kw, flag)
 
                 # … and build a stream for it
                 link = StreamLink(self, i)
@@ -374,7 +369,7 @@ class HandlerStream(MsgHandler):
             else:
                 self._id3.add(mid)
 
-    async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:  # noqa: D102
+    async def send(self, link: StreamLink, a: Sequence, kw: OptDict, flag: int) -> None:  # noqa: D102
         if self.closing:
             raise EOFError
         assert isinstance(a, (list, tuple)), a
@@ -415,6 +410,8 @@ class HandlerStream(MsgHandler):
             *a: Positional arguments to pass to the function.
             **kw: Keyword arguments to pass to the function.
         """
+        if self._tg is None:
+            raise RuntimeError("Not started")
         if kw:
             self._tg.start_soon(partial(cmd, *a, *kw))
         else:
@@ -423,7 +420,7 @@ class HandlerStream(MsgHandler):
     async def __aenter__(self):
         acm = ACM(self)
         try:
-            tg: TaskGroup = await acm(TaskGroup())
+            tg: _TaskGroupProto = await acm(TaskGroup())
             self._tg = tg
             self._tgs = await acm(TaskGroup())
             self.closing = False
@@ -502,9 +499,9 @@ class HandlerStream(MsgHandler):
 class StreamLink(MsgLink):
     """This is the handler for messages that forwards them to the stream."""
 
-    def __init__(self, stream: Msg, id: int):
+    def __init__(self, stream: HandlerStream, id: int):
         super().__init__()
-        self.__stream = stream
+        self.__stream: HandlerStream | None = stream
         self.id = id
         self.task = None
 

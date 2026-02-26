@@ -98,6 +98,14 @@ if TYPE_CHECKING:
             **k: P.kwargs,
         ) -> _anyio.CancelScope: ...
 
+        def start_soon(
+            self,
+            p: Callable[P, Awaitable[Any]],
+            *a: P.args,
+            _name: str | None = None,
+            **k: P.kwargs,
+        ) -> None: ...
+
         def cancel(self) -> None: ...
 
     class _TaskGroupFactoryProto(Protocol):

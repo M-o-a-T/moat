@@ -24,7 +24,10 @@ from moat.lib.micro import (
 )
 from moat.lib.stream import StackedMsg
 
-from typing import Any  # isort:skip
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any  # isort:skip
 
 
 class EphemeralMsg:

@@ -46,8 +46,8 @@ if TYPE_CHECKING:
     MutBuffer = bytearray | memoryview
     _AACMBase = AbstractAsyncContextManager
 else:
-    Buffer = bytes | bytearray | memoryview
-    MutBuffer = bytearray | memoryview
+    Buffer = bytes
+    MutBuffer = bytearray
     _AACMBase = object
 
 
@@ -122,7 +122,6 @@ class Base(_AACMBase):
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
         tb: TracebackType | None,
-        /,
     ) -> bool | None:
         return await AC_exit(self, exc_type, exc, tb)
 

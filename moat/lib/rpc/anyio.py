@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
-    from moat.lib.rpc import MsgHandler, MsgSender
+    from moat.lib.rpc import MsgHandler
 
     from . import BaseMsgHandler
 
@@ -30,7 +30,7 @@ class AioStream(HandlerStream):  # noqa: D101
 
     def __init__(
         self,
-        cmd: MsgSender,
+        cmd: BaseMsgHandler,
         stream,
         debug: str | None = None,
         codec: str | Codec | None = None,

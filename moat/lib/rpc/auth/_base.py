@@ -98,7 +98,7 @@ class Auth(BaseMsgHandler):
             self.tg.cancel()
         self._auth_root = root
 
-    async def process(self, root: BaseMsgHandler):
+    async def process(self, root: MsgSender):
         """Run the auth handler, then the normal stream."""
         self.base_root = root
         a_in = AuthCmdIn(self)

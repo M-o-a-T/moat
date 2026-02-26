@@ -28,10 +28,20 @@ if TYPE_CHECKING or DOC:
     from .msg import Msg  # noqa:TC001
 
     from collections.abc import Awaitable, Callable, Mapping
-    from typing import Any, Self
+    from typing import Any, Protocol, Self
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
+
+    class MsgRoot(Protocol):
+        """Interface required by :class:`MsgSender`."""
+
+        def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]: ...
+
+        def find_handler(
+            self, path: Path, cmd: bool = False
+        ) -> tuple[MsgHandler, Path] | Callable: ...
+
 
 __all__ = ["BaseMsgHandler", "MsgHandler", "MsgSender"]
 
@@ -204,7 +214,7 @@ class MsgSender(BaseMsgHandler):
 
     Caller_: type[Caller] = Caller
 
-    def __init__(self, root: MsgHandler):
+    def __init__(self, root: MsgRoot):
         """
         This class accepts client-side MoaT-cmd calls and turns them into
         messages.
@@ -218,10 +228,15 @@ class MsgSender(BaseMsgHandler):
         pass
 
     @property
+    def sender(self) -> MsgSender:
+        """Return a sender adapter for compatibility with handler roots."""
+        return self
+
+    @property
     def root(self):  # noqa: D102
         return self._root
 
-    def set_root(self, root):  # noqa: D102
+    def set_root(self, root: MsgRoot):  # noqa: D102
         if type(self) is not MsgSender:
             raise RuntimeError("not in a subclass")
         assert not isinstance(root, MsgSender)
@@ -249,7 +264,7 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd, a, kw))
 
-    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable:
         """
         Resolve the given prefix, as far as possible.
 
@@ -305,7 +320,7 @@ class SubMsgSender(MsgSender):
     An empty path is OK.
     """
 
-    def __init__(self, root: MsgHandler, path: Path, caller=None):
+    def __init__(self, root: MsgRoot, path: Path, caller=None):
         """
         Setup.
         """
@@ -382,10 +397,11 @@ class SubMsgSender(MsgSender):
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 
-    def sub_at(self, prefix: Path, caller=None) -> SubMsgSender:
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender | Callable:
         """
         Returns a SubMsgSender
         """
+        cmd  # noqa:B018
         return SubMsgSender(self.root, self._path + prefix, caller=caller or self.Caller_)
 
     def __getattr__(self, x):

@@ -379,7 +379,7 @@ class Path(Sequence[PathElem]):
             res.append(":m" + self.mark)
         if self._data is None:
             return ":?"
-        if not self._data and not self._prefix:
+        if not self._data and self._prefix is None:
             if slash:
                 raise ValueError("Empty paths cannot be slash-coded")
             res.append(":")
@@ -565,7 +565,7 @@ class Path(Sequence[PathElem]):
     def __add__(self, other: Path | Sequence[PathElem]) -> Path:
         """Concatenate two paths"""
         mark = self._tag_add(other)
-        if len(self) == 0 and not self._prefix:
+        if len(self) == 0 and self._prefix is None:
             return Path.build(other)
         if isinstance(other, Path):
             if isinstance(other._prefix, Path):

@@ -4,7 +4,10 @@ PDF subclass
 
 from __future__ import annotations
 
-from fpdf import FPDF, ViewerPreferences
+try:
+    from fpdf2 import FPDF, ViewerPreferences  # type:ignore[unresolved-import]
+except ImportError:
+    from fpdf.prefs import ViewerPreferences
 
 from typing import TYPE_CHECKING
 

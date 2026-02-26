@@ -20,10 +20,17 @@ class RetryCmd(BaseFwdCmd):
     This handler catches some retryable exceptions, thus shielding the rest
     of MoaT from them.
 
-    If the @retry config is zero the exception is ignored, otherwise the
+    Parameters:
+        cfg(dict): sub-App to run
+        retry(int): Number of retries
+        timeout(int): delay before restarting
+        notify(Path): Called on error
+        always(bool): also restart the app if it ends without error
+
+    If *retry* is zero, the exception is simply ignored. Otherwise the
     app is restarted after a timeout.
 
-    Set @retry to -1 for infinite retries.
+    Set *retry* to -1 for infinite retries.
 
     Set @always to `True` if the app should be restarted if it ends without
     raising an error.

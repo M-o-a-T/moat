@@ -35,7 +35,7 @@ from .stream import HandlerStream
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import Msg, MsgSender
+    from moat.lib.rpc import Msg
 
     from .base import BaseMsgHandler
 
@@ -60,7 +60,7 @@ class CmdStream(HandlerStream):
 
     def __init__(
         self,
-        cmd: MsgSender | None,
+        cmd: BaseMsgHandler | None,
         msg: Msg,
         debug: str | None = None,
         **kw,

@@ -17,7 +17,7 @@ __all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import Auth, MsgSender
+    from moat.lib.rpc import Auth, BaseMsgHandler
     from moat.lib.stream import BaseMsg
 
     from collections.abc import Awaitable
@@ -31,7 +31,7 @@ class MsgStream(HandlerStream):
 
     """
 
-    def __init__(self, handler: MsgSender, stream: BaseCmdMsg):
+    def __init__(self, handler: BaseMsgHandler, stream: BaseCmdMsg):
         self.__stream = stream
         super().__init__(handler)
 
@@ -198,7 +198,7 @@ class BaseCmdMsg(BaseCmd):
         """
         Start the MsgStream.
         """
-        root = self.root
+        root = self.root.sender
         lprefix = self.cfg.get("prefix", {}).get("recv", ())
         if lprefix:
             root = root.sub_at(lprefix)
@@ -208,7 +208,7 @@ class BaseCmdMsg(BaseCmd):
         else:
             await self.process(root)
 
-    async def process(self, root: MsgSender):
+    async def process(self, root: BaseMsgHandler):
         """
         Low-level handler to run the message processor.
 

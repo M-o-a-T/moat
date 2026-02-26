@@ -6,7 +6,7 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.link.cmd.schema
+.. automodule:: moat.link.schema._main
    :members:
    :undoc-members:
    :show-inheritance:

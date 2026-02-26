@@ -150,6 +150,7 @@ class LinkCommon(CmdCommon):
 
     protocol_version: int = -1
     name: str
+    _id: str
     server_name: str = None
     is_server: bool = False
     _sender: MsgSender
@@ -164,6 +165,7 @@ class LinkCommon(CmdCommon):
             name = cfg.get("client_id")
             if name is None:
                 name = "_" + gen_ident(12, alphabet=al_unique)
+        self._id = name
         self.name = name
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
@@ -191,7 +193,7 @@ class LinkCommon(CmdCommon):
 
     @property
     def id(self):  # noqa:D102
-        return self.name
+        return self._id
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         async with self._connect_one(self._port) as hdl:
@@ -204,9 +206,14 @@ class LinkCommon(CmdCommon):
     @asynccontextmanager
     async def _connect_one(self, remote: dict | str, data: dict | None = None) -> MsgSender:
         auth_out = []
+        rpc_auth_modes = ["anon"]
+        rpc_auth_data = {}
         if isinstance(remote, dict):
             with suppress(KeyError):
-                auth_out.append(TokenAuth(data["auth"]["token"]))
+                token = data["auth"]["token"]
+                auth_out.append(TokenAuth(token))
+                rpc_auth_modes.insert(0, "token")
+                rpc_auth_data["token"] = token
             conn_ = TCPConn(
                 self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger
             )
@@ -214,7 +221,14 @@ class LinkCommon(CmdCommon):
             conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
 
         auth_out.append(AnonAuth())
-        self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
+        self._hello = Hello(
+            me=self.name,
+            me_server=self.is_server,
+            auth_out=auth_out,
+            rpc_auth_modes=tuple(rpc_auth_modes),
+            rpc_auth_data=rpc_auth_data,
+            rpc_auth_server=False,
+        )
         yielded = False
 
         async with conn_ as conn:
@@ -1049,11 +1063,11 @@ class Link(LinkCommon, CtxObj):
 
     @property
     def _ping_path(self):
-        return P("run.ping.id") / self.name
+        return P("run.ping.id") / self.id
 
     @property
     def _id_path(self):
-        return P("run.id") / self.name
+        return P("run.id") / self.id
 
     async def _send_id(self):
         data = dict(

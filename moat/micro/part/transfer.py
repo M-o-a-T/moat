@@ -9,7 +9,7 @@ from __future__ import annotations
 from moat.util import Queue, QueueFull, combine_dict
 from moat.lib.micro import Event, L, TaskGroup, every_ms, idle, is_async, log, ticks_ms
 from moat.lib.path import Path
-from moat.lib.rpc import BaseCmd
+from moat.lib.rpc import BaseCmd, RemoteError
 
 from typing import TYPE_CHECKING
 
@@ -98,6 +98,9 @@ class _Step:
         if p is not None:
             self.p = trans.root.sub_at(p)
 
+    def __repr__(self):
+        return f"‹TS:{self.trans.path / self.id}›"
+
     async def run(self) -> None:
         if self.p is not None:
             await self.p.rdy_()
@@ -157,7 +160,10 @@ class _Step:
                     a = tuple(a) + self.a
             if self.kw:
                 kw = combine_dict(kw, self.kw)
-            msg = await self.p.cmd((), *a, **kw)
+            try:
+                msg = await self.p.cmd((), *a, **kw)
+            except Exception as exc:
+                raise RemoteError(f"{self}: {exc}") from exc
 
             self.last_a = msg.args
             self.last_kw = msg.kw

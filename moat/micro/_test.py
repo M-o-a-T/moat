@@ -64,7 +64,7 @@ class MpyBuf(ProcessBuf):
         if root is None:
             root = temp_dir.get() / "root"
         else:
-            root = Path(root).absolute()
+            root = Path(root).absolute()  # noqa: ASYNC240, RUF100 Test only
         lib = root / "stdlib"
         lib2 = root / "lib"
         with suppress(FileExistsError):
@@ -74,7 +74,7 @@ class MpyBuf(ProcessBuf):
         with suppress(FileExistsError):
             lib2.mkdir()
         with suppress(FileExistsError):
-            (root / "tests").symlink_to(Path("tests").absolute())
+            (root / "tests").symlink_to(Path("tests").absolute())  # noqa: ASYNC240, RUF100 Test only
 
         std = (upy / "lib/micropython-lib/python-stdlib").absolute()
         ustd = (upy / "lib/micropython-lib/micropython").absolute()
@@ -86,11 +86,11 @@ class MpyBuf(ProcessBuf):
             else:
                 raise FileNotFoundError(std / req)
 
-        aio = Path("lib/micropython/extmod/asyncio").absolute()
+        aio = Path("lib/micropython/extmod/asyncio").absolute()  # noqa: ASYNC240, RUF100 Test only
         with suppress(FileExistsError):
             (lib / "asyncio").symlink_to(aio)
 
-        libp = []
+        libp = [lib, lib2]
         for p in moat.micro.__path__:
             p = Path(p) / "_embed"  # noqa:PLW2901
             if p.exists():
@@ -100,7 +100,7 @@ class MpyBuf(ProcessBuf):
         libp.append(".frozen")
 
         self.env = {
-            "MICROPYPATH": os.pathsep.join(str(x) for x in (lib, lib2, *libp)),
+            "MICROPYPATH": os.pathsep.join(str(x) for x in libp),
         }
         self.cwd = root
 
@@ -112,8 +112,8 @@ class MpyBuf(ProcessBuf):
             with (root / "moat.lrg").open("wb") as f:
                 pass
 
-        rlink(libp[0] / "boot.py", root / "boot.py")
-        rlink(libp[0] / "main_unix.py", root / "main.py")
+        rlink(libp[2] / "boot.py", root / "boot.py")
+        rlink(libp[2] / "main_unix.py", root / "main.py")
         self.argv = [
             # "strace", "-s300", "-o/tmp/mpy.log",
             pre / "build" / ("mpy-unix" + ("-dup" if dupterm else "")) / "micropython",

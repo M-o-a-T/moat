@@ -1,4 +1,4 @@
-"""Tests for moat.link.cmd.schema."""
+"""Tests for moat.link.schema."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from io import StringIO
 
 from moat.util import attrdict
 from moat.lib.path import P
-from moat.link.cmd import schema as schema_cmd
+from moat.link.schema import _main as schema_cmd
 
 pytestmark = pytest.mark.anyio
 

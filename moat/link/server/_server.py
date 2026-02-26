@@ -51,7 +51,7 @@ from moat.lib.path import (
     Root,
 )
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
-from moat.link.auth import AnonAuth
+from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
 from moat.link.exceptions import ClientError, OutOfDateError
@@ -219,7 +219,10 @@ class ServerClient(LinkCommon):
             them=self.name,
             me=self.server.name,
             me_server=True,
-            auth_in=[AnonAuth()],
+            auth_in=[TokenAuth(*self.server.tokens), AnonAuth()],
+            rpc_auth_modes=("token", "anon"),
+            rpc_auth_data={"token": self.server.tokens},
+            rpc_auth_server=True,
         )
         async with (
             anyio.create_task_group() as self.tg,
@@ -2094,7 +2097,14 @@ class Server(MsgHandler):
         """
         "Local subcommand redirect for 'cl'"
         name = rcmd.pop()
-        cl = self._clients[name]
+        try:
+            cl = self._clients[name]
+        except KeyError:
+            for cl in self._clients.values():
+                if f"{cl.prefix}_{cl.client_nr}" == name:
+                    break
+            else:
+                raise
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:

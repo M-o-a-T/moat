@@ -7,11 +7,10 @@ This file isn't just for agents …
 - Use 'beads' for tracking.
   - 'bd list --label foo --ready --json': list issues
   - 'bd show --json ID': examine single issue
-  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'bd create --priority P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
   - 'bd dep add ID-task ID-blocker': add relationship
   - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
   - 'bd close --reason STRING'
-  - 'bd sync': sync tracker state with git
 
 - Conventions:
   - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems
@@ -22,7 +21,7 @@ This file isn't just for agents …
 The purpose of issues is to remember things to do.
 Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
-The issue tracker cannot run inside a sandbox.
+`bd` cannot run in a sandbox.
 
 ## Project Structure & Modules
 
@@ -58,20 +57,28 @@ The issue tracker cannot run inside a sandbox.
 
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
-- Use `[async] with (a,b,c)` instead of nested `[a]sync with` statements.
-  - Exception: MicroPython needs a single line instead of parentheses.
-    Use backslash continuation, disable reformatting for long lines.
+
+- In `moat.lib` and `moat.micro`, do not use syntax that doesn't work with
+  MicroPython. Specifically:
+  - `(foo,bar,*baz)` list expansion
+  - `with (x,y)`
+  - def foo(bar,/) positional-only arguments
+
+- Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
+  from submodules. Exception: `TYPE_CHECKING` blocks.
 
 ### Typing
 
 - MoaT does its type checking with "ty".
+- Use "ty check --output-format github".
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
 - Only add type:ignore comments when (a) you see an actual error from "ty",
   *and* (b) you thought hard and determined that the error cannot be fixed in
   another way.
-- This also applies to `cast` expressions.
-- Do not type-check function parameters. That's what `ty` is for.
+- This also applies to `cast` expressions and the "Any" catch-all.
+- Do not type-check data explicitly. That's what `ty` is for.  If that's
+  not possible, duck typing (or the failure thereof) will raise a `TypeError`.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
 - After a module typechecks, add its files to the tool.ty.src.include list in
@@ -161,13 +168,13 @@ Work is NOT complete until `git push` succeeds.
    Example: "Fix moat-abc: wrangled the zumblicator"
    Add a short explanation of the change if warranted, but
    DO NOT mention implementation details, esp. not if they are obvious
-   when reading the changelog.
+   when reading the diff.
 1. **Update issue status** (if you're working on one):
    Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
 1. **Push to remote**:
-   - run `git push`
+   - run `git push intern HEAD:main`
    - If there are conflicts,
      - git pull --no-edit
      - resolve merge conflicts, if any
@@ -177,8 +184,3 @@ Work is NOT complete until `git push` succeeds.
 However, if a git push/pull command fails with a permission error, STOP:
 the problem is a missing SSH key. The user needs to re-add the key before
 you can continue.
-
-### Mandatory Rules
-
-- Work is NOT complete until `git push` succeeds
-- If push fails, pull + resolve + retry until it succeeds

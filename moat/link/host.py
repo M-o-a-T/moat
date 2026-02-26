@@ -589,5 +589,8 @@ class ServiceMon(HostList):
         except KeyError:
             self.hostdown[path] = self.cfg.timeout.restart.error
         else:
-            await self._err(host, path, "flapping", msg)
+            if msg is not None and msg.get("up", False):
+                await self._err(host, path, "flapping", msg)
+            else:
+                self.hostdown[path] = self.cfg.timeout.restart.error
         await super().drop_path(host, path)

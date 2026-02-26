@@ -46,6 +46,8 @@ from typing import TYPE_CHECKING, cast, overload
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
+    from moat.lib.path import PathElem
+
     from .base import OptDict
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
@@ -429,7 +431,7 @@ class Msg(MsgLink, MsgResult):
         return self._cmd
 
     @property
-    def rcmd(self) -> list[str]:
+    def rcmd(self) -> list[PathElem]:
         """
         Retrieve a reversed command
         """

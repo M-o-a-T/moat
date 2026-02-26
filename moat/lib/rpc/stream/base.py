@@ -37,7 +37,6 @@ from moat.lib.rpc import (
     Msg,
     MsgHandler,
     MsgLink,
-    MsgSender,
     ShortCommandError,
 )
 
@@ -54,7 +53,7 @@ if TYPE_CHECKING:
     from logging import Logger
 
     from moat.lib.path import PathElem
-    from moat.lib.rpc import OptDict
+    from moat.lib.rpc import BaseMsgHandler, OptDict
 
     from collections.abc import Sequence
     from typing import Any
@@ -139,7 +138,7 @@ class HandlerStream(MsgHandler):
     _tg: TaskGroup = None
     _id = 0
 
-    def __init__(self, sender: MsgSender | None, logger: Logger | None = None):
+    def __init__(self, sender: BaseMsgHandler | None, logger: Logger | None = None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)

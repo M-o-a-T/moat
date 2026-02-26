@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from moat.lib.stream import BaseMsg
     from moat.lib.stream.base import Buffer, MutBuffer
 
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
     from typing import Any, Protocol
 
     class _ConsoleMsgProto(Protocol):
@@ -130,7 +130,7 @@ class BaseCmdMsg(BaseCmd):
         """
         return {}
 
-    def auth_data_in(self, args: Sequence, data: dict) -> None:
+    def auth_data_in(self, args: Sequence, data: Mapping[str, Any]) -> None:
         """
         Data from the incoming auth message.
         """
@@ -150,7 +150,7 @@ class BaseCmdMsg(BaseCmd):
         role  # noqa:B018
         return {}
 
-    def auth_data_res_in(self, role: str, data: dict) -> None:
+    def auth_data_res_in(self, role: str, data: Mapping[str, Any]) -> None:
         """
         Data from the incoming auth acknowledgment.
 
@@ -209,7 +209,10 @@ class BaseCmdMsg(BaseCmd):
         """
         Start the MsgStream.
         """
-        root = self.root.sender
+        root0 = self.root
+        if root0 is None:
+            raise RuntimeError("Not attached")
+        root = root0.sender
         lprefix = self.cfg.get("prefix", {}).get("recv", ())
         if lprefix:
             root = cast(MsgSender, root.sub_at(lprefix))

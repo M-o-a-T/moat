@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.lib.micro import _TaskGroupProto as _TaskGroupType
     from moat.lib.path import PathElem
-    from moat.lib.rpc import BaseCmdMsg, Msg
+    from moat.lib.rpc import BaseCmdMsg, Msg, SubMsgSender
 
     from typing import Protocol
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
             parent: AuthCmdIn,
             idx: int,
             name: str,
-            remote: MsgSender,
+            remote: SubMsgSender,
         ) -> _SubAuthType: ...
 
 else:
@@ -317,7 +317,7 @@ class AuthCmdIn(BaseCmd):
                                 self,
                                 idx,
                                 name,
-                                cast(MsgSender, sdr.sub_at(Path.build((None, cfg.mode)))),
+                                cast("SubMsgSender", sdr.sub_at(Path.build((None, cfg.mode)))),
                             )
                             self.modes[name] = sub
 
@@ -428,7 +428,7 @@ class SubAuth(BaseCmd):
 
     cfg: attrdict
     parent: AuthCmdIn
-    remote: MsgSender
+    remote: SubMsgSender
 
     def __init__(
         self,
@@ -437,7 +437,7 @@ class SubAuth(BaseCmd):
         parent: AuthCmdIn,
         idx: int,
         name: str,
-        remote: MsgSender,
+        remote: SubMsgSender,
     ):
         super().__init__(cfg)
         self.idx = idx

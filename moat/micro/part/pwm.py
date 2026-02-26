@@ -14,6 +14,7 @@ from moat.lib.micro import (
     TaskGroup,
     TimeoutError,  # noqa:A004
     every_ms,
+    retry_ms,
     ticks_diff,
     ticks_ms,
     wait_for_ms,
@@ -291,7 +292,7 @@ class PWM(BaseCmd):
 
         remaining = t_ms
         last = ticks_ms()
-        async for value in every_ms(interval, p):
+        async for value in every_ms(interval, retry_ms(0, 10, p, _exc=ValueError)):
             now = ticks_ms()
             dt = ticks_diff(now, last)
             last = now

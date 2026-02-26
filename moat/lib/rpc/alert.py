@@ -17,9 +17,12 @@ from moat.lib.micro import AC_use, Event, Queue, TaskGroup, WouldBlock
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
+    from moat.lib.micro import _TaskGroupProto
     from moat.lib.rpc import Msg
 
     from collections.abc import Iterator
@@ -39,12 +42,13 @@ class Alert(Exception):
 
 
 class AlertIter:
-    q: Queue = None
-    xal: Iterator[tuple[tuple[type[Alert], Path], Alert]]
+    q: Queue | None = None
+    xal: Iterator[tuple[tuple[type[Alert], Path], Alert]] | None
 
     def __init__(self, ah: AlertHandler, s: bool | None):
         self.ah = ah
         self.s = s
+        self.xal = None
 
     async def __aenter__(self):
         if self.q is not None:
@@ -55,7 +59,9 @@ class AlertIter:
         return self
 
     async def __aexit__(self, *tb):
-        self.ah.q.discard(self.q)
+        q = self.q
+        if q is not None:
+            self.ah.q.discard(q)
         self.q = None
 
     def __aiter__(self):
@@ -76,7 +82,10 @@ class AlertIter:
 
         if a is None:
             try:
-                a, p, d = await self.q.get()
+                q = self.q
+                if q is None:
+                    raise RuntimeError("not started")
+                a, p, d = await q.get()
             except EOFError:
                 raise StopAsyncIteration  # noqa:B904,RUF100
         res = {"a": a, "p": p}
@@ -109,8 +118,7 @@ class AlertHandler(BaseCmd):
     the "rem" path so that the destination is known and unique.
     """
 
-    q: set[Queue] = None
-    m: dict = None
+    q: set[Queue]
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -125,7 +133,10 @@ class AlertHandler(BaseCmd):
     async def _rdr(self, p, evt):
         rem = p["rem"]
         al = p["al"]
-        async with self.root.cmd(Path.build(rem + al + ("r",))).stream_in() as it:
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        async with root.cmd(Path.build(rem + al + ("r",))).stream_in() as it:
             evt.set()
             async for res in it:
                 await self.cmd_w(a=res["a"], p=rem + res["p"], d=res.get("d", None))
@@ -133,12 +144,20 @@ class AlertHandler(BaseCmd):
     async def _start_mon(self):
         if (pl := self.cfg.get("mon", None)) is not None:
             if getattr(self, "tg", None) is None:
-                self.tg = await AC_use(self, TaskGroup())
+                self.tg = await AC_use(
+                    self,
+                    cast("AbstractAsyncContextManager[object]", TaskGroup()),
+                )
+            tg = cast("_TaskGroupProto", self.tg)
 
             evs = []
             for k, v in pl.items():
                 evt = Event()
-                self._mon[k] = await self.tg.spawn(self._rdr, v, evt)
+
+                async def _run(v=v, evt=evt) -> None:
+                    await self._rdr(v, evt)
+
+                self._mon[k] = await tg.spawn(_run)
                 evs.append(evt)
             for e in evs:
                 await e.wait()

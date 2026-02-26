@@ -9,6 +9,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.db.box.model import Box
+    from moat.db.label.model import Label
+
+    from typing import Any
+
 
 class ThingTyp(Base):
     "One kind of thing."
@@ -60,13 +68,16 @@ class Thing(Base):
     box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_thing_box"), nullable=True)
 
     thingtyp: Mapped[ThingTyp] = relationship(back_populates="things")
+    if TYPE_CHECKING:
+        container: Box | None
+        labels: set[Label]
 
     # possibly the location within its parent
     pos_x: Mapped[int] = mapped_column(nullable=True, comment="X position in parent")
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-    def dump(self):  # noqa: D102
+    def dump(self) -> dict[str, Any]:  # noqa: D102
         res = super().dump()
         res.pop("pos_x", None)
         res.pop("pos_y", None)

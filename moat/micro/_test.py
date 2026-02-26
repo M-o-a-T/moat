@@ -64,7 +64,7 @@ class MpyBuf(ProcessBuf):
         if root is None:
             root = temp_dir.get() / "root"
         else:
-            root = Path(root).absolute()
+            root = Path(root).absolute()  # noqa: ASYNC240, RUF100 Test only
         lib = root / "stdlib"
         lib2 = root / "lib"
         with suppress(FileExistsError):
@@ -74,7 +74,7 @@ class MpyBuf(ProcessBuf):
         with suppress(FileExistsError):
             lib2.mkdir()
         with suppress(FileExistsError):
-            (root / "tests").symlink_to(Path("tests").absolute())
+            (root / "tests").symlink_to(Path("tests").absolute())  # noqa: ASYNC240, RUF100 Test only
 
         std = (upy / "lib/micropython-lib/python-stdlib").absolute()
         ustd = (upy / "lib/micropython-lib/micropython").absolute()
@@ -86,7 +86,7 @@ class MpyBuf(ProcessBuf):
             else:
                 raise FileNotFoundError(std / req)
 
-        aio = Path("lib/micropython/extmod/asyncio").absolute()
+        aio = Path("lib/micropython/extmod/asyncio").absolute()  # noqa: ASYNC240, RUF100 Test only
         with suppress(FileExistsError):
             (lib / "asyncio").symlink_to(aio)
 

@@ -243,6 +243,10 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/db/__init__.py",
+    "moat/db/box/",
+    "moat/db/label/",
+    "moat/db/thing/",
     "moat/lib/broadcast/",
     "moat/lib/codec/",
     "moat/lib/diffiehellman/",

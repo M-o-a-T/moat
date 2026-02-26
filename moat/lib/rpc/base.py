@@ -548,8 +548,8 @@ class MsgHandler(Base, BaseMsgHandler):
         # Find a subcommand.
         scmd = rcmd.pop()
         if (sub := self.find_sub(scmd, pref)) is not None:
-            if isinstance(sub, BaseMsgHandler):
-                return await sub.handle(msg, rcmd)
+            sub = getattr(sub, "handle", sub)
+            sub = cast("Callable[[Msg, list[PathElem]], Awaitable[None]]", sub)
             return await sub(msg, rcmd)
 
         if is_rdy:

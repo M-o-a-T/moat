@@ -25,6 +25,7 @@ dependencies = [
     "asyncvictoria ~= 0.7.0",
     "asyncwebsockets",
     "cffi",
+    "fpdf2",
     "pygit",
     "httpx",
     "jmespath",

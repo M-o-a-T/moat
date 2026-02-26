@@ -9,11 +9,16 @@ from smbus3 import SMBus, i2c_msg
 from moat.lib.micro import Lock, to_thread
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
+
+    from typing import Any, Protocol
+
+    class _I2CWriteRes(Protocol):
+        len: int
 
 
 class Cmd(BaseCmd):
@@ -35,7 +40,7 @@ class Cmd(BaseCmd):
         )
     )
 
-    _bus = None
+    _bus: SMBus | None = None
 
     def __init__(self, cfg: dict):
         super().__init__(cfg)
@@ -75,14 +80,21 @@ class Cmd(BaseCmd):
 
     async def cmd_rd(self, i, n=16) -> bytes:
         "read @n bytes from bus @cd at address @i"
-        return bytes(self._bus.i2c_rd(i, n))
+        bus = self._bus
+        if bus is None:
+            raise RuntimeError("No bus")
+        return bytes(bus.i2c_rd(i, n))
 
     doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
 
     async def cmd_wr(self, i: int, buf: bytes) -> int:
         "write @buf to bus @cd at address @i"
+        bus = self._bus
+        if bus is None:
+            raise RuntimeError("No bus")
         async with self._lock:
-            return (await to_thread(self._bus.i2c_wr, i, list(buf))).len
+            res = cast("_I2CWriteRes", await to_thread(bus.i2c_wr, i, list(buf)))
+            return res.len
 
     doc_wrrd = dict(
         _d="write+read",
@@ -92,21 +104,25 @@ class Cmd(BaseCmd):
         _r="int|bytes:nbytes short-written|read result",
     )
 
-    async def cmd_wrrd(self, i, buf, n=16) -> int:
+    async def cmd_wrrd(self, i, buf, n=16) -> bytes:
         """
         write @buf to bus @cd at address @i, then read @n bytes.
 
         Returns -x if only x bytes could be written.
         """
 
+        bus = self._bus
+        if bus is None:
+            raise RuntimeError("No bus")
+
         def _run():
-            bus = self._bus
             wr = i2c_msg.write(i, list(buf))
             rd = i2c_msg.read(i, n)
 
             bus.i2c_rdwr(wr, rd)
+            return rd
 
-        async with self._lock():
+        async with self._lock:
             rd = await to_thread(_run)
         return bytes(rd)
 
@@ -118,23 +134,27 @@ class Cmd(BaseCmd):
 
         Returns: the list of working addresses.
         """
+        bus = self._bus
+        if bus is None:
+            raise RuntimeError("No bus")
         res = []
         for i in range(0x08, 0x78):
             try:
                 if i >> 4 in (3, 5):
-                    await to_thread(self._bus.read_byte, i)
+                    await to_thread(bus.read_byte, i)
                 else:
-                    await to_thread(self._bus.write_quick, i)
+                    await to_thread(bus.write_quick, i)
             except OSError:
                 pass
             else:
                 res.append(i)
         return res
 
-    async def handle(self, msg: Msg, rpath: list[PathElem]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> Any:
         """
         Intercept the bus address: ``bus:33.wr(x)`` ≍ ``bus.wr(33,x)``.
         """
-        if rpath and isinstance(rpath[-1], int):
-            msg.args.insert(0, rpath.pop())
-        await super().handle(msg, rpath)
+        prefix  # noqa:B018
+        if rcmd and isinstance(rcmd[-1], int):
+            msg.args_l.insert(0, rcmd.pop())
+        return await super().handle(msg, rcmd)

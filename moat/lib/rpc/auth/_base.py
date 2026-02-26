@@ -9,14 +9,40 @@ from moat.lib.path import P, Path
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.util import attrdict
+    from moat.lib.micro import _TaskGroupProto as _TaskGroupType
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseCmdMsg, Msg
 
-    from collections.abc import Awaitable
+    from typing import Protocol
+
+    class _SubAuthType(Protocol):
+        idx: int
+        name: str
+        cfg: attrdict
+
+        async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None: ...
+
+        async def run(self) -> None: ...
+
+    class _SubAuthFactory(Protocol):
+        def __call__(
+            self,
+            cfg: attrdict,
+            auth: dict | None,
+            parent: AuthCmdIn,
+            idx: int,
+            name: str,
+            remote: MsgSender,
+        ) -> _SubAuthType: ...
+
+else:
+    _TaskGroupType = object
+    _SubAuthType = object
+    _SubAuthFactory = object
 
 
 class AuthError(RuntimeError):
@@ -58,18 +84,19 @@ class Auth(BaseMsgHandler):
     This is a support class for {py:cls}`~moat.lib.stream.BaseCmdMsg`.
     """
 
+    cfg: attrdict
     parent: BaseCmdMsg
-    modes: dict[str, SubAuth]  # our SubAuth instances
+    modes: dict[str, object]  # our auth instances
     base_root: MsgSender  # dest for local commands; cfg.path gets added to this
-    tg: TaskGroup | None = None
+    tg: object | None = None
     auth: attrdict | None
     is_server: bool
-    ok: Exception | SubAuth | None = None
+    ok: Exception | object | None = None
 
-    _auth_root: BaseMsgHandler
-    _auth_done: Event
+    _auth_root: BaseMsgHandler | None
+    _auth_done: Event | None
 
-    def __init__(self, cfg: dict, parent: BaseCmdMsg):
+    def __init__(self, cfg: attrdict, parent: BaseCmdMsg):
         # super().__init__(cfg)
         self.cfg = cfg
         self.parent = parent
@@ -78,9 +105,10 @@ class Auth(BaseMsgHandler):
         self._auth_root = None
         self._auth_done = Event()
 
-    def auth_done(self, root: BaseMsgHandler):
-        self._auth_done.set()
-        self._auth_done = None
+    def auth_done(self, root: BaseMsgHandler | None):
+        if self._auth_done is not None:
+            self._auth_done.set()
+            self._auth_done = None
         self._auth_root = root
 
     async def wait_done(self):
@@ -95,7 +123,7 @@ class Auth(BaseMsgHandler):
         if self.ok is None:
             self.ok = CancelledError()
         if self.tg is not None:
-            self.tg.cancel()
+            cast(_TaskGroupType, self.tg).cancel()
         self._auth_root = root
 
     async def process(self, root: MsgSender):
@@ -139,16 +167,19 @@ class Auth(BaseMsgHandler):
             finally:
                 del self.parent.stream_owner_obj_
 
-    def accept(self, by: SubAuth):
+    def accept(self, by: object):
+        by = cast(_SubAuthType, by)
         if isinstance(self.ok, Exception):
             return  # too late
 
-        if self.ok is None or self.ok.idx > by.idx:
+        if self.ok is None or cast(_SubAuthType, self.ok).idx > by.idx:
             self.ok = by
 
-    def deny(self, by: SubAuth):
+    def deny(self, by: object):
+        by = cast(_SubAuthType, by)
         self.ok = AuthDenied(self.cfg.modes[by.idx].mode)
-        self.tg.cancel()
+        if self.tg is not None:
+            cast(_TaskGroupType, self.tg).cancel()
 
     async def _err(self, exc):
         "auth error from remote"
@@ -175,7 +206,7 @@ class _WithAuth(BaseMsgHandler):
     def __init__(self, wrapped: BaseCmdMsg):
         self.wrapped = wrapped
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         "Call the wrapped handler when it's ready"
         if L:
             await self.wrapped.wait_ready()
@@ -190,9 +221,10 @@ class _WithAuth(BaseMsgHandler):
 class AuthCmdIn(BaseCmd):
     """Handles the incoming-message side of the auth protocol."""
 
+    cfg: attrdict
     parent: Auth
     msg_in: Event | Msg
-    msg_out: Event | tuple[list, dict]
+    msg_out: Event | Exception | object
     p_version: int | None = None  # protocol version
 
     def __init__(self, parent: Auth):
@@ -201,7 +233,8 @@ class AuthCmdIn(BaseCmd):
         self.msg_out = Event()
         super().__init__(parent.cfg)
 
-    async def _run(self, s_a: SubAuth):
+    async def _run(self, s_a: object):
+        s_a = cast(_SubAuthType, s_a)
         timeout = self.cfg.get("timeout")
         if not timeout:
             return await s_a.run()
@@ -228,15 +261,15 @@ class AuthCmdIn(BaseCmd):
                 P(":n"), vers, self.parent.is_server, name, modes, **cmd.auth_data_out()
             )
         except AuthVersionError as err:
-            vers = err.args
-            if vers[1] < VERS_MIN or vers[0] > VERS_MAX:
+            v_min, v_max = err.args
+            if v_max < VERS_MIN or v_min > VERS_MAX:
                 raise
             if self.p_version is not None:
-                vers = min(vers, self.p_version)
-            self.p_version = vers
+                v_max = min(v_max, self.p_version)
+            self.p_version = v_max
             res = await sdr.cmd(
                 Path.build((None,)),
-                vers,
+                v_max,
                 self.parent.is_server,
                 name,
                 modes,
@@ -249,18 +282,27 @@ class AuthCmdIn(BaseCmd):
             log("AuthResIn ??: %r", res.args)
         cmd.auth_data_res_in(res[0], res.kw)
 
-    async def task(self) -> MsgSender:
+    async def task(self) -> None:
         try:
             async with ungroup, TaskGroup() as tg_send:
                 sdr = MsgSender(_WithAuth(self.parent.parent))
                 self.modes = {}
-                tg_send.start_soon(self._send_cmd, sdr)
+
+                async def _send_cmd() -> None:
+                    await self._send_cmd(sdr)
+
+                await tg_send.spawn(_send_cmd)
 
                 async with TaskGroup() as tg:
                     self.parent.tg = tg
                     try:
-                        await self.msg_in.wait()
-                        modes = set(self.msg_in[3])
+                        msg_in = self.msg_in
+                        if isinstance(msg_in, Event):
+                            await msg_in.wait()
+                            msg_in = self.msg_in
+                        if isinstance(msg_in, Event):
+                            raise RuntimeError("No auth request")  # noqa:TRY004
+                        modes = set(msg_in[3])
 
                         for idx, cfg in enumerate(self.cfg.modes):
                             name = cfg.get("name", cfg.mode)
@@ -269,17 +311,20 @@ class AuthCmdIn(BaseCmd):
                             if name not in modes:
                                 continue  # not accepted by the other side
 
-                            sub = get_auth(cfg.mode)(
+                            sub = cast(_SubAuthFactory, get_auth(cfg.mode))(
                                 cfg,
-                                self.parent.auth.get(name),
-                                self.parent,
+                                None if self.parent.auth is None else self.parent.auth.get(name),
+                                self,
                                 idx,
                                 name,
-                                sdr.sub_at(Path.build((None, cfg.mode))),
+                                cast(MsgSender, sdr.sub_at(Path.build((None, cfg.mode)))),
                             )
                             self.modes[name] = sub
 
-                            tg.start_soon(self._run, sub)
+                            async def _run_sub(sub: object = sub) -> None:
+                                await self._run(sub)
+
+                            tg.start_soon(_run_sub)
                     finally:
                         self.parent.tg = None
 
@@ -295,6 +340,8 @@ class AuthCmdIn(BaseCmd):
 
                 # Unblock the remote ``:n`` reply before waiting for ``_send_cmd``
                 # to finish when ``tg_send`` exits.
+                if not isinstance(self.msg_out, Event):
+                    raise RuntimeError("AlreadySent")  # noqa:TRY004
                 self.msg_out.set()
                 self.msg_out = ok
 
@@ -302,10 +349,11 @@ class AuthCmdIn(BaseCmd):
                     # forward the exception to the remote side
                     self.parent.auth_done(None)
                 else:
+                    ok = cast(_SubAuthType, ok)
                     p = ok.cfg.get("path")
                     sdr = self.parent.base_root.sender
                     if p:
-                        sdr = sdr.sub_at(p)
+                        sdr = cast(MsgSender, sdr.sub_at(p))
                     self.parent.auth_done(sdr)
 
         except AuthNoRemote:
@@ -341,16 +389,29 @@ class AuthCmdIn(BaseCmd):
         await self.msg_out.wait()
         if isinstance(self.parent.ok, Exception):
             raise self.parent.ok  # will be forwarded to the remote side
-        await msg.result(self.parent.ok.name, **cmd.auth_data_res_out(self.parent.ok.name))
+        ok = self.parent.ok
+        if ok is None:
+            raise AuthDenied("No auth")
+        ok = cast(_SubAuthType, ok)
+        await msg.result(ok.name, **cmd.auth_data_res_out(ok.name))
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]):
+    def accept(self, by: object) -> None:
+        """Forward auth acceptance to the parent controller."""
+        self.parent.accept(by)
+
+    def deny(self, by: object) -> None:
+        """Forward auth rejection to the parent controller."""
+        self.parent.deny(by)
+
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
         """Handler for incoming messages"""
+        prefix  # noqa:B018
         if len(rcmd) and rcmd[-1] is None:
             if len(rcmd) == 1:
                 return await msg.call_stream(self._handle_cmd)
             rcmd.pop()
             name = rcmd.pop()
-            return await self.modes[name].handle(msg, rcmd)
+            return await cast(_SubAuthType, self.modes[name]).handle(msg, rcmd)
 
         pad = self.parent._auth_done  # noqa:SLF001
         if pad is not None:
@@ -364,6 +425,10 @@ class AuthCmdIn(BaseCmd):
 
 class SubAuth(BaseCmd):
     "base class for individual auth methods"
+
+    cfg: attrdict
+    parent: AuthCmdIn
+    remote: MsgSender
 
     def __init__(
         self,
@@ -399,7 +464,7 @@ class SubAuth(BaseCmd):
         self.parent.deny(self)
 
 
-def get_auth(mode: str) -> SubAuth:
+def get_auth(mode: str) -> object:
     """
     Loads and initializes the named sub-auth.
     """

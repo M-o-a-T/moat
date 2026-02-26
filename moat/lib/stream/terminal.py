@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import anyio
 import errno
 import os
 import struct
 import termios
+from anyio.to_thread import run_sync
 from fcntl import ioctl
 
 from moat.lib.repl import tcgetattr, tcsetattr
@@ -107,11 +107,11 @@ class FilenoTerm(FilenoBuf, TermBuf):
 
     async def set_raw(self) -> None:
         """switch to raw mode"""
-        return await self.tset(self.__raw_termstate)
+        await self.tset(self.__raw_termstate)
 
     async def set_orig(self) -> None:
         """switch to previous mode"""
-        return await self.tset(self.__orig_termstate)
+        await self.tset(self.__orig_termstate)
 
     async def tget(self) -> TermState:
         """return current terminfo"""
@@ -127,7 +127,7 @@ class FilenoTerm(FilenoBuf, TermBuf):
 
         """
         try:
-            await anyio.to_thread.run_sync(tcsetattr, self.rfd, termios.TCSADRAIN, state)
+            await run_sync(tcsetattr, self.rfd, termios.TCSADRAIN, state)
         except termios.error as te:
             if te.args[0] not in ignore:
                 raise
@@ -157,5 +157,7 @@ class FilenoTerm(FilenoBuf, TermBuf):
 
     async def rdp(self) -> bytearray:
         """read pending data, without blocking"""
+        if FIONREAD is None:
+            return bytearray()
         amount = struct.unpack("i", ioctl(self.rfd, FIONREAD, b"\0\0\0\0"))[0]
-        return os.read(self.rfd, amount)
+        return bytearray(os.read(self.rfd, amount))

@@ -9,16 +9,19 @@ import fcntl
 import os
 import sys
 import termios
+from anyio.abc import ByteStream
+from anyio.streams.stapled import StapledByteStream
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
 from moat.lib.micro import AC_use
 from moat.lib.stream import BaseBuf
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, Any, cast  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.rpc import SubMsgSender
+    from moat.lib.stream.base import Buffer, MutBuffer
 
 
 class ProcessDeadError(RuntimeError):
@@ -30,7 +33,7 @@ class AnyioBuf(BaseBuf):
     Adapts an anyio stream to MoaT.
     """
 
-    async def stream(self) -> anyio.abc.ByteStream:
+    async def stream(self) -> ByteStream:
         """
         Create the stream to use.
 
@@ -39,16 +42,16 @@ class AnyioBuf(BaseBuf):
         """
         raise NotImplementedError(f"Override {self.__class__.__name__}.stream")
 
-    async def wr(self, buf) -> int:
+    async def wr(self, data: Buffer) -> int:
         "basic send"
         try:
-            await self.s.send(buf)
+            await self.s.send(data)
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             raise EOFError from None
         else:
-            return len(buf)
+            return len(data)
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         "basic receive-into"
         try:
             res = await self.s.receive(len(buf))
@@ -69,7 +72,7 @@ class FilenoBuf(BaseBuf):
     wfd: int
     rfl: int
     wfl: int
-    term: bytes
+    term: list[Any] | None
 
     def __init__(self, cfg, fd: int, wfd: int | None = None):
         super().__init__(cfg)
@@ -77,9 +80,9 @@ class FilenoBuf(BaseBuf):
         self.wfd = fd if wfd is None else wfd
         self.term = None
 
-    async def stream(self) -> anyio.abc.ByteStream:
+    async def stream(self) -> ByteStream:
         "Dummy here"
-        pass
+        raise NotImplementedError("Dummy")
 
     async def setup(self):
         "Change to nonblocking and raw"
@@ -98,8 +101,9 @@ class FilenoBuf(BaseBuf):
         else:
             new = self.term[:]
             new[3] = new[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
-            new[6][termios.VMIN] = 1
-            new[6][termios.VTIME] = 0
+            cc = cast("list[int]", new[6])
+            cc[termios.VMIN] = 1
+            cc[termios.VTIME] = 0
             termios.tcsetattr(self.rfd, termios.TCSANOW, new)
 
     async def teardown(self):
@@ -110,19 +114,20 @@ class FilenoBuf(BaseBuf):
         if self.term is not None:
             termios.tcsetattr(self.rfd, termios.TCSANOW, self.term)
 
-    async def wr(self, buf) -> int:
+    async def wr(self, data: Buffer) -> int:
         "basic send"
-        on = len(buf)
-        while n := len(buf):
+        on = len(data)
+        while n := len(data):
             await anyio.wait_writable(self.wfd)
-            nn = os.write(self.wfd, buf)
+            nn = os.write(self.wfd, data)
             if nn <= 0:
                 raise OSError
             if nn == n:
                 return on
-            buf = memoryview(buf)[nn:]
+            data = memoryview(data)[nn:]
+        raise EOFError
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         "basic receive-into"
         await anyio.wait_readable(self.rfd)
         bf = os.read(self.rfd, len(buf))
@@ -130,7 +135,7 @@ class FilenoBuf(BaseBuf):
         return len(bf)
 
 
-class RemoteBufAnyio(anyio.abc.ByteStream):
+class RemoteBufAnyio(ByteStream):
     """
     Adapts a MoaT buf stream to a remote buffer read/write
 
@@ -144,9 +149,9 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
         "forward to ``.rd``"
         return await self.disp.rd(n=max_bytes)
 
-    async def send(self, buf):
+    async def send(self, item: bytes) -> None:
         "forward to ``.wr``"
-        await self.disp.wr(b=buf)
+        await self.disp.wr(b=item)
 
     async def aclose(self):
         "no-op"
@@ -156,7 +161,7 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
         raise NotImplementedError("EOF")
 
 
-class BufAnyio(anyio.abc.ByteStream):
+class BufAnyio(ByteStream):
     """
     Adapts a MoaT Buf stream to an anyio bytestream.
     """
@@ -184,9 +189,9 @@ class BufAnyio(anyio.abc.ByteStream):
             b = memoryview(b)
             return b[:r]
 
-    async def send(self, buf):
+    async def send(self, item: bytes) -> None:
         "forward to ``.wr``"
-        await self.s.wr(buf)
+        await self.s.wr(item)
 
 
 class SingleAnyioBuf(AnyioBuf):
@@ -217,7 +222,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
     subclass's `setup` method. Configuration can then override them.
     """
 
-    proc: anyio.Process = None
+    proc: Any = None
     exec: str | None = None
     cwd: str | None = None
     argv: list[str] | None = None
@@ -226,7 +231,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
     def __init__(self, cfg, executable: str | None = None, **kw):
         super().__init__(cfg)
         kw.setdefault("stderr", sys.stderr)
-        self.kw = kw
+        self.kw: dict[str, Any] = dict(kw)
         self.exec = executable
 
     def open_args(self, dbg: int = 0):
@@ -236,9 +241,11 @@ class ProcessBuf(CtxObj, AnyioBuf):
         """
         # Ugh, anyio doesn't accept 'executable'
         if self.exec is not None:
+            if self.argv is None:
+                raise ValueError("Missing argv")
             # self.kw["executable"] = self.exec
             self.argv[0] = self.exec
-        elif "/" in (a0 := str(self.argv[0])):  # noqa:F841 # a0 unused
+        elif self.argv is not None and "/" in (a0 := str(self.argv[0])):  # noqa:F841
             # self.kw["executable"] = a0
             # self.argv[0] = a0.rsplit("/",1)[1]
             pass
@@ -266,8 +273,10 @@ class ProcessBuf(CtxObj, AnyioBuf):
                 if dbg:
                     print(f"PID:{proc.pid}", file=sys.stderr)
                 try:
+                    if proc.stdin is None or proc.stdout is None:
+                        raise ProcessDeadError(f"{self} has no stdio pipe")
                     async with SingleAnyioBuf(
-                        anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout),
+                        StapledByteStream(proc.stdin, proc.stdout),
                     ) as s:
                         yield s
                     await proc.wait()

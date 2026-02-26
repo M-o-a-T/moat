@@ -17,7 +17,27 @@ from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.stream.base import Buffer, MutBuffer
+
     from collections.abc import Awaitable
+    from typing import Any, Protocol
+
+    class _LoopLinkProto(Protocol):
+        def xs(self, *, m: Any) -> Awaitable[None]: ...
+
+        def xr(self) -> Awaitable[Any]: ...
+
+        def xsb(self, *, m: Buffer | bytes) -> Awaitable[None]: ...
+
+        def xrb(self) -> Awaitable[Buffer | bytes]: ...
+
+        def xwr(self, *, b: Buffer) -> Awaitable[None]: ...
+
+        def xrd(self, *, n: int) -> Awaitable[Buffer | bytes]: ...
+
+        def xcwr(self, *, b: Buffer) -> Awaitable[None]: ...
+
+        def xcrd(self, *, n: int) -> Awaitable[Buffer | bytes]: ...
 
 
 temp_dir = ContextVar("temp_dir")
@@ -39,7 +59,7 @@ async def rpc_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None, **kw)
         cfg = combine_dict(cfg2, cfg, cls=attrdict)
 
     async with ctx_as(temp_dir, temp):
-        if isinstance(cfg.app, str):
+        if isinstance(cfg.get("app"), str):
             cfg = attrdict(app=cfg)
         if "rtc" in cfg:
             from moat.micro.rtc import RTC  # noqa:PLC0415
@@ -101,10 +121,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
     snd = send
 
     async def recv(self):  # pylint:disable=arguments-differ
-        if self._link is None:
+        link = self._link
+        if link is None or isinstance(link, anyio.Event):
             raise anyio.BrokenResourceError(self)
         try:
-            return await self._link.q_rd.receive()
+            return await link.q_rd.receive()
         except (
             anyio.ClosedResourceError,
             anyio.BrokenResourceError,
@@ -114,7 +135,7 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
 
     rcv = recv
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: MutBuffer) -> int:
         while True:
             if self._buf:
                 n = min(len(self._buf), len(buf))
@@ -123,10 +144,10 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
                 return n
             self._buf = await self.recv()
 
-    async def wr(self, buf) -> int:
-        n = len(buf)
+    async def wr(self, data: Buffer) -> int:
+        n = len(data)
         if self.loss:
-            b = bytearray(buf)
+            b = bytearray(data)
             loss = 1 - (1 - self.loss) ** (1 / len(b) / 2)
             # '1-loss' is the chance of not killing each single byte
             # that's required to not kill a message of size len(b)
@@ -141,14 +162,15 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
                         b[n] = b[n] ^ (1 << int(8 * random()))
                     n += 1
         else:
-            b = bytes(buf)
-        await self.send(bytes(buf), _loss=False)
+            b = bytes(data)
+        await self.send(b, _loss=False)
         return n
 
     async def teardown(self):
         await self.q_wr.aclose()
-        if self._link is not None and self._link is not self:
-            await self._link.q_rd.aclose()
+        link = self._link
+        if isinstance(link, Loopback) and link is not self:
+            await link.q_rd.aclose()
         await super().teardown()
 
 
@@ -164,7 +186,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
 
     # pylint:disable=abstract-method
 
-    _link = None
+    _link: _LoopLinkProto | None = None
 
     async def setup(self):
         p = self.cfg["path"]
@@ -172,40 +194,47 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
             raise TypeError(f"Need a path, not {p!r}")
         self._link = self.cfg._moat_cmd.root.sub_at(p)  # noqa:SLF001
 
-    def send(self, m) -> Awaitable[None]:
+    def _r(self) -> _LoopLinkProto:
+        link = self._link
+        if link is None:
+            raise RuntimeError("not set up")
+        return link
+
+    async def send(self, m: Any) -> Any:
         """Send message data."""
-        return self._link.xs(m=m)
+        return await self._r().xs(m=m)
 
-    def recv(self) -> Awaitable[None]:
+    async def recv(self) -> Any:
         """Read message data."""
-        return self._link.xr()
+        return await self._r().xr()
 
-    def snd(self, m) -> Awaitable[None]:
+    async def snd(self, m: Buffer | bytes) -> None:
         """Send block data."""
-        return self._link.xsb(m=m)
+        await self._r().xsb(m=m)
 
-    def rcv(self) -> Awaitable[bytes | bytearray]:
-        return self._link.xrb()
+    async def rcv(self) -> Buffer | bytes:
         """Read block data."""
+        return await self._r().xrb()
 
-    def wr(self, b: bytes | bytearray) -> Awaitable[None]:
+    async def wr(self, data: Buffer) -> int:
         """Send bytes."""
-        return self._link.xwr(b=b)
+        await self._r().xwr(b=data)
+        return len(data)
 
-    async def rd(self, b):
+    async def rd(self, buf: MutBuffer) -> int:
         """Read bytes."""
-        r = await self._link.xrd(n=len(b))
+        r = await self._r().xrd(n=len(buf))
         n = len(r)
-        b[:n] = r
+        buf[:n] = r
         return n
 
-    def cwr(self, b: bytes | bytearray | memoryview) -> Awaitable[int]:
+    async def cwr(self, b: Buffer) -> None:
         """Send bytes."""
-        return self._link.xcwr(b=b)
+        await self._r().xcwr(b=b)
 
     async def crd(self, b: bytearray) -> int:
         """Read bytes."""
-        r = await self._link.xcrd(n=len(b))
+        r = await self._r().xcrd(n=len(b))
         n = len(r)
         b[:n] = r
         return n

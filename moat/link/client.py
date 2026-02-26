@@ -150,6 +150,7 @@ class LinkCommon(CmdCommon):
 
     protocol_version: int = -1
     name: str
+    _id: str
     server_name: str = None
     is_server: bool = False
     _sender: MsgSender
@@ -164,6 +165,7 @@ class LinkCommon(CmdCommon):
             name = cfg.get("client_id")
             if name is None:
                 name = "_" + gen_ident(12, alphabet=al_unique)
+        self._id = name
         self.name = name
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
@@ -191,7 +193,7 @@ class LinkCommon(CmdCommon):
 
     @property
     def id(self):  # noqa:D102
-        return self.name
+        return self._id
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         async with self._connect_one(self._port) as hdl:
@@ -1061,11 +1063,11 @@ class Link(LinkCommon, CtxObj):
 
     @property
     def _ping_path(self):
-        return P("run.ping.id") / self.name
+        return P("run.ping.id") / self.id
 
     @property
     def _id_path(self):
-        return P("run.id") / self.name
+        return P("run.id") / self.id
 
     async def _send_id(self):
         data = dict(

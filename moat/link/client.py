@@ -67,6 +67,7 @@ if TYPE_CHECKING:
 
     from collections.abc import AsyncIterator, Awaitable
     from typing import Any, Literal
+    from types import CoroutineType
 
 
 class _Requeue(Exception):
@@ -177,7 +178,7 @@ class LinkCommon(CmdCommon):
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> Awaitable[None]:
+    def handle(self, msg, rpath, *add) -> CoroutineType[Any,Any,None]:
         """
         Message handler that intercepts incoming commands
         while authorization has not completed

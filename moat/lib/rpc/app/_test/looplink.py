@@ -57,29 +57,33 @@ class LoopLink(BaseCmd):
         )
     )
 
-    q_wm, q_wmr = None, None
-    q_wb, q_wbr = None, None
-    q_ws, q_wse = None, None
-    q_wc, q_wce = None, None
+    remote: SubMsgSender
 
-    # read queues
-    q_rmw, q_rm = None, None
-    q_rbw, q_rb = None, None
-    q_rse, q_rs = None, None
-    q_rce, q_rc = None, None
+    q_wm: MemoryObjectSendStream[Any]
+    q_wmr: MemoryObjectReceiveStream[Any]
+    q_wb: MemoryObjectSendStream[bytes]
+    q_wbr: MemoryObjectReceiveStream[bytes]
+    q_ws: bytearray
+    q_wse: anyio.Event
+    q_wc: bytearray
+    q_wce: anyio.Event
+
+    q_rmw: MemoryObjectSendStream[Any]
+    q_rm: MemoryObjectReceiveStream[Any]
+    q_rbw: MemoryObjectSendStream[bytes]
+    q_rb: MemoryObjectReceiveStream[bytes]
+    q_rse: anyio.Event
+    q_rs: bytearray
+    q_rce: anyio.Event
+    q_rc: bytearray
 
     async def setup(self):
         """Set up the queues based on usage config."""
         p = self.cfg.get("path", None)
         if isinstance(p, str):
             raise TypeError(f"Need a path, not {p!r}")
-        if p is None:
-            self.remote = None
-        else:
-            root = self.root
-            if root is None:
-                raise RuntimeError("Not attached")
-            self.remote = root.sub_at(p)
+        if p is not None:
+            self.remote = self.root.sub_at(p)
 
         u = self.cfg.get("usage", "")
         if "m" in u:
@@ -108,43 +112,31 @@ class LoopLink(BaseCmd):
 
     def cmd_s(self, m) -> Awaitable[None]:
         """Write to the message queue."""
-        if self.q_wm:
+        try:
             return self.q_wm.send(m)
-        else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return remote.xs(m=m)
+        except AttributeError:
+            return self.remote.xs(m=m)
 
     doc_xs = dict(_d="q write remote", _0="any:msg")
 
     def cmd_xs(self, m) -> Awaitable[None]:
         """Remotely write the message read queue."""
-        q = self.q_rmw
-        if q is None:
-            raise RuntimeError("No read queue")
-        return q.send(m)
+        return self.q_rmw.send(m)
 
     doc_r = dict(_d="q read", _r="any:msg")
 
     def cmd_r(self) -> Awaitable[Any]:
         """Read the message queue."""
-        if self.q_rm:
+        try:
             return self.q_rm.receive()
-        else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return remote.xr()
+        except AttributeError:
+            return self.remote.xr()
 
     doc_xr = dict(_d="q read remote", _r="any:msg")
 
     def cmd_xr(self) -> Awaitable[Any]:
         """Remotely read the message write queue."""
-        q = self.q_wmr
-        if q is None:
-            raise RuntimeError("No write queue")
-        return q.receive()
+        return self.q_wmr.receive()
 
     doc_mrw = BaseCmdBBM.doc_mrw
     stream_mrw = BaseCmdBBM.stream_mrw
@@ -155,43 +147,31 @@ class LoopLink(BaseCmd):
 
     def cmd_sb(self, m) -> Awaitable[None]:
         """Write to the block queue."""
-        if self.q_wb:
+        try:
             return self.q_wb.send(m)
-        else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return remote.xsb(m=m)
+        except AttributeError:
+            return self.remote.xsb(m=m)
 
     doc_xsb = dict(_d="b write remote", _r="bytes:msg")
 
     def cmd_xsb(self, m) -> Awaitable[None]:
         """Remotely write the block read queue."""
-        q = self.q_rbw
-        if q is None:
-            raise RuntimeError("No read queue")
-        return q.send(m)
+        return self.q_rbw.send(m)
 
     doc_rb = dict(_d="b read ", _0="bytes:msg")
 
     def cmd_rb(self) -> Awaitable[bytes]:
         """Read the byte queue."""
-        if self.q_rb:
+        try:
             return self.q_rb.receive()
-        else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return remote.xrb()
+        except AttributeError:
+            return self.remote.xrb()
 
     doc_xrb = dict(_d="b read remote", _0="bytes:msg")
 
     def cmd_xrb(self) -> Awaitable[bytes]:
         """Remotely read the block write queue."""
-        q = self.q_wbr
-        if q is None:
-            raise RuntimeError("No write queue")
-        return q.receive()
+        return self.q_wbr.receive()
 
     doc_brw = BaseCmdBBM.doc_brw
     stream_brw = BaseCmdBBM.stream_brw
@@ -202,67 +182,46 @@ class LoopLink(BaseCmd):
 
     async def cmd_wr(self, b) -> None:
         """Write to the byte queue."""
-        if self.q_wse is not None:
-            q_ws = self.q_ws
+        try:
             q_wse = self.q_wse
-            if q_ws is None or q_wse is None:
-                raise RuntimeError("No write queue")
-            q_ws.extend(b)
+        except AttributeError:
+            return await self.remote.xwr(b)
+        else:
+            self.q_ws.extend(b)
             q_wse.set()
             self.q_wse = anyio.Event()
-        else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return await remote.xwr(b)
 
     doc_xwr = dict(_d="s write remote", _0="bytes:stream")
 
     async def cmd_xwr(self, b) -> None:
         """Remotely write the byte read queue."""
-        q_rs = self.q_rs
-        q_rse = self.q_rse
-        if q_rs is None or q_rse is None:
-            raise RuntimeError("No read queue")
-        q_rs.extend(b)
-        q_rse.set()
+        self.q_rs.extend(b)
+        self.q_rse.set()
         self.q_rse = anyio.Event()
 
     doc_rd = dict(_d="s read", _r="bytes:stream", _0="int:len(64)")
 
     async def cmd_rd(self, n=64) -> bytes:
         """Read the byte queue."""
-        if self.q_rse is None:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return await remote.xrd(n=n)
-        q_rse = self.q_rse
-        q_rs = self.q_rs
-        if q_rse is None or q_rs is None:
-            raise RuntimeError("No read queue")
-        while not q_rs:
-            await q_rse.wait()
-            q_rse = self.q_rse
-            if q_rse is None:
-                raise RuntimeError("No read queue")
-        n = min(n, len(q_rs))
-        res = bytes(q_rs[:n])
-        q_rs[:n] = b""
-        return res
+        try:
+            while not self.q_rs:
+                await self.q_rse.wait()
+        except AttributeError:
+            return await self.remote.xrd(n=n)
+        else:
+            n = min(n, len(self.q_rs))
+            res = bytes(self.q_rs[:n])
+            self.q_rs[:n] = b""
+            return res
 
     doc_xrd = dict(_d="s read remote", _r="bytes:stream", _0="int:len(64)")
 
     async def cmd_xrd(self, n=64) -> bytes:
         """Remotely read the byte write queue."""
         q_ws = self.q_ws
-        q_wse = self.q_wse
-        if q_ws is None or q_wse is None:
-            raise RuntimeError("No write queue")
         while not q_ws:
-            await q_wse.wait()
-            q_wse = self.q_wse
-            if q_wse is None:
+            await self.q_wse.wait()
+            if self.q_wse is None:
                 raise RuntimeError("No write queue")
         n = min(n, len(q_ws))
         res = bytes(q_ws[:n])
@@ -278,68 +237,45 @@ class LoopLink(BaseCmd):
 
     async def cmd_cwr(self, b) -> None:
         """Write to the console queue."""
-        if self.q_wce is not None:
-            q_wc = self.q_wc
-            q_wce = self.q_wce
-            if q_wc is None or q_wce is None:
-                raise RuntimeError("No write queue")
-            q_wc.extend(b)
-            q_wce.set()
-            self.q_wce = anyio.Event()
+        try:
+            self.q_wc.extend(b)
+        except AttributeError:
+            return await self.remote.xcwr(b)
         else:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return await remote.xcwr(b)
+            self.q_wce.set()
+            self.q_wce = anyio.Event()
 
     doc_xcwr = dict(_d="s write remote cons", _0="bytes:stream")
 
     async def cmd_xcwr(self, b) -> None:
         """Remotely write the console read queue."""
-        q_rc = self.q_rc
-        q_rce = self.q_rce
-        if q_rc is None or q_rce is None:
-            raise RuntimeError("No read queue")
-        q_rc.extend(b)
-        q_rce.set()
+        self.q_rc.extend(b)
+        self.q_rce.set()
         self.q_rce = anyio.Event()
 
     doc_crd = dict(_d="s read cons", _r="bytes:stream", _0="int:len(64)")
 
     async def cmd_crd(self, n=64) -> bytes:
         """Read the console queue."""
-        if self.q_rce is None:
-            remote = self.remote
-            if remote is None:
-                raise RuntimeError("No remote")
-            return await remote.xcrd(n=n)
-        q_rce = self.q_rce
-        q_rc = self.q_rc
-        if q_rce is None or q_rc is None:
-            raise RuntimeError("No read queue")
-        while not q_rc:
-            await q_rce.wait()
-            q_rce = self.q_rce
-            if q_rce is None:
-                raise RuntimeError("No read queue")
-        n = min(n, len(q_rc))
-        res = bytes(q_rc[:n])
-        q_rc[:n] = b""
-        return res
+        try:
+            while not self.q_rc:
+                await self.q_rce.wait()
+        except AttributeError:
+            return await self.remote.xcrd(n=n)
+        else:
+            q_rc = self.q_rc
+            n = min(n, len(q_rc))
+            res = bytes(q_rc[:n])
+            q_rc[:n] = b""
+            return res
 
     doc_xcrd = dict(_d="s read remote cons", _r="bytes:stream", _0="int:len(64)")
 
     async def cmd_xcrd(self, n=64) -> bytes:
         """Remotely read the console write queue."""
+        while not self.q_wc:
+            await self.q_wce.wait()
         q_wc = self.q_wc
-        q_wce = self.q_wce
-        if q_wc is None or q_wce is None:
-            raise RuntimeError("No write queue")
-        while not q_wc:
-            await q_wce.wait()
-            q_wce = self.q_wce
-            if q_wce is None:
-                raise RuntimeError("No write queue")
         n = min(n, len(q_wc))
         res = bytes(q_wc[:n])
         q_wc[:n] = b""
@@ -347,22 +283,4 @@ class LoopLink(BaseCmd):
 
     doc_crw = BaseCmdBBM.doc_crw
     stream_crw = BaseCmdBBM.stream_crw
-    remote: SubMsgSender | None = None
 
-    q_wm: MemoryObjectSendStream[Any] | None
-    q_wmr: MemoryObjectReceiveStream[Any] | None
-    q_wb: MemoryObjectSendStream[bytes] | None
-    q_wbr: MemoryObjectReceiveStream[bytes] | None
-    q_ws: bytearray | None
-    q_wse: anyio.Event | None
-    q_wc: bytearray | None
-    q_wce: anyio.Event | None
-
-    q_rmw: MemoryObjectSendStream[Any] | None
-    q_rm: MemoryObjectReceiveStream[Any] | None
-    q_rbw: MemoryObjectSendStream[bytes] | None
-    q_rb: MemoryObjectReceiveStream[bytes] | None
-    q_rse: anyio.Event | None
-    q_rs: bytearray | None
-    q_rce: anyio.Event | None
-    q_rc: bytearray | None

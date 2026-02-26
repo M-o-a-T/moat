@@ -81,6 +81,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   not possible, duck typing (or the failure thereof) will raise a `TypeError`.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
+- Do not replace "def foo():Awaitable[Bar]: return asyncfn()" with an async
+  def. The correct type is `CoroutineType[Any,Any,Bar]`.
 - After a module typechecks, add its files to the tool.ty.src.include list in
   pyproject.toml.
 

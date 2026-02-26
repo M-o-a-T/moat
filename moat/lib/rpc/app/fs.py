@@ -142,10 +142,8 @@ class Cmd(LockBaseCmd):
 
     doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
 
-    async def cmd_wr(self, f: int, o: int = 0, d: bytes | None = None):
+    async def cmd_wr(self, f: int, o: int, d: bytes) -> int:
         "write @d to @f at offset @o"
-        if d is None:
-            raise ValueError("No Data")
         fh = self._fd(f)
         fh.seek(o)
         return await to_thread(fh.write, d)

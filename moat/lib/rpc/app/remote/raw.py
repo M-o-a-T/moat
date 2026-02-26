@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, cast  # isort:skip
 if TYPE_CHECKING:
     from moat.lib.rpc import MsgSender
     from moat.lib.stream import BaseBuf
+    from typing import Any
+    from types import CoroutineType
 
 
 class Raw(BaseCmdBBM):
@@ -23,12 +25,6 @@ class Raw(BaseCmdBBM):
 
     doc = dict(_c=dict(_d="Data forwarding", path="path:dest"))
 
-    async def stream(self) -> BaseBuf:
+    def stream(self) -> CoroutineType[Any,Any,BaseBuf]:
         """Returns the link."""
-        root = self.root
-        if root is None:
-            raise RuntimeError("Not attached")
-        return cast(
-            "BaseBuf",
-            await AC_use(self, cast("MsgSender", root.sub_at(self.cfg["path"]))),
-        )
+        return AC_use(self, self.root.sub_at(self.cfg["path"]))

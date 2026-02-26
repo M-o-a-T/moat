@@ -24,7 +24,7 @@ else:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgHandler
+    from moat.lib.rpc import MsgHandler,MsgRoot
 
 __all__ = ["StreamLoop"]
 
@@ -34,7 +34,7 @@ class StreamLoop(HandlerStream):
 
     __other: StreamLoop | None = None
 
-    def __init__(self, h: MsgHandler | None, s: str):
+    def __init__(self, h: MsgRoot, s: str):
         super().__init__(h)
         self.__s = s
 

@@ -17,7 +17,7 @@ from moat.util.exc import ungroup
 from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
-from collections.abc import Mapping
+from collections.abc import Mapping,Callable
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING or DOC:
@@ -29,6 +29,7 @@ if TYPE_CHECKING or DOC:
 
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any, Protocol, Self
+    from types import CoroutineType
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
@@ -36,12 +37,14 @@ if TYPE_CHECKING or DOC:
     class MsgRoot(Protocol):
         """Interface required by :class:`MsgSender`."""
 
-        def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]: ...
+        def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]: ...
 
         def find_handler(
             self, path: Path, cmd: bool = False
         ) -> tuple[MsgHandler, Path] | Callable: ...
 
+else:
+    MsgRoot = object
 
 __all__ = ["BaseMsgHandler", "MsgHandler", "MsgSender"]
 
@@ -62,7 +65,7 @@ class Caller:
 
     def __init__(
         self,
-        sender: BaseMsgHandler,
+        sender: BaseMsgHandler|MsgRoot,
         data: tuple[str | Path, list[Any] | tuple[Any, ...], dict[str, Any]],
         _list: bool | EllipsisType | None = NotGiven,
     ):
@@ -196,7 +199,7 @@ class BaseMsgHandler:
     Somewhat-abstract superclass for anything that accepts messages.
     """
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
         """
         Handle this message stream.
 
@@ -239,7 +242,7 @@ class MsgSender(BaseMsgHandler):
         return self
 
     @property
-    def root(self):  # noqa: D102
+    def root(self) -> MsgRoot:  # noqa: D102
         return self._root
 
     def set_root(self, root: MsgRoot):  # noqa: D102
@@ -248,7 +251,7 @@ class MsgSender(BaseMsgHandler):
         assert not isinstance(root, MsgSender)
         self._root = root
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
         """
         Redirect to the underlying command handler.
         """
@@ -278,7 +281,7 @@ class MsgSender(BaseMsgHandler):
         possibly a method if the path can be resolved and *cmd* is `True`.
         """
         res = self.root.find_handler(prefix, cmd=cmd)
-        if isinstance(res, tuple):
+        if not isinstance(res, Callable):  # thus must be tuple[MsgHandler,Path]
             root, rem = res
             if rem:
                 return SubMsgSender(root, rem, caller=caller or self.Caller_)
@@ -356,7 +359,7 @@ class SubMsgSender(MsgSender):
                 raise NotReadyError(self)
         return await super().__aenter__()
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
         """
         Forward the message, as directed by :py:attr:`path`.
         """
@@ -417,7 +420,7 @@ class SubMsgSender(MsgSender):
     __getitem__ = __getattr__
 
 
-class MsgHandler(Base, BaseMsgHandler):
+class MsgHandler(Base, BaseMsgHandler, MsgRoot):
     """
     Message dispatching, using a Path-based prefix.
 

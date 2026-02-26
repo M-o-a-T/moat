@@ -63,7 +63,7 @@ class Cmd(BaseCmd):
     so no separate CS path is needed.
     """
 
-    _spi: _SpiDevProto | None = None
+    _spi: _SpiDevProto
 
     doc = dict(
         _c=dict(_d="SPI driver (Linux)"),
@@ -113,8 +113,9 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        s, self._spi = self._spi, None
+        s = getattr(self,"_spi")
         if s is not None:
+            del self._spi
             s.close()
 
     doc_rd = dict(
@@ -129,11 +130,8 @@ class Cmd(BaseCmd):
         Args:
             n: number of bytes to read
         """
-        spi = self._spi
-        if spi is None:
-            raise RuntimeError("No SPI")
         async with self.lock:
-            return bytes(await to_thread(spi.readbytes, n))
+            return bytes(await to_thread(self._spi.readbytes, n))
 
     doc_wr = dict(
         _d="write",
@@ -148,11 +146,8 @@ class Cmd(BaseCmd):
         Args:
             buf: data to write
         """
-        spi = self._spi
-        if spi is None:
-            raise RuntimeError("No SPI")
         async with self.lock:
-            await to_thread(spi.writebytes, list(buf))
+            await to_thread(self._spi.writebytes, list(buf))
             return len(buf)
 
     doc_rw = dict(
@@ -170,11 +165,8 @@ class Cmd(BaseCmd):
 
         Returns the same number of bytes as written.
         """
-        spi = self._spi
-        if spi is None:
-            raise RuntimeError("No SPI")
         async with self.lock:
-            return bytes(await to_thread(spi.xfer, list(wbuf)))
+            return bytes(await to_thread(self._spi.xfer, list(wbuf)))
 
     doc_wrrd = dict(
         _d="write then read (separate)",
@@ -195,8 +187,6 @@ class Cmd(BaseCmd):
             n: number of bytes to read after
         """
         spi = self._spi
-        if spi is None:
-            raise RuntimeError("No SPI")
         async with self.lock:
             await to_thread(spi.writebytes, list(wbuf))
             return bytes(await to_thread(spi.readbytes, n))

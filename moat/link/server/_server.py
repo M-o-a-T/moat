@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from moat.link.backend import Message
 
     from collections.abc import Awaitable, Callable
+    from types import CoroutineType
 
     PathType = anyio.Path | FSPath | str
 
@@ -278,7 +279,7 @@ class ServerClient(LinkCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def handle(self, msg, rpath, *sub) -> Awaitable[None]:
+    def handle(self, msg, rpath, *sub) -> CoroutineType[Any,Any,None]:
         """
         Message handlers that intercepts (a) authorization, (b) a "d_"
         path-based "simple data" command

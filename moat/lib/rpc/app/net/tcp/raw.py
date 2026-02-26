@@ -13,14 +13,16 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.lib.stream import BaseBuf
+    from types import CoroutineType
+    from typing import Any
 
 
 class Raw(BaseCmdBBM):
     """Sends/receives raw data over TCP."""
 
-    async def stream(self) -> BaseBuf:
+    def stream(self) -> CoroutineType[Any,Any,BaseBuf]:
         """Returns the TCP stream."""
-        return await AC_use(
+        return AC_use(
             self,
             TcpLink(
                 self.cfg.get("host", "127.0.0.1"),

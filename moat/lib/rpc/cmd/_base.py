@@ -89,7 +89,7 @@ class BaseCmd(MsgHandler):
     Base class of a Command handler.
     """
 
-    root: RootCmd | None = None
+    root: RootCmd = None  # type:ignore[invalid-assignment]
     real_root: RootCmd
     # real_root is set when `root` is a non-settable property.
     # This is used for root hijackers like `log.Cmd` so that they can
@@ -287,9 +287,10 @@ class BaseCmd(MsgHandler):
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent
         self._name = name
+
         root = parent.root
         if root is None:
-            raise RuntimeError("No root")
+            raise RuntimeError("No root set")
         try:
             self.root = root
         except AttributeError:

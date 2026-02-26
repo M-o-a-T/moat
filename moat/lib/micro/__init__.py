@@ -79,7 +79,7 @@ if TYPE_CHECKING:
             **k: P.kwargs,
         ) -> Awaitable[R]: ...
 
-    class _TaskGroupProto(Protocol):
+    class _TaskGroupProto(AbstractAsyncContextManager[Any], Protocol):
         async def __aenter__(self) -> Self: ...
 
         async def __aexit__(
@@ -386,7 +386,7 @@ _tg = None
 _tgt = None
 
 
-def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
+def TaskGroup() -> _TaskGroupProto:  # Returns augmented TaskGroup instance
     "A TaskGroup subclass that supports ``spawn`` and ``cancel``"
 
     global _tg, _tgt

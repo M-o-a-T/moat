@@ -3,7 +3,7 @@
 \#*
 /bin/
 /*.build
-/build/
+/build
 /*.buildinfo
 .cache
 /*.cfg

@@ -7,6 +7,7 @@ from __future__ import annotations
 from moat.util import attrdict, combine_dict, set_part
 from moat.lib.codec.errors import NoPathError
 from moat.lib.micro import L, TaskGroup
+from moat.lib.path import Path
 from moat.lib.rpc import MsgSender, ShortCommandError, load_app
 
 from .tree.dir import BaseSuperCmd
@@ -14,6 +15,9 @@ from .tree.dir import BaseSuperCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import Msg
+
     from collections.abc import Awaitable
 
 
@@ -22,7 +26,7 @@ class ArrayCmd(BaseSuperCmd):
     A command that hosts a number of mostly-identical subcommands.
     """
 
-    n: int = None
+    n: int | None = None
 
     doc = dict(
         _c=dict(
@@ -113,7 +117,7 @@ class ArrayCmd(BaseSuperCmd):
         for app in self.apps:
             await self.start_app(app)
 
-    async def handle(self, msg, rcmd):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
         """
         Dispatch a message.
 
@@ -126,6 +130,7 @@ class ArrayCmd(BaseSuperCmd):
 
         See :meth:`moat.lib.rpc.MsgHandler.handle` for further details.
         """
+        prefix  # noqa:B018
 
         if not rcmd:
             raise ShortCommandError(msg.cmd)
@@ -140,6 +145,14 @@ class ArrayCmd(BaseSuperCmd):
             else:
                 return await self._cmd_all(msg, rcmd)
 
+        if not isinstance(cmd, int):
+            raise NoPathError(
+                self.path,
+                msg.cmd,
+                self.__class__.__name__,
+                await self.cmd_dir_(v=None),
+            ) from None
+
         try:
             sub = self.apps[cmd]
         except (TypeError, IndexError):
@@ -153,9 +166,9 @@ class ArrayCmd(BaseSuperCmd):
 
     doc_dir_ = dict(na="int:max index")
 
-    async def cmd_dir_(self, **kw):
+    async def cmd_dir_(self, v=True):
         "report max index"
-        res = await super().cmd_dir_(**kw)
+        res = await super().cmd_dir_(v=v)
         res["na"] = len(self.apps)
         return res
 
@@ -182,10 +195,10 @@ class ArrayCmd(BaseSuperCmd):
                 cmd = list(cmd)
 
         res = []
-        snd = MsgSender(None)
+        snd = MsgSender(self)
         for app in self.apps:
             snd.set_root(app)
-            r = await snd.cmd(cmd, *msg.args, *msg.kw)
+            r = await snd.cmd(Path.build(cmd), *msg.args, **msg.kw)
             res.append((r.args, r.kw))
         await msg.result(*res)
 
@@ -211,6 +224,10 @@ class ArrayCmd(BaseSuperCmd):
 
         async with msg.stream_out() as st, TaskGroup() as tg:
             for i, app in enumerate(self.apps):
-                tg.start_soon(_reply, i, app, st)
+
+                async def _run(i=i, app=app) -> None:
+                    await _reply(i, app, st)
+
+                tg.start_soon(_run)
 
         await msg.result()

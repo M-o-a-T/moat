@@ -9,19 +9,27 @@ import sys
 from moat.util import attrdict, merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
-from moat.lib.rpc import BaseCmd, HandlerStream
+from moat.lib.rpc import BaseCmd, HandlerStream, MsgSender
 
 __all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
 
 # Typing
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.path import PathElem
     from moat.lib.rpc import Auth, BaseMsgHandler
+    from moat.lib.rpc.msg import Msg
     from moat.lib.stream import BaseMsg
+    from moat.lib.stream.base import Buffer, MutBuffer
 
-    from collections.abc import Awaitable
-    from typing import Any
+    from collections.abc import Mapping, Sequence
+    from typing import Any, Protocol
+
+    class _ConsoleMsgProto(Protocol):
+        async def crd(self, buf: MutBuffer) -> int: ...
+
+        async def cwr(self, buf: Buffer) -> None: ...
 
 
 class MsgStream(HandlerStream):
@@ -31,7 +39,7 @@ class MsgStream(HandlerStream):
 
     """
 
-    def __init__(self, handler: BaseMsgHandler, stream: BaseCmdMsg):
+    def __init__(self, handler: BaseMsgHandler, stream: BaseMsg):
         self.__stream = stream
         super().__init__(handler)
 
@@ -73,9 +81,10 @@ class BaseCmdMsg(BaseCmd):
     all messages through a :py.cls:`~moat.lib.rpc.Auth` instance.
     """
 
-    tg: TaskGroup = None
+    tg: object | None = None
     __stream = None
     __rprefix = ()
+    stream_owner_obj_: object
 
     doc = dict(_d="Foo")
     auth: attrdict | None = None
@@ -98,7 +107,7 @@ class BaseCmdMsg(BaseCmd):
             self._auth = Auth(cfg.auth, self)
 
     @property
-    def auth_helper(self) -> Auth:
+    def auth_helper(self) -> Auth | None:
         "Getter."
         return self._auth
 
@@ -121,10 +130,12 @@ class BaseCmdMsg(BaseCmd):
         """
         return {}
 
-    def auth_data_in(self, role: str, data: dict) -> None:
+    def auth_data_in(self, args: Sequence, data: Mapping[str, Any]) -> None:
         """
         Data from the incoming auth message.
         """
+        args  # noqa:B018
+        data  # noqa:B018
         pass
 
     def auth_data_res_out(self, role: str) -> dict:
@@ -139,7 +150,7 @@ class BaseCmdMsg(BaseCmd):
         role  # noqa:B018
         return {}
 
-    def auth_data_res_in(self, role: str, data: dict) -> None:
+    def auth_data_res_in(self, role: str, data: Mapping[str, Any]) -> None:
         """
         Data from the incoming auth acknowledgment.
 
@@ -198,10 +209,13 @@ class BaseCmdMsg(BaseCmd):
         """
         Start the MsgStream.
         """
-        root = self.root.sender
+        root0 = self.root
+        if root0 is None:
+            raise RuntimeError("Not attached")
+        root = root0.sender
         lprefix = self.cfg.get("prefix", {}).get("recv", ())
         if lprefix:
-            root = root.sub_at(lprefix)
+            root = cast(MsgSender, root.sub_at(lprefix))
 
         if self._auth:
             await self._auth.process(root)
@@ -229,10 +243,13 @@ class BaseCmdMsg(BaseCmd):
             self.s = None
             self.__stream = None
 
-    async def handle(self, msg, rcmd, _auth: bool = False) -> Awaitable[Any]:
+    async def handle(
+        self, msg: Msg, rcmd: list[PathElem], *prefix: str, _auth: bool = False
+    ) -> Any:
         """
         Forward a request to some remote side.
         """
+        prefix  # noqa:B018
         # If auth, route through it.
         if self._auth and not _auth:
             return await self._auth.handle(msg, rcmd)
@@ -259,19 +276,23 @@ class BaseCmdMsg(BaseCmd):
             m2 = await self.cmd_dir_(v=msg.get("v", True))
             await msg.wait_replied(preload=True)
 
-            msg._kw["c"] = tuple(set(msg.get("c", ())) | set(m2.pop("c", ())))  # noqa: SLF001
-            msg._kw["s"] = tuple(set(msg.get("s", ())) | set(m2.pop("s", ())))  # noqa: SLF001
-            merge(msg._kw, m2)  # noqa: SLF001
+            if msg._kw is None:  # noqa: SLF001
+                msg._kw = {}  # noqa: SLF001
+            kw = cast(dict, msg._kw)  # noqa: SLF001
+            kw["c"] = tuple(set(msg.get("c", ())) | set(m2.pop("c", ())))
+            kw["s"] = tuple(set(msg.get("s", ())) | set(m2.pop("s", ())))
+            merge(kw, m2)
         return res
 
     doc_crd = dict(_d="read console", _0="int:len (64)")
 
-    async def cmd_crd(self, n=64) -> bytes:
+    async def cmd_crd(self, n=64) -> Buffer:
         """read some console data"""
         b = bytearray(n)
         if self.s is None:
             raise EOFError
-        r = await self.s.crd(b)
+        s = cast("_ConsoleMsgProto", self.s)
+        r = await s.crd(b)
         if r == n:
             return b
         elif r <= n >> 2:
@@ -282,11 +303,11 @@ class BaseCmdMsg(BaseCmd):
 
     doc_cwr = dict(_d="write console", _0="bytes:data")
 
-    async def cmd_cwr(self, b):
+    async def cmd_cwr(self, b: Buffer):
         """write some console data"""
         if self.s is None:
             raise EOFError
-        await self.s.cwr(b)
+        await cast("_ConsoleMsgProto", self.s).cwr(b)
 
     doc_c = dict(
         _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
@@ -316,9 +337,9 @@ class CmdMsg(BaseCmdMsg):
         super().__init__(cfg)
         self.link = link
 
-    def stream(self) -> Awaitable[BaseMsg]:  # noqa:D102
+    async def stream(self) -> BaseMsg:  # noqa:D102
         # pylint:disable=invalid-overridden-method
-        return AC_use(self.stream_owner_(), self.link)
+        return await AC_use(self.stream_owner_(), self.link)
 
 
 class SingleCmdMsg(BaseCmdMsg):

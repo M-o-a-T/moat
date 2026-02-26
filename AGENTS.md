@@ -63,6 +63,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   - `(foo,bar,*baz)` list expansion
   - `with (x,y)`
   - def foo(bar,/) positional-only arguments
+  - Python 3.12+ syntax for generic types
+  - `isinstance(obj, type1 | type2)` -- use `isinstance(obj, (type1 type2))`
+  - multiple inheritance (syntax works but is ignored)
 
 - Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
   from submodules. Exception: `TYPE_CHECKING` blocks.

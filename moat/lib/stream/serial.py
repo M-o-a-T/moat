@@ -9,7 +9,7 @@ from moat.lib.stream import BaseBuf, BaseMsg, StackedBlk
 
 from ._console import _CReader
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from moat.util import attrdict
@@ -26,32 +26,31 @@ class SerialPackerBlkBuf(StackedBlk):
     cons = False
 
     def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
-        super().__init__(None)
+        StackedBlk.__init__(self, stream, None)
 
-        from serialpacker import SerialPacker  # noqa: PLC0415
+        SerialPacker = __import__("serialpacker", fromlist=("SerialPacker",)).SerialPacker
 
-        self.s = stream
         self.p = SerialPacker(**frame)
         self.buf = bytearray(16)
         self.i = 0
         self.n = 0
         self.w_lock = Lock()
         if console:
-            _CReader.__init__(self, console)
+            _CReader.__init__(cast("Any", self), console)
 
-    async def crd(self, buf):
+    async def crd(self, buf: bytearray) -> int:
         "console read"
         if not self.cons:
             raise EOFError
-        return await _CReader.crd(self, buf)
+        return await _CReader.crd(cast("Any", self), buf)
 
-    async def cwr(self, buf):
+    async def cwr(self, buf) -> None:
         "console write"
         if not self.cons:
             return
-        return await super().wr(buf)
+        await self.s.wr(buf)
 
-    async def recv(self):
+    async def rcv(self):
         "block read"
         while True:
             while self.i < self.n:
@@ -59,7 +58,7 @@ class SerialPackerBlkBuf(StackedBlk):
                 self.i += 1
                 if isinstance(msg, int):
                     if self.cons:
-                        _CReader.cput(self, msg)
+                        _CReader.cput(cast("Any", self), msg)
                 elif msg is not None:
                     return msg
 
@@ -69,9 +68,9 @@ class SerialPackerBlkBuf(StackedBlk):
             self.i = 0
             self.n = n
 
-    async def send(self, msg):
+    async def snd(self, m: bytes | bytearray | memoryview[int]) -> None:
         "block write"
-        h, msg, t = self.p.frame(msg)
+        h, msg, t = self.p.frame(m)
         async with self.w_lock:
             if not self.cons:
                 await self.s.wr(h)
@@ -79,6 +78,9 @@ class SerialPackerBlkBuf(StackedBlk):
                 await self.s.wr(t)
             else:
                 await self.s.wr(h + msg + t)
+
+    recv = rcv
+    send = snd
 
 
 def serial_stack(stream, cfg: attrdict, cons: bool = False):

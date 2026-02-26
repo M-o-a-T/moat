@@ -31,14 +31,15 @@ class TcpLink(AnyioBuf):
         n = 0
         retry = self.retry
         sl = retry.get("delay", 0.1)
-        er = None
+        er: OSError | None = None
         try:
             with anyio.fail_after(retry.get("timeout", 999)):
                 while True:
                     try:
                         s = await anyio.connect_tcp(self.host, self.port)
                     except OSError as e:
-                        er = e.__cause__ if e.errno is None else e
+                        cause = e.__cause__
+                        er = cause if e.errno is None and isinstance(cause, OSError) else e
                         if er.errno not in {
                             errno.ENETUNREACH,
                             errno.EHOSTUNREACH,

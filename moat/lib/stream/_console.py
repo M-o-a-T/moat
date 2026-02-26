@@ -15,7 +15,7 @@ class _CReader:
     def __init__(self, cons: bool | int):
         if cons is True:
             try:
-                import machine  # noqa: PLC0415,F401
+                __import__("machine")
             except ImportError:
                 cons = 32768
             else:
@@ -26,7 +26,7 @@ class _CReader:
         self.cons = cons
         self.intr = 0
 
-    async def crd(self, buf: bytearray):
+    async def crd(self, buf: bytearray) -> int:
         """read waiting console data"""
         if not self.cons:
             raise EOFError

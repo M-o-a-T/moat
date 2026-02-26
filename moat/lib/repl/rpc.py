@@ -59,6 +59,8 @@ class MsgTerm(MsgHandler):
                     tg.cancel_scope.cancel()
 
                 async for data in ms:
+                    if not isinstance(data, (bytes, bytearray, memoryview)):
+                        raise TypeError(data)
                     await self.term.wr(data)
                 tg.cancel_scope.cancel()
             finally:

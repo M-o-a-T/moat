@@ -9,6 +9,11 @@ from moat.lib.rpc import B_FLAGSTR, wire2i_f
 
 from .base import StackedBlk, StackedBuf, StackedMsg
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    Buffer = bytes | bytearray | memoryview
+
 
 class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     """
@@ -102,10 +107,10 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("RB:%s %r", self.txt, repr_b(msg))
             return msg
 
-    async def wr(self, buf):  # noqa:D102
-        log("S:%s %r", self.txt, repr_b(buf))
+    async def wr(self, data: Buffer) -> int:  # noqa:D102
+        log("S:%s %r", self.txt, repr_b(data))
         try:
-            res = await self.s.wr(buf)
+            res = await self.s.wr(data)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
@@ -113,7 +118,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             # log("S:%s =%r", self.txt, res)
             return res
 
-    async def rd(self, buf) -> int:  # noqa:D102
+    async def rd(self, buf: Buffer) -> int:  # noqa:D102
         # log("R:%s %d", self.txt, len(buf))
         try:
             res = await self.s.rd(buf)
@@ -124,7 +129,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s %r", self.txt, repr_b(buf[:res]))
             return res
 
-    async def cwr(self, buf):  # noqa:D102
+    async def cwr(self, buf: Buffer) -> None:  # noqa:D102
         log("SC:%s %r", self.txt, repr_b(buf))
         try:
             res = await self.s.cwr(buf)
@@ -135,7 +140,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             # log("SC:%s =%r", self.txt, res)
             return res
 
-    async def crd(self, buf) -> int:  # noqa:D102
+    async def crd(self, buf: Buffer) -> int:  # noqa:D102
         # log("RC:%s %d", self.txt, len(buf))
         try:
             res = await self.s.crd(buf)

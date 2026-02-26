@@ -34,13 +34,15 @@ from moat.lib.micro import ACM, AC_exit, AC_use
 
 # Typing
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
-    from collections.abc import Awaitable, Buffer
+    from collections.abc import Awaitable
     from typing import Any
+
+    Buffer = bytes | bytearray | memoryview
 
 
 class _NullCtx:
@@ -251,22 +253,26 @@ class StackedConn(BaseConn):
         cfg: Config data
     """
 
-    link: BaseConn = None
+    link: BaseConn | None = None
 
-    def __init__(self, link, cfg):
+    def __init__(self, link: BaseConn, cfg):
         super().__init__(cfg=cfg)
         self.link = link
 
     def wrap(self):  # noqa:D102
+        if self.link is None:
+            raise RuntimeError("No link")
         return self.link.wrap()
 
-    def stream(self):  # async
+    async def stream(self) -> BaseConn:
         """
         Generate the low-level connection this module uses.
 
         By default, returns the linked stream's async context.
         """
-        return AC_use(self, self.link)
+        if self.link is None:
+            raise RuntimeError("No link")
+        return await AC_use(self, cast("Any", self.link))
 
 
 class StackedMsg(StackedConn, BaseMsg):
@@ -280,21 +286,21 @@ class StackedMsg(StackedConn, BaseMsg):
         cfg: Config data
     """
 
-    def send(self, m):  # async
+    async def send(self, m: Any) -> Any:
         "Send. Transmits a structured message"
-        return self.s.send(m)
+        return await self.s.send(m)
 
-    def recv(self):  # async
+    async def recv(self) -> Any:
         "Receive. Returns a message."
-        return self.s.recv()
+        return await self.s.recv()
 
-    def cwr(self, buf):  # async
+    async def cwr(self, buf: Buffer) -> None:
         "Console Send. Returns when the buffer is transmitted."
-        return self.s.cwr(buf)
+        await self.s.cwr(buf)
 
-    def crd(self, buf) -> int:  # async
+    async def crd(self, buf: Buffer) -> int:
         "Console Receive. Returns data by reading into a buffer."
-        return self.s.crd(buf)
+        return await self.s.crd(buf)
 
 
 class StackedBuf(StackedConn, BaseBuf):
@@ -308,13 +314,13 @@ class StackedBuf(StackedConn, BaseBuf):
         cfg: Config data
     """
 
-    def wr(self, buf):  # async
+    async def wr(self, data: Buffer) -> int:
         "Send. Returns when the buffer is transmitted."
-        return self.s.wr(buf)
+        return await self.s.wr(data)
 
-    def rd(self, buf) -> int:  # async
+    async def rd(self, buf: Buffer) -> int:
         "Receive. Returns data by reading into a buffer."
-        return self.s.rd(buf)
+        return await self.s.rd(buf)
 
 
 class StackedBlk(StackedConn, BaseBlk):
@@ -331,10 +337,10 @@ class StackedBlk(StackedConn, BaseBlk):
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
-    def snd(self, m):  # async
+    async def snd(self, m: Buffer | bytes) -> None:
         "Send. Transmits a structured message"
-        return self.s.send(m)
+        await self.s.snd(m)
 
-    def rcv(self):  # async
+    async def rcv(self) -> Buffer | bytes:
         "Receive. Returns a message."
-        return self.s.rcv()
+        return await self.s.rcv()

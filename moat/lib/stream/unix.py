@@ -15,7 +15,7 @@ from moat.lib.stream import AnyioBuf
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.path import Path
+    from os import PathLike
 
 
 class UnixLink(AnyioBuf):
@@ -23,7 +23,7 @@ class UnixLink(AnyioBuf):
     A channel that connects to a remote Unix socket.
     """
 
-    def __init__(self, port: str | Path, retry: dict | None = None):
+    def __init__(self, port: str | PathLike[str], retry: dict | None = None):
         self.port = port
         if retry is None:
             retry = {}
@@ -32,7 +32,7 @@ class UnixLink(AnyioBuf):
     async def stream(self):  # noqa:D102
         retry = self.retry
         sl = retry.get("delay", 0.1)
-        er = None
+        er: OSError | None = None
         n = 0
         try:
             with anyio.fail_after(retry.get("timeout", 999)):
@@ -40,7 +40,8 @@ class UnixLink(AnyioBuf):
                     try:
                         s = await anyio.connect_unix(self.port)
                     except OSError as e:
-                        er = e.__cause__ if e.errno is None else e
+                        cause = e.__cause__
+                        er = cause if e.errno is None and isinstance(cause, OSError) else e
                         if er.errno not in {
                             errno.ENOENT,
                             errno.ECONNREFUSED,

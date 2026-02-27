@@ -6,6 +6,11 @@ from __future__ import annotations
 
 from inspect import isfunction
 
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, MutableMapping
+
 __all__ = [
     "DProxy",
     "NoProxyError",
@@ -51,19 +56,21 @@ class DProxy(_DProxy):
     proxy structure back (if it doesn't). The object's state is included.
     """
 
-    def __init__(self, name, a, k):
-        a = list(a) if a else []
-        super().__init__(name, a, k)
+    def __init__(
+        self, name: str, a: list[Any] | tuple[Any, ...] | None, k: MutableMapping[str, Any]
+    ) -> None:
+        args = list(a) if a else []
+        super().__init__(name, args, dict(k))
 
-    def append(self, val):
+    def append(self, val: Any) -> None:
         "Helper for deserializer"
         self.a.append(val)
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: str, val: Any) -> None:
         "Helper for deserializer"
         self.k[key] = val
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[type[DProxy], list[Any], MutableMapping[str, Any]]:
         return (type(self), self.a, self.k)
 
 
@@ -74,14 +81,14 @@ as_proxy("_fp", FSPath)
 as_proxy("_fpa", AioPath)
 
 
-def _next(it, dfl=None):
+def _next(it: Iterator[Any], dfl: Any = None) -> Any:
     try:
         return next(it)
     except StopIteration:
         return dfl
 
 
-def wrap_obj(obj, name=None):
+def wrap_obj(obj: Any, name: str | None = None) -> tuple[Any, ...] | list[Any]:
     "Serialize an object"
     if name is None:
         name = obj2name(type(obj))
@@ -124,7 +131,7 @@ def wrap_obj(obj, name=None):
         return (name,) + p
 
 
-def unwrap_obj(s):
+def unwrap_obj(s: list[Any] | tuple[Any, ...]) -> Any:
     "Deserialize an object"
     pk, *a = s
     if not isinstance(pk, type):
@@ -132,10 +139,10 @@ def unwrap_obj(s):
         if isinstance(pk, Proxy):
             pk = pk.name
         try:
-            pk = _CProxy[pk]
+            pk = _CProxy[cast(str, pk)]
         except KeyError:
             kw = pop_kw(a)
-            return DProxy(pk, a, kw)
+            return DProxy(cast(str, pk), a, kw)
     kw = pop_kw(a)
 
     if isfunction(pk):

@@ -256,6 +256,7 @@ include = [
     "moat/lib/path/",
     "moat/lib/pid/",
     "moat/lib/priomap/",
+    "moat/lib/proxy/",
     "moat/lib/repl/",
     "moat/lib/rpc/",
     "moat/lib/ring/",

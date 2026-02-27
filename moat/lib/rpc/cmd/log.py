@@ -7,11 +7,12 @@ from __future__ import annotations
 from moat.lib.micro import AC_use, TaskGroup, idle, log
 from moat.lib.rpc import BaseFwdCmd, HandlerStream, Msg, MsgSender
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.lib.path import PathElem
+    from moat.lib.rpc import BaseMsgHandler
 
 
 class _LogStream(HandlerStream):
@@ -58,19 +59,23 @@ class Logger(BaseFwdCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.s1 = _LogStream(self.real_root, logger=self._log)
-        self.s2 = _LogStream(self.app)
+        app = self.app
+        if app is None:
+            raise RuntimeError("No app")
+        self.s1 = _LogStream(cast("BaseMsgHandler", self.real_root), logger=self._log)
+        self.s2 = _LogStream(cast("BaseMsgHandler", app))
         self.s1.other = self.s2
         self.s2.other = self.s1
         self._sender = MsgSender(self.s2)
         await AC_use(self, self.s1)
         await AC_use(self, self.s2)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None:
         "Forward"
+        prefix  # noqa:B018
         await self.s1.handle(msg, rcmd)
 
-    def _log(self, m, *a):
+    def _log(self, m: str, *a: object):
         log(f"{self.prefix}:{m}", *a)
 
     def cfg_reloaded(self, cfg: attrdict):

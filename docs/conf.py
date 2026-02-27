@@ -251,6 +251,7 @@ nitpick_ignore = [
     ("py:class", "T"),
     ("py:class", "PathElem"),
     ("py:class", "moat.lib.repl.types.TypeAliasType"),
+    ("py:class", "moat.lib.micro._TaskGroupProto"),
     ("py:class", "os.statvfs_result"),
     ("py:func", "moat.lib.path.Path.from_path"),
     ("py:obj", "NotGiven"),
@@ -259,6 +260,8 @@ nitpick_ignore = [
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
+    ("py:class", "moat.lib.rpc.base.MsgRoot"),
+    ("py:class", "coroutine"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),

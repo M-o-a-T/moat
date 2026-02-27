@@ -272,7 +272,7 @@ def process_args(
             elif vv == "=n":
                 vv = None
             elif vv[0] == "=":
-                vv = cmd_eval(vv[1:])  # pylint: disable=W0631
+                vv = cmd_eval(vv[1:])
             elif vv[0] == ":":
                 vv = P(vv)
             elif vv[0] == ".":
@@ -300,7 +300,7 @@ def process_args(
             vv: Any = v
             if vv == "-":
                 vv = NotGiven
-            elif vv == "/":  # pylint: disable=W0631
+            elif vv == "/":
                 if vs is None:
                     raise click.BadOptionUsage(
                         option_name=str(k),
@@ -308,7 +308,7 @@ def process_args(
                     )
                 vv = NoneType
             else:
-                vv = eval(vv)  # pylint: disable=W0631
+                vv = eval(vv)
             yield k, vv
         for k, pv in path_:
             vv = P(str(pv))
@@ -356,13 +356,13 @@ def process_args(
         if vs is not None:
             vs.add(str(k))
         if v is NotGiven:
-            val = attrdict._delete(val, k)  # pylint: disable=protected-access
+            val = attrdict._delete(val, k)
         elif v is NoneType:
-            val = attrdict._delete(val, k)  # pylint: disable=protected-access
+            val = attrdict._delete(val, k)
             if vs is not None:
                 vs.discard(str(k))
         else:
-            val = attrdict._update(val, k, v)  # pylint: disable=protected-access
+            val = attrdict._update(val, k, v)
     return val
 
 
@@ -395,7 +395,7 @@ def load_ext(name: str, *attr: str, err: bool = False) -> Any:
 
 
 def _namespaces(name: str | object) -> Iterator[ModuleInfo]:
-    import pkgutil  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    import pkgutil  # noqa: PLC0415
 
     if name is NotGiven:
         return iter(())
@@ -750,7 +750,7 @@ async def main_(
     # twice instead of never.
     if hasattr(ctx, "_moat_invoked"):
         return
-    cast(Any, ctx)._moat_invoked = True  # pylint: disable=protected-access
+    cast(Any, ctx)._moat_invoked = True
     cfg = current_cfg.get()
     if cfg is not None:
         kv["cfg"] = cfg
@@ -853,7 +853,7 @@ def wrap_main(
 
     if sub_pre is True:
         "discover from caller"
-        import inspect  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+        import inspect  # noqa: PLC0415
 
         frame = inspect.currentframe()
         if frame is None or frame.f_back is None:
@@ -872,10 +872,10 @@ def wrap_main(
         if help is not None:
             main.help = help
 
-    obj._util_sub_pre = sub_pre  # pylint: disable=protected-access
-    obj._util_sub_post = sub_post  # pylint: disable=protected-access
-    obj._util_ext_pre = ext_pre  # pylint: disable=protected-access
-    obj._util_ext_post = ext_post  # pylint: disable=protected-access
+    obj._util_sub_pre = sub_pre
+    obj._util_sub_post = sub_post
+    obj._util_ext_pre = ext_pre
+    obj._util_ext_post = ext_post
 
     if not isinstance(cfg, CfgStore):
         cfg = CFG(name, preload=cfg, load_all=cfg_load_all, ext=ext_name)
@@ -951,7 +951,6 @@ def wrap_main(
         obj.stdout = sys.stdout
 
     try:
-        # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
         # NOTE this return an awaitable
         if ctx is not None:
             ctx.obj = obj

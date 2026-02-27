@@ -4,6 +4,7 @@ import anyio
 import logging
 from anyio import (
     BrokenResourceError,
+    CancelScope,
     ClosedResourceError,
     Event,
     Lock,
@@ -15,7 +16,7 @@ from anyio import (
     create_task_group,
     move_on_after,
 )
-from anyio.abc import ByteReceiveStream, ByteStream, TaskStatus
+from anyio.abc import ByteReceiveStream, ByteStream, TaskGroup, TaskStatus
 from anyio.streams.tls import TLSStream
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from ssl import SSLContext, SSLError
@@ -81,7 +82,7 @@ TOperationException = TypeVar("TOperationException", bound=MQTTOperationFailed)
 
 class MQTTWebsocketStream(ByteStream):  # noqa: D101
     def __init__(self, session: AsyncWebSocketSession):
-        self._session = session
+        self._session: AsyncWebSocketSession | None = session
 
     async def send_eof(self) -> None:  # noqa: D102
         raise NotImplementedError
@@ -90,14 +91,18 @@ class MQTTWebsocketStream(ByteStream):  # noqa: D101
         max_bytes  # noqa:B018
         from httpx_ws import WebSocketInvalidTypeReceived  # noqa:PLC0415
 
+        session = self._session
+        assert session is not None
         try:
-            return await self._session.receive_bytes()
+            return await session.receive_bytes()
         except WebSocketInvalidTypeReceived as exc:
-            await self._session.close()
+            await session.close()
             raise BrokenResourceError from exc
 
     async def send(self, item: bytes) -> None:  # noqa: D102
-        await self._session.send_bytes(item)
+        session = self._session
+        assert session is not None
+        await session.send_bytes(item)
 
     async def aclose(self) -> None:  # noqa: D102
         if self._session is not None:
@@ -253,14 +258,18 @@ class AsyncMQTTClient:
     password: str | None = field(kw_only=True, default=None, validator=optional(instance_of(str)))
     clean_start: bool = field(kw_only=True, default=True, validator=instance_of(bool))
     receive_maximum: int = field(
-        kw_only=True, validator=[instance_of(int), ge(0), le(65535)], default=65535
+        kw_only=True,
+        validator=cast("Any", [instance_of(int), ge(0), le(65535)]),
+        default=65535,
     )  # TODO: enforce this
     max_packet_size: int | None = field(
         kw_only=True, validator=optional([instance_of(int), gt(0)]), default=None
     )  # TODO: enforce this when encoding packets
     will: Will | None = field(kw_only=True, default=None, validator=optional(instance_of(Will)))
     keep_alive: int = field(
-        kw_only=True, validator=[instance_of(int), ge(0), le(65535)], default=0
+        kw_only=True,
+        validator=cast("Any", [instance_of(int), ge(0), le(65535)]),
+        default=0,
     )
 
     _exit_stack: AsyncExitStack = field(init=False)
@@ -271,13 +280,13 @@ class AsyncMQTTClient:
     _subscription_ids: dict[int, ClientSubscription] = field(init=False, factory=dict)
     _subscription_no_id: dict[Pattern, ClientSubscription] = field(init=False, factory=dict)
     _last_subscr_id: int = field(init=False, default=0)
-    _stream: ByteStream = field(init=False, default=None)
+    _stream: ByteStream | None = field(init=False, default=None)
     _stream_lock: Lock = field(init=False, factory=Lock)
     _pending_connect: MQTTConnectOperation | None = field(init=False, default=None)
     _pending_operations: dict[int, MQTTOperation[Any]] = field(init=False, factory=dict)
     _ignored_exc_classes: tuple[type[Exception]] = field(init=False)
     __ctx: AbstractAsyncContextManager[Self] = field(init=False)
-    _conn_scope: anyio.abc.CancelScope | None = field(init=False)
+    _conn_scope: CancelScope | None = field(init=False, default=None)
 
     def __attrs_post_init__(self) -> None:
         if not self.host_or_path:
@@ -410,7 +419,7 @@ class AsyncMQTTClient:
                     raise MQTTNoReconnect
                 await anyio.sleep(t_backoff)
 
-    async def _keep_alive(self):
+    async def _keep_alive(self) -> None:
         if not self._state_machine.keep_alive:
             return
         try:
@@ -436,9 +445,7 @@ class AsyncMQTTClient:
             assert isinstance(client_id, str)
             self.client_id = client_id
 
-    async def _read_inbound_packets(
-        self, stream: ByteReceiveStream, taskgroup: anyio.abc.TaskGroup
-    ) -> None:
+    async def _read_inbound_packets(self, stream: ByteReceiveStream, taskgroup: TaskGroup) -> None:
         # Receives packets from the transport stream and forwards them to interested
         # listeners
         try:

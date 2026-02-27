@@ -26,7 +26,7 @@ from ._types import (
     decode_packet,
 )
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -264,7 +264,7 @@ class BaseMQTTClientStateMachine:
             return None
 
         if isinstance(request, packet_class):
-            return request
+            return cast(TPacket, request)
 
         raise MQTTProtocolError(
             f"attempted to send an acknowledgement for {packet_class.__name__} that "
@@ -281,7 +281,7 @@ class BaseMQTTClientStateMachine:
         """
         buffer = self._out_buffer
         self._out_buffer = bytearray()
-        return buffer
+        return bytes(buffer)
 
     def feed_bytes(self, data: bytes) -> Sequence[MQTTPacket]:
         """

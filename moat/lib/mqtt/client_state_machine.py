@@ -44,6 +44,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     cap: Capabilities = field(init=False, factory=Capabilities)
     keep_alive: int = field(init=False, default=0)
 
+    if TYPE_CHECKING:
+
+        def __attrs_init__(self, client_id: str) -> None:
+            """Initialize attrs-managed fields."""
+
     def __init__(self, client_id: str | None = None):
         self.__attrs_init__(client_id=client_id or f"moat-mqtt-{uuid4().hex}")
         self._auto_ack_publishes = True

@@ -8,6 +8,7 @@ from anyio.abc import (
     ByteStream,
     Listener,
     SocketAttribute,
+    TaskStatus,
 )
 from anyio.streams.tls import TLSListener
 from os import PathLike
@@ -316,7 +317,7 @@ class AsyncMQTTBroker:
         return ReasonCode.SUCCESS
 
     async def serve(  # noqa: D102
-        self, *, task_status: anyio.abc.TaskStatus[int] = anyio.TASK_STATUS_IGNORED
+        self, *, task_status: TaskStatus[int] = anyio.TASK_STATUS_IGNORED
     ) -> None:
         listener: Listener[Any]
         if isinstance(self.bind_address, (str, bytes, PathLike)):

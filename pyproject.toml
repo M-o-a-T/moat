@@ -261,6 +261,7 @@ include = [
     "moat/lib/repl/",
     "moat/lib/rpc/",
     "moat/lib/ring/",
+    "moat/lib/run/",
     "moat/lib/stream/",
     "moat/util/",
 ]

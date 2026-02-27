@@ -8,11 +8,11 @@ import ast
 import importlib
 import logging
 import logging.config
+import pathlib
 import sys
 from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial, wraps
-from pathlib import Path as FSPath
 from types import NoneType
 
 import asyncclick as click
@@ -24,17 +24,21 @@ from moat.lib.micro import ModuleNotFoundError  # noqa:A004
 from moat.lib.path import P, Path
 
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, cast
 
 try:
-    from moat.lib.proxy import Proxy
+    from moat.lib.proxy import Proxy as _Proxy
 except ImportError:
-    Proxy = None
-
-from typing import TYPE_CHECKING
+    _Proxy = cast(Any, None)
 
 if TYPE_CHECKING:
-    from typing import Awaitable, Literal, Sequence  # noqa:UP035
+    from pkgutil import ModuleInfo
+
+    from collections.abc import Awaitable, Callable, Iterator, Sequence
+    from typing import Literal
+
+Proxy: type[Any] | None = _Proxy
 
 logger = logging.getLogger("_loader")
 
@@ -50,31 +54,32 @@ __all__ = [
     "wrap_main",
 ]
 
-this_load = ContextVar("this_load", default=None)
+this_load: ContextVar[str | None] = ContextVar("this_load", default=None)
 
 
 # cmd_eval is a simple and safe "eval" replacement.
 _eval = simpleeval.SimpleEval(functions=dict(P=P, Path=Path))
-_eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript]
-    _eval._eval(x) for x in node.elts
-)
-_eval.nodes[ast.List] = lambda node: list(  # pyright: ignore[reportOptionalSubscript]
-    _eval._eval(x) for x in node.elts
-)
-_eval.nodes[ast.Dict] = lambda node: attrdict(  # pyright: ignore[reportOptionalSubscript]
-    (_eval._eval(x), _eval._eval(y)) for x, y in zip(node.keys, node.values, strict=False)
-)
+if _eval.nodes is not None:
+    _eval.nodes[ast.Tuple] = lambda node: tuple(  # pyright: ignore[reportOptionalSubscript]
+        _eval._eval(x) for x in node.elts
+    )
+    _eval.nodes[ast.List] = lambda node: list(  # pyright: ignore[reportOptionalSubscript]
+        _eval._eval(x) for x in node.elts
+    )
+    _eval.nodes[ast.Dict] = lambda node: attrdict(  # pyright: ignore[reportOptionalSubscript]
+        (_eval._eval(x), _eval._eval(y)) for x, y in zip(node.keys, node.values, strict=False)
+    )
 cmd_eval = _eval.eval
 
 
-def _no_config(*a, **k):  # noqa:ARG001
+def _no_config(*_a: Any, **_k: Any) -> None:
     import warnings  # noqa: PLC0415
 
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
 
 def attr_args(
-    proc=None,
+    proc: Callable[..., Any] | None = None,
     with_combined: bool | str = "s",
     with_arglist: bool = False,
     with_path: bool = True,
@@ -82,7 +87,7 @@ def attr_args(
     with_var: bool = True,
     with_proxy: bool = False,
     par_name: str = "Parameter",
-):
+) -> Callable[..., Any]:
     """
     Add an option for setting possibly-hierarchical values to :func:`asyncclick.command`.
 
@@ -124,7 +129,7 @@ def attr_args(
     Use ``:=`` if you ever need a path that consist of a single plus character.
     """
 
-    def _proc(proc):
+    def _proc(proc: Callable[..., Any]) -> Callable[..., Any]:
         if with_combined:
             ht = []
             if with_var:
@@ -221,16 +226,16 @@ def attr_args(
 
 
 def process_args(
-    val: dict | None = None,
-    set_=(),
-    args_=(),
-    vars_=(),
-    eval_=(),
-    path_=(),
-    proxy_=(),
-    no_path=False,
-    vs=None,
-):
+    val: dict[str, Any] | None = None,
+    set_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
+    args_: Sequence[str] = (),
+    vars_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
+    eval_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
+    path_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
+    proxy_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
+    no_path: bool = False,
+    vs: set[str] | None = None,
+) -> Any:
     """
     process ``set_``/``args_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
 
@@ -253,69 +258,73 @@ def process_args(
     if isinstance(proxy_, Mapping):
         proxy_ = proxy_.items()
 
-    def data():
-        def s_eval(v):
-            if v[0] == "~":
-                v = v[1:]
-            elif v == "=-":
-                v = NotGiven
-            elif v == "=t":
-                v = True
-            elif v == "=f":
-                v = False
-            elif v == "=n":
-                v = None
-            elif v[0] == "=":
-                v = cmd_eval(v[1:])  # pylint: disable=W0631
-            elif v[0] == ":":
-                v = P(v)
-            elif v[0] == ".":
-                v = P(v[1:])
-            elif v[0] == "^":
-                v = Proxy(v[1:])
+    def data() -> Iterator[tuple[Any, Any]]:
+        def s_eval(v: str) -> Any:
+            vv: Any = v
+            if vv[0] == "~":
+                vv = vv[1:]
+            elif vv == "=-":
+                vv = NotGiven
+            elif vv == "=t":
+                vv = True
+            elif vv == "=f":
+                vv = False
+            elif vv == "=n":
+                vv = None
+            elif vv[0] == "=":
+                vv = cmd_eval(vv[1:])  # pylint: disable=W0631
+            elif vv[0] == ":":
+                vv = P(vv)
+            elif vv[0] == ".":
+                vv = P(vv[1:])
+            elif vv[0] == "^":
+                if Proxy is None:
+                    raise ImportError("No Proxy")
+                vv = Proxy(vv[1:])
             else:
                 try:
-                    v = int(v)
+                    vv = int(vv)
                 except ValueError:
                     try:
-                        v = float(v)
+                        vv = float(vv)
                     except ValueError:
                         pass  # leave it as a string
-            return v
+            return vv
 
         for k, v in set_:
-            yield k, s_eval(v)
+            yield k, s_eval(str(v))
         for k, v in vars_:
             yield k, v
         for k, v in eval_:
             # ruff:noqa:PLW2901 # var overwritten
-            if v == "-":
-                v = NotGiven
-            elif v == "/":  # pylint: disable=W0631
+            vv: Any = v
+            if vv == "-":
+                vv = NotGiven
+            elif vv == "/":  # pylint: disable=W0631
                 if vs is None:
                     raise click.BadOptionUsage(
-                        option_name=k,
+                        option_name=str(k),
                         message="A slash value doesn't work here.",
                     )
-                v = NoneType
+                vv = NoneType
             else:
-                v = eval(v)  # pylint: disable=W0631
-            yield k, v
-        for k, v in path_:
-            v = P(v)
+                vv = eval(vv)  # pylint: disable=W0631
+            yield k, vv
+        for k, pv in path_:
+            vv = P(str(pv))
             if no_path:
-                v = tuple(v)
-            yield k, v
+                vv = tuple(vv)
+            yield k, vv
         if proxy_:
             if Proxy is None:
                 raise ImportError("No Proxy")
-            for k, v in proxy_:
-                v = Proxy(v)
-                yield k, v
+            for k, pv in proxy_:
+                vv = Proxy(str(pv))
+                yield k, vv
 
         # Arguments are given last, thus they get processed last.
         for v in args_:
-            yield ((None, None), s_eval(v))
+            yield ((None, None), s_eval(str(v)))
 
     if set_:
         dd = data()
@@ -337,7 +346,7 @@ def process_args(
         if not len(k):
             if vs is not None:
                 raise click.BadOptionUsage(
-                    option_name=k,
+                    option_name=str(k),
                     message="You can't use empty paths here.",
                 )
             val = v
@@ -350,13 +359,14 @@ def process_args(
             val = attrdict._delete(val, k)  # pylint: disable=protected-access
         elif v is NoneType:
             val = attrdict._delete(val, k)  # pylint: disable=protected-access
-            vs.discard(str(k))
+            if vs is not None:
+                vs.discard(str(k))
         else:
             val = attrdict._update(val, k, v)  # pylint: disable=protected-access
     return val
 
 
-def load_ext(name, *attr, err=False):
+def load_ext(name: str, *attr: str, err: bool = False) -> Any:
     """
     Load a module
     """
@@ -367,7 +377,7 @@ def load_ext(name, *attr, err=False):
     try:
         mod = importlib.import_module(dp)
     except ModuleNotFoundError as exc:
-        if err and not exc.name.endswith("._main"):
+        if err and exc.name is not None and not exc.name.endswith("._main"):
             logger.debug("Err %s: %r", dp, exc, exc_info=exc)
         return None
     except FileNotFoundError:
@@ -384,28 +394,31 @@ def load_ext(name, *attr, err=False):
         return mod
 
 
-def _namespaces(name):
+def _namespaces(name: str | object) -> Iterator[ModuleInfo]:
     import pkgutil  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
     if name is NotGiven:
-        return ()
+        return iter(())
     try:
-        ext = importlib.import_module(name)
+        ext = importlib.import_module(cast(str, name))
     except ModuleNotFoundError:
         logger.debug("No NS: %s", name)
-        return ()
+        return iter(())
     try:
         p = ext.__path__
     except AttributeError:
-        p = (str(FSPath(ext.__file__).parent),)
+        fn = ext.__file__
+        if fn is None:
+            return iter(())
+        p = (str(pathlib.Path(fn).parent),)
     logger.debug("NS: %s %s", name, p)
     return pkgutil.iter_modules(p, ext.__name__ + ".")
 
 
-_ext_cache = defaultdict(dict)
+_ext_cache: defaultdict[str, dict[str, Any]] = defaultdict(dict)
 
 
-def _cache_ext(ext_name, pkg_only):
+def _cache_ext(ext_name: str, pkg_only: bool) -> None:
     """List external modules
 
     Yields (name,path) tuples.
@@ -418,11 +431,13 @@ def _cache_ext(ext_name, pkg_only):
             continue
         logger.debug("ExtC %s", name)
         x = name.rsplit(".", 1)[-1]
-        f = FSPath(finder.path) / x
+        f = pathlib.Path(finder.path) / x
         _ext_cache[ext_name][x] = f
 
 
-def list_ext(name, func=None, pkg_only=True):
+def list_ext(
+    name: str, func: str | None = None, pkg_only: bool = True
+) -> Iterator[tuple[str, Any]]:
     """List external modules
 
     Yields (name,path) tuples.
@@ -455,14 +470,14 @@ def list_ext(name, func=None, pkg_only=True):
 
 
 def load_subgroup(
-    _fn=None,
-    prefix=None,
-    sub_pre=None,
-    sub_post=None,
-    ext_pre=None,
-    ext_post=None,
-    **kw,
-) -> click.Command:
+    _fn: Callable[..., Any] | None = None,
+    prefix: str | None = None,
+    sub_pre: str | None = None,
+    sub_post: str | None = None,
+    ext_pre: str | None = None,
+    ext_post: str | None = None,
+    **kw: Any,
+) -> Callable[..., Any]:
     """
     A decorator like :func:`asyncclick.group`, enabling loading of subcommands
 
@@ -472,7 +487,7 @@ def load_subgroup(
     All other arguments are forwarded to :func:`asyncclick.command`.
     """
 
-    def _ext(fn, **kw):
+    def _ext(fn: Callable[..., Any], **kw: Any) -> Callable[..., Any]:
         return click.command(**kw)(fn)
 
     kw["cls"] = partial(
@@ -528,12 +543,12 @@ class Loader(click.Group):
     def __init__(
         self,
         *,
-        _util_sub_pre=None,
-        _util_sub_post=None,
-        _util_ext_pre=None,
-        _util_ext_post=None,
-        **kw,
-    ):
+        _util_sub_pre: str | None = None,
+        _util_sub_post: str | None = None,
+        _util_ext_pre: str | None = None,
+        _util_ext_post: str | None = None,
+        **kw: Any,
+    ) -> None:
         logger.debug(
             "* Load: %s.*.%s / %s.*.%s",
             _util_sub_pre,
@@ -551,7 +566,7 @@ class Loader(click.Group):
             self._util_ext_post = _util_ext_post
         super().__init__(**kw)
 
-    def get_sub_ext(self, ctx):
+    def get_sub_ext(self, ctx: click.Context) -> tuple[Any, Any, Any, Any]:
         """Fetch extension variables"""
         try:
             uspr = ctx.obj._util_sub_pre
@@ -605,7 +620,7 @@ class Loader(click.Group):
 
         return sub_pre, sub_post, ext_pre, ext_post
 
-    def list_commands(self, ctx):
+    def list_commands(self, ctx: click.Context) -> list[str]:
         "show subpackages"
         rv = super().list_commands(ctx)
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
@@ -630,7 +645,7 @@ class Loader(click.Group):
         logger.debug("List: %r", rv)
         return rv
 
-    def get_command(self, ctx, cmd_name):
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         "add subpackages"
         command = super().get_command(ctx, cmd_name)
 
@@ -660,8 +675,9 @@ class Loader(click.Group):
         if command is None:
             # raise click.UsageError(f"No such subcommand: {cmd_name}")
             return None
-        command.__name__ = command.name = cmd_name
-        return command
+        cmd = cast(Any, command)
+        cmd.__name__ = cmd.name = cmd_name
+        return cast(click.Command, cmd)
 
 
 class MainLoader(Loader):
@@ -670,9 +686,9 @@ class MainLoader(Loader):
     subcommand with "--help".
     """
 
-    async def invoke(self, ctx):
+    async def invoke(self, ctx: click.Context) -> Any:
         if not getattr(ctx, "_moat_invoked", False):
-            await ctx.invoke(self.callback, **ctx.params)
+            await ctx.invoke(cast(Any, self.callback), **ctx.params)
         return await super().invoke(ctx)
 
 
@@ -706,7 +722,7 @@ class MainLoader(Loader):
     "-c",
     "--cfg",
     "cfg_files",
-    type=click.Path("r"),
+    type=click.Path(readable=True),
     default=None,
     help="Configuration file (YAML).",
     multiple=True,
@@ -720,7 +736,9 @@ class MainLoader(Loader):
 )
 @attr_args(par_name="Config item")
 @click.pass_context
-async def main_(ctx, verbose, quiet, help=False, **kv) -> None:
+async def main_(
+    ctx: click.Context, verbose: int, quiet: int, help: bool = False, **kv: Any
+) -> None:
     """
     This is the main command. (You might want to override this text.)
 
@@ -732,7 +750,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv) -> None:
     # twice instead of never.
     if hasattr(ctx, "_moat_invoked"):
         return
-    ctx._moat_invoked = True  # pylint: disable=protected-access
+    cast(Any, ctx)._moat_invoked = True  # pylint: disable=protected-access
     cfg = current_cfg.get()
     if cfg is not None:
         kv["cfg"] = cfg
@@ -751,31 +769,31 @@ async def main_(ctx, verbose, quiet, help=False, **kv) -> None:
 
 
 def wrap_main(
-    main=main_,
+    main: Any = main_,
     *,
-    set_=(),
-    vars_=(),
-    eval_=(),
-    path_=(),
-    proxy_=(),
-    name=None,
-    sub_pre=None,
-    sub_post=None,
-    ext_pre=None,
-    ext_post=None,
+    set_: Mapping[str, str] | Sequence[tuple[str, str]] = (),
+    vars_: Mapping[str, str] | Sequence[tuple[str, str]] = (),
+    eval_: Mapping[str, str] | Sequence[tuple[str, str]] = (),
+    path_: Mapping[str, str] | Sequence[tuple[str, str]] = (),
+    proxy_: Mapping[str, str] | Sequence[tuple[str, str]] = (),
+    name: str | None = None,
+    sub_pre: str | bool | None = None,
+    sub_post: str | None = None,
+    ext_pre: str | None = None,
+    ext_post: str | None = None,
     ext_name: str | None = None,
     cfg: CfgStore | attrdict | None | Literal[False] = None,
     cfg_files: str | Sequence[str] = (),
     cfg_load_all: bool | None = True,
-    args=None,
-    wrap=False,
-    verbose=1,
-    debug=0,
-    debug_loader=False,
-    log=(),
-    ctx=None,
-    help=None,
-) -> Awaitable:
+    args: Sequence[str] | None = None,
+    wrap: bool = False,
+    verbose: int = 1,
+    debug: int = 0,
+    debug_loader: bool = False,
+    log: Sequence[str] = (),
+    ctx: click.Context | None = None,
+    help: str | None = None,
+) -> Awaitable[Any] | None:
     """
     The main command entry point, when testing.
 
@@ -799,7 +817,7 @@ def wrap_main(
     External extensions are loaded as ``{ext_pre}.*.{ext_post}``.
     """
 
-    obj = getattr(ctx, "obj", None)
+    obj: attrdict = getattr(ctx, "obj", None)
     if obj is None:
         obj = attrdict()
 
@@ -837,7 +855,10 @@ def wrap_main(
         "discover from caller"
         import inspect  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
-        sub_pre = inspect.currentframe().f_back.f_globals["__package__"]
+        frame = inspect.currentframe()
+        if frame is None or frame.f_back is None:
+            raise RuntimeError("Cannot discover caller module")
+        sub_pre = frame.f_back.f_globals["__package__"]
     elif sub_pre is None:
         sub_pre = name
     if sub_post is None:
@@ -909,9 +930,9 @@ def wrap_main(
         in_test(cfg)
 
     if not wrap and not hasattr(logging.root, "_MoaT"):
-        logging.basicConfig = _no_config
-        logging.config.dictConfig = _no_config
-        logging.config.fileConfig = _no_config
+        logging.basicConfig = cast(Any, _no_config)
+        logging.config.dictConfig = cast(Any, _no_config)
+        logging.config.fileConfig = cast(Any, _no_config)
 
         logging.captureWarnings(verbose > 0)
         logger.disabled = False
@@ -919,7 +940,7 @@ def wrap_main(
             logger.level = logging.DEBUG
             for p in sys.path:
                 logger.debug("Path: %s", p)
-        logging.root._MoaT = True
+        cast(Any, logging.root)._MoaT = True
 
     obj.logger = logging.getLogger(name)
     obj.debug_loader = debug_loader
@@ -941,11 +962,17 @@ def wrap_main(
                 return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
+        pname = (
+            exc.param.name.upper()
+            if exc.param is not None and exc.param.name is not None
+            else "PARAMETER"
+        )
         print(
-            f"You need to provide an argument {exc.param.name.upper()!r}.\n",
+            f"You need to provide an argument {pname!r}.\n",
             file=sys.stderr,
         )
-        print(exc.cmd.get_help(exc.ctx), file=sys.stderr)
+        if exc.cmd is not None and exc.ctx is not None:
+            print(exc.cmd.get_help(exc.ctx), file=sys.stderr)
         sys.exit(2)
     except click.exceptions.UsageError as exc:
         try:
@@ -959,9 +986,9 @@ def wrap_main(
         print("Aborted.", file=sys.stderr)
 
 
-def _ng(type_):
+def _ng(type_: Callable[[Any], Any]) -> Callable[[Any], Any]:
     @wraps(type_)
-    def gen(data):
+    def gen(data: Any) -> Any:
         if data is NotGiven:
             return data
         return type_(data)
@@ -969,5 +996,5 @@ def _ng(type_):
     return gen
 
 
-def option_ng(*a, type=str, **kw):  # noqa: A002, D103
+def option_ng(*a: Any, type: Callable[[Any], Any] = str, **kw: Any) -> Any:  # noqa: A002, D103
     return click.option(*a, **kw, type=_ng(type), default=NotGiven)

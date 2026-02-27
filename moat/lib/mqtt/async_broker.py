@@ -56,7 +56,7 @@ class AsyncMQTTClientSession:  # noqa: D101
         async with self.lock:
             if data := self.state_machine.get_outbound_data():
                 try:
-                    await self.stream.send(data)
+                    await self.stream.send(bytes(data))
                 except anyio.ClosedResourceError:
                     pass
 

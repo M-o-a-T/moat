@@ -8,6 +8,7 @@ from attrs import define, field
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
 from ._exceptions import MQTTProtocolError
 from ._types import (
+    Buffer,
     Capabilities,
     MQTTConnAckPacket,
     MQTTConnectPacket,
@@ -172,7 +173,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     def publish(
         self,
         topic: str,
-        payload: str | bytes,
+        payload: str | Buffer,
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,

@@ -26,6 +26,7 @@ from attr.validators import ge, gt, in_, instance_of, le, lt, optional
 from attrs import define, field
 
 from . import (
+    Buffer,
     MQTTConnAckPacket,
     MQTTPacket,
     MQTTPublishAckPacket,
@@ -574,7 +575,7 @@ class AsyncMQTTClient:
                 raise anyio.BrokenResourceError
             if data := self._state_machine.get_outbound_data():
                 try:
-                    await self._stream.send(data)
+                    await self._stream.send(bytes(data))
                 except self._ignored_exc_classes:
                     # logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
                     pass
@@ -614,7 +615,7 @@ class AsyncMQTTClient:
     async def publish(
         self,
         topic: str,
-        payload: bytes | str,
+        payload: Buffer | str,
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,

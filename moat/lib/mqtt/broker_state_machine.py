@@ -6,6 +6,7 @@ from attrs import define, field
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
 from ._exceptions import MQTTProtocolError
 from ._types import (
+    Buffer,
     MQTTConnAckPacket,
     MQTTConnectPacket,
     MQTTDisconnectPacket,
@@ -232,7 +233,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
     def deliver_publish(
         self,
         topic: str,
-        payload: str | bytes,
+        payload: str | Buffer,
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,

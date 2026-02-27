@@ -2,17 +2,15 @@
 from __future__ import annotations
 
 import anyio
-import sys
 import time
 
 import asyncclick as click
-from attrs import define, field
 
-from moat.util import NotGiven, get_p
+from moat.util import NotGiven, get_part, yprint
 from moat.lib.path import P, Path
 from moat.link.client import Link
-from moat.link.schema import schema_path, validate_instance
 
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 
@@ -27,174 +25,284 @@ async def cli(ctx):
     obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
 
 
-async def _flow_error(conn, path: Path, data: Any) -> Exception | None:
-    """Return the schema validation error for one message, if any."""
+def flow_path(path: Path) -> Path:
+    """
+    Return the flow-check lookup path for a data path.
+    """
+    return P("flow") + path
+
+
+def _error_path(path: Path, rel: Path) -> Path:
+    """
+    Return the error path for a checked data sub-item.
+    """
+    if len(rel) == 0:
+        return path
+    return path / None + rel
+
+
+def _iter_checks(data: Any, base: Path = Path()) -> Iterator[tuple[Path, Mapping[str, Any]]]:
+    """
+    Yield check definitions in a flow config tree.
+    """
+    if not isinstance(data, Mapping):
+        return
+
+    check = data.get("_")
+    if isinstance(check, Mapping):
+        yield base, check
+
+    for key, value in data.items():
+        if key == "_":
+            continue
+        if not isinstance(key, (str, int)):
+            continue
+        yield from _iter_checks(value, base / key)
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _check_limits(value: Any, check: Mapping[str, Any], previous: Any = NotGiven) -> str | None:
+    """
+    Validate min/max/maxstep limits.
+    """
+    num = _as_float(value)
+    if (v_min := check.get("min", None)) is not None:
+        if num is None:
+            return "Value is not numeric"
+        if num < float(v_min):
+            return f"{num:g} < {float(v_min):g}"
+
+    if (v_max := check.get("max", None)) is not None:
+        if num is None:
+            return "Value is not numeric"
+        if num > float(v_max):
+            return f"{num:g} > {float(v_max):g}"
+
+    if (v_step := check.get("maxstep", None)) is not None and previous is not NotGiven:
+        prev_num = _as_float(previous)
+        if num is not None and prev_num is not None:
+            delta = abs(num - prev_num)
+            if delta > float(v_step):
+                return f"Step {delta:g} > {float(v_step):g}"
+
+    return None
+
+
+async def _check_copied(conn: Link, value: Any, check: Mapping[str, Any]) -> str | None:
+    """
+    Validate a ``copied`` rule.
+    """
+    copied = check.get("copied", None)
+    if not isinstance(copied, Mapping):
+        return None
+
+    if "at" not in copied:
+        return "Copied rule has no destination path"
+
     try:
-        schema = await conn.d_search(schema_path(path))
+        c_val = await conn.d_get(copied["at"])
+    except Exception as exc:
+        return f"Copied lookup failed: {exc}"
+
+    c_item = copied.get("item", None)
+    if c_item is not None:
+        try:
+            c_val = get_part(c_val, c_item)
+        except Exception as exc:
+            return f"Copied item lookup failed: {exc}"
+
+    if c_val != value:
+        return f"Copied mismatch: want {value!r}, got {c_val!r}"
+    return None
+
+
+def _value_for(data: Any, rel: Path) -> Any:
+    if not rel:
+        return data
+    return get_part(data, rel)
+
+
+async def _flow_data(conn: Link, path: Path) -> Mapping[str, Any] | None:
+    try:
+        flow = await conn.d_search(flow_path(path))
     except KeyError:
         return None
-    try:
-        validate_instance(schema, data)
-    except Exception as exc:
-        return exc
-    return None
+    if not isinstance(flow, Mapping):
+        return None
+    return flow
 
 
-async def _flow_record_error(conn, path: Path, data: Any, exc: Exception) -> None:
-    """Write one error record."""
-    await conn.e_info(
-        P("flow") + path,
-        msg,
-        data_path=path,
-        data=data,
-        detail=str(exc) if exc else None,
-    )
+async def _check_path(
+    conn: Link,
+    *,
+    path: Path,
+    data: Any,
+    meta: Any,
+    flow: Mapping[str, Any],
+    previous: dict[Path, Any],
+    now: float,
+    do_copied: bool,
+    do_stale_age: bool,
+) -> tuple[
+    set[Path],
+    dict[Path, tuple[str, Mapping[str, Any], Any]],
+    dict[Path, tuple[float, Mapping[str, Any], Any]],
+]:
+    """
+    Evaluate one message against flow rules.
+    """
+    checked: set[Path] = set()
+    errors: dict[Path, tuple[str, Mapping[str, Any], Any]] = {}
+    timeouts: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
 
+    for rel, check in _iter_checks(flow):
+        err_p = _error_path(path, rel)
+        checked.add(err_p)
 
-def _gen_paths(data:Mapping, p:Path=Path()) -> Iterator[tuple[Path,dict[str,Any]]]:
-    if not isinstance(data,Mapping):
-        return
-    if "_" in data:
-        yield p,data["_"]
-        return
-    for k,v in data:
-        yield from _gen_paths(v, p/k)
+        if data is NotGiven:
+            if check.get("required", False):
+                errors[err_p] = ("Missing data", check, NotGiven)
+            continue
 
-def _check_limits(data,chk:dict) -> str|None:
-    # XXX check against min/max
-    return None
+        try:
+            value = _value_for(data, rel)
+        except Exception:
+            value = NotGiven
 
-@define
-class PathTimer:
-    p:Path=field(eq=True,hash=True)
-    v:Any=field(eq=False,hash=False)
-    chk:dict=field(eq=False,hash=False)
+        if value is NotGiven:
+            if check.get("required", False):
+                errors[err_p] = ("Missing data", check, NotGiven)
+            continue
+
+        prev_key = path + rel
+        prev_val = previous.get(prev_key, NotGiven)
+        previous[prev_key] = value
+
+        msg = _check_limits(value, check, prev_val)
+        if msg is None and do_copied:
+            msg = await _check_copied(conn, value, check)
+
+        if msg is not None:
+            errors[err_p] = (msg, check, value)
+
+        timeout = check.get("timeout", None)
+        if timeout is not None:
+            try:
+                timeout = float(timeout)
+            except (TypeError, ValueError):
+                timeout = None
+
+        if timeout is not None and timeout > 0:
+            timeouts[err_p] = (timeout, check, value)
+            ts = getattr(meta, "timestamp", None)
+            if do_stale_age and ts is not None and now - ts > timeout and err_p not in errors:
+                age = now - ts
+                errors[err_p] = (f"Stale data: {age:g}s > {timeout:g}s", check, value)
+
+    return checked, errors, timeouts
+
 
 class FlowMon:
-    def __init__(self, conn:Link, path:Path):
+    """
+    Monitor incoming messages and create flow errors.
+    """
+
+    def __init__(self, conn: Link, path: Path):
         self.conn = conn
         self.path = path
+        self.previous: dict[Path, Any] = {}
+        self.active_errors: dict[Path, str] = {}
+        self.timeout_deadline: dict[Path, float] = {}
+        self.timeout_data: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
 
-        self.dest = TimerMap()  # verify destinations
-        self.delay = TimerMap()
-        self.values = attrdict()  # past values
+    async def _set_error(
+        self, path: Path, msg: str, check: Mapping[str, Any], data: Any, data_path: Path
+    ) -> None:
+        if self.active_errors.get(path, None) == msg:
+            return
+        self.active_errors[path] = msg
+        await self.conn.e_info(P("flow") + path, msg, data_path=data_path, check=check, data=data)
 
-    def check_data(self, p:Path, v:Any, chk:dict, m:MsgMeta) -> str|None:
-        """
-        - check min/max/step
-        - queue a dest value check, if required
-        - queue a timeout for updates
-        """
-        old_val = self.value.get(p,NotGiven)
-        # TODO check min/max
-        if (step := chk.get("maxstep",-1)) > 0:
-            if (s := abs(old_val-v)) > step:
-                return f"Step {s} > {step}"
+    async def _clear_error(self, path: Path) -> None:
+        if path not in self.active_errors:
+            return
+        del self.active_errors[path]
+        await self.conn.e_ok(P("flow") + path)
 
-        self.value.set_(p,v)
-        if "timeout" not in chk and "copied" not in chk:
-            return None
+    async def _run_timeouts(self, stop: anyio.Event) -> None:
+        while True:
+            if stop.is_set():
+                return
+            await anyio.sleep(0.01)
 
-        tm=PathTimer(p,v,chk)
-        if (cop := chk.get("copied", None)) is not None:
-            self.dest[tm]=cop.get("delay",3)
-        if (t := chk.get("timeout", None)) is not None:
-            self.delay[tm]=t
-
-    async def _run_dest(self, errs):
-        async for pt in self.dest:
-            try:
-                cv = await self.conn.d_get(pt.chk["copied"]["at"])
-                v = get_p(cv,pt.chk["copied"]["item"])
-                if v != pt.v:
-                    raise ValueError("want {pt.v}, got {v}")
-            except Exception as exc:
-                # only set the error if there isn't one already
-                try:
-                    if "want " in errs.get(pt.p, create=False).data.msg:
-                        continue
-                except (AttributeError,KeyError):
-                    pass
-                await self.conn.e_exc(pt.p,"Comparison",exc)
-            else:
-                # only clear the error if there is one
-                try:
-                    errs.get(pt.p, create=False).data.msg
-                except (ValueError,KeyError,AttributeError):
-                    pass
-                else:
-                    await self.conn.e_ok(pt.p)
-
-    async def _run_delay(self, errs):
-        async for pt in self.delay:
-            await self.conn.e_info(err_p, e_msg, check=chk,data=v)
-
-    async def run(self):
-        async with (
-            self.conn.d_watch(P("flow"), state=None, subtree=True).node() as flows,
-            self.conn.d_watch(P("error.flow")+self.path, state=None, subtree=True).node() as errs,
-            self.conn.d_watch(self.path, state=None, subtree=True, meta=True) as data,
-            anyio.create_task_group() as tg,
-        ):
-            # TODO this is not quite correct, need to do it explicitly
-            # because if an error is resolved we need to update the stored value
-
-            async for pdm in data:
-                if pdm is None:
-                    # Marker: start processing timeouts
-                    tg.start_soon(self._run_dest, errs)
-                    tg.start_soon(self._run_delay, errs)
+            now = time.monotonic()
+            for path, deadline in tuple(self.timeout_deadline.items()):
+                if deadline > now:
                     continue
-                p,d,m = pdm
-                try:
-                    flow = flows.search(self.path+pp)
-                except KeyError:
+                timeout, check, data = self.timeout_data[path]
+                msg = f"No update for {timeout:g}s"
+                await self._set_error(path, msg, check, data, path)
+
+    async def _run_data(self, stop: anyio.Event) -> None:
+        async with self.conn.d_watch(self.path, state=None, subtree=True, meta=True) as mon:
+            async for rel, data, meta in mon:
+                full = self.path + rel
+                flow = await _flow_data(self.conn, full)
+                if flow is None:
                     continue
-                try:
-                    err_d = errs[p]
-                except KeyError:
-                    err_d = None
 
-                for pp,chk in _gen_paths(flow.data):
-                    if len(pp):
-                        err_path = p/None+pp
+                checked, errors, timeouts = await _check_path(
+                    self.conn,
+                    path=full,
+                    data=data,
+                    meta=meta,
+                    flow=flow,
+                    previous=self.previous,
+                    now=time.time(),
+                    do_copied=True,
+                    do_stale_age=False,
+                )
+
+                now = time.monotonic()
+                for path, (timeout, check, value) in timeouts.items():
+                    self.timeout_deadline[path] = now + timeout
+                    self.timeout_data[path] = (timeout, check, value)
+
+                for path in checked:
+                    if path in errors:
+                        msg, check, value = errors[path]
+                        await self._set_error(path, msg, check, value, full)
                     else:
-                        err_path=p
+                        await self._clear_error(path)
 
-                    if err_d is not None and len(pp):
-                        try:
-                            err_pp = err_d[None][pp]
-                        except KeyError:
-                            err_pp = None
-                    else:
-                        err_pp = err_d
+        stop.set()
 
-                    # if d is NotGiven, the item has been deleted
-                    if d is NotGiven:
-                        v = NotGiven
-                    else:
-                        try:
-                            v = get_p(flow.data, pp)
-                        except KeyError:
-                            v = NotGiven
+    async def run(self) -> None:
+        """
+        Run the monitor.
+        """
+        stop = anyio.Event()
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(self._run_data, stop)
+            tg.start_soon(self._run_timeouts, stop)
 
-                    e_msg = None
-                    if v is not NotGiven:
-                        e_msg = self.check_data(v, chk, m)
-                    elif chk.get("required", False):
-                        e_msg = "Missing data"
 
-                    if e_msg is not None:
-                        # TODO skip if the message isn't modified
-                        try:
-                            if err_pp.data.msg == e_msg:
-                                continue
-                        except (ValueError,AttributeError):
-                            pass  # data deleted
-                        await self.conn.e_info(err_path, e_msg, check=chk,data=v)
-                    elif err_pp is not None:
-                        await self.conn.e_ok(err_path)
-
+@cli.command()
+@click.argument("path", type=P, nargs=1)
+@click.pass_obj
+async def get(obj, path):
+    """
+    Retrieve the flow-check definition for a path.
+    """
+    res = await obj.conn.d_search(flow_path(path))
+    yprint(res, stream=obj.stdout)
 
 
 @cli.command()
@@ -215,51 +323,45 @@ async def monitor(obj, path):
 @click.pass_obj
 async def check(obj, path, verbose, monitor):
     """
-    Check stored messages in a subtree against flows.
-    Does not check or trigger errors; does not verify timeouts
-    (but reports stale data).
+    Check stored messages in a subtree against flow checks.
+
+    This command does not create errors in ``error.flow``.
     """
     n_bad = 0
     n_skip = 0
     n_good = 0
+    previous: dict[Path, Any] = {}
+    watch_state = None if monitor else True
 
-    async with (
-        obj.conn.d_watch(P("flow"), state=None, subtree=True).node() as flows,
-        obj.conn.d_watch(self.path,
-                         state=None if monitor else True, subtree=True,meta=True) as data,
-    ):
-        async for p,d,m in data:
-            try:
-                flow = flows.get_(path+p).data
-            except KeyError:
+    async with obj.conn.d_watch(path, state=watch_state, subtree=True, meta=True) as mon:
+        async for rel, data, meta in mon:
+            full = path + rel
+            flow = await _flow_data(obj.conn, full)
+            if flow is None:
                 n_skip += 1
-            else:
-                pass # TODO verify
+                continue
 
-            if d is NotGiven:
-                if flow.get("_",{}).get("required",False):
-                    n_bad += 1
-                    print("DEL",p)
-            else:
-                if (t := flow.get("_",{}).get("timeout",-1)) > 0:
-                    if time.time()-m.timestamp > t:
-                        print("OLD",p)
-                        n_bad += 1
+            checked, errors, _timeouts = await _check_path(
+                obj.conn,
+                path=full,
+                data=data,
+                meta=meta,
+                flow=flow,
+                previous=previous,
+                now=time.time(),
+                do_copied=True,
+                do_stale_age=True,
+            )
 
-                for pp,chk in _gen_paths(flow):
-                    try:
-                        v = d.get_(pp)
-                    except KeyError:
-                        if chk.get("required",False):
-                            n_bad += 1
-                            print("MIS",p,pp)
-                            break
-                    else:
-                        if (s := _check_limits(v,chk)) is not None:
-                            n_bad += 1
-                            print("CHK",p,pp,s)
-                        else:
-                            n_good += 1
+            n_bad += len(errors)
+            n_good += len(checked) - len(errors)
+            for err_path, (detail, check, value) in errors.items():
+                yprint(
+                    dict(path=err_path, data_path=full, detail=detail, check=check, data=value),
+                    stream=obj.stdout,
+                )
+                print("---", file=obj.stdout)
+                obj.stdout.flush()
+
             if verbose:
-                print(" ",n_good,n_skip,n_bad,p,"     ", end="\r")
-                sys.stdout.flush()
+                click.echo(f"ok: {n_good}  skipped: {n_skip}  bad: {n_bad}", err=True)

@@ -241,7 +241,7 @@ class attrdict(dict[Hashable, Any]):
         """
         self._post = True
 
-    def get_(self, path: Path, default: Any = NotGiven) -> Any:
+    def get_(self, path: Path, default: Any = _Nope) -> Any:
         """
         Get a node's value and access the dict items beneath it.
         """
@@ -251,9 +251,9 @@ class attrdict(dict[Hashable, Any]):
         for p in path:
             if val is None:
                 return None
-            val = val.get(p, NotGiven)
-            if val is NotGiven:
-                if default is NotGiven:
+            val = val.get(p, _Nope)
+            if val is _Nope:
+                if default is _Nope:
                     raise KeyError(path)
                 return default
         return val

@@ -78,6 +78,12 @@ class _HostEventData:
     kwargs: dict[str, Any] = field(factory=dict)
 
 
+class _ServiceData(attrdict):
+    h: dict[Path, dict[str, Any]]
+    i: Any
+    p: dict[str, Any]
+
+
 class HostMachine:
     def __init__(self, host):
         self.host = host
@@ -182,7 +188,7 @@ class Service:
     id: str = field()
 
     # These get filled via path
-    data: dict[str, dict] = field(factory=attrdict, init=False)
+    data: _ServiceData = field(factory=_ServiceData, init=False)
     machine: HostMachine = field(init=False)
     _lock: anyio.Lock = field(init=False, factory=anyio.Lock, repr=False)
 
@@ -274,7 +280,11 @@ class HostList(CtxObj):
     """
 
     def __init__(
-        self, cfg: dict, link: Link, debug: bool = False, broadcaster: Broadcaster = None
+        self,
+        cfg: dict,
+        link: Link,
+        debug: bool = False,
+        broadcaster: Broadcaster[Any] | None = None,
     ):
         self.link = link
         self.debug = debug

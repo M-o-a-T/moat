@@ -8,6 +8,7 @@ from attrs import define, field
 
 from ._exceptions import InsufficientData, MQTTProtocolError
 from ._types import (
+    Buffer,
     MQTTAuthPacket,
     MQTTDisconnectPacket,
     MQTTPacket,
@@ -271,7 +272,7 @@ class BaseMQTTClientStateMachine:
             f"either never arrived or was already acknowledged"
         )
 
-    def get_outbound_data(self) -> bytes:
+    def get_outbound_data(self) -> Buffer:
         """
         Retrieve any bytes to be sent to the peer.
 
@@ -281,9 +282,9 @@ class BaseMQTTClientStateMachine:
         """
         buffer = self._out_buffer
         self._out_buffer = bytearray()
-        return bytes(buffer)
+        return buffer
 
-    def feed_bytes(self, data: bytes) -> Sequence[MQTTPacket]:
+    def feed_bytes(self, data: Buffer) -> Sequence[MQTTPacket]:
         """
         Input bytes received from the transport stream to the state machine.
 

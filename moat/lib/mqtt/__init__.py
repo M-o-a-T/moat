@@ -15,6 +15,7 @@ from ._exceptions import MQTTPublishFailed as MQTTPublishFailed
 from ._exceptions import MQTTSubscribeFailed as MQTTSubscribeFailed
 from ._exceptions import MQTTUnsubscribeFailed as MQTTUnsubscribeFailed
 from ._exceptions import MQTTUnsupportedPropertyType as MQTTUnsupportedPropertyType
+from ._types import Buffer as Buffer
 from ._types import MQTTAuthPacket as MQTTAuthPacket
 from ._types import MQTTConnAckPacket as MQTTConnAckPacket
 from ._types import MQTTConnectPacket as MQTTConnectPacket

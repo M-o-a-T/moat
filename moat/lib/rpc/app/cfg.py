@@ -114,5 +114,4 @@ class Cmd(BaseCmd):
         """
         Activate the new config.
         """
-        dest = self.root
-        await dest.reload()
+        await self.root.reload()

@@ -15,9 +15,15 @@ from moat.lib.rpc import BaseCmd
 
 # Typing
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
+    from moat.lib.micro import _TaskGroupProto
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import BaseMsgHandler
+
     from collections.abc import Awaitable, Callable
 
 
@@ -28,15 +34,16 @@ class BaseSuperCmd(BaseCmd):
     Sets up a taskgroup for the sub-app(s) to run in.
     """
 
-    tg: TaskGroup = None
-    app_lock: Lock = None
+    tg: object | None = None
+    app_lock: Lock | None = None
 
     async def setup(self) -> None:
         "setup apps"
         await super().setup()
         self.app_lock = Lock()
-        self.tg = await AC_use(self, TaskGroup())
-        await AC_use(self, self.tg.cancel)
+        tg = await AC_use(self, cast("AbstractAsyncContextManager[object]", TaskGroup()))
+        self.tg = tg
+        await AC_use(self, cast("_TaskGroupProto", tg).cancel)
 
     async def start_app(self, app: BaseCmd) -> None:
         """
@@ -49,11 +56,21 @@ class BaseSuperCmd(BaseCmd):
             finally:
                 app.p_task = None
 
+        if self.app_lock is None:
+            raise RuntimeError("No lock")
+        tg = self.tg
+        if tg is None:
+            raise RuntimeError("No taskgroup")
+        tg = cast("_TaskGroupProto", tg)
         async with self.app_lock:
             if app.p_task:
                 return
             try:
-                t = await self.tg.spawn(_run, app)
+
+                async def _run_app() -> None:
+                    await _run(app)
+
+                t = await tg.spawn(_run_app)
                 if app.p_task is False:
                     # set by .stop()
                     t.cancel()
@@ -121,20 +138,25 @@ class BaseSubCmd(BaseSuperCmd):
 
     async def reload(self):
         "reload apps"
-        self.root.cfg_reloaded(self.cfg)
+        root = self.root
+        if root is None:
+            raise RuntimeError("No root")
+        root.cfg_reloaded(self.cfg)
 
         await super().reload()
         async with TaskGroup() as tg:
             for app in list(self.sub.values()):
                 tg.start_soon(app.reload)
 
-    def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
+    def find_sub(
+        self, scmd: PathElem, prefix: str = ""
+    ) -> BaseMsgHandler | Callable[..., object] | None:
         """
         Resolve a subcommand.
 
         This version uses the ``sub`` mapping.
         """
-        if not prefix and (sub := self.sub.get(scmd, None)) is not None:
+        if isinstance(scmd, str) and not prefix and (sub := self.sub.get(scmd, None)) is not None:
             return sub
 
         return super().find_sub(scmd, prefix)
@@ -195,7 +217,10 @@ class DirCmd(BaseSubCmd):
 
         # log("Setup %s: %s", self, self.path)
         gcfg = self.cfg
-        self.root.cfg_reloaded(gcfg)
+        root = self.root
+        if root is None:
+            raise RuntimeError("No root")
+        root.cfg_reloaded(gcfg)
 
         apps = {}
         for k, v in gcfg.items():
@@ -228,7 +253,11 @@ class DirCmd(BaseSubCmd):
         # For existing apps, tell it to update its configuration.
         for app in self.sub.values():
             async with TaskGroup() as tg:
-                tg.start_soon(self.start_app, app)
+
+                async def _start(app: BaseCmd = app) -> None:
+                    await self.start_app(app)
+
+                tg.start_soon(_start)
 
         # Third, wait for them to be up.
         if L:

@@ -14,13 +14,14 @@ from moat.util.exc import ExpKeyError
 
 from ._link import Alert as Alert
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import MsgSender
     from moat.lib.rpc.msg import Msg
     from moat.link.announce import FakeReady
+    from moat.link.client import LinkSender
 
 
 class Cmd(BaseCmd):
@@ -62,14 +63,15 @@ class Cmd(BaseCmd):
         )
     )
 
-    link: Link | None = None
+    link: Link
     rlink: MsgSender | None = None
     ann: FakeReady | None = None
 
     async def setup(self):
         "set up the link"
         await super().setup()
-        self.link = await AC_use(self, Link(CFG.moat.link, common=True))
+        self.link = link = await AC_use(self, Link(CFG.moat.link, common=True))
+        link = self.link
         srv = self.cfg.get("link")
         if srv is not None:
             if (service := self.cfg.get("service", None)) is not None:
@@ -78,13 +80,16 @@ class Cmd(BaseCmd):
                 else:
                     srv /= service
             target = self.cfg.get("target", {}).get("recv", None)
+            root = self.root
+            if root is None:
+                raise RuntimeError("Not attached")
             self.ann = await AC_use(
                 self,
                 announcing(
-                    self.link,
+                    link.sender,
                     srv,
                     host=self.cfg.get("host", False),
-                    service=self.root.sub_at(target) if target is not None else None,
+                    service=cast("MsgSender", root.sub_at(target)) if target is not None else None,
                 ),
             )
         # rlink will be set up lazily
@@ -95,7 +100,7 @@ class Cmd(BaseCmd):
             self.ann.set()
         await super().task()
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
         "forward, possibly"
         await self.check_rdy(msg, rcmd)
 
@@ -114,13 +119,14 @@ class Cmd(BaseCmd):
             via = self.cfg.get("via", None)
             link = self.link
             if via is not None:
-                link = await link.get_service(via)
+                link = (await link.get_service(via))
+            link = link.sender
             if len(rpath):
                 link = link.sub_at(rpath)
             self.rlink = link
 
         try:
-            return await self.rlink.handle(msg, rcmd, *prefix)
+            await self.rlink.handle(msg, rcmd, *prefix)
         except BaseException:
-            self.rlink = None
+            del self.rlink
             raise

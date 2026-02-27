@@ -7,10 +7,10 @@ from __future__ import annotations
 from moat.lib.micro import L, log, sleep_ms
 from moat.lib.rpc import BaseFwdCmd
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgSender
+    from moat.lib.rpc import SubMsgSender
 
 
 class RetryCmd(BaseFwdCmd):
@@ -49,9 +49,9 @@ class RetryCmd(BaseFwdCmd):
         )
     )
 
-    retry: int = None
-    timeout: int = None
-    p: MsgSender | None = None
+    retry: int = 0
+    timeout: int = 100
+    notify: SubMsgSender | None = None
 
     @property
     def cfg_name(self) -> str:
@@ -64,9 +64,13 @@ class RetryCmd(BaseFwdCmd):
     async def handle(self, *a, **k):
         """Handle a command, waiting for ready if needed."""
         if L:
-            if self.app is None:
+            app = self.app
+            if app is None:
                 await super().wait_ready()
-            await self.app.wait_ready()
+                app = self.app
+            if app is None:
+                raise RuntimeError("No app")
+            await app.wait_ready()
         return await super().handle(*a, **k)
 
     async def reload(self):
@@ -80,7 +84,13 @@ class RetryCmd(BaseFwdCmd):
         self.always = self.cfg.get("always", False)
 
         p = self.cfg.get("notify", None)
-        self.notify = self.root.sub_at(p) if p is not None else None
+        if p is None:
+            self.notify = None
+        else:
+            root = self.root
+            if root is None:
+                raise RuntimeError("Not attached")
+            self.notify = cast("SubMsgSender", root.sub_at(p))
 
     if L:
 
@@ -122,7 +132,10 @@ class RetryCmd(BaseFwdCmd):
                     return
 
             if self.retry:
-                self.app.init_events()
+                app = self.app
+                if app is None:
+                    raise RuntimeError("No app")
+                app.init_events()
             # otherwise dead
 
             if self.retry > 0:

@@ -16,6 +16,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.util import attrdict
 
+    from typing import Protocol
+
+    class _FileObj(Protocol):
+        def close(self) -> object: ...
+
+        def seek(self, pos: int) -> object: ...
+
+        def read(self, n: int) -> bytes: ...
+
+        def write(self, data: bytes) -> int: ...
+
 
 def _fty(s, **r):
     # file type/size: stat array to dict
@@ -55,7 +66,7 @@ class Cmd(LockBaseCmd):
     """
 
     _fd_last = 0
-    _fd_cache = None
+    _fd_cache: dict[int, _FileObj]
 
     doc = dict(_c=dict(_d="Local file system access", root="str:root path"))
 
@@ -131,10 +142,8 @@ class Cmd(LockBaseCmd):
 
     doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
 
-    async def cmd_wr(self, f: int, o: int = 0, d: bytes = None):  # noqa: RUF013
+    async def cmd_wr(self, f: int, o: int, d: bytes) -> int:
         "write @d to @f at offset @o"
-        if d is None:
-            raise ValueError("No Data")
         fh = self._fd(f)
         fh.seek(o)
         return await to_thread(fh.write, d)
@@ -159,7 +168,11 @@ class Cmd(LockBaseCmd):
         """
         p = self._fsp(p)
         res = []
-        it = await to_thread(os.ilistdir, p)
+        ilistdir = getattr(os, "ilistdir", None)
+        if ilistdir is None:
+            it = ((n,) for n in os.listdir(p))
+        else:
+            it = await to_thread(ilistdir, p)
 
         def inext(it):
             try:

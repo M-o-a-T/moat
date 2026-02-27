@@ -46,6 +46,8 @@ from typing import TYPE_CHECKING, cast, overload
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
+    from moat.lib.path import PathElem
+
     from .base import OptDict
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
@@ -88,7 +90,7 @@ class MsgResult(Iterable):
         return self._a
 
     @property
-    def kw(self) -> dict[str, Any]:
+    def kw(self) -> Mapping[str, Any]:
         "Retrieve the keywords."
         if self._kw is None:
             return {}
@@ -103,7 +105,7 @@ class MsgResult(Iterable):
     @overload
     def to_list(self, dict_only: Literal[True]) -> list[Any] | dict: ...
 
-    def to_list(self, dict_only: bool | None = True) -> list[Any]:
+    def to_list(self, dict_only: bool | None = True) -> list[Any] | Mapping[str, Any]:
         """
         Returns a list of positional arguments.
         May end with a dict of keyword arguments.
@@ -154,7 +156,10 @@ class MsgResult(Iterable):
         """
         if isinstance(k, (int, slice)):
             return self._a[k]
-        return self._kw[k]  # pyright:ignore
+        kw = self._kw
+        if kw is None:
+            raise KeyError(k)
+        return kw[k]
 
     def get(self, k: int | str, default=None, nulled=False) -> Any:
         """
@@ -167,8 +172,11 @@ class MsgResult(Iterable):
             except IndexError:
                 return default
         else:
+            kw = self._kw
+            if kw is None:
+                return default
             try:
-                res = self._kw[k]  # pyright:ignore
+                res = kw[k]
             except KeyError:
                 return default
 
@@ -187,7 +195,7 @@ class MsgResult(Iterable):
         """
         if isinstance(k, int):
             return 0 <= k < len(self._a)
-        return k in self._kw
+        return False if self._kw is None else k in self._kw
 
     def __iter__(self) -> Iterator:
         """
@@ -204,7 +212,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's keys."
-        return self._kw.keys()  # pyright:ignore
+        return {}.keys() if self._kw is None else self._kw.keys()
 
     def values(self) -> ValuesView:
         """
@@ -213,7 +221,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's values."
-        return self._kw.values()  # pyright:ignore
+        return {}.values() if self._kw is None else self._kw.values()
 
     def items(self) -> ItemsView:
         """
@@ -221,7 +229,7 @@ class MsgResult(Iterable):
 
         :meta public:
         """
-        return self._kw.items()  # pyright:ignore
+        return {}.items() if self._kw is None else self._kw.items()
 
 
 _link_id = 0
@@ -238,7 +246,7 @@ class MsgLink:
     a message to its sibling.
     """
 
-    _remote: MsgLink = None
+    _remote: MsgLink | None = None
     _end: bool = False
 
     def __init__(self):
@@ -429,14 +437,14 @@ class Msg(MsgLink, MsgResult):
         return self._cmd
 
     @property
-    def rcmd(self) -> list[str]:
+    def rcmd(self) -> list[PathElem]:
         """
         Retrieve a reversed command
         """
         assert self.cmd is not None
         res = list(self.cmd)
         res.reverse()
-        return res
+        return cast("list[PathElem]", res)
 
     @classmethod
     def Call(cls, cmd: Path, a: list, kw: dict, flags: int = 0) -> Self:
@@ -454,7 +462,7 @@ class Msg(MsgLink, MsgResult):
         return s
 
     @property
-    def remote(self) -> MsgLink:  # noqa: D102
+    def remote(self) -> MsgLink | None:  # noqa: D102
         return self._remote
 
     def replace_with(self, link: MsgLink) -> None:
@@ -713,7 +721,7 @@ class Msg(MsgLink, MsgResult):
                 Typically a ``cmd_*`` method.
         """
         try:
-            res = cmd(*self._a, **self._kw)  # pyright:ignore
+            res = cmd(*self._a, **({} if self._kw is None else self._kw))
             if is_async(res):
                 res = await res
         except Exception as exc:
@@ -807,7 +815,11 @@ class Msg(MsgLink, MsgResult):
         self._msg2 = None
         if msg is None:
             raise EOFError
-        self._a, self._kw = msg.unwrap()  # pyright:ignore
+        if isinstance(msg, outcome.Error):
+            msg.unwrap()
+            return
+        msg = cast("outcome.Value[tuple[list, OptDict]]", msg)
+        self._a, self._kw = msg.unwrap()
 
     def __aiter__(self) -> Self:
         if not self._dir & SD_IN:

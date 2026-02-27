@@ -36,6 +36,7 @@ class UnixIter(BaseConnIter):
             if L:
                 self.set_ready()
             await li.serve(self._handle)
+        raise RuntimeError("listener stopped")
 
     async def _handle(self, client):
         await self.add_conn(SingleAnyioBuf(client))

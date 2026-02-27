@@ -94,7 +94,7 @@ def decode_utf8(data: memoryview) -> tuple[memoryview, str]:
         raise InsufficientData
 
     try:
-        return data[length:], str(data[:length], "utf-8")
+        return data[length:], str(bytes(data[:length]), "utf-8")
     except UnicodeDecodeError as exc:
         raise MQTTDecodeError(f"error decoding utf-8 string: {exc}") from None
 
@@ -682,7 +682,9 @@ class MQTTPacket(metaclass=ABCMeta):
         assert isinstance(cls.packet_type, ControlPacketType)
         packet_types[cls.packet_type] = cls
 
-    def encode_fixed_header(self, flags: int, payload: bytes, buffer: bytearray) -> None:
+    def encode_fixed_header(
+        self, flags: int, payload: bytes | bytearray, buffer: bytearray
+    ) -> None:
         logger.debug("OUT: %r", self)
         assert flags < 16
         encode_fixed_integer(flags | (self.packet_type << 4), buffer, 1)

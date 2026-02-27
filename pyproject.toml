@@ -254,6 +254,7 @@ include = [
     "moat/lib/diffiehellman/",
     "moat/lib/gpio/",
     "moat/lib/micro/",
+    "moat/lib/mqtt/",
     "moat/lib/path/",
     "moat/lib/pid/",
     "moat/lib/priomap/",

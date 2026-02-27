@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any, Self
 
-__all__ = ["Node"]
+__all__ = ["Node", "NodeFinder"]
 
 logger = getLogger(__name__)
 
@@ -417,6 +417,7 @@ class NodeFinder:
         return res
 
     def at(self, path: Path) -> Self:
+        """Advance this finder by all elements in *path*."""
         for elem in path:
             self.step(elem)
         return self
@@ -460,6 +461,7 @@ class NodeFinder:
 
     @property
     def result(self) -> Node:
+        """Return the highest-priority matching node."""
         for node in self.matches:
             return node
         raise KeyError("No matching wildcard state")

@@ -50,6 +50,13 @@ def almost_equal(first, second, places=None, delta=None):
     return False
 
 
+def _prime_pid(Kp, Ki, Kd, Tf):
+    pid = PID(Kp=Kp, Ki=Ki, Kd=Kd, Tf=Tf, t=0)
+    pid(0.0, t=0)
+    pid(1.0, t=1 * PID_TC)
+    return pid
+
+
 def test_init_set_gains():  # noqa:D103
     # Set gains
     Kp, Ki, Kd, Tf = 1.0, 2.0, 3.0, 4.0
@@ -282,3 +289,87 @@ def test_integrate_anti_windup():  # noqa:D103
     assert almost_equal(upper, output.max())
     assert almost_equal(lower, integral.min())
     assert almost_equal(upper, integral.max())
+
+
+def test_set_gains_bumpless_kp_updates_i():  # noqa:D103
+    Kp0, Kp1 = 1.0, 2.5
+    Ki = 2.0
+    Kd = 2.0
+    Tf = 0.4
+    e = 1.0
+    t = 1 * PID_TC
+
+    pid_ref = _prime_pid(Kp0, Ki, Kd, Tf)
+    pid_new = _prime_pid(Kp0, Ki, Kd, Tf)
+
+    i0 = pid_new.get_state()[2]
+    u_ref = pid_ref(e, t=t)
+    pid_new.set_gains(Kp=Kp1, Ki=Ki, Kd=Kd, Tf=Tf)
+    i1 = pid_new.get_state()[2]
+    u_new = pid_new(e, t=t)
+
+    assert almost_equal(i1, i0 + (Kp0 - Kp1) * e, delta=1e-12)
+    assert almost_equal(u_ref, u_new, delta=1e-12)
+
+
+def test_set_gains_bumpless_ki_updates_i():  # noqa:D103
+    Kp = 1.2
+    Ki0, Ki1 = 2.0, 0.5
+    Kd = 2.0
+    Tf = 0.4
+    e = 1.0
+    t = 1 * PID_TC
+
+    pid_ref = _prime_pid(Kp, Ki0, Kd, Tf)
+    pid_new = _prime_pid(Kp, Ki0, Kd, Tf)
+
+    i0 = pid_new.get_state()[2]
+    u_ref = pid_ref(e, t=t)
+    pid_new.set_gains(Kp=Kp, Ki=Ki1, Kd=Kd, Tf=Tf)
+    i1 = pid_new.get_state()[2]
+    u_new = pid_new(e, t=t)
+
+    assert almost_equal(i0, i1, delta=1e-12)
+    assert almost_equal(u_ref, u_new, delta=1e-12)
+
+
+def test_set_gains_bumpless_kd_updates_e():  # noqa:D103
+    Kp = 1.1
+    Ki = 0.3
+    Kd0, Kd1 = 2.0, 3.0
+    Tf = 0.4
+    dt = 0.001
+    t = (1 + dt) * PID_TC
+
+    pid_ref = _prime_pid(Kp, Ki, Kd0, Tf)
+    pid_new = _prime_pid(Kp, Ki, Kd0, Tf)
+    e0 = cast(float, pid_new.get_state()[1])
+    u_ref = pid_ref(1.0, t=t)
+
+    pid_new.set_gains(Kp=Kp, Ki=Ki, Kd=Kd1, Tf=Tf)
+    e1 = cast(float, pid_new.get_state()[1])
+    u_new = pid_new(1.0, t=t)
+
+    assert not almost_equal(e0, e1, delta=1e-12)
+    assert almost_equal(u_ref, u_new, delta=1e-6)
+
+
+def test_set_gains_bumpless_tf_updates_e():  # noqa:D103
+    Kp = 1.1
+    Ki = 0.3
+    Kd = 2.0
+    Tf0, Tf1 = 0.4, 0.8
+    dt = 0.001
+    t = (1 + dt) * PID_TC
+
+    pid_ref = _prime_pid(Kp, Ki, Kd, Tf0)
+    pid_new = _prime_pid(Kp, Ki, Kd, Tf0)
+    e0 = cast(float, pid_new.get_state()[1])
+    u_ref = pid_ref(1.0, t=t)
+
+    pid_new.set_gains(Kp=Kp, Ki=Ki, Kd=Kd, Tf=Tf1)
+    e1 = cast(float, pid_new.get_state()[1])
+    u_new = pid_new(1.0, t=t)
+
+    assert not almost_equal(e0, e1, delta=1e-12)
+    assert almost_equal(u_ref, u_new, delta=1e-3)

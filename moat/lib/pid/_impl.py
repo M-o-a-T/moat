@@ -44,6 +44,7 @@ class PID:
 
     t: float | None = None
     e: float | None = None
+    _err: float | None = None
     i: float = 0
 
     Kp: float
@@ -167,10 +168,38 @@ class PID:
             Tf: Time constant of the first-order derivative filter.
 
         """
-        self.Kp = Kp or 0
-        self.Ki = Ki / PID_TC if Ki else None
-        self.Kd = Kd * PID_TC if Kd else None
-        self.Tf = Tf * PID_TC if Tf else None
+        old_Kp = getattr(self, "Kp", 0.0)
+        old_Kd = getattr(self, "Kd", None)
+        old_Tf = getattr(self, "Tf", None)
+
+        new_Kp = Kp or 0
+        new_Ki = Ki / PID_TC if Ki else None
+        new_Kd = Kd * PID_TC if Kd else None
+        new_Tf = Tf * PID_TC if Tf else None
+
+        err = self._err
+        if err is None:
+            err = self.e
+
+        if err is not None:
+            # keep p+i continuous across gain changes
+            self.i += (old_Kp - new_Kp) * err
+
+            if old_Kd and old_Tf and self.e is not None:
+                if new_Kd and new_Tf:
+                    # Adjust derivative filter residual for a bumpless D/Tf change.
+                    tdf0 = old_Tf / old_Kd
+                    tdf1 = new_Tf / new_Kd
+                    self.e = err - (tdf1 / tdf0) * (err - self.e)
+                else:
+                    self.e = err
+            elif new_Kd and new_Tf:
+                self.e = err
+
+        self.Kp = new_Kp
+        self.Ki = new_Ki
+        self.Kd = new_Kd
+        self.Tf = new_Tf
 
     def set_output_limits(self, lower: float | None = None, upper: float | None = None):
         """Set PID controller output limits, for anti-windup.
@@ -216,6 +245,7 @@ class PID:
             self.t = t
         if e is not None:
             self.e = e
+            self._err = e
         if i is not None:
             self.i = i
 
@@ -240,6 +270,7 @@ class PID:
 
         This method performs anti-windup protection on the controller's integral term.
         """
+        e1 = e
         t0, e0, i0 = self.get_state()
         if t is None:
             t = time()
@@ -263,7 +294,7 @@ class PID:
             # anti-windup
             i = min(max(i, min(self.lower - p, 0)), max(self.upper - p, 0))
         else:
-            i = 0
+            i = i0
 
         # Calculate possibly-delayed derivative term
         d = 0.0
@@ -279,6 +310,7 @@ class PID:
                 d = (e - e0) * Kd / dt
         # Set initial value for next cycle
         self.set_state(t, e, i)
+        self._err = e1
 
         return p, i, d
 

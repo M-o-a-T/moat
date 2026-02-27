@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
     from .hello import Hello
 
-    from typing import Any, ClassVar, ReadOnly
+    from typing import Any, ClassVar
 
 __all__ = ["AnonAuth", "AuthMethod", "NoAuth", "TokenAuth"]
 
@@ -68,7 +68,7 @@ class AuthMethod:  # noqa: D101
 
 
 class TokenAuth(AuthMethod):  # noqa: D101
-    name: ClassVar[ReadOnly[str]] = "token"
+    name: ClassVar[str] = "token"
 
     def __init__(self, *token: str):
         self._token = token
@@ -109,7 +109,7 @@ class AnonAuth(AuthMethod):
     Auth method of last resort: anonymous login.
     """
 
-    name: ClassVar[ReadOnly[str]] = "anon"
+    name: ClassVar[str] = "anon"
 
     async def hello_out(self):  # noqa: D102
         return None
@@ -128,7 +128,7 @@ class NoAuth(AuthMethod):
     Reject auth attempts.
     """
 
-    name: ClassVar[ReadOnly[str]] = "no"
+    name: ClassVar[str] = "no"
 
     async def hello_out(self):  # noqa: D102
         return None

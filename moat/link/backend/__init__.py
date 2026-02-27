@@ -19,12 +19,16 @@ from moat.lib.path import Path, Root
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+    from contextlib import AbstractAsyncContextManager
+    from types import EllipsisType
+
     from moat.lib.codec import Codec
     from moat.lib.mqtt import QoS
     from moat.link.meta import MsgMeta
 
     from collections.abc import AsyncIterator
-    from typing import Any, ClassVar, Literal, Self
+    from typing import Any, ClassVar, Self
 
 TData = TypeVar("TData")
 
@@ -54,14 +58,14 @@ class Message(Generic[TData]):
 class RawMessage(Message):
     "A message that couldn't be decoded / shouldn't be encoded"
 
-    exc: Exception = field(default=None)
+    exc: Exception | None = field(default=None)
     raw: ClassVar[bool] = True
 
 
 class Backend(CtxObj, metaclass=ABCMeta):
     "Base class for messaging backends"
 
-    _tg: anyio.abc.TaskGroup
+    _tg: TaskGroup
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
@@ -72,11 +76,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self.logger = logging.getLogger(f"moat.link.backend.{name}")
 
     @abstractmethod
-    @asynccontextmanager
-    async def connect(self, *a, **k) -> AsyncIterator[Self]:
+    def connect(self, *a, **k) -> AbstractAsyncContextManager[Self]:
         """
         This async context manager returns a connection to the backend.
         """
+        raise NotImplementedError
 
     @asynccontextmanager
     async def _ctx(self) -> AsyncIterator[Self]:
@@ -87,29 +91,29 @@ class Backend(CtxObj, metaclass=ABCMeta):
             yield self
 
     @abstractmethod
-    @asynccontextmanager
-    async def monitor(
+    def monitor(
         self,
         topic: Path,
         qos: QoS | None = None,
-        codec: Codec | None | Literal[NotGiven] = NotGiven,
+        codec: Codec | str | None | EllipsisType = NotGiven,
         raw: bool | None = False,
         echo: bool = False,
         no_local: bool = False,
         subtree: bool = False,
-    ) -> AsyncIterator[AsyncIterator[Message]]:
+    ) -> AbstractAsyncContextManager[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.
 
         Set @raw to ``True`` to always get non-decoded messages.
         """
+        raise NotImplementedError
 
     @abstractmethod
     async def send(
         self,
         topic: Path,
         data: Any,
-        codec: Codec | None | Literal[NotGiven] = NotGiven,
+        codec: Codec | str | None | EllipsisType = NotGiven,
         **kw: Any,
     ) -> None:
         """

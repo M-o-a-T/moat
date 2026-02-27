@@ -252,6 +252,7 @@ include = [
     "moat/lib/codec/",
     "moat/lib/config/",
     "moat/lib/diffiehellman/",
+    "moat/lib/gpio/",
     "moat/lib/micro/",
     "moat/lib/path/",
     "moat/lib/pid/",

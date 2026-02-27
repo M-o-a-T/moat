@@ -49,12 +49,17 @@ from .exceptions import AuthError, ClientCancelledError
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
-from .schema import schema_path, validate_instance
 
 from typing import TYPE_CHECKING, overload
 
+try:
+    from .schema import schema_path, validate_instance
+except ImportError:
+    schema_path = validate_instance = None
+
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
+    from types import CoroutineType
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg, MsgHandler
@@ -67,7 +72,6 @@ if TYPE_CHECKING:
 
     from collections.abc import AsyncIterator, Awaitable
     from typing import Any, Literal
-    from types import CoroutineType
 
 
 class _Requeue(Exception):
@@ -178,7 +182,7 @@ class LinkCommon(CmdCommon):
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg, rpath, *add) -> CoroutineType[Any, Any, None]:
         """
         Message handler that intercepts incoming commands
         while authorization has not completed
@@ -587,23 +591,33 @@ class LinkSender(MsgSender):
             )
 
         if verify is not False:
-            try:
-                schema = await self.d_search(schema_path(path))
-            except KeyError:
-                pass
-            except Exception as exc:
+            if schema_path is None or validate_instance is None:
                 if verify is None:
-                    self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
+                    self._link.logger.warning(
+                        "Schema support is not installed, cannot verify %s", path
+                    )
                 else:
-                    raise
+                    raise RuntimeError("Schema support is not installed")
             else:
                 try:
-                    validate_instance(schema, data)
+                    schema = await self.d_search(schema_path(path))
+                except KeyError:
+                    pass
                 except Exception as exc:
                     if verify is None:
-                        self._link.logger.warning("Schema validation failed for %s: %r", path, exc)
+                        self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
                     else:
                         raise
+                else:
+                    try:
+                        validate_instance(schema, data)
+                    except Exception as exc:
+                        if verify is None:
+                            self._link.logger.warning(
+                                "Schema validation failed for %s: %r", path, exc
+                            )
+                        else:
+                            raise
 
         if meta is None:
             meta = MsgMeta(origin=self._link.name)

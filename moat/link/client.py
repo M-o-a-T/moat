@@ -55,6 +55,7 @@ from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
+    from types import CoroutineType
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg, MsgHandler
@@ -65,9 +66,8 @@ if TYPE_CHECKING:
     from .schema import Data
     from .schema import SchemaName as S
 
-    from collections.abc import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable, Iterator
     from typing import Any, Literal
-    from types import CoroutineType
 
 
 class _Requeue(Exception):
@@ -178,7 +178,7 @@ class LinkCommon(CmdCommon):
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg, rpath, *add) -> CoroutineType[Any, Any, None]:
         """
         Message handler that intercepts incoming commands
         while authorization has not completed
@@ -1468,6 +1468,17 @@ class Watcher(CtxObj):
 
     def __aiter__(self):
         return self
+
+    @asynccontextmanager
+    async def node(self) -> Iterator[Node]:
+        """
+        Helper for fetching data in background.
+
+        This is necessary if you start several watchers in a common context
+        managers. If you then call :py.meth.`get_node` on one of them,
+        the data from the other(s) might overwhelm the input queue.
+        """
+        yield self.get_node()
 
     async def get_node(self, background=True) -> Node:
         """

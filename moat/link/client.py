@@ -1469,6 +1469,7 @@ class Watcher(CtxObj):
     def __aiter__(self):
         return self
 
+    @property
     @asynccontextmanager
     async def node(self) -> Iterator[Node]:
         """
@@ -1478,7 +1479,10 @@ class Watcher(CtxObj):
         managers. If you then call :py.meth.`get_node` on one of them,
         the data from the other(s) might overwhelm the input queue.
         """
-        yield self.get_node()
+        if self._node is not None:
+            raise RuntimeError("Use `await get_node()`")
+        async with self:
+            yield await self.get_node()
 
     async def get_node(self, background=True) -> Node:
         """

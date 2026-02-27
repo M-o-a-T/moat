@@ -19,12 +19,14 @@ from moat.link.meta import MsgMeta
 from . import Backend as _Backend
 from . import Message, RawMessage
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from moat.lib.codec import Codec
 
-    from collections.abc import Any, AsyncIterator, Awaitable, Literal
+    from collections.abc import AsyncIterator
 
 
 class MqttMessage:
@@ -44,16 +46,16 @@ class Backend(_Backend):
     The MQTT backend driver.
     """
 
-    client: AsyncMQTTClient
+    client: AsyncMQTTClient | None
 
     def __init__(
         self,
-        cfg,
+        cfg: attrdict,
         will: attrdict | None = None,
         name: str | None = None,
         id: str | None = None,
         meta: bool = True,
-    ):
+    ) -> None:
         """
         Connect to MQTT.
 
@@ -62,6 +64,10 @@ class Backend(_Backend):
         @will: topic+data+retain+qos+codec for on-death message
 
         """
+        if name is None:
+            name = cfg.get("name", "mqtt")
+        if id is None:
+            id = name
         super().__init__(cfg, name=name, id=id)
         self.cfg = cfg
         self.meta = meta
@@ -97,6 +103,7 @@ class Backend(_Backend):
                 retain=will.get("retain", data == b""),
             )
         self.a, self.kw = a, kw
+        self.client = None
 
     @asynccontextmanager
     async def connect(self):
@@ -111,14 +118,14 @@ class Backend(_Backend):
     @asynccontextmanager
     async def monitor(
         self,
-        topic,
+        topic: Path,
         *,
-        codec: str | Codec | None | Literal[NotGiven] = NotGiven,
+        codec: str | Codec | None | EllipsisType = NotGiven,
         raw: bool | None = False,
         subtree: bool = False,
         mine: bool = True,
         retained: bool = True,
-        **kw,
+        **kw: Any,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
         Watch a topic.
@@ -139,14 +146,21 @@ class Backend(_Backend):
             raise ValueError("empty path")
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Monitor %s%s start", topic, ":*" if subtree else "")
-        codec = self.codec if codec is NotGiven else get_codec(codec)
+        codec_obj: Codec | None
+        if codec is NotGiven:
+            codec_obj = self.codec
+        elif codec is None:
+            codec_obj = None
+        else:
+            codec_obj = get_codec(codec)
         kw["no_local"] = not mine
         kw["retain_handling"] = (
             RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
         )
+        assert self.client is not None
         try:
             async with self.client.subscribe(tops, **kw) as sub:
-                yield _SubGet(self, sub, codec, raw)
+                yield _SubGet(self, sub, codec_obj, raw)
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
@@ -155,39 +169,15 @@ class Backend(_Backend):
         else:
             self.logger.debug("Monitor %s%s end", topic, ":*" if subtree else "")
 
-    @overload
-    def send(
-        self,
-        topic: Path,
-        data: bytes | bytearray | memoryview,
-        codec: Literal[None],
-        meta: MsgMeta | bool | None = None,
-        retain: bool | None = None,
-        **kw,
-    ) -> Awaitable:  # pylint: disable=invalid-overridden-method
-        ...
-
-    @overload
-    def send(
+    async def send(
         self,
         topic: Path,
         data: Any,
-        codec: Codec | str | Literal[NotGiven] = NotGiven,
+        codec: Codec | str | None | EllipsisType = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool | None = None,
-        **kw,
-    ) -> Awaitable:  # pylint: disable=invalid-overridden-method
-        ...
-
-    def send(
-        self,
-        topic: Path,
-        data: Any,
-        codec: Codec | str | None | Literal[NotGiven] = NotGiven,
-        meta: MsgMeta | bool | None = None,
-        retain: bool | None = None,
-        **kw,
-    ) -> Awaitable:  # pylint: disable=invalid-overridden-method
+        **kw: Any,
+    ) -> None:
         """
         Send this payload to this topic.
 
@@ -223,7 +213,8 @@ class Backend(_Backend):
             msg = codec.encode(data)
 
         self.logger.debug("S %s %s %s", topic, srepr(data), meta)
-        return self.client.publish(
+        assert self.client is not None
+        await self.client.publish(
             topic.slashed2,
             payload=msg,
             user_properties=prop,
@@ -287,7 +278,10 @@ class _SubGet:
                     try:
                         p_i = msg.properties.get(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0)
                         if not p_i:
-                            data = self.codec.decode(msg.payload)
+                            if self.codec is None:
+                                data = msg.payload
+                            else:
+                                data = self.codec.decode(msg.payload)
                         elif p_i == 1:
                             data = msg.payload  # UTF-8
                         else:

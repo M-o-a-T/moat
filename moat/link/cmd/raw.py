@@ -199,7 +199,7 @@ async def pub(obj, **args):
     await do_pub(obj.conn, args, cfg, codec)
 
 
-async def run_kvsub(client, topic, lock, skip):
+async def run_kvsub(client, topic, lock, timing, skip):
     """Monitor a MoaT-KV subtree"""
 
     if topic[-1] == "#":
@@ -235,31 +235,31 @@ async def run_kvsub(client, topic, lock, skip):
                     continue
                 del r["seq"]
 
-                r["_prev"] = humandelta(atm - lock.tm, msec=6)
+                r["_prev"] = humandelta(atm - timing["tm"], msec=6)
                 r["_time"] = ts2iso(tm, msec=6)
                 r["time"] = tm
 
                 yprint(r)
                 print("---")
-                lock.tm = atm
+                timing["tm"] = atm
 
 
 async def do_sub(client, args, cfg):
     "handle subscriptions"
     lock = anyio.Lock()
-    lock.tm = anyio.current_time()
+    timing = {"tm": anyio.current_time()}
 
     skip = args["skip"]
     try:
         async with anyio.create_task_group() as tg:
             for topic in args["topic"]:
-                tg.start_soon(run_sub, client, topic, args, cfg.link, lock, skip)
+                tg.start_soon(run_sub, client, topic, args, cfg.link, lock, timing, skip)
             if args["kv_topic"]:
                 from moat.kv.client import open_client as kv_client  # noqa: PLC0415
 
                 async with kv_client(**cfg.kv) as kvc:
                     for topic in args["kv_topic"]:
-                        tg.start_soon(run_kvsub, kvc, topic, lock, skip)
+                        tg.start_soon(run_kvsub, kvc, topic, lock, timing, skip)
 
     except KeyboardInterrupt:
         pass
@@ -267,7 +267,7 @@ async def do_sub(client, args, cfg):
         logger.fatal("connection to '%s' failed: %r", args["uri"], ce)
 
 
-async def run_sub(client, topic, args, cfg, lock, skip):
+async def run_sub(client, topic, args, cfg, lock, timing, skip):
     "handle a single subscription"
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
@@ -292,7 +292,7 @@ async def run_sub(client, topic, args, cfg, lock, skip):
                     d = dict(
                         topic=msg.topic,
                         time=tm,
-                        _prev=humandelta(atm - lock.tm, msec=6),
+                        _prev=humandelta(atm - timing["tm"], msec=6),
                         _time=ts2iso(tm, msec=6),
                     )
 
@@ -324,7 +324,7 @@ async def run_sub(client, topic, args, cfg, lock, skip):
                     if flags:
                         d["_flags"] = flags
 
-                    lock.tm = atm
+                    timing["tm"] = atm
                     yprint(d)
                     print("---")
                 else:

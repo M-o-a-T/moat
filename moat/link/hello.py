@@ -16,7 +16,7 @@ from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min
 from .common import CmdCommon
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
@@ -248,8 +248,8 @@ class Hello(CmdCommon):
 
         cfg = attrdict(modes=[attrdict(mode=m) for m in modes])
         shim = _RPCShim(self, sender, self.rpc_auth_data)
-        auth = Auth(cfg, shim)
-        auth.base_root = _RPCRoot(sender)
+        auth = Auth(cfg, cast("Any", shim))
+        auth.base_root = cast("MsgSender", _RPCRoot(sender))
         a_in = AuthCmdIn(auth)
         self._rpc_auth = auth
         self._rpc_in = a_in
@@ -316,7 +316,11 @@ class Hello(CmdCommon):
             # Some other method already succeeded
             await msg.result(False)
             return
-        a = self.auth_in.get(rcmd[0], None)
+        rcmd0 = rcmd[0]
+        if not isinstance(rcmd0, str):
+            await msg.result(False)
+            return
+        a = self.auth_in.get(rcmd0, None)
         if a is None:
             await msg.result(False)
         else:
@@ -384,7 +388,7 @@ class Hello(CmdCommon):
             try:
                 local_name = next(it)
             except StopIteration:
-                self.auth_data_in((prot, they_server, remote_name))
+                self.auth_data_in((prot, they_server, remote_name), {})
                 raise
             else:
                 res = {}

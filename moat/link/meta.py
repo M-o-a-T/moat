@@ -8,9 +8,9 @@ import time
 from base64 import b85decode, b85encode
 
 try:
-    import ruyaml as yaml
+    from ruyaml.representer import SafeRepresenter
 except ImportError:
-    import ruamel.yaml as yaml  # fallback if ruyaml unavailable
+    from ruamel.yaml.representer import SafeRepresenter
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw
@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     from typing import Any, Self
 
 _codec = StdCBOR()
-
-SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
 
 
 def _gen(i):
@@ -74,6 +72,11 @@ class MsgMeta:
     timestamp = _gen(1)
 
     source: Any = None
+
+    if TYPE_CHECKING:
+
+        def __attrs_init__(self) -> None:
+            """Initialize attrs-managed fields."""
 
     def __init__(self, /, name: str | EllipsisType | None = None, **kwargs):  # pyright: ignore
         vals = {}

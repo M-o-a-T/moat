@@ -9,7 +9,9 @@ from ._impl import Chip, Direction, Drive, Edge, Line, LineSettings
 __all__ = ["Chip", "Direction", "Drive", "Edge", "Line", "LineSettings", "open_chip"]
 
 
-def open_chip(num=None, label=None, consumer=sys.argv[0]):
+def open_chip(
+    num: int | None = None, label: str | None = None, consumer: str = sys.argv[0]
+) -> Chip:
     """Returns an object representing a GPIO chip.
 
     Arguments:

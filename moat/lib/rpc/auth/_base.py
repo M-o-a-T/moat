@@ -41,8 +41,12 @@ if TYPE_CHECKING:
 
 else:
     _TaskGroupType = object
-    _SubAuthType = object
-    _SubAuthFactory = object
+
+    class _SubAuthType:
+        pass
+
+    class _SubAuthFactory:
+        pass
 
 
 class AuthError(RuntimeError):
@@ -233,6 +237,13 @@ class AuthCmdIn(BaseCmd):
         self.msg_out = Event()
         super().__init__(parent.cfg)
 
+    @staticmethod
+    def sender_for_ok(sender: MsgSender, ok: _SubAuthType) -> MsgSender:
+        p = ok.cfg.get("path")
+        if p:
+            sender = sender.sub_at(p)
+        return sender
+
     async def _run(self, s_a: object):
         s_a = cast(_SubAuthType, s_a)
         timeout = self.cfg.get("timeout")
@@ -311,13 +322,15 @@ class AuthCmdIn(BaseCmd):
                             if name not in modes:
                                 continue  # not accepted by the other side
 
-                            sub = cast(_SubAuthFactory, get_auth(cfg.mode))(
+                            remote = sdr.sub_at(Path.build((None, cfg.mode)))
+                            sub_factory = cast(_SubAuthFactory, get_auth(cfg.mode))
+                            sub = sub_factory(
                                 cfg,
                                 None if self.parent.auth is None else self.parent.auth.get(name),
                                 self,
                                 idx,
                                 name,
-                                sdr.sub_at(Path.build((None, cfg.mode))),
+                                remote,
                             )
                             self.modes[name] = sub
 
@@ -349,12 +362,11 @@ class AuthCmdIn(BaseCmd):
                     # forward the exception to the remote side
                     self.parent.auth_done(None)
                 else:
-                    ok = cast(_SubAuthType, ok)
-                    p = ok.cfg.get("path")
-                    sdr = self.parent.base_root.sender
-                    if p:
-                        sdr = sdr.sub_at(p)
-                    self.parent.auth_done(sdr)
+                    assert ok is not None
+                    sender = self.sender_for_ok(
+                        self.parent.base_root.sender, cast(_SubAuthType, ok)
+                    )
+                    self.parent.auth_done(sender)
 
         except AuthNoRemote:
             cmd = self.parent.parent

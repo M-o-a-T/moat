@@ -22,7 +22,7 @@ from . import Message, RawMessage
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from types import CoroutineType, EllipsisType
+    from types import EllipsisType
 
     from moat.lib.codec import Codec
 
@@ -46,7 +46,7 @@ class Backend(_Backend):
     The MQTT backend driver.
     """
 
-    client: AsyncMQTTClient
+    client: AsyncMQTTClient | None
 
     def __init__(
         self,
@@ -103,6 +103,7 @@ class Backend(_Backend):
                 retain=will.get("retain", data == b""),
             )
         self.a, self.kw = a, kw
+        self.client = None
 
     @asynccontextmanager
     async def connect(self):
@@ -156,6 +157,7 @@ class Backend(_Backend):
         kw["retain_handling"] = (
             RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
         )
+        assert self.client is not None
         try:
             async with self.client.subscribe(tops, **kw) as sub:
                 yield _SubGet(self, sub, codec_obj, raw)
@@ -167,7 +169,7 @@ class Backend(_Backend):
         else:
             self.logger.debug("Monitor %s%s end", topic, ":*" if subtree else "")
 
-    def send(
+    async def send(
         self,
         topic: Path,
         data: Any,
@@ -175,7 +177,7 @@ class Backend(_Backend):
         meta: MsgMeta | bool | None = None,
         retain: bool | None = None,
         **kw: Any,
-    ) -> CoroutineType[Any, Any, None]:
+    ) -> None:
         """
         Send this payload to this topic.
 
@@ -211,7 +213,8 @@ class Backend(_Backend):
             msg = codec.encode(data)
 
         self.logger.debug("S %s %s %s", topic, srepr(data), meta)
-        return self.client.publish(
+        assert self.client is not None
+        await self.client.publish(
             topic.slashed2,
             payload=msg,
             user_properties=prop,

@@ -7,7 +7,7 @@ from moat.util import ungroup
 from moat.lib.micro import ACM, AC_exit, Event, L, TaskGroup, log, sleep_ms, wait_for
 from moat.lib.path import P, Path
 from moat.lib.proxy import as_proxy
-from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender
+from moat.lib.rpc import BaseCmd, BaseMsgHandler, MsgSender, SubMsgSender
 
 from typing import TYPE_CHECKING, cast
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.lib.micro import _TaskGroupProto as _TaskGroupType
     from moat.lib.path import PathElem
-    from moat.lib.rpc import BaseCmdMsg, Msg, SubMsgSender
+    from moat.lib.rpc import BaseCmdMsg, Msg
 
     from typing import Protocol
 
@@ -285,7 +285,7 @@ class AuthCmdIn(BaseCmd):
     async def task(self) -> None:
         try:
             async with ungroup, TaskGroup() as tg_send:
-                sdr = MsgSender(_WithAuth(self.parent.parent))
+                sdr = SubMsgSender(_WithAuth(self.parent.parent), Path())
                 self.modes = {}
 
                 async def _send_cmd() -> None:
@@ -317,7 +317,7 @@ class AuthCmdIn(BaseCmd):
                                 self,
                                 idx,
                                 name,
-                                cast("SubMsgSender", sdr.sub_at(Path.build((None, cfg.mode)))),
+                                sdr.sub_at(Path.build((None, cfg.mode))),
                             )
                             self.modes[name] = sub
 
@@ -353,7 +353,7 @@ class AuthCmdIn(BaseCmd):
                     p = ok.cfg.get("path")
                     sdr = self.parent.base_root.sender
                     if p:
-                        sdr = cast(MsgSender, sdr.sub_at(p))
+                        sdr = sdr.sub_at(p)
                     self.parent.auth_done(sdr)
 
         except AuthNoRemote:

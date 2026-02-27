@@ -9,7 +9,7 @@ import sys
 from moat.util import attrdict, merge
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
-from moat.lib.rpc import BaseCmd, HandlerStream, MsgSender
+from moat.lib.rpc import BaseCmd, HandlerStream
 
 __all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
 
@@ -215,7 +215,7 @@ class BaseCmdMsg(BaseCmd):
         root = root0.sender
         lprefix = self.cfg.get("prefix", {}).get("recv", ())
         if lprefix:
-            root = cast(MsgSender, root.sub_at(lprefix))
+            root = root.sub_at(lprefix)
 
         if self._auth:
             await self._auth.process(root)

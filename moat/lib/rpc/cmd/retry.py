@@ -7,10 +7,11 @@ from __future__ import annotations
 from moat.lib.micro import L, log, sleep_ms
 from moat.lib.rpc import BaseFwdCmd
 
-from typing import TYPE_CHECKING, cast  # isort:skip
+from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import SubMsgSender
+    from collections.abc import Awaitable, Callable
+    from typing import Any
 
 
 class RetryCmd(BaseFwdCmd):
@@ -51,7 +52,7 @@ class RetryCmd(BaseFwdCmd):
 
     retry: int = 0
     timeout: int = 100
-    notify: SubMsgSender | None = None
+    notify: Callable[..., Awaitable[Any]] | None = None
 
     @property
     def cfg_name(self) -> str:
@@ -90,7 +91,10 @@ class RetryCmd(BaseFwdCmd):
             root = self.root
             if root is None:
                 raise RuntimeError("Not attached")
-            self.notify = cast("SubMsgSender", root.sub_at(p))
+            notify = root.sub_at(p, cmd=True)
+            if not callable(notify):
+                raise TypeError(f"Notify target is not callable: {p}")
+            self.notify = notify
 
     if L:
 

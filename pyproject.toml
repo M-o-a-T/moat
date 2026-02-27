@@ -264,6 +264,9 @@ include = [
     "moat/lib/ring/",
     "moat/lib/run/",
     "moat/lib/stream/",
+    "moat/link/_data.py",
+    "moat/link/_test.py",
+    "moat/link/host.py",
     "moat/util/",
 ]
 exclude = [

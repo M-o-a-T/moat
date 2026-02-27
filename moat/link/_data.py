@@ -17,11 +17,15 @@ from moat.util.times import ts2iso
 from .meta import MsgMeta
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, TextIO
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from moat.lib.codec import Codec
     from moat.link.client import Link
+
+    from collections.abc import Awaitable, Callable
 
 
 def add_dates(d):
@@ -64,10 +68,10 @@ async def data_get(
     mindepth: int = 0,
     empty: bool = False,
     raw: bool = False,
-    path_mangle=None,
-    item_mangle=None,
-    add_date=False,
-    out=None,
+    path_mangle: Callable[[Path], Path | None] | None = None,
+    item_mangle: Callable[[Any], Awaitable[Any | None]] | None = None,
+    add_date: bool = False,
+    out: TextIO | Literal[False] | None = None,
 ):
     """Generic code to dump a subtree.
 
@@ -77,21 +81,26 @@ async def data_get(
     """
     if path_mangle is None:
 
-        def path_mangle(x):
+        def path_mangle(x: Path) -> Path:
             return x
 
     if item_mangle is None:
 
-        async def item_mangle(x):  # pylint: disable=function-redefined
+        async def item_mangle(x: Any) -> Any:  # pylint: disable=function-redefined
             return x
 
+    out_list: list[Any] | None = None
+    out_stream: TextIO | None = None
     if out is None:
-        out = sys.stdout
+        out_stream = sys.stdout
     elif out is False:
-        out = []
+        tmp: list[Any] = []
+        out_list = tmp
+    else:
+        out_stream = out
 
     if recursive:
-        kw = {}
+        kw: dict[str, Any] = {}
         a = [None, None, None]
 
         if maxdepth is not None and maxdepth >= 0:
@@ -102,30 +111,32 @@ async def data_get(
             kw["empty"] = True
         while a and a[-1] is None:
             a.pop()
-        y = {}
+        tree: dict[Any, Any] = {}
         pl = PathLongener()
         async with conn.d.walk(path, *a, **kw).stream_in() as res:
             async for r in res:
                 r = await item_mangle(r)  # noqa:PLW2901
                 if r is None:
                     continue
-                n, p, d, *m = r
-                path = pl.long(n, p)
-                path = path_mangle(path)
-                if path is None:
+                n, p, d, *m_raw = r
+                row_path = pl.long(n, p)
+                row_path = path_mangle(row_path)
+                if row_path is None:
                     continue
 
                 if add_date:
                     add_dates(d)
 
+                meta_data: dict[str, Any] | None = None
                 if meta:
-                    m = MsgMeta._moat__restore(m, NotGiven)  # noqa: SLF001
+                    meta_obj: MsgMeta = MsgMeta._moat__restore(m_raw, NotGiven)  # noqa: SLF001
+                    meta_data = meta_obj.repr()
 
                 if as_dict is not None:
                     if meta:
-                        d = dict(data=d, meta=m.repr())
-                    yy = y
-                    for p in path:
+                        d = dict(data=d, meta=meta_data)
+                    yy = tree
+                    for p in row_path:
                         yy = yy.setdefault(p, {})
                     try:
                         yy[as_dict] = d
@@ -134,16 +145,17 @@ async def data_get(
                             yy[as_dict] = None
                 else:
                     if raw:
-                        y = path
+                        msg: Any = row_path
                     elif meta:
-                        y = [path, d, m.repr()]
+                        msg = [row_path, d, meta_data]
                     else:
-                        y = [path, d]
-                    if isinstance(out, list):
-                        out.append(y)
+                        msg = [row_path, d]
+                    if out_list is not None:
+                        out_list.append(msg)
                     else:
-                        yprint(y, stream=out)
-                        out.write("---\n")
+                        assert out_stream is not None
+                        yprint(msg, stream=out_stream)
+                        out_stream.write("---\n")
 
             if as_dict is not None:
                 if maxdepth:
@@ -159,14 +171,15 @@ async def data_get(
                                 del d[as_dict]
                         return d
 
-                    y = simplex(y)
+                    tree = simplex(tree)
 
-            if isinstance(out, list):
-                return y
+            if out_list is not None:
+                return tree
             if as_dict is not None:
-                yprint(y, stream=out)
+                assert out_stream is not None
+                yprint(tree, stream=out_stream)
 
-            return out  # end "if recursive"
+            return out_stream  # end "if recursive"
 
     d, *m = await conn.d.get(path)
     if add_date:
@@ -177,12 +190,13 @@ async def data_get(
 
     if out is False:
         return d
+    assert out_stream is not None
     if not raw:
-        yprint(d, stream=out)
+        yprint(d, stream=out_stream)
     elif isinstance(d, bytes):
-        os.write(out.fileno(), res)
+        os.write(out_stream.fileno(), d)
     else:
-        out.write(str(d))
+        out_stream.write(str(d))
     pass  # end get
 
 
@@ -195,11 +209,11 @@ async def backend_get(
     empty: bool = False,
     as_dict: str | None = "_",
     raw: bool = False,
-    path_mangle=None,
-    item_mangle=None,
-    add_date=False,
+    path_mangle: Callable[[Path], Path | None] | None = None,
+    item_mangle: Callable[[Any], Awaitable[Any | None]] | None = None,
+    add_date: bool = False,
     codec: Codec | None = None,
-    out=None,
+    out: TextIO | Literal[False] | None = None,
     timeout: float = 0.5,
 ):
     """Generic code to dump a backend subtree.
@@ -212,23 +226,28 @@ async def backend_get(
 
     if path_mangle is None:
 
-        def path_mangle(x):
+        def path_mangle(x: Path) -> Path:
             return x
 
     if item_mangle is None:
 
-        async def item_mangle(x):  # pylint: disable=function-redefined
+        async def item_mangle(x: Any) -> Any:  # pylint: disable=function-redefined
             return x
 
+    out_list: list[Any] | None = None
+    out_stream: TextIO | None = None
     if out is None:
-        out = sys.stdout
+        out_stream = sys.stdout
     elif out is False:
-        out = []
+        tmp: list[Any] = []
+        out_list = tmp
+    else:
+        out_stream = out
+
+    kw: dict[str, Any] = {"codec": codec}
 
     if recursive:
-        kw = {"codec": codec}
-
-        y = {}
+        tree: dict[Any, Any] = {}
         async with conn.monitor(path, subtree=True, **kw) as mon:
             while True:
                 r = None
@@ -253,7 +272,7 @@ async def backend_get(
                     d = dict(data=d, meta=m.repr())
 
                 if as_dict is not None:
-                    yy = y
+                    yy = tree
                     for pp in p:
                         yy = yy.setdefault(pp, {})
                     try:
@@ -263,26 +282,28 @@ async def backend_get(
                             yy[as_dict] = None
                 else:
                     if raw:
-                        y = p
+                        msg: Any = p
                     else:
-                        y = {}
+                        msg = {}
                         try:
-                            y[p] = d
+                            msg[p] = d
                         except AttributeError:
                             if empty:
-                                y[p] = None
+                                msg[p] = None
                             else:
                                 continue
-                    if isinstance(out, list):
-                        out.append(y)
+                    if out_list is not None:
+                        out_list.append(msg)
                     else:
-                        yprint([y], stream=out)
+                        assert out_stream is not None
+                        yprint([msg], stream=out_stream)
 
-            if isinstance(out, list):
-                return y
-            yprint(y, stream=out)
+            if out_list is not None:
+                return tree
+            assert out_stream is not None
+            yprint(tree, stream=out_stream)
 
-            return out  # end "if recursive"
+            return out_stream  # end "if recursive"
 
     async with conn.monitor(path, **kw) as mon:
         r = None
@@ -300,12 +321,13 @@ async def backend_get(
 
     if out is False:
         return d
+    assert out_stream is not None
     if not raw:
-        yprint(d, stream=out)
+        yprint(d, stream=out_stream)
     elif isinstance(d, bytes):
-        os.write(out.fileno(), d)
+        os.write(out_stream.fileno(), d)
     else:
-        out.write(str(d))
+        out_stream.write(str(d))
     pass  # end get
 
 
@@ -334,7 +356,15 @@ def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-
     return val._update(attr, value=value, **kw)  # noqa: SLF001
 
 
-async def node_attr(obj, path, val=NotGiven, meta=NotGiven, *, retain: bool = False, **kw):
+async def node_attr(
+    obj,
+    path,
+    val: dict[str | None, Any] | EllipsisType = NotGiven,
+    meta=NotGiven,
+    *,
+    retain: bool = False,
+    **kw,
+):
     """
     Sub-attr setter.
 
@@ -353,7 +383,7 @@ async def node_attr(obj, path, val=NotGiven, meta=NotGiven, *, retain: bool = Fa
             pass
         else:
             meta = MsgMeta.restore(m)
-    val = process_args(val, **kw)
+    val = process_args(None if val is NotGiven else val, **kw)
     if retain:
         t = {} if meta is NotGiven else {"t": meta.timestamp}
         if val is NotGiven:

@@ -282,7 +282,7 @@ class MsgSender(BaseMsgHandler):
     def sub_at(self, prefix: Path, caller=None, *, cmd: Literal[True]) -> MsgSender | Callable: ...
 
     @overload
-    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable: ...
+    def sub_at(self, prefix: Path, caller=None, *, cmd: bool) -> MsgSender | Callable: ...
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable:
         """
@@ -419,14 +419,12 @@ class SubMsgSender(MsgSender):
     def sub_at(self, prefix: Path, caller=None, cmd: Literal[False] = False) -> SubMsgSender: ...
 
     @overload
-    def sub_at(
-        self, prefix: Path, caller=None, *, cmd: Literal[True]
-    ) -> SubMsgSender | Callable: ...
+    def sub_at(self, prefix: Path, caller=None, *, cmd: Literal[True]) -> SubMsgSender: ...
 
     @overload
-    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender | Callable: ...
+    def sub_at(self, prefix: Path, caller=None, *, cmd: bool) -> SubMsgSender: ...
 
-    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender | Callable:
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """

@@ -226,7 +226,7 @@ def attr_args(
 
 
 def process_args(
-    val: dict[str, Any] | None = None,
+    val: dict[str | None, Any] | None = None,
     set_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),
     args_: Sequence[str] = (),
     vars_: Mapping[Any, Any] | Iterable[tuple[Any, Any]] = (),

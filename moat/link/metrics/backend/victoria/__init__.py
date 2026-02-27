@@ -10,7 +10,7 @@ import asyncvictoria as victoria
 
 from .._base import Backend as _Backend  # noqa:TID252
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.link.metrics.model import MetricPoint
@@ -60,7 +60,7 @@ class Backend(_Backend):
         mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
         entry = victoria.Entry(
             series=point.series,
-            value=point.value,
+            value=cast("int", point.value),
             tags=point.tags,
             time=point.timestamp,
             mode=mode,

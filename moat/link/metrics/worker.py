@@ -41,9 +41,13 @@ async def run_entry(
         subpath: path of this entry relative to the server node
             (used for error reporting).
     """
-    source = Path.build(entry.source)
+    source_data = entry.source
+    assert source_data is not None
+    source = Path.build(source_data)
     series = entry.series
     tags = entry.tags
+    assert series is not None
+    assert tags is not None
     mode = entry.mode
     attr = entry.attr
     factor = entry.factor

@@ -8,6 +8,11 @@ from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.rpc import MsgSender
+
 
 @click.command(short_help="Send a command")
 @click.option("-S", "--stream", is_flag=True, help="Read a stream")
@@ -26,20 +31,19 @@ async def cli(ctx, path, stream, raw, client, **kw):
         cfg.client.port = obj.port
 
     async with Link(cfg) as conn:
-        if client:
-            conn = await conn.get_service(client)  # noqa:PLW2901
+        svc: MsgSender = await conn.get_service(client) if client else conn.sender
 
         kw = process_args({None: []}, no_path=True, **kw)
         args = kw.pop(None)
         if stream:
-            async with conn.cmd(path, *args, **kw).stream_in() as res:
+            async with svc.cmd(path, *args, **kw).stream_in() as res:
                 yprint(rep_(res, raw), stream=obj.stdout)
                 print("---", file=obj.stdout)
                 async for msg in res:
                     yprint(rep_(msg, raw), stream=obj.stdout)
                     print("---", file=obj.stdout)
         else:
-            res = await conn.cmd(path, *args, **kw)
+            res = await svc.cmd(path, *args, **kw)
         yprint(rep_(res, raw), stream=obj.stdout)
 
 

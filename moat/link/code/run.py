@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import ast
+from anyio.to_thread import run_sync
 
 from moat.util import NotGiven, combine_dict
 from moat.lib.path import P, Path
@@ -154,7 +155,7 @@ class Code:
     @staticmethod
     def _exec(proc: CodeType, vars_: dict[str, Any]) -> Any:
         """Execute one compiled snippet with explicit locals."""
-        return eval(proc, locals=vars_)
+        return eval(proc, vars_)
 
     async def __call__(self, **kw: Any) -> Any:
         """
@@ -170,7 +171,7 @@ class Code:
 
         if self._is_async is False:
             try:
-                await anyio.to_thread.run_sync(self._exec, self._proc, call_kw)
+                await run_sync(self._exec, self._proc, call_kw)
             except ReturnValue as exc:
                 return exc.value
             return None

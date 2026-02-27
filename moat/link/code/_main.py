@@ -74,7 +74,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
         args.pop()
 
     pl = PathLongener(obj.path)
-    out = {} if as_dict is not None else None
+    out: dict[Any, Any] | None = {} if as_dict is not None else None
 
     async with obj.conn.d.walk(obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
@@ -93,7 +93,8 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
                 continue
 
             if as_dict is not None:
-                cur = out
+                assert out is not None
+                cur: dict[Any, Any] = out
                 for pp in path:
                     cur = cur.setdefault(pp, {})
                 cur[as_dict] = entry

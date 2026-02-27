@@ -100,7 +100,7 @@ class SetReady:
     This duck-types `anyio.abc.TaskStatus` and `anyio.Event`.
     """
 
-    link: Link = field()
+    link: LinkSender = field()
     path: Path = field()
     force: bool = field(default=False)
     service_path: Path | None = field(default=None)
@@ -263,7 +263,12 @@ async def announcing(
 
     service_path = Path.build((gen_ident(12),)) if service is not None else None
 
-    async def _delegate(path, service, *, task_status: anyio.TASK_STATUS_IGNORED):
+    async def _delegate(
+        path: Path,
+        service: MsgSender,
+        *,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
+    ) -> None:
         with link.link.delegate(path, service):
             task_status.started()
             await anyio.sleep_forever()

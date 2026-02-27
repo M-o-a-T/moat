@@ -17,9 +17,11 @@ from .backend import get_backend
 from .model import MetricsEntry, MetricsServer
 from .worker import run_entry
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.link.client import LinkSender
 
     from collections.abc import Mapping
@@ -32,7 +34,7 @@ async def task(
     cfg: Mapping,
     server_name: str,
     *,
-    task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Run the metrics connector for one server.
 
@@ -74,7 +76,7 @@ async def task(
 
             async def _run(
                 *,
-                task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
+                task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
             ) -> None:
                 with anyio.CancelScope() as sc:
                     workers[p] = sc
@@ -88,7 +90,7 @@ async def task(
 
         # Watch the server subtree for configuration entries.
         # mark=True yields None when the initial state is complete.
-        async with link.d_watch(
+        async with cast(Any, link).d_watch(
             server_path,
             subtree=True,
             mark=True,

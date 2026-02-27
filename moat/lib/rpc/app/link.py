@@ -14,14 +14,13 @@ from moat.util.exc import ExpKeyError
 
 from ._link import Alert as Alert
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import MsgSender
     from moat.lib.rpc.msg import Msg
     from moat.link.announce import FakeReady
-    from moat.link.client import LinkSender
 
 
 class Cmd(BaseCmd):
@@ -89,7 +88,7 @@ class Cmd(BaseCmd):
                     link.sender,
                     srv,
                     host=self.cfg.get("host", False),
-                    service=cast("MsgSender", root.sub_at(target)) if target is not None else None,
+                    service=root.sub_at(target) if target is not None else None,
                 ),
             )
         # rlink will be set up lazily
@@ -119,7 +118,7 @@ class Cmd(BaseCmd):
             via = self.cfg.get("via", None)
             link = self.link
             if via is not None:
-                link = (await link.get_service(via))
+                link = await link.get_service(via)
             link = link.sender
             if len(rpath):
                 link = link.sub_at(rpath)

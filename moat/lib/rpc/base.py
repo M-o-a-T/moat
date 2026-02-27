@@ -17,11 +17,14 @@ from moat.util.exc import ungroup
 from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
-from collections.abc import Mapping,Callable
-from typing import TYPE_CHECKING, cast
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 if TYPE_CHECKING or DOC:
-    from types import EllipsisType  # noqa:TC003
+    from types import (
+        CoroutineType,  # noqa:TC003
+        EllipsisType,  # noqa:TC003
+    )
 
     from moat.lib.path import PathElem
 
@@ -29,7 +32,6 @@ if TYPE_CHECKING or DOC:
 
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any, Protocol, Self
-    from types import CoroutineType
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None
@@ -37,7 +39,7 @@ if TYPE_CHECKING or DOC:
     class MsgRoot(Protocol):
         """Interface required by :class:`MsgSender`."""
 
-        def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]: ...
+        def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]: ...
 
         def find_handler(
             self, path: Path, cmd: bool = False
@@ -65,7 +67,7 @@ class Caller:
 
     def __init__(
         self,
-        sender: BaseMsgHandler|MsgRoot,
+        sender: BaseMsgHandler | MsgRoot,
         data: tuple[str | Path, list[Any] | tuple[Any, ...], dict[str, Any]],
         _list: bool | EllipsisType | None = NotGiven,
     ):
@@ -199,7 +201,7 @@ class BaseMsgHandler:
     Somewhat-abstract superclass for anything that accepts messages.
     """
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Handle this message stream.
 
@@ -251,7 +253,7 @@ class MsgSender(BaseMsgHandler):
         assert not isinstance(root, MsgSender)
         self._root = root
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Redirect to the underlying command handler.
         """
@@ -272,6 +274,15 @@ class MsgSender(BaseMsgHandler):
 
         """
         return self.Caller_(self, (cmd, a, kw))
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: Literal[False] = False) -> MsgSender: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, *, cmd: Literal[True]) -> MsgSender | Callable: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable: ...
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable:
         """
@@ -359,7 +370,7 @@ class SubMsgSender(MsgSender):
                 raise NotReadyError(self)
         return await super().__aenter__()
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Forward the message, as directed by :py:attr:`path`.
         """
@@ -403,6 +414,17 @@ class SubMsgSender(MsgSender):
             _list: Unpacking mode.
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: Literal[False] = False) -> SubMsgSender: ...
+
+    @overload
+    def sub_at(
+        self, prefix: Path, caller=None, *, cmd: Literal[True]
+    ) -> SubMsgSender | Callable: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender | Callable: ...
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender | Callable:
         """

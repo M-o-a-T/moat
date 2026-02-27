@@ -9,7 +9,7 @@ from inspect import isfunction
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, MutableMapping
+    from collections.abc import MutableMapping
 
 __all__ = [
     "DProxy",
@@ -79,13 +79,6 @@ as_proxy("_p", Proxy)
 
 as_proxy("_fp", FSPath)
 as_proxy("_fpa", AioPath)
-
-
-def _next(it: Iterator[Any], dfl: Any = None) -> Any:
-    try:
-        return next(it)
-    except StopIteration:
-        return dfl
 
 
 def wrap_obj(obj: Any, name: str | None = None) -> tuple[Any, ...] | list[Any]:

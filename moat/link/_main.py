@@ -12,17 +12,11 @@ import sys
 
 import asyncclick as click
 
-from moat.util import NotGiven, yprint
+from moat.util import yprint
 from moat.lib.path import P, Path, set_root
 from moat.lib.run import load_subgroup
 
 from .backend import get_backend
-
-try:
-    from moat.lib.mqtt import MQTTPublishPacket
-except ImportError:
-    MQTTPublishPacket = NotGiven
-
 
 logger = logging.getLogger(__name__)
 

@@ -8,6 +8,8 @@ from moat.lib.path import P
 from moat.lib.run import attr_args, process_args
 from moat.link.client import Link
 
+from typing import Any, cast
+
 
 @click.command(short_help="Send a command")
 @click.option("-S", "--stream", is_flag=True, help="Read a stream")
@@ -29,10 +31,11 @@ async def cli(ctx, path, stream, raw, client, **kw):
         if client:
             conn = await conn.get_service(client)  # noqa:PLW2901
 
-        kw = process_args({None: []}, no_path=True, **kw)
+        kw = process_args(cast("dict[str, Any]", {None: []}), no_path=True, **kw)
         args = kw.pop(None)
         if stream:
-            async with conn.cmd(path, *args, **kw).stream_in() as res:
+            cmd = await conn.cmd(path, *args, **kw)
+            async with cmd.stream_in() as res:
                 yprint(rep_(res, raw), stream=obj.stdout)
                 print("---", file=obj.stdout)
                 async for msg in res:

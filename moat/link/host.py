@@ -294,7 +294,7 @@ class HostList(CtxObj):
         # Service Instance
         self.hsi: dict[Path, Service] = {}
         self.ids: dict[str, Service] = {}
-        self.times: TimerMap[str, float] = TimerMap()
+        self.times: TimerMap[str] = TimerMap()
 
     @asynccontextmanager
     async def _ctx(self):
@@ -496,8 +496,8 @@ class ServiceMon(HostList):
     def __init__(self, *a, fake: bool = False, **kw):
         """ """
         super().__init__(*a, **kw)
-        self.hostdown: TimerMap[Path, float] = TimerMap()
-        self.hostup: TimerMap[Path, float] = TimerMap()
+        self.hostdown: TimerMap[Path] = TimerMap()
+        self.hostup: TimerMap[Path] = TimerMap()
         self.errored: dict[Path, bool] = dict()
         self.fake: bool = fake
 

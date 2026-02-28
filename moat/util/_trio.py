@@ -3,17 +3,26 @@
 from __future__ import annotations
 
 import sys
+from importlib import import_module
 
-from trio._core._instrumentation import Instruments
 from trio.abc import Instrument
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
     from types import FrameType
 
     from outcome import Outcome
-    from trio._core._run import Runner, Task
+
+    class Runner(Protocol):
+        instruments: Any
+
+    class Task(Protocol):
+        _next_send: Any
+
+
+def _instruments(seq: list[Instrument]) -> Any:
+    return import_module("trio._core._instrumentation").Instruments(seq)
 
 
 class Instr(Instrument):
@@ -38,8 +47,10 @@ def hookup(runner: Runner | None = None) -> None:
             f = f.f_back
             if f is None:
                 return  # no Trio
-        runner = f.f_locals["runner"]  # type: ignore[union-attr]  # f is not None here
+        if f is None:
+            return
+        runner = cast(Runner, f.f_locals["runner"])  # f is not None here
 
     i = Instr()
-    ig = Instruments([i])
+    ig = _instruments([i])
     runner.instruments = ig

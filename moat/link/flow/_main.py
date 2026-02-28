@@ -151,16 +151,16 @@ async def _check_path(
 ) -> tuple[
     set[Path],
     dict[Path, tuple[str, Mapping[str, Any], Any]],
-    dict[Path, tuple[float, Mapping[str, Any], Any]],
-    dict[Path, tuple[float, Mapping[str, Any], Any]],
+    list[_Timeout],
+    list[_Copied],
 ]:
     """
     Evaluate one message against flow rules.
     """
     checked: set[Path] = set()
     errors: dict[Path, tuple[str, Mapping[str, Any], Any]] = {}
-    timeouts: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
-    copied: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
+    timeouts: list[_Timeout] = []
+    copied: list[_Copied] = []
 
     for rel, check in _iter_checks(flow):
         err_p = _error_path(path, rel)
@@ -202,7 +202,7 @@ async def _check_path(
                         delay = 3.0
                     if delay < 0:
                         delay = 0.0
-                    copied[err_p] = (delay, check, value)
+                    copied.append(_Copied(err_p, delay, check, value))
 
         if msg is not None:
             errors[err_p] = (msg, check, value)
@@ -215,7 +215,7 @@ async def _check_path(
                 timeout = None
 
         if timeout is not None and timeout > 0:
-            timeouts[err_p] = (timeout, check, value)
+            timeouts.append(_Timeout(err_p, timeout, check, value, rel))
             ts = getattr(meta, "timestamp", None)
             if do_stale_age and ts is not None and now - ts > timeout and err_p not in errors:
                 age = now - ts
@@ -292,9 +292,9 @@ class FlowMon:
             return
         self.active_errors[path] = msg
         await self.conn.e_info(
-            P("flow") + self.path + path,
+            P("flow") + path,
             msg,
-            data_path=self.path + data_path,
+            data_path=path + data_path,
             check=check,
             data=data,
         )
@@ -303,7 +303,7 @@ class FlowMon:
         if path not in self.active_errors and not self._error_exists(path):
             return
         self.active_errors.pop(path, None)
-        await self.conn.e_ok(P("flow") + self.path + path)
+        await self.conn.e_ok(P("flow") + path)
 
     async def _run_timeouts(self) -> None:
         async for tm in self.timeout:
@@ -361,15 +361,16 @@ class FlowMon:
                         with suppress(KeyError):
                             del self.copied[cast(_Copied, path)]
 
-                for path, (timeout, check, value) in timeouts.items():
-                    tm = _Timeout(path, timeout, check, value, rel)
+                for tm in timeouts:
+                    tm.path = self.path + tm.path
                     self.timeout[tm] = tm.timeout
 
-                for path, (delay, check, value) in copied.items():
-                    cp = _Copied(path, check, value, rel)
-                    self.copied[cp] = delay
+                for cp in copied:
+                    cp.path = self.path + cp.path
+                    self.copied[cp] = cp.delay
 
                 for path in checked:
+                    path = self.path + path  # noqa:PLW2901
                     if path in errors:
                         msg, check, value = errors[path]
                         await self._set_error(path, msg, check, value, rel)

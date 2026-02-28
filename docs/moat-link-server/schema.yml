@@ -121,6 +121,46 @@ properties:
       description: if not present, use min*10
 
 ---
+_path: !P flow.#
+title: Data flow and monitoring
+type: object
+properties:
+  _:
+    type: object
+    properties:
+      timeout:
+        type: float
+        title: A new message must arrive every ‹timeout› seconds.
+        doc: When not on top level, concerns a message that includes this element.
+      min:
+        type: float
+        title: Alert when the value is below this
+      max:
+        type: float
+        title: Alert when the value is above this
+      maxstep:
+        type: float
+        title: Alert when the delta between values is above this
+      copied:
+        type: object
+        properties:
+          at:
+            type: Path
+            title: This value must be mirrored there (Link path of data item)
+          item:
+            type: Path
+            title: This value must be mirrored there (Accessor within item)
+          delay:
+            type: float
+            title: Delay before we check
+            default: 3
+        required:
+          - at
+      required:
+        type: bool
+        title: Flag whether this element must always be present.
+        default: false
+---
 _path: !P gate.#
 title: Gateway specification
 properties:

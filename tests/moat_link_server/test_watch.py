@@ -66,8 +66,7 @@ async def test_watch_mon(cfg):  # noqa: D103
             c = await sf.client()
             evt = anyio.Event()
 
-            async with c.d_watch(P("test.here"), subtree=True, meta=True) as mon:
-                node = await mon.get_node()
+            async with c.d_watch(P("test.here"), subtree=True, meta=True).node as node:
                 assert node["before"].data == "One"
                 assert node["both"].data == "Two"
                 task_status.started(evt)

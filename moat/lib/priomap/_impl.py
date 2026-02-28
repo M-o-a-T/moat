@@ -8,7 +8,7 @@ import anyio
 from dataclasses import dataclass
 from time import monotonic as time
 
-from collections.abc import MutableMapping
+from collections.abc import Hashable, MutableMapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -23,12 +23,12 @@ else:
     Comparable = Any
 
 Priority = TypeVar("Priority", bound=Comparable)
+KeyT = TypeVar("KeyT", bound=Hashable)
 
 if TYPE_CHECKING:  # pragma: no cover
     from types import EllipsisType
 
     from collections.abc import (
-        Hashable,
         ItemsView,
         Iterable,
         Iterator,
@@ -38,23 +38,22 @@ if TYPE_CHECKING:  # pragma: no cover
 
     RT = TypeVar("RT")
 
-    Key = Hashable
-    InitialData = dict[Key, Priority] | None
-    InitialPrio = dict[Key, float] | None
+    InitialData = dict[KeyT, Priority] | None
+    InitialPrio = dict[KeyT, float] | None
 
 
 @dataclass(slots=True)
-class _KeyPrio(Generic[Priority]):
+class _KeyPrio(Generic[KeyT, Priority]):
     """Storage unit for heap entries."""
 
-    key: Key
+    key: KeyT
     priority: Priority
 
 
 __all__ = ["PrioMap", "TimerMap"]
 
 
-class PrioMap(MutableMapping, Generic[Priority]):
+class PrioMap(MutableMapping, Generic[KeyT, Priority]):
     """
     A heap that behaves like a dict but maintains heap ordering.
 
@@ -71,15 +70,15 @@ class PrioMap(MutableMapping, Generic[Priority]):
         Raises:
             TypeError: If any priority in ``initial`` is not an int or float.
         """
-        self.heap: list[_KeyPrio[Priority]] = []
-        self.position: dict[Key, int] = {}
+        self.heap: list[_KeyPrio[KeyT, Priority]] = []
+        self.position: dict[KeyT, int] = {}
         self.evt: anyio.Event = anyio.Event()
 
         # Bulk initialize if provided
         if initial:
             self.bulk(initial.items())
 
-    def bulk(self, initial: Iterable[tuple[Key, Priority]]) -> None:
+    def bulk(self, initial: Iterable[tuple[KeyT, Priority]]) -> None:
         """
         Bulk insert.
         """
@@ -91,7 +90,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         for i in reversed(range(len(self.heap) // 2)):
             self._sift_down(i)
 
-    def items(self) -> ItemsView[Key, Priority]:
+    def items(self) -> ItemsView[KeyT, Priority]:
         """
         Yield (key, priority) pairs.
 
@@ -100,7 +99,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         return self._create_iterator(None)
 
-    def keys(self) -> KeysView[Key]:
+    def keys(self) -> KeysView[KeyT]:
         """
         Yield keys only.
 
@@ -119,15 +118,15 @@ class PrioMap(MutableMapping, Generic[Priority]):
         return self._create_iterator(False)
 
     @overload
-    def pop(self) -> tuple[Key, Priority]: ...
+    def pop(self) -> tuple[KeyT, Priority]: ...
 
     @overload
-    def pop(self, key: Key) -> Priority: ...
+    def pop(self, key: KeyT) -> Priority: ...
 
     @overload
-    def pop(self, key: Key, default: RT) -> Priority | RT: ...
+    def pop(self, key: KeyT, default: RT) -> Priority | RT: ...
 
-    def pop(self, *a) -> tuple[Key, Priority] | Priority | RT:
+    def pop(self, *a) -> tuple[KeyT, Priority] | Priority | RT:
         """
         Remove and return an item.
 
@@ -162,7 +161,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
             return prio
         return key, prio
 
-    def peek(self) -> tuple[Key, Priority]:
+    def peek(self) -> tuple[KeyT, Priority]:
         """
         Return the root item without removing it.
 
@@ -174,7 +173,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         except IndexError:
             raise IndexError("Queue is empty") from None
 
-    def set_priority(self, key: Key, new_priority: Priority) -> None:
+    def set_priority(self, key: KeyT, new_priority: Priority) -> None:
         """
         Update priority for an existing key, then reheapify.
 
@@ -263,7 +262,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
             else:
                 break
 
-    def __getitem__(self, key: Key) -> Priority:
+    def __getitem__(self, key: KeyT) -> Priority:
         """
         Get the priority for `key`.
 
@@ -275,7 +274,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
             return self.heap[self.position[key]].priority
         raise KeyError(f"Key {key} not found in heap.")
 
-    def __setitem__(self, key: Key, priority: Priority) -> None:
+    def __setitem__(self, key: KeyT, priority: Priority) -> None:
         """
         Insert or update `key` with `priority`.
 
@@ -294,7 +293,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
                 self.evt.set()
                 self.evt = anyio.Event()
 
-    def __delitem__(self, key: Key) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         """
         Remove `key` from the heap.
 
@@ -314,7 +313,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
                 self.evt.set()
                 self.evt = anyio.Event()
 
-    def __contains__(self, key: Key) -> bool:
+    def __contains__(self, key: object) -> bool:
         """
         Check if `key` exists in the heap.
         """
@@ -353,7 +352,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
             def __iter__(self) -> SafeIterator:
                 return self
 
-            def __next__(self) -> Key | Priority | tuple[Key, Priority]:
+            def __next__(self) -> KeyT | Priority | tuple[KeyT, Priority]:
                 s = self.state
                 if s["index"] < s["len"]:
                     item = self.heap_dict.heap[s["index"]]
@@ -369,7 +368,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
 
         return SafeIterator(self, keys)
 
-    def __iter__(self) -> Iterator[tuple[Key, Priority]]:
+    def __iter__(self) -> Iterator[tuple[KeyT, Priority]]:
         """
         Iterate over (key, priority) pairs.
 
@@ -377,7 +376,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         return self._create_iterator(None)
 
-    def __aiter__(self) -> PrioMap[Priority]:
+    def __aiter__(self) -> PrioMap[KeyT, Priority]:
         """
         Iterate asynchronously over (key, priority) pairs.
 
@@ -385,7 +384,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         """
         return self
 
-    async def __anext__(self) -> tuple[Key, Priority]:
+    async def __anext__(self) -> tuple[KeyT, Priority]:
         """
         Return the lowest-priority item.
 
@@ -395,7 +394,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
             await self.evt.wait()
         return self.pop()
 
-    async def apeek(self) -> tuple[Key, Priority]:
+    async def apeek(self) -> tuple[KeyT, Priority]:
         """
         Return the root item without removing it.
 
@@ -407,7 +406,7 @@ class PrioMap(MutableMapping, Generic[Priority]):
         return item.key, item.priority
 
 
-class TimerMap:
+class TimerMap(Generic[KeyT]):
     """
     A map that stores timeout values.
 
@@ -418,8 +417,8 @@ class TimerMap:
     Negative delays are not an error.
     """
 
-    def __init__(self, initial: InitialPrio = None) -> None:
-        self._pm: PrioMap[float] = PrioMap()
+    def __init__(self, initial: dict[KeyT, float] | None = None) -> None:
+        self._pm: PrioMap[KeyT, float] = PrioMap()
         if initial:
             self._pm.bulk((k, self.T_ADD(v)) for k, v in initial.items())
 
@@ -433,16 +432,16 @@ class TimerMap:
         "Subtract the current time."
         return p - time()
 
-    def __setitem__(self, key: Key, delay: float) -> None:
+    def __setitem__(self, key: KeyT, delay: float) -> None:
         self._pm[key] = self.T_ADD(delay)
 
-    def __getitem__(self, key: Key) -> float:
+    def __getitem__(self, key: KeyT) -> float:
         return self.T_SUB(self._pm[key])
 
-    def __delitem__(self, key: Key) -> None:
+    def __delitem__(self, key: KeyT) -> None:
         del self._pm[key]
 
-    async def apeek(self) -> tuple[Key, float]:
+    async def apeek(self) -> tuple[KeyT, float]:
         """
         Return the first item (without removing it).
 
@@ -454,10 +453,10 @@ class TimerMap:
     def __len__(self) -> int:
         return len(self._pm)
 
-    def __aiter__(self) -> TimerMap:
+    def __aiter__(self) -> TimerMap[KeyT]:
         return self
 
-    async def __anext__(self) -> Key:
+    async def __anext__(self) -> KeyT:
         "iterate keys as they time out."
         while True:
             k, p = await self.apeek()
@@ -470,19 +469,19 @@ class TimerMap:
                     raise RuntimeError("Heap got confused? {k !r}:{p}")
                 return k
 
-    def update(self, key: Key, new_delay: float) -> None:
+    def update(self, key: KeyT, new_delay: float) -> None:
         """
         Update priority for an existing key, then reheapify.
         """
         self._pm.set_priority(key, self.T_ADD(new_delay))
 
     @overload
-    def pop(self) -> tuple[Key, float]: ...
+    def pop(self) -> tuple[KeyT, float]: ...
 
     @overload
-    def pop(self, key: Key) -> float: ...
+    def pop(self, key: KeyT) -> float: ...
 
-    def pop(self, a: Key | EllipsisType = Ellipsis) -> tuple[Key, float] | float:
+    def pop(self, a: KeyT | EllipsisType = Ellipsis) -> tuple[KeyT, float] | float:
         """
         Remove and return an item.
 

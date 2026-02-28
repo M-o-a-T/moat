@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Key
 
     from collections.abc import Awaitable, Callable, Iterator
-    from typing import Any
+    from typing import Any, Self
 
-__all__ = ["Node"]
+__all__ = ["Node", "NodeFinder"]
 
 logger = getLogger(__name__)
 
@@ -339,16 +339,21 @@ class Node:
 
         await _walk(self, Path())
 
+    def finder(self, path: Path) -> NodeFinder:
+        """
+        Find the destination node of a path, including wildcards.
+
+        This node represents a search path.
+        """
+        return NodeFinder(self).at(path)
+
     def search(self, path: Path) -> Node:
         """
         Find the destination node of a path, including wildcards.
 
         This node represents the pattern.
         """
-        nf = NodeFinder(self)
-        for elem in path:
-            nf.step(elem)
-        return nf.result
+        return self.finder(path).result
 
     def collect(self, path: Path, keep: bool = False) -> dict:
         """
@@ -403,7 +408,21 @@ class NodeFinder:
                 continue
             yield n, m, sub
 
-    def step(self, name: str | int | bool | None, new=False):
+    def copy(self) -> Self:
+        """
+        Create a clone with the current path.
+        """
+        res = object.__new__(NodeFinder)
+        res.steps = self.steps
+        return res
+
+    def at(self, path: Path) -> Self:
+        """Advance this finder by all elements in *path*."""
+        for elem in path:
+            self.step(elem)
+        return self
+
+    def step(self, name: str | int | bool | None, new=False) -> None:
         """
         Walk a single hierarchy step, observing wildcards. Note that ``#``
         means *one or more*, i.e. it will not match an empty path element.
@@ -442,6 +461,7 @@ class NodeFinder:
 
     @property
     def result(self) -> Node:
+        """Return the highest-priority matching node."""
         for node in self.matches:
             return node
         raise KeyError("No matching wildcard state")

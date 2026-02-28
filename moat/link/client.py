@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     from .schema import Data
     from .schema import SchemaName as S
 
-    from collections.abc import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable, Iterator
     from typing import Any, Literal
 
 
@@ -1482,6 +1482,21 @@ class Watcher(CtxObj):
 
     def __aiter__(self):
         return self
+
+    @property
+    @asynccontextmanager
+    async def node(self) -> Iterator[Node]:
+        """
+        Helper for fetching data in background.
+
+        This is necessary if you start several watchers in a common context
+        managers. If you then call :py.meth.`get_node` on one of them,
+        the data from the other(s) might overwhelm the input queue.
+        """
+        if self._node is not None:
+            raise RuntimeError("Use `await get_node()`")
+        async with self:
+            yield await self.get_node()
 
     async def get_node(self, background=True) -> Node:
         """

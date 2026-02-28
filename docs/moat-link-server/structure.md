@@ -52,6 +52,14 @@ Any message in `moat/#` should have a corresponding entry in
 The `schema/_` sub-hierarchy contains MoaT objects like
 <span class="title-ref">moat.util.Path</span>.
 
+### flow
+
+Flow-check configuration.
+
+Entries below `flow/#` mirror data paths and define runtime checks such as
+minimum/maximum values, maximum step size, copied-value verification, and
+timeouts for stale data detection.
+
 ## Message Metadata
 
 MoaT-Link messages should be accompanied with metadata as specified in

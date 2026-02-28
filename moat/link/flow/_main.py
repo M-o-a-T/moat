@@ -206,6 +206,7 @@ async def _check_path(
 
         if msg is not None:
             errors[err_p] = (msg, check, value)
+            continue
 
         timeout = check.get("timeout", None)
         if timeout is not None:
@@ -270,54 +271,48 @@ class FlowMon:
         self.conn = conn
         self.path = path
         self.previous: dict[Path, Any] = {}
-        self.active_errors: dict[Path, str] = {}
         self.timeout: TimerMap[_Timeout] = TimerMap()
         self.copied: TimerMap[_Copied] = TimerMap()
         self.errs = None
         self.flows = None
 
-    def _error_exists(self, path: Path) -> bool:
-        if self.errs is None:
-            return False
+    async def _set_error(self, path: Path, msg: str, check: Mapping[str, Any], data: Any) -> None:
         try:
-            self.errs[path]
-        except (KeyError, ValueError):
-            return False
-        return True
-
-    async def _set_error(
-        self, path: Path, msg: str, check: Mapping[str, Any], data: Any, data_path: Path
-    ) -> None:
-        if self.active_errors.get(path, None) == msg:
-            return
-        self.active_errors[path] = msg
+            err = self.errs[path]
+            if err.data.msg == msg:
+                return
+        except KeyError:
+            pass
         await self.conn.e_info(
-            P("flow") + path,
+            P("flow") + self.path + path,
             msg,
-            data_path=path + data_path,
             check=check,
             data=data,
         )
 
     async def _clear_error(self, path: Path) -> None:
-        if path not in self.active_errors and not self._error_exists(path):
-            return
-        self.active_errors.pop(path, None)
-        await self.conn.e_ok(P("flow") + path)
+        try:
+            _err = self.errs[path]
+        except KeyError:
+            pass
+        else:
+            await self.conn.e_ok(P("flow") + self.path + path)
 
     async def _run_timeouts(self) -> None:
         async for tm in self.timeout:
             msg = f"No update for {tm.timeout:g}s"
-            await self._set_error(tm.path, msg, tm.check, tm.value, tm.rel)
+            await self._set_error(tm.path, msg, tm.check, tm.value)
 
     async def _run_copied(self) -> None:
         async for cp in self.copied:
             msg = await _check_copied(self.conn, cp.value, cp.check)
             if msg is None:
-                if self.active_errors.get(cp.path, "").startswith("Copied "):
-                    await self._clear_error(cp.path)
-                continue
-            await self._set_error(cp.path, msg, cp.check, cp.value, cp.rel)
+                try:
+                    if self.errs[cp.path].data.msg.startswith("Copied "):
+                        await self._clear_error(cp.path)
+                except (KeyError, ValueError):
+                    pass
+            await self._set_error(cp.path, msg, cp.check, cp.value)
 
     async def run(self) -> None:
         """
@@ -362,21 +357,15 @@ class FlowMon:
                             del self.copied[cast(_Copied, path)]
 
                 for tm in timeouts:
-                    tm.path = self.path + tm.path
                     self.timeout[tm] = tm.timeout
 
                 for cp in copied:
-                    cp.path = self.path + cp.path
                     self.copied[cp] = cp.delay
 
                 for path in checked:
-                    path = self.path + path  # noqa:PLW2901
                     if path in errors:
                         msg, check, value = errors[path]
-                        await self._set_error(path, msg, check, value, rel)
-                    elif path in copied:
-                        if self.active_errors.get(path, "").startswith("No update for"):
-                            await self._clear_error(path)
+                        await self._set_error(path, msg, check, value)
                     else:
                         await self._clear_error(path)
 

@@ -6,6 +6,7 @@ import time
 from contextlib import suppress
 
 import asyncclick as click
+from attrs import define, field
 
 from moat.util import NotGiven, get_part, yprint
 from moat.lib.path import P, Path
@@ -13,7 +14,7 @@ from moat.lib.priomap import TimerMap
 from moat.link.client import Link
 
 from collections.abc import Iterator, Mapping
-from typing import Any
+from typing import Any, cast
 
 
 @click.group(short_help="Manage data flows.")
@@ -223,6 +224,43 @@ async def _check_path(
     return checked, errors, timeouts, copied
 
 
+@define
+class _Timeout:
+    path: Path = field()
+    timeout: float = field()
+    check: Mapping[str, Any] = field()
+    value: Any = field()
+    rel: Path = field()
+
+    def __hash__(self):
+        return hash(self.path)
+
+    def __eq__(self, other: object):
+        if isinstance(other, _Timeout):
+            other = other.path
+        if isinstance(other, Path):
+            return self.path == other
+        return False
+
+
+@define
+class _Copied:
+    path: Path = field()
+    check: Mapping[str, Any] = field()
+    value: Any = field()
+    rel: Path = field()
+
+    def __hash__(self):
+        return hash(self.path)
+
+    def __eq__(self, other: object):
+        if isinstance(other, _Copied):
+            other = other.path
+        if isinstance(other, Path):
+            return self.path == other
+        return False
+
+
 class FlowMon:
     """
     Monitor incoming messages and create flow errors.
@@ -233,10 +271,8 @@ class FlowMon:
         self.path = path
         self.previous: dict[Path, Any] = {}
         self.active_errors: dict[Path, str] = {}
-        self.timeout_map: TimerMap[Path] = TimerMap()
-        self.timeout_data: dict[Path, tuple[float, Mapping[str, Any], Any, Path]] = {}
-        self.copied_map: TimerMap[Path] = TimerMap()
-        self.copied_data: dict[Path, tuple[Mapping[str, Any], Any, Path]] = {}
+        self.timeout: TimerMap[_Timeout] = TimerMap()
+        self.copied: TimerMap[_Copied] = TimerMap()
         self.errs = None
         self.flows = None
 
@@ -269,39 +305,19 @@ class FlowMon:
         self.active_errors.pop(path, None)
         await self.conn.e_ok(P("flow") + self.path + path)
 
-    def _drop_timeout(self, path: Path) -> None:
-        with suppress(KeyError):
-            del self.timeout_data[path]
-        with suppress(KeyError):
-            del self.timeout_map[path]
-
-    def _drop_copied(self, path: Path) -> None:
-        with suppress(KeyError):
-            del self.copied_data[path]
-        with suppress(KeyError):
-            del self.copied_map[path]
-
     async def _run_timeouts(self) -> None:
-        async for path in self.timeout_map:
-            try:
-                timeout, check, data, data_path = self.timeout_data[path]
-            except KeyError:
-                continue
-            msg = f"No update for {timeout:g}s"
-            await self._set_error(path, msg, check, data, data_path)
+        async for tm in self.timeout:
+            msg = f"No update for {tm.timeout:g}s"
+            await self._set_error(tm.path, msg, tm.check, tm.value, tm.rel)
 
     async def _run_copied(self) -> None:
-        async for path in self.copied_map:
-            try:
-                check, data, data_path = self.copied_data[path]
-            except KeyError:
-                continue
-            msg = await _check_copied(self.conn, data, check)
+        async for cp in self.copied:
+            msg = await _check_copied(self.conn, cp.value, cp.check)
             if msg is None:
-                if self.active_errors.get(path, "").startswith("Copied "):
-                    await self._clear_error(path)
+                if self.active_errors.get(cp.path, "").startswith("Copied "):
+                    await self._clear_error(cp.path)
                 continue
-            await self._set_error(path, msg, check, data, data_path)
+            await self._set_error(cp.path, msg, cp.check, cp.value, cp.rel)
 
     async def run(self) -> None:
         """
@@ -338,17 +354,20 @@ class FlowMon:
 
                 for path in checked:
                     if path not in timeouts:
-                        self._drop_timeout(path)
+                        with suppress(KeyError):
+                            del self.timeout[cast(_Timeout, path)]
+
                     if path not in copied:
-                        self._drop_copied(path)
+                        with suppress(KeyError):
+                            del self.copied[cast(_Copied, path)]
 
                 for path, (timeout, check, value) in timeouts.items():
-                    self.timeout_data[path] = (timeout, check, value, rel)
-                    self.timeout_map[path] = timeout
+                    tm = _Timeout(path, timeout, check, value, rel)
+                    self.timeout[tm] = tm.timeout
 
                 for path, (delay, check, value) in copied.items():
-                    self.copied_data[path] = (check, value, rel)
-                    self.copied_map[path] = delay
+                    cp = _Copied(path, check, value, rel)
+                    self.copied[cp] = delay
 
                 for path in checked:
                     if path in errors:

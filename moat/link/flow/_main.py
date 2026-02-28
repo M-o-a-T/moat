@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import anyio
 import time
+from contextlib import suppress
 
 import asyncclick as click
 
 from moat.util import NotGiven, get_part, yprint
 from moat.lib.path import P, Path
+from moat.lib.priomap import TimerMap
 from moat.link.client import Link
 
 from collections.abc import Iterator, Mapping
@@ -123,16 +125,10 @@ async def _check_copied(conn: Link, value: Any, check: Mapping[str, Any]) -> str
     return None
 
 
-def _value_for(data: Any, rel: Path) -> Any:
-    if not rel:
-        return data
-    return get_part(data, rel)
-
-
-async def _flow_data(conn: Link, path: Path) -> Mapping[str, Any] | None:
+def _flow_for(flows: Any, path: Path) -> Mapping[str, Any] | None:
     try:
-        flow = await conn.d_search(flow_path(path))
-    except KeyError:
+        flow = flows.search(path).data
+    except (KeyError, ValueError):
         return None
     if not isinstance(flow, Mapping):
         return None
@@ -149,10 +145,12 @@ async def _check_path(
     previous: dict[Path, Any],
     now: float,
     do_copied: bool,
-    do_stale_age: bool,
+    do_stale_age: bool = True,
+    queue_copied: bool = False,
 ) -> tuple[
     set[Path],
     dict[Path, tuple[str, Mapping[str, Any], Any]],
+    dict[Path, tuple[float, Mapping[str, Any], Any]],
     dict[Path, tuple[float, Mapping[str, Any], Any]],
 ]:
     """
@@ -161,6 +159,7 @@ async def _check_path(
     checked: set[Path] = set()
     errors: dict[Path, tuple[str, Mapping[str, Any], Any]] = {}
     timeouts: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
+    copied: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
 
     for rel, check in _iter_checks(flow):
         err_p = _error_path(path, rel)
@@ -172,7 +171,10 @@ async def _check_path(
             continue
 
         try:
-            value = _value_for(data, rel)
+            if len(rel) == 0:
+                value = data
+            else:
+                value = get_part(data, rel)
         except Exception:
             value = NotGiven
 
@@ -186,8 +188,20 @@ async def _check_path(
         previous[prev_key] = value
 
         msg = _check_limits(value, check, prev_val)
-        if msg is None and do_copied:
-            msg = await _check_copied(conn, value, check)
+        if msg is None:
+            if do_copied:
+                msg = await _check_copied(conn, value, check)
+            elif queue_copied:
+                rule = check.get("copied", None)
+                if isinstance(rule, Mapping):
+                    delay = rule.get("delay", 3.0)
+                    try:
+                        delay = float(delay)
+                    except (TypeError, ValueError):
+                        delay = 3.0
+                    if delay < 0:
+                        delay = 0.0
+                    copied[err_p] = (delay, check, value)
 
         if msg is not None:
             errors[err_p] = (msg, check, value)
@@ -206,7 +220,7 @@ async def _check_path(
                 age = now - ts
                 errors[err_p] = (f"Stale data: {age:g}s > {timeout:g}s", check, value)
 
-    return checked, errors, timeouts
+    return checked, errors, timeouts, copied
 
 
 class FlowMon:
@@ -219,8 +233,21 @@ class FlowMon:
         self.path = path
         self.previous: dict[Path, Any] = {}
         self.active_errors: dict[Path, str] = {}
-        self.timeout_deadline: dict[Path, float] = {}
-        self.timeout_data: dict[Path, tuple[float, Mapping[str, Any], Any]] = {}
+        self.timeout_map: TimerMap[Path] = TimerMap()
+        self.timeout_data: dict[Path, tuple[float, Mapping[str, Any], Any, Path]] = {}
+        self.copied_map: TimerMap[Path] = TimerMap()
+        self.copied_data: dict[Path, tuple[Mapping[str, Any], Any, Path]] = {}
+        self.errs = None
+        self.flows = None
+
+    def _error_exists(self, path: Path) -> bool:
+        if self.errs is None:
+            return False
+        try:
+            self.errs[path]
+        except (KeyError, ValueError):
+            return False
+        return True
 
     async def _set_error(
         self, path: Path, msg: str, check: Mapping[str, Any], data: Any, data_path: Path
@@ -228,70 +255,110 @@ class FlowMon:
         if self.active_errors.get(path, None) == msg:
             return
         self.active_errors[path] = msg
-        await self.conn.e_info(P("flow") + path, msg, data_path=data_path, check=check, data=data)
+        await self.conn.e_info(
+            P("flow") + self.path + path,
+            msg,
+            data_path=self.path + data_path,
+            check=check,
+            data=data,
+        )
 
     async def _clear_error(self, path: Path) -> None:
-        if path not in self.active_errors:
+        if path not in self.active_errors and not self._error_exists(path):
             return
-        del self.active_errors[path]
-        await self.conn.e_ok(P("flow") + path)
+        self.active_errors.pop(path, None)
+        await self.conn.e_ok(P("flow") + self.path + path)
 
-    async def _run_timeouts(self, stop: anyio.Event) -> None:
-        while True:
-            if stop.is_set():
-                return
-            await anyio.sleep(0.01)
+    def _drop_timeout(self, path: Path) -> None:
+        with suppress(KeyError):
+            del self.timeout_data[path]
+        with suppress(KeyError):
+            del self.timeout_map[path]
 
-            now = time.monotonic()
-            for path, deadline in tuple(self.timeout_deadline.items()):
-                if deadline > now:
-                    continue
-                timeout, check, data = self.timeout_data[path]
-                msg = f"No update for {timeout:g}s"
-                await self._set_error(path, msg, check, data, path)
+    def _drop_copied(self, path: Path) -> None:
+        with suppress(KeyError):
+            del self.copied_data[path]
+        with suppress(KeyError):
+            del self.copied_map[path]
 
-    async def _run_data(self, stop: anyio.Event) -> None:
-        async with self.conn.d_watch(self.path, state=None, subtree=True, meta=True) as mon:
-            async for rel, data, meta in mon:
-                full = self.path + rel
-                flow = await _flow_data(self.conn, full)
-                if flow is None:
-                    continue
+    async def _run_timeouts(self) -> None:
+        async for path in self.timeout_map:
+            try:
+                timeout, check, data, data_path = self.timeout_data[path]
+            except KeyError:
+                continue
+            msg = f"No update for {timeout:g}s"
+            await self._set_error(path, msg, check, data, data_path)
 
-                checked, errors, timeouts = await _check_path(
-                    self.conn,
-                    path=full,
-                    data=data,
-                    meta=meta,
-                    flow=flow,
-                    previous=self.previous,
-                    now=time.time(),
-                    do_copied=True,
-                    do_stale_age=False,
-                )
-
-                now = time.monotonic()
-                for path, (timeout, check, value) in timeouts.items():
-                    self.timeout_deadline[path] = now + timeout
-                    self.timeout_data[path] = (timeout, check, value)
-
-                for path in checked:
-                    if path in errors:
-                        msg, check, value = errors[path]
-                        await self._set_error(path, msg, check, value, full)
-                    else:
-                        await self._clear_error(path)
-
-        stop.set()
+    async def _run_copied(self) -> None:
+        async for path in self.copied_map:
+            try:
+                check, data, data_path = self.copied_data[path]
+            except KeyError:
+                continue
+            msg = await _check_copied(self.conn, data, check)
+            if msg is None:
+                if self.active_errors.get(path, "").startswith("Copied "):
+                    await self._clear_error(path)
+                continue
+            await self._set_error(path, msg, check, data, data_path)
 
     async def run(self) -> None:
         """
         Run the monitor.
         """
-        stop = anyio.Event()
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(self._run_data, stop)
-            tg.start_soon(self._run_timeouts, stop)
+        async with (
+            self.conn.d_watch(P("flow"), state=None, subtree=True).node as flows,
+            self.conn.d_watch(P("error.flow") + self.path, state=None, subtree=True).node as errs,
+            self.conn.d_watch(self.path, state=None, subtree=True, meta=True) as mon,
+            anyio.create_task_group() as tg,
+        ):
+            self.flows = flows
+            self.errs = errs
+            tg.start_soon(self._run_timeouts)
+            tg.start_soon(self._run_copied)
+
+            async for rel, data, meta in mon:
+                flow = _flow_for(flows, self.path + rel)
+                if flow is None:
+                    continue
+
+                checked, errors, timeouts, copied = await _check_path(
+                    self.conn,
+                    path=rel,
+                    data=data,
+                    meta=meta,
+                    flow=flow,
+                    previous=self.previous,
+                    now=time.time(),
+                    do_copied=False,
+                    do_stale_age=False,
+                    queue_copied=True,
+                )
+
+                for path in checked:
+                    if path not in timeouts:
+                        self._drop_timeout(path)
+                    if path not in copied:
+                        self._drop_copied(path)
+
+                for path, (timeout, check, value) in timeouts.items():
+                    self.timeout_data[path] = (timeout, check, value, rel)
+                    self.timeout_map[path] = timeout
+
+                for path, (delay, check, value) in copied.items():
+                    self.copied_data[path] = (check, value, rel)
+                    self.copied_map[path] = delay
+
+                for path in checked:
+                    if path in errors:
+                        msg, check, value = errors[path]
+                        await self._set_error(path, msg, check, value, rel)
+                    elif path in copied:
+                        if self.active_errors.get(path, "").startswith("No update for"):
+                            await self._clear_error(path)
+                    else:
+                        await self._clear_error(path)
 
 
 @cli.command()
@@ -333,31 +400,40 @@ async def check(obj, path, verbose, monitor):
     previous: dict[Path, Any] = {}
     watch_state = None if monitor else True
 
-    async with obj.conn.d_watch(path, state=watch_state, subtree=True, meta=True) as mon:
+    async with (
+        obj.conn.d_watch(P("flow"), state=None, subtree=True).node as flows,
+        obj.conn.d_watch(path, state=watch_state, subtree=True, meta=True) as mon,
+    ):
         async for rel, data, meta in mon:
             full = path + rel
-            flow = await _flow_data(obj.conn, full)
+            flow = _flow_for(flows, full)
             if flow is None:
                 n_skip += 1
                 continue
 
-            checked, errors, _timeouts = await _check_path(
+            checked, errors, _timeouts, _copied = await _check_path(
                 obj.conn,
-                path=full,
+                path=rel,
                 data=data,
                 meta=meta,
                 flow=flow,
                 previous=previous,
                 now=time.time(),
                 do_copied=True,
-                do_stale_age=True,
+                queue_copied=False,
             )
 
             n_bad += len(errors)
             n_good += len(checked) - len(errors)
             for err_path, (detail, check, value) in errors.items():
                 yprint(
-                    dict(path=err_path, data_path=full, detail=detail, check=check, data=value),
+                    dict(
+                        path=path + err_path,
+                        data_path=full,
+                        detail=detail,
+                        check=check,
+                        data=value,
+                    ),
                     stream=obj.stdout,
                 )
                 print("---", file=obj.stdout)

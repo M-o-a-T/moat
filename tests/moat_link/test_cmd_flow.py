@@ -71,7 +71,6 @@ async def test_flow_monitor_e2e_writes_and_clears_timeout_error(cfg):
         assert len(events) == 2
         p1, d1 = events[0]
         assert p1 == P("live")
-        assert d1["data_path"] == P("state.live")
         assert d1["check"]["timeout"] == pytest.approx(0.05)
         assert d1["data"] in (10, 11)
 

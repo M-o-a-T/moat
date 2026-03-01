@@ -10,6 +10,7 @@ import logging
 import os
 import random
 import signal
+import sys
 import time
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
@@ -2166,7 +2167,8 @@ class Server(MsgHandler):
                 exc = "Cancelled"
             self._error_cache[name] = cast(Exception, exc)
             self.logger.debug("End Client C_%s %r", cnr, exc)
-
+            if "pytest" in sys.modules:
+                raise
         finally:
             with anyio.move_on_after(2, shield=True):
                 await stream.aclose()

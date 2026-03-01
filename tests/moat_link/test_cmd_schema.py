@@ -8,14 +8,16 @@ from io import StringIO
 
 from moat.util import attrdict
 from moat.lib.path import P
+from moat.link._test import Scaffold
 from moat.link.schema import _main as schema_cmd
 
 pytestmark = pytest.mark.anyio
 
 
 class _WatchCtx:
-    def __init__(self, items):
+    def __init__(self, items, node=None):
         self._items = list(items)
+        self._node = node
 
     async def __aenter__(self):
         async def _it():
@@ -23,6 +25,36 @@ class _WatchCtx:
                 yield item
 
         return _it()
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    @property
+    def node(self):
+        return _NodeCtx(self._node)
+
+
+class _NodeRes:
+    def __init__(self, data):
+        self.data = data
+
+
+class _SchemaNode:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def search(self, path):
+        if not self._conn.has_schema:
+            raise KeyError(path)
+        return _NodeRes({"type": "integer"})
+
+
+class _NodeCtx:
+    def __init__(self, node):
+        self._node = node
+
+    async def __aenter__(self):
+        return self._node
 
     async def __aexit__(self, exc_type, exc, tb):
         return False
@@ -47,6 +79,8 @@ class _Conn:
 
     def d_watch(self, path, **kw):
         self.watch_calls.append((path, kw))
+        if path == P("schema"):
+            return _WatchCtx([], node=_SchemaNode(self))
         return _WatchCtx(self.watch_items)
 
     async def e_info(self, path, text, **kw):
@@ -80,11 +114,17 @@ async def test_schema_monitor_rate_limit():
     assert str(kw["data_path"]) == "foo.a"
 
 
-async def test_schema_monitor_queue_drops_when_busy():
+async def test_schema_monitor_queue_drops_when_busy(monkeypatch):
     """`schema monitor` drops excess messages instead of backlogging."""
 
     conn = _Conn()
-    conn.delay = 0.005
+    orig = schema_cmd._schema_error  # noqa: SLF001
+
+    async def _slow_schema_error(*a, **k):
+        await anyio.sleep(0.005)
+        return await orig(*a, **k)
+
+    monkeypatch.setattr(schema_cmd, "_schema_error", _slow_schema_error)
     conn.watch_items = [(P(str(n)), "x") for n in range(200)]
     obj = attrdict(conn=conn, stdout=StringIO())
 
@@ -119,3 +159,36 @@ async def test_schema_check_ignores_missing_schema():
     await schema_cmd.check.callback.__wrapped__(obj, P("foo"), False)
 
     assert obj.stdout.getvalue() == ""
+
+
+@pytest.mark.anyio
+async def test_schema_monitor_e2e_writes_error(cfg):
+    """`schema monitor` writes an error in a real client/server setup."""
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as writer,
+        sf.client_() as watcher,
+    ):
+        await writer.d_set(P("schema.state.live"), {"type": "integer"}, verify=False)
+        await writer.i_sync()
+        await writer.d_set(P("state.live"), "bad", verify=False)
+        await writer.i_sync()
+
+        obj = attrdict(conn=watcher, stdout=StringIO())
+        async with (
+            sf.do_watch(P("error.schema.state"), subtree=True, n=1) as evt,
+            anyio.create_task_group() as tg,
+        ):
+            tg.start_soon(schema_cmd.monitor.callback.__wrapped__, obj, P("state"), 0.0, False)
+            await anyio.sleep(0.2)
+            tg.cancel_scope.cancel()
+
+        res = await evt.get()
+        assert len(res) == 1
+        p, d = res[0]
+        assert p == P("live")
+        assert d["data_path"] == P("state.live")
+        assert d["data"] == "bad"
+        assert "integer" in d["detail"]

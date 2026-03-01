@@ -7,13 +7,15 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING, cast  # isort:skip
+from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.path import PathElem
-    from moat.lib.rpc import MsgHandler, MsgSender
-    from moat.lib.rpc.msg import Msg
     from types import CoroutineType
+
+    from moat.lib.path import PathElem
+    from moat.lib.rpc import MsgSender
+    from moat.lib.rpc.msg import Msg
+
     from typing import Any
 
 
@@ -52,6 +54,6 @@ class Fwd(BaseCmd):
         xb = await AC_use(self, b)
         self.sd = MsgSender(xb)
 
-    def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """Call via the subdispatcher."""
-        return self.sd.handle(msg, rcmd, *prefix)
+        return self.sd.handle(msg, rcmd)

@@ -118,7 +118,7 @@ async def monitor(obj, path, limit, verbose):
 @click.pass_obj
 async def check(obj, path, verbose):
     """
-    Check all stored messages in a subtree against schemas.
+    Check all stored messages in a subtree against their schema.
     """
     n_bad = 0
 

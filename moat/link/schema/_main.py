@@ -37,11 +37,11 @@ async def get(obj, path):
     yprint(res, stream=obj.stdout)
 
 
-async def _schema_error(conn, path: Path, data: Any) -> Exception | None:
+async def _schema_error(schemas: Any, path: Path, data: Any) -> Exception | None:
     """Return the schema validation error for one message, if any."""
     try:
-        schema = await conn.d_search(schema_path(path))
-    except KeyError:
+        schema = schemas.search(path).data
+    except (KeyError, ValueError):
         return None
     try:
         validate_instance(schema, data)
@@ -82,20 +82,11 @@ async def monitor(obj, path, limit, verbose):
     next_err = 0.0
     qw, qr = anyio.create_memory_object_stream(10)
 
-    async def _reader():
-        try:
-            async with obj.conn.d_watch(path, state=None, subtree=True) as mon:
-                async for rel, data in mon:
-                    with suppress(anyio.WouldBlock):
-                        qw.send_nowait((rel, data))
-        finally:
-            await qw.aclose()
-
-    async def _worker():
+    async def _worker(schemas):
         nonlocal n_bad, n_err, next_err
         async for rel, data in qr:
             full = path + rel
-            exc = await _schema_error(obj.conn, full, data)
+            exc = await _schema_error(schemas, full, data)
             if exc is None:
                 continue
             n_bad += 1
@@ -107,9 +98,22 @@ async def monitor(obj, path, limit, verbose):
             if verbose:
                 click.echo(f"invalid: {n_bad}  recorded: {n_err}", err=True)
 
-    async with anyio.create_task_group() as tg:
+    async with (
+        obj.conn.d_watch(P("schema"), state=None, subtree=True).node as schemas,
+        obj.conn.d_watch(path, state=None, subtree=True) as mon,
+        anyio.create_task_group() as tg,
+    ):
+
+        async def _reader():
+            try:
+                async for rel, data in mon:
+                    with suppress(anyio.WouldBlock):
+                        qw.send_nowait((rel, data))
+            finally:
+                await qw.aclose()
+
         tg.start_soon(_reader)
-        tg.start_soon(_worker)
+        tg.start_soon(_worker, schemas)
 
 
 @cli.command()
@@ -122,10 +126,13 @@ async def check(obj, path, verbose):
     """
     n_bad = 0
 
-    async with obj.conn.d_watch(path, state=True, subtree=True) as mon:
+    async with (
+        obj.conn.d_watch(P("schema"), state=None, subtree=True).node as schemas,
+        obj.conn.d_watch(path, state=True, subtree=True) as mon,
+    ):
         async for rel, data in mon:
             full = path + rel
-            exc = await _schema_error(obj.conn, full, data)
+            exc = await _schema_error(schemas, full, data)
             if exc is None:
                 continue
             n_bad += 1

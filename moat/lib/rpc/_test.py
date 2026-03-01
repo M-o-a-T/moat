@@ -139,13 +139,15 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
     async def rd(self, buf: MutBuffer) -> int:
         while True:
             try:
-                n = min(len(self._buf), len(buf))
+                b = self._buf
             except AttributeError:
                 pass
             else:
-                buf[0:n] = self._buf[0:n]
-                self._buf = self._buf[n:]
-                return n
+                if b:
+                    n = min(len(b), len(buf))
+                    buf[0:n] = b[0:n]
+                    self._buf = b[n:]
+                    return n
             self._buf = await self.recv()
 
     async def wr(self, data: Buffer) -> int:

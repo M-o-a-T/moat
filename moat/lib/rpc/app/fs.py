@@ -142,7 +142,7 @@ class Cmd(LockBaseCmd):
 
     doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
 
-    async def cmd_wr(self, f: int, o: int, d: bytes) -> int:
+    async def cmd_wr(self, f: int, o: int = 0, d: bytes = b"") -> int:
         "write @d to @f at offset @o"
         fh = self._fd(f)
         fh.seek(o)

@@ -72,10 +72,12 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        b = getattr(self,"_bus")
-        if b is not None:
-            del self._bus
-            b.close()
+        try:
+            b = self._bus
+        except AttributeError:
+            return
+        del self._bus
+        b.close()
 
     doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
 
@@ -139,11 +141,10 @@ class Cmd(BaseCmd):
                 res.append(i)
         return res
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> Any:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> Any:
         """
         Intercept the bus address: ``bus:33.wr(x)`` ≍ ``bus.wr(33,x)``.
         """
-        prefix  # noqa:B018
         if rcmd and isinstance(rcmd[-1], int):
             msg.args_l.insert(0, rcmd.pop())
         return await super().handle(msg, rcmd)

@@ -5,7 +5,7 @@ from moat.link import protocol_version
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import Key, Msg, MsgHandler
+    from moat.lib.rpc import Msg, MsgHandler
 
     from .hello import Hello
 
@@ -137,6 +137,6 @@ class NoAuth(AuthMethod):
         "reject"
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg, *prefix: Key):  # noqa: ARG002
+    async def handle(self, conn: MsgHandler, msg: Msg):  # noqa: ARG002
         "reject"
         return False

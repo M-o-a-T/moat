@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         name: str
         cfg: attrdict
 
-        async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None: ...
+        async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None: ...
 
         async def run(self) -> None: ...
 
@@ -415,9 +415,8 @@ class AuthCmdIn(BaseCmd):
         """Forward auth rejection to the parent controller."""
         self.parent.deny(by)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """Handler for incoming messages"""
-        prefix  # noqa:B018
         if len(rcmd) and rcmd[-1] is None:
             if len(rcmd) == 1:
                 return await msg.call_stream(self._handle_cmd)

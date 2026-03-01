@@ -117,7 +117,7 @@ class ArrayCmd(BaseSuperCmd):
         for app in self.apps:
             await self.start_app(app)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """
         Dispatch a message.
 
@@ -130,8 +130,6 @@ class ArrayCmd(BaseSuperCmd):
 
         See :meth:`moat.lib.rpc.MsgHandler.handle` for further details.
         """
-        prefix  # noqa:B018
-
         if not rcmd:
             raise ShortCommandError(msg.cmd)
         if isinstance(rcmd[-1], str) and rcmd[-1] == "!":

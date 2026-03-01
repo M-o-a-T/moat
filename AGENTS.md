@@ -55,6 +55,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 ## Python patterns
 
+- NEVER busy-loop. NEVER delay to get something to work (except in testcases).
+
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
 
@@ -76,15 +78,14 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Use "ty check --output-format github".
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
-- Only add type:ignore comments when (a) you see an actual error from "ty",
-  *and* (b) you thought hard and determined that the error cannot be fixed in
-  another way.
-- This also applies to `cast` expressions and the "Any" catch-all.
+- DO NOT type:ignore comments, use the "Any" type, or add casts.
+  UNLESS (a) you see an actual error from "ty", *and* (b) you THOUGHT HARD
+  and determined that the error CANNOT be fixed some another way.
 - Do not type-check data explicitly. That's what `ty` is for.  If that's
   not possible, duck typing (or the failure thereof) will raise a `TypeError`.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
-- Do not replace "def foo():Awaitable[Bar]: return asyncfn()" with an async
+- DO NOT replace "def foo():Awaitable[Bar]: return asyncfn()" with an async
   def. The correct type is `CoroutineType[Any,Any,Bar]`.
 - After a module typechecks, add its files to the tool.ty.src.include list in
   pyproject.toml.

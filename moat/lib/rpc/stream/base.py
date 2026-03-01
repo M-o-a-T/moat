@@ -157,11 +157,10 @@ class HandlerStream(MsgHandler):
             return False
         return True
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Forward a new message to the other side.
         """
-        prefix  # noqa:B018
         if self.closing:
             raise EOFError
 

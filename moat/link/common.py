@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import anyio
 
+from moat.lib.micro import AC_use
+from moat.lib.path import P
 from moat.lib.rpc import MsgHandler
 
 from typing import TYPE_CHECKING
@@ -14,30 +16,25 @@ if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
 
-    from collections.abc import Awaitable
+    from collections.abc import Callable
 
 
 class NotAuthorized(RuntimeError):  # noqa: D101
     pass
 
 
-class CmdCommon(MsgHandler):
+class _Sub_i(MsgHandler):
     """
-    Commands every handler should know.
-
-    This includes the 'i' subcommand.
+    Namespace for internal ``i.*`` commands.
     """
 
-    doc_i = dict(_d="Internal commands")
+    def __init__(self, parent: CmdCommon):
+        super().__init__(parent.cfg)
 
-    def sub_i(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
-        "Local subcommand redirect for 'i'"
-        return self.handle(msg, rcmd, "i")
+    doc_ping = dict(_d="Ping, echo", _r="Any: sends all args and keys back")
+    doc_乒 = doc_ping  # noqa:PLC2401
 
-    doc_i_ping = dict(_d="Ping, echo", _r="Any: sends all args and keys back")
-    doc_i_乒 = doc_i_ping  # noqa:PLC2401
-
-    async def stream_i_ping(self, msg: Msg) -> bool | None:
+    async def stream_ping(self, msg: Msg) -> bool | None:
         """
         This handler replies with "pong" and its arguments, for basic
         round-trip tests.
@@ -48,13 +45,13 @@ class CmdCommon(MsgHandler):
         """
         await msg.result("乓", *msg.args, **msg.kw)
 
-    stream_i_乒 = stream_i_ping  # noqa:PLC2401
+    stream_乒 = stream_ping  # noqa:PLC2401
 
-    doc_i_count = dict(
+    doc_count = dict(
         _d="count", _o="int:numbers", s="int:start", d="int:delta", e="int:end", t="float:interval"
     )
 
-    async def stream_i_count(self, msg: Msg) -> bool | None:
+    async def stream_count(self, msg: Msg) -> bool | None:
         """
         This handler replies with a stream of numbers.
 
@@ -82,9 +79,9 @@ class CmdCommon(MsgHandler):
                     await anyio.sleep(t)
             await msg.result(s)
 
-    doc_i_sink = dict(_d="count up", _i="Any:whatever", n="int:accept this many")
+    doc_sink = dict(_d="count up", _i="Any:whatever", n="int:accept this many")
 
-    async def stream_i_sink(self, msg: Msg) -> bool | None:
+    async def stream_sink(self, msg: Msg) -> bool | None:
         """
         This handler swallows an input stream.
 
@@ -103,11 +100,9 @@ class CmdCommon(MsgHandler):
 
             await msg.result(c)
 
-    doc_i_echo = dict(
-        _d="count up", _i="Any:whatever", _o="Any:whatever", n="int:accept this many"
-    )
+    doc_echo = dict(_d="count up", _i="Any:whatever", _o="Any:whatever", n="int:accept this many")
 
-    async def stream_i_echo(self, msg: Msg) -> bool | None:
+    async def stream_echo(self, msg: Msg) -> bool | None:
         """
         This handler echoes an input stream.
 
@@ -126,3 +121,30 @@ class CmdCommon(MsgHandler):
                 await msg.send(m)
 
             await msg.result(c)
+
+
+class CmdCommon(MsgHandler):
+    """
+    Commands every handler should know.
+
+    This includes the 'i' subcommand.
+    """
+
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self._sub_i = _Sub_i(self)
+
+    async def setup(self):
+        "Attach delegated command handlers."
+        await super().setup()
+        await AC_use(self, self.delegate(P("i"), self._sub_i))
+
+    doc_i = dict(_d="Internal commands")
+
+    def find_sub(self, scmd: PathElem) -> MsgHandler | Callable | None:
+        """
+        Resolve subcommands, with a fallback for ``i`` when setup wasn't run.
+        """
+        if scmd == "i" and "sub_i" not in self.__dict__:
+            return self._sub_i
+        return super().find_sub(scmd)

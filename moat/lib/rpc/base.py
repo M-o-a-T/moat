@@ -18,7 +18,7 @@ from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING or DOC:
     from types import (
@@ -31,7 +31,7 @@ if TYPE_CHECKING or DOC:
     from .msg import Msg  # noqa:TC001
 
     from collections.abc import Awaitable, Callable, Iterator
-    from typing import Any, Protocol, Self
+    from typing import Any, Literal, Protocol, Self
 
     Key = str | int | bool
     OptDict = Mapping[str, Any] | None

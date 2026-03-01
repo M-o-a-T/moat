@@ -148,18 +148,16 @@ class BaseSubCmd(BaseSuperCmd):
             for app in list(self.sub.values()):
                 tg.start_soon(app.reload)
 
-    def find_sub(
-        self, scmd: PathElem, prefix: str = ""
-    ) -> BaseMsgHandler | Callable[..., object] | None:
+    def find_sub(self, scmd: PathElem) -> BaseMsgHandler | Callable[..., object] | None:
         """
         Resolve a subcommand.
 
         This version uses the ``sub`` mapping.
         """
-        if isinstance(scmd, str) and not prefix and (sub := self.sub.get(scmd, None)) is not None:
+        if isinstance(scmd, str) and (sub := self.sub.get(scmd, None)) is not None:
             return sub
 
-        return super().find_sub(scmd, prefix)
+        return super().find_sub(scmd)
 
     doc_dir_ = dict(
         _d="list cmd subdirectory",

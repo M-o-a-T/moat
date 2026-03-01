@@ -95,13 +95,12 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         return None
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """
         Forward to the sub-app.
 
         The subcommand "!" redirects to the local handler.
         """
-        prefix  # noqa:B018
         if rcmd and isinstance(rcmd[-1], str) and rcmd[-1] == "!":
             rcmd.pop()
             return await super().handle(msg, rcmd)

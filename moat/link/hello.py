@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
-    from moat.lib.rpc import Key, Msg, MsgSender
+    from moat.lib.rpc import Msg, MsgSender
 
     from .auth import AuthMethod
 
@@ -288,12 +288,10 @@ class Hello(CmdCommon):
             self._rpc_in = None
             self._rpc_auth = None
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: Key) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Dispatch an incoming "hello" message
         """
-        if prefix:
-            raise NotImplementedError
         if self._rpc_in is not None and rcmd and rcmd[-1] is None:
             # new auth protocol
             return await self._rpc_in.handle(msg, rcmd)

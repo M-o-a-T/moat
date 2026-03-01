@@ -97,30 +97,6 @@ required:
   - msg
 additionalProperties: true
 ---
-_path: !P cfg.error.#
-title: Error management
-type: object
-properties:
-  min:
-    type: integer
-    title: Time from first occurrence to raising a notification
-  max:
-    type: integer
-    title: Time from last occurrence (unfixed) to deletion
-  ok:
-    type: integer
-    title: Time from fix-up to deletion
-  prio:
-    type: integer
-    title: Priority for notifications
-  schedule:
-    type: array
-    items:
-      type: integer
-      title: Re-Notification intervals
-      description: if not present, use min*10
-
----
 _path: !P flow.#
 title: Data flow and monitoring
 type: object
@@ -217,6 +193,72 @@ properties:
     type: array
     doc: |
       List of test values (source/result) for `encode`.
+---
+_path: !P escalate.#
+title: Error management
+type: object
+properties:
+  min:
+    type: integer
+    title: Time from first occurrence to raising a notification
+    doc:
+  max:
+    type: integer
+    title: Time from last occurrence (unfixed) to deletion
+  ok:
+    type: integer
+    title: Time from fix-up to deletion
+  prio:
+    type: integer
+    title: Priority for notifications
+  schedule:
+    type: object
+    properties:
+    items:
+      type: object
+      title: Re-Notification intervals
+      additionalProperties:
+        type: object
+        properties:
+          notifier:
+            type: string
+            title: plugin
+            description: name of the notification plugin to use
+          after:
+            type: integer
+            title: time after error activation until notifier triggers
+---
+_path: !P notify.#
+title: Notifications
+type: object
+properties:
+  data:
+    type: object
+  title:
+    type: string
+    description: message title
+  msg:
+    type: string
+    description: message text
+  level:
+    type: integer
+    decription: Severity, 1…5, 5 is highest
+  ack:
+    type: object
+    description: Acknowledgment data
+    properties:
+      until:
+        type: integer
+        description: alert if the error repeats after this; always alert if missing
+      time:
+        type: integer
+        description: time when ack'd
+  sent:
+    type: array
+    items:
+      type: string
+      description: back-end that's been sent to
+
 ---
 _path: !P gate.moat.#.#
 title: Gateway between MQTT and MoaT-Link data TODO DRAFT

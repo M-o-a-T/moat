@@ -13,33 +13,33 @@ from random import random
 from moat.util import attrdict, combine_dict, ctx_as, yload
 from moat.lib.rpc import RootCmd
 from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
-from moat.lib.micro import Event
 
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from moat.lib.stream.base import Buffer, MutBuffer
-
-    from collections.abc import Awaitable
-    from typing import Any, Protocol
     from types import CoroutineType
 
+    from moat.lib.micro import Event
+    from moat.lib.stream.base import Buffer, MutBuffer
+
+    from typing import Any, Protocol
+
     class _LoopLinkProto(Protocol):
-        def xs(self, *, m: Any) -> CoroutineType[Any,Any,None]: ...
+        def xs(self, *, m: Any) -> CoroutineType[Any, Any, None]: ...
 
-        def xr(self) -> CoroutineType[Any,Any,Any]: ...
+        def xr(self) -> CoroutineType[Any, Any, Any]: ...
 
-        def xsb(self, *, m: Buffer | bytes) -> CoroutineType[Any,Any,None]: ...
+        def xsb(self, *, m: Buffer | bytes) -> CoroutineType[Any, Any, None]: ...
 
-        def xrb(self) -> CoroutineType[Any,Any,Buffer | bytes]: ...
+        def xrb(self) -> CoroutineType[Any, Any, Buffer | bytes]: ...
 
-        def xwr(self, *, b: Buffer) -> CoroutineType[Any,Any,None]: ...
+        def xwr(self, *, b: Buffer) -> CoroutineType[Any, Any, None]: ...
 
-        def xrd(self, *, n: int) -> CoroutineType[Any,Any,Buffer | bytes]: ...
+        def xrd(self, *, n: int) -> CoroutineType[Any, Any, Buffer | bytes]: ...
 
-        def xcwr(self, *, b: Buffer) -> CoroutineType[Any,Any,None]: ...
+        def xcwr(self, *, b: Buffer) -> CoroutineType[Any, Any, None]: ...
 
-        def xcrd(self, *, n: int) -> CoroutineType[Any,Any,Buffer | bytes]: ...
+        def xcrd(self, *, n: int) -> CoroutineType[Any, Any, Buffer | bytes]: ...
 
 
 temp_dir = ContextVar("temp_dir")
@@ -84,8 +84,8 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
 
     # pylint:disable=abstract-method
 
-    _link:Event|Loopback|None = None
-    _buf:MutBuffer
+    _link: Event | Loopback | None = None
+    _buf: MutBuffer
 
     def __init__(self, qlen=0, loss=0):
         super().__init__({})
@@ -126,7 +126,7 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
         if (link := self._link) is None:
             raise anyio.BrokenResourceError(self)
         try:
-            return await cast(Loopback,link).q_rd.receive()
+            return await cast(Loopback, link).q_rd.receive()
         except (
             anyio.ClosedResourceError,
             anyio.BrokenResourceError,
@@ -138,8 +138,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
 
     async def rd(self, buf: MutBuffer) -> int:
         while True:
-            if self._buf:
+            try:
                 n = min(len(self._buf), len(buf))
+            except AttributeError:
+                pass
+            else:
                 buf[0:n] = self._buf[0:n]
                 self._buf = self._buf[n:]
                 return n
@@ -195,11 +198,11 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
             raise TypeError(f"Need a path, not {p!r}")
         self._link = self.cfg._moat_cmd.root.sub_at(p)  # noqa:SLF001
 
-    def send(self, m: Any) -> CoroutineType[Any, Any,None]:
+    def send(self, m: Any) -> CoroutineType[Any, Any, None]:
         """Send message data."""
         return self._link.xs(m=m)
 
-    def recv(self) -> CoroutineType[Any, Any,Any]:
+    def recv(self) -> CoroutineType[Any, Any, Any]:
         """Read message data."""
         return self._link.xr()
 
@@ -207,7 +210,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         """Send block data."""
         return self._link.xsb(m=m)
 
-    def rcv(self) -> CoroutineType[Any, Any,Buffer | bytes]:
+    def rcv(self) -> CoroutineType[Any, Any, Buffer | bytes]:
         """Read block data."""
         return self._link.xrb()
 
@@ -223,7 +226,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         buf[:n] = r
         return n
 
-    def cwr(self, b: Buffer) -> CoroutineType[Any, Any,None]:
+    def cwr(self, b: Buffer) -> CoroutineType[Any, Any, None]:
         """Send bytes."""
         return self._link.xcwr(b=b)
 

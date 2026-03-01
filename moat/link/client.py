@@ -161,7 +161,7 @@ class LinkCommon(CmdCommon):
     _sender: MsgSender
 
     def __init__(self, cfg, name: str | None = None):
-        self.cfg = cfg
+        super().__init__(cfg)
         CFG.maybe_redo()
 
         if name is not None:
@@ -182,19 +182,19 @@ class LinkCommon(CmdCommon):
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> CoroutineType[Any, Any, None]:
+    def handle(self, msg, rpath) -> CoroutineType[Any, Any, None]:
         """
         Message handler that intercepts incoming commands
         while authorization has not completed
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.handle(msg, rpath, *add)
+            return self._hello.handle(msg, rpath)
 
         if rpath and rpath[-1] == "d_":
             msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
             return msg.call_stream(self.sdr.stream_d_)
 
-        return super().handle(msg, rpath, *add)
+        return super().handle(msg, rpath)
 
     @property
     def id(self):  # noqa:D102

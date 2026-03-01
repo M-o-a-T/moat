@@ -70,9 +70,8 @@ class Logger(BaseFwdCmd):
         await AC_use(self, self.s1)
         await AC_use(self, self.s2)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str) -> None:
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         "Forward"
-        prefix  # noqa:B018
         await self.s1.handle(msg, rcmd)
 
     def _log(self, m: str, *a: object):

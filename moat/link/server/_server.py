@@ -10,6 +10,7 @@ import logging
 import os
 import random
 import signal
+import sys
 import time
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
@@ -42,6 +43,7 @@ from moat.lib.codec.moat_cbor import (
     CBOR_TAG_MOAT_FILE_END,
     CBOR_TAG_MOAT_FILE_ID,
 )
+from moat.lib.micro import AC_use
 from moat.lib.mqtt import QoS
 from moat.lib.path import (
     P,
@@ -54,6 +56,7 @@ from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
 from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
+from moat.link.common import _Sub_i as _CommonSubI
 from moat.link.exceptions import ClientError, OutOfDateError
 from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
@@ -66,13 +69,13 @@ from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
+    from types import CoroutineType
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
     from moat.link.backend import Message
 
     from collections.abc import Awaitable, Callable
-    from types import CoroutineType
 
     PathType = anyio.Path | FSPath | str
 
@@ -170,6 +173,154 @@ class HelloProc:
         self.client.in_stream.pop(0, None)
 
 
+class _Sub_d(MsgHandler):
+    "Data access namespace."
+
+    def __init__(self, parent: ServerClient):
+        super().__init__(parent.server.cfg)
+        self.parent = parent
+
+    doc_get = dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+    doc_collect = dict(_d="collate subnode data", _r="Any:Data", _0="Path:root", _1="Path")
+    doc_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
+    doc_walk = dict(
+        _d="get subtree",
+        _0="Path",
+        _1="float:mintime",
+        _2="int:mindepth",
+        _3="int:maxdepth",
+        _r=dict(_0="int:depth", _1="Path:sub", _2="Any:data", _99="MsgMeta"),
+        _o="str",
+    )
+    doc_search = dict(_d="search subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+    doc_set = dict(
+        _d="set value",
+        _0="Path",
+        _1="Any",
+        _99="MsgMeta:optional",
+        t="Time of last change",
+    )
+    doc_delete = dict(
+        _d="delete value",
+        _0="Path",
+        _99="MsgMeta:optional",
+        t="float:Time of+ last change",
+        rec="bool:recursive",
+    )
+    doc_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
+
+    async def stream_get(self, msg: Msg) -> None:
+        await self.parent.d_get_stream_(msg)
+
+    async def stream_collect(self, msg: Msg) -> None:
+        await self.parent.d_collect_stream_(msg)
+
+    async def stream_list(self, msg: Msg) -> None:
+        await self.parent.d_list_stream_(msg)
+
+    async def stream_walk(self, msg: Msg) -> None:
+        await self.parent.d_walk_stream_(msg)
+
+    async def stream_deltree(self, msg: Msg) -> None:
+        await self.parent.d_deltree_stream_(msg)
+
+    async def cmd_search(self, path: Path) -> Any:
+        return await self.parent.d_search_(path)
+
+    async def cmd_set(
+        self,
+        path: Path,
+        value: Any,
+        meta: MsgMeta | None = None,
+        t: float | bool | None = None,
+    ) -> Any:
+        return await self.parent.d_set_(path, value, meta=meta, t=t)
+
+    async def cmd_delete(
+        self, path: Path, meta: MsgMeta | None = None, t: float | None = None, rec: bool = False
+    ) -> Any:
+        return await self.parent.d_delete_(path, meta=meta, t=t, rec=rec)
+
+
+class _Sub_e(MsgHandler):
+    "Error handling namespace."
+
+    def __init__(self, parent: ServerClient):
+        super().__init__(parent.server.cfg)
+        self.parent = parent
+
+    doc_exc = dict(_d="Report an exception", _0="path:Path", _1="exc:Error", _k="any")
+    doc_info = dict(_d="Report a non-exceptional anomaly", _0="path:Path", _k="any")
+    doc_ack = dict(_d="Acknowledge an error", _0="path:Path", _k="any", ack="None|bool|float:")
+    doc_ok = dict(_d="State is OK", _0="path:Path", _k="any")
+    doc_mon = dict(_d="Monitoring wrapper", _0="path:Path", _i="log data", _k="any")
+
+    def stream_exc(self, msg: Msg) -> Awaitable[Any]:
+        return self.parent.e_exc_stream_(msg)
+
+    def stream_info(self, msg: Msg) -> Awaitable[Any]:
+        return self.parent.e_info_stream_(msg)
+
+    def stream_ack(self, msg: Msg) -> Awaitable[Any]:
+        return self.parent.e_ack_stream_(msg)
+
+    def stream_ok(self, msg: Msg) -> Awaitable[Any]:
+        return self.parent.e_ok_stream_(msg)
+
+    async def stream_mon(self, msg: Msg) -> None:
+        await self.parent.e_mon_stream_(msg)
+
+
+class _Sub_i(_CommonSubI):
+    "Server informational namespace."
+
+    def __init__(self, parent: ServerClient):
+        super().__init__(parent.server)
+        self.parent = parent
+
+    doc_state = dict(_d="state", _r="MsgMeta:optional")
+    doc_error = dict(_d="last disconnect error", _r="Any:error")
+    doc_stamp = dict(_d="stamp", _r="int:timestamp sequence#")
+    doc_sync = dict(_d="sync", _0="int:timestamp sequence#")
+    doc_checkid = dict(_d="probe client ID", _0="str:id of the client", t="retry delay")
+
+    async def cmd_state(self) -> Any:
+        return await self.parent.i_state_()
+
+    def cmd_error(self, last_name: str | None = None) -> Any:
+        return self.parent.i_error_(last_name=last_name)
+
+    def cmd_stamp(self) -> int:
+        return self.parent.i_stamp_()
+
+    def cmd_sync(self, stamp: Any) -> Awaitable[None]:
+        return self.parent.i_sync_(stamp)
+
+    async def cmd_checkid(self, id: str, t: float = 0.1) -> bool:
+        return await self.parent.i_checkid_(id=id, t=t)
+
+
+class _Sub_s(MsgHandler):
+    "Save/load namespace."
+
+    def __init__(self, parent: ServerClient):
+        super().__init__(parent.server.cfg)
+        self.parent = parent
+
+    doc_log = dict(_d="save updates", _0="str:filename", state="bool:include current state")
+    doc_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
+    doc_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
+
+    async def cmd_log(self, path: str, *, state: bool = False) -> bool:
+        return await self.parent.s_log_(path, state=state)
+
+    async def cmd_save(self, path: str, prefix: Path = Path()) -> bool:
+        return await self.parent.s_save_(path, prefix=prefix)
+
+    async def cmd_load(self, path: str, *, prefix: Path = Path()) -> Any:
+        return await self.parent.s_load_(path, prefix=prefix)
+
+
 class ServerClient(LinkCommon):
     """Represent one (possibly-non-server) client."""
 
@@ -226,6 +377,7 @@ class ServerClient(LinkCommon):
             rpc_auth_server=True,
         )
         async with (
+            self,
             anyio.create_task_group() as self.tg,
             rpc_on_aiostream(self, self.stream) as cmd,
         ):
@@ -260,6 +412,17 @@ class ServerClient(LinkCommon):
                 with anyio.fail_after(self.server.cfg.server.probe.timeout):
                     await self._sender.cmd(P("i.乒"))
 
+    async def setup(self):
+        "Attach delegated sub-command handlers."
+        self._sub_i = _Sub_i(self)
+        await super().setup()
+        self._sub_dh = _Sub_d(self)
+        self._sub_eh = _Sub_e(self)
+        self._sub_sh = _Sub_s(self)
+        await AC_use(self, self.delegate(P("d"), self._sub_dh))
+        await AC_use(self, self.delegate(P("e"), self._sub_eh))
+        await AC_use(self, self.delegate(P("s"), self._sub_sh))
+
     async def wait_ready(self, wait: bool = True):
         "Standard; waits for auth to complete"
         if self._hello is None:
@@ -279,13 +442,13 @@ class ServerClient(LinkCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def handle(self, msg, rpath, *sub) -> CoroutineType[Any,Any,None]:
+    def handle(self, msg, rpath) -> CoroutineType[Any, Any, None]:
         """
         Message handlers that intercepts (a) authorization, (b) a "d_"
         path-based "simple data" command
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.handle(msg, rpath, *sub)
+            return self._hello.handle(msg, rpath)
 
         if rpath[-1] == "d_":
             # Simple Data. If both a path vector and a `p` argument is
@@ -294,13 +457,11 @@ class ServerClient(LinkCommon):
                 msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
             elif len(rpath) > 1:
                 msg.kw["p"] = Path.build(rpath[-2::-1]) + msg["p"]
-            return msg.call_simple(self.cmd_d_)
+            return msg.call_simple(self.d_simple_)
 
-        return super().handle(msg, rpath, *sub)
+        return super().handle(msg, rpath)
 
-    doc_d_get = dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
-
-    async def stream_d_get(self, msg):
+    async def d_get_stream_(self, msg):
         """Get the data of a sub-node.
 
         Arguments:
@@ -318,9 +479,7 @@ class ServerClient(LinkCommon):
         d = data[path]
         await msg.result(d.data, *d.meta.dump())
 
-    doc_d_collect = dict(_d="collate subnode data", _r="Any:Data", _0="Path:root", _1="Path")
-
-    async def stream_d_collect(self, msg):
+    async def d_collect_stream_(self, msg):
         """Collate the dicts on the path from some root to a sub-node.
 
         This is used to e.g. collect path-specific config data for a subsystem.
@@ -338,28 +497,9 @@ class ServerClient(LinkCommon):
         await msg.result(**d)
 
     doc_d = dict(_d="Data access commands")
-
-    def sub_d(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
-        "Local subcommand redirect for 'd'"
-        return self.handle(msg, rcmd, "d")
-
     doc_e = dict(_d="Error handling commands")
-
-    def sub_e(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
-        "Local subcommand redirect for 'e'"
-        return self.handle(msg, rcmd, "e")
-
     doc_i = dict(_d="Informational commands")
-
-    def sub_i(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
-        "Local subcommand redirect for 'i'"
-        return self.handle(msg, rcmd, "i")
-
     doc_s = dict(_d="Data load/save commands")
-
-    def sub_s(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable:
-        "Local subcommand redirect for 's'"
-        return self.handle(msg, rcmd, "s")
 
     doc_cl = dict(_d="Access to named clients")
 
@@ -377,9 +517,7 @@ class ServerClient(LinkCommon):
         "Send the list of currently-known clients"
         return self.server.stream_cl(msg)
 
-    doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
-
-    async def stream_d_list(self, msg):
+    async def d_list_stream_(self, msg):
         """Get the child names of a sub-node.
         Arguments:
         * path
@@ -392,17 +530,7 @@ class ServerClient(LinkCommon):
             for k in list(self.server.data[msg[0]].keys()):
                 await msg.send(k)
 
-    doc_d_walk = dict(
-        _d="get subtree",
-        _0="Path",
-        _1="float:mintime",
-        _2="int:mindepth",
-        _3="int:maxdepth",
-        _r=dict(_0="int:depth", _1="Path:sub", _2="Any:data", _99="MsgMeta"),
-        _o="str",
-    )
-
-    async def stream_d_walk(self, msg):
+    async def d_walk_stream_(self, msg):
         """
         Get a whole subtree.
         Arguments:
@@ -434,27 +562,19 @@ class ServerClient(LinkCommon):
         async with msg.stream_out():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
-    doc_d_set = dict(
-        _d="set value",
-        _0="Path",
-        _1="Any",
-        _99="MsgMeta:optional",
-        t="Time of last change",
-    )
-
-    def cmd_d_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
+    def d_simple_(self, value: Any = _NotGiven, *, p: Path, **_kw) -> Awaitable:
         """
         Handler for direct storage
         """
         p = Path.build(p)
         if value is _NotGiven:
-            return self._cmd_d_get(p)
+            return self.d_get_(p)
         elif value is NotGiven:
-            return self.cmd_d_delete(p)
+            return self.d_delete_(p)
         else:
-            return self.cmd_d_set(p, value)
+            return self.d_set_(p, value)
 
-    async def _cmd_d_get(self, path: Path):
+    async def d_get_(self, path: Path):
         """Get the data of a sub-node.
 
         Arguments:
@@ -470,9 +590,7 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
-    doc_d_search = dict(_d="search subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
-
-    async def cmd_d_search(self, path: Path):
+    async def d_search_(self, path: Path):
         """Search for wildcard-matching sub-node data.
 
         Arguments:
@@ -488,7 +606,7 @@ class ServerClient(LinkCommon):
         d = data.search(path)
         return d.data
 
-    async def cmd_d_set(
+    async def d_set_(
         self,
         path,
         value,
@@ -529,15 +647,7 @@ class ServerClient(LinkCommon):
 
         return self.server.maybe_update(path, value, meta, force=True)
 
-    doc_d_delete = dict(
-        _d="delete value",
-        _0="Path",
-        _99="MsgMeta:optional",
-        t="float:Time of+ last change",
-        rec="bool:recursive",
-    )
-
-    async def cmd_d_delete(self, path, meta=None, t: float | None = None, rec: bool = False):
+    async def d_delete_(self, path, meta=None, t: float | None = None, rec: bool = False):
         """Delete a node's value.
 
         Arguments:
@@ -579,42 +689,32 @@ class ServerClient(LinkCommon):
         else:
             return dv, *dm.dump()
 
-    doc_e_exc = dict(_d="Report an exception", _0="path:Path", _1="exc:Error", _k="any")
-
-    def stream_e_exc(self, msg: Msg) -> Awaitable:
+    def e_exc_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
             msg.kw["args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_info = dict(_d="Report a non-exceptional anomaly", _0="path:Path", _k="any")
-
-    def stream_e_info(self, msg: Msg) -> Awaitable:
+    def e_info_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 2:
             msg.kw["args"] = msg.args[2:]
         return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_ack = dict(_d="Acknowledge an error", _0="path:Path", _k="any", ack="None|bool|float:")
-
-    def stream_e_ack(self, msg: Msg) -> Awaitable:
+    def e_ack_stream_(self, msg: Msg) -> Awaitable:
         """Acknowledge an error"""
         if len(msg.args) > 2:
             msg.kw["args"] = msg.args[2:]
         msg.kw["ack"] = True
         return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_ok = dict(_d="State is OK", _0="path:Path", _k="any")
-
-    def stream_e_ok(self, msg: Msg) -> Awaitable:
+    def e_ok_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
         if len(msg.args) > 1:
             msg.kw["args"] = msg.args[1:]
         return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
 
-    doc_e_mon = dict(_d="Monitoring wrapper", _0="path:Path", _i="log data", _k="any")
-
-    async def stream_e_mon(self, msg: Msg):
+    async def e_mon_stream_(self, msg: Msg):
         path = msg[0]
         kw = msg.kw
         kw["start"] = time.time()
@@ -642,33 +742,23 @@ class ServerClient(LinkCommon):
             with anyio.move_on_after(2, shield=True):
                 await self.server.set_error(path, err, kw, MsgMeta(origin=self.name))
 
-    doc_i_state = dict(_d="state", _r="MsgMeta:optional")
-
-    async def cmd_i_state(self):
+    async def i_state_(self):
         """Return some info about this node's internal state"""
         return self.server.get_state()
 
-    doc_i_error = dict(_d="last disconnect error", _r="Any:error")
-
-    def cmd_i_error(self, last_name: str | None = None) -> Any:
+    def i_error_(self, last_name: str | None = None) -> Any:
         """Return some info about the reason my link got disconnected"""
         return self.server.get_cached_error(last_name or self.name)
 
-    doc_i_stamp = dict(_d="stamp", _r="int:timestamp sequence#")
-
-    def cmd_i_stamp(self) -> int:
+    def i_stamp_(self) -> int:
         """Return a new timestamp value"""
         return self.server.new_stamp()
 
-    doc_i_sync = dict(_d="sync", _0="int:timestamp sequence#")
-
-    def cmd_i_sync(self, stamp) -> Awaitable[None]:
+    def i_sync_(self, stamp) -> Awaitable[None]:
         """wait until the server received this stamp#"""
         return self.server.wait_stamp(stamp)
 
-    doc_i_checkid = dict(_d="probe client ID", _0="str:id of the client", t="retry delay")
-
-    async def cmd_i_checkid(self, id: str, t: float = 0.1) -> bool:
+    async def i_checkid_(self, id: str, t: float = 0.1) -> bool:
         """wait until the server received this stamp#"""
         await anyio.sleep(0.1)
         if id in self.server.known_ids:
@@ -678,9 +768,7 @@ class ServerClient(LinkCommon):
         await anyio.sleep(t)
         return id in self.server.known_ids
 
-    doc_d_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
-
-    async def stream_d_deltree(self, msg):
+    async def d_deltree_stream_(self, msg):
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
         """
@@ -710,22 +798,16 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-    doc_s_log = dict(_d="save updates", _0="str:filename", state="bool:include current state")
-
-    async def cmd_s_log(self, path: str, *, state: bool = False):
+    async def s_log_(self, path: str, *, state: bool = False):
         await self.server.run_saver(path, save_state=state)
         return True
 
-    doc_s_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
-
-    async def cmd_s_save(self, path: str, prefix=Path()):
+    async def s_save_(self, path: str, prefix=Path()):
         await self.server.save(path, prefix=prefix)
 
         return True
 
-    doc_s_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
-
-    async def cmd_s_load(self, path, *, prefix=Path()):
+    async def s_load_(self, path, *, prefix=Path()):
         return await self.server.load_file(fn=path, prefix=prefix)
 
 
@@ -2085,7 +2167,8 @@ class Server(MsgHandler):
                 exc = "Cancelled"
             self._error_cache[name] = cast(Exception, exc)
             self.logger.debug("End Client C_%s %r", cnr, exc)
-
+            if "pytest" in sys.modules:
+                raise
         finally:
             with anyio.move_on_after(2, shield=True):
                 await stream.aclose()

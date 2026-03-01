@@ -99,7 +99,7 @@ class Cmd(BaseCmd):
             self.ann.set()
         await super().task()
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: str):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         "forward, possibly"
         await self.check_rdy(msg, rcmd)
 
@@ -125,7 +125,7 @@ class Cmd(BaseCmd):
             self.rlink = link
 
         try:
-            await self.rlink.handle(msg, rcmd, *prefix)
+            await self.rlink.handle(msg, rcmd)
         except BaseException:
             del self.rlink
             raise

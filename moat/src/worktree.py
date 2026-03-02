@@ -9,9 +9,11 @@ from pathlib import Path
 
 import asyncclick as click
 
+from moat.util.exec import CalledProcessError
 from moat.util.exec import run as run_
 
-_SUBMODULE_RE = re.compile(r"^[ +\-U]?[0-9a-fA-F]+\s+(.+?)(?:\s+\(.*\))?$")
+_SUBMODULE_RE = re.compile(r"^[ +\-U]?[0-9a-fA-F]+\s+(.+?)(?:\s+\((.*)\))?$")
+_WORKTREE_RE = re.compile(r"^(.+?)\s+[0-9a-fA-F]{7,40}\s+(?:\[(.+)\]|\(detached HEAD\))$")
 
 
 def _normalize(base: Path, path: Path) -> Path:
@@ -21,24 +23,51 @@ def _normalize(base: Path, path: Path) -> Path:
     return (base / path).resolve()
 
 
-def _submodule_paths(status: str) -> list[Path]:
-    """Extract relative submodule paths from ``git submodule`` output."""
-    res: list[Path] = []
+def _extract_branch(desc: str | None) -> str | None:
+    """Extract a branch name from submodule info text."""
+    if desc is None:
+        return None
+    if desc.startswith("heads/"):
+        return desc[6:]
+    if desc.startswith("remotes/"):
+        parts = desc.split("/", 2)
+        if len(parts) == 3:
+            return parts[2]
+    if "/" not in desc and desc:
+        return desc
+    return None
+
+
+def _submodule_paths(status: str) -> list[tuple[Path, str | None]]:
+    """Extract submodule path+branch tuples from ``git submodule list`` output."""
+    res: list[tuple[Path, str | None]] = []
     for line in status.splitlines():
         match = _SUBMODULE_RE.match(line.rstrip())
         if match is None:
-            continue
-        res.append(Path(match.group(1)))
+            parts = line.split(maxsplit=1)
+            if len(parts) != 2:
+                continue
+            res.append((Path(parts[0]), _extract_branch(parts[1])))
+        else:
+            res.append((Path(match.group(1)), _extract_branch(match.group(2))))
     return res
 
 
-async def _collect_submodules(base: Path, rel: Path = Path()) -> list[Path]:
+async def _read_submodule_list(base: Path) -> str:
+    """Read submodule status/list information."""
+    try:
+        return await run_("git", "submodule", "list", cwd=base, capture=True)
+    except CalledProcessError:
+        return await run_("git", "submodule", cwd=base, capture=True)
+
+
+async def _collect_submodules(base: Path, rel: Path = Path()) -> list[tuple[Path, str | None]]:
     """Collect all submodule paths below ``base`` recursively."""
-    status = await run_("git", "submodule", cwd=base, capture=True)
-    res: list[Path] = []
-    for sub in _submodule_paths(status):
+    status = await _read_submodule_list(base)
+    res: list[tuple[Path, str | None]] = []
+    for sub, branch in _submodule_paths(status):
         path = rel / sub
-        res.append(path)
+        res.append((path, branch))
         res.extend(await _collect_submodules(base / sub, path))
     return res
 
@@ -46,7 +75,7 @@ async def _collect_submodules(base: Path, rel: Path = Path()) -> list[Path]:
 async def add_worktree(source_root: Path, branch: str, target_root: Path) -> None:
     """Create a worktree and add matching worktrees for all submodules."""
     await run_("bd", "worktree", "create", "--branch", branch, str(target_root))
-    for sub in await _collect_submodules(source_root):
+    for sub, _sub_branch in await _collect_submodules(source_root):
         await run_(
             "git",
             "worktree",
@@ -60,12 +89,47 @@ async def add_worktree(source_root: Path, branch: str, target_root: Path) -> Non
 
 async def delete_worktree(target_root: Path) -> None:
     """Remove a worktree after recursively removing submodule worktrees."""
-    subs = await _collect_submodules(target_root)
+    subs = [sub for sub, _branch in await _collect_submodules(target_root)]
     subs.sort(key=lambda x: len(x.parts), reverse=True)
     for sub in subs:
         path = target_root / sub
         await run_("git", "worktree", "remove", str(path), cwd=path)
     await run_("git", "worktree", "remove", str(target_root))
+
+
+def _parse_worktree_list(data: str) -> dict[Path, str | None]:
+    """Parse ``git worktree list`` output into ``path -> branch``."""
+    res: dict[Path, str | None] = {}
+    for line in data.splitlines():
+        match = _WORKTREE_RE.match(line.rstrip())
+        if match is None:
+            continue
+        path = Path(match.group(1)).resolve()
+        res[path] = match.group(2)
+    return res
+
+
+async def _read_worktree_list(base: Path) -> dict[Path, str | None]:
+    """Read worktree metadata for ``base``."""
+    data = await run_("git", "worktree", "list", cwd=base, capture=True)
+    return _parse_worktree_list(data)
+
+
+async def fix_worktree(source_root: Path, target_root: Path) -> None:
+    """Add missing submodule worktrees to an existing top-level worktree."""
+    worktrees = await _read_worktree_list(source_root)
+    if target_root not in worktrees:
+        raise click.ClickException(f"Not an existing worktree: {target_root}")
+
+    for sub, branch in await _collect_submodules(source_root):
+        if branch is None:
+            raise click.ClickException(f"Cannot determine branch for submodule {sub}")
+        source_sub = source_root / sub
+        target_sub = target_root / sub
+        sub_worktrees = await _read_worktree_list(source_sub)
+        if target_sub in sub_worktrees:
+            continue
+        await run_("git", "worktree", "add", "-b", branch, str(target_sub), cwd=source_sub)
 
 
 @click.group(short_help="Manage source worktrees.")
@@ -96,3 +160,12 @@ async def delete_(directory: Path) -> None:
     """Delete a worktree and all submodule worktrees inside it."""
     target = _normalize(Path.cwd(), directory)
     await delete_worktree(target)
+
+
+@cli.command("fix")
+@click.argument("directory", type=click.Path(file_okay=False, path_type=Path))
+async def fix_(directory: Path) -> None:
+    """Add missing submodule worktrees to an existing worktree."""
+    source = Path.cwd()
+    target = _normalize(source, directory)
+    await fix_worktree(source, target)

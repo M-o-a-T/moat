@@ -7,6 +7,8 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
+import asyncclick as click
+
 from moat.src import worktree
 
 
@@ -91,4 +93,80 @@ async def test_delete_worktree_deep_first(monkeypatch: pytest.MonkeyPatch) -> No
         ("git", "worktree", "remove", "/dst/root/ext/a"),
         ("git", "worktree", "remove", "/dst/root/ext/b"),
         ("git", "worktree", "remove", "/dst/root"),
+    ]
+
+
+@pytest.mark.anyio
+async def test_fix_worktree_requires_existing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fixing requires an already existing top-level worktree."""
+    source = Path("/src/root")
+    target = Path("/dst/root")
+
+    async def fake_run(
+        *cmd: object, cwd: Path | None = None, capture: bool = False, **_kw: object
+    ) -> str | None:
+        if cmd[:3] == ("git", "worktree", "list"):
+            assert cwd == source
+            assert capture
+            return "/src/root aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa [main]\n"
+        raise RuntimeError(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(worktree, "run_", fake_run)
+
+    with pytest.raises(click.ClickException, match="Not an existing worktree"):
+        await worktree.fix_worktree(source, target)
+
+
+@pytest.mark.anyio
+async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fixing adds only missing submodule worktrees."""
+    source = Path("/src/root")
+    target = Path("/dst/root")
+
+    status = {
+        source: " 0 ext/a (heads/feat/x)\n 1 ext/b (heads/feat/x)\n",
+        source / "ext/a": " 2 dep/c (heads/feat/x)\n",
+        source / "ext/a" / "dep/c": "",
+        source / "ext/b": "",
+    }
+    wt = {
+        source: (
+            "/src/root aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa [main]\n"
+            "/dst/root bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb [feat/x]\n"
+        ),
+        source / "ext/a": "/src/root/ext/a cccccccccccccccccccccccccccccccccccccccc [main]\n",
+        source
+        / "ext/a"
+        / "dep/c": "/src/root/ext/a/dep/c dddddddddddddddddddddddddddddddddddddddd [main]\n",
+        source / "ext/b": (
+            "/src/root/ext/b eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee [main]\n"
+            "/dst/root/ext/b ffffffffffffffffffffffffffffffffffffffff [feat/x]\n"
+        ),
+    }
+    calls: list[tuple[object, ...]] = []
+
+    async def fake_run(
+        *cmd: object, cwd: Path | None = None, capture: bool = False, **_kw: object
+    ) -> str | None:
+        calls.append(cmd)
+        if cmd[:3] == ("git", "worktree", "list"):
+            assert cwd is not None
+            assert capture
+            return wt[cwd]
+        if cmd[:3] == ("git", "submodule", "list"):
+            raise worktree.CalledProcessError(1, cmd)
+        if cmd[:2] == ("git", "submodule"):
+            assert cwd is not None
+            assert capture
+            return status[cwd]
+        return None
+
+    monkeypatch.setattr(worktree, "run_", fake_run)
+
+    await worktree.fix_worktree(source, target)
+
+    add_calls = [cmd for cmd in calls if cmd[:3] == ("git", "worktree", "add")]
+    assert add_calls == [
+        ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a"),
+        ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a/dep/c"),
     ]

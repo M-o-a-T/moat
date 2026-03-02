@@ -133,7 +133,7 @@ async def fix_worktree(source_root: Path, target_root: Path, debug: int = 0) -> 
     if branch is None:
         raise click.ClickException(f"Cannot determine branch for worktree {target_root}")
 
-    for sub, _sub_branch in await _collect_submodules(target_root, debug=debug):
+    for sub, _sub_branch in await _collect_submodules(source_root, debug=debug):
         source_sub = source_root / sub
         target_sub = target_root / sub
         sub_worktrees = await _read_worktree_list(source_sub)

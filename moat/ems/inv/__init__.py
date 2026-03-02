@@ -17,9 +17,9 @@ from datetime import datetime
 from asyncdbus import DBusError
 from asyncdbus.service import method
 
-from moat.lib.victron.dbus import Dbus
-from moat.lib.victron.dbus.monitor import DbusMonitor
-from moat.lib.victron.dbus.utils import (
+from moat.ems.victron.dbus import Dbus
+from moat.ems.victron.dbus.monitor import DbusMonitor
+from moat.ems.victron.dbus.utils import (
     CtxObj,
     DbusInterface,
     DbusName,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from moat.lib.victron.dbus import Dbus
+from moat.ems.victron.dbus import Dbus
 import anyio
 
 

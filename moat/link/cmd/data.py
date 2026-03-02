@@ -20,7 +20,7 @@ from moat.util import (
     yprint,
 )
 from moat.lib.path import P, Path, Root
-from moat.lib.run import attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
@@ -161,7 +161,7 @@ async def _load_data(obj, infile: str, force: bool) -> None:
                 await obj.conn.d.set(p, d, m)
 
 
-@click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context

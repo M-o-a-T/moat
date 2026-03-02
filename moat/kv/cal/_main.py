@@ -12,6 +12,7 @@ import pytz
 
 from moat.kv.data import data_get
 from moat.lib.path import P, Path
+from moat.lib.run import AliasedGroup
 
 from .model import CalRoot
 from .util import find_next_alarm
@@ -22,7 +23,7 @@ utc = UTC
 now = partial(datetime.now, utc)
 
 
-@click.group(short_help="Manage calendar polling.")
+@click.group(cls=AliasedGroup, short_help="Manage calendar polling.")
 @click.pass_obj
 async def cli(obj):
     """

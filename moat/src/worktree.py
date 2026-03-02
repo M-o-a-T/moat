@@ -9,6 +9,7 @@ from pathlib import Path
 
 import asyncclick as click
 
+from moat.lib.run import AliasedGroup
 from moat.util.exec import CalledProcessError
 from moat.util.exec import run as run_
 
@@ -132,7 +133,7 @@ async def fix_worktree(source_root: Path, target_root: Path) -> None:
         await run_("git", "worktree", "add", "-b", branch, str(target_sub), cwd=source_sub)
 
 
-@click.group(short_help="Manage source worktrees.")
+@click.group(cls=AliasedGroup, short_help="Manage source worktrees.")
 async def cli() -> None:
     """Manage source worktrees, including submodule worktrees."""
 

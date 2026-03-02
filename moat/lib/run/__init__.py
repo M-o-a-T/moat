@@ -43,6 +43,7 @@ Proxy: type[Any] | None = _Proxy
 logger = logging.getLogger("_loader")
 
 __all__ = [
+    "AliasedGroup",
     "Loader",
     "attr_args",
     "list_ext",
@@ -55,6 +56,35 @@ __all__ = [
 ]
 
 this_load: ContextVar[str | None] = ContextVar("this_load", default=None)
+
+
+class AliasedGroup(click.Group):
+    """Click command group supporting unambiguous command prefixes."""
+
+    def get_command(self, ctx, cmd_name):
+        """Resolve a command, allowing unique prefixes."""
+        rv = super().get_command(ctx, cmd_name)
+
+        if rv is not None:
+            return rv
+
+        matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name)]
+
+        if not matches:
+            return None
+
+        if len(matches) == 1:
+            return super().get_command(ctx, matches[0])
+
+        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+
+    async def resolve_command(self, ctx, args):
+        """Return the full command name after resolving aliases."""
+        # always return the full command name
+        name, cmd, args = await super().resolve_command(ctx, args)
+        if name is None or cmd is None:
+            ctx.fail("No such command.")
+        return name, cmd, args
 
 
 # cmd_eval is a simple and safe "eval" replacement.
@@ -504,7 +534,7 @@ def load_subgroup(
         return _ext(_fn, **kw)
 
 
-class Loader(click.Group):
+class Loader(AliasedGroup):
     """
     An :class:`asyncclick.Group` that loads additional commands from subfolders and/or extensions.
 
@@ -645,7 +675,24 @@ class Loader(click.Group):
         logger.debug("List: %r", rv)
         return rv
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+    def get_command(self, ctx, cmd_name):
+        """Resolve a command, allowing unique prefixes."""
+        rv = self._get_command(ctx, cmd_name)
+
+        if rv is not None:
+            return rv
+
+        matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name)]
+
+        if not matches:
+            return None
+
+        if len(matches) == 1:
+            return self._get_command(ctx, matches[0])
+
+        ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
+
+    def _get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         "add subpackages"
         command = super().get_command(ctx, cmd_name)
 

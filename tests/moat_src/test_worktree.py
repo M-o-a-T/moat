@@ -119,15 +119,15 @@ async def test_fix_worktree_requires_existing(monkeypatch: pytest.MonkeyPatch) -
 
 @pytest.mark.anyio
 async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fixing adds only missing submodule worktrees."""
+    """Fixing adds only missing submodule worktrees using target branches."""
     source = Path("/src/root")
     target = Path("/dst/root")
 
     status = {
-        source: " 0 ext/a (heads/feat/x)\n 1 ext/b (heads/feat/x)\n",
-        source / "ext/a": " 2 dep/c (heads/feat/x)\n",
-        source / "ext/a" / "dep/c": "",
-        source / "ext/b": "",
+        target: " 0 ext/a (heads/feat/y)\n 1 ext/b (heads/feat/y)\n",
+        target / "ext/a": " 2 dep/c (heads/feat/y)\n",
+        target / "ext/a" / "dep/c": "",
+        target / "ext/b": "",
     }
     wt = {
         source: (
@@ -167,6 +167,6 @@ async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> Non
 
     add_calls = [cmd for cmd in calls if cmd[:3] == ("git", "worktree", "add")]
     assert add_calls == [
-        ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a"),
-        ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a/dep/c"),
+        ("git", "worktree", "add", "-b", "feat/y", "/dst/root/ext/a"),
+        ("git", "worktree", "add", "-b", "feat/y", "/dst/root/ext/a/dep/c"),
     ]

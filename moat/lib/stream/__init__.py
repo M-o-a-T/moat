@@ -38,6 +38,9 @@ if _TC:
     from .terminal import FilenoTerm as FilenoTerm
     from .terminal import TermBuf as TermBuf
     from .unix import UnixLink as UnixLink
+    from .ws import SingleWsBlk as SingleWsBlk
+    from .ws import WsLink as WsLink
+    from .ws import ws_stack as ws_stack
 
 
 # Lazy loading
@@ -66,6 +69,9 @@ _imports = {
     # Network connections
     "TcpLink": "tcp",
     "UnixLink": "unix",
+    "WsLink": "ws",
+    "SingleWsBlk": "ws",
+    "ws_stack": "ws",
     # Terminal
     "FilenoTerm": "terminal",
     "TermBuf": "terminal",

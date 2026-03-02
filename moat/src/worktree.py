@@ -38,48 +38,49 @@ def _extract_branch(desc: str | None) -> str | None:
     return None
 
 
-def _submodule_paths(status: str) -> list[tuple[Path, str | None]]:
+def _submodule_paths(status: str) -> list[Path]:
     """Extract submodule path+branch tuples from ``git submodule list`` output."""
-    res: list[tuple[Path, str | None]] = []
+    res: list[Path] = []
     for line in status.splitlines():
         match = _SUBMODULE_RE.match(line.rstrip())
         if match is None:
             parts = line.split(maxsplit=1)
             if len(parts) != 2:
                 continue
-            res.append((Path(parts[0]), _extract_branch(parts[1])))
+            res.append(Path(parts[0]))
         else:
-            res.append((Path(match.group(1)), _extract_branch(match.group(2))))
+            res.append(Path(match.group(1)))
     return res
 
 
-async def _read_submodule_list(base: Path, debug: int = 0) -> str:
+async def _read_submodule_list(base: Path, debug: int = 0) -> str | None:
     """Read submodule status/list information."""
+    if not (base / ".git").exists():
+        return ""
     return await run_("git", "submodule", cwd=base, capture=True, echo=debug > 1)
 
 
-async def _collect_submodules(
-    base: Path, rel: Path = Path(), debug: int = 0
-) -> list[tuple[Path, str | None]]:
+async def _collect_submodules(base: Path, rel: Path = Path(), debug: int = 0) -> list[Path]:
     """Collect all submodule paths below ``base`` recursively."""
     status = await _read_submodule_list(base, debug=debug)
     res: list[tuple[Path, str | None]] = []
-    for sub, branch in _submodule_paths(status):
-        path = rel / sub
-        res.append((path, branch))
-        res.extend(await _collect_submodules(base / sub, path, debug=debug))
+    if status is not None:
+        for sub in _submodule_paths(status):
+            path = rel / sub
+            res.append(path)
+            res.extend(await _collect_submodules(base / sub, path, debug=debug))
     return res
 
 
 async def add_worktree(source_root: Path, branch: str, target_root: Path, debug: int = 0) -> None:
     """Create a worktree and add matching worktrees for all submodules."""
     await run_("bd", "worktree", "create", "--branch", branch, str(target_root))
-    for sub, _sub_branch in await _collect_submodules(source_root, debug=debug):
+    for sub in await _collect_submodules(source_root, debug=debug):
         await run_(
             "git",
             "worktree",
             "add",
-            "-b",
+            "-B",
             branch,
             str(target_root / sub),
             cwd=source_root / sub,
@@ -89,7 +90,7 @@ async def add_worktree(source_root: Path, branch: str, target_root: Path, debug:
 
 async def delete_worktree(target_root: Path, debug: int = 0) -> None:
     """Remove a worktree after recursively removing submodule worktrees."""
-    subs = [sub for sub, _branch in await _collect_submodules(target_root, debug=debug)]
+    subs = [sub for sub in await _collect_submodules(target_root, debug=debug)]
     subs.sort(key=lambda x: len(x.parts), reverse=True)
     for sub in subs:
         path = target_root / sub
@@ -133,7 +134,7 @@ async def fix_worktree(source_root: Path, target_root: Path, debug: int = 0) -> 
     if branch is None:
         raise click.ClickException(f"Cannot determine branch for worktree {target_root}")
 
-    for sub, _sub_branch in await _collect_submodules(source_root, debug=debug):
+    for sub in await _collect_submodules(source_root, debug=debug):
         source_sub = source_root / sub
         target_sub = target_root / sub
         sub_worktrees = await _read_worktree_list(source_sub)
@@ -157,15 +158,24 @@ async def list_(obj) -> None:
     click.echo(res, nl=False)
 
 
+@cli.command("prune")
+@click.pass_obj
+async def prune_(obj) -> None:
+    """Prune all worktrees."""
+    source = Path.cwd()
+    for sub in await _collect_submodules(source, debug=obj.debug - 1 if obj.debug > 0 else 0):
+        await run_("git", "worktree", "prune", cwd=source, echo=obj.debug > 2)
+        if obj.debug == 2:
+            print(sub)
+
+
 @cli.command("submodules")
 @click.pass_obj
 async def submodules_(obj) -> None:
     """List all submodules."""
     source = Path.cwd()
-    for sub, _sub_branch in await _collect_submodules(
-        source, debug=obj.debug - 1 if obj.debug > 0 else 0
-    ):
-        print(sub, _sub_branch)
+    for sub in await _collect_submodules(source, debug=obj.debug - 1 if obj.debug > 0 else 0):
+        print(sub)
 
 
 @cli.command("add")

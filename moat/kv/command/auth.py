@@ -6,9 +6,10 @@ import asyncclick as click
 from moat.util import NotGiven, split_arg, yprint
 from moat.kv.auth import gen_auth, loader
 from moat.lib.path import Path
+from moat.lib.run import AliasedGroup
 
 
-@click.group(short_help="Manage authorization")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage authorization")  # pylint: disable=undefined-variable
 @click.option("-m", "--method", default=None, help="Affect/use this auth method")
 @click.pass_obj
 async def cli(obj, method):

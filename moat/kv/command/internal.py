@@ -8,11 +8,12 @@ from range_set import RangeSet
 
 from moat.util import yprint
 from moat.lib.path import P, PathLongener
+from moat.lib.run import AliasedGroup
 
 from collections.abc import Mapping
 
 
-@click.group(short_help="Control internal state.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Control internal state.")  # pylint: disable=undefined-variable
 async def cli():
     """
     This subcommand queries and controls the server's internal state.

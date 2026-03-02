@@ -15,7 +15,7 @@ from moat.lib.path import (
     P,
     Path,
 )
-from moat.lib.run import attr_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.announce import as_service
 
 from .model import OWFSroot
@@ -23,7 +23,7 @@ from .model import OWFSroot
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage 1wire devices.")
+@click.group(cls=AliasedGroup, short_help="Manage 1wire devices.")
 @click.pass_obj
 async def cli(obj):
     """

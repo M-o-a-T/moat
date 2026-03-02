@@ -25,7 +25,7 @@ moat:
   micro:
     setup:
       args:
-        cross: "ext/micropython/mpy-cross/build/mpy-cross"
+        cross: "build/mpy-cross"
         config: !P cfg.r
         update: true
         state: std

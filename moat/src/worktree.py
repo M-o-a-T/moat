@@ -157,6 +157,17 @@ async def list_(obj) -> None:
     click.echo(res, nl=False)
 
 
+@cli.command("submodules")
+@click.pass_obj
+async def submodules_(obj) -> None:
+    """List all submodules."""
+    source = Path.cwd()
+    for sub, _sub_branch in await _collect_submodules(
+        source, debug=obj.debug - 1 if obj.debug > 0 else 0
+    ):
+        print(sub, _sub_branch)
+
+
 @cli.command("add")
 @click.argument("branch", type=str)
 @click.argument("directory", type=click.Path(file_okay=False, path_type=Path))

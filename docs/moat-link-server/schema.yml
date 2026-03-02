@@ -307,6 +307,21 @@ description: |
   error.run.notify.backend.# logs when a backend fails.
 type: null
 ---
+_path: !P run.service.#.server.#
+title: Server announcement
+type: object
+properties:
+  auth:
+    type: object
+    properties:
+      token: string
+  link:
+    type: array
+    description: host+port tuple
+  node:
+    type: string
+    description: node name, redundant (last element of topic)
+---
 _path: !P run.service.#.conn
 title: Address of the currently-elected MoaT-Link server
 type: object

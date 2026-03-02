@@ -95,6 +95,23 @@ accepts, precedence is by their order in the list of methods (first wins).
 Doing neither has the same effect as if the method was not present in the
 list.
 
+## Auth Stream App
+
+The `moat.lib.rpc.app.auth.Cmd` app protects command subtrees behind a
+single streamed endpoint.
+
+- Direct access to configured sub-apps is blocked.
+- The app exposes only one RPC entrypoint: the streamed root command.
+- The streamed endpoint runs the regular Auth protocol before forwarding
+  nested calls.
+
+Configuration:
+
+- `auth`: required; same structure as on `BaseCmdMsg`.
+- `path`: optional path to an existing subtree to expose after auth.
+- If `path` is absent, local sub-app entries are used as the protected
+  subtree.
+
 ### Dynamic data
 
 `BaseCmdMsg`.*auth* is a basic `attrdict` which the caller can fill with
@@ -119,4 +136,3 @@ The "auth" keyword may be used to transmit initial data to auth methods.
 These commands are *not* answered until auth negotiation completes. The
 reply consists of one positional argument, the successful auth method (if
 auth is successful), but may contain follow-up keywords.
-

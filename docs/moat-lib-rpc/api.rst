@@ -33,3 +33,7 @@ API
 .. automodule:: moat.lib.rpc.stream.xcmd
    :members:
    :show-inheritance:
+
+.. automodule:: moat.lib.rpc.app.auth
+   :members:
+   :show-inheritance:

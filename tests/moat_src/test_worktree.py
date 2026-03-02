@@ -124,10 +124,10 @@ async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> Non
     target = Path("/dst/root")
 
     status = {
-        target: " 0 ext/a (heads/feat/y)\n 1 ext/b (heads/feat/y)\n",
-        target / "ext/a": " 2 dep/c (heads/feat/y)\n",
-        target / "ext/a" / "dep/c": "",
-        target / "ext/b": "",
+        source: " 0 ext/a (heads/feat/y)\n 1 ext/b (heads/feat/y)\n",
+        source / "ext/a": " 2 dep/c (heads/feat/y)\n",
+        source / "ext/a" / "dep/c": "",
+        source / "ext/b": "",
     }
     wt = {
         source: (

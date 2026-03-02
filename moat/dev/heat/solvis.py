@@ -36,6 +36,7 @@ from moat.lib.path import (
     PathLongener,
 )
 from moat.lib.pid import CPID
+from moat.lib.run import AliasedGroup
 
 FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -2037,7 +2038,7 @@ class fake_cl:
 #    GPIO.cleanup()
 
 
-@click.group
+@click.group(cls=AliasedGroup)
 @click.pass_context
 @click.option("-c", "--config", type=click.Path("r"), help="config file")
 async def cli(ctx, config):

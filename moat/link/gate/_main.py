@@ -10,13 +10,13 @@ import asyncclick as click
 
 from moat.util import NotGiven, yprint
 from moat.lib.path import P
-from moat.lib.run import attr_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
 
 
-@click.group(short_help="Manage gateways.", invoke_without_command=True)
+@click.group(cls=AliasedGroup, short_help="Manage gateways.", invoke_without_command=True)
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
 async def cli(ctx, path):

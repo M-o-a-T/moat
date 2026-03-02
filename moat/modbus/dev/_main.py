@@ -11,6 +11,7 @@ from pathlib import Path as FSPath
 import asyncclick as click
 
 from moat.util import yload, yprint
+from moat.lib.run import AliasedGroup
 
 from .device import fixup
 from .poll import dev_poll
@@ -18,7 +19,7 @@ from .poll import dev_poll
 logger = logging.getLogger(__name__)
 
 
-@click.group()
+@click.group(cls=AliasedGroup)
 def cli():
     """Modbus device polling"""
     pass

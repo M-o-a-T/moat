@@ -15,10 +15,10 @@ from moat.lib.path import (
     Path,
     PathLongener,
 )
-from moat.lib.run import attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 
 
-@click.group(invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, invoke_without_command=True)  # pylint: disable=undefined-variable
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
 async def cli(ctx, path):

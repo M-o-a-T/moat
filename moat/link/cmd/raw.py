@@ -19,13 +19,14 @@ from moat.util import NotGiven, gen_ident, yprint
 from moat.lib.codec import get_codec
 from moat.lib.mqtt import MQTTException
 from moat.lib.path import P, PathLongener, set_root
+from moat.lib.run import AliasedGroup
 from moat.link.backend import RawMessage, get_backend
 from moat.util.times import humandelta, ts2iso
 
 logger = logging.getLogger(__name__)
 
 
-@click.group
+@click.group(cls=AliasedGroup)
 @click.pass_context
 async def cli(ctx):
     """

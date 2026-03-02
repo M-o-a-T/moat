@@ -9,13 +9,14 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.lib.path import P, Path
+from moat.lib.run import AliasedGroup
 from moat.link.client import Link
 from moat.link.schema import schema_path, validate_instance
 
 from typing import Any
 
 
-@click.group(short_help="Manage schemas.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage schemas.")  # pylint: disable=undefined-variable
 @click.pass_context
 async def cli(ctx):
     """

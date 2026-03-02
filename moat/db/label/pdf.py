@@ -7,6 +7,7 @@ from __future__ import annotations
 try:
     from fpdf2 import FPDF, ViewerPreferences  # type:ignore[unresolved-import]
 except ImportError:
+    from fpdf import FPDF
     from fpdf.prefs import ViewerPreferences
 
 from typing import TYPE_CHECKING

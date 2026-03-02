@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 from subprocess import run
 
@@ -10,6 +11,17 @@ import moat.micro  # noqa:F401
 
 def make_upy(force: bool = False, dupterm: bool = False):  # noqa: D103
     here = Path.cwd().absolute()
+    p = here / "build"
+    upy = p / "mpy-cross"
+    mk = here / "ext/micropython/mpy-cross"
+    if force or not upy.exists():
+        run(
+            ["make", "STRIP=", "DEBUG=1", "-j5"],
+            cwd=mk,
+            check=True,
+        )
+        shutil.copy(mk / "build" / "mpy-cross", upy)
+
     p = here / "build" / ("mpy-unix" + ("-dup" if dupterm else ""))
     upy = p / "micropython"
     var = here / "moat/micro/_embed/boards/unix" / ("test_dup" if dupterm else "test")

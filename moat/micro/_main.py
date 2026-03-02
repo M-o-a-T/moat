@@ -11,6 +11,7 @@ import os
 import sys
 from functools import wraps
 from pathlib import Path as FSPath
+from shutil import which
 
 import asyncclick as click
 
@@ -259,7 +260,10 @@ async def sync_(ctx, **kw):
 
     mydir = FSPath(__file__).parent.parent.parent
     mpydir = mydir / "ext" / "micropython"
-    default["cross"] = mpydir / "mpy-cross" / "build" / "mpy-cross"
+    cross = mpydir / "mpy-cross" / "build" / "mpy-cross"
+    if not cross.exists():
+        cross = which("mpy-cross")
+    default["cross"] = cross
 
     param = {
         k: v

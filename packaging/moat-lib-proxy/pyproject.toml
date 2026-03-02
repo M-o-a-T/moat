@@ -13,7 +13,7 @@ classifiers = [
 ]
 dependencies = [
     "anyio ~= 4.0",
-    "moat-util ~= 0.62.6",
+    "moat-util ~= 0.63.0",
     "moat-lib-micro ~= 0.3.0",
 ]
 keywords = ["MoaT"]
@@ -22,7 +22,7 @@ name = "moat-lib-proxy"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Proxy helpers for serializing and deserializing objects'
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

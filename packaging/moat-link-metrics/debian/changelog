@@ -1,3 +1,9 @@
+moat-link-metrics (0.0.5-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:23:28 +0100
+
 moat-link-metrics (0.0.4-5) unstable; urgency=medium
 
   * New release for 26.0.6

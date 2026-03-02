@@ -17,5 +17,6 @@ TODO
 ../moat-ems-battery/index
 ../moat-ems-inv/index
 ../moat-ems-sched/index
+../moat-ems-victron/index
 api
 ```

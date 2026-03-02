@@ -17,7 +17,7 @@ dependencies = [
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
-name = "moat-lib-victron"
+name = "moat-ems-victron"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"

@@ -1,17 +1,17 @@
 API
 ===
 
-.. automodule:: moat.lib.victron
+.. automodule:: moat.ems.victron
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.lib.victron.dbus
+.. automodule:: moat.ems.victron.dbus
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.lib.victron.dbus.utils
+.. automodule:: moat.ems.victron.dbus.utils
    :members:
    :undoc-members:
    :show-inheritance:

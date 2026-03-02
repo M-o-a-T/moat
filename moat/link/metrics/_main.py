@@ -10,13 +10,14 @@ import asyncclick as click
 
 from moat.util import NotGiven
 from moat.lib.path import P
+from moat.lib.run import AliasedGroup
 from moat.link._data import data_get
 from moat.link.client import Link
 
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage metrics series.")
+@click.group(cls=AliasedGroup, short_help="Manage metrics series.")
 @click.pass_context
 async def cli(ctx):
     """Configure metrics time-series forwarding.

@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import asyncclick as click
 
+from moat.lib.run import AliasedGroup
 from moat.link.announce import announcing
 from moat.link.client import Link
 
 
-@click.group(short_help="Manage notifications.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage notifications.")  # pylint: disable=undefined-variable
 @click.pass_context
 async def cli(ctx):
     """

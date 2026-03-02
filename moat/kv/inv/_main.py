@@ -15,13 +15,14 @@ from moat.kv.data import data_get
 from moat.kv.inv.model import Host, InventoryRoot, Wire
 from moat.kv.obj.command import std_command
 from moat.lib.path import P
+from moat.lib.run import AliasedGroup
 
 from collections import deque
 
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage computer inventory.")
+@click.group(cls=AliasedGroup, short_help="Manage computer inventory.")
 @click.pass_obj
 async def cli(obj):
     """

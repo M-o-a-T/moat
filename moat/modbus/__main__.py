@@ -12,13 +12,15 @@ from pprint import pprint
 
 import asyncclick as click
 
+from moat.lib.run import AliasedGroup
+
 from .typemap import get_type, map_kind, map_type
 from .types import InputRegisters, IntValue
 
 log = logging.getLogger()
 
 
-@click.group()
+@click.group(cls=AliasedGroup)
 async def main():
     """Modbus client / server"""
 

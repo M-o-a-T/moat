@@ -1,12 +1,12 @@
 _path: !P ':'
-$id: https://M-o-a-T.org/schema/
+$id: https://M-o-a-T.org/link/schema/
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Root Schema
 description: Descriptive tag at the root of the hierarchy
 type: object
 properties:
   root:
-    $ref: _/path
+    $ref: _.path
   home:
     type: string
     format: uri
@@ -27,7 +27,7 @@ properties:
   title: string
   doc: string
   ext:
-    $ref: _/ext
+    $ref: _.ext
   items:
     type: object
     title: describes entries below this, unless nothed otherwise
@@ -35,7 +35,7 @@ properties:
       title: string
       doc: string
       ext:
-        $ref: _/ext
+        $ref: _.ext
     required:
     - title
 required:
@@ -96,30 +96,6 @@ properties:
 required:
   - msg
 additionalProperties: true
----
-_path: !P cfg.error.#
-title: Error management
-type: object
-properties:
-  min:
-    type: integer
-    title: Time from first occurrence to raising a notification
-  max:
-    type: integer
-    title: Time from last occurrence (unfixed) to deletion
-  ok:
-    type: integer
-    title: Time from fix-up to deletion
-  prio:
-    type: integer
-    title: Priority for notifications
-  schedule:
-    type: array
-    items:
-      type: integer
-      title: Re-Notification intervals
-      description: if not present, use min*10
-
 ---
 _path: !P flow.#
 title: Data flow and monitoring
@@ -218,6 +194,72 @@ properties:
     doc: |
       List of test values (source/result) for `encode`.
 ---
+_path: !P escalate.#
+title: Error management
+type: object
+properties:
+  min:
+    type: integer
+    title: Time from first occurrence to raising a notification
+    doc:
+  max:
+    type: integer
+    title: Time from last occurrence (unfixed) to deletion
+  ok:
+    type: integer
+    title: Time from fix-up to deletion
+  prio:
+    type: integer
+    title: Priority for notifications
+  schedule:
+    type: object
+    properties:
+    items:
+      type: object
+      title: Re-Notification intervals
+      additionalProperties:
+        type: object
+        properties:
+          notifier:
+            type: string
+            title: plugin
+            description: name of the notification plugin to use
+          after:
+            type: integer
+            title: time after error activation until notifier triggers
+---
+_path: !P notify.#
+title: Notifications
+type: object
+properties:
+  data:
+    type: object
+  title:
+    type: string
+    description: message title
+  msg:
+    type: string
+    description: message text
+  level:
+    type: integer
+    decription: Severity, 1…5, 5 is highest
+  ack:
+    type: object
+    description: Acknowledgment data
+    properties:
+      until:
+        type: integer
+        description: alert if the error repeats after this; always alert if missing
+      time:
+        type: integer
+        description: time when ack'd
+  sent:
+    type: array
+    items:
+      type: string
+      description: back-end that's been sent to
+
+---
 _path: !P gate.moat.#.#
 title: Gateway between MQTT and MoaT-Link data TODO DRAFT
 type: object
@@ -310,7 +352,7 @@ _path: !P schema
 $ref: https://json-schema.org/draft/2020-12/schema
 properties:
   ext:
-    $ref: _/ext
+    $ref: _.ext
   items:
     title: documents the next hierarchy level(s)
     description: applies if the entries below this don't have their own schema entry
@@ -342,18 +384,20 @@ properties:
     description: error-generating datum, or its repr if unencodeable
   path:
     title: some other path associated with the error
-    $ref: _/path
+    $ref: _.path
 ---
 _path: !P _.path
 title: Path object
-description: Object accessor path
-$id: Path
+description: Object accessor path. Does not include bytestrings or floats.
 type: array
 items:
   anyOf:
     - type: string
     - type: integer
-    - $ref: Path
+    - const: true
+    - const: false
+    - const: null
+    - $ref: ._path
 ---
 _path: !P _.ext
 title: External data flag
@@ -363,7 +407,6 @@ type: boolean
 _path: !P _.frame
 title: Metadata for MoaT messages
 description: set if the entry was loaded from MoaT
-$id: Path
 type: object
 properties:
   timestamp:
@@ -405,7 +448,7 @@ prefixItems:
         Server: can't do you if False. "Token OK" or "no login required" if True.
 ---
 _path: !P _.link.server.i.hello.resp
-$ref: _/links/server(i/hello/req
+$ref: _.links.server.i.hello.req
 ---
 _path: !P _.save.data
 title: Save file entry, except for the first and last item
@@ -415,10 +458,10 @@ prefixItems:
     title: Path prefix
     description: The first n items in the previous entry's path atr prepended to this entry's path
   - type: array
-    $ref: _/path
+    $ref: _.path
   - type: any
   - type: array
-    $ref: _/meta
+    $ref: _.meta
 ---
 _path: !P _.save.header
 type: object
@@ -426,7 +469,7 @@ title: Saved-file and Data dump transmission header+trailer
 properties:
   root:
     title: base directory
-    $ref: _/path
+    $ref: _.path
   timestamp:
     type: number
     title: the file contains changes logged after this time

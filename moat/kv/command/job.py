@@ -13,10 +13,10 @@ from moat.kv.code import CodeRoot
 from moat.kv.data import add_dates, data_get
 from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
 from moat.lib.path import P, Path
-from moat.lib.run import attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 
 
-@click.group()  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
 @click.option("-n", "--node", help="node to run this code on. Empty: any one node, '-': all nodes")
 @click.option("-g", "--group", help="group to run this code on. Empty: default")
 @click.pass_context

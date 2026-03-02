@@ -10,7 +10,7 @@ import asyncclick as click
 
 from moat.util import NotGiven, edit_text, edit_yaml, yload, yprint
 from moat.lib.path import P, Path, PathLongener
-from moat.lib.run import attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.run import make_proc
@@ -105,7 +105,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
         yprint(out, stream=obj.stdout)
 
 
-@click.group(short_help="Manage code snippets.", invoke_without_command=True)
+@click.group(cls=AliasedGroup, short_help="Manage code snippets.", invoke_without_command=True)
 @click.option("-m", "--meta", is_flag=True, help="Include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context

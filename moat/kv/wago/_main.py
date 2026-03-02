@@ -9,13 +9,13 @@ import asyncclick as click
 from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import node_attr
 from moat.lib.path import P
-from moat.lib.run import attr_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.announce import as_service
 
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage Wago controllers.")
+@click.group(cls=AliasedGroup, short_help="Manage Wago controllers.")
 async def cli():
     """
     List Wago controllers, modify device handling …

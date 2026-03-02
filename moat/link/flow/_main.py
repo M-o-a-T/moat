@@ -11,13 +11,14 @@ from attrs import define, field
 from moat.util import NotGiven, get_part, yprint
 from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
+from moat.lib.run import AliasedGroup
 from moat.link.client import Link
 
 from collections.abc import Iterator, Mapping
 from typing import Any, cast
 
 
-@click.group(short_help="Manage data flows.")
+@click.group(cls=AliasedGroup, short_help="Manage data flows.")
 @click.pass_context
 async def cli(ctx):
     """

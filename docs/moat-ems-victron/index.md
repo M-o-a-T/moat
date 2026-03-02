@@ -1,7 +1,7 @@
-(moat-lib-victron)=
+(moat-ems-victron)=
 # Victron device support
 
-```{include} ../../packaging/moat-lib-victron/README.md
+```{include} ../../packaging/moat-ems-victron/README.md
 :start-after: % start main
 :end-before: % end main
 ```

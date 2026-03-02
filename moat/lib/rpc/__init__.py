@@ -58,6 +58,7 @@ _imports = {
     "BaseConnIter": "conn.util",
     "TcpIter": "conn.tcp",
     "UnixIter": "conn.unix",
+    "WsIter": "conn.ws",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -177,6 +178,7 @@ __all__ = [  # noqa:RUF022
     "BaseConnIter",
     "TcpIter",
     "UnixIter",
+    "WsIter",
     # From msg
     "Msg",
     "MsgLink",
@@ -235,6 +237,7 @@ if _TC or _DOC:
     from .conn.tcp import TcpIter as TcpIter
     from .conn.unix import UnixIter as UnixIter
     from .conn.util import BaseConnIter as BaseConnIter
+    from .conn.ws import WsIter as WsIter
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink
     from .msg import MsgResult as MsgResult

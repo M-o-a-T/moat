@@ -122,7 +122,7 @@ async def fix_worktree(source_root: Path, target_root: Path) -> None:
     if target_root not in worktrees:
         raise click.ClickException(f"Not an existing worktree: {target_root}")
 
-    for sub, branch in await _collect_submodules(source_root):
+    for sub, branch in await _collect_submodules(target_root):
         if branch is None:
             raise click.ClickException(f"Cannot determine branch for submodule {sub}")
         source_sub = source_root / sub

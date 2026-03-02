@@ -26,16 +26,18 @@ async def test_add_worktree_recurses(monkeypatch: pytest.MonkeyPatch) -> None:
     }
     calls: list[tuple[str, tuple[object, ...], Path | None, bool]] = []
 
+    async def fake_read_submodule_list(base: Path, debug: int = 0) -> str:
+        _ = debug
+        return status[base]
+
     async def fake_run(
         *cmd: object, cwd: Path | None = None, capture: bool = False, **_kw: object
     ) -> str | None:
         calls.append((str(cmd[0]), cmd, cwd, capture))
-        if cmd[:2] == ("git", "submodule"):
-            assert cwd is not None
-            return status[cwd]
         return None
 
     monkeypatch.setattr(worktree, "run_", fake_run)
+    monkeypatch.setattr(worktree, "_read_submodule_list", fake_read_submodule_list)
 
     await worktree.add_worktree(source, "feat/x", target)
 
@@ -43,19 +45,19 @@ async def test_add_worktree_recurses(monkeypatch: pytest.MonkeyPatch) -> None:
     assert add_calls == [
         (
             "git",
-            ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a"),
+            ("git", "worktree", "add", "-B", "feat/x", "/dst/root/ext/a"),
             source / "ext/a",
             False,
         ),
         (
             "git",
-            ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/a/dep/c"),
+            ("git", "worktree", "add", "-B", "feat/x", "/dst/root/ext/a/dep/c"),
             source / "ext/a" / "dep/c",
             False,
         ),
         (
             "git",
-            ("git", "worktree", "add", "-b", "feat/x", "/dst/root/ext/b"),
+            ("git", "worktree", "add", "-B", "feat/x", "/dst/root/ext/b"),
             source / "ext/b",
             False,
         ),
@@ -72,22 +74,24 @@ async def test_delete_worktree_deep_first(monkeypatch: pytest.MonkeyPatch) -> No
         target / "ext/a" / "dep/c": "",
         target / "ext/b": "",
     }
-    calls: list[tuple[object, ...]] = []
+    calls: list[tuple[tuple[object, ...], Path | None, bool]] = []
+
+    async def fake_read_submodule_list(base: Path, debug: int = 0) -> str:
+        _ = debug
+        return status[base]
 
     async def fake_run(
         *cmd: object, cwd: Path | None = None, capture: bool = False, **_kw: object
     ) -> str | None:
-        calls.append((cmd, capture))
-        if cmd[:2] == ("git", "submodule"):
-            assert cwd is not None
-            return status[cwd]
+        calls.append((cmd, cwd, capture))
         return None
 
     monkeypatch.setattr(worktree, "run_", fake_run)
+    monkeypatch.setattr(worktree, "_read_submodule_list", fake_read_submodule_list)
 
     await worktree.delete_worktree(target)
 
-    rm_calls = [cmd for cmd, _capture in calls if cmd[:3] == ("git", "worktree", "remove")]
+    rm_calls = [cmd for cmd, _cwd, _capture in calls if cmd[:3] == ("git", "worktree", "remove")]
     assert rm_calls == [
         ("git", "worktree", "remove", "/dst/root/ext/a/dep/c"),
         ("git", "worktree", "remove", "/dst/root/ext/a"),
@@ -145,6 +149,10 @@ async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> Non
     }
     calls: list[tuple[object, ...]] = []
 
+    async def fake_read_submodule_list(base: Path, debug: int = 0) -> str:
+        _ = debug
+        return status[base]
+
     async def fake_run(
         *cmd: object, cwd: Path | None = None, capture: bool = False, **_kw: object
     ) -> str | None:
@@ -157,13 +165,10 @@ async def test_fix_worktree_adds_missing(monkeypatch: pytest.MonkeyPatch) -> Non
             assert cwd == target
             assert capture
             return "feat/z\n"
-        if cmd[:2] == ("git", "submodule"):
-            assert cwd is not None
-            assert capture
-            return status[cwd]
         return None
 
     monkeypatch.setattr(worktree, "run_", fake_run)
+    monkeypatch.setattr(worktree, "_read_submodule_list", fake_read_submodule_list)
 
     await worktree.fix_worktree(source, target)
 

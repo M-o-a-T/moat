@@ -12,6 +12,7 @@ import asyncclick as click
 
 from moat.util import attrdict, combine_dict, yload
 from moat.lib.codec import get_codec
+from moat.lib.run import AliasedGroup
 
 from .broker import create_broker
 from .client import CodecError, ConnectException, open_mqttclient
@@ -19,7 +20,7 @@ from .client import CodecError, ConnectException, open_mqttclient
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="MQTT client and broker")
+@click.group(cls=AliasedGroup, short_help="MQTT client and broker")
 async def cli():
     """
     Run MQTT commands.

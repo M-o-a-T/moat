@@ -10,6 +10,7 @@ import asyncclick as click
 
 from moat.util import as_service, attrdict, srepr
 from moat.lib.broadcast import Broadcaster
+from moat.lib.run import AliasedGroup
 from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.link.host import HostList, ServiceMon
@@ -17,7 +18,7 @@ from moat.link.host import HostList, ServiceMon
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage host services.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage host services.")  # pylint: disable=undefined-variable
 @click.pass_context
 async def cli(ctx):
     """

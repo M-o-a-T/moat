@@ -8,12 +8,13 @@ import asyncclick as click
 from moat.util import yprint
 from moat.kv.data import data_get
 from moat.lib.path import P, Path
+from moat.lib.run import AliasedGroup
 
 ACL = set("rwdcxena")
 # read, write, delete, create, access, enumerate
 
 
-@click.group()  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
 async def cli():
     """Manage ACLs. Usage: … acl …"""
     pass

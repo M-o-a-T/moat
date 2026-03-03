@@ -154,7 +154,7 @@ async def cli() -> None:
 @click.pass_obj
 async def list_(obj) -> None:
     """List all worktrees."""
-    res = await run_("git", "worktree", capture=True, echo=obj.debug > 2)
+    res = await run_("git", "worktree", "list", capture=True, echo=obj.debug > 2)
     click.echo(res, nl=False)
 
 
@@ -164,7 +164,7 @@ async def prune_(obj) -> None:
     """Prune all worktrees."""
     source = Path.cwd()
     for sub in await _collect_submodules(source, debug=obj.debug - 1 if obj.debug > 0 else 0):
-        await run_("git", "worktree", "prune", cwd=source, echo=obj.debug > 2)
+        await run_("git", "worktree", "prune", cwd=sub, echo=obj.debug > 2)
         if obj.debug == 2:
             print(sub)
 

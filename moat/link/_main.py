@@ -69,8 +69,9 @@ start "moat link server" in a separate terminal, and try again.
 
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
+@click.option("-s", "--server", "link_name", default=None, help="Connect to named server only")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx, link_name):
     """
     MoaT's data link
 
@@ -85,6 +86,8 @@ async def cli(ctx):
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")
+    if link_name is not None:
+        obj.link_name = link_name
 
 
 @cli.command("test")

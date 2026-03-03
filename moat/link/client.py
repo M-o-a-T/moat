@@ -1089,6 +1089,7 @@ class Link(LinkCommon, CtxObj):
     This class combines the back-end link with a connection to a MoaT-Link server.
 
     If "common" is set, create global state.
+    If "only" is set, connect only to the named server.
     """
 
     _server: ValueEvent = None
@@ -1101,16 +1102,19 @@ class Link(LinkCommon, CtxObj):
     _port: dict[str, Any] | str | None = None
     _state: str = "init"
     _common: bool = False
+    _only: str | None = None
     announced: set[Path]
     sdr: LinkSender
 
-    def __new__(cls, cfg, name: str | None = None, common: bool = False):  # noqa:D102
-        cfg, name  # noqa:B018
+    def __new__(cls, cfg, name: str | None = None, common: bool = False, only: str | None = None):  # noqa:D102
+        cfg, name, only  # noqa:B018
         if common and (link := _the_link.get(NotGiven)) is not NotGiven:
             return link
         return super().__new__(cls)
 
-    def __init__(self, cfg, name: str | None = None, common: bool = False):
+    def __init__(
+        self, cfg, name: str | None = None, common: bool = False, only: str | None = None
+    ):
         if _the_link.get(NotGiven) is self:
             return
         super().__init__(cfg, name=name)
@@ -1118,6 +1122,7 @@ class Link(LinkCommon, CtxObj):
         self._server_up = anyio.Event()
         self._state_change = anyio.Event()
         self._common = common
+        self._only = only
         self.announced = set()
         with suppress(AttributeError):
             self._port = self.cfg.client.port
@@ -1320,8 +1325,14 @@ class Link(LinkCommon, CtxObj):
         # Background process that monitors the server link channel
 
         self._last_link_seen = anyio.Event()
+        if self._only is not None:
+            # Monitor the specific named server's announcement
+            monitor_path = P(":R.run.service.main.server") / self._only
+        else:
+            # Monitor the main connection channel
+            monitor_path = P(":R.run.service.main.conn")
         async with self.backend.monitor(
-            P(":R.run.service.main.conn"),
+            monitor_path,
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
@@ -1336,6 +1347,22 @@ class Link(LinkCommon, CtxObj):
         # We're connected.
         self.current_server = rem
         self._server_up.set()
+
+        # Check backend compatibility when connecting to a named server
+        if self._only is not None:
+            try:
+                remote_backend = await rem.cmd(P("i.backend"))
+                if remote_backend.kw != self.cfg.backend:
+                    self.logger.info(
+                        "Server %s uses different backend: %r (we use %r)",
+                        self._only,
+                        remote_backend.kw,
+                        self.cfg.backend,
+                    )
+                    # Store the remote backend for potential reconnection
+                    self._remote_backend = remote_backend.kw
+            except Exception as exc:
+                self.logger.warning("Could not query backend from %s: %r", self._only, exc)
 
         async def run_(cmd):
             await cmd.run(rem)

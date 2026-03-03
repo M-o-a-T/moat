@@ -387,3 +387,16 @@ async def test_asdict(cfg):  # noqa: D103
             with anyio.fail_after(0.2):
                 await a.wait_
             assert a.b.y == 3
+
+
+@pytest.mark.anyio
+async def test_i_backend(cfg):
+    "Check that the i.backend command returns backend configuration."
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+        r = await c.cmd(P("i.backend"))
+        # The result should be a dict containing the backend driver
+        backend = r.kw
+        assert "driver" in backend
+        assert backend["driver"] == "mqtt"

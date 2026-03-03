@@ -77,11 +77,11 @@ class Repeater:
     def __init__(
         self,
         cfg: dict,
-        rdr: Callable[Awaitable[float], []],
+        rdr: Callable[[], Awaitable[float]],
         min: float = -99999,  # noqa:A002
         max: float = 99999,  # noqa:A002
         diff: float = 99999,
-    ) -> float:
+    ) -> None:
         self.cfg = cfg
         self.rdr = rdr
         self.min = min
@@ -129,7 +129,10 @@ class Repeater:
                 except Exception as exc:
                     if err is None:
                         err = exc
-                if self.cfg.get("min", self.min) < val < self.cfg.get("max", self.max):
+                if val is not None and self.cfg.get("min", self.min) < val < self.cfg.get(
+                    "max",
+                    self.max,
+                ):
                     if self.val is None or abs(val - self.val) < self.cfg.get("diff", self.diff):
                         break
                 self.err = val
@@ -217,7 +220,7 @@ class Sensor(BaseCmd):
         if msg.can_stream:
             async with msg.stream_out() as m:
                 while True:
-                    val = self._rep.get()
+                    val = await self._rep.get()
                     if o is None or abs(val - o) > d:
                         await m.send(val)
                         if o is not None:

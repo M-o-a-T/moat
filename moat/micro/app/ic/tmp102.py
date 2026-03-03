@@ -21,10 +21,15 @@ class Cmd(Sensor):
         adr: Bus address to access
     """
 
-    doc = Sensor.doc.copy()
-    doc["_c"] = doc["_c"].copy()
-    doc["_c"]["bus"] = "path:i2c bus"
-    doc["_c"]["adr"] = "path:bus address"
+    doc = dict(Sensor.doc)
+    doc_c = doc.get("_c", {})
+    if not isinstance(doc_c, dict):
+        doc_c = {}
+    else:
+        doc_c = dict(doc_c)
+    doc_c["bus"] = "path:i2c bus"
+    doc_c["adr"] = "path:bus address"
+    doc["_c"] = doc_c
 
     async def task(self):
         "wrapper, for i2c bus access"

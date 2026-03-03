@@ -12,6 +12,8 @@ from . import NotSync, RTCBase
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import builtins
+
     from typing import Any
 
 
@@ -91,7 +93,7 @@ class RTC(RTCBase):
         await sender(name, data)
         return True
 
-    async def keys(self) -> set[str]:
+    async def keys(self) -> builtins.set[str]:
         """
         Get all stored data from the remote.
 

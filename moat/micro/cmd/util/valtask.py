@@ -4,19 +4,28 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.lib.codec.errors import StoppedError
-
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from anyio import CancelScope
+    from collections.abc import Awaitable, Callable
+    from typing import Protocol
 
-    from moat.lib.rpc import BaseCmd
+    class HasValueTaskReplies(Protocol):
+        """Required reply methods on command objects."""
 
-    from collections.abc import Callable, Mapping
-    from typing import Any
+        async def reply_error(self, i: int, err: Exception, x: list[Exception]) -> None:
+            """Forward a task error."""
+
+        async def reply_result(self, i: int, res: object) -> None:
+            """Forward a task result."""
+
+    class Cancellable(Protocol):
+        """Cancel-capable task handle."""
+
+        def cancel(self) -> None:
+            """Cancel this task."""
 
 
 class ValueTask:
@@ -28,14 +37,22 @@ class ValueTask:
     @p: callable
     """
 
-    def __init__(self, cmd: BaseCmd, i: int, x: list[Exception], p: Callable, *a, **k):
+    def __init__(
+        self,
+        cmd: HasValueTaskReplies,
+        i: int,
+        x: list[Exception],
+        p: Callable[..., Awaitable[object]],
+        *a: object,
+        **k: object,
+    ):
         self.cmd = cmd
         self.i = i
         self.p = p
-        self.a: list[Any] = a
-        self.k: Mapping[str, Any] = k
+        self.a = a
+        self.k = k
         self.x = x
-        self._t: CancelScope = None
+        self._t: Cancellable | None = None
 
     async def start(self, tg):
         "Task starter. Called from the command."
@@ -45,18 +62,11 @@ class ValueTask:
 
     async def _wrap(self):
         try:
-            err = None
             res = await self.p(*self.a, **self.k)
-        except Exception as exc:  # pylint:disable=broad-exception-caught
-            err = exc
-        except BaseException as exc:  # pylint:disable=broad-exception-caught
-            err = StoppedError(repr(exc))
-        if err is None:
-            await self.reply_result(res)
-        else:
+        except Exception as err:  # pylint:disable=broad-exception-caught
             await self.cmd.reply_error(self.i, err, self.x)
-            if not isinstance(err, Exception):
-                raise err
+            return
+        await self.reply_result(res)
 
     async def reply_result(self, res):
         "forward the task's return value to the caller"
@@ -66,7 +76,7 @@ class ValueTask:
         "cancel the iterator"
         if self._t is not None:
             self._t.cancel()
-            self._t = False
+            self._t = None
 
     async def set_error(self, err):
         "tell the iterator to raise an error"

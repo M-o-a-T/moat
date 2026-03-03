@@ -19,11 +19,15 @@ def get_serial(cfg):
     """
     p = cfg["port"]
     if not isinstance(p, str):
-        pass
+        Ser = p
     elif p == "USB":
-        from moat.micro.part.serial import USBSerial  # noqa: PLC0415
-
-        Ser = USBSerial
+        Ser = getattr(
+            __import__("moat.micro.part.serial", fromlist=("USBSerial",)),
+            "USBSerial",
+            None,
+        )
+        if Ser is None:
+            Ser = NamedSerial
     else:
         Ser = NamedSerial
     return Ser(cfg)

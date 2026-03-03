@@ -48,7 +48,7 @@ class AlertIter:
         self.s = s
 
     async def __aenter__(self):
-        if hasattr(self,"q"):
+        if hasattr(self, "q"):
             raise RuntimeError("already on")
         self.q = q = Queue(10)
         self.ah.q.add(q)

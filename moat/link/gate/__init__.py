@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+from anyio import Lock
 
 from attrs import define, field
 
@@ -18,13 +19,15 @@ from moat.link.node import Node
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
     from moat.util import attrdict
     from moat.lib.codec import Codec
     from moat.link.client import Link, Watcher
 
     from typing import Any
 
-__all__ = ["Gate"]
+__all__ = ["Gate", "GateNode"]
 
 
 class GateVanished(RuntimeError):
@@ -40,9 +43,9 @@ class GateNode(Node):
     in order to resolve bidirectional updates and/or update conflicts.
     """
 
-    ext_meta: dict[str, Any] | None = field(init=False, default=None)
+    ext_meta: Any = field(init=False, default=None)
     ext_data: Any = field(init=False, default=NotGiven)
-    lock: anyio.abc.Lock = field(init=False, factory=anyio.Lock)
+    lock: Lock = field(init=False, factory=Lock)
 
     todo: bool = field(init=False, default=False)
 
@@ -64,6 +67,11 @@ class GateNode(Node):
         if self.ext_data is NotGiven and self.ext_meta is None:
             return False
         return True
+
+    def clear_src(self) -> None:
+        "Mark source data as absent."
+        self._data = NotGiven
+        self._meta = None
 
 
 class Gate:
@@ -99,7 +107,8 @@ class Gate:
 
     state: Node
     src: Node
-    tg: anyio.abc.TaskGroup
+    data: GateNode
+    tg: TaskGroup
     codec: Codec
 
     _src_done: anyio.Event
@@ -127,6 +136,12 @@ class Gate:
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
+    @staticmethod
+    def _gate_node(node: Node) -> GateNode:
+        if isinstance(node, GateNode):
+            return node
+        raise TypeError(f"Expected {GateNode.__name__}, got {type(node).__name__}")
+
     async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the internal data.
@@ -144,7 +159,7 @@ class Gate:
                     # mine, so skip
                     continue
 
-                node = self.data.get(p)
+                node = self._gate_node(self.data.get(p))
                 if self.running or node.has_src:
                     # self.logger.debug("S NOW %r %r %r",p,d,m)
                     await self._set_dst(p, node, d, m)
@@ -185,6 +200,7 @@ class Gate:
         the destination resolver can use to disambiguate.
         """
         node = self.data.get(path)
+        node = self._gate_node(node)
 
         if self.running or node.has_dst:
             await self._set_src(self.cf.src + path, node, data, aux)
@@ -203,7 +219,7 @@ class Gate:
 
             await self.link.d_set(path, data, meta)
 
-            node.set_((), NotGiven, NotGiven)
+            node.clear_src()
             node.ext_data = data
             node.ext_meta = aux or NotGiven
             node.todo = False
@@ -299,7 +315,8 @@ class Gate:
         self.running = True
 
         # resolve any conflicts in the initial data
-        async def visit(path, node):
+        async def visit(path: Path, node: Node):
+            node = self._gate_node(node)
             if not node.todo:
                 return
 
@@ -322,7 +339,10 @@ class Gate:
 
             if d is False:
                 self.logger.debug("SRC %s %s %r/%r", self.path, path, node.data_, node.meta)
-                await self._set_dst(path, node, node.data_, node.meta)
+                meta = node.meta
+                if meta is None:
+                    raise TypeError(f"Missing metadata for source value at {self.path + path}")
+                await self._set_dst(path, node, node.data_, meta)
 
             elif d is True:
                 self.logger.debug("DST %s %s %r/%r", self.path, path, node.ext_data, node.ext_meta)

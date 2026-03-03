@@ -10,6 +10,8 @@ from moat.lib.micro import log
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import builtins
+
     from moat.lib.rpc import RootCmd
 
     from collections.abc import Awaitable
@@ -174,7 +176,7 @@ class _RTC:
             raise exc2 from None
         raise KeyError(name) from None
 
-    async def keys(self, fs: bool | None = None, sync: bool = False) -> set[str]:
+    async def keys(self, fs: bool | None = None, sync: bool = False) -> builtins.set[str]:
         """
         Get the list of available/existing RTC keys.
         """
@@ -331,7 +333,7 @@ class RTCBase:
         """
         return State(self, name)
 
-    async def keys(self) -> set[str]:
+    async def keys(self) -> builtins.set[str]:
         """
         Get all available keys.
         """

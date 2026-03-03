@@ -236,7 +236,7 @@ class Line:
         """Context management for use with :meth:`open` and :meth:`monitor`."""
         if self._line is not None:
             raise OSError("This line is already in use")
-        line = self._chip.request_lines({self._offset: self._settings})
+        line = self._chip.request_lines({(self._offset,): self._settings})
 
         try:
             line.__enter__()

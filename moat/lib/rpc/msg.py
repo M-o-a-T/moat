@@ -66,7 +66,7 @@ class MsgResult(Iterable):
     """
 
     _a: Sequence
-    _kw: OptDict
+    _kw: dict
 
     def __init__(self, a: list, kw: dict):
         self._a = a
@@ -90,10 +90,8 @@ class MsgResult(Iterable):
         return self._a
 
     @property
-    def kw(self) -> Mapping[str, Any]:
+    def kw(self) -> MutableMapping[str, Any]:
         "Retrieve the keywords."
-        if self._kw is None:
-            return {}
         return self._kw
 
     @overload
@@ -156,10 +154,7 @@ class MsgResult(Iterable):
         """
         if isinstance(k, (int, slice)):
             return self._a[k]
-        kw = self._kw
-        if kw is None:
-            raise KeyError(k)
-        return kw[k]
+        return self._kw[k]
 
     def get(self, k: int | str, default=None, nulled=False) -> Any:
         """
@@ -172,11 +167,8 @@ class MsgResult(Iterable):
             except IndexError:
                 return default
         else:
-            kw = self._kw
-            if kw is None:
-                return default
             try:
-                res = kw[k]
+                res = self._kw[k]
             except KeyError:
                 return default
 
@@ -195,7 +187,7 @@ class MsgResult(Iterable):
         """
         if isinstance(k, int):
             return 0 <= k < len(self._a)
-        return False if self._kw is None else k in self._kw
+        return k in self._kw
 
     def __iter__(self) -> Iterator:
         """
@@ -212,7 +204,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's keys."
-        return {}.keys() if self._kw is None else self._kw.keys()
+        return self._kw.keys()
 
     def values(self) -> ValuesView:
         """
@@ -221,7 +213,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's values."
-        return {}.values() if self._kw is None else self._kw.values()
+        return self._kw.values()
 
     def items(self) -> ItemsView:
         """
@@ -229,7 +221,7 @@ class MsgResult(Iterable):
 
         :meta public:
         """
-        return {}.items() if self._kw is None else self._kw.items()
+        return self._kw.items()
 
 
 _link_id = 0
@@ -401,8 +393,8 @@ class Msg(MsgLink, MsgResult):
     # The multiple inheritance problem WRT µPy is resolved below.
 
     _cmd: Path | None = None
-    _a: Sequence  # pyright:ignore
-    _kw: OptDict  # pyright:ignore
+    _a: Sequence
+    _kw: dict
     # also in MsgResult
 
     _stream_in: int = S_NEW
@@ -498,7 +490,7 @@ class Msg(MsgLink, MsgResult):
             await super().kill()
 
     async def ml_send(
-        self, a: Sequence, kw: OptDict | None, flags: int, initial: bool | None = None
+        self, a: Sequence, kw: OptDict, flags: int, initial: bool | None = None
     ) -> None:
         """
         Sender of data to the other side.
@@ -514,7 +506,7 @@ class Msg(MsgLink, MsgResult):
                 self._stream_in = S_ON
         await super().ml_send(a, kw, flags)
 
-    async def ml_recv(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """
         Receiver for data from the other side.
         """
@@ -610,13 +602,15 @@ class Msg(MsgLink, MsgResult):
         """
         await self.ml_send(a, kw, B_ERROR)
 
-    def _set_msg(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
+    def _set_msg(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """
         A message has arrived on this stream. Store and set an event.
         """
         if flags & B_ERROR:
             msg = outcome.Error(StreamError(a))
         else:
+            if kw is None:
+                kw = {}
             msg = outcome.Value((a, kw))
 
         if self._msg is None:
@@ -721,7 +715,7 @@ class Msg(MsgLink, MsgResult):
                 Typically a ``cmd_*`` method.
         """
         try:
-            res = cmd(*self._a, **({} if self._kw is None else self._kw))
+            res = cmd(*self._a, **self._kw)
             if is_async(res):
                 res = await res
         except Exception as exc:
@@ -818,7 +812,7 @@ class Msg(MsgLink, MsgResult):
         if isinstance(msg, outcome.Error):
             msg.unwrap()
             return
-        msg = cast("outcome.Value[tuple[list, OptDict]]", msg)
+        msg = cast("outcome.Value[tuple[list, dict]]", msg)
         self._a, self._kw = msg.unwrap()
 
     def __aiter__(self) -> Self:
@@ -887,7 +881,7 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf, a: Sequence, kw: OptDict | None, flag: int, initial: bool = False):
+    def __init__(self, slf, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
         self.slf = slf
         self.a = a
         self.kw = kw

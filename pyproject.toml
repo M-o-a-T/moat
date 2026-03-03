@@ -250,6 +250,7 @@ include = [
     "moat/db/thing/",
     "moat/lib/",
     "moat/link/",
+    "moat/micro/",
     "moat/util/",
 ]
 exclude = [
@@ -259,6 +260,11 @@ exclude = [
     "packaging/**",
     "docs/**",
     "moat/lib/victron/**",
+    "moat/micro/_embed/**",
+    "moat/micro/**/_test.py",
+    "moat/micro/**/_test/**",
+    "moat/micro/part/pin.py",
+    "moat/micro/romfs.py",
     "moat/link/gate/kv.py",
 ]
 

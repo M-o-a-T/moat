@@ -6,13 +6,13 @@ from __future__ import annotations
 
 from moat.lib.broadcast import Broadcaster
 from moat.lib.micro import AC_use, TaskGroup
+from moat.lib.path import Path
 from moat.lib.pid import CPID
 from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.path import Path
     from moat.lib.rpc import Msg, MsgSender
 
 _state_d = dict(t="int:last time", e="float:error", i="float:integral")
@@ -96,7 +96,7 @@ class PID(BaseCmd):
             self.state_rtc = sr = self.root.sub_at(self.state_path)
             await sr.rdy_()
         if sr is not None:
-            await sr.w(self.pid.state, fs=False)
+            await sr.cmd(Path.build(("w",)), self.pid.state, fs=False)
         return self.pid.sum(s)
 
     doc_sp = dict(

@@ -265,6 +265,8 @@ nitpick_ignore = [
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
     ("py:class", "coroutine"),
+    ("py:class", "pathlib._local.PurePath"),
+    ("py:class", "pathlib._local.PosixPath"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),

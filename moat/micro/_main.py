@@ -52,7 +52,7 @@ def catch_errors(fn):
         try:
             return await fn(*a, **k)
         except (NoPathError, ConnectionRefusedError) as e:
-            raise click.ClickException(e)  # noqa:B904
+            raise click.ClickException(str(e))  # noqa:B904
         except Exception as e:
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
@@ -298,7 +298,7 @@ async def sync_(ctx, **kw):
             if update:
                 await do_update(dst, root, cross, hsh)
             for s in source:
-                await do_copy(s, root, dest, cross)
+                await do_copy(s, root, dest, cross if cross != "-" else None)
             if boot:
                 await rsys.boot(code="SysBooT", m=1)
 

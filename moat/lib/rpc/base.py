@@ -17,7 +17,7 @@ from moat.util.exc import ungroup
 from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING or DOC:
@@ -34,7 +34,7 @@ if TYPE_CHECKING or DOC:
     from typing import Any, Literal, Protocol, Self
 
     Key = str | int | bool
-    OptDict = Mapping[str, Any] | None
+    OptDict = MutableMapping[str, Any] | None
     _SdrPath = tuple["MsgRoot", Path]
 
     class MsgRoot(Protocol):
@@ -319,6 +319,14 @@ class MsgSender(BaseMsgHandler):
             sb = self.sub_at(Path.build((elem,)))
             setattr(self, elem, sb)
         return sb
+
+    def __getattr__(self, x: str) -> MsgSender:
+        """
+        Return a sub-sender for this path element.
+        """
+        return self.sub_at(Path.build((x,)))
+
+    __getitem__ = __getattr__
 
 
 class SubMsgSender(MsgSender):

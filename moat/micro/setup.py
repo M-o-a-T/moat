@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 from anyio import Path as FSPath
+from anyio.to_thread import run_sync as run_sync_thread
 from contextlib import suppress
 from pprint import pformat
 from shutil import copy as copy_fs
@@ -20,7 +21,7 @@ import asyncclick as click
 from moat.util import NotGiven, get_part, merge, ungroup
 from moat.lib.codec import get_codec
 from moat.lib.micro import idle, log
-from moat.lib.path import P, Path
+from moat.lib.path import P
 from moat.lib.rpc import RootCmd
 from moat.micro.util import run_update
 from moat.util.exec import run as run_cmd
@@ -31,7 +32,7 @@ all = ["setup", "install", "do_update", "do_copy"]  # noqa: A001
 
 
 async def do_update(dst, root, cross, hfn):  # noqa: D103
-    from moat.micro.files import copytree  # noqa: PLC0415
+    from moat.micro.files import APath, copytree  # noqa: PLC0415
 
     await run_update(dst / "lib", cross=cross, hash_fn=hfn)
 
@@ -40,16 +41,16 @@ async def do_update(dst, root, cross, hfn):  # noqa: D103
     import moat.micro._embed  # noqa: PLC0415
 
     p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
-    await copytree(p / "boot.py", root / "boot.py", cross=None)
+    await copytree(APath(p / "boot.py"), root / "boot.py", cross=None)
     if not await (root / "main.py").exists():
-        await copytree(p / "main.py", root / "main.py", cross=None)
+        await copytree(APath(p / "main.py"), root / "main.py", cross=None)
 
 
 async def do_copy(
     source: anyio.Path,
     dst: anyio.Path,
     dest: str | None,
-    cross: str,
+    cross: str | anyio.Path | None,
     wdst: anyio.Path | None = None,
 ):
     """
@@ -59,7 +60,7 @@ async def do_copy(
 
     @cross is the path of the mpy-cross executable.
     """
-    from .files import copy_over  # noqa: PLC0415
+    from .files import APath, copy_over  # noqa: PLC0415
 
     if not dest:
         dest = str(source)
@@ -69,7 +70,8 @@ async def do_copy(
             dst /= dest
     else:
         dst /= dest
-    await copy_over(source, dst, cross=cross, wdst=wdst)
+    awdst = None if wdst is None else APath(wdst)
+    await copy_over(source, dst, cross=cross, wdst=awdst)
 
 
 def _clean_cfg(cfg):
@@ -90,10 +92,10 @@ async def setup(
     reset: bool = False,
     state: str | None = None,
     config: dict | None = None,
-    cross: str | None = None,
+    cross: str | anyio.Path | None = None,
     update: bool = False,
     watch: bool = False,
-    main: str = False,
+    main: str | anyio.Path | bool | None = False,
     config_file: str = "moat.cfg",
 ):
     """
@@ -121,10 +123,12 @@ async def setup(
 
     if cross == "-":
         cross = None
+    elif cross is not None:
+        cross = str(cross)
 
     if kill:
         async with (
-            RootCmd(cfg, run=True) as dsp,
+            RootCmd(cfg) as dsp,
             dsp.sub_at(cfg.remote) as sd,
             RemoteBufAnyio(sd) as ser,
             DirectREPL(ser) as repl,
@@ -208,12 +212,13 @@ async def setup(
             dst = MoatDevPath(root).connect_repl(repl)
             if source:
                 if rom:
-                    from .romfs import make_romfs, write_rom  # noqa:PLC0415
+                    from .romfs import make_romfs, write_romfs  # noqa:PLC0415
 
                     async with anyio.TemporaryDirectory() as tf:
-                        await do_copy(source, dst, dest, cross, wdst=tf)
-                        rom = await make_romfs(tf)
-                        await write_rom(sd, tf)
+                        wdst = anyio.Path(tf)
+                        await do_copy(source, dst, dest, cross, wdst=wdst)
+                        rom_data = await make_romfs(wdst, cross)
+                        await write_romfs(sd, rom_data)
                 else:
                     await do_copy(source, dst, dest, cross)
             if state and not watch:
@@ -230,10 +235,12 @@ async def setup(
                 await copy_over(f, MoatDevPath(config_file).connect_repl(repl))
 
             if main:
-                from moat.micro.files import copytree  # noqa: PLC0415
+                from moat.micro.files import APath, copytree  # noqa: PLC0415
 
                 await copytree(
-                    anyio.Path(main), MoatDevPath(".").connect_repl(repl) / "main.py", cross=None
+                    APath(anyio.Path(str(main))),
+                    MoatDevPath(".").connect_repl(repl).joinpath("main.py"),
+                    cross=None,
                 )
 
             if update:
@@ -287,7 +294,7 @@ def find_p(prog: str):
     return None
 
 
-async def install_(cfg, dest: Path = None):
+async def install_(cfg, dest: str | anyio.Path | None = None):
     """
     Install our version of MicroPython to a device.
     """
@@ -373,7 +380,7 @@ async def install_(cfg, dest: Path = None):
         if build_tmp:
             await (build_tmp).symlink_to(build_dir)
         if board_tmp:
-            await anyio.to_thread.run_sync(copytree_fs, str(board_dir), str(board_tmp))
+            await run_sync_thread(copytree_fs, str(board_dir), str(board_tmp))
 
         await run_cmd(
             "make",
@@ -403,11 +410,12 @@ async def install_(cfg, dest: Path = None):
                     await (portdir / build_tmp).unlink()
             if board_tmp:
                 with suppress(OSError), ungroup:
-                    await anyio.to_thread.run_sync(rmtree, str(board_tmp))
+                    await run_sync_thread(rmtree, str(board_tmp))
 
     if device == "rp2":
         if isinstance(dest, str):
             dest = anyio.Path(dest)
+        assert dest is not None
         df = dest / "INFO_UF2.TXT"
         if not await df.exists():
             print(f"Waiting for RPI in {dest} ", end="")
@@ -417,7 +425,7 @@ async def install_(cfg, dest: Path = None):
                 await anyio.sleep(1)
             print("… found.")
 
-        await anyio.to_thread.run_sync(
+        await run_sync_thread(
             copy_fs,
             portdir / "build-RPI_PICO/" / "firmware.uf2",
             dest,
@@ -436,5 +444,5 @@ async def install_(cfg, dest: Path = None):
         run=True,
         update=True,
         state="once",
-        cross=mpydir / "mpy-cross" / "build" / "mpy-cross",
+        cross=str(mpydir / "mpy-cross" / "build" / "mpy-cross"),
     )

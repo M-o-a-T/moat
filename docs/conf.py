@@ -257,6 +257,8 @@ nitpick_ignore = [
     ("py:obj", "NotGiven"),
     ("py:obj", "moat.lib.broadcast._impl.TData"),
     ("py:obj", "moat.link.backend.TData"),
+    ("py:class", "moat.link.client.DataSender"),
+    ("py:class", "moat.link.client.ErrSender"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),

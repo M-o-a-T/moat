@@ -249,9 +249,7 @@ include = [
     "moat/db/label/",
     "moat/db/thing/",
     "moat/lib/",
-    "moat/link/_data.py",
-    "moat/link/_test.py",
-    "moat/link/host.py",
+    "moat/link/",
     "moat/micro/",
     "moat/util/",
 ]
@@ -271,6 +269,7 @@ exclude = [
     "moat/micro/part/pin.py",
     "moat/micro/romfs.py",
     "moat/micro/setup.py",
+    "moat/link/gate/kv.py",
 ]
 
 [tool.ty.rules]

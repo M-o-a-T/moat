@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import sys
 
-from moat.lib.micro import Event, L
+from moat.lib.micro import Event, L, idle
 from moat.lib.path import Path
-from moat.lib.rpc import Auth, BaseSubCmd, DirCmd, MsgHandler, MsgSender
+from moat.lib.rpc import Auth, BaseSuperCmd, LoadCmd, MsgHandler, MsgSender
 from moat.lib.rpc.auth._base import AuthDenied
 from moat.lib.rpc.nest import CmdStream
 
@@ -17,31 +17,7 @@ from typing import TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from moat.util import attrdict
     from moat.lib.path import PathElem
-    from moat.lib.rpc import BaseCmdMsg, Msg
-
-    from collections.abc import Awaitable, Callable
-
-
-class _SecuredSubRoot(MsgHandler):
-    """
-    Internal root that exposes this command's sub-apps.
-    """
-
-    def __init__(self, parent: Cmd):
-        self.parent = parent
-
-    async def handle(self, msg: Msg, rcmd: list[PathElem]):
-        if not rcmd:
-            raise KeyError(msg.cmd)
-        scmd = rcmd.pop()
-        sub = BaseSubCmd.find_sub(self.parent, scmd)
-        if sub is None:
-            raise KeyError(scmd)
-        sub_h = cast(
-            "Callable[[Msg, list[PathElem]], Awaitable[object]]",
-            getattr(sub, "handle", sub),
-        )
-        return await sub_h(msg, rcmd)
+    from moat.lib.rpc import BaseCmd, BaseCmdMsg, Msg
 
 
 class _AuthBridge:
@@ -142,7 +118,7 @@ class _AuthBridge:
         return await self._stream.handle(msg, rcmd)
 
 
-class Cmd(DirCmd):
+class Cmd(BaseSuperCmd):
     """
     Expose a protected subtree via a single authenticated stream.
 
@@ -150,7 +126,7 @@ class Cmd(DirCmd):
 
     - ``auth``: authentication configuration.
     - ``path``: optional path to a pre-existing subtree.
-    - Otherwise, local sub-apps are defined by normal ``DirCmd`` style entries.
+    - Otherwise, ``cfg`` contains the protected app's configuration.
     """
 
     doc = dict(
@@ -158,12 +134,12 @@ class Cmd(DirCmd):
             _d="secured nested RPC stream",
             auth="dict:auth config",
             path="path:forward to this subtree",
-            _n="app:sub-app",
+            cfg="cfg:protected app config",
         )
     )
 
     _target_path: Path | None = None
-    _sub_root: _SecuredSubRoot | None = None
+    _app: BaseCmd | None = None
 
     async def setup(self):
         """Validate configuration before startup."""
@@ -171,73 +147,45 @@ class Cmd(DirCmd):
         if "auth" not in self.cfg:
             raise ValueError(f"{self.path}: Missing auth configuration")
 
-        local_apps = False
-        for value in self.cfg.values():
-            try:
-                if value.get("running", True) and isinstance(value.get("app", None), str):
-                    local_apps = True
-                    break
-            except AttributeError:
-                continue
-
         path = self.cfg.get("path", None)
+        cfg = self.cfg.get("cfg", None)
         if path is not None:
             self._target_path = Path.build(path)
-            if local_apps:
-                raise ValueError(f"{self.path}: can't combine 'path' with local app entries")
+            if cfg is not None:
+                raise ValueError(f"{self.path}: can't combine 'path' with 'cfg'")
         else:
-            if not local_apps:
-                raise ValueError(f"{self.path}: need either 'path' or local app entries")
-            self._sub_root = _SecuredSubRoot(self)
-
-    async def _setup_apps(self):
-        """
-        Setup sub-apps while ignoring non-app helper mappings.
-        """
-        from moat.lib.rpc import LoadCmd  # noqa: PLC0415
-
-        gcfg = self.cfg
-        root = self.root
-        if root is None:
-            raise RuntimeError("No root set")
-        root.cfg_reloaded(gcfg)
-
-        apps = {}
-        for k, v in gcfg.items():
-            if k in {"auth", "path", "debug"}:
-                continue
-            try:
-                if not v.get("running", True):
-                    continue
-                nam = v.get("app", None)
-                if not isinstance(nam, str):
-                    continue
-                apps[k] = v
-            except AttributeError:
-                continue
-
-        for name in list(self.sub.keys()):
-            if name not in apps:
-                await self.detach(name)
-
-        for name in apps:
-            if name in self.sub:
-                continue
-            cfg = gcfg[name]
-            await self.attach(name, LoadCmd(cfg))
-
-        for app in self.sub.values():
-            await self.start_app(app)
-
-        if L:
-            for app in self.sub.values():
-                if app.cfg.get("wait", True):
-                    await app.wait_ready()
-            self.set_ready()
+            if cfg is None:
+                raise ValueError(f"{self.path}: need either 'path' or 'cfg'")
+            self._app = LoadCmd(cfg)
+            if self._app is None:
+                raise ValueError(f"{self.path}: protected app is disabled")
+            self._app.attached(self, None)
 
     def find_sub(self, scmd):  # noqa: D102
         scmd  # noqa: B018
         return None
+
+    async def task(self):
+        """Start the protected app (if local), then idle."""
+        if self._app is not None:
+            await self.start_app(self._app)
+            if L and self._app.cfg.get("wait", True):
+                await self._app.wait_ready()
+        if L:
+            self.set_ready()
+        await idle()
+
+    if L:
+
+        async def wait_ready(self, wait=True):
+            """Check readiness of this app and its protected local app."""
+            if (w := await super().wait_ready(wait=wait)) is None:
+                return None
+            if self._app is None:
+                return w
+            if (aw := await self._app.wait_ready(wait=wait)) is None:
+                return None
+            return w or aw
 
     async def stream(self, msg: Msg):
         """Open the authenticated nested command stream."""
@@ -247,12 +195,12 @@ class Cmd(DirCmd):
         if root is None:
             raise RuntimeError("No root")
 
-        if self._target_path is None:
-            if self._sub_root is None:
-                raise RuntimeError("No secured sub-root")
-            target = MsgSender(self._sub_root)
-        else:
+        if self._target_path is not None:
             target = root.sender.sub_at(self._target_path)
+        elif self._app is not None:
+            target = MsgSender(self._app)
+        else:
+            raise RuntimeError("No protected target")
 
         async with msg.stream():
             bridge = _AuthBridge(

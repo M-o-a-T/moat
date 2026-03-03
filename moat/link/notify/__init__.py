@@ -14,7 +14,7 @@ from moat.util import CtxObj, NotGiven, as_service, attrdict
 from moat.lib.path import P, Path
 from moat.lib.priomap import PrioMap
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.link.client import Link
@@ -36,7 +36,7 @@ class Notify:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dropped: PrioMap[Notifier] = PrioMap()
+        self.dropped: PrioMap[Notifier, float] = PrioMap()
 
     async def run(self, link: Link, evt: anyio.Event | None = None):
         """
@@ -85,7 +85,7 @@ class Notify:
             if t > tm:
                 break
             del self.dropped[b_e]
-            retry.add(cast("Notifier", b_e))
+            retry.add(b_e)
 
         for name, b_e in list(self._backends.items()):
             if b_e in self.dropped:

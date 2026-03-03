@@ -26,13 +26,19 @@ EDIT_SAVE = "s"
 EDIT_ABORT = "a"
 
 
-def _sanitize_vars(value: Any) -> dict[str, Any]:
+def _sanitize_vars(value: Any) -> dict[str | None, Any]:
     "Normalize the configured argument defaults."
     if value in (NotGiven, None):
         return {}
     if not isinstance(value, Mapping):
         raise TypeError("vars must be a mapping")
-    return dict(value)
+    res: dict[str | None, Any] = {}
+    for key, val in value.items():
+        if key is None or isinstance(key, str):
+            res[key] = val
+        else:
+            raise TypeError("vars keys must be strings")
+    return res
 
 
 def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:

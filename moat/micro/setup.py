@@ -49,7 +49,7 @@ async def do_copy(
     source: anyio.Path,
     dst: anyio.Path,
     dest: str | None,
-    cross: str,
+    cross: str | None,
     wdst: anyio.Path | None = None,
 ):
     """

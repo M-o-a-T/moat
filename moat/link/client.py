@@ -97,14 +97,6 @@ if TYPE_CHECKING:
         ok: Callable[..., Awaitable[Any]]
         mon: Callable[..., AbstractAsyncContextManager[Any]]
 
-else:
-
-    class DataSender:
-        "Runtime placeholder for typing-only sender protocol."
-
-    class ErrSender:
-        "Runtime placeholder for typing-only sender protocol."
-
 
 NotGivenType = type(NotGiven)
 
@@ -117,8 +109,6 @@ __all__ = [
     "BasicLink",
     "ClientCaller",
     "CodeCaller",
-    "DataSender",
-    "ErrSender",
     "Link",
     "LinkCommon",
     "LinkSender",

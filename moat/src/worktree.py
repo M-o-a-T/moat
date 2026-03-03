@@ -53,20 +53,25 @@ def _submodule_paths(status: str) -> list[Path]:
     return res
 
 
-async def _read_submodule_list(base: Path, debug: int = 0) -> str | None:
+async def _read_submodule_list(base: Path, debug: int = 0) -> str:
     """Read submodule status/list information."""
     if not (base / ".git").exists():
         return ""
-    return await run_("git", "submodule", cwd=base, capture=True, echo=debug > 1)
+    res = await run_("git", "submodule", cwd=base, capture=True, echo=debug > 1)
+    if res is None:
+        return ""
+    return res
 
 
 async def _collect_submodules(base: Path, rel: Path = Path(), debug: int = 0) -> list[Path]:
     """Collect all submodule paths below ``base`` recursively."""
     status = await _read_submodule_list(base, debug=debug)
-    res: list[tuple[Path, str | None]] = []
-    if status is not None:
+    res: list[Path] = []
+    if status:
         for sub in _submodule_paths(status):
             path = rel / sub
+            if not (path / ".git").exists():
+                continue
             res.append(path)
             res.extend(await _collect_submodules(base / sub, path, debug=debug))
     return res
@@ -113,12 +118,16 @@ def _parse_worktree_list(data: str) -> dict[Path, str | None]:
 async def _read_worktree_list(base: Path) -> dict[Path, str | None]:
     """Read worktree metadata for ``base``."""
     data = await run_("git", "worktree", "list", cwd=base, capture=True)
+    if data is None:
+        return {}
     return _parse_worktree_list(data)
 
 
 async def _read_current_branch(base: Path, debug: int = 0) -> str | None:
     """Read the current branch name for ``base``."""
     branch = await run_("git", "branch", "--show-current", cwd=base, capture=True, echo=debug > 1)
+    if branch is None:
+        return None
     branch = branch.strip()
     if not branch:
         return None

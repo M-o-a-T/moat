@@ -102,9 +102,12 @@ class Gate(_Gate):  # noqa: D101
                         continue
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
         "update destination"
-        meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
+        if meta is None:
+            meta = MsgMeta(origin=self.origin)
+        else:
+            meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
             await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
         elif self.codecs is not None:
@@ -137,13 +140,15 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = meta
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta) -> bool:
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:
         """
         Test whether this is an update.
 
         @data is currently ignored.
         """
         data  # noqa:B018
+        if aux is None:
+            return True
         # if the old metadata match the new, it's not an update.
         try:
             if node.ext_meta.origin == aux.origin and node.ext_meta.timestamp == aux.timestamp:

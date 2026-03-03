@@ -94,7 +94,7 @@ class Gate(DelayedGate):
                     continue
                 await self.set_src(p, d, m)
 
-    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta):
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None):
         """
         Queue an update to the remote server, with filtering.
         """
@@ -103,21 +103,29 @@ class Gate(DelayedGate):
             return
         await super()._set_dst(path, node, data, meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
         """
         Send data to the remote server.
         """
-        remote_meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
+        if meta is None:
+            remote_meta = MsgMeta(origin=self.origin)
+        else:
+            remote_meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         await self._remote.d_set(self.cf.src + path, data, remote_meta)
         node.ext_meta = remote_meta
 
-    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):  # noqa: ARG002
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:  # noqa: ARG002
         """
         Test whether this is an update from the remote.
         """
+        if aux is None:
+            return True
+        ext_meta = node.ext_meta
+        if not isinstance(ext_meta, MsgMeta):
+            return True
         # If the metadata match, it's not an update
         try:
-            if node.ext_meta.origin == meta.origin and node.ext_meta.timestamp == meta.timestamp:
+            if ext_meta.origin == aux.origin and ext_meta.timestamp == aux.timestamp:
                 return False
         except (AttributeError, KeyError):
             pass
@@ -130,27 +138,32 @@ class Gate(DelayedGate):
         This is called at startup when both sides have data.
         """
         # If the remote has no metadata, assume it's newer (shouldn't happen)
-        if not node.ext_meta:
+        ext_meta = node.ext_meta
+        meta = node.meta
+        if not isinstance(ext_meta, MsgMeta):
+            return True
+        if meta is None:
             return True
 
         # If the local message is from us, the remote is newer
-        if self.origin == node.meta.origin:
+        if self.origin == meta.origin:
             return True
 
         # If the remote message is from us, the local is newer
-        if self.origin == node.ext_meta.origin:
+        if self.origin == ext_meta.origin:
             return False
 
         # If the local has a copy of the remote metadata, check if data matches
-        if "gw" in node.meta:
-            if node.meta["gw"] == node.ext_meta:
+        gw_meta = meta.kw.get("gw", None)
+        if gw_meta is not None:
+            if gw_meta == ext_meta:
                 return None if node.data_ == node.ext_data else True
             else:
                 return True
 
         # If timestamps are too close, can't decide
-        if abs(node.ext_meta.timestamp - node.meta.timestamp) < 0.1:
+        if abs(ext_meta.timestamp - meta.timestamp) < 0.1:
             return None
 
         # Use the message with the newer timestamp
-        return node.ext_meta.timestamp > node.meta.timestamp
+        return ext_meta.timestamp > meta.timestamp

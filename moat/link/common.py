@@ -31,6 +31,16 @@ class _Sub_i(MsgHandler):
     def __init__(self, parent: CmdCommon):
         super().__init__(parent.cfg)
 
+    doc_backend = dict(_d="Return backend configuration", _r="dict:backend config")
+
+    def cmd_backend(self) -> dict:
+        """
+        Return the backend configuration.
+
+        This is used by clients to discover which backend a server uses.
+        """
+        return self.cfg.backend
+
     doc_ping = dict(_d="Ping, echo", _r="Any: sends all args and keys back")
     doc_乒 = doc_ping  # noqa:PLC2401
 

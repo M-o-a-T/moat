@@ -320,6 +320,14 @@ class MsgSender(BaseMsgHandler):
             setattr(self, elem, sb)
         return sb
 
+    def __getattr__(self, x: str) -> MsgSender:
+        """
+        Return a sub-sender for this path element.
+        """
+        return self.sub_at(Path.build((x,)))
+
+    __getitem__ = __getattr__
+
 
 class SubMsgSender(MsgSender):
     """

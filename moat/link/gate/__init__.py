@@ -211,7 +211,7 @@ class Gate:
             node.ext_meta = aux or NotGiven
             node.todo = True
 
-    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta):
+    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None):
         async with node.lock:
             if not self.is_update(node, data, aux):
                 return
@@ -226,7 +226,7 @@ class Gate:
             node.ext_meta = aux or NotGiven
             node.todo = False
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
         """
         Called to update the destination state. @meta is the source
         metadata, in case it is useful in some way.
@@ -235,7 +235,7 @@ class Gate:
         """
         raise NotImplementedError
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta):  # noqa: ARG002
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None):  # noqa: ARG002
         """
         Check whether this new destination data is an update.
 
@@ -430,18 +430,20 @@ class DelayedGate(Gate):
         self._delay = cf.get("delay", 0.1)
         self._pending = TimerMap()
 
-    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta):
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None):
         """
         Queue an update to the destination, with delay.
         """
         # Cancel any pending update from the other direction for the same path
         with suppress(KeyError):
-            del self._pending[(path, False)]  # cancel pending src update
+            del self._pending[
+                _DelayedUpdate(path=path, data=NotGiven, meta=None, node=node, to_dst=False)
+            ]
 
         update = _DelayedUpdate(path=path, data=data, meta=meta, node=node, to_dst=True)
         self._pending[update] = self._delay
 
-    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta):
+    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None):
         """
         Queue an update to the source, with delay.
 
@@ -453,7 +455,9 @@ class DelayedGate(Gate):
 
         # Cancel any pending update from the other direction for the same path
         with suppress(KeyError):
-            del self._pending[(rel_path, True)]  # cancel pending dst update
+            del self._pending[
+                _DelayedUpdate(path=rel_path, data=NotGiven, meta=None, node=node, to_dst=True)
+            ]
 
         update = _DelayedUpdate(path=rel_path, data=data, meta=aux, node=node, to_dst=False)
         self._pending[update] = self._delay
@@ -468,11 +472,12 @@ class DelayedGate(Gate):
                     # Send to destination
                     update.node.ext_data = NotGiven
                     update.node.ext_meta = NotGiven
-                    update.node.set_(update.path, update.data, update.meta)
+                    meta = update.meta if update.meta is not None else MsgMeta(origin=self.origin)
+                    update.node.set_(update.path, update.data, meta)
                     update.node.todo = False
 
                     async with update.node.lock:
-                        await self.set_dst(update.path, update.data, update.meta, update.node)
+                        await self.set_dst(update.path, update.data, meta, update.node)
                 else:
                     # Send to source
                     async with update.node.lock:
@@ -484,7 +489,7 @@ class DelayedGate(Gate):
 
                         await self.link.d_set(self.cf.src + update.path, update.data, meta)
 
-                        update.node.set_((), NotGiven, NotGiven)
+                        update.node.clear_src()
                         update.node.ext_data = update.data
                         update.node.ext_meta = update.meta or NotGiven
                         update.node.todo = False

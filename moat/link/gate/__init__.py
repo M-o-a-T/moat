@@ -441,30 +441,34 @@ class DelayedGate(Gate):
         Background task that processes pending updates when their timers expire.
         """
         async for update in self._pending:
-            if update.to_dst:
-                # Send to destination
-                update.node.ext_data = NotGiven
-                update.node.ext_meta = NotGiven
-                update.node.set_(update.path, update.data, update.meta)
-                update.node.todo = False
-
-                async with update.node.lock:
-                    await self.set_dst(update.path, update.data, update.meta, update.node)
-            else:
-                # Send to source
-                async with update.node.lock:
-                    if not self.is_update(update.node, update.data, update.meta):
-                        continue
-                    meta = MsgMeta(origin=self.origin)
-                    if update.meta not in (None, NotGiven):
-                        meta["gw"] = update.meta
-
-                    await self.link.d_set(self.cf.src + update.path, update.data, meta)
-
-                    update.node.set_((), NotGiven, NotGiven)
-                    update.node.ext_data = update.data
-                    update.node.ext_meta = update.meta or NotGiven
+            try:
+                if update.to_dst:
+                    # Send to destination
+                    update.node.ext_data = NotGiven
+                    update.node.ext_meta = NotGiven
+                    update.node.set_(update.path, update.data, update.meta)
                     update.node.todo = False
+
+                    async with update.node.lock:
+                        await self.set_dst(update.path, update.data, update.meta, update.node)
+                else:
+                    # Send to source
+                    async with update.node.lock:
+                        if not self.is_update(update.node, update.data, update.meta):
+                            continue
+                        meta = MsgMeta(origin=self.origin)
+                        if update.meta not in (None, NotGiven):
+                            meta["gw"] = update.meta
+
+                        await self.link.d_set(self.cf.src + update.path, update.data, meta)
+
+                        update.node.set_((), NotGiven, NotGiven)
+                        update.node.ext_data = update.data
+                        update.node.ext_meta = update.meta or NotGiven
+                        update.node.todo = False
+            except AttributeError:
+                # Connection is being closed during shutdown, ignore
+                return
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """

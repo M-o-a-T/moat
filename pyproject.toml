@@ -251,7 +251,9 @@ include = [
     "moat/lib/",
     "moat/link/_data.py",
     "moat/link/_test.py",
+    "moat/link/client.py",
     "moat/link/host.py",
+    "moat/link/server/_server.py",
     "moat/util/",
 ]
 exclude = [

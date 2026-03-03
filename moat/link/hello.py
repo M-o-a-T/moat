@@ -33,7 +33,9 @@ class NotAuthorized(RuntimeError):  # noqa: D101
     pass
 
 
-def _to_dict(x: list[AuthMethod]) -> dict[str, AuthMethod]:
+def _to_dict(x: dict[str, AuthMethod] | list[AuthMethod]) -> dict[str, AuthMethod]:
+    if isinstance(x, dict):
+        return x
     return {a.name: a for a in x}
 
 
@@ -113,6 +115,23 @@ class Hello(CmdCommon):
 
     Negotiated auth data are in ``.auth_data``.
     """
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            me: str | None = None,
+            them: str | None = None,
+            *,
+            auth_in: dict[str, AuthMethod] | list[AuthMethod] = ...,
+            auth_out: dict[str, AuthMethod] | list[AuthMethod] = ...,
+            rpc_auth_modes: tuple[str, ...] | None = None,
+            rpc_auth_data: dict[str, Any] = ...,
+            rpc_auth_server: bool | None = None,
+            me_server: bool = False,
+            protocol_min: int = proto_version_min,
+            protocol_max: int = proto_version,
+        ) -> None: ...
 
     me: str | None = field(default=None)
     them: str | None = field(default=None)

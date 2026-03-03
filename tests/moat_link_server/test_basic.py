@@ -400,3 +400,21 @@ async def test_i_backend(cfg):
         backend = r.kw
         assert "driver" in backend
         assert backend["driver"] == "mqtt"
+
+
+@pytest.mark.anyio
+async def test_link_only(cfg):
+    "Check that Link with only parameter connects to named server."
+    from moat.link.client import Link  # noqa: PLC0415
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        server_name = srv.name
+
+        # Create a client that connects only to the named server
+        async with Link(sf.cfg, only=server_name) as c:
+            # Verify we can communicate
+            r = await c.cmd(P("i.乒"), "test")
+            assert r.args == ["乓", "test"]
+            # Verify we connected to the expected server
+            assert c.link.server_name == server_name

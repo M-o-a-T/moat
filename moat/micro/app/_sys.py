@@ -12,6 +12,11 @@ from moat.lib.proxy import Proxy, drop_proxy
 from moat.lib.rpc import BaseCmd
 from moat.micro.util import TEST_MAGIC
 
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class Cmd(BaseCmd):
     """
@@ -100,7 +105,7 @@ class Cmd(BaseCmd):
 
         # call it?
         if a is not None or k is not None:
-            res = res(*(a or ()), **(k or {}))
+            res = cast("Callable", res)(*(a or ()), **(k or {}))
             if hasattr(res, "throw"):
                 res = await res
 
@@ -152,4 +157,10 @@ class Cmd(BaseCmd):
         """
         Return the current time.
         """
-        return {"t": time.time(), "ms": time.ticks_ms(), "us": time.ticks_us()}
+        f_ms = getattr(time, "ticks_ms", None)
+        f_us = getattr(time, "ticks_us", None)
+        return {
+            "t": time.time(),
+            "ms": f_ms() if callable(f_ms) else int(time.time() * 1000),
+            "us": f_us() if callable(f_us) else int(time.time() * 1000000),
+        }

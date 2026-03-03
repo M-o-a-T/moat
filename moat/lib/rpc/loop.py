@@ -24,7 +24,7 @@ else:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgHandler,MsgRoot
+    from moat.lib.rpc import MsgRoot
 
 __all__ = ["StreamLoop"]
 

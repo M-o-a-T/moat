@@ -12,15 +12,17 @@ from moat.lib.stream import UnixLink
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.stream import BaseBuf
     from types import CoroutineType
+
+    from moat.lib.stream import BaseBuf
+
     from typing import Any
 
 
 class Raw(BaseCmdBBM):
     """Sends/receives raw data over a Unix socket."""
 
-    def stream(self) -> CoroutineType[Any,Any,BaseBuf]:
+    def stream(self) -> CoroutineType[Any, Any, BaseBuf]:
         """Returns the Unix socket stream."""
         return AC_use(
             self,

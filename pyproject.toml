@@ -263,12 +263,8 @@ exclude = [
     "moat/micro/_embed/**",
     "moat/micro/**/_test.py",
     "moat/micro/**/_test/**",
-    "moat/micro/direct.py",
-    "moat/micro/files.py",
-    "moat/micro/fuse.py",
     "moat/micro/part/pin.py",
     "moat/micro/romfs.py",
-    "moat/micro/setup.py",
     "moat/link/gate/kv.py",
 ]
 

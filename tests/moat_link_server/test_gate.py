@@ -17,7 +17,9 @@ from moat.lib.codec import get_codec
 from moat.lib.path import P
 from moat.link._data import backend_get, data_get
 from moat.link._test import Scaffold
+from moat.link.client import Link
 from moat.link.gate import DelayedGate, run_gate
+from moat.link.gate.link import Gate as LinkGate
 from moat.link.meta import MsgMeta
 
 
@@ -454,3 +456,79 @@ async def test_delayed_gate_cancellation(cfg):
             assert gate.dst_store.get(P("a")) != 1
 
             tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_link_gate_sync(cfg):
+    """
+    Test Link gate synchronization between two servers.
+
+    This tests that changes propagate bidirectionally via the link gate:
+    1. Set up two servers on the same MQTT broker
+    2. Create data on main server
+    3. Start link gateway between the servers
+    4. Verify data propagates to remote server
+    5. Make changes on both sides while gateway is running
+    6. Verify bidirectional synchronization
+    """
+    async with Scaffold(cfg, use_servers=True) as sf:
+        # Start two servers
+        await sf.server(init={"test": 1}, name="S_main")
+        await sf.server(init={"test": 2}, name="S_remote")
+
+        # Get client to main server (default)
+        c_main = await sf.client()
+
+        # Create initial data on main server
+        await c_main.d_set(P("sync.a"), 1)
+        await c_main.d_set(P("sync.b"), 2)
+        await c_main.d_set(P("sync.c.d"), 3)
+
+        # Connect to remote server
+        async with Link(sf.cfg, only="S_remote") as c_remote:
+            # Set some initial data on remote
+            await c_remote.d_set(P("sync.x"), 100)
+
+            # Start the link gate connecting main to remote
+            gate_cf = to_attrdict(
+                dict(
+                    driver="link",
+                    src=P("sync"),
+                    server="S_remote",
+                    delay=0.1,
+                )
+            )
+            gate = LinkGate(sf.cfg, gate_cf, P("gate.sync"), c_main)
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(gate.run)
+
+                # Give time for initial sync
+                await anyio.sleep(0.5)
+
+                # Verify data propagated from main to remote
+                res_remote = await c_remote.d_get(P("sync.a"))
+                assert res_remote == 1, f"Main->Remote: sync.a = {res_remote}"
+
+                res_remote = await c_remote.d_get(P("sync.b"))
+                assert res_remote == 2, f"Main->Remote: sync.b = {res_remote}"
+
+                # Verify sync.x propagated from remote to main
+                res_main = await c_main.d_get(P("sync.x"))
+                assert res_main == 100, f"Remote->Main: sync.x = {res_main}"
+
+                # Make changes on both sides while gateway is running
+                await c_main.d_set(P("sync.new_main"), 999)
+                await c_remote.d_set(P("sync.new_remote"), 888)
+
+                # Wait for sync
+                await anyio.sleep(0.5)
+
+                # Verify bidirectional propagation
+                res_main = await c_main.d_get(P("sync.new_remote"))
+                assert res_main == 888, f"Remote->Main: sync.new_remote = {res_main}"
+
+                res_remote = await c_remote.d_get(P("sync.new_main"))
+                assert res_remote == 999, f"Main->Remote: sync.new_main = {res_remote}"
+
+                tg.cancel_scope.cancel()

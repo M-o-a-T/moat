@@ -387,3 +387,34 @@ async def test_asdict(cfg):  # noqa: D103
             with anyio.fail_after(0.2):
                 await a.wait_
             assert a.b.y == 3
+
+
+@pytest.mark.anyio
+async def test_i_backend(cfg):
+    "Check that the i.backend command returns backend configuration."
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+        r = await c.cmd(P("i.backend"))
+        # The result should be a dict containing the backend driver
+        backend = r.kw
+        assert "driver" in backend
+        assert backend["driver"] == "mqtt"
+
+
+@pytest.mark.anyio
+async def test_link_only(cfg):
+    "Check that Link with only parameter connects to named server."
+    from moat.link.client import Link  # noqa: PLC0415
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        server_name = srv.name
+
+        # Create a client that connects only to the named server
+        async with Link(sf.cfg, only=server_name) as c:
+            # Verify we can communicate
+            r = await c.cmd(P("i.乒"), "test")
+            assert r.args == ["乓", "test"]
+            # Verify we connected to the expected server
+            assert c.link.server_name == server_name

@@ -13,6 +13,7 @@ from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
 from moat.lib.run import AliasedGroup
 from moat.link.client import Link
+from moat.link.node import Node
 
 from collections.abc import Iterator, Mapping
 from typing import Any, cast
@@ -248,9 +249,9 @@ class _Timeout:
 @define
 class _Copied:
     path: Path = field()
+    delay: float = field()
     check: Mapping[str, Any] = field()
     value: Any = field()
-    rel: Path = field()
 
     def __hash__(self):
         return hash(self.path)
@@ -274,8 +275,8 @@ class FlowMon:
         self.previous: dict[Path, Any] = {}
         self.timeout: TimerMap[_Timeout] = TimerMap()
         self.copied: TimerMap[_Copied] = TimerMap()
-        self.errs = None
-        self.flows = None
+        self.errs: Node = Node()
+        self.flows: Node = Node()
 
     async def _set_error(self, path: Path, msg: str, check: Mapping[str, Any], data: Any) -> None:
         try:
@@ -313,6 +314,7 @@ class FlowMon:
                         await self._clear_error(cp.path)
                 except (KeyError, ValueError):
                     pass
+                continue
             await self._set_error(cp.path, msg, cp.check, cp.value)
 
     async def run(self) -> None:

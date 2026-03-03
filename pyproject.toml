@@ -249,11 +249,7 @@ include = [
     "moat/db/label/",
     "moat/db/thing/",
     "moat/lib/",
-    "moat/link/_data.py",
-    "moat/link/_test.py",
-    "moat/link/client.py",
-    "moat/link/host.py",
-    "moat/link/server/_server.py",
+    "moat/link/",
     "moat/util/",
 ]
 exclude = [
@@ -263,6 +259,7 @@ exclude = [
     "packaging/**",
     "docs/**",
     "moat/lib/victron/**",
+    "moat/link/gate/kv.py",
 ]
 
 [tool.ty.rules]

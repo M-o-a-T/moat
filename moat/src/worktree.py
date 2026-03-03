@@ -77,7 +77,14 @@ async def _collect_submodules(base: Path, rel: Path = Path(), debug: int = 0) ->
 
 async def add_worktree(source_root: Path, branch: str, target_root: Path, debug: int = 0) -> None:
     """Create a worktree and add matching worktrees for all submodules."""
-    await run_("bd", "worktree", "create", "--branch", branch, str(target_root))
+    if Path(".beads").exists():  # noqa:ASYNC240
+        await run_("bd", "worktree", "create", "--branch", branch, str(target_root))
+    else:
+        await run_("git", "worktree", "create", "--branch", branch, str(target_root))
+    for name in (".venv", "build", "dist"):
+        if Path(name).exists():  # noqa:ASYNC240
+            (target_root / name).symlink_to(source_root / name)
+
     for sub in await _collect_submodules(source_root, debug=debug):
         await run_(
             "git",

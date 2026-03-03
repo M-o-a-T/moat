@@ -167,8 +167,8 @@ Work is NOT complete until `git push` succeeds.
 ### Workflow
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up.
-1. **Run quality gates** (if code changed) - Tests, linters, builds.
-   "git commit" should do this automatically, via pre-commit.
+1. "git commit" runs quality gates automatically. If errors are reported,
+   fix and resubmit.
 1. **Commit all work**. Reference the issue(s) you worked on, if any, in
    the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"

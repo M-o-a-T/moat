@@ -8,7 +8,7 @@ import anyio
 
 from moat.lib.micro import AC_use
 from moat.lib.path import P
-from moat.lib.rpc import MsgHandler
+from moat.lib.rpc import BaseMsgHandler, MsgHandler
 
 from typing import TYPE_CHECKING
 
@@ -141,7 +141,7 @@ class CmdCommon(MsgHandler):
 
     doc_i = dict(_d="Internal commands")
 
-    def find_sub(self, scmd: PathElem) -> MsgHandler | Callable | None:
+    def find_sub(self, scmd: PathElem) -> BaseMsgHandler | Callable | None:
         """
         Resolve subcommands, with a fallback for ``i`` when setup wasn't run.
         """

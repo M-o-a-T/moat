@@ -69,7 +69,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
-    from types import CoroutineType
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
@@ -78,6 +77,8 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     PathType = anyio.Path | FSPath | str
+
+NotGivenType = type(NotGiven)
 
 
 class BadFile(ValueError):
@@ -275,7 +276,7 @@ class _Sub_i(_CommonSubI):
     "Server informational namespace."
 
     def __init__(self, parent: ServerClient):
-        super().__init__(parent.server)
+        super().__init__(parent)
         self.parent = parent
 
     doc_state = dict(_d="state", _r="MsgMeta:optional")
@@ -330,9 +331,11 @@ class ServerClient(LinkCommon):
     protocol_version: int = -1
     prefix: str
     name: str
+    server: Server
 
     def __init__(self, server: Server, prefix: str, stream: Stream):
         self.server = server
+        self.cfg = server.cfg
         self.prefix = prefix
         self.stream = stream
 
@@ -394,6 +397,8 @@ class ServerClient(LinkCommon):
                 them = self._hello.them
                 self.is_server = self._hello.they_server
                 if True:  # self.is_server:
+                    if them is None:
+                        raise RuntimeError("No remote name after handshake")
                     try:
                         self.server.rename_client(self, them)
                     except ValueError:
@@ -442,24 +447,26 @@ class ServerClient(LinkCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def handle(self, msg, rpath) -> CoroutineType[Any, Any, None]:
+    async def handle(self, msg, rcmd):
         """
         Message handlers that intercepts (a) authorization, (b) a "d_"
         path-based "simple data" command
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.handle(msg, rpath)
+            return await self._hello.handle(msg, rcmd)
 
-        if rpath[-1] == "d_":
+        if rcmd[-1] == "d_":
             # Simple Data. If both a path vector and a `p` argument is
             # given, concatenate them.
             if "p" not in msg.kw:
-                msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
-            elif len(rpath) > 1:
-                msg.kw["p"] = Path.build(rpath[-2::-1]) + msg["p"]
-            return msg.call_simple(self.d_simple_)
+                msg._kw = dict(msg.kw)  # noqa: SLF001
+                msg._kw["p"] = Path.build(rcmd[-2::-1])  # noqa: SLF001
+            elif len(rcmd) > 1:
+                msg._kw = dict(msg.kw)  # noqa: SLF001
+                msg._kw["p"] = Path.build(rcmd[-2::-1]) + msg["p"]  # noqa: SLF001
+            return await msg.call_simple(self.d_simple_)
 
-        return super().handle(msg, rpath)
+        return await super().handle(msg, rcmd)
 
     async def d_get_stream_(self, msg):
         """Get the data of a sub-node.
@@ -477,7 +484,10 @@ class ServerClient(LinkCommon):
         else:
             data = self.server.data
         d = data[path]
-        await msg.result(d.data, *d.meta.dump())
+        if d.meta is None:
+            await msg.result(d.data)
+        else:
+            await msg.result(d.data, *d.meta.dump())
 
     async def d_collect_stream_(self, msg):
         """Collate the dicts on the path from some root to a sub-node.
@@ -680,49 +690,55 @@ class ServerClient(LinkCommon):
 
                 await rec_del(node, path)
             else:
-                if t is not None and abs(node.meta.timestamp - t) > 0.001:
+                if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
                     raise OutOfDateError(node.meta)
                 self.server.maybe_update(path, NotGiven, meta)
 
         if node is None:
             return None
         else:
+            if dm is None:
+                return dv
             return dv, *dm.dump()
 
     def e_exc_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], kw, MsgMeta(origin=self.name))
 
     def e_info_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], kw, MsgMeta(origin=self.name))
 
     def e_ack_stream_(self, msg: Msg) -> Awaitable:
         """Acknowledge an error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        msg.kw["ack"] = True
-        return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        kw["ack"] = True
+        return self.server.set_error(msg[0], NotGiven, kw, MsgMeta(origin=self.name))
 
     def e_ok_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 1:
-            msg.kw["args"] = msg.args[1:]
-        return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[1:]
+        return self.server.set_error(msg[0], None, kw, MsgMeta(origin=self.name))
 
     async def e_mon_stream_(self, msg: Msg):
         path = msg[0]
-        kw = msg.kw
+        kw = dict(msg.kw)
         kw["start"] = time.time()
         kw["log"] = log = []
         try:
             async with msg.stream_in() as mon:
-                async for msg in mon:
-                    a = msg.to_list(dict_only=True)
+                async for mon_msg in mon:
+                    a = mon_msg.to_list(dict_only=True)
                     if not a and log and not log[-1]:
                         continue
                     log.append(a)
@@ -859,7 +875,7 @@ class Server(MsgHandler):
 
     _ping_history: Sequence[str] = ()
 
-    _server_link: dict[str, tuple[anyio.CancelScope, BasicLink]]
+    _server_link: dict[str, tuple[anyio.CancelScope, BasicLink | None]]
     _server_link_add: anyio.Event
 
     _f_load: anyio.Path | None = None
@@ -1135,7 +1151,7 @@ class Server(MsgHandler):
     async def set_error(
         self,
         path: Path,
-        err: str | BaseException | None | NotGiven,
+        err: str | BaseException | None | NotGivenType,
         kw: dict[str, Any],
         meta: MsgMeta,
     ):
@@ -1181,7 +1197,7 @@ class Server(MsgHandler):
 
         # this shortcuts maybe_update
         # forcing is required because we just modified the dict in-place
-        if dt.set(..., dd, meta, force=True):
+        if dt.set(Path(), dd, meta, force=True):
             self.write_monitor((p, dd, meta))
 
     async def _save(
@@ -1712,7 +1728,9 @@ class Server(MsgHandler):
             await anyio.sleep(30)
             self.last_auth = None
 
-    async def _run_server_link(self, name, data, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _run_server_link(
+        self, name: str, data: dict[str, Any], *, task_status=anyio.TASK_STATUS_IGNORED
+    ):
         """
         Run a single client link to another server.
         """
@@ -1963,11 +1981,9 @@ class Server(MsgHandler):
             return
 
         done = set()
-        fs = []
-        async for p, _d, f in dest.walk():
-            for ff in f:
-                if ff.endswith(".moat"):
-                    fs.append(p / ff)
+        fs: list[anyio.Path] = []
+        async for fn in dest.rglob("*.moat"):
+            fs.append(fn)
         fs.sort()
         fn = None
 
@@ -2148,13 +2164,11 @@ class Server(MsgHandler):
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             self.logger.debug("End Client C_%s %r", cnr, exc)
-            if hasattr(exc, "split"):
-                exc = exc.split(CancelExc)[1]  # pyright: ignore
-                ex = list(exc_iter(exc))
-                if len(ex) == 1:
-                    exc = ex[0]
-            elif hasattr(exc, "filter"):
-                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)  # pyright: ignore
+            ex = [e for e in exc_iter(exc) if not isinstance(e, CancelExc)]
+            if not ex:
+                exc = None
+            elif len(ex) == 1:
+                exc = ex[0]
 
             if exc is not None and not isinstance(exc, CancelExc):
                 if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
@@ -2181,6 +2195,8 @@ class Server(MsgHandler):
         """
         "Local subcommand redirect for 'cl'"
         name = rcmd.pop()
+        if not isinstance(name, str):
+            raise KeyError(name)
         try:
             cl = self._clients[name]
         except KeyError:
@@ -2208,6 +2224,8 @@ class Server(MsgHandler):
         Direct a message to another server.
         """
         name = rcmd.pop()
+        if not isinstance(name, str):
+            raise KeyError(name)
         if name == self.name:
             return await self.handle(msg, rcmd)
 

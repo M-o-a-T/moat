@@ -22,7 +22,7 @@ from .os_error_list import os_error_mapping
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.stream import BaseBuf
+    from anyio.abc import ByteStream
 
 
 logger = logging.getLogger(__name__)
@@ -40,28 +40,45 @@ class DirectREPL(SingleAnyioBuf):
     Interface to the remote REPL
     """
 
-    serial: BaseBuf = None  # pylint:disable=used-before-assignment # WTF
-    srbuf: BufferedByteReceiveStream = None
+    serial: ByteStream | None = None
+    srbuf: BufferedByteReceiveStream | None = None
+
+    def _serial(self) -> ByteStream:
+        ser = self.serial
+        if ser is None:
+            raise RuntimeError("serial stream not initialized")
+        return ser
+
+    def _srbuf(self) -> BufferedByteReceiveStream:
+        buf = self.srbuf
+        if buf is None:
+            raise RuntimeError("buffered stream not initialized")
+        return buf
 
     async def stream(self):
         "Context. Tries hard to exit special MicroPython modes, if any"
-        self.serial = await super().stream()
+        ser = await super().stream()
+        if not hasattr(ser, "send") or not hasattr(ser, "receive"):
+            raise TypeError(f"Not a serial stream: {ser!r}")
+        self.serial = ser
 
         async def out_():
+            ser = self._serial()
             with anyio.fail_after(0.5):
-                await self.serial.send(b"\x02\x03\x03")
+                await ser.send(b"\x02\x03\x03")
 
         await AC_use(self, out_)
 
-        self.srbuf = BufferedByteReceiveStream(self.serial)
+        ser = self._serial()
+        self.srbuf = BufferedByteReceiveStream(ser)
 
-        await self.serial.send(b"\x02")  # exit raw repl (if we're in that)
+        await ser.send(b"\x02")  # exit raw repl (if we're in that)
         await self.flush_in(0.5)
         with anyio.fail_after(0.5):
-            await self.serial.send(b"\x03")  # CTRL+C (if running something)
+            await ser.send(b"\x03")  # CTRL+C (if running something)
         await self.flush_in(0.5)
         with anyio.fail_after(0.5):
-            await self.serial.send(b"\x01")  # enter raw repl
+            await ser.send(b"\x01")  # enter raw repl
         await self.flush_in(0.2)
 
         # Rather than wait for a longer timeout we try sending a command.
@@ -70,24 +87,25 @@ class DirectREPL(SingleAnyioBuf):
         try:
             await self.exec_raw("print(1)")
         except (OSError, TimeoutError):
-            await self.serial.send(b"\x02\x03")  # exit raw repl, CTRL+C
+            await ser.send(b"\x02\x03")  # exit raw repl, CTRL+C
             await self.flush_in(0.2)
-            await self.serial.send(b"\x03\x01")  # CTRL+C, enter raw repl
+            await ser.send(b"\x03\x01")  # CTRL+C, enter raw repl
             try:
                 await anyio.sleep(0.2)
                 await self.exec_raw("print(2)")
             except OSError:
                 await anyio.sleep(0.2)
                 await self.exec_raw("print(3)")
-        return self.serial
+        return ser
 
     async def flush_in(self, timeout=0.1):
         "flush incoming data"
         started = False
         b = b""
+        ser = self._serial()
         while True:
             with anyio.move_on_after(timeout):
-                res = await self.serial.receive(200)
+                res = await ser.receive(200)
                 if not started:
                     logger.debug("Flushing…")
                     started = True
@@ -96,7 +114,7 @@ class DirectREPL(SingleAnyioBuf):
             break
         if b:
             logger.debug("Flush: IN\n%s", b.decode("utf-8"))
-        self.srbuf._buffer = bytearray()  # noqa:SLF001 pylint: disable=protected-access
+        self._srbuf()._buffer = bytearray()  # noqa:SLF001 pylint: disable=protected-access
 
     def _parse_error(self, text):
         """Read the error message and convert exceptions"""
@@ -123,8 +141,10 @@ class DirectREPL(SingleAnyioBuf):
         """Exec code, returning (stdout, stderr)"""
         if not quiet:
             logger.debug("Exec: %r", cmd)
-        await self.serial.send(cmd.encode("utf-8"))
-        await self.serial.send(b"\x04")
+        ser = self._serial()
+        srbuf = self._srbuf()
+        await ser.send(cmd.encode("utf-8"))
+        await ser.send(b"\x04")
 
         if not timeout:
             logger.debug("does not return")
@@ -132,13 +152,13 @@ class DirectREPL(SingleAnyioBuf):
 
         try:
             with anyio.fail_after(timeout):
-                data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)
+                data = await srbuf.receive_until(b"\x04>", max_bytes=10000)
         except TimeoutError:
             # interrupt, read output again to get the expected traceback message
-            logger.debug("Timeout. Buffer:\n%s\n", self.srbuf.buffer)
-            await self.serial.send(b"\x03")  # CTRL+C
+            logger.debug("Timeout. Buffer:\n%s\n", srbuf.buffer)
+            await ser.send(b"\x03")  # CTRL+C
             with anyio.fail_after(3):
-                data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)
+                data = await srbuf.receive_until(b"\x04>", max_bytes=10000)
 
         try:
             out, err = data.split(b"\x04")
@@ -196,10 +216,10 @@ class DirectREPL(SingleAnyioBuf):
         """
         if run_main:
             # exit raw REPL for a reset that runs main.py
-            await self.serial.send(b"\x03\x03\x02\x04\x01")
+            await self._serial().send(b"\x03\x03\x02\x04\x01")
         else:
             # if raw REPL is active, then MicroPython will not execute main.py
-            await self.serial.send(b"\x03\x03\x04\x01")
+            await self._serial().send(b"\x03\x03\x04\x01")
             # execute empty line to get a new prompt
             # and consume all the outputs form the soft reset
             try:

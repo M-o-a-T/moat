@@ -10,7 +10,7 @@ import logging
 import os
 import stat
 from contextlib import asynccontextmanager, suppress
-from pathlib import PosixPath as Path
+from pathlib import PurePath, PurePosixPath
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -30,10 +30,10 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from pyfuse3 import RequestContext, SetattrFields, StatvfsData
 
-    from moat.lib.rpc import MsgSender, SubMsgSender
+    from moat.lib.rpc import SubMsgSender
 
-    from collections.abc import Callable, Sequence
-    from typing import Any
+    from collections.abc import AsyncIterator, Callable, Sequence
+    from typing import Any, NoReturn
 
 
 logger = logging.getLogger(__name__)
@@ -50,24 +50,24 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     max_read: int = 256
     max_write: int = 256
 
-    _inode_path_map: dict[int, Path] = {pyfuse3.ROOT_INODE: Path("/")}
-    _path_inode_map: dict[Path, int] = {Path("/"): pyfuse3.ROOT_INODE}
-    _lookup_cnt: dict[int, Callable]
-    _fd_inode_map: dict[int, int]
-    _inode_fd_map: dict[int, int]
+    _inode_path_map: dict[pyfuse3.InodeT, PurePath] = {pyfuse3.ROOT_INODE: PurePosixPath("/")}
+    _path_inode_map: dict[PurePath, pyfuse3.InodeT] = {PurePosixPath("/"): pyfuse3.ROOT_INODE}
+    _lookup_cnt: dict[pyfuse3.InodeT, Callable]
+    _fd_inode_map: dict[int, pyfuse3.InodeT]
+    _inode_fd_map: dict[pyfuse3.InodeT, int]
     _fd_open_count: dict[int, int]
 
-    _dir_content: dict[int, tuple[int, Any, RequestContext]]
+    _dir_content: dict[int, tuple[pyfuse3.InodeT, Any, RequestContext]]
     _last_dir_fh: int = 0
 
-    _link: MsgSender
-    _last_inode: int = pyfuse3.ROOT_INODE
+    _link: SubMsgSender
+    _last_inode: pyfuse3.InodeT = pyfuse3.ROOT_INODE
 
-    def __init__(self, link: MsgSender):
+    def __init__(self, link: SubMsgSender):
         # pylint: disable=I1101
         super().__init__()
-        self._inode_path_map = {pyfuse3.ROOT_INODE: Path("/")}
-        self._path_inode_map = {Path("/"): pyfuse3.ROOT_INODE}
+        self._inode_path_map = {pyfuse3.ROOT_INODE: PurePosixPath("/")}
+        self._path_inode_map = {PurePosixPath("/"): pyfuse3.ROOT_INODE}
         self._lookup_cnt = defaultdict(lambda: 0)
         self._fd_inode_map = dict()
         self._inode_fd_map = dict()
@@ -86,7 +86,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         i = self._fd_inode_map.pop(fd)
         del self._inode_fd_map[i]
 
-    def i_path(self, inode):
+    def i_path(self, inode: pyfuse3.InodeT) -> PurePath:
         "return path for inode"
         try:
             return self._inode_path_map[inode]
@@ -94,19 +94,19 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             logger.debug("NotFound: i=%r", inode)
             raise FUSEError(errno.ENOENT) from None
 
-    def i_add(self, path, inode=None):
+    def i_add(self, path: PurePath, inode: pyfuse3.InodeT | None = None) -> pyfuse3.InodeT:
         "invent new inode number"
         try:
             return self._path_inode_map[path]
         except KeyError:
             if inode is None:
                 self._last_inode += 1
-                inode = self._last_inode
+                inode = pyfuse3.InodeT(self._last_inode)
             self._inode_path_map[inode] = path
             self._path_inode_map[path] = inode
             return inode
 
-    def i_del(self, inode):
+    def i_del(self, inode: pyfuse3.InodeT) -> None:
         "drop inode number"
         try:
             p = self._inode_path_map.pop(inode)
@@ -115,7 +115,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         else:
             del self._path_inode_map[p]
 
-    def raise_error(self, err, inode=None):
+    def raise_error(self, err: BaseException, inode: pyfuse3.InodeT | None = None) -> NoReturn:
         "translate generic exception to FUSE exception"
         logger.warning("Error: %r", err)
         if isinstance(err, FileNotFoundError):
@@ -126,7 +126,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             raise FUSEError(errno.EEXIST)
         raise FUSEError(errno.EIO)
 
-    async def lookup(self, parent_inode, name, ctx: RequestContext) -> EntryAttributes:
+    @staticmethod
+    def _name(name: pyfuse3.FileNameT) -> str:
+        if isinstance(name, (bytes, bytearray, memoryview)):
+            return bytes(name).decode("utf-8")
+        return str(name)
+
+    async def lookup(
+        self, parent_inode: pyfuse3.InodeT, name: pyfuse3.FileNameT, ctx: RequestContext
+    ) -> EntryAttributes:
         """Look up a directory entry by name and get its attributes.
 
         This method should return an `~pyfuse3.EntryAttributes` instance for the
@@ -144,7 +152,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         (Successful) execution of this handler increases the lookup count for
         the returned inode by one.
         """
-        p = self.i_path(parent_inode) / name.decode("utf-8")
+        p = self.i_path(parent_inode) / self._name(name)
         try:
             return await self.getattr(self._path_inode_map[p], ctx)
         except KeyError:
@@ -154,9 +162,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                 self.raise_error(err)
             else:
                 inode = self.i_add(p)
-                return await self.getattr(inode, ctx, _res=d)
+                return await self._getattr(inode, ctx, _res=d)
 
-    async def forget(self, inode_list: Sequence[int]):
+    async def forget(self, inode_list: Sequence[tuple[pyfuse3.InodeT, int]]) -> None:
         """Decrease lookup counts for inodes in *inode_list*
 
         *inode_list* is a list of ``(inode, nlookup)`` tuples. This method
@@ -177,11 +185,13 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         it is not handling a particular client request.
         """
 
-        for i in inode_list:
+        for i, _n in inode_list:
             with suppress(KeyError):
                 self.i_del(i)
 
-    async def getattr(self, inode: int, _ctx: RequestContext, _res=None) -> EntryAttributes:
+    async def _getattr(
+        self, inode: pyfuse3.InodeT, _ctx: RequestContext, _res=None
+    ) -> EntryAttributes:
         """Get attributes for *inode*
 
         This method should return an `~pyfuse3.EntryAttributes` instance with the
@@ -200,15 +210,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         r = EntryAttributes()
         t = d["t"]
-        r.st_ino = inode
+        r.st_ino = pyfuse3.InodeT(inode)
         r.entry_timeout = 300
         r.attr_timeout = 300
 
         r.st_size = 0
         if d["m"] == "d":
-            r.st_mode = stat.S_IFDIR | 0o777
+            r.st_mode = pyfuse3.ModeT(stat.S_IFDIR | 0o777)
         elif d["m"] == "f":
-            r.st_mode = stat.S_IFREG | 0o666
+            r.st_mode = pyfuse3.ModeT(stat.S_IFREG | 0o666)
             r.st_size = d["s"]
         r.st_mtime_ns = t * 1_000_000_000
         r.st_ctime_ns = t * 1_000_000_000
@@ -219,8 +229,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         r.st_blocks = (r.st_size - 1) // r.st_blksize + 1
         return r
 
+    async def getattr(self, inode: pyfuse3.InodeT, ctx: RequestContext) -> EntryAttributes:
+        """Get attributes for *inode*."""
+        return await self._getattr(inode, ctx)
+
     async def setattr(
-        self, inode: int, attr: EntryAttributes, fields: SetattrFields, fh, ctx: RequestContext
+        self,
+        inode: pyfuse3.InodeT,
+        attr: EntryAttributes,
+        fields: SetattrFields,
+        fh,
+        ctx: RequestContext,
     ) -> EntryAttributes:
         """Change attributes of *inode*
 
@@ -260,7 +279,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         raise FUSEError(errno.ENOSYS)
 
     async def mknod(
-        self, parent_inode: int, name: str, mode: int, rdev: int, ctx: RequestContext
+        self,
+        parent_inode: pyfuse3.InodeT,
+        name: pyfuse3.FileNameT,
+        mode: pyfuse3.ModeT,
+        rdev: int,
+        ctx: RequestContext,
     ) -> EntryAttributes:
         """Create (possibly special) file
 
@@ -287,7 +311,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         raise FUSEError(errno.ENOSYS)
 
     async def mkdir(
-        self, parent_inode: int, name: str, _mode: int, ctx: RequestContext
+        self,
+        parent_inode: pyfuse3.InodeT,
+        name: pyfuse3.FileNameT,
+        mode: pyfuse3.ModeT,
+        ctx: RequestContext,
     ) -> EntryAttributes:
         """Create a directory
 
@@ -300,14 +328,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         (Successful) execution of this handler increases the lookup count for
         the returned inode by one.
         """
-        p = self.i_path(parent_inode) / name.decode()
+        mode, ctx  # noqa:B018
+        p = self.i_path(parent_inode) / self._name(name)
         try:
             await self._link.mkdir(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
-        return await self.getattr(self.i_add(p), ctx)
+        return await self._getattr(self.i_add(p), ctx)
 
-    async def unlink(self, parent_inode: int, name: str, _ctx: RequestContext):
+    async def unlink(
+        self, parent_inode: pyfuse3.InodeT, name: pyfuse3.FileNameT, ctx: RequestContext
+    ) -> None:
         """Remove a (possibly special) file
 
         This method must remove the (special or regular) file *name* from the
@@ -326,13 +357,16 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         """
 
-        p = self.i_path(parent_inode) / name.decode()
+        ctx  # noqa:B018
+        p = self.i_path(parent_inode) / self._name(name)
         try:
             await self._link.rm(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
-    async def rmdir(self, parent_inode: int, name: str, _ctx: RequestContext):
+    async def rmdir(
+        self, parent_inode: pyfuse3.InodeT, name: pyfuse3.FileNameT, ctx: RequestContext
+    ) -> None:
         """Remove directory *name*
 
         This method must remove the directory *name* from the direcory with
@@ -353,14 +387,19 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         associated with the ``.`` and ``..`` entries).
         """
 
-        p = self.i_path(parent_inode) / name.decode()
+        ctx  # noqa:B018
+        p = self.i_path(parent_inode) / self._name(name)
         try:
             await self._link.rmdir(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
     async def symlink(
-        self, parent_inode: int, name: str, target: str, ctx: RequestContext
+        self,
+        parent_inode: pyfuse3.InodeT,
+        name: pyfuse3.FileNameT,
+        target: pyfuse3.FileNameT,
+        ctx: RequestContext,
     ) -> EntryAttributes:
         """Create a symbolic link
 
@@ -379,13 +418,13 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
     async def rename(
         self,
-        parent_inode_old: int,
+        parent_inode_old: pyfuse3.InodeT,
         name_old: str,
-        parent_inode_new: int,
+        parent_inode_new: pyfuse3.InodeT,
         name_new: str,
-        flags: int,
+        flags: pyfuse3.FlagT,
         ctx: RequestContext,
-    ):
+    ) -> None:
         """Rename a directory entry.
 
         This method must rename *name_old* in the directory with inode
@@ -414,8 +453,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         try:
-            p = self.i_path(parent_inode_old) / name_old.decode()
-            q = self.i_path(parent_inode_new) / name_new.decode()
+            p = self.i_path(parent_inode_old) / name_old
+            q = self.i_path(parent_inode_new) / name_new
 
             if flags == 0:
                 await self._link.mv(s=str(p), d=str(q))
@@ -459,7 +498,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         )
         raise FUSEError(errno.ENOSYS)
 
-    async def open(self, inode, flags: int, _ctx: RequestContext):
+    async def open(
+        self, inode: pyfuse3.InodeT, flags: pyfuse3.FlagT, ctx: RequestContext
+    ) -> FileInfo:
         """Open a inode *inode* with *flags*.
 
         *flags* will be a bitwise or of the open flags described in the
@@ -474,6 +515,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         have relevant configuration attributes set; see the `~pyfuse3.FileInfo`
         documentation for more information.
         """
+        ctx  # noqa:B018
         fh = FileInfo()
         if flags & os.O_RDWR:
             m = "a+" if flags & os.O_APPEND else "r+"
@@ -730,7 +772,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: getxattr: i=%r n=%r ctx=%r", inode, name, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def listxattr(self, inode: int, ctx: RequestContext) -> Sequence[bytes]:
+    async def listxattr(
+        self, inode: pyfuse3.InodeT, ctx: RequestContext
+    ) -> Sequence[pyfuse3.XAttrNameT]:
         """Get list of extended attributes for *inode*
 
         This method must return a sequence of `bytes` objects.  The objects must
@@ -765,7 +809,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         raise FUSEError(errno.ENOSYS)
 
     async def create(
-        self, parent_inode: int, name: str, _mode: int, flags: int, ctx: RequestContext
+        self,
+        parent_inode: pyfuse3.InodeT,
+        name: pyfuse3.FileNameT,
+        mode: pyfuse3.ModeT,
+        flags: pyfuse3.FlagT,
+        ctx: RequestContext,
     ) -> tuple[FileInfo, EntryAttributes]:
         """Create a file with permissions *mode* and open it with *flags*
 
@@ -773,11 +822,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         the returned inode by one.
         """
 
-        p = self.i_path(parent_inode) / name.decode()
+        mode  # noqa:B018
+        p = self.i_path(parent_inode) / self._name(name)
         try:
-            i = self.i_path(p)
+            i = self._path_inode_map[p]
             gen = False
-        except FUSEError:
+        except KeyError:
             i = self.i_add(p)
             gen = True
 
@@ -790,12 +840,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         else:
             i = self.i_add(p)
             h = await self.open(i, flags, ctx)
-            a = await self.getattr(i, ctx, _res=r)
+            a = await self._getattr(i, ctx, _res=r)
             return (h, a)
 
 
 @asynccontextmanager
-async def wrap(link: SubMsgSender, path: Path, blocksize=0, debug=1) -> None:
+async def wrap(
+    link: SubMsgSender, path: str | PurePath | anyio.Path, blocksize: int = 0, debug: int = 1
+) -> AsyncIterator[None]:
     """
     Context manager that mounts a satellite file system locally
     """

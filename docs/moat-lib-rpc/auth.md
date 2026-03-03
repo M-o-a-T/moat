@@ -109,8 +109,8 @@ Configuration:
 
 - `auth`: required; same structure as on `BaseCmdMsg`.
 - `path`: optional path to an existing subtree to expose after auth.
-- If `path` is absent, local sub-app entries are used as the protected
-  subtree.
+- If `path` is absent, `cfg` must contain the protected app configuration
+  (including its own `app` selector).
 
 ### Dynamic data
 

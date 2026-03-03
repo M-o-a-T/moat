@@ -17,7 +17,7 @@ from moat.lib.codec import get_codec
 from moat.lib.path import P
 from moat.link._data import backend_get, data_get
 from moat.link._test import Scaffold
-from moat.link.gate import run_gate
+from moat.link.gate import DelayedGate, run_gate
 from moat.link.meta import MsgMeta
 
 
@@ -337,3 +337,120 @@ async def test_gate_codec(cfg):  # noqa: D103
                 "three": {"zaz": {"_": "ThReE"}},
             },
         }
+
+
+class MockDelayedGate(DelayedGate):
+    """
+    A mock DelayedGate for testing that stores destination updates in a dict.
+    """
+
+    dst_store: dict
+    dst_updates: list
+
+    def __init__(self, cfg, cf, path, link):
+        super().__init__(cfg, cf, path, link)
+        self.dst_store = {}
+        self.dst_updates = []
+
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        No external destination monitoring for this mock.
+        """
+        self.dst_is_current()
+        task_status.started()
+        # Keep running forever
+        await anyio.sleep_forever()
+
+    async def set_dst(self, path, data, meta, node):  # noqa: ARG002
+        """
+        Store destination updates in our dict.
+        """
+        self.dst_store[path] = data
+        self.dst_updates.append((path, data, meta))
+
+    def newer_dst(self, node):  # noqa: ARG002
+        """
+        For mock, just prefer source.
+        """
+        return False
+
+
+@pytest.mark.anyio
+async def test_delayed_gate_basic(cfg):
+    """Test that DelayedGate delays updates by the configured time."""
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+
+        # Create gate config directly (no need to store in server)
+        gate_cf = to_attrdict(
+            dict(
+                driver="mock",
+                src=P("test.src"),
+                delay=0.2,  # 200ms delay
+            )
+        )
+        gate = MockDelayedGate(sf.cfg, gate_cf, P("gate.delayed"), c)
+
+        async with anyio.create_task_group() as tg:
+            await tg.start(gate.run)
+
+            # Set source data
+            await c.d_set(P("test.src.a"), 1)
+            await c.d_set(P("test.src.b"), 2)
+
+            # Updates should not appear immediately
+            await anyio.sleep(0.05)
+            assert P("a") not in gate.dst_store
+
+            # Wait for delay to expire
+            await anyio.sleep(0.25)
+            assert gate.dst_store.get(P("a")) == 1
+            assert gate.dst_store.get(P("b")) == 2
+
+            tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_delayed_gate_cancellation(cfg):
+    """Test that DelayedGate cancels pending updates when matching update arrives."""
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+
+        # Create gate config directly
+        gate_cf = to_attrdict(
+            dict(
+                driver="mock",
+                src=P("test.src"),
+                delay=0.3,  # 300ms delay
+            )
+        )
+        gate = MockDelayedGate(sf.cfg, gate_cf, P("gate.delayed"), c)
+
+        async with anyio.create_task_group() as tg:
+            await tg.start(gate.run)
+
+            # Set source data
+            await c.d_set(P("test.src.a"), 1)
+
+            # Simulate an update from destination side before delay expires
+            await anyio.sleep(0.1)
+            # Call set_src directly to simulate incoming data from destination
+            await gate.set_src(P("a"), 99, MsgMeta(origin="external"))
+
+            # The set_src should have cancelled the pending dst update
+            # Wait for delay to expire
+            await anyio.sleep(0.4)
+
+            # The original src->dst update for path "a" should have been cancelled
+            # (because set_src cancels pending dst updates)
+            # But set_src queues a src update, so we need to wait for that too
+
+            # Check that the dst_store either doesn't have the value 1
+            # (the original update was cancelled) or has 99 from set_src
+            # In our mock, set_dst isn't called by set_src (it goes to link.d_set)
+            # So dst_store should not have value 1 for path "a"
+            assert gate.dst_store.get(P("a")) != 1
+
+            tg.cancel_scope.cancel()

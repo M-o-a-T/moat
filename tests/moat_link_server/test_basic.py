@@ -78,7 +78,7 @@ async def test_ls_legacy_hello_fallback(cfg, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
+async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch, caplog):
     "Server accepts legacy hello and falls back even if the :n rejection arrives late."
     orig_modes = Hello._rpc_modes  # noqa: SLF001
     orig_handle = Hello.handle
@@ -107,6 +107,7 @@ async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
 
     monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
     monkeypatch.setattr(Hello, "handle", _handle)
+    caplog.set_level(logging.ERROR)
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -120,6 +121,7 @@ async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
 
     assert saw_late_reject
     assert saw_server_fallback
+    assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
 
 
 @pytest.mark.anyio

@@ -158,6 +158,7 @@ class Hello(CmdCommon):
     protocol_version: int = field(init=False, default=0)
     _rpc_auth: Any = field(init=False, default=None)
     _rpc_in: Any = field(init=False, default=None)
+    _rpc_init: anyio.Event = field(init=False, factory=anyio.Event)
     _rpc_fallback: bool = field(init=False, default=False)
     _name_reply: str | None = field(init=False, default=None)
     _res_data: dict[str, Any] | None = field(init=False, default=None)
@@ -260,6 +261,7 @@ class Hello(CmdCommon):
         """
         modes = self._rpc_modes()
         if not modes:
+            self._rpc_init.set()
             raise _NoRPCAuth
 
         from moat.lib.rpc.auth._base import Auth, AuthCmdIn, AuthDenied  # noqa: PLC0415
@@ -272,6 +274,7 @@ class Hello(CmdCommon):
         a_in = AuthCmdIn(auth)
         self._rpc_auth = auth
         self._rpc_in = a_in
+        self._rpc_init.set()
         self._rpc_fallback = False
         self._name_reply = None
         self._res_data = None
@@ -304,6 +307,7 @@ class Hello(CmdCommon):
             self._done.set()
             raise
         finally:
+            self._rpc_init.set()
             self._rpc_in = None
             self._rpc_auth = None
 
@@ -311,9 +315,14 @@ class Hello(CmdCommon):
         """
         Dispatch an incoming "hello" message
         """
-        if self._rpc_in is not None and rcmd and rcmd[-1] is None:
-            # new auth protocol
-            return await self._rpc_in.handle(msg, rcmd)
+        if rcmd and rcmd[-1] is None:
+            # RPC auth can arrive before ``run`` had a chance to install ``_rpc_in``.
+            if self._rpc_in is None and not self._rpc_init.is_set():
+                await self._rpc_init.wait()
+            if self._rpc_in is not None:
+                return await self._rpc_in.handle(msg, rcmd)
+            await msg.ml_send_error(ValueError("No Hello/Auth"))
+            return
         scmd = rcmd.pop()
         if scmd != "i":
             raise KeyError(scmd)

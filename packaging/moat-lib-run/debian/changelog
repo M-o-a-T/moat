@@ -1,3 +1,9 @@
+moat-lib-run (0.2.0-4) unstable; urgency=medium
+
+  * New release for 26.0.16
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 23:08:14 +0100
+
 moat-lib-run (0.2.0-3) unstable; urgency=medium
 
   * New release for 26.0.15

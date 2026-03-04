@@ -263,6 +263,30 @@ async def test_load_force_overwrites():
     assert kw == {}
 
 
+async def test_data_cli_uses_selected_server(monkeypatch):
+    """`moat link -s NAME data ...` forwards NAME to `Link(..., only=...)`."""
+
+    calls = []
+
+    class _Link:
+        def __init__(self, cfg, *, common=False, only=None):
+            calls.append((cfg, common, only))
+
+    async def _with_async_resource(res):
+        return res
+
+    monkeypatch.setattr(data_cmd, "Link", _Link)
+    ctx = attrdict(
+        obj=attrdict(cfg=attrdict(link=attrdict()), link_name="foo", stdout=StringIO()),
+        with_async_resource=_with_async_resource,
+        invoked_subcommand="get",
+    )
+
+    await data_cmd.cli.callback.__wrapped__(ctx, P(":"), False)
+
+    assert calls == [(ctx.obj.cfg.link, True, "foo")]
+
+
 async def test_load_dict_format_and_optional_meta(monkeypatch):
     """`load` auto-detects dict docs and accepts missing `_meta`."""
 

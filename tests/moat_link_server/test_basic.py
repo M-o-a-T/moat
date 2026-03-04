@@ -122,6 +122,7 @@ async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch, caplog
     assert saw_late_reject
     assert saw_server_fallback
     assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
+    assert not any("No Hello/Auth" in rec.getMessage() for rec in caplog.records)
 
 
 @pytest.mark.anyio
@@ -184,6 +185,38 @@ async def test_ls_client_fallback_if_hello_precedes_nohelloauth(cfg, monkeypatch
 
     assert saw_delayed_nohelloauth
     assert not any("Link failed:" in r.message for r in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_ls_rpc_waits_for_server_auth_start(cfg, monkeypatch, caplog):
+    "Incoming RPC auth waits for server startup instead of failing with KeyError(None)."
+    orig_run = Hello.run
+    orig_handle = Hello.handle
+    saw_early_rpc = False
+
+    async def _run(self, sender, **kw):
+        if self.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, sender, **kw)
+
+    async def _handle(self, msg, rcmd, *prefix):
+        nonlocal saw_early_rpc
+        if self.rpc_auth_server is True and self._rpc_in is None and rcmd and rcmd[-1] is None:
+            saw_early_rpc = True
+        return await orig_handle(self, msg, rcmd, *prefix)
+
+    monkeypatch.setattr(Hello, "run", _run)
+    monkeypatch.setattr(Hello, "handle", _handle)
+    caplog.set_level(logging.ERROR)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert saw_early_rpc
+    assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
 
 
 async def data(s):  # noqa: D103

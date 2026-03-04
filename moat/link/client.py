@@ -222,7 +222,11 @@ class LinkCommon(CmdCommon):
         while authorization has not completed
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return await self._hello.handle(msg, rcmd)
+            if self._hello.is_auth_cmd(rcmd):
+                return await self._hello.handle(msg, rcmd)
+            if not self._hello.auth_accepting:
+                await msg.ml_send_error(ValueError("No Hello/Auth"))
+                return
 
         if rcmd and rcmd[-1] == "d_":
             msg._kw = dict(msg.kw)  # noqa: SLF001

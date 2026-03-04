@@ -159,6 +159,7 @@ class Hello(CmdCommon):
     _rpc_auth: Any = field(init=False, default=None)
     _rpc_in: Any = field(init=False, default=None)
     _rpc_init: anyio.Event = field(init=False, factory=anyio.Event)
+    _rpc_accepting: bool = field(init=False, default=False)
     _rpc_fallback: bool = field(init=False, default=False)
     _name_reply: str | None = field(init=False, default=None)
     _res_data: dict[str, Any] | None = field(init=False, default=None)
@@ -226,10 +227,36 @@ class Hello(CmdCommon):
         """
         Extra auth-response metadata shared between RPC auth and legacy Hello.
         """
+        if role is not None and self._rpc_in is not None:
+            # We are about to send a successful incoming RPC-auth reply.
+            # At this point non-auth commands may pass through.
+            self._rpc_accepting = True
         role  # noqa:B018
         if self._name_reply is None:
             return {}
         return {"name": self._name_reply}
+
+    @staticmethod
+    def is_auth_cmd(rcmd: list[PathElem]) -> bool:
+        """
+        Check whether this command belongs to startup authentication.
+        """
+        if not rcmd:
+            return False
+        if rcmd[-1] is None:
+            return True
+        if rcmd[-1] != "i":
+            return False
+        if len(rcmd) == 2 and rcmd[0] == "hello":
+            return True
+        return len(rcmd) == 3 and rcmd[1] == "auth"
+
+    @property
+    def auth_accepting(self) -> bool:
+        """
+        Non-auth commands may pass while RPC auth cleanup is still running.
+        """
+        return self._rpc_accepting
 
     def auth_data_res_in(self, role: str | None, data: dict) -> None:
         """
@@ -275,6 +302,7 @@ class Hello(CmdCommon):
         self._rpc_auth = auth
         self._rpc_in = a_in
         self._rpc_init.set()
+        self._rpc_accepting = False
         self._rpc_fallback = False
         self._name_reply = None
         self._res_data = None
@@ -315,7 +343,7 @@ class Hello(CmdCommon):
         """
         Dispatch an incoming "hello" message
         """
-        if rcmd and rcmd[-1] is None:
+        if self.is_auth_cmd(rcmd) and rcmd[-1] is None:
             # RPC auth can arrive before ``run`` had a chance to install ``_rpc_in``.
             if self._rpc_in is None and not self._rpc_init.is_set():
                 await self._rpc_init.wait()

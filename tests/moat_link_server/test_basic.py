@@ -219,6 +219,34 @@ async def test_ls_rpc_waits_for_server_auth_start(cfg, monkeypatch, caplog):
     assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
 
 
+@pytest.mark.anyio
+async def test_ls_rpc_allows_post_auth_backend_query(cfg, monkeypatch, caplog):
+    "Named-server backend query must not fail while RPC auth teardown is still running."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+    from moat.link.client import Link  # noqa: PLC0415
+
+    orig_task = AuthCmdIn.task
+
+    async def _task(self):
+        res = await orig_task(self)
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return res
+
+    monkeypatch.setattr(AuthCmdIn, "task", _task)
+    caplog.set_level(logging.WARNING)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        async with Link(sf.cfg, only=srv.name) as c:
+            r = await c.cmd(P("i.乒"), "pling")
+            assert r.args == ["乓", "pling"]
+
+    assert not any("Could not query backend" in rec.getMessage() for rec in caplog.records)
+    assert not any("No Hello/Auth" in rec.getMessage() for rec in caplog.records)
+
+
 async def data(s):  # noqa: D103
     await s("a.b.e", 10)
     await s("a.b.f", 11)

@@ -83,6 +83,9 @@ async def cli(ctx, link_name):
     if "link" not in cfg or "backend" not in cfg["link"]:
         sys.stderr.write(usage1)
         raise click.UsageError("not configured")
+
+    set_root(cfg.link)
+
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")

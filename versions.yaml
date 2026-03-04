@@ -296,7 +296,7 @@ moat-lib-rpc:
   tag: 0.7.0
 moat-lib-run:
   deb: 0.1.4-1
-  new: 0.1.4
+  new: 0.2.0
   pkg: 1
   pypi: 0.1.4
   rev: dfc1de8d666d036c9eda515ca99ddf6f58d4c93f

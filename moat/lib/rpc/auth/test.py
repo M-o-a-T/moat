@@ -20,10 +20,18 @@ class SubAuth(_SubAuth):
 
     _seen: Event
 
+    def _seen_evt(self) -> Event:
+        "Return the per-instance start/seen event, creating it if needed."
+        try:
+            return self._seen
+        except AttributeError:
+            self._seen = Event()
+            return self._seen
+
     async def setup(self):
         "Adds an event, for continuing"
         await super().setup()
-        self._seen = Event()
+        self._seen_evt()
 
     async def task(self):
         """Handle this auth method."""
@@ -31,7 +39,7 @@ class SubAuth(_SubAuth):
             self.set_ready()
 
         if self.is_server:
-            await self._seen.wait()
+            await self._seen_evt().wait()
             return
 
         ok = self.auth.get("ok", self.parent.cfg.get("ok", self.cfg.get("ok")))
@@ -46,7 +54,7 @@ class SubAuth(_SubAuth):
 
     async def cmd_test(self, ok=None):
         """Handle receiving a request for this auth method"""
-        self._seen.set()
+        self._seen_evt().set()
         if ok is True:
             self.accept()
         elif ok is False:

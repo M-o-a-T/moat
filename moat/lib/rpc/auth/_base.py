@@ -440,6 +440,7 @@ class SubAuth(BaseCmd):
     cfg: attrdict
     parent: AuthCmdIn
     remote: SubMsgSender
+    _seen: Event
 
     def __init__(
         self,
@@ -457,6 +458,15 @@ class SubAuth(BaseCmd):
         self.remote = remote
         self.auth = auth or {}
         self.is_server = parent.parent.is_server
+
+    @property
+    def _seen_evt(self) -> Event:
+        "Return the per-instance start/seen event, creating it lazily."
+        try:
+            return self._seen
+        except AttributeError:
+            self._seen = Event()
+            return self._seen
 
     async def task(self):
         """Handle this auth method."""

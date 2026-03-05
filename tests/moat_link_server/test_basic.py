@@ -247,6 +247,31 @@ async def test_ls_rpc_allows_post_auth_backend_query(cfg, monkeypatch, caplog):
     assert not any("No Hello/Auth" in rec.getMessage() for rec in caplog.records)
 
 
+@pytest.mark.anyio
+async def test_ls_rpc_auth_cmd_before_subtask_setup(cfg, monkeypatch, caplog):
+    "RPC auth mode commands may arrive before subauth setup has run."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+
+    orig_run = AuthCmdIn._run  # noqa: SLF001
+
+    async def _run(self, s_a):
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, s_a)
+
+    monkeypatch.setattr(AuthCmdIn, "_run", _run)
+    caplog.set_level(logging.ERROR)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert not any("has no attribute '_seen'" in rec.getMessage() for rec in caplog.records)
+
+
 async def data(s):  # noqa: D103
     await s("a.b.e", 10)
     await s("a.b.f", 11)

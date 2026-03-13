@@ -636,8 +636,8 @@ class LinkSender(MsgSender):
         requested via @with_prev, goes through the server. Otherwise posts to
         MQTT directly.
         """
-        if path and isinstance(path[0], Path):
-            raise ValueError("Don't use a root-prefixed path here.")
+        if path.has_prefix:
+            raise ValueError("Don't use a prefixed path here.")
 
         if verify is NotGiven:
             verify = (

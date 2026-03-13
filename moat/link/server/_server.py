@@ -818,16 +818,16 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-    async def s_log_(self, path: str, *, state: bool = False):
+    async def s_log_(self, path: str, *, state: bool = False) -> bool:
         await self.server.run_saver(path, save_state=state)
         return True
 
-    async def s_save_(self, path: str, prefix=Path()):
+    async def s_save_(self, path: str, prefix=Path()) -> bool:
         await self.server.save(path, prefix=prefix)
 
         return True
 
-    async def s_load_(self, path, *, prefix=Path()):
+    async def s_load_(self, path, *, prefix=Path()) -> tuple[int, int, list[Tag], str]:
         return await self.server.load_file(fn=path, prefix=prefix)
 
 
@@ -1934,8 +1934,8 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd, _skp, tags = await self.load_file(fn=fn)
-        if not upd:
+        upd, _skp, tags, mode = await self.load_file(fn=fn)
+        if mode != "init" and not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):
             raise RuntimeError("No or incomplete tags!")
@@ -2002,13 +2002,13 @@ class Server(MsgHandler):
             done.add(sfn)
 
             try:
-                upd, _skp, tags = await self.load_file(fn=fn)
+                upd, _skp, tags, mode = await self.load_file(fn=fn)
             except Exception as exc:
                 self.logger.error("Failed to load %s", fn, exc_info=exc)
                 await fn.rename(fn.with_suffix(".moat.bad"))
                 continue
 
-            if not upd or not tags:
+            if mode != "init" and (not upd or not tags):
                 continue
             if not tag_check(tags):
                 # extract the first tag's value
@@ -2026,7 +2026,7 @@ class Server(MsgHandler):
 
     async def load_file(
         self, fn: anyio.Path, prefix: Path = Path(), local: bool = False
-    ) -> tuple[int, int, list[Tag]]:
+    ) -> tuple[int, int, list[Tag], str]:
         """
         Load a file.
 
@@ -2034,6 +2034,7 @@ class Server(MsgHandler):
         plus the tags from the file.
         """
         self.logger.info("Loading from %r", fn)
+        mode = "?"
         async with MsgReader(fn, codec="std-cbor") as rdr:
             pl = PathLongener(prefix)
             upd, skp, tags = 0, 0, []
@@ -2048,6 +2049,7 @@ class Server(MsgHandler):
                         # concatenated files?
                         if ehdr is not None:
                             raise ValueError("START within file %r", str(fn))
+                        mode = msg.value[1].get("mode", "?")
                         # TODO verify that these belong together
 
                     elif msg.tag == CBOR_TAG_MOAT_CHANGE:
@@ -2082,7 +2084,7 @@ class Server(MsgHandler):
                     skp += 1
 
             self.logger.info("Loading from %r done: %d/%d", fn, upd, skp)
-            return upd, skp, tags
+            return upd, skp, tags, mode
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
         seen = defaultdict(lambda: 0)

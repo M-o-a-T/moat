@@ -2057,6 +2057,7 @@ class Server(MsgHandler):
                     elif msg.tag == CBOR_TAG_MOAT_FILE_END:
                         if ehdr is None:
                             raise ValueError("END without start in %r", str(fn))
+                        if ehdr.tag == CBOR_TAG_MOAT_FILE_END:
                             raise ValueError("Duplicate END in %r", str(fn))
                     else:
                         self.logger.warning("Unknown tag %r: %r", str(fn), msg)
@@ -2068,7 +2069,7 @@ class Server(MsgHandler):
                 elif ehdr.tag != CBOR_TAG_MOAT_FILE_ID:
                     raise ValueError("Data %r after tag: %r", msg, ehdr)
 
-                # Any other problems just raise the exception
+                # Any other problems just raise an exception
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
                 meta = MsgMeta.restore(mt)

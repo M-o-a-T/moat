@@ -5,6 +5,7 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
+import math
 import struct
 
 from moat.util import OutOfData
@@ -403,16 +404,20 @@ class Codec(_Codec):
         # Some special cases of CBOR_7 best handled by special struct.unpack logic here
         if tb == CBOR_FLOAT16:
             data = self._read(2)
-            pf = struct.unpack_from("!e", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!e", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(4 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT32:
             data = self._read(4)
-            pf = struct.unpack_from("!f", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!f", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(8 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT64:
             data = self._read(8)
-            pf = struct.unpack_from("!d", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!d", data, 0)[0]
+            return pf
 
         tag, aux = self._dec_tag_aux(tb)
 

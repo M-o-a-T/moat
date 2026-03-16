@@ -16,7 +16,7 @@ from attrs import define, field
 
 from moat.util import NotGiven, attrdict, gen_ident
 from moat.util import as_service as _as_service
-from moat.lib.path import P, Path, set_root
+from moat.lib.path import P, Path
 
 from .client import Link
 from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
@@ -310,7 +310,6 @@ async def as_service(obj: attrdict | None = None):
     if obj is None:
         obj = attrdict()
     obj.setdefault("debug", False)
-    set_root(obj.cfg.link)
 
     async with (
         _as_service(obj) as mon,

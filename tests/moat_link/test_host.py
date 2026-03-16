@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import anyio
-import os
 import pytest
 import time
 
 from moat.util import as_service, merge, to_attrdict, yload
-from moat.lib.path import P, Path
+from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.announce import announcing
 from moat.link.host import HostEvent, HostState, Service, ServiceMon
@@ -203,9 +202,11 @@ async def test_mon(cfg):
     "host monitoring test"
 
     # shorten timeouts
+
     ctim = yload(TIMES, attr=True)
-    ctim.root = Path.build((os.getpid(), "TEST"))
+    #   ctim.root = Path.build((os.getpid(), "TEST"))
     merge(cfg.link, ctim)
+    #   CFG.maybe_redo()
     emsgs = []
     hmsgs = []
 

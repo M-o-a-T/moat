@@ -1512,19 +1512,21 @@ class Server(MsgHandler):
         """
         The method that opens a backend connection and actually runs the server.
 
-        This will terminate when `stop` is called (in another task).
+        This will terminate when `stop` is called (in another task),
+        or when cancelled.
         """
+        # root path
+        csr = self.cfg.root
+        csr = P(csr) if isinstance(csr, str) else Path.build(csr)
+        Root.set(csr)
+
+        # termination notice
         will_data = attrdict(
             topic=P(":R.run.service.main.server") / self.name,
             data=NotGiven,
             qos=1,
             retain=True,
         )
-
-        # root path
-        csr = self.cfg.root
-        csr = P(csr) if isinstance(csr, str) else Path.build(csr)
-        Root.set(csr)
 
         self._stop_flag = anyio.Event()
         self._stopped = anyio.Event()

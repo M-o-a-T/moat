@@ -13,7 +13,7 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
-from moat.lib.path import P, Path, set_root
+from moat.lib.path import P, Path
 from moat.lib.run import load_subgroup
 
 from .backend import get_backend
@@ -84,8 +84,6 @@ async def cli(ctx, link_name):
         sys.stderr.write(usage1)
         raise click.UsageError("not configured")
 
-    set_root(cfg.link)
-
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")
@@ -99,7 +97,6 @@ async def test(obj):
     "Test"
 
     cfg = obj.cfg.link
-    set_root(cfg)
 
     async def check_root():
         try:

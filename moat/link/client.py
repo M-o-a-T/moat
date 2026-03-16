@@ -38,6 +38,7 @@ from moat.lib.path import (
     Path,
     PathLongener,
     Root,
+    set_root,
 )
 from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
@@ -197,6 +198,7 @@ class LinkCommon(CmdCommon):
     def __init__(self, cfg, name: str | None = None):
         super().__init__(cfg)
         CFG.maybe_redo()
+        set_root(CFG.moat.link)
 
         if name is not None:
             self.is_server = True

@@ -361,7 +361,10 @@ class Register:
     __str__ = __repr__
 
 
-_data = FSPath(__file__).parent / "_data"
+if FSPath("mt").exists() and FSPath(".git").exists():
+    _data = FSPath(__file__).parent / "_data"
+else:
+    _data = FSPath("/usr/share/moat/modbus-data")
 
 
 class BaseDevice:

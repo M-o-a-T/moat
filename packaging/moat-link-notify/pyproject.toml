@@ -13,7 +13,7 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"asyncclick",
+	"asyncclick ~= 8.3",
 	"attrs",
 	"httpx",
 	"moat-util ~= 0.63.0",

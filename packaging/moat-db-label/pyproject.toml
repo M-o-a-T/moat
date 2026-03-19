@@ -34,7 +34,7 @@ repository = "https://github.com/M-o-a-T/moat"
 
 [project.optional-dependencies]
 event = [ "attr", "outcome",]
-main = [ "asyncclick", "getpass",]
+main = [ "asyncclick >= 8.3", "getpass",]
 msg = [ "msgpack",]
 path = [ "simpleeval",]
 queue = [ "outcome",]

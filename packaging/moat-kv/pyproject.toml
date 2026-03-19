@@ -17,7 +17,7 @@ classifiers = [
 	"Topic :: System :: Distributed Computing",
 ]
 dependencies = [
-	"asyncclick > 7.99",
+	"asyncclick >= 8.3",
 	"trio >= 0.22",
 	"anyio >= 4",
 	"range_set >= 0.2",

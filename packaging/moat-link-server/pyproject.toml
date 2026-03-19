@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
 	"anyio ~= 4.2",
 	"asyncactor ~= 0.28.0",
-	"asyncclick",
+	"asyncclick ~= 8.3",
 	"attrs",
 	"ruyaml",
 	"simpleeval",

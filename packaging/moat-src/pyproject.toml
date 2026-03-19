@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
 	"anyio ~= 4.2",
 	"tomlkit ~= 0.12",
-	"asyncclick",
+	"asyncclick ~= 8.3",
 	"gitpython",
 	"packaging",
 	"moat-lib-config ~= 0.2.0",

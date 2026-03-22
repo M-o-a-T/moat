@@ -18,7 +18,7 @@ from moat.lib.priomap import TimerMap
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from anyio.abc import TaskGroup
@@ -138,12 +138,6 @@ class Gate:
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
-    @staticmethod
-    def _gate_node(node: Node) -> GateNode:
-        if isinstance(node, GateNode):
-            return node
-        raise TypeError(f"Expected {GateNode.__name__}, got {type(node).__name__}")
-
     async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the internal data.
@@ -161,7 +155,7 @@ class Gate:
                     # mine, so skip
                     continue
 
-                node = self._gate_node(self.data.get(p))
+                node = cast(GateNode, self.data.get(p))
                 if self.running or node.has_src:
                     # self.logger.debug("S NOW %r %r %r",p,d,m)
                     await self._set_dst(p, node, d, m)
@@ -201,8 +195,7 @@ class Gate:
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
         """
-        node = self.data.get(path)
-        node = self._gate_node(node)
+        node = cast(GateNode, self.data.get(path))
 
         if self.running or node.has_dst:
             await self._set_src(self.cf.src + path, node, data, aux)
@@ -318,7 +311,7 @@ class Gate:
 
         # resolve any conflicts in the initial data
         async def visit(path: Path, node: Node):
-            node = self._gate_node(node)
+            node = cast(GateNode, node)
             if not node.todo:
                 return
 

@@ -1,0 +1,26 @@
+[Unit]
+Description=MoaT-Link host service for %i
+After=moat-link-server.service
+After=flashmq.service
+
+ConditionFileNotEmpty=/etc/moat/moat-%i.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat link host run
+
+RuntimeDirectory=moat/link
+
+User=MoaT-Link
+Group=MoaT
+
+EnvironmentFile=/usr/lib/moat/link/env
+EnvironmentFile=-/etc/moat/link.env
+EnvironmentFile=-/etc/moat/link-%i.env
+Environment=MOAT_CFG=/etc/moat/moat-%i.yaml
+
+TimeoutSec=300
+WatchdogSec=10

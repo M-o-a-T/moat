@@ -568,8 +568,8 @@ class Path(Sequence[PathElem]):
         if len(self) == 0 and self._prefix is None:
             return Path.build(other)
         if isinstance(other, Path):
-            if isinstance(other._prefix, Path):
-                raise ValueError(f"Add with prefix: {self} + {other}")  # noqa:TRY004
+            if isinstance(other._prefix, Path) and self._prefix != other._prefix:
+                raise ValueError(f"Add with prefix: {self} + {other}")
             # Prefix=True (relative) is OK
             other = other._data
         elif not isinstance(other, (list, tuple)):

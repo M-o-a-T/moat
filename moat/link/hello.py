@@ -10,9 +10,7 @@ import logging
 from attrs import define, field
 
 from moat.util import attrdict
-from moat.lib.path import P
-from moat.lib.rpc import Auth, AuthCmdIn, AuthDenied  # noqa: PLC0415
-from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
+from moat.lib.rpc import Auth, AuthCmdIn, AuthDenied
 
 from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min
@@ -31,12 +29,6 @@ logger = logging.getLogger(__name__)
 
 class NotAuthorized(RuntimeError):  # noqa: D101
     pass
-
-
-def _to_dict(x: dict[str, AuthMethod] | list[AuthMethod]) -> dict[str, AuthMethod]:
-    if isinstance(x, dict):
-        return x
-    return {a.name: a for a in x}
 
 
 class _RPCRoot:
@@ -119,8 +111,6 @@ class Hello(CmdCommon):
             me: str | None = None,
             them: str | None = None,
             *,
-            auth_in: dict[str, AuthMethod] | list[AuthMethod] = ...,
-            auth_out: dict[str, AuthMethod] | list[AuthMethod] = ...,
             rpc_auth_modes: tuple[str, ...] | None = None,
             rpc_auth_data: dict[str, Any] = ...,
             rpc_auth_server: bool | None = None,
@@ -134,8 +124,6 @@ class Hello(CmdCommon):
 
     auth_data: Any = field(init=False, default=None)
 
-    auth_in: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)  # noqa:RUF008
-    auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)  # noqa:RUF008
     rpc_auth_modes: tuple[str, ...] | None = field(kw_only=True, default=None)
     rpc_auth_data: dict[str, Any] = field(kw_only=True, factory=dict)
     rpc_auth_server: bool | None = field(kw_only=True, default=None)
@@ -143,7 +131,6 @@ class Hello(CmdCommon):
     me_server: bool = field(default=False)
     they_server: bool = field(init=False, default=False)
 
-    _sync: anyio.Event = field(init=False, factory=anyio.Event)
     _done: anyio.Event = field(init=False, factory=anyio.Event)
 
     # min and max protocol versions we might accept
@@ -156,7 +143,7 @@ class Hello(CmdCommon):
     _rpc_in: Any = field(init=False, default=None)
     _rpc_init: anyio.Event = field(init=False, factory=anyio.Event)
     _rpc_accepting: bool = field(init=False, default=False)
-    _reply: dict[str,Any] = field(init=False, factory=dict)
+    _reply: dict[str, Any] = field(init=False, factory=dict)
     _res_data: dict[str, Any] | None = field(init=False, default=None)
 
     def __attrs_post_init__(self):
@@ -258,9 +245,9 @@ class Hello(CmdCommon):
 
     def auth_skip(self) -> None:
         """
-        RPC auth isn't supported by the peer; caller may fall back to Hello/auth.
+        RPC auth isn't supported by the peer.
         """
-        raise 
+        raise NotAuthorized("Peer does not support RPC auth")
 
     def _rpc_modes(self) -> tuple[str, ...]:
         """
@@ -270,21 +257,23 @@ class Hello(CmdCommon):
             return ()
         return tuple(self.rpc_auth_modes)
 
-    async def run(self, sender: MsgSender, **kw):
+    async def run(self, sender: MsgSender):
         """
         Run the RPC auth protocol.
         """
         modes = self._rpc_modes()
         if not modes:
             self._rpc_init.set()
-            raise _NoRPCAuth
+            self._done.set()
+            raise NotAuthorized("No auth modes configured")
 
         cfg = attrdict(modes=[attrdict(mode=m) for m in modes])
         shim = _RPCShim(self, sender, self.rpc_auth_data)
         auth = Auth(cfg, cast("Any", shim))
         auth.base_root = cast("MsgSender", _RPCRoot(sender))
         self._rpc_auth = auth
-        self._rpc_in = AuthCmdIn(auth)
+        a_in = AuthCmdIn(auth)
+        self._rpc_in = a_in
         self._rpc_init.set()
         self._rpc_accepting = False
         self._reply = {}
@@ -298,7 +287,7 @@ class Hello(CmdCommon):
             if a_in.p_version is not None:
                 self.protocol_version = min(a_in.p_version, self.protocol_max)
             return self._res_data or True
-        except BaseException as exc:
+        except BaseException:
             self.auth_data = False
             raise
         finally:
@@ -317,36 +306,7 @@ class Hello(CmdCommon):
             if self._rpc_in is None:
                 raise AuthDenied(msg)
             return await self._rpc_in.handle(msg, rcmd)
-        scmd = rcmd.pop()
-        if scmd != "i":
-            raise KeyError(scmd)
-        if len(rcmd) != 2 or rcmd[1] != "auth":
-            raise ValueError("No Hello/Auth")
-
-        if self.auth_data is not None:
-            # Some other method already succeeded
-            await msg.result(False)
-            return
-        rcmd0 = rcmd[0]
-        if not isinstance(rcmd0, str):
-            await msg.result(False)
-            return
-        a = self.auth_in.get(rcmd0, None)
-        if a is None:
-            await msg.result(False)
-        else:
-            await a.handle(self, msg)
-
-    def authorized(self, data: Any) -> bool:
-        """
-        Called by an auth method to indicate that authorization worked.
-
-        Returns True if this method was the first to succeed.
-        """
-        if self.auth_data is not None:
-            return False
-        self.auth_data = data
-        return True
+        raise KeyError(rcmd)
 
     async def wait_done(self):
         "wait until done"

@@ -8,7 +8,7 @@ from platform import uname
 
 import asyncclick as click
 
-from moat.util import as_service, attrdict, srepr, NotGiven
+from moat.util import NotGiven, as_service, attrdict, srepr
 from moat.lib.broadcast import Broadcaster
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup
@@ -87,9 +87,13 @@ async def list(obj, timeout, dump):  # noqa: A001
                 if dump:
                     print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
                 else:
+                    try:
+                        up = h.data.p["up"]
+                    except AttributeError:
+                        up = None
                     for k, v in h.data.h.items():
-                        ok = v.get("up", False)
-                        if hc.get(k, False) == ok:
+                        ok = up if up is not None else v.get("up", False)
+                        if hc.get(k, None) is ok:
                             continue
                         hc[k] = ok
                         print(
@@ -101,17 +105,18 @@ async def list(obj, timeout, dump):  # noqa: A001
                             "" if ok else "** DOWN **",
                         )
 
+
 @cli.command()
 @click.argument("paths", type=P, nargs=-1)
 @click.pass_obj
-async def kill(obj, paths):  # noqa: A001
+async def kill(obj, paths):
     """
     Kill a hosted service.
     """
 
     link = obj.conn
     for p in paths:
-        if len(p)==1 and isinstance(p[0],str) and p[0].startswith("_"):
-            await link.send(P(":R.run.ping.id")+p, NotGiven, retain=True)
+        if len(p) == 1 and isinstance(p[0], str) and p[0].startswith("_"):
+            await link.send(P(":R.run.ping.id") + p, NotGiven, retain=True)
         else:
-            await link.send(P(":R.run.host")+p, NotGiven, retain=True)
+            await link.send(P(":R.run.host") + p, NotGiven, retain=True)

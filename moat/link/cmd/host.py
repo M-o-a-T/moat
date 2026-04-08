@@ -8,8 +8,9 @@ from platform import uname
 
 import asyncclick as click
 
-from moat.util import as_service, attrdict, srepr
+from moat.util import as_service, attrdict, srepr, NotGiven
 from moat.lib.broadcast import Broadcaster
+from moat.lib.path import P
 from moat.lib.run import AliasedGroup
 from moat.link.announce import announcing
 from moat.link.client import Link
@@ -63,20 +64,29 @@ async def run(obj, main, no_main, debug):
 
 @cli.command()
 @click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
-@click.option("-h", "--hosts", is_flag=True, help="Show host paths.")
+@click.option("-d", "--dump", is_flag=True, help="Show details.")
 @click.pass_obj
-async def list(obj, timeout, hosts):  # noqa: A001
+async def list(obj, timeout, dump):  # noqa: A001
     """
     Host list.
 
     "moat link host list" shows the hosts that are currently active.
+
+    Output consists of three space-delimited columns:
+    * connection's key
+    * host name
+    * service path
+
+    The host name is empty if the service path starts with it.
     """
 
     hc = dict()
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
-                if hosts:
+                if dump:
+                    print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
+                else:
                     for k, v in h.data.h.items():
                         ok = v.get("up", False)
                         if hc.get(k, False) == ok:
@@ -90,5 +100,18 @@ async def list(obj, timeout, hosts):  # noqa: A001
                             k,
                             "" if ok else "** DOWN **",
                         )
-                else:
-                    print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
+
+@cli.command()
+@click.argument("paths", type=P, nargs=-1)
+@click.pass_obj
+async def kill(obj, paths):  # noqa: A001
+    """
+    Kill a hosted service.
+    """
+
+    link = obj.conn
+    for p in paths:
+        if len(p)==1 and isinstance(p[0],str) and p[0].startswith("_"):
+            await link.send(P(":R.run.ping.id")+p, NotGiven, retain=True)
+        else:
+            await link.send(P(":R.run.host")+p, NotGiven, retain=True)

@@ -297,6 +297,18 @@ class AuthCmdIn(BaseCmd):
 
     async def task(self) -> None:
         "Runner for authorizing."
+        try:
+            await self._task()
+        except AuthNoRemote:
+            cmd = self.parent.parent
+            cmd.auth_skip()
+            if L:
+                self.set_ready()
+            del self.modes
+            self.parent.auth_done(self.parent.base_root)
+
+    async def _task(self) -> None:
+        "Inner task body, separated so AuthNoRemote can be caught cleanly."
         async with ungroup, TaskGroup() as tg_send:
             sdr = SubMsgSender(_WithAuth(self.parent.parent), Path())
             self.modes = {}

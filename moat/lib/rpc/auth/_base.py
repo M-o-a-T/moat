@@ -312,7 +312,7 @@ class AuthCmdIn(BaseCmd):
                     if isinstance(msg_in, Event):
                         await msg_in.wait()
                         msg_in = self.msg_in
-                    modes = set(cast(Msg, msg_in)[3])
+                    modes = set(msg_in[3])  # type: ignore[index]
 
                     for idx, cfg in enumerate(self.cfg.modes):
                         name = cfg.get("name", cfg.mode)
@@ -361,11 +361,8 @@ class AuthCmdIn(BaseCmd):
                 self.parent.auth_done(None)
             else:
                 assert ok is not None
-                sender = self.sender_for_ok(
-                    self.parent.base_root.sender, cast(_SubAuthType, ok)
-                )
+                sender = self.sender_for_ok(self.parent.base_root.sender, cast(_SubAuthType, ok))
                 self.parent.auth_done(sender)
-
 
     async def _handle_cmd(self, msg: Msg):
         """

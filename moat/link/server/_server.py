@@ -53,7 +53,6 @@ from moat.lib.path import (
     Root,
 )
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
-from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
 from moat.link.common import _Sub_i as _CommonSubI
@@ -374,7 +373,6 @@ class ServerClient(LinkCommon):
             them=self.name,
             me=self.server.name,
             me_server=True,
-            auth_in=[TokenAuth(*self.server.tokens), AnonAuth()],
             rpc_auth_modes=("token", "anon"),
             rpc_auth_data={"token": self.server.tokens},
             rpc_auth_server=True,
@@ -2208,12 +2206,12 @@ class Server(MsgHandler):
             raise KeyError(name)
         try:
             cl = self._clients[name]
-        except KeyError:
+        except KeyError as exc:
             for cl in self._clients.values():
                 if f"{cl.prefix}_{cl.client_nr}" == name:
                     break
             else:
-                raise
+                raise ExpKeyError(name) from exc
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:

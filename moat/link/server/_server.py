@@ -2208,12 +2208,12 @@ class Server(MsgHandler):
             raise KeyError(name)
         try:
             cl = self._clients[name]
-        except KeyError:
+        except KeyError as exc:
             for cl in self._clients.values():
                 if f"{cl.prefix}_{cl.client_nr}" == name:
                     break
             else:
-                raise
+                raise ExpKeyError(name) from exc
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:

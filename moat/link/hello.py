@@ -11,6 +11,8 @@ from attrs import define, field
 
 from moat.util import attrdict
 from moat.lib.path import P
+from moat.lib.rpc import Auth, AuthCmdIn, AuthDenied  # noqa: PLC0415
+from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
 
 from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min
@@ -21,8 +23,6 @@ from typing import TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg, MsgSender
-
-    from .auth import AuthMethod
 
     from typing import Any
 
@@ -37,10 +37,6 @@ def _to_dict(x: dict[str, AuthMethod] | list[AuthMethod]) -> dict[str, AuthMetho
     if isinstance(x, dict):
         return x
     return {a.name: a for a in x}
-
-
-class _NoRPCAuth(RuntimeError):
-    "Internal marker for falling back to legacy Hello/auth."
 
 
 class _RPCRoot:
@@ -160,8 +156,7 @@ class Hello(CmdCommon):
     _rpc_in: Any = field(init=False, default=None)
     _rpc_init: anyio.Event = field(init=False, factory=anyio.Event)
     _rpc_accepting: bool = field(init=False, default=False)
-    _rpc_fallback: bool = field(init=False, default=False)
-    _name_reply: str | None = field(init=False, default=None)
+    _reply: dict[str,Any] = field(init=False, factory=dict)
     _res_data: dict[str, Any] | None = field(init=False, default=None)
 
     def __attrs_post_init__(self):
@@ -208,12 +203,12 @@ class Hello(CmdCommon):
             if self.them is None:
                 logger.error("No remote name")
             else:
-                self._name_reply = self.them
+                self._reply["name"] = self.them
         elif self.them is None:
             self.them = remote_name
         elif self.them != remote_name:
             logger.debug("Remote name: %r / %r", remote_name, self.them)
-            self._name_reply = self.them
+            self._reply["name"] = self.them
             self.them = remote_name
 
         if local_name is None:
@@ -231,10 +226,7 @@ class Hello(CmdCommon):
             # We are about to send a successful incoming RPC-auth reply.
             # At this point non-auth commands may pass through.
             self._rpc_accepting = True
-        role  # noqa:B018
-        if self._name_reply is None:
-            return {}
-        return {"name": self._name_reply}
+        return self._reply
 
     @staticmethod
     def is_auth_cmd(rcmd: list[PathElem]) -> bool:
@@ -245,11 +237,7 @@ class Hello(CmdCommon):
             return False
         if rcmd[-1] is None:
             return True
-        if rcmd[-1] != "i":
-            return False
-        if len(rcmd) == 2 and rcmd[0] == "hello":
-            return True
-        return len(rcmd) == 3 and rcmd[1] == "auth"
+        return False
 
     @property
     def auth_accepting(self) -> bool:
@@ -272,7 +260,7 @@ class Hello(CmdCommon):
         """
         RPC auth isn't supported by the peer; caller may fall back to Hello/auth.
         """
-        raise _NoRPCAuth
+        raise 
 
     def _rpc_modes(self) -> tuple[str, ...]:
         """
@@ -282,87 +270,56 @@ class Hello(CmdCommon):
             return ()
         return tuple(self.rpc_auth_modes)
 
-    async def _run_rpc(self, sender: MsgSender):
+    async def run(self, sender: MsgSender, **kw):
         """
-        Try the RPC auth protocol and return Hello-compatible result data.
+        Run the RPC auth protocol.
         """
         modes = self._rpc_modes()
         if not modes:
             self._rpc_init.set()
             raise _NoRPCAuth
 
-        from moat.lib.rpc.auth._base import Auth, AuthCmdIn, AuthDenied  # noqa: PLC0415
-        from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
-
         cfg = attrdict(modes=[attrdict(mode=m) for m in modes])
         shim = _RPCShim(self, sender, self.rpc_auth_data)
         auth = Auth(cfg, cast("Any", shim))
         auth.base_root = cast("MsgSender", _RPCRoot(sender))
-        a_in = AuthCmdIn(auth)
         self._rpc_auth = auth
-        self._rpc_in = a_in
+        self._rpc_in = AuthCmdIn(auth)
         self._rpc_init.set()
         self._rpc_accepting = False
-        self._rpc_fallback = False
-        self._name_reply = None
+        self._reply = {}
         self._res_data = None
         try:
             async with a_in:
                 await a_in.task()
-            if self._rpc_fallback:
-                raise _NoRPCAuth
             if isinstance(auth.ok, Exception):
                 raise auth.ok
             self.auth_data = getattr(auth.ok, "name", True)
             if a_in.p_version is not None:
                 self.protocol_version = min(a_in.p_version, self.protocol_max)
-            self._done.set()
             return self._res_data or True
-        except AuthDenied:
-            self.auth_data = False
-            self._done.set()
-            raise
-        except _NoRPCAuth:
-            raise
         except BaseException as exc:
-            if isinstance(exc, RemoteError) and exc.args == ("ValueError", "No Hello/Auth"):
-                raise _NoRPCAuth from None
-            if isinstance(exc, ValueError) and exc.args == ("No Hello/Auth",):
-                raise _NoRPCAuth from None
-            if self._rpc_fallback:
-                raise _NoRPCAuth from None
             self.auth_data = False
-            self._done.set()
             raise
         finally:
-            self._rpc_init.set()
+            self._done.set()
             self._rpc_in = None
             self._rpc_auth = None
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
-        Dispatch an incoming "hello" message
+        Dispatch an incoming auth message
         """
         if self.is_auth_cmd(rcmd) and rcmd[-1] is None:
             # RPC auth can arrive before ``run`` had a chance to install ``_rpc_in``.
-            if self._rpc_in is None and not self._rpc_init.is_set():
+            if self._rpc_in is None:
                 await self._rpc_init.wait()
-            if self._rpc_in is not None:
-                return await self._rpc_in.handle(msg, rcmd)
-            await msg.ml_send_error(ValueError("No Hello/Auth"))
-            return
+            if self._rpc_in is None:
+                raise AuthDenied(msg)
+            return await self._rpc_in.handle(msg, rcmd)
         scmd = rcmd.pop()
         if scmd != "i":
             raise KeyError(scmd)
-        if len(rcmd) == 1 and rcmd[0] == "hello":
-            if self._rpc_in is not None:
-                # The peer is using the legacy startup protocol. Let the incoming
-                # hello proceed immediately, then fall back once our pending RPC
-                # auth attempt receives its rejection.
-                self._rpc_fallback = True
-                self._sync.set()
-            res = await self.do_hello(msg)
-            return await msg.result(res)
         if len(rcmd) != 2 or rcmd[1] != "auth":
             raise ValueError("No Hello/Auth")
 
@@ -390,167 +347,6 @@ class Hello(CmdCommon):
             return False
         self.auth_data = data
         return True
-
-    doc_i_hello = dict(
-        _d="Process remote Hello msg",
-        _r="auth state",
-        _0="int:protocol",
-        _1="bool:server flag",
-        _2="str:sender's name",
-        _3="str:recipient's name (temp by sender)",
-        _4=["str:auth method"],
-        _k="str:auth names",
-        _kw="Any:auth params",
-    )
-
-    async def do_hello(self, msg) -> bool | None:
-        """
-        Process the remote hello message.
-
-        Returns True if no auth is required.
-        """
-        try:
-            res = await self._do_hello(msg)
-        except BaseException:
-            self.auth_data = False
-            raise
-        else:
-            if self.auth_data is None:
-                self.auth_data = res
-            await msg.result(res)
-        finally:
-            self._done.set()
-
-    async def _do_hello(self, msg) -> bool | dict:
-        logger.debug("H IN %r %r", msg.args, msg.kw)
-        it = iter(msg.args)
-        auth = True
-        remote_name = None
-        local_name = None
-
-        try:
-            prot = next(it)
-
-            # TODO special auth for servers?
-            they_server = next(it)
-            self.they_server = they_server
-            if not self.they_server and not self.me_server:
-                raise RuntimeError("Two clients cannot talk")
-
-            remote_name = next(it)
-            self._name_reply = None
-            try:
-                local_name = next(it)
-            except StopIteration:
-                self.auth_data_in((prot, they_server, remote_name), {})
-                raise
-            else:
-                res = {}
-                if local_name is not None:
-                    res["rname"] = local_name
-                self.auth_data_in(
-                    (prot, they_server, remote_name),
-                    {"moat.link": res},
-                )
-            if remote_name is None and self.them is None:
-                auth = False
-                raise StopIteration
-
-            auth = next(it)
-
-            if not next(it):
-                raise RuntimeError("Not talking to a server")
-
-        except StopIteration:
-            pass
-
-        # wait for the outgoing part to start
-        await self._sync.wait()
-
-        if auth is False:
-            raise NotAuthorized("Remote blocks us", self.them)
-        if auth is True:
-            self.auth_data = True
-            aux_data = self.auth_data_res_out(None)
-            return aux_data or True
-
-        if isinstance(auth, str):
-            auth = (auth,)
-
-        # Check for auth data in the Hello
-        aux_data = {}
-        for a in self.auth_in.values():
-            res = await a.hello_in(self, msg.kw.get(a.name, None))
-            if res is False:
-                return False
-            if res:
-                if self.auth_data is None:
-                    self.auth_data = True
-                aux_data.update(self.auth_data_res_out(a.name))
-                break
-
-        # cycle through the remote side's accepted auth methods
-        for a in auth:
-            am = self.auth_out.get(a, None)
-            if am is None:
-                continue
-            res = await am.chat(self, msg.kw.get(a, None))
-            if res is None:
-                continue
-            aux_data = self.auth_data_res_out(am.name)
-            if isinstance(res, dict):
-                aux_data.update(res)
-            if res is False or not aux_data:
-                return res
-            return aux_data
-
-        # Nothing matched.
-        return False
-
-    async def run(self, sender: MsgSender, **kw):
-        """
-        Send our Hello message.
-        """
-        try:
-            return await self._run_rpc(sender)
-        except _NoRPCAuth:
-            pass
-
-        auths = []
-        for a in self.auth_in.values():
-            auths.append(a.name)
-            if a.name not in kw:
-                v = await a.hello_out()
-                if v is not None:
-                    kw[a.name] = v
-        kw.update(self.auth_data_out())
-
-        if len(auths) == 0:
-            auths = True
-        elif len(auths) == 1:
-            auths = auths[0]
-
-        logger.debug("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
-        self._sync.set()
-        res = await sender.cmd(
-            P("i.hello"),
-            proto_version,
-            self.me_server,
-            self.me,
-            self.them,
-            auths,
-            **kw,
-        )
-        res = res.kw or res[0]
-
-        if res is False:
-            raise NotAuthorized("Server %r rejects us", self.them)
-        if isinstance(res, dict):
-            self.auth_data_res_in(None, res)
-
-        # Wait for the incoming side of the auth/hello dance to succeed
-        await self._done.wait()
-        return res
 
     async def wait_done(self):
         "wait until done"

@@ -49,6 +49,7 @@ else:
         pass
 
 
+@as_proxy("_AuE")
 class AuthError(RuntimeError):
     pass
 
@@ -57,6 +58,7 @@ VERS_MIN = 1
 VERS_MAX = 1
 
 
+@as_proxy("_AuNR")
 class AuthNoRemote(AuthError):
     "Remote side doesn't support the auth protocol"
 
@@ -294,93 +296,80 @@ class AuthCmdIn(BaseCmd):
         cmd.auth_data_res_in(res[0], res.kw)
 
     async def task(self) -> None:
-        try:
-            async with ungroup, TaskGroup() as tg_send:
-                sdr = SubMsgSender(_WithAuth(self.parent.parent), Path())
-                self.modes = {}
+        "Runner for authorizing."
+        async with ungroup, TaskGroup() as tg_send:
+            sdr = SubMsgSender(_WithAuth(self.parent.parent), Path())
+            self.modes = {}
 
-                async def _send_cmd() -> None:
-                    await self._send_cmd(sdr)
+            # send
+            await tg_send.spawn(self._send_cmd, sdr)
 
-                await tg_send.spawn(_send_cmd)
-
-                async with TaskGroup() as tg:
-                    self.parent.tg = tg
-                    try:
+            # receive
+            async with TaskGroup() as tg:
+                self.parent.tg = tg
+                try:
+                    msg_in = self.msg_in
+                    if isinstance(msg_in, Event):
+                        await msg_in.wait()
                         msg_in = self.msg_in
-                        if isinstance(msg_in, Event):
-                            await msg_in.wait()
-                            msg_in = self.msg_in
-                        if isinstance(msg_in, Event):
-                            raise RuntimeError("No auth request")  # noqa:TRY004
-                        modes = set(msg_in[3])
+                    modes = set(cast(Msg, msg_in)[3])
 
-                        for idx, cfg in enumerate(self.cfg.modes):
-                            name = cfg.get("name", cfg.mode)
-                            if name in self.modes:
-                                raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
-                            if name not in modes:
-                                continue  # not accepted by the other side
+                    for idx, cfg in enumerate(self.cfg.modes):
+                        name = cfg.get("name", cfg.mode)
+                        if name in self.modes:
+                            raise ValueError(f"Duplicate mode {cfg.mode} for {self.path}")
+                        if name not in modes:
+                            continue  # not accepted by the other side
 
-                            remote = sdr.sub_at(Path.build((None, cfg.mode)))
-                            sub_factory = cast(_SubAuthFactory, get_auth(cfg.mode))
-                            sub = sub_factory(
-                                cfg,
-                                None if self.parent.auth is None else self.parent.auth.get(name),
-                                self,
-                                idx,
-                                name,
-                                remote,
-                            )
-                            self.modes[name] = sub
+                        remote = sdr.sub_at(Path.build((None, cfg.mode)))
+                        sub = get_auth(cfg.mode)(
+                            cfg,
+                            None if self.parent.auth is None else self.parent.auth.get(name),
+                            self,
+                            idx,
+                            name,
+                            remote,
+                        )
+                        self.modes[name] = sub
 
-                            async def _run_sub(sub: object = sub) -> None:
-                                await self._run(sub)
+                        async def _run_sub(sub: object = sub) -> None:
+                            await self._run(sub)
 
-                            tg.start_soon(_run_sub)
-                    finally:
-                        self.parent.tg = None
+                        tg.start_soon(_run_sub)
+                finally:
+                    self.parent.tg = None
 
-                if L:
-                    self.set_ready()
-
-                del self.modes  # no longer needed
-
-                ok = self.parent.ok
-                if ok is None:
-                    ok = AuthDenied("No auth method worked.")
-                    self.parent.ok = ok
-
-                # Unblock the remote ``:n`` reply before waiting for ``_send_cmd``
-                # to finish when ``tg_send`` exits.
-                if not isinstance(self.msg_out, Event):
-                    raise RuntimeError("AlreadySent")  # noqa:TRY004
-                self.msg_out.set()
-                self.msg_out = ok
-
-                if isinstance(ok, Exception):
-                    # forward the exception to the remote side
-                    self.parent.auth_done(None)
-                else:
-                    assert ok is not None
-                    sender = self.sender_for_ok(
-                        self.parent.base_root.sender, cast(_SubAuthType, ok)
-                    )
-                    self.parent.auth_done(sender)
-
-        except AuthNoRemote:
-            cmd = self.parent.parent
-            cmd.auth_skip()
             if L:
                 self.set_ready()
-            del self.modes
-            self.parent.auth_done(self.parent.base_root)
-            return
-        # don't yield before here!
+
+            del self.modes  # no longer needed
+
+            ok = self.parent.ok
+            if ok is None:
+                ok = AuthDenied("No auth method worked.")
+                self.parent.ok = ok
+
+            # Unblock the remote ``:n`` reply before waiting for ``_send_cmd``
+            # to finish when ``tg_send`` exits.
+            if not isinstance(self.msg_out, Event):
+                raise RuntimeError("AlreadySent")  # noqa:TRY004
+            self.msg_out.set()
+            self.msg_out = ok
+
+            if isinstance(ok, Exception):
+                # forward the exception to the remote side
+                self.parent.auth_done(None)
+            else:
+                assert ok is not None
+                sender = self.sender_for_ok(
+                    self.parent.base_root.sender, cast(_SubAuthType, ok)
+                )
+                self.parent.auth_done(sender)
+
 
     async def _handle_cmd(self, msg: Msg):
         """
-        Remote call.
+        Incoming remote auth call.
         """
         if not isinstance(self.msg_in, Event):
             raise RuntimeError("Duplicate")  # noqa:TRY004
@@ -399,9 +388,9 @@ class AuthCmdIn(BaseCmd):
         if not isinstance(self.msg_out, Event):
             raise RuntimeError("AlreadySent")  # noqa:TRY004
         await self.msg_out.wait()
-        if isinstance(self.parent.ok, Exception):
-            raise self.parent.ok  # will be forwarded to the remote side
         ok = self.parent.ok
+        if isinstance(ok, Exception):
+            raise ok  # will be forwarded to the remote side
         if ok is None:
             raise AuthDenied("No auth")
         ok = cast(_SubAuthType, ok)
@@ -485,7 +474,7 @@ class SubAuth(BaseCmd):
         self.parent.deny(self)
 
 
-def get_auth(mode: str) -> object:
+def get_auth(mode: str) -> _SubAuthFactory:
     """
     Loads and initializes the named sub-auth.
     """

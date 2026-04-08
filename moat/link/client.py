@@ -74,8 +74,8 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg
     from moat.link.code.run import Code
     from moat.link.node.codec import CodecNode
+    from moat.lib.rpc import Auth
 
-    from .auth import AuthMethod
     from .backend import Backend, Message
 
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -260,16 +260,14 @@ class LinkCommon(CmdCommon):
     async def _connect_one(
         self, remote: dict[str, Any] | str, data: dict[str, Any] | None = None
     ) -> AsyncIterator[MsgSender]:
-        auth_out: list[AuthMethod] = []
+        auth_out: list[Auth] = []
         rpc_auth_modes = ["anon"]
         rpc_auth_data: dict[str, Any] = {}
         if isinstance(remote, dict):
             if data is not None:
                 with suppress(KeyError):
                     token = data["auth"]["token"]
-                    auth_out.append(TokenAuth(token))
-                    rpc_auth_modes.insert(0, "token")
-                    rpc_auth_data["token"] = token
+                    auth_out.append(get_auth("token")(auth={"token":token}))
             conn_ = TCPConn(
                 self,
                 remote_host=remote["host"],

@@ -43,7 +43,6 @@ from moat.lib.path import (
 from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
 
-from .auth import AnonAuth, TokenAuth
 from .common import CmdCommon
 from .conn import TCPConn, UnixConn
 from .exceptions import AuthError, ClientCancelledError
@@ -75,7 +74,6 @@ if TYPE_CHECKING:
     from moat.link.code.run import Code
     from moat.link.node.codec import CodecNode
 
-    from .auth import AuthMethod
     from .backend import Backend, Message
 
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -260,14 +258,12 @@ class LinkCommon(CmdCommon):
     async def _connect_one(
         self, remote: dict[str, Any] | str, data: dict[str, Any] | None = None
     ) -> AsyncIterator[MsgSender]:
-        auth_out: list[AuthMethod] = []
         rpc_auth_modes = ["anon"]
         rpc_auth_data: dict[str, Any] = {}
         if isinstance(remote, dict):
             if data is not None:
                 with suppress(KeyError):
                     token = data["auth"]["token"]
-                    auth_out.append(TokenAuth(token))
                     rpc_auth_modes.insert(0, "token")
                     rpc_auth_data["token"] = token
             conn_ = TCPConn(
@@ -279,11 +275,9 @@ class LinkCommon(CmdCommon):
         else:
             conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
 
-        auth_out.append(AnonAuth())
         self._hello = Hello(
             me=self.name,
             me_server=self.is_server,
-            auth_out=auth_out,
             rpc_auth_modes=tuple(rpc_auth_modes),
             rpc_auth_data=rpc_auth_data,
             rpc_auth_server=False,
@@ -1298,6 +1292,8 @@ class Link(LinkCommon, CtxObj):
             try:
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
+                if isinstance(exc, (NameError, AttributeError, TypeError, ImportError)):
+                    raise
                 if srv.meta is None:
                     err_path = P("run.service.main.server")
                 else:
@@ -1430,6 +1426,8 @@ class Link(LinkCommon, CtxObj):
             except OSError as exc:
                 self.logger.warning("Link failed: %r (%r)", remote, exc)
             except Exception as exc:
+                if isinstance(exc, (NameError, AttributeError, TypeError, ImportError)):
+                    raise
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
 

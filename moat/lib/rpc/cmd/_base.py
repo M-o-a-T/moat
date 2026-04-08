@@ -123,7 +123,7 @@ class BaseCmd(MsgHandler):
     def __repr__(self):
         try:
             return f"<{self.cfg_name}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             return f"<{self.cfg_name}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def setup(self):

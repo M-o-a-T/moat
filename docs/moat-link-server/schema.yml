@@ -431,7 +431,7 @@ properties:
     type: string
     title: node that created the message
 ---
-_path: !P _.link.server.i.hello.req
+_path: !P _.link.server:n.req
 title: "'Hello' sent to the server, initial message"
 type: array
 prefixItems:
@@ -452,9 +452,6 @@ prefixItems:
         type: string
         title: auth method name
         description: supported auth methods
-    - type: string
-      title: auth token
-      deacription: "Client: from broadcast; Server: use this method"
     - type: boolean
       title: authorized
       description: |2
@@ -462,8 +459,8 @@ prefixItems:
         Client: won't do auth if False. Default ("hit me with auth methods") is True.
         Server: can't do you if False. "Token OK" or "no login required" if True.
 ---
-_path: !P _.link.server.i.hello.resp
-$ref: _.links.server.i.hello.req
+_path: !P _.link.server:n.resp
+$ref: _.links.server:n.req
 ---
 _path: !P _.save.data
 title: Save file entry, except for the first and last item

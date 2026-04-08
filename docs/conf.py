@@ -264,6 +264,8 @@ nitpick_ignore = [
     ("py:obj", "moat.lib.priomap._impl.Priority"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
+    ("py:class", "moat.lib.rpc.auth._base.AuthError"),
+    ("py:class", "moat.lib.rpc.auth._base._SubAuthFactory"),
     ("py:class", "coroutine"),
     ("py:class", "pathlib._local.PurePath"),
     ("py:class", "pathlib._local.PosixPath"),

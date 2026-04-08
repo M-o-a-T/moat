@@ -138,6 +138,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Tests should focus on exercising a module's API and its actual purpose.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
+- DO NOT use "head", "tail" or "grep" on test output. Instead, redirect to a
+  temp file and post-process that.
 
 ## Commit & Pull Requests
 
@@ -151,6 +153,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
 - DO NOT use "--rebase" when merging or pulling.
+- DO NOT use "--no-verify" when committing.
+  - If you encounter a pre-existing failure, temporarily stash your changes
+    and run a sub-agent to fix the problem.
 
 ## Agent‑Specific Notes
 

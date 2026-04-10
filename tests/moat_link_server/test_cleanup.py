@@ -343,6 +343,89 @@ async def test_cleanup_interval_no_files_in_window(tmp_path: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Tests for relative file names in headers / trailers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_name_for_file_relative(tmp_path: Any) -> None:
+    """_name_for_file returns a path relative to save.dir for files inside it."""
+    from moat.util import to_attrdict  # noqa: PLC0415
+
+    save_dir = tmp_path / "data"
+    save_dir.mkdir()
+    cfg = to_attrdict({"server": {"save": {"dir": str(save_dir)}}})
+
+    class _MinimalServer:
+        """Stub that only provides cfg."""
+
+        def __init__(self, c: Any) -> None:
+            self.cfg = c
+
+    # A file inside save.dir
+    inside = anyio.Path(save_dir) / "2024-01" / "01" / "10-00.moat"
+    srv = _MinimalServer(cfg)
+    result = Server._name_for_file(srv, inside)  # noqa: SLF001
+    assert not result.startswith("/"), "Expected relative path, got: " + result
+    assert result == str(anyio.Path(inside).relative_to(anyio.Path(save_dir)))
+
+    # A file outside save.dir stays absolute
+    outside = anyio.Path(tmp_path) / "other.moat"
+    result2 = Server._name_for_file(srv, outside)  # noqa: SLF001
+    assert result2 == str(outside)
+
+
+@pytest.mark.anyio
+async def test_header_stores_relative_name(cfg: Any, tmp_path: Any) -> None:
+    """Headers written by the server embed a relative name, not an absolute path.
+
+    Scaffold always puts state files in ``tempdir/data``; passing the test's
+    ``tmp_path`` as ``tempdir`` makes that directory predictable.
+    """
+    from moat.util import MsgReader  # noqa: PLC0415
+    from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag  # noqa: PLC0415
+    from moat.lib.codec.moat_cbor import CBOR_TAG_MOAT_FILE_ID  # noqa: PLC0415
+    from moat.link._test import Scaffold  # noqa: PLC0415
+    from moat.util.dict import combine_dict  # noqa: PLC0415
+
+    # Short cycle so that at least one full file finishes writing.
+    # interval must exceed the 1-second granularity of %H-%M-%S.
+    save_cfg = {
+        "name": "%Y-%m/%d/%H-%M-%S.moat",
+        "interval": 1.2,
+        "rewrite": 1,
+        "errors": 10,
+        "keep": [5],
+    }
+    override = attrdict(link=attrdict(server=attrdict(save=attrdict(**save_cfg))))
+    merged_cfg = combine_dict(override, cfg, cls=attrdict)
+
+    # Scaffold overwrites save.dir with tempdir/data; use tmp_path so we know where.
+    # The directory must exist before the server starts (_save_task checks is_dir).
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    async with Scaffold(merged_cfg, use_servers=True, tempdir=str(tmp_path)) as sf:
+        await sf.server(init={"test": 1})
+        await anyio.sleep(2.0)  # let at least one full cycle complete
+    moat_files = list(data_dir.rglob("*.moat"))
+    assert moat_files, f"No state files in {data_dir}"
+
+    # All stored 'name' values must be relative (no leading '/').
+    for fn in moat_files:
+        async with MsgReader(anyio.Path(fn), codec="std-cbor") as rdr:
+            raw = await anext(rdr)
+        if isinstance(raw, Tag) and raw.tag == CBOR_TAG_CBOR_LEADER:
+            raw = raw.value
+        assert isinstance(raw, Tag)
+        assert raw.tag == CBOR_TAG_MOAT_FILE_ID
+        _text, meta = raw.value
+        stored_name = meta.get("name", "")
+        assert stored_name, f"{fn}: no 'name' in header"
+        assert not stored_name.startswith("/"), f"{fn}: header 'name' is absolute: {stored_name!r}"
+
+
+# ---------------------------------------------------------------------------
 # Integration test: cleanup runs inside a live server
 # ---------------------------------------------------------------------------
 

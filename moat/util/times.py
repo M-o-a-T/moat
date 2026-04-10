@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from typing import Self
 
-__all__ = ["humandelta", "now", "time_until", "ts2iso"]
+__all__ = ["humandelta", "now", "simple_time_delta", "time_until", "ts2iso"]
 
 startup = dt.datetime.now().astimezone()
 _log: Logger | None = None

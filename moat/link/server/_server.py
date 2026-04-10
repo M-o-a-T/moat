@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import anyio
 import anyio.abc
+import dataclasses
 import logging
 import os
 import random
 import signal
+import struct
 import sys
 import time
 from anyio.abc import SocketAttribute
@@ -37,6 +39,7 @@ from moat.util import (
     to_attrdict,
 )
 from moat.lib.broadcast import Broadcaster, BroadcastReader
+from moat.lib.codec import get_codec
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.lib.codec.moat_cbor import (
     CBOR_TAG_MOAT_CHANGE,
@@ -61,10 +64,15 @@ from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 from moat.util.exc import ExpKeyError, exc_iter
+from moat.util.times import simple_time_delta
 
 from collections import defaultdict
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
+
+# CBOR encoding of Tag(CBOR_TAG_MOAT_FILE_END, ...) - used to locate the trailer
+# Tag 0x4D656F46 in CBOR: major type 6, 4-byte uint → 0xDA followed by 4 bytes
+_CBOR_FILE_END_MARKER: bytes = b"\xda" + struct.pack(">I", CBOR_TAG_MOAT_FILE_END)
 
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
@@ -81,7 +89,102 @@ NotGivenType = type(NotGiven)
 
 
 class BadFile(ValueError):
-    pass
+    """Raised when a state file cannot be parsed."""
+
+
+@dataclasses.dataclass
+class StateFileInfo:
+    """Metadata extracted from a saved server state file.
+
+    Attributes:
+        path: Filesystem path to the state file.
+        timestamp: Start timestamp (Unix epoch) read from the file header.
+        mode: File mode from the header (``'full'``, ``'incr'``, or ``'init'``).
+        trailer: Decoded trailer mapping, or ``None`` if not yet loaded.
+    """
+
+    path: anyio.Path
+    timestamp: float
+    mode: str
+    trailer: dict[str, Any] | None = dataclasses.field(default=None)
+
+    @property
+    def is_incr(self) -> bool:
+        """True if this is an incremental (delta-only) file."""
+        return self.mode == "incr"
+
+    @property
+    def is_error(self) -> bool:
+        """True if the file’s trailer indicates an error during writing."""
+        t = self.trailer
+        return t is not None and t.get("mode") == "error"
+
+
+async def _read_state_header(path: anyio.Path) -> tuple[float, str]:
+    """Read the header record of a state file.
+
+    Args:
+        path: Path to the ``.moat`` state file.
+
+    Returns:
+        A ``(timestamp, mode)`` pair where *timestamp* is the file’s start
+        time as a Unix epoch float and *mode* is the header mode string
+        (e.g. ``'full'``, ``'incr'``).
+
+    Raises:
+        BadFile: if the file does not begin with a valid header tag.
+        StopAsyncIteration: if the file is empty.
+    """
+    async with MsgReader(path, codec="std-cbor") as rdr:
+        msg = await anext(rdr)
+    # CBOR_TAG_CBOR_LEADER is stripped transparently by the decoder, but check
+    # defensively in case a future codec version behaves differently.
+    if isinstance(msg, Tag) and msg.tag == CBOR_TAG_CBOR_LEADER:
+        msg = msg.value
+    if not isinstance(msg, Tag) or msg.tag != CBOR_TAG_MOAT_FILE_ID:
+        raise BadFile(f"No file-ID tag in {path}")
+    _text, meta = msg.value
+    ts: Any = meta.get("time", 0)
+    if hasattr(ts, "timestamp"):
+        ts = ts.timestamp()
+    mode: str = meta.get("mode", "full")
+    return float(ts), mode
+
+
+async def _read_state_trailer(path: anyio.Path) -> dict[str, Any] | None:
+    """Read the trailer record from a state file.
+
+    Reads the last 1 kiB of *path*, locates the :data:`CBOR_TAG_MOAT_FILE_END`
+    marker, and decodes the tag value.
+
+    Args:
+        path: Path to the ``.moat`` state file.
+
+    Returns:
+        The decoded trailer mapping if a valid trailer is found,
+        an empty dict if the tag has no mapping payload,
+        or ``None`` if no trailer marker exists (truncated / in-progress file).
+    """
+    try:
+        size = (await path.stat()).st_size
+        async with await anyio.open_file(path, "rb") as f:
+            await f.seek(max(0, size - 1024))
+            data = await f.read(1024)
+        idx = data.rfind(_CBOR_FILE_END_MARKER)
+        if idx < 0:
+            return None
+        codec = get_codec("std-cbor")
+        codec.feed(data[idx:])
+        try:
+            tag = next(codec)
+        except StopIteration:
+            return None
+        if isinstance(tag, Tag) and tag.tag == CBOR_TAG_MOAT_FILE_END:
+            val = tag.value
+            return val if isinstance(val, dict) else {}
+        return None
+    except Exception:
+        return None
 
 
 class _NotGiven:
@@ -1446,22 +1549,179 @@ class Server(MsgHandler):
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 
+    async def _collect_state_files(self, dest: anyio.Path) -> list[StateFileInfo]:
+        """Scan *dest* for all ``.moat`` state files and return them newest-first.
+
+        Files whose headers cannot be read are silently skipped.
+
+        Args:
+            dest: The save directory to scan.
+
+        Returns:
+            List of :class:`StateFileInfo` objects sorted by descending timestamp.
+        """
+        files: list[StateFileInfo] = []
+        if not await dest.is_dir():
+            return files
+        async for fn in dest.rglob("*.moat"):
+            try:
+                ts, mode = await _read_state_header(fn)
+                files.append(StateFileInfo(path=fn, timestamp=ts, mode=mode))
+            except Exception as exc:
+                self.logger.debug("Skipping unreadable state file %s: %s", fn, exc)
+        files.sort(key=lambda f: f.timestamp, reverse=True)
+        return files
+
+    async def _cleanup_state_files(
+        self,
+        files: list[StateFileInfo],
+        save: attrdict,
+    ) -> None:
+        """Delete old state files according to the ``save.keep`` policy.
+
+        Processes the ``keep`` list in order.  For each entry:
+
+        * Incremental files (``mode="incr"``) at the current position are
+          skipped over (preserved) before the entry is applied.
+        * If the current file has ``mode="error"`` in its trailer:
+
+          - If ``pos < save.errors``: the file is preserved and ``pos`` advances
+            past it without consuming the keep entry.
+          - Otherwise the file is deleted and removed from *files*.
+
+        * An integer ``N > 0`` advances ``I`` by ``N`` (keeping those files).
+        * A string is parsed as a human-readable duration via
+          :func:`~moat.util.times.simple_time_delta`.  The largest window
+          ``span`` is found such that
+          ``files[pos].timestamp − files[pos+span].timestamp ≤ delta``.
+          Files strictly between ``pos`` and ``pos+span`` are deleted.
+          ``pos`` advances by 1 (unless ``span=0``).
+
+        After all keep entries are exhausted, every file with index ``> pos``
+        is deleted.
+
+        The *files* list is modified in-place.
+
+        Args:
+            files: State file list sorted newest-first.  Modified in place.
+            save: The ``server.save`` configuration section.
+        """
+        keep: list[int | str] = save.keep
+        errors_limit: int = save.get("errors", 10)
+        pos = 0
+
+        for entry in keep:
+            # Pre-step: advance past incremental files and consume error files.
+            # Error files within the tolerance are skipped (pos advances, no
+            # keep-entry consumed).  Error files beyond the tolerance are deleted.
+            while True:
+                # Advance past leading incremental files
+                while len(files) > pos and files[pos].is_incr:
+                    pos += 1
+                if len(files) <= pos:
+                    return
+
+                fi = files[pos]
+                if fi.trailer is None:
+                    fi.trailer = await _read_state_trailer(fi.path)
+
+                if not fi.is_error:
+                    break  # ready to apply the keep entry
+
+                if errors_limit > pos:
+                    # Within tolerance: preserve, skip past this error file
+                    pos += 1
+                else:
+                    # Too many error files: delete this one
+                    try:
+                        await fi.path.unlink()
+                    except OSError as exc:
+                        self.logger.warning("Could not delete %s: %s", fi.path, exc)
+                    files.pop(pos)
+                    # pos stays; the deletion shifted subsequent entries down
+
+            if len(files) <= pos:
+                return
+
+            # Apply the keep entry
+            if isinstance(entry, int) and entry > 0:
+                pos += entry
+            elif isinstance(entry, str):
+                delta = simple_time_delta(entry)
+                # Find largest span: files[pos].ts - files[pos+span].ts <= delta
+                span = 0
+                while len(files) > pos + span + 1:
+                    if files[pos].timestamp - files[pos + span + 1].timestamp <= delta:
+                        span += 1
+                    else:
+                        break
+                # Delete the files strictly between pos and pos+span
+                for j in range(pos + span - 1, pos, -1):
+                    fi = files[j]
+                    try:
+                        await fi.path.unlink()
+                    except OSError as exc:
+                        self.logger.warning("Could not delete %s: %s", fi.path, exc)
+                    files.pop(j)
+                if span > 0:
+                    pos += 1  # advance to what was files[pos+span]
+
+        # Delete every file beyond the current position
+        for fi in files[pos + 1 :]:
+            try:
+                await fi.path.unlink()
+            except OSError as exc:
+                self.logger.warning("Could not delete %s: %s", fi.path, exc)
+        del files[pos + 1 :]
+
     async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
-        Background task to periodically restart the saver task
+        Background task to periodically restart the saver task.
+
+        After each save interval, the previous file is added to the front of
+        the state-file list and :meth:`_cleanup_state_files` is called to
+        enforce the configured retention policy.
         """
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         rewrite = 0
-        kw = {}
+        kw: dict[str, Any] = {}
+
+        # Collect existing state files and run an initial cleanup pass
+        state_files = await self._collect_state_files(dest)
+        if state_files:
+            await self._cleanup_state_files(state_files, save)
+
+        prev_fn: anyio.Path | None = None
+
         while True:
             now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
+
+            # Starting the new saver sends a STOP to the previous one.
             await self.run_saver(path=fn, save_state=rewrite == 0, **kw)
 
             task_status.started()
             task_status = anyio.TASK_STATUS_IGNORED
+
+            # If there was a previous file, wait for it to finish writing,
+            # then add it to the list and run cleanup.
+            if prev_fn is not None:
+                prev_str = str(prev_fn)
+                if prev_str in self._writing:
+                    # Wait for the previous saver task to finish flushing the file.
+                    # save_stream sets _writing_done in its finally block.
+                    with anyio.move_on_after(5):
+                        await self._writing_done.wait()
+                try:
+                    ts, mode = await _read_state_header(prev_fn)
+                    state_files.insert(0, StateFileInfo(path=prev_fn, timestamp=ts, mode=mode))
+                    await self._cleanup_state_files(state_files, save)
+                except Exception as exc:
+                    self.logger.warning("Could not read state file header %s: %s", prev_fn, exc)
+
+            prev_fn = fn
 
             await anyio.sleep(save.interval)
             rewrite = (rewrite or save.rewrite) - 1

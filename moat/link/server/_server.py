@@ -1344,6 +1344,26 @@ class Server(MsgHandler):
                 ftr = self.gen_hdr_stop()
             await writer(ftr)
 
+    def _name_for_file(self, path: anyio.Path | FSPath | str) -> str:
+        """Return the name to embed in a file\'s header or trailer.
+
+        When *path* lives under ``save.dir`` the result is a path relative to
+        that directory, so that renaming the directory does not break the
+        stored chain.  Otherwise the absolute path string is returned.
+
+        Args:
+            path: The filesystem path being written.
+
+        Returns:
+            A relative or absolute path string suitable for storing in a
+            CBOR header/trailer.
+        """
+        try:
+            dest = anyio.Path(self.cfg.server.save.dir)
+            return str(anyio.Path(path).relative_to(dest))
+        except ValueError:
+            return str(path)
+
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
         from moat.lib.codec.moat_cbor import gen_start  # noqa: PLC0415
@@ -1384,13 +1404,13 @@ class Server(MsgHandler):
             self._writing.add(spath)
             async with MsgWriter(path=path, codec="std-cbor") as mw:
                 task_status.started()
-                await self._save(mw, shorter, name=str(path), mode="full", **kw)
+                await self._save(mw, shorter, name=self._name_for_file(path), mode="full", **kw)
         finally:
             self._writing.remove(spath)
 
     async def save_stream(
         self,
-        path: str | anyio.Path | FSPath | None = None,
+        path: str | anyio.Path | FSPath,
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
         **kw,
@@ -1421,7 +1441,7 @@ class Server(MsgHandler):
                 ):
                     try:
                         msg = self.gen_hdr_stop(
-                            name=str(path),
+                            name=self._name_for_file(path),
                             mode="restart" if save_state else "next",
                         )
                         # This ensures that the Stop message isn't seen by
@@ -1431,7 +1451,7 @@ class Server(MsgHandler):
                         task_status.started(scope)
 
                         msg = self.gen_hdr_start(
-                            name=str(path),
+                            name=self._name_for_file(path),
                             mode="full" if save_state else "incr",
                             state=None if save_state else False,
                             **kw,
@@ -1441,7 +1461,7 @@ class Server(MsgHandler):
                         except Exception as exc:
                             self.logger.error("MSG WRITE FAIL %r", msg, exc_info=exc)
                             msg = self.gen_hdr_start(
-                                name=str(path),
+                                name=self._name_for_file(path),
                                 mode="full" if save_state else "incr",
                                 state=None if save_state else False,
                             )
@@ -1725,7 +1745,7 @@ class Server(MsgHandler):
 
             await anyio.sleep(save.interval)
             rewrite = (rewrite or save.rewrite) - 1
-            kw["prev"] = str(fn)
+            kw["prev"] = self._name_for_file(fn)
 
     async def run_saver(self, path: PathType | None, save_state: bool = True, **kw):
         """
@@ -2279,7 +2299,10 @@ class Server(MsgHandler):
                     tt = tt[1]
                 fn = tt.get("prev", None)
                 if fn is not None:
-                    fn = anyio.Path(fn)
+                    # Resolve relative paths (new files) against dest;
+                    # pathlib silently ignores dest when fn is absolute
+                    # (backward-compat with old files storing absolute paths).
+                    fn = dest / anyio.Path(fn)
                 continue
             ready.set()
             return

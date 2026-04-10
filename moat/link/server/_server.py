@@ -2059,47 +2059,42 @@ class Server(MsgHandler):
     ):
         """
         Run a single client link to another server.
+
+        Exactly one connection attempt is made.  On failure, or when
+        the link later drops, the entry is removed from
+        :attr:`_server_link` and the task exits.  :meth:`_watch_up`
+        will start a new task if the remote server re-announces itself
+        on the MQTT topic.
         """
         # TODO: There should be only one TCP link between server A and B, not two
         # (plus another for syncing).
-
-        backoff = 0
 
         with anyio.CancelScope() as sc:
             self._server_link[name] = (sc, None)
             task_status.started()
 
-            while True:
-                try:
-                    async with BasicLink(self.cfg, name=self.name, data=data) as conn:
-                        conn.add_sub("cl")
-                        if self._server_link[name][0] is not sc:
-                            return
-                        self._server_link[name] = (sc, conn)
-                        self._server_link_add.set()
-                        self._server_link_add = anyio.Event()
-
-                        await anyio.sleep(30)
-                        backoff = 0
-                        await anyio.sleep_forever()
-
-                except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
-                    self.logger.warning("Link to %s closed", name)
-
-                except* OSError:
-                    self.logger.warning("Link to %s died", name)
-
-                except* Exception as exc:
-                    self.logger.warning("Link to %s died", name, exc_info=exc)
-
-                finally:
-                    if name in self._server_link and self._server_link[name][0] is sc:
-                        self._server_link[name] = (sc, None)
-                    else:
+            try:
+                async with BasicLink(self.cfg, name=self.name, data=data) as conn:
+                    conn.add_sub("cl")
+                    if self._server_link[name][0] is not sc:
                         return
+                    self._server_link[name] = (sc, conn)
+                    self._server_link_add.set()
+                    self._server_link_add = anyio.Event()
+                    await anyio.sleep_forever()
 
-                backoff = min(backoff * 1.2 + 0.1, 30)
-                await anyio.sleep(backoff)
+            except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
+                self.logger.warning("Link to %s closed", name)
+
+            except* OSError:
+                self.logger.warning("Link to %s died", name)
+
+            except* Exception as exc:
+                self.logger.warning("Link to %s died", name, exc_info=exc)
+
+            finally:
+                if name in self._server_link and self._server_link[name][0] is sc:
+                    self._server_link.pop(name)
 
     async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """

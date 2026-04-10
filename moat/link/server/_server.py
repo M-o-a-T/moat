@@ -1601,6 +1601,9 @@ class Server(MsgHandler):
 
         Processes the ``keep`` list in order.  For each entry:
 
+        * Files that no longer exist on disk are silently removed from
+          *files* whenever they are encountered; in particular, integer
+          skip entries only count *existing* files.
         * Incremental files (``mode="incr"``) at the current position are
           skipped over (preserved) before the entry is applied.
         * If the current file has ``mode="error"`` in its trailer:
@@ -1609,7 +1612,8 @@ class Server(MsgHandler):
             past it without consuming the keep entry.
           - Otherwise the file is deleted and removed from *files*.
 
-        * An integer ``N > 0`` advances ``I`` by ``N`` (keeping those files).
+        * An integer ``N > 0`` advances ``pos`` by ``N`` *existing* files
+          (keeping them).  Non-existent files in that range are dropped.
         * A string is parsed as a human-readable duration via
           :func:`~moat.util.times.simple_time_delta`.  The largest window
           ``span`` is found such that
@@ -1631,14 +1635,22 @@ class Server(MsgHandler):
         pos = 0
 
         for entry in keep:
-            # Pre-step: advance past incremental files and consume error files.
+            # Pre-step: drop non-existent files, advance past incremental files,
+            # and consume error files.  Non-existent files are silently removed.
             # Error files within the tolerance are skipped (pos advances, no
             # keep-entry consumed).  Error files beyond the tolerance are deleted.
             while True:
-                # Advance past leading incremental files
-                while len(files) > pos and files[pos].is_incr:
+                # Drop non-existent files and skip over incremental ones.
+                found = False
+                while pos < len(files):
+                    if not await files[pos].path.exists():
+                        files.pop(pos)
+                        continue
+                    if not files[pos].is_incr:
+                        found = True
+                        break
                     pos += 1
-                if len(files) <= pos:
+                if not found:
                     return
 
                 fi = files[pos]
@@ -1652,9 +1664,11 @@ class Server(MsgHandler):
                     # Within tolerance: preserve, skip past this error file
                     pos += 1
                 else:
-                    # Too many error files: delete this one
+                    # Too many error files: delete this one (may already be gone)
                     try:
                         await fi.path.unlink()
+                    except FileNotFoundError:
+                        pass
                     except OSError as exc:
                         self.logger.warning("Could not delete %s: %s", fi.path, exc)
                     files.pop(pos)
@@ -1663,33 +1677,49 @@ class Server(MsgHandler):
             if len(files) <= pos:
                 return
 
-            # Apply the keep entry
+            # Apply the keep entry.
             if isinstance(entry, int) and entry > 0:
-                pos += entry
+                # Advance pos past N existing files; drop non-existent ones.
+                count = 0
+                while count < entry and pos < len(files):
+                    if not await files[pos].path.exists():
+                        files.pop(pos)
+                    else:
+                        pos += 1
+                        count += 1
             elif isinstance(entry, str):
                 delta = simple_time_delta(entry)
-                # Find largest span: files[pos].ts - files[pos+span].ts <= delta
+                # Find largest span: files[pos].ts - files[pos+span].ts <= delta.
+                # Drop non-existent files encountered during the scan.
                 span = 0
-                while len(files) > pos + span + 1:
-                    if files[pos].timestamp - files[pos + span + 1].timestamp <= delta:
+                while pos + span + 1 < len(files):
+                    j = pos + span + 1
+                    if not await files[j].path.exists():
+                        files.pop(j)
+                        continue
+                    if files[pos].timestamp - files[j].timestamp <= delta:
                         span += 1
                     else:
                         break
-                # Delete the files strictly between pos and pos+span
+                # Delete files strictly between pos and pos+span.
                 for j in range(pos + span - 1, pos, -1):
                     fi = files[j]
                     try:
                         await fi.path.unlink()
+                    except FileNotFoundError:
+                        pass
                     except OSError as exc:
                         self.logger.warning("Could not delete %s: %s", fi.path, exc)
                     files.pop(j)
                 if span > 0:
                     pos += 1  # advance to what was files[pos+span]
 
-        # Delete every file beyond the current position
+        # Delete every file beyond the current position.
         for fi in files[pos + 1 :]:
             try:
                 await fi.path.unlink()
+            except FileNotFoundError:
+                pass
             except OSError as exc:
                 self.logger.warning("Could not delete %s: %s", fi.path, exc)
         del files[pos + 1 :]

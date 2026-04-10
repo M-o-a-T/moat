@@ -343,6 +343,131 @@ async def test_cleanup_interval_no_files_in_window(tmp_path: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Tests for missing-file handling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_cleanup_missing_file_removed_from_list(tmp_path: Any) -> None:
+    """A file deleted from disk is silently removed from the list."""
+    base = anyio.Path(tmp_path)
+    specs = [
+        ("full", 100.0, None),  # files[0]
+        ("full", 90.0, None),  # files[1] ← will be deleted from disk
+        ("full", 80.0, None),  # files[2]
+    ]
+    files = await _make_file_list(base, specs)
+    # Manually remove files[1] from disk
+    await files[1].path.unlink()
+
+    save = make_save_cfg(keep=[2])
+    srv = _FakeServer()
+    await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
+
+    # files[1] (t=90) must have been pruned from the list.
+    # keep=[2]: pos advances past 2 existing files (t=100, t=80); nothing deleted.
+    remaining = {f.timestamp for f in files}
+    assert 90.0 not in remaining
+    assert 100.0 in remaining
+    assert 80.0 in remaining
+
+
+@pytest.mark.anyio
+async def test_cleanup_count_skips_missing(tmp_path: Any) -> None:
+    """Integer skip only counts existing files; missing ones are dropped.
+
+    With keep=[2] and files [t100, t90(gone), t80, t70, t60]:
+    * t90 is pruned when encountered during the count loop.
+    * The skip of 2 counts t100 (count=1) and t80 (count=2), leaving
+      pos=2 pointing to t70 (the anchor after pruning).
+    * The tail rule deletes files[3:] = [t60] only.
+    """
+    base = anyio.Path(tmp_path)
+    specs = [
+        ("full", 100.0, None),  # files[0]
+        ("full", 90.0, None),  # files[1] ← deleted from disk
+        ("full", 80.0, None),  # files[2]
+        ("full", 70.0, None),  # files[3]
+        ("full", 60.0, None),  # files[4]
+    ]
+    files = await _make_file_list(base, specs)
+    await files[1].path.unlink()
+
+    # After pruning t=90: files = [t100, t80, t70, t60]
+    # keep=[2]: count t100 (pos→1, count=1) then t80 (pos→2, count=2)
+    # pos=2 → anchor is t70; files[3:] = [t60] → deleted
+    save = make_save_cfg(keep=[2])
+    srv = _FakeServer()
+    await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
+
+    remaining = {f.timestamp for f in files}
+    assert 90.0 not in remaining  # pruned (missing from disk)
+    assert 100.0 in remaining  # within the 2-skip
+    assert 80.0 in remaining  # within the 2-skip
+    assert 70.0 in remaining  # pos anchor (not deleted)
+    assert 60.0 not in remaining  # beyond pos → deleted
+
+
+@pytest.mark.anyio
+async def test_cleanup_interval_drops_missing_intermediate(tmp_path: Any) -> None:
+    """Missing files in the interval scan are dropped; endpoints still kept."""
+    base = anyio.Path(tmp_path)
+    specs = [
+        ("full", 100.0, None),  # files[0]  ← left endpoint
+        ("full", 90.0, None),  # files[1]  ← will be manually deleted
+        ("full", 80.0, None),  # files[2]  ← right endpoint (100-80=20≤20)
+        ("full", 70.0, None),  # files[3]
+    ]
+    files = await _make_file_list(base, specs)
+    await files[1].path.unlink()
+
+    # keep=["20 seconds"]: scan from pos=0 (t=100).
+    # t=90 is missing → dropped; t=80: 100-80=20≤20 → span=1 (after the drop).
+    # Files between pos=0 and pos+span=1 (exclusive): nothing to delete.
+    # pos advances to 1 (was pos+span after deletion).  End: delete files[2:].
+    save = make_save_cfg(keep=["20 seconds"])
+    srv = _FakeServer()
+    await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
+
+    remaining = {f.timestamp for f in files}
+    assert 90.0 not in remaining  # pruned (missing from disk)
+    assert 100.0 in remaining  # left endpoint
+    assert 80.0 in remaining  # right endpoint
+    assert 70.0 not in remaining  # beyond pos → deleted
+
+
+@pytest.mark.anyio
+async def test_cleanup_missing_incr_dropped(tmp_path: Any) -> None:
+    """Non-existent incremental files in the pre-step are silently removed.
+
+    With keep=[1] and files [incr t100(gone), full t90, full t80, full t70]:
+    * The missing incr is pruned, leaving files = [t90, t80, t70].
+    * Pre-step: pos=0 (t90, the first existing non-incr).
+    * Apply 1: pos advances to 1 (t80).
+    * Tail: files[2:] = [t70] → deleted.
+    """
+    base = anyio.Path(tmp_path)
+    specs = [
+        ("incr", 100.0, None),  # files[0] ← missing
+        ("full", 90.0, None),  # files[1]
+        ("full", 80.0, None),  # files[2]
+        ("full", 70.0, None),  # files[3]
+    ]
+    files = await _make_file_list(base, specs)
+    await files[0].path.unlink()
+
+    save = make_save_cfg(keep=[1])
+    srv = _FakeServer()
+    await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
+
+    remaining = {f.timestamp for f in files}
+    assert 100.0 not in remaining  # was missing, pruned
+    assert 90.0 in remaining  # pre-step anchor
+    assert 80.0 in remaining  # pos landed here
+    assert 70.0 not in remaining  # beyond pos → deleted
+
+
+# ---------------------------------------------------------------------------
 # Tests for relative file names in headers / trailers
 # ---------------------------------------------------------------------------
 

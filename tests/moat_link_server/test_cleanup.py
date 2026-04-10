@@ -28,9 +28,20 @@ _log = logging.getLogger("test.cleanup")
 
 
 class _FakeServer:
-    """Minimal stub used to call Server methods that only need a logger."""
+    """Minimal stub used to call Server instance methods in unit tests.
+
+    Provides ``logger``, ``cfg.server.save.dir``, and the
+    :meth:`~moat.link.server._server.Server._unlink_state_file` method.
+    The *save_dir* is only needed when cleanup actually deletes files;
+    pass a real path when the test creates files in subdirectories.
+    """
 
     logger = _log
+    # Borrow the real implementation so parent-directory cleanup is exercised.
+    _unlink_state_file = Server._unlink_state_file  # noqa: SLF001
+
+    def __init__(self, save_dir: str = "/nonexistent") -> None:
+        self.cfg = attrdict(server=attrdict(save=attrdict(dir=save_dir)))
 
 
 def make_save_cfg(**overrides: Any) -> attrdict:
@@ -174,7 +185,7 @@ async def test_cleanup_count_only(tmp_path: Any) -> None:
     files = await _make_file_list(base, specs)
     save = make_save_cfg(keep=[2])
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     # pos ends at 2 → files[0..2] kept, files[3] deleted
@@ -205,7 +216,7 @@ async def test_cleanup_interval(tmp_path: Any) -> None:
     # End: delete files[3:] → t=60, t=50
     save = make_save_cfg(keep=[1, "20 seconds"])
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -234,7 +245,7 @@ async def test_cleanup_incr_files_preserved(tmp_path: Any) -> None:
     # Then pos += 1 → pos=3 (t=80).  End of keep: delete files[4:].
     save = make_save_cfg(keep=[1])
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -260,7 +271,7 @@ async def test_cleanup_error_within_limit(tmp_path: Any) -> None:
     # keep=[1], errors=3: error files advance pos to 2, then "1" → pos=3
     save = make_save_cfg(keep=[1], errors=3)
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -284,7 +295,7 @@ async def test_cleanup_error_beyond_limit(tmp_path: Any) -> None:
     files = await _make_file_list(base, specs)
     save = make_save_cfg(keep=[1], errors=2)
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -316,7 +327,7 @@ async def test_cleanup_all_incr(tmp_path: Any) -> None:
     files = await _make_file_list(base, specs)
     save = make_save_cfg(keep=[1])
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
     assert len(files) == 2  # nothing deleted
 
@@ -335,7 +346,7 @@ async def test_cleanup_interval_no_files_in_window(tmp_path: Any) -> None:
     # keep=["5 seconds"]: span=0 (100-50=50 > 5), pos stays 0, end → delete files[1:]
     save = make_save_cfg(keep=["5 seconds"])
 
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     assert len(files) == 1
@@ -361,7 +372,7 @@ async def test_cleanup_missing_file_removed_from_list(tmp_path: Any) -> None:
     await files[1].path.unlink()
 
     save = make_save_cfg(keep=[2])
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     # files[1] (t=90) must have been pruned from the list.
@@ -397,7 +408,7 @@ async def test_cleanup_count_skips_missing(tmp_path: Any) -> None:
     # keep=[2]: count t100 (pos→1, count=1) then t80 (pos→2, count=2)
     # pos=2 → anchor is t70; files[3:] = [t60] → deleted
     save = make_save_cfg(keep=[2])
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -426,7 +437,7 @@ async def test_cleanup_interval_drops_missing_intermediate(tmp_path: Any) -> Non
     # Files between pos=0 and pos+span=1 (exclusive): nothing to delete.
     # pos advances to 1 (was pos+span after deletion).  End: delete files[2:].
     save = make_save_cfg(keep=["20 seconds"])
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -457,7 +468,7 @@ async def test_cleanup_missing_incr_dropped(tmp_path: Any) -> None:
     await files[0].path.unlink()
 
     save = make_save_cfg(keep=[1])
-    srv = _FakeServer()
+    srv = _FakeServer(str(tmp_path))
     await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
 
     remaining = {f.timestamp for f in files}
@@ -465,6 +476,81 @@ async def test_cleanup_missing_incr_dropped(tmp_path: Any) -> None:
     assert 90.0 in remaining  # pre-step anchor
     assert 80.0 in remaining  # pos landed here
     assert 70.0 not in remaining  # beyond pos → deleted
+
+
+# ---------------------------------------------------------------------------
+# Tests for parent-directory cleanup after unlink
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_unlink_state_file_removes_empty_parents(tmp_path: Any) -> None:
+    """_unlink_state_file removes empty parent directories up to save.dir."""
+    save_dir = anyio.Path(tmp_path) / "data"
+    await save_dir.mkdir()
+
+    # Create a file nested two levels deep inside save_dir.
+    nested = save_dir / "2024-01" / "15"
+    await nested.mkdir(parents=True)
+    fn = nested / "10-00.moat"
+    await fn.write_bytes(b"x")
+
+    srv = _FakeServer(str(save_dir))
+    await Server._unlink_state_file(srv, fn)  # noqa: SLF001
+
+    assert not await fn.exists()
+    assert not await (save_dir / "2024-01" / "15").exists()  # leaf dir removed
+    assert not await (save_dir / "2024-01").exists()  # parent dir removed
+    assert await save_dir.exists()  # save.dir itself kept
+
+
+@pytest.mark.anyio
+async def test_unlink_state_file_stops_at_nonempty_parent(tmp_path: Any) -> None:
+    """_unlink_state_file stops climbing when a directory is not empty."""
+    save_dir = anyio.Path(tmp_path) / "data"
+    await save_dir.mkdir()
+
+    subdir = save_dir / "2024-01" / "15"
+    await subdir.mkdir(parents=True)
+    fn1 = subdir / "10-00.moat"
+    fn2 = subdir / "11-00.moat"  # sibling — keeps the directory non-empty
+    await fn1.write_bytes(b"x")
+    await fn2.write_bytes(b"y")
+
+    srv = _FakeServer(str(save_dir))
+    await Server._unlink_state_file(srv, fn1)  # noqa: SLF001
+
+    assert not await fn1.exists()  # file removed
+    assert await fn2.exists()  # sibling untouched
+    assert await subdir.exists()  # dir kept (non-empty)
+    assert await (save_dir / "2024-01").exists()  # parent also kept
+
+
+@pytest.mark.anyio
+async def test_cleanup_removes_empty_dirs(tmp_path: Any) -> None:
+    """After cleanup deletes files, their empty parent directories are removed."""
+    base = anyio.Path(tmp_path)
+    save_dir = base / "data"
+    await save_dir.mkdir()
+
+    # Place each file in its own dated subdirectory.
+    files: list[StateFileInfo] = []
+    for i, ts in enumerate([100.0, 90.0, 80.0]):
+        subdir = save_dir / f"sub{i}"
+        await subdir.mkdir()
+        fn = subdir / f"state_{i:04d}.moat"
+        await make_state_file(fn, mode="full", timestamp=ts)
+        files.append(StateFileInfo(path=fn, timestamp=ts, mode="full"))
+
+    srv = _FakeServer(str(save_dir))
+    # keep=[1]: only files[0] (t=100) and files[1] (t=90) survive;
+    # files[2] (t=80) is deleted along with its parent directory.
+    save = make_save_cfg(keep=[1])
+    await Server._cleanup_state_files(srv, files, save)  # noqa: SLF001
+
+    assert await (save_dir / "sub0").exists()  # kept
+    assert await (save_dir / "sub1").exists()  # kept
+    assert not await (save_dir / "sub2").exists()  # deleted with its file
 
 
 # ---------------------------------------------------------------------------

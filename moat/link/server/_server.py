@@ -1569,6 +1569,34 @@ class Server(MsgHandler):
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 
+    async def _unlink_state_file(self, path: anyio.Path) -> None:
+        """Delete a state file and remove any now-empty parent directories.
+
+        Parent directories are removed up to (but not including)
+        ``save.dir``.  If the file no longer exists the call is a no-op.
+        Errors during directory removal are silently ignored.
+
+        Args:
+            path: Path to the state file to delete.
+        """
+        try:
+            await path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            self.logger.warning("Could not delete %s: %s", path, exc)
+            return
+
+        # Walk up the directory tree, removing empty parents.
+        dest = anyio.Path(self.cfg.server.save.dir)
+        parent = path.parent
+        while parent != dest and parent != parent.parent:
+            try:
+                await parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+
     async def _collect_state_files(self, dest: anyio.Path) -> list[StateFileInfo]:
         """Scan *dest* for all ``.moat`` state files and return them newest-first.
 
@@ -1665,12 +1693,7 @@ class Server(MsgHandler):
                     pos += 1
                 else:
                     # Too many error files: delete this one (may already be gone)
-                    try:
-                        await fi.path.unlink()
-                    except FileNotFoundError:
-                        pass
-                    except OSError as exc:
-                        self.logger.warning("Could not delete %s: %s", fi.path, exc)
+                    await self._unlink_state_file(fi.path)
                     files.pop(pos)
                     # pos stays; the deletion shifted subsequent entries down
 
@@ -1703,25 +1726,14 @@ class Server(MsgHandler):
                         break
                 # Delete files strictly between pos and pos+span.
                 for j in range(pos + span - 1, pos, -1):
-                    fi = files[j]
-                    try:
-                        await fi.path.unlink()
-                    except FileNotFoundError:
-                        pass
-                    except OSError as exc:
-                        self.logger.warning("Could not delete %s: %s", fi.path, exc)
+                    await self._unlink_state_file(files[j].path)
                     files.pop(j)
                 if span > 0:
                     pos += 1  # advance to what was files[pos+span]
 
         # Delete every file beyond the current position.
         for fi in files[pos + 1 :]:
-            try:
-                await fi.path.unlink()
-            except FileNotFoundError:
-                pass
-            except OSError as exc:
-                self.logger.warning("Could not delete %s: %s", fi.path, exc)
+            await self._unlink_state_file(fi.path)
         del files[pos + 1 :]
 
     async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):

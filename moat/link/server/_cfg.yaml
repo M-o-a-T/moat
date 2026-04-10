@@ -3,6 +3,11 @@ save:
   name: "%Y-%m/%d/%H-%M.moat"
   interval: 1000
   rewrite: 5
+  errors: 10  #   unlink error files ZZ
+  keep:
+  - 10
+  - 1 day
+  - 10
 
 timeout:
   monitor: 0.5

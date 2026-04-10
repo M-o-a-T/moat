@@ -112,7 +112,7 @@ async def test_ls_rpc_allows_post_auth_backend_query(cfg, monkeypatch, caplog):
             assert r.args == ["乓", "pling"]
 
     assert not any("Could not query backend" in rec.getMessage() for rec in caplog.records)
-    assert not any("No Hello/Auth" in rec.getMessage() for rec in caplog.records)
+    assert not any("No Auth" in rec.getMessage() for rec in caplog.records)
 
 
 @pytest.mark.anyio

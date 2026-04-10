@@ -1,5 +1,6 @@
 # Dolt database (managed by Dolt, not git)
 dolt/
+embeddeddolt/
 /dolt-access.lock
 /dolt-monitor.pid
 /dolt-server.lock
@@ -45,6 +46,7 @@ daemon.lock
 daemon.log
 daemon-*.log.gz
 daemon.pid
+.beads-credential-key
 beads.base.jsonl
 beads.base.meta.json
 beads.left.jsonl

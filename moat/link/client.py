@@ -225,7 +225,7 @@ class LinkCommon(CmdCommon):
             if self._hello.is_auth_cmd(rcmd):
                 return await self._hello.handle(msg, rcmd)
             if not self._hello.auth_accepting:
-                await msg.ml_send_error(ValueError("No Hello/Auth"))
+                await msg.ml_send_error(ValueError("No Auth"))
                 return
 
         if rcmd and rcmd[-1] == "d_":

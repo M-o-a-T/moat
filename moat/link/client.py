@@ -1123,9 +1123,15 @@ class Link(LinkCommon, CtxObj):
         self._state_change = anyio.Event()
         self._common = common
         self._only = only
+        self._socket_path: str | None = None
         self.announced = set()
         with suppress(AttributeError):
             self._port = self.cfg.client.port
+        with suppress(AttributeError):
+            self._socket_path = str(self.cfg.client.path)
+        if self._only is None:
+            with suppress(AttributeError):
+                self._only = str(self.cfg.client.name)
 
     async def set_state(self, state: str):
         """
@@ -1275,8 +1281,28 @@ class Link(LinkCommon, CtxObj):
         """
         This is the manager task for the server link channel.
         It starts a server connection (and tries to keep it alive).
+
+        Connection order:
+        1. Unix socket (cfg.client.path), if configured
+        2. Named server announcement (cfg.client.name), if configured
+        3. Any server announcement
         """
         task_status = TS(task_status)
+
+        # Try Unix socket first, if configured
+        if self._socket_path is not None:
+            try:
+                with anyio.fail_after(self.cfg.client.init_timeout):
+                    async with self._connect_one(self._socket_path) as rem:
+                        await self._connect_run(rem, task_status=task_status)
+            except OSError as exc:
+                self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
+            except TimeoutError:
+                self.logger.info("%r timed out, trying announcements", self._socket_path)
+            finally:
+                self.current_server = None
+                if self._server_up.is_set():
+                    self._server_up = anyio.Event()
 
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)

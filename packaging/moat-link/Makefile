@@ -10,6 +10,9 @@ installscript:
 	mkdir -p $(PREFIX)/usr/lib/moat/link
 	cp scripts/* $(PREFIX)/usr/lib/moat/link/
 
+	mkdir -p $(PREFIX)/usr/share/misc/magic
+	cp moat-link.magic $(PREFIX)/usr/share/misc/magic/
+
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr

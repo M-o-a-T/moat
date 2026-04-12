@@ -1,0 +1,5 @@
+# Magic file for MoaT savefiles
+# Detects CBOR-encoded MoaT savefiles and extracts the identification string
+
+0       string          \xd9\xd9\xf8\xfa\x4d\x6f\x61\x54\x82\x78    CBOR/MoaT:
+>10     pstring         x                                           \b %s

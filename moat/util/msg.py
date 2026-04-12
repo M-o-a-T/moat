@@ -147,7 +147,6 @@ class MsgWriter(_MsgRW):
         self.buf: list[bytes] = []
         self.buflen: int = buflen
         self.curlen: int = 0
-        self.excess: int = 0
 
     async def __aexit__(
         self,
@@ -157,9 +156,8 @@ class MsgWriter(_MsgRW):
     ) -> None:
         assert self.stream is not None  # stream is set in __aenter__
         with anyio.fail_after(2, shield=True):
-            if self.buf:
-                await self.stream.write(b"".join(self.buf))  # type: ignore[attr-defined]  # AsyncFile has write
-            await super().__aexit__(exc_type, exc_val, exc_tb)
+            await self.flush(force=True)
+        await super().__aexit__(exc_type, exc_val, exc_tb)
 
     async def __call__(self, msg: Any) -> None:
         """Write a message (bytes) to the buffer.
@@ -171,15 +169,10 @@ class MsgWriter(_MsgRW):
             msg_bytes = bytes(msg_bytes)
         self.buf.append(msg_bytes)
         self.curlen += len(msg_bytes)
-        if self.curlen + self.excess >= self.buflen:
+        if self.curlen >= self.buflen:
             buf = b"".join(self.buf)
-            pos = self.buflen * ((self.curlen + self.excess) // self.buflen) - self.excess
-            assert pos > 0
-            wb, buf = buf[:pos], buf[pos:]
-            self.curlen = len(buf)
-            self.buf = [buf]
-            self.excess = 0
-            await self.stream.write(wb)  # type: ignore[attr-defined]  # AsyncFile has write
+            await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
+            self.buf = []
 
     async def flush(self, force: bool = True) -> None:
         """Flush the buffer.
@@ -190,7 +183,6 @@ class MsgWriter(_MsgRW):
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
-            self.excess = (self.excess + len(buf)) % self.buflen
             await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
-            if force:
-                await self.stream.flush()  # type: ignore[attr-defined]  # AsyncFile has flush
+        if force:
+            await self.stream.flush()  # type: ignore[attr-defined]  # AsyncFile has flush

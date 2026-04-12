@@ -105,7 +105,6 @@ dev = [
     "pytest-coverage",
     "setuptools-scm",
     "smbus3",
-    "transitions-aio",
     "ty ~= 0.17",
     "uv",
     "wheel",

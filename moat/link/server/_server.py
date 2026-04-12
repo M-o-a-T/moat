@@ -1757,9 +1757,23 @@ class Server(MsgHandler):
         prev_fn: anyio.Path | None = None
 
         while True:
-            now = datetime.now(UTC)
+            if save.get("use_local_time", False):
+                now = datetime.now().astimezone()
+            else:
+                now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
+
+            # Handle collisions (e.g., DST change) by adding a suffix
+            if await fn.exists():
+                base = fn.with_suffix("")
+                suffix = fn.suffix
+                counter = 1
+                while True:
+                    fn = anyio.Path(f"{base}.{counter}{suffix}")
+                    if not await fn.exists():
+                        break
+                    counter += 1
 
             # Starting the new saver sends a STOP to the previous one.
             await self.run_saver(path=fn, save_state=rewrite == 0, **kw)

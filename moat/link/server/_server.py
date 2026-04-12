@@ -2322,7 +2322,15 @@ class Server(MsgHandler):
                 upd, _skp, tags, mode = await self.load_file(fn=fn)
             except Exception as exc:
                 self.logger.error("Failed to load %s", fn, exc_info=exc)
-                await fn.rename(fn.with_suffix(".moat.bad"))
+                try:
+                    await fn.rename(fn.with_suffix(".moat.bad"))
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    try:
+                        await fn.unlink()
+                    except OSError as exc:
+                        self.logger.error("Failed to remove bad %s", fn, exc_info=exc)
                 continue
 
             if mode != "init" and (not upd or not tags):

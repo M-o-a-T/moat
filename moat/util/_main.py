@@ -282,20 +282,20 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
                 if long:
                     if isinstance(data, Sequence) and len(data) > 1:
                         d, p, *x = data  # noqa:PLW2901
-                        p = cast(long, PathLongener).long(d, p)
+                        p = cast(PathLongener, long).long(d, p)
                         data = [p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "depth" in data and "path" in data:
-                        data["path"] = cast(long, PathLongener).long(
+                        data["path"] = cast(PathLongener, long).long(
                             data.pop("depth"), data["path"]
                         )
                 if short:
                     if isinstance(data, Sequence) and len(data) > 0:
                         p, *x = data
-                        d, p = cast(short, PathShortener).short(p)  # noqa:PLW2901
+                        d, p = cast(PathShortener, short).short(p)  # noqa:PLW2901
                         data = [d, p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "path" in data:
                         assert isinstance(data, Mapping)
-                        d, p = cast(short, PathShortener).short(  # noqa:PLW2901
+                        d, p = cast(PathShortener, short).short(  # noqa:PLW2901
                             data["path"]  # type:ignore[invalid-argument-type]
                         )
                         data["depth"] = d  # type: ignore[index]  # data is Mapping after isinstance check

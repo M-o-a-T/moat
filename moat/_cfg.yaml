@@ -9,8 +9,6 @@ $root:
         level: DEBUG
       moat.mqtt:
         level: INFO
-      transitions_aio:
-        level: WARNING
       transitions:
         level: WARNING
       xknx.raw_socket:

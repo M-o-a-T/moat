@@ -994,7 +994,6 @@ dev = [
     { name = "pytest-trio" },
     { name = "setuptools-scm" },
     { name = "smbus3" },
-    { name = "transitions-aio" },
     { name = "ty" },
     { name = "uv" },
     { name = "wheel" },
@@ -1070,7 +1069,6 @@ requires-dist = [
     { name = "stamina" },
     { name = "tomlkit" },
     { name = "transitions" },
-    { name = "transitions-aio", marker = "extra == 'dev'" },
     { name = "trio" },
     { name = "ty", marker = "extra == 'dev'" },
     { name = "uv", marker = "extra == 'dev'" },
@@ -2599,15 +2597,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4f/83/9e90f3494057d73c9e6bd8de8488af7c9fa714666ccc2db30fe07d147818/transitions-0.9.3.tar.gz", hash = "sha256:881fb75bb1654ed55d86060bb067f2c716f8e155f57bb73fd444e53713aafec8", size = 1191029 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/05/fea3020e90aa378941ff10de8860fb3b1288313c27efd10fa0c476498f7e/transitions-0.9.3-py2.py3-none-any.whl", hash = "sha256:02463248f2b668d86f66636b1e3c9e8de84d93e22915247f4e1aa9ee1cae28aa", size = 112792 },
-]
-
-[[package]]
-name = "transitions-aio"
-version = "0.9.3.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f4/8f/523cf0a34e6c2489ce715acda396fc9e2a75c011cf4681e4dfcd6318c427/transitions_aio-0.9.3.4.tar.gz", hash = "sha256:b8a25076b5608a9f5deb8143ed6b708154ca1c1926419cc6c968532e4412cb70", size = 1255012 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/f7/9c6f66fdc548a060bd90f96e41ad196a6ddfef51930b510409fc23105f9f/transitions_aio-0.9.3.4-py3-none-any.whl", hash = "sha256:08483a3306e7adb2e20b30587f5fd6ee4fc6d1ae8a993a72f5e0d6cc8e50441b", size = 113547 },
 ]
 
 [[package]]

@@ -4,6 +4,7 @@ save:
   interval: 1000
   rewrite: 5
   errors: 10  #   unlink error files ZZ
+  use_local_time: false
   keep:
   - 10
   - 1 day

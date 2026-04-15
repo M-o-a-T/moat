@@ -369,7 +369,7 @@ class ReliableMsg(StackedMsg):
                 try:
                     await self.s.send(msg)
                 except AttributeError:
-                    return  # closing. XXX should not happen
+                    pass  # closing. XXX should not happen
                 except TypeError:
                     if len(msg) > 1:
                         msg = [msg[0], repr(err)]

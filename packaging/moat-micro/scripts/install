@@ -25,13 +25,13 @@ for c in $@ ; do
     cmd+=("-c" "$c")
 done
 
-port=$($M ${cmd[@]} util cfg micro.setup.r.port)
+port=$($M ${cmd[@]} util cfg moat.micro.setup.r.port)
 
-dev=$($M ${cmd[@]} util cfg micro.install.port)
-dir=$($M ${cmd[@]} util cfg -e micro.install.dir)
-rate=$($M ${cmd[@]} util cfg -e micro.install.rate)
+dev=$($M ${cmd[@]} util cfg moat.micro.install.port)
+dir=$($M ${cmd[@]} util cfg -e moat.micro.install.dir)
+rate=$($M ${cmd[@]} util cfg -e moat.micro.install.rate)
 export MOAT_PORT=$dev
-board=$($M ${cmd[@]} util cfg -e micro.install.board)
+board=$($M ${cmd[@]} util cfg -e moat.micro.install.board)
 #BOARD=${dev@U}
 BOARD=
 if [ -n "$board" ] ; then

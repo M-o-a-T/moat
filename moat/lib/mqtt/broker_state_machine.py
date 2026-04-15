@@ -6,6 +6,7 @@ from attrs import define, field
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
 from ._exceptions import MQTTProtocolError
 from ._types import (
+    Buffer,
     MQTTConnAckPacket,
     MQTTConnectPacket,
     MQTTDisconnectPacket,
@@ -232,12 +233,12 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
     def deliver_publish(
         self,
         topic: str,
-        payload: str | bytes,
+        payload: str | Buffer,
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
         user_properties: dict[str, str] | None = None,
-        subscription_id: Sequence[int] = (),
+        subscription_id: int | Sequence[int] = (),
     ) -> int | None:
         """
         Deliver a ``PUBLISH`` message to this client if the current state allows it.
@@ -260,7 +261,10 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
             user_properties=user_properties or {},
         )
         if subscription_id:
-            packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = subscription_id
+            if isinstance(subscription_id, int):
+                packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = [subscription_id]
+            else:
+                packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = list(subscription_id)
         packet.encode(self._out_buffer)
         if packet.packet_id is not None:
             self._add_pending_packet(packet, local=True)

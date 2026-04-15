@@ -8,7 +8,7 @@ import time
 
 from moat.ems.battery.diy_serial.packet import RequestTiming
 from moat.lib.micro import log
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 from .support import CF, as_attr
 
@@ -41,7 +41,7 @@ async def test_cell1(tmp_path):
     def tm():
         return int(time.monotonic() * 100000) & 0xFFFF
 
-    async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
+    async with rpc_stack(tmp_path, CFG1) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
         s  # noqa:B018
         p = RequestTiming(timer=tm())
         x = (await bc(p=p, s=0))[0]
@@ -78,7 +78,7 @@ async def test_cell4(tmp_path):
     def tm():
         return int(time.monotonic() * 100000) & 0xFFFF
 
-    async with mpy_stack(tmp_path, CFG4) as d, d.sub_at("s"), d.sub_at("bc") as bc:
+    async with rpc_stack(tmp_path, CFG4) as d, d.sub_at("s"), d.sub_at("bc") as bc:
         p = RequestTiming(timer=tm())
         x = await bc(p=p, s=0, bc=True)
         td = (tm() - x[-1].timer) & 0xFFFF
@@ -110,7 +110,7 @@ CFGC1 = as_attr(CFGC1, c=CF.c, bc=CF.c)
 
 async def test_cell_link1(tmp_path):
     "Basic fake cell verification via comm"
-    async with mpy_stack(tmp_path, CFGC1) as d, d.sub_at("bc") as c, d.sub_at("c") as cx:
+    async with rpc_stack(tmp_path, CFGC1) as d, d.sub_at("bc") as c, d.sub_at("c") as cx:
         assert await c.u() == 5
         assert await cx.u() == 5
         assert await cx.u(c=0.25) == 2
@@ -198,7 +198,7 @@ async def test_batt(tmp_path):
     "Basic BMS test"
     with contextlib.suppress(FileNotFoundError):
         os.unlink("fake.rtc")
-    async with mpy_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
+    async with rpc_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
         u = await b.u()
         assert u == 20.2  # 1% plus
         await b.i(100)

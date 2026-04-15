@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 
 from moat.lib.path import P, Path
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 CFG = """
 app: dir
@@ -29,7 +29,7 @@ a:
 @pytest.mark.anyio
 async def test_ary(tmp_path):
     "fake array test"
-    async with mpy_stack(tmp_path, CFG) as d:  # , d.cfg_at(P("c")) as cf:
+    async with rpc_stack(tmp_path, CFG) as d:  # , d.cfg_at(P("c")) as cf:
         a = d.sub_at(P("a"))
         assert False is (await d.cmd(P("a:0")))[0]
         assert True is (await d.cmd(P("a:1")))[0]

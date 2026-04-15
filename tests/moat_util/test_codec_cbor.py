@@ -84,7 +84,7 @@ def test_bar():
 @pytest.mark.parametrize("chunks", [1, 2, 5])
 def test_chunked(chunks):
     codec = StdCBOR()
-    p = [dict(a=1, b=23, c=345, d=6789012345678901234567890, e="duh"), "!"]
+    p = [42, dict(a=1, b=23, c=345, d=6789012345678901234567890, e="duh"), "!"]
     m = b"".join(codec.encode(x) for x in p)
     r = []
     for i in range(chunks):

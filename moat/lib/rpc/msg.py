@@ -46,6 +46,8 @@ from typing import TYPE_CHECKING, cast, overload
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
+    from moat.lib.path import PathElem
+
     from .base import OptDict
 
     from collections.abc import Callable, ItemsView, Iterator, KeysView, Sequence, ValuesView
@@ -64,7 +66,7 @@ class MsgResult(Iterable):
     """
 
     _a: Sequence
-    _kw: OptDict
+    _kw: dict
 
     def __init__(self, a: list, kw: dict):
         self._a = a
@@ -88,10 +90,8 @@ class MsgResult(Iterable):
         return self._a
 
     @property
-    def kw(self) -> dict[str, Any]:
+    def kw(self) -> MutableMapping[str, Any]:
         "Retrieve the keywords."
-        if self._kw is None:
-            return {}
         return self._kw
 
     @overload
@@ -103,7 +103,7 @@ class MsgResult(Iterable):
     @overload
     def to_list(self, dict_only: Literal[True]) -> list[Any] | dict: ...
 
-    def to_list(self, dict_only: bool | None = True) -> list[Any]:
+    def to_list(self, dict_only: bool | None = True) -> list[Any] | Mapping[str, Any]:
         """
         Returns a list of positional arguments.
         May end with a dict of keyword arguments.
@@ -154,7 +154,7 @@ class MsgResult(Iterable):
         """
         if isinstance(k, (int, slice)):
             return self._a[k]
-        return self._kw[k]  # pyright:ignore
+        return self._kw[k]
 
     def get(self, k: int | str, default=None, nulled=False) -> Any:
         """
@@ -168,7 +168,7 @@ class MsgResult(Iterable):
                 return default
         else:
             try:
-                res = self._kw[k]  # pyright:ignore
+                res = self._kw[k]
             except KeyError:
                 return default
 
@@ -204,7 +204,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's keys."
-        return self._kw.keys()  # pyright:ignore
+        return self._kw.keys()
 
     def values(self) -> ValuesView:
         """
@@ -213,7 +213,7 @@ class MsgResult(Iterable):
         :meta public:
         """
         "Returns an iterator over the dict's values."
-        return self._kw.values()  # pyright:ignore
+        return self._kw.values()
 
     def items(self) -> ItemsView:
         """
@@ -221,7 +221,7 @@ class MsgResult(Iterable):
 
         :meta public:
         """
-        return self._kw.items()  # pyright:ignore
+        return self._kw.items()
 
 
 _link_id = 0
@@ -238,7 +238,7 @@ class MsgLink:
     a message to its sibling.
     """
 
-    _remote: MsgLink = None
+    _remote: MsgLink | None = None
     _end: bool = False
 
     def __init__(self):
@@ -393,8 +393,8 @@ class Msg(MsgLink, MsgResult):
     # The multiple inheritance problem WRT µPy is resolved below.
 
     _cmd: Path | None = None
-    _a: Sequence  # pyright:ignore
-    _kw: OptDict  # pyright:ignore
+    _a: Sequence
+    _kw: dict
     # also in MsgResult
 
     _stream_in: int = S_NEW
@@ -429,14 +429,14 @@ class Msg(MsgLink, MsgResult):
         return self._cmd
 
     @property
-    def rcmd(self) -> list[str]:
+    def rcmd(self) -> list[PathElem]:
         """
         Retrieve a reversed command
         """
         assert self.cmd is not None
         res = list(self.cmd)
         res.reverse()
-        return res
+        return cast("list[PathElem]", res)
 
     @classmethod
     def Call(cls, cmd: Path, a: list, kw: dict, flags: int = 0) -> Self:
@@ -454,7 +454,7 @@ class Msg(MsgLink, MsgResult):
         return s
 
     @property
-    def remote(self) -> MsgLink:  # noqa: D102
+    def remote(self) -> MsgLink | None:  # noqa: D102
         return self._remote
 
     def replace_with(self, link: MsgLink) -> None:
@@ -490,7 +490,7 @@ class Msg(MsgLink, MsgResult):
             await super().kill()
 
     async def ml_send(
-        self, a: Sequence, kw: OptDict | None, flags: int, initial: bool | None = None
+        self, a: Sequence, kw: OptDict, flags: int, initial: bool | None = None
     ) -> None:
         """
         Sender of data to the other side.
@@ -506,7 +506,7 @@ class Msg(MsgLink, MsgResult):
                 self._stream_in = S_ON
         await super().ml_send(a, kw, flags)
 
-    async def ml_recv(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """
         Receiver for data from the other side.
         """
@@ -602,13 +602,15 @@ class Msg(MsgLink, MsgResult):
         """
         await self.ml_send(a, kw, B_ERROR)
 
-    def _set_msg(self, a: Sequence, kw: OptDict | None, flags: int) -> None:
+    def _set_msg(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """
         A message has arrived on this stream. Store and set an event.
         """
         if flags & B_ERROR:
             msg = outcome.Error(StreamError(a))
         else:
+            if kw is None:
+                kw = {}
             msg = outcome.Value((a, kw))
 
         if self._msg is None:
@@ -713,14 +715,15 @@ class Msg(MsgLink, MsgResult):
                 Typically a ``cmd_*`` method.
         """
         try:
-            res = cmd(*self._a, **self._kw)  # pyright:ignore
+            res = cmd(*self._a, **self._kw)
             if is_async(res):
                 res = await res
         except Exception as exc:
             if self._remote is None:
                 raise
             if not isinstance(exc, SilentRemoteError) and not isinstance(exc, ExpectedError):
-                log_exc(exc, "Command Error %r", self)
+                if exc.args != ("schema",):
+                    log_exc(exc, "Command Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             if self._remote is None:
@@ -806,7 +809,11 @@ class Msg(MsgLink, MsgResult):
         self._msg2 = None
         if msg is None:
             raise EOFError
-        self._a, self._kw = msg.unwrap()  # pyright:ignore
+        if isinstance(msg, outcome.Error):
+            msg.unwrap()
+            return
+        msg = cast("outcome.Value[tuple[list, dict]]", msg)
+        self._a, self._kw = msg.unwrap()
 
     def __aiter__(self) -> Self:
         if not self._dir & SD_IN:
@@ -874,7 +881,7 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf, a: Sequence, kw: OptDict | None, flag: int, initial: bool = False):
+    def __init__(self, slf, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
         self.slf = slf
         self.a = a
         self.kw = kw

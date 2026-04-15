@@ -13,6 +13,7 @@ Package: python3-moat-lib-rpc
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),
+  python3-moat-lib-stream,
 Description: A simple RPC and stream multiplexer
   This library implements a bidirectional RPC architecture that supports
   streaming messages and flow control.

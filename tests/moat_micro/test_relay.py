@@ -8,7 +8,7 @@ import pytest
 
 from moat.lib.micro import sleep_ms
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 CFG = """
 app: dir
@@ -27,7 +27,7 @@ p:
 @pytest.mark.anyio
 async def test_rly(tmp_path):
     "fake relay test"
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with rpc_stack(tmp_path, CFG) as d:
         r = d.sub_at(P("r"))
         p = d.sub_at(P("p"))
 

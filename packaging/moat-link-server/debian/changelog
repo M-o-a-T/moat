@@ -1,14 +1,92 @@
-moat-link-server (0.3.26-4) unstable; urgency=medium
+moat-link-server (0.5.3-1) unstable; urgency=medium
+
+  * New release for 26.1.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Apr 2026 16:34:58 +0200
+
+moat-link-server (0.5.2-2) unstable; urgency=medium
+
+  * New release for 26.1.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 12 Apr 2026 12:33:07 +0200
+
+moat-link-server (0.5.2-1) unstable; urgency=medium
+
+  * New release for 26.1.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 12 Apr 2026 09:48:18 +0200
+
+moat-link-server (0.5.1-1) unstable; urgency=medium
+
+  * New release for 26.1.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 10 Apr 2026 11:31:26 +0200
+
+moat-link-server (0.5.0-1) unstable; urgency=medium
+
+  * New release for 26.1.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 08 Apr 2026 20:09:08 +0200
+
+moat-link-server (0.4.4-3) unstable; urgency=medium
+
+  * New release for 26.0.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Apr 2026 01:10:02 +0200
+
+moat-link-server (0.4.4-2) unstable; urgency=medium
+
+  * New release for 26.0.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 22 Mar 2026 16:05:17 +0100
+
+moat-link-server (0.4.4-1) unstable; urgency=medium
+
+  * New release for 26.0.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 16 Mar 2026 21:27:58 +0100
+
+moat-link-server (0.4.3-1) unstable; urgency=medium
+
+  * New release for 26.0.17
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 13 Mar 2026 12:17:36 +0100
+
+moat-link-server (0.4.2-1) unstable; urgency=medium
+
+  * New release for 26.0.16
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 23:07:37 +0100
+
+moat-link-server (0.4.1-1) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:58:34 +0100
+
+moat-link-server (0.4.0-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:19:34 +0100
+
+moat-link-server (0.3.26-8) unstable; urgency=medium
+
+  * New release for 26.0.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 20 Feb 2026 11:48:30 +0100
+
+moat-link-server (0.3.26-7) unstable; urgency=medium
+
+  * New release for 26.0.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 14:05:35 +0100
+
+moat-link-server (0.3.26-6) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:20 -0500
-
-moat-link-server (0.3.26-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:29 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 18:06:25 +0100
 
 moat-link-server (0.3.26-2) unstable; urgency=medium
 

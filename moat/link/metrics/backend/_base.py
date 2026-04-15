@@ -15,8 +15,12 @@ from moat.util import CtxObj
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
+
+    from moat.link.metrics.model import MetricPoint
+
     from collections.abc import AsyncIterator
-    from typing import Any, Self
+    from typing import Self
 
 __all__ = ["Backend", "get_backend"]
 
@@ -30,11 +34,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self.logger = logging.getLogger(f"moat.link.metrics.backend.{name}")
 
     @abstractmethod
-    @asynccontextmanager
-    async def connect(self, *a, **k) -> AsyncIterator[Self]:
+    def connect(self, *a, **k) -> AbstractAsyncContextManager[Self]:
         """
         This async context manager returns a connection to the backend.
         """
+        raise NotImplementedError
 
     @asynccontextmanager
     async def _ctx(self) -> AsyncIterator[Self]:
@@ -42,12 +46,12 @@ class Backend(CtxObj, metaclass=ABCMeta):
             yield self
 
     @abstractmethod
-    async def put(self, point: Any) -> None:
+    async def put(self, point: MetricPoint) -> None:
         """
         Send a metric data point to the backend.
 
         Args:
-            point: A MetricPoint or backend-specific data structure.
+            point: The data point to send.
         """
 
 

@@ -17,21 +17,36 @@ from moat.util.exc import ungroup
 from .const import SD_BOTH, SD_IN, SD_NONE, SD_OUT
 from .errors import NotReadyError, ShortCommandError
 
-from typing import TYPE_CHECKING
+from collections.abc import Mapping, MutableMapping
+from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING or DOC:
-    from contextlib import AbstractContextManager
-    from types import EllipsisType  # noqa:TC003
+    from types import (
+        CoroutineType,  # noqa:TC003
+        EllipsisType,  # noqa:TC003
+    )
 
     from moat.lib.path import PathElem
 
     from .msg import Msg  # noqa:TC001
 
-    from collections.abc import Awaitable, Callable, Mapping
-    from typing import Any, Self
+    from collections.abc import Awaitable, Callable, Iterator
+    from typing import Any, Literal, Protocol, Self
 
     Key = str | int | bool
-    OptDict = Mapping[str, Any] | None
+    OptDict = MutableMapping[str, Any] | None
+    _SdrPath = tuple["MsgRoot", Path]
+
+    class MsgRoot(Protocol):
+        """Interface required by :class:`MsgSender`."""
+
+        def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]: ...
+
+        def find_handler(self, path: Path, cmd: bool = False) -> _SdrPath | Callable: ...
+
+else:
+    MsgRoot = object
+    _SdrPath = object
 
 __all__ = ["BaseMsgHandler", "MsgHandler", "MsgSender"]
 
@@ -52,8 +67,8 @@ class Caller:
 
     def __init__(
         self,
-        sender: MsgSender,
-        data: tuple[str | Path, list | tuple, dict],
+        sender: BaseMsgHandler | MsgRoot,
+        data: tuple[str | Path, list[Any] | tuple[Any, ...], dict[str, Any]],
         _list: bool | EllipsisType | None = NotGiven,
     ):
         """
@@ -84,7 +99,10 @@ class Caller:
         "helper for __await__ that calls the remote side"
         from .msg import Msg  # noqa: PLC0415
 
-        msg = Msg.Call(*self.data)
+        cmd, args, kw = self.data
+        if isinstance(cmd, str):
+            cmd = Path.build((cmd,))
+        msg = Msg.Call(cmd, list(args), kw)
 
         await self.sender.handle(msg, msg.rcmd)
         await msg.wait_replied()
@@ -126,7 +144,10 @@ class Caller:
 
             from .msg import Msg  # noqa: PLC0415
 
-            m1 = Msg.Call(*self.data)
+            cmd, args, kw = self.data
+            if isinstance(cmd, str):
+                cmd = Path.build((cmd,))
+            m1 = Msg.Call(cmd, list(args), kw)
 
             tg = await acm(TaskGroup())
             m2 = await acm(m1.ensure_remote())
@@ -180,7 +201,7 @@ class BaseMsgHandler:
     Somewhat-abstract superclass for anything that accepts messages.
     """
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Handle this message stream.
 
@@ -204,7 +225,7 @@ class MsgSender(BaseMsgHandler):
 
     Caller_: type[Caller] = Caller
 
-    def __init__(self, root: MsgHandler):
+    def __init__(self, root: MsgRoot):
         """
         This class accepts client-side MoaT-cmd calls and turns them into
         messages.
@@ -218,16 +239,21 @@ class MsgSender(BaseMsgHandler):
         pass
 
     @property
-    def root(self):  # noqa: D102
+    def sender(self) -> MsgSender:
+        """Return a sender adapter for compatibility with handler roots."""
+        return self
+
+    @property
+    def root(self) -> MsgRoot:  # noqa: D102
         return self._root
 
-    def set_root(self, root):  # noqa: D102
+    def set_root(self, root: MsgRoot):  # noqa: D102
         if type(self) is not MsgSender:
             raise RuntimeError("not in a subclass")
         assert not isinstance(root, MsgSender)
         self._root = root
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Redirect to the underlying command handler.
         """
@@ -249,7 +275,16 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd, a, kw))
 
-    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: Literal[False] = False) -> MsgSender: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, *, cmd: Literal[True]) -> MsgSender | Callable: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, *, cmd: bool) -> MsgSender: ...
+
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender | Callable:
         """
         Resolve the given prefix, as far as possible.
 
@@ -258,7 +293,9 @@ class MsgSender(BaseMsgHandler):
         """
         res = self.root.find_handler(prefix, cmd=cmd)
         if isinstance(res, tuple):
-            root, rem = res
+            root: MsgRoot
+            rem: Path
+            root, rem = cast(_SdrPath, res)
             if rem:
                 return SubMsgSender(root, rem, caller=caller or self.Caller_)
             return MsgSender(root)
@@ -283,6 +320,14 @@ class MsgSender(BaseMsgHandler):
             setattr(self, elem, sb)
         return sb
 
+    def __getattr__(self, x: str) -> MsgSender:
+        """
+        Return a sub-sender for this path element.
+        """
+        return self.sub_at(Path.build((x,)))
+
+    __getitem__ = __getattr__
+
 
 class SubMsgSender(MsgSender):
     """
@@ -305,7 +350,7 @@ class SubMsgSender(MsgSender):
     An empty path is OK.
     """
 
-    def __init__(self, root: MsgHandler, path: Path, caller=None):
+    def __init__(self, root: MsgRoot, path: Path, caller=None):
         """
         Setup.
         """
@@ -327,7 +372,7 @@ class SubMsgSender(MsgSender):
     async def __aenter__(self):
         "Ensure that the called object is ready for service"
         try:
-            msg = await self.cmd(["rdy_"])
+            msg = await self.cmd(Path.build(("rdy_",)))
         except KeyError:
             pass  # can't do it. Oh well.
         else:
@@ -335,14 +380,14 @@ class SubMsgSender(MsgSender):
                 raise NotReadyError(self)
         return await super().__aenter__()
 
-    def handle(self, msg: Msg, rcmd: list[PathElem]) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list[PathElem]) -> CoroutineType[Any, Any, None]:
         """
         Forward the message, as directed by :py:attr:`path`.
         """
         rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
 
-    def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
+    def cmd(self, cmd: Path, *a: Any, **kw: Any) -> Caller:
         """
         Run a command.
 
@@ -359,17 +404,15 @@ class SubMsgSender(MsgSender):
         return Caller(self, (cmd, a, kw))
 
     def stream(self, *a, **kw):
-        return self.cmd((), *a, **kw).stream()
+        return self.cmd(Path(), *a, **kw).stream()
 
     def stream_in(self, *a, **kw):
-        return self.cmd((), *a, **kw).stream_in()
+        return self.cmd(Path(), *a, **kw).stream_in()
 
     def stream_out(self, *a, **kw):
-        return self.cmd((), *a, **kw).stream_out()
+        return self.cmd(Path(), *a, **kw).stream_out()
 
-    def __call__(
-        self, *a: list[Any], _list: bool | EllipsisType | None = None, **kw: dict[Key, Any]
-    ) -> Caller:
+    def __call__(self, *a: Any, _list: bool | EllipsisType | None = None, **kw: Any) -> Caller:
         """
         Process a direct call.
 
@@ -382,10 +425,20 @@ class SubMsgSender(MsgSender):
         """
         return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 
-    def sub_at(self, prefix: Path, caller=None) -> SubMsgSender:
+    @overload
+    def sub_at(self, prefix: Path, caller=None, cmd: Literal[False] = False) -> SubMsgSender: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, *, cmd: Literal[True]) -> SubMsgSender: ...
+
+    @overload
+    def sub_at(self, prefix: Path, caller=None, *, cmd: bool) -> SubMsgSender: ...
+
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
+        cmd  # noqa:B018
         return SubMsgSender(self.root, self._path + prefix, caller=caller or self.Caller_)
 
     def __getattr__(self, x):
@@ -397,7 +450,7 @@ class SubMsgSender(MsgSender):
     __getitem__ = __getattr__
 
 
-class MsgHandler(Base, BaseMsgHandler):
+class MsgHandler(Base, BaseMsgHandler, MsgRoot):
     """
     Message dispatching, using a Path-based prefix.
 
@@ -433,7 +486,7 @@ class MsgHandler(Base, BaseMsgHandler):
         raise NotImplementedError
 
     @contextmanager
-    def delegate(self, path: Path, service: MsgHandler) -> AbstractContextManager[Self]:
+    def delegate(self, path: Path, service: MsgHandler) -> Iterator[Self]:
         """
         Tell this handler to delegate messages that start with this path
         to that handler.
@@ -449,7 +502,7 @@ class MsgHandler(Base, BaseMsgHandler):
         name = f"sub_{path[0]}"
         if len(path) > 1:
             sub = getattr(self, name)  # must exist
-            with sub.delegate(name[1:], service):
+            with sub.delegate(path[1:], service):
                 yield self
         else:
             if hasattr(self, name):
@@ -460,7 +513,7 @@ class MsgHandler(Base, BaseMsgHandler):
             finally:
                 delattr(self, name)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: list[str]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]):
         """
         Process the message.
 
@@ -480,14 +533,12 @@ class MsgHandler(Base, BaseMsgHandler):
         * If that doesn't exist, raise a `KeyError`.
 
         """
-        pref = "_" + "_".join(prefix) if prefix else ""
-
         # Process direct calls.
         if not rcmd:
-            if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
+            if not msg.can_stream and (cmd := getattr(self, "cmd", None)) is not None:
                 return await msg.call_simple(cmd)
-            elif getattr(self, f"stream{pref}", None) is not None:
-                return await msg.call_stream(self.stream)
+            elif (cmd := getattr(self, "stream", None)) is not None:
+                return await msg.call_stream(cmd)
             else:
                 raise ShortCommandError(msg.cmd)
 
@@ -496,20 +547,15 @@ class MsgHandler(Base, BaseMsgHandler):
             if msg.args or msg.kw:
                 raise TypeError("doc", msg.args, msg.kw)
             if (
-                doc := getattr(
-                    self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None
-                )
+                doc := getattr(self, f"doc_{rcmd[1]}" if len(rcmd) > 1 else "doc", None)
             ) is not None:
                 return await msg.result(doc)
 
         # Process command handlers of this class.
         if len(rcmd) == 1:
-            if (
-                not msg.can_stream
-                and (cmd := getattr(self, f"cmd{pref}_{rcmd[0]}", None)) is not None
-            ):
+            if not msg.can_stream and (cmd := getattr(self, f"cmd_{rcmd[0]}", None)) is not None:
                 return await msg.call_simple(cmd)
-            if (cmd := getattr(self, f"stream{pref}_{rcmd[0]}", None)) is not None:
+            if (cmd := getattr(self, f"stream_{rcmd[0]}", None)) is not None:
                 return await msg.call_stream(cmd)
 
         # Neither of the above.
@@ -527,9 +573,9 @@ class MsgHandler(Base, BaseMsgHandler):
 
         # Find a subcommand.
         scmd = rcmd.pop()
-        if (sub := self.find_sub(scmd, pref)) is not None:
-            if hasattr(sub, "handle"):
-                sub = sub.handle
+        if (sub := self.find_sub(scmd)) is not None:
+            sub = getattr(sub, "handle", sub)
+            sub = cast("Callable[[Msg, list[PathElem]], Awaitable[None]]", sub)
             return await sub(msg, rcmd)
 
         if is_rdy:
@@ -539,20 +585,21 @@ class MsgHandler(Base, BaseMsgHandler):
             scmd,
             self.cfg_name,
             msg.cmd,
-            list(self.sub.keys()) if hasattr(self, "sub") else (),
+            list(subs.keys()) if isinstance((subs := getattr(self, "sub", None)), Mapping) else (),
         )
 
-    def find_sub(self, scmd: str, prefix: str = "") -> Callable | None:
+    def find_sub(self, scmd: PathElem) -> BaseMsgHandler | Callable | None:
         """
         Resolve a subcommand.
 
         Args:
             scmd: the subcommand to look up.
-            prefix: any command prefix (deprecated-ish).
 
-        The default implementation uses sub{pref}_{scmd} attributes.
+        The default implementation uses ``sub_{scmd}`` attributes.
         """
-        return getattr(self, f"sub{prefix}_{scmd}", None)
+        if not isinstance(scmd, str):
+            return None
+        return cast("BaseMsgHandler | Callable | None", getattr(self, f"sub_{scmd}", None))
 
     def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """
@@ -601,6 +648,16 @@ class MsgHandler(Base, BaseMsgHandler):
         if s:
             res["s"] = s
         return res
+
+    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]):
+        """
+        Basic boilerplate command for handling basic readiness checks in
+        `handle` and similar methods.
+        """
+        if not L or not rcmd or rcmd[0] != "rdy_":
+            return
+        if await self.wait_ready(wait=msg.get("wait", True)):
+            raise NotReadyError(msg.cmd, rcmd)
 
     if L:
         doc_rdy_ = dict(_d="check readiness", w="bool:wait for it?")

@@ -10,7 +10,7 @@ from moat.lib.micro import log
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import RootCmd
+    import builtins
 
     from collections.abc import Awaitable
     from typing import Any, ClassVar
@@ -51,10 +51,6 @@ class _RTC:
         else:
             merge(self.cfg, cfg)
             self._setup()
-
-    def set_root(self, root: RootCmd):
-        self.root = root
-        self._setup()
 
     def _setup(self, err: bool = False):
         self.backends = bes = []
@@ -174,7 +170,7 @@ class _RTC:
             raise exc2 from None
         raise KeyError(name) from None
 
-    async def keys(self, fs: bool | None = None, sync: bool = False) -> set[str]:
+    async def keys(self, fs: bool | None = None, sync: bool = False) -> builtins.set[str]:
         """
         Get the list of available/existing RTC keys.
         """
@@ -331,7 +327,7 @@ class RTCBase:
         """
         return State(self, name)
 
-    async def keys(self) -> set[str]:
+    async def keys(self) -> builtins.set[str]:
         """
         Get all available keys.
         """
@@ -351,7 +347,7 @@ def at(*a, **kw):
             return
     except KeyError:
         pass
-    data = (a, kw) if a and kw else (a if a else kw)
+    data = (a, kw) if a and kw else (a or kw)
     try:
         RTC.set_sync("debug", data, fs=False)
     except NotImplementedError:

@@ -1,1 +1,1 @@
-../../../app/ping.py
+../../../../lib/rpc/app/ping.py

@@ -1,3 +1,1 @@
-"""
-interfaces to non-existing hardware
-"""
+../../lib/rpc/app/fake.py

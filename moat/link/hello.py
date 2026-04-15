@@ -9,19 +9,18 @@ import logging
 
 from attrs import define, field
 
-from moat.lib.path import P
+from moat.util import attrdict
+from moat.lib.rpc import Auth, AuthCmdIn, AuthDenied
 
 from . import protocol_version as proto_version
 from . import protocol_version_min as proto_version_min
 from .common import CmdCommon
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
-    from moat.lib.rpc import Key, Msg, MsgSender
-
-    from .auth import AuthMethod
+    from moat.lib.rpc import Msg, MsgSender
 
     from typing import Any
 
@@ -32,8 +31,58 @@ class NotAuthorized(RuntimeError):  # noqa: D101
     pass
 
 
-def _to_dict(x: list[AuthMethod]) -> dict[str, AuthMethod]:
-    return {a.name: a for a in x}
+class _RPCRoot:
+    "Minimal object exposing ``.sender`` for the RPC auth helper."
+
+    def __init__(self, sender):
+        self.sender = sender
+
+
+class _RPCShim:
+    "Adapter exposing the subset of BaseCmdMsg used by moat.lib.rpc.auth."
+
+    def __init__(self, hello: Hello, sender, auth_data: dict[str, Any]):
+        self.hello = hello
+        self._sender = sender
+        self.auth = attrdict(auth_data)
+        self.is_server = (
+            hello.rpc_auth_server if hello.rpc_auth_server is not None else hello.me_server
+        )
+
+    @property
+    def auth_name(self):
+        "Name presented to the RPC auth helper."
+        return self.hello.me
+
+    async def wait_ready(self, wait: bool = True):
+        "The live RPC stream is already running."
+        wait  # noqa:B018
+        return False
+
+    async def handle(self, msg, rcmd, _auth: bool = False):
+        "Forward auth helper traffic to the already-open RPC sender."
+        _auth  # noqa:B018
+        return await self._sender.handle(msg, rcmd)
+
+    def auth_data_out(self) -> dict:
+        "Delegate extra auth-request data handling to Hello."
+        return self.hello.auth_data_out()
+
+    def auth_data_in(self, args, data: dict) -> None:
+        "Delegate extra incoming auth-request data handling to Hello."
+        self.hello.auth_data_in(args, data)
+
+    def auth_data_res_out(self, role: str) -> dict:
+        "Delegate extra auth-response data handling to Hello."
+        return self.hello.auth_data_res_out(role)
+
+    def auth_data_res_in(self, role: str, data: dict) -> None:
+        "Delegate extra incoming auth-response data handling to Hello."
+        self.hello.auth_data_res_in(role, data)
+
+    def auth_skip(self) -> None:
+        "Signal that the peer does not support RPC auth."
+        self.hello.auth_skip()
 
 
 @define
@@ -55,18 +104,33 @@ class Hello(CmdCommon):
     Negotiated auth data are in ``.auth_data``.
     """
 
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            me: str | None = None,
+            them: str | None = None,
+            *,
+            rpc_auth_modes: tuple[str, ...] | None = None,
+            rpc_auth_data: dict[str, Any] = ...,
+            rpc_auth_server: bool | None = None,
+            me_server: bool = False,
+            protocol_min: int = proto_version_min,
+            protocol_max: int = proto_version,
+        ) -> None: ...
+
     me: str | None = field(default=None)
     them: str | None = field(default=None)
 
     auth_data: Any = field(init=False, default=None)
 
-    auth_in: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
-    auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
+    rpc_auth_modes: tuple[str, ...] | None = field(kw_only=True, default=None)
+    rpc_auth_data: dict[str, Any] = field(kw_only=True, factory=dict)
+    rpc_auth_server: bool | None = field(kw_only=True, default=None)
 
     me_server: bool = field(default=False)
     they_server: bool = field(init=False, default=False)
 
-    _sync: anyio.Event = field(init=False, factory=anyio.Event)
     _done: anyio.Event = field(init=False, factory=anyio.Event)
 
     # min and max protocol versions we might accept
@@ -75,207 +139,174 @@ class Hello(CmdCommon):
 
     # negotiated protocol version
     protocol_version: int = field(init=False, default=0)
+    _rpc_auth: Any = field(init=False, default=None)
+    _rpc_in: Any = field(init=False, default=None)
+    _rpc_init: anyio.Event = field(init=False, factory=anyio.Event)
+    _rpc_accepting: bool = field(init=False, default=False)
+    _reply: dict[str, Any] = field(init=False, factory=dict)
+    _res_data: dict[str, Any] | None = field(init=False, default=None)
 
     def __attrs_post_init__(self):
         if self.me_server and self.me is None:
             raise ValueError("A server must have a name")
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem], *prefix: Key) -> None:
+    def auth_data_out(self) -> dict:
         """
-        Dispatch an incoming "hello" message
+        Extra auth-request metadata shared between RPC auth and legacy Hello.
         """
-        if prefix:
-            raise NotImplementedError
-        if rcmd.pop() != "i":
-            raise ValueError("No Hello/Auth")
-        if len(rcmd) == 1 and rcmd[0] == "hello":
-            res = await self.do_hello(msg)
-            await msg.result(res)
-            return
-        if len(rcmd) != 2 or rcmd[1] != "auth":
-            raise ValueError("No Hello/Auth")
+        res = {"version": proto_version}
+        if self.them:
+            res["rname"] = self.them
+        return {"moat.link": res}
 
-        if self.auth_data is not None:
-            # Some other method already succeeded
-            await msg.result(False)
-            return
-        a = self.auth_in.get(rcmd[0], None)
-        if a is None:
-            await msg.result(False)
-        else:
-            await a.handle(self, msg)
-
-    def authorized(self, data: Any) -> bool:
+    def auth_data_in(self, args, data: dict) -> None:
         """
-        Called by an auth method to indicate that authorization worked.
+        Process incoming auth-request metadata.
 
-        Returns True if this method was the first to succeed.
+        Args:
+            args: auth/hello positional arguments, with the peer name at index 2.
+            data: auth/hello keyword metadata.
         """
-        if self.auth_data is not None:
-            return False
-        self.auth_data = data
-        return True
-
-    doc_i_hello = dict(
-        _d="Process remote Hello msg",
-        _r="auth state",
-        _0="int:protocol",
-        _1="bool:server flag",
-        _2="str:sender's name",
-        _3="str:recipient's name (temp by sender)",
-        _4=["str:auth method"],
-        _k="str:auth names",
-        _kw="Any:auth params",
-    )
-
-    async def do_hello(self, msg) -> bool | None:
-        """
-        Process the remote hello message.
-
-        Returns True if no auth is required.
-        """
+        info = data.get("moat.link", {})
+        if info is None:
+            info = {}
         try:
-            res = await self._do_hello(msg)
-        except BaseException:
-            self.auth_data = False
-            raise
-        else:
-            if self.auth_data is None:
-                self.auth_data = res
-            await msg.result(res)
-        finally:
-            self._done.set()
-
-    async def _do_hello(self, msg) -> bool | dict:
-        logger.debug("H IN %r %r", msg.args, msg.kw)
-        it = iter(msg.args)
-        auth = True
-        aux_data = {}
-
-        try:
-            prot = next(it)
+            prot = info.get("version", args[0])
+        except IndexError:
+            prot = info.get("version", None)
+        if prot is not None:
             if prot < self.protocol_min:
                 raise ValueError("Protocol mismatch", prot)
             self.protocol_version = min(prot, self.protocol_max)
 
-            # TODO special auth for servers?
-            self.they_server = next(it)
-            if not self.they_server and not self.me_server:
-                raise RuntimeError("Two clients cannot talk")
-
-            # Remote names
-            # If the remote is nameless, use ours.
-            # If the remote is a server, keep its name.
-            # If the name are the same, no problem.
-            # If the remote name starts with an underscore, tell it to use ours.
-            # If the remote name starts with a bang, strip it.
-            # Otherwise prefix with our name.
-            remote_name = next(it)
-            if remote_name is None:
-                if self.them is None:
-                    logger.error("No remote name")
-                    auth = False
-                    raise StopIteration
-                aux_data["name"] = self.them
-            elif self.them is None:
-                self.them = remote_name
-            elif self.them != remote_name:
-                logger.debug("Remote name: %r / %r", remote_name, self.them)
-                aux_data["name"] = self.them
-                self.them = remote_name
-
-            local_name = next(it)
-            if local_name is None:
-                pass
-            elif self.me is None:
-                self.me = local_name
-            elif self.me != local_name:
-                logger.debug("My name: %r / %r", local_name, self.me)
-
-            auth = next(it)
-
-            if not next(it):
-                raise RuntimeError("Not talking to a server")
-
-        except StopIteration:
+        try:
+            self.they_server = args[1]
+        except IndexError:
             pass
 
-        # wait for the outgoing part to start
-        await self._sync.wait()
+        local_name = info.get("rname", None)
+        remote_name = args[2] if len(args) > 2 else None
+        if remote_name is None:
+            if self.them is None:
+                logger.error("No remote name")
+            else:
+                self._reply["name"] = self.them
+        elif self.them is None:
+            self.them = remote_name
+        elif self.them != remote_name:
+            logger.debug("Remote name: %r / %r", remote_name, self.them)
+            self._reply["name"] = self.them
+            self.them = remote_name
 
-        if auth is False:
-            raise NotAuthorized("Remote blocks us", self.them)
-        if auth is True:
-            self.auth_data = True
-            return aux_data or True
+        if local_name is None:
+            return
+        if self.me is None:
+            self.me = local_name
+        elif self.me != local_name:
+            logger.debug("My name: %r / %r", local_name, self.me)
 
-        if isinstance(auth, str):
-            auth = (auth,)
+    def auth_data_res_out(self, role: str | None = None) -> dict:
+        """
+        Extra auth-response metadata shared between RPC auth and legacy Hello.
+        """
+        if role is not None and self._rpc_in is not None:
+            # We are about to send a successful incoming RPC-auth reply.
+            # At this point non-auth commands may pass through.
+            self._rpc_accepting = True
+        return self._reply
 
-        # Check for auth data in the Hello
-        for a in self.auth_in.values():
-            res = await a.hello_in(self, msg.kw.get(a.name, None))
-            if res is False:
-                return False
-            if res:
-                if self.auth_data is None:
-                    self.auth_data = True
-                break
-
-        # cycle through the remote side's accepted auth methods
-        for a in auth:
-            am = self.auth_out.get(a, None)
-            if am is None:
-                continue
-            res = await am.chat(self, msg.kw.get(a, None))
-            if res is None:
-                continue
-            if isinstance(res, dict):
-                aux_data.update(res)
-            if res is False or not aux_data:
-                return res
-            return aux_data
-
-        # Nothing matched.
+    @staticmethod
+    def is_auth_cmd(rcmd: list[PathElem]) -> bool:
+        """
+        Check whether this command belongs to startup authentication.
+        """
+        if not rcmd:
+            return False
+        if rcmd[-1] is None:
+            return True
         return False
 
-    async def run(self, sender: MsgSender, **kw):
+    @property
+    def auth_accepting(self) -> bool:
         """
-        Send our Hello message.
+        Non-auth commands may pass while RPC auth cleanup is still running.
         """
+        return self._rpc_accepting
 
-        auths = []
-        for a in self.auth_in.values():
-            auths.append(a.name)
-            if a.name not in kw:
-                v = await a.hello_out()
-                if v is not None:
-                    kw[a.name] = v
+    def auth_data_res_in(self, role: str | None, data: dict) -> None:
+        """
+        Process incoming auth-response metadata.
+        """
+        role  # noqa:B018
+        data = dict(data)
+        if (name := data.pop("name", None)) is not None:
+            self.me = name
+        self._res_data = data or None
 
-        if len(auths) == 0:
-            auths = True
-        elif len(auths) == 1:
-            auths = auths[0]
+    def auth_skip(self) -> None:
+        """
+        RPC auth isn't supported by the peer.
+        """
+        raise NotAuthorized("Peer does not support RPC auth")
 
-        logger.debug("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
-        self._sync.set()
-        res = await sender.cmd(
-            P("i.hello"),
-            proto_version,
-            self.me_server,
-            self.me,
-            self.them,
-            auths,
-            **kw,
-        )
-        res = res.kw or res[0]
+    def _rpc_modes(self) -> tuple[str, ...]:
+        """
+        RPC auth methods to try before the legacy hello/auth handshake.
+        """
+        if self.rpc_auth_modes is None:
+            return ()
+        return tuple(self.rpc_auth_modes)
 
-        if res is False:
-            raise NotAuthorized("Server %r rejects us", self.them)
+    async def run(self, sender: MsgSender):
+        """
+        Run the RPC auth protocol.
+        """
+        modes = self._rpc_modes()
+        if not modes:
+            self._rpc_init.set()
+            self._done.set()
+            raise NotAuthorized("No auth modes configured")
 
-        # Wait for the incoming side of the auth/hello dance to succeed
-        await self._done.wait()
-        return res
+        cfg = attrdict(modes=[attrdict(mode=m) for m in modes])
+        shim = _RPCShim(self, sender, self.rpc_auth_data)
+        auth = Auth(cfg, cast("Any", shim))
+        auth.base_root = cast("MsgSender", _RPCRoot(sender))
+        self._rpc_auth = auth
+        a_in = AuthCmdIn(auth)
+        self._rpc_in = a_in
+        self._rpc_init.set()
+        self._rpc_accepting = False
+        self._reply = {}
+        self._res_data = None
+        try:
+            async with a_in:
+                await a_in.task()
+            if isinstance(auth.ok, Exception):
+                raise auth.ok
+            self.auth_data = getattr(auth.ok, "name", True)
+            if a_in.p_version is not None:
+                self.protocol_version = min(a_in.p_version, self.protocol_max)
+            return self._res_data or True
+        except BaseException:
+            self.auth_data = False
+            raise
+        finally:
+            self._done.set()
+            self._rpc_in = None
+            self._rpc_auth = None
+
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
+        """
+        Dispatch an incoming auth message
+        """
+        if self.is_auth_cmd(rcmd) and rcmd[-1] is None:
+            # RPC auth can arrive before ``run`` had a chance to install ``_rpc_in``.
+            if self._rpc_in is None:
+                await self._rpc_init.wait()
+            if self._rpc_in is None:
+                raise AuthDenied(msg)
+            return await self._rpc_in.handle(msg, rcmd)
+        raise KeyError(rcmd)
 
     async def wait_done(self):
         "wait until done"

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from moat.link.client import Link
 
     from collections.abc import AsyncIterator
-    from typing import NoReturn, Self
+    from typing import Self
 
 __all__ = ["Notifier", "Notify", "get_backend"]
 
@@ -36,7 +36,7 @@ class Notify:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dropped: PrioMap[Notifier] = PrioMap()
+        self.dropped: PrioMap[Notifier, float] = PrioMap()
 
     async def run(self, link: Link, evt: anyio.Event | None = None):
         """
@@ -121,7 +121,7 @@ class Notify:
         elif any(x not in self.dropped for x in retry):
             await self.link.e_ok(P("run.notify.backend"))
 
-    async def _run(self, evt) -> NoReturn:
+    async def _run(self, evt) -> None:
         """
         A bridge that monitors the MoaT-Link notify subtree.
         """
@@ -139,7 +139,7 @@ class Notify:
                         t = time.time()
                         if meta.timestamp < t - self.cfg.max_age:
                             continue
-                        if isinstance(msg, NotGiven):
+                        if msg is NotGiven:
                             # Treat as empty message, for now
                             msg = {"msg": "Deleted"}  # noqa:PLW2901
                         if isinstance(msg, dict):
@@ -157,7 +157,7 @@ class Notify:
                 )
                 raise
 
-    async def _keepalive(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> NoReturn:
+    async def _keepalive(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         "Monitor the keepalive topic"
         bad = True
         link = self.link
@@ -199,7 +199,7 @@ class Notify:
                 bad = True
 
 
-def get_backend(name: str, link: Link, cfg: dict) -> Notify:
+def get_backend(name: str, link: Link, cfg: dict) -> Notifier:
     """
     Fetch the backend named in the config and initialize it.
     """

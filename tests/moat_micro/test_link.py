@@ -7,8 +7,8 @@ from __future__ import annotations
 import pytest
 
 from moat.lib.path import P
+from moat.lib.rpc._test import rpc_stack
 from moat.link._test import Scaffold
-from moat.micro._test import mpy_stack
 
 CFG = """
 app: dir
@@ -36,7 +36,7 @@ async def test_fake(seed, tmp_path, cfg):
     async with (
         Scaffold(cfg=True, use_servers=True) as sf,
         sf.server_(init="Foo"),
-        mpy_stack(tmp_path, CFG, dict(x=dict(seed=seed))) as ps,
+        rpc_stack(tmp_path, CFG, dict(x=dict(seed=seed))) as ps,
         sf.client_() as cl,
         await cl.get_service(P("foo.bar")) as fb,
         cl.announcing(P("baz.quux"), host=False, service=cl.sub_at("d")) as ann,

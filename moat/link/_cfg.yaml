@@ -11,7 +11,9 @@ backend_example:
     key: '/path/to/cert.key'
 client:
   init_timeout: 5  # set to None to not require a server
-  # name: foo
+  # path: '/run/moat/link/socket'  # try this Unix socket first
+  # name: foo  # try this named server next
+  # otherwise monitor server announcements (no config option)
 
 # also in moat/link/_main.py
 root: !P XXX.NotConfigured.YZ
@@ -35,17 +37,16 @@ timeout:
 
   # Ping messages every … seconds
   ping:
-    every: 10
-    timeout: 22  # no ping received
-    delete: 1800  # still no ping received
-    stale: 15  # ping never received
-    down: 25  # delayed error, give it a chance to come back
-    min: 20  # answering old messages. Should be > ping timeout
+    every: 10  # ping transmit frequency
+    timeout: 22  # no followup ping received
+    stale: 15  # no initial ping received
+    delete: 150  # time before removing run.host.* messages
+    delay: 3  # no service deletions
 
   restart:
     error: 30  # generate an error if not back in this many seconds
     flap: 60  # keep the error if it won't stay online this long
-    up: 20  # timeout for service.up to become True
+    up: 20  # time for service.up to become True
 
   # client reconnect
   connect:

@@ -4,68 +4,244 @@ Test support
 
 from __future__ import annotations
 
-from moat.lib.micro import log, shield
-from moat.lib.rpc import B_FLAGSTR, wire2i_f
-from moat.util.exc import ungroup
+import anyio
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from pathlib import Path
+from random import random
 
-try:
-    import anyio
-except ImportError:
-    import asyncio
+from moat.util import attrdict, combine_dict, ctx_as, yload
+from moat.lib.rpc import RootCmd
+from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
 
-    def cancelled_class():
-        return asyncio.CancelledError
-
-else:
-    cancelled_class = anyio.get_cancelled_exc_class
-
-from .stream import HandlerStream
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgHandler
+    from types import CoroutineType
+
+    from moat.lib.micro import Event
+    from moat.lib.stream.base import Buffer, MutBuffer
+
+    from typing import Any, Protocol
+
+    class _LoopLinkProto(Protocol):
+        def xs(self, *, m: Any) -> CoroutineType[Any, Any, None]: ...
+
+        def xr(self) -> CoroutineType[Any, Any, Any]: ...
+
+        def xsb(self, *, m: Buffer | bytes) -> CoroutineType[Any, Any, None]: ...
+
+        def xrb(self) -> CoroutineType[Any, Any, Buffer | bytes]: ...
+
+        def xwr(self, *, b: Buffer) -> CoroutineType[Any, Any, None]: ...
+
+        def xrd(self, *, n: int) -> CoroutineType[Any, Any, Buffer | bytes]: ...
+
+        def xcwr(self, *, b: Buffer) -> CoroutineType[Any, Any, None]: ...
+
+        def xcrd(self, *, n: int) -> CoroutineType[Any, Any, Buffer | bytes]: ...
 
 
-class StreamLoop(HandlerStream):
-    __other: StreamLoop = None
+temp_dir = ContextVar("temp_dir")
 
-    def __init__(self, h: MsgHandler, s: str):
-        super().__init__(h)
-        self.__s = s
 
-    def attach_remote(self, other):
-        self.__other = other
+@asynccontextmanager
+async def rpc_stack(temp: Path, cfg: attrdict | str, cfg2: dict | None = None, **kw):
+    """
+    Creates a multiplexer.
+    """
+    if isinstance(cfg, str):
+        if "\n" in cfg:
+            cfg = yload(cfg, attr=True)
+        else:
+            with (Path("tests") / "cfg" / (cfg + ".cfg")).open("r") as cff:
+                cfg = yload(cff, attr=True)
 
-    async def write_stream(self):
+    if cfg2 is not None:
+        cfg = combine_dict(cfg2, cfg, cls=attrdict)
+
+    async with ctx_as(temp_dir, temp):
+        if isinstance(cfg.app, str):
+            cfg = attrdict(app=cfg)
+        if "rtc" in cfg:
+            from moat.micro.rtc import RTC  # noqa:PLC0415
+
+            RTC.init(cfg["rtc"])
+        stack = RootCmd(cfg, **kw)
+        async with stack:
+            yield stack
+
+
+class Loopback(BaseMsg, BaseBuf, BaseBlk):
+    """
+    A simple loopback object.
+
+    The write queue is created locally, the read queue is taken from the
+    "other side".
+
+    This object can be self-linked.
+    """
+
+    # pylint:disable=abstract-method
+
+    _link: Event | Loopback | None = None
+    _buf: MutBuffer
+
+    def __init__(self, qlen=0, loss=0):
+        super().__init__({})
+        assert 0 <= loss < 1
+        self.q_wr, self.q_rd = anyio.create_memory_object_stream(qlen)
+        self.loss = loss
+
+    async def setup(self):
+        if self._link is None:
+            raise RuntimeError("You must link before setup!")
+        elif isinstance(self._link, anyio.Event):
+            await self._link.wait()
+
+    def link(self, other: Loopback | anyio.Event):
+        """Tell this loopback to read from some other loopback."""
+        evt, self._link = self._link, other
+        if isinstance(evt, anyio.Event):
+            evt.set()
+
+    async def send(self, m, _loss=True):  # pylint:disable=arguments-differ
+        """Send data."""
+        if self._link is None:
+            raise anyio.BrokenResourceError(self)
+        if _loss and random() < self.loss:
+            return
+        try:
+            await self.q_wr.send(m)
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ) as exc:
+            raise EOFError from exc
+
+    snd = send
+
+    async def recv(self):  # pylint:disable=arguments-differ
+        if (link := self._link) is None:
+            raise anyio.BrokenResourceError(self)
+        try:
+            return await cast(Loopback, link).q_rd.receive()
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ):
+            raise EOFError from None
+
+    rcv = recv
+
+    async def rd(self, buf: MutBuffer) -> int:
         while True:
             try:
-                msg = await self.msg_out()
-            except EOFError:
-                return
-            m = msg[:]
-            i, fl = wire2i_f(m.pop(0))
-            f = B_FLAGSTR[fl]
-            if i >= 0:
-                f += "+"
-            f += str(i)
+                b = self._buf
+            except AttributeError:
+                pass
+            else:
+                if b:
+                    n = min(len(b), len(buf))
+                    buf[0:n] = b[0:n]
+                    self._buf = b[n:]
+                    return n
+            self._buf = await self.recv()
 
-            log("%s: %s %s", self.__s, f, " ".join(repr(x) for x in m))
-            await self.__other.msg_in(msg)
+    async def wr(self, data: Buffer) -> int:
+        n = len(data)
+        if self.loss:
+            b = bytearray(data)
+            loss = 1 - (1 - self.loss) ** (1 / len(b) / 2)
+            # '1-loss' is the chance of not killing each single byte
+            # that's required to not kill a message of size len(b)
+            # given two chances of mangling each byte
 
-    async def read_stream(self):
-        await self.__other.writer_done.wait()
+            n = 0
+            while n < len(b):
+                if random() < loss:
+                    del b[n]
+                else:
+                    while random() < loss:
+                        b[n] = b[n] ^ (1 << int(8 * random()))
+                    n += 1
+        else:
+            b = bytes(data)
+        await self.send(b, _loss=False)
+        return n
 
-    async def __aexit__(self, *tb):
-        with shield():
-            await self.__other.closed_input()
-        try:
-            with ungroup:
-                await super().__aexit__(*tb)
-        finally:
-            if not self.is_idle:
-                log("*** WARNING *** %r: not idle; %r", self, vars(self))
-            # assert self.is_idle
+    async def teardown(self):
+        await self.q_wr.aclose()
+        link = self._link
+        if isinstance(link, Loopback) and link is not self:
+            await link.q_rd.aclose()
+        await super().teardown()
 
-        if isinstance(ungroup.one(tb[1]), cancelled_class()):
-            return True
+
+class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
+    """
+    A loopback BBM. It talks to a remote LoopLink.
+
+    This BBM is not a command, thus it cannot be linked to.
+
+    The remote LoopLink must have the appropriate buffers,
+    i.e. `usage: mM` for messages, etc.
+    """
+
+    # pylint:disable=abstract-method
+
+    _link: _LoopLinkProto
+
+    async def setup(self):
+        p = self.cfg["path"]
+        if isinstance(p, str):
+            raise TypeError(f"Need a path, not {p!r}")
+        self._link = self.cfg._moat_cmd.root.sub_at(p)  # noqa:SLF001
+
+    def send(self, m: Any) -> CoroutineType[Any, Any, None]:
+        """Send message data."""
+        return self._link.xs(m=m)
+
+    def recv(self) -> CoroutineType[Any, Any, Any]:
+        """Read message data."""
+        return self._link.xr()
+
+    def snd(self, m: Buffer | bytes) -> CoroutineType[Any, Any, None]:
+        """Send block data."""
+        return self._link.xsb(m=m)
+
+    def rcv(self) -> CoroutineType[Any, Any, Buffer | bytes]:
+        """Read block data."""
+        return self._link.xrb()
+
+    async def wr(self, data: Buffer) -> int:
+        """Send bytes."""
+        await self._link.xwr(b=data)
+        return len(data)
+
+    async def rd(self, buf: MutBuffer) -> int:
+        """Read bytes."""
+        r = await self._link.xrd(n=len(buf))
+        n = len(r)
+        buf[:n] = r
+        return n
+
+    def cwr(self, b: Buffer) -> CoroutineType[Any, Any, None]:
+        """Send bytes."""
+        return self._link.xcwr(b=b)
+
+    async def crd(self, b: bytearray) -> int:
+        """Read bytes."""
+        r = await self._link.xcrd(n=len(b))
+        n = len(r)
+        b[:n] = r
+        return n
+
+
+class Root(RootCmd):
+    "an empty root for testing"
+
+    def __init__(self):
+        super().__init__({})

@@ -1,14 +1,74 @@
-moat-kv (0.71.25-4) unstable; urgency=medium
+moat-kv (0.71.28-3) unstable; urgency=medium
+
+  * New release for 26.1.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 10 Apr 2026 11:30:54 +0200
+
+moat-kv (0.71.28-2) unstable; urgency=medium
+
+  * New release for 26.1.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 08 Apr 2026 20:08:17 +0200
+
+moat-kv (0.71.28-1) unstable; urgency=medium
+
+  * New release for 26.0.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Apr 2026 01:09:11 +0200
+
+moat-kv (0.71.27-4) unstable; urgency=medium
+
+  * New release for 26.0.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 22 Mar 2026 16:04:42 +0100
+
+moat-kv (0.71.27-3) unstable; urgency=medium
+
+  * New release for 26.0.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 16 Mar 2026 21:27:29 +0100
+
+moat-kv (0.71.27-2) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:56:56 +0100
+
+moat-kv (0.71.27-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:17:47 +0100
+
+moat-kv (0.71.26-2) unstable; urgency=medium
+
+  * New release for 26.0.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 20 Feb 2026 11:58:42 +0100
+
+moat-kv (0.71.26-1) unstable; urgency=medium
+
+  * New release for 26.0.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 20 Feb 2026 11:48:10 +0100
+
+moat-kv (0.71.25-7) unstable; urgency=medium
+
+  * New release for 26.0.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 21:10:29 +0100
+
+moat-kv (0.71.25-6) unstable; urgency=medium
+
+  * New release for 26.0.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 14:04:02 +0100
+
+moat-kv (0.71.25-5) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:08 -0500
-
-moat-kv (0.71.25-4) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:12 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 18 Feb 2026 17:51:31 +0100
 
 moat-kv (0.71.25-2) unstable; urgency=medium
 

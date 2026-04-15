@@ -56,7 +56,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
 
     # create 2D sketch with rounded corners, for the bottom of the socket
     s3a = (
-        cq.Sketch()
+        cq
+        .Sketch()
         .rect(box_wd + 0.001, box_wd + 0.001)  # ensure boxes overlap with small add
         .vertices()
         .fillet(c_rad)
@@ -64,7 +65,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
 
     # take s3a sketch and create one socket for the bottom of box
     f2 = (
-        cq.Workplane("XY")
+        cq
+        .Workplane("XY")
         .placeSketch(s3a)
         .extrude(t_chm_ht * math.sqrt(2), taper=45)
         .faces(">Z")
@@ -91,7 +93,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
 
     # create exterior box walls
     f7 = (
-        cq.Workplane("XY")
+        cq
+        .Workplane("XY")
         .placeSketch(s4)
         .extrude(vw_ht)  # vertical wall height
         .translate((wall_xpos, wall_ypos, 0))
@@ -99,7 +102,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
 
     # create tool to trim off excess socket underhang
     f11 = (
-        cq.Workplane("XY")
+        cq
+        .Workplane("XY")
         .placeSketch(s4)
         .extrude(-socket_ht - 1)  # socket is below XY-plane
         .translate((wall_xpos, wall_ypos, 1 / 2))
@@ -109,7 +113,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
 
     # create sketch for box interior that is later swept straight/chamfered
     s5 = (
-        cq.Sketch()
+        cq
+        .Sketch()
         # should NOT be a f(wall_th) to ensure compatibility, but could create other issues
         .rect(box_wd_xwall - 2 * wall_th, box_wd_ywall - 2 * wall_th)
         .vertices()
@@ -131,7 +136,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
     # includes fillets on the bottom interior
     # and chamfered walls that enable stacking
     f9 = (
-        cq.Workplane("XY")
+        cq
+        .Workplane("XY")
         .placeSketch(s5)
         .extrude(wall_strt_ht1)  # vertical wall height
         .translate((wall_xpos, wall_ypos, bot_th))  # REVISED, to make sure bot_th is correct
@@ -193,7 +199,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
         ]
 
         f8 = (
-            f8.faces("<Z")
+            f8
+            .faces("<Z")
             .workplane()
             .pushPoints(hole_pts)
             .cboreHole(bolt_diam, mag_diam, mag_dep, depth=bolt_dep)

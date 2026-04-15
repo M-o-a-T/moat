@@ -4,20 +4,164 @@ from __future__ import annotations
 import anyio
 import os
 import sys
+import time
 from contextlib import nullcontext, suppress
 
 import asyncclick as click
 
-from moat.util import MsgReader, NotGiven, combine_dict, yformat, yload, yprint
-from moat.lib.path import P
-from moat.lib.run import attr_args, process_args
+from moat.util import (
+    MsgReader,
+    NotGiven,
+    _help_preserve_blocks,
+    combine_dict,
+    edit_text,
+    yformat,
+    yload,
+    yprint,
+)
+from moat.lib.path import P, Path, Root
+from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import data_get
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
-from moat.util.exec import run
 
 
-@click.group(short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
+def _encode_dict_entry(path: Path, data, meta: MsgMeta | None) -> dict:
+    """Encode one dump entry using mapping format."""
+
+    res = {"_path": str(path)}
+    if meta is not None:
+        res["_meta"] = meta.dump()
+    if (
+        isinstance(data, dict)
+        and "_path" not in data
+        and "_meta" not in data
+        and "_value" not in data
+        and not any(isinstance(key, str) and key.startswith("_") for key in data)
+    ):
+        res.update(data)
+    else:
+        res["_value"] = data
+    return res
+
+
+def _decode_meta(data) -> MsgMeta | None:
+    """Decode metadata from one dump entry."""
+
+    if data is None:
+        return None
+    if isinstance(data, MsgMeta):
+        return data
+    if isinstance(data, list | tuple):
+        return MsgMeta.restore(list(data))
+    if isinstance(data, dict):
+        try:
+            return MsgMeta(**{
+                k: v for k, v in data.items() if not (isinstance(k, str) and k.startswith("_"))
+            })
+        except ValueError as exc:
+            raise click.UsageError(
+                "Metadata mappings need at least origin and timestamp."
+            ) from exc
+    raise click.UsageError("Metadata must be a MsgMeta, list, tuple, mapping, or null.")
+
+
+async def _dump_data(obj, as_dict: bool = False) -> None:
+    """Emit subtree entries as YAML docs without human-formatted timestamps."""
+    include_meta = getattr(obj, "meta", False)
+
+    async with obj.conn.d_watch(
+        obj.path,
+        state=True,
+        meta=include_meta,
+        subtree=True,
+    ) as mon:
+        async for pdm in mon:
+            if include_meta:
+                p, d, m = pdm
+            else:
+                p, d = pdm
+                m = None
+            with suppress(BrokenPipeError):
+                if as_dict:
+                    yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
+                else:
+                    if m is None:
+                        yprint([p, d], stream=obj.stdout)
+                    else:
+                        yprint([p, d, *m.dump()], stream=obj.stdout)
+                print("---", file=obj.stdout)
+                obj.stdout.flush()
+
+
+def _write_result(res) -> bool | None:
+    """Convert `d.set` response to write status."""
+
+    if isinstance(res, bool) or res is None:
+        return res
+    return res[0]
+
+
+async def _load_data(obj, infile: str, force: bool) -> None:
+    """Load subtree entries from YAML docs."""
+
+    path = "/dev/stdin" if infile == "-" else infile
+    async with MsgReader(path=path, codec="yaml") as reader:
+        async for msg in reader:
+            if isinstance(msg, dict):
+                if "path" in msg and "value" in msg:
+                    try:
+                        p = msg["path"]
+                        d = msg["value"]
+                    except KeyError as exc:
+                        raise click.UsageError("Dict entries need 'path' and 'value'.") from exc
+                    m = msg.get("meta")
+                else:
+                    try:
+                        p = msg["_path"]
+                    except KeyError as exc:
+                        raise click.UsageError(
+                            "Dict entries need either path/value or _path/_value layout."
+                        ) from exc
+                    if "_value" in msg:
+                        d = msg["_value"]
+                    else:
+                        d = {
+                            k: v
+                            for k, v in msg.items()
+                            if not (isinstance(k, str) and k.startswith("_"))
+                        }
+                    m = msg.get("_meta")
+            else:
+                if not isinstance(msg, list | tuple) or len(msg) < 2:
+                    raise click.UsageError(
+                        "Entries must be [path, value] or [path, value, meta...]."
+                    )
+                p, d, *m = msg
+                if len(m) == 0:
+                    m = None
+                elif len(m) == 1 and isinstance(m[0], MsgMeta | list | tuple | dict):
+                    m = m[0]
+
+            p = P(p) if isinstance(p, str) else Path.build(p)
+            m = _decode_meta(m)
+            p = obj.path + p
+
+            if force:
+                ts = time.time()
+                res = _write_result(await obj.conn.d.set(p, d, m))
+                if res is False:
+                    if m is None:
+                        m2 = MsgMeta(origin=obj.conn.name, timestamp=ts)
+                    else:
+                        m2 = MsgMeta.restore(list(m.a), dict(m.kw))
+                        m2.timestamp = ts
+                    await obj.conn.d.set(p, d, m2)
+            else:
+                await obj.conn.d.set(p, d, m)
+
+
+@click.group(cls=AliasedGroup, short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
@@ -27,7 +171,9 @@ async def cli(ctx, path, meta):
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
-    obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
+    obj.conn = await ctx.with_async_resource(
+        Link(cfg, common=True, only=getattr(obj, "link_name", None))
+    )
     obj.meta = meta
     if ctx.invoked_subcommand is None:
         await data_get(obj.conn, path, meta=obj.meta, out=obj.stdout, recursive=False)
@@ -159,61 +305,54 @@ async def edit(obj, yes, editor):
     try:
         data = await obj.conn.d_get(obj.path)
     except KeyError:
-        data = {}
+        try:
+            data = await obj.conn.d_search(P("template") + obj.path)
+        except KeyError:
+            data = {}
 
     if editor is None:
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
 
-    async with anyio.NamedTemporaryFile(mode="w+", suffix=".yaml") as f:
-        await f.write(yformat(data, compact=False) + "\n")
-        await f.flush()
-        await f.seek(0)
+    content = yformat(data, compact=False) + "\n"
 
-        while True:
-            await run(editor, f.name, stdin=sys.stdin, stdout=sys.stdout)
+    while True:
+        edited_content = await edit_text(editor, content, suffix=".yaml")
 
-            edited_content = await f.read()
-            await f.seek(0)
+        try:
+            new_data = yload(edited_content)
+        except Exception as e:
+            click.echo(f"YAML parse error: {e}", err=True)
+            choice = await click.prompt(
+                "Re-open with [o]riginal, [e]dited content, or [q]uit?",
+                type=click.Choice(["o", "e", "q"], case_sensitive=False),
+                default="e",
+            )
+            if choice == "q":
+                click.echo("Not saved.", err=True)
+                return
+            if choice == "o":
+                content = yformat(data, compact=False) + "\n"
+            else:
+                content = edited_content
+            continue
 
-            try:
-                new_data = yload(edited_content)
-            except Exception as e:
-                click.echo(f"YAML parse error: {e}", err=True)
-                choice = await click.prompt(
-                    "Re-open with [o]riginal, [e]dited content, or [q]uit?",
-                    type=click.Choice(["o", "e", "q"], case_sensitive=False),
-                    default="e",
-                )
-                if choice == "q":
-                    click.echo("Not saved.", err=True)
-                    return
-                if choice == "o":
-                    # Restore original content
-                    d = yformat(data, compact=False) + "\n"
-                    await f.write(d)
-                    await f.truncate(len(d))
-                    await f.flush()
-                    await f.seek(0)
-                # choice == "e": keep edited content, loop back to editor
-                continue
+        if new_data == data:
+            click.echo("No changes.", err=True)
+            return
 
-            if new_data == data:
-                click.echo("No changes.", err=True)
+        if not yes:
+            # TODO this still blocks
+            if not click.confirm("Save changes?", default=True):
+                click.echo("Not saved.", err=True)
                 return
 
-            if not yes:
-                # TODO this still blocks
-                if not click.confirm("Save changes?", default=True):
-                    click.echo("Not saved.", err=True)
-                    return
-
-            # Save
-            res = await obj.conn.d_set(obj.path, new_data, meta=obj.meta)
-            if obj.meta:
-                yprint(res, stream=obj.stdout)
-            else:
-                click.echo("Saved.", err=True)
-            return
+        # Save
+        res = await obj.conn.d_set(obj.path, new_data, meta=obj.meta)
+        if obj.meta:
+            yprint(res, stream=obj.stdout)
+        else:
+            click.echo("Saved.", err=True)
+        return
 
 
 @cli.command(short_help="Delete an entry / subtree")
@@ -224,8 +363,9 @@ async def edit(obj, yes, editor):
     help="Don't delete entries created after this timestamp",
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
+@click.option("-m", "--mqtt", is_flag=True, help="Delete via MQTT message")
 @click.pass_obj
-async def delete(obj, before, recursive):
+async def delete(obj, before, recursive, mqtt):
     """
     Delete an entry, or a subtree.
 
@@ -234,12 +374,18 @@ async def delete(obj, before, recursive):
 
     The root entry cannot be deleted.
     """
+    if mqtt and (recursive or before):
+        raise click.UsageError("--mqtt and --recursive/--before don't like each other")
     args = {}
     if recursive:
         args["rec"] = recursive
     if before:
         args["ts"] = before
-    res = await obj.conn.d.delete(obj.path, **args)
+    if mqtt:
+        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
+        return
+    else:
+        res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
         res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:
@@ -318,9 +464,12 @@ async def monitor(
                 if pdm is None:
                     res = "*** Snapshot data ends ***"
                 else:
-                    p, d, m = pdm
-                    if pm(p):
-                        continue
+                    if subtree:
+                        p, d, m = pdm
+                        if pm(p):
+                            continue
+                    else:
+                        d, m = pdm
 
                     if only:
                         res = d
@@ -330,9 +479,37 @@ async def monitor(
                         res = [p, d, m]
                     else:
                         res = [p, d]
-                yprint(res, stream=obj.stdout)
-                print("---", file=obj.stdout)
-                obj.stdout.flush()
+                with suppress(BrokenPipeError):
+                    yprint(res, stream=obj.stdout)
+                    print("---", file=obj.stdout)
+                    obj.stdout.flush()
+
+
+monitor.help = _help_preserve_blocks(monitor.help)
+
+
+@cli.command()
+@click.option("-d", "--dict", "as_dict", is_flag=True, help="Write dict-based dump docs.")
+@click.pass_obj
+async def dump(obj, as_dict):
+    """
+    Dump one subtree as YAML docs.
+
+    Metadata is included iff the top-level ``-m/--meta`` flag is set.
+    This is otherwise equivalent to ``monitor -m c -s``.
+    """
+    await _dump_data(obj, as_dict=as_dict)
+
+
+@cli.command()
+@click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
+@click.option("-f", "--force", is_flag=True, help="Overwrite entries regardless of timestamp.")
+@click.pass_obj
+async def load(obj, infile, force):
+    """
+    Load path+data+metadata tuples from YAML docs into a subtree.
+    """
+    await _load_data(obj, infile, force)
 
 
 @cli.command()

@@ -4,50 +4,52 @@ requires = [ "setuptools", "wheel", "setuptools-scm",]
 
 [project]
 classifiers = [
-	"Intended Audience :: Developers",
-	"Programming Language :: Python :: 3",
-	"Framework :: AsyncIO",
-	"Framework :: Trio",
-	"Framework :: AnyIO",
-	"License :: OSI Approved",
-	"Development Status :: 4 - Beta",
-	]
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Framework :: AsyncIO",
+    "Framework :: Trio",
+    "Framework :: AnyIO",
+    "License :: OSI Approved",
+    "Development Status :: 4 - Beta",
+]
 dependencies = [
-	"anyio ~= 4.9",
-	"trio",
-	"alembic",
-        "aiocaldav",
-	"anyio_serial",
-	"asyncactor ~= 0.28.0",
-	"asyncakumuli ~= 0.6.2",
-	"asyncclick",
-	"asyncowfs",
-	"asyncscope",
-	"asyncvictoria ~= 0.7.0",
-	"asyncwebsockets",
-	"cffi",
-	"pygit",
-	"httpx",
-	"jmespath",
-	"jsonschema",
-        "netaddr",
-        "pydantic ~= 2.12",
-        "pydantic_variants ~= 0.3",
-	"pynacl",
-	"outcome",
-	"psutil",
-	"pyfuse3",
-	"pymodbus ~= 3.8",
-        "range_set ~= 0.3",
-        "regex",
-	"ruyaml",
-	"simpleeval",
-	"sqlalchemy",
-        "stamina",
-	"tomlkit",
-	"transitions",
-	"wsproto",
-	]
+    "anyio ~= 4.9",
+    "trio",
+    "trio_asyncio",
+    "alembic",
+    "anyio_serial",
+    "asyncactor ~= 0.28.0",
+    "asyncakumuli ~= 0.6.2",
+    "asyncclick",
+    "asyncowfs",
+    "asyncscope",
+    "asyncvictoria ~= 0.7.0",
+    "asyncwebsockets",
+    "cffi",
+    "fpdf2",
+    "pygit",
+    "httpx",
+    "jmespath",
+    "jsonschema",
+    "netaddr",
+    "pydantic ~= 2.12",
+    "pydantic_variants ~= 0.3",
+    "pynacl",
+    "outcome",
+    "psutil",
+    "pyfuse3",
+    "pymodbus ~= 3.8",
+    "range_set ~= 0.3",
+    "regex",
+    "ruyaml",
+    "simpleeval",
+    "sqlalchemy",
+    "stamina",
+    "tomlkit",
+    "transitions",
+    "wsproto",
+    "xknx ~= 3.6",
+]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
@@ -106,8 +108,7 @@ dev = [
     "pytest-coverage",
     "setuptools-scm",
     "smbus3",
-    "transitions-aio",
-    "ty",
+    "ty ~= 0.17",
     "uv",
     "wheel",
 ]
@@ -137,7 +138,6 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "ext/**",
-    "docs/**",
     "moat/micro/_embed/lib/mpdb.py",  # symlink
 ]
 
@@ -168,7 +168,7 @@ ignore = [
     "PLW0603", "PLW1514", "PLW1641",
     "PTH",
     "RET50",
-    "RUF001", "RUF002", "RUF003", "RUF005", "RUF012",
+    "RUF001", "RUF002", "RUF003", "RUF005", "RUF012", "RUF037",
     "S101", "S307", "S311", "S610", "S701",
     "SIM102", "SIM103", "SIM105", "SIM108", "SIM110", "SIM114", "SIM118", "SIM905", "SIM910",
     "T2",
@@ -184,9 +184,12 @@ explicit-preview-rules = true
 "moat/micro/_embed/**" = ["SIM105","B904"]
 "moat/mqtt/**" = ["E501","UP031"]
 "moat/lib/broadcast/**" = ["UP046"]
+"docs/conf.py" = ["ALL"]
+"docs/**" = ["D1","F841","TC003"]
 "tests/moat_mqtt/**" = ["PT"]
-"tests/**" = ["D104","E501","PLW2901","RUF040","S105","S110","S607"]
+"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
 "examples/**" = ["S108"]
+"moat/micro/_test.py" = ["ASYNC240"]
 
 [tool.ruff.lint.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true
@@ -238,47 +241,18 @@ exclude_also = [
     "@(abc\\.)?abstractmethod",
     ]
 
-[tool.pyright]
-include = ["moat"]
-exclude = [
-    "ext",
-    ".nodered",
-    ".git",
-    "OFF",
-]
-ignore = []
-#defineConstant = { DEBUG = true }
-#stubPath = "src/stubs"
-
-disableBytesTypePromotions = false
-
-reportMissingImports = "error"
-reportMissingTypeStubs = false
-
-pythonVersion = "3.12"
-pythonPlatform = "Linux"
-
-executionEnvironments = [
-# { root = "src/web", pythonVersion = "3.5", pythonPlatform = "Windows", extraPaths = [ "src/service_libs" ], reportMissingImports = "warning" },
-# { root = "src/sdk", pythonVersion = "3.0", extraPaths = [ "src/backend" ] },
-# { root = "src/tests", extraPaths = ["src/tests/e2e", "src/sdk" ]},
-  { root = "." }
-]
-
 [tool.ty.environment]
 python-version = "3.11"
 
 [tool.ty.src]
 include = [
-    "moat/lib/broadcast/",
-    "moat/lib/codec/",
-    "moat/lib/diffiehellman/",
-    "moat/lib/micro/",
-    "moat/lib/path/",
-    "moat/lib/pid/",
-    "moat/lib/priomap/",
-    "moat/lib/repl/",
-    "moat/lib/ring/",
+    "moat/db/__init__.py",
+    "moat/db/box/",
+    "moat/db/label/",
+    "moat/db/thing/",
+    "moat/lib/",
+    "moat/link/",
+    "moat/micro/",
     "moat/util/",
 ]
 exclude = [
@@ -287,6 +261,13 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "docs/**",
+    "moat/lib/victron/**",
+    "moat/micro/_embed/**",
+    "moat/micro/**/_test.py",
+    "moat/micro/**/_test/**",
+    "moat/micro/part/pin.py",
+    "moat/micro/romfs.py",
+    "moat/link/gate/kv.py",
 ]
 
 [tool.ty.rules]

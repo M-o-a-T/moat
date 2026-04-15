@@ -379,7 +379,7 @@ class Path(Sequence[PathElem]):
             res.append(":m" + self.mark)
         if self._data is None:
             return ":?"
-        if not self._data and not self._prefix:
+        if not self._data and self._prefix is None:
             if slash:
                 raise ValueError("Empty paths cannot be slash-coded")
             res.append(":")
@@ -565,9 +565,15 @@ class Path(Sequence[PathElem]):
     def __add__(self, other: Path | Sequence[PathElem]) -> Path:
         """Concatenate two paths"""
         mark = self._tag_add(other)
+        if len(self) == 0 and self._prefix is None:
+            return Path.build(other)
         if isinstance(other, Path):
-            if isinstance(other._prefix, Path):
-                raise ValueError(f"Add with prefix: {self} + {other}")  # noqa:TRY004
+            if (
+                isinstance(other._prefix, Path)
+                and self._prefix is not None
+                and self._prefix != other._prefix
+            ):
+                raise ValueError(f"Add with prefix: {self} + {other}")
             # Prefix=True (relative) is OK
             other = other._data
         elif not isinstance(other, (list, tuple)):
@@ -1166,8 +1172,13 @@ class Var:
 
     def set(self, val, *, force: bool = False):
         "set current value"
-        if not force and self.data is not NotGiven and self.data != val:
-            raise ValueError("Already set")
+        # If the root is a.b.c, a new identical value will arrive as an
+        # empty path with a root of a.b.c. That's bad. Thus silently don't
+        # update in that case.
+        if not force and self.data is not NotGiven:
+            if self.data.slashed != val.slashed:
+                raise ValueError("Already set", self.data, val)
+            return 42
         self.data = val
         return 42
 

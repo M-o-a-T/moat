@@ -3,6 +3,12 @@ save:
   name: "%Y-%m/%d/%H-%M.moat"
   interval: 1000
   rewrite: 5
+  errors: 10  #   unlink error files ZZ
+  use_local_time: false
+  keep:
+  - 10
+  - 1 day
+  - 10
 
 timeout:
   monitor: 0.5
@@ -32,3 +38,10 @@ probe:
 # TODO Port configuration uses the database.
 # port: 0
 port: 27587
+
+ports_example:
+  local:
+    port: /run/moat/link/socket
+  main:
+    host: 0.0.0.0
+    port: 27587

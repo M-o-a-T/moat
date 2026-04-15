@@ -8,8 +8,10 @@ from platform import uname
 
 import asyncclick as click
 
-from moat.util import as_service, attrdict, srepr
+from moat.util import NotGiven, as_service, attrdict, srepr
 from moat.lib.broadcast import Broadcaster
+from moat.lib.path import P
+from moat.lib.run import AliasedGroup
 from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.link.host import HostList, ServiceMon
@@ -17,7 +19,7 @@ from moat.link.host import HostList, ServiceMon
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage host services.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage host services.")  # pylint: disable=undefined-variable
 @click.pass_context
 async def cli(ctx):
     """
@@ -33,9 +35,10 @@ async def cli(ctx):
 
 @cli.command()
 @click.option("-m", "--main", is_flag=True, help="Main server flag (override)")
+@click.option("-n", "--no-main", is_flag=True, help="Main server verbose no-action mode")
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
 @click.pass_obj
-async def run(obj, main, debug):
+async def run(obj, main, no_main, debug):
     """
     Host management background task.
 
@@ -51,7 +54,9 @@ async def run(obj, main, debug):
         Link(cfg) as link,
         as_service(attrdict(debug=debug, link=link)) as srv,
         announcing(link, host=not main, via=srv.evt, force=True),  # TODO: add service
-        ServiceMon(cfg=cfg, link=link, debug=debug) if main else nullcontext(),
+        ServiceMon(cfg=cfg, link=link, debug=debug, fake=no_main)
+        if main or no_main
+        else nullcontext(),
     ):
         srv.started()
         await anyio.sleep_forever()
@@ -59,23 +64,36 @@ async def run(obj, main, debug):
 
 @cli.command()
 @click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
-@click.option("-h", "--hosts", is_flag=True, help="Show host paths.")
+@click.option("-d", "--dump", is_flag=True, help="Show details.")
 @click.pass_obj
-async def list(obj, timeout, hosts):  # noqa: A001
+async def list(obj, timeout, dump):  # noqa: A001
     """
     Host list.
 
     "moat link host list" shows the hosts that are currently active.
+
+    Output consists of three space-delimited columns:
+    * connection's key
+    * host name
+    * service path
+
+    The host name is empty if the service path starts with it.
     """
 
     hc = dict()
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
-                if hosts:
+                if dump:
+                    print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
+                else:
+                    try:
+                        up = h.data.p["up"]
+                    except AttributeError:
+                        up = None
                     for k, v in h.data.h.items():
-                        ok = v.get("up", False)
-                        if hc.get(k, False) == ok:
+                        ok = up if up is not None else v.get("up", False)
+                        if hc.get(k, None) is ok:
                             continue
                         hc[k] = ok
                         print(
@@ -86,5 +104,19 @@ async def list(obj, timeout, hosts):  # noqa: A001
                             k,
                             "" if ok else "** DOWN **",
                         )
-                else:
-                    print("    UPD  ", h.id, h.state.name, srepr(h.data, bare=True))
+
+
+@cli.command()
+@click.argument("paths", type=P, nargs=-1)
+@click.pass_obj
+async def kill(obj, paths):
+    """
+    Kill a hosted service.
+    """
+
+    link = obj.conn
+    for p in paths:
+        if len(p) == 1 and isinstance(p[0], str) and p[0].startswith("_"):
+            await link.send(P(":R.run.ping.id") + p, NotGiven, retain=True)
+        else:
+            await link.send(P(":R.run.host") + p, NotGiven, retain=True)

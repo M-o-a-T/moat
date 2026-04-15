@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 from anyio import create_task_group
 from anyio.abc import TaskStatus
+
+import asyncio
 
 from moat.lib.mqtt.async_client import AsyncMQTTClient
 

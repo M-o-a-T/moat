@@ -2,7 +2,7 @@
 |-------------------------------------------------------------------|
 |                                                                   |
 | Run "moat kv wago monitor" to connect to the server on localhost. |
-| See "moat util cfg wago" for configuration options.               |
+| See "moat util cfg moat.kv.wago" for configuration options.       |
 | Data structure                                                    |
 
 On disk, the path to the port is `:.moat.kv.wago.SERVER.TYPE.CARD.PORT`

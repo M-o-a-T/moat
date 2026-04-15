@@ -24,10 +24,10 @@ from moat.lib.micro import (
 )
 from moat.lib.stream import StackedMsg
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any  # isort:skip
 
 
 class EphemeralMsg:
@@ -104,6 +104,7 @@ class ReliableMsg(StackedMsg):
     # is probably not useful. The default is 1000 (one second).
 
     rq = None
+    _tg = None
     __tg = None
 
     def __init__(self, link, cfg):
@@ -131,7 +132,8 @@ class ReliableMsg(StackedMsg):
         self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
         self.s_recv_tail = 0  # messages before this have been processed
         self.s_q = []
-        self.m_send: dict(int, list[Any, int, Event]) = {}  # mte: message timestamp event
+        self.m_send: dict[int, list[Any]] = {}
+        # mte: message timestamp event
         self.m_recv = {}
         self.t_recv = None
         self.progressed = False
@@ -293,7 +295,8 @@ class ReliableMsg(StackedMsg):
             raise
 
     async def __aexit__(self, *err):
-        self._tg.cancel()
+        if self._tg is not None:
+            self._tg.cancel()
         self._tg = None
         return await AC_exit(self, *err)
 
@@ -308,7 +311,10 @@ class ReliableMsg(StackedMsg):
         self.reset_level = 1
 
         try:
-            async with TaskGroup() as tg, self.link as s:
+            link = self.link
+            if link is None:
+                raise RuntimeError("No link")
+            async with TaskGroup() as tg, link as s:
                 self.__tg = tg
                 self.s = s
                 await tg.spawn(self._read, _name="rel_read")
@@ -363,7 +369,7 @@ class ReliableMsg(StackedMsg):
                 try:
                     await self.s.send(msg)
                 except AttributeError:
-                    return  # closing. XXX should not happen
+                    pass  # closing. XXX should not happen
                 except TypeError:
                     if len(msg) > 1:
                         msg = [msg[0], repr(err)]
@@ -389,7 +395,7 @@ class ReliableMsg(StackedMsg):
         self._trigger.set()
         await self.s.send(msg)
 
-    async def send(self, msg):
+    async def send(self, m: Any) -> Any:
         """
         Sender.
 
@@ -397,19 +403,19 @@ class ReliableMsg(StackedMsg):
         The sender won't wait until they're transmitted.
         """
 
-        if isinstance(msg, EphemeralMsg):
-            i = msg.chan
+        if isinstance(m, EphemeralMsg):
+            i = m.chan
             if (om := self._iters.get(i, None)) is not None:
-                om.data = msg.data
+                om.data = m.data
                 om.sent = False
                 return
-            self._iters[i] = msg
-            msg.sent = False
+            self._iters[i] = m
+            m.sent = False
             evt = None
         else:
             evt = ValueEvent()
 
-        self.s_q.append((msg, evt))
+        self.s_q.append((m, evt))
         self._trigger.set()
         if evt is None:
             return
@@ -420,6 +426,10 @@ class ReliableMsg(StackedMsg):
             # self.s_q.append(({"i": msg["i"]}, None))
             self._trigger.set()
             raise
+
+    async def error(self, exc: BaseException) -> None:
+        """Report an internal protocol error."""
+        log("Reliable error: %r", exc)
 
     def _get_config(self):
         return [self.window, self.timeout]
@@ -438,6 +448,8 @@ class ReliableMsg(StackedMsg):
 
     async def recv(self) -> Any:
         "return the next message in the receive queue"
+        if self.rq is None:
+            raise EOFError
         return await self.rq.get()
 
     async def _read(self) -> None:
@@ -604,6 +616,8 @@ class ReliableMsg(StackedMsg):
                 self.pend_ack = True
                 if len(d) == 1:
                     d = d[0]
+                if self.rq is None:
+                    raise EOFError
                 await self.rq.put(d)
 
         if self.s_recv_tail == self.s_recv_head:

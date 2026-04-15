@@ -12,17 +12,11 @@ import sys
 
 import asyncclick as click
 
-from moat.util import NotGiven, yprint
-from moat.lib.path import P, Path, set_root
+from moat.util import yprint
+from moat.lib.path import P, Path
 from moat.lib.run import load_subgroup
 
 from .backend import get_backend
-
-try:
-    from moat.lib.mqtt import MQTTPublishPacket
-except ImportError:
-    MQTTPublishPacket = NotGiven
-
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +69,9 @@ start "moat link server" in a separate terminal, and try again.
 
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
+@click.option("-s", "--server", "link_name", default=None, help="Connect to named server only")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx, link_name):
     """
     MoaT's data link
 
@@ -88,9 +83,12 @@ async def cli(ctx):
     if "link" not in cfg or "backend" not in cfg["link"]:
         sys.stderr.write(usage1)
         raise click.UsageError("not configured")
+
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")
+    if link_name is not None:
+        obj.link_name = link_name
 
 
 @cli.command("test")
@@ -98,33 +96,29 @@ async def cli(ctx):
 async def test(obj):
     "Test"
 
-    lock = anyio.Lock()
     cfg = obj.cfg.link
-    set_root(cfg)
 
     async def check_root():
         try:
-            with anyio.fail_after(1):
+            with anyio.fail_after(0.5):
                 async with back.monitor(cfg.root) as mon:
                     async for msg in mon:
-                        async with lock:
-                            print("# Retained root dataset:")
-                            yprint(msg.data)
-                            print("---")
-                            return
+                        print("# Retained root dataset:")
+                        yprint(msg.data)
+                        print("---")
+                        return
         except TimeoutError:
             print(f"## No retained root dataset on {cfg.root}.")
 
     async def check_server():
         try:
-            with anyio.fail_after(1):
+            with anyio.fail_after(0.5):
                 async with back.monitor(P(":R.run.service.main.conn")) as mon:
                     async for msg in mon:
-                        async with lock:
-                            print("# Server link:")
-                            yprint(msg.data)
-                            print("---")
-                            return
+                        print("# Server link:")
+                        yprint(msg.data)
+                        print("---")
+                        return
         except TimeoutError:
             print(f"### No server link on {cfg.root}!")
 

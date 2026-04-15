@@ -8,7 +8,6 @@ import anyio
 import logging
 
 from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from xknx.remote_value import RemoteValueSensor
 from xknx.telegram import GroupAddress
 
 from moat.util import NotGiven
@@ -113,31 +112,40 @@ class KNXnode(_KNXnode):
                 xknx=self.server,
                 group_address_state=self.group,
                 name=mode + "." + ".".join(str(x) for x in self.subpath),
-                ignore_internal_state=True,
+                device_updated_cb=self._cb,
             )
             if mode == "binary":
-                device = BinarySensor(**args)
+                device = BinarySensor(ignore_internal_state=True, **args)
 
                 def get_val(s):
                     return s.is_on()
 
-            elif mode in RemoteValueSensor.DPTMAP:
+            else:  # if mode in RemoteValueSensor.DPTMAP:
                 device = Sensor(value_type=mode, **args)
 
                 def get_val(s):
                     return s.sensor_value.value
 
-            # TODO more of the same
-            else:
-                logger.info("mode not known (%r) in %s", mode, self.subpath)
-                return
+            #           # TODO more of the same
+            #           else:
+            #               logger.info("mode not known (%r) in %s", mode, self.subpath)
+            #               return
 
-            async with device.run() as dev:
+            self._server.devices.async_add(device)
+            self.__evt = anyio.Event()
+            try:
                 evt.set()
-                async for _ in dev:
+                while True:
+                    await self.__evt.wait()
+                    self.__evt = anyio.Event()
                     await self.client.set(dest, value=get_val(device), idem=idem)
+            finally:
+                self._server.devices.async_remove(device)
         finally:
             evt.set()
+
+    def _cb(self, _dev):
+        self.__evt.set()
 
     async def _task_out(self, evt, src, initial=False):
         try:
@@ -165,7 +173,7 @@ class KNXnode(_KNXnode):
                 def get_val(dev):
                     return dev.state
 
-            elif mode in RemoteValueSensor.DPTMAP:
+            else:  #  mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
 
                 async def set_val(dev, val):
@@ -174,9 +182,9 @@ class KNXnode(_KNXnode):
                 def get_val(device):
                     return device.sensor_value.value
 
-            else:
-                logger.info("mode not known (%r) in %s", mode, self.subpath)
-                return
+            #           else:
+            #               logger.info("mode not known (%r) in %s", mode, self.subpath)
+            #               return
 
             async with anyio.create_task_group() as tg:
                 lock = anyio.Lock()
@@ -186,9 +194,15 @@ class KNXnode(_KNXnode):
                     # The "goal" value may also be set by the bus. Thus we monitor
                     # the device we send on, and set the value accordingly.
                     nonlocal val
-                    async with device.run() as dev:
+
+                    self._server.devices.async_add(device)
+                    self.__evt = anyio.Event()
+                    try:
                         task_status.started()
-                        async for _ in dev:
+                        while True:
+                            await self.__evt.wait()
+                            self.__evt = anyio.Event()
+
                             nval = get_val(device)
                             if val is None or nval != val:
                                 async with lock:
@@ -198,6 +212,8 @@ class KNXnode(_KNXnode):
                                     )
                                     nonlocal chain
                                     chain = res.chain
+                    finally:
+                        self._server.devices.async_remove(device)
 
                 await tg.start(_rdr)
 

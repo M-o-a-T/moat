@@ -17,7 +17,7 @@ from moat.lib.path import (
     P,
     Path,
 )
-from moat.lib.run import attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ _DEV_CLS = {
 }
 
 
-@click.group(short_help="Manage Home Assistant.")
+@click.group(cls=AliasedGroup, short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
 @click.pass_obj
 async def cli(obj, test):

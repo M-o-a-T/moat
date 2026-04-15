@@ -19,13 +19,14 @@ from moat.util import NotGiven, gen_ident, yprint
 from moat.lib.codec import get_codec
 from moat.lib.mqtt import MQTTException
 from moat.lib.path import P, PathLongener, set_root
+from moat.lib.run import AliasedGroup
 from moat.link.backend import RawMessage, get_backend
 from moat.util.times import humandelta, ts2iso
 
 logger = logging.getLogger(__name__)
 
 
-@click.group
+@click.group(cls=AliasedGroup)
 @click.pass_context
 async def cli(ctx):
     """
@@ -199,7 +200,7 @@ async def pub(obj, **args):
     await do_pub(obj.conn, args, cfg, codec)
 
 
-async def run_kvsub(client, topic, lock, skip):
+async def run_kvsub(client, topic, lock, timing, skip):
     """Monitor a MoaT-KV subtree"""
 
     if topic[-1] == "#":
@@ -235,31 +236,31 @@ async def run_kvsub(client, topic, lock, skip):
                     continue
                 del r["seq"]
 
-                r["_prev"] = humandelta(atm - lock.tm, msec=6)
+                r["_prev"] = humandelta(atm - timing["tm"], msec=6)
                 r["_time"] = ts2iso(tm, msec=6)
                 r["time"] = tm
 
                 yprint(r)
                 print("---")
-                lock.tm = atm
+                timing["tm"] = atm
 
 
 async def do_sub(client, args, cfg):
     "handle subscriptions"
     lock = anyio.Lock()
-    lock.tm = anyio.current_time()
+    timing = {"tm": anyio.current_time()}
 
     skip = args["skip"]
     try:
         async with anyio.create_task_group() as tg:
             for topic in args["topic"]:
-                tg.start_soon(run_sub, client, topic, args, cfg.link, lock, skip)
+                tg.start_soon(run_sub, client, topic, args, cfg.link, lock, timing, skip)
             if args["kv_topic"]:
                 from moat.kv.client import open_client as kv_client  # noqa: PLC0415
 
                 async with kv_client(**cfg.kv) as kvc:
                     for topic in args["kv_topic"]:
-                        tg.start_soon(run_kvsub, kvc, topic, lock, skip)
+                        tg.start_soon(run_kvsub, kvc, topic, lock, timing, skip)
 
     except KeyboardInterrupt:
         pass
@@ -267,7 +268,7 @@ async def do_sub(client, args, cfg):
         logger.fatal("connection to '%s' failed: %r", args["uri"], ce)
 
 
-async def run_sub(client, topic, args, cfg, lock, skip):
+async def run_sub(client, topic, args, cfg, lock, timing, skip):
     "handle a single subscription"
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
@@ -292,7 +293,7 @@ async def run_sub(client, topic, args, cfg, lock, skip):
                     d = dict(
                         topic=msg.topic,
                         time=tm,
-                        _prev=humandelta(atm - lock.tm, msec=6),
+                        _prev=humandelta(atm - timing["tm"], msec=6),
                         _time=ts2iso(tm, msec=6),
                     )
 
@@ -324,7 +325,7 @@ async def run_sub(client, topic, args, cfg, lock, skip):
                     if flags:
                         d["_flags"] = flags
 
-                    lock.tm = atm
+                    timing["tm"] = atm
                     yprint(d)
                     print("---")
                 else:
@@ -374,3 +375,65 @@ async def sub(obj, **args):
 
     with anyio.move_on_after(args["limit"] or math.inf):
         await do_sub(obj.conn, args, cfg)
+
+
+@cli.command("init")
+@click.pass_obj
+@click.option(
+    "-d", "--dest", type=click.Path(dir_okay=False), help="Destination (default: link storage)"
+)
+async def init_(obj, dest):
+    """
+    This command generates an initial data file for `moat link server`.
+    """
+    from pathlib import Path as FSPath  # noqa:PLC0415
+
+    from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:PLC0415
+    from moat.lib.codec.moat_cbor import (  # noqa:PLC0415
+        CBOR_TAG_MOAT_FILE_END,
+        CBOR_TAG_MOAT_FILE_ID,
+    )
+
+    if dest:
+        dest = FSPath(dest)
+    else:
+        dest = FSPath("/var/lib/moat/link/data/2000-01/01")
+        dest.mkdir(parents=True, exist_ok=True)
+        dest /= "00-00.moat"
+    c = Codec()
+    with dest.open("wb") as f:
+
+        def w(x):
+            f.write(c.encode(x))
+
+        w(
+            Tag(
+                CBOR_TAG_CBOR_LEADER,
+                Tag(
+                    CBOR_TAG_MOAT_FILE_ID,
+                    [
+                        "MoaT-Link setup",
+                        dict(
+                            mode="init",
+                            name="/var/lib/moat/link/data/2000-01/01/00-00.moat",
+                            state=None,
+                            time=Tag(1, 946684800.0),
+                        ),
+                    ],
+                ),
+            )
+        )
+        w([
+            0,
+            Tag(39, []),
+            dict(
+                email="you@example.invalid",
+                location="1234 Random Street, SomeCity XYZ-ABC, XC",
+                owner="Your Name",
+            ),
+            "s-asi.INIT",
+            946684800.1,
+        ])
+        w(Tag(CBOR_TAG_MOAT_FILE_END, dict(mode="log_end", time=Tag(1, 946684800.1))))
+    if obj.debug:
+        print("Done. Next: systemctl start moat-link-server")

@@ -22,6 +22,7 @@ X-DH-Compat: 13
 Package: moat
 Architecture: all
 Depends: python3-moat (= ${binary:Version}),
+Suggests: moat-doc
 Description: The command line for MoaT
  This module contains the command line for (all of) MoaT.
  .
@@ -41,6 +42,5 @@ Description: The command line for MoaT
 
 Package: moat-doc
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends},
 Description: The documentationfor MoaT
  This module contains the documentation for the MoaT system.

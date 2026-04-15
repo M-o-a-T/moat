@@ -39,11 +39,100 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
+    from types import TracebackType
 
     from collections.abc import Awaitable, Callable
-    from typing import NoReturn, Self
+    from typing import NoReturn, ParamSpec, Protocol, Self
+
+    P = ParamSpec("P")
+
+    class _EveryProto(Protocol):
+        @overload
+        def __call__(
+            self, t: float, p: None = None, /, *a: Any, **k: Any
+        ) -> AsyncIterator[None]: ...
+
+        @overload
+        def __call__(
+            self,
+            t: float,
+            p: Callable[P, Awaitable[R]],
+            /,
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> AsyncIterator[R]: ...
+
+    class _RunProto(Protocol):
+        def __call__(
+            self,
+            p: Callable[P, Awaitable[R]],
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> R | None: ...
+
+    class _WaitForProto(Protocol):
+        def __call__(
+            self,
+            timeout: float,
+            p: Callable[P, Awaitable[R]],
+            *a: P.args,
+            **k: P.kwargs,
+        ) -> Awaitable[R]: ...
+
+    class _TaskGroupProto(AbstractAsyncContextManager[Any], Protocol):
+        async def __aenter__(self) -> Self: ...
+
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+            /,
+        ) -> bool | None: ...
+
+        async def spawn(
+            self,
+            p: Callable[P, Awaitable[Any]],
+            *a: P.args,
+            _name: str | None = None,
+            **k: P.kwargs,
+        ) -> _anyio.CancelScope: ...
+
+        def start_soon(
+            self,
+            p: Callable[P, Awaitable[Any]],
+            *a: P.args,
+            _name: str | None = None,
+            **k: P.kwargs,
+        ) -> None: ...
+
+        def cancel(self) -> None: ...
+
+    class _TaskGroupFactoryProto(Protocol):
+        def __call__(self) -> _TaskGroupProto: ...
+
 
 logger = logging.getLogger(__name__)
+
+
+def _ac_task_id() -> int | None:
+    """Return the current task ID if the backend exposes one."""
+    try:
+        return _anyio.get_current_task().id
+    except Exception:
+        return None
+
+
+def _ac_check_owner(obj: Any, acm: AsyncExitStack, op: str) -> None:
+    """Reject cross-task use of an object's attached AC stack."""
+    owner = getattr(acm, "_moat_ac_task", None)
+    if owner is None:
+        return
+    cur = _ac_task_id()
+    if cur is None or cur == owner:
+        return
+    raise RuntimeError(f"{op}: cross-task AC use on {obj!r} (owner={owner}, current={cur})")
+
 
 # Monkeypatch aclosing's docstring to be Sphinx-compatible
 aclosing.__doc__ = """
@@ -74,6 +163,7 @@ __all__ = [
     "Event",
     "L",
     "Lock",
+    "ModuleNotFoundError",
     "ObjSequence",
     "Queue",
     "QueueEmpty",
@@ -92,6 +182,8 @@ __all__ = [
     "log",
     "log_exc",
     "print_exc",
+    "retry",
+    "retry_ms",
     "run",
     "run_server",
     "shield",
@@ -116,6 +208,7 @@ EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001
+ModuleNotFoundError = ModuleNotFoundError  # noqa:PLW0127,A001
 ExceptionGroup = ExceptionGroup  # noqa: A001, PLW0127
 BaseExceptionGroup = BaseExceptionGroup  # noqa: A001, PLW0127
 
@@ -233,7 +326,7 @@ async def every_ms(
     tt = ticks_add(ticks_ms(), int(t))
     while True:
         try:
-            yield None if p is None else await p(*a, **k)
+            yield (None if p is None else await p(*a, **k))
         except StopAsyncIteration:
             return
         tn = ticks_ms()
@@ -249,6 +342,24 @@ async def every_ms(
 def every(t: float, *a, **k) -> AsyncIterator[Any]:
     "every t seconds, call ``p(*a,**k)``"
     return every_ms(t * 1000, *a, **k)
+
+
+async def retry_ms(n: int, t: float, p: Callable[..., Awaitable[R]], *a, _exc=Exception, **k) -> R:
+    "every t milliseconds, call ``p(*a,**k)``"
+    while True:
+        try:
+            return await p(*a, **k)
+        except _exc:
+            if n >= 0:
+                n -= 1
+            if n == 0:
+                raise
+            await sleep_ms(t)
+
+
+def retry(n: int, t: float, p: Callable[..., Awaitable[R]], *a, **k) -> Awaitable[R]:
+    "every t seconds, call ``p(*a,**k)``"
+    return retry_ms(n, t * 1000, p, *a, **k)
 
 
 async def idle() -> None:
@@ -275,7 +386,7 @@ _tg = None
 _tgt = None
 
 
-def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
+def TaskGroup() -> _TaskGroupProto:  # Returns augmented TaskGroup instance
     "A TaskGroup subclass that supports ``spawn`` and ``cancel``"
 
     global _tg, _tgt
@@ -312,6 +423,15 @@ def TaskGroup() -> Any:  # Returns augmented TaskGroup instance
 
         _tg = TaskGroup_
     return _tg()
+
+
+if TYPE_CHECKING:
+    every: _EveryProto = every  # noqa: PLW0127
+    every_ms: _EveryProto = every_ms  # noqa: PLW0127
+    run: _RunProto = run  # noqa: PLW0127
+    wait_for: _WaitForProto = wait_for  # noqa: PLW0127
+    wait_for_ms: _WaitForProto = wait_for_ms  # noqa: PLW0127
+    TaskGroup: _TaskGroupFactoryProto = TaskGroup  # noqa: PLW0127
 
 
 async def run_server(
@@ -406,10 +526,11 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
         obj._AC_ = []
 
     cm = AsyncExitStack()
+    cm._moat_ac_task = _ac_task_id()  # noqa:SLF001  # type:ignore[unresolved-attribute]
     obj._AC_.append(cm)
 
-    # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
-    # least it shouldn't yield
+    # AsyncExitStack.__aenter__ is a no-op. We don't depend on that, but at
+    # least it shouldn't yield.
     # log("AC_Enter",nback=2)
     try:
         # pylint:disable=no-member,unnecessary-dunder-call
@@ -452,6 +573,7 @@ async def AC_use(obj: Any, ctx: Any) -> Any:
     Otherwise it's a callable and will run on exit.
     """
     acm: AsyncExitStack = obj._AC_[-1]
+    _ac_check_owner(obj, acm, "AC_use")
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):
@@ -469,7 +591,9 @@ async def AC_exit(obj: Any, *exc) -> bool | None:
     """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
-    return await obj._AC_.pop().__aexit__(*exc)
+    acm = obj._AC_.pop()
+    _ac_check_owner(obj, acm, "AC_exit")
+    return await acm.__aexit__(*exc)
 
 
 def is_async(obj: Any) -> bool:

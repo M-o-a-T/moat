@@ -1,11 +1,17 @@
-moat-link-metrics-backend-victoria (0.0.1-2) unstable; urgency=medium
+moat-link-metrics-backend-victoria (0.0.4-2) unstable; urgency=medium
 
-  * New release for 26.0.1
+  * New release for 26.0.12
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:16 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 11:03:10 +0100
 
-moat-link-metrics-backend-victoria (0.0.1-1) unstable; urgency=medium
+moat-link-metrics-backend-victoria (0.0.4-1) unstable; urgency=medium
 
-  * Initial release as separate backend package.
+  * New release for 26.0.11
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 07:04:00 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:23:52 +0100
+
+moat-link-metrics-backend-victoria (0.0.3-1) unstable; urgency=medium
+
+  * Initial release for 26.0.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 14 Feb 2026 14:09:58 +0100

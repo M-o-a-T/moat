@@ -6,16 +6,23 @@ from __future__ import annotations
 
 from moat.lib.micro import ACM, AC_exit, L, Lock, TaskGroup
 from moat.lib.rpc import BaseCmd
+from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
 
 __all__ = ["BaseCmdBBM"]
 
 # Typing
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.stream import BaseBlk, BaseBuf, BaseMsg
+    from moat.lib.stream.base import Buffer, MutBuffer
 
     from collections.abc import Awaitable
+    from typing import Protocol
+
+    class _ConsoleProto(Protocol):
+        async def crd(self, buf: MutBuffer) -> int: ...
+
+        async def cwr(self, buf: Buffer) -> None: ...
 
 
 class BaseCmdBBM(BaseCmd):
@@ -31,13 +38,13 @@ class BaseCmdBBM(BaseCmd):
     `~moat.lib.stream.BaseBlk`, and `~moat.lib.stream.BaseBuf` streams.
 
     The difference between this and a
-    :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg`-derived class is that this
+    :moat.lib.rpc.cmd.msg:`BaseCmdMsg`-derived class is that this
     class exposes commands that directly access the underlying stream
     (of whatever type).
 
-    In contrast, :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg` encapsulates
+    In contrast, :moat.lib.rpc.cmd.msg:`BaseCmdMsg` encapsulates
     arbitrary commands and requires a
-    :moat.lib.rpc.stream.cmdmsg:`BaseCmdMsg` handler on the other side to
+    :moat.lib.rpc.cmd.msg:`BaseCmdMsg` handler on the other side to
     talk to.
 
     This class cannot wrap a pre-existing stream, by design.
@@ -69,14 +76,14 @@ class BaseCmdBBM(BaseCmd):
 
     doc_rd = dict(_d="read bytestream", _0="int:len (64)")
 
-    async def cmd_rd(self, n=64) -> bytes:
+    async def cmd_rd(self, n=64) -> Buffer:
         """read some data"""
         if L:
             await self.wait_ready()
         b = bytearray(n)
         if self.s is None:
             raise EOFError
-        r = await self.s.rd(b)
+        r = await cast(BaseBuf, self.s).rd(b)
         if r == n:
             return b
         elif r <= n >> 2:
@@ -87,14 +94,14 @@ class BaseCmdBBM(BaseCmd):
 
     doc_wr = dict(_d="write bytestream", _0="bytes:data")
 
-    async def cmd_wr(self, b):
+    async def cmd_wr(self, b: Buffer):
         """write some data"""
         if L:
             await self.wait_ready()
         async with self.w_lock:
             if self.s is None:
                 raise EOFError
-            await self.s.wr(b)
+            await cast(BaseBuf, self.s).wr(b)
 
     doc_rw = dict(
         _d="r/w byte stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
@@ -118,12 +125,12 @@ class BaseCmdBBM(BaseCmd):
 
     doc_crd = dict(_d="read console", _0="int:len (64)", _r="bytes:data")
 
-    async def cmd_crd(self, n=64) -> bytes:
+    async def cmd_crd(self, n=64) -> Buffer:
         """read some console data"""
         b = bytearray(n)
         if self.s is None:
             raise EOFError
-        r = await self.s.crd(b)
+        r = await cast("_ConsoleProto", self.s).crd(b)
         if r == n:
             return b
         elif r <= n >> 2:
@@ -134,12 +141,12 @@ class BaseCmdBBM(BaseCmd):
 
     doc_cwr = dict(_d="write console", _0="bytes:data")
 
-    async def cmd_cwr(self, b):
+    async def cmd_cwr(self, b: Buffer):
         """write some console data"""
         async with self.w_lock:
             if self.s is None:
                 raise EOFError
-            await self.s.cwr(b)
+            await cast("_ConsoleProto", self.s).cwr(b)
 
     doc_crw = dict(
         _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
@@ -167,7 +174,7 @@ class BaseCmdBBM(BaseCmd):
         """send a message"""
         if self.s is None:
             raise EOFError
-        return self.s.send(m)
+        return cast(BaseMsg, self.s).send(m)
 
     doc_r = dict(_d="read message", _r="any:message")
 
@@ -175,7 +182,7 @@ class BaseCmdBBM(BaseCmd):
         """receive a message"""
         if self.s is None:
             raise EOFError
-        return self.s.recv()
+        return cast(BaseMsg, self.s).recv()
 
     doc_mrw = dict(_d="r/w msg stream", _i="any:message", _o="any:message")
 
@@ -200,7 +207,7 @@ class BaseCmdBBM(BaseCmd):
         """send a binary message"""
         if self.s is None:
             raise EOFError
-        return self.s.snd(m)
+        return cast(BaseBlk, self.s).snd(m)
 
     doc_rb = dict(_d="read block", _r="any:encoded message")
 
@@ -208,7 +215,7 @@ class BaseCmdBBM(BaseCmd):
         """receive a binary message"""
         if self.s is None:
             raise EOFError
-        return self.s.rcv()
+        return cast(BaseBlk, self.s).rcv()
 
     doc_brw = dict(_d="r/w block stream", _i="bytes:message", _o="bytes:message")
 

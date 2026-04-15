@@ -28,7 +28,7 @@ class BaseLayerCmd(BaseSuperCmd):
     You need to override "gen_cmd" to create the app object.
     """
 
-    app: BaseCmd = None
+    app: BaseCmd | None = None
     name: str = "_"
 
     async def run_app(self):
@@ -39,6 +39,8 @@ class BaseLayerCmd(BaseSuperCmd):
         You might override this e.g. for restarting or
         shielding the rest of MoaT from errors.
         """
+        if self.app is None:
+            raise RuntimeError("No app")
         await self.app.run()
 
     async def task(self):
@@ -48,10 +50,13 @@ class BaseLayerCmd(BaseSuperCmd):
         You typically don't override this.
         """
         async with TaskGroup() as tg:
-            if self.app is not None:
-                await tg.spawn(self.run_app)
+            app = self.app
+            if app is not None:
+                tg.start_soon(self.run_app)
             if L:
-                await self.app.wait_ready()
+                if app is None:
+                    raise RuntimeError("No app")
+                await app.wait_ready()
                 self.set_ready()
 
             # await self.app.stopped()
@@ -82,7 +87,7 @@ class BaseLayerCmd(BaseSuperCmd):
                 return None
             return await self.app.wait_ready(wait=wait)
 
-    async def gen_cmd(self) -> BaseCmd:
+    async def gen_cmd(self) -> BaseCmd | None:
         """
         Create the actual app to use.
 
@@ -102,6 +107,8 @@ class BaseLayerCmd(BaseSuperCmd):
 
         if L:
             await self.wait_ready()
+        if self.app is None:
+            raise RuntimeError("No app")
         return await self.app.handle(msg, rcmd)
 
     if L:

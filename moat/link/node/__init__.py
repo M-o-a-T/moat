@@ -12,7 +12,6 @@ from moat.util import (
     NotGiven,
     attrdict,
     combine_dict,
-    to_attrdict,
 )
 from moat.lib.path import (
     Path,
@@ -28,9 +27,9 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Key
 
     from collections.abc import Awaitable, Callable, Iterator
-    from typing import Any
+    from typing import Any, Self
 
-__all__ = ["Node"]
+__all__ = ["Node", "NodeFinder"]
 
 logger = getLogger(__name__)
 
@@ -51,18 +50,32 @@ class Node:
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
 
-        If @tick is earlier than the item's timestamp, always return False.
-        If data changes, apply change and return True.
-        If @force is not set, return False.
-        Otherwise, update metadata and return None.
+        Return semantics:
+
+        * If ``force`` is set:
+          * ``True``: incoming timestamp is newer
+          * ``None``: incoming data are equal
+          * ``False``: otherwise
+        * If ``force`` is not set:
+          * ``None``: incoming data are equal
+          * ``False``: incoming timestamp is older
+          * ``True``: otherwise
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
         if s._meta is not None:  # noqa:SLF001
-            if meta.timestamp <= s._meta.timestamp:  # noqa:SLF001
+            same = s._data == data  # noqa:SLF001
+            if force:
+                if meta.timestamp > s._meta.timestamp:  # noqa:SLF001
+                    s.set_(item, data, meta)
+                    return True
+                if same:
+                    return None
                 return False
-            if not force and s._data == data:  # noqa:SLF001
+            if same:
                 return None
+            if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
+                return False
         s.set_(item, data, meta)
         return True
 
@@ -326,34 +339,41 @@ class Node:
 
         await _walk(self, Path())
 
+    def finder(self, path: Path) -> NodeFinder:
+        """
+        Find the destination node of a path, including wildcards.
+
+        This node represents a search path.
+        """
+        return NodeFinder(self).at(path)
+
     def search(self, path: Path) -> Node:
         """
         Find the destination node of a path, including wildcards.
+
+        This node represents the pattern.
         """
-        nf = NodeFinder(self)
-        for elem in path:
-            nf.step(elem)
-        return nf.result
+        return self.finder(path).result
 
     def collect(self, path: Path, keep: bool = False) -> dict:
         """
-        Collate all data from the root to this node (as far as data
-        exist) and return the combined result.
+        Collate data from all matching branches for a path.
 
-        This method is used to collect default data along a path.
+        This method combines all data nodes found in the matching
+        ``NodeFinder`` branches, with more specific matches overriding
+        less specific ones.
         """
-        if self.data_ is not NotGiven:
-            res = to_attrdict(self.data_)
-        else:
-            res = attrdict()
-        slf = self
+        nf = NodeFinder(self)
         for p in path:
             try:
-                slf = slf.get(p, create=False)
+                nf.step(p)
             except KeyError:
                 break
-            if slf.data_ is not NotGiven:
-                res = combine_dict(slf.data_, res, cls=attrdict, keep=keep)
+
+        res: dict = attrdict()
+        for node in reversed(nf.matches):
+            if node.data_ is not NotGiven:
+                res = combine_dict(node.data_, res, cls=attrdict, keep=keep)
 
         return res
 
@@ -370,11 +390,41 @@ class NodeFinder:
     """
 
     def __init__(self, src):
-        self.steps = ((src, False),)
+        self.steps = ((src, 0, 0),)
 
-    def step(self, name: str | int | bool | None, new=False):
+    @staticmethod
+    def _range_wildcards(node):
+        """Yield `(min,max,node)` tuples for valid range wildcard children."""
+
+        for key, sub in node._sub.items():  # noqa:SLF001
+            if not isinstance(key, tuple) or len(key) != 2:
+                continue
+            n, m = key
+            if type(n) is not int or type(m) is not int:
+                continue
+            if n < 1:
+                continue
+            if m != 0 and m < n:
+                continue
+            yield n, m, sub
+
+    def copy(self) -> Self:
         """
-        Walk a single hierarchy step, observing wildcards. Note that ``*``
+        Create a clone with the current path.
+        """
+        res = object.__new__(NodeFinder)
+        res.steps = self.steps
+        return res
+
+    def at(self, path: Path) -> Self:
+        """Advance this finder by all elements in *path*."""
+        for elem in path:
+            self.step(elem)
+        return self
+
+    def step(self, name: str | int | bool | None, new=False) -> None:
+        """
+        Walk a single hierarchy step, observing wildcards. Note that ``#``
         means *one or more*, i.e. it will not match an empty path element.
 
         Args:
@@ -386,25 +436,48 @@ class NodeFinder:
             raise ValueError("I can't create new nodes.")
 
         steps = []
-        for node, _keep in self.steps:
-            if name in node:
-                steps.append((node.get(name), False))
-        for node, _keep in self.steps:
-            if "+" in node:
-                steps.append((node.get("+"), False))
-        for node, _keep in self.steps:
-            if "#" in node:
-                steps.append((node.get("#"), True))
-        for node, keep in self.steps:
-            if keep:
-                steps.append((node, True))
-            # Nodes found with '*' stay on the list
-            # so that they can match multiple path elements.
+        for node, min_more, max_more in self.steps:
+            if min_more == 0:
+                if name in node:
+                    steps.append((node.get(name), 0, 0))
+                if "+" in node:
+                    steps.append((node.get("+"), 0, 0))
+                for n, m, sub in self._range_wildcards(node):
+                    steps.append((sub, n - 1, None if m == 0 else m - 1))
+                if "#" in node:
+                    steps.append((node.get("#"), 0, None))
+
+            if max_more is None or max_more > 0:
+                steps.append((
+                    node,
+                    max(min_more - 1, 0),
+                    None if max_more is None else max_more - 1,
+                ))
+            # Nodes found with '#' or range wildcards stay on the list
+            # so that they can match additional path elements.
         if not steps:
             raise KeyError(name)
         self.steps = steps
 
     @property
-    def result(self) -> tuple[Path, Node]:
-        s = self.steps[0]
-        return s[0]
+    def result(self) -> Node:
+        """Return the highest-priority matching node."""
+        for node in self.matches:
+            return node
+        raise KeyError("No matching wildcard state")
+
+    @property
+    def matches(self) -> tuple[Node, ...]:
+        """Return all applicable branch nodes in precedence order."""
+
+        seen: set[int] = set()
+        res: list[Node] = []
+        for node, min_more, _max_more in self.steps:
+            if min_more != 0:
+                continue
+            node_id = id(node)
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            res.append(node)
+        return tuple(res)

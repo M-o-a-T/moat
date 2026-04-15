@@ -1,3 +1,27 @@
+moat-lib-priomap (0.2.6-2) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 11:00:26 +0100
+
+moat-lib-priomap (0.2.6-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:21:21 +0100
+
+moat-lib-priomap (0.2.5-2) unstable; urgency=medium
+
+  * New release for 26.0.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 14:06:59 +0100
+
+moat-lib-priomap (0.2.5-1) unstable; urgency=medium
+
+  * New release for 26.0.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 13:57:59 +0100
+
 moat-lib-priomap (0.2.4-2) unstable; urgency=medium
 
   * New release for 26.0.0

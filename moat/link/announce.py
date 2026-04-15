@@ -8,6 +8,7 @@ import anyio
 import logging
 import os
 import platform
+import re
 from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
@@ -33,6 +34,22 @@ if TYPE_CHECKING:
 __all__ = ["announcing"]
 
 logger = logging.getLogger(__name__)
+
+
+_unesc_re = re.compile(r"\\x([0-9a-fA-F]{2})")
+
+
+def _unesc(s: PathElem) -> PathElem:
+    if not isinstance(s, str):
+        return s
+
+    if "\\x" not in s:
+        return s
+
+    def _replace(match: re.Match[str]) -> str:
+        return chr(int(match.group(1), 16))
+
+    return _unesc_re.sub(_replace, s)
 
 
 async def get_service_path(host: Path | str | bool, name: Path | None = None):
@@ -72,7 +89,7 @@ async def get_service_path(host: Path | str | bool, name: Path | None = None):
                             for h in hi:
                                 path.extend(h.split("-"))
                         logger.info("Control Path: %s", path)
-                        return Path.build(path)
+                        return Path.build([_unesc(x) for x in path])
     raise ServiceNotFound
 
 
@@ -83,7 +100,7 @@ class SetReady:
     This duck-types `anyio.abc.TaskStatus` and `anyio.Event`.
     """
 
-    link: Link = field()
+    link: LinkSender = field()
     path: Path = field()
     force: bool = field(default=False)
     service_path: Path | None = field(default=None)
@@ -246,7 +263,12 @@ async def announcing(
 
     service_path = Path.build((gen_ident(12),)) if service is not None else None
 
-    async def _delegate(path, service, *, task_status: anyio.TASK_STATUS_IGNORED):
+    async def _delegate(
+        path: Path,
+        service: MsgSender,
+        *,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
+    ) -> None:
         with link.link.delegate(path, service):
             task_status.started()
             await anyio.sleep_forever()

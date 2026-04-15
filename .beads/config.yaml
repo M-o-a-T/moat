@@ -60,3 +60,5 @@ sync-branch: "bugs"
 # - linear.api-key
 # - github.org
 # - github.repo
+
+sync.branch: "bugs"

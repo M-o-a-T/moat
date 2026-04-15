@@ -330,7 +330,10 @@ def _node_gt(self, other):
     if self is None or self == other:
         return False
     while self["node"] != other["node"]:
-        self = self["prev"]
+        try:
+            self = self["prev"]
+        except KeyError:
+            return False
         if self is None:
             return False
     return self["tick"] >= other["tick"]

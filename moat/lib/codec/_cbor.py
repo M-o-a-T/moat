@@ -5,6 +5,7 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
+import math
 import struct
 
 from moat.util import OutOfData
@@ -111,7 +112,7 @@ class ExtraData(ValueError):
 class Codec(_Codec):
     "Basic CBOR codec"
 
-    _buffer: bytes | bytearray | memoryview = b""
+    _buffer: bytes | bytearray = b""
     _buf_pos: int = 0
 
     _buf_out: bytearray | None = None
@@ -146,7 +147,7 @@ class Codec(_Codec):
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
-        self._buffer = data
+        self._buffer = cast(bytes, data)
         try:
             res = self._dec_any()
             # chop off the part we've read
@@ -161,16 +162,12 @@ class Codec(_Codec):
         "Add additional input"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
-                self._buffer = cast(
-                    bytes | bytearray,
-                    self._buffer + data,  # type: ignore[operator]
-                )
+                self._buffer = cast(bytes, self._buffer + data)
                 return
-            data = cast(
-                bytes | bytearray | memoryview,
-                self._buffer[self._buf_pos :] + data,  # type: ignore[operator]
-            )
-        self._buffer = data
+            data = cast(bytes, self._buffer[self._buf_pos :] + data)
+        if isinstance(data, memoryview):
+            data = bytearray(data)
+        self._buffer = cast(bytes, data)
         self._buf_pos = 0
 
     def unfeed(self, buf: VarByteType) -> int:
@@ -407,16 +404,20 @@ class Codec(_Codec):
         # Some special cases of CBOR_7 best handled by special struct.unpack logic here
         if tb == CBOR_FLOAT16:
             data = self._read(2)
-            pf = struct.unpack_from("!e", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!e", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(4 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT32:
             data = self._read(4)
-            pf = struct.unpack_from("!f", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!f", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(8 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT64:
             data = self._read(8)
-            pf = struct.unpack_from("!d", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!d", data, 0)[0]
+            return pf
 
         tag, aux = self._dec_tag_aux(tb)
 

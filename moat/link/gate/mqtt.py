@@ -10,14 +10,13 @@ from contextlib import AsyncExitStack
 from moat.util import NotGiven
 from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
+from moat.link.node.codec import CodecNode
 
 from . import Gate as _Gate
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.link.node.codec import CodecNode
-
     from . import GateNode
 
     from typing import Any
@@ -45,6 +44,7 @@ class Gate(_Gate):  # noqa: D101
         "fetch destination"
         async with AsyncExitStack() as ex:
             if self.codecs is not None:
+                codecs = self.codecs
                 codec = "noop"
 
                 def conv(p, d):
@@ -52,7 +52,9 @@ class Gate(_Gate):  # noqa: D101
                     # (a) look up the codec type in the vector
                     try:
                         vd = self.codec_vecs.search(p)
-                        cd = self.codecs.get(Path.build(vd.data["codec"]))
+                        cd = codecs.get(Path.build(vd.data["codec"]))
+                        if not isinstance(cd, CodecNode):
+                            return NotGiven
                     except (KeyError, ValueError):
                         return NotGiven
                     # (b) decode it
@@ -100,15 +102,22 @@ class Gate(_Gate):  # noqa: D101
                         continue
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
         "update destination"
-        meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
+        if meta is None:
+            meta = MsgMeta(origin=self.origin)
+        else:
+            meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
             await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
         elif self.codecs is not None:
+            codecs = self.codecs
             try:
                 vd = self.codec_vecs.search(path)
-                cd = self.codecs.get(Path.build(vd.data["codec"]))
+                cd = codecs.get(Path.build(vd.data["codec"]))
+                if not isinstance(cd, CodecNode):
+                    self.logger.error("Bad codec node: %s", path)
+                    return
             except (ValueError, KeyError):
                 self.logger.error("No codec: %s %r", path, data)
                 return
@@ -131,16 +140,18 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = meta
 
-    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:
         """
         Test whether this is an update.
 
         @data is currently ignored.
         """
         data  # noqa:B018
+        if aux is None:
+            return True
         # if the old metadata match the new, it's not an update.
         try:
-            if node.ext_meta.origin == meta.origin and node.ext_meta.timestamp == meta.timestamp:
+            if node.ext_meta.origin == aux.origin and node.ext_meta.timestamp == aux.timestamp:
                 return False
         except (AttributeError, KeyError):
             pass

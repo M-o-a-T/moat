@@ -32,8 +32,12 @@ _imports = {
     "SubMsgSender": "base",
     # From cmd.array
     "ArrayCmd": "cmd.array",
+    # From cmd.retry
+    "RetryCmd": "cmd.retry",
     # From cmd._base and cmd.base
     "APP": "cmd._base",  # not exported/documented
+    "add_app_prefix": "cmd._base",
+    "load_app": "cmd._base",
     "BaseCmd": "cmd._base",
     "LoadCmd": "cmd._base",
     "LockBaseCmd": "cmd._base",
@@ -50,6 +54,11 @@ _imports = {
     # From cmd.tree.listen
     "BaseListenCmd": "cmd.tree.listen",
     "BaseListenOneCmd": "cmd.tree.listen",
+    # From conn
+    "BaseConnIter": "conn.util",
+    "TcpIter": "conn.tcp",
+    "UnixIter": "conn.unix",
+    "WsIter": "conn.ws",
     # From msg
     "Msg": "msg",
     "MsgLink": "msg",
@@ -63,12 +72,12 @@ _imports = {
     "wire2i_f": "stream.base",
     # From stream.cmdbbm
     "BaseCmdBBM": "stream.cmdbbm",
-    # From stream.cmdmsg
-    "MsgStream": "stream.cmdmsg",
-    "BaseCmdMsg": "stream.cmdmsg",
-    "CmdMsg": "stream.cmdmsg",
-    "SingleCmdMsg": "stream.cmdmsg",
-    "ExtCmdMsg": "stream.cmdmsg",
+    # From cmd.msg
+    "MsgStream": "cmd.msg",
+    "BaseCmdMsg": "cmd.msg",
+    "CmdMsg": "cmd.msg",
+    "SingleCmdMsg": "cmd.msg",
+    "ExtCmdMsg": "cmd.msg",
     # From stream.xcmd
     "BBMCmd": "stream.xcmd",
     "MsgCmd": "stream.xcmd",
@@ -76,6 +85,14 @@ _imports = {
     "BlkCmd": "stream.xcmd",
     # From log
     "Logger": "cmd.log",
+    # From auth
+    "Auth": "auth._base",
+    "AuthCmdIn": "auth._base",
+    "AuthDenied": "auth._base",
+    "get_auth": "auth._base",
+    # From alert
+    "Alert": "alert",
+    "AlertHandler": "alert",
 }
 
 
@@ -84,7 +101,7 @@ def __getattr__(attr: str):
         mod = _imports[attr]
     except KeyError:
         raise AttributeError(attr) from None
-    value = getattr(__import__(mod, globals(), None, True, 1), attr)
+    value = getattr(__import__(mod, globals(), None, (attr,), 1), attr)
     globals()[attr] = value
     return value
 
@@ -139,8 +156,12 @@ __all__ = [  # noqa:RUF022
     "SubMsgSender",
     # From cmd.array
     "ArrayCmd",
+    # From cmd.retry
+    "RetryCmd",
     # From cmd.base
     "BaseCmd",
+    "add_app_prefix",
+    "load_app",
     "LoadCmd",
     "LockBaseCmd",
     "RootCmd",
@@ -156,6 +177,11 @@ __all__ = [  # noqa:RUF022
     # From cmd.tree.listen
     "BaseListenCmd",
     "BaseListenOneCmd",
+    # From conn
+    "BaseConnIter",
+    "TcpIter",
+    "UnixIter",
+    "WsIter",
     # From msg
     "Msg",
     "MsgLink",
@@ -170,7 +196,7 @@ __all__ = [  # noqa:RUF022
     "wire2i_f",
     # From stream.cmdbbm
     "BaseCmdBBM",
-    # From stream.cmdmsg
+    # From cmd.msg
     "MsgStream",
     "BaseCmdMsg",
     "CmdMsg",
@@ -183,6 +209,14 @@ __all__ = [  # noqa:RUF022
     "BlkCmd",
     # From log
     "Logger",
+    # From auth
+    "Auth",
+    "AuthCmdIn",
+    "AuthDenied",
+    "get_auth",
+    # From alert
+    "Alert",
+    "AlertHandler",
 ]
 
 if _TC or _DOC:
@@ -195,14 +229,21 @@ if _TC or _DOC:
     from .base import OptDict as OptDict
     from .base import SubMsgSender as SubMsgSender
     from .cmd._base import BaseCmd as BaseCmd
+    from .cmd._base import add_app_prefix as add_app_prefix
+    from .cmd._base import load_app as load_app
     from .cmd._base import LoadCmd as LoadCmd
     from .cmd._base import LockBaseCmd as LockBaseCmd
     from .cmd.array import ArrayCmd as ArrayCmd
+    from .cmd.retry import RetryCmd as RetryCmd
     from .cmd.base import RootCmd as RootCmd
     from .cmd.log import Logger as Logger
     from .cmd.tree.dir import BaseSubCmd, BaseSuperCmd, CfgStore, SubStore
     from .cmd.tree.layer import BaseFwdCmd, BaseLayerCmd
     from .cmd.tree.listen import BaseListenCmd, BaseListenOneCmd
+    from .conn.tcp import TcpIter as TcpIter
+    from .conn.unix import UnixIter as UnixIter
+    from .conn.util import BaseConnIter as BaseConnIter
+    from .conn.ws import WsIter as WsIter
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink
     from .msg import MsgResult as MsgResult
@@ -211,14 +252,20 @@ if _TC or _DOC:
     from .stream.base import i_f2wire as i_f2wire
     from .stream.base import wire2i_f as wire2i_f
     from .stream.cmdbbm import BaseCmdBBM as BaseCmdBBM
-    from .stream.cmdmsg import BaseCmdMsg as BaseCmdMsg
-    from .stream.cmdmsg import CmdMsg as CmdMsg
-    from .stream.cmdmsg import ExtCmdMsg as ExtCmdMsg
-    from .stream.cmdmsg import MsgStream as MsgStream
-    from .stream.cmdmsg import SingleCmdMsg as SingleCmdMsg
+    from .cmd.msg import BaseCmdMsg as BaseCmdMsg
+    from .cmd.msg import CmdMsg as CmdMsg
+    from .cmd.msg import ExtCmdMsg as ExtCmdMsg
+    from .cmd.msg import MsgStream as MsgStream
+    from .cmd.msg import SingleCmdMsg as SingleCmdMsg
     from .stream.xcmd import BBMCmd as BBMCmd
     from .stream.xcmd import BlkCmd as BlkCmd
     from .stream.xcmd import BufCmd as BufCmd
     from .stream.xcmd import MsgCmd as MsgCmd
     from .nest import CmdStream as CmdStream
     from .nest import rpc_on_rpc as rpc_on_rpc
+    from .alert import Alert as Alert
+    from .alert import AlertHandler as AlertHandler
+    from .auth._base import Auth as Auth
+    from .auth._base import AuthCmdIn as AuthCmdIn
+    from .auth._base import AuthDenied as AuthDenied
+    from .auth._base import get_auth as get_auth

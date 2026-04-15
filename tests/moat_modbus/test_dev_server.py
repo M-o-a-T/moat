@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import math
 import pytest
 
 import trio
@@ -17,7 +18,7 @@ from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.modbus.client import ModbusClient
 from moat.modbus.dev.poll import dev_poll
-from moat.modbus.types import HoldingRegisters, IntValue
+from moat.modbus.types import FloatValue, HoldingRegisters, IntValue
 
 logger = logging.getLogger(__name__)
 
@@ -503,12 +504,14 @@ server:
             type: uint
             len: 1
             const: 42
+      2:
+        regs:
           pi_value:
             reg_type: h
-            register: 1
-            type: uint
-            len: 1
-            const: 314
+            register: 2
+            type: float
+            len: 2
+            const: 3.1415926
 """,
         attr=True,
     )
@@ -524,14 +527,17 @@ server:
             cli.host("localhost", gateway_port) as h,
             h.unit(1) as u,
             u.slot("test") as s,
+            h.unit(2) as u2,
+            u2.slot("test") as s2,
         ):
             s.add(HoldingRegisters, 0, IntValue)
-            s.add(HoldingRegisters, 1, IntValue)
+            s2.add(HoldingRegisters, 2, FloatValue)
             res = await s.getValues()
+            res2 = await s2.getValues()
 
             # Should return const values
             assert res[HoldingRegisters][0].value == 42
-            assert res[HoldingRegisters][1].value == 314
+            assert abs(res2[HoldingRegisters][2].value - math.pi) < 1e-6
 
         tg.cancel_scope.cancel()
 

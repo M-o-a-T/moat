@@ -26,7 +26,7 @@ except ImportError:
 class RunMsg:
     """A helper to signal readiness or status updates to systemd.
 
-    It also duck-types as :class:`anyio.abc.TaskStatus.`
+    It also duck-types as :class:`anyio.abc.TaskStatus`.
     """
 
     def __init__(self, tg: TaskGroup, obj: Any) -> None:

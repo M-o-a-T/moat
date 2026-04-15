@@ -2,15 +2,29 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 from subprocess import run
 
+import moat.micro  # noqa:F401
 
-def make_upy(force: bool = False):  # noqa: D103
+
+def make_upy(force: bool = False, dupterm: bool = False):  # noqa: D103
     here = Path.cwd().absolute()
-    p = here / "build/mpy-unix"
+    p = here / "build"
+    upy = p / "mpy-cross"
+    mk = here / "ext/micropython/mpy-cross"
+    if force or not upy.exists():
+        run(
+            ["make", "STRIP=", "DEBUG=1", "-j5"],
+            cwd=mk,
+            check=True,
+        )
+        shutil.copy(mk / "build" / "mpy-cross", upy)
+
+    p = here / "build" / ("mpy-unix" + ("-dup" if dupterm else ""))
     upy = p / "micropython"
-    var = here / "moat/micro/_embed/boards/unix/test"
+    var = here / "moat/micro/_embed/boards/unix" / ("test_dup" if dupterm else "test")
     mk = here / "ext/micropython/ports/unix"
     if not force and upy.exists():
         return
@@ -21,7 +35,7 @@ def make_upy(force: bool = False):  # noqa: D103
     env = os.environ.copy()
     env["PYTHONPATH"] = str(here)
     run(  # noqa:S603
-        ["make", "STRIP=", "DEBUG=1", f"VARIANT_DIR={var}", f"BUILD={p}"],
+        ["make", "STRIP=", "DEBUG=1", f"VARIANT_DIR={var}", f"BUILD={p}", "-j5"],
         cwd=mk,
         check=True,
         env=env,
@@ -29,3 +43,4 @@ def make_upy(force: bool = False):  # noqa: D103
 
 
 make_upy()
+make_upy(dupterm=True)

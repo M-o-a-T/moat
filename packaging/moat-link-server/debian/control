@@ -20,6 +20,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-asyncactor (>= 0.28.0),
   python3-moat-lib-codec,
   python3-moat-lib-cmd,
+  python3-moat-lib-broadcast,
   python3-moat-lib-mqtt,
   systemd (>= 241),
 Recommends:

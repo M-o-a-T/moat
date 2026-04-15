@@ -18,8 +18,13 @@ from moat.util.exc import ExpectedError
 __all__ = ["cmd", "run"]
 
 
-def cmd(backend="trio"):
+def cmd(backend=None):
     "The standard MoaT command line handler"
+    if backend is None:
+        if "knx" in sys.argv:
+            backend = "asyncio"
+        else:
+            backend = "trio"
     return _cmd(attrdict(sub_pre="moat", sub_post="_main.cli"), backend=backend)
 
 

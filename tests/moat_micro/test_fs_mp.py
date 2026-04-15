@@ -9,7 +9,7 @@ import multiprocessing as mp
 import pytest
 
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.micro.fuse import wrap
 
 pytestmark = pytest.mark.anyio
@@ -20,7 +20,6 @@ CFG = """
 app: dir
 r:
   app: _test.MpyCmd
-  mplex: true
   cfg:
     app:
       app: dir
@@ -44,7 +43,7 @@ async def test_fuse(tmp_path):
     r = anyio.Path(tmp_path) / "root"
     await p.mkdir()
 
-    async with mpy_stack(tmp_path, CFG, {"r": {"cfg": {"app": {"f": {"root": str(r)}}}}}) as d:
+    async with rpc_stack(tmp_path, CFG, {"r": {"cfg": {"app": {"f": {"root": str(r)}}}}}) as d:
         async with wrap(d.sub_at(P("r.f")), p, debug=4):
 
             def fn(p):

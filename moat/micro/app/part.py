@@ -22,6 +22,6 @@ def __getattr__(attr):
     mod = _attrs.get(attr, None)
     if mod is None:
         raise AttributeError(attr)
-    value = getattr(__import__(f"moat.micro.part.{mod}", globals(), None, True, 0), attr)
+    value = getattr(__import__(f"moat.micro.part.{mod}", globals(), None, (attr,), 0), attr)
     globals()[attr] = value
     return value

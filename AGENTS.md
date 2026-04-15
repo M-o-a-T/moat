@@ -5,19 +5,23 @@ This file isn't just for agents …
 ## Issue tracking
 
 - Use 'beads' for tracking.
-  - 'bd list --label foo --ready': list issues
-  - 'bd show ID': examine single issue
-  - 'bd create --prio P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
+  - 'bd list --label foo --ready --json': list issues
+  - 'bd show --json ID': examine single issue
+  - 'bd create --priority P --title TEXT --description TEXT --notes TEXT --type TYPE --labels foo,bar': create new issue
   - 'bd dep add ID-task ID-blocker': add relationship
   - 'bd update ID --parent ID --set-labels foo,bar --priority P --status S --title … --type …'
   - 'bd close --reason STRING'
-  - 'bd sync': sync tracker state with git
 
 - Conventions:
   - labels: we use "common", "doc", or "moat.xx.yy" for specific subsystems
   - status: open, in\_progress, blocked, deferred, closed
   - prio: 0…4, 0:highest
   - type: bug|feature|task|epic|chore
+
+The purpose of issues is to remember things to do.
+Thus, DO NOT create issues for one-off changes that you'd immediately close.
+
+`bd` cannot run in a sandbox.
 
 ## Project Structure & Modules
 
@@ -51,21 +55,38 @@ This file isn't just for agents …
 
 ## Python patterns
 
+- NEVER busy-loop. NEVER delay to get something to work (except in testcases).
+
 - A BaseException (that's not an Exception) MUST propagate.
   This includes `anyio.get_cancelled_exc_class()`.
-- Use `async with (a,b,c)` instead of nested `async with` statements.
+
+- In `moat.lib` and `moat.micro`, do not use syntax that doesn't work with
+  MicroPython. Specifically:
+  - `(foo,bar,*baz)` list expansion
+  - `with (x,y)`
+  - def foo(bar,/) positional-only arguments
+  - Python 3.12+ syntax for generic types
+  - `isinstance(obj, type1 | type2)` -- use `isinstance(obj, (type1 type2))`
+  - multiple inheritance (syntax works but is ignored)
+
+- Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
+  from submodules. Exception: `TYPE_CHECKING` blocks.
 
 ### Typing
 
 - MoaT does its type checking with "ty".
-- Type-checked files need to be typed completely, i.e. all variables,
+- Use "ty check --output-format github".
+- Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
-- Only add type:ignore comments when (a) you see an actual error from "ty",
-  *and* (b) you thought hard and determined that the error cannot be fixed in
-  another way.
-- The above also applies to `cast` expressions.
-- Each type:ignore or cast requires a one-line comment explaining why the
-  affected code is valid anyway.
+- DO NOT type:ignore comments, use the "Any" type, or add casts.
+  UNLESS (a) you see an actual error from "ty", *and* (b) you THOUGHT HARD
+  and determined that the error CANNOT be fixed some another way.
+- Do not type-check data explicitly. That's what `ty` is for.  If that's
+  not possible, duck typing (or the failure thereof) will raise a `TypeError`.
+- Do not range-check function parameters. It is sufficient to describe valid ranges
+  in the docstring.
+- DO NOT replace "def foo():Awaitable[Bar]: return asyncfn()" with an async
+  def. The correct type is `CoroutineType[Any,Any,Bar]`.
 - After a module typechecks, add its files to the tool.ty.src.include list in
   pyproject.toml.
 
@@ -73,6 +94,7 @@ This file isn't just for agents …
 
 - pre-commit enforces formatting and typechecking.
 - YAML files may contain Path objects, marked with `!P`.
+  The pre-commit yaml checker understands this.
 - When testing, *always write the test output to a temporary file* so you
   can analyze it more easily. Running the same test multiple times is
   inefficient.
@@ -107,12 +129,17 @@ This file isn't just for agents …
   (included in `docs/moat-XXX-YYY/index.md`). The synopsis does not contain
   headers. The main part is assumed to be under a level 1 header. It must
   not itself contain a Level 1 header itself.
+- Do not create enumerations like "Key features" or similar.
+- Do not mention implementation details in docstrings.
+- Use references, not literals.
 
 ## Testing Guidelines
 
-- Tests should focus on exercising a module's API.
-- 100% coverage is a goal but not the main focus of our tests.
-- Don't repeat similar tests or assertions.
+- Tests should focus on exercising a module's API and its actual purpose.
+- 100% coverage is a goal to aspire to, but not the main focus of our tests.
+- Don't repeat tests or assertions.
+- DO NOT use "head", "tail" or "grep" on test output. Instead, redirect to a
+  temp file and post-process that.
 
 ## Commit & Pull Requests
 
@@ -126,6 +153,9 @@ This file isn't just for agents …
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
 - DO NOT use "--rebase" when merging or pulling.
+- DO NOT use "--no-verify" when committing.
+  - If you encounter a pre-existing failure, temporarily stash your changes
+    and run a sub-agent to fix the problem.
 
 ## Agent‑Specific Notes
 
@@ -142,30 +172,26 @@ Work is NOT complete until `git push` succeeds.
 ### Workflow
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up.
-1. **Run quality gates** (if code changed) - Tests, linters, builds.
-   "git commit" should do this automatically, via pre-commit.
-1. **Commit all work**. Reference the issue(s) in the first line.
+1. "git commit" runs quality gates automatically. If errors are reported,
+   fix and resubmit.
+1. **Commit all work**. Reference the issue(s) you worked on, if any, in
+   the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
-1. **Update issue status** - Close finished work, update in-progress items.
+   Add a short explanation of the change if warranted, but
+   DO NOT mention implementation details, esp. not if they are obvious
+   when reading the diff.
+1. **Update issue status** (if you're working on one):
+   Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
-1. Run `bd sync`.
 1. **Push to remote**:
-   ```bash
-   git pull
-   resolve conflicts, if any
-   bd sync
-   git push
-   git status  # MUST show "up to date with 'intern/main'"
+   - run `git push intern HEAD:main`
+   - If there are conflicts,
+     - git pull --no-edit
+     - resolve merge conflicts, if any
+     - retry `git push`
+     - repeat until successful
    ```
-1. **Verify** - All changes committed AND pushed
-
-If a git push/pull command fails with a permission error, STOP: the problem is a
-missing SSH key. The user needs to re-add the key before you can continue.
-
-### Mandatory Rules
-
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+However, if a git push/pull command fails with a permission error, STOP:
+the problem is a missing SSH key. The user needs to re-add the key before
+you can continue.

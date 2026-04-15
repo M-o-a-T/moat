@@ -97,7 +97,7 @@ class VfsRomWriter:  # noqa: D101
                 if self.cross and name.endswith(".py"):
                     name_mpy = name[:-3] + ".mpy"
                     src_name_mpy = src_dir / name_mpy
-                    if not os.path.isfile(src_name_mpy):
+                    if not await anyio.Path(src_name_mpy).is_file():
                         if mpy_cross_run is not None:
                             did_mpy = True
                             mpy_cross_run(src_name)

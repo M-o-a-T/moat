@@ -8,7 +8,7 @@ import anyio
 import pytest
 
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 
 pytestmark = pytest.mark.anyio
 
@@ -18,7 +18,6 @@ _sys:
   app: _sys.Cmd
 r:
   app: _test.MpyCmd
-  mplex: true
   cfg:
     app:
       app: dir
@@ -54,7 +53,7 @@ p:
 
 async def test_ping(tmp_path):
     "test pinging"
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.p")) as pi:
+    async with rpc_stack(tmp_path, CFG) as d, d.sub_at(P("r.p")) as pi:
         rply = await pi(12, _list=...)
         assert rply[0] == 12
         await anyio.sleep(1)

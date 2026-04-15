@@ -1,7 +1,53 @@
-moat-link-metrics (0.0.1-1) unstable; urgency=medium
+moat-link-metrics (0.0.5-5) unstable; urgency=medium
 
-  * Renamed from moat-link-akumuli to moat-link-metrics.
-  * Added backend abstraction layer.
-  * Initial release as moat-link-metrics.
+  * New release for 26.1.3
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 06:43:00 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 10 Apr 2026 11:34:11 +0200
+
+moat-link-metrics (0.0.5-4) unstable; urgency=medium
+
+  * New release for 26.0.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 22 Mar 2026 16:07:19 +0100
+
+moat-link-metrics (0.0.5-3) unstable; urgency=medium
+
+  * New release for 26.0.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 16 Mar 2026 21:29:47 +0100
+
+moat-link-metrics (0.0.5-2) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 11:02:45 +0100
+
+moat-link-metrics (0.0.5-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:23:28 +0100
+
+moat-link-metrics (0.0.4-5) unstable; urgency=medium
+
+  * New release for 26.0.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 16:07:52 +0100
+
+moat-link-metrics (0.0.4-4) unstable; urgency=medium
+
+  * New release for 26.0.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 14:08:23 +0100
+
+moat-link-metrics (0.0.4-3) unstable; urgency=medium
+
+  * New release for 26.0.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 13:58:28 +0100
+
+moat-link-metrics (0.0.4-2) unstable; urgency=medium
+
+  * Initial release for 26.0.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 07:02:52 +0100

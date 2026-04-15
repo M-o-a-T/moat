@@ -2,7 +2,7 @@
 
 Run "moat kv akumuli monitor server" to connect to the specified server.
 
-See "moat util cfg kv.akumuli" for configuration options.
+See "moat util cfg moat.kv.akumuli" for configuration options.
 
 ## Data structure
 

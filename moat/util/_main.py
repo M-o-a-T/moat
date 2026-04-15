@@ -14,6 +14,7 @@ from time import time
 
 import asyncclick as click
 
+from moat.util import _help_preserve_blocks
 from moat.lib.config import CFG
 from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -281,20 +282,20 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
                 if long:
                     if isinstance(data, Sequence) and len(data) > 1:
                         d, p, *x = data  # noqa:PLW2901
-                        p = cast(long, PathLongener).long(d, p)
+                        p = cast(PathLongener, long).long(d, p)
                         data = [p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "depth" in data and "path" in data:
-                        data["path"] = cast(long, PathLongener).long(
+                        data["path"] = cast(PathLongener, long).long(
                             data.pop("depth"), data["path"]
                         )
                 if short:
                     if isinstance(data, Sequence) and len(data) > 0:
                         p, *x = data
-                        d, p = cast(short, PathShortener).short(p)  # noqa:PLW2901
+                        d, p = cast(PathShortener, short).short(p)  # noqa:PLW2901
                         data = [d, p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "path" in data:
                         assert isinstance(data, Mapping)
-                        d, p = cast(short, PathShortener).short(  # noqa:PLW2901
+                        d, p = cast(PathShortener, short).short(  # noqa:PLW2901
                             data["path"]  # type:ignore[invalid-argument-type]
                         )
                         data["depth"] = d  # type: ignore[index]  # data is Mapping after isinstance check
@@ -338,7 +339,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     patho.close()
 
 
-@cli.command("path", help=Path.__doc__, no_args_is_help=True)
+@cli.command("path", help=_help_preserve_blocks(Path.__doc__), no_args_is_help=True)
 @click.option(
     "-e",
     "--encode",
@@ -379,7 +380,7 @@ async def cfg_(obj, path, yaml, empty):
 
     Single values are printed with a trailing line feed.
 
-    Dump the whole config with "moat util cfg :".
+    Dump the whole config with "moat util cfg : -y".
     """
     from .exc import ungroup  # noqa: PLC0415
 

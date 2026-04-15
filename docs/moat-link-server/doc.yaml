@@ -39,6 +39,16 @@ doc: |2
   .
   This problem does not convert the message to raw data.
 ---
+path: !P error.flow
+title: Data flow check errors
+doc: |2
+  Flow monitoring problems are reported here.
+  .
+  Messages are emitted by ``moat link flow monitor`` and use the monitored
+  data path below this prefix.
+items:
+  title: Flow check error
+---
 path: !P error.run.service.conn.*
 title: Backend link failed
 doc: |2
@@ -177,6 +187,16 @@ doc: |2
   if there's no sepatare Schema entry for it.
 items:
   title: Schema item
+---
+path: !P flow
+title: Flow monitoring configuration
+doc: |2
+  Flow checks for retained data live below this path.
+  .
+  Entries mirror the monitored data path and may contain checks for
+  staleness, limits, and copied values.
+items:
+  title: Flow check definition
 ---
 path: !P schema._
 title: Internal schema items

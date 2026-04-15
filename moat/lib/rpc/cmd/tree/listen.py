@@ -11,13 +11,14 @@ from .layer import BaseLayerCmd
 
 # Typing
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.micro import _TaskGroupProto
+    from moat.lib.rpc import BaseConnIter
     from moat.lib.stream import BaseBuf, BaseMsg
-    from moat.micro.stacks.util import BaseConnIter
 
-    from typing import Never
+    from collections.abc import Callable
 
 
 class BaseListenOneCmd(BaseLayerCmd):
@@ -61,11 +62,11 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.lib.rpc.stream.cmdmsg import (  # noqa: PLC0415
+        from moat.lib.rpc.cmd.msg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 
-        app = ExtCmdMsg(self.wrapper(conn), self.cfg)
+        app = ExtCmdMsg(self.cfg, self.wrapper(conn), is_server=True)
         if (
             self.app is None
             # or not await self.app.is_ready()
@@ -87,13 +88,22 @@ class BaseListenOneCmd(BaseLayerCmd):
             # close the thing
             await self.reject(conn)
 
-    async def task(self) -> Never:
+    async def task(self) -> None:
         """
         Accept connections.
         """
-        async with self.listener() as conns:
+        tg = self.tg
+        if tg is None:
+            raise RuntimeError("No taskgroup")
+        tg = cast("_TaskGroupProto", tg)
+        listener = cast("Callable[[], BaseConnIter]", self.listener)
+        async with listener() as conns:
             async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
+
+                async def _handle(conn=conn) -> None:
+                    await self.handler(conn)
+
+                tg.start_soon(_handle)
 
 
 class BaseListenCmd(BaseSubCmd):
@@ -114,12 +124,13 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.lib.rpc.stream.cmdmsg import (  # noqa: PLC0415
+        from moat.lib.rpc.cmd.msg import (  # noqa: PLC0415
             ExtCmdMsg,  # pylint:disable=import-outside-toplevel
         )
 
-        conn = self.wrapper(conn)
-        app = ExtCmdMsg(conn, self.cfg)
+        wrapper = cast("Callable[[object], BaseMsg]", self.wrapper)
+        conn = wrapper(conn)
+        app = ExtCmdMsg(self.cfg, conn, is_server=True)
         seq = self.seq
         if seq > len(self.sub) * 3:
             seq = 10
@@ -134,12 +145,21 @@ class BaseListenCmd(BaseSubCmd):
         await app.wait_stopped()
         await self.detach(seq)
 
-    async def task(self) -> Never:
+    async def task(self) -> None:
         """
         Accept connections.
         """
-        async with self.listener() as conns:
+        tg = self.tg
+        if tg is None:
+            raise RuntimeError("No taskgroup")
+        tg = cast("_TaskGroupProto", tg)
+        listener = cast("Callable[[], BaseConnIter]", self.listener)
+        async with listener() as conns:
             if L:
                 self.set_ready()
             async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
+
+                async def _handle(conn=conn) -> None:
+                    await self.handler(conn)
+
+                tg.start_soon(_handle)

@@ -32,8 +32,7 @@ class ExpectedError(Exception):
     An error that shouldn't elicit a traceback
     """
 
-    def __init__(self, exc: BaseException) -> None:
-        self.exc: BaseException = exc
+    pass
 
 
 class ExpKeyError(KeyError, ExpectedError):

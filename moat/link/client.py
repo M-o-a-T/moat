@@ -38,11 +38,11 @@ from moat.lib.path import (
     Path,
     PathLongener,
     Root,
+    set_root,
 )
 from moat.lib.rpc import Caller, MsgSender
 from moat.util.random import al_unique
 
-from .auth import AnonAuth, TokenAuth
 from .common import CmdCommon
 from .conn import TCPConn, UnixConn
 from .exceptions import AuthError, ClientCancelledError
@@ -52,19 +52,52 @@ from .node import Node
 
 from typing import TYPE_CHECKING, overload
 
+try:
+    from .schema import schema_path, validate_instance
+except ImportError:
+    _HAVE_SCHEMA = False
+
+    def schema_path(_path: Path) -> Path:
+        raise RuntimeError("Schema support is not installed")
+
+    def validate_instance(_schema: object, _data: object) -> None:
+        raise RuntimeError("Schema support is not installed")
+
+else:
+    _HAVE_SCHEMA = True
+
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
     from moat.lib.path import PathElem
-    from moat.lib.rpc import Msg, MsgHandler
+    from moat.lib.rpc import Msg
+    from moat.link.code.run import Code
     from moat.link.node.codec import CodecNode
 
-    from .backend import Message
-    from .schema import Data
-    from .schema import SchemaName as S
+    from .backend import Backend, Message
 
-    from collections.abc import AsyncIterator, Awaitable
-    from typing import Any, Literal
+    from collections.abc import AsyncIterator, Awaitable, Callable
+    from typing import Any, Literal, Protocol
+
+    class DataSender(Protocol):
+        "Protocol for `d.*` RPC sender helpers."
+
+        get: Callable[[Path], Awaitable[Any]]
+        search: Callable[[Path], Awaitable[Any]]
+        set: Callable[[Path, Any, MsgMeta], Awaitable[Any]]
+        walk: Callable[..., Caller]
+
+    class ErrSender(Protocol):
+        "Protocol for `e.*` RPC sender helpers."
+
+        exc: Callable[..., Awaitable[Any]]
+        info: Callable[..., Awaitable[Any]]
+        ack: Callable[..., Awaitable[Any]]
+        ok: Callable[..., Awaitable[Any]]
+        mon: Callable[..., AbstractAsyncContextManager[Any]]
+
+
+NotGivenType = type(NotGiven)
 
 
 class _Requeue(Exception):
@@ -74,6 +107,7 @@ class _Requeue(Exception):
 __all__ = [
     "BasicLink",
     "ClientCaller",
+    "CodeCaller",
     "Link",
     "LinkCommon",
     "LinkSender",
@@ -92,7 +126,7 @@ def get_link() -> Link | None:
     return _the_link.get(None)
 
 
-class TS(anyio.abc.TaskStatus):
+class TS:
     "A wrapper to TaskStatus that swallows successive calls"
 
     def __init__(self, ts):
@@ -147,13 +181,22 @@ class LinkCommon(CmdCommon):
 
     protocol_version: int = -1
     name: str
-    server_name: str = None
+    _id: str
+    server_name: str | None = None
     is_server: bool = False
     _sender: MsgSender
+    _hello: Hello | None = None
+    _port: dict[str, Any] | str | None = None
+    sdr: LinkSender
+    announced: set[Path]
+    backend: Backend
+    tg: Any
+    current_server: MsgSender | None
 
     def __init__(self, cfg, name: str | None = None):
-        self.cfg = cfg
+        super().__init__(cfg)
         CFG.maybe_redo()
+        set_root(CFG.moat.link)
 
         if name is not None:
             self.is_server = True
@@ -161,6 +204,7 @@ class LinkCommon(CmdCommon):
             name = cfg.get("client_id")
             if name is None:
                 name = "_" + gen_ident(12, alphabet=al_unique)
+        self._id = name
         self.name = name
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
@@ -168,29 +212,37 @@ class LinkCommon(CmdCommon):
         self._sender = MsgSender(self)
 
     @property
-    def sender(self):
+    def sender(self) -> MsgSender:
         "The MsgSender that forwards to our server"
         return self._sender
 
-    def handle(self, msg, rpath, *add) -> Awaitable[None]:
+    async def handle(self, msg, rcmd):
         """
         Message handler that intercepts incoming commands
         while authorization has not completed
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.handle(msg, rpath, *add)
+            if self._hello.is_auth_cmd(rcmd):
+                return await self._hello.handle(msg, rcmd)
+            if not self._hello.auth_accepting:
+                await msg.ml_send_error(ValueError("No Auth"))
+                return
 
-        if rpath and rpath[-1] == "d_":
-            msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
-            return msg.call_stream(self.sdr.stream_d_)
+        if rcmd and rcmd[-1] == "d_":
+            msg._kw = dict(msg.kw)  # noqa: SLF001
+            # reversed path, without the local "d_" suffix
+            msg._kw["p"] = Path.build(rcmd[-2::-1])  # noqa: SLF001
+            return await msg.call_stream(self.sdr.stream_d_)
 
-        return super().handle(msg, rpath, *add)
+        return await super().handle(msg, rcmd)
 
     @property
     def id(self):  # noqa:D102
-        return self.name
+        return self._id
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        if self._port is None:
+            raise RuntimeError("No configured port")
         async with self._connect_one(self._port) as hdl:
             task_status.started(hdl)
             await anyio.sleep_forever()
@@ -198,20 +250,38 @@ class LinkCommon(CmdCommon):
     def _state_changed(self):
         pass
 
+    async def get_link(self) -> MsgSender:
+        "Return the active remote sender."
+        raise RuntimeError("No server link")
+
     @asynccontextmanager
-    async def _connect_one(self, remote: dict | str, data: dict | None = None) -> MsgSender:
-        auth_out = []
+    async def _connect_one(
+        self, remote: dict[str, Any] | str, data: dict[str, Any] | None = None
+    ) -> AsyncIterator[MsgSender]:
+        rpc_auth_modes = ["anon"]
+        rpc_auth_data: dict[str, Any] = {}
         if isinstance(remote, dict):
-            with suppress(KeyError):
-                auth_out.append(TokenAuth(data["auth"]["token"]))
+            if data is not None:
+                with suppress(KeyError):
+                    token = data["auth"]["token"]
+                    rpc_auth_modes.insert(0, "token")
+                    rpc_auth_data["token"] = token
             conn_ = TCPConn(
-                self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger
+                self,
+                remote_host=remote["host"],
+                remote_port=remote["port"],
+                logger=self.logger,
             )
         else:
             conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
 
-        auth_out.append(AnonAuth())
-        self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
+        self._hello = Hello(
+            me=self.name,
+            me_server=self.is_server,
+            rpc_auth_modes=tuple(rpc_auth_modes),
+            rpc_auth_data=rpc_auth_data,
+            rpc_auth_server=False,
+        )
         yielded = False
 
         async with conn_ as conn:
@@ -228,7 +298,8 @@ class LinkCommon(CmdCommon):
                 if res:
                     self.logger.warning("Unknown auth reply: %r", res)
 
-            self.name = self._hello.me
+            if self._hello.me is not None:
+                self.name = self._hello.me
             self.server_name = self._hello.them
             self.protocol_version = self._hello.protocol_version
             self._hello = None  # done with that
@@ -253,17 +324,123 @@ class ClientCaller(Caller):
         self._link = sender._link  # noqa:SLF001
         super().__init__(sender, *a, **kw)
 
-    @asynccontextmanager
-    async def _ctx(self):
-        await self._link.get_link()
-        async with super()._ctx() as res:
-            yield res
-
     async def _call(self):
         "helper for __await__ that calls the remote handler"
         link = await self._link.get_link()
         cmd, a, kw = self.data
         return await link.root._sender.cmd(cmd, *a, **kw)  # noqa:SLF001
+
+
+@define
+class _CodeWatch:
+    """
+    Shared watcher state for one code path.
+    """
+
+    code: Code
+    users: int
+    cancel_scope: anyio.CancelScope
+    done: anyio.Event
+
+
+def _code_path(path: Path) -> Path:
+    "Build a code storage path below ``code.exec``."
+    from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+
+    return CODE_EXEC_ROOT + Path.build(path)
+
+
+class CodeCaller:
+    """
+    Helper returned by :meth:`LinkSender.code_at`.
+
+    This object supports direct calls, ``await`` to get the current
+    code wrapper, and async context usage to
+    keep one shared wrapper updated in the background.
+    """
+
+    sender: LinkSender
+    path: Path
+
+    def __init__(self, sender: LinkSender, path: Path):
+        self.sender = sender
+        self.path = _code_path(path)
+
+    def __await__(self):
+        return self.sender._code_get(self.path).__await__()  # noqa: SLF001
+
+    def __call__(self, **kw: Any):
+        "Call the referenced code snippet."
+
+        async def _run():
+            code = await self
+            return await code(**kw)
+
+        return _run()
+
+    async def _enter(self) -> Code:
+        "Acquire (and maybe start) one shared code watcher."
+        p = self.path
+        while True:
+            entry = self.sender._code_watch.get(p, NotGiven)  # noqa: SLF001
+            if isinstance(entry, _CodeWatch):
+                entry.users += 1
+                return entry.code
+            if entry is not NotGiven:
+                await entry.wait()
+                continue
+
+            evt = anyio.Event()
+            self.sender._code_watch[p] = evt  # noqa: SLF001
+            try:
+                from moat.link.code.run import Code  # noqa: PLC0415
+
+                code = Code(self.sender, p)
+                code.update(await self.sender.d_get(p))
+                done = anyio.Event()
+                scope = await self.sender._link.tg.start(self.sender._watch_code, p, code, done)  # noqa: SLF001
+                self.sender._code_watch[p] = _CodeWatch(  # noqa: SLF001
+                    code=code,
+                    users=1,
+                    cancel_scope=scope,
+                    done=done,
+                )
+                evt.set()
+                return code
+            except BaseException:
+                self.sender._code_watch.pop(p, None)  # noqa: SLF001
+                evt.set()
+                raise
+
+    async def _exit(self) -> None:
+        "Release one shared code watcher."
+        p = self.path
+        while True:
+            entry = self.sender._code_watch.get(p, NotGiven)  # noqa: SLF001
+            if isinstance(entry, _CodeWatch):
+                if entry.users > 1:
+                    entry.users -= 1
+                    return
+                evt = anyio.Event()
+                self.sender._code_watch[p] = evt  # noqa: SLF001
+                try:
+                    entry.cancel_scope.cancel()
+                    await entry.done.wait()
+                finally:
+                    self.sender._code_watch.pop(p, None)  # noqa: SLF001
+                    evt.set()
+                return
+            if entry is not NotGiven:
+                await entry.wait()
+                continue
+            if entry is NotGiven:
+                return
+
+    async def __aenter__(self) -> Code:
+        return await self._enter()
+
+    async def __aexit__(self, *tb):
+        await self._exit()
 
 
 class LinkSender(MsgSender):
@@ -281,10 +458,19 @@ class LinkSender(MsgSender):
     Caller_ = ClientCaller
 
     _codec_tree: CodecNode | None = None
+    _codec_tree_wait: anyio.Event | None = None
+    _code_watch: dict[Path, _CodeWatch | anyio.Event]
+    d: DataSender
+    d_: MsgSender
+    e: ErrSender
+    i: MsgSender
+    cl: MsgSender
 
     def __init__(self, link: LinkCommon):
         self._link = link
         self.announced = self._link.announced
+        self._code_watch = {}
+        self._codec_tree_wait = None
 
     @property
     def root(self):
@@ -320,7 +506,7 @@ class LinkSender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def find_handler(self, path, cmd: bool = False) -> tuple[MsgHandler, Path]:
+    def find_handler(self, path: Path, cmd: bool = False) -> tuple[MsgSender, Path]:
         """
         Standard sub-dispatcher redirector, no-op.
         """
@@ -366,10 +552,10 @@ class LinkSender(MsgSender):
             await msg.result(res)
 
     @overload
-    def d_get(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
+    async def d_get(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
 
     @overload
-    def d_get(self, path: Path) -> Any: ...
+    async def d_get(self, path: Path) -> Any: ...
 
     async def d_get(self, path: Path, meta: bool = False) -> tuple[Any, MsgMeta]:
         """
@@ -387,6 +573,27 @@ class LinkSender(MsgSender):
         return res[0], MsgMeta.restore(res[1:])
 
     @overload
+    async def d_search(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
+
+    @overload
+    async def d_search(self, path: Path) -> Any: ...
+
+    async def d_search(self, path: Path, meta: bool = False) -> tuple[Any, MsgMeta]:
+        """
+        Search-based data retrieval. Calls the server's ``d.search`` method.
+
+        Returns a data+metadata tuple if @meta is True, otherwise just the
+        data.
+        """
+        if len(path) and isinstance(path[0], Path):
+            raise ValueError("Don't use a root-prefixed path here.")
+
+        res = await self.d.search(path)
+        if not meta:
+            return res[0]
+        return res[0], MsgMeta.restore(res[1:])
+
+    @overload
     async def d_set(
         self,
         path: Path,
@@ -394,7 +601,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[True] = True,
         retain: bool | None = None,
-    ) -> tuple[Any, MsgMeta]: ...
+        verify: bool | None = False,
+    ) -> bool | None: ...
 
     @overload
     async def d_set(
@@ -404,7 +612,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         meta: Literal[False] = False,
         retain: bool | None = None,
-    ) -> None: ...
+        verify: bool | None = False,
+    ) -> bool | None: ...
 
     async def d_set(
         self,
@@ -414,7 +623,8 @@ class LinkSender(MsgSender):
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
-    ) -> None | tuple[Any, MsgMeta]:
+        verify: bool | None | NotGivenType = NotGiven,
+    ) -> bool | None | tuple[Any, MsgMeta | None]:
         """
         Data update.
 
@@ -422,8 +632,42 @@ class LinkSender(MsgSender):
         requested via @with_prev, goes through the server. Otherwise posts to
         MQTT directly.
         """
-        if path and isinstance(path[0], Path):
-            raise ValueError("Don't use a root-prefixed path here.")
+        if path.has_prefix:
+            raise ValueError("Don't use a prefixed path here.")
+
+        if verify is NotGiven:
+            verify = (
+                "pytest" in sys.modules and getattr(self._link, "current_server", None) is not None
+            )
+
+        if verify is not False:
+            if not _HAVE_SCHEMA:
+                if verify is None:
+                    self._link.logger.warning(
+                        "Schema support is not installed, cannot verify %s", path
+                    )
+                else:
+                    raise RuntimeError("Schema support is not installed")
+            else:
+                try:
+                    schema = await self.d_search(schema_path(path))
+                except KeyError:
+                    pass
+                except Exception as exc:
+                    if verify is None:
+                        self._link.logger.warning("Schema lookup failed for %s: %r", path, exc)
+                    else:
+                        raise
+                else:
+                    try:
+                        validate_instance(schema, data)
+                    except Exception as exc:
+                        if verify is None:
+                            self._link.logger.warning(
+                                "Schema validation failed for %s: %r", path, exc
+                            )
+                        else:
+                            raise
 
         if meta is None:
             meta = MsgMeta(origin=self._link.name)
@@ -431,13 +675,21 @@ class LinkSender(MsgSender):
             if retain is None:
                 retain = len(path) == 0 or path[0] != "run"
             await self.send(Root.get() + path, data=data, meta=meta, retain=retain)
-            return
+            return True
         tt = {} if t is None else {"t": t}
+        old: tuple[Any, MsgMeta | None] | None = None
+        if with_prev:
+            try:
+                old = await self.d_get(path, meta=True)
+            except KeyError:
+                old = (NotGiven, None)
         res = await self.d.set(path, data, meta, **tt)
-        if not with_prev:
-            return res[0]
-        meta = MsgMeta.restore(res[1:]) if len(res) > 1 else None
-        return res[0], meta
+        if not isinstance(res, bool) and res is not None:
+            res = res[0]
+        if with_prev:
+            assert old is not None
+            return old
+        return res
 
     @asynccontextmanager
     async def d_walk(
@@ -464,7 +716,7 @@ class LinkSender(MsgSender):
 
     async def stream_watch(self, msg: Msg):
         """
-        A hook for reading data. Used mainly by `moat.micro.app.link.Cmd`.
+        A hook for reading data. Used mainly by `moat.lib.rpc.app.link.Cmd`.
         """
         if msg.can_stream:
             async with msg.stream_out() as ms, self.d_watch(msg[0], **msg.kw) as mr:
@@ -482,7 +734,7 @@ class LinkSender(MsgSender):
         mark: bool = False,
         meta: Literal[False] = False,
         subtree: Literal[False] = False,
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[Any]]: ...
 
     @overload
@@ -492,7 +744,7 @@ class LinkSender(MsgSender):
         mark: Literal[False] = False,
         meta: Literal[True] = True,
         subtree: Literal[False] = False,
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
 
     @overload
@@ -502,7 +754,7 @@ class LinkSender(MsgSender):
         mark: Literal[False],
         meta: Literal[True],
         subtree: Literal[True],
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
@@ -512,7 +764,7 @@ class LinkSender(MsgSender):
         mark: Literal[False] = False,
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
 
     @overload
@@ -522,7 +774,7 @@ class LinkSender(MsgSender):
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[False] = False,
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
 
     @overload
@@ -532,7 +784,7 @@ class LinkSender(MsgSender):
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[True],
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
 
     @overload
@@ -542,7 +794,7 @@ class LinkSender(MsgSender):
         mark: Literal[True],
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
-        state: bool | Literal[NotGiven] | None = None,
+        state: bool | NotGivenType | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
 
     def d_watch(
@@ -550,12 +802,12 @@ class LinkSender(MsgSender):
         path: Path,
         meta: bool = False,
         subtree: bool = False,
-        state: bool | None | NotGiven = None,
+        state: bool | None | NotGivenType = None,
         age: float | None = None,
         mark: bool = False,
         min_length: int | None = None,
         max_length: int | None = None,
-        cls: type = Node,
+        cls: type[Node] = Node,
     ):
         """
         Monitor a node or subtree.
@@ -594,7 +846,7 @@ class LinkSender(MsgSender):
         is not specified. Conflicts should be strictly avoided.
         """
         res = attrdict() if default is None else default
-        evt: anyio.Event | None = None
+        evt = anyio.Event()
 
         class AWT:
             def __await__(self):
@@ -623,7 +875,7 @@ class LinkSender(MsgSender):
                         n = dl.pop()
                         d = attrdict({n: d})
                     if not isinstance(d, dict):
-                        self.logger.warning("Item at {p} is {d !r}, not a dict, ignoring")
+                        self._link.logger.warning("Item at %r is %r, not a dict, ignoring", p, d)
                         continue
                     merge(res, d)
                     if evt is not None:
@@ -733,7 +985,18 @@ class LinkSender(MsgSender):
         return st
 
     async def _get_tree(self, path, *, task_status, **kw):
-        async with self.d_watch(path, **kw) as w:
+        async with Watcher(
+            self,
+            path,
+            bool(kw.get("meta", False)),
+            bool(kw.get("subtree", False)),
+            kw.get("state", None),
+            kw.get("age", None),
+            bool(kw.get("mark", False)),
+            kw.get("cls", Node),
+            kw.get("min_length", None),
+            kw.get("max_length", None),
+        ) as w:
             task_status.started(await w.get_node())
             await anyio.sleep_forever()
 
@@ -743,23 +1006,26 @@ class LinkSender(MsgSender):
         """
 
         if self._codec_tree is None:
-            self._codec_tree = evt = anyio.Event()
-
+            if self._codec_tree_wait is not None:
+                await self._codec_tree_wait.wait()
+                assert self._codec_tree is not None
+                return self._codec_tree
+            evt = anyio.Event()
+            self._codec_tree_wait = evt
             from moat.link.node.codec import CodecNode  # noqa: PLC0415
 
-            self._codec_tree = await self._link.tg.start(
+            tree = await self._link.tg.start(
                 partial(
                     self._get_tree, P("codec"), subtree=True, state=None, meta=False, cls=CodecNode
                 )
             )
+            self._codec_tree = tree
+            self._codec_tree_wait = None
             evt.set()
-
-        elif isinstance(self._codec_tree, anyio.abc.Event):
-            await self._codec_tree.wait()
-
+        assert self._codec_tree is not None
         return self._codec_tree
 
-    async def get_service(self, srv: Path, wait: bool = False) -> MsgHandler:
+    async def get_service(self, srv: Path, wait: bool = False) -> MsgSender:
         """
         Retrieve a SubDispatcher that connects to the given announced
         service.
@@ -780,34 +1046,75 @@ class LinkSender(MsgSender):
 
         return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
 
+    async def _code_get(self, p: Path) -> Code:
+        "Return cached code while monitored, otherwise a fresh wrapper."
+        while True:
+            entry = self._code_watch.get(p, NotGiven)
+            if isinstance(entry, _CodeWatch):
+                return entry.code
+            if entry is not NotGiven:
+                await entry.wait()
+                continue
+            if entry is NotGiven:
+                from moat.link.code.run import Code  # noqa: PLC0415
+
+                return Code(self, p)
+
+    async def _watch_code(
+        self, path: Path, code: Code, done: anyio.Event, *, task_status=anyio.TASK_STATUS_IGNORED
+    ):
+        "Background updater for one code path."
+        with anyio.CancelScope() as scope:
+            task_status.started(scope)
+            try:
+                async with self.d_watch(path, state=False) as mon:
+                    async for data in mon:
+                        code.update(data)
+            finally:
+                done.set()
+
+    def code_at(self, path: Path) -> CodeCaller:
+        """
+        Return a code caller.
+
+        The result can be called directly, awaited to retrieve a
+        code wrapper, or used as an async
+        context manager to keep one shared wrapper updated.
+        """
+        return CodeCaller(self, path)
+
 
 class Link(LinkCommon, CtxObj):
     """
     This class combines the back-end link with a connection to a MoaT-Link server.
 
     If "common" is set, create global state.
+    If "only" is set, connect only to the named server.
     """
 
     _server: ValueEvent = None
     _uptodate: bool = False
-    _hello: Hello = None
-    current_server: MsgSender = None
+    _hello: Hello | None = None
+    current_server: MsgSender | None = None
     _server_up: anyio.Event
-    _last_link: Msg | None = None
+    _last_link: Message | None = None
     _last_link_seen: anyio.Event
-    _port: str | None = None
+    _port: dict[str, Any] | str | None = None
     _state: str = "init"
     _common: bool = False
+    _only: str | None = None
     announced: set[Path]
     sdr: LinkSender
 
-    def __new__(cls, cfg, name: str | None = None, common: bool = False):  # noqa:D102
-        cfg, name  # noqa:B018
+    def __new__(cls, cfg, name: str | None = None, common: bool = False, only: str | None = None):  # noqa:D102
+        cfg, name, only  # noqa:B018
         if common and (link := _the_link.get(NotGiven)) is not NotGiven:
             return link
         return super().__new__(cls)
 
-    def __init__(self, cfg, name: str | None = None, common: bool = False):
+    def __init__(
+        self, cfg, name: str | None = None, common: bool = False, only: str | None = None
+    ):
         if _the_link.get(NotGiven) is self:
             return
         super().__init__(cfg, name=name)
@@ -815,9 +1122,16 @@ class Link(LinkCommon, CtxObj):
         self._server_up = anyio.Event()
         self._state_change = anyio.Event()
         self._common = common
+        self._only = only
+        self._socket_path: str | None = None
         self.announced = set()
         with suppress(AttributeError):
             self._port = self.cfg.client.port
+        with suppress(AttributeError):
+            self._socket_path = str(self.cfg.client.path)
+        if self._only is None:
+            with suppress(AttributeError):
+                self._only = str(self.cfg.client.name)
 
     async def set_state(self, state: str):
         """
@@ -840,11 +1154,11 @@ class Link(LinkCommon, CtxObj):
 
     @property
     def _ping_path(self):
-        return P("run.ping.id") / self.name
+        return P("run.ping.id") / self.id
 
     @property
     def _id_path(self):
-        return P("run.id") / self.name
+        return P("run.id") / self.id
 
     async def _send_id(self):
         data = dict(
@@ -967,8 +1281,28 @@ class Link(LinkCommon, CtxObj):
         """
         This is the manager task for the server link channel.
         It starts a server connection (and tries to keep it alive).
+
+        Connection order:
+        1. Unix socket (cfg.client.path), if configured
+        2. Named server announcement (cfg.client.name), if configured
+        3. Any server announcement
         """
         task_status = TS(task_status)
+
+        # Try Unix socket first, if configured
+        if self._socket_path is not None:
+            try:
+                with anyio.fail_after(self.cfg.client.init_timeout):
+                    async with self._connect_one(self._socket_path) as rem:
+                        await self._connect_run(rem, task_status=task_status)
+            except OSError as exc:
+                self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
+            except TimeoutError:
+                self.logger.info("%r timed out, trying announcements", self._socket_path)
+            finally:
+                self.current_server = None
+                if self._server_up.is_set():
+                    self._server_up = anyio.Event()
 
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)
@@ -976,11 +1310,22 @@ class Link(LinkCommon, CtxObj):
         tm = self.cfg.timeout.connect
         timeout = tm.initial
         while True:
+            if srv is None:
+                await self._last_link_seen.wait()
+                srv = self._last_link
+                self._last_link_seen = anyio.Event()
+                continue
             try:
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
+                if isinstance(exc, (NameError, AttributeError, TypeError, ImportError)):
+                    raise
+                if srv.meta is None:
+                    err_path = P("run.service.main.server")
+                else:
+                    err_path = P("run.service.main.server") / srv.meta.origin
                 await self.backend.send_error(
-                    P("run.service.main.server") / srv.meta.origin,
+                    err_path,
                     data=srv,
                     exc=exc,
                 )
@@ -1008,8 +1353,14 @@ class Link(LinkCommon, CtxObj):
         # Background process that monitors the server link channel
 
         self._last_link_seen = anyio.Event()
+        if self._only is not None:
+            # Monitor the specific named server's announcement
+            monitor_path = P(":R.run.service.main.server") / self._only
+        else:
+            # Monitor the main connection channel
+            monitor_path = P(":R.run.service.main.conn")
         async with self.backend.monitor(
-            P(":R.run.service.main.conn"),
+            monitor_path,
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
@@ -1024,6 +1375,22 @@ class Link(LinkCommon, CtxObj):
         # We're connected.
         self.current_server = rem
         self._server_up.set()
+
+        # Check backend compatibility when connecting to a named server
+        if self._only is not None:
+            try:
+                remote_backend = await rem.cmd(P("i.backend"))
+                if remote_backend.kw != self.cfg.backend:
+                    self.logger.info(
+                        "Server %s uses different backend: %r (we use %r)",
+                        self._only,
+                        remote_backend.kw,
+                        self.cfg.backend,
+                    )
+                    # Store the remote backend for potential reconnection
+                    self._remote_backend = remote_backend.kw
+            except Exception as exc:
+                self.logger.warning("Could not query backend from %s: %r", self._only, exc)
 
         async def run_(cmd):
             await cmd.run(rem)
@@ -1060,12 +1427,7 @@ class Link(LinkCommon, CtxObj):
         finally:
             self._retry_msgs.discard(cmd_)
 
-    async def _connect_server(
-        self,
-        srv: Message[Data[S.run.service.main.conn]],
-        *,
-        task_status=anyio.TASK_STATUS_IGNORED,
-    ):
+    async def _connect_server(self, srv: Message, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status = TS(task_status)
 
         # Backend connection
@@ -1090,6 +1452,8 @@ class Link(LinkCommon, CtxObj):
             except OSError as exc:
                 self.logger.warning("Link failed: %r (%r)", remote, exc)
             except Exception as exc:
+                if isinstance(exc, (NameError, AttributeError, TypeError, ImportError)):
+                    raise
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
 
@@ -1144,16 +1508,16 @@ class Watcher(CtxObj):
     * a MoaT-Link request to enumerate a subtree
     """
 
-    link: Link = field()
+    link: LinkSender = field()
     path: Path = field()
     meta: bool = field()
     subtree: bool = field()
-    state: bool | None | NotGiven = field()
+    state: bool | None | NotGivenType = field()
     age: float | None = field()
     mark: bool = field()
-    node_cls: type = field()
-    min_length: type = field()
-    max_length: type = field()
+    node_cls: type[Node] = field()
+    min_length: int | None = field()
+    max_length: int | None = field()
 
     _qr = field(init=False, repr=False)
     _tg = field(init=False, repr=False)
@@ -1207,6 +1571,8 @@ class Watcher(CtxObj):
                 await qw.send(None)
 
         await qw.aclose()
+        if self._current_done is None:
+            raise RuntimeError("Missing done event")
         self._current_done.set()
 
     async def _updates(self, qw, *, task_status):
@@ -1245,6 +1611,21 @@ class Watcher(CtxObj):
     def __aiter__(self):
         return self
 
+    @property
+    @asynccontextmanager
+    async def node(self) -> AsyncIterator[Node]:
+        """
+        Helper for fetching data in background.
+
+        This is necessary if you start several watchers in a common context
+        managers. If you then call :py.meth.`get_node` on one of them,
+        the data from the other(s) might overwhelm the input queue.
+        """
+        if self._node is not None:
+            raise RuntimeError("Use `await get_node()`")
+        async with self:
+            yield await self.get_node()
+
     async def get_node(self, background=True) -> Node:
         """
         Wait until fetching the static data is complete, then return the
@@ -1256,10 +1637,12 @@ class Watcher(CtxObj):
         """
         if background:
             await self._tg.start(self._iter)
+        if self._current_done is None:
+            raise RuntimeError("Missing done event")
         await self._current_done.wait()
         return self._node
 
-    async def _iter(self, *, task_status: anyio.abc.TaskStatus):
+    async def _iter(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status.started()
         qr, self._qr = self._qr, None
 
@@ -1280,6 +1663,8 @@ class Watcher(CtxObj):
             if msg is None:
                 return None
             p, d, m = msg
+            if self._current_done is None:
+                raise RuntimeError("Missing done event")
             if self._node.set(p, d, m, force=self._current_done.is_set()):
                 if self.meta:
                     return (p, d, m) if self.subtree else (d, m)

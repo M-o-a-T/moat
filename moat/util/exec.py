@@ -8,6 +8,7 @@ import anyio
 import io
 from codecs import getincrementaldecoder
 from pathlib import Path
+from shlex import quote
 from subprocess import DEVNULL, PIPE, STDOUT, CalledProcessError
 
 from typing import TYPE_CHECKING, cast, overload
@@ -20,6 +21,35 @@ if TYPE_CHECKING:
 
 
 __all__ = ["DEVNULL", "PIPE", "STDOUT", "CalledProcessError", "run"]
+
+
+class DetailedCalledProcessError(CalledProcessError):
+    def __init__(self, retval, args, dir, out, err):  # noqa:A002
+        super().__init__(retval, args)
+        self.dir = dir
+        self.out = out
+        self.err = err
+
+    def __str__(self):
+        def dec(s: bytes | str) -> bytes | str:
+            if isinstance(s, bytes):
+                try:
+                    s = s.decode("utf-8")
+                except UnicodeDecodeError:
+                    pass
+            return s
+
+        res = [
+            f"Command returned exit status {self.returncode}",
+            f"Args: {' '.join(quote(x) for x in self.cmd)}",
+        ]
+        if self.dir:
+            res.append(f"Dir: {self.dir}")
+        if self.out:
+            res.append(f"Output:\n{dec(self.out)}")
+        if self.err:
+            res.append(f"Error:\n{dec(self.err)}")
+        return "\n".join(res)
 
 
 @overload
@@ -136,9 +166,10 @@ async def run(
         print("…")
 
     if proc.returncode != 0:
-        raise CalledProcessError(
+        raise DetailedCalledProcessError(
             cast(int, proc.returncode),
             a,
+            kw.get("cwd", None),
             None if out is None else out.getvalue(),
             None if err is None else err.getvalue(),
         )

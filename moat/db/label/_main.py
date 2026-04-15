@@ -16,11 +16,10 @@ from moat.util import (
     al_lower,
     gen_ident,
     merge,
-    option_ng,
     yprint,
 )
 from moat.db import database
-from moat.lib.run import load_subgroup
+from moat.lib.run import load_subgroup, option_ng
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
 from .pdf import Labels
@@ -86,7 +85,7 @@ def show_(obj):
 
     if obj.text is None and obj.nr is None:
         seen = False
-        with sess.execute(sel(Label).where(Label.box == None)) as labels:  # noqa:E711
+        with sess.execute(sel(Label).where(Label.box_id.is_(None))) as labels:
             for (label,) in labels:
                 seen = True
                 print(label.text)
@@ -215,7 +214,7 @@ def print_(obj, printer, output):
         prt = None
     else:
         prt = merge(cfg.printer[printer], cfg.printer["_default"], replace=False)
-    prt.name_ = printer
+        prt.name_ = printer
 
     obj.printer = prt
 
@@ -235,7 +234,7 @@ def test(obj, label):
 
     fmt = merge(cfg.format[label], cfg.format["_default"], replace=False)
 
-    p.add_page(format=fmt)
+    p.add_label_page(format=fmt)
     _testpage(p, fmt)
     p.print(obj.filename)
 
@@ -299,7 +298,7 @@ def print_sheet(obj, sheets, test):
             continue
 
         for alt in (False, True):
-            p.add_page(format=fmt)
+            p.add_label_page(format=fmt)
             if test:
                 _testpage(p, fmt)
             p.set_line_width(0.5)
@@ -353,7 +352,7 @@ def print_sheet(obj, sheets, test):
                         p.set_font(f.name, style=f.style, size=f.size * w / tw)
                     p.cell(w, h, lbl.text, align=lab.font.align)
 
-            if not lab.alternate:
+            if lab is None or not lab.alternate:
                 break
         print(f"Printed sheet {sh.id}.")
         sh.printed = True
@@ -754,12 +753,15 @@ def sheet_gen(obj, pattern, file, start, count, typ):
         print(f"Sheet {sh.id} has space for {maxcount} labels.", file=sys.stderr)
         count = maxcount
 
-    code = sh.labeltyp.next_code()
+    if (labeltyp := sh.labeltyp) is None:
+        raise ValueError(f"Sheet {sh.id} has no label type")
+    code = labeltyp.next_code()
 
     with open(file, "r") if file else nullcontext() as fd:
         while count:
             count -= 1
-            if file:
+            if file is not None:
+                assert fd is not None
                 seq = fd.readline().strip()
             else:
                 seq = str(start)
@@ -767,9 +769,9 @@ def sheet_gen(obj, pattern, file, start, count, typ):
             if pattern:
                 seq = pattern.replace("#", seq)
 
-            lab = Label(code=code, labeltyp=sh.labeltyp, text=seq)
-            if sh.labeltyp.url is not None:
-                sh.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
+            lab = Label(code=code, labeltyp=labeltyp, text=seq)
+            if labeltyp.url is not None:
+                lab.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
 
             sh.labels.add(lab)
             code += 1

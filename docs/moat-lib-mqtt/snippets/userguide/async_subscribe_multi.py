@@ -6,10 +6,10 @@ from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 
 async def main() -> None:
-    async with AsyncMQTTClient() as client:
-        async with client.subscribe("topic", "more/+/topics", "other/#") as sub:
-            async for message in sub:
-                print(f"Received a message from {message.topic}: {message.payload!r}")
+    async with AsyncMQTTClient() as client, \
+            client.subscribe("topic", "more/+/topics", "other/#") as sub:  # fmt: skip
+        async for message in sub:
+            print(f"Received a message from {message.topic}: {message.payload!r}")
 
 
 asyncio.run(main())

@@ -9,7 +9,7 @@ from xknx.remote_value import RemoteValueSensor
 from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import node_attr, res_get, res_update
 from moat.lib.path import P, Path, path_eval
-from moat.lib.run import attr_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.announce import as_service
 
 from collections.abc import Mapping
@@ -17,7 +17,7 @@ from collections.abc import Mapping
 logger = logging.getLogger(__name__)
 
 
-@click.group(short_help="Manage KNX controllers.")
+@click.group(cls=AliasedGroup, short_help="Manage KNX controllers.")
 async def cli():
     """
     List KNX controllers, modify device handling …

@@ -1,0 +1,35 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["wheel","setuptools"]
+
+[project]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AnyIO",
+    "Framework :: Trio",
+    "Framework :: AsyncIO",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "anyio ~= 4.0",
+    "asyncdbus ~= 0.7.3",
+]
+keywords = ["MoaT"]
+requires-python = ">=3.8"
+name = "moat-ems-victron"
+authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description = "REPLACE ME"
+readme = "README.rst"
+version = "0.1.8"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

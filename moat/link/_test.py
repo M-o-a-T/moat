@@ -27,9 +27,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.path import Path
-    from moat.lib.rpc import MsgSender
     from moat.link.backend import Backend
-    from moat.link.client import LinkCommon
+    from moat.link.client import LinkCommon, LinkSender
 
     from collections.abc import AsyncIterator
     from typing import Literal, Never, Self
@@ -124,7 +123,7 @@ class Scaffold(CtxObj):
     subconfig. Otherwise, pass in the `moat` subconfig.
     """
 
-    tempdir: str | None
+    tempdir: FSPath | None
 
     def __init__(
         self, cfg: attrdict | Literal[True], use_servers=True, tempdir: str | None = None
@@ -166,6 +165,7 @@ class Scaffold(CtxObj):
             if self._tempdir is not None
             else TemporaryDirectory() as tempdir
         ):
+            assert tempdir is not None
             self.tempdir = FSPath(tempdir)
             async with (
                 anyio.create_task_group() as tg,
@@ -190,7 +190,7 @@ class Scaffold(CtxObj):
         return await self.tg.start(self._run_backend, cfg, kw)
 
     @asynccontextmanager
-    async def backend_(self, cfg: dict | None, **kw) -> Backend:
+    async def backend_(self, cfg: dict | None, **kw) -> AsyncIterator[Backend]:
         """
         Start a backend (async context manager).
         """
@@ -238,7 +238,7 @@ class Scaffold(CtxObj):
         await anyio.sleep_forever()
 
     @asynccontextmanager
-    async def server_(self, cfg: dict | None = None, **kw) -> None:
+    async def server_(self, cfg: dict | None = None, **kw) -> AsyncIterator[Server]:
         """
         Runs a basic MoaT-Link server. (async context manager)
         """
@@ -257,11 +257,12 @@ class Scaffold(CtxObj):
         async with self.client_(*a, **kw) as cl:
             task_status.started(cl)
             await anyio.sleep_forever()
+        raise AssertionError("unreachable")
 
     @asynccontextmanager
     async def client_(
         self, cfg: dict | None = None, cli: LinkCommon | None = None, name=None
-    ) -> MsgSender:
+    ) -> AsyncIterator[LinkSender]:
         """
         Start a client (async context manager)
         """

@@ -32,14 +32,18 @@ ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
-def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
+def fix_deps(deps: list[str], tags: dict[str, str], changed: bool = False) -> bool:
     """Adjust dependencies"""
     work = False
     for i, dep in enumerate(deps):
         r = Requirement(dep)
         if r.name in tags:
             dep = f"{r.name} ~= {tags[r.name]}"  # noqa:PLW2901
-            if deps[i] != dep:
+            if (
+                (deps[i] != dep)
+                if changed
+                else (deps[i][: deps[i].rindex(".")] != dep[: dep.rindex(".")])
+            ):
                 deps[i] = dep
                 work = True
     return work
@@ -81,8 +85,12 @@ def do_autotag(repo, repos, major, minor, tags):
     "Create tags for updated subrepos"
     for r in repos:
         if r.has_changes(True) or "tag" not in r.vers:
-            r.vers.tag = r.next_tag(major, minor)
-            r.vers.pkg = 1
+            r.next_tag(major, minor)
+            if r.vers.get("tag", "") != r.vers.new:
+                r.vers.tag = r.vers.new
+                r.vers.pkg = 1
+            else:
+                r.vers.pkg += 1
             r.vers.rev = repo.head.commit.hexsha
             with suppress(AttributeError):
                 del r.vers.pkgrev
@@ -121,6 +129,7 @@ async def do_versions(repo, repos, tags, no):
             content = await p.read_text()
             pr = tomlkit.loads(content)
             pr["project"]["version"] = r.vers.get("new", r.last_tag)
+            changed = r.has_changes(True)
 
             if not no.version:
                 try:
@@ -128,14 +137,14 @@ async def do_versions(repo, repos, tags, no):
                 except KeyError:
                     pass
                 else:
-                    fix_deps(deps, tags)
+                    fix_deps(deps, tags, changed)
                 try:
                     deps = pr["project"]["optional_dependencies"]
                 except KeyError:
                     pass
                 else:
                     for v in deps.values():
-                        fix_deps(v, tags)
+                        fix_deps(v, tags, changed)
             await p.write_text(pr.as_string())
 
             repo.index.add(str(p))
@@ -147,7 +156,7 @@ def do_copy_repos(repos):
         r.copy()
 
 
-async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
+async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
     "Build Debian packages"
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
@@ -174,39 +183,65 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
-                    res = await run_(
-                        "dpkg-parsechangelog",
-                        "-S",
-                        "Changes",
-                        cwd=rd,
-                        capture=True,
-                        echo=debug,
-                    )
-                    if res.strip().endswith(f" for {forcetag}"):
-                        # New version for the same tag.
+                    vers = None
+                    while True:
+                        res = await run_(
+                            "dpkg-parsechangelog",
+                            "-S",
+                            "Changes",
+                            cwd=rd,
+                            capture=True,
+                            echo=debug,
+                        )
+                        if not res.strip().endswith(f" for {gtag}"):
+                            break
+                        # New version for this tag.
                         # Restore the previous version before continuing
                         # so we don't end up with duplicates.
                         # This may actually delete the changelog, but
                         # that's OK.
+                        #
+                        if vers is None:
+                            vers = repo.last_tag
+                        else:
+                            # Walk back to the commit just before `vers`
+                            # that last touched this changelog file.
+                            changelog_path = str(rd / "debian" / "changelog")
+                            found = next(
+                                repo.iter_commits(
+                                    f"{vers}^",
+                                    paths=changelog_path,
+                                ),
+                                None,
+                            )
+                            if found is None:
+                                break
+                            vers = found.hexsha
+
                         await run_(
                             "git",
                             "restore",
                             "-s",
-                            repo.last_tag,
+                            vers,
                             str(rd / "debian" / "changelog"),
                         )
+                        #
+                        if not await (rd / "debian" / "changelog").exists():
+                            break
 
                 elif tag == ltag and r.vers.pkg < ptag:
                     r.vers.pkg = ptag
 
-            if await (rd / "debian" / "changelog").exists():
+            if tag == ltag and r.vers.pkg == ptag:
+                pass  # no change
+            elif await (rd / "debian" / "changelog").exists():
                 await run_(
                     "debchange",
                     "--distribution",
                     "unstable",
                     "--newversion",
                     f"{ltag}-{r.vers.pkg}",
-                    f"New release for {forcetag}",
+                    f"New release for {gtag}",
                     cwd=rd,
                     echo=debug,
                 )
@@ -218,10 +253,10 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, forcetag):
                     "--distribution",
                     "unstable",
                     "--newversion",
-                    f"{r.vers.new}-{r.vers.pkg}",
+                    f"{ltag}-{r.vers.pkg}",
                     "--package",
                     r.mdash,
-                    f"Initial release for {forcetag}",
+                    f"Initial release for {gtag}",
                     cwd=rd,
                     echo=debug,
                 )

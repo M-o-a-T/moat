@@ -26,10 +26,14 @@ API
    :members:
    :show-inheritance:
 
-.. automodule:: moat.lib.rpc.stream.cmdmsg
+.. automodule:: moat.lib.rpc.cmd.msg
    :members:
    :show-inheritance:
 
 .. automodule:: moat.lib.rpc.stream.xcmd
+   :members:
+   :show-inheritance:
+
+.. automodule:: moat.lib.rpc.app.auth
    :members:
    :show-inheritance:

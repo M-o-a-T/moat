@@ -105,7 +105,7 @@ def float_presenter(dumper: BaseRepresenter, data: float) -> Node:
     Round appropriately
     """
     if data != 0:
-        data = round(data, int(7 - math.log10(abs(data))))
+        data = round(data, int(14 - math.log10(abs(data))))
     return dumper.represent_scalar("tag:yaml.org,2002:float", str(data))
 
 

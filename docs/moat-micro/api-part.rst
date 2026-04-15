@@ -21,11 +21,6 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.micro.part.pin
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: moat.micro.part.pwm
    :members:
    :undoc-members:

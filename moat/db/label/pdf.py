@@ -4,7 +4,11 @@ PDF subclass
 
 from __future__ import annotations
 
-from fpdf import FPDF, ViewerPreferences
+try:
+    from fpdf2 import FPDF, ViewerPreferences  # type:ignore[unresolved-import]
+except ImportError:
+    from fpdf import FPDF
+    from fpdf.prefs import ViewerPreferences
 
 from typing import TYPE_CHECKING
 
@@ -43,7 +47,9 @@ class Labels(FPDF):  # noqa: D101
         if label is not None:
             self.__la = label
         if not self.__paged:
-            self.add_page()
+            self.add_label_page()
+        if self.__fo is None:
+            raise RuntimeError("No label format selected")
         cx = self.__cx
         cy = self.__cy
 
@@ -63,13 +69,15 @@ class Labels(FPDF):  # noqa: D101
         return cx, cy
 
     def label_position(self, x: int, y: int) -> tuple[float, float]:  # noqa: D102
+        if self.__fo is None:
+            raise RuntimeError("No label format selected")
         stp = self.__fo.stepping
         scl = self.__pr.scale
         pm = self.__pr.margin
         lm = self.__fo.margin
         return pm[0] + (lm[0] + x * stp[0]) * scl[0], pm[1] + (lm[1] + y * stp[1]) * scl[1]
 
-    def add_page(self, printer=None, format=None, label=None):  # noqa: A002, D102
+    def add_label_page(self, printer=None, format=None, label=None) -> None:  # noqa: A002, D102
         if printer is not None:
             self.__pr = printer
         if format is not None:

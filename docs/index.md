@@ -57,6 +57,13 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Schema Validation](moat-link-schema/index.md)
+
+```{include} ../packaging/moat-link-schema/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Notifications](moat-link-notify/index.md)
 
 ```{include} ../packaging/moat-link-notify/README.md
@@ -170,6 +177,13 @@ things is TODO.
 #### [Scheduling](moat-ems-sched/index.md)
 
 ```{include} ../packaging/moat-ems-sched/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Victron support](moat-ems-victron/index.md)
+
+```{include} ../packaging/moat-ems-victron/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -398,13 +412,6 @@ We'd rather not do that.
 #### [Proxy Helpers](moat-lib-proxy/index.md)
 
 ```{include} ../packaging/moat-lib-proxy/README.md
-:start-after: % start synopsis
-:end-before: % end synopsis
-```
-
-#### [TODO: Victron Support](moat-lib-victron/index.md)
-
-```{include} ../packaging/moat-lib-victron/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```

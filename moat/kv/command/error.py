@@ -9,9 +9,10 @@ from moat.util import yprint
 from moat.kv.data import add_dates
 from moat.kv.errors import ErrorRoot
 from moat.lib.path import P, Path
+from moat.lib.run import AliasedGroup
 
 
-@click.group()  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
 @click.pass_obj
 async def cli(obj):
     """Manage error records in MoaT-KV."""

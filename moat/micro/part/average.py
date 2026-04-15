@@ -36,7 +36,7 @@ class Average(BaseCmd):
         )
     )
 
-    flag: Event | None = None
+    flag: Event
 
     def __init__(self, cfg):
         super().__init__(cfg)

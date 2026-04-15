@@ -4,9 +4,10 @@ from __future__ import annotations
 import asyncclick as click
 
 from moat.util import yprint
+from moat.lib.run import AliasedGroup
 
 
-@click.group(short_help="Manage logging.")  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage logging.")  # pylint: disable=undefined-variable
 async def cli():
     """
     This subcommand controls a server's logging.

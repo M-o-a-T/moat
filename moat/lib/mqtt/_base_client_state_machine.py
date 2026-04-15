@@ -8,6 +8,7 @@ from attrs import define, field
 
 from ._exceptions import InsufficientData, MQTTProtocolError
 from ._types import (
+    Buffer,
     MQTTAuthPacket,
     MQTTDisconnectPacket,
     MQTTPacket,
@@ -26,7 +27,7 @@ from ._types import (
     decode_packet,
 )
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -264,14 +265,14 @@ class BaseMQTTClientStateMachine:
             return None
 
         if isinstance(request, packet_class):
-            return request
+            return cast(TPacket, request)
 
         raise MQTTProtocolError(
             f"attempted to send an acknowledgement for {packet_class.__name__} that "
             f"either never arrived or was already acknowledged"
         )
 
-    def get_outbound_data(self) -> bytes:
+    def get_outbound_data(self) -> Buffer:
         """
         Retrieve any bytes to be sent to the peer.
 
@@ -283,7 +284,7 @@ class BaseMQTTClientStateMachine:
         self._out_buffer = bytearray()
         return buffer
 
-    def feed_bytes(self, data: bytes) -> Sequence[MQTTPacket]:
+    def feed_bytes(self, data: Buffer) -> Sequence[MQTTPacket]:
         """
         Input bytes received from the transport stream to the state machine.
 

@@ -16,9 +16,11 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
-    from moat.lib.rpc import MsgHandler, MsgSender
+    from moat.lib.rpc import MsgHandler
 
     from . import BaseMsgHandler
+
+    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class AioStream(HandlerStream):  # noqa: D101
 
     def __init__(
         self,
-        cmd: MsgSender,
+        cmd: BaseMsgHandler,
         stream,
         debug: str | None = None,
         codec: str | Codec | None = None,
@@ -83,12 +85,12 @@ class AioStream(HandlerStream):  # noqa: D101
 @asynccontextmanager
 async def rpc_on_aiostream(
     cmd: BaseMsgHandler,
-    stream: anyio.abc.ByteStream,
+    stream,
     *,
     codec: Codec | str | None = None,
     debug: bool = False,
     logger=None,
-) -> MsgHandler:
+) -> AsyncIterator[MsgHandler]:
     """
     Run a command handler on top of an anyio stream, using the given codec.
 
@@ -105,7 +107,13 @@ async def rpc_on_aiostream(
         async with (
             ungroup,
             stream,
-            AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs,
+            AioStream(
+                cmd,
+                stream,
+                codec=codec,
+                debug=("" if debug else None),
+                logger=logger,
+            ) as hs,
         ):
             y = True
             yield hs

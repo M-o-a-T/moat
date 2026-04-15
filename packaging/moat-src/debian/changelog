@@ -1,26 +1,62 @@
-moat-src (0.11.1-1) unstable; urgency=medium
+moat-src (0.12.1-2) unstable; urgency=medium
+
+  * New release for 26.0.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 22 Mar 2026 16:06:20 +0100
+
+moat-src (0.12.1-1) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:59:53 +0100
+
+moat-src (0.12.0-1) unstable; urgency=medium
+
+  * New release for 26.0.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 02 Mar 2026 11:20:49 +0100
+
+moat-src (0.11.6-2) unstable; urgency=medium
+
+  * New release for 26.0.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 21:11:16 +0100
+
+moat-src (0.11.6-1) unstable; urgency=medium
+
+  * New release for 26.0.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 16:42:19 +0100
+
+moat-src (0.11.5-1) unstable; urgency=medium
+
+  * New release for 0.11.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 16:28:27 +0100
+
+moat-src (0.11.4-1) unstable; urgency=medium
+
+  * New release for 26.0.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 15:42:50 +0100
+
+moat-src (0.11.2-3) unstable; urgency=medium
+
+  * New release for 26.0.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 14:06:37 +0100
+
+moat-src (0.11.2-2) unstable; urgency=medium
+
+  * New release for 26.0.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 13:57:50 +0100
+
+moat-src (0.11.2-1) unstable; urgency=medium
 
   * New release for 26.0.1
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:15:20 -0500
-
-moat-src (0.11.1-1) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:13:42 -0500
-
-moat-src (0.11.1-1) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:10:56 -0500
-
-moat-src (0.11.1-1) unstable; urgency=medium
-
-  * New release for 26.0.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Feb 2026 10:04:02 -0500
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 07:02:40 +0100
 
 moat-src (0.11.0-1) unstable; urgency=medium
 

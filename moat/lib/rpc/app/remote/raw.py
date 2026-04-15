@@ -1,0 +1,31 @@
+"""
+Raw remote stream forwarding app.
+"""
+
+from __future__ import annotations
+
+from moat.lib.micro import AC_use
+from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from types import CoroutineType
+
+    from moat.lib.stream import BaseBuf
+
+    from typing import Any
+
+
+class Raw(BaseCmdBBM):
+    """
+    Link to a stream that's someplace else.
+
+    This app forwards read/write requests to somewhere else.
+    """
+
+    doc = dict(_c=dict(_d="Data forwarding", path="path:dest"))
+
+    def stream(self) -> CoroutineType[Any, Any, BaseBuf]:
+        """Returns the link."""
+        return AC_use(self, self.root.sub_at(self.cfg["path"]))

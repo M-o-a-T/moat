@@ -65,6 +65,8 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
 
     # Start the hardware watchdog timer early
     for v in cfg.values():
+        if not isinstance(v, dict):
+            continue
         if v.get("app", "") != "wdt.Cmd":
             continue
         if v.get("running", True) and v.get("hw", False):

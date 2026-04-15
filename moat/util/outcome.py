@@ -8,10 +8,11 @@ may be unwrapped more than once.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from typing import Any
 
 __all__ = ["Error", "Outcome", "Value", "capture"]
 

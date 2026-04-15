@@ -70,13 +70,13 @@ class Notifier(BaseNotifier):  # noqa:D101
             hdr["title"] = title
         if prio is not None:
             try:
-                prio = prio_map[prio]
-                hdr["prio"] = str(prio)
-                if prio > 3:
+                pnum = prio_map[prio]
+                hdr["prio"] = str(pnum)
+                if pnum > 3:
                     tags.append("warning")
             except KeyError:
                 hdr["prio"] = "high"
-                msg += f" (prio:{prio})"
+                msg = (msg or "") + f" (prio:{prio})"
         hdr["tags"] = ",".join(str(x) for x in tags)
 
         if "token" in self.cfg:

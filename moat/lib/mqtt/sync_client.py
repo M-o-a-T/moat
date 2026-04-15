@@ -6,6 +6,7 @@ from contextlib import ExitStack, contextmanager
 from attrs import define
 
 from ._types import (
+    Buffer,
     MQTTPublishPacket,
     PropertyType,
     PropertyValue,
@@ -105,7 +106,7 @@ class MQTTClient:  # noqa: D101
     def publish(  # noqa: D102
         self,
         topic: str,
-        payload: bytes | str,
+        payload: Buffer | str,
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,

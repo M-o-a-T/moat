@@ -1,8 +1,9 @@
 # Install this file as /etc/moat/moat.yaml
-# to read the old `moat.cfg` file as-is
+# to read the old `moat.cfg` file
 $base:
-  - - !P logging
-    - moat: "/etc/moat/moat.cfg"
+  - moat: "/etc/moat/moat.cfg"
   - logging:
     - "/etc/moat/moat.cfg"
     - !P logging
+moat:
+  logging: !R _

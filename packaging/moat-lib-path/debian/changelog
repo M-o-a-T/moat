@@ -1,3 +1,63 @@
+moat-lib-path (0.3.2-2) unstable; urgency=medium
+
+  * New release for 26.1.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Apr 2026 16:36:43 +0200
+
+moat-lib-path (0.3.2-1) unstable; urgency=medium
+
+  * New release for 26.1.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 12 Apr 2026 12:34:32 +0200
+
+moat-lib-path (0.3.1-2) unstable; urgency=medium
+
+  * New release for 26.1.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 08 Apr 2026 20:10:18 +0200
+
+moat-lib-path (0.3.1-1) unstable; urgency=medium
+
+  * New release for 26.0.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Apr 2026 01:11:25 +0200
+
+moat-lib-path (0.3.0-11) unstable; urgency=medium
+
+  * New release for 26.0.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 20 Feb 2026 11:59:17 +0100
+
+moat-lib-path (0.3.0-10) unstable; urgency=medium
+
+  * New release for 26.0.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 20 Feb 2026 11:49:11 +0100
+
+moat-lib-path (0.3.0-9) unstable; urgency=medium
+
+  * New release for 26.0.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 21:11:38 +0100
+
+moat-lib-path (0.3.0-8) unstable; urgency=medium
+
+  * New release for 26.0.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 16:42:28 +0100
+
+moat-lib-path (0.3.0-7) unstable; urgency=medium
+
+  * New release for 0.3.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 16:38:34 +0100
+
+moat-lib-path (0.3.0-3) unstable; urgency=medium
+
+  * New release for 26.0.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 19 Feb 2026 15:09:08 +0100
+
 moat-lib-path (0.2.0-3) unstable; urgency=medium
 
   * New release for 26.0.0

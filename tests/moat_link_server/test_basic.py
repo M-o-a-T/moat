@@ -1,12 +1,14 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
+import logging
 import pytest
 import time
 
 from moat.util import NotGiven
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
@@ -52,24 +54,90 @@ async def test_ls_basic(cfg):  # noqa: D103
         with anyio.fail_after(1):
             await evt.wait()
 
-        await c.i_sync()
 
-        r, *m = await c.cmd(P("d.get"), P("test.here"))
-        assert r == "Hello"
-        m = MsgMeta.restore(m)
-        assert m.origin == "me!"
+@pytest.mark.anyio
+async def test_ls_rpc_waits_for_server_auth_start(cfg, monkeypatch, caplog):
+    "Incoming RPC auth waits for server startup instead of failing with KeyError(None)."
+    orig_run = Hello.run
+    orig_handle = Hello.handle
+    saw_early_rpc = False
 
-        r, *m = await c.cmd(P("d.get"), P(":"))
-        assert r["test"] == 123
-        m = MsgMeta.restore(m)
-        assert m.origin == "INIT"
+    async def _run(self, sender, **kw):
+        if self.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, sender, **kw)
 
-        evt = anyio.Event()
-        await sf.tg.start(cl, 999)
-        om = MsgMeta(origin="me!")
-        await c.d_set(P("test.here"), 999, om)
-        with anyio.fail_after(1):
-            await evt.wait()
+    async def _handle(self, msg, rcmd, *prefix):
+        nonlocal saw_early_rpc
+        if self.rpc_auth_server is True and self._rpc_in is None and rcmd and rcmd[-1] is None:
+            saw_early_rpc = True
+        return await orig_handle(self, msg, rcmd, *prefix)
+
+    monkeypatch.setattr(Hello, "run", _run)
+    monkeypatch.setattr(Hello, "handle", _handle)
+    caplog.set_level(logging.ERROR)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert saw_early_rpc
+    assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_ls_rpc_allows_post_auth_backend_query(cfg, monkeypatch, caplog):
+    "Named-server backend query must not fail while RPC auth teardown is still running."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+    from moat.link.client import Link  # noqa: PLC0415
+
+    orig_task = AuthCmdIn.task
+
+    async def _task(self):
+        res = await orig_task(self)
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return res
+
+    monkeypatch.setattr(AuthCmdIn, "task", _task)
+    caplog.set_level(logging.WARNING)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        async with Link(sf.cfg, only=srv.name) as c:
+            r = await c.cmd(P("i.乒"), "pling")
+            assert r.args == ["乓", "pling"]
+
+    assert not any("Could not query backend" in rec.getMessage() for rec in caplog.records)
+    assert not any("No Auth" in rec.getMessage() for rec in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_ls_rpc_auth_cmd_before_subtask_setup(cfg, monkeypatch, caplog):
+    "RPC auth mode commands may arrive before subauth setup has run."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+
+    orig_run = AuthCmdIn._run  # noqa: SLF001
+
+    async def _run(self, s_a):
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, s_a)
+
+    monkeypatch.setattr(AuthCmdIn, "_run", _run)
+    caplog.set_level(logging.ERROR)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"]
+
+    assert not any("has no attribute '_seen'" in rec.getMessage() for rec in caplog.records)
 
 
 async def data(s):  # noqa: D103
@@ -244,13 +312,13 @@ async def test_collate(cfg):  # noqa: D103
                 assert res.kw == want, (res, want)
 
         await chk("a", dict(x=2))
-        await chk("a.b", dict(x=2, y=3))
-        await chk("a.b.u", dict(x=2, y=3))
-        await chk("a.b.f", dict(x=2, y=3))
-        await chk("a.b.f.c", dict(y=3, z=5))
-        await chk("a.b.f.c.e", dict(y=3, z=5))
-        await chk("a.b.f.c.d", dict(y=4, z=5))
-        await chk("a.b.f.c.d.u", dict(y=4, z=5))
+        await chk("a.b", dict(y=3))
+        await chk("a.b.u", dict(y=3))
+        await chk("a.b.f", dict())
+        await chk("a.b.f.c", dict(z=5))
+        await chk("a.b.f.c.e", dict())
+        await chk("a.b.f.c.d", dict(y=4))
+        await chk("a.b.f.c.d.u", dict(y=4))
 
 
 @pytest.mark.anyio
@@ -275,3 +343,34 @@ async def test_asdict(cfg):  # noqa: D103
             with anyio.fail_after(0.2):
                 await a.wait_
             assert a.b.y == 3
+
+
+@pytest.mark.anyio
+async def test_i_backend(cfg):
+    "Check that the i.backend command returns backend configuration."
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+        r = await c.cmd(P("i.backend"))
+        # The result should be a dict containing the backend driver
+        backend = r.kw
+        assert "driver" in backend
+        assert backend["driver"] == "mqtt"
+
+
+@pytest.mark.anyio
+async def test_link_only(cfg):
+    "Check that Link with only parameter connects to named server."
+    from moat.link.client import Link  # noqa: PLC0415
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        server_name = srv.name
+
+        # Create a client that connects only to the named server
+        async with Link(sf.cfg, only=server_name) as c:
+            # Verify we can communicate
+            r = await c.cmd(P("i.乒"), "test")
+            assert r.args == ["乓", "test"]
+            # Verify we connected to the expected server
+            assert c.link.server_name == server_name

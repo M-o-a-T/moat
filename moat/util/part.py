@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
 
 def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
@@ -19,7 +20,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             cur = getattr(cur, pp)  # type: ignore[arg-type]  # pp might be int but then getattr raises
         except (TypeError, AttributeError):
             try:
-                cur = cur[pp]
+                cur = cur[pp]  # type: ignore[invalid-argument-type]
             except TypeError:
                 if pp is None:
                     raise KeyError(p, pp) from None
@@ -27,7 +28,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             except KeyError:
                 if not add:
                     raise KeyError(p, pp) from None
-                cur[pp] = nc = []
+                cur[pp] = nc = []  # type: ignore[invalid-assignment]
                 cur = nc
     return cur
 
@@ -71,7 +72,7 @@ def enc_part(
     """
 
     def _complex(v: Any) -> bool:
-        if isinstance(v, dict | list | tuple):
+        if isinstance(v, (dict, list, tuple)):
             return True
         return False
 
@@ -89,7 +90,7 @@ def enc_part(
             # dict has no complex values: return directly
             return c
 
-    elif isinstance(cur, list | tuple):
+    elif isinstance(cur, (list, tuple)):
         c_list: list[Any] = []
         s_list: list[int] = []
         for k, v in enumerate(cur):

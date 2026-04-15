@@ -215,14 +215,17 @@ async def test_set_time(cfg):
         res = await c.d.get(P("test.here"))
         assert res[0] == "HiLo"
         meta = MsgMeta.restore(res[1:])
-        await c.d_set(P("test.here"), "Ugh", t=meta.timestamp)
+        assert (await c.d_set(P("test.here"), "Ugh", t=meta.timestamp)) is True
         res = await c.d.get(P("test.here"))
         assert res[0] == "Ugh"
+        meta = MsgMeta.restore(res[1:])
+        same_meta = MsgMeta(origin="X", timestamp=meta.timestamp)
+        assert (await c.d_set(P("test.here"), "Ugh", t=meta.timestamp, meta=same_meta)) is None
         with pytest.raises(OutOfDateError):
             await c.d_set(P("test.here"), "Nope1", t=meta.timestamp - 10)
         with pytest.raises(KeyError):
             await c.d_set(P("test.here"), "Nope2", t=False)
-        await c.d_set(P("test.here"), "Yep3", t=True)
+        assert (await c.d_set(P("test.here"), "Yep3", t=True)) is True
         res = await c.d.get(P("test.here"))
         assert res[0] == "Yep3"
 
@@ -251,3 +254,44 @@ async def test_set_d_direct(cfg):
             await c.d_get(P("test.foo.bar"))
         with pytest.raises(KeyError):
             await c.d_.test.foo.bar()
+
+
+@pytest.mark.anyio
+async def test_unix_socket_connect(cfg):
+    "Client connects directly via configured Unix socket path"
+    async with anyio.TemporaryDirectory() as tmpdir:
+        sock_path = f"{tmpdir}/test.sock"
+
+        # Start server with both TCP (for MQTT announcement) and Unix socket.
+        # The scaffold rewrites ports.main.port to 0, so we include it.
+        server_patch = {
+            "server": {
+                "ports": {
+                    "main": {"host": "0.0.0.0", "port": 0},  # noqa:S104
+                    "unix": {"port": sock_path},
+                }
+            }
+        }
+        async with (
+            Scaffold(cfg, use_servers=True) as sf,
+            sf.server_(server_patch, init={}),
+            sf.client_({"client": {"path": sock_path}}) as c,
+        ):
+            await c.d_set(P("test.via_socket"), "hello")
+            await c.i_sync()
+            assert (await c.d_get(P("test.via_socket"))) == "hello"
+
+
+@pytest.mark.anyio
+async def test_unix_socket_fallback(cfg):
+    "Client falls back to MQTT announcement when configured socket is absent"
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={}),
+        sf.client_({"client": {"path": "/nonexistent/path/test.sock"}}) as c,
+    ):
+        # Client should have connected via MQTT announcement despite bad socket path
+        assert c.link.server_name is not None
+        await c.d_set(P("test.via_fallback"), "world")
+        await c.i_sync()
+        assert (await c.d_get(P("test.via_fallback"))) == "world"

@@ -45,6 +45,7 @@ Lock = asyncio.Lock
 sleep = asyncio.sleep
 sleep_ms = asyncio.sleep_ms
 TimeoutError = asyncio.TimeoutError  # noqa:A001
+ModuleNotFoundError = ImportError  # noqa:A001
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
@@ -181,6 +182,24 @@ def every_ms(t, p=None, *a, **k):
 def every(t, *a, **k):
     "call a function every @t seconds"
     return every_ms(int(t * 1000), *a, **k)
+
+
+async def retry_ms(n, t, p=None, *a, _exc=Exception, **k):
+    "call a function every @t milliseconds until it succeeds"
+    while True:
+        try:
+            return await p(*a, **k)
+        except _exc:
+            if n >= 0:
+                n -= 1
+            if n == 0:
+                raise
+            await sleep_ms(t)
+
+
+async def retry(n, t, *a, **k):
+    "call a function every @t seconds until it succeeds"
+    return retry_ms(n, int(t * 1000), *a, **k)
 
 
 if DEBUG:

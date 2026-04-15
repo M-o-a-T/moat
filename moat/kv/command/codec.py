@@ -5,9 +5,10 @@ import asyncclick as click
 
 from moat.util import NotGiven, yload, yprint
 from moat.lib.path import P, Path, PathLongener
+from moat.lib.run import AliasedGroup
 
 
-@click.group()  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
 async def cli():
     """Manage codecs and converters. Usage: … codec …"""
     pass

@@ -24,6 +24,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from typing import Any, ClassVar, Self, TypeAlias
 
+    Buffer: TypeAlias = bytes | bytearray | memoryview
+    MutBuffer: TypeAlias = bytearray | memoryview
+else:
+    Buffer = bytes
+    MutBuffer = bytearray
+
 logger = logging.getLogger("moat.lib.mqtt")
 
 PropertyValue: TypeAlias = "str | bytes | int | tuple[str, str] | list[int]"
@@ -69,7 +75,7 @@ def decode_variable_integer(data: memoryview) -> tuple[memoryview, int]:
     raise InsufficientData
 
 
-def encode_binary(value: bytes, buffer: bytearray) -> None:
+def encode_binary(value: Buffer, buffer: bytearray) -> None:
     encode_fixed_integer(len(value), buffer, 2)
     buffer.extend(value)
 
@@ -94,7 +100,7 @@ def decode_utf8(data: memoryview) -> tuple[memoryview, str]:
         raise InsufficientData
 
     try:
-        return data[length:], str(data[:length], "utf-8")
+        return data[length:], str(bytes(data[:length]), "utf-8")
     except UnicodeDecodeError as exc:
         raise MQTTDecodeError(f"error decoding utf-8 string: {exc}") from None
 
@@ -458,7 +464,7 @@ class Will(PropertiesMixin):
     ])
 
     topic: str
-    payload: str | bytes
+    payload: str | Buffer
     retain: bool = False
     qos: QoS = QoS.AT_MOST_ONCE
 
@@ -682,7 +688,7 @@ class MQTTPacket(metaclass=ABCMeta):
         assert isinstance(cls.packet_type, ControlPacketType)
         packet_types[cls.packet_type] = cls
 
-    def encode_fixed_header(self, flags: int, payload: bytes, buffer: bytearray) -> None:
+    def encode_fixed_header(self, flags: int, payload: Buffer, buffer: bytearray) -> None:
         logger.debug("OUT: %r", self)
         assert flags < 16
         encode_fixed_integer(flags | (self.packet_type << 4), buffer, 1)
@@ -755,7 +761,7 @@ class MQTTConnectPacket(MQTTPacket, PropertiesMixin):
         if connect_flags & cls.WILL_FLAG:
             data, will_properties, will_user_properties = Will.decode_properties(data)
             data, will_topic = decode_utf8(data)
-            payload: bytes | str
+            payload: Buffer | str
             if will_properties.pop(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0):
                 data, payload = decode_utf8(data)
             else:
@@ -932,7 +938,7 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
     DUP_FLAG = 8
 
     topic: str
-    payload: bytes | str
+    payload: Buffer | str
     packet_id: int | None = field(default=None)
     retain: bool = field(default=False)
     qos: QoS = field(default=QoS.AT_MOST_ONCE)
@@ -963,7 +969,7 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
         data, properties, user_properties = cls.decode_properties(data)
 
         # Decode the payload
-        payload: bytes | str
+        payload: Buffer | str
         if properties.pop(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0):
             try:
                 data, payload = memoryview(b""), data.tobytes().decode("utf-8")

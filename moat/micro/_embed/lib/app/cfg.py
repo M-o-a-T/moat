@@ -1,1 +1,1 @@
-../../../app/cfg.py
+../../../../lib/rpc/app/cfg.py

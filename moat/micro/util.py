@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 
+from ._util import TEST_MAGIC as TEST_MAGIC
 from ._util import Repeater as Repeater
 from ._util import Sensor as Sensor
 from ._util import del_p as del_p
@@ -72,6 +73,8 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         dn = str(dst)[:-3].replace("/", ".").lstrip(".")
         dn = dn.removeprefix("lib.")
         dn = dn.removesuffix(".__init__")
+        if hash_fn is None:
+            return False
         try:
             res = await hash_fn(dn)
             if res is None:

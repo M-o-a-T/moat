@@ -11,7 +11,7 @@ from pathlib import Path
 from moat.util import yload, yprint
 from moat.lib.codec import get_codec
 from moat.lib.path import P
-from moat.micro._test import mpy_stack
+from moat.lib.rpc._test import rpc_stack
 from moat.src.test import run
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -25,7 +25,7 @@ moat:
   micro:
     setup:
       args:
-        cross: "ext/micropython/mpy-cross/build/mpy-cross"
+        cross: "build/mpy-cross"
         config: !P cfg.r
         update: true
         state: std
@@ -36,7 +36,6 @@ moat:
         r: &rm
           app: _test.MpyRaw
           cwd: /tmp/mpy-test
-          mplex: false
           log:
             txt: "M"
           cfg: !P :@.moat.micro.cfg.r
@@ -51,7 +50,6 @@ moat:
         r:
           app: _test.MpyRaw
           cwd: /tmp/mpy-test
-          mplex: false
           log:
             txt: "M"
           cfg: !P :@.moat.micro.cfg.r
@@ -87,7 +85,6 @@ moat:
             link:
               console: true
               frame: 0xf7
-            mplex: false
 #           log:
 #             txt: "U"
 #           log_raw:
@@ -154,7 +151,7 @@ async def test_stack(tmp_path):
             raise RuntimeError("Startup failed, no socket")
 
         async with (
-            mpy_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
+            rpc_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
             d.sub_at(P("r.s")) as s,
             d.cfg_at(P("r.s.c")) as cfg,
         ):

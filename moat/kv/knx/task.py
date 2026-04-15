@@ -27,6 +27,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class XKNX(xknx.XKNX):
+    "xknx main object, but with a taskgroup."
+
+    task_group = None
+
+
 async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # noqa:D103
     client  # noqa:B018
     cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
@@ -41,7 +47,10 @@ async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=
             gateway_port=cfg.get("port", 3671),
             **add,
         )
-        async with xknx.XKNX().run(connection_config=ccfg) as srv:
+        async with (
+            XKNX(connection_config=ccfg) as srv,
+            anyio.create_task_group() as srv.task_group,
+        ):
             await server.set_server(srv, initial=initial)
             if evt is not None:
                 evt.set()

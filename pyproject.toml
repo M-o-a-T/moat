@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "anyio ~= 4.9",
     "trio",
+    "trio_asyncio",
     "alembic",
     "anyio_serial",
     "asyncactor ~= 0.28.0",
@@ -46,6 +47,7 @@ dependencies = [
     "tomlkit",
     "transitions",
     "wsproto",
+    "xknx ~= 3.6",
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

@@ -54,7 +54,7 @@ else:
 try:
     import posix
 except ImportError:
-    posix = None  # type: ignore[assignment]
+    posix = None  # ty:ignore[invalid-assignment]
 
 __all__ = ["UnixConsole"]
 
@@ -91,7 +91,7 @@ except AttributeError:
                 r, w, e = select.select([self.fd], [], [], timeout / 1000)  # noqa: RUF059
             return r
 
-    poll = MinimalPoll  # type: ignore[assignment]
+    poll = MinimalPoll  # ty:ignore[invalid-assignment]
 
 
 class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
@@ -325,7 +325,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             newline,
         ) in zip(range(offset, offset + height), oldscr, newscr, strict=False):
             if oldline != newline:
-                self.__write_changed_line(y, oldline, newline, px)
+                await self.__write_changed_line(y, oldline, newline, px)
 
         y = len(newscr)
         while y < len(oldscr):
@@ -391,7 +391,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         if self.__read_task_end is not None:
             # cannot be None if _r_t_e is not None
-            self.__read_task.cancel()  # type:ignore[possibly-missing-attribute]
+            self.__read_task.cancel()  # ty:ignore[unresolved-attribute]  # can't be None
             await self.__read_task_end.wait()
             self.__read_task = None
             self.__read_task_end = None
@@ -530,8 +530,8 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     def input_hook(self):  # noqa: D102
         # Python 3.14 only
         try:
-            if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001  # type: ignore[attr-defined]
-                return posix._inputhook  # noqa: SLF001  # type: ignore[attr-defined]
+            if posix is not None and posix._is_inputhook_installed():  # noqa: SLF001  # ty:ignore[unresolved-attribute]
+                return posix._inputhook  # noqa: SLF001  # ty:ignore[unresolved-attribute]
         except AttributeError:
             pass
 
@@ -579,7 +579,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.__move = self.__move_short
 
-    def __write_changed_line(self, y, oldline, newline, px_coord):
+    async def __write_changed_line(self, y, oldline, newline, px_coord):
         # this is frustrating; there's no reason to test (say)
         # self.dch1 inside the loop -- but alternative ways of
         # structuring this function are equally painful (I'm trying to
@@ -660,7 +660,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             # ANSI escape characters are present, so we can't assume
             # anything about the position of the cursor.  Moving the cursor
             # to the left margin should work to get to a known position.
-            self.move_cursor(0, y)
+            await self.move_cursor(0, y)
 
     def __write(self, text):
         self.__buffer.append((text, 0))
@@ -735,12 +735,11 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             self.posxy = 0, self.posxy[1]
             self.__write("\r")
             ns = len(self.screen) * ["\000" * self._width]
-            self.screen = ns
         else:
             self.posxy = 0, self.__offset
             self.__move(0, self.__offset)
             ns = self._height * ["\000" * self._width]
-            self.screen = ns
+        self.screen = ns  # ty:ignore[invalid-assignment]  # yes it is
 
     async def __tputs(self, fmt, prog=delayprog):
         """A Python implementation of the curses tputs function; the

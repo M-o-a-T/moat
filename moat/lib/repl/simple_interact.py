@@ -157,7 +157,7 @@ async def run_multiline_interactive_console(  # noqa: D103
             more = console.push(
                 _strip_final_indent(statement),
                 filename=input_name,  # ty: ignore[unknown-argument]  # Python 3.13+
-                _symbol="single",  # type: ignore[misc]
+                _symbol="single",  # ty:ignore[unknown-argument]
             )
             assert not more
             try:
@@ -174,7 +174,7 @@ async def run_multiline_interactive_console(  # noqa: D103
             r.pos = len(r.get_unicode())
             r.dirty = True
             await r.refresh()
-            r.in_bracketed_paste = False  # type: ignore[attr-defined]
+            r.in_bracketed_paste = False  # ty:ignore[unresolved-attribute]
             console.write("\nKeyboardInterrupt\n")
             console.resetbuffer()
         except MemoryError:

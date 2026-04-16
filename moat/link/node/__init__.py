@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Key
+    from moat.lib.path import PathElem
 
     from collections.abc import Awaitable, Callable, Iterator
     from typing import Any, Self
@@ -45,7 +46,7 @@ class Node:
     _data: Any = field(init=False, default=NotGiven)
     _meta: MsgMeta | None = field(init=False, default=None)
 
-    _sub: dict[Key, Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
+    _sub: dict[Key|PathElem, Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
 
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
@@ -278,7 +279,7 @@ class Node:
         self._sub[item] = s = type(self)()
         return s
 
-    def __iter__(self) -> Iterator[tuple[Key, Node]]:
+    def __iter__(self) -> Iterator[tuple[Key|PathElem, Node]]:
         """
         Return a list of keys under this node.
         """

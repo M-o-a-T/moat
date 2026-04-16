@@ -159,9 +159,9 @@ class BasicCmd:
         except anyio.get_cancelled_exc_class():
             raise
         except Exception as exc:
-            self._result = outcome.Error(exc)
+            self._result = outcome.Error(exc) #ty:ignore[too-many-positional-arguments] # attrs not supported yet
         else:
-            self._result = outcome.Value(res)
+            self._result = outcome.Value(res) #ty:ignore[too-many-positional-arguments] # attrs not supported yet
         finally:
             self._evt.set()
 
@@ -699,7 +699,7 @@ class LinkSender(MsgSender):
         min_ts: float = 0,
         min_depth: int = 0,
         max_depth: int = 255,
-    ) -> AsyncIterator[tuple[str, Any, MsgMeta]]:
+        ) -> AsyncIterator[Walker]:
         """
         Fetch a (limited) subtree.
         """

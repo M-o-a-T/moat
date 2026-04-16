@@ -45,10 +45,10 @@ class DiffieHellman:
 
     """
 
-    shared_secret: int = None  # type:ignore[invalid-assignment]
-    shared_key: str = None  # type:ignore[invalid-assignment]
-    public_key: int = None  # type:ignore[invalid-assignment]
-    __private_key: int = None  # type:ignore[invalid-assignment]
+    shared_secret: int = None  # ty:ignore[invalid-assignment]
+    shared_key: str = None  # ty:ignore[invalid-assignment]
+    public_key: int = None  # ty:ignore[invalid-assignment]
+    __private_key: int = None  # ty:ignore[invalid-assignment]
 
     def __init__(self, group=18, key_length=640):
         self.key_length = max(200, key_length)

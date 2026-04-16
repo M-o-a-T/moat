@@ -276,7 +276,7 @@ class Scaffold(CtxObj):
             cli = Link(cfg, name)
 
         async with cli as li:
-            yield li
+            yield li  # ty:ignore[invalid-yield] ## XXX TODO
 
     @asynccontextmanager
     async def do_watch(

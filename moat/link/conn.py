@@ -26,7 +26,7 @@ async def TCPConn(
     debug: bool = False,
     logger=None,
     **kw,
-) -> AsyncGenerator[..., MsgSender]:
+) -> AsyncGenerator[MsgHandler, MsgSender]:
     """
     Connection to a MoaT server.
 
@@ -54,7 +54,7 @@ async def UnixConn(
     debug: bool = False,
     logger=None,
     **kw,
-) -> AsyncGenerator[..., MsgSender]:
+) -> AsyncGenerator[MsgHandler, MsgSender]:
     """
     Connection to a MoaT server.
 

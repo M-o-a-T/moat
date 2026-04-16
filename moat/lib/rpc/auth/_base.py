@@ -324,7 +324,7 @@ class AuthCmdIn(BaseCmd):
                     if isinstance(msg_in, Event):
                         await msg_in.wait()
                         msg_in = self.msg_in
-                    modes = set(msg_in[3])  # type: ignore[index]
+                    modes = set(msg_in[3])  # ty:ignore[not-subscriptable]
 
                     for idx, cfg in enumerate(self.cfg.modes):
                         name = cfg.get("name", cfg.mode)

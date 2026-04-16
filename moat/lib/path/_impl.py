@@ -1110,7 +1110,7 @@ class PathLongener:
     Caution: this longener ignores path marks.
     """
 
-    cls = Path
+    cls: type[Path] = Path
 
     def __init__(self, prefix: Path | PathTuple = ()):
         if isinstance(prefix, Path):

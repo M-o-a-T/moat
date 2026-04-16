@@ -52,7 +52,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
     _inode_path_map: dict[pyfuse3.InodeT, PurePath] = {pyfuse3.ROOT_INODE: PurePosixPath("/")}
     _path_inode_map: dict[PurePath, pyfuse3.InodeT] = {PurePosixPath("/"): pyfuse3.ROOT_INODE}
-    _lookup_cnt: dict[pyfuse3.InodeT, Callable]
+    _lookup_cnt: dict[pyfuse3.InodeT, int]
     _fd_inode_map: dict[int, pyfuse3.InodeT]
     _inode_fd_map: dict[pyfuse3.InodeT, int]
     _fd_open_count: dict[int, int]
@@ -416,7 +416,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: symlink: p=%r n=%r t=%r ctx=%r", parent_inode, name, target, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def rename(  # type: ignore[override]
+    async def rename(  # ty:ignore[override]
         self,
         parent_inode_old: pyfuse3.InodeT,
         name_old: str,

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, cast  # isort:skip
 if TYPE_CHECKING:
     from moat.lib.rpc import SubMsgSender
     from moat.lib.stream.base import Buffer, MutBuffer
+    from types import TracebackType
 
 
 class ProcessDeadError(RuntimeError):
@@ -174,8 +175,8 @@ class BufAnyio(ByteStream):
     async def __aenter__(self):
         self.s = await self.stream.__aenter__()
 
-    async def __aexit__(self, *tb):
-        return await self.stream.__aexit__(*tb)
+    async def __aexit__(self, exc_type: type[BaseException] | None,exc_val: BaseException | None,exc_tb: TracebackType | None) -> None:
+        await self.stream.__aexit__(exc_type,exc_val,exc_tb)
 
     async def receive(self, max_bytes=256):
         "forward to ``.rd``"

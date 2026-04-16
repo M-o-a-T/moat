@@ -154,7 +154,7 @@ class Hello(CmdCommon):
         """
         Extra auth-request metadata shared between RPC auth and legacy Hello.
         """
-        res = {"version": proto_version}
+        res:dict[str,Any] = {"version": proto_version}
         if self.them:
             res["rname"] = self.them
         return {"moat.link": res}

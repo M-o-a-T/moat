@@ -94,7 +94,7 @@ if TYPE_CHECKING:
             self,
             p: Callable[P, Awaitable[Any]],
             *a: P.args,
-            _name: str | None = None,
+            _name: str | None = None,  # ty:ignore[invalid-paramspec]
             **k: P.kwargs,
         ) -> _anyio.CancelScope: ...
 
@@ -102,7 +102,7 @@ if TYPE_CHECKING:
             self,
             p: Callable[P, Awaitable[Any]],
             *a: P.args,
-            _name: str | None = None,
+            _name: str | None = None,  # ty:ignore[invalid-paramspec]
             **k: P.kwargs,
         ) -> None: ...
 
@@ -397,7 +397,7 @@ def TaskGroup() -> _TaskGroupProto:  # Returns augmented TaskGroup instance
     if tgt is not _tgt:
         _tgt = tgt
 
-        class TaskGroup_(_tgt):  # type: ignore[misc]
+        class TaskGroup_(_tgt):  # ty:ignore[unsupported-base]
             """An augmented taskgroup"""
 
             async def spawn(
@@ -526,7 +526,7 @@ def ACM(obj: Any) -> Callable[[Any], Awaitable[Any]]:
         obj._AC_ = []
 
     cm = AsyncExitStack()
-    cm._moat_ac_task = _ac_task_id()  # noqa:SLF001  # type:ignore[unresolved-attribute]
+    cm._moat_ac_task = _ac_task_id()  # noqa:SLF001  # ty:ignore[unresolved-attribute]
     obj._AC_.append(cm)
 
     # AsyncExitStack.__aenter__ is a no-op. We don't depend on that, but at
@@ -606,5 +606,5 @@ def is_async(obj: Any) -> bool:
 async def to_thread(p: Callable[..., R], *a, **k) -> R:
     """run this function in a thread"""
     if k:
-        return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)  # type: ignore[attr-defined]
-    return await _anyio.to_thread.run_sync(p, *a, abandon_on_cancel=True)  # type: ignore[attr-defined]
+        return await _anyio.to_thread.run_sync(partial(p, *a, **k), abandon_on_cancel=True)  # ty:ignore[unresolved-attribute]
+    return await _anyio.to_thread.run_sync(p, *a, abandon_on_cancel=True)  # ty:ignore[unresolved-attribute]

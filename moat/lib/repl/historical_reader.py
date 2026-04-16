@@ -79,13 +79,13 @@ class previous_history(commands.Command):
 class history_search_backward(commands.Command):
     async def do(self) -> None:
         r = self.reader
-        r.search_next(forwards=False)
+        await r.search_next(forwards=False)
 
 
 class history_search_forward(commands.Command):
     async def do(self) -> None:
         r = self.reader
-        r.search_next(forwards=True)
+        await r.search_next(forwards=True)
 
 
 class restore_history(commands.Command):
@@ -210,7 +210,7 @@ class isearch_end(commands.Command):
     async def do(self) -> None:
         r = self.reader
         r.isearch_direction = ISEARCH_DIRECTION_NONE
-        r.console.forgetinput()
+        await r.console.forgetinput()
         r.pop_input_trans()
         r.dirty = True
 
@@ -295,7 +295,7 @@ class HistoricalReader(Reader):
 
     @contextmanager
     def suspend(self) -> SimpleContextManager:  # noqa: D102
-        with super().suspend(), self.suspend_history():  # type: ignore[misc]
+        with super().suspend(), self.suspend_history():  # ty:ignore[invalid-context-manager]
             yield
 
     @contextmanager
@@ -422,4 +422,4 @@ class HistoricalReader(Reader):
             self.history.append(ret)
 
 
-should_auto_add_history = True
+should_auto_add_history:bool = True

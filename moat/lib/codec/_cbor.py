@@ -17,7 +17,7 @@ from ._base import NoCodecError
 from typing import TYPE_CHECKING, cast  # isort:skip
 
 try:
-    from micropython import const  # type: ignore[import-not-found]  # MicroPython only
+    from micropython import const  # ty:ignore[unresolved-import]  # MicroPython only
 except ImportError:
 
     def const(x: int) -> int:

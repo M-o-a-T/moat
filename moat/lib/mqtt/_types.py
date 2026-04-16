@@ -38,7 +38,6 @@ VARIABLE_HEADER_START = b"\x00\x04MQTT\x05"
 
 packet_types: dict[int, type[MQTTPacket]] = {}
 
-
 def encode_fixed_integer(value: int, buffer: bytearray, size: int) -> None:
     buffer.extend(value.to_bytes(size, "big"))
 
@@ -50,7 +49,7 @@ def decode_fixed_integer(data: memoryview, size: int) -> tuple[memoryview, int]:
     return data[size:], int.from_bytes(data[:size], "big")
 
 
-def encode_variable_integer(value: int, buffer: bytearray) -> None:
+def encode_variable_integer(value: int | PropertyType, buffer: bytearray) -> None:
     assert value >= 0, "Cannot pack negative values"
     while True:
         new_byte = value % 128
@@ -252,94 +251,94 @@ class PublishAckState(Enum):
 
 
 class PropertyType(IntEnum):
-    PAYLOAD_FORMAT_INDICATOR = (
+    PAYLOAD_FORMAT_INDICATOR = (  # ty:ignore[invalid-assignment]
         0x01,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    MESSAGE_EXPIRY_INTERVAL = (
+    MESSAGE_EXPIRY_INTERVAL = (  # ty:ignore[invalid-assignment]
         0x02,
         partial(encode_fixed_integer, size=4),
         partial(decode_fixed_integer, size=4),
     )
-    CONTENT_TYPE = 0x03, encode_utf8, decode_utf8
-    RESPONSE_TOPIC = 0x08, encode_utf8, decode_utf8
-    CORRELATION_DATA = 0x09, encode_binary, decode_binary
+    CONTENT_TYPE = 0x03, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    RESPONSE_TOPIC = 0x08, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    CORRELATION_DATA = 0x09, encode_binary, decode_binary  # ty:ignore[invalid-assignment]
     # TODO: this can appear multiple times
-    SUBSCRIPTION_IDENTIFIER = 0x0B, encode_variable_integer, decode_variable_integer
-    SESSION_EXPIRY_INTERVAL = (
+    SUBSCRIPTION_IDENTIFIER = 0x0B, encode_variable_integer, decode_variable_integer  # ty:ignore[invalid-assignment]
+    SESSION_EXPIRY_INTERVAL = (  # ty:ignore[invalid-assignment]
         0x11,
         partial(encode_fixed_integer, size=4),
         partial(decode_fixed_integer, size=4),
     )
-    ASSIGNED_CLIENT_IDENTIFIER = 0x12, encode_utf8, decode_utf8
-    SERVER_KEEP_ALIVE = (
+    ASSIGNED_CLIENT_IDENTIFIER = 0x12, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    SERVER_KEEP_ALIVE = (  # ty:ignore[invalid-assignment]
         0x13,
         partial(encode_fixed_integer, size=2),
         partial(decode_fixed_integer, size=2),
     )
-    AUTHENTICATION_METHOD = 0x15, encode_utf8, decode_utf8
-    AUTHENTICATION_DATA = 0x16, encode_binary, decode_binary
-    REQUEST_PROBLEM_INFORMATION = (
+    AUTHENTICATION_METHOD = 0x15, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    AUTHENTICATION_DATA = 0x16, encode_binary, decode_binary  # ty:ignore[invalid-assignment]
+    REQUEST_PROBLEM_INFORMATION = (  # ty:ignore[invalid-assignment]
         0x17,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    WILL_DELAY_INTERVAL = (
+    WILL_DELAY_INTERVAL = (  # ty:ignore[invalid-assignment]
         0x18,
         partial(encode_fixed_integer, size=4),
         partial(decode_fixed_integer, size=4),
     )
-    REQUEST_RESPONSE_INFORMATION = (
+    REQUEST_RESPONSE_INFORMATION = (  # ty:ignore[invalid-assignment]
         0x19,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    RESPONSE_INFORMATION = 0x1A, encode_utf8, decode_utf8
-    SERVER_REFERENCE = 0x1C, encode_utf8, decode_utf8
-    REASON_STRING = 0x1F, encode_utf8, decode_utf8
-    RECEIVE_MAXIMUM = (
+    RESPONSE_INFORMATION = 0x1A, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    SERVER_REFERENCE = 0x1C, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    REASON_STRING = 0x1F, encode_utf8, decode_utf8  # ty:ignore[invalid-assignment]
+    RECEIVE_MAXIMUM = (  # ty:ignore[invalid-assignment]
         0x21,
         partial(encode_fixed_integer, size=2),
         partial(decode_fixed_integer, size=2),
     )
-    TOPIC_ALIAS_MAXIMUM = (
+    TOPIC_ALIAS_MAXIMUM = (  # ty:ignore[invalid-assignment]
         0x22,
         partial(encode_fixed_integer, size=2),
         partial(decode_fixed_integer, size=2),
     )
-    TOPIC_ALIAS = (
+    TOPIC_ALIAS = (  # ty:ignore[invalid-assignment]
         0x23,
         partial(encode_fixed_integer, size=2),
         partial(decode_fixed_integer, size=2),
     )
-    MAXIMUM_QOS = (
+    MAXIMUM_QOS = (  # ty:ignore[invalid-assignment]
         0x24,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    RETAIN_AVAILABLE = (
+    RETAIN_AVAILABLE = (  # ty:ignore[invalid-assignment]
         0x25,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    USER_PROPERTY = 0x26, encode_utf8_pair, decode_utf8_pair
-    MAXIMUM_PACKET_SIZE = (
+    USER_PROPERTY = 0x26, encode_utf8_pair, decode_utf8_pair  # ty:ignore[invalid-assignment]
+    MAXIMUM_PACKET_SIZE = (  # ty:ignore[invalid-assignment]
         0x27,
         partial(encode_fixed_integer, size=4),
         partial(decode_fixed_integer, size=4),
     )
-    WILDCARD_SUBSCRIPTION_AVAILABLE = (
+    WILDCARD_SUBSCRIPTION_AVAILABLE = (  # ty:ignore[invalid-assignment]
         0x28,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    SUBSCRIPTION_IDENTIFIER_AVAILABLE = (
+    SUBSCRIPTION_IDENTIFIER_AVAILABLE = (  # ty:ignore[invalid-assignment]
         0x29,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),
     )
-    SHARED_SUBSCRIPTION_AVAILABLE = (
+    SHARED_SUBSCRIPTION_AVAILABLE = (  # ty:ignore[invalid-assignment]
         0x2A,
         partial(encode_fixed_integer, size=1),
         partial(decode_fixed_integer, size=1),

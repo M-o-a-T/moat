@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 __all__ = ["as_service"]
 
 try:
-    from systemd.daemon import notify  # type: ignore[import-not-found]
+    from systemd.daemon import notify
 except ImportError:
     notify = None
 

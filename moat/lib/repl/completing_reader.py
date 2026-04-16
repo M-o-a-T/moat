@@ -173,7 +173,7 @@ def build_menu(
 class complete(commands.Command):
     async def do(self) -> None:
         r: CompletingReader
-        r = self.reader  # type: ignore[assignment]
+        r = self.reader  # ty:ignore[invalid-assignment]
         last_is_completer = r.last_command_is(self.__class__)
         immutable_completions = r.assume_immutable_completions
         completions_unchangable = last_is_completer and immutable_completions
@@ -213,7 +213,7 @@ class complete(commands.Command):
 class self_insert(commands.self_insert):
     async def do(self) -> None:
         r: CompletingReader
-        r = self.reader  # type: ignore[assignment]
+        r = self.reader  # ty:ignore[invalid-assignment]
 
         await commands.self_insert.do(self)
 

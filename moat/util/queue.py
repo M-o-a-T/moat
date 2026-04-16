@@ -56,28 +56,28 @@ class Queue(Generic[T]):
     async def put(self, x: T) -> None:
         """Send a value, blocking"""
         try:
-            await self._s.send(Value(x))
+            await self._s.send(Value(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     def put_nowait(self, x: T) -> None:
         """Send a value, nonblocking"""
         try:
-            self._s.send_nowait(Value(x))
+            self._s.send_nowait(Value(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     async def put_error(self, x: Exception) -> None:
         """Send an error value, blocking"""
         try:
-            await self._s.send(Error(x))
+            await self._s.send(Error(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     def put_nowait_error(self, x: Exception) -> None:
         """Send an error, nonblocking"""
         try:
-            self._s.send_nowait(Error(x))
+            self._s.send_nowait(Error(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
@@ -221,9 +221,9 @@ class DelayedRead(Queue[T]):
         self._n_ack: int = 0
         self._len: int = length // 3
         if get_seq is not None:
-            self.get_seq = get_seq  # type: ignore[method-assign]  # method override by assignment
+            self.get_seq = get_seq  # ty:ignore[invalid-assignment]  # method override by assignment
         if send_ack is not None:
-            self.send_ack = send_ack  # type: ignore[method-assign]  # method override by assignment
+            self.send_ack = send_ack  # ty:ignore[invalid-assignment]  # method override by assignment
 
     @staticmethod
     def get_seq(msg: T) -> int:  # abstract method
@@ -238,7 +238,7 @@ class DelayedRead(Queue[T]):
         self._n_last = max(self._n_last, self.get_seq(res))
         if self._n_last - self._n_ack > self._len:
             self._n_ack = self._n_last
-            await self.send_ack(self._n_last)  # type: ignore[misc]  # method can be overridden
+            await self.send_ack(self._n_last)  # ty:ignore[invalid-argument-type,missing-argument]  # method can be overridden
 
     async def __anext__(self) -> T:
         res = await super().__anext__()

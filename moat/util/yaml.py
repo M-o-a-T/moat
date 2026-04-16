@@ -12,8 +12,8 @@ try:
     import ruyaml as yaml
     from ruyaml import constructor, emitter, representer
 except ImportError:
-    import ruamel.yaml as yaml  # fallback if ruyaml unavailable
-    from ruamel.yaml import constructor, emitter, representer  # fallback if ruyaml unavailable
+    import ruamel.yaml as yaml  # ty:ignore[unresolved-import]
+    from ruamel.yaml import constructor, emitter, representer  # ty:ignore[unresolved-import]
 
 from moat.lib.path import Path
 
@@ -31,15 +31,15 @@ if TYPE_CHECKING:
         from ruyaml.representer import BaseRepresenter
         from ruyaml.representer import SafeRepresenter as SafeRepresenterType
     except ImportError:
-        from ruamel.yaml.constructor import BaseConstructor  # fallback if ruyaml unavailable
-        from ruamel.yaml.constructor import (
-            SafeConstructor as SafeConstructorType,  # fallback if ruyaml unavailable
+        from ruamel.yaml.constructor import BaseConstructor  # ty:ignore[unresolved-import]
+        from ruamel.yaml.constructor import (  # ty:ignore[unresolved-import]
+            SafeConstructor as SafeConstructorType,
         )
-        from ruamel.yaml.emitter import Emitter as EmitterType  # fallback if ruyaml unavailable
-        from ruamel.yaml.nodes import Node  # fallback if ruyaml unavailable
-        from ruamel.yaml.representer import BaseRepresenter  # fallback if ruyaml unavailable
-        from ruamel.yaml.representer import (
-            SafeRepresenter as SafeRepresenterType,  # fallback if ruyaml unavailable
+        from ruamel.yaml.emitter import Emitter as EmitterType  # ty:ignore[unresolved-import]
+        from ruamel.yaml.nodes import Node  # ty:ignore[unresolved-import]
+        from ruamel.yaml.representer import BaseRepresenter  # ty:ignore[unresolved-import]
+        from ruamel.yaml.representer import (  # ty:ignore[unresolved-import]
+            SafeRepresenter as SafeRepresenterType,
         )
 
     from collections.abc import Callable
@@ -48,8 +48,8 @@ if TYPE_CHECKING:
 try:
     from moat.lib.proxy import DProxy, Proxy
 except ImportError:
-    Proxy = None  # type: ignore[assignment, misc]  # optional import
-    DProxy = None  # type: ignore[assignment, misc]  # optional import
+    Proxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
+    DProxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
 
 __all__ = [
     "add_repr",
@@ -73,13 +73,13 @@ def load_ansible_repr() -> None:
     "Call me if you're using `moat.util` in conjunction with Ansible."
 
     # optional dependencies, imported at runtime
-    from ansible.parsing.yaml.objects import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.parsing.yaml.objects import (  # noqa: PLC0415
         AnsibleUnicode,
     )
-    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415
         AnsibleUnsafeText,
     )
-    from ansible.vars.hostvars import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.vars.hostvars import (  # noqa: PLC0415
         HostVars,
         HostVarsVars,
     )
@@ -233,7 +233,7 @@ def expect_node(self: Any, *a: Any, **kw: Any) -> None:
     self.root_context = False
 
 
-Emitter.expect_node = expect_node  # type: ignore[method-assign]  # monkey-patch
+Emitter.expect_node = expect_node  # ty:ignore[invalid-assignment]  # monkey-patch
 
 
 def yload(
@@ -248,7 +248,7 @@ def yload(
     y = yaml.YAML(typ=typ)
     if attr:
 
-        class AttrConstructor(SafeConstructor):  # type: ignore[misc, valid-type]  # runtime class creation
+        class AttrConstructor(SafeConstructor):  # ty:ignore[unsupported-base, valid-type]  # runtime class creation
             def __init__(self, *a: Any, **k: Any) -> None:
                 super().__init__(*a, **k)
                 self.yaml_base_dict_type = attrdict if attr is True else attr
@@ -296,7 +296,7 @@ def yformat(data: Any, compact: bool = False) -> str:
     from io import StringIO  # noqa: PLC0415
 
     s = StringIO()
-    yprint(data, compact=compact, stream=s)  # type: ignore[arg-type]  # StringIO is compatible with TextIOWrapper
+    yprint(data, compact=compact, stream=s)  # ty:ignore[arg-type]  # StringIO is compatible with TextIOWrapper
     return s.getvalue()
 
 

@@ -142,7 +142,7 @@ class digit_arg(Command):
 class clear_screen(Command):
     async def do(self) -> None:
         r = self.reader
-        r.console.clear()
+        await r.console.clear()
         r.dirty = True
 
 
@@ -154,7 +154,7 @@ class refresh(Command):
 class repaint(Command):
     async def do(self) -> None:
         self.reader.dirty = True
-        self.reader.console.repaint()
+        await self.reader.console.repaint()
 
 
 class kill_line(KillCommand):

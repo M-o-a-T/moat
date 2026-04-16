@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.util import attrdict
-    from moat.lib.stream.base import Buffer
+    from moat.lib.stream.base import Buffer, MutBuffer
 
 
 class SerialPackerBlkBuf(StackedBlk):
@@ -39,7 +39,7 @@ class SerialPackerBlkBuf(StackedBlk):
         if console:
             _CReader.__init__(cast(_CReader, self), console)
 
-    async def crd(self, buf: bytearray) -> int:
+    async def crd(self, buf: MutBuffer) -> int:
         "console read"
         if not self.cons:
             raise EOFError

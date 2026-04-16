@@ -285,7 +285,7 @@ def yprint(
         y.dump(data, stream=stream)
 
 
-def yformat(data: Any, compact: bool | None = None) -> str:
+def yformat(data: Any, compact: bool = False) -> str:
     """
     Return ``data`` as a multi-line YAML string.
 

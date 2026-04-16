@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import anyio
+import time
 from contextlib import nullcontext
 
 import asyncclick as click
@@ -14,10 +15,11 @@ from moat.link.client import Link
 from moat.link.meta import MsgMeta
 
 
-@click.group(cls=AliasedGroup, short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage error data", invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path):
+async def cli(ctx, path, meta):
     """
     This subcommand reads and manipulates errors stored in the MoaT-Link service.
     """
@@ -25,8 +27,9 @@ async def cli(ctx, path):
     cfg = obj.cfg["link"]
     obj.conn = await ctx.with_async_resource(Link(cfg))
     path = P("error") + path
+    obj.meta = meta
     if ctx.invoked_subcommand is None:
-        await data_get(obj.conn, path, meta=True, out=obj.stdout, recursive=False)
+        await data_get(obj.conn, path, meta=obj.meta, out=obj.stdout, recursive=False)
     else:
         obj.path = path
 
@@ -53,7 +56,7 @@ async def set_(obj, ok, **kw):
     Update some MoaT-Link error entry.
     """
     if ok is not None:
-        kw["eval_"]["ok"] = repr(ok)
+        kw["eval_"] = (*kw["eval_"], ("ok", repr(ok)))
     res = await node_attr(obj, obj.path, **kw)
 
     if obj.meta:
@@ -92,6 +95,49 @@ async def delete(obj, before, recursive):
     else:
         res = res[0]
     yprint(res, stream=obj.stdout)
+
+
+@cli.command()
+@click.pass_obj
+async def list_(obj):
+    """
+    List all errors with their paths and age.
+
+    Shows the path relative to the error root and the age of each error
+    in seconds.
+    """
+    now = time.time()
+    errors: list[tuple[str, int]] = []
+
+    async with obj.conn.d_watch(
+        obj.path,
+        state=True,
+        meta=True,
+        subtree=True,
+    ) as mon:
+        async for pdm in mon:
+            if pdm is None:
+                break
+            p, _d, m = pdm
+            # Only show leaf errors, not intermediate paths
+            if len(p) > len(obj.path):
+                rel_path = p[len(obj.path) :]
+                age = int(now - m.timestamp) if m.timestamp else 0
+                errors.append((str(rel_path), age))
+
+    # Sort by path
+    errors.sort(key=lambda x: x[0])
+
+    # Print header
+    print(f"{'Path':<50} {'Age (s)':<10}", file=obj.stdout)
+    print("-" * 60, file=obj.stdout)
+
+    # Print errors
+    for path, age in errors:
+        print(f"{path:<50} {age:<10}", file=obj.stdout)
+
+    if not errors:
+        print("No errors found.", file=obj.stdout)
 
 
 @cli.command()

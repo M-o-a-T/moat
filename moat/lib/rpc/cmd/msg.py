@@ -103,7 +103,7 @@ class BaseCmdMsg(BaseCmd):
             if "pytest" in sys.modules:
                 tcfg = cfg.auth.get("test", None)
                 if tcfg is not None:
-                    self.auth.update(tcfg)
+                    self.auth.update(tcfg)  # type: ignore[attr-defined]
             self._auth = Auth(cfg.auth, self)
 
     @property

@@ -245,7 +245,7 @@ class AsyncMQTTClient:
 
     host_or_path: str | None = field(default=None, validator=optional(instance_of(str)))
     port: int | None = field(default=None, validator=optional([gt(0), lt(65536)]))
-    transport: Literal["tcp", "unix"] = field(
+    transport: Literal["tcp", "unix"] = field(  # type: ignore[call-overload]
         kw_only=True, default="tcp", validator=in_({"tcp", "unix"})
     )
     websocket_path: str | None = field(
@@ -316,7 +316,7 @@ class AsyncMQTTClient:
 
     async def __aenter__(self) -> Self:
         ctx: AbstractAsyncContextManager[Self]
-        self.__ctx = ctx = self._ctx()
+        self.__ctx = ctx = self._ctx()  # type: ignore[assignment]
         return await ctx.__aenter__()
 
     def __aexit__(

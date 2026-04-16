@@ -416,7 +416,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: symlink: p=%r n=%r t=%r ctx=%r", parent_inode, name, target, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def rename(
+    async def rename(  # type: ignore[override]
         self,
         parent_inode_old: pyfuse3.InodeT,
         name_old: str,

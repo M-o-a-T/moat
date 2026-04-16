@@ -8,6 +8,7 @@ from contextlib import nullcontext
 import asyncclick as click
 
 from moat.util import NotGiven, yprint
+from moat.util.times import humandelta
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
@@ -97,17 +98,24 @@ async def delete(obj, before, recursive):
     yprint(res, stream=obj.stdout)
 
 
-@cli.command()
+@cli.command("list")
 @click.pass_obj
-async def list_(obj):
+@click.option("-k/-A", "--ok/--all", is_flag=True, help="only list if ok / list all")
+@click.option("-r", "--raw", is_flag=True, help="show age in seconds")
+async def list_(obj, ok, raw):
     """
     List all errors with their paths and age.
 
-    Shows the path relative to the error root and the age of each error
-    in seconds.
+    Shows the name and age of each error.
+
+    The default is to list only open errors.
     """
+    seen = False
     now = time.time()
-    errors: list[tuple[str, int]] = []
+    if ok is None:
+        ok = False
+    elif ok is False:
+        ok = None
 
     async with obj.conn.d_watch(
         obj.path,
@@ -118,25 +126,15 @@ async def list_(obj):
         async for pdm in mon:
             if pdm is None:
                 break
-            p, _d, m = pdm
-            # Only show leaf errors, not intermediate paths
-            if len(p) > len(obj.path):
-                rel_path = p[len(obj.path) :]
-                age = int(now - m.timestamp) if m.timestamp else 0
-                errors.append((str(rel_path), age))
+            p, d, m = pdm
+            if ok is not None and d.get("ok", False) != ok:
+                continue
 
-    # Sort by path
-    errors.sort(key=lambda x: x[0])
+            print(f"{int(now-m.timestamp) if raw else humandelta(now-m.timestamp) :10} {p}",
+                  file=obj.stdout)
+            seen = True
 
-    # Print header
-    print(f"{'Path':<50} {'Age (s)':<10}", file=obj.stdout)
-    print("-" * 60, file=obj.stdout)
-
-    # Print errors
-    for path, age in errors:
-        print(f"{path:<50} {age:<10}", file=obj.stdout)
-
-    if not errors:
+    if not seen:
         print("No errors found.", file=obj.stdout)
 
 

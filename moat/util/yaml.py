@@ -12,8 +12,8 @@ try:
     import ruyaml as yaml
     from ruyaml import constructor, emitter, representer
 except ImportError:
-    import ruamel.yaml as yaml  # ty:ignore[unresolved-import]
-    from ruamel.yaml import constructor, emitter, representer  # ty:ignore[unresolved-import]
+    import ruamel.yaml as yaml
+    from ruamel.yaml import constructor, emitter, representer
 
 from moat.lib.path import Path
 
@@ -31,14 +31,14 @@ if TYPE_CHECKING:
         from ruyaml.representer import BaseRepresenter
         from ruyaml.representer import SafeRepresenter as SafeRepresenterType
     except ImportError:
-        from ruamel.yaml.constructor import BaseConstructor  # ty:ignore[unresolved-import]
-        from ruamel.yaml.constructor import (  # ty:ignore[unresolved-import]
+        from ruamel.yaml.constructor import BaseConstructor
+        from ruamel.yaml.constructor import (
             SafeConstructor as SafeConstructorType,
         )
-        from ruamel.yaml.emitter import Emitter as EmitterType  # ty:ignore[unresolved-import]
-        from ruamel.yaml.nodes import Node  # ty:ignore[unresolved-import]
-        from ruamel.yaml.representer import BaseRepresenter  # ty:ignore[unresolved-import]
-        from ruamel.yaml.representer import (  # ty:ignore[unresolved-import]
+        from ruamel.yaml.emitter import Emitter as EmitterType
+        from ruamel.yaml.nodes import Node
+        from ruamel.yaml.representer import BaseRepresenter
+        from ruamel.yaml.representer import (
             SafeRepresenter as SafeRepresenterType,
         )
 

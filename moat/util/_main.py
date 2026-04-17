@@ -179,7 +179,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return eval, pformat, False, False
 
         if n == "json":
-            import simplejson as json
+            import simplejson as json  # noqa:PLC0415
 
             if stream:
 
@@ -200,10 +200,10 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             try:
                 import ruyaml as yaml  # noqa: PLC0415
             except ImportError:
-                import ruamel.yaml as yaml  # ty:ignore[unresolved-import]  # noqa: PLC0415
+                import ruamel.yaml as yaml  # noqa: PLC0415
 
             y = yaml.YAML(typ="safe")
-            y.default_flow_style = True, False
+            y.default_flow_style = True
             from moat.util import yload  # noqa: PLC0415
 
             def ypr(d, s):

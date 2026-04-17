@@ -56,28 +56,28 @@ class Queue(Generic[T]):
     async def put(self, x: T) -> None:
         """Send a value, blocking"""
         try:
-            await self._s.send(Value(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
+            await self._s.send(Value(x))  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     def put_nowait(self, x: T) -> None:
         """Send a value, nonblocking"""
         try:
-            self._s.send_nowait(Value(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
+            self._s.send_nowait(Value(x))  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     async def put_error(self, x: Exception) -> None:
         """Send an error value, blocking"""
         try:
-            await self._s.send(Error(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
+            await self._s.send(Error(x))  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 
     def put_nowait_error(self, x: Exception) -> None:
         """Send an error, nonblocking"""
         try:
-            self._s.send_nowait(Error(x))  # ty:ignore[too-many-positional-arguments]  # attrs support
+            self._s.send_nowait(Error(x))  # attrs support
         except anyio.ClosedResourceError:
             raise EOFError from None
 

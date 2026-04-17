@@ -10,7 +10,7 @@ from base64 import b85decode, b85encode
 try:
     from ruyaml.representer import SafeRepresenter
 except ImportError:
-    from ruamel.yaml.representer import SafeRepresenter  # ty:ignore[unresolved-import]
+    from ruamel.yaml.representer import SafeRepresenter
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw

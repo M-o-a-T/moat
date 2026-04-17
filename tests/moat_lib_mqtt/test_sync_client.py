@@ -6,10 +6,14 @@ import sys
 from moat.lib.mqtt import MQTTPublishPacket, QoS
 from moat.lib.mqtt.sync_client import MQTTClient
 
+pytestmark = pytest.mark.skip
+
+# XXX This *requires* `mqtt_broker_port` to fork off a threaded or external service
+
 
 @pytest.mark.parametrize("qos", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
-def test_publish_subscribe(qos: QoS) -> None:  # noqa: D103
-    with MQTTClient() as client, client.subscribe("test/+") as messages:
+async def test_publish_subscribe(mqtt_broker_port: int, qos: QoS) -> None:  # noqa: D103
+    with MQTTClient(port=mqtt_broker_port) as client, client.subscribe("test/+") as messages:
         client.publish("test/text", "test åäö", qos=qos)
         client.publish("test/binary", b"\x00\xff\x00\x1f", qos=qos)
         packets: list[MQTTPublishPacket] = []
@@ -30,9 +34,9 @@ if sys.version_info < (3, 11):  # noqa: UP036
         exceptions: list[BaseExceptionGroup] = []
 
 
-def test_retained_message() -> None:  # noqa: D103
+async def test_retained_message(mqtt_broker_port: int) -> None:  # noqa: D103
     try:
-        with MQTTClient() as client:
+        with MQTTClient(port=mqtt_broker_port) as client:
             if not client.cap_retain:
                 pytest.skip("Retain not available")
             client.publish("retainedtest", "test åäö", retain=True)

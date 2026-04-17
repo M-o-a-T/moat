@@ -111,6 +111,7 @@ __all__ = [
     "Link",
     "LinkCommon",
     "LinkSender",
+    "Walker",
     "get_link",
 ]
 

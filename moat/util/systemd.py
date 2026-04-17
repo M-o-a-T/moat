@@ -18,9 +18,12 @@ if TYPE_CHECKING:
 __all__ = ["as_service"]
 
 try:
-    from systemd.daemon import notify
+    from cysystemd.daemon import Notification, notify
 except ImportError:
-    notify = None
+    try:
+        from systemd.daemon import notify  # ty:ignore[unresolved-import]
+    except ImportError:
+        notify = None  # ty:ignore[conflicting-declarations]
 
 
 class RunMsg:
@@ -38,7 +41,10 @@ class RunMsg:
         """Signal readiness to systemd."""
         self.evt.set()
         if notify is not None:
-            notify("READY=1")
+            try:
+                notify(Notification.READY)
+            except NameError:
+                notify("READY=1")  # ty:ignore[invalid-argument-type]
         if self.obj is not None and self.obj.debug:
             print("Running.")
 
@@ -67,7 +73,10 @@ async def as_service(obj: Any = None) -> AsyncIterator[RunMsg]:
         pid = os.getpid()
         while os.getpid() == pid:
             if notify is not None:
-                notify("WATCHDOG=1")
+                try:
+                    notify(Notification.WATCHDOG)
+                except NameError:
+                    notify("WATCHDOG=1")  # ty:ignore[invalid-argument-type]
             await anyio.sleep(usec)
 
     def need_keepalive() -> int:

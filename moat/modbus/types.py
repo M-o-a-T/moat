@@ -8,7 +8,6 @@ import anyio
 import logging
 import struct
 
-from pymodbus.datastore.store import BaseModbusDataBlock
 from pymodbus.pdu.bit_message import (
     ReadCoilsRequest,
     ReadCoilsResponse,
@@ -29,6 +28,17 @@ from pymodbus.pdu.register_message import (
     WriteSingleRegisterRequest,
     WriteSingleRegisterResponse,
 )
+
+try:
+    from pymodbus.datastore.sequential import ModbusSequentialDataBlock
+    from pymodbus.datastore.sparse import ModbusSparseDataBlock
+
+    from typing import TypeAlias
+
+    BaseModbusDataBlock: TypeAlias = ModbusSequentialDataBlock | ModbusSparseDataBlock
+
+except ImportError:
+    from pymodbus.datastore.store import BaseModbusDataBlock
 
 MAX_REQ_LEN = 30
 

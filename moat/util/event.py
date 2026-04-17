@@ -41,12 +41,12 @@ class ValueEvent:
 
     def set(self, value: Any) -> None:
         """Set the result to return this value, and wake any waiting task."""
-        self.value = outcome.Value(value)  # ty:ignore[too-many-positional-arguments] # support for attrs
+        self.value = outcome.Value(value)  # support for attrs
         self.event.set()
 
     def set_error(self, exc: Exception) -> None:
         """Set the result to raise this exceptio, and wake any waiting task."""
-        self.value = outcome.Error(exc)  # ty:ignore[too-many-positional-arguments] # support for attrs
+        self.value = outcome.Error(exc)  # support for attrs
         self.event.set()
 
     def is_set(self) -> bool:

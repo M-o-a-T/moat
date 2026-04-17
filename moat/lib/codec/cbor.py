@@ -9,7 +9,7 @@ import struct
 try:
     from ruyaml import representer
 except ImportError:
-    from ruamel.yaml import representer  # ty:ignore[unresolved-import]
+    from ruamel.yaml import representer
 
 from ._cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:F401
 

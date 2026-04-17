@@ -102,7 +102,7 @@ def combine_dict(
 
     if post:
         try:
-            res.set_post_()  # type: ignore[attr-defined]  # set_post_ exists on attrdict
+            res.set_post_()  # ty:ignore[unresolved-attribute]  # set_post_ exists on attrdict
         except AttributeError:
             pass
     return res
@@ -271,7 +271,7 @@ class attrdict(dict[Hashable, Any]):
         self[a] = b
         return b
 
-    def update(  # type: ignore[override]  # More flexible signature than dict.update
+    def update(  # ty:ignore[invalid-method-override]  # More flexible signature than dict.update
         self, a: Mapping[Hashable, Any] | Sequence[tuple[Hashable, Any]] | None = None, **kw: Any
     ) -> None:
         """
@@ -413,10 +413,10 @@ class attrdict(dict[Hashable, Any]):
             if px is None:
                 v.append(value)
                 return self
-            if px >= len(v):  # type:ignore[unsupported-operator]
-                if px > len(v) + 10:  # type:ignore[unsupported-operator]
+            if px >= len(v):  # ty:ignore[unsupported-operator]
+                if px > len(v) + 10:  # ty:ignore[unsupported-operator]
                     raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
-                v.extend([NotGiven] * (1 + px - len(v)))  # type:ignore[unsupported-operator]
+                v.extend([NotGiven] * (1 + px - len(v)))  # ty:ignore[unsupported-operator]
             v[px] = value
         elif not isinstance(v, Mapping):
             raise ValueError((v, px))

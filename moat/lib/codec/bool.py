@@ -17,11 +17,11 @@ class Codec(_Codec):
     def __init__(self, on="on", off="off", null=None, **kw):
         super().__init__(**kw)
         if on is not None:
-            self.on = on.encode("utf-8")
+            self.on = on.encode("utf-8", "surrogateescape")
         if off is not None:
-            self.off = off.encode("utf-8")
+            self.off = off.encode("utf-8", "surrogateescape")
         if null is not None:
-            self.null = null.encode("utf-8")
+            self.null = null.encode("utf-8", "surrogateescape")
 
     def encode(self, obj):
         "bool > some text"

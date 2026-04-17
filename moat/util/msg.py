@@ -65,7 +65,7 @@ class _MsgRW:
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"
-            self.stream = await anyio.open_file(p, self._mode)  # type: ignore[arg-type]  # _mode is str literal in subclasses
+            self.stream = await anyio.open_file(p, self._mode)  # ty:ignore[no-matching-overload]  # _mode is str literal in subclasses
         return self
 
     async def __aexit__(
@@ -114,7 +114,7 @@ class MsgReader(_MsgRW):
                 pass
 
             assert self.stream is not None  # stream is set in __aenter__
-            d = await self.stream.read(self.buflen)  # type: ignore[attr-defined]  # AsyncFile has read
+            d = await self.stream.read(self.buflen)  # ty:ignore[unresolved-attribute]  # AsyncFile has read
             if d == b"":
                 raise StopAsyncIteration
             self.codec.feed(d)
@@ -171,7 +171,7 @@ class MsgWriter(_MsgRW):
         self.curlen += len(msg_bytes)
         if self.curlen >= self.buflen:
             buf = b"".join(self.buf)
-            await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
+            await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
             self.buf = []
 
     async def flush(self, force: bool = True) -> None:
@@ -183,6 +183,6 @@ class MsgWriter(_MsgRW):
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
-            await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
+            await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
         if force:
-            await self.stream.flush()  # type: ignore[attr-defined]  # AsyncFile has flush
+            await self.stream.flush()  # ty:ignore[unresolved-attribute]  # AsyncFile has flush

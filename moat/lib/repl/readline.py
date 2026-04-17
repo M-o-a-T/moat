@@ -216,7 +216,7 @@ class ReadlineAlikeReader(historical_reader.HistoricalReader, CompletingReader):
 
 def set_auto_history(_should_auto_add_history: bool) -> None:
     """Enable or disable automatic history"""
-    historical_reader.should_auto_add_history = bool(_should_auto_add_history)  # type: ignore[misc]
+    historical_reader.should_auto_add_history = bool(_should_auto_add_history)
 
 
 def _get_this_line_indent(buffer: list[str], pos: int) -> int:
@@ -276,7 +276,7 @@ def _should_auto_indent(buffer: list[str], pos: int) -> bool:
 class maybe_accept(commands.Command):
     async def do(self) -> None:
         r: ReadlineAlikeReader
-        r = self.reader  # type: ignore[assignment]
+        r = self.reader  # ty:ignore[invalid-assignment]
         r.dirty = True  # this is needed to hide the completion menu, if visible
 
         # if there are already several lines and the cursor
@@ -338,7 +338,7 @@ class backspace_dedent(commands.Command):
             del b[r.pos : r.pos + repeat]
             r.dirty = True
         else:
-            self.reader.error("can't backspace at start")
+            await self.reader.error("can't backspace at start")
 
 
 # ____________________________________________________________
@@ -585,13 +585,13 @@ def _setup(namespace: Mapping[str, Any]) -> None:
     if not isinstance(namespace, dict):
         namespace = dict(namespace)
     _wrapper.config.module_completer = ModuleCompleter(namespace)
-    _wrapper.config.readline_completer = RLCompleter(namespace).complete  # type: ignore[arg-type]
+    _wrapper.config.readline_completer = RLCompleter(namespace).complete  # ty:ignore[invalid-argument-type]
 
     # this is not really what readline.c does.  Better than nothing I guess
     import builtins  # noqa: PLC0415
 
     raw_input = builtins.input
-    builtins.input = _wrapper.input  # type: ignore[assignment]
+    builtins.input = _wrapper.input  # ty:ignore[invalid-assignment]
 
 
 raw_input: Callable[[object], str] | None = None

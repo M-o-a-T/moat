@@ -58,11 +58,11 @@ class CtxObj(ABC, Generic[T_Ctx]):
         if not hasattr(ctx_iter, "__aenter__"):
             # DEPRECATED
             # legacy code for `_ctx` without @asynccm
-            ctx: AbstractAsyncContextManager[T_Ctx, bool | None] = asynccontextmanager(self._ctx)()  # type: ignore[assignment]  # legacy support
+            ctx: AbstractAsyncContextManager[T_Ctx, bool | None] = asynccontextmanager(self._ctx)()  # ty:ignore[missing-argument]  # legacy support
         else:
             ctx = ctx_iter  # AsyncIterator with __aenter__ is an ACM
-        self.__ctx = ctx  # type: ignore[assignment]  # mixed types for legacy support
-        return await ctx.__aenter__()  # type: ignore[union-attr]  # both branches have __aenter__
+        self.__ctx = ctx  # ty:ignore[invalid-assignment]  # mixed types for legacy support
+        return await ctx.__aenter__()  # ty:ignore[call-non-callable,union-attr]  # both branches have __aenter__
 
     def __aexit__(
         self,
@@ -70,7 +70,7 @@ class CtxObj(ABC, Generic[T_Ctx]):
     ) -> Awaitable[bool | None]:
         try:
             assert self.__ctx is not None
-            return self.__ctx.__aexit__(*tb)  # type: ignore[arg-type]  # variadic unpacking
+            return self.__ctx.__aexit__(*tb)  # ty:ignore[invalid-argument-type]  # variadic unpacking
         finally:
             self.__ctx = None
 
@@ -158,7 +158,7 @@ class ContextMgr(Generic[T_CtxType]):
         """
         Ends the context task.
         """
-        self.qw.close()  # type: ignore[attr-defined]  # close() exists on MemoryObjectSendStream
+        self.qw.close()  # ty:ignore[unresolved-attribute]  # close() exists on MemoryObjectSendStream
         if self.stopper is not None and not self.stopper.is_set():
             self.exc = CancelledError()
             self.stopper.set()

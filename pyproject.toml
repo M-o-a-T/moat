@@ -31,13 +31,14 @@ dependencies = [
     "httpx",
     "jmespath",
     "jsonschema",
+    "netaddr",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
     "pynacl",
     "outcome",
     "psutil",
     "pyfuse3",
-    "pymodbus ~= 3.8",
+    "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
     "regex",
     "ruyaml",
@@ -93,6 +94,7 @@ testpaths = [
 
 [project.optional-dependencies]
 dev = [
+    "ansible",
     "asyncdbus ~= 0.7",
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
@@ -105,9 +107,12 @@ dev = [
     "pre-commit",
     "pytest-trio",
     "pytest-coverage",
+    "ruamel.yaml",
     "setuptools-scm",
+    "simplejson",
     "smbus3",
-    "ty ~= 0.17",
+    "systemd",
+    "ty ~= 0.0.17",
     "uv",
     "wheel",
 ]
@@ -272,7 +277,7 @@ exclude = [
 [tool.ty.rules]
 ambiguous-protocol-member = "error"
 division-by-zero = "error"
-ignore-comment-unknown-rule = "error"
+ignore-comment-unknown-rule = "ignore"
 invalid-ignore-comment = "ignore"
 redundant-cast = "error"
 undefined-reveal = "error"

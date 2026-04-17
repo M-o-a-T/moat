@@ -13,7 +13,7 @@ from tokenize import TokenInfo as TI
 
 # Current Python only
 try:
-    import _colorize  # type:ignore[unresolved-import]
+    import _colorize  # ty:ignore[unresolved-import]
 except ImportError:
     _colorize = None
 
@@ -40,15 +40,15 @@ BUILTINS = {str(name) for name in dir(builtins) if not name.startswith("_")}
 
 if not hasattr(T, "TSTRING_START"):
     # workaround for older Python
-    T.TSTRING_START = None  # type:ignore[unresolved-attribute]
-    T.TSTRING_MIDDLE = None  # type:ignore[unresolved-attribute]
-    T.TSTRING_END = None  # type:ignore[unresolved-attribute]
+    T.TSTRING_START = None  # ty:ignore[unresolved-attribute]
+    T.TSTRING_MIDDLE = None  # ty:ignore[unresolved-attribute]
+    T.TSTRING_END = None  # ty:ignore[unresolved-attribute]
 
 
 def THEME(**kwargs):  # noqa: D103
     # Not cached: the user can modify the theme inside the interactive session.
     try:
-        return _colorize.get_theme(**kwargs).syntax  # type:ignore[possibly-missing-attribute]
+        return _colorize.get_theme(**kwargs).syntax  # ty:ignore[unresolved-attribute]
     except AttributeError:
         return None
 
@@ -70,7 +70,7 @@ class Span(NamedTuple):
         "generate from token"
         end_offset = -1
         if (
-            token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE}  # type:ignore[unresolved-attribute]
+            token.type in {T.FSTRING_MIDDLE, T.TSTRING_MIDDLE}  # ty:ignore[unresolved-attribute]
             and token.string.endswith((
                 "{",
                 "}",
@@ -274,7 +274,7 @@ def is_soft_keyword_used(*tokens: TI | None) -> bool:
         case (
             None | TI(T.NEWLINE) | TI(T.INDENT) | TI(string=":"),
             TI(string="match"),
-            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # type:ignore[unresolved-attribute]
+            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # ty:ignore[unresolved-attribute]
             | TI(T.OP, string="(" | "*" | "[" | "{" | "~" | "..."),
         ):
             return True
@@ -289,7 +289,7 @@ def is_soft_keyword_used(*tokens: TI | None) -> bool:
         case (
             None | TI(T.NEWLINE) | TI(T.INDENT) | TI(T.DEDENT) | TI(string=":"),
             TI(string="case"),
-            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # type:ignore[unresolved-attribute]
+            TI(T.NUMBER | T.STRING | T.FSTRING_START | T.TSTRING_START)  # ty:ignore[unresolved-attribute]
             | TI(T.OP, string="(" | "*" | "-" | "[" | "{"),
         ):
             return True

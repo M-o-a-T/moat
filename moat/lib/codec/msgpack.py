@@ -471,7 +471,7 @@ class Packer:
                 wb(obj)
                 continue
             if is_(obj, str):
-                obj = obj.encode("utf-8")  # , self._unicode_errors)
+                obj = obj.encode("utf-8", "surrogateescape")  # , self._unicode_errors)
                 n = len(obj)
                 if n <= 0x1F:
                     wb(struct.pack("B", 0xA0 + n))

@@ -156,7 +156,7 @@ class ClientUserMaker(BaseClientAuthMaker):  # noqa:D101
         self = super().build(user, _initial=_initial)
         self._name = user["name"]
         if "password" in user:
-            self._pass = user["password"].encode("utf-8")
+            self._pass = user["password"].encode("utf-8", errors="surrogateescape")
         return self
 
     @classmethod
@@ -220,7 +220,7 @@ class ClientUser(BaseClientAuth):  # noqa:D101
     def build(cls, user):  # noqa:D102
         self = super().build(user)
         self._name = user["name"]
-        self._pass = user["password"].encode("utf-8")
+        self._pass = user["password"].encode("utf-8", errors="surrogateescape")
         return self
 
     async def auth(self, client: Client, chroot=()):

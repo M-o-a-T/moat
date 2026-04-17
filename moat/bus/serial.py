@@ -132,7 +132,7 @@ class SerBus:
         if not self.log_buf:
             return
         try:
-            b = self.log_buf.decode("utf-8")
+            b = self.log_buf.decode("utf-8", errors="surrogateescape")
         except Exception:
             b = self.log_buf.decode("latin1")
         if b in {"L1", "L2", "L3"}:
@@ -313,7 +313,7 @@ class SerBusDump(SerBus):
         if not self.log_buf:
             return
         try:
-            b = self.log_buf.decode("utf-8")
+            b = self.log_buf.decode("utf-8", errors="surrogateescape")
         except Exception:
             b = self.log_buf.decode("latin1")
         if b in {"L1", "L2", "L3"}:

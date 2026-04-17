@@ -38,6 +38,7 @@ VARIABLE_HEADER_START = b"\x00\x04MQTT\x05"
 
 packet_types: dict[int, type[MQTTPacket]] = {}
 
+
 def encode_fixed_integer(value: int, buffer: bytearray, size: int) -> None:
     buffer.extend(value.to_bytes(size, "big"))
 
@@ -88,7 +89,7 @@ def decode_binary(data: memoryview) -> tuple[memoryview, bytes]:
 
 
 def encode_utf8(value: str, buffer: bytearray) -> None:
-    data = value.encode("utf-8")
+    data = value.encode("utf-8", errors="surrogateescape")
     encode_fixed_integer(len(data), buffer, 2)
     buffer.extend(data)
 
@@ -971,7 +972,10 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
         payload: Buffer | str
         if properties.pop(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0):
             try:
-                data, payload = memoryview(b""), data.tobytes().decode("utf-8")
+                data, payload = (
+                    memoryview(b""),
+                    data.tobytes().decode("utf-8", errors="surrogateescape"),
+                )
             except UnicodeDecodeError as exc:
                 raise MQTTDecodeError(f"error decoding utf-8 string: {exc}") from None
         else:
@@ -1000,7 +1004,7 @@ class MQTTPublishPacket(MQTTPacket, PropertiesMixin):
 
         # Encode the payload
         if isinstance(self.payload, str):
-            internal_buffer.extend(self.payload.encode("utf-8"))
+            internal_buffer.extend(self.payload.encode("utf-8", errors="surrogateescape"))
         else:
             internal_buffer.extend(self.payload)
 

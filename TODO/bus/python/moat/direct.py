@@ -94,7 +94,7 @@ class DirectREPL:
     async def exec_raw(self, cmd, timeout=5):
         """Exec code, returning (stdout, stderr)"""
         logger.debug("Exec: %r", cmd)
-        await self.serial.send(cmd.encode("utf-8"))
+        await self.serial.send(cmd.encode("utf-8",errors='surrogateescape'))
         await self.serial.send(b"\x04")
 
         if not timeout:
@@ -116,8 +116,8 @@ class DirectREPL:
 
         if not out.startswith(b"OK"):
             raise IOError(f"data was not accepted: {out}: {err}")
-        out = out[2:].decode("utf-8")
-        err = err.decode("utf-8")
+        out = out[2:].decode("utf-8", errors="surrogateescape")
+        err = err.decode("utf-8", errors="surrogateescape")
         if out:
             logger.debug("OUT %r", out)
         if err:

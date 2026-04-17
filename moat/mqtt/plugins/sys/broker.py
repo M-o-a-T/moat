@@ -136,9 +136,13 @@ class BrokerSysPlugin:  # noqa: D101
             "messages/sent",
             int_to_bytes_str(self._stats[STAT_MSG_SENT]),
         )
-        await self._broadcast_sys_topic("time", str(datetime.now(tz=datetime.UTC)).encode("utf-8"))
+        await self._broadcast_sys_topic(
+            "time", str(datetime.now(tz=datetime.UTC)).encode("utf-8", errors="surrogateescape")
+        )
         await self._broadcast_sys_topic("uptime", int_to_bytes_str(int(uptime.total_seconds())))
-        await self._broadcast_sys_topic("uptime/formated", str(uptime).encode("utf-8"))
+        await self._broadcast_sys_topic(
+            "uptime/formated", str(uptime).encode("utf-8", errors="surrogateescape")
+        )
         await self._broadcast_sys_topic("clients/connected", int_to_bytes_str(client_connected))
         await self._broadcast_sys_topic(
             "clients/disconnected",

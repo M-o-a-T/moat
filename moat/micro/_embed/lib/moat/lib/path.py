@@ -10,6 +10,8 @@ _PartRE = re.compile("[^:._]+|_|:|\\.")
 
 b64decode = None
 
+PathElem = str  # mock typing
+
 
 class Path(tuple):  # noqa:SLOT001
     """

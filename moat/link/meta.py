@@ -234,7 +234,7 @@ class MsgMeta:
                 raise ValueError("No non-string origins")
             res.append("\\")
             if d != "":
-                res.append(b85encode(_codec.encode(d)).decode("utf-8"))
+                res.append(b85encode(_codec.encode(d)).decode("utf-8", errors="surrogateescape"))
         return "".join(res)
 
     @classmethod
@@ -270,7 +270,7 @@ class MsgMeta:
                 d, data = data[:cc], data[cc + 1 :]
             if encoded:
                 if d != "":
-                    d = _codec.decode(b85decode(d.encode("utf-8")))
+                    d = _codec.decode(b85decode(d.encode("utf-8", errors="surrogateescape")))
             elif d == "":
                 d = None
             ddec.append(d)

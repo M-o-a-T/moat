@@ -30,7 +30,7 @@ async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose): 
         msg.src = source
         msg.dst = dest
         msg.code = cmd
-        data = " ".join(data).encode("utf-8")
+        data = " ".join(data).encode("utf-8", errors="surrogateescape")
         msg.start_send()
         msg.add_data(data)
 

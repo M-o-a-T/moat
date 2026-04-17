@@ -89,7 +89,7 @@ class BaseCmd(MsgHandler):
     Base class of a Command handler.
     """
 
-    root: RootCmd = None  # type:ignore[invalid-assignment]
+    root: RootCmd = None  # ty:ignore[invalid-assignment]
     real_root: RootCmd
     # real_root is set when `root` is a non-settable property.
     # This is used for root hijackers like `log.Cmd` so that they can

@@ -108,7 +108,7 @@ class ModuleCompleter:
         if path.startswith("."):
             # Convert relative path to absolute path
             package = self.namespace.get("__package__", "")
-            path = self.resolve_relative_name(path, package)  # type: ignore[assignment]
+            path = self.resolve_relative_name(path, package)  # ty:ignore[invalid-assignment]
             if path is None:
                 return []
 

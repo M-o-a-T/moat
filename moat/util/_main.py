@@ -134,7 +134,7 @@ y, yr   Year (2023–)
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
-@attr_args(with_var=False, with_eval="eval_", with_path=False)  # type: ignore[call-arg]  # with_eval accepts str to specify target param
+@attr_args(with_var=False, with_eval="eval_", with_path=False)  # ty:ignore[call-arg]  # with_eval accepts str to specify target param
 def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     """File conversion / mangling utility.
 
@@ -179,7 +179,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return eval, pformat, False, False
 
         if n == "json":
-            import simplejson as json  # type: ignore[import-not-found]  # optional dependency  # noqa: PLC0415
+            import simplejson as json  # noqa:PLC0415
 
             if stream:
 
@@ -200,10 +200,10 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             try:
                 import ruyaml as yaml  # noqa: PLC0415
             except ImportError:
-                import ruamel.yaml as yaml  # fallback if ruyaml unavailable  # noqa: PLC0415
+                import ruamel.yaml as yaml  # noqa: PLC0415
 
             y = yaml.YAML(typ="safe")
-            y.default_flow_style = True, False
+            y.default_flow_style = True
             from moat.util import yload  # noqa: PLC0415
 
             def ypr(d, s):
@@ -296,12 +296,12 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
                     elif isinstance(data, Mapping) and "path" in data:
                         assert isinstance(data, Mapping)
                         d, p = cast(PathShortener, short).short(  # noqa:PLW2901
-                            data["path"]  # type:ignore[invalid-argument-type]
+                            data["path"]  # ty:ignore[invalid-argument-type]
                         )
-                        data["depth"] = d  # type: ignore[index]  # data is Mapping after isinstance check
-                        data["path"] = p  # type: ignore[index]  # data is Mapping after isinstance check
+                        data["depth"] = d  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check
+                        data["path"] = p  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check
 
-                data = process_args(data, **kw)  # type: ignore[arg-type]  # data is dict-like  # noqa:PLW2901
+                data = process_args(data, **kw)  # ty:ignore[invalid-argument-type]  # data is dict-like  # noqa:PLW2901
                 if cse:
                     if f_dump:
                         buf = bt()

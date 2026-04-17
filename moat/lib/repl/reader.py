@@ -25,7 +25,7 @@ import anyio
 import sys
 from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
 
-import _colorize  # type: ignore[import-not-found]
+import _colorize  # ty:ignore[unresolved-import]
 from attrs import define, field, fields
 
 from . import commands
@@ -283,7 +283,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         # facilitate the tab completion hack implemented for
         # <https://bugs.python.org/issue25660>.
         try:
-            sup = super().__attrs_post_init__  # type: ignore[misc]
+            sup = super().__attrs_post_init__  # ty:ignore[unresolved-attribute]
         except AttributeError:
             pass
         else:
@@ -312,7 +312,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         self.height, self.width = await self.console.getheightwidth()
         async with AsyncExitStack() as acm:
             try:
-                self.__events = aiter(await acm.enter_async_context(self.console.evt().stream()))  # type: ignore[attr-defined]
+                self.__events = aiter(await acm.enter_async_context(self.console.evt().stream()))  # ty:ignore[unresolved-attribute]
             except AttributeError:
                 pass
 
@@ -705,7 +705,7 @@ class Reader(anyio.AsyncContextManagerMixin):
         else:
             return  # nothing to do
 
-        command = command_type(self, *cmd)  # type: ignore[arg-type]
+        command = command_type(self, *cmd)  # ty:ignore[invalid-argument-type]
         await command.do()
 
         self.after_command(command)
@@ -740,7 +740,7 @@ class Reader(anyio.AsyncContextManagerMixin):
             try:
                 res = input_hook()
                 if hasattr(res, "__await__"):
-                    await res
+                    await res  # ty:ignore[invalid-await]
             except Exception:  # noqa: S110
                 pass
 
@@ -784,18 +784,20 @@ class Reader(anyio.AsyncContextManagerMixin):
                     continue
                 return False
 
-            await self.do_cmd(cmd)  # type: ignore[arg-type]
+            await self.do_cmd(cmd)  # ty:ignore[invalid-argument-type]
             await self.console.flushoutput()
             return True
 
     async def push_char(self, char: int | bytes) -> None:  # noqa: D102
-        await self.console.push_char(char)  # type: ignore[misc]
+        res = self.console.push_char(char)
+        if hasattr(res, "__await__"):
+            await res
         await self.handle1(block=False)
 
     async def readline(self, startup_hook: Callback | None = None) -> str:
         """Read a line."""
         async with (
-            nullcontext() if self._in_context else self.console,  # type: ignore[misc]
+            nullcontext() if self._in_context else self.console,  # ty:ignore[invalid-context-manager]
             nullcontext() if self._in_context else self,
         ):
             if startup_hook is not None:

@@ -9,7 +9,7 @@ from ._base import Codec as _Codec
 try:
     from json import dumps, loads
 except ImportError:
-    from simplejson import dumps, loads  # type: ignore[import-not-found]  # optional fallback
+    from simplejson import dumps, loads
 
 
 class Codec(_Codec):
@@ -22,7 +22,7 @@ class Codec(_Codec):
 
     def encode(self, obj):
         "basic encoder"
-        return dumps(obj).encode("utf-8")
+        return dumps(obj).encode("utf-8", "surrogateescape")
 
     def decode(self, data):
         "basic decoder"

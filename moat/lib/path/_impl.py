@@ -611,6 +611,9 @@ class Path(Sequence[PathElem]):
     def __repr__(self):
         return f"P({str(self)!r})"
 
+    def __format__(self, spec):
+        return str(self).__format__(spec)
+
     @classmethod
     def from_str(cls, path, *, mark="", scan=False):
         """
@@ -1107,7 +1110,7 @@ class PathLongener:
     Caution: this longener ignores path marks.
     """
 
-    cls = Path
+    cls: type[Path] = Path
 
     def __init__(self, prefix: Path | PathTuple = ()):
         if isinstance(prefix, Path):

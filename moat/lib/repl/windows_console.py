@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from collections.abc import Buffer  # ty: ignore[unresolved-import]  # Python 3.12+
 
 try:
-    from ctypes import GetLastError, WinDLL, WinError, windll  # type: ignore[attr-defined]
+    from ctypes import GetLastError, WinDLL, WinError, windll  # ty:ignore[unresolved-import]
 except Exception:
     # Keep MyPy happy off Windows
     from ctypes import CDLL as WinDLL
@@ -175,7 +175,7 @@ class WindowsConsole(Console):  # noqa: D101
         self.output_fd = 1  # stdout file descriptor
         self.event_queue = EventQueue(encoding)
         try:
-            self.out = io._WindowsConsoleIO(self.output_fd, "w")  # type: ignore[attr-defined]  # noqa: SLF001
+            self.out = io._WindowsConsoleIO(self.output_fd, "w")  # ty:ignore[unresolved-attribute]  # noqa: SLF001
         except ValueError:
             # Console I/O is redirected, fallback...
             self.out = None
@@ -234,7 +234,7 @@ class WindowsConsole(Console):  # noqa: D101
             newline,
         ) in zip(range(offset, offset + height), oldscr, newscr, strict=False):
             if oldline != newline:
-                self.__write_changed_line(y, oldline, newline, px)
+                await self.__write_changed_line(y, oldline, newline, px)
 
         y = len(newscr)
         while y < len(oldscr):
@@ -246,7 +246,7 @@ class WindowsConsole(Console):  # noqa: D101
         self._show_cursor()
 
         self.screen = screen
-        self.move_cursor(cx, cy)
+        await self.move_cursor(cx, cy)
 
     @property
     def input_hook(self):  # moqa: D102  # noqa: D102
@@ -256,7 +256,7 @@ class WindowsConsole(Console):  # noqa: D101
             return nt._inputhook  # noqa: SLF001
         return None
 
-    def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
+    async def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
         minlen = min(wlen(oldline), wlen(newline))
         x_pos = 0
         x_coord = 0
@@ -285,7 +285,7 @@ class WindowsConsole(Console):  # noqa: D101
                 # ANSI escape characters are present, so we can't assume
                 # anything about the position of the cursor.  Moving the cursor
                 # to the left margin should work to get to a known position.
-                self.move_cursor(0, y)
+                await self.move_cursor(0, y)
 
     async def _scroll(
         self, top: int, bottom: int, left: int | None = None, right: int | None = None

@@ -17,7 +17,7 @@ from ._base import NoCodecError
 from typing import TYPE_CHECKING, cast  # isort:skip
 
 try:
-    from micropython import const  # type: ignore[import-not-found]  # MicroPython only
+    from micropython import const  # ty:ignore[unresolved-import]  # MicroPython only
 except ImportError:
 
     def const(x: int) -> int:
@@ -247,7 +247,7 @@ class Codec(_Codec):
 
     def _enc_string(self, val):
         if isinstance(val, str):
-            val = val.encode("utf8")
+            val = val.encode("utf8", "surrogateescape")
             self._enc_type_num(CBOR_TEXT, len(val))
         else:
             self._enc_type_num(CBOR_BYTES, len(val))

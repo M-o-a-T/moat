@@ -266,7 +266,7 @@ class State:
         "Setter."
         if "fs" not in kw:
             kw["fs"] = self.fs
-        return self.rtc.set(self.name, data, **kw)
+        return self.rtc.set(self.name, data, **kw) # ty:ignore[invalid-return-type]
 
 
 class RTCBase:

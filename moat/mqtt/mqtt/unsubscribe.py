@@ -48,7 +48,7 @@ class UnubscribePayload(MQTTPayload):  # noqa: D101
             try:
                 topic = await decode_string(reader)
                 topics.append(topic)
-                read_bytes += 2 + len(topic.encode("utf-8"))
+                read_bytes += 2 + len(topic.encode("utf-8", errors="surrogateescape"))
             except NoDataException:
                 break
         return cls(topics)

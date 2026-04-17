@@ -1678,7 +1678,7 @@ class Walker:
     A trimmed-down watcher that retrieves a possibly-partial subtree
     from our MoaT-Link server.
 
-    This differs from `Watcher` by not tracking updates, nor keeping a node
+    This differs from :py.class:`Watcher` by not tracking updates, nor keeping a node
     tree in memory.
     """
 

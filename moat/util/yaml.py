@@ -199,9 +199,9 @@ def _bin_from_hex(loader: BaseConstructor, node: Node) -> bytearray:
 def _bin_to_ascii(dumper: SafeRepresenterType, data: bytes | bytearray | memoryview) -> Node:
     try:
         if isinstance(data, memoryview):
-            data_str = data.tobytes().decode("utf-8")
+            data_str = data.tobytes().decode("utf-8", errors="surrogateescape")
         else:
-            data_str = data.decode("utf-8")
+            data_str = data.decode("utf-8", errors="surrogateescape")
     except UnicodeError:
         data_bytes = data.tobytes() if isinstance(data, memoryview) else data
         if len(data_bytes) < 33:

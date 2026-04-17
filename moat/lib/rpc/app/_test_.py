@@ -203,6 +203,8 @@ class Cons(BaseCmd):
                     log(
                         "%s: %s",
                         p,
-                        bytes(memoryview(buf)[: d - (buf[d - 1] == 10)]).decode("utf-8"),
+                        bytes(memoryview(buf)[: d - (buf[d - 1] == 10)]).decode(
+                            "utf-8", "surrogateescape"
+                        ),
                     )
                 d = 0

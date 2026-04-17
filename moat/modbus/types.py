@@ -406,11 +406,11 @@ class StringValue(ByteValue):
     @length is in bytes, NOT UTF-8 characters"""
 
     def _encode(self, value):
-        value = value.encode("utf-8")
+        value = value.encode("utf-8", errors="surrogateescape")
         return super()._encode(value)
 
     def _decode(self, regs):
-        return super()._decode(regs).rstrip(b"\0").decode("utf-8")
+        return super()._decode(regs).rstrip(b"\0").decode("utf-8", errors="surrogateescape")
 
 
 class SwappedStringValue(StringValue):

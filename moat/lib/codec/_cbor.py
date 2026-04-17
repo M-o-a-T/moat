@@ -247,7 +247,7 @@ class Codec(_Codec):
 
     def _enc_string(self, val):
         if isinstance(val, str):
-            val = val.encode("utf8")
+            val = val.encode("utf8", "surrogateescape")
             self._enc_type_num(CBOR_TEXT, len(val))
         else:
             self._enc_type_num(CBOR_BYTES, len(val))

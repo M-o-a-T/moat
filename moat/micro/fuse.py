@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from moat.lib.rpc import SubMsgSender
 
-    from collections.abc import AsyncIterator, Callable, Sequence
+    from collections.abc import AsyncIterator, Sequence
     from typing import Any, NoReturn
 
 
@@ -129,7 +129,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     @staticmethod
     def _name(name: pyfuse3.FileNameT) -> str:
         if isinstance(name, (bytes, bytearray, memoryview)):
-            return bytes(name).decode("utf-8")
+            return bytes(name).decode("utf-8", errors="surrogateescape")
         return str(name)
 
     async def lookup(
@@ -419,9 +419,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     async def rename(  # ty:ignore[override]
         self,
         parent_inode_old: pyfuse3.InodeT,
-        name_old: str,
+        name_old: pyfuse3.FileNameT,
         parent_inode_new: pyfuse3.InodeT,
-        name_new: str,
+        name_new: pyfuse3.FileNameT,
         flags: pyfuse3.FlagT,
         ctx: RequestContext,
     ) -> None:
@@ -453,8 +453,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         try:
-            p = self.i_path(parent_inode_old) / name_old
-            q = self.i_path(parent_inode_new) / name_new
+            p = self.i_path(parent_inode_old) / self._name(name_old)
+            q = self.i_path(parent_inode_new) / self._name(name_new)
 
             if flags == 0:
                 await self._link.mv(s=str(p), d=str(q))
@@ -694,7 +694,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             start_id += 1
             if not pyfuse3.readdir_reply(  # pylint: disable=I1101
                 token,
-                name.encode("utf-8"),
+                name.encode("utf-8", errors="surrogateescape"),
                 attr,
                 start_id,
             ):

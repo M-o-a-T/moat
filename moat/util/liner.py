@@ -109,7 +109,7 @@ class Liner:
             self.evt = Event()
 
     async def _partial(self, end: bool = False) -> None:
-        pr = cast(bytearray, self.buf).decode("utf-8")
+        pr = cast(bytearray, self.buf).decode("utf-8", "surrogateescape")
         self.buf = None if end else bytearray()
 
         res = self.writer(self.prefix + pr + self.incomplete + ("-END-" if end else "") + "\n")
@@ -132,7 +132,7 @@ class Liner:
             idx = buf.rfind(b"\n")
         try:
             if idx != -1:
-                pr = buf[:idx].decode("utf-8").replace("\n", f"\n{self.prefix}")
+                pr = buf[:idx].decode("utf-8", "surrogateescape").replace("\n", f"\n{self.prefix}")
                 self.buf = bytearray(buf[idx + 1 :])
                 return self.writer(self.prefix + pr + "\n")
             elif iscoroutinefunction(self.writer):

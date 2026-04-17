@@ -564,7 +564,7 @@ class BMV080(ContextManagerMixin):
             BMV080Error: If setting parameter fails.
             TypeError: If value type is not supported.
         """
-        key_bytes = key.encode("utf-8")
+        key_bytes = key.encode("utf-8", errors="surrogateescape")
 
         if isinstance(value, bool):
             val_ptr = self._ffi.new("bool*", value)
@@ -574,7 +574,7 @@ class BMV080(ContextManagerMixin):
         elif isinstance(value, float):
             val_ptr = self._ffi.new("float*", value)
         elif isinstance(value, str):
-            val_ptr = self._ffi.new("char[]", value.encode("utf-8"))
+            val_ptr = self._ffi.new("char[]", value.encode("utf-8", errors="surrogateescape"))
         else:
             raise TypeError(f"Unsupported parameter type: {type(value)}")
 
@@ -593,7 +593,7 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
-        key_bytes = key.encode("utf-8")
+        key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("bool*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
@@ -611,7 +611,7 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
-        key_bytes = key.encode("utf-8")
+        key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("uint16_t*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
@@ -629,7 +629,7 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
-        key_bytes = key.encode("utf-8")
+        key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("float*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
@@ -647,11 +647,11 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
-        key_bytes = key.encode("utf-8")
+        key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("char[256]")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
-        return self._ffi.string(val_ptr).decode("utf-8")
+        return self._ffi.string(val_ptr).decode("utf-8", errors="surrogateescape")
 
     def start_continuous_measurement(self) -> None:
         """Start particle measurement in continuous mode.

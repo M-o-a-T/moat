@@ -26,7 +26,7 @@ dependencies = [
     "asyncvictoria ~= 0.7.0",
     "asyncwebsockets",
     "cffi",
-    "fpdf",
+    "fpdf2",
     "pygit",
     "httpx",
     "jmespath",
@@ -94,6 +94,7 @@ testpaths = [
 
 [project.optional-dependencies]
 dev = [
+    "ansible",
     "asyncdbus ~= 0.7",
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
@@ -106,8 +107,11 @@ dev = [
     "pre-commit",
     "pytest-trio",
     "pytest-coverage",
+    "ruamel.yaml",
     "setuptools-scm",
+    "simplejson",
     "smbus3",
+    "systemd",
     "ty ~= 0.0.17",
     "uv",
     "wheel",

@@ -38,7 +38,7 @@ dependencies = [
     "outcome",
     "psutil",
     "pyfuse3",
-    "pymodbus ~= 3.8",
+    "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
     "regex",
     "ruyaml",

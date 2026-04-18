@@ -34,8 +34,8 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from xknx.devices import BinarySensor, Switch
-from xknx.dpt import DPTBinary
+from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from xknx.dpt import DPTArray, DPTBinary
 from xknx.telegram import GroupAddress, Telegram
 from xknx.telegram.apci import GroupValueWrite
 
@@ -61,6 +61,8 @@ _CMD_ADDR = GroupAddress("0/0/1")  # Switch sends here; moat type=in listens
 _STATE_ADDR = GroupAddress("0/0/2")  # moat type=out sends here; Switch listens
 _SENSOR_ADDR = GroupAddress("0/0/3")  # moat type=out acts as sensor; BinarySensor listens
 _KV_SENSOR = P("test.sensor")  # moat-kv path watched by the sensor type=out node
+_KV_INT_STATE = P("test.int_state")  # state path for integer actuator test
+_KV_INT_SENSOR = P("test.int_sensor")  # value path for integer sensor test
 _BUS = "testbus"
 _SRV = "myserver"
 
@@ -338,5 +340,261 @@ async def test_binary_sensor(
                 with anyio.fail_after(5):
                     val = await sens_recv.receive()
                 assert val is False
+
+                tg.cancel_scope.cancel()
+
+
+async def test_integer_roundtrip(
+    knxd_port: int,
+    xknx_monitor: xknx.XKNX,
+) -> None:
+    """
+    Verify the full two-way integer roundtrip with moat-kv-knx as the device.
+
+    Mirrors :func:`test_binary_roundtrip` using ``mode='1byte_unsigned'``.
+    An xknx :class:`~xknx.devices.ExposeSensor` sends integer commands on
+    the command address (0/0/1); an xknx :class:`~xknx.devices.Sensor`
+    receives integer state on the state address (0/0/2).
+
+    **Direction 1 — controller → moat-kv**: :meth:`~xknx.devices.ExposeSensor.set`
+    sends a ``GroupValueWrite`` on the command address.  The ``type=in`` node
+    receives it and writes the integer value to ``test.int_state``.
+
+    **Direction 2 — moat-kv → controller**: a write to ``test.int_state``
+    causes the ``type=out`` node to send a ``GroupValueWrite`` on the state
+    address.  The :class:`~xknx.devices.Sensor` receives it and updates its
+    resolved state.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_monitor: Connected XKNX instance hosting the xknx controller
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    # ExposeSensor: sends integer commands on CMD_ADDR.
+    # respond_to_read=False: prevents it from answering the startup GroupValueRead
+    # issued by moat's type=in Sensor, keeping cmd_recv free of initial values.
+    expose = ExposeSensor(
+        xknx_monitor,
+        "TestExpose",
+        group_address=_CMD_ADDR,
+        value_type="1byte_unsigned",
+        respond_to_read=False,
+    )
+    xknx_monitor.devices.async_add(expose)
+
+    # Sensor: receives integer state on STATE_ADDR.
+    # sync_state=False: no startup GroupValueRead, keeping the streams clean.
+    sensor = Sensor(
+        xknx_monitor,
+        "TestSensor",
+        group_address_state=_STATE_ADDR,
+        value_type="1byte_unsigned",
+        sync_state=False,
+    )
+    xknx_monitor.devices.async_add(sensor)
+
+    sens_send, sens_recv = anyio.create_memory_object_stream[int](max_buffer_size=16)
+
+    def _on_sensor(s: Sensor) -> None:
+        v = s.resolve_state()
+        if v is not None:
+            sens_send.send_nowait(int(v))
+
+    sensor.register_device_updated_cb(_on_sensor)
+
+    st_send, st_recv = anyio.create_memory_object_stream[Telegram](max_buffer_size=16)
+
+    def _on_state(tg: Telegram) -> None:
+        if isinstance(tg.payload, GroupValueWrite):
+            st_send.send_nowait(tg)
+
+    xknx_monitor.telegram_queue.register_telegram_received_cb(
+        _on_state, group_addresses=[_STATE_ADDR]
+    )
+
+    cmd_send, cmd_recv = anyio.create_memory_object_stream[int](max_buffer_size=16)
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 1)),
+                value={"type": "in", "mode": "1byte_unsigned", "dest": _KV_CMD},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 2)),
+                value={"type": "out", "mode": "1byte_unsigned", "src": _KV_INT_STATE},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                async def _watch_cmd(
+                    *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+                ) -> None:
+                    async with c.watch(_KV_CMD, min_depth=0, max_depth=0) as wp:
+                        task_status.started()
+                        async for msg in wp:
+                            if "path" in msg and "value" in msg:
+                                cmd_send.send_nowait(int(msg.value))
+
+                await tg.start(_watch_cmd)
+
+                async def _recv(expected: int) -> None:
+                    with anyio.fail_after(5):
+                        async for val in cmd_recv:
+                            if val == expected:
+                                return
+
+                # ── Direction 1: ExposeSensor → moat-kv ─────────────────── #
+
+                await expose.set(42)
+                await _recv(42)
+
+                with anyio.move_on_after(0.5):
+                    async for _ in sens_recv:
+                        pass
+
+                await expose.set(7)
+                await _recv(7)
+
+                with anyio.move_on_after(0.5):
+                    async for _ in sens_recv:
+                        pass
+
+                # ── Direction 2: moat-kv → Sensor ───────────────────────── #
+
+                await c.set(_KV_INT_STATE, value=42)
+
+                with anyio.fail_after(5):
+                    confirmation = await st_recv.receive()
+                assert isinstance(confirmation.payload, GroupValueWrite)
+                assert confirmation.payload.value == DPTArray((42,))
+
+                with anyio.fail_after(5):
+                    val = await sens_recv.receive()
+                assert val == 42
+
+                await c.set(_KV_INT_STATE, value=7)
+
+                with anyio.fail_after(5):
+                    confirmation = await st_recv.receive()
+                assert isinstance(confirmation.payload, GroupValueWrite)
+                assert confirmation.payload.value == DPTArray((7,))
+
+                with anyio.fail_after(5):
+                    val = await sens_recv.receive()
+                assert val == 7
+
+                tg.cancel_scope.cancel()
+
+
+async def test_integer_sensor(
+    knxd_port: int,
+    xknx_monitor: xknx.XKNX,
+) -> None:
+    """
+    Verify that moat-kv-knx correctly acts as a 1-byte unsigned integer sensor.
+
+    Mirrors :func:`test_binary_sensor` using ``mode='1byte_unsigned'``.  A
+    moat-kv ``type=out`` node publishes integer values to the sensor address
+    (0/0/3) whenever ``test.int_sensor`` changes.  An xknx
+    :class:`~xknx.devices.Sensor` (``group_address_state`` = 0/0/3,
+    ``sync_state=False``) receives each ``GroupValueWrite`` and updates its
+    resolved state.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_monitor: Connected XKNX instance hosting the xknx Sensor
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    sensor = Sensor(
+        xknx_monitor,
+        "TestIntSensor",
+        group_address_state=_SENSOR_ADDR,
+        value_type="1byte_unsigned",
+        sync_state=False,
+    )
+    xknx_monitor.devices.async_add(sensor)
+
+    sens_send, sens_recv = anyio.create_memory_object_stream[int](max_buffer_size=16)
+
+    def _on_sensor(s: Sensor) -> None:
+        v = s.resolve_state()
+        if v is not None:
+            sens_send.send_nowait(int(v))
+
+    sensor.register_device_updated_cb(_on_sensor)
+
+    st_send, st_recv = anyio.create_memory_object_stream[Telegram](max_buffer_size=16)
+
+    def _on_state(tg: Telegram) -> None:
+        if isinstance(tg.payload, GroupValueWrite):
+            st_send.send_nowait(tg)
+
+    xknx_monitor.telegram_queue.register_telegram_received_cb(
+        _on_state, group_addresses=[_SENSOR_ADDR]
+    )
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 3)),
+                value={"type": "out", "mode": "1byte_unsigned", "src": _KV_INT_SENSOR},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                await c.set(_KV_INT_SENSOR, value=42)
+
+                with anyio.fail_after(5):
+                    confirmation = await st_recv.receive()
+                assert isinstance(confirmation.payload, GroupValueWrite)
+                assert confirmation.payload.value == DPTArray((42,))
+
+                with anyio.fail_after(5):
+                    val = await sens_recv.receive()
+                assert val == 42
+
+                await c.set(_KV_INT_SENSOR, value=7)
+
+                with anyio.fail_after(5):
+                    confirmation = await st_recv.receive()
+                assert isinstance(confirmation.payload, GroupValueWrite)
+                assert confirmation.payload.value == DPTArray((7,))
+
+                with anyio.fail_after(5):
+                    val = await sens_recv.receive()
+                assert val == 7
 
                 tg.cancel_scope.cancel()

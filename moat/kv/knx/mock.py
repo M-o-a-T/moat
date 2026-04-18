@@ -143,6 +143,52 @@ class SimulatedSensorDevice(SimulatedDevice):
         self._send_state(response=False)
 
 
+class SimulatedBinarySensor(SimulatedDevice):
+    """
+    Simulates a write-only KNX binary sensor (e.g. a push button or motion
+    detector).
+
+    The device has no command address.  It only publishes its boolean state
+    on *state_addr* and answers
+    :class:`~xknx.telegram.apci.GroupValueRead` requests.
+
+    :meth:`set_state` lets tests inject a state change as the physical
+    sensor would.
+
+    Args:
+        device_xknx: Started XKNX instance representing the device side.
+        state_addr: Group address on which the sensor publishes its state.
+        initial: Initial boolean state (default ``False``).
+    """
+
+    def __init__(
+        self,
+        device_xknx: xknx.XKNX,
+        state_addr: GroupAddressableType,
+        initial: bool = False,
+    ) -> None:
+        """Initialise and register the telegram callback."""
+        super().__init__(device_xknx, state_addr)
+        self.state: bool = initial
+
+    def _encode(self) -> DPTBinary:
+        """Encode the boolean state as a :class:`~xknx.dpt.DPTBinary`."""
+        return DPTBinary(1 if self.state else 0)
+
+    def set_state(self, val: bool) -> None:
+        """
+        Inject a new sensor reading onto the bus.
+
+        Sends a :class:`~xknx.telegram.apci.GroupValueWrite` on the state
+        address, as a real sensor would when its physical input changes.
+
+        Args:
+            val: New boolean state to publish.
+        """
+        self.state = val
+        self._send_state(response=False)
+
+
 class SimulatedActuatorBase(SimulatedDevice, ABC):
     """
     Abstract base for simulated KNX actuators with a command address.

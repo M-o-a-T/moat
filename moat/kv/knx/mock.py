@@ -4,11 +4,18 @@ Test helpers for moat.kv.knx.
 :class:`Tester` connects a single XKNX client to a local knxd daemon and
 exposes convenience methods for creating xknx device proxies.
 
-:class:`SimulatedBinaryDevice` and :class:`SimulatedSensorDevice` simulate
-real KNX actuators / sensors by reacting to bus telegrams directly, without
-going through xknx device proxy classes.  They are intended for use in
-end-to-end tests alongside a second XKNX instance that holds the controller
-side (e.g. a :class:`~xknx.devices.Switch`).
+The simulated-device classes implement the *device* side of a KNX exchange —
+i.e. the physical actuator or sensor on the bus — rather than the controller
+side that xknx device proxies represent.  They react to bus telegrams directly
+via ``telegram_received_cb``, without going through xknx device proxy classes.
+
+Class hierarchy::
+
+    SimulatedDevice (ABC)
+    ├── SimulatedSensorDevice   – write-only sensor, no command address
+    └── SimulatedActuatorBase (ABC)
+        ├── SimulatedBinaryDevice  – bool state, DPT 1.x encoding
+        └── SimulatedActuator      – numeric state, configurable DPTNumeric
 """
 
 from __future__ import annotations
@@ -16,11 +23,12 @@ from __future__ import annotations
 import anyio
 import os
 import tempfile
+from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 
 import xknx
 from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from xknx.dpt import DPT2ByteFloat, DPTArray, DPTBinary
+from xknx.dpt import DPT2ByteFloat, DPTArray, DPTBinary, DPTNumeric
 from xknx.io import ConnectionConfig, ConnectionType
 from xknx.telegram import GroupAddress, Telegram
 from xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
@@ -35,28 +43,121 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-class SimulatedBinaryDevice:
+class SimulatedDevice(ABC):
     """
-    Simulates a KNX binary actuator (e.g. a relay or a light switch).
+    Abstract base for all simulated KNX devices.
 
-    Registers a telegram callback on *device_xknx* that:
-
-    - processes :class:`~xknx.telegram.apci.GroupValueWrite` telegrams
-      arriving on *cmd_addr* by updating the internal state and sending a
-      :class:`~xknx.telegram.apci.GroupValueWrite` confirmation on
-      *state_addr*;
-    - answers :class:`~xknx.telegram.apci.GroupValueRead` telegrams on
-      *state_addr* with a :class:`~xknx.telegram.apci.GroupValueResponse`.
-
-    :meth:`set_state` lets tests inject a device-originated state change
-    (i.e. a write on *state_addr* without a preceding command).
+    Handles the *state address* side: puts outgoing state telegrams on the
+    bus and answers :class:`~xknx.telegram.apci.GroupValueRead` requests.
+    Subclasses must implement :meth:`_encode` to produce the payload.
 
     Args:
-        device_xknx: The XKNX instance that represents the device side of
-            the bus.  Must already be started.
-        cmd_addr: Group address on which the device receives commands
-            (``GroupValueWrite`` from a controller).
+        device_xknx: Started XKNX instance representing the device side.
         state_addr: Group address on which the device publishes its state.
+        extra_addrs: Additional addresses to subscribe to (used by
+            :class:`SimulatedActuatorBase` to add the command address).
+    """
+
+    def __init__(
+        self,
+        device_xknx: xknx.XKNX,
+        state_addr: GroupAddressableType,
+        extra_addrs: list[GroupAddress] | None = None,
+    ) -> None:
+        """Initialise and register the telegram callback."""
+        self._xknx = device_xknx
+        self.state_addr: GroupAddress = GroupAddress(state_addr)
+        watched = [self.state_addr, *(extra_addrs or [])]
+        device_xknx.telegram_queue.register_telegram_received_cb(
+            self._on_telegram,
+            group_addresses=watched,
+        )
+
+    @abstractmethod
+    def _encode(self) -> DPTBinary | DPTArray:
+        """Encode the current device value into a KNX payload."""
+
+    def _on_telegram(self, telegram: Telegram) -> None:
+        """React to incoming telegrams.  Subclasses should call ``super()``."""
+        if telegram.destination_address == self.state_addr:
+            if isinstance(telegram.payload, GroupValueRead):
+                self._send_state(response=True)
+
+    def _send_state(self, *, response: bool) -> None:
+        """Put a state telegram into the outgoing queue."""
+        value = self._encode()
+        payload: GroupValueWrite | GroupValueResponse
+        if response:
+            payload = GroupValueResponse(value=value)
+        else:
+            payload = GroupValueWrite(value=value)
+        self._xknx.telegrams.put_nowait(
+            Telegram(destination_address=self.state_addr, payload=payload)
+        )
+
+
+class SimulatedSensorDevice(SimulatedDevice):
+    """
+    Simulates a write-only KNX sensor (e.g. a temperature transmitter).
+
+    The device has no command address.  It only publishes readings on
+    *state_addr* and responds to
+    :class:`~xknx.telegram.apci.GroupValueRead` requests.  Values are
+    encoded with *dpt* (default: :class:`~xknx.dpt.DPT2ByteFloat`).
+
+    Args:
+        device_xknx: Started XKNX instance representing the device side.
+        state_addr: Group address on which the device publishes its value.
+        initial: Initial sensor value (default ``0.0``).
+        dpt: DPT class used for encoding / decoding (default
+            :class:`~xknx.dpt.DPT2ByteFloat`).
+    """
+
+    def __init__(
+        self,
+        device_xknx: xknx.XKNX,
+        state_addr: GroupAddressableType,
+        initial: float = 0.0,
+        dpt: type[DPTNumeric] = DPT2ByteFloat,
+    ) -> None:
+        """Initialise and register the telegram callback."""
+        super().__init__(device_xknx, state_addr)
+        self.value: float = initial
+        self._dpt: type[DPTNumeric] = dpt
+
+    def _encode(self) -> DPTArray:
+        """Encode the current value as a DPTArray."""
+        return self._dpt.to_knx(self.value)
+
+    def set_value(self, val: float) -> None:
+        """
+        Inject a new sensor reading onto the bus.
+
+        Sends a :class:`~xknx.telegram.apci.GroupValueWrite` on the state
+        address, as a real sensor would when its reading changes.
+
+        Args:
+            val: New value to publish.
+        """
+        self.value = val
+        self._send_state(response=False)
+
+
+class SimulatedActuatorBase(SimulatedDevice, ABC):
+    """
+    Abstract base for simulated KNX actuators with a command address.
+
+    Extends :class:`SimulatedDevice` with a *command address*: incoming
+    :class:`~xknx.telegram.apci.GroupValueWrite` telegrams on *cmd_addr*
+    are decoded by :meth:`_apply` and confirmed by sending the new state on
+    *state_addr*.
+
+    Subclasses must implement :meth:`_encode` and :meth:`_apply`.
+
+    Args:
+        device_xknx: Started XKNX instance representing the device side.
+        cmd_addr: Group address on which the actuator receives commands.
+        state_addr: Group address on which the actuator publishes its state.
     """
 
     def __init__(
@@ -66,37 +167,58 @@ class SimulatedBinaryDevice:
         state_addr: GroupAddressableType,
     ) -> None:
         """Initialise and register the telegram callback."""
-        self._xknx = device_xknx
-        self.state: bool = False
         self.cmd_addr: GroupAddress = GroupAddress(cmd_addr)
-        self.state_addr: GroupAddress = GroupAddress(state_addr)
-        device_xknx.telegram_queue.register_telegram_received_cb(
-            self._on_telegram,
-            group_addresses=[self.cmd_addr, self.state_addr],
-        )
+        super().__init__(device_xknx, state_addr, extra_addrs=[self.cmd_addr])
+
+    @abstractmethod
+    def _apply(self, value: DPTBinary | DPTArray) -> None:
+        """Update internal state from an incoming command payload."""
 
     def _on_telegram(self, telegram: Telegram) -> None:
-        """React to incoming telegrams on the command or state address."""
+        """Handle command writes in addition to state reads."""
+        super()._on_telegram(telegram)
         if telegram.destination_address == self.cmd_addr:
             if isinstance(telegram.payload, GroupValueWrite):
-                if isinstance(telegram.payload.value, DPTBinary):
-                    self.state = bool(telegram.payload.value.value)
+                self._apply(telegram.payload.value)
                 self._send_state(response=False)
-        elif telegram.destination_address == self.state_addr:
-            if isinstance(telegram.payload, GroupValueRead):
-                self._send_state(response=True)
 
-    def _send_state(self, *, response: bool) -> None:
-        """Put a state telegram into the outgoing queue."""
-        payload: GroupValueWrite | GroupValueResponse
-        value = DPTBinary(1 if self.state else 0)
-        if response:
-            payload = GroupValueResponse(value=value)
-        else:
-            payload = GroupValueWrite(value=value)
-        self._xknx.telegrams.put_nowait(
-            Telegram(destination_address=self.state_addr, payload=payload)
-        )
+
+class SimulatedBinaryDevice(SimulatedActuatorBase):
+    """
+    Simulates a KNX binary actuator (e.g. a relay or a light switch).
+
+    Processes :class:`~xknx.telegram.apci.GroupValueWrite` telegrams on the
+    command address as boolean on/off commands (DPT 1.x), confirms each
+    command by sending the new state on the state address, and answers
+    :class:`~xknx.telegram.apci.GroupValueRead` requests on the state
+    address.
+
+    :meth:`set_state` lets tests inject a device-originated state change.
+
+    Args:
+        device_xknx: Started XKNX instance representing the device side.
+        cmd_addr: Group address on which the device receives commands.
+        state_addr: Group address on which the device publishes its state.
+    """
+
+    def __init__(
+        self,
+        device_xknx: xknx.XKNX,
+        cmd_addr: GroupAddressableType,
+        state_addr: GroupAddressableType,
+    ) -> None:
+        """Initialise with state False and register the telegram callback."""
+        super().__init__(device_xknx, cmd_addr, state_addr)
+        self.state: bool = False
+
+    def _encode(self) -> DPTBinary:
+        """Encode the boolean state as a :class:`~xknx.dpt.DPTBinary`."""
+        return DPTBinary(1 if self.state else 0)
+
+    def _apply(self, value: DPTBinary | DPTArray) -> None:
+        """Set state from the boolean payload of an incoming command."""
+        if isinstance(value, DPTBinary):
+            self.state = bool(value.value)
 
     def set_state(self, val: bool) -> None:
         """
@@ -113,66 +235,60 @@ class SimulatedBinaryDevice:
         self._send_state(response=False)
 
 
-class SimulatedSensorDevice:
+class SimulatedActuator(SimulatedActuatorBase):
     """
-    Simulates a write-only KNX sensor (e.g. a temperature transmitter).
+    Simulates a KNX numeric actuator (e.g. a dimmer or a setpoint controller).
 
-    The device has no command address.  It only publishes readings on
-    *state_addr* and responds to :class:`~xknx.telegram.apci.GroupValueRead`
-    requests.  Values are encoded as 2-byte KNX floats (DPT 9.x).
+    Accepts numeric commands encoded with *dpt* (default:
+    :class:`~xknx.dpt.DPT2ByteFloat` for two-byte floats) on the command
+    address, confirms each command, and answers
+    :class:`~xknx.telegram.apci.GroupValueRead` requests on the state address.
+
+    :meth:`set_state` lets tests inject a device-originated state change.
 
     Args:
-        device_xknx: The XKNX instance that represents the device side of
-            the bus.  Must already be started.
-        state_addr: Group address on which the device publishes its value.
-        initial: Initial sensor value (default ``0.0``).
+        device_xknx: Started XKNX instance representing the device side.
+        cmd_addr: Group address on which the actuator receives commands.
+        state_addr: Group address on which the actuator publishes its state.
+        initial: Initial state value (default ``0.0``).
+        dpt: DPT class used for encoding and decoding (default
+            :class:`~xknx.dpt.DPT2ByteFloat`).
     """
 
     def __init__(
         self,
         device_xknx: xknx.XKNX,
+        cmd_addr: GroupAddressableType,
         state_addr: GroupAddressableType,
         initial: float = 0.0,
+        dpt: type[DPTNumeric] = DPT2ByteFloat,
     ) -> None:
-        """Initialise and register the telegram callback."""
-        self._xknx = device_xknx
-        self.value: float = initial
-        self.state_addr: GroupAddress = GroupAddress(state_addr)
-        device_xknx.telegram_queue.register_telegram_received_cb(
-            self._on_telegram,
-            group_addresses=[self.state_addr],
-        )
+        """Initialise with the given state and DPT, register the callback."""
+        super().__init__(device_xknx, cmd_addr, state_addr)
+        self.state: float = initial
+        self._dpt: type[DPTNumeric] = dpt
 
-    def _on_telegram(self, telegram: Telegram) -> None:
-        """Answer GroupValueRead requests on the state address."""
-        if telegram.destination_address == self.state_addr:
-            if isinstance(telegram.payload, GroupValueRead):
-                self._send_value(response=True)
+    def _encode(self) -> DPTArray:
+        """Encode the current state as a :class:`~xknx.dpt.DPTArray`."""
+        return self._dpt.to_knx(self.state)
 
-    def _send_value(self, *, response: bool) -> None:
-        """Put a value telegram into the outgoing queue."""
-        payload: GroupValueWrite | GroupValueResponse
-        encoded: DPTArray = DPT2ByteFloat.to_knx(self.value)
-        if response:
-            payload = GroupValueResponse(value=encoded)
-        else:
-            payload = GroupValueWrite(value=encoded)
-        self._xknx.telegrams.put_nowait(
-            Telegram(destination_address=self.state_addr, payload=payload)
-        )
+    def _apply(self, value: DPTBinary | DPTArray) -> None:
+        """Decode and store an incoming numeric command payload."""
+        result = self._dpt.from_knx(value)
+        self.state = float(result)
 
-    def set_value(self, val: float) -> None:
+    def set_state(self, val: float) -> None:
         """
-        Inject a new sensor reading onto the bus.
+        Inject a device-originated state change.
 
         Sends a :class:`~xknx.telegram.apci.GroupValueWrite` on the state
-        address, as a real sensor would when its reading changes.
+        address without any preceding command.
 
         Args:
-            val: New float value to publish.
+            val: New numeric state to publish.
         """
-        self.value = val
-        self._send_value(response=False)
+        self.state = val
+        self._send_state(response=False)
 
 
 class Tester:
@@ -259,28 +375,28 @@ discover = false
             self._client = client
             yield self
 
-    def switch(self, *a: object, **k: object) -> Switch:
+    def switch(self, *a, **k) -> Switch:
         """Create a :class:`~xknx.devices.Switch` registered with the client."""
         assert self._client is not None
         res = Switch(self._client, *a, **k)
         self._client.devices.async_add(res)
         return res
 
-    def binary_sensor(self, *a: object, **k: object) -> BinarySensor:
+    def binary_sensor(self, *a, **k) -> BinarySensor:
         """Create a :class:`~xknx.devices.BinarySensor` registered with the client."""
         assert self._client is not None
         res = BinarySensor(self._client, *a, **k)
         self._client.devices.async_add(res)
         return res
 
-    def sensor(self, *a: object, **k: object) -> Sensor:
+    def sensor(self, *a, **k) -> Sensor:
         """Create a :class:`~xknx.devices.Sensor` registered with the client."""
         assert self._client is not None
         res = Sensor(self._client, *a, **k)
         self._client.devices.async_add(res)
         return res
 
-    def exposed_sensor(self, *a: object, **k: object) -> ExposeSensor:
+    def exposed_sensor(self, *a, **k) -> ExposeSensor:
         """Create an :class:`~xknx.devices.ExposeSensor` registered with the client."""
         assert self._client is not None
         res = ExposeSensor(self._client, *a, **k)

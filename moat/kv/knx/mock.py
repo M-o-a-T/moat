@@ -97,7 +97,7 @@ trace-mask = 0x3ff
         )
         async with (
             self._daemon() as server,
-            xknx.XKNX().run(connection_config=ccfg) as client,
+            xknx.XKNX(connection_config=ccfg) as client,
         ):
             self._server = server
             self._client = client

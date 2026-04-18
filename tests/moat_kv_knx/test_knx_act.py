@@ -29,7 +29,7 @@ import pytest
 from xknx.telegram import GroupAddress
 
 from moat.util import attrdict
-from moat.kv.knx.mock import SimulatedBinaryDevice
+from moat.kv.knx.mock import SimulatedBinaryDevice, SimulatedBinarySensor
 from moat.kv.knx.model import KNXroot
 from moat.kv.knx.task import task
 from moat.kv.mock.mqtt import stdtest
@@ -49,6 +49,8 @@ _KV_CMD = P("test.cmd")  # moat-kv path watched by the type=out node
 _KV_STATE = P("test.state")  # moat-kv path written by the type=in node
 _CMD_ADDR = GroupAddress("0/0/1")  # KNX command address  (type=out → bus)
 _STATE_ADDR = GroupAddress("0/0/2")  # KNX state address   (bus → type=in)
+_SENSOR_ADDR = GroupAddress("0/0/3")  # sensor-only address (bus → type=in)
+_KV_SENSOR = P("test.sensor")  # moat-kv path written by the sensor type=in node
 _BUS = "testbus"  # KNX bus name in the model tree
 _SRV = "myserver"  # KNX server entry name in the model tree
 
@@ -159,5 +161,87 @@ async def test_moatkv_binary_roundtrip(
 
                 device.set_state(True)
                 await _recv(True)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_moatkv_binary_sensor(
+    knxd_port: int,
+    xknx_device: xknx.XKNX,
+) -> None:
+    """
+    Verify that moat-kv-knx correctly receives binary sensor readings.
+
+    A :class:`~moat.kv.knx.mock.SimulatedBinarySensor` publishes boolean
+    state changes on the sensor address (0/0/3).  The ``type=in`` node
+    receives each ``GroupValueWrite`` and writes the value to ``test.sensor``
+    in moat-kv.
+
+    The ``type=in`` node's internal :class:`~xknx.devices.BinarySensor`
+    issues a ``GroupValueRead`` at startup; the simulated sensor answers with
+    ``GroupValueResponse(False)``, writing an initial ``False`` to moat-kv.
+    The :func:`_recv` helper skips values until the expected one is seen,
+    handling this start-up artifact transparently.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_device: Connected XKNX instance hosting the simulated sensor
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    sensor = SimulatedBinarySensor(xknx_device, _SENSOR_ADDR)
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            # type=in: sensor writes on 0/0/3 → moat-kv test.sensor
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 3)),
+                value={"type": "in", "mode": "binary", "dest": _KV_SENSOR},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            sens_send, sens_recv = anyio.create_memory_object_stream[bool](max_buffer_size=16)
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                async def _watch_sensor(
+                    *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+                ) -> None:
+                    async with c.watch(_KV_SENSOR, min_depth=0, max_depth=0) as wp:
+                        task_status.started()
+                        async for msg in wp:
+                            if "path" in msg and "value" in msg:
+                                sens_send.send_nowait(bool(msg.value))
+
+                await tg.start(_watch_sensor)
+
+                # Skip values until the expected one arrives.  The startup
+                # GroupValueRead → GroupValueResponse(False) may pre-populate
+                # test.sensor with False before the first explicit set_state().
+                async def _recv(expected: bool) -> None:
+                    with anyio.fail_after(5):
+                        async for val in sens_recv:
+                            if val is expected:
+                                return
+
+                sensor.set_state(True)
+                await _recv(True)
+
+                sensor.set_state(False)
+                await _recv(False)
 
                 tg.cancel_scope.cancel()

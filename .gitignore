@@ -82,3 +82,8 @@ __pycache__/
 # bv (beads viewer) local config and caches
 .bv/
 .beads/backup/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

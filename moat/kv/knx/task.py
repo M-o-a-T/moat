@@ -32,6 +32,11 @@ class XKNX(xknx.XKNX):
 
     task_group = None
 
+    async def __aexit__(self, *tb: object) -> None:
+        """Exit the context, shielding stop() from any active cancellation."""
+        with anyio.move_on_after(2, shield=True):
+            await super().__aexit__(*tb)
+
 
 async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):  # noqa:D103
     client  # noqa:B018

@@ -25,10 +25,14 @@ from xknx.io import ConnectionConfig, ConnectionType
 from xknx.telegram import GroupAddress, Telegram
 from xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 if TYPE_CHECKING:
+    from anyio.abc import Process
+
     from xknx.telegram.address import GroupAddressableType
+
+    from collections.abc import AsyncIterator
 
 
 class SimulatedBinaryDevice:
@@ -192,7 +196,7 @@ class Tester:
         self.TCP_PORT = port
 
     @asynccontextmanager
-    async def _daemon(self):  # type: ignore[return]
+    async def _daemon(self) -> AsyncIterator[Process]:
         """Start a knxd process and wait until it accepts connections."""
         with tempfile.TemporaryDirectory() as d:
             cfg = os.path.join(d, "test.ini")
@@ -240,7 +244,7 @@ discover = false
                 proc.kill()
 
     @asynccontextmanager
-    async def run(self):  # type: ignore[return]
+    async def run(self) -> AsyncIterator[Self]:
         """Start knxd and the XKNX client; yield *self*."""
         ccfg = ConnectionConfig(
             connection_type=ConnectionType.TUNNELING,

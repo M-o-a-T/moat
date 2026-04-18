@@ -59,6 +59,7 @@ _SENSOR_ADDR = GroupAddress("0/0/3")  # sensor-only address (bus → type=in)
 _KV_SENSOR = P("test.sensor")  # moat-kv path written by the sensor type=in node
 _KV_INT_STATE = P("test.int_state")  # state path for integer actuator test
 _KV_INT_SENSOR = P("test.int_sensor")  # value path for integer sensor test
+_KV_ROOMTEMP = P("test.roomtemp")  # moat-kv path for startup-read test
 _BUS = "testbus"  # KNX bus name in the model tree
 _SRV = "myserver"  # KNX server entry name in the model tree
 
@@ -426,5 +427,88 @@ async def test_moatkv_integer_sensor(
 
                 sensor.set_value(7)
                 await _recv(7)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_moatkv_startup_read(
+    knxd_port: int,
+    xknx_device: xknx.XKNX,
+) -> None:
+    """
+    Verify that moat-kv-knx reads a sensor's current value at startup.
+
+    When ``task()`` is called with ``initial=True`` the ``type=in`` node
+    calls :meth:`~xknx.devices.Sensor.sync` immediately after registering
+    the xknx device.  This sends a ``GroupValueRead`` to the sensor's group
+    address.  A :class:`~moat.kv.knx.mock.SimulatedSensorDevice` pre-loaded
+    with 22.0 °C answers with ``GroupValueResponse``, causing the ``type=in``
+    node to write 22.0 to moat-kv without any explicit
+    :meth:`~moat.kv.knx.mock.SimulatedSensorDevice.set_value` call.
+
+    After that initial read the test also verifies that subsequent
+    ``GroupValueWrite`` updates (22.5 °C) are received normally.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_device: Connected XKNX instance hosting the simulated sensor
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    # Sensor is pre-loaded with 22.0; it will answer the startup GroupValueRead.
+    sensor = SimulatedSensorDevice(xknx_device, _SENSOR_ADDR, initial=22.0)
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 3)),
+                value={"type": "in", "mode": "temperature", "dest": _KV_ROOMTEMP},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            temp_send, temp_recv = anyio.create_memory_object_stream[float](max_buffer_size=16)
+
+            async with anyio.create_task_group() as tg:
+                # initial=True: _task_in will call device.sync() at startup,
+                # sending GroupValueRead → sensor answers → value written to moat-kv.
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready, None, True)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                async def _watch_temp(
+                    *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+                ) -> None:
+                    async with c.watch(_KV_ROOMTEMP, min_depth=0, max_depth=0) as wp:
+                        task_status.started()
+                        async for msg in wp:
+                            if "path" in msg and "value" in msg:
+                                temp_send.send_nowait(float(msg.value))
+
+                await tg.start(_watch_temp)
+
+                async def _recv(expected: float) -> None:
+                    with anyio.fail_after(5):
+                        async for val in temp_recv:
+                            if val == expected:
+                                return
+
+                # The startup GroupValueRead should deliver 22.0 without any
+                # explicit set_value() call.
+                await _recv(22.0)
+
+                # Ongoing monitoring must continue to work.
+                sensor.set_value(22.5)
+                await _recv(22.5)
 
                 tg.cancel_scope.cancel()

@@ -108,6 +108,7 @@ dev = [
     "pytest-trio",
     "pytest-coverage",
     "ruamel.yaml",
+    "ruff",
     "setuptools-scm",
     "simplejson",
     "smbus3",

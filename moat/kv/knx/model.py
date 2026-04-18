@@ -99,7 +99,7 @@ class _KNXnode(_KNXbase):
 class KNXnode(_KNXnode):
     """Describes one port, i.e. incoming value to be read."""
 
-    async def _task_in(self, evt, dest):
+    async def _task_in(self, evt, dest, initial=False):
         try:
             idem = self.find_cfg("idem", default=True)
 
@@ -133,6 +133,8 @@ class KNXnode(_KNXnode):
 
             self._server.devices.async_add(device)
             self.__evt = anyio.Event()
+            if initial:
+                await device.sync()
             try:
                 evt.set()
                 while True:
@@ -248,7 +250,7 @@ class KNXnode(_KNXnode):
         if typ == "in":
             dest = self.find_cfg("dest", default=None)
             if dest is not None:
-                await self.spawn(self._task_in, evt, dest)
+                await self.spawn(self._task_in, evt, dest, initial)
             else:
                 logger.info("'dest' not set in %s", self.subpath)
                 return

@@ -26,10 +26,16 @@ from __future__ import annotations
 import anyio
 import pytest
 
+from xknx.dpt import DPTValue1ByteUnsigned
 from xknx.telegram import GroupAddress
 
 from moat.util import attrdict
-from moat.kv.knx.mock import SimulatedBinaryDevice, SimulatedBinarySensor
+from moat.kv.knx.mock import (
+    SimulatedActuator,
+    SimulatedBinaryDevice,
+    SimulatedBinarySensor,
+    SimulatedSensorDevice,
+)
 from moat.kv.knx.model import KNXroot
 from moat.kv.knx.task import task
 from moat.kv.mock.mqtt import stdtest
@@ -51,6 +57,8 @@ _CMD_ADDR = GroupAddress("0/0/1")  # KNX command address  (type=out → bus)
 _STATE_ADDR = GroupAddress("0/0/2")  # KNX state address   (bus → type=in)
 _SENSOR_ADDR = GroupAddress("0/0/3")  # sensor-only address (bus → type=in)
 _KV_SENSOR = P("test.sensor")  # moat-kv path written by the sensor type=in node
+_KV_INT_STATE = P("test.int_state")  # state path for integer actuator test
+_KV_INT_SENSOR = P("test.int_sensor")  # value path for integer sensor test
 _BUS = "testbus"  # KNX bus name in the model tree
 _SRV = "myserver"  # KNX server entry name in the model tree
 
@@ -243,5 +251,180 @@ async def test_moatkv_binary_sensor(
 
                 sensor.set_state(False)
                 await _recv(False)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_moatkv_integer_roundtrip(
+    knxd_port: int,
+    xknx_device: xknx.XKNX,
+) -> None:
+    """
+    Verify the full two-way integer actuator roundtrip through moat-kv-knx.
+
+    Mirrors :func:`test_moatkv_binary_roundtrip` but uses
+    ``mode='1byte_unsigned'`` and a
+    :class:`~moat.kv.knx.mock.SimulatedActuator` with
+    :class:`~xknx.dpt.DPTValue1ByteUnsigned` encoding.
+
+    **moat-kv → device**: writing an integer to ``test.int_state`` via the
+    ``type=out`` node sends a ``GroupValueWrite`` on the command address.
+    The actuator receives it, updates its state, and confirms on the state
+    address.  The ``type=in`` node writes the confirmed value back to
+    ``test.int_state``.
+
+    **device → moat-kv**: a device-originated state change (via
+    :meth:`~moat.kv.knx.mock.SimulatedActuator.set_state`) publishes a
+    ``GroupValueWrite`` on the state address; the ``type=in`` node writes
+    the value into moat-kv.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_device: Connected XKNX instance hosting the simulated actuator
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    device = SimulatedActuator(xknx_device, _CMD_ADDR, _STATE_ADDR, dpt=DPTValue1ByteUnsigned)
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 1)),
+                value={"type": "out", "mode": "1byte_unsigned", "src": _KV_CMD},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 2)),
+                value={"type": "in", "mode": "1byte_unsigned", "dest": _KV_INT_STATE},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            st_send, st_recv = anyio.create_memory_object_stream[int](max_buffer_size=16)
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                async def _watch_int(
+                    *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+                ) -> None:
+                    async with c.watch(_KV_INT_STATE, min_depth=0, max_depth=0) as wp:
+                        task_status.started()
+                        async for msg in wp:
+                            if "path" in msg and "value" in msg:
+                                st_send.send_nowait(int(msg.value))
+
+                await tg.start(_watch_int)
+
+                # Use == (not is) for integer comparison.  The startup
+                # GroupValueRead → GroupValueResponse(0) from the type=in Sensor
+                # may pre-populate test.int_state with 0; _recv skips it.
+                async def _recv(expected: int) -> None:
+                    with anyio.fail_after(5):
+                        async for val in st_recv:
+                            if val == expected:
+                                return
+
+                # ── Direction 1: moat-kv → device → moat-kv ─────────────── #
+
+                await c.set(_KV_CMD, value=42)
+                await _recv(42)
+                assert device.state == 42
+
+                await c.set(_KV_CMD, value=7)
+                await _recv(7)
+                assert device.state == 7
+
+                # ── Direction 2: device → moat-kv (no echo to bus) ──────── #
+
+                device.set_state(99)
+                await _recv(99)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_moatkv_integer_sensor(
+    knxd_port: int,
+    xknx_device: xknx.XKNX,
+) -> None:
+    """
+    Verify that moat-kv-knx correctly receives 1-byte unsigned integer readings.
+
+    Mirrors :func:`test_moatkv_binary_sensor` using ``mode='1byte_unsigned'``
+    and a :class:`~moat.kv.knx.mock.SimulatedSensorDevice` with
+    :class:`~xknx.dpt.DPTValue1ByteUnsigned` encoding.
+
+    The ``type=in`` node's internal :class:`~xknx.devices.Sensor` issues a
+    ``GroupValueRead`` at startup; the simulated sensor answers with its
+    initial value (0), writing 0 to moat-kv.  The :func:`_recv` helper skips
+    values until the expected integer is seen.
+
+    Args:
+        knxd_port: Port of the running knxd instance (from fixture).
+        xknx_device: Connected XKNX instance hosting the simulated sensor
+            (from fixture).
+    """
+    cfg = attrdict(prefix=_PREFIX, server_default=attrdict(port=3671))
+
+    sensor = SimulatedSensorDevice(xknx_device, _SENSOR_ADDR, dpt=DPTValue1ByteUnsigned)
+
+    async with stdtest(args={"init": 0}, tocks=50) as st:
+        assert st is not None
+        async with st.client() as c:
+            await c.set(
+                _PREFIX + Path.build((_BUS, _SRV)),
+                value={"host": "127.0.0.1", "port": knxd_port},
+            )
+            await c.set(
+                _PREFIX + Path.build((_BUS, 0, 0, 3)),
+                value={"type": "in", "mode": "1byte_unsigned", "dest": _KV_INT_SENSOR},
+            )
+
+            knxroot = await KNXroot.as_handler(c, cfg=cfg)
+            await knxroot.wait_loaded()
+
+            task_ready = anyio.Event()
+
+            sens_send, sens_recv = anyio.create_memory_object_stream[int](max_buffer_size=16)
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task, c, cfg, knxroot[_BUS][_SRV], task_ready)
+
+                with anyio.fail_after(10):
+                    await task_ready.wait()
+
+                async def _watch_int_sensor(
+                    *, task_status: anyio.abc.TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+                ) -> None:
+                    async with c.watch(_KV_INT_SENSOR, min_depth=0, max_depth=0) as wp:
+                        task_status.started()
+                        async for msg in wp:
+                            if "path" in msg and "value" in msg:
+                                sens_send.send_nowait(int(msg.value))
+
+                await tg.start(_watch_int_sensor)
+
+                async def _recv(expected: int) -> None:
+                    with anyio.fail_after(5):
+                        async for val in sens_recv:
+                            if val == expected:
+                                return
+
+                sensor.set_value(42)
+                await _recv(42)
+
+                sensor.set_value(7)
+                await _recv(7)
 
                 tg.cancel_scope.cancel()

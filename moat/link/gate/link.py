@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import anyio
 
+from moat.util import attrdict
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+from moat.util.dict import combine_dict as _combine_dict
 
 from . import DelayedGate, GateNode
 
@@ -68,8 +70,20 @@ class Gate(DelayedGate):
         if not server_name:
             raise ValueError("Link gate requires 'server' configuration")
 
+        # Build the config for the remote Link.
+        # If the gate config contains a 'backend' dict, use it to override
+        # the local backend settings so the remote Link talks to the
+        # correct MQTT broker (e.g. a satellite broker after a network split).
+        cfg = self.link.link.cfg
+        if "backend" in self.cf:
+            cfg = _combine_dict(
+                {"backend": dict(self.cf.backend)},
+                cfg,
+                cls=attrdict,
+            )
+
         # Connect to the remote server
-        async with Link(self.link.link.cfg, only=server_name) as remote:
+        async with Link(cfg, only=server_name) as remote:
             self._remote = remote
             await super().run_(task_status=task_status)
 

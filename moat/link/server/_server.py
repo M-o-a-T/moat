@@ -2429,6 +2429,12 @@ class Server(MsgHandler):
             return upd, skp, tags, mode
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
+        """
+        Iterate over service announcement messages and sync from remote servers.
+
+        Retries syncing from a server if the TCP link is not yet established,
+        up to a limited number of attempts per server.
+        """
         seen = defaultdict(lambda: 0)
         async for msg in main:
             if msg.meta.origin == self.name:

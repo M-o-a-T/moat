@@ -29,3 +29,6 @@ Environment=MOAT-cfg=/etc/moat/moat-%i.yaml
 
 TimeoutSec=300
 WatchdogSec=10
+
+Restart=always
+RestartSec=30

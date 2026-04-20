@@ -25,3 +25,6 @@ EnvironmentFile=-/etc/moat/kv.env
 
 TimeoutSec=300
 WatchdogSec=300  # Sigh
+
+Restart=always
+RestartSec=30

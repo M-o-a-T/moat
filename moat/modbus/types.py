@@ -39,6 +39,8 @@ try:
 
 except ImportError:
     from pymodbus.datastore.store import BaseModbusDataBlock
+    from pymodbus.datastore.store import ModbusSparseDataBlock
+    pass
 
 MAX_REQ_LEN = 30
 
@@ -498,7 +500,7 @@ class InputRegisters(TypeCodec):
     decoder_m = WriteMultipleRegistersResponse
 
 
-class DataBlock(dict, BaseModbusDataBlock):
+class DataBlock(dict, ModbusSparseDataBlock):
     """Your basic sparse data block.
 
     The @changed attribute is an event that triggers when a write request

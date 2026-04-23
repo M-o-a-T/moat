@@ -1,7 +1,6 @@
 [Unit]
 Description=MoaT-KV default all-nodes runner
 After=moat-kv.service
-Conflicts=distkv-run-all.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

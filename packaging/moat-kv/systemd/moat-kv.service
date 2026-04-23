@@ -3,7 +3,6 @@ Description=MoaT-KV main server
 After=mosquitto.service
 Wants=mosquitto.service
 Conflicts=moat-kv-recover.service
-Conflicts=distkv.service
 OnFailure=moat-kv-recover.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml

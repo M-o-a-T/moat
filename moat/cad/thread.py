@@ -6,14 +6,8 @@ from __future__ import annotations
 
 from math import pi, tan
 
-try:
-    import bd_warehouse.thread as _t
-    import cadquery
-except ImportError:
-    _t = None
-    TrapezoidalThread = object
-else:
-    TrapezoidalThread = _t.TrapezoidalThread
+import bd_warehouse.thread as _t
+import cadquery
 
 __all__ = ["AngledThread", "ISO228_Thread"]
 
@@ -72,7 +66,7 @@ def AngledThread(
     )
 
 
-class ISO228_Thread(TrapezoidalThread):
+class ISO228_Thread(_t.TrapezoidalThread):
     "Threads for fittings. ISO 228."
 
     specs = {

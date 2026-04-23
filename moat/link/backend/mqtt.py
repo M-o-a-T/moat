@@ -293,7 +293,6 @@ class _SubGet:
                             self.codec.__class__.__module__,
                             msg.payload,
                             exc,
-                            exc_info=exc,
                         )
                         await back.send(
                             P(":R.error.link.mqtt.codec") + top,

@@ -1292,13 +1292,20 @@ class Link(LinkCommon, CtxObj):
 
         # Try Unix socket first, if configured
         if self._socket_path is not None:
+            entered = False
             try:
-                with anyio.fail_after(self.cfg.client.init_timeout):
-                    async with self._connect_one(self._socket_path) as rem:
-                        await self._connect_run(rem, task_status=task_status)
+                async with timed_ctx(
+                    self.cfg.client.init_timeout, self._connect_one(self._socket_path)
+                ) as rem:
+                    entered = True
+                    await self._connect_run(rem, task_status=task_status)
             except OSError as exc:
+                if entered:
+                    raise
                 self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
             except TimeoutError:
+                if entered:
+                    raise
                 self.logger.info("%r timed out, trying announcements", self._socket_path)
             finally:
                 self.current_server = None

@@ -22,7 +22,7 @@ name = "moat-lib-pid"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='An advanced PID controller'
 readme = "README.md"
-version = "0.8.1"
+version = "0.8.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

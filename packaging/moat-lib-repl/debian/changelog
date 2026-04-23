@@ -1,3 +1,9 @@
+moat-lib-repl (0.1.6-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:15:46 +0200
+
 moat-lib-repl (0.1.5-2) unstable; urgency=medium
 
   * New release for 26.0.12

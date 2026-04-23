@@ -31,7 +31,7 @@ dependencies = [
   "moat-lib-pid ~= 0.8.1",
   "moat-lib-proxy ~= 0.1.1",
   "moat-lib-ring ~= 0.2.3",
-  "moat-lib-run ~= 0.1.3",
+  "moat-lib-run ~= 0.2.0",
   "moat-lib-stream ~= 0.3.0",
 ]
 requires-python = ">=3.8"
@@ -39,7 +39,7 @@ name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.21.2"
+version = "0.21.3"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

@@ -1,7 +1,7 @@
 [Unit]
 Description=Moat-KV OWFS server
 After=moat-kv.service
-Requires=moat-kv.service
+# Requires=moat-kv.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

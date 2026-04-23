@@ -1,7 +1,8 @@
 [Unit]
 Description=MoaT-KV WAGO server
 After=moat-kv.service
-Requires=moat-kv.service
+# Requires=moat-kv.service
+# only if moat-kv runs on the same host
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

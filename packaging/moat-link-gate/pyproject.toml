@@ -19,7 +19,7 @@ dependencies = [
 	"moat-link ~= 0.6.0",
 	"moat-lib-mqtt ~= 0.8.0",
 	]
-version = "0.0.5"
+version = "0.0.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-gate"

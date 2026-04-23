@@ -23,10 +23,10 @@ dependencies = [
 	"moat-lib-micro ~= 0.3.0",
 	"moat-lib-path ~= 0.3.0",
 	"moat-lib-proxy ~= 0.1.1",
-	"moat-lib-run ~= 0.1.3",
+	"moat-lib-run ~= 0.2.0",
 	"moat-lib-config ~= 0.2.0",
 	]
-version = "0.63.4"
+version = "0.63.5"
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"

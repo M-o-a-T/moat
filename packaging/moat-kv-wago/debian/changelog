@@ -1,3 +1,9 @@
+moat-kv-wago (0.8.9-3) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:11:26 +0200
+
 moat-kv-wago (0.8.9-2) unstable; urgency=medium
 
   * New release for 26.0.12

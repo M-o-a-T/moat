@@ -1,3 +1,9 @@
+moat-micro (0.21.3-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:13:19 +0200
+
 moat-micro (0.21.2-2) unstable; urgency=medium
 
   * New release for 26.0.19

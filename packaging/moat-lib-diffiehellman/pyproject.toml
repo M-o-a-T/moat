@@ -21,7 +21,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"},{email = "c
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.md"
-version = "0.13.6"
+version = "0.13.7"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

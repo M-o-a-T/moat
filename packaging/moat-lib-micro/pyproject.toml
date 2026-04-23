@@ -21,7 +21,7 @@ name = "moat-lib-micro"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='Compatibility layer for CPython/anyio and MicroPython/uasyncio'
 readme = "README.md"
-version = "0.3.1"
+version = "0.3.2"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

@@ -1,3 +1,9 @@
+moat-lib-ring (0.2.4-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:15:30 +0200
+
 moat-lib-ring (0.2.3-3) unstable; urgency=medium
 
   * New release for 26.0.3

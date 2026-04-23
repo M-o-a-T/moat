@@ -1,3 +1,9 @@
+moat-lib-mqtt (0.8.2-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:16:57 +0200
+
 moat-lib-mqtt (0.8.1-2) unstable; urgency=medium
 
   * New release for 26.0.12

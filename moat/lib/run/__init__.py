@@ -76,6 +76,9 @@ class AliasedGroup(click.Group):
         if len(matches) == 1:
             return super().get_command(ctx, matches[0])
 
+        if cmd_name in matches:
+            return super().get_command(ctx, cmd_name)
+
         ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
 
     async def resolve_command(self, ctx, args):
@@ -90,13 +93,13 @@ class AliasedGroup(click.Group):
 # cmd_eval is a simple and safe "eval" replacement.
 _eval = simpleeval.SimpleEval(functions=dict(P=P, Path=Path))
 if _eval.nodes is not None:
-    _eval.nodes[ast.Tuple] = lambda node: tuple(  #ty:ignore[invalid-assignment]
+    _eval.nodes[ast.Tuple] = lambda node: tuple(  # ty:ignore[invalid-assignment]
         _eval._eval(x) for x in node.elts
     )
-    _eval.nodes[ast.List] = lambda node: list(  #ty:ignore[invalid-assignment]
+    _eval.nodes[ast.List] = lambda node: list(  # ty:ignore[invalid-assignment]
         _eval._eval(x) for x in node.elts
     )
-    _eval.nodes[ast.Dict] = lambda node: attrdict(  #ty:ignore[invalid-assignment]
+    _eval.nodes[ast.Dict] = lambda node: attrdict(  # ty:ignore[invalid-assignment]
         (_eval._eval(x), _eval._eval(y)) for x, y in zip(node.keys, node.values, strict=False)
     )
 cmd_eval = _eval.eval
@@ -113,7 +116,7 @@ def attr_args(
     with_combined: bool | str = "s",
     with_arglist: bool = False,
     with_path: bool = True,
-    with_eval: bool|str = True,
+    with_eval: bool | str = True,
     with_var: bool = True,
     with_proxy: bool = False,
     par_name: str = "Parameter",
@@ -689,6 +692,9 @@ class Loader(AliasedGroup):
 
         if len(matches) == 1:
             return self._get_command(ctx, matches[0])
+
+        if cmd_name in matches:
+            return self._get_command(ctx, cmd_name)
 
         ctx.fail(f"Too many matches: {', '.join(sorted(matches))}")
 

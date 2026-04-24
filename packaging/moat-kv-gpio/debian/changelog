@@ -1,3 +1,9 @@
+moat-kv-gpio (0.12.10-3) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:32:01 +0200
+
 moat-kv-gpio (0.12.10-2) unstable; urgency=medium
 
   * New release for 26.0.12

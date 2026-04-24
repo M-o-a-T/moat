@@ -1,3 +1,9 @@
+moat-link-gate (0.0.6-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:40:35 +0200
+
 moat-link-gate (0.0.6-1) unstable; urgency=medium
 
   * New release for 26.1.10

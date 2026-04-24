@@ -499,9 +499,9 @@ class RunnerEntry(AttrClientEntry):
         backoff (float): Exponential back-off factor on errors.
             Default: 1.1.
 
-    The code runs with these additional keywords::
+    The code runs with these additional globals::
 
-        _self: the `CallEnv` object, which the task can use to actually do things.
+        _self: the `CallAdmin` object, which the task can use to actually do things.
         _client: the MoaT-KV client connection.
         _info: a queue which the task can use to receive events. A message of
             ``None`` signals that the queue was overflowing and no further

@@ -115,10 +115,9 @@ class ISO228_Thread(_t.TrapezoidalThread):
     ):
         kw.setdefault("end_finishes", ("fade", "fade"))
 
-        self.size = size
         self.external = external
         self.length = length
-        (pitch, diameter) = self.specs[self.size]
+        (pitch, diameter) = self.specs[size]
         self.pitch = IN / pitch
         diameter += 2 * adj
 
@@ -136,6 +135,76 @@ class ISO228_Thread(_t.TrapezoidalThread):
         # length; the ratio is defined by the angle.
 
         hd = self.pitch / 6 / tan(radians(self.thread_angle))
+        if self.external:
+            self.apex_radius = diameter / 2 + hd
+            self.root_radius = diameter / 2 - hd
+            self.diameter = 2 * self.root_radius
+        else:
+            self.apex_radius = diameter / 2 - hd
+            self.root_radius = diameter / 2 + hd
+            self.diameter = 2 * self.apex_radius
+
+        cq_object = _t.Thread(
+            apex_radius=self.apex_radius,
+            apex_width=apex_width,
+            root_radius=self.root_radius,
+            root_width=root_width,
+            pitch=self.pitch,
+            length=self.length,
+            **kw,
+        )
+        self.end_finishes = cq_object.end_finishes
+        self.hand = "right" if cq_object.right_hand else "left"
+        cadquery.Solid.__init__(self, cq_object.wrapped)
+
+
+class ISO1222_Thread(ISO228_Thread):
+    "Threads for photo tripods. ISO 1222."
+
+    specs = {
+        # nominal size: threads per inch / diameter at center of thread
+        "1/4": (20, 5.525),
+        "3/8": (16, 8.494),
+    }
+
+    thread_angle = 30  # degrees
+
+    @classmethod
+    def parse_size(cls, x):
+        "not called here. Yes we're duck typing."
+        x  # noqa:B018
+        raise RuntimeError("Not applicable")
+
+    def __init__(
+        self,
+        size: str,
+        length: float,
+        adj: float = 0,
+        external: bool = True,
+        **kw,
+    ):
+        kw.setdefault("end_finishes", ("fade", "fade"))
+
+        self.external = external
+        self.length = length
+        (pitch, diameter) = self.specs[size]
+        self.pitch = IN / pitch
+        diameter += 2 * adj
+
+        self.adj = adj
+
+        # 3/8th of the total height, given the thread angle, is cut off.
+        # This corresponds to 3/8th of the total width, i.e. the pitch.
+
+        top = 3 / 16 * self.pitch
+        apex_width = top
+        root_width = self.pitch - top  # - bottom really, but top==bottom here
+
+        # The height difference between the thread's center and its
+        # adjacent top (or bottom) is spread over 1/6th of the pitch
+        # length; the ratio is defined by the angle.
+
+        hd = self.pitch / 8 / tan(radians(self.thread_angle))
         if self.external:
             self.apex_radius = diameter / 2 + hd
             self.root_radius = diameter / 2 - hd

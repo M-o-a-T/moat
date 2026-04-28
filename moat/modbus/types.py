@@ -38,8 +38,8 @@ try:
     BaseModbusDataBlock: TypeAlias = ModbusSequentialDataBlock | ModbusSparseDataBlock
 
 except ImportError:
-    from pymodbus.datastore.store import BaseModbusDataBlock
     from pymodbus.datastore.store import ModbusSparseDataBlock
+
     pass
 
 MAX_REQ_LEN = 30
@@ -500,7 +500,7 @@ class InputRegisters(TypeCodec):
     decoder_m = WriteMultipleRegistersResponse
 
 
-class DataBlock(dict, ModbusSparseDataBlock):
+class DataBlock(ModbusSparseDataBlock):
     """Your basic sparse data block.
 
     The @changed attribute is an event that triggers when a write request
@@ -509,12 +509,37 @@ class DataBlock(dict, ModbusSparseDataBlock):
 
     def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
         super().__init__()
+        self.__data = dict()
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
         self.changed = anyio.Event()
 
     def __bool__(self):
         return True
+
+    def __len__(self):
+        return len(self.__data)
+
+    def __getitem__(self, k):
+        return self.__data[k]
+
+    def __setitem__(self, k, v):
+        self.__data[k] = v
+
+    def __delitem__(self, k):
+        del self.__data[k]
+
+    def keys(self):
+        "mapping keys"
+        return self.__data.keys()
+
+    def values(self):
+        "mapping values"
+        return self.__data.values()
+
+    def items(self):
+        "mapping items"
+        return self.__data.items()
 
     def reset(self):
         """

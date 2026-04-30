@@ -1294,9 +1294,12 @@ class Link(LinkCommon, CtxObj):
         if self._socket_path is not None:
             entered = False
             try:
-                async with timed_ctx(
-                    self.cfg.client.init_timeout, self._connect_one(self._socket_path)
-                ) as rem:
+                async with (
+                    ungroup,
+                    timed_ctx(
+                        self.cfg.client.init_timeout, self._connect_one(self._socket_path)
+                    ) as rem,
+                ):
                     entered = True
                     await self._connect_run(rem, task_status=task_status)
             except OSError as exc:

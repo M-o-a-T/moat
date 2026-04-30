@@ -2,6 +2,12 @@
 
 d=$(dirname $0)
 
+cd /src/moat
+kitty ./mt link host list &
 while sleep 5 ; do ./mt -VVc local/thermo/test-pico.yaml micro run ; done &
 while sleep 2 ; do ./mt -Vc local/thermo/ug-link.yaml micro run ; done &
 while sleep 5 ; do $d/get-thermostat.py ; done &
+
+cd /src/venus-gui/build
+bin/venus-gui-v2 -p geheim -u mqtt --mqtt 10.107.9.17:1883 &
+bin/venus-gui-v2 -p geheim -u mqtt --mqtt 10.107.9.71:1883 &

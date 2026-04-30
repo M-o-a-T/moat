@@ -1,10 +1,10 @@
 _:
-  new: 26.1.12
+  new: 26.1.14
 moat:
-  deb: 0.12.2-2
+  deb: 0.12.2-3
   new: 0.12.2
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
+  pkg: 3
+  pkgrev: ae9f6cfd0058b242771cc966180c180229a7d4db
   pypi: 0.12.2
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.12.2
@@ -31,12 +31,11 @@ moat-bus:
   tag: 0.7.8
 moat-cad:
   deb: 0.3.3-3
-  new: 0.3.12
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.3.12
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.3.12
+  new: 0.3.13
+  pkg: 1
+  pypi: 0.3.13
+  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
+  tag: 0.3.13
 moat-db:
   deb: 0.2.2-3
   new: 0.2.7
@@ -131,12 +130,12 @@ moat-ems-victron:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.1.9
 moat-kv:
-  deb: 0.71.30-1
-  new: 0.71.30
+  deb: 0.71.31-1
+  new: 0.71.31
   pkg: 1
-  pypi: 0.71.30
-  rev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  tag: 0.71.30
+  pypi: 0.71.31
+  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
+  tag: 0.71.31
 moat-kv-akumuli:
   deb: 0.8.13-2
   new: 0.8.13
@@ -338,13 +337,12 @@ moat-lib-stream:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.3.2
 moat-link:
-  deb: 0.6.2-2
-  new: 0.6.2
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.6.2
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.6.2
+  deb: 0.6.3-1
+  new: 0.6.3
+  pkg: 1
+  pypi: 0.6.3
+  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
+  tag: 0.6.3
 moat-link-gate:
   deb: 0.0.6-2
   new: 0.0.6
@@ -410,13 +408,12 @@ moat-micro:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.21.3
 moat-modbus:
-  deb: 0.9.3-2
-  new: 0.9.3
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.9.3
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.9.3
+  deb: 0.9.4-1
+  new: 0.9.4
+  pkg: 1
+  pypi: 0.9.4
+  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
+  tag: 0.9.4
 moat-modbus-dev-_data:
   deb: 0.8.6-1
   new: 0.8.6
@@ -425,10 +422,10 @@ moat-modbus-dev-_data:
   rev: a6770c20e6ae7eac0cee11a40e1e17e03c2a0344
   tag: 0.8.6
 moat-mqtt:
-  deb: 0.42.17-2
+  deb: 0.42.17-3
   new: 0.42.17
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
+  pkg: 3
+  pkgrev: ae9f6cfd0058b242771cc966180c180229a7d4db
   pypi: 0.42.17
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.42.17

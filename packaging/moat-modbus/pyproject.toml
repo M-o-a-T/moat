@@ -19,7 +19,7 @@ dependencies = [
 	"asyncscope ~= 0.8.3",
 	"moat-lib-run ~= 0.2.0",
 	]
-version = "0.9.3"
+version = "0.9.4"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-modbus"

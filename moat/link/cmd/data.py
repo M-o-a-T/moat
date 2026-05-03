@@ -374,18 +374,19 @@ async def delete(obj, before, recursive, mqtt):
 
     The root entry cannot be deleted.
     """
-    if mqtt and (recursive or before):
-        raise click.UsageError("--mqtt and --recursive/--before don't like each other")
+    if mqtt:
+        if recursive or before:
+            raise click.UsageError("--mqtt and --recursive/--before don't like each other")
+        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
+        return
+
     args = {}
     if recursive:
         args["rec"] = recursive
     if before:
         args["ts"] = before
-    if mqtt:
-        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
-        return
-    else:
-        res = await obj.conn.d.delete(obj.path, **args)
+
+    res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
         res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:

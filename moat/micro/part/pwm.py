@@ -14,6 +14,7 @@ from moat.lib.micro import (
     TaskGroup,
     TimeoutError,  # noqa:A004
     every_ms,
+    idle,
     retry_ms,
     ticks_diff,
     ticks_ms,
@@ -22,7 +23,7 @@ from moat.lib.micro import (
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg, SubMsgSender
@@ -101,6 +102,7 @@ class PWM(BaseCmd):
     sync_high: dict
     sync_invert: bool = False
     sync_path: SubMsgSender | None = None
+    _sync_pid: SubMsgSender | None = None
 
     # Sync/resync state tracking
     _out_mode: str | None = None
@@ -109,6 +111,7 @@ class PWM(BaseCmd):
     _sync_suspended: bool = False
     _sync_check_ms: int | None = None
     _resync_scope = None  # anyio.CancelScope | None — cancel scope of resync task
+    _pid_lock_scope = None  # anyio.CancelScope | None — cancel scope of PID lock task
 
     _d_threshold = dict(
         _d="describes behavior at min/max boundaries",
@@ -117,6 +120,7 @@ class PWM(BaseCmd):
         t_check="int:interval for value check (s, default 10)",
         threshold="float:threshold to start resync, off below/on above",
         input="float:PWM value during resync",
+        lock="bool:block PID I increase/decrease while resync forces output",
     )
 
     doc = dict(
@@ -129,6 +133,7 @@ class PWM(BaseCmd):
             sync_high=_d_threshold,
             sync_path="path:value to check",
             sync_invert="bool:checked value inverted WRT input?",
+            sync_pid="path:PID controller (blocks I during sync)",
             base="float:input range 0...(1000)",
             init="float:initial value",
             so="bool:stream to pin? (no)",
@@ -150,6 +155,7 @@ class PWM(BaseCmd):
             t_sync=cfg.get("t_sync"),
             t_check=cfg.get("t_check", 10),
             bound=cfg.get("bound"),
+            lock=cfg.get("lock", False),
         )
 
     def _load(self):
@@ -174,10 +180,19 @@ class PWM(BaseCmd):
             raise TypeError(sp)
         self.sync_path = sp
 
+    def _load_sync_pid(self):
+        # Stores a sender to the PID's "lock" sub-command.
+        # Must be called after the command is attached (root is available).
+        if "sync_pid" not in self.cfg:
+            self._sync_pid = None
+            return
+        self._sync_pid = self.root.sub_at(self.cfg.sync_pid / "lock")
+
     async def reload(self):
         "reload from config"
         self._load()
         self._load_sync_path()
+        self._load_sync_pid()
         await super().reload()
 
     async def setup(self):  # noqa:D102
@@ -186,6 +201,7 @@ class PWM(BaseCmd):
         if await self.pin.rdy_():
             raise StoppedError("pin")
         self._load_sync_path()
+        self._load_sync_pid()
         self.set_times(self.cfg.get("init", self.min))
 
     async def task(self):  # noqa:D102
@@ -245,6 +261,27 @@ class PWM(BaseCmd):
         self._sync_left = None
         self._sync_suspended = False
         self._sync_check_ms = None
+        self._end_pid_lock()
+
+    def _end_pid_lock(self) -> None:
+        if self._pid_lock_scope is not None:
+            self._pid_lock_scope.cancel()
+            self._pid_lock_scope = None
+
+    async def _start_pid_lock(self, mode: str) -> None:
+        if self._pid_lock_scope is not None:
+            return
+        if self._sync_pid is None:
+            return
+        up = mode == "low"  # True blocks I increase; False blocks I decrease
+        sync_pid = self._sync_pid
+
+        async def _do_lock() -> None:
+            async with sync_pid.stream_out(up=up):
+                await idle()
+            self._pid_lock_scope = None
+
+        self._pid_lock_scope = await self._tg.spawn(_do_lock, _name="PIDLock")
 
     def _select_out_mode(self, val: float) -> str | None:
         low_threshold = self.sync_low.get("threshold")
@@ -294,6 +331,17 @@ class PWM(BaseCmd):
         interval = t_check if t_check is not None else t_ms
         p = self.sync_path if t_check is not None else None
 
+        # Start PID lock if configured: output is forced (not suspended) from the start.
+        mode = self._sync_active
+        should_lock = (
+            p is not None
+            and mode is not None
+            and self._sync_pid is not None
+            and self._sync_cfg(mode).get("lock")
+        )
+        if should_lock and not self._sync_suspended:
+            await self._start_pid_lock(cast(str, mode))
+
         remaining = t_ms
         last = ticks_ms()
         async for _value in every_ms(interval):
@@ -316,6 +364,11 @@ class PWM(BaseCmd):
                     self._sync_suspended = cond
                     if prev != cond:
                         self._apply_value(self.val)
+                        if should_lock:
+                            if cond:  # became suspended → output no longer forced
+                                self._end_pid_lock()
+                            else:  # became not-suspended → output forced again
+                                await self._start_pid_lock(self._sync_active)
 
             if not self._sync_suspended:
                 remaining -= dt

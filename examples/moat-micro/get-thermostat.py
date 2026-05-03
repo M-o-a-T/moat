@@ -14,7 +14,7 @@ async def run():
     lim = 18
     async with Link(CFG.moat.link) as li:
         pid = (await li.get_service(P("s.ug.heizung"))).sub_at(P("z1.r.pid"))
-        r=P("legacy.home.ass.dyn.sensor.test_z1")
+        r=P("home.ass.dyn.sensor.test_z1")
         while True:
             s = await pid.s()
             # print(s)

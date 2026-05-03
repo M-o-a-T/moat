@@ -383,6 +383,8 @@ async def node_attr(
             pass
         else:
             meta = MsgMeta.restore(m)
+    if val is None:
+        val = {}
     val = process_args(None if val is NotGiven else val, **kw)
     if retain:
         t = {} if meta is NotGiven else {"t": meta.timestamp}

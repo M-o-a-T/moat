@@ -401,8 +401,8 @@ moat-link-server:
   tag: 0.5.4
 moat-micro:
   deb: 0.21.3-2
-  new: 0.21.3
-  pkg: 2
+  new: 0.22.0
+  pkg: 1
   pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
   pypi: 0.21.3
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8

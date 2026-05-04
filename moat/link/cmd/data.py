@@ -191,18 +191,18 @@ async def cli(ctx, path, meta):
     "for values. Default: return as list",
 )
 @click.option(
-    "-m",
+    "-n",
     "--maxdepth",
     type=int,
     default=None,
     help="Limit recursion depth. Default: whole tree",
 )
 @click.option(
-    "-M",
+    "-N",
     "--mindepth",
     type=int,
     default=None,
-    help="Starting depth. Default: whole tree",
+    help="Starting depth. Default: root",
 )
 @click.option("-e", "--empty", is_flag=True, help="Include empty nodes")
 @click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
@@ -229,14 +229,14 @@ async def get(obj, **k):
     "for values. Default: return as list",
 )
 @click.option(
-    "-m",
+    "-N",
     "--maxdepth",
     type=int,
     default=1,
     help="Limit recursion depth. Default: 1 (single layer).",
 )
 @click.option(
-    "-M",
+    "-N",
     "--mindepth",
     type=int,
     default=1,
@@ -395,16 +395,16 @@ async def delete(obj, before, recursive, mqtt):
 
 
 @cli.command()
-@click.option("-m", "--mode", type=str, help="Retrieval mode", default="s")
-@click.option("-M", "--mark", is_flag=True, help="Retrieval mode")
+@click.option("-m", "--mode", type=str, help="Retrieval mode", default="s", metavar="MODE")
+@click.option("-M", "--mark", is_flag=True, help="Insert static-part-done flag")
 @click.option("-o", "--only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-s", "--subtree", is_flag=True, help="Read the whole tree.")
 @click.option("-p", "--path-only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.option("-i", "--ignore", multiple=True, type=P, help="Skip this (sub)tree")
-@click.option("-n", "--min-length", type=int, help="Minimum path length")
-@click.option("-N", "--max-length", type=int, help="Maximum path length")
-@click.option("-a", "--max-age", type=int, help="Skip entries older than N seconds")
+@click.option("-n", "--mindepth", type=int, help="Minimum path length")
+@click.option("-N", "--maxdepth", type=int, help="Maximum path length")
+@click.option("-a", "--maxage", type=int, help="Skip entries older than N seconds")
 @click.option("-t", "--timeout", type=int, help="Stop reading after N seconds")
 @click.pass_obj
 async def monitor(
@@ -416,14 +416,14 @@ async def monitor(
     ignore,
     mark,
     subtree,
-    min_length,
-    max_length,
-    max_age,
+    mindepth,
+    maxdepth,
+    maxage,
     timeout,
 ):
     """Monitor a MoaT-Link subtree.
 
-    The mode can be:
+    MODE can be:
     * c  current   read current data from the server
     * u  update    read updates from MQTT
     * s  stream    current plus updates
@@ -457,9 +457,9 @@ async def monitor(
             mark=mark,
             meta=True,
             subtree=subtree,
-            max_length=max_length,
-            min_length=min_length,
-            age=max_age,
+            max_length=maxdepth,
+            min_length=mindepth,
+            age=maxage,
         ) as mon:
             async for pdm in mon:
                 if pdm is None:

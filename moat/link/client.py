@@ -50,7 +50,7 @@ from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 try:
     from .schema import schema_path, validate_instance
@@ -98,6 +98,8 @@ if TYPE_CHECKING:
 
 
 NotGivenType = type(NotGiven)
+
+_NodeType = TypeVar("_NodeType", bound=Node)
 
 
 class _Requeue(Exception):
@@ -736,7 +738,8 @@ class LinkSender(MsgSender):
         meta: Literal[False] = False,
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[Any]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -746,7 +749,8 @@ class LinkSender(MsgSender):
         meta: Literal[True] = True,
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -756,7 +760,8 @@ class LinkSender(MsgSender):
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -766,7 +771,8 @@ class LinkSender(MsgSender):
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -776,7 +782,8 @@ class LinkSender(MsgSender):
         meta: Literal[True],
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -786,7 +793,8 @@ class LinkSender(MsgSender):
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
@@ -796,7 +804,8 @@ class LinkSender(MsgSender):
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     def d_watch(
         self,
@@ -809,7 +818,7 @@ class LinkSender(MsgSender):
         min_length: int | None = None,
         max_length: int | None = None,
         cls: type[Node] = Node,
-    ):
+    ) -> Watcher[Node]:
         """
         Monitor a node or subtree.
 
@@ -1512,7 +1521,7 @@ class BasicLink(LinkCommon, CtxObj):
 
 
 @define(eq=False)
-class Watcher(CtxObj):
+class Watcher(CtxObj, Generic[_NodeType]):
     """
     Helper class for monitoring (and coalescint the data of) either-or-both
     * a MQTT subscription to a subtree of our MoaT-Link hierarchy
@@ -1526,13 +1535,14 @@ class Watcher(CtxObj):
     state: bool | None | NotGivenType = field()
     age: float | None = field()
     mark: bool = field()
-    node_cls: type[Node] = field()
+    node_cls: type[_NodeType] = field()
     min_length: int | None = field()
     max_length: int | None = field()
 
+    nodes: _NodeType = field(init=False)
+
     _qr = field(init=False, repr=False)
     _tg = field(init=False, repr=False)
-    _node = field(init=False, default=None)
 
     _current_done: anyio.Event | None = field(init=False, default=None)
 
@@ -1602,7 +1612,7 @@ class Watcher(CtxObj):
     @asynccontextmanager
     async def _ctx(self):
         async with anyio.create_task_group() as tg:
-            self._node = self.node_cls()
+            self.nodes = self.node_cls()
             self._current_done = anyio.Event()
             self._tg = tg
             qw, self._qr = anyio.create_memory_object_stream(10)
@@ -1617,14 +1627,14 @@ class Watcher(CtxObj):
             await qw.aclose()
             yield self
             tg.cancel_scope.cancel()
-            self._node = None
+            del self.nodes
 
     def __aiter__(self):
         return self
 
     @property
     @asynccontextmanager
-    async def node(self) -> AsyncIterator[Node]:
+    async def node(self) -> AsyncIterator[_NodeType]:
         """
         Helper for fetching data in background.
 
@@ -1632,12 +1642,12 @@ class Watcher(CtxObj):
         managers. If you then call :py.meth.`get_node` on one of them,
         the data from the other(s) might overwhelm the input queue.
         """
-        if self._node is not None:
+        if self.nodes is not None:
             raise RuntimeError("Use `await get_node()`")
         async with self:
             yield await self.get_node()
 
-    async def get_node(self, background=True) -> Node:
+    async def get_node(self, background=True) -> _NodeType:
         """
         Wait until fetching the static data is complete, then return the
         watched node.
@@ -1651,7 +1661,7 @@ class Watcher(CtxObj):
         if self._current_done is None:
             raise RuntimeError("Missing done event")
         await self._current_done.wait()
-        return self._node
+        return self.nodes
 
     async def _iter(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status.started()
@@ -1663,7 +1673,7 @@ class Watcher(CtxObj):
             except anyio.EndOfStream:
                 return
             p, d, m = msg
-            self._node.set(p, d, m)
+            self.nodes.set(p, d, m)
 
     async def __anext__(self):
         while True:
@@ -1676,7 +1686,7 @@ class Watcher(CtxObj):
             p, d, m = msg
             if self._current_done is None:
                 raise RuntimeError("Missing done event")
-            if self._node.set(p, d, m, force=self._current_done.is_set()):
+            if self.nodes.set(p, d, m, force=self._current_done.is_set()):
                 if self.meta:
                     return (p, d, m) if self.subtree else (d, m)
                 else:

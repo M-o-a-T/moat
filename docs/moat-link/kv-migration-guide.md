@@ -123,7 +123,7 @@ Link layer, not raw MQTT.  Remove this feature; if raw MQTT is needed, use
 ## Checklist for migrating ``moat.kv.FOO``
 
 1. Create ``moat/link/FOO/`` with ``__init__.py``, ``_cfg.yaml``, model,
-   task, worker, and CLI modules.
+   task, worker, and CLI (``_main.py``) modules.
 2. Subclass ``Node`` with ``add_child`` overrides for typed children.
 3. Use ``d_watch(…, subtree=True, mark=True, cls=…)`` for tree monitoring.
 4. Replace ``ErrorRoot`` calls with ``link.e_*`` methods.

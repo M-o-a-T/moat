@@ -58,6 +58,8 @@ async def at_cli(ctx, path):
     obj = ctx.obj
     if len(path) == 0 or None in path:
         raise click.UsageError("Path cannot be empty or contain 'None'")
+    if obj.server is None:
+        raise click.UsageError("Create the server before assigning measurements to it!")
     obj.subpath = path
     obj.node = obj.server.follow(path)
     if ctx.invoked_subcommand is None:

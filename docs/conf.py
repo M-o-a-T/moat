@@ -262,6 +262,7 @@ nitpick_ignore = [
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
+    ("py:obj", "moat.link.client._NodeType"),
     ("py:obj", "moat.util.impl.YieldT"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),

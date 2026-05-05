@@ -42,38 +42,35 @@ class Gate(_Gate):  # noqa: D101
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "fetch destination"
-        async with AsyncExitStack() as ex:
-            if self.codecs is not None:
-                codecs = self.codecs
-                codec = "noop"
+        if self.codecs is not None:
+            codecs = self.codecs
+            codec = "noop"
 
-                def conv(p, d):
-                    # two step
-                    # (a) look up the codec type in the vector
-                    try:
-                        vd = self.codec_vecs.search(p)
-                        cd = codecs.get(Path.build(vd.data["codec"]))
-                        if not isinstance(cd, CodecNode):
-                            return NotGiven, None
-                    except (KeyError, ValueError):
+            def conv(p, d):
+                # two step
+                # (a) look up the codec type in the vector
+                try:
+                    vd = self.codec_vecs.search(p)
+                    cd = codecs.get(Path.build(vd.data["codec"]))
+                    if not isinstance(cd, CodecNode):
                         return NotGiven, None
-                    # (b) decode it
-                    try:
-                        return cd.dec_value(d), vd
-                    except Exception as exc:
-                        self.logger.error("Decode: %s %r: %r", p, d, exc)
-                        return NotGiven, None
+                except (KeyError, ValueError):
+                    return NotGiven, None
+                # (b) decode it
+                try:
+                    return cd.dec_value(d), vd
+                except Exception as exc:
+                    self.logger.error("Decode: %s %r: %r", p, d, exc)
+                    return NotGiven, None
 
-            else:
-                codec = self.codec
+        else:
+            codec = self.codec
 
-                def conv(p, d):
-                    p  # noqa:B018
-                    return d, None
+            def conv(p, d):
+                p  # noqa:B018
+                return d, None
 
-            mon = await ex.enter_async_context(
-                self.link.monitor(self.cf.dst, subtree=True, codec=codec)
-            )
+        async with self.link.monitor(self.cf.dst, subtree=True, codec=codec) as mon:
             task_status.started()
             ld = len(self.cf.dst)
             while True:

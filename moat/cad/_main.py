@@ -21,7 +21,7 @@ usage1 = """
 """
 
 
-@load_subgroup(sub_pre="moat.link", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
+@load_subgroup(sub_pre="moat.cad", sub_post="cli", ext_pre="moat.cad", ext_post="_main.cli")
 @click.pass_context
 async def cli(ctx):
     """

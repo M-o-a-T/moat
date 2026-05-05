@@ -51,13 +51,13 @@ async def edit_(obj, files):
 
     import moat  # noqa: PLC0415
 
-    cfg = obj.cfg
+    cfg = obj.cfg.cad
     env = os.environ.copy()
 
     with SpooledTemporaryFile(mode="w+") as buf:
         await anyio.run_process(
             [
-                f"{cfg.cad.base}/bin/python3" if cfg.cad.base else "python3",
+                f"{cfg.base}/bin/python3" if cfg.base else "python3",
                 "-c",
                 "import sys; print(repr(sys.path))",
             ],
@@ -65,7 +65,7 @@ async def edit_(obj, files):
         )
         buf.seek(0)
         pypath = (
-            cfg.cad.paths
+            cfg.paths
             + eval(buf.read())
             + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
         )
@@ -73,8 +73,7 @@ async def edit_(obj, files):
     for k, v in cfg.env.items():
         env[k] = v
     await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3" if cfg.cad.base else "python3", "-mcq_editor"]
-        + list(files),
+        [f"{cfg.base}/bin/python3" if cfg.base else "python3", "-mcq_editor"] + list(files),
         env=env,
         # stdin=subprocess.DEVNULL,
         stdout=sys.stdout,
@@ -104,23 +103,23 @@ async def run_(obj, file, args):
 
     import moat  # noqa: PLC0415
 
-    cfg = obj.cfg
+    cfg = obj.cfg.cad
     env = os.environ.copy()
 
     with SpooledTemporaryFile(mode="w+") as buf:
         res = await anyio.run_process(
-            [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+            [f"{cfg.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
             stdout=buf,
         )
         buf.seek(0)
         pypath = (
-            cfg.cad.paths
+            cfg.paths
             + eval(buf.read())
             + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
         )
     env["PYTHONPATH"] = os.pathsep.join(pypath)
     res = await anyio.open_process(
-        [f"{cfg.cad.base}/bin/python3", file] + list(args),
+        [f"{cfg.base}/bin/python3", file] + list(args),
         env=env,
         stdin=sys.stdin,
         stdout=sys.stdout,

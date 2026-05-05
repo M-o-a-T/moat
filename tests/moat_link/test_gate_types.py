@@ -52,7 +52,7 @@ async def test_delayed_gate_pending_to_dst_uses_meta_fallback() -> None:
     gate._pending[_DelayedUpdate(path=P("x"), data=1, meta=None, node=node, to_dst=True)] = -1  # noqa: SLF001
 
     with anyio.move_on_after(0.05):
-        await gate._process_pending()  # noqa: SLF001
+        await gate._process_pending(gate._pending)  # noqa: SLF001
 
     assert len(seen) == 1
     assert isinstance(seen[0], MsgMeta)
@@ -65,6 +65,7 @@ async def test_delayed_gate_pending_to_src_clears_source() -> None:
     gate = object.__new__(DelayedGate)
     gate.origin = "via:test"
     gate._pending = TimerMap()  # noqa: SLF001
+    gate._speed_pending = {}  # noqa: SLF001
     gate.cf = SimpleNamespace(src=P("s"))
     gate.link = _Remote()
 
@@ -79,7 +80,7 @@ async def test_delayed_gate_pending_to_src_clears_source() -> None:
     gate._pending[_DelayedUpdate(path=P("x"), data=3, meta=meta, node=node, to_dst=False)] = -1  # noqa: SLF001
 
     with anyio.move_on_after(0.05):
-        await gate._process_pending()  # noqa: SLF001
+        await gate._process_pending(gate._pending)  # noqa: SLF001
 
     assert gate.link.calls[0][0] == P("s.x")
     assert node.data_ is NotGiven

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import time
 from anyio import Lock
 from contextlib import suppress
 
@@ -50,6 +51,7 @@ class GateNode(Node):
     lock: Lock = field(init=False, factory=Lock)
 
     todo: bool = field(init=False, default=False)
+    src_write_time: float = field(init=False, default=0.0)
 
     @property
     def has_src(self):
@@ -70,10 +72,38 @@ class GateNode(Node):
             return False
         return True
 
-    def clear_src(self) -> None:
-        "Mark source data as absent."
+    def clear_src(self, write_time: float = 0.0) -> None:
+        """Mark source data as absent, optionally recording the write timestamp."""
         self._data = NotGiven
         self._meta = None
+        if write_time:
+            self.src_write_time = write_time
+
+
+@define
+class _DelayedUpdate:
+    """
+    A delayed update entry that hashes to its path.
+
+    Used with TimerMap to delay updates and cancel them if a matching
+    update arrives from the other direction.
+    """
+
+    path: Path = field()
+    data: Any = field()
+    meta: MsgMeta | None = field()
+    node: GateNode = field()
+    to_dst: bool = field(default=False)  # True if this update is going to destination
+
+    def __hash__(self):
+        return hash((self.path, self.to_dst))
+
+    def __eq__(self, other: object):
+        if isinstance(other, _DelayedUpdate):
+            return self.path == other.path and self.to_dst == other.to_dst
+        if isinstance(other, tuple) and len(other) == 2:
+            return self.path == other[0] and self.to_dst == other[1]
+        return False
 
 
 class Gate:
@@ -113,6 +143,10 @@ class Gate:
     tg: TaskGroup
     codec: Codec
 
+    _waiting: TimerMap[_DelayedUpdate]
+    _speed: float = 0
+    _speed_pending: dict[tuple[Path, bool], _DelayedUpdate]
+
     _src_done: anyio.Event
     _dst_done: anyio.Event
 
@@ -135,6 +169,9 @@ class Gate:
         self.origin = str(
             Path.build(("GATE",) + (P(cf["name"]) if "name" in cf else self.path[1:]))
         )
+        self._waiting = TimerMap()
+        self._speed_pending = {}
+        self._speed = float(self.cf.get("speed", 0))
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
@@ -190,15 +227,35 @@ class Gate:
         """
         raise NotImplementedError
 
-    async def set_src(self, path: Path, data: Any, aux: MsgMeta):
+    async def set_src(self, path: Path, data: Any, aux: MsgMeta, speed: float | None = None):
         """
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
         """
+        if speed is None:
+            speed = self._speed
+
         node = cast(GateNode, self.data.get(path))
 
         if self.running or node.has_dst:
-            await self._set_src(self.cf.src + path, node, data, aux)
+            ts = max(
+                node.src_write_time,
+                node.meta.timestamp if node.meta is not None else 0.0,
+            )
+            if speed and ts and (tm := ts + speed - time.time()) > 0:
+                key = (path, False)
+                existing = self._speed_pending.get(key)
+                if existing is not None:
+                    existing.data = data
+                    existing.meta = aux
+                    self._waiting.update(existing, tm)
+                else:
+                    update = _DelayedUpdate(path=path, data=data, meta=aux, node=node)
+                    self._speed_pending[key] = update
+                    self._waiting[update] = tm
+
+            else:
+                await self._set_src(self.cf.src + path, node, data, aux)
         else:
             node.ext_data = data
             node.ext_meta = aux or NotGiven
@@ -214,7 +271,7 @@ class Gate:
 
             await self.link.d_set(path, data, meta)
 
-            node.clear_src()
+            node.clear_src(write_time=meta.timestamp)
             node.ext_data = data
             node.ext_meta = aux or NotGiven
             node.todo = False
@@ -359,6 +416,7 @@ class Gate:
                 )
 
         await self.data.walk(visit, force=True)
+        self.tg.start_soon(self._process_pending, self._waiting)
         task_status.started()
 
     async def state_updater(self, mon: Watcher, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -373,31 +431,41 @@ class Gate:
 
         # nothing further to do
 
+    async def _process_pending(self, queue: TimerMap[_DelayedUpdate]) -> None:
+        """
+        Background task that processes pending updates when their timers expire.
+        """
+        async for update in queue:
+            try:
+                if update.to_dst:
+                    # Send to destination
+                    update.node.ext_data = NotGiven
+                    update.node.ext_meta = NotGiven
+                    meta = update.meta if update.meta is not None else MsgMeta(origin=self.origin)
+                    update.node.set_(update.path, update.data, meta)
+                    update.node.todo = False
 
-@define
-class _DelayedUpdate:
-    """
-    A delayed update entry that hashes to its path.
+                    async with update.node.lock:
+                        await self.set_dst(update.path, update.data, meta, update.node)
+                else:
+                    # Send to source
+                    async with update.node.lock:
+                        if not self.is_update(update.node, update.data, update.meta):
+                            continue
+                        meta = MsgMeta(origin=self.origin)
+                        if update.meta not in (None, NotGiven):
+                            meta["gw"] = update.meta
 
-    Used with TimerMap to delay updates and cancel them if a matching
-    update arrives from the other direction.
-    """
+                        await self.link.d_set(self.cf.src + update.path, update.data, meta)
 
-    path: Path = field()
-    data: Any = field()
-    meta: MsgMeta | None = field()
-    node: GateNode = field()
-    to_dst: bool = field()  # True if this update is going to destination
-
-    def __hash__(self):
-        return hash((self.path, self.to_dst))
-
-    def __eq__(self, other: object):
-        if isinstance(other, _DelayedUpdate):
-            return self.path == other.path and self.to_dst == other.to_dst
-        if isinstance(other, tuple) and len(other) == 2:
-            return self.path == other[0] and self.to_dst == other[1]
-        return False
+                        self._speed_pending.pop((update.path, False), None)
+                        update.node.clear_src(write_time=meta.timestamp)
+                        update.node.ext_data = update.data
+                        update.node.ext_meta = update.meta or NotGiven
+                        update.node.todo = False
+            except AttributeError:
+                # Connection is being closed during shutdown, ignore
+                return
 
 
 class DelayedGate(Gate):
@@ -429,9 +497,7 @@ class DelayedGate(Gate):
         """
         # Cancel any pending update from the other direction for the same path
         with suppress(KeyError):
-            del self._pending[
-                _DelayedUpdate(path=path, data=NotGiven, meta=None, node=node, to_dst=False)
-            ]
+            del self._pending[(path, False)]  # ty:ignore[invalid-argument-type]
 
         update = _DelayedUpdate(path=path, data=data, meta=meta, node=node, to_dst=True)
         self._pending[update] = self._delay
@@ -448,53 +514,16 @@ class DelayedGate(Gate):
 
         # Cancel any pending update from the other direction for the same path
         with suppress(KeyError):
-            del self._pending[
-                _DelayedUpdate(path=rel_path, data=NotGiven, meta=None, node=node, to_dst=True)
-            ]
+            del self._pending[(rel_path, True)]  # ty:ignore[invalid-argument-type]
 
         update = _DelayedUpdate(path=rel_path, data=data, meta=aux, node=node, to_dst=False)
         self._pending[update] = self._delay
-
-    async def _process_pending(self) -> None:
-        """
-        Background task that processes pending updates when their timers expire.
-        """
-        async for update in self._pending:
-            try:
-                if update.to_dst:
-                    # Send to destination
-                    update.node.ext_data = NotGiven
-                    update.node.ext_meta = NotGiven
-                    meta = update.meta if update.meta is not None else MsgMeta(origin=self.origin)
-                    update.node.set_(update.path, update.data, meta)
-                    update.node.todo = False
-
-                    async with update.node.lock:
-                        await self.set_dst(update.path, update.data, meta, update.node)
-                else:
-                    # Send to source
-                    async with update.node.lock:
-                        if not self.is_update(update.node, update.data, update.meta):
-                            continue
-                        meta = MsgMeta(origin=self.origin)
-                        if update.meta not in (None, NotGiven):
-                            meta["gw"] = update.meta
-
-                        await self.link.d_set(self.cf.src + update.path, update.data, meta)
-
-                        update.node.clear_src()
-                        update.node.ext_data = update.data
-                        update.node.ext_meta = update.meta or NotGiven
-                        update.node.todo = False
-            except AttributeError:
-                # Connection is being closed during shutdown, ignore
-                return
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Run the gateway with pending update processing.
         """
-        self.tg.start_soon(self._process_pending)
+        self.tg.start_soon(self._process_pending, self._pending)
         await super().run_(task_status=task_status)
 
 

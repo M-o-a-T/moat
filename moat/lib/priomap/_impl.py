@@ -26,8 +26,6 @@ Priority = TypeVar("Priority", bound=Comparable)
 KeyT = TypeVar("KeyT", bound=Hashable)
 
 if TYPE_CHECKING:  # pragma: no cover
-    from types import EllipsisType
-
     from collections.abc import (
         ItemsView,
         Iterable,
@@ -40,6 +38,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
     InitialData = dict[KeyT, Priority] | None
     InitialPrio = dict[KeyT, float] | None
+
+
+class _NotGiven:
+    pass
 
 
 @dataclass(slots=True)
@@ -481,7 +483,10 @@ class TimerMap(Generic[KeyT]):
     @overload
     def pop(self, key: KeyT) -> float: ...
 
-    def pop(self, a: KeyT | EllipsisType = Ellipsis) -> tuple[KeyT, float] | float:
+    @overload
+    def pop(self, key: KeyT, default: RT) -> Priority | RT: ...
+
+    def pop(self, key=Ellipsis, default=_NotGiven) -> tuple[KeyT, float] | float:
         """
         Remove and return an item.
 
@@ -490,8 +495,13 @@ class TimerMap(Generic[KeyT]):
         :return: (key, priority)
         :raises IndexError: If empty.
         """
-        if a is Ellipsis:
+        if key is Ellipsis:
             key, prio = self._pm.pop()
             return key, self.T_SUB(prio)
         else:
-            return self.T_SUB(self._pm.pop(a))
+            try:
+                return self.T_SUB(self._pm.pop(key))
+            except KeyError:
+                if default is _NotGiven:
+                    raise
+                return default

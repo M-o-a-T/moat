@@ -12,9 +12,9 @@ import asyncclick as click
 from moat.util import (
     MsgReader,
     NotGiven,
-    _help_preserve_blocks,
     combine_dict,
     edit_text,
+    help_preserve_blocks,
     yformat,
     yload,
     yprint,
@@ -407,6 +407,7 @@ async def delete(obj, before, recursive, mqtt):
 @click.option("-a", "--maxage", type=int, help="Skip entries older than N seconds")
 @click.option("-t", "--timeout", type=int, help="Stop reading after N seconds")
 @click.pass_obj
+@help_preserve_blocks
 async def monitor(
     obj,
     mode,
@@ -484,9 +485,6 @@ async def monitor(
                     yprint(res, stream=obj.stdout)
                     print("---", file=obj.stdout)
                     obj.stdout.flush()
-
-
-monitor.help = _help_preserve_blocks(monitor.help)
 
 
 @cli.command()

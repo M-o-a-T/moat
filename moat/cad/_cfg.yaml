@@ -4,3 +4,4 @@ paths:
   - "/src/build123d/src"
   - "/src/bd_warehouse/src"
   - "/opt/cq/lib/python3.11/site-packages"
+env: {}

@@ -56,7 +56,11 @@ async def edit_(obj, files):
 
     with SpooledTemporaryFile(mode="w+") as buf:
         await anyio.run_process(
-            [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+            [
+                f"{cfg.cad.base}/bin/python3" if cfg.cad.base else "python3",
+                "-c",
+                "import sys; print(repr(sys.path))",
+            ],
             stdout=buf,
         )
         buf.seek(0)
@@ -66,8 +70,11 @@ async def edit_(obj, files):
             + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
         )
     env["PYTHONPATH"] = os.pathsep.join(pypath)
+    for k, v in cfg.env.items():
+        env[k] = v
     await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-mcq_editor"] + list(files),
+        [f"{cfg.cad.base}/bin/python3" if cfg.cad.base else "python3", "-mcq_editor"]
+        + list(files),
         env=env,
         # stdin=subprocess.DEVNULL,
         stdout=sys.stdout,

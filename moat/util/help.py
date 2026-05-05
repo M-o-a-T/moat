@@ -4,22 +4,37 @@ Command help text formatting helpers.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import overload
 
-def _help_preserve_blocks(text: str | None) -> str | None:
+
+@overload
+def help_preserve_blocks(text: str) -> str: ...
+
+
+@overload
+def help_preserve_blocks(text: Callable) -> Callable: ...
+
+
+def help_preserve_blocks(text: str | None | Callable) -> str | None | Callable:
     """Mark preformatted help paragraphs so Click does not reflow them."""
 
-    if text is None:
-        return None
+    func = None
 
-    def _is_preformatted(paragraph: list[str]) -> bool:
+    if isinstance(text, Callable):
+        func = text
+        text = func.__doc__
+    if text is None:
+        return func
+
+    def is_preformatted(paragraph: list[str]) -> bool:
         if not paragraph:
             return False
         if paragraph[0] == "\b":
             return False
         return any(
-            line[:1].isspace() or line.startswith((">>>", "...", "* ", "- ", "+ "))
+            line[:1].isspace() or line.startswith((">>>", "...", "* ", "- ", "+ ")) or "  " in line
             for line in paragraph
-            if line
         )
 
     out: list[str] = []
@@ -29,7 +44,7 @@ def _help_preserve_blocks(text: str | None) -> str | None:
         nonlocal paragraph
         if not paragraph:
             return
-        if _is_preformatted(paragraph):
+        if is_preformatted(paragraph):
             out.append("\b")
         out.extend(paragraph)
         paragraph = []
@@ -42,4 +57,8 @@ def _help_preserve_blocks(text: str | None) -> str | None:
             out.append("")
     _flush_paragraph()
 
-    return "\n".join(out)
+    text = "\n".join(out)
+    if func is None:
+        return text
+    func.__doc__ = text
+    return func

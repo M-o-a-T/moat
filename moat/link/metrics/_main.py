@@ -8,7 +8,7 @@ import logging
 
 import asyncclick as click
 
-from moat.util import NotGiven
+from moat.util import NotGiven, help_preserve_blocks
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup
 from moat.link._data import data_get
@@ -33,11 +33,15 @@ async def cli(ctx):
 
 
 @cli.command("list")
-@click.argument("server", type=str)
+@click.argument("server", type=str, nargs=-1)
 @click.pass_obj
 async def list_(obj, server):
     """List series entries for a server."""
-    path = obj.prefix + P(server)
+    path = obj.prefix
+    if server:
+        if len(server) != 1:
+            raise click.UsageError("Only one server please")
+        path += P(server)
     await data_get(obj.conn, path, recursive=True, out=obj.stdout)
 
 
@@ -67,10 +71,10 @@ async def show_(obj, server, name):
 )
 @click.option("-f", "--force", is_flag=True, help="Overwrite existing entry.")
 @click.pass_obj
+@help_preserve_blocks
 async def add_(obj, server, name, source, series, tags, mode, attr, force):
     """Add a series entry.
 
-    \\b
     SERVER: server name.
     NAME:   unique entry name (path).
     SOURCE: MoaT-Link path of the value to watch.

@@ -14,7 +14,7 @@ from time import time
 
 import asyncclick as click
 
-from moat.util import _help_preserve_blocks
+from moat.util import help_preserve_blocks
 from moat.lib.config import CFG
 from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -339,7 +339,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     patho.close()
 
 
-@cli.command("path", help=_help_preserve_blocks(Path.__doc__), no_args_is_help=True)
+@cli.command("path", help=help_preserve_blocks(Path.__doc__), no_args_is_help=True)
 @click.option(
     "-e",
     "--encode",

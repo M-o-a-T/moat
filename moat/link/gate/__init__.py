@@ -8,7 +8,6 @@ import anyio
 import logging
 import time
 from anyio import Lock
-from contextlib import suppress
 
 from attrs import define, field
 
@@ -496,8 +495,7 @@ class DelayedGate(Gate):
         Queue an update to the destination, with delay.
         """
         # Cancel any pending update from the other direction for the same path
-        with suppress(KeyError):
-            del self._pending[(path, False)]  # ty:ignore[invalid-argument-type]
+        self._pending.pop((path, False), None)  # ty:ignore[invalid-argument-type]
 
         update = _DelayedUpdate(path=path, data=data, meta=meta, node=node, to_dst=True)
         self._pending[update] = self._delay
@@ -513,8 +511,7 @@ class DelayedGate(Gate):
         rel_path = path[len(self.cf.src) :]
 
         # Cancel any pending update from the other direction for the same path
-        with suppress(KeyError):
-            del self._pending[(rel_path, True)]  # ty:ignore[invalid-argument-type]
+        self._pending.pop((rel_path, True), None)  # ty:ignore[invalid-argument-type]
 
         update = _DelayedUpdate(path=rel_path, data=data, meta=aux, node=node, to_dst=False)
         self._pending[update] = self._delay

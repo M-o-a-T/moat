@@ -17,7 +17,7 @@ from .backend import get_backend
 from .model import MetricsEntry, MetricsServer
 from .worker import run_entry
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anyio.abc import TaskStatus
@@ -90,7 +90,7 @@ async def task(
 
         # Watch the server subtree for configuration entries.
         # mark=True yields None when the initial state is complete.
-        async with cast(Any, link).d_watch(
+        async with link.d_watch(
             server_path,
             subtree=True,
             mark=True,
@@ -107,7 +107,7 @@ async def task(
                     # Server-level data changed (host/port); ignore here.
                     continue
 
-                node = mon._node.get(p)  # noqa:SLF001
+                node = mon.nodes.get(p)
                 if isinstance(node, MetricsEntry):
                     if node.is_complete():
                         await _start(p, node)

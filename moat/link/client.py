@@ -1642,7 +1642,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
         managers. If you then call :py.meth.`get_node` on one of them,
         the data from the other(s) might overwhelm the input queue.
         """
-        if self.nodes is not None:
+        if hasattr(self, "nodes"):
             raise RuntimeError("Use `await get_node()`")
         async with self:
             yield await self.get_node()

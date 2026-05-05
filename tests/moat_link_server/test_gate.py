@@ -3,6 +3,7 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import copy
 import pytest
+import time
 from contextlib import AsyncExitStack
 from functools import partial
 from unittest import mock
@@ -18,9 +19,11 @@ from moat.lib.path import P
 from moat.link._data import backend_get, data_get
 from moat.link._test import Scaffold
 from moat.link.client import Link
-from moat.link.gate import DelayedGate, run_gate
+from moat.link.gate import DelayedGate, GateNode, run_gate
 from moat.link.gate.link import Gate as LinkGate
 from moat.link.meta import MsgMeta
+
+from typing import cast
 
 
 async def mon(c, *, task_status):  # noqa: D103
@@ -532,3 +535,89 @@ async def test_link_gate_sync(cfg):
                 assert res_remote == 999, f"Main->Remote: sync.new_main = {res_remote}"
 
                 tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_gate_speed(cfg):
+    """
+    Test the speed-limiting feature: rapid external updates are coalesced
+    into a single delayed entry and the last value wins.
+
+    The ``speed`` config key sets a minimum interval between source updates.
+    When a new external value arrives for a path whose MoaT-Link entry is
+    fresher than ``speed`` seconds, the update is held in a TimerMap.
+    If another update for the same path arrives before the timer fires,
+    the pending entry is updated in-place so only one write eventually
+    reaches MoaT-Link – with the most-recent value.
+
+    After the timer fires (or is forced in this test), a second rapid
+    update verifies that the freshly-written timestamp re-arms the
+    rate-limiter.
+    """
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+        c = await sf.client()
+
+        # Establish an initial value so get_src can set node.meta
+        await c.d_set(P("test.src.val"), 0)
+        await c.i_sync()
+
+        gate_cf = to_attrdict(
+            dict(
+                driver="mock",
+                src=P("test.src"),
+                speed=5.0,  # large window – always in range during the test
+            )
+        )
+        gate = MockDelayedGate(sf.cfg, gate_cf, P("gate.speed_test"), c)
+
+        async with anyio.create_task_group() as tg:
+            await tg.start(gate.run)
+
+            # After the gate has synced, node.meta must be set and fresh.
+            node = cast(GateNode, gate.data.get(P("val")))
+            assert node.meta is not None, "node.meta should be set after initial sync"
+            assert time.time() - node.meta.timestamp < gate._speed, (  # noqa: SLF001
+                "test assumption: node.meta.timestamp is within the speed window"
+            )
+
+            meta_ext = MsgMeta(origin="external")
+
+            # ── Phase 1: coalescing ───────────────────────────────────────
+            # Two rapid updates → only ONE entry in _waiting.
+            await gate.set_src(P("val"), 10, meta_ext)
+            assert len(gate._waiting) == 1, "first rapid update should be queued"  # noqa: SLF001
+
+            await gate.set_src(P("val"), 20, meta_ext)
+            assert len(gate._waiting) == 1, "second rapid update should coalesce, not duplicate"  # noqa: SLF001
+
+            # Force the pending timer to fire immediately.
+            pending_key, _ = gate._waiting.pop()  # noqa: SLF001
+            gate._waiting[pending_key] = 0  # re-insert with zero delay  # noqa: SLF001
+
+            await anyio.sleep(0.1)  # let _process_pending fire
+
+            val = await c.d_get(P("test.src.val"))
+            assert val == 20, f"last coalesced value (20) should be written, got {val!r}"
+
+            # ── Phase 2: re-arm after timer fires ────────────────────────
+            # _process_pending updates node.meta with a fresh timestamp, so
+            # the next rapid update is delayed again rather than applied
+            # immediately.
+            assert len(gate._waiting) == 0, "no pending entries after first fire"  # noqa: SLF001
+
+            await gate.set_src(P("val"), 30, meta_ext)
+            assert len(gate._waiting) == 1, (  # noqa: SLF001
+                "update right after a write should be speed-limited again"
+            )
+
+            # Force that timer too and verify the value lands.
+            pending_key2, _ = gate._waiting.pop()  # noqa: SLF001
+            gate._waiting[pending_key2] = 0  # noqa: SLF001
+
+            await anyio.sleep(0.1)
+
+            val = await c.d_get(P("test.src.val"))
+            assert val == 30, f"re-armed speed limit: expected 30, got {val!r}"
+
+            tg.cancel_scope.cancel()

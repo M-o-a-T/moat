@@ -54,22 +54,22 @@ class Gate(_Gate):  # noqa: D101
                         vd = self.codec_vecs.search(p)
                         cd = codecs.get(Path.build(vd.data["codec"]))
                         if not isinstance(cd, CodecNode):
-                            return NotGiven
+                            return NotGiven, None
                     except (KeyError, ValueError):
-                        return NotGiven
+                        return NotGiven, None
                     # (b) decode it
                     try:
-                        return cd.dec_value(d)
+                        return cd.dec_value(d), vd
                     except Exception as exc:
                         self.logger.error("Decode: %s %r: %r", p, d, exc)
-                        return NotGiven
+                        return NotGiven, None
 
             else:
                 codec = self.codec
 
                 def conv(p, d):
                     p  # noqa:B018
-                    return d
+                    return d, None
 
             mon = await ex.enter_async_context(
                 self.link.monitor(self.cf.dst, subtree=True, codec=codec)
@@ -83,10 +83,12 @@ class Gate(_Gate):  # noqa: D101
                 except TimeoutError:
                     break
                 p = Path.build(msg.topic[ld:])
-                res = conv(p, msg.data)
+                res, vd = conv(p, msg.data)
                 if res is NotGiven:
                     continue
-                await self.set_src(p, res, msg.meta)
+
+                spd = None if vd is None else vd.get("speed", None)
+                await self.set_src(p, res, msg.meta, speed=spd)
             self.dst_is_current()
 
             async for msg in mon:
@@ -96,10 +98,12 @@ class Gate(_Gate):  # noqa: D101
                 p = Path.build(msg.topic[ld:])
                 if msg.data == b"":
                     res = NotGiven
+                    spd = None
                 else:
-                    res = conv(p, msg.data)
+                    res, vd = conv(p, msg.data)
                     if res is NotGiven:
                         continue
+                    spd = None if vd is None else vd.get("speed", None)
                 await self.set_src(p, res, msg.meta)
 
     async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):

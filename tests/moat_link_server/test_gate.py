@@ -10,14 +10,15 @@ from unittest import mock
 
 import trio
 
-from moat.util import combine_dict, to_attrdict
+from moat.util import attrdict, combine_dict, to_attrdict
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
 from moat.kv.server import Server as KVServer
 from moat.lib.codec import get_codec
 from moat.lib.path import P
 from moat.link._data import backend_get, data_get
-from moat.link._test import Scaffold
+from moat.link._test import Scaffold, run_broker
+from moat.link.backend import get_backend
 from moat.link.client import Link
 from moat.link.gate import DelayedGate, GateNode, run_gate
 from moat.link.gate.link import Gate as LinkGate
@@ -621,3 +622,115 @@ async def test_gate_speed(cfg):
             assert val == 30, f"re-armed speed limit: expected 30, got {val!r}"
 
             tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_gate_mqtt_backend(cfg):
+    """MQTT gate uses a separate backend broker when ``cfg.backend`` is set.
+
+    The gate connects to a second FlashMQ broker (the "external" side)
+    while the MoaT-Link server keeps using the primary broker.  This
+    exercises the ``get_backend`` path introduced in
+    ``moat.link.gate.mqtt.Gate.run_``.
+
+    Bidirectional sync is verified:
+
+    * data written to MoaT-Link propagates to the external broker, and
+    * data published on the external broker propagates into MoaT-Link.
+    """
+
+    async def read_ext(bk, path, timeout=0.5):
+        """Read all retained messages under *path* from a raw Backend."""
+        result = {}
+        async with bk.monitor(path, subtree=True) as mon:
+            while True:
+                msg = None
+                with anyio.move_on_after(timeout):
+                    msg = await anext(mon)
+                if msg is None:
+                    break
+                rel = msg.topic[len(path) :]
+                if rel:
+                    result[str(rel[-1])] = {"_": msg.data}
+        return result
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        # Seed initial values on both sides before the gate starts so that
+        # the initial-state reconciliation is exercised as well.
+        await c.d_set(P("test.a.one"), 1)
+        await c.d_set(P("test.a.two"), 2)
+
+        # Start a *second* MQTT broker for the gate's dedicated backend.
+        ext_port = await sf.tg.start(run_broker, sf.cfg)
+        ext_backend_cfg = attrdict(
+            backend=attrdict(
+                driver="mqtt",
+                host="127.0.0.1",
+                port=ext_port,
+                codec="json",
+                keep_alive=9999,
+            )
+        )
+
+        # Publish retained data on the external broker before the gate
+        # starts so the initial-sync path (retained messages) is covered.
+        async with get_backend(ext_backend_cfg, name="seed") as seed_bk:
+            await seed_bk.send(P("test.b.three"), 33, retain=True, meta=False)
+
+        # Store the gate configuration in MoaT-Link.  The ``backend``
+        # sub-dict tells the gate to use the second broker instead of the
+        # primary MoaT-Link backend.
+        await c.d_set(
+            P("gate.backend_test"),
+            dict(
+                driver="mqtt",
+                src=P("test.a"),
+                dst=P("test.b"),
+                codec="json",
+                backend=dict(
+                    driver="mqtt",
+                    host="127.0.0.1",
+                    port=ext_port,
+                    codec="json",
+                    keep_alive=9999,
+                ),
+            ),
+        )
+        await c.i_sync()
+
+        await sf.tg.start(run_gate, sf.cfg, c, "backend_test")
+        await c.i_sync()
+        await anyio.sleep(0.2)
+
+        # ── Verify initial-state reconciliation ──────────────────────────
+        # MoaT-Link should contain the value seeded on the external broker;
+        # the external broker should reflect the values pre-set in MoaT-Link.
+        a = await data_get(c, P("test.a"), out=False)
+        assert a == dict(one={"_": 1}, two={"_": 2}, three={"_": 33})
+
+        async with get_backend(ext_backend_cfg, name="checker") as chk_bk:
+            b = await read_ext(chk_bk, P("test.b"))
+        assert b == dict(one={"_": 1}, two={"_": 2}, three={"_": 33})
+
+        # ── Verify live updates: MoaT-Link → external broker ─────────────
+        await c.d_set(P("test.a.four"), 4)
+        await c.d_set(P("test.a.five"), 5)
+        await anyio.sleep(0.2)
+
+        async with get_backend(ext_backend_cfg, name="checker2") as chk2_bk:
+            b = await read_ext(chk2_bk, P("test.b"))
+        assert b["four"] == {"_": 4}
+        assert b["five"] == {"_": 5}
+
+        # ── Verify live updates: external broker → MoaT-Link ─────────────
+        async with get_backend(ext_backend_cfg, name="writer") as writer_bk:
+            await writer_bk.send(P("test.b.six"), 6, retain=True, meta=False)
+            await writer_bk.send(P("test.b.one"), 111, retain=True, meta=False)
+        await anyio.sleep(0.2)
+
+        a = await data_get(c, P("test.a"), out=False)
+        assert a["six"] == {"_": 6}
+        assert a["one"] == {"_": 111}

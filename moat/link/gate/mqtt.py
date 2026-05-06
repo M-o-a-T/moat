@@ -5,10 +5,10 @@ MoaT gateway
 from __future__ import annotations
 
 import anyio
-from contextlib import AsyncExitStack
 
-from moat.util import NotGiven
+from moat.util import NotGiven, gen_ident
 from moat.lib.path import P, Path
+from moat.link.backend import Backend, get_backend
 from moat.link.meta import MsgMeta
 from moat.link.node.codec import CodecNode
 
@@ -17,28 +17,66 @@ from . import Gate as _Gate
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.link.client import Link
+
     from . import GateNode
 
     from typing import Any
 
 
-class Gate(_Gate):  # noqa: D101
+class Gate(_Gate):
+    """MQTT gateway driver.
+
+    Bridges a MoaT-Link subtree (``cf.src``) to a raw MQTT topic tree
+    (``cf.dst``).  By default the gateway reuses the primary MoaT-Link
+    MQTT connection.  When ``cf.backend`` is present, a dedicated
+    connection to a separate broker is opened instead and kept alive for
+    the lifetime of the gateway.
+
+    Configuration keys (stored at ``:R.gate.NAME``):
+
+    Attributes:
+        cf.src: Source path inside MoaT-Link.
+        cf.dst: Destination topic prefix on the external MQTT broker.
+        cf.codec: Codec name or path to conversion-vector tree.
+        cf.backend: Optional dict describing a separate MQTT broker.
+            Supports all keys accepted by :class:`moat.link.backend.mqtt.Backend`;
+            ``driver`` defaults to ``mqtt``.
+    """
+
     codecs: CodecNode | None = None
+
+    backend: Backend | Link
+
+    async def setup_(self) -> None:
+        """Enter the gate-specific backend into ``self.ex`` before ``self.tg`` is created."""
+        try:
+            bcfg = self.cf.backend
+        except AttributeError:
+            self.backend = self.link
+        else:
+            if "driver" not in bcfg:
+                bcfg.driver = "mqtt"
+            name = "gate_" + gen_ident()
+            self.backend = await self.ex.enter_async_context(
+                get_backend({"backend": bcfg}, name=name)
+            )
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Main loop. Overridden to fetch the codecs"
-        async with AsyncExitStack() as ex:
-            if isinstance(self.cf.codec, Path):
-                cdv = await ex.enter_async_context(
-                    self.link.d_watch(
-                        P("conv") + self.cf.codec, subtree=True, state=None, meta=False
-                    )
-                )
+        if isinstance(self.cf.codec, Path):
+            # The watcher must live within self.tg's scope (Trio's strict
+            # LIFO nursery rule): use a local context here.
+            # TODO: The codec-vector node therefore doesn't receive live
+            # updates after run_() returns; fix this properly once the
+            # Watcher API grows a task-group-free update path.
+            async with self.link.d_watch(
+                P("conv") + self.cf.codec, subtree=True, state=None, meta=False
+            ) as cdv:
                 self.codec_vecs = await cdv.get_node()
+            self.codecs = await self.link.get_codec_tree()
 
-                self.codecs = await self.link.get_codec_tree()
-
-            await super().run_(task_status=task_status)
+        await super().run_(task_status=task_status)
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "fetch destination"
@@ -70,7 +108,7 @@ class Gate(_Gate):  # noqa: D101
                 p  # noqa:B018
                 return d, None
 
-        async with self.link.monitor(self.cf.dst, subtree=True, codec=codec) as mon:
+        async with self.backend.monitor(self.cf.dst, subtree=True, codec=codec) as mon:
             task_status.started()
             ld = len(self.cf.dst)
             while True:
@@ -110,7 +148,7 @@ class Gate(_Gate):  # noqa: D101
         else:
             meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
-            await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
+            await self.backend.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
         elif self.codecs is not None:
             codecs = self.codecs
             try:
@@ -128,14 +166,14 @@ class Gate(_Gate):  # noqa: D101
                 self.logger.error("Encode: %s %r: %r", path, data, exc)
             else:
                 if isinstance(res, (str, bytes, bytearray)):
-                    await self.link.send(
+                    await self.backend.send(
                         self.cf.dst + path, res, retain=True, codec="noop", meta=meta
                     )
                 else:
                     self.logger.error("Bad codec: %s %r > %r", path, data, res)
 
         else:
-            await self.link.send(
+            await self.backend.send(
                 self.cf.dst + path, data, retain=True, codec=self.codec, meta=meta
             )
 

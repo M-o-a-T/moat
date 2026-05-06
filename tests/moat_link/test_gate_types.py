@@ -118,6 +118,7 @@ async def test_mqtt_gate_metadata_paths() -> None:
     gate.origin = "via:test"
     gate.cf = SimpleNamespace(dst=P("d"))
     gate.link = _Link()
+    gate.backend = gate.link  # mirrors what run_() sets when no separate backend is given
     gate.codecs = None
     gate.codec = "cbor"
 

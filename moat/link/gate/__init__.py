@@ -8,6 +8,7 @@ import anyio
 import logging
 import time
 from anyio import Lock
+from contextlib import AsyncExitStack
 
 from attrs import define, field
 
@@ -140,6 +141,7 @@ class Gate:
     src: Node
     data: GateNode
     tg: TaskGroup
+    ex: AsyncExitStack
     codec: Codec
 
     _waiting: TimerMap[_DelayedUpdate]
@@ -325,9 +327,11 @@ class Gate:
             self.running = False
 
             try:
-                async with anyio.create_task_group() as self.tg:
-                    await self.tg.start(self._restart)
-                    await self.run_(task_status=task_status)
+                async with AsyncExitStack() as self.ex:
+                    await self.setup_()
+                    async with anyio.create_task_group() as self.tg:
+                        await self.tg.start(self._restart)
+                        await self.run_(task_status=task_status)
             except* GateVanished:
                 run = False
             else:
@@ -346,6 +350,16 @@ class Gate:
                 self.cf = d
                 self.tg.cancel_scope.cancel()
                 return
+
+    async def setup_(self) -> None:
+        """
+        Called inside ``self.ex`` but before ``self.tg`` is created.
+
+        Override this to enter long-lived resources into ``self.ex``
+        that must outlive ``run_()`` but whose async context managers
+        must not be nested inside the gate's task group.
+        The default implementation does nothing.
+        """
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """

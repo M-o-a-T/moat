@@ -403,19 +403,34 @@ class Gate:
                 d = self.newer_dst(node)
 
             if d is False:
-                self.logger.debug("SRC %s %s %r/%r", self.path, path, node.data_, node.meta)
                 meta = node.meta
                 if meta is None:
                     raise TypeError(f"Missing metadata for source value at {self.path + path}")
-                await self._set_dst(path, node, node.data_, meta)
+                try:
+                    await self._set_dst(path, node, node.data_, meta)
+                except Exception:
+                    self.logger.error(
+                        "ERR SRC %s %s %r/%r", self.path, path, node.data_, node.meta
+                    )
+                    raise
+                else:
+                    self.logger.debug("SRC %s %s %r/%r", self.path, path, node.data_, node.meta)
 
             elif d is True:
-                self.logger.debug("DST %s %s %r/%r", self.path, path, node.ext_data, node.ext_meta)
-
                 meta = MsgMeta(origin=self.origin)
                 if node.ext_meta:
                     meta["gw"] = node.ext_meta
-                await self.link.d_set(self.cf.src + path, node.ext_data, meta)
+                try:
+                    await self.link.d_set(self.cf.src + path, node.ext_data, meta)
+                except Exception:
+                    self.logger.error(
+                        "ERR DST %s %s %r/%r", self.path, path, node.ext_data, node.ext_meta
+                    )
+                    raise
+                else:
+                    self.logger.debug(
+                        "DST %s %s %r/%r", self.path, path, node.ext_data, node.ext_meta
+                    )
 
             elif node.data_ != node.ext_data:
                 self.logger.warning(

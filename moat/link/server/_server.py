@@ -779,12 +779,14 @@ class ServerClient(LinkCommon):
         path = Path.build(path)
 
         try:
-            node = self.server.data[path]
-            dv = node.data
-            dm = node.meta
-        except (KeyError, ValueError):
+            node = self.server.data.get(path, create=False)
+        except KeyError:
             node = None
-        else:
+
+        if node is not None:
+            dv = node.data_
+            dm = node.meta if dv is not NotGiven else None
+
             if rec:
 
                 async def rec_del(n, p):
@@ -795,11 +797,13 @@ class ServerClient(LinkCommon):
 
                 await rec_del(node, path)
             else:
+                if dv is NotGiven:
+                    return None
                 if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
                     raise OutOfDateError(node.meta)
                 self.server.maybe_update(path, NotGiven, meta)
 
-        if node is None:
+        if node is None or dv is NotGiven:
             return None
         else:
             if dm is None:

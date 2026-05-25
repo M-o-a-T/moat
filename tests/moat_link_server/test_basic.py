@@ -271,6 +271,33 @@ async def test_delete(cfg):  # noqa: D103
 
 
 @pytest.mark.anyio
+async def test_delete_open(cfg):  # noqa: D103
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        await c.d.set(P("a.b"), 12)
+        await c.d.set(P("a.b.c"), 123)
+        await c.d.set(P("a.b.c.d"), 1234)
+        await c.d.set(P("a.b.c.e"), 1235)
+
+        async def chk(want, path):
+            if want is NotGiven:
+                with pytest.raises(KeyError):
+                    await c.d.get(P(path))
+            else:
+                res = await c.d.get(P(path))
+                assert res[0] == want, (res, want)
+
+        await c.d.delete(P("a"), rec=True)
+        await chk(NotGiven, "a")
+        await chk(NotGiven, "a.b")
+        await chk(NotGiven, "a.b.c")
+        await chk(NotGiven, "a.b.c.e")
+
+
+
+@pytest.mark.anyio
 async def test_id(cfg):
     "check that the client id test works"
     async with Scaffold(cfg, use_servers=True) as sf:

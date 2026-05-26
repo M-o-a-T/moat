@@ -24,6 +24,7 @@ from moat.link.node.codec import CodecNode
 
 from . import Gate as _BaseGate
 from .mqtt import Gate as _MqttGate
+from .mqtt import _is_null
 
 from typing import TYPE_CHECKING
 
@@ -116,6 +117,10 @@ class Gate(_MqttGate):
 
         Returns ``(codec_node, vd)`` or ``(None, None)`` when no
         codec-vector tree is configured or the lookup fails.
+
+        If the codec-vector entry selects the null codec
+        (``data['codec'] == 'null'``), ``cd`` is ``None`` and ``vd`` is
+        returned so callers can detect the placeholder and drop the item.
         """
         codecs = self.codecs
         codec_vecs = getattr(self, "codec_vecs", None)
@@ -123,6 +128,11 @@ class Gate(_MqttGate):
             return None, None
         try:
             vd = codec_vecs.search(path)
+        except (KeyError, ValueError):
+            return None, None
+        if _is_null(vd):
+            return None, vd
+        try:
             cd = codecs.get(Path.build(vd.data["codec"]))
         except (KeyError, ValueError):
             return None, None
@@ -163,6 +173,8 @@ class Gate(_MqttGate):
                 value = msg.data["value"]
                 extras = {k: v for k, v in msg.data.items() if k != "value"}
                 cd, vd = self._lookup(p)
+                if _is_null(vd):
+                    return
                 if cd is not None:
                     try:
                         value = cd.dec_value(value)
@@ -224,7 +236,11 @@ class Gate(_MqttGate):
             return
 
         wire = data
-        cd, _ = self._lookup(path)
+        cd, vd = self._lookup(path)
+        if _is_null(vd):
+            # Null-codec placeholder: silently drop outbound writes.
+            node.ext_meta = out_meta
+            return
         if cd is not None:
             try:
                 wire = cd.enc_value(data)

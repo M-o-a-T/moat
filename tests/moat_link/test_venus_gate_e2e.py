@@ -16,6 +16,7 @@ The test:
 from __future__ import annotations
 
 import anyio
+import logging
 import os
 import pytest
 
@@ -36,6 +37,24 @@ TARGET = DEST + P("settings.0.Settings.Gui2.OnBoarding")
 
 #: Expected value at ``TARGET`` once the gate has finished syncing.
 EXPECTED_VALUE = 2
+
+#: Name of the codec-vector tree used by the Venus gate in this test.
+CODEC_VEC = "venustest"
+
+#: Topic substring used to recognise the no-op battery debug values
+#: that the gate is configured to drop via the null codec.
+DROPPED_TOPIC_LEAF = "ChargeModeDebugFloat"
+
+
+class _RecordingHandler(logging.Handler):
+    """Collect emitted log records for later inspection."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
 
 
 def _venus_backend_cfg() -> attrdict:
@@ -81,6 +100,15 @@ async def test_venus_gateway_e2e(cfg) -> None:
         await sf.server(init="TEST")
         client = await sf.client()
 
+        # Configure a codec-vector tree that marks the noisy Venus
+        # ``battery/*/Info/ChargeModeDebugFloat`` payloads (which carry
+        # values such as ``NaN`` that can't survive a UTF-8 round-trip)
+        # as belonging to the null codec, so the gate drops them.
+        await client.d_set(
+            P("conv") + P(CODEC_VEC) + P(f"battery.+.Info.{DROPPED_TOPIC_LEAF}"),
+            {"codec": "null"},
+        )
+
         gate_path = P("gate.venustest")
         await client.d_set(
             gate_path,
@@ -88,6 +116,7 @@ async def test_venus_gateway_e2e(cfg) -> None:
                 "driver": "venus",
                 "src": DEST,
                 "dst": P(portal_id),
+                "codec": P(CODEC_VEC),
                 "backend": dict(_venus_backend_cfg()),
                 "timeout": 60,
             },
@@ -97,13 +126,30 @@ async def test_venus_gateway_e2e(cfg) -> None:
         # config when it does ``d_get``.
         await client.i_sync()
 
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(run_gate, sf.cfg, client, gate_path)
+        handler = _RecordingHandler()
+        backend_logger = logging.getLogger("moat.link.backend")
+        backend_logger.addHandler(handler)
+        try:
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(run_gate, sf.cfg, client, gate_path)
 
-            with anyio.fail_after(90):
-                async with client.d_watch(TARGET, state=None) as mon:
-                    async for val in mon:
-                        assert val == EXPECTED_VALUE
-                        break
+                with anyio.fail_after(90):
+                    async with client.d_watch(TARGET, state=None) as mon:
+                        async for val in mon:
+                            assert val == EXPECTED_VALUE
+                            break
 
-            tg.cancel_scope.cancel()
+                tg.cancel_scope.cancel()
+        finally:
+            backend_logger.removeHandler(handler)
+
+        # The null-codec placeholder must have prevented the gate from
+        # mirroring the offending Venus payloads into MoaT-Link, so the
+        # link backend never had to drop them on the outgoing side.
+        offenders = [
+            r
+            for r in handler.records
+            if r.getMessage().startswith("Dropping non-UTF8 payload")
+            and DROPPED_TOPIC_LEAF in r.getMessage()
+        ]
+        assert offenders == [], offenders

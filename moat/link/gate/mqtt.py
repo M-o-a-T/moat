@@ -34,6 +34,21 @@ MQTT gateway parameters (use ``-s KEY VALUE`` to set):
 """
 
 
+def _is_null(vd: Any) -> bool:
+    """Return ``True`` when ``vd`` selects the null codec placeholder.
+
+    A codec-vector entry whose ``codec`` field is the literal string
+    ``"null"`` (referring to :mod:`moat.lib.codec.null`) marks the path
+    as one whose payload should be silently dropped by the gateway.
+    """
+    if vd is None:
+        return False
+    try:
+        return vd.data.get("codec") == "null"
+    except (AttributeError, ValueError):
+        return False
+
+
 class Gate(_Gate):
     """MQTT gateway driver.
 
@@ -99,6 +114,11 @@ class Gate(_Gate):
                 # (a) look up the codec type in the vector
                 try:
                     vd = self.codec_vecs.search(p)
+                except (KeyError, ValueError):
+                    return NotGiven, None
+                if _is_null(vd):
+                    return NotGiven, vd
+                try:
                     cd = codecs.get(Path.build(vd.data["codec"]))
                     if not isinstance(cd, CodecNode):
                         return NotGiven, None
@@ -163,6 +183,14 @@ class Gate(_Gate):
             codecs = self.codecs
             try:
                 vd = self.codec_vecs.search(path)
+            except (ValueError, KeyError):
+                self.logger.error("No codec: %s %r", path, data)
+                return
+            if _is_null(vd):
+                # Null-codec placeholder: silently drop outbound writes.
+                node.ext_meta = meta
+                return
+            try:
                 cd = codecs.get(Path.build(vd.data["codec"]))
                 if not isinstance(cd, CodecNode):
                     self.logger.error("Bad codec node: %s", path)

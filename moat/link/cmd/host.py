@@ -111,14 +111,17 @@ async def list(obj, timeout, dump):  # noqa: A001
                     for k, v in h.data.h.items():
                         known.add(k)
                         ok = up if up is not None else v.get("up", False)
-                        if hc.get((h.id, k), None) is ok:
-                            continue
-                        hc[(h.id, k)] = ok
-                        print(
-                            h.id,
+                        hostname = (
                             ""
                             if "i" not in h.data or (len(k) and k[0] == h.data.i["host"])
-                            else h.data.i["host"],
+                            else h.data.i["host"]
+                        )
+                        if hc.get((h.id, k), None) == (ok, hostname):
+                            continue
+                        hc[(h.id, k)] = (ok, hostname)
+                        print(
+                            h.id,
+                            hostname,
                             k,
                             "" if ok else "** DOWN **",
                         )

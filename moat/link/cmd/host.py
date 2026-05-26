@@ -80,7 +80,9 @@ async def list(obj, timeout, dump):  # noqa: A001
     The host name is empty if the service path starts with it.
     """
 
-    hc = dict()
+    hc: dict = {}
+    # Per-host id, paths previously reported as up.
+    seen: dict = {}
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
@@ -91,11 +93,27 @@ async def list(obj, timeout, dump):  # noqa: A001
                         up = h.data.p["up"]
                     except AttributeError:
                         up = None
-                    for k, v in h.data.h.items():
-                        ok = up if up is not None else v.get("up", False)
-                        if hc.get(k, None) is ok:
+                    current = set(h.data.h.keys())
+                    known = seen.setdefault(h.id, set())
+                    # Report previously-seen paths that disappeared as DOWN.
+                    for k in known - current:
+                        if hc.get((h.id, k), None) is False:
                             continue
-                        hc[k] = ok
+                        hc[(h.id, k)] = False
+                        print(
+                            h.id,
+                            ""
+                            if "i" not in h.data or (len(k) and k[0] == h.data.i["host"])
+                            else h.data.i["host"],
+                            k,
+                            "** DOWN **",
+                        )
+                    for k, v in h.data.h.items():
+                        known.add(k)
+                        ok = up if up is not None else v.get("up", False)
+                        if hc.get((h.id, k), None) is ok:
+                            continue
+                        hc[(h.id, k)] = ok
                         print(
                             h.id,
                             ""

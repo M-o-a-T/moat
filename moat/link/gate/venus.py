@@ -22,6 +22,7 @@ from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
 from moat.link.node.codec import CodecNode
 
+from . import Gate as _BaseGate
 from .mqtt import Gate as _MqttGate
 
 from typing import TYPE_CHECKING
@@ -75,11 +76,7 @@ class Gate(_MqttGate):
     _keepalive_id: str
 
     async def setup_(self) -> None:
-        """Compute Venus-specific topic prefixes and ensure ``cf.codec`` is set."""
-        # mqtt.Gate.run_ reads ``self.cf.codec`` unconditionally; supply a
-        # harmless default when the user didn't configure a codec-vector tree.
-        if "codec" not in self.cf:
-            self.cf.codec = "noop"
+        """Compute Venus-specific topic prefixes and per-run keep-alive ID."""
         await super().setup_()
         self._read_prefix = P("N") + self.cf.dst
         self._write_prefix = P("W") + self.cf.dst
@@ -93,6 +90,26 @@ class Gate(_MqttGate):
         # set one explicitly via ``cf.speed``.
         if "speed" not in self.cf:
             self._speed = self.DEFAULT_SPEED
+
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
+        """Optionally fetch the codec-vector tree, then run the base gate.
+
+        Overrides :py:meth:`moat.link.gate.mqtt.Gate.run_` so that a
+        Venus gate may run without a ``codec`` entry: Venus payloads are
+        always JSON-wrapped and don't need a wire codec.  Mutating
+        ``self.cf`` here would break the equality check in
+        :py:meth:`moat.link.gate.Gate._restart`.
+        """
+        cfg_codec = self.cf.get("codec", None)
+        if isinstance(cfg_codec, Path):
+            async with self.link.d_watch(
+                P("conv") + cfg_codec, subtree=True, state=None, meta=False
+            ) as cdv:
+                self.codec_vecs = await cdv.get_node()
+            self.codecs = await self.link.get_codec_tree()
+        # Skip mqtt.Gate.run_ (we just replicated its codec setup);
+        # delegate directly to the base implementation.
+        await _BaseGate.run_(self, task_status=task_status)
 
     def _lookup(self, path: Path) -> tuple[CodecNode | None, Any]:
         """Look up the codec node and vector entry for ``path``.

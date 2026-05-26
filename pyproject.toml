@@ -273,6 +273,7 @@ exclude = [
     "moat/micro/part/pin.py",
     "moat/micro/romfs.py",
     "moat/link/gate/kv.py",
+    "moat/link/gate/venus.py",
 ]
 
 [tool.ty.rules]

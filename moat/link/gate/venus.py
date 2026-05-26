@@ -40,8 +40,11 @@ Venus gateway parameters (use ``-s KEY VALUE`` to set):
              Per element, ``codec`` selects the codec applied to the
              ``value`` field and ``speed`` gives the minimum delay in
              seconds between updates accepted from the device.
+  speed      Default minimum delay between updates, applied when the
+             codec entry doesn't carry its own ``speed`` (default: 1.0).
   keepalive  Keep-alive interval in seconds (default: 30).
-  timeout    Seconds to wait for the initial data burst (default: 5).
+  timeout    Seconds to wait for the initial full-publish-completed
+             echo (default: 30).
   backend    Dict describing a separate MQTT broker;
              ``driver`` defaults to ``mqtt``.
 
@@ -56,6 +59,14 @@ class Gate(_MqttGate):
     JSON-with-``value``-wrapper convention used by Venus OS and adding a
     keep-alive publisher.
     """
+
+    #: Fallback for ``set_src`` rate limiting when neither the codec entry
+    #: nor ``cf.speed`` provide a value.  Venus often emits very frequent
+    #: updates, so we default to one second.
+    DEFAULT_SPEED: float = 1.0
+
+    #: Topic suffix Venus uses to signal completion of the initial publish.
+    COMPLETION_TOPIC: str = "full_publish_completed"
 
     _read_prefix: Path
     _write_prefix: Path
@@ -73,6 +84,10 @@ class Gate(_MqttGate):
         self._write_prefix = P("W") + self.cf.dst
         self._keepalive_topic = P("R") + self.cf.dst + P("keepalive")
         self._keepalive_interval = float(self.cf.get("keepalive", 30))
+        # Apply the Venus-specific default rate limit when the user hasn't
+        # set one explicitly via ``cf.speed``.
+        if "speed" not in self.cf:
+            self._speed = self.DEFAULT_SPEED
 
     def _lookup(self, path: Path) -> tuple[CodecNode | None, Any]:
         """Look up the codec node and vector entry for ``path``.
@@ -113,14 +128,16 @@ class Gate(_MqttGate):
             self.tg.start_soon(self._keepalive_loop)
 
             ld = len(self._read_prefix)
-            timeout = float(self.cf.get("timeout", 5))
+            timeout = float(self.cf.get("timeout", 30))
 
-            async def _process(msg: Any) -> None:
+            def _is_completion(p: Path) -> bool:
+                return len(p) == 1 and p[0] == self.COMPLETION_TOPIC
+
+            async def _process(p: Path, msg: Any) -> None:
                 if msg.meta is not None and msg.meta.origin == self.origin:
                     return
                 if not isinstance(msg.data, dict) or "value" not in msg.data:
                     return
-                p = Path.build(msg.topic[ld:])
                 value = msg.data["value"]
                 extras = {k: v for k, v in msg.data.items() if k != "value"}
                 cd, vd = self._lookup(p)
@@ -134,17 +151,36 @@ class Gate(_MqttGate):
                 spd = None if vd is None else vd.data.get("speed", None)
                 await self.set_src(p, value, meta, speed=spd)
 
-            while True:
-                try:
-                    with anyio.fail_after(timeout):
-                        msg = await anext(mon)
-                except TimeoutError:
-                    break
-                await _process(msg)
+            # Wait for Venus to signal completion of the initial publish
+            # via ``N/<id>/full_publish_completed``.  If that doesn't
+            # arrive within ``timeout`` seconds, raise an error so the
+            # operator knows the device isn't responding.
+            try:
+                with anyio.fail_after(timeout):
+                    async for msg in mon:
+                        p = Path.build(msg.topic[ld:])
+                        if _is_completion(p):
+                            break
+                        await _process(p, msg)
+                    else:
+                        raise RuntimeError(
+                            f"Venus monitor stream for {self.cf.dst} ended "
+                            "before full-publish-completed",
+                        )
+            except TimeoutError as exc:
+                raise RuntimeError(
+                    f"Venus device {self.cf.dst} did not signal "
+                    f"full-publish-completed within {timeout}s",
+                ) from exc
             self.dst_is_current()
 
             async for msg in mon:
-                await _process(msg)
+                p = Path.build(msg.topic[ld:])
+                # ``suppress-republish`` should prevent further completion
+                # echoes, but filter them out defensively just in case.
+                if _is_completion(p):
+                    continue
+                await _process(p, msg)
 
     async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode) -> None:
         """Publish ``{"value": data}`` to ``W/<id>/...``."""
@@ -181,15 +217,28 @@ class Gate(_MqttGate):
         node.ext_meta = out_meta
 
     async def _keepalive_loop(self) -> None:
-        """Periodically publish to ``R/<id>/keepalive`` to keep Venus talking."""
+        """Periodically publish to ``R/<id>/keepalive`` to keep Venus talking.
+
+        The first keep-alive carries the ``full-publish-completed-echo``
+        option, asking Venus to signal completion of the initial publish.
+        Subsequent keep-alives carry ``suppress-republish`` so the device
+        merely maintains the session instead of dumping its whole state
+        on every tick.
+
+        Send failures are intentionally not caught: a broken keep-alive
+        link should propagate and tear the gate down.
+        """
+        await self.backend.send(
+            self._keepalive_topic,
+            {"keepalive-options": ["full-publish-completed-echo"]},
+            codec="json",
+            retain=False,
+        )
         while True:
-            try:
-                await self.backend.send(
-                    self._keepalive_topic,
-                    b"",
-                    codec="noop",
-                    retain=False,
-                )
-            except Exception as exc:
-                self.logger.warning("Keep-alive failed: %r", exc)
             await anyio.sleep(self._keepalive_interval)
+            await self.backend.send(
+                self._keepalive_topic,
+                {"keepalive-options": ["suppress-republish"]},
+                codec="json",
+                retain=False,
+            )

@@ -41,6 +41,27 @@ class MqttMessage:
         self.meta = attrdict(kw)
 
 
+def _is_valid_mqtt_utf8(s: str) -> bool:
+    """Return ``True`` iff ``s`` is a strict MQTT-5 UTF-8 payload.
+
+    MQTT-5 brokers such as FlashMQ reject UTF-8 payloads containing any
+    control character (U+0000..U+001F, U+007F..U+009F), lone surrogate
+    code point, or Unicode noncharacter.  Per the standard, such payloads
+    would otherwise tear down the connection.
+    """
+    for c in s:
+        cp = ord(c)
+        if cp <= 0x1F or 0x7F <= cp <= 0x9F:
+            return False
+        if 0xD800 <= cp <= 0xDFFF:
+            return False
+        if 0xFDD0 <= cp <= 0xFDEF:
+            return False
+        if (cp & 0xFFFF) in (0xFFFE, 0xFFFF):
+            return False
+    return True
+
+
 class Backend(_Backend):
     """
     The MQTT backend driver.
@@ -104,6 +125,12 @@ class Backend(_Backend):
             )
         self.a, self.kw = a, kw
         self.client = None
+        # Topics where we've already logged a UTF-8 problem in str payloads.
+        # MQTT 5 marks ``str`` payloads with PAYLOAD_FORMAT_INDICATOR=1 and
+        # strict brokers (e.g. FlashMQ) terminate the connection when the
+        # bytes on the wire aren't valid UTF-8 (lone surrogates, NUL chars,
+        # etc.).  We validate before publishing and skip + log offenders.
+        self._bad_utf8_paths: set[Path] = set()
 
     @asynccontextmanager
     async def connect(self):
@@ -169,6 +196,23 @@ class Backend(_Backend):
         else:
             self.logger.debug("Monitor %s%s end", topic, ":*" if subtree else "")
 
+    def _log_bad_utf8(self, topic: Path, data: str) -> None:
+        """Log once per topic that we're dropping an unsendable str payload."""
+        if topic in self._bad_utf8_paths:
+            return
+        self._bad_utf8_paths.add(topic)
+        # Show enough of the payload to identify the offender without
+        # flooding the log; ``repr`` exposes the offending escape sequences.
+        snippet = repr(data[:200])
+        if len(data) > 200:
+            snippet = snippet[:-1] + "…" + snippet[-1]
+        self.logger.error(
+            "Dropping non-UTF8 payload at %s: %s (len=%d)",
+            topic,
+            snippet,
+            len(data),
+        )
+
     async def send(
         self,
         topic: Path,
@@ -198,6 +242,9 @@ class Backend(_Backend):
             raise ValueError("Need to set whether to retain or not")
 
         if isinstance(data, str):
+            if not _is_valid_mqtt_utf8(data):
+                self._log_bad_utf8(topic, data)
+                return
             msg = data  # utf-8 is pass-thru in MQTT5
         elif data is NotGiven:
             # delete

@@ -134,7 +134,7 @@ async def data_get(
 
                 if as_dict is not None:
                     if meta:
-                        d = dict(data=d, meta=meta_data, _path=p)
+                        d = dict(data=d, meta=meta_data, _path=path + p)
                     yy = tree
                     for p in row_path:
                         yy = yy.setdefault(p, {})

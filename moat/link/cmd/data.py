@@ -84,7 +84,7 @@ async def _dump_data(obj, as_dict: bool = False) -> None:
                 m = None
             with suppress(BrokenPipeError):
                 if as_dict:
-                    yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
+                    yprint(_encode_dict_entry(obj.path + p, d, m), stream=obj.stdout)
                 else:
                     if m is None:
                         yprint([p, d], stream=obj.stdout)

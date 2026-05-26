@@ -140,14 +140,11 @@ async def test_dump_dict_inlines_simple_mapping():
     await _dump_data(obj, as_dict=True)
 
     out = obj.stdout.getvalue()
-    assert "_path: a.b" in out
+    assert "_path: root.a.b" in out
     assert "_meta:" in out
     assert "_value:" not in out
     assert "\nv: 1\n" in out
     assert "!P" not in out
-
-
-async def test_dump_dict_wraps_reserved_values():
     """`dump --dict` stores reserved-key mappings under `_value`."""
 
     conn = _Conn()
@@ -189,7 +186,7 @@ async def test_dump_dict_without_meta_omits_meta_key():
     await _dump_data(obj, as_dict=True)
 
     out = obj.stdout.getvalue()
-    assert "_path: a.b" in out
+    assert "_path: root.a.b" in out
     assert "_meta:" not in out
     assert "\nv: 1\n" in out
 

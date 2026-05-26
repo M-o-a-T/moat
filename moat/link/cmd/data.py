@@ -363,9 +363,15 @@ async def edit(obj, yes, editor):
     help="Don't delete entries created after this timestamp",
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
+@click.option(
+    "-s",
+    "--sub",
+    is_flag=True,
+    help="Delete the subtree below the entry but keep the entry itself",
+)
 @click.option("-m", "--mqtt", is_flag=True, help="Delete via MQTT message")
 @click.pass_obj
-async def delete(obj, before, recursive, mqtt):
+async def delete(obj, before, recursive, sub, mqtt):
     """
     Delete an entry, or a subtree.
 
@@ -374,15 +380,19 @@ async def delete(obj, before, recursive, mqtt):
 
     The root entry cannot be deleted.
     """
+    if recursive and sub:
+        raise click.UsageError("--recursive and --sub are mutually exclusive")
     if mqtt:
-        if recursive or before:
-            raise click.UsageError("--mqtt and --recursive/--before don't like each other")
+        if recursive or sub or before:
+            raise click.UsageError("--mqtt and --recursive/--sub/--before don't like each other")
         await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
         return
 
     args = {}
     if recursive:
         args["rec"] = recursive
+    if sub:
+        args["sub"] = sub
     if before:
         args["ts"] = before
 

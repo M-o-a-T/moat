@@ -119,8 +119,8 @@ async def data_get(
                 if r is None:
                     continue
                 n, p, d, *m_raw = r
-                row_path = pl.long(n, p)
-                row_path = path_mangle(row_path)
+                p = pl.long(n, p)
+                row_path = path_mangle(p)
                 if row_path is None:
                     continue
 
@@ -134,7 +134,7 @@ async def data_get(
 
                 if as_dict is not None:
                     if meta:
-                        d = dict(data=d, meta=meta_data)
+                        d = dict(data=d, meta=meta_data, _path=p)
                     yy = tree
                     for p in row_path:
                         yy = yy.setdefault(p, {})

@@ -34,21 +34,6 @@ MQTT gateway parameters (use ``-s KEY VALUE`` to set):
 """
 
 
-def _is_null(vd: Any) -> bool:
-    """Return ``True`` when ``vd`` selects the null codec placeholder.
-
-    A codec-vector entry whose ``codec`` field is the literal string
-    ``"null"`` (referring to :mod:`moat.lib.codec.null`) marks the path
-    as one whose payload should be silently dropped by the gateway.
-    """
-    if vd is None:
-        return False
-    try:
-        return vd.data.get("codec") == "null"
-    except (AttributeError, ValueError):
-        return False
-
-
 class Gate(_Gate):
     """MQTT gateway driver.
 
@@ -72,6 +57,27 @@ class Gate(_Gate):
     codecs: CodecNode | None = None
 
     backend: Backend | Link
+
+    def _path_dropped(self, path: Path) -> bool:
+        """Consult the codec-vector tree for a null-codec placeholder.
+
+        Falls back to the base implementation (which inspects
+        :attr:`codec`) when no codec-vector tree is configured or the
+        path isn't covered.
+        """
+        codec_vecs = getattr(self, "codec_vecs", None)
+        if codec_vecs is not None:
+            try:
+                vd = codec_vecs.search(path)
+            except (KeyError, ValueError):
+                pass
+            else:
+                try:
+                    if vd.data.get("codec") == "null":
+                        return True
+                except (AttributeError, ValueError):
+                    pass
+        return super()._path_dropped(path)
 
     async def setup_(self) -> None:
         """Enter the gate-specific backend into ``self.ex`` before ``self.tg`` is created."""
@@ -114,11 +120,6 @@ class Gate(_Gate):
                 # (a) look up the codec type in the vector
                 try:
                     vd = self.codec_vecs.search(p)
-                except (KeyError, ValueError):
-                    return NotGiven, None
-                if _is_null(vd):
-                    return NotGiven, vd
-                try:
                     cd = codecs.get(Path.build(vd.data["codec"]))
                     if not isinstance(cd, CodecNode):
                         return NotGiven, None
@@ -183,14 +184,6 @@ class Gate(_Gate):
             codecs = self.codecs
             try:
                 vd = self.codec_vecs.search(path)
-            except (ValueError, KeyError):
-                self.logger.error("No codec: %s %r", path, data)
-                return
-            if _is_null(vd):
-                # Null-codec placeholder: silently drop outbound writes.
-                node.ext_meta = meta
-                return
-            try:
                 cd = codecs.get(Path.build(vd.data["codec"]))
                 if not isinstance(cd, CodecNode):
                     self.logger.error("Bad codec node: %s", path)

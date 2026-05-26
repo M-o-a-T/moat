@@ -14,6 +14,7 @@ from attrs import define, field
 
 from moat.util import NotGiven, to_attrdict
 from moat.lib.codec import get_codec
+from moat.lib.codec.null import Codec as _NullCodec
 from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
 from moat.link.meta import MsgMeta
@@ -176,6 +177,15 @@ class Gate:
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
+    def _path_dropped(self, path: Path) -> bool:  # noqa: ARG002
+        """Return ``True`` if items at ``path`` should be silently dropped.
+
+        Used as a generic null-codec hook: drivers wire their per-path
+        codec selection through this method.  The default reports
+        ``True`` when the gate's overall codec is the null placeholder.
+        """
+        return isinstance(self.codec, _NullCodec)
+
     async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the internal data.
@@ -203,6 +213,8 @@ class Gate:
                     node.todo = True
 
     async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta):
+        if self._path_dropped(path):
+            return
         node.ext_data = NotGiven
         node.ext_meta = NotGiven
         node.set_(path, data, meta)
@@ -233,6 +245,8 @@ class Gate:
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
         """
+        if self._path_dropped(path):
+            return
         if speed is None:
             speed = self._speed
 
@@ -384,6 +398,8 @@ class Gate:
             node = cast(GateNode, node)
             if not node.todo:
                 return
+            if self._path_dropped(path):
+                return
 
             if not node.has_src:
                 # no source data
@@ -523,6 +539,8 @@ class DelayedGate(Gate):
         """
         Queue an update to the destination, with delay.
         """
+        if self._path_dropped(path):
+            return
         # Cancel any pending update from the other direction for the same path
         self._pending.pop((path, False), None)  # ty:ignore[invalid-argument-type]
 

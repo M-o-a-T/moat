@@ -282,6 +282,7 @@ def yprint(
     else:
         y = yaml.YAML(typ=typ)
         y.default_flow_style = compact
+        y.width = sys.maxsize
         y.dump(data, stream=stream)
 
 

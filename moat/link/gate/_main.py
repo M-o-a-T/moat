@@ -4,16 +4,23 @@ Command line for gatewaying
 
 from __future__ import annotations
 
+import pkgutil
 import sys
 
 import asyncclick as click
 
+import moat.link.gate as _gate_pkg
 from moat.util import NotGiven, yprint
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+
+_drivers: list[str] = sorted(
+    m.name for m in pkgutil.iter_modules(_gate_pkg.__path__) if not m.name.startswith("_")
+)
+_drivers_epilog: str = "Available drivers: " + ", ".join(_drivers) + "."
 
 
 @click.group(cls=AliasedGroup, short_help="Manage gateways.", invoke_without_command=True)
@@ -78,11 +85,11 @@ async def _list(obj):
     await data_get(obj.conn, P("gate") + obj.path, **k)
 
 
-@cli.command("set", short_help="Add or update a gate entry")
+@cli.command("set", short_help="Add or update a gate entry", epilog=_drivers_epilog)
 @attr_args
 @click.option("-S", "--src", type=P, help="Source (in Moat-Link)")
 @click.option("-D", "--dst", type=P, help="Destination (driver specific)")
-@click.option("-d", "--driver", type=str, help="Driver")
+@click.option("-d", "--driver", type=str, help="Driver name or full module path")
 @click.pass_obj
 async def set_(obj, src, dst, driver, **kw):
     """

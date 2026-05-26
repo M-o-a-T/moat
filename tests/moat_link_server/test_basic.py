@@ -296,6 +296,49 @@ async def test_delete_open(cfg):  # noqa: D103
         await chk(NotGiven, "a.b.c.e")
 
 
+@pytest.mark.anyio
+async def test_delete_sub(cfg):
+    """`sub=True` deletes the subtree below a node but keeps the node itself."""
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        await c.d.set(P("a"), 1)
+        await c.d.set(P("a.b"), 12)
+        await c.d.set(P("a.b.c"), 123)
+        await c.d.set(P("a.b.c.d"), 1234)
+        await c.d.set(P("a.b.c.e"), 1235)
+
+        async def chk(want, path):
+            if want is NotGiven:
+                with pytest.raises(KeyError):
+                    await c.d.get(P(path))
+            else:
+                res = await c.d.get(P(path))
+                assert res[0] == want, (res, want)
+
+        # Sub-delete of a node with no own value: children gone, no error.
+        await c.d.set(P("q.r"), 7)
+        await c.d.set(P("q.r.s"), 8)
+        await c.d.delete(P("q"), sub=True)
+        await chk(NotGiven, "q")
+        await chk(NotGiven, "q.r")
+        await chk(NotGiven, "q.r.s")
+
+        # Sub-delete: keep a, drop everything below.
+        await c.d.delete(P("a"), sub=True)
+        await chk(1, "a")
+        await chk(NotGiven, "a.b")
+        await chk(NotGiven, "a.b.c")
+        await chk(NotGiven, "a.b.c.d")
+        await chk(NotGiven, "a.b.c.e")
+
+        # rec and sub together are rejected.
+        from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
+
+        with pytest.raises((RemoteError, ValueError)):
+            await c.d.delete(P("a"), rec=True, sub=True)
+
 
 @pytest.mark.anyio
 async def test_id(cfg):

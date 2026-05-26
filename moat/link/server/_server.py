@@ -309,6 +309,7 @@ class _Sub_d(MsgHandler):
         _99="MsgMeta:optional",
         t="float:Time of+ last change",
         rec="bool:recursive",
+        sub="bool:delete children only, keep this node",
     )
     doc_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
 
@@ -340,9 +341,14 @@ class _Sub_d(MsgHandler):
         return await self.parent.d_set_(path, value, meta=meta, t=t)
 
     async def cmd_delete(
-        self, path: Path, meta: MsgMeta | None = None, t: float | None = None, rec: bool = False
+        self,
+        path: Path,
+        meta: MsgMeta | None = None,
+        t: float | None = None,
+        rec: bool = False,
+        sub: bool = False,
     ) -> Any:
-        return await self.parent.d_delete_(path, meta=meta, t=t, rec=rec)
+        return await self.parent.d_delete_(path, meta=meta, t=t, rec=rec, sub=sub)
 
 
 class _Sub_e(MsgHandler):
@@ -762,17 +768,31 @@ class ServerClient(LinkCommon):
 
         return self.server.maybe_update(path, value, meta, force=True)
 
-    async def d_delete_(self, path, meta=None, t: float | None = None, rec: bool = False):
+    async def d_delete_(
+        self,
+        path,
+        meta=None,
+        t: float | None = None,
+        rec: bool = False,
+        sub: bool = False,
+    ):
         """Delete a node's value.
 
         Arguments:
         * pathname
         * optional: new metadata
         * optional: t: timestamp of last change
+        * optional: rec: recursively delete the node and its subtree
+        * optional: sub: recursively delete the node's children only,
+          leaving the node itself intact
+
+        ``rec`` and ``sub`` are mutually exclusive.
 
         You should only call this if you don't know whether the data exists.
         If you do, send an empty value to the MQTT topic directly.
         """
+        if rec and sub:
+            raise ValueError("'rec' and 'sub' are mutually exclusive")
         if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
@@ -787,7 +807,7 @@ class ServerClient(LinkCommon):
             dv = node.data_
             dm = node.meta if dv is not NotGiven else None
 
-            if rec:
+            if rec or sub:
 
                 async def rec_del(n, p):
                     await anyio.sleep(0.01)
@@ -795,7 +815,11 @@ class ServerClient(LinkCommon):
                         await rec_del(nn, p / pp)
                     self.server.maybe_update(p, NotGiven, meta)
 
-                await rec_del(node, path)
+                if sub:
+                    for pp, nn in list(node.items()):
+                        await rec_del(nn, path / pp)
+                else:
+                    await rec_del(node, path)
             else:
                 if dv is NotGiven:
                     return None

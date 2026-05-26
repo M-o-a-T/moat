@@ -22,6 +22,17 @@ if TYPE_CHECKING:
     from moat.lib.path import Path
 
 
+params_info = """\
+MoaT-Link-to-Link gateway parameters (use ``-s KEY VALUE`` to set):
+
+\b
+  server   Name of the remote MoaT-Link server (required).
+  delay    Conflict-resolution delay in seconds (default: 0.1).
+  skip     Extra path prefixes to exclude from sync (in addition to "run").
+  backend  Dict to override the MQTT broker for the remote connection.\
+"""
+
+
 # Paths that should not be synced between servers
 SKIP_PATHS = frozenset(["run"])
 

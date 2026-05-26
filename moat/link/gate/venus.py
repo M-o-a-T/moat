@@ -167,7 +167,8 @@ class Gate(_MqttGate):
                         if _is_completion(p):
                             if (
                                 isinstance(msg.data, dict)
-                                and msg.data.get("value") == self._keepalive_id
+                                and msg.data.get("full-publish-completed-echo")
+                                == self._keepalive_id
                             ):
                                 break
                             # Stale echo from a previous run; keep waiting.

@@ -147,6 +147,7 @@ def _make_venus_gate() -> VenusGate:
     gate._write_prefix = P("W") + gate.cf.dst  # noqa: SLF001
     gate._keepalive_topic = P("R") + gate.cf.dst + P("keepalive")  # noqa: SLF001
     gate._keepalive_interval = 0.01  # noqa: SLF001
+    gate._keepalive_id = "unit-test-id"  # noqa: SLF001
     return gate
 
 
@@ -212,9 +213,9 @@ async def test_venus_gate_keepalive_publishes() -> None:
     topics = {call[0] for call in gate.link.calls}
     assert topics == {P("R.abc.keepalive")}
     assert all(call[3] == "json" for call in gate.link.calls)
-    # The first keep-alive asks Venus for a completion echo.
+    # The first keep-alive asks Venus for a completion echo carrying our ID.
     assert gate.link.calls[0][1] == {
-        "keepalive-options": ["full-publish-completed-echo"],
+        "keepalive-options": [{"full-publish-completed-echo": "unit-test-id"}],
     }
     # Subsequent keep-alives suppress the full republish.
     assert gate.link.calls[1][1] == {"keepalive-options": ["suppress-republish"]}

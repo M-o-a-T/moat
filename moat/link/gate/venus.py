@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import anyio
 
-from moat.util import NotGiven
+from moat.util import NotGiven, gen_ident
 from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
 from moat.link.node.codec import CodecNode
@@ -72,6 +72,7 @@ class Gate(_MqttGate):
     _write_prefix: Path
     _keepalive_topic: Path
     _keepalive_interval: float
+    _keepalive_id: str
 
     async def setup_(self) -> None:
         """Compute Venus-specific topic prefixes and ensure ``cf.codec`` is set."""
@@ -84,6 +85,10 @@ class Gate(_MqttGate):
         self._write_prefix = P("W") + self.cf.dst
         self._keepalive_topic = P("R") + self.cf.dst + P("keepalive")
         self._keepalive_interval = float(self.cf.get("keepalive", 30))
+        # Random per-run identifier echoed by Venus in the initial
+        # ``full_publish_completed`` message so we can ignore stale
+        # completions from earlier runs.
+        self._keepalive_id = gen_ident(8)
         # Apply the Venus-specific default rate limit when the user hasn't
         # set one explicitly via ``cf.speed``.
         if "speed" not in self.cf:
@@ -152,15 +157,21 @@ class Gate(_MqttGate):
                 await self.set_src(p, value, meta, speed=spd)
 
             # Wait for Venus to signal completion of the initial publish
-            # via ``N/<id>/full_publish_completed``.  If that doesn't
-            # arrive within ``timeout`` seconds, raise an error so the
-            # operator knows the device isn't responding.
+            # via ``N/<id>/full_publish_completed`` carrying our keep-alive
+            # ID.  If that doesn't arrive within ``timeout`` seconds, raise
+            # an error so the operator knows the device isn't responding.
             try:
                 with anyio.fail_after(timeout):
                     async for msg in mon:
                         p = Path.build(msg.topic[ld:])
                         if _is_completion(p):
-                            break
+                            if (
+                                isinstance(msg.data, dict)
+                                and msg.data.get("value") == self._keepalive_id
+                            ):
+                                break
+                            # Stale echo from a previous run; keep waiting.
+                            continue
                         await _process(p, msg)
                     else:
                         raise RuntimeError(
@@ -230,7 +241,11 @@ class Gate(_MqttGate):
         """
         await self.backend.send(
             self._keepalive_topic,
-            {"keepalive-options": ["full-publish-completed-echo"]},
+            {
+                "keepalive-options": [
+                    {"full-publish-completed-echo": self._keepalive_id},
+                ],
+            },
             codec="json",
             retain=False,
         )

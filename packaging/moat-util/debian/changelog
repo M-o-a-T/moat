@@ -1,3 +1,9 @@
+moat-util (0.63.6-1) unstable; urgency=medium
+
+  * New release for 26.1.15
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 26 May 2026 07:03:47 +0200
+
 moat-util (0.63.5-2) unstable; urgency=medium
 
   * New release for 26.1.12

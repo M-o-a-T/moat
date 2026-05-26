@@ -1,5 +1,5 @@
 _:
-  new: 26.1.14
+  new: 26.1.15
 moat:
   deb: 0.12.2-3
   new: 0.12.2
@@ -31,11 +31,11 @@ moat-bus:
   tag: 0.7.8
 moat-cad:
   deb: 0.3.3-3
-  new: 0.3.13
+  new: 0.3.14
   pkg: 1
-  pypi: 0.3.13
-  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
-  tag: 0.3.13
+  pypi: 0.3.14
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.3.14
 moat-db:
   deb: 0.2.2-3
   new: 0.2.7
@@ -130,20 +130,20 @@ moat-ems-victron:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.1.9
 moat-kv:
-  deb: 0.71.31-1
+  deb: 0.71.31-2
   new: 0.71.31
-  pkg: 1
+  pkg: 2
+  pkgrev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
   pypi: 0.71.31
   rev: ae9f6cfd0058b242771cc966180c180229a7d4db
   tag: 0.71.31
 moat-kv-akumuli:
-  deb: 0.8.13-2
-  new: 0.8.13
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.8.13
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.8.13
+  deb: 0.8.14-1
+  new: 0.8.14
+  pkg: 1
+  pypi: 0.8.14
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.8.14
 moat-kv-cal:
   deb: 0.1.4-1
   new: 0.1.10
@@ -279,13 +279,12 @@ moat-lib-pid:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.8.2
 moat-lib-priomap:
-  deb: 0.2.6-2
-  new: 0.2.6
-  pkg: 2
-  pkgrev: 39ac483fdfb72cadc1c2e3b684a24d2a4440b72b
-  pypi: 0.2.6
-  rev: dfc1de8d666d036c9eda515ca99ddf6f58d4c93f
-  tag: 0.2.6
+  deb: 0.2.7-1
+  new: 0.2.7
+  pkg: 1
+  pypi: 0.2.7
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.2.7
 moat-lib-proxy:
   deb: 0.1.2-2
   new: 0.1.2
@@ -337,28 +336,26 @@ moat-lib-stream:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.3.2
 moat-link:
-  deb: 0.6.3-1
-  new: 0.6.3
+  deb: 0.6.4-1
+  new: 0.6.4
   pkg: 1
-  pypi: 0.6.3
-  rev: ae9f6cfd0058b242771cc966180c180229a7d4db
-  tag: 0.6.3
+  pypi: 0.6.4
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.6.4
 moat-link-gate:
-  deb: 0.0.6-2
-  new: 0.0.6
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.0.6
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.0.6
+  deb: 0.0.7-1
+  new: 0.0.7
+  pkg: 1
+  pypi: 0.0.7
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.0.7
 moat-link-metrics:
-  deb: 0.0.5-5
-  new: 0.0.5
-  pkg: 5
-  pkgrev: 4b099b094ad1d77fb81acbd4c2b6ef873c0a0c27
-  pypi: 0.0.5
-  rev: dfc1de8d666d036c9eda515ca99ddf6f58d4c93f
-  tag: 0.0.5
+  deb: 0.0.6-1
+  new: 0.0.6
+  pkg: 1
+  pypi: 0.0.6
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.0.6
 moat-link-metrics-backend-akumuli:
   deb: 0.0.4-2
   new: 0.0.4
@@ -392,25 +389,24 @@ moat-link-schema:
   rev: dfc1de8d666d036c9eda515ca99ddf6f58d4c93f
   tag: 0.0.1
 moat-link-server:
-  deb: 0.5.4-2
-  new: 0.5.4
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.5.4
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.5.4
+  deb: 0.6.0-1
+  new: 0.6.0
+  pkg: 1
+  pypi: 0.6.0
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.6.0
 moat-micro:
-  deb: 0.21.3-2
+  deb: 0.22.0-1
   new: 0.22.0
   pkg: 1
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.21.3
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.21.3
+  pypi: 0.22.0
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.22.0
 moat-modbus:
-  deb: 0.9.4-1
+  deb: 0.9.4-2
   new: 0.9.4
-  pkg: 1
+  pkg: 2
+  pkgrev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
   pypi: 0.9.4
   rev: ae9f6cfd0058b242771cc966180c180229a7d4db
   tag: 0.9.4
@@ -452,10 +448,9 @@ moat-thing:
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
 moat-util:
-  deb: 0.63.5-2
-  new: 0.63.5
-  pkg: 2
-  pkgrev: 490d2d0c6d1b31d4100839bc7a5ff9513ba1df55
-  pypi: 0.63.5
-  rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
-  tag: 0.63.5
+  deb: 0.63.6-1
+  new: 0.63.6
+  pkg: 1
+  pypi: 0.63.6
+  rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
+  tag: 0.63.6

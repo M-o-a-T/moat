@@ -20,7 +20,7 @@ dependencies = [
   "serialpacker",
   "pyfuse3",
   "moat-util ~= 0.63.0",
-  "moat-micro ~= 0.21.0",
+  "moat-micro ~= 0.22.0",
   "moat-lib-config ~= 0.2.0",
   "moat-lib-micro ~= 0.3.0",
   "moat-lib-proxy ~= 0.1.1",

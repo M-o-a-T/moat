@@ -17,7 +17,7 @@ dependencies = [
 	"attrs",
 	"httpx",
 	"moat-util ~= 0.63.0",
-	"moat-link ~= 0.6.0",
+	"moat-link ~= 0.7.0",
 	]
 version = "0.0.4"
 keywords = [ "MoaT",]

@@ -10,10 +10,7 @@ from __future__ import annotations
 
 from ._base import Codec as _Codec
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from ._base import ByteType
+from typing import Any
 
 
 class Codec(_Codec):
@@ -30,6 +27,6 @@ class Codec(_Codec):
             return b""
         raise ValueError(f"The null codec only accepts None, not {obj!r}")
 
-    def decode(self, data: ByteType) -> None:  # noqa: ARG002
+    def decode(self, data: bytes | bytearray | memoryview) -> None:  # noqa: ARG002
         """Discard ``data`` and return :data:`None`."""
         return None

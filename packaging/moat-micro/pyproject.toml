@@ -39,7 +39,7 @@ name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.21.3"
+version = "0.22.0"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

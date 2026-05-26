@@ -23,6 +23,40 @@ _drivers: list[str] = sorted(
 _drivers_epilog: str = "Available drivers: " + ", ".join(_drivers) + "."
 
 
+class _GateSetCommand(click.Command):
+    """Command subclass that substitutes driver-specific parameter info into the epilog."""
+
+    def get_help(self, ctx: click.Context) -> str:
+        """Return help text, with driver-specific params appended when ``--driver`` is given."""
+        driver: str | None = ctx.params.get("driver")
+        if driver is None:
+            # --help may have appeared before --driver; scan the raw argv
+            args = sys.argv
+            for i, arg in enumerate(args):
+                if arg in ("--driver", "-d") and i + 1 < len(args):
+                    driver = args[i + 1]
+                    break
+                if arg.startswith("--driver="):
+                    driver = arg[len("--driver=") :]
+                    break
+
+        old_epilog = self.epilog
+        if driver is not None:
+            from importlib import import_module  # noqa: PLC0415
+
+            mod_name = driver if "." in driver else f"moat.link.gate.{driver}"
+            try:
+                info: str | None = getattr(import_module(mod_name), "params_info", None)
+            except ImportError:
+                info = None
+            if info is not None:
+                self.epilog = info
+        try:
+            return super().get_help(ctx)
+        finally:
+            self.epilog = old_epilog
+
+
 @click.group(cls=AliasedGroup, short_help="Manage gateways.", invoke_without_command=True)
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
@@ -85,7 +119,12 @@ async def _list(obj):
     await data_get(obj.conn, P("gate") + obj.path, **k)
 
 
-@cli.command("set", short_help="Add or update a gate entry", epilog=_drivers_epilog)
+@cli.command(
+    "set",
+    short_help="Add or update a gate entry",
+    epilog=_drivers_epilog,
+    cls=_GateSetCommand,
+)
 @attr_args
 @click.option("-S", "--src", type=P, help="Source (in Moat-Link)")
 @click.option("-D", "--dst", type=P, help="Destination (driver specific)")

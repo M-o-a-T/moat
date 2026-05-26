@@ -24,6 +24,16 @@ if TYPE_CHECKING:
     from typing import Any
 
 
+params_info = """\
+MQTT gateway parameters (use ``-s KEY VALUE`` to set):
+
+\b
+  codec    Codec name, or path to a codec-vector conversion tree.
+  backend  Dict describing a separate MQTT broker;
+           ``driver`` defaults to ``mqtt``.\
+"""
+
+
 class Gate(_Gate):
     """MQTT gateway driver.
 

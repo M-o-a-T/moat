@@ -268,6 +268,7 @@ nitpick_ignore = [
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
     ("py:class", "moat.lib.rpc.auth._base.AuthError"),
     ("py:class", "moat.lib.rpc.auth._base._SubAuthFactory"),
+    ("py:class", "moat.link.client._NodeType"),
     ("py:class", "coroutine"),
     ("py:class", "pathlib._local.PurePath"),
     ("py:class", "pathlib._local.PosixPath"),

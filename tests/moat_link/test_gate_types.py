@@ -203,11 +203,34 @@ def test_venus_gate_lookup_no_codec_tree() -> None:
 
 @pytest.mark.anyio
 async def test_venus_gate_keepalive_publishes() -> None:
-    """The keep-alive loop publishes to R/<id>/keepalive at the configured interval."""
+    """The keep-alive loop publishes JSON requests to R/<id>/keepalive."""
     gate = _make_venus_gate()
     with anyio.move_on_after(0.05):
         await gate._keepalive_loop()  # noqa: SLF001
-    topics = [call[0] for call in gate.link.calls]
-    assert P("R.abc.keepalive") in topics
-    # codec must be "noop" so the empty bytes payload survives untouched.
-    assert all(call[3] == "noop" for call in gate.link.calls)
+    assert len(gate.link.calls) >= 2
+    # All keep-alives go to the same topic, encoded as JSON.
+    topics = {call[0] for call in gate.link.calls}
+    assert topics == {P("R.abc.keepalive")}
+    assert all(call[3] == "json" for call in gate.link.calls)
+    # The first keep-alive asks Venus for a completion echo.
+    assert gate.link.calls[0][1] == {
+        "keepalive-options": ["full-publish-completed-echo"],
+    }
+    # Subsequent keep-alives suppress the full republish.
+    assert gate.link.calls[1][1] == {"keepalive-options": ["suppress-republish"]}
+
+
+@pytest.mark.anyio
+async def test_venus_gate_keepalive_propagates_send_errors() -> None:
+    """A failing keep-alive must propagate instead of being swallowed."""
+
+    class _BoomLink:
+        async def send(self, *a, **kw) -> None:
+            a  # noqa:B018
+            kw  # noqa:B018
+            raise RuntimeError("network down")
+
+    gate = _make_venus_gate()
+    gate.backend = _BoomLink()
+    with pytest.raises(RuntimeError, match="network down"):
+        await gate._keepalive_loop()  # noqa: SLF001

@@ -34,10 +34,10 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from xknx.dpt import DPTArray, DPTBinary
-from xknx.telegram import GroupAddress, Telegram
-from xknx.telegram.apci import GroupValueWrite
+from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from moat.lib.xknx.dpt import DPTArray, DPTBinary
+from moat.lib.xknx.telegram import GroupAddress, Telegram
+from moat.lib.xknx.telegram.apci import GroupValueWrite
 
 from moat.util import attrdict
 from moat.kv.knx.model import KNXroot

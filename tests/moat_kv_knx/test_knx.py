@@ -15,10 +15,10 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from xknx.devices import Switch
-from xknx.dpt import DPTBinary
-from xknx.telegram import GroupAddress, Telegram
-from xknx.telegram.apci import GroupValueWrite
+from moat.lib.xknx.devices import Switch
+from moat.lib.xknx.dpt import DPTBinary
+from moat.lib.xknx.telegram import GroupAddress, Telegram
+from moat.lib.xknx.telegram.apci import GroupValueWrite
 
 from moat.kv.knx.mock import SimulatedBinaryDevice
 

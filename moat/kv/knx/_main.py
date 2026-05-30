@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 import asyncclick as click
-from xknx.remote_value import RemoteValueSensor
+from moat.lib.xknx.remote_value import RemoteValueSensor
 
 from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import node_attr, res_get, res_update
@@ -98,7 +98,7 @@ def map_keys():
     try:
         return RemoteValueSensor.DPTMAP.keys()
     except AttributeError:
-        from xknx.dpt import DPTBase  # noqa: PLC0415
+        from moat.lib.xknx.dpt import DPTBase  # noqa: PLC0415
 
         return (cls.__name__[3:] for cls in DPTBase.__recursive_subclasses__())
 

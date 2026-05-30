@@ -7,3 +7,6 @@
 [submodule "mpdb"]
 	path = ext/mpdb
 	url = https://github.com/M-o-a-T/mpdb.git
+[submodule "ext/xknx"]
+	path = ext/xknx
+	url = https://github.com/M-o-a-T/xknx.git

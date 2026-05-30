@@ -338,6 +338,8 @@ moat-lib-stream:
   pypi: 0.3.2
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.3.2
+moat-lib-xknx:
+  new: 3.15.0
 moat-link:
   deb: 0.7.1-1
   new: 0.7.1

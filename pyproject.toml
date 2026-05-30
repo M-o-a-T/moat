@@ -48,7 +48,6 @@ dependencies = [
     "tomlkit",
     "transitions",
     "wsproto",
-    "xknx ~= 3.6",
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

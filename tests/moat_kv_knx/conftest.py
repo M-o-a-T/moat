@@ -11,8 +11,6 @@ knxd is configured with the ``dummy`` driver (no physical bus) and an
 ``ets_router`` server with tunneling enabled.  The same TCP/UDP port is used
 for both the TCP readiness probe (``knxd_tcp`` server) and the KNXnet/IP
 tunneling endpoint (``ets_router``).
-
-xknx is asyncio-only, so all tests in this package run under asyncio.
 """
 
 from __future__ import annotations
@@ -21,7 +19,7 @@ import anyio
 import pytest
 import subprocess
 
-import xknx
+from moat.lib.xknx import XKNX
 from moat.lib.xknx.io import ConnectionConfig, ConnectionType
 
 from typing import TYPE_CHECKING
@@ -30,12 +28,6 @@ if TYPE_CHECKING:
     from anyio.abc import TaskStatus
 
     from collections.abc import AsyncGenerator
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    """Use asyncio as the anyio backend (xknx is asyncio-only)."""
-    return "asyncio"
 
 
 async def _run_knxd(port: int, *, task_status: TaskStatus[int]) -> None:
@@ -134,7 +126,7 @@ def _make_ccfg(port: int) -> ConnectionConfig:
 
 
 @pytest.fixture
-async def xknx_device(knxd_port: int) -> AsyncGenerator[xknx.XKNX, None]:
+async def xknx_device(knxd_port: int) -> AsyncGenerator[XKNX, None]:
     """
     A connected XKNX instance that simulates a real KNX device on the bus.
 
@@ -148,12 +140,12 @@ async def xknx_device(knxd_port: int) -> AsyncGenerator[xknx.XKNX, None]:
     Yields:
         A started :class:`xknx.XKNX` instance.
     """
-    async with xknx.XKNX(connection_config=_make_ccfg(knxd_port)) as client:
+    async with XKNX(connection_config=_make_ccfg(knxd_port)) as client:
         yield client
 
 
 @pytest.fixture
-async def xknx_monitor(knxd_port: int) -> AsyncGenerator[xknx.XKNX, None]:
+async def xknx_monitor(knxd_port: int) -> AsyncGenerator[XKNX, None]:
     """
     A connected XKNX instance used purely for bus monitoring.
 
@@ -169,5 +161,5 @@ async def xknx_monitor(knxd_port: int) -> AsyncGenerator[xknx.XKNX, None]:
     Yields:
         A started :class:`xknx.XKNX` instance.
     """
-    async with xknx.XKNX(connection_config=_make_ccfg(knxd_port)) as client:
+    async with XKNX(connection_config=_make_ccfg(knxd_port)) as client:
         yield client

@@ -1,0 +1,36 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["wheel","setuptools"]
+
+[project]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AnyIO",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "Topic :: Home Automation",
+]
+dependencies = [
+    "anyio ~= 4.0",
+    "attrs",
+    "cryptography",
+    "ifaddr",
+]
+keywords = ["MoaT", "KNX"]
+requires-python = ">=3.10"
+name = "moat-lib-xknx"
+maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description = "Vendorized xknx KNX/IP library for MoaT"
+readme = "README.md"
+version = "3.15.0"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "py.typed"]

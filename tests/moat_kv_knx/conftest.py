@@ -22,7 +22,7 @@ import pytest
 import subprocess
 
 import xknx
-from xknx.io import ConnectionConfig, ConnectionType
+from moat.lib.xknx.io import ConnectionConfig, ConnectionType
 
 from typing import TYPE_CHECKING
 

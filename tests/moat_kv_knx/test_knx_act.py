@@ -26,8 +26,8 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from xknx.dpt import DPTValue1ByteUnsigned
-from xknx.telegram import GroupAddress
+from moat.lib.xknx.dpt import DPTValue1ByteUnsigned
+from moat.lib.xknx.telegram import GroupAddress
 
 from moat.util import attrdict
 from moat.kv.knx.mock import (

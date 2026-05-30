@@ -27,18 +27,18 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 
 import xknx
-from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from xknx.dpt import DPT2ByteFloat, DPTArray, DPTBinary, DPTNumeric
-from xknx.io import ConnectionConfig, ConnectionType
-from xknx.telegram import GroupAddress, Telegram
-from xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
+from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from moat.lib.xknx.dpt import DPT2ByteFloat, DPTArray, DPTBinary, DPTNumeric
+from moat.lib.xknx.io import ConnectionConfig, ConnectionType
+from moat.lib.xknx.telegram import GroupAddress, Telegram
+from moat.lib.xknx.telegram.apci import GroupValueRead, GroupValueResponse, GroupValueWrite
 
 from typing import TYPE_CHECKING, Self
 
 if TYPE_CHECKING:
     from anyio.abc import Process
 
-    from xknx.telegram.address import GroupAddressableType
+    from moat.lib.xknx.telegram.address import GroupAddressableType
 
     from collections.abc import AsyncIterator
 

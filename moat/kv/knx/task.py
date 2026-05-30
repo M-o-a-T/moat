@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 
 import xknx
-from xknx.io import ConnectionConfig, ConnectionType
+from moat.lib.xknx.io import ConnectionConfig, ConnectionType
 
 try:
     from collections.abc import Mapping

@@ -15,8 +15,8 @@ from contextlib import asynccontextmanager
 from anyio.pytest_plugin import free_tcp_port
 
 import xknx
-from xknx.io import ConnectionConfig, ConnectionType
-from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
+from moat.lib.xknx.io import ConnectionConfig, ConnectionType
+from moat.lib.xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 
 
 class Tester:

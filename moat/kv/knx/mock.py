@@ -26,7 +26,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 
-import xknx
+from moat.lib.xknx import XKNX
 from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
 from moat.lib.xknx.dpt import DPT2ByteFloat, DPTArray, DPTBinary, DPTNumeric
 from moat.lib.xknx.io import ConnectionConfig, ConnectionType
@@ -60,7 +60,7 @@ class SimulatedDevice(ABC):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         state_addr: GroupAddressableType,
         extra_addrs: list[GroupAddress] | None = None,
     ) -> None:
@@ -115,7 +115,7 @@ class SimulatedSensorDevice(SimulatedDevice):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         state_addr: GroupAddressableType,
         initial: float = 0.0,
         dpt: type[DPTNumeric] = DPT2ByteFloat,
@@ -163,7 +163,7 @@ class SimulatedBinarySensor(SimulatedDevice):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         state_addr: GroupAddressableType,
         initial: bool = False,
     ) -> None:
@@ -208,7 +208,7 @@ class SimulatedActuatorBase(SimulatedDevice, ABC):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         cmd_addr: GroupAddressableType,
         state_addr: GroupAddressableType,
     ) -> None:
@@ -249,7 +249,7 @@ class SimulatedBinaryDevice(SimulatedActuatorBase):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         cmd_addr: GroupAddressableType,
         state_addr: GroupAddressableType,
     ) -> None:
@@ -303,7 +303,7 @@ class SimulatedActuator(SimulatedActuatorBase):
 
     def __init__(
         self,
-        device_xknx: xknx.XKNX,
+        device_xknx: XKNX,
         cmd_addr: GroupAddressableType,
         state_addr: GroupAddressableType,
         initial: float = 0.0,
@@ -349,7 +349,7 @@ class Tester:
         port: TCP port that knxd will listen on.
     """
 
-    _client: xknx.XKNX | None = None
+    _client: XKNX | None = None
     _server: object = None
     _socket: str | None = None
 
@@ -415,7 +415,7 @@ discover = false
         )
         async with (
             self._daemon() as server,
-            xknx.XKNX(connection_config=ccfg) as client,
+            XKNX(connection_config=ccfg) as client,
         ):
             self._server = server
             self._client = client

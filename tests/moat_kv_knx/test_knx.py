@@ -25,12 +25,12 @@ from moat.kv.knx.mock import SimulatedBinaryDevice
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import xknx
+    from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
 
 
-async def test_monitor(xknx_device: xknx.XKNX, xknx_monitor: xknx.XKNX) -> None:
+async def test_monitor(xknx_device: XKNX, xknx_monitor: XKNX) -> None:
     """
     Verify that the bus monitor receives a telegram sent by the device instance.
 
@@ -67,8 +67,8 @@ async def test_monitor(xknx_device: xknx.XKNX, xknx_monitor: xknx.XKNX) -> None:
 
 
 async def test_switch_simulated_binary_device(
-    xknx_device: xknx.XKNX,
-    xknx_monitor: xknx.XKNX,
+    xknx_device: XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify correct interoperation between a Switch and a SimulatedBinaryDevice.

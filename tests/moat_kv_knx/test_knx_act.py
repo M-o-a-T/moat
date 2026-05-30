@@ -44,7 +44,7 @@ from moat.lib.path import P, Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import xknx
+    from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
 
@@ -66,7 +66,7 @@ _SRV = "myserver"  # KNX server entry name in the model tree
 
 async def test_moatkv_binary_roundtrip(
     knxd_port: int,
-    xknx_device: xknx.XKNX,
+    xknx_device: XKNX,
 ) -> None:
     """
     Verify the full two-way binary actuator roundtrip through moat-kv-knx.
@@ -176,7 +176,7 @@ async def test_moatkv_binary_roundtrip(
 
 async def test_moatkv_binary_sensor(
     knxd_port: int,
-    xknx_device: xknx.XKNX,
+    xknx_device: XKNX,
 ) -> None:
     """
     Verify that moat-kv-knx correctly receives binary sensor readings.
@@ -258,7 +258,7 @@ async def test_moatkv_binary_sensor(
 
 async def test_moatkv_integer_roundtrip(
     knxd_port: int,
-    xknx_device: xknx.XKNX,
+    xknx_device: XKNX,
 ) -> None:
     """
     Verify the full two-way integer actuator roundtrip through moat-kv-knx.
@@ -357,7 +357,7 @@ async def test_moatkv_integer_roundtrip(
 
 async def test_moatkv_integer_sensor(
     knxd_port: int,
-    xknx_device: xknx.XKNX,
+    xknx_device: XKNX,
 ) -> None:
     """
     Verify that moat-kv-knx correctly receives 1-byte unsigned integer readings.
@@ -433,7 +433,7 @@ async def test_moatkv_integer_sensor(
 
 async def test_moatkv_startup_read(
     knxd_port: int,
-    xknx_device: xknx.XKNX,
+    xknx_device: XKNX,
 ) -> None:
     """
     Verify that moat-kv-knx reads a sensor's current value at startup.

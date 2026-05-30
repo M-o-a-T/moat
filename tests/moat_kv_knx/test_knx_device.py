@@ -48,7 +48,7 @@ from moat.lib.path import P, Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import xknx
+    from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
 
@@ -69,7 +69,7 @@ _SRV = "myserver"
 
 async def test_binary_roundtrip(
     knxd_port: int,
-    xknx_monitor: xknx.XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify the full two-way binary roundtrip with moat-kv-knx as the device.
@@ -237,7 +237,7 @@ async def test_binary_roundtrip(
 
 async def test_binary_sensor(
     knxd_port: int,
-    xknx_monitor: xknx.XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify that moat-kv-knx correctly acts as a binary sensor on the bus.
@@ -346,7 +346,7 @@ async def test_binary_sensor(
 
 async def test_integer_roundtrip(
     knxd_port: int,
-    xknx_monitor: xknx.XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify the full two-way integer roundtrip with moat-kv-knx as the device.
@@ -505,7 +505,7 @@ async def test_integer_roundtrip(
 
 async def test_integer_sensor(
     knxd_port: int,
-    xknx_monitor: xknx.XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify that moat-kv-knx correctly acts as a 1-byte unsigned integer sensor.

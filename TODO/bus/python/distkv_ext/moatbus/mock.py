@@ -14,7 +14,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from anyio.pytest_plugin import free_tcp_port
 
-import xknx
+from moat.lib.xknx import XKNX
 from moat.lib.xknx.io import ConnectionConfig, ConnectionType
 from moat.lib.xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 
@@ -96,7 +96,7 @@ trace-mask = 0x3ff
             gateway_port=self.TCP_PORT,
         )
         async with self._daemon() as server:
-            async with xknx.XKNX().run(connection_config=ccfg) as client:
+            async with XKNX().run(connection_config=ccfg) as client:
                 self._server = server
                 self._client = client
                 yield self

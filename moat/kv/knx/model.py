@@ -66,7 +66,7 @@ class _KNXnode(_KNXbase):
 
     @property
     def tg(self):
-        return self.server.task_group
+        return self.server.tg
 
     async def setup(self, initial=False):  # noqa:ARG002
         await super().setup()

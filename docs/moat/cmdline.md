@@ -93,3 +93,28 @@ async with Link(cfg) as obj.conn:
 ```
 which doesn't work with `click` because it runs subcommands
 after the supercommand's code returns.
+
+
+## Command Structure Conventions
+
+Several MoaT commands deal with non-trivial data structures. We need to
+establish a common way of handling access to these.
+
+### Simple Elements at path
+
+Example: `moat link data PATH ...`. This command acts on a single data item.
+
+Here, not using a path is pointless.
+
+### Complex elements at path
+
+Example: `moat link flow at PATH ...`. While command also acts on a single data item,
+there are other commands (check data below a path, find the flow definition applicable
+to an item, …) that don't need one.
+
+### Prefix plus Path
+
+Example: `moat link metrics NAME at PATH ...`. Here there are (possibly)
+several services, with data hierarchies below them.
+
+Using `-` as the name lists available servers.

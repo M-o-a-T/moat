@@ -5,6 +5,7 @@ from io import StringIO
 
 from moat.util import attrdict
 from moat.lib.path import P
+from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code import _main as code_cmd
 from moat.link.code._main import _check_exec_syntax
 
@@ -43,20 +44,20 @@ def test_check_exec_syntax_ok():
         vars=dict(foo=21, bar=2),
         is_async=False,
     )
-    _check_exec_syntax(data, P("code.exec.test.mul"))
+    _check_exec_syntax(data, CODE_EXEC_ROOT + P("test.mul"))
 
 
 def test_check_exec_syntax_bad_vars():
     "Reject non-mapping vars configuration."
     data = dict(code="return 1", vars=["x"])
     with pytest.raises(TypeError, match="vars must be a mapping"):
-        _check_exec_syntax(data, P("code.exec.test.bad"))
+        _check_exec_syntax(data, CODE_EXEC_ROOT + P("test.bad"))
 
 
 def test_check_exec_syntax_missing_code():
     "Reject records that do not contain code."
     with pytest.raises(KeyError):
-        _check_exec_syntax({}, P("code.exec.test.missing"))
+        _check_exec_syntax({}, CODE_EXEC_ROOT + P("test.missing"))
 
 
 @pytest.mark.anyio
@@ -73,12 +74,12 @@ async def test_edit_uses_template_fallback(monkeypatch):
     monkeypatch.setattr(code_cmd.click, "prompt", _prompt)
 
     conn = _EditConn(template={"code": "return 42;\n"})
-    obj = attrdict(conn=conn, path=P("code.exec.foo.bar"), meta=False, stdout=StringIO())
+    obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
 
     await code_cmd.edit.callback.__wrapped__(obj, editor="dummy")
 
-    assert [str(p) for p in conn.get_calls] == ["code.exec.foo.bar"]
-    assert [str(p) for p in conn.search_calls] == ["template.code.exec.foo.bar"]
+    assert conn.get_calls == [CODE_EXEC_ROOT + P("foo.bar")]
+    assert conn.search_calls == [P("template") + CODE_EXEC_ROOT + P("foo.bar")]
     assert conn.set_calls == []
 
 
@@ -96,9 +97,9 @@ async def test_edit_uses_default_fallback(monkeypatch):
     monkeypatch.setattr(code_cmd.click, "prompt", _prompt)
 
     conn = _EditConn()
-    obj = attrdict(conn=conn, path=P("code.exec.foo.bar"), meta=False, stdout=StringIO())
+    obj = attrdict(conn=conn, path=P("foo.bar"), meta=False, stdout=StringIO())
 
     await code_cmd.edit.callback.__wrapped__(obj, editor="dummy")
 
-    assert [str(p) for p in conn.search_calls] == ["template.code.exec.foo.bar"]
+    assert conn.search_calls == [P("template") + CODE_EXEC_ROOT + P("foo.bar")]
     assert conn.set_calls == []

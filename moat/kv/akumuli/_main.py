@@ -56,12 +56,10 @@ async def dump_(obj, one_line):
 @click.pass_context
 async def at_cli(ctx, path):
     obj = ctx.obj
-    if len(path) == 0 or None in path:
-        raise click.UsageError("Path cannot be empty or contain 'None'")
     if obj.server is None:
         raise click.UsageError("Create the server before assigning measurements to it!")
     obj.subpath = path
-    obj.node = obj.server.follow(path)
+    obj.node = obj.server.follow(path, empty_ok=True)
     if ctx.invoked_subcommand is None:
         await data_get(obj.client, obj.server._path + obj.subpath, recursive=False, out=obj.stdout)  # noqa:SLF001
 
@@ -107,6 +105,8 @@ async def add_(obj, source, mode, attr, series, tags, force):
     tags: any number of "name=value" Akumuli tags to use for the series.
     """
 
+    if len(obj.subpath) == 0 or None in obj.subpath:
+        raise click.UsageError("Path cannot be empty or contain 'None'")
     if not force and obj.node.chain is not None:
         raise click.UsageError("This node already exists. Use '--force' or 'set'.")
     source = P(source)

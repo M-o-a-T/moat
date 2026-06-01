@@ -27,7 +27,12 @@ def _make_entry(**data) -> KnxEntry:
 
 
 class _WatchCtx:
-    """Fake d_watch async context manager yielding ``(value, meta)``."""
+    """Fake d_watch async context manager.
+
+    Items are 3-tuples ``(delay, val, meta)``.  Yields ``None`` when
+    ``val`` is ``None`` (used to simulate ``mark=True``'s end-of-initial
+    sentinel); otherwise yields ``(val, meta)``.
+    """
 
     def __init__(self, items):
         self._items = items
@@ -42,7 +47,10 @@ class _WatchCtx:
         for delay, val, meta in self._items:
             if delay:
                 await anyio.sleep(delay)
-            yield val, meta
+            if val is None and meta is None:
+                yield None
+            else:
+                yield val, meta
 
 
 def _link_with(values, getter=None):
@@ -222,3 +230,75 @@ async def test_out_state_only_blocks_old(monkeypatch, autojump_clock):  # noqa:A
         tg.cancel_scope.cancel()
 
     assert sets == [False]
+
+
+@pytest.mark.trio
+async def test_out_state_check_only_during_initial(monkeypatch, autojump_clock):  # noqa:ARG001
+    """After the ``mark=True`` sentinel runtime updates skip the state check.
+
+    A post-mark command whose timestamp predates the state must still be
+    forwarded, and the state path must not be queried.
+    """
+    sets: list = []
+    _patch_device(monkeypatch, sets)
+    entry = _make_entry(state=("state", "x"))
+
+    get_calls: list = []
+
+    async def _get(_path, meta=False):  # noqa: ARG001
+        get_calls.append(_path)
+        return False, MsgMeta(origin="bus", timestamp=100)
+
+    link = _link_with(
+        [
+            (0, True, MsgMeta(origin="t", timestamp=10)),  # initial, stale -> drop
+            (0, None, None),  # end-of-initial marker
+            (0, False, MsgMeta(origin="t", timestamp=20)),  # runtime, no check -> pass
+        ],
+        getter=_get,
+    )
+    srv = MagicMock()
+    srv.devices = MagicMock()
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(
+            knx_worker.run_out,
+            link,
+            srv,
+            entry,
+            GroupAddress("1/2/3"),
+            P("k.1.2.3"),
+        )
+        await anyio.sleep(1)
+        tg.cancel_scope.cancel()
+
+    assert sets == [False]
+    # state was consulted exactly once, for the initial command.
+    assert len(get_calls) == 1
+
+
+@pytest.mark.trio
+async def test_out_no_state_skips_mark(monkeypatch, autojump_clock):  # noqa:ARG001
+    """Without ``state`` the watcher is opened with ``mark=False``."""
+    sets: list = []
+    _patch_device(monkeypatch, sets)
+    entry = _make_entry()
+    link = _link_with([(0, True, MsgMeta(origin="t", timestamp=10))])
+    srv = MagicMock()
+    srv.devices = MagicMock()
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(
+            knx_worker.run_out,
+            link,
+            srv,
+            entry,
+            GroupAddress("1/2/3"),
+            P("k.1.2.3"),
+        )
+        await anyio.sleep(1)
+        tg.cancel_scope.cancel()
+
+    assert sets == [True]
+    _, kwargs = link.d_watch.call_args
+    assert kwargs.get("mark") is False

@@ -1,39 +1,23 @@
-"""End-to-end tests for ``moat.link.metrics`` CLI commands."""
+"""End-to-end tests for ``moat.link.metrics`` CLI commands.
+
+The CLI is invoked through :py:meth:`moat.link._test.Scaffold.run` so the
+full ``asyncclick`` decorator stack is exercised.
+"""
 
 from __future__ import annotations
 
 import pytest
-from io import StringIO
 
-import asyncclick as click
-
-from moat.util import attrdict
+import moat.link.metrics  # noqa:F401 - register cfg
 from moat.lib.path import P
 from moat.link._test import Scaffold
-from moat.link.metrics import _main as cmd
+from moat.src.test import raises as _raises
 
 pytestmark = pytest.mark.anyio
 
 
-def _wrapped(c):
-    """Strip click decorators to call a command callback directly."""
-    return c.callback.__wrapped__
-
-
-async def _obj(cfg, c):
-    """Build the ``obj`` attrdict the CLI callbacks expect."""
-    return attrdict(
-        cfg=cfg,
-        conn=c,
-        debug=False,
-        stdout=StringIO(),
-        metrics_cfg=cfg.link.metrics,
-        metrics_prefix=cfg.link.metrics.prefix,
-    )
-
-
 async def test_server_lifecycle(cfg):
-    """Add, set, list and delete a server."""
+    """Add, set, list and delete a server via the CLI."""
 
     async with (
         Scaffold(cfg, use_servers=True) as sf,
@@ -41,50 +25,32 @@ async def test_server_lifecycle(cfg):
         sf.client_() as c,
     ):
         prefix = cfg.link.metrics.prefix
-        obj = await _obj(cfg, c)
-        obj.metrics_name = "srv1"
 
-        await _wrapped(cmd.add)(
-            obj,
-            backend="akumuli",
-            host="example.com",
-            port=8282,
-            force=False,
-        )
+        await sf.run("link metrics srv1 add -b akumuli -h example.com -p 8282")
         await c.i_sync()
 
         data = await c.d_get(prefix + P("srv1"))
         assert data == {"backend": "akumuli", "server": {"host": "example.com", "port": 8282}}
 
         # second add without --force fails
-        with pytest.raises(click.UsageError):
-            await _wrapped(cmd.add)(
-                obj,
-                backend="akumuli",
-                host="other",
-                port=8000,
-                force=False,
-            )
+        import asyncclick as click  # noqa:PLC0415
+
+        with _raises(click.UsageError) as r:
+            await sf.run("link metrics srv1 add -b akumuli -h other -p 8000")
+        assert r.value is not None
+        assert "already exists" in r.value.format_message().lower()
 
         # set updates fields
-        await _wrapped(cmd.set_)(
-            obj,
-            backend=None,
-            host="newhost",
-            port=None,
-        )
+        await sf.run("link metrics srv1 set -h newhost")
         await c.i_sync()
         data = await c.d_get(prefix + P("srv1"))
         assert data["server"]["host"] == "newhost"
         assert data["server"]["port"] == 8282
         assert data["backend"] == "akumuli"
 
-        # listing
-        seen = []
-        async with c.d_walk(prefix, min_depth=1, max_depth=1) as mon:
-            async for p, _d in mon:
-                seen.append(p[-1])
-        assert seen == ["srv1"]
+        # listing: '-' enumerates servers
+        r = await sf.run("link metrics -")
+        assert "srv1" in r.stdout
 
         # delete is always recursive: child entries go away too
         await c.d_set(
@@ -92,8 +58,7 @@ async def test_server_lifecycle(cfg):
             {"source": P("a"), "series": "s", "tags": {"x": "y"}, "mode": "gauge"},
         )
         await c.i_sync()
-        obj.metrics_name = "srv1"
-        await _wrapped(cmd.delete_)(obj)
+        await sf.run("link metrics srv1 delete")
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("srv1"))
@@ -102,7 +67,7 @@ async def test_server_lifecycle(cfg):
 
 
 async def test_at_lifecycle(cfg):
-    """Add, modify and delete a series entry under a server."""
+    """Add, modify and delete a series entry via the CLI."""
 
     async with (
         Scaffold(cfg, use_servers=True) as sf,
@@ -110,30 +75,13 @@ async def test_at_lifecycle(cfg):
         sf.client_() as c,
     ):
         prefix = cfg.link.metrics.prefix
-        obj = await _obj(cfg, c)
-        obj.metrics_name = "srv1"
 
-        await _wrapped(cmd.add)(
-            obj,
-            backend="akumuli",
-            host="h",
-            port=1,
-            force=False,
-        )
+        await sf.run("link metrics srv1 add -b akumuli -h h -p 1")
         await c.d_set(P("src.value"), 42)
         await c.i_sync()
 
-        # at_cli is a group; invoke its callback to set up subpath
-        obj.metrics_subpath = P("entry1")
-
-        await _wrapped(cmd.add_at)(
-            obj,
-            source=P("src.value"),
-            mode="gauge",
-            attr=None,
-            series="series1",
-            tags=("host=h1", "kind=temp"),
-            force=False,
+        await sf.run(
+            "link metrics srv1 at entry1 add src.value series1 host=h1 kind=temp",
         )
         await c.i_sync()
 
@@ -144,16 +92,14 @@ async def test_at_lifecycle(cfg):
         assert ev["mode"] == "gauge"
 
         # adding again without --force fails
-        with pytest.raises(click.UsageError):
-            await _wrapped(cmd.add_at)(
-                obj,
-                source=P("src.value"),
-                mode="gauge",
-                attr=None,
-                series="series1",
-                tags=("host=h1",),
-                force=False,
+        import asyncclick as click  # noqa:PLC0415
+
+        with _raises(click.UsageError) as r:
+            await sf.run(
+                "link metrics srv1 at entry1 add src.value series1 host=h1",
             )
+        assert r.value is not None
+        assert "already exists" in r.value.format_message().lower()
 
         # at PATH delete: non-recursive leaves children alone
         await c.d_set(
@@ -161,16 +107,15 @@ async def test_at_lifecycle(cfg):
             {"source": P("src.value"), "series": "s", "tags": {"a": "b"}, "mode": "gauge"},
         )
         await c.i_sync()
-        await _wrapped(cmd.delete_at)(obj, recursive=False)
+        await sf.run("link metrics srv1 at entry1 delete")
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("srv1.entry1"))
-        # the child survives
         child = await c.d_get(prefix + P("srv1.entry1.sub"))
         assert child["series"] == "s"
 
         # at PATH delete -r removes the subtree
-        await _wrapped(cmd.delete_at)(obj, recursive=True)
+        await sf.run("link metrics srv1 at entry1 delete -r")
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("srv1.entry1.sub"))

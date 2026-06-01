@@ -20,7 +20,7 @@ import sys
 import asyncclick as click
 
 import moat.link.metrics.backend as _backend_pkg
-from moat.util import NotGiven, yprint
+from moat.util import NotGiven, attrdict, yprint
 from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
@@ -45,21 +45,6 @@ def _server_path(obj) -> Path:
     return obj.metrics_prefix + Path.build((obj.metrics_name,))
 
 
-async def _server_data(obj) -> dict[str, Any]:
-    """Fetch the data dict stored at the server entry, or raise.
-
-    Raises:
-        click.UsageError: if the entry is missing or not a mapping.
-    """
-    try:
-        data = await obj.conn.d_get(_server_path(obj))
-    except KeyError:
-        raise click.UsageError(f"Server {obj.metrics_name!r} does not exist.") from None
-    if not isinstance(data, dict):
-        raise click.UsageError(f"Server {obj.metrics_name!r} has no configuration.")
-    return data
-
-
 @click.group(
     cls=AliasedGroup,
     name="metrics",
@@ -82,7 +67,6 @@ async def cli(ctx, name: str) -> None:
     obj.conn = await ctx.with_async_resource(Link(cfg))
     obj.metrics_cfg = obj.cfg.link.metrics
     obj.metrics_prefix = obj.metrics_cfg.prefix
-    obj.metrics_name = name
 
     if name == "-":
         if ctx.invoked_subcommand is not None:
@@ -98,6 +82,7 @@ async def cli(ctx, name: str) -> None:
             print("no entries", file=sys.stderr)
         return
 
+    obj.metrics_name = name
     if ctx.invoked_subcommand is None:
         try:
             data = await obj.conn.d_get(_server_path(obj))
@@ -105,20 +90,7 @@ async def cli(ctx, name: str) -> None:
             raise click.UsageError(
                 f"Server {obj.metrics_name!r} does not exist.",
             ) from None
-        srv = data.get("server", {}) if isinstance(data, dict) else {}
-        cnt = 0
-        if isinstance(srv, dict):
-            for k in ("backend", "host", "port"):
-                v = srv.get(k)
-                if v is not None:
-                    cnt += 1
-                    print(f"server {k} {v}", file=obj.stdout)
-        topic = data.get("topic") if isinstance(data, dict) else None
-        if topic is not None:
-            cnt += 1
-            print(f"topic {topic}", file=obj.stdout)
-        if not cnt and obj.debug:
-            print("exists, no data", file=sys.stderr)
+        yprint(data)
 
 
 @cli.command("--help", hidden=True)
@@ -130,13 +102,6 @@ def _cli_help(ctx) -> None:
 
 def _server_options(proc):
     """Add the ``add``/``set`` options for server configuration."""
-    proc = click.option(
-        "-t",
-        "--topic",
-        type=P,
-        default=None,
-        help="Raw MQTT topic for ad-hoc logging.",
-    )(proc)
     proc = click.option(
         "-p",
         "--port",
@@ -165,11 +130,11 @@ def _server_options(proc):
 @_server_options
 @click.option("-f", "--force", is_flag=True, help="Allow replacing an existing server.")
 @click.pass_obj
-async def add(obj, backend, host, port, topic, force) -> None:
-    """Add a metrics time-series server.
+async def add(obj, backend, host, port, force) -> None:
+    """Add a time-series server.
 
-    A ``--backend`` driver should be specified; if omitted the global
-    ``server_default.backend`` (from configuration) is used at run-time.
+    The ``--backend`` driver option defaults to the
+    ``moat.link.metrics.backend`` config value.
     """
     path = _server_path(obj)
     if not force:
@@ -182,52 +147,36 @@ async def add(obj, backend, host, port, topic, force) -> None:
                 f"Server {obj.metrics_name!r} already exists. Use --force or 'set'.",
             )
 
-    srv: dict[str, Any] = {}
-    if backend is not None:
-        srv["backend"] = backend
+    srv = attrdict()
+    val = attrdict(server=srv)
+    val.backend = backend or obj.cfg.link.metrics.backend
     if host is not None:
-        srv["host"] = host
+        srv.host = host
     if port is not None:
-        srv["port"] = port
-    val: dict[str, Any] = {"server": srv}
-    if topic is not None:
-        val["topic"] = topic
+        srv.port = port
     await obj.conn.d_set(path, val)
 
 
 @cli.command("set", short_help="Modify a metrics time-series server", epilog=_backends_epilog)
 @_server_options
 @click.pass_obj
-async def set_(obj, backend, host, port, topic) -> None:
-    """Modify the configuration of a metrics time-series server.
+async def set_(obj, backend, host, port) -> None:
+    """Modify the configuration of a metrics time-series server."""
+    try:
+        data = await obj.conn.d_get(_server_path(obj))
+    except KeyError:
+        raise click.UsageError(f"Server {obj.metrics_name!r} does not exist.") from None
+    if not isinstance(data, dict):
+        raise click.UsageError(f"Server {obj.metrics_name!r} has no configuration.")
 
-    Pass ``-`` as a value (where applicable) to clear an existing
-    setting.
-    """
-    data = await _server_data(obj)
-    srv = data.get("server", {})
-    if not isinstance(srv, dict):
-        srv = {}
+    srv = data["server"]
 
     if backend is not None:
-        if backend == "-":
-            srv.pop("backend", None)
-        else:
-            srv["backend"] = backend
+        data["backend"] = backend
     if host is not None:
-        if host == "-":
-            srv.pop("host", None)
-        else:
-            srv["host"] = host
+        srv["host"] = host
     if port is not None:
         srv["port"] = port
-    data["server"] = srv
-
-    if topic is not None:
-        if topic == P(":"):
-            data.pop("topic", None)
-        else:
-            data["topic"] = topic
 
     await obj.conn.d_set(_server_path(obj), data)
 

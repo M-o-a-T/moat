@@ -49,13 +49,12 @@ async def test_server_lifecycle(cfg):
             backend="akumuli",
             host="example.com",
             port=8282,
-            topic=None,
             force=False,
         )
         await c.i_sync()
 
         data = await c.d_get(prefix + P("srv1"))
-        assert data == {"server": {"backend": "akumuli", "host": "example.com", "port": 8282}}
+        assert data == {"backend": "akumuli", "server": {"host": "example.com", "port": 8282}}
 
         # second add without --force fails
         with pytest.raises(click.UsageError):
@@ -64,7 +63,6 @@ async def test_server_lifecycle(cfg):
                 backend="akumuli",
                 host="other",
                 port=8000,
-                topic=None,
                 force=False,
             )
 
@@ -74,14 +72,12 @@ async def test_server_lifecycle(cfg):
             backend=None,
             host="newhost",
             port=None,
-            topic=P("raw.topic"),
         )
         await c.i_sync()
         data = await c.d_get(prefix + P("srv1"))
         assert data["server"]["host"] == "newhost"
         assert data["server"]["port"] == 8282
-        assert data["server"]["backend"] == "akumuli"
-        assert data["topic"] == P("raw.topic")
+        assert data["backend"] == "akumuli"
 
         # listing
         seen = []
@@ -122,7 +118,6 @@ async def test_at_lifecycle(cfg):
             backend="akumuli",
             host="h",
             port=1,
-            topic=None,
             force=False,
         )
         await c.d_set(P("src.value"), 42)

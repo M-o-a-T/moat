@@ -25,6 +25,7 @@ async def _prepare_cli(obj):
 cli = std_command(
     click,
     name="server",
+    long_name="Akumuli time-series logging",
     sub_base=None,
     sub_name=NotGiven,
     id_name=None,
@@ -163,7 +164,7 @@ async def delete_(obj):
 @attr_args
 @click.pass_obj
 async def attr_(obj, **kw):
-    """Modify a given akumuli series (copier)."""
+    """Modify a given akumuli series."""
     if all(x not in kw for x in "vars_ eval_ path_".split()):
         return
 

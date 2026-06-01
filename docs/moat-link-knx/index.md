@@ -24,6 +24,9 @@ A group-address entry contains:
 - **mode**: XKNX data-point type, e.g. ``binary`` or ``Bool``.
 - **dest**: destination MoaT-Link path (for ``type=in``).
 - **src**: source MoaT-Link path (for ``type=out``).
+- **state**: optional path (for ``type=out``) recording the last
+  observed bus state.  When set, commands at ``src`` whose timestamp
+  is older than the recorded state are suppressed.
 - **idem**: optional, suppress repeated identical writes (default ``True``).
 
 ## CLI reference

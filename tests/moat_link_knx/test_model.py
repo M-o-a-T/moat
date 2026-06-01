@@ -80,6 +80,30 @@ def test_entry_incomplete():
     assert e.is_complete()
 
 
+def test_entry_state_property():
+    """``KnxEntry.state`` exposes the optional state path."""
+    e = KnxEntry()
+    e.set_(
+        (),
+        {
+            "type": "out",
+            "mode": "Bool",
+            "src": ("cmd", "x"),
+            "state": ("state", "x"),
+        },
+        MsgMeta(origin="t", t=1),
+    )
+    assert e.state == P("state.x")
+
+    e2 = KnxEntry()
+    e2.set_(
+        (),
+        {"type": "out", "mode": "Bool", "src": ("cmd",)},
+        MsgMeta(origin="t", t=1),
+    )
+    assert e2.state is None
+
+
 def test_typed_watcher_round_trip():
     """A KnxRoot built up via ``set`` keeps the type chain consistent."""
     root = KnxRoot()

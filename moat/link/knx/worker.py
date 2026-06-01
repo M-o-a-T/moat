@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from moat.lib.xknx import XKNX
     from moat.lib.xknx.telegram import GroupAddress
     from moat.link.client import LinkSender
+    from moat.link.meta import MsgMeta
 
     from .model import KnxEntry
 
@@ -118,6 +119,13 @@ async def run_out(
 ) -> None:
     """Forward MoaT-Link source updates onto the KNX bus.
 
+    If :attr:`~moat.link.knx.model.KnxEntry.state` is set, the data
+    stored at that path is consulted before each command is forwarded:
+    a command whose timestamp is older than the recorded state's
+    timestamp is suppressed.  This avoids re-sending a stale outgoing
+    command on startup when other bus actors changed the device state
+    in the meantime.
+
     Args:
         link: Active MoaT-Link sender.
         srv: Connected XKNX gateway.
@@ -130,15 +138,45 @@ async def run_out(
     src = entry.src
     if mode is None or src is None:
         return
+    state_path = entry.state
 
     name = f"{mode}." + ".".join(str(x) for x in subpath)
     device, set_val, _get_val = _make_out_device(srv, addr, mode, name)
     srv.devices.async_add(device)
     try:
-        async with link.d_watch(src, state=initial or None) as wp:
-            async for raw in wp:
+        async with link.d_watch(src, meta=True, state=initial or None) as wp:
+            async for raw, meta in wp:
                 if raw is NotGiven:
+                    continue
+                if state_path is not None and not await _state_allows(
+                    link, state_path, meta, subpath
+                ):
                     continue
                 await set_val(device, raw)
     finally:
         srv.devices.async_remove(device)
+
+
+async def _state_allows(
+    link: LinkSender,
+    state_path: Path,
+    cmd_meta: MsgMeta,
+    subpath: Path,
+) -> bool:
+    """Return True iff *cmd_meta* is at least as recent as *state_path*.
+
+    Missing state data is treated as "always allow".
+    """
+    try:
+        _data, state_meta = await link.d_get(state_path, meta=True)
+    except KeyError:
+        return True
+    if state_meta.timestamp > cmd_meta.timestamp:
+        logger.debug(
+            "Suppressing stale command at %s: state %r newer than cmd %r",
+            subpath,
+            state_meta.timestamp,
+            cmd_meta.timestamp,
+        )
+        return False
+    return True

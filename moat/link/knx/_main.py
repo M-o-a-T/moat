@@ -298,6 +298,11 @@ async def add_at(obj, typ, mode, force, **kw) -> None:
     destination MoaT-Link path; for ``type=out`` the ``src``
     attribute must specify the source path.  Use the ``-s``
     option to set them, e.g. ``-s dest .my.path``.
+
+    For ``type=out`` you may additionally set ``state`` to a
+    MoaT-Link path that tracks the last observed bus state.
+    Commands whose timestamp is older than the recorded state
+    are then suppressed (useful on startup).
     """
     sub: Path = obj.knx_subpath
     path = _server_path(obj) + sub

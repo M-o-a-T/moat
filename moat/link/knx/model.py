@@ -66,6 +66,9 @@ class KnxEntry(Node):
     * ``mode``: XKNX data-point type, e.g. ``"binary"`` or ``"Bool"``.
     * ``src``: source path (for ``type=out``).
     * ``dest``: destination path (for ``type=in``).
+    * ``state``: optional path (``type=out`` only) that holds the last
+      observed bus state.  If newer than the command at ``src``, the
+      command is treated as stale and not forwarded.
     * ``idem``: optional idempotency flag (default ``True``).
     """
 
@@ -93,6 +96,18 @@ class KnxEntry(Node):
         """Destination path (for ``type=in``), or ``None``."""
         d = self.data_
         s = d.get("dest") if isinstance(d, dict) else None
+        return s if s is None else Path.build(s)
+
+    @property
+    def state(self) -> Path | None:
+        """Last-observed-bus-state path (for ``type=out``), or ``None``.
+
+        If set, this path's stored timestamp is compared with the
+        command's timestamp; commands older than the recorded state are
+        suppressed.
+        """
+        d = self.data_
+        s = d.get("state") if isinstance(d, dict) else None
         return s if s is None else Path.build(s)
 
     @property

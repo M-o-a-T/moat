@@ -57,11 +57,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
 
 def get_backend(cfg: dict, name: str) -> Backend:
     """
-    Fetch the backend named in the config and initialize it.
+    Fetch the named backend and initialize it.
     """
     from importlib import import_module  # noqa: PLC0415
 
-    backend_name = cfg.get("backend", "akumuli")
+    backend_name = cfg["backend"]
     if "." not in backend_name:
         backend_name = "moat.link.metrics.backend." + backend_name
     return import_module(backend_name).Backend(cfg, name)

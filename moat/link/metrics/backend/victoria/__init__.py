@@ -38,11 +38,8 @@ class Backend(_Backend):
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[Self]:
         """Connect to the VictoriaMetrics server."""
-        conn_cfg = {
-            "host": self.cfg.get("host", "localhost"),
-            "port": self.cfg.get("port", 8282),
-        }
-        async with victoria.connect(**conn_cfg) as self.srv:
+        cfg = self.cfg.get("server", {})
+        async with victoria.connect(**cfg) as self.srv:
             try:
                 yield self
             finally:

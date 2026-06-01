@@ -10,6 +10,7 @@ from __future__ import annotations
 import anyio
 import logging
 
+from moat.util import combine_dict
 from moat.lib.path import Path
 
 from .backend import get_backend
@@ -46,13 +47,18 @@ async def task(
     prefix = Path.build(cfg["prefix"])
     server_path = prefix / server_name
 
-    # Fetch the server-level config
+    # Fetch the server-level config and merge it with the static defaults.
     server_data = await link.d_get(server_path)
-
-    # Get the backend from config
+    if not isinstance(server_data, dict):
+        server_data = {}
+    backend_cfg = combine_dict(
+        server_data,
+        {"backend": cfg["backend"]} if "backend" in cfg else {},
+        {"server": cfg.get("server_default", {})},
+    )
 
     async with (
-        get_backend(server_data, server_name) as backend,
+        get_backend(backend_cfg, server_name) as backend,
         anyio.create_task_group() as tg,
     ):
         workers: dict[Path, anyio.CancelScope] = {}

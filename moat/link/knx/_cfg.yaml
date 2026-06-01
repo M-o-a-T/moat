@@ -1,0 +1,5 @@
+prefix: !P knx
+server_default:
+  port: 3671
+poll: 10
+count: true

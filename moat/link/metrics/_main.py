@@ -7,16 +7,19 @@ series mappings live below it, accessed through the ``at`` sub-group.
 
 The only conceptual addition over the legacy command is the
 ``--backend`` option on the server, which selects the metrics back-end
-driver (``akumuli``, ``victoria``, …).
+driver. ``add --help`` / ``set --help`` show the list of available
+back-ends.
 """
 
 from __future__ import annotations
 
 import logging
+import pkgutil
 import sys
 
 import asyncclick as click
 
+import moat.link.metrics.backend as _backend_pkg
 from moat.util import NotGiven, yprint
 from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args
@@ -30,6 +33,11 @@ if TYPE_CHECKING:
     from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_backends: list[str] = sorted(
+    m.name for m in pkgutil.iter_modules(_backend_pkg.__path__) if not m.name.startswith("_")
+)
+_backends_epilog: str = "Available back-ends: " + (", ".join(_backends) or "(none)") + "."
 
 
 def _server_path(obj) -> Path:
@@ -153,7 +161,7 @@ def _server_options(proc):
     return proc
 
 
-@cli.command(short_help="Add a metrics time-series server")
+@cli.command(short_help="Add a metrics time-series server", epilog=_backends_epilog)
 @_server_options
 @click.option("-f", "--force", is_flag=True, help="Allow replacing an existing server.")
 @click.pass_obj
@@ -187,7 +195,7 @@ async def add(obj, backend, host, port, topic, force) -> None:
     await obj.conn.d_set(path, val)
 
 
-@cli.command("set", short_help="Modify a metrics time-series server")
+@cli.command("set", short_help="Modify a metrics time-series server", epilog=_backends_epilog)
 @_server_options
 @click.pass_obj
 async def set_(obj, backend, host, port, topic) -> None:
@@ -225,19 +233,11 @@ async def set_(obj, backend, host, port, topic) -> None:
 
 
 @cli.command("delete", short_help="Delete a metrics time-series server")
-@click.option("-r", "--recursive", is_flag=True, help="Also remove all series below.")
 @click.pass_obj
-async def delete_(obj, recursive: bool) -> None:
-    """Delete a metrics time-series server.
-
-    Without ``--recursive`` the server entry itself is removed but its
-    child series entries are kept (they become orphans).
-    """
+async def delete_(obj) -> None:
+    """Delete a metrics time-series server and all series below it."""
     path = _server_path(obj)
-    args: dict[str, Any] = {}
-    if recursive:
-        args["rec"] = True
-    res = await obj.conn.d.delete(path, **args)
+    res = await obj.conn.d.delete(path, rec=True)
     if getattr(obj, "meta", False):
         yprint(res[0], stream=obj.stdout)
 
@@ -377,14 +377,21 @@ async def add_at(obj, source, mode, attr, series, tags, force) -> None:
 
 
 @at_cli.command("delete")
+@click.option("-r", "--recursive", is_flag=True, help="Also remove sub-entries below this path.")
 @click.pass_obj
-async def delete_at(obj) -> None:
+async def delete_at(obj, recursive: bool) -> None:
     """Remove a series from the metrics server.
 
-    The stored data is not physically deleted in the backend, but no new
-    values will be forwarded.
+    Without ``--recursive`` only the named entry is removed; any
+    sub-entries below it are kept (they become orphans).
+
+    The stored data is not physically deleted in the back-end, but no
+    new values will be forwarded.
     """
     path = _server_path(obj) + obj.metrics_subpath
+    if recursive:
+        await obj.conn.d.delete(path, rec=True)
+        return
     try:
         await obj.conn.d_get(path)
     except KeyError:

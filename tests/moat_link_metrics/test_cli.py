@@ -90,12 +90,19 @@ async def test_server_lifecycle(cfg):
                 seen.append(p[-1])
         assert seen == ["srv1"]
 
-        # delete
+        # delete is always recursive: child entries go away too
+        await c.d_set(
+            prefix + P("srv1.child"),
+            {"source": P("a"), "series": "s", "tags": {"x": "y"}, "mode": "gauge"},
+        )
+        await c.i_sync()
         obj.metrics_name = "srv1"
-        await _wrapped(cmd.delete_)(obj, recursive=False)
+        await _wrapped(cmd.delete_)(obj)
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("srv1"))
+        with pytest.raises(KeyError):
+            await c.d_get(prefix + P("srv1.child"))
 
 
 async def test_at_lifecycle(cfg):
@@ -153,8 +160,22 @@ async def test_at_lifecycle(cfg):
                 force=False,
             )
 
-        # at PATH delete
-        await _wrapped(cmd.delete_at)(obj)
+        # at PATH delete: non-recursive leaves children alone
+        await c.d_set(
+            prefix + P("srv1.entry1.sub"),
+            {"source": P("src.value"), "series": "s", "tags": {"a": "b"}, "mode": "gauge"},
+        )
+        await c.i_sync()
+        await _wrapped(cmd.delete_at)(obj, recursive=False)
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("srv1.entry1"))
+        # the child survives
+        child = await c.d_get(prefix + P("srv1.entry1.sub"))
+        assert child["series"] == "s"
+
+        # at PATH delete -r removes the subtree
+        await _wrapped(cmd.delete_at)(obj, recursive=True)
+        await c.i_sync()
+        with pytest.raises(KeyError):
+            await c.d_get(prefix + P("srv1.entry1.sub"))

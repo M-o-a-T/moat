@@ -521,6 +521,115 @@ async def load(obj, infile, force):
     await _load_data(obj, infile, force)
 
 
+async def _import_data(
+    obj,
+    infile: str,
+    *,
+    as_dict: str | None,
+) -> None:
+    """Import legacy MoaT-KV ``data … get -r [-d KEY]`` output.
+
+    The whole input file is parsed as a single YAML document.
+
+    Args:
+        obj: the command-context object (provides ``conn`` and ``path``).
+        infile: source file name, or ``-`` for stdin.
+        as_dict: if given, parse the input as the nested-dict form
+            emitted by ``mt kv data … get -r -d KEY`` (with KEY marking
+            value leaves). If `None`, parse the list form emitted by
+            ``mt kv data … get -r``.
+
+    Raises:
+        click.UsageError: if the input does not match the expected
+            shape.
+    """
+    path = "/dev/stdin" if infile == "-" else infile
+    async with await anyio.open_file(path, "rb") as f:
+        raw = await f.read()
+    try:
+        doc = yload(raw.decode("utf-8", "surrogateescape"))
+    except Exception as exc:
+        raise click.UsageError(f"Cannot parse YAML input: {exc}") from exc
+
+    if as_dict is None:
+        await _import_legacy_list(obj, doc)
+    else:
+        await _import_legacy_dict(obj, doc, as_dict)
+
+
+def _as_path(p) -> Path:
+    """Coerce a YAML-decoded path representation to :class:`Path`."""
+    if isinstance(p, Path):
+        return p
+    if isinstance(p, str):
+        return P(p)
+    if isinstance(p, (list, tuple)):
+        return Path.build(p)
+    raise click.UsageError(f"Cannot interpret {p!r} as a path.")
+
+
+async def _import_legacy_list(obj, doc) -> None:
+    """Import the list-of-singleton-dicts form from ``mt kv data … get -r``."""
+    if not isinstance(doc, list):
+        raise click.UsageError(
+            "--legacy expects the YAML list emitted by 'mt kv data … get -r'.",
+        )
+    for item in doc:
+        if not isinstance(item, dict) or len(item) != 1:
+            raise click.UsageError(
+                "--legacy expects each list entry to be a single {path: value} mapping.",
+            )
+        p, v = next(iter(item.items()))
+        await obj.conn.d_set(obj.path + _as_path(p), v)
+
+
+async def _import_legacy_dict(obj, doc, as_dict: str) -> None:
+    """Import the nested-dict form from ``mt kv data … get -r -d KEY``."""
+    if not isinstance(doc, dict):
+        raise click.UsageError(
+            "--as-dict expects the YAML mapping emitted by 'mt kv data … get -r -d KEY'.",
+        )
+
+    async def walk(prefix: Path, node: dict) -> None:
+        for k, v in node.items():
+            if k == as_dict:
+                await obj.conn.d_set(obj.path + prefix, v)
+            elif isinstance(v, dict):
+                await walk(prefix + Path.build((k,)), v)
+
+    await walk(Path(), doc)
+
+
+@cli.command("import", short_help="Import data from a MoaT-KV dump")
+@click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
+@click.option(
+    "--legacy",
+    is_flag=True,
+    help="Input is from 'mt kv data … get -r' (a YAML list).",
+)
+@click.option(
+    "-d",
+    "--as-dict",
+    "as_dict",
+    default=None,
+    metavar="KEY",
+    help="Input is from 'mt kv data … get -r -d KEY' (a nested mapping).",
+)
+@click.pass_obj
+async def import_(obj, infile: str, legacy: bool, as_dict: str | None) -> None:
+    """Import data from a ``mt kv data … get -r`` dump.
+
+    Exactly one of ``--legacy`` or ``--as-dict`` must be given to
+    indicate which on-disk format the input is in. Imported values are
+    written below the current ``PATH``.
+    """
+    if legacy == (as_dict is not None):
+        raise click.UsageError(
+            "Pass exactly one of --legacy or --as-dict to select the input format.",
+        )
+    await _import_data(obj, infile, as_dict=as_dict)
+
+
 @cli.command()
 @click.option("-i", "--infile", type=click.Path(), help="File to read.")
 @click.option("-C", "--codec", type=str, default="yaml", help="Codec to use (default: yaml).")

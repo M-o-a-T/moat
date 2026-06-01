@@ -5,10 +5,13 @@ from __future__ import annotations
 import pytest
 from io import StringIO
 
+import asyncclick as click
+
 from moat.util import attrdict
 from moat.lib.path import P
+from moat.link._test import Scaffold
 from moat.link.cmd import data as data_cmd
-from moat.link.cmd.data import _dump_data, _load_data
+from moat.link.cmd.data import _dump_data, _import_data, _load_data
 from moat.link.meta import MsgMeta
 
 pytestmark = pytest.mark.anyio
@@ -363,3 +366,132 @@ async def test_edit_writes_changed_template(monkeypatch):
     p, d, _m = conn.set_calls[0]
     assert str(p) == "foo.bar"
     assert d == {"x": 2}
+
+
+class _ImportConn:
+    """Minimal conn capturing :py:meth:`d_set` calls for import tests."""
+
+    def __init__(self):
+        self.calls: list[tuple] = []
+        self.name = "conn"
+
+    async def d_set(self, path, data, meta=None):
+        self.calls.append((path, data, meta))
+        return True
+
+
+async def test_import_legacy_list_format(tmp_path):
+    """`import --legacy` ingests the YAML-list output of `kv data get -r`.
+
+    Exercises path-string, tagged-Path and list-of-segments forms as
+    well as plain ``str`` paths produced by some legacy dumps.
+    """
+
+    src = tmp_path / "dump.yaml"
+    # mix of !P-tagged Path, string and list-form path keys
+    src.write_text("- !P a.b: 42\n- !P a.c: hi\n- !P x:\n    nested: 1\n- p.q: 7\n- [k, l]: 9\n")
+
+    conn = _ImportConn()
+    obj = attrdict(conn=conn, path=P("root"))
+
+    await _import_data(obj, str(src), as_dict=None)
+
+    assert [(str(p), v) for p, v, _m in conn.calls] == [
+        ("root.a.b", 42),
+        ("root.a.c", "hi"),
+        ("root.x", {"nested": 1}),
+        ("root.p.q", 7),
+        ("root.k.l", 9),
+    ]
+
+
+async def test_import_as_dict_format(tmp_path):
+    """`import --as-dict KEY` walks the nested-dict output of `kv data get -r -d KEY`."""
+
+    src = tmp_path / "dump.yaml"
+    src.write_text(
+        "a:\n  b:\n    _: 42\n  c:\n    _: hi\nx:\n  _:\n    nested: 1\n  sub:\n    _: 7\n"
+        # stray non-dict entry with a non-marker key is silently skipped
+        "z:\n  ignored: scalar\n"
+    )
+
+    conn = _ImportConn()
+    obj = attrdict(conn=conn, path=P("root"))
+
+    await _import_data(obj, str(src), as_dict="_")
+
+    got = sorted((str(p), v) for p, v, _m in conn.calls)
+    assert got == [
+        ("root.a.b", 42),
+        ("root.a.c", "hi"),
+        ("root.x", {"nested": 1}),
+        ("root.x.sub", 7),
+    ]
+
+
+async def test_import_rejects_wrong_shape(tmp_path):
+    """`import --legacy` rejects a mapping at the top, and vice versa.
+
+    Also rejects an unsupported path representation (e.g. a number).
+    """
+
+    src = tmp_path / "wrong.yaml"
+    src.write_text("a:\n  _: 1\n")
+
+    conn = _ImportConn()
+    obj = attrdict(conn=conn, path=P("root"))
+
+    with pytest.raises(click.UsageError, match="YAML list"):
+        await _import_data(obj, str(src), as_dict=None)
+    assert conn.calls == []
+
+    src.write_text("- !P a: 1\n")
+    with pytest.raises(click.UsageError, match="YAML mapping"):
+        await _import_data(obj, str(src), as_dict="_")
+    assert conn.calls == []
+
+    # legacy with an unparseable path-key type → helpful error.
+    src.write_text("- 42: 1\n")
+    with pytest.raises(click.UsageError, match="as a path"):
+        await _import_data(obj, str(src), as_dict=None)
+    assert conn.calls == []
+
+
+async def test_import_cli_requires_one_mode(tmp_path):
+    """`import` errors when neither (or both) --legacy/--as-dict are given."""
+
+    src = tmp_path / "x.yaml"
+    src.write_text("- !P a: 1\n")
+    conn = _ImportConn()
+    obj = attrdict(conn=conn, path=P("root"))
+
+    with pytest.raises(click.UsageError):
+        await data_cmd.import_.callback.__wrapped__(
+            obj, infile=str(src), legacy=False, as_dict=None
+        )
+    with pytest.raises(click.UsageError):
+        await data_cmd.import_.callback.__wrapped__(obj, infile=str(src), legacy=True, as_dict="_")
+    assert conn.calls == []
+
+    # the happy path
+    await data_cmd.import_.callback.__wrapped__(obj, infile=str(src), legacy=True, as_dict=None)
+    assert [(str(p), v) for p, v, _m in conn.calls] == [("root.a", 1)]
+
+
+async def test_import_e2e_against_real_link(cfg, tmp_path):
+    """End-to-end check: imported entries land in the real Link store."""
+
+    src = tmp_path / "dump.yaml"
+    src.write_text("- !P one: 11\n- !P two.deep: hi\n")
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        obj = attrdict(conn=c, path=P("imp"))
+        await _import_data(obj, str(src), as_dict=None)
+        await c.i_sync()
+
+        assert await c.d_get(P("imp.one")) == 11
+        assert await c.d_get(P("imp.two.deep")) == "hi"

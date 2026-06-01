@@ -1,39 +1,25 @@
-"""End-to-end tests for ``moat.link.knx`` CLI commands."""
+"""End-to-end tests for ``moat.link.knx`` CLI commands.
+
+Run through :py:meth:`moat.link._test.Scaffold.run` so the entire
+``asyncclick`` decorator stack is exercised.
+"""
 
 from __future__ import annotations
 
 import pytest
-from io import StringIO
 
 import asyncclick as click
 
-from moat.util import attrdict
+import moat.link.knx  # noqa:F401 - register cfg
 from moat.lib.path import P
 from moat.link._test import Scaffold
-from moat.link.knx import _main as cmd
+from moat.src.test import raises as _raises
 
 pytestmark = pytest.mark.anyio
 
 
-def _wrapped(c):
-    """Strip click decorators to call a command callback directly."""
-    return c.callback.__wrapped__
-
-
-def _obj(cfg, c):
-    """Build the ``obj`` attrdict the CLI callbacks expect."""
-    return attrdict(
-        cfg=cfg,
-        conn=c,
-        debug=False,
-        stdout=StringIO(),
-        knx_cfg=cfg.link.knx,
-        knx_prefix=cfg.link.knx.prefix,
-    )
-
-
 async def test_server_lifecycle(cfg):
-    """Add, set, list and delete a KNX gateway."""
+    """Add, set, list and delete a KNX gateway via the CLI."""
 
     async with (
         Scaffold(cfg, use_servers=True) as sf,
@@ -41,28 +27,32 @@ async def test_server_lifecycle(cfg):
         sf.client_() as c,
     ):
         prefix = cfg.link.knx.prefix
-        obj = _obj(cfg, c)
-        obj.knx_name = "g1"
 
-        await _wrapped(cmd.add)(obj, host="10.0.0.1", port=3671, force=False)
+        await sf.run("link knx g1 add -h 10.0.0.1 -p 3671")
         await c.i_sync()
 
         data = await c.d_get(prefix + P("g1"))
         assert data == {"server": {"host": "10.0.0.1", "port": 3671}}
 
         # second add without --force fails
-        with pytest.raises(click.UsageError):
-            await _wrapped(cmd.add)(obj, host="x", port=1, force=False)
+        with _raises(click.UsageError) as r:
+            await sf.run("link knx g1 add -h other -p 1")
+        assert r.value is not None
+        assert "already exists" in r.value.format_message().lower()
 
         # set updates fields
-        await _wrapped(cmd.set_)(obj, host="10.0.0.2", port=None)
+        await sf.run("link knx g1 set -h 10.0.0.2")
         await c.i_sync()
         data = await c.d_get(prefix + P("g1"))
         assert data["server"]["host"] == "10.0.0.2"
         assert data["server"]["port"] == 3671
 
+        # list servers
+        r = await sf.run("link knx -")
+        assert "g1" in r.stdout
+
         # delete
-        await _wrapped(cmd.delete_)(obj, recursive=False)
+        await sf.run("link knx g1 delete")
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("g1"))
@@ -81,30 +71,13 @@ async def test_at_addr_lifecycle(cfg):
         sf.client_() as c,
     ):
         prefix = cfg.link.knx.prefix
-        obj = _obj(cfg, c)
-        obj.knx_name = "g1"
 
-        await _wrapped(cmd.add)(obj, host="10.0.0.1", port=3671, force=False)
+        await sf.run("link knx g1 add -h 10.0.0.1 -p 3671")
+        await c.d_set(P("src.value"), 42)
         await c.i_sync()
 
-        # The CLI `at 1/2/3` would parse to (1,2,3); we set it directly here.
-        from moat.link.knx.model import group_subpath  # noqa: PLC0415
-
-        obj.knx_subpath = group_subpath("1/2/3")
-
         # mimic `add -t in -m Bool -s dest .data.foo.bar`
-        await _wrapped(cmd.add_at)(
-            obj,
-            typ="in",
-            mode="Bool",
-            force=False,
-            set_=(("dest", ".data.foo.bar"),),
-            args_=(),
-            vars_=(),
-            eval_=(),
-            path_=(),
-            proxy_=(),
-        )
+        await sf.run("link knx g1 at 1/2/3 add -t in -m Bool -s dest .data.foo.bar")
         await c.i_sync()
 
         stored = await c.d_get(prefix + P("g1") + P(":1:2:3"))
@@ -112,40 +85,20 @@ async def test_at_addr_lifecycle(cfg):
         assert stored["mode"] == "Bool"
         assert stored["dest"] == P("data.foo.bar")
 
-        # Adding the same address without --force is an error
-        with pytest.raises(click.UsageError):
-            await _wrapped(cmd.add_at)(
-                obj,
-                typ="in",
-                mode="Bool",
-                force=False,
-                set_=(("dest", ".data.foo.bar"),),
-                args_=(),
-                vars_=(),
-                eval_=(),
-                path_=(),
-                proxy_=(),
-            )
+        # adding again without --force is an error
+        with _raises(click.UsageError) as r:
+            await sf.run("link knx g1 at 1/2/3 add -t in -m Bool -s dest .data.foo.bar")
+        assert r.value is not None
+        assert "already exists" in r.value.format_message().lower()
 
         # type=in without dest fails the post-add validation
-        obj.knx_subpath = group_subpath("4/5/6")
-        with pytest.raises(click.UsageError):
-            await _wrapped(cmd.add_at)(
-                obj,
-                typ="in",
-                mode="Bool",
-                force=False,
-                set_=(),
-                args_=(),
-                vars_=(),
-                eval_=(),
-                path_=(),
-                proxy_=(),
-            )
+        with _raises(click.UsageError) as r:
+            await sf.run("link knx g1 at 4/5/6 add -t in -m Bool")
+        assert r.value is not None
+        assert "dest" in r.value.format_message().lower()
 
-        # delete the first one
-        obj.knx_subpath = group_subpath("1/2/3")
-        await _wrapped(cmd.delete_at)(obj)
+        # delete
+        await sf.run("link knx g1 at 1/2/3 delete")
         await c.i_sync()
         with pytest.raises(KeyError):
             await c.d_get(prefix + P("g1") + P(":1:2:3"))

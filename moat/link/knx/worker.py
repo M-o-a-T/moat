@@ -143,13 +143,21 @@ async def run_out(
     name = f"{mode}." + ".".join(str(x) for x in subpath)
     device, set_val, _get_val = _make_out_device(srv, addr, mode, name)
     srv.devices.async_add(device)
+    initial_phase = state_path is not None
     try:
-        async with link.d_watch(src, meta=True, state=initial or None) as wp:
-            async for raw, meta in wp:
+        async with link.d_watch(src, meta=True, mark=initial_phase, state=initial or None) as wp:
+            async for msg in wp:
+                if msg is None:
+                    # End of initial-state replay; no more stale-suppression.
+                    initial_phase = False
+                    continue
+                raw, meta = msg
                 if raw is NotGiven:
                     continue
-                if state_path is not None and not await _state_allows(
-                    link, state_path, meta, subpath
+                if (
+                    initial_phase
+                    and state_path is not None
+                    and not await _state_allows(link, state_path, meta, subpath)
                 ):
                     continue
                 await set_val(device, raw)

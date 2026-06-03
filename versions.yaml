@@ -342,7 +342,7 @@ moat-lib-xknx:
   new: 3.15.0
 moat-link:
   deb: 0.7.1-1
-  new: 0.7.1
+  new: 0.8.0
   pkg: 1
   pypi: 0.7.1
   rev: ed4cd48df14d8a69d84ab65bde41d21d2373d227
@@ -355,10 +355,12 @@ moat-link-gate:
   pypi: 0.0.7
   rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae
   tag: 0.0.7
+moat-link-knx:
+  new: 0.20.0
 moat-link-metrics:
   deb: 0.0.6-3
-  new: 0.0.6
-  pkg: 3
+  new: 0.1.0
+  pkg: 1
   pkgrev: ed4cd48df14d8a69d84ab65bde41d21d2373d227
   pypi: 0.0.6
   rev: db715f2cfbce2185f1ae3059fd096e12aea6ecae

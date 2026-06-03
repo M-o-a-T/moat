@@ -16,10 +16,10 @@ dependencies = [
 	"asyncclick ~= 8.3",
 	"attrs",
 	"moat-util ~= 0.63.0",
-	"moat-link ~= 0.7.0",
+	"moat-link ~= 0.8.0",
 	"moat-lib-mqtt ~= 0.8.0",
 	]
-version = "0.0.7"
+version = "0.0.8"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-gate"

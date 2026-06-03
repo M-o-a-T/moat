@@ -1,3 +1,9 @@
+moat-util (0.63.7-2) unstable; urgency=medium
+
+  * New release for 26.1.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 20:28:32 +0200
+
 moat-util (0.63.7-1) unstable; urgency=medium
 
   * New release for 26.1.18

@@ -1,3 +1,9 @@
+moat-lib-codec (0.4.19-2) unstable; urgency=medium
+
+  * New release for 26.1.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 20:27:16 +0200
+
 moat-lib-codec (0.4.19-1) unstable; urgency=medium
 
   * New release for 26.1.18

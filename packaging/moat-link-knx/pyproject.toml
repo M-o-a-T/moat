@@ -16,11 +16,11 @@ dependencies = [
 	"asyncclick ~= 8.3",
 	"attrs",
 	"moat-util ~= 0.63.0",
-	"moat-link ~= 0.7.0",
+	"moat-link ~= 0.8.0",
 	"moat-lib-config ~= 0.2.0",
-	"moat-lib-xknx",
+	"moat-lib-xknx ~= 3.15.0",
 	]
-version = "0.0.1"
+version = "0.20.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.13"
 name = "moat-link-knx"

@@ -102,7 +102,7 @@ async def test_out_no_state_passes_through(monkeypatch, autojump_clock):  # noqa
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [True]
@@ -134,7 +134,7 @@ async def test_out_state_older_passes(monkeypatch, autojump_clock):  # noqa:ARG0
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [True]
@@ -166,7 +166,7 @@ async def test_out_state_newer_suppresses(monkeypatch, autojump_clock):  # noqa:
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == []
@@ -191,7 +191,7 @@ async def test_out_state_missing_passes(monkeypatch, autojump_clock):  # noqa:AR
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [True]
@@ -226,7 +226,7 @@ async def test_out_state_only_blocks_old(monkeypatch, autojump_clock):  # noqa:A
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [False]
@@ -269,7 +269,7 @@ async def test_out_state_check_only_during_initial(monkeypatch, autojump_clock):
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [False]
@@ -296,7 +296,7 @@ async def test_out_no_state_skips_mark(monkeypatch, autojump_clock):  # noqa:ARG
             GroupAddress("1/2/3"),
             P("k.1.2.3"),
         )
-        await anyio.sleep(1)
+        await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
 
     assert sets == [True]

@@ -353,8 +353,6 @@ async def delete_at(obj, recursive: bool) -> None:
 @click.pass_obj
 async def set_at(obj, **kw) -> None:
     """Modify a given series."""
-    if not any(kw.get(x) for x in ("vars_", "eval_", "path_")):
-        return
     path = _server_path(obj) + obj.metrics_subpath
     res, _meta = await node_attr(obj, path, **kw)
     if getattr(obj, "meta", False):

@@ -346,8 +346,6 @@ async def delete_at(obj) -> None:
 @click.pass_obj
 async def set_at(obj, **kw) -> None:
     """Modify a group-address mapping."""
-    if not any(kw.get(x) for x in ("vars_", "eval_", "path_")):
-        return
     path = _server_path(obj) + obj.knx_subpath
     res, _meta = await node_attr(obj, path, **kw)
     if getattr(obj, "meta", False):

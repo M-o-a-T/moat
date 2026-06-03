@@ -120,8 +120,8 @@ async def run_out(
     """Forward MoaT-Link source updates onto the KNX bus.
 
     If :attr:`~moat.link.knx.model.KnxEntry.state` is set, the data
-    stored at that path is consulted before each command is forwarded:
-    a command whose timestamp is older than the recorded state's
+    stored at that path is consulted before the initial command is
+    forwarded: a command whose timestamp is older than the recorded state's
     timestamp is suppressed.  This avoids re-sending a stale outgoing
     command on startup when other bus actors changed the device state
     in the meantime.

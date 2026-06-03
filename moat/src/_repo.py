@@ -180,7 +180,7 @@ class Package(_Common):
             pf = p / f
             pf.parent.mkdir(parents=True, exist_ok=True)
             if f.is_dir():
-                copytree(f, pf, symlinks=False)
+                copytree(f, pf, symlinks=False, dirs_exist_ok=True)
             else:
                 copyfile(f, pf, follow_symlinks=True)
 

@@ -68,6 +68,11 @@ def _link_with(values, getter=None):
     return link
 
 
+async def _run_out_initial(link, srv, entry, addr, subpath):
+    """Invoke :func:`run_out` with ``initial=True`` to engage state checks."""
+    await knx_worker.run_out(link, srv, entry, addr, subpath, initial=True)
+
+
 def _patch_device(monkeypatch, sets):
     """Replace _make_out_device so we can observe set_val calls."""
     device = MagicMock()
@@ -127,7 +132,7 @@ async def test_out_state_older_passes(monkeypatch, autojump_clock):  # noqa:ARG0
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            knx_worker.run_out,
+            _run_out_initial,
             link,
             srv,
             entry,
@@ -159,7 +164,7 @@ async def test_out_state_newer_suppresses(monkeypatch, autojump_clock):  # noqa:
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            knx_worker.run_out,
+            _run_out_initial,
             link,
             srv,
             entry,
@@ -184,7 +189,7 @@ async def test_out_state_missing_passes(monkeypatch, autojump_clock):  # noqa:AR
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            knx_worker.run_out,
+            _run_out_initial,
             link,
             srv,
             entry,
@@ -219,7 +224,7 @@ async def test_out_state_only_blocks_old(monkeypatch, autojump_clock):  # noqa:A
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            knx_worker.run_out,
+            _run_out_initial,
             link,
             srv,
             entry,
@@ -262,7 +267,7 @@ async def test_out_state_check_only_during_initial(monkeypatch, autojump_clock):
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            knx_worker.run_out,
+            _run_out_initial,
             link,
             srv,
             entry,

@@ -38,7 +38,7 @@ async def task(
     server_name: str,
     *,
     local_ip: str | None = None,
-    initial: bool = False,
+    initial: bool | None = None,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Run the KNX connector for one gateway.
@@ -49,7 +49,7 @@ async def task(
         server_name: the server entry name inside the config subtree.
         local_ip: optional local IP override for the gateway connection.
         initial: if true, push existing outgoing states / pull inputs on
-            startup.
+            startup. Defaults to ``True`` on input.
         task_status: task-status for ``tg.start``.
     """
     prefix = Path.build(cfg["prefix"])
@@ -83,6 +83,8 @@ async def task(
                 sc.cancel()
 
         async def _start(p: Path, entry: KnxEntry) -> None:
+            nonlocal initial
+
             _cancel(p)
             if not entry.is_complete():
                 logger.warning("Incomplete entry at %s, skipping", p)
@@ -94,6 +96,8 @@ async def task(
             addr = GroupAddress((main << 11) | (middle << 8) | sub)
 
             runner = run_in if entry.type_ == "in" else run_out
+            if initial is None:
+                initial = entry.type_ == "in"
 
             async def _run(
                 *,
@@ -102,6 +106,7 @@ async def task(
                 with anyio.CancelScope() as sc:
                     workers[p] = sc
                     task_status.started()
+                    assert initial is not None  ## typing *sigh*
                     try:
                         await runner(link, srv, entry, addr, p, initial=initial)
                     except Exception:

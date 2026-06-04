@@ -14,7 +14,6 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat-link,
-  moat-lib-xknx,
 Recommends:
   python3-trio (>= 0.22),
 Description: KNX bus connector for MoaT-Link

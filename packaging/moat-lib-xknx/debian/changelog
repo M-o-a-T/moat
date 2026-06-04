@@ -1,3 +1,9 @@
+moat-lib-xknx (3.15.1-1) unstable; urgency=medium
+
+  * New release for 26.1.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Jun 2026 08:23:30 +0200
+
 moat-lib-xknx (3.15.0-2) unstable; urgency=medium
 
   * New release for 26.1.18

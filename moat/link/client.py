@@ -85,6 +85,7 @@ if TYPE_CHECKING:
         get: Callable[[Path], Awaitable[Any]]
         search: Callable[[Path], Awaitable[Any]]
         set: Callable[[Path, Any, MsgMeta], Awaitable[Any]]
+        delete: Callable[..., Awaitable[Any]]
         walk: Callable[..., Caller]
 
     class ErrSender(Protocol):

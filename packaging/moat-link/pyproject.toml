@@ -13,8 +13,10 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
+	"asyncactor ~= 0.28.0",
 	"attrs",
 	"outcome",
+	"psutil",
 	"ruyaml",
 	"simpleeval",
 	"moat-util ~= 0.63.0",

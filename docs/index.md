@@ -71,6 +71,13 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Job Runner](moat-link-job/index.md)
+
+```{include} ../packaging/moat-link-job/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Metrics Connector](moat-link-metrics/index.md)
 
 ```{include} ../packaging/moat-link-metrics/README.md

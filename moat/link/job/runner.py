@@ -631,7 +631,8 @@ class _Watcher:
         kw = dict(self.kw)
         fetch = bool(kw.pop("fetch", True))
         subtree = bool(kw.pop("subtree", False))
-        state: bool | None = bool(fetch)
+        # ``state=None``: initial value + updates; ``state=False``: updates only.
+        state: bool | None = None if fetch else False
         with anyio.CancelScope() as sc:
             self.scope = sc
             async with self.client.d_watch(

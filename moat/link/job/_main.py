@@ -106,7 +106,7 @@ async def info_(obj: attrdict) -> None:
     """
     path = Path.build(obj.path[:-1])
     seen: set[Any] = set()
-    async with obj.conn.d.walk(path, None, 1, 1).stream_in() as mon:
+    async with obj.conn.d.walk(path, None, 1).stream_in() as mon:
         async for r in mon:
             _, p, *_rest = r
             if not p:

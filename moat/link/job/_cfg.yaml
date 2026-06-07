@@ -1,0 +1,33 @@
+# 'moat link job' configuration.
+#
+# Loaded under cfg.link.job.*
+
+# Static job records.
+prefix: !P job
+
+# Dynamic per-run status. Paths under 'run.*' are not retained on MQTT.
+state: !P run.job
+
+# Tag for this runner installation (used to scope actor topics).
+name: "run"
+
+# Seconds to wait between job starts.
+start_delay: 1
+
+# 'I am alive' notification frequency (seconds).
+# Positive: stored in MoaT-Link; negative: broadcast to the actor topic.
+ping: -15
+
+actor:
+  # See asyncactor for details.
+  cycle: 20
+  nodes: -1
+  splits: 5
+  n_hosts: 3
+  version: 1
+
+sub:
+  # Path fragments inserted into prefix/state for each runner mode.
+  group: !P any
+  single: !P at
+  all: !P all

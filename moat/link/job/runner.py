@@ -872,7 +872,12 @@ class JobRunner:
                 await self.trigger_rescan()
 
     async def _watch_state(self, *, task_status: Any) -> None:
-        """Maintain the in-memory state tree from the link."""
+        """Maintain the in-memory state tree from the link.
+
+        Also enforces ownership: if a running job's state record is
+        deleted, or its ``node`` field no longer points at this runner,
+        the running task is cancelled immediately.
+        """
         async with self.link.d_watch(
             self.statepath,
             state=None,
@@ -887,7 +892,17 @@ class JobRunner:
                 p, d = item
                 key = _split_subpath(p)
                 e = self._get(key)
-                e.state._load(d if isinstance(d, dict) else None)  # noqa: SLF001
+                if d is NotGiven or d is None or not isinstance(d, dict):
+                    e.state._load(None)  # noqa: SLF001
+                else:
+                    e.state._load(d)  # noqa: SLF001
+
+                # Cancel a locally-running job whenever its state was
+                # taken away (deleted, or node cleared / reassigned).
+                if e.scope is not None and e._running and e.state.node != self.name:  # noqa: SLF001
+                    e._comment = f"Cancel: state.node={e.state.node!r}"  # noqa: SLF001
+                    e.scope.cancel()
+
                 await self.trigger_rescan()
 
     async def _run_now(self, evt: anyio.Event | None = None) -> None:

@@ -12,8 +12,8 @@ import pytest
 import time
 
 import moat.link.job  # noqa:F401 - register cfg
-from moat.util import attrdict, combine_dict
-from moat.lib.path import P
+from moat.util import NotGiven, attrdict, combine_dict
+from moat.lib.path import P, Root
 from moat.link._test import Scaffold
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.job import (
@@ -356,4 +356,151 @@ async def test_no_code_no_run(cfg):
             if st is not None:
                 assert st.get("started", 0) == 0
                 assert st.get("reason") == "no code"
+            tg.cancel_scope.cancel()
+
+
+async def _setup_long_job(
+    sf: Scaffold,
+    c: Any,
+    name: str,
+) -> tuple[attrdict, P, P, P]:
+    """Define a long-running snippet + job and return the relevant paths.
+
+    The snippet calls ``setup_done`` (clearing back-off) and then sleeps
+    until cancelled, so we can observe state transitions from outside.
+    """
+    await c.d_set(
+        CODE_EXEC_ROOT + P("test.sleeper"),
+        dict(
+            code="""
+import anyio
+await _self.setup_done()
+await anyio.sleep_forever()
+""",
+            is_async=True,
+        ),
+    )
+    job_cfg = _job_cfg(sf)
+    sub = job_cfg["sub"]["group"] + P("default")
+    job_path = job_cfg["prefix"] + sub + P(name)
+    state_path = job_cfg["state"] + sub + P(name)
+
+    await c.d_set(
+        job_path,
+        dict(
+            code=P("test.sleeper"),
+            target=time.time(),
+            data={},
+            delay=300,
+            backoff=1.1,
+        ),
+    )
+    await c.i_sync()
+    return job_cfg, sub, job_path, state_path
+
+
+async def test_cancel_when_state_deleted(cfg):
+    """Deleting the ``run.job.*`` state record cancels the running job."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, _job_path, state_path = await _setup_long_job(sf, c, "d")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            # Yank the state record out from under the runner.
+            #
+            # Note: ``c.d.delete`` is a no-op for paths starting with
+            # ``run`` (the server explicitly skips them in
+            # ``maybe_update``).  The retained MQTT message is what
+            # the runner watches, so clear it by publishing a NotGiven
+            # payload directly with ``retain=True``.
+            await c.send(Root.get() + state_path, NotGiven, retain=True)
+            await c.i_sync()
+
+            # The runner must observe the deletion and cancel; afterwards
+            # ``stopped`` is set again.
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("stopped", 0) > 0,
+            )
+            # ``started`` may have been wiped by the deletion notification;
+            # what matters is that the runner observed it and saved a
+            # ``stopped`` record (i.e. it cancelled).
+            assert st["stopped"] > 0
+            tg.cancel_scope.cancel()
+
+
+async def test_cancel_when_state_node_cleared(cfg):
+    """Clearing ``state.node`` cancels the running job."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, _job_path, state_path = await _setup_long_job(sf, c, "n")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            tampered = dict(st)
+            tampered["node"] = None
+            await c.d_set(state_path, tampered, retain=True)
+            await c.i_sync()
+
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("stopped", 0) > 0,
+            )
+            assert st["started"] > 0
+            tg.cancel_scope.cancel()
+
+
+async def test_cancel_when_state_node_reassigned(cfg):
+    """Reassigning ``state.node`` to another node cancels the running job."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, _job_path, state_path = await _setup_long_job(sf, c, "r")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            tampered = dict(st)
+            tampered["node"] = "someone_else"
+            await c.d_set(state_path, tampered, retain=True)
+            await c.i_sync()
+
+            # We stop, but ``node`` keeps the externally-set value: the
+            # other node is supposedly running it now, so it's not ours
+            # to clear.
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("stopped", 0) > 0,
+            )
+            assert st["started"] > 0
+            assert st["node"] == "someone_else"
             tg.cancel_scope.cancel()

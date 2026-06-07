@@ -17,6 +17,7 @@ Snippets referenced from a job entry are resolved through
 
 from __future__ import annotations
 
+from moat.lib.config import register as _register
 from moat.lib.path import P
 
 from .runner import (
@@ -59,3 +60,5 @@ __all__ = [
     "StateEntry",
     "TimerMsg",
 ]
+
+_register(__name__)

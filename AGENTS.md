@@ -145,7 +145,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
 - DO NOT use "head", "tail", or "rg" / "grep" on test output.
-  Instead, redirect to a temp file and post-process that.
+  Instead, redirect to a temp file (or check tmux content) and post-process that.
+- moat.src.test contains wrappers "run" (process a `moat ...` command line)
+  and `raises` (like pytest.raises but ignores exception groups).
 
 ## Commit & Pull Requests
 
@@ -165,10 +167,13 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 ## Agent‑Specific Notes
 
-- You MUST follow these guidelines for any code changes in this repository.
-- Do not introduce unrelated tooling or broad refactors unless specifically
+- Do not introduce unrelated tooling or refactors unless specifically
   asked to do so.
 - Context compaction: You MUST re-read this document after compacting.
+
+# Issue Processing
+
+This section only applies when resolving a Beads issue.
 
 ## Completion
 

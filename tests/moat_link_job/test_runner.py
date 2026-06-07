@@ -504,3 +504,117 @@ async def test_cancel_when_state_node_reassigned(cfg):
             assert st["started"] > 0
             assert st["node"] == "someone_else"
             tg.cancel_scope.cancel()
+
+
+async def test_failing_job_records_error(cfg):
+    """A snippet that throws on every run is recorded at ``error/<job>``."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.boom"),
+            dict(code="raise RuntimeError('boom')", is_async=True),
+        )
+
+        job_cfg = _job_cfg(sf)
+        sub = job_cfg["sub"]["group"] + P("default")
+        job_path = job_cfg["prefix"] + sub + P("err")
+        state_path = job_cfg["state"] + sub + P("err")
+        error_path = P("error") + job_path
+
+        await c.d_set(
+            job_path,
+            dict(code=P("test.boom"), target=time.time(), data={}, delay=2),
+        )
+        await c.i_sync()
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            # Wait until the runner has noticed the failure (backoff > 0).
+            await _wait_state(c, state_path, until=lambda s: s.get("backoff", 0) > 0)
+
+            # The runner reports the exception through the link's error
+            # channel, which stores a record at error/<job_path>.
+            with anyio.fail_after(5):
+                while True:
+                    try:
+                        err = await c.d_get(error_path)
+                    except KeyError:
+                        await anyio.sleep(0.1)
+                        continue
+                    if isinstance(err, dict) and "exc" in err:
+                        break
+                    await anyio.sleep(0.1)
+            assert "exc" in err
+            tg.cancel_scope.cancel()
+
+
+async def test_recovering_job_clears_error(cfg):
+    """A job that failed before but now runs cleanly clears its error.
+
+    The job's code path is rewritten from a failing snippet to a
+    successful one mid-run; the runner picks up the new code on its
+    next retry, runs it to completion, and its
+    :py:meth:`~moat.link.client.LinkSender.e_ok` call removes the
+    error record.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        # Initial snippet always raises.
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.flip"),
+            dict(code="raise RuntimeError('boom')", is_async=True),
+        )
+
+        job_cfg = _job_cfg(sf)
+        sub = job_cfg["sub"]["group"] + P("default")
+        job_path = job_cfg["prefix"] + sub + P("flip")
+        state_path = job_cfg["state"] + sub + P("flip")
+        error_path = P("error") + job_path
+
+        # Short delay so the retry happens quickly.
+        await c.d_set(
+            job_path,
+            dict(code=P("test.flip"), target=time.time(), data={}, delay=1),
+        )
+        await c.i_sync()
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            # First, observe the failure and the recorded error.
+            await _wait_state(c, state_path, until=lambda s: s.get("backoff", 0) > 0)
+            with anyio.fail_after(5):
+                while True:
+                    try:
+                        await c.d_get(error_path)
+                        break
+                    except KeyError:
+                        await anyio.sleep(0.1)
+
+            # Now swap the snippet for one that returns cleanly.
+            await c.d_set(
+                CODE_EXEC_ROOT + P("test.flip"),
+                dict(code="return 'ok'", is_async=True),
+            )
+            await c.i_sync()
+
+            # The runner's next retry runs the new code; on clean
+            # completion it calls ``e_ok`` which removes the error
+            # record.
+            with anyio.fail_after(20):
+                while True:
+                    try:
+                        await c.d_get(error_path)
+                    except KeyError:
+                        break
+                    await anyio.sleep(0.1)
+
+            # And the backoff counter should drop back to zero.
+            st = await _wait_state(c, state_path, until=lambda s: s.get("backoff", 0) == 0)
+            assert st.get("result") == "ok"
+            tg.cancel_scope.cancel()

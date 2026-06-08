@@ -77,6 +77,8 @@ class Gate(_MqttGate):
 
     async def setup_(self) -> None:
         """Compute Venus-specific topic prefixes and per-run keep-alive ID."""
+        if self.cf.backend.setdefault("codec", "json") != "json":
+            raise ValueError(f"Backend must have json codec, not {self.cf.backend.codec}")
         await super().setup_()
         self._read_prefix = P("N") + self.cf.dst
         self._write_prefix = P("W") + self.cf.dst

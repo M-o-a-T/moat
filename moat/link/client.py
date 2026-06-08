@@ -931,6 +931,30 @@ class LinkSender(MsgSender):
         """
         await self.e.ok(path, **kw)
 
+    async def is_client_alive(self, name: str) -> bool:
+        """Check whether the server can still reach client ``name``.
+
+        Sends an empty command to ``cl/<name>``; the server forwards it
+        to the named client.  This works for both stable cluster
+        members and anonymous (``_``-prefixed) connection IDs.
+
+        Returns:
+            `False` if the server doesn't know about that client (it
+            raises a :py:class:`KeyError`), `True` otherwise.  Any
+            other exception is treated as evidence that the client is
+            indeed reachable (the server only got as far as it did
+            *because* the client was there to receive the dispatch).
+        """
+        try:
+            await self.cmd(P("cl") / name)
+        except KeyError:
+            return False
+        except Exception:  # noqa: S110 "no such command" is fine
+            # Any other failure (typically ShortCommandError)
+            # means the server was able to reach it.
+            pass
+        return True
+
     @asynccontextmanager
     async def e_wrap(self, path: Path, **kw):
         """

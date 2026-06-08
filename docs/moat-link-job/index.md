@@ -33,8 +33,9 @@ rescheduling.  Useful for poking at a snippet from the command line.
 
 * ``state.node`` is set to the link's connection ID for the duration
   of the call.
-* Refuses to start if a different runner already owns the job;
-  override with ``-f``/``--force``.
+* Refuses to start if a different runner currently owns the job
+  (a liveness probe via :py:meth:`~moat.link.client.LinkSender.is_client_alive`
+  rules out stale records); override with ``-f``/``--force``.
 * ``-b``/``--break`` drops into :py:mod:`pdb` immediately before the
   snippet is invoked.
 * The usual ``-v``/``-e``/``-p`` attribute options merge into the

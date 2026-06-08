@@ -248,3 +248,68 @@ async def test_debug_logs_to_stderr(cfg, capfd):
         captured = capfd.readouterr()
         assert "HELLO-DEBUG" in captured.err
         assert "HELLO-INFO" in captured.err
+
+
+async def test_debug_takes_over_dead_anon_owner(cfg):
+    """``debug`` reclaims a job stuck on a vanished anonymous client."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+
+        state = cfg.link.job.state
+        sub = cfg.link.job.sub.group + P("default")
+
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.noop"),
+            dict(code="return None", is_async=True),
+        )
+        await sf.run("link job at zombie set -c test.noop -t -")
+
+        # The previous owner has an auto-generated id (leading ``_``) and
+        # is no longer connected to the server.
+        await c.d_set(
+            state + sub + P("zombie"),
+            dict(started=time.time(), stopped=0, node="_dead_client", backoff=0),
+            retain=True,
+        )
+        await c.i_sync()
+
+        # Should run without ``-f``: liveness check finds nothing.
+        await sf.run("link job at zombie debug")
+        await c.i_sync()
+        st = await c.d_get(state + sub + P("zombie"))
+        assert st["node"] is None
+
+
+async def test_debug_refuses_live_anon_owner(cfg):
+    """``debug`` refuses if the anonymous owner is still connected."""
+    from moat.link.client import Link  # noqa: PLC0415
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        # Connect a *second* client without a fixed name so that the
+        # server assigns it an auto-generated (``_``-prefixed) ID.
+        other_cli = Link(sf.cfg)  # no name -> _xxxxxx
+        async with sf.client_(cli=other_cli) as other:
+            assert other.id.startswith("_")
+
+            state = cfg.link.job.state
+            sub = cfg.link.job.sub.group + P("default")
+
+            await sf.run("link job at live set -c test.noop -t -")
+            await c.d_set(
+                state + sub + P("live"),
+                dict(started=time.time(), stopped=0, node=other.id, backoff=0),
+                retain=True,
+            )
+            await c.i_sync()
+
+            with raises(click.exceptions.UsageError) as r:
+                await sf.run("link job at live debug")
+            assert "already running" in str(r.value)

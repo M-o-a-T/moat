@@ -79,14 +79,13 @@ async def _discover_portal_id() -> str:
             {"backend": _venus_backend_cfg()},
             name="venus_probe",
         ) as bk,
-        bk.monitor(P("N"), subtree=True, codec="noop") as mon,
+        bk.monitor(P("N.+.system.+.Serial"), codec="noop") as mon,
     ):
         with anyio.fail_after(15):
             async for msg in mon:
                 t = msg.topic
                 # N/<portal>/system/<inst>/Serial
-                if len(t) >= 5 and t[0] == "N" and t[2] == "system" and t[-1] == "Serial":
-                    return t[1]
+                return t[1]
     raise AssertionError("Venus monitor ended without a Serial message")
 
 

@@ -361,7 +361,7 @@ class Gate:
                     continue
                 if d is NotGiven or d.get("driver") != self.cf.driver:
                     raise GateVanished(str(self.path))
-                self.cf = d
+                self.cf = to_attrdict(d)
                 self.tg.cancel_scope.cancel()
                 return
 

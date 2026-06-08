@@ -38,6 +38,7 @@ from .actor import (
     PartialState,
 )
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ if TYPE_CHECKING:
 
     from moat.link.client import LinkSender
 
-    from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ __all__ = [
     "SingleJobRunner",
     "StateEntry",
     "TimerMsg",
+    "debug_run",
 ]
 
 
@@ -1043,3 +1045,166 @@ class AllJobRunner(SingleJobRunner):
     ) -> None:
         super().__init__(link, cfg, subpath, nodes)
         self.statepath = self.statepath + Path.build((link.name,))
+
+
+class _DebugStub:
+    """Minimal :class:`JobRunner` look-alike used by :func:`debug_run`.
+
+    Only the attributes :class:`JobEntry` and :class:`StateEntry`
+    actually touch are provided.
+    """
+
+    def __init__(self, link: LinkSender, path: Path, statepath: Path) -> None:
+        self.link = link
+        self.path = path
+        self.statepath = statepath
+        self.name = link.id
+
+    async def trigger_rescan(self) -> None:
+        """No-op: there is no scheduler to wake."""
+
+
+async def debug_run(
+    link: LinkSender,
+    job_path: Path,
+    state_path: Path,
+    data_overrides: Mapping[str, Any] | None = None,
+    *,
+    use_pdb: bool = False,
+    force: bool = False,
+    log_stream: Any = None,
+) -> Any:
+    """Run a single job interactively once.
+
+    The current process takes ownership of the job: ``state.node`` is
+    set to ``link.id`` and the snippet is invoked directly.  No actor
+    coordination, no rescheduling, no retry on failure.
+
+    Args:
+        link: Connected MoaT-Link client.
+        job_path: Full link path of the stored job record.
+        state_path: Full link path of the matching state record.
+        data_overrides: Extra values merged on top of the job's
+            stored ``data`` dictionary.  Keys present here win.
+        use_pdb: If true, drop into :mod:`pdb` immediately before the
+            snippet is called.
+        force: Run even when ``state.node`` is set to a different
+            owner.  Without this flag a `RuntimeError` is raised
+            instead of stealing the job.
+        log_stream: If not `None`, a stream handler at level
+            ``DEBUG`` is attached to the snippet's ``_log`` logger and
+            output is mirrored there for the duration of the call.
+
+    Returns:
+        Whatever the snippet returned, or `None` on error.
+    """
+    try:
+        job = await link.d_get(job_path)
+    except KeyError as exc:
+        raise RuntimeError(f"No job at {job_path}") from exc
+    if not isinstance(job, Mapping) or "code" not in job:
+        raise RuntimeError(f"Job at {job_path} has no 'code'")
+
+    try:
+        prev = await link.d_get(state_path)
+    except KeyError:
+        prev = None
+
+    our_id = link.id
+    if (
+        not force
+        and isinstance(prev, Mapping)
+        and prev.get("node")
+        and prev.get("node") != our_id
+        and prev.get("started", 0) > prev.get("stopped", 0)
+    ):
+        raise RuntimeError(
+            f"Job already running on {prev['node']!r} (use force=True / -f to override)",
+        )
+
+    stub = _DebugStub(link, job_path, state_path)
+    entry = JobEntry(stub, ())  # ty:ignore[invalid-argument-type]  # subpath empty: path == stub.path
+    entry.update_value(dict(job))
+    # The snippet's ``_log`` logger should reflect the job path, not
+    # the empty subpath we used to wire :attr:`JobEntry.path`.
+    entry._logger = logger_for(job_path)  # noqa: SLF001
+    if isinstance(prev, Mapping):
+        entry.state._load(dict(prev))  # noqa: SLF001
+
+    if data_overrides:
+        entry.data = combine_dict(dict(data_overrides), entry.data or {}, deep=True)
+
+    handler: logging.Handler | None = None
+    if log_stream is not None:
+        handler = logging.StreamHandler(log_stream)
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s %(name)s: %(message)s"),
+        )
+        entry._logger.addHandler(handler)  # noqa: SLF001
+        if entry._logger.level == logging.NOTSET or entry._logger.level > logging.DEBUG:  # noqa: SLF001
+            entry._logger.setLevel(logging.DEBUG)  # noqa: SLF001
+
+    # Take ownership.  Clear any leftover "running" markers.
+    entry.state.started = 0
+    entry.state.stopped = 0
+    entry.state.node = our_id
+    entry.state.backoff = 0
+    await entry.state.save()
+
+    st = entry.state
+    t = time.time()
+    result: Any = None
+    try:
+        entry._running = True  # noqa: SLF001
+        if entry.code is None:
+            raise RuntimeError(f"Job at {job_path} has no 'code'")
+        code = link.code_at(entry.code)
+        code_obj = await code
+        payload = entry.data or {}
+        default = {}
+        if isinstance(code_obj._data, dict):  # noqa: SLF001
+            default = code_obj._data.get("default", {}) or {}  # noqa: SLF001
+        kw = combine_dict(payload, default, deep=True)
+        entry._q = create_queue(QLEN)  # noqa: SLF001
+        admin = CallAdmin(entry, kw)
+        kw["_self"] = admin
+        kw["_link"] = link
+        kw["_cfg"] = link.cfg
+        kw["_cls"] = _CLASSES
+        kw["_info"] = entry._q  # noqa: SLF001
+        kw["_P"] = P
+        kw["_Path"] = Path
+        kw["_log"] = entry._logger  # noqa: SLF001
+        kw["_digits"] = digits
+
+        st.started = t
+        await st.save()
+
+        if use_pdb:
+            import pdb  # noqa: PLC0415, T100
+
+            pdb.set_trace()  # noqa: T100
+        result = await admin._run(code_obj, kw)  # noqa: SLF001
+    except ErrorRecorded:
+        pass
+    except Exception as exc:
+        with anyio.move_on_after(5, shield=True):
+            await link.e_exc(job_path, exc, data=entry.data)
+        raise
+    else:
+        st.result = result
+        await link.e_ok(job_path)
+    finally:
+        entry._running = False  # noqa: SLF001
+        entry._q = None  # noqa: SLF001
+        with anyio.fail_after(2, shield=True):
+            if st.node == our_id:
+                st.node = None
+            st.stopped = time.time()
+            with suppress(anyio.ClosedResourceError):
+                await st.save()
+        if handler is not None:
+            entry._logger.removeHandler(handler)  # noqa: SLF001
+
+    return result

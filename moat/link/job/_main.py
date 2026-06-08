@@ -20,7 +20,7 @@ from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import add_dates, data_get
 from moat.link.client import Link
 
-from .runner import AllJobRunner, AnyJobRunner, JobRunner, SingleJobRunner
+from .runner import AllJobRunner, AnyJobRunner, JobRunner, SingleJobRunner, debug_run
 
 from typing import Any
 
@@ -420,6 +420,66 @@ async def set_(
             res["target"] = time.time() + float(tm)
 
     await obj.conn.d_set(path, res)
+
+
+@at_cli.command("debug")
+@click.option(
+    "-b",
+    "--break",
+    "use_break",
+    is_flag=True,
+    help="Drop into pdb before calling the snippet.",
+)
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Take over the job even if another runner currently owns it.",
+)
+@attr_args
+@click.pass_obj
+async def debug_(
+    obj: attrdict,
+    use_break: bool,
+    force: bool,
+    **kw: Any,
+) -> None:
+    """Run a single job interactively, for debugging.
+
+    No actor coordination, no scheduling.  The job's stored ``data`` is
+    taken as-is; ``-v``/``-p``/``-e`` overrides are merged on top for
+    this run only.
+
+    ``state.node`` is set to the client connection ID for the duration
+    of the call.  If a different runner already owns the job, ``-f`` is
+    required to steal it.
+
+    Output emitted by the snippet through ``_log`` (at DEBUG level and
+    up) is mirrored to stderr regardless of the global verbosity.
+    """
+    if obj.subpath[-1] == "-":
+        raise click.UsageError("Group '-' can only be used for listing.")
+    if not obj.jobpath:
+        raise click.UsageError("A job path is required.")
+
+    overrides = process_args(attrdict(), **kw)
+    job_path = obj.path + obj.jobpath
+    state_path = obj.statepath + obj.jobpath
+
+    try:
+        res = await debug_run(
+            obj.conn,
+            job_path,
+            state_path,
+            data_overrides=overrides,
+            use_pdb=use_break,
+            force=force,
+            log_stream=sys.stderr,
+        )
+    except RuntimeError as exc:
+        raise click.UsageError(str(exc)) from None
+    if res is not None:
+        yprint(res, stream=obj.stdout)
 
 
 @cli.command(short_help="Show runners' keepalive messages")

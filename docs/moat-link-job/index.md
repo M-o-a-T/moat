@@ -13,7 +13,7 @@ The ``moat link job`` command line is structured exactly like
 
 ```
 moat link job [-n NODE] [-g GROUP] info
-moat link job [-n NODE] [-g GROUP] at PATH list|get|set|delete|state|path
+moat link job [-n NODE] [-g GROUP] at PATH list|get|set|delete|state|path|debug
 moat link job [-n NODE] [-g GROUP] run [-n NODES]
 moat link job [-n NODE] [-g GROUP] monitor
 ```
@@ -25,6 +25,23 @@ moat link job [-n NODE] [-g GROUP] monitor
 * ``-n -`` – the job runs on every node (All-runner).
 
 ``-g``/``--group`` selects the job group (default: ``default``).
+
+### ``at PATH debug``
+
+Runs the job in the current process without any actor coordination or
+rescheduling.  Useful for poking at a snippet from the command line.
+
+* ``state.node`` is set to the link's connection ID for the duration
+  of the call.
+* Refuses to start if a different runner already owns the job;
+  override with ``-f``/``--force``.
+* ``-b``/``--break`` drops into :py:mod:`pdb` immediately before the
+  snippet is invoked.
+* The usual ``-v``/``-e``/``-p`` attribute options merge into the
+  job's stored ``data`` for this run only; the stored record is not
+  modified.
+* All output emitted via the snippet's ``_log`` logger (at DEBUG and
+  up) is mirrored to stderr regardless of the global verbosity.
 
 ## Storage layout
 

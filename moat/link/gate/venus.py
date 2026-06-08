@@ -75,9 +75,15 @@ class Gate(_MqttGate):
     _keepalive_interval: float
     _keepalive_id: str
 
+    def _backend_cfg(self) -> dict[str, Any]:
+        """Inject the Venus default of ``codec='json'`` into the backend config."""
+        bcfg = super()._backend_cfg()
+        bcfg.setdefault("codec", "json")
+        return bcfg
+
     async def setup_(self) -> None:
         """Compute Venus-specific topic prefixes and per-run keep-alive ID."""
-        if self.cf.backend.setdefault("codec", "json") != "json":
+        if self.cf.backend.get("codec", "json") != "json":
             raise ValueError(f"Backend must have json codec, not {self.cf.backend.codec}")
         await super().setup_()
         self._read_prefix = P("N") + self.cf.dst

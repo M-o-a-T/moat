@@ -1064,39 +1064,6 @@ class _DebugStub:
         """No-op: there is no scheduler to wake."""
 
 
-async def _node_is_alive(link: LinkSender, node: str) -> bool:
-    """Best-effort liveness check for the runner that last owned a job.
-
-    Auto-generated client IDs (those starting with ``_``) are never
-    advertised through the cluster's node list, so the only way to tell
-    if such a client is still around is to ask the server to forward us
-    to it.  The forwarded command intentionally has no further
-    sub-command; the only thing that matters is *whether* the server
-    accepts the dispatch.
-
-    Returns:
-        ``True`` if the server still knows ``node`` (or could not be
-        proven otherwise), ``False`` only if the server explicitly
-        signalled that no such client exists.
-    """
-    if not node.startswith("_"):
-        # Stable cluster member: assume it's there.  (Querying it would
-        # be possible but the project intentionally only special-cases
-        # the auto-generated IDs.)
-        return True
-    try:
-        await link.cmd(P("cl") / node)
-    except KeyError:
-        return False
-    except BaseException as exc:
-        # Any other failure (incl. "no such command") means the server
-        # was able to reach the client — it's alive.
-        if not isinstance(exc, Exception):
-            raise
-        return True
-    return True
-
-
 async def debug_run(
     link: LinkSender,
     job_path: Path,
@@ -1152,7 +1119,7 @@ async def debug_run(
         and prev.get("started", 0) > prev.get("stopped", 0)
     ):
         owner = prev["node"]
-        if await _node_is_alive(link, owner):
+        if await link.is_client_alive(owner):
             raise RuntimeError(
                 f"Job already running on {owner!r} (use force=True / -f to override)",
             )

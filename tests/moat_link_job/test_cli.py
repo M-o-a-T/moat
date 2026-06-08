@@ -203,15 +203,16 @@ async def test_debug_refuses_running_owner(cfg):
         )
         await sf.run("link job at busy set -c test.noop -t -")
 
-        # Pretend a different runner is currently running the job.
+        # Pretend the currently-connected client ``c`` is running the
+        # job.  Its ID is known to the server, so ``is_client_alive``
+        # will confirm liveness and ``debug`` will refuse without -f.
         await c.d_set(
             state + sub + P("busy"),
-            dict(started=time.time(), stopped=0, node="other_node", backoff=0),
+            dict(started=time.time(), stopped=0, node=c.id, backoff=0),
             retain=True,
         )
         await c.i_sync()
 
-        # Without ``-f`` the command refuses.
         with raises(click.exceptions.UsageError) as r:
             await sf.run("link job at busy debug")
         assert "already running" in str(r.value)
@@ -250,8 +251,8 @@ async def test_debug_logs_to_stderr(cfg, capfd):
         assert "HELLO-INFO" in captured.err
 
 
-async def test_debug_takes_over_dead_anon_owner(cfg):
-    """``debug`` reclaims a job stuck on a vanished anonymous client."""
+async def test_debug_takes_over_dead_owner(cfg):
+    """``debug`` reclaims a job whose owner is no longer connected."""
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init={"Hello": "there!"}),
@@ -268,16 +269,15 @@ async def test_debug_takes_over_dead_anon_owner(cfg):
         )
         await sf.run("link job at zombie set -c test.noop -t -")
 
-        # The previous owner has an auto-generated id (leading ``_``) and
-        # is no longer connected to the server.
+        # The previous owner is no longer connected to the server.
         await c.d_set(
             state + sub + P("zombie"),
-            dict(started=time.time(), stopped=0, node="_dead_client", backoff=0),
+            dict(started=time.time(), stopped=0, node="dead_client", backoff=0),
             retain=True,
         )
         await c.i_sync()
 
-        # Should run without ``-f``: liveness check finds nothing.
+        # Should run without ``-f``: liveness probe finds nothing.
         await sf.run("link job at zombie debug")
         await c.i_sync()
         st = await c.d_get(state + sub + P("zombie"))

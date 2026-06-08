@@ -10,9 +10,12 @@ from __future__ import annotations
 import pytest
 import time
 
+import asyncclick as click
+
 import moat.link.job  # noqa:F401 - register cfg
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio
 
@@ -142,3 +145,106 @@ async def test_node_modes_use_distinct_paths(cfg):
         assert (await c.d_get(prefix + sub_grp + P("any_foo")))["code"] == P("x")
         assert (await c.d_get(prefix + sub_at + P("single_foo")))["code"] == P("x")
         assert (await c.d_get(prefix + sub_all + P("all_foo")))["code"] == P("x")
+
+
+async def test_debug_runs_job(cfg):
+    """``moat link job at FOO debug`` runs the snippet once with overrides."""
+    from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        prefix = cfg.link.job.prefix
+        state = cfg.link.job.state
+        sub = cfg.link.job.sub.group + P("default")
+
+        # A snippet that just echoes its 'who' parameter.
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.greet"),
+            dict(code="return 'hi ' + who", vars=dict(who="world"), is_async=True),
+        )
+        await sf.run("link job at d1 set -c test.greet -t 0 -v who default")
+        await c.i_sync()
+
+        # Override 'who' on the fly via ``-v``.
+        r = await sf.run("link job at d1 debug -v who alice")
+        assert "hi alice" in r.stdout
+
+        # The stored job's ``data`` is untouched.
+        stored = await c.d_get(prefix + sub + P("d1"))
+        assert stored["data"]["who"] == "default"
+
+        # A state record with the link connection ID is left behind.
+        st = await c.d_get(state + sub + P("d1"))
+        assert st["started"] > 0
+        assert st["stopped"] >= st["started"]
+        # node is cleared after the run finishes cleanly.
+        assert st["node"] is None
+
+
+async def test_debug_refuses_running_owner(cfg):
+    """``debug`` aborts when another runner currently owns the job."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+
+        state = cfg.link.job.state
+        sub = cfg.link.job.sub.group + P("default")
+
+        # A do-nothing snippet so ``-f`` actually succeeds.
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.noop"),
+            dict(code="return None", is_async=True),
+        )
+        await sf.run("link job at busy set -c test.noop -t -")
+
+        # Pretend a different runner is currently running the job.
+        await c.d_set(
+            state + sub + P("busy"),
+            dict(started=time.time(), stopped=0, node="other_node", backoff=0),
+            retain=True,
+        )
+        await c.i_sync()
+
+        # Without ``-f`` the command refuses.
+        with raises(click.exceptions.UsageError) as r:
+            await sf.run("link job at busy debug")
+        assert "already running" in str(r.value)
+
+        # With ``-f`` the command succeeds and overwrites state.node.
+        await sf.run("link job at busy debug -f")
+        await c.i_sync()
+        st = await c.d_get(state + sub + P("busy"))
+        assert st["node"] is None  # cleared after the forced run
+
+
+async def test_debug_logs_to_stderr(cfg, capfd):
+    """``_log`` output from the snippet goes to stderr at DEBUG level."""
+    from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.chatty"),
+            dict(
+                code="_log.debug('HELLO-DEBUG'); _log.info('HELLO-INFO'); return None",
+                is_async=True,
+            ),
+        )
+        await sf.run("link job at chatty set -c test.chatty -t -")
+
+        # ``capfd`` snapshots fd-level stderr; clear the prior buffer so
+        # we only see the debug invocation's output.
+        capfd.readouterr()
+        await sf.run("link job at chatty debug")
+        captured = capfd.readouterr()
+        assert "HELLO-DEBUG" in captured.err
+        assert "HELLO-INFO" in captured.err

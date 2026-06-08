@@ -79,15 +79,25 @@ class Gate(_Gate):
                     pass
         return super()._path_dropped(path)
 
+    def _backend_cfg(self) -> dict[str, Any]:
+        """Return a *copy* of the gate-local backend config.
+
+        Subclasses may override to inject driver-specific defaults
+        (e.g. a wire codec) without mutating ``self.cf``, which would
+        cause the equality check in
+        :py:meth:`moat.link.gate.Gate._restart` to trigger a spurious
+        restart on every iteration.
+        """
+        bcfg = dict(self.cf.backend)
+        bcfg.setdefault("driver", "mqtt")
+        return bcfg
+
     async def setup_(self) -> None:
         """Enter the gate-specific backend into ``self.ex`` before ``self.tg`` is created."""
-        try:
-            bcfg = self.cf.backend
-        except AttributeError:
+        if "backend" not in self.cf:
             self.backend = self.link
         else:
-            if "driver" not in bcfg:
-                bcfg.driver = "mqtt"
+            bcfg = self._backend_cfg()
             name = "gate_" + gen_ident()
             self.backend = await self.ex.enter_async_context(
                 get_backend({"backend": bcfg}, name=name)

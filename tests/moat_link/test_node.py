@@ -147,7 +147,8 @@ def test_search_wildcard_range_unbounded():
 
     with pytest.raises(KeyError):
         n.search(P("a"))
-    assert n.search(P("a.end")).data_ is NotGiven
+    with pytest.raises(KeyError):
+        n.search(P("a.end"))
     assert n.search(P("a.b.end")).data == "range2plus_end"
     assert n.search(P("a.b.c.end")).data == "range2plus_end"
 

@@ -18,7 +18,7 @@ dependencies = [
 	"moat-lib-config ~= 0.2.0",
 	"moat-lib-run ~= 0.2.0",
 ]
-version = "0.2.16"
+version = "0.2.17"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-ems-sched"

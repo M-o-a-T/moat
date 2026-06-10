@@ -466,6 +466,8 @@ class NodeFinder:
     def result(self) -> Node:
         """Return the highest-priority matching node."""
         for node in self.matches:
+            if node.data_ is NotGiven:
+                continue
             return node
         raise KeyError("No matching wildcard state")
 

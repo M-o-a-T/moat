@@ -424,11 +424,10 @@ class Gate:
                     raise TypeError(f"Missing metadata for source value at {self.path + path}")
                 try:
                     await self._set_dst(path, node, node.data_, meta)
-                except Exception:
+                except Exception as exc:
                     self.logger.error(
-                        "ERR SRC %s %s %r/%r", self.path, path, node.data_, node.meta
+                        "ERR SRC %s %s %r/%r: %r", self.path, path, node.data_, node.meta, exc
                     )
-                    raise
                 else:
                     self.logger.debug("SRC %s %s %r/%r", self.path, path, node.data_, node.meta)
 

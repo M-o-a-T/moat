@@ -6,11 +6,13 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+
+from typing import TextIO
 
 
 def _conv_prefix(obj):
@@ -86,16 +88,60 @@ async def _do_delete(obj, recursive):
     yprint(out, stream=obj.stdout)
 
 
-async def _do_list(obj):
+async def _list_no_at(conn: Link, path: Path, stdout: TextIO) -> bool:
+    """Recursively list entries under *path*, stopping at codec nodes.
+
+    Uses server-side depth-1 walks and recurses on the client side,
+    stopping at every node that already carries a ``codec`` attribute
+    (i.e. not recursing further into that subtree).
+
+    Args:
+        conn: active Link connection.
+        path: absolute path to inspect.
+        stdout: output stream.
+
+    Returns:
+        True if at least one entry was printed.
+    """
+    # Base case: stop if this node already carries a codec.
+    try:
+        d = await conn.d_get(path)
+    except KeyError:
+        return False
+    if isinstance(d, dict) and "codec" in d:
+        print(f"{path} : {d['codec']}", file=stdout)
+        return True
+
+    # No codec at this level: walk one level deep and recurse into
+    # children that have no codec of their own.
+    seen = False
+    async with conn.d_walk(path, min_depth=1, max_depth=1) as mon:
+        async for p, child_d in mon:
+            seen = True
+            child_path = path + p
+            try:
+                print(f"{child_path} : {child_d['codec']}", file=stdout)
+            except (KeyError, TypeError):
+                print(f"{child_path}", file=stdout)
+                await _list_no_at(conn, child_path, stdout)
+    return seen
+
+
+async def _do_list(obj) -> None:
     """List all paths at and below ``obj.path`` with their codec."""
     seen = False
-    async with obj.conn.d_walk(obj.path) as mon:
-        async for p, d in mon:
-            seen = True
-            try:
-                print(f"{obj.path + p} : {d['codec']}", file=obj.stdout)
-            except (KeyError, TypeError):
-                print(f"{obj.path + p}", file=obj.stdout)
+    if obj.parent_path is None:
+        # No "at": recurse client-side, stopping at the first codec entry
+        # in each branch so deeply-nested overrides are not obscured.
+        seen = await _list_no_at(obj.conn, obj.path, obj.stdout)
+    else:
+        async with obj.conn.d_walk(obj.path) as mon:
+            async for p, d in mon:
+                seen = True
+                try:
+                    print(f"{obj.path + p} : {d['codec']}", file=obj.stdout)
+                except (KeyError, TypeError):
+                    print(f"{obj.path + p}", file=obj.stdout)
     if not seen and obj.debug:
         print("- no entries.", file=sys.stderr)
 
@@ -122,8 +168,6 @@ async def cli(ctx, path, meta):
         Link(cfg, common=True, only=getattr(obj, "link_name", None))
     )
     obj.meta = meta
-    if not len(path):
-        raise click.UsageError("PATH must not be empty.")
     obj.parent_path = None
     obj.path = _conv_prefix(obj) + path
     if ctx.invoked_subcommand is None:
@@ -142,6 +186,8 @@ async def get(obj):
 @click.pass_obj
 async def set_(obj, **kw):
     """Update the attributes of this conv entry."""
+    if not len(obj.parent_path):
+        raise click.UsageError("PATH must not be empty.")
     await _do_set(obj, kw)
 
 
@@ -160,6 +206,8 @@ async def add(obj, codec):
 @click.pass_obj
 async def delete(obj):
     """Delete this entry and its entire subtree."""
+    if not len(obj.parent_path):
+        raise click.UsageError("PATH must not be empty.")
     await _do_delete(obj, recursive=True)
 
 
@@ -186,8 +234,6 @@ async def at(ctx, path):
     by default (pass ``-r`` to remove the whole subtree).
     """
     obj = ctx.obj
-    if not len(path):
-        raise click.UsageError("Sub-PATH must not be empty.")
     obj.parent_path = obj.path
     obj.path = obj.path + path
     if ctx.invoked_subcommand is None:
@@ -206,6 +252,8 @@ async def at_get(obj):
 @click.pass_obj
 async def at_set(obj, **kw):
     """Update the attributes of this sub-entry."""
+    if obj.path == obj.parent_path:
+        raise click.UsageError("Sub-PATH must not be empty.")
     await _do_set(obj, kw)
 
 
@@ -218,6 +266,8 @@ async def at_add(obj, codec):
     Fails if the outer conv entry does not exist, or if this sub-entry
     already exists.
     """
+    if obj.path == obj.parent_path:
+        raise click.UsageError("Sub-PATH must not be empty.")
     await _do_add(obj, codec, require_parent=True)
 
 
@@ -230,6 +280,8 @@ async def at_delete(obj, recursive):
     By default, only the entry itself is removed; pass ``-r`` to drop
     everything below it as well.
     """
+    if obj.path == obj.parent_path:
+        raise click.UsageError("Sub-PATH must not be empty.")
     await _do_delete(obj, recursive=recursive)
 
 

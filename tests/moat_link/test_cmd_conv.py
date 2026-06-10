@@ -6,7 +6,7 @@ import pytest
 from io import StringIO
 
 from moat.util import attrdict
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.link._test import Scaffold
 from moat.link.cmd.conv import (
     _conv_prefix,
@@ -29,6 +29,7 @@ def _make_obj(client, *, meta: bool = False):
         meta=meta,
         debug=False,
         cfg=attrdict(link=attrdict(conv=attrdict(prefix=P("conv")))),
+        parent_path=None,
     )
 
 
@@ -115,6 +116,7 @@ async def test_conv_lifecycle(cfg):
         # list shows both entries
         obj5 = _make_obj(client)
         obj5.path = P("conv.A")
+        obj5.parent_path = Path()
         await _do_list(obj5)
         out = obj5.stdout.getvalue()
         assert "conv.A : changed.codec" in out
@@ -122,6 +124,7 @@ async def test_conv_lifecycle(cfg):
 
         # non-recursive delete on sub.x leaves siblings alone
         obj6 = _make_obj(client)
+        obj6.parent_path = P("conv.A")
         obj6.path = P("conv.A.sub.x")
         await _do_delete(obj6, recursive=False)
         await client.i_sync()

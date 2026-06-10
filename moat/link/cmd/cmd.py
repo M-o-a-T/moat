@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from moat.lib.rpc import MsgSender
 
 
-@click.command(short_help="Send a command")
+@click.command(short_help="Send a command to the MoaT-Link server.")
 @click.option("-S", "--stream", is_flag=True, help="Read a stream")
 @click.option("-R", "--raw", is_flag=True, help="Show raw message data")
 @click.option("-C", "--client", type=P, help="Connect to this client")

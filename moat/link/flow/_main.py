@@ -23,10 +23,10 @@ from typing import Any, cast
 @click.pass_context
 async def cli(ctx):
     """
-      Data flow monitoring.
+    Data flow monitoring.
 
     This command monitors selected data for large value deltas, schema violations,
-      and missing updates.
+    and missing updates.
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]

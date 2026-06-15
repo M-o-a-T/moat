@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from moat.util import CtxObj
+from moat.util import CtxObj, NotGiven
 from moat.lib.run import load_ext
 
 from typing import TYPE_CHECKING, Any
@@ -108,6 +108,10 @@ async def services(cfg: attrdict, tg: TaskGroup) -> AsyncIterator[list[Service]]
     svc: list[Service] = []
     async with AsyncExitStack() as stack:
         for sname, scfg in cfg.get("services", {}).items():
+            if not isinstance(scfg, dict):
+                if scfg in (None, False, NotGiven):
+                    continue
+                raise ValueError(f"MCP config for {sname!r} is {scfg!r} ??")
             cls = load_service(sname)
             service = cls(scfg, tg)
             await stack.enter_async_context(service)

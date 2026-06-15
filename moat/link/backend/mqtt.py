@@ -317,8 +317,8 @@ class _SubGet:
                             topic=top,
                             val=oprop,
                             msg=repr(exc),
-                            retain=False,
                         ),
+                        retain=False,
                     )
                     err = exc
                 else:

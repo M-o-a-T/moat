@@ -11,11 +11,6 @@ API
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: moat.mcp._server
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: moat.mcp._main
    :members:
    :undoc-members:

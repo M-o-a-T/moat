@@ -33,6 +33,7 @@ dependencies = [
     "ifaddr",
     "jmespath",
     "jsonschema",
+    "mcp",
     "netaddr",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
@@ -195,6 +196,8 @@ explicit-preview-rules = true
 "tests/moat_mqtt/**" = ["PT"]
 "tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
 "examples/**" = ["S108"]
+"moat/mcp/_server.py" = ["I002"]
+"moat/mcp/_tools.py" = ["I002"]
 "moat/micro/_test.py" = ["ASYNC240"]
 
 [tool.ruff.lint.flake8-comprehensions]
@@ -258,6 +261,7 @@ include = [
     "moat/db/thing/",
     "moat/lib/",
     "moat/link/",
+    "moat/mcp/",
     "moat/micro/",
     "moat/util/",
 ]
@@ -275,6 +279,8 @@ exclude = [
     "moat/micro/romfs.py",
     "moat/link/gate/kv.py",
     "moat/link/gate/venus.py",
+    "moat/mcp/_server.py",
+    "moat/mcp/_tools.py",
 ]
 
 [tool.ty.rules]

@@ -269,9 +269,56 @@ class LinkService(_Service):
 
     async def register(self, mcp: Any) -> None:
         """Register the link service's tools on ``mcp``."""
-        from ._tools import register_link  # noqa: PLC0415
+        backend = self.backend
+        p = self.tool_name
 
-        register_link(mcp, self)
+        @mcp.tool(
+            name=p("get_value"),
+            description="Read the value stored at a dotted MoaT-Link path.",
+        )
+        async def get_value(path: str) -> Any:
+            return await backend.value_get(path)
+
+        @mcp.tool(
+            name=p("set_value"),
+            description="Store a value at a dotted MoaT-Link path.",
+        )
+        async def set_value(path: str, value: Any) -> str:
+            await backend.value_set(path, value)
+            return "ok"
+
+        @mcp.tool(
+            name=p("watch_start"),
+            description=(
+                "Start watching a dotted MoaT-Link path for changes. "
+                "Returns a numeric watch ID used to poll and stop the watch. "
+                "Set 'subtree' to also report changes below the path."
+            ),
+        )
+        async def watch_start(path: str, subtree: bool = False) -> int:
+            return await backend.watch_start(path, subtree)
+
+        @mcp.tool(
+            name=p("watch_get"),
+            description=(
+                "Retrieve pending changes for a watch. When given, wait up to "
+                "'timeout' seconds for the first change; returns an empty list "
+                "if none arrive. 'max_items' limits the number returned (0 = no "
+                "limit)."
+            ),
+        )
+        async def watch_get(
+            watch_id: int, max_items: int = 0, timeout: float | None = None
+        ) -> list[dict[str, Any]]:
+            return await backend.watch_get(watch_id, max_items, timeout)
+
+        @mcp.tool(
+            name=p("watch_stop"),
+            description="Stop a watch and release its resources.",
+        )
+        async def watch_stop(watch_id: int) -> str:
+            await backend.watch_stop(watch_id)
+            return "ok"
 
 
 #: The service class, as looked up by :func:`moat.mcp.load_service`.

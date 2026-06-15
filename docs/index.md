@@ -113,6 +113,13 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+### [MCP Server](moat-mcp/index.md)
+
+```{include} ../packaging/moat-mcp/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### [Modbus](moat-modbus/index.md)
 
 ```{include} ../packaging/moat-modbus/README.md
@@ -478,6 +485,7 @@ moat-link/index
 moat-lib
 moat-micro/index
 moat/index
+moat-mcp/index
 moat-modbus/index
 moat-dev/index
 moat-bus/index

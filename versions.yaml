@@ -422,6 +422,8 @@ moat-link-server:
   pypi: 0.6.1
   rev: 90bc38231158712b46bba7673520f864984656ff
   tag: 0.6.1
+moat-mcp:
+  new: 0.2.0
 moat-micro:
   deb: 0.22.0-2
   new: 0.22.0

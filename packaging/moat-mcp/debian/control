@@ -1,0 +1,24 @@
+Source: moat-mcp
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/moat
+X-DH-Compat: 13
+
+Package: moat-mcp
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-util,
+  moat,
+  python3-mcp,
+Recommends:
+  python3-trio (>= 0.22),
+  moat-link,
+Description: MCP server for MoaT
+ This package provides a stdio MCP (Model Context Protocol) server that
+ exposes MoaT subsystems to MCP clients. Each subsystem is implemented as a
+ service in a moat.mcp.<name> submodule.

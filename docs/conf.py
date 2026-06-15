@@ -307,6 +307,8 @@ nitpick_ignore = [
     ("py:class", "asyncakumuli.model.DS"),
     ("py:obj", "moat.util.ctx.T_Ctx"),
     ("py:obj", "moat.util.queue.T"),
+    ("py:class", "mcp.server.fastmcp.FastMCP"),
+    ("py:class", "mcp.server.fastmcp.server.FastMCP"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),

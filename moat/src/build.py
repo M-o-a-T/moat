@@ -327,10 +327,10 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                         file=sys.stderr,
                     )
             else:
-                if debug:
-                    print(f"\n=== Failure packaging {r.name}", file=sys.stderr)
-                else:
-                    print(f"Failure packaging {r.name}: {exc.stderr.strip()}", file=sys.stderr)
+                err = exc.stderr or "?"
+                print(f"Failure packaging {r.name}: {err.strip()}", file=sys.stderr)
+                if not debug and not exc.stderr:
+                    raise
                 no.commit = True
                 no.deb = True
                 no.pypi = True

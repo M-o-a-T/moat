@@ -201,7 +201,8 @@ async def EventSetter(evt):
 
 Stream = anyio.abc.ByteStream
 
-ClosedResourceError = anyio.ClosedResourceError
+StreamDied = (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream)
+StreamEnd = (EOFError,) + StreamDied
 
 _client_nr = 0
 
@@ -2125,7 +2126,7 @@ class Server(MsgHandler):
                     self._server_link_add = anyio.Event()
                     await anyio.sleep_forever()
 
-            except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
+            except* StreamEnd:
                 self.logger.warning("Link to %s closed", name)
 
             except* OSError:
@@ -2542,7 +2543,7 @@ class Server(MsgHandler):
                 if self._clients.get(c.name, None) is c:
                     del self._clients[c.name]
 
-        except (ClosedResourceError, anyio.EndOfStream):
+        except StreamDied:
             self.logger.debug("Client C_%s closed", cnr)
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
@@ -2554,7 +2555,7 @@ class Server(MsgHandler):
                 exc = ex[0]
 
             if exc is not None and not isinstance(exc, CancelExc):
-                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
+                if isinstance(exc, StreamDied):
                     self.logger.debug("Client C_%s closed", cnr)
                 elif isinstance(exc, TimeoutError):
                     self.logger.warning("Client C_%s timed out", cnr)

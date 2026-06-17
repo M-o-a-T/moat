@@ -1044,7 +1044,12 @@ class LinkSender(MsgSender):
 
             tree = await self._link.tg.start(
                 partial(
-                    self._get_tree, P("codec"), subtree=True, state=None, meta=False, cls=CodecNode
+                    self._get_tree,
+                    P("codec"),
+                    subtree=True,
+                    state=None,
+                    meta=False,
+                    node_cls=CodecNode,
                 )
             )
             self._codec_tree = tree
@@ -1548,14 +1553,14 @@ class Watcher(CtxObj, Generic[_NodeType]):
 
     link: LinkSender = field()
     path: Path = field()
-    meta: bool = field()
-    subtree: bool = field()
-    state: bool | None | NotGivenType = field()
-    age: float | None = field()
-    mark: bool = field()
-    node_cls: type[_NodeType] = field()
-    min_length: int | None = field()
-    max_length: int | None = field()
+    meta: bool = field(default=False)
+    subtree: bool = field(default=False)
+    state: bool | None | NotGivenType = field(default=None)
+    age: float | None = field(default=None)
+    mark: bool = field(default=False)
+    node_cls: type[_NodeType] = field(default=Node)  # ty:ignore[invalid-assignment]
+    min_length: int | None = field(default=None)
+    max_length: int | None = field(default=None)
 
     nodes: _NodeType = field(init=False)
 

@@ -5,6 +5,7 @@ MoaT gateway
 from __future__ import annotations
 
 import anyio
+from contextlib import AsyncExitStack
 
 from moat.util import NotGiven, gen_ident
 from moat.lib.path import P, Path
@@ -105,19 +106,22 @@ class Gate(_Gate):
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Main loop. Overridden to fetch the codecs"
-        if isinstance(self.cf.codec, Path):
-            # The watcher must live within self.tg's scope (Trio's strict
-            # LIFO nursery rule): use a local context here.
-            # TODO: The codec-vector node therefore doesn't receive live
-            # updates after run_() returns; fix this properly once the
-            # Watcher API grows a task-group-free update path.
-            async with self.link.d_watch(
-                P("conv") + self.cf.codec, subtree=True, state=None, meta=False
-            ) as cdv:
+        async with AsyncExitStack() as ts:
+            if isinstance(self.cf.codec, Path):
+                # The watcher must live within self.tg's scope (Trio's strict
+                # LIFO nursery rule): use a local context here.
+                # TODO: The codec-vector node therefore doesn't receive live
+                # updates after run_() returns; fix this properly once the
+                # Watcher API grows a task-group-free update path.
+                cdv = await ts.enter_async_context(
+                    self.link.d_watch(
+                        P("conv") + self.cf.codec, subtree=True, state=None, meta=False
+                    )
+                )
                 self.codec_vecs = await cdv.get_node()
-            self.codecs = await self.link.get_codec_tree()
+                self.codecs = await self.link.get_codec_tree()
 
-        await super().run_(task_status=task_status)
+            await super().run_(task_status=task_status)
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "fetch destination"
@@ -126,7 +130,7 @@ class Gate(_Gate):
             codec = "noop"
 
             def conv(p, d):
-                # two step
+                # two steps:
                 # (a) look up the codec type in the vector
                 try:
                     vd = self.codec_vecs.search(p)

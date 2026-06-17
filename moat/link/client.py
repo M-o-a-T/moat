@@ -1021,18 +1021,10 @@ class LinkSender(MsgSender):
         return st
 
     async def _get_tree(self, path, *, task_status, **kw):
-        async with Watcher(
-            self,
-            path,
-            bool(kw.get("meta", False)),
-            bool(kw.get("subtree", False)),
-            kw.get("state", None),
-            kw.get("age", None),
-            bool(kw.get("mark", False)),
-            kw.get("cls", Node),
-            kw.get("min_length", None),
-            kw.get("max_length", None),
-        ) as w:
+        """
+        Helper task to monitor a (sub)tree
+        """
+        async with Watcher(self, path, **kw) as w:
             task_status.started(await w.get_node())
             await anyio.sleep_forever()
 

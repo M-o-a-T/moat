@@ -101,12 +101,12 @@ def alembic_cfg(gcfg, sess):
     from alembic.config import Config  # noqa: PLC0415
     from moat import db  # noqa: PLC0415
 
-    cfg = gcfg.db
+    cfg = gcfg.moat.db
 
     c = Config()
     c.file_config = RawConfigParser()
     c.set_section_option("alembic", "script_location", str(Path(db.__path__[0]) / "alembic"))
-    c.set_section_option("alembic", "timezone", gcfg.env.timezone)
+    # c.set_section_option("alembic", "timezone", gcfg.env.timezone)
     c.set_section_option("alembic", "file_template", "%(rev)s")
     c.set_section_option("alembic", "version_path_separator", "os")
 

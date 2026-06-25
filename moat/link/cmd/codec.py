@@ -75,7 +75,7 @@ async def list_(obj, path):
     async with obj.conn.d_walk(full) as mon:
         async for p, _d in mon:
             seen = True
-            print(" ".join(str(x) for x in p), file=obj.stdout)
+            print(path + p, file=obj.stdout)
     if not seen and obj.debug:
         print("- no codec entries.", file=sys.stderr)
 

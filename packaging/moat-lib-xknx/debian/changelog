@@ -1,3 +1,9 @@
+moat-lib-xknx (3.15.1-6) unstable; urgency=medium
+
+  * New release for 26.2.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Jun 2026 16:09:34 +0200
+
 moat-lib-xknx (3.15.1-5) unstable; urgency=medium
 
   * New release for 26.2.4

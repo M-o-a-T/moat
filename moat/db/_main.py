@@ -13,6 +13,7 @@ import asyncclick as click
 from alembic import command
 
 from moat.lib.run import load_subgroup
+from moat.lib.config import CFG
 
 from .util import alembic_cfg, database, load
 
@@ -38,7 +39,7 @@ def init_(obj):
     with database(cfg) as sess, sess.begin():
         meta.create_all(sess.bind)
 
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
         command.stamp(acfg, "head")
 
 
@@ -67,8 +68,8 @@ def get(obj, args):
         # TODO
 
 
-@cli.group
-def migrate():
+@cli.group(name="migrate")
+def mig():
     """\
     Database migration commands. Development only!
     """
@@ -83,7 +84,7 @@ def update(obj):
     cfg = obj.cfg.db
 
     with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         command.upgrade(acfg, "head")
 
@@ -101,7 +102,7 @@ def mig_init(obj):
 
     load(cfg)
     with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
         command.stamp(acfg, "head")
 
 
@@ -119,7 +120,7 @@ def mig_rev(obj, message):
 
     load(cfg)
     with database(cfg) as sess:
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         try:
             command.check(acfg)
@@ -139,7 +140,7 @@ def mig_check(obj):
 
     load(cfg)
     with database(cfg) as sess:
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         try:
             command.check(acfg)
@@ -159,7 +160,7 @@ def to(obj, revision):
 
     load(cfg)
     with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         # Up+downgrade are no-ops when used in the "wrong" direction
         # thus it's safe to just run both
@@ -177,7 +178,7 @@ def history(obj):
 
     load(cfg)
     with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         command.history(acfg, verbose=True)
 
@@ -192,6 +193,6 @@ def show(obj):
 
     load(cfg)
     with database(cfg) as sess, sess.begin():
-        acfg = alembic_cfg(obj.cfg, sess)
+        acfg = alembic_cfg(CFG, sess)
 
         command.show(acfg, "current")

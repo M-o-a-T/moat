@@ -109,34 +109,31 @@ async def run_out(
                     await link.d_set(state, val)
     elif mode == "oneshot":
         t_on = entry.t_on
-        _work: anyio.CancelScope | None = None
-        _work_done: anyio.Event | None = None
-
-        async def _cancel_work() -> None:
-            nonlocal _work, _work_done
-            if _work is not None:
-                _work.cancel()
-                if _work_done is not None:
-                    await _work_done.wait()
-                _work = None
-                _work_done = None
+        worker: anyio.CancelScope | None = None
+        worker_done: anyio.Event | None = None
 
         async def _do_oneshot(val: bool) -> None:
-            nonlocal _work, _work_done
+            nonlocal worker, worker_done
+            if worker is not None:
+                worker.cancel()
+                if worker_done is not None:
+                    await worker_done.wait()
+                worker = None
+                worker_done = None
+
             if val:
-                await _cancel_work()
                 done_evt = anyio.Event()
-                _work_done = done_evt
+                worker_done = done_evt
                 with anyio.CancelScope() as sc:
-                    _work = sc
+                    worker = sc
                     async with srv.write_timed_output(card, port, not rest, t_on) as work:
                         if state is not None:
                             await link.d_set(state, True)
                         await work.wait()
-                if _work is sc:
-                    _work = None
-                    if _work_done is done_evt:
-                        _work_done = None
+                if worker is sc:
+                    worker = None
+                    if worker_done is done_evt:
+                        worker_done = None
                     done_evt.set()
                 with anyio.fail_after(2, shield=True):
                     if state is not None:
@@ -147,41 +144,40 @@ async def run_out(
                         else:
                             await link.d_set(state, v != rest)
             else:
-                await _cancel_work()
                 await srv.write_output(card, port, rest)
                 if state is not None:
                     await link.d_set(state, False)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
-            async for raw in wp:
-                if raw is NotGiven:
+            async for val in wp:
+                if not isinstance(val, bool):
                     continue
-                await _do_oneshot(bool(raw))
+                link.link.tg.start_soon(_do_oneshot, val)
 
     elif mode == "pulse":
         t_on = entry.t_on
         t_off = entry.t_off
-        _work: anyio.CancelScope | None = None
-        _work_done: anyio.Event | None = None
+        worker: anyio.CancelScope | None = None
+        worker_done: anyio.Event | None = None
 
         async def _cancel_pulse() -> None:
-            nonlocal _work, _work_done
-            if _work is not None:
-                _work.cancel()
-                if _work_done is not None:
-                    await _work_done.wait()
-                _work = None
-                _work_done = None
+            nonlocal worker, worker_done
+            if worker is not None:
+                worker.cancel()
+                if worker_done is not None:
+                    await worker_done.wait()
+                worker = None
+                worker_done = None
 
         async def _do_pulse(val: bool) -> None:
-            nonlocal _work, _work_done
+            nonlocal worker, worker_done
             if val:
                 await _cancel_pulse()
                 done_evt = anyio.Event()
-                _work_done = done_evt
+                worker_done = done_evt
                 try:
                     with anyio.CancelScope() as sc:
-                        _work = sc
+                        worker = sc
                         if t_on is None or t_off is None:
                             raise RuntimeError("t_on or t_off is None")
                         async with srv.write_pulsed_output(
@@ -191,10 +187,10 @@ async def run_out(
                                 await link.d_set(state, t_on / (t_on + t_off))
                             await work.wait()
                 finally:
-                    if _work is sc:
-                        _work = None
-                        if _work_done is done_evt:
-                            _work_done = None
+                    if worker is sc:
+                        worker = None
+                        if worker_done is done_evt:
+                            worker_done = None
                         done_evt.set()
                     with anyio.fail_after(2, shield=True):
                         if state is not None:

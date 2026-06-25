@@ -207,10 +207,10 @@ async def run_out(
                     await link.d_set(state, False)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
-            async for raw in wp:
-                if raw is NotGiven:
+            async for val in wp:
+                if not isinstance(val, bool):
                     continue
-                await _do_pulse(bool(raw))
+                link.link.tg.start_soon(_do_pulse, val)
 
     else:
         logger.warning("Unknown output mode %r at %s", mode, subpath)

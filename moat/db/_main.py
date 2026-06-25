@@ -68,7 +68,7 @@ def get(obj, args):
 
 
 @cli.group
-def mig():
+def migrate():
     """\
     Database migration commands. Development only!
     """

@@ -88,11 +88,13 @@ def database(cfg: attrdict) -> Session:
     """Start a database session."""
 
     load(cfg)
-
-    with Session() as conn:
-        sess = Mgr(conn)
-        with ctx_as(session, sess):
-            yield sess
+    try:
+        with Session() as conn:
+            sess = Mgr(conn)
+            with ctx_as(session, sess):
+                yield sess
+    except Exception as exc:
+        raise RuntimeError(f"{exc} (database: {getattr(cfg, 'url', '?')})") from exc
 
 
 def alembic_cfg(gcfg, sess):

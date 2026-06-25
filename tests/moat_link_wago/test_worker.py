@@ -96,7 +96,7 @@ async def test_out_write_with_state(monkeypatch, autojump_clock):  # noqa:ARG001
             entry,
             1,
             3,
-            P("input.1.3"),
+            P("input:1:3"),
         )
         await anyio.sleep(0.2)
         tg.cancel_scope.cancel()
@@ -117,6 +117,7 @@ async def test_out_oneshot(monkeypatch, autojump_clock):  # noqa:ARG001
     srv.read_output = AsyncMock(return_value=False)
 
     async with anyio.create_task_group() as tg:
+        link.link.tg = tg
         tg.start_soon(
             wago_worker.run_out,
             link,
@@ -124,7 +125,7 @@ async def test_out_oneshot(monkeypatch, autojump_clock):  # noqa:ARG001
             entry,
             1,
             3,
-            P("input.1.3"),
+            P("input:1:3"),
         )
         await anyio.sleep(0.2)
         tg.cancel_scope.cancel()

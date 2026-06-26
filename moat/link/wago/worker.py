@@ -13,7 +13,7 @@ import logging
 
 from moat.util import NotGiven
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from moat.lib.path import Path
@@ -112,7 +112,7 @@ async def run_out(
         worker: anyio.CancelScope | None = None
         worker_done: anyio.Event | None = None
 
-        async def _do_oneshot(val: bool) -> None:
+        async def _cancel_oneshot() -> None:
             nonlocal worker, worker_done
             if worker is not None:
                 worker.cancel()
@@ -121,19 +121,20 @@ async def run_out(
                 worker = None
                 worker_done = None
 
-            if val:
-                logger.error(f"{subpath} on 1")
-
-                done_evt = anyio.Event()
-                worker_done = done_evt
+        async def _run_oneshot(work) -> None:
+            nonlocal worker, worker_done
+            done_evt = anyio.Event()
+            worker_done = done_evt
+            try:
                 with anyio.CancelScope() as sc:
                     worker = sc
                     logger.error(f"{subpath} on 3")
-                    async with srv.write_timed_output(card, port, not rest, t_on) as work:
+                    async with work:
                         if state is not None:
                             await link.d_set(state, True)
                         await work.wait()
                     logger.error(f"{subpath} on 5")
+            finally:
                 if worker is sc:
                     logger.error(f"{subpath} onx 6")
                     worker = None
@@ -151,12 +152,22 @@ async def run_out(
                             await link.d_set(state, v != rest)
                         logger.error(f"{subpath} onx 8")
                 logger.error(f"{subpath} on 9")
+
+        async def _do_oneshot(val: bool) -> None:
+            await _cancel_oneshot()
+            if val:
+                logger.error(f"{subpath} on 1")
+                await _run_oneshot(srv.write_timed_output(card, port, not rest, t_on))
             else:
                 logger.error(f"{subpath} off 1")
                 await srv.write_output(card, port, rest)
                 if state is not None:
                     await link.d_set(state, False)
                 logger.error(f"{subpath} off 9")
+
+        mon = await srv.find_monitor(card, port)
+        if mon is not None:
+            link.link.tg.start_soon(_run_oneshot, mon)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
             async for val in wp:
@@ -166,8 +177,8 @@ async def run_out(
                 link.link.tg.start_soon(_do_oneshot, val)
 
     elif mode == "pulse":
-        t_on = entry.t_on
-        t_off = entry.t_off
+        t_on = cast(float, entry.t_on)
+        t_off = cast(float, entry.t_off)
         worker: anyio.CancelScope | None = None
         worker_done: anyio.Event | None = None
 
@@ -180,42 +191,46 @@ async def run_out(
                 worker = None
                 worker_done = None
 
-        async def _do_pulse(val: bool) -> None:
+        async def _run_pulse(work) -> None:
             nonlocal worker, worker_done
-            if val:
-                await _cancel_pulse()
-                done_evt = anyio.Event()
-                worker_done = done_evt
-                try:
-                    with anyio.CancelScope() as sc:
-                        worker = sc
-                        if t_on is None or t_off is None:
-                            raise RuntimeError("t_on or t_off is None")
-                        async with srv.write_pulsed_output(
-                            card, port, not rest, t_on, t_off
-                        ) as work:
-                            if state is not None:
-                                await link.d_set(state, t_on / (t_on + t_off))
-                            await work.wait()
-                finally:
-                    if worker is sc:
-                        worker = None
-                        if worker_done is done_evt:
-                            worker_done = None
-                        done_evt.set()
-                    with anyio.fail_after(2, shield=True):
+            done_evt = anyio.Event()
+            worker_done = done_evt
+            try:
+                with anyio.CancelScope() as sc:
+                    worker = sc
+                    async with work:
                         if state is not None:
-                            try:
-                                v = await srv.read_output(card, port)
-                            except anyio.ClosedResourceError:
-                                pass
-                            else:
-                                await link.d_set(state, v != rest)
+                            await link.d_set(state, t_on / (t_on + t_off))
+                        await work.wait()
+            finally:
+                if worker is sc:
+                    worker = None
+                    if worker_done is done_evt:
+                        worker_done = None
+                    done_evt.set()
+                with anyio.fail_after(2, shield=True):
+                    if state is not None:
+                        try:
+                            v = await srv.read_output(card, port)
+                        except anyio.ClosedResourceError:
+                            pass
+                        else:
+                            await link.d_set(state, v != rest)
+
+        async def _do_pulse(val: bool) -> None:
+            await _cancel_pulse()
+            if val:
+                if t_on is None or t_off is None:
+                    raise RuntimeError("t_on or t_off is None")
+                await _run_pulse(srv.write_pulsed_output(card, port, not rest, t_on, t_off))
             else:
-                await _cancel_pulse()
                 await srv.write_output(card, port, rest)
                 if state is not None:
                     await link.d_set(state, False)
+
+        mon = await srv.find_monitor(card, port)
+        if mon is not None:
+            link.link.tg.start_soon(_run_pulse, mon)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
             async for val in wp:

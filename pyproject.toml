@@ -246,6 +246,7 @@ python-version = "3.11"
 include = [
     "moat/db/__init__.py",
     "moat/db/box/",
+    "moat/db/inv/",
     "moat/db/label/",
     "moat/db/thing/",
     "moat/lib/",

@@ -1,9 +1,17 @@
 # Work: Repair `moat.ems.sched` and add a real test
 
-Tracking note: this file documents the work tracked by Beads issue
-**moat-emssched-break** (the main bug). A second issue,
-**moat-emssched-test**, depends on (is blocked by) it and references
-this document.
+Issue graph (Beads):
+
+- **moat-swd** (P1, blocks the others) — `ty` pre-commit gate is red
+  (34 pre-existing errors in already-included `moat/lib`,`moat/link`,
+  `moat/micro`,`moat/util`) and `moat/ems` is excluded from
+  `[tool.ty.src].include`. Must be settled before the sched fix or
+  its test can land through pre-commit.
+- **moat-iov** (P2, blocked by moat-swd) — the scheduler is broken;
+  this is the main bug this document plans.
+- **moat-1nk** (P2, blocked by moat-iov **and** moat-swd) — convert
+  `examples/moat-ems-sched/test.py` into a real pytest suite; the
+  test asserts the `propose()` return contract restored by moat-iov.
 
 ## Background
 
@@ -57,6 +65,34 @@ re-defining `Loader` in `_main.py`; import the canonical one from
 
 These aren't on the example's hot path but blow up `--all` with
 cbor/msgpack/json. Cheap to fix while here.
+
+## ty dependency (see moat-swd)
+
+`ty check` is **already red on the pristine tree** (34 errors, all in
+already-included modules outside `moat/ems`). Adding
+`"moat/ems/sched/"` to `[tool.ty.src].include` surfaces 54 more in
+the sched subtree, in three buckets:
+
+- **(A) trivially fixable in moat-iov** — `file.py`
+  `StdCBOR/StdMsgpack.encode` as bare class attrs (→ `Codec().encode`);
+  undefined `res` in the `results()` json branch; `control.py` L41
+  `list[int, int]` → `list[tuple[int, int]]`.
+- **(B) structural typing work** — `Model.__init__` types `cfg: dict`,
+  so every `cfg.battery/.inverter/.grid/.steps/.mode` is
+  `unresolved-attribute` (~40 of 54); needs a typed sched-config
+  schema. ortools has no stubs → `solver`/`objective`/`constr_init`
+  attrs on `None|Unknown`. `zip` over Optional lists (partly resolved
+  by the `propose()` rewrite).
+- **(C) environmental, not logic bugs** — `asks` not installed in
+  `.venv` (`awattar`/`fore_solar` `unresolved-import`; the `file`/
+  `file2` modes the test uses don't need it); `datetime.UTC` flagged
+  (exists at runtime on 3.11+); `cfg.solar.array` typed `None`.
+
+Resolution path for moat-swd is decided upstream (fix the 34
+baseline errors / introduce a ty error budget / scope excludes).
+Regardless, moat-iov will fix bucket (A) and as much of (B) as is
+in scope for the touched files; bucket (C)'s `asks` gap is noted but
+not expanded here.
 
 ## Plan
 

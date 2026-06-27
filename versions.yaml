@@ -1,5 +1,5 @@
 _:
-  new: 26.2.6
+  new: 26.2.7
 moat:
   deb: 0.12.2-7
   new: 0.12.2
@@ -340,9 +340,9 @@ moat-lib-stream:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.3.2
 moat-lib-xknx:
-  deb: 3.15.1-7
+  deb: 3.15.1-8
   new: 3.15.1
-  pkg: 7
+  pkg: 8
   pkgrev: 2fb87a587f285b25b90fdf61771f0bdac7c80dd1
   pypi: 3.15.0
   rev: 43d36f1b36ce7fef0933915a67e26532e8aab691
@@ -428,12 +428,12 @@ moat-link-server:
   rev: 864c5745af0f7aabdd253ab90216f69dbd06cdc7
   tag: 0.6.2
 moat-link-wago:
-  deb: 0.9.2-1
-  new: 0.9.2
+  deb: 0.10.0-1
+  new: 0.10.0
   pkg: 1
-  pypi: 0.9.2
-  rev: 7930928de5e744d0840a227b9e3efe5693fd8cca
-  tag: 0.9.2
+  pypi: 0.10.0
+  rev: 12f17471592089a4fef4a7f9fc0de367493900c4
+  tag: 0.10.0
 moat-mcp:
   deb: 0.2.0-2
   new: 0.2.0

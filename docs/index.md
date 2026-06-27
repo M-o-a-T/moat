@@ -174,6 +174,13 @@ things is TODO.
 :end-before: % end synopsis
 ```
 
+#### [Irrigation](moat-db-rain/index.md)
+
+```{include} ../packaging/moat-db-rain/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 ### [Energy Management](moat-ems/index.md)
 
 ```{include} ../packaging/moat-ems/README.md

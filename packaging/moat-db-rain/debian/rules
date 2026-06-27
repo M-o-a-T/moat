@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=moat-db-rain
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+debian/moat-db-rain@.service: moat-db-rain@.service
+	cp $< $@
+
+override_dh_auto_install: debian/moat-db-rain@.service
+	dh_auto_install

@@ -1,0 +1,17 @@
+[Unit]
+Description=MoaT irrigation monitor for %i
+After=moat-link.service
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat db rain %i monitor
+EnvironmentFile=/usr/lib/moat/link/env
+EnvironmentFile=-/etc/moat/rain.env
+TimeoutSec=300
+WatchdogSec=10
+Restart=always
+RestartSec=30

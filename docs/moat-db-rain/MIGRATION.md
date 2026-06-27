@@ -152,14 +152,17 @@ The three existing submodules are the template. Key conventions:
   `dd1007d00e262b5c`. `moat db migrate rev` autogenerates off the live
   metadata; `moat db init` stamps `head`; `moat db migrate update` upgrades.
 - **CLI loading** (`moat.lib.run.Loader`): `moat db` is a `Loader` with
-  `prefix="moat.db"` and default `sub_post="cli"`, so its
-  `list_commands` scans the `moat.db.*` namespace and loads
-  `moat.db.<name>.cli` (the `cli` attribute on the subpackage). To make
-  rain appear as **`moat db rain`**, `moat/db/rain/__init__.py` must
-  re-export the group: `from ._main import cli`. (Existing
-  `box`/`thing`/`label` deliberately do *not* export `cli` from
-  `__init__`, which is why they are top-level `moat box` etc. and not
-  `moat db box`.) Confirm with a `moat db --help` smoke test in Phase 1.
+  `prefix="moat.db"` (so `ext_pre="moat.db"`, `ext_post="_main.cli"`).
+  Its `list_commands` resolves each subcommand via
+  `load_ext("moat.db","<name>","_main","cli")`, i.e.
+  `moat.db.<name>._main.cli` — **not** the `cli` attribute on the
+  subpackage. Thus rain is discovered as `moat.db.rain._main.cli`,
+  exactly like `box`/`thing`/`label`; `moat/db/rain/__init__.py` must
+  **not** export `cli` (it is docstring + `CfgStore.with_(__name__)`
+  only), otherwise `moat db --help` lists `rain` twice (the `sub_pre`
+  scan would also find `moat.db.rain.cli`). (`box`/`thing`/`label` are
+  additionally reachable as top-level `moat box` etc.; rain is
+  `moat db rain` only.) Confirmed by the Phase-1 smoke test.
 - **CLI body** (thin group + `cmds/`, cf. `moat.link._main` /
   `moat.link.cmd`): `_main.py` defines only the top-level `cli` group
   via `@load_subgroup(sub_pre="moat.db.rain.cmds", sub_post="cli",
@@ -284,7 +287,8 @@ as a follow-up, §11.)
 ```
 moat/db/rain/
 ├── __init__.py        # "MoaT irrigation database module."
-│                      #   CfgStore.with_(__name__);  from ._main import cli   ← makes `moat db rain` resolve
+│                      #   CfgStore.with_(__name__) only; NO `cli` export — discovery is via
+│                      #   `moat.db.rain._main.cli` (ext_pre), cf. box/label/thing
 ├── model.py           # SQLAlchemy declarations (all rain_* tables/classes)
 ├── model_.py          # cross-table relationships + apply()/dump() monkeypatches
 ├── range.py           # interval algebra: range_union/intersection/invert/coalesce, StoredIter, RangeMixin  (§7.1)
@@ -320,16 +324,16 @@ packaging/moat-db-rain/
 │                      #   moat-link ~=0.2, asyncclick, moat-util, anyio
 ├── README.md          # % start synopsis / % start main markers
 ├── LICENSE.txt        # copied from packaging/moat-db-box/LICENSE.txt
+├── moat-db-rain@.service  # systemd template (packaging root); `rules` copies it into debian/
 ├── debian/            # Debian packaging (§9)
 │   ├── control
-│   ├── rules
+│   ├── rules          # `override_dh_auto_install` copies the .service into debian/
 │   ├── changelog
 │   ├── source/format
 │   ├── py3dist-overrides
-│   ├── moat-db-rain@.service     # systemd template for the monitor daemon
-│   ├── moat-db-rain.install      # ships the .service to /lib/systemd/system/
-│   └── .gitignore
-│                      # (src/ auto-populated, git-ignored)
+│   └── .gitignore     # ignores the built copy: /*.service, /moat-db-rain, …
+│                      # (src/ auto-populated, git-ignored; no .install — dh_installsystemd
+│                      #  auto-ships the .service, cf. moat-kv-akumuli)
 
 docs/moat-db-rain/
 ├── index.md           # mirrors docs/moat-db-box/index.md; includes README main block
@@ -630,8 +634,9 @@ Files under `packaging/moat-db-rain/debian/`:
   ```
   (mirrors `moat-kv-akumuli@.service`, with `ExecStart=/usr/bin/moat db
   rain %i monitor`).
-- **`moat-db-rain.install`** — `debian/moat-db-rain@.service
-  /lib/systemd/system/` (built copy target, cf. akumuli `rules`).
+- **No `.install` file** — `dh_installsystemd` auto-discovers and ships the
+  `.service` (copied into `debian/` by `rules`) to `/lib/systemd/system/`,
+  cf. `moat-kv-akumuli` (which has no `.install`).
 - **`.gitignore`** — ignore built artifacts: `/files`, `/*.log`,
   `/*.debhelper`, `/*.debhelper-build-stamp`, `/*.substvars`,
   `/debhelper-build-stamp`, `/moat-db-rain`, `/moat-db-rain@.service`.
@@ -664,8 +669,9 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    invoke_without_command=True)` + `@click.argument("site")` (the wago
    "site-before-verb" pattern), opens `database(cfg)`+`begin()`, sets
    `obj.session`+`obj.site_name`, and adds the hidden
-   `@cli.command("--help")` workaround. Wire `CfgStore.with_`, `from
-   ._main import cli` in `__init__.py`, append to `moat/db/_cfg.yaml`
+   `@cli.command("--help")` workaround. Wire `CfgStore.with_` in
+   `__init__.py` (no `cli` export — discovery is via `ext_pre` →
+   `_main.cli`, cf. box/label/thing), append to `moat/db/_cfg.yaml`
    schemas, add ty include, hook docs toctrees. Smoke-test all three
    layers: `moat db --help` lists `rain`; `moat db rain --help` lists
    the stub subcommand from `cmds/`; `moat db rain <stub-site>
@@ -735,11 +741,13 @@ File these as separate issues (do **not** implement in this refactor):
 
 ### To confirm during implementation (not blocking the plan)
 
-- **`moat db rain` registration (two-layer, confirmed by inspection)**:
-  (1) `moat db` is a `Loader(prefix="moat.db")` whose `list_commands`
-  resolves subcommands via `load_ext("moat.db","<name>","cli")`, so
-  `moat/db/rain/__init__.py` must `from ._main import cli` for `rain` to
-  appear in `moat db --help`. (2) `moat db rain`'s own group uses
+- **`moat db rain` registration (two-layer, confirmed by inspection +
+  smoke test)**: (1) `moat db` is a `Loader(prefix="moat.db")` (so
+  `ext_pre="moat.db"`, `ext_post="_main.cli"`) whose `list_commands`
+  resolves `moat.db.<name>._main.cli` — rain is found as
+  `moat.db.rain._main.cli`, like `box`/`thing`/`label`; `__init__.py`
+  must **not** export `cli` (else `moat db --help` lists `rain` twice).
+  (2) `moat db rain`'s own group uses
   `@load_subgroup(sub_pre="moat.db.rain.cmds", sub_post="cli", …)`, so
   its `list_commands` resolves `moat.db.rain.cmds.<name>.cli` — each
   `cmds/<entity>.py` exports `cli`. No `moat.rain` top-level module is

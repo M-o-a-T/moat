@@ -258,6 +258,7 @@ include = [
     "moat/db/box/",
     "moat/db/label/",
     "moat/db/thing/",
+    "moat/db/rain/",
     "moat/lib/",
     "moat/link/",
     "moat/mcp/",

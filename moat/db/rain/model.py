@@ -16,7 +16,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
+from moat.util import NotGiven
 from moat.db.schema import Base
+from moat.db.util import session
 from moat.lib.path import Path
 from moat.util.times import now
 
@@ -198,6 +200,25 @@ class EnvGroup(Base):
         "Valve", back_populates="envgroup", passive_deletes=True
     )
 
+    def apply(self, site=NotGiven, **kw) -> None:
+        """Apply mutable env-group properties.
+
+        Args:
+            site: Name of the :class:`Site` this group belongs to. Required
+                for a new group; cannot be cleared.
+            **kw: Scalar columns (``name``, ``comment``, ``factor``, ``rain``)
+                forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Env groups need a site")
+                self.site = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New env groups need a site")
+
 
 class EnvItem(Base):
     """One data point in an :class:`EnvGroup`."""
@@ -235,6 +256,42 @@ class Sensor(Base):
 
     site: Mapped[Site] = relationship("Site", back_populates="sensors")
 
+    def apply(self, site=NotGiven, kind=NotGiven, state=NotGiven, **kw) -> None:
+        """Apply mutable sensor properties.
+
+        Args:
+            site: Name of the :class:`Site` to attach the sensor to.
+                Required for new sensors; cannot be cleared.
+            kind: One of ``rain`` / ``temp`` / ``wind`` / ``sun``. Immutable
+                once set.
+            state: The sensor's read/subscribe path as a dotted string;
+                parsed with :meth:`Path.from_str`. Required for new sensors;
+                cannot be cleared.
+            **kw: Scalar columns (``name``, ``weight``) forwarded to
+                :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Sensors need a site")
+                self.site = sess.one(Site, name=site)
+
+            if kind is not NotGiven:
+                if kind is None:
+                    raise ValueError("Sensors need a kind")
+                if self.kind is None:
+                    self.kind = kind
+                elif self.kind != kind:
+                    raise ValueError("Sensor kinds cannot be changed")
+
+            if state is not NotGiven:
+                if state is None:
+                    raise ValueError("Sensors need a state path")
+                self.state = Path.from_str(state)
+
 
 class Feed(Base):
     """A source of water for a :class:`Site`."""
@@ -261,6 +318,34 @@ class Feed(Base):
         """``max_flow_wait`` as a :class:`~datetime.timedelta`."""
         return timedelta(seconds=self.max_flow_wait)
 
+    def apply(self, site=NotGiven, flow_monitor=NotGiven, **kw) -> None:
+        """Apply mutable feed properties.
+
+        Args:
+            site: Name of the :class:`Site` this feed serves. Required for a
+                new feed; cannot be cleared.
+            flow_monitor: Dotted path of the flow-monitoring sensor, or
+                ``None`` / ``"-"`` to clear. Parsed with
+                :meth:`Path.from_str`.
+            **kw: Scalar columns (``name``, ``comment``, ``flow``,
+                ``max_flow_wait``, ``disabled``) forwarded to
+                :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Feeds need a site")
+                self.site = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New feeds need a site")
+            if flow_monitor is not NotGiven:
+                if flow_monitor is None or flow_monitor == "-":
+                    self.flow_monitor = None
+                else:
+                    self.flow_monitor = Path.from_str(flow_monitor)
+
 
 class Controller(Base):
     """A device (Wago or similar) that drives valves."""
@@ -282,6 +367,25 @@ class Controller(Base):
         "Valve", back_populates="controller", passive_deletes=True
     )
     logs: Mapped[set[Log]] = relationship("Log", back_populates="controller", passive_deletes=True)
+
+    def apply(self, site=NotGiven, **kw) -> None:
+        """Apply mutable controller properties.
+
+        Args:
+            site: Name of the :class:`Site` this controller belongs to.
+                Required for a new controller; cannot be cleared.
+            **kw: Scalar columns (``name``, ``comment``, ``location``,
+                ``max_on``) forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Controllers need a site")
+                self.site = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New controllers need a site")
 
 
 class Valve(Base):
@@ -345,6 +449,80 @@ class Valve(Base):
     def min_delay_td(self) -> timedelta | None:
         """``min_delay`` as a :class:`~datetime.timedelta`, or ``None``."""
         return None if self.min_delay is None else timedelta(seconds=self.min_delay)
+
+    def apply(
+        self,
+        site=NotGiven,
+        feed=NotGiven,
+        controller=NotGiven,
+        envgroup=NotGiven,
+        command=NotGiven,
+        state=NotGiven,
+        **kw,
+    ) -> None:
+        """Apply mutable valve properties.
+
+        Args:
+            site: Name of the :class:`Site` this valve is in. Scopes the
+                ``feed`` / ``controller`` / ``envgroup`` lookups; derived from
+                the linked feed when omitted. Required for a new valve.
+            feed: Name of the :class:`Feed` within the site. Required for a new
+                valve; cannot be cleared.
+            controller: Name of the :class:`Controller` within the site.
+                Required for a new valve; cannot be cleared.
+            envgroup: Name of the :class:`EnvGroup` within the site. Required
+                for a new valve; cannot be cleared.
+            command: Dotted write path, or ``None`` / ``"-"`` to clear (a valve
+                may be monitor-only). Parsed with :meth:`Path.from_str`.
+            state: Dotted read/feedback path, or ``None`` / ``"-"`` to clear (a
+                valve may be control-only). Parsed with :meth:`Path.from_str`.
+            **kw: Scalar columns forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Valves need a site")
+                site_obj = sess.one(Site, name=site)
+            elif self.feed is not None:
+                site_obj = self.feed.site
+            else:
+                raise ValueError("New valves need a site")
+
+            if feed is not NotGiven:
+                if feed is None:
+                    raise ValueError("Valves need a feed")
+                self.feed = sess.one(Feed, site=site_obj, name=feed)
+            elif self.feed is None:
+                raise ValueError("New valves need a feed")
+
+            if controller is not NotGiven:
+                if controller is None:
+                    raise ValueError("Valves need a controller")
+                self.controller = sess.one(Controller, site=site_obj, name=controller)
+            elif self.controller is None:
+                raise ValueError("New valves need a controller")
+
+            if envgroup is not NotGiven:
+                if envgroup is None:
+                    raise ValueError("Valves need an env group")
+                self.envgroup = sess.one(EnvGroup, site=site_obj, name=envgroup)
+            elif self.envgroup is None:
+                raise ValueError("New valves need an env group")
+
+            if command is not NotGiven:
+                if command is None or command == "-":
+                    self.command = None
+                else:
+                    self.command = Path.from_str(command)
+
+            if state is not NotGiven:
+                if state is None or state == "-":
+                    self.state = None
+                else:
+                    self.state = Path.from_str(state)
 
 
 class DayRange(Base):
@@ -540,6 +718,25 @@ class History(Base):
     )
 
     site: Mapped[Site] = relationship("Site", back_populates="histories")
+
+    def apply(self, site=NotGiven, **kw) -> None:
+        """Apply mutable history-sample properties.
+
+        Args:
+            site: Name of the :class:`Site` this sample is for. Required for a
+                new sample; cannot be cleared.
+            **kw: Scalar columns (``time``, ``rain``, ``feed``, ``temp``,
+                ``wind``, ``sun``) forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("History needs a site")
+                self.site = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New history needs a site")
 
 
 class Log(Base):

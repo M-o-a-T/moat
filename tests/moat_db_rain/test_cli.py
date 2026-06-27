@@ -1,8 +1,10 @@
 """End-to-end CLI tests for ``moat db rain`` (site + controller CRUD).
 
 Drives the full ``moat`` command line via :func:`moat.src.test.run`,
-redirecting ``moat.db.url`` at a throwaway SQLite database so the tests
-need no real server. Each test gets its own database (``tmp_path``).
+redirecting ``moat.db.url`` at a shared SQLite database so the tests
+need no real server. The schema is created once per session
+(:func:`_db_url`); each test starts from an empty ``rain_*`` set, wiped
+on exit by :func:`db_url`.
 """
 
 from __future__ import annotations
@@ -14,17 +16,61 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from moat.db.rain.model import Site
+from moat.db.schema import Base
 from moat.src.test import raises as _raises
 from moat.src.test import run
 
 pytestmark = pytest.mark.anyio
 
 
+@pytest.fixture(scope="session")
+def _db_url(tmp_path_factory):
+    """Initialise one SQLite database for the whole test session.
+
+    The ``rain_*`` schema is created once via :meth:`MetaData.create_all`;
+    every test reuses this file. Per-test isolation is restored by
+    :func:`db_url`, which wipes the ``rain_*`` rows on exit.
+    """
+    db_path = tmp_path_factory.mktemp("rain-cli") / "r.db"
+    url = f"sqlite:///{db_path}"
+    eng = create_engine(url)
+    Base.metadata.create_all(eng)
+    try:
+        yield url
+    finally:
+        eng.dispose()
+
+
+def _wipe_rain(url: str) -> None:
+    """Delete every row from the ``rain_*`` tables (dependents first).
+
+    Tables are cleared in reverse dependency order so foreign-key
+    constraints (enforced by the SQLite connect pragma) hold while
+    children are removed before their parents.
+    """
+    eng = create_engine(url)
+    try:
+        with eng.begin() as conn:
+            for tbl in reversed(Base.metadata.sorted_tables):
+                if tbl.name.startswith("rain_"):
+                    conn.execute(tbl.delete())
+    finally:
+        eng.dispose()
+
+
 @pytest.fixture
-async def rain(tmp_path):
-    """A freshly-initialised temp SQLite DB, with an async ``R()`` caller."""
-    url = f"sqlite:///{tmp_path}/r.db"
-    await run("-s", "moat.db.url", url, "db", "init")
+def db_url(_db_url):
+    """The shared DB url; all ``rain_*`` rows are wiped after each test."""
+    try:
+        yield _db_url
+    finally:
+        _wipe_rain(_db_url)
+
+
+@pytest.fixture
+async def rain(db_url):
+    """An async ``R()`` caller against the shared session DB."""
+    url = db_url
 
     async def R(*args, ee=0):
         return await run("-s", "moat.db.url", url, *args, expect_exit=ee)
@@ -1741,21 +1787,17 @@ async def test_dummy_site_dash(rain):
     assert r.stdout == "home\n"
 
 
-async def test_site_rate_units(tmp_path):
+async def test_site_rate_units(rain, db_url):
     """``--rate`` is mm/day on the CLI; the stored column is mm/second."""
-    url = f"sqlite:///{tmp_path}/ru.db"
-    await run("-s", "moat.db.url", url, "db", "init")
-
-    # default evaporation is 10 mm/day
-    r = await run("-s", "moat.db.url", url, "db", "rain", "home", "add")
+    r = await rain("db", "rain", "home", "add")
     assert "rate: 10.0" in r.stdout
 
     # set to 20 mm/day; the CLI echoes mm/day
-    r = await run("-s", "moat.db.url", url, "db", "rain", "home", "set", "--rate", "20")
+    r = await rain("db", "rain", "home", "set", "--rate", "20")
     assert "rate: 20.0" in r.stdout
 
     # the stored column is mm/second
-    eng = create_engine(url)
+    eng = create_engine(db_url)
     try:
         with Session(eng) as sess:
             site = sess.scalars(select(Site).where(Site.name == "home")).one()

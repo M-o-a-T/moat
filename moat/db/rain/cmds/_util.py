@@ -7,6 +7,7 @@ skips underscore-prefixed modules) never exposes it as a command.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime
 
 import asyncclick as click
 from sqlalchemy import select
@@ -124,6 +125,24 @@ def valve_spec(obj, spec: str):
 def is_given(v) -> bool:
     """True unless ``v`` is the ``NotGiven`` sentinel."""
     return v is not NotGiven
+
+
+def parse_dt(s: str) -> datetime:
+    """Parse an ISO-8601 timestamp, forcing timezone awareness.
+
+    Naive timestamps are interpreted in the local timezone, matching the
+    repo-wide convention of tz-aware datetimes everywhere.
+
+    Raises:
+        click.UsageError: if ``s`` is not a parseable timestamp.
+    """
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        raise click.UsageError(f"Bad timestamp {s!r}.") from None
+    if dt.tzinfo is None:
+        dt = dt.astimezone()
+    return dt
 
 
 @contextmanager

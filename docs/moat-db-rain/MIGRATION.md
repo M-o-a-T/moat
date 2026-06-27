@@ -139,6 +139,10 @@ The three existing submodules are the template. Key conventions:
     rich `apply()` methods that resolve FK targets **by name** via
     `sess.one(Table, name=...)` using `moat.db.util.session` (a
     `ContextVar`).
+  - **Rain diverges** (§4.10): it has no cross-submodule relationships,
+    so `model_.py` is a documented stub and the `apply()` methods are
+    real method overrides in `model.py` — no `cast(Any, …)` monkeypatch,
+    per the AGENTS.md no-cast policy.
 - **Schema registration**: `moat/db/_cfg.yaml` holds the master `schemas:`
   list (e.g. `moat.db.box.model`, then `moat.db.box.model_`).
   `moat/db/util.py::load()` imports each listed module so SQLAlchemy
@@ -314,6 +318,44 @@ __init__.py` calls `CfgStore.with_(__name__)`. No separate `_cfg.yaml`
 needed initially. (A cleaner per-submodule `_cfg.yaml` refactor is filed
 as a follow-up, §11.)
 
+### 4.10 `apply()` — placement and FK resolution
+
+**Placement.** box/thing/label install `apply()` by monkeypatching in
+`model_.py` (`Cls.apply = cast(Any, fn)`), because their `apply()`
+references *other submodules'* entities for FK lookups, which would
+import-cycle from `model.py`. Rain's relationships are all intra-package,
+so there is no cycle to break: `apply()` is therefore defined as **real
+method overrides directly on the classes in `model.py`**. This was
+verified empirically — `ty` rejects the bare monkeypatch (`sensor_apply`
+is "not assignable to attribute `apply` of type `def apply(self, **kw)`")
+but accepts the genuine override, so the `cast(Any, …)` that AGENTS.md
+discourages is genuinely unnecessary here. `model_.py` stays a stub that
+documents why it is empty.
+
+**FK resolution convention** (shapes Phase 6's CLI):
+
+- Parents uniquely identifiable by name within the site — `Site`, `Day`,
+  `DayRange` (global), and `EnvGroup`/`Feed`/`Controller`/`Group`/`Sensor`
+  (`(site, name)`) — are passed to `apply()` **by name** and resolved with
+  `sess.one(Parent, site=<site_obj>, name=…)` (faithful to box/thing).
+  Site-scoped entities take a `site=` name argument as the scope anchor
+  (derived from an already-linked parent when omitted on update).
+- `Valve` has a **compound key** `(controller, name)`, so it is **not**
+  name-resolvable within a site. Entities that parent a valve
+  (`Schedule`, `ValveOverride`, `Level`, `Log.valve`, `Group.valves`)
+  receive the `Valve` **object**; the CLI resolves it via controller+name.
+- Path columns (`Sensor.state`, `Valve.command`/`state`, `Feed.flow_monitor`)
+  take a **dotted string**, parsed with `Path.from_str`; `None` or `"-"`
+  clears a nullable one (a required one rejects clearing).
+- M2M collections take name-lists with a `-` prefix for removal
+  (box/thing convention), except `Group.valves` which takes `Valve` objects
+  (compound key again).
+- Plain scalars flow through `Base.apply(**kw)`. `NotGiven` (Ellipsis)
+  means "leave unchanged"; `None`/`"-"` means "clear" where nullable.
+
+Lookups run inside `sess.no_autoflush` so a half-built row is not flushed
+mid-`apply`.
+
 ---
 
 ## 5. Target file tree
@@ -324,7 +366,7 @@ moat/db/rain/
 │                      #   CfgStore.with_(__name__) only; NO `cli` export — discovery is via
 │                      #   `moat.db.rain._main.cli` (ext_pre), cf. box/label/thing
 ├── model.py           # SQLAlchemy declarations (all rain_* tables/classes)
-├── model_.py          # cross-table relationships + apply()/dump() monkeypatches
+├── model_.py          # stub: rain has no cross-submodule relationships; apply() is in model.py (§4.10)
 ├── range.py           # interval algebra: range_union/intersection/invert/coalesce, StoredIter, RangeMixin  (§7.1)
 ├── engine.py          # _range() ports + generate_schedule() + recalculate()  (§7.2–7.3)
 ├── monitor.py         # daemon run-loop impl behind `moat db rain <site> monitor`  (§7.5)
@@ -714,9 +756,12 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
 3. **Models — pass 2 (branches).** `Controller`, `Valve`, `Group`,
    `DayRange`, overrides, `GroupAdjust`, `Schedule`, `Level`, `History`,
    `Log`, and the four association `Table`s.
-4. **`model_.py`.** Cross-class `relationship()`s + rich `apply()`
-   methods (name-based FK resolution, sentinel handling for M2M
-   add/remove, duration-property wiring).
+4. **`apply()` methods** (real overrides in `model.py`, §4.10): name-based
+   FK resolution with the site as scope anchor, `Valve` passed as an
+   object (compound key), Path fields as dotted strings, sentinel
+   handling for M2M add/remove, duration-property wiring. `model_.py`
+   stays a stub. *(Batch 1 done: Site/EnvGroup/Feed/Controller/Sensor/
+   History/Valve + 26 tests, 98% coverage.)*
 5. **Alembic revision.** Generate, hand-fix, verify (§8).
 6. **CLI — CRUD.** Implement one `cmds/<entity>.py` at a time
    (site → controller → valve → feed → sensor → group → env → day →

@@ -226,9 +226,12 @@ in a per-row DB column. `rain_site` keeps only `name`, `comment`, `var`,
 
 Store integer seconds in a plain `Integer` column named without the
 `db_` prefix (`max_run`, `min_delay`, `duration`, `max_flow_wait`,
-`rain_delay`), and expose a Python `@property` returning
-`timedelta(seconds=…)`. Nullable where the original was nullable. Avoids
-`Interval`/driver quirks on SQLite and matches the legacy data shape.
+`rain_delay`), and expose a Python `@property` named `<col>_td` returning
+`timedelta(seconds=…)` (e.g. `Site.rain_delay_td`, `Feed.max_flow_wait_td`).
+The column keeps the plain name so `Base.dump()` emits raw seconds; the
+`_td` sibling is for Python-side use by the engine/monitor. Nullable
+where the original was nullable. Avoids `Interval`/driver quirks on
+SQLite and matches the legacy data shape.
 
 ### 4.4 Weather meters — one polymorphic `Meter` table
 
@@ -256,9 +259,17 @@ concern (beads epic, §11).
 
 Mirror Django's default `on_delete=CASCADE` for all FKs: declare
 `ForeignKey("...", ondelete="CASCADE", name="fk_<local>_<remote>")` and
-rely on the `PRAGMA foreign_keys=ON` already enabled in
+rely on the `PRAGMA foreign_keys=ON` set by
 `moat.db.util.set_sqlite_pragma`. Relationships use the default SA
-cascade (do *not* add `cascade="delete"`, let the DB do it).
+cascade (do *not* add `cascade="delete"`, let the DB do it) **and** set
+`passive_deletes=True` on the collection side, so SQLAlchemy does not
+pre-empt the DB by NULLing child FKs (which would violate the NOT NULL
+FK). Deleting a parent that has children *already loaded* in the session
+would still trip that NULL — so one-shot `delete` commands load only the
+parent (the collections are lazy) and let `ON DELETE CASCADE` remove the
+rows. (Production MariaDB enforces FKs natively; the sqlite pragma path
+is for dev/test — `set_sqlite_pragma` was corrected in Phase 2 to
+actually detect sqlite, which it previously did not.)
 
 ### 4.8 Many-to-many association tables
 

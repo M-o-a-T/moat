@@ -20,7 +20,7 @@ from moat.lib.run import load_subgroup
 async def cli(ctx, site):
     """Irrigation management.
 
-    Manage irrigation sites, controllers, valves, feeds, meters,
+    Manage irrigation sites, controllers, valves, feeds, sensors,
     schedules, and the monitoring daemon.
     """
     obj = ctx.obj

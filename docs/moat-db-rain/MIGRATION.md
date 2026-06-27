@@ -218,7 +218,7 @@ from `Base`'s auto-lowercase default.
 
 The old `Site` carried RabbitMQ / "MoaT server" connection params.
 Connection configuration belongs in MoaT's YAML config / link setup, not
-in a per-row DB column. `rain_site` keeps only `name`, `comment`, `var`,
+in a per-row DB column. `rain_site` keeps only `name`, `comment`,
 `rate` (mm/day, float), `rain_delay` (seconds, int). Drops
 `host`/`port`/`username`/`password`/`virtualhost`.
 
@@ -257,15 +257,20 @@ The link roles, reflecting how each entity talks to MoaT-link:
 | Column | Was | Now |
 |---|---|---|
 | `Sensor.state` | `Sensor.var` (the subscribed monitor var) | renamed — the sensor's read endpoint |
-| `Valve.command` | `Valve.var` ("name of this output") | renamed — the valve's write endpoint |
+| `Valve.command` | `Valve.var` ("name of this output") | renamed — the valve's write endpoint (`nullable`) |
 | `Valve.state` | — | new — the valve's read/feedback endpoint (`nullable`, unique) |
-| `Controller.var` | `Controller.var` (RPC name) | retyped, name kept |
-| `Feed.var` | `Feed.var` (flow monitor name) | retyped, name kept |
-| `Site.var` | `Site.var` (site name in MoaT) | retyped, name kept |
+| `Feed.flow_monitor` | `Feed.var` (the flow meter's monitor name) | renamed — a pointer to the monitoring sensor's path |
 
-`command` is mandatory (every valve must be commandable); `state` is
-optional (a valve may lack feedback). Both are unique — no two valves
-share a command or state path.
+`Site.var` and `Controller.var` are **dropped**: a site and its
+controllers have fixed addresses in moat.link, not per-row DB columns.
+
+Both `Valve.command` and `Valve.state` are `nullable` and `unique`:
+some valves can be monitored but not controlled (state set, command
+absent), others controlled but lacking feedback (command set, state
+absent). They are distinct columns — `state` does not implicitly track
+`command`. Multiple `NULL`s coexist under a unique constraint, so any
+combination of presence/absence is allowed. `Sensor.state` remains
+mandatory (a sensor with nothing to read is meaningless).
 
 ### 4.6 Drop `UserForSite` (auth deferred)
 
@@ -385,10 +390,10 @@ Plus edits to existing files (§6.4).
 
 | New class | Table | Key columns (beyond PK) | FKs / relations |
 |---|---|---|---|
-| `Site` | `rain_site` | `name` uniq, `comment`?, `var` Path uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
-| `Controller` | `rain_controller` | `name`, `var` Path uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
-| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `command` Path uniq, `state` Path? uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
-| `Feed` | `rain_feed` | `name`, `var` Path uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
+| `Site` | `rain_site` | `name` uniq, `comment`?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
+| `Controller` | `rain_controller` | `name`, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
+| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `command` Path? uniq, `state` Path? uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
+| `Feed` | `rain_feed` | `name`, `flow_monitor` Path uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
 | `Sensor` | `rain_sensor` | `kind` str(rain/temp/wind/sun), `name`, `state` Path uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
 | `Group` | `rain_group` | `name`, `comment`?, `adj`? | `site`→Site; M2M `days`/`xdays`↔DayRange; M2M `valves`↔Valve. UQ(site,name) |
 | `EnvGroup` | `rain_envgroup` | `name`, `comment`?, `factor` d=1.0, `rain` bool d=True | `site`→Site; → items, valves. UQ(site,name) |
@@ -566,7 +571,7 @@ Ports `runschedule` (1416 lines) from qbroker/gevent/rpyc to
 - Periodically (and on sensor/level change) call `generate_schedule()`
   for the site's valves; mark new/changed `Schedule` rows.
 - Send pending schedules (`seen=False`) to each `Controller` via
-  moat-link RPC (controller `var`); mark `seen=True`; honour
+  moat-link RPC (the controller's fixed link address); mark `seen=True`; honour
   `changed`/`forced` flags.
 - Maintain per-valve `Level` rows (call `recalculate()` incrementally);
   set `Valve.priority` when a cycle didn't finish.

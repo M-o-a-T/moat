@@ -119,7 +119,6 @@ class Site(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, type_=String(200))
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
-    var: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     rate: Mapped[float] = mapped_column(default=10.0, server_default="10")
     rain_delay: Mapped[int] = mapped_column(default=300, server_default="300")
 
@@ -245,7 +244,7 @@ class Feed(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
+    flow_monitor: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     flow: Mapped[float | None] = mapped_column(nullable=True, default=10.0, server_default="10")
     max_flow_wait: Mapped[int] = mapped_column(default=300, server_default="300")
@@ -271,7 +270,6 @@ class Controller(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[Path] = mapped_column(type_=PathType(), unique=True)
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     location: Mapped[str] = mapped_column(type_=String(200))
     max_on: Mapped[int] = mapped_column(default=3, server_default="3")
@@ -296,7 +294,7 @@ class Valve(Base):
     name: Mapped[str] = mapped_column(type_=String(200))
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     location: Mapped[str] = mapped_column(type_=String(200))
-    command: Mapped[Path] = mapped_column(type_=PathType(), unique=True)
+    command: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     state: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     verbose: Mapped[int] = mapped_column(type_=SmallInteger, default=0, server_default="0")
     flow: Mapped[float] = mapped_column()

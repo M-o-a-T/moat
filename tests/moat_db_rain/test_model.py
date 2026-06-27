@@ -34,7 +34,6 @@ def test_site_defaults_and_timedelta(engine):
         assert site.rain_delay == 300
         assert site.rain_delay_td == timedelta(seconds=300)
         assert site.comment is None
-        assert site.var is None
 
 
 def test_envgroup_envitem_relationships(engine):
@@ -97,7 +96,7 @@ def test_feed_defaults_and_timedelta(engine):
         assert feed.max_flow_wait == 300
         assert feed.max_flow_wait_td == timedelta(seconds=300)
         assert feed.disabled is False
-        assert feed.var is None
+        assert feed.flow_monitor is None
         assert site.feeds == {feed}
 
 

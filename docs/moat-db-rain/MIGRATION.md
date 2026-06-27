@@ -29,7 +29,7 @@ Goals:
   queries to SQLAlchemy), and the schedule-generation / level-recalculation
   logic. These live in `moat.db.rain` alongside the models.
 - Provide the long-running daemon **`moat db rain <site> monitor`** that
-  runs the current schedule, watches weather meters, talks to controllers
+  runs the current schedule, watches weather sensors, talks to controllers
   via MoaT-link, and maintains `Schedule`/`Level`/`History`/`Log` rows.
   (Phased — the daemon lands last; see §10.)
 - Manage the schema with the **shared** Alembic tree at
@@ -233,10 +233,10 @@ The column keeps the plain name so `Base.dump()` emits raw seconds; the
 where the original was nullable. Avoids `Interval`/driver quirks on
 SQLite and matches the legacy data shape.
 
-### 4.4 Weather meters — one polymorphic `Meter` table
+### 4.4 Weather sensors — one polymorphic `Sensor` table
 
 Collapse the four structurally-identical legacy tables
-`RainMeter`/`TempMeter`/`WindMeter`/`SunMeter` into a single `rain_meter`
+`RainMeter`/`TempMeter`/`WindMeter`/`SunMeter` into a single `rain_sensor`
 table with a `kind` discriminator column (`"rain"|"temp"|"wind"|"sun"`,
 short `String` — not a Python `Enum`, to stay simple). Unique constraint
 `(site, kind, name)`. `Feed` remains its own table (`rain_feed`) since
@@ -318,7 +318,7 @@ moat/db/rain/
     ├── controller.py   # `moat db rain <SITE> controller {show,add,set,delete}`
     ├── valve.py        # `moat db rain <SITE> valve {…}`
     ├── feed.py         # `moat db rain <SITE> feed {…}`
-    ├── meter.py        # `moat db rain <SITE> meter {…}`  # --kind rain|temp|wind|sun
+    ├── sensor.py       # `moat db rain <SITE> sensor {…}`  # --kind rain|temp|wind|sun
     ├── group.py        # `moat db rain <SITE> group {…}`  # +/-days, +/-xdays, +/-valves
     ├── env.py          # `moat db rain <SITE> env {…}`    # envgroup + nested item
     ├── day.py          # `moat db rain <SITE> day {…}`    # day + nested time / range
@@ -367,11 +367,11 @@ Plus edits to existing files (§6.4).
 
 | New class | Table | Key columns (beyond PK) | FKs / relations |
 |---|---|---|---|
-| `Site` | `rain_site` | `name` uniq, `comment`?, `var` uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, meters, histories, logs |
+| `Site` | `rain_site` | `name` uniq, `comment`?, `var` uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
 | `Controller` | `rain_controller` | `name`, `var` uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
 | `Valve` | `rain_valve` | `name`, `comment`?, `location`, `var` uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
 | `Feed` | `rain_feed` | `name`, `var` uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
-| `Meter` | `rain_meter` | `kind` str(rain/temp/wind/sun), `name`, `var` uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
+| `Sensor` | `rain_sensor` | `kind` str(rain/temp/wind/sun), `name`, `var` uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
 | `Group` | `rain_group` | `name`, `comment`?, `adj`? | `site`→Site; M2M `days`/`xdays`↔DayRange; M2M `valves`↔Valve. UQ(site,name) |
 | `EnvGroup` | `rain_envgroup` | `name`, `comment`?, `factor` d=1.0, `rain` bool d=True | `site`→Site; → items, valves. UQ(site,name) |
 | `EnvItem` | `rain_envitem` | `factor` d=1.0, `temp`?, `wind`?, `sun`? | `group`→EnvGroup |
@@ -426,7 +426,7 @@ moat db rain <SITE> delete           # delete site
 moat db rain <SITE> controller  {show,add,set,delete}
 moat db rain <SITE> valve       {show,add,set,delete}
 moat db rain <SITE> feed        {show,add,set,delete}
-moat db rain <SITE> meter       {show,add,set,delete}   # --kind rain|temp|wind|sun
+moat db rain <SITE> sensor      {show,add,set,delete}   # --kind rain|temp|wind|sun
 moat db rain <SITE> group       {show,add,set,delete}   # +/-days, +/-xdays, +/-valves
 moat db rain <SITE> env         {show,add,set,delete}    # envgroup; sub: item {…}
 moat db rain <SITE> day         {show,add,set,delete}    # day; sub: time {…}; range {…} (+/-days)
@@ -541,12 +541,11 @@ stores `descr` verbatim regardless; parsing is engine-only.
 Ports `runschedule` (1416 lines) from qbroker/gevent/rpyc to
 **anyio + moat.link**. Responsibilities, preserved:
 
-- Subscribe to weather meters (`rain_meter`/`temp_meter`/`wind_meter`/
-  `sun_meter` `var`s) via moat.link; accumulate into `History` rows;
-  deprecate stale meter readings (`METER_TIME=5 min`,
-  `METER_MAXTIME=1 h` constants).
+- Subscribe to weather sensors (`rain_sensor` rows, filtered by `kind`)
+  via moat.link; accumulate into `History` rows; deprecate stale sensor
+  readings (`SENSOR_TIME=5 min`, `SENSOR_MAXTIME=1 h` constants).
 - Track `Site.rain_delay`: suppress scheduling while rain is recent.
-- Periodically (and on meter/level change) call `generate_schedule()`
+- Periodically (and on sensor/level change) call `generate_schedule()`
   for the site's valves; mark new/changed `Schedule` rows.
 - Send pending schedules (`seen=False`) to each `Controller` via
   moat-link RPC (controller `var`); mark `seen=True`; honour
@@ -558,7 +557,7 @@ Ports `runschedule` (1416 lines) from qbroker/gevent/rpyc to
 
 Implementation notes:
 
-- Single anyio task group; one long-running task per concern (meters,
+- Single anyio task group; one long-running task per concern (sensors,
   scheduler, dispatcher) communicating via anyio memory channels —
   replacing the old gevent `Queue`/`Semaphore`/`AsyncResult`.
 - Use `moat.lib.run.wrap_main` / `asyncscope` for structured lifecycle
@@ -584,7 +583,7 @@ engine is testable without hardware.
   new revision whose `down_revision = "dd1007d00e262b5c"` (current head).
 - Hand-check the generated revision for: correct `rain_*` table names,
   named FK constraints (`fk_…`), `ondelete="CASCADE"`, the `kind`
-  column on `rain_meter`, composite-PK association tables, and
+  column on `rain_sensor`, composite-PK association tables, and
   `UniqueConstraint`s for every former `unique_together`.
 - Verify with `moat db migrate check` (must report no diffs) and a
   round-trip `moat db migrate to <rev>` / back.
@@ -687,7 +686,7 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    positional-then-subcommand disambiguation).
 2. **Models — pass 1 (leaves).** `model.py` for entities with no in-rain
    FK dependents: `Site`, `Day`, `DayTime`, `EnvGroup`, `EnvItem`,
-   `Meter`, `Feed`. Define columns + self-contained relationships +
+   `Sensor`, `Feed`. Define columns + self-contained relationships +
    `__tablename__`.
 3. **Models — pass 2 (branches).** `Controller`, `Valve`, `Group`,
    `DayRange`, overrides, `GroupAdjust`, `Schedule`, `Level`, `History`,
@@ -697,7 +696,7 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    add/remove, duration-property wiring).
 5. **Alembic revision.** Generate, hand-fix, verify (§8).
 6. **CLI — CRUD.** Implement one `cmds/<entity>.py` at a time
-   (site → controller → valve → feed → meter → group → env → day →
+   (site → controller → valve → feed → sensor → group → env → day →
    override → schedule → history), each exporting a `cli` group with
    show/add/set/delete. The thin `_main.py` needs no per-entity edits.
 7. **Engine — algebra.** Port `range.py` (§7.1) + `test_range.py` parity
@@ -726,7 +725,7 @@ File these as separate issues (do **not** implement in this refactor):
   `UserForSite` (cross-cutting, not rain-specific).
 - **Data import** — one-shot script to migrate a live `rainman_*`
   SQLite/MySQL DB into `rain_*` tables (handle the dropped Site
-  connection fields and the 4→1 meter consolidation).
+  connection fields and the 4→1 sensor consolidation).
 - **Config-driven schema registration** — move the `schemas:` list out
   of the central `moat/db/_cfg.yaml` into per-submodule `_cfg.yaml`s so
   `moat-db` no longer references optional subpackages (§4.9).
@@ -742,7 +741,7 @@ File these as separate issues (do **not** implement in this refactor):
 ### Resolved (ACKed)
 
 1. **Site connection fields** — dropped (§4.2).
-2. **Meter consolidation** — one `rain_meter` table with `kind` (§4.4).
+2. **Sensor consolidation** — one `rain_sensor` table with `kind` (§4.4).
 3. **Schema registration** — central-list append (§4.9).
 4. **Duration storage** — integer seconds + `timedelta` property (§4.3).
 5. **Table prefix** — `rain_*` (§4.1).
@@ -769,6 +768,6 @@ File these as separate issues (do **not** implement in this refactor):
 - **`moat.times.time_until` successor**: locate the modern MoaT module
   providing human-time-expression parsing for `DayTime.descr`; port if
   absent (§7.4).
-- **moat-link client API surface** for the monitor (subscribe to meter
+- **moat-link client API surface** for the monitor (subscribe to sensor
   vars, RPC to controllers): pin to the current `moat.link` API in
   Phase 9.

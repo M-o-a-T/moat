@@ -25,7 +25,9 @@ class Site(Base):
     envgroups: Mapped[set[EnvGroup]] = relationship(
         "EnvGroup", back_populates="site", passive_deletes=True
     )
-    meters: Mapped[set[Meter]] = relationship("Meter", back_populates="site", passive_deletes=True)
+    sensors: Mapped[set[Sensor]] = relationship(
+        "Sensor", back_populates="site", passive_deletes=True
+    )
     feeds: Mapped[set[Feed]] = relationship("Feed", back_populates="site", passive_deletes=True)
 
     @property
@@ -100,11 +102,13 @@ class EnvItem(Base):
     group: Mapped[EnvGroup] = relationship("EnvGroup", back_populates="items")
 
 
-class Meter(Base):
+class Sensor(Base):
     """A weather sensor of a given kind attached to a :class:`Site`."""
 
-    __tablename__ = "rain_meter"
-    __table_args__ = (UniqueConstraint("site_id", "kind", "name", name="uq_meter_site_kind_name"),)
+    __tablename__ = "rain_sensor"
+    __table_args__ = (
+        UniqueConstraint("site_id", "kind", "name", name="uq_sensor_site_kind_name"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(type_=String(8), comment="rain|temp|wind|sun")
@@ -112,10 +116,10 @@ class Meter(Base):
     var: Mapped[str] = mapped_column(unique=True, type_=String(200))
     weight: Mapped[int] = mapped_column(type_=SmallInteger, default=10, server_default="10")
     site_id: Mapped[int] = mapped_column(
-        ForeignKey("rain_site.id", name="fk_meter_site", ondelete="CASCADE"),
+        ForeignKey("rain_site.id", name="fk_sensor_site", ondelete="CASCADE"),
     )
 
-    site: Mapped[Site] = relationship("Site", back_populates="meters")
+    site: Mapped[Site] = relationship("Site", back_populates="sensors")
 
 
 class Feed(Base):

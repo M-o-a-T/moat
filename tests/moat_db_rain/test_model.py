@@ -68,17 +68,17 @@ def test_day_daytime_unique(engine):
         sess.rollback()
 
 
-def test_meter_kinds_and_unique(engine):
-    """Meters of differing kinds coexist; ``(site, kind, name)`` is unique."""
+def test_sensor_kinds_and_unique(engine):
+    """Sensors of differing kinds coexist; ``(site, kind, name)`` is unique."""
     with Session(engine) as sess:
         site = rain.Site(name="home")
-        m1 = rain.Meter(kind="rain", name="r1", var="home.rain", site=site)
-        m2 = rain.Meter(kind="temp", name="t1", var="home.temp", site=site)
+        m1 = rain.Sensor(kind="rain", name="r1", var="home.rain", site=site)
+        m2 = rain.Sensor(kind="temp", name="t1", var="home.temp", site=site)
         sess.add_all([m1, m2])
         sess.flush()
-        assert site.meters == {m1, m2}
+        assert site.sensors == {m1, m2}
         assert m1.weight == 10
-        sess.add(rain.Meter(kind="rain", name="r1", var="dup", site=site))
+        sess.add(rain.Sensor(kind="rain", name="r1", var="dup", site=site))
         with pytest.raises(IntegrityError):
             sess.flush()
         sess.rollback()
@@ -110,7 +110,7 @@ def test_feed_unique_site_name(engine):
 
 
 def test_cascade_delete_site_removes_children(engine):
-    """Deleting a site cascades to its envgroups, meters, and feeds.
+    """Deleting a site cascades to its envgroups, sensors, and feeds.
 
     Mirrors a one-shot ``delete`` command: the deleting session loads only
     the site (the collections are lazy), so SQLAlchemy's ``passive_deletes``
@@ -119,11 +119,11 @@ def test_cascade_delete_site_removes_children(engine):
     with Session(engine) as sess:
         site = rain.Site(name="home")
         eg = rain.EnvGroup(name="std", site=site)
-        meter = rain.Meter(kind="rain", name="r1", var="home.rain", site=site)
+        sensor = rain.Sensor(kind="rain", name="r1", var="home.rain", site=site)
         feed = rain.Feed(name="main", site=site)
-        sess.add_all([eg, meter, feed])
+        sess.add_all([eg, sensor, feed])
         sess.flush()
-        eg_id, meter_id, feed_id, site_id = eg.id, meter.id, feed.id, site.id
+        eg_id, sensor_id, feed_id, site_id = eg.id, sensor.id, feed.id, site.id
         sess.commit()
 
     with Session(engine) as sess:
@@ -132,5 +132,5 @@ def test_cascade_delete_site_removes_children(engine):
 
     with Session(engine) as sess:
         assert sess.get(rain.EnvGroup, eg_id) is None
-        assert sess.get(rain.Meter, meter_id) is None
+        assert sess.get(rain.Sensor, sensor_id) is None
         assert sess.get(rain.Feed, feed_id) is None

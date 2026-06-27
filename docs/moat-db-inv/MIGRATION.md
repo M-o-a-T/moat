@@ -40,12 +40,14 @@ has run).
 
 3. **Addresses are stored as IPv6.**
    The database is assumed not to support IPv6 natively, so every network
-   and interface address is stored as a **`BIGINT` address + `TINYINT`
-   prefix** pair, using the IPv4-mapped IPv6 representation
-   (`::ffff:a.b.c.d`) for IPv4. On the Python side the value is exposed as
-   an `ipaddress.IPv4Interface` (for IPv4-mapped addresses) or
-   `ipaddress.IPv6Interface` (for native IPv6); networks analogously as
-   `IPv4Network` / `IPv6Network`.
+   and interface address is stored as an **address + prefix** pair, using
+   the IPv4-mapped IPv6 representation (`::ffff:a.b.c.d`) for IPv4. The
+   original wording said “`BIGINT` + `TINYINT`”; a 128-bit IPv6 value
+   does not fit a 64-bit `BIGINT`, so per Q5 the address column is
+   realised as **`BINARY(16)`** (big-endian) with a `SMALLINT` prefix.
+   On the Python side the value is exposed as an `ipaddress.IPv4Interface`
+   (for IPv4-mapped addresses) or `ipaddress.IPv6Interface` (for native
+   IPv6); networks analogously as `IPv4Network` / `IPv6Network`.
 
 ## Glossary: old term → new term
 
@@ -63,16 +65,26 @@ has run).
 | path key `(bits, netnum)`      | `network.addr` + `network.prefix`    |
 | path key `(server, tock)` cable| `cable.id` (surrogate)              |
 
-## Derived decisions (recommendation, confirm before implementing)
+## Derived decisions
 
 These follow from the three given decisions but are not spelled out by
-them. Each is a modelling choice; the recommendation is what this plan
-implements unless overridden.
+them. Status as of this revision:
+
+- **D1 — accepted.** Wires are hosts (Thing type `wire`).
+- **D2 — accepted (modified).** Store the concrete address *and* keep the
+  host offset `num` on the interface.
+- **D3 — deferred.** Master/slave co-existence: decide later; the
+  `network.master_id` column is retained as a placeholder.
+- **D4 — accepted (modified).** No separate `host.name`; the short name
+  lives on `thing.name`.
+- **D5 — accepted.** MAC as `BINARY(6)` → `netaddr.EUI`.
+- **D6 — tentative.** Dropping arbitrary port `attrs` is presumed fine;
+  revisit when the migrator is written.
 
 ### D1 — Wires are hosts
 
-*Recommendation:* model a **wire as a `host` whose `Thing` is of a
-“wire” thing-type**, carrying exactly two interfaces named `"a"` and `"b"`
+**Accepted.** A wire is a **`host` whose `Thing` is of a “wire”
+thing-type**, carrying exactly two interfaces named `"a"` and `"b"`
 and no address.
 
 Rationale: in DistKV a `Wire` is structurally a host with two fixed ports
@@ -96,75 +108,75 @@ be polymorphic in its owner (`host_id` xor `wire_id`), or a separate
 `wire_interface` table, both of which reintroduce the special-casing the
 unification removes.
 
-### D2 — Store the concrete address, not the host number
+### D2 — Concrete address *and* host number, both stored
 
-*Recommendation:* an `interface` stores its **concrete address**
-(`addr` + `prefix`), not a host-offset `num`. The `num`/`shift`/`mac`
-machinery becomes **allocation policy on the `network`** (used to pick a
-free address), not stored per-interface.
+**Accepted (modified).** An `interface` stores **both** its concrete
+address (`addr` + `prefix`) *and* its host offset **`num`** within the
+network. The `shift`/`mac` flags remain **allocation policy on the
+`network`**.
 
-Rationale: DistKV stored only `num` (the host offset within the network)
-because the network number *was* the DistKV key; addresses were derived on
-demand. A real database can store the address directly, which makes
-reverse lookup (IP → interface) a trivial indexed equality/containment
-query instead of the current `net.enclosing()` + `net.by_num()` dance, and
-removes the fragile `addr(num)` = `base + (num << shift)` recomputation.
+Rationale: storing the address directly makes reverse lookup (IP →
+interface) a trivial indexed equality/containment query instead of the
+DistKV `net.enclosing()` + `net.by_num()` dance. Keeping `num` as a
+column serves two purposes the user called out:
 
-`num` remains derivable for non-MAC networks as `(addr − base) >> shift`;
-it does not need a column. See “Address computation” for the MAC-mode
-caveat.
+(a) the IPv4 (mapped) address is still **derived from `num`** —
+    `addr = network.base + (num << network.shift)` — so `num` is the
+    authoritative allocator value and the stored `addr` is its
+    materialisation (kept in sync by the writer/validator);
+(b) **finding a free host address** scans small integer `num` values
+    (skipping the DHCP range and network/broadcast positions) rather than
+    probing the 16-byte `addr` field — cheaper and clearer.
 
-### D3 — Master/slave (“co-existing”) networks are materialised
+`num` is **nullable**: it is `NULL` for MAC-mode interfaces (address
+derived from the MAC, see Q1), for wire `a`/`b` interfaces (no address),
+and for any interface not yet assigned an address. Uniqueness is
+`UNIQUE(net_id, num)`; SQL engines treat `NULL` as distinct in a unique
+constraint, so multiple un-numbered interfaces on a network are allowed.
 
-*Recommendation:* keep `network.master_id` (self-FK) to record that a
-network co-exists with a supernet (typically an IPv6 net alongside an IPv4
-master). A host that sits on the master net and should also be reachable
-on the slave net gets **two interface rows** — one per network — rather
-than a virtual derivation.
+See “Address computation” for the MAC-mode caveat.
 
-Rationale: DistKV’s `all_nets`/`_slaves` yielded multiple addresses for one
-host attachment. With one-address-per-interface (D2) the clean equivalent
-is to materialise one interface per (host, network) the host actually
-occupies. Reverse lookup and listing stay simple. The migrator creates the
-slave interface rows; later, assigning an address on a master net may
-auto-create the slave interfaces (behaviour to pin down — see open
-questions).
+### D3 — Master/slave (“co-existing”) networks — DEFERRED
 
-### D4 — Short name vs FQDN vs `Thing.name`
+*Deferred.* Whether/how slave-network addresses are represented is left
+open for now. The `network.master_id` self-FK is **retained** as a
+placeholder so the co-existence relationship can be recorded (and
+preserved by the migrator) without committing to a materialisation policy
+yet. Decide after Q1/Q2 land.
 
-*Recommendation:*
+### D4 — Short name lives on `Thing.name` only
+
+**Accepted (modified).** There is **no separate `host.name` column**; the
+short name is stored once, on `thing.name`. Thus:
 
 - `host.domain` — the FQDN (e.g. `one.you.example`), `VARCHAR(255)`,
-  **unique**. This is the host’s primary identifier (it was the DistKV
-  path key).
-- `host.name` — the short name (e.g. `you-one`), `VARCHAR(64)`, unique
-  among hosts.
-- `thing.name` — set to the **short name** (must respect `Thing.name`’s
-  `String(40)` length and global-uniqueness across *all* things).
-  `thing.descr` ← `host.desc`; `thing.comment` available for free text.
+  **unique**. The host’s primary identifier (was the DistKV path key).
+- `thing.name` — the **short name** (e.g. `you-one`), subject to
+  `Thing.name`’s `String(40)` length and global uniqueness across *all*
+  things. `thing.descr` ← `host.desc`; `thing.comment` for free text.
 
-Implication: a host’s short name must not collide with any non-host
-`Thing` name. If that is unacceptable, the alternative is to give the
-`Thing` a synthetic/slug name and keep both `host.name` and `host.domain`
-on the host row. This plan assumes short names are host-unique and
-globally unique among things.
+Consequence: a host’s short name shares the global thing-name namespace
+(and inherits the 40-char cap). If collisions or length ever bite, revisit
+by re-adding a `host.name` column and giving the `Thing` a synthetic slug;
+out of scope for now.
 
 ### D5 — MAC storage
 
-*Recommendation:* store MAC addresses as a 6-byte `BINARY(6)` (mirroring
+**Accepted.** Store MAC addresses as a 6-byte `BINARY(6)` (mirroring
 DistKV’s `EUI.packed`), exposed in Python as `netaddr.EUI` via a small
-custom `TypeDecorator`. (The design only mandates the IPv6/bigint
-treatment for *IP* addresses; MACs are separate.) An `INTEGER`-backed
-48-bit value would also work and be sortable; `BINARY(6)` is chosen to
-preserve byte identity and avoid endianness questions.
+custom `TypeDecorator`. (The design only mandates the IPv6 treatment for
+*IP* addresses; MACs are separate.) An `INTEGER`-backed 48-bit value would
+also work and be sortable; `BINARY(6)` is chosen to preserve byte identity
+and avoid endianness questions.
 
-### D6 — Arbitrary port `attrs` are dropped
+### D6 — Arbitrary port `attrs` are dropped — TENTATIVE
 
-DistKV `HostPort` carried a free-form `attrs` dict (only `vlan` is actually
-used). The DB schema models the known fields (`mac`, `force_vlan`,
-`vlan_id`, `desc`, …) as columns. Unknown attrs are **dropped** on
-migration. If free-form metadata is later required, add a `JSON` column;
-out of scope now.
+*Tentative — revisit when the migrator is written.* DistKV `HostPort`
+carried a free-form `attrs` dict (only `vlan` is actually used). The DB
+schema models the known fields (`mac`, `force_vlan`, `vlan_id`, `desc`, …)
+as columns; unknown attrs would be **dropped** on migration. Before
+finalising, the migrator should scan a real DistKV tree for any `attrs`
+actually in use beyond `vlan`; if any matter, add a `JSON` column then.
 
 ## SQL data structure
 
@@ -176,42 +188,35 @@ following the existing `box`/`thing`/`label` convention.
 
 A reusable `TypeDecorator`/`composite` pair in `moat/db/inv/ip.py`:
 
-- Columns: `addr` (the address integer; see width discussion below) and
-  `prefix SMALLINT` (0–128, the netmask).
+- Columns: `addr BINARY(16)` (`LargeBinary`) and `prefix SMALLINT`
+  (0–128, the netmask).
 - Python ↔ DB:
-  - **DB → Python:** reconstruct `ipaddress.IPv6Address(addr)`. If it lies
-    in `::ffff:0:0/96`, extract the embedded IPv4 and return
-    `IPv4Interface((ipv4, prefix))`; otherwise `IPv6Interface((ipv6, prefix))`.
+  - **DB → Python:** unpack the 16 big-endian bytes into a 128-bit int,
+    reconstruct `ipaddress.IPv6Address(int)`. If it lies in
+    `::ffff:0:0/96`, extract the embedded IPv4 and return
+    `IPv4Interface((ipv4, prefix))`; otherwise
+    `IPv6Interface((ipv6, prefix))`.
   - **Python → DB:** accept `IPv4Interface`/`IPv6Interface`/
     `IPv4Network`/`IPv6Network`/`str`. Normalise IPv4 to
-    `::ffff:a.b.c.d` (`int = (0xffff << 32) | int(ipv4_address)`) and
-    store `int` + `prefix`.
+    `::ffff:a.b.c.d` (`int = (0xffff << 32) | int(ipv4_address)`), then
+    pack the 128-bit int as 16 big-endian bytes and store with `prefix`.
 - ORM exposure: use `sqlalchemy.orm.composite()` so each model presents a
   single attribute (`interface.address`, `network.subnet`) that is an
   `IPv4Interface`/`IPv6Interface`/`IPv4Network`/`IPv6Network`, backed by
   the two columns. (A plain two-property accessor is the simpler fallback
   if `composite()` proves awkward for mutations.)
 
-**Width of `addr` — important.** A full IPv6 address is 128 bits and does
-**not** fit in a 64-bit `BIGINT` on either SQLite (`INTEGER` is 8-byte
-signed, max `2**63−1`) or PostgreSQL (`BIGINT` is 64-bit signed). The
-IPv4-mapped form `::ffff:a.b.c.d` is only 48 bits wide and *does* fit in a
-`BIGINT`; native IPv6 (e.g. `2001:780:107::1`) does not. So the literal
-“store the address as a bigint” works for an IPv4-only deployment but not
-for general IPv6. Resolution (see open question Q5):
-
-- *Recommended (supports full IPv6):* back `addr` with `BINARY(16)`
-  (`LargeBinary`), still paired with the `SMALLINT prefix`. The converter
-  packs/unpacks the 128-bit value as 16 big-endian bytes. Equality and
-  range queries compare the byte strings, which sort correctly for
-  big-endian encoding.
-- *Literal-design (IPv4-only):* back `addr` with `BigInteger` and reject
-  native IPv6 at write time. Matches the design wording exactly but limits
-  the schema to IPv4-mapped addresses.
-
-The converter should be written against an abstract column type so the
-backend choice is a one-line switch. Below, `addr` is written as `BIGINT`
-for readability; treat it as the chosen backing type per Q5.
+**Backing type — decided (Q5): `BINARY(16)`.** A full IPv6 address is 128
+bits and does **not** fit in a 64-bit `BIGINT` on SQLite (`INTEGER` is
+8-byte signed, max `2**63−1`) or PostgreSQL (`BIGINT` is 64-bit signed).
+The IPv4-mapped form `::ffff:a.b.c.d` is only 48 bits and would fit a
+`BIGINT`, but native IPv6 (e.g. `2001:780:107::1`) would not. `BINARY(16)`
+supports full IPv6: the converter packs/unpacks the 128-bit value as 16
+big-endian bytes, and equality/range comparisons on the byte strings sort
+correctly for big-endian encoding. The converter is written against an
+abstract column type so a future switch (e.g. to a native `INET` on
+PostgreSQL) is a one-line change. Below, `addr` columns are shown as
+`BINARY(16)` reflecting this decision.
 
 ### Tables
 
@@ -230,7 +235,7 @@ for readability; treat it as the chosen backing type per Q5.
 |---------------|----------------------|---------------------------------------------|
 | `id`          | PK                   |                                             |
 | `name`        | VARCHAR(64), UNIQUE  |                                             |
-| `addr`        | BIGINT               | subnet base address (IPv6 / v4-mapped)      |
+| `addr`        | BINARY(16)           | subnet base address (IPv6 / v4-mapped)      |
 | `prefix`      | SMALLINT             | subnet prefix length                        |
 | `desc`        | VARCHAR(200)         | nullable                                    |
 | `vlan_id`     | FK → `vlan.id`       | nullable                                    |
@@ -250,10 +255,10 @@ Composite attribute `subnet` → `IPv4Network`/`IPv6Network`.
 | `id`        | PK                   |                                               |
 | `thing_id`  | FK → `thing.id`, UNIQUE, NOT NULL | the Thing this host is            |
 | `domain`   | VARCHAR(255), UNIQUE | FQDN; primary identifier                      |
-| `name`      | VARCHAR(64), UNIQUE  | short name (also `thing.name`)                |
 | `loc`       | VARCHAR(200)         | nullable, location                            |
 
-`desc`/`comment` live on the `Thing`. `mac`/`net`/`num` move to the `""`
+`desc`/`comment` live on the `Thing`; the **short name is `thing.name`**
+(D4 — no separate `host.name`). `mac`/`net`/`num` move to the `""`
 interface (decisions 1 + D2). `groups` via M2M below.
 
 #### `interface`
@@ -265,7 +270,8 @@ Unifies the old `HostPort` and the host’s direct attachment.
 | `host_id`    | FK → `host.id`, NOT NULL      |                                           |
 | `name`       | VARCHAR(64)                   | `""` = former direct attachment; `"."` on CLI maps to `""` |
 | `net_id`     | FK → `network.id`             | nullable                                  |
-| `addr`       | BIGINT                        | nullable; interface address               |
+| `num`        | INT                           | nullable; host offset within `net` (allocator key; v4 addr derived from it). NULL for MAC-mode / wire / unassigned |
+| `addr`       | BINARY(16)                    | nullable; materialised interface address  |
 | `prefix`     | SMALLINT                      | nullable; netmask                         |
 | `mac`        | BINARY(6)                     | nullable; → `netaddr.EUI`                  |
 | `force_vlan` | BOOLEAN, default 0            |                                           |
@@ -273,8 +279,11 @@ Unifies the old `HostPort` and the host’s direct attachment.
 | `desc`       | VARCHAR(200)                  | nullable                                  |
 
 Constraints: `UNIQUE(host_id, name)` (one `""` per host, one `"a"`/`"b"`
-per wire, unique port names per host). Composite attribute `address` →
-`IPv4Interface`/`IPv6Interface`.
+per wire, unique port names per host); `UNIQUE(net_id, num)` (no two
+interfaces share a host offset on the same network; `NULL` `num` is
+distinct, so un-numbered interfaces coexist). Composite attribute
+`address` → `IPv4Interface`/`IPv6Interface`. The writer derives `addr`
+from `num` for non-MAC networks and keeps them consistent (validator).
 
 #### `cable`
 | column       | type                       | notes                              |
@@ -296,8 +305,8 @@ DistKV’s one-cable-per-port invariant). Cables are anonymous link records
 
 ### Seeded thing-types
 
-The migrator (and/or an Alembic data migration) ensures a non-abstract
-`ThingTyp` named `host` exists (and `wire`, if D1 is accepted). These are
+The migrator (and/or an Alembic data migration) ensures non-abstract
+`ThingTyp`s named `host` and `wire` exist (D1 accepted). These are
 attached under the existing `ThingTyp` tree per `thingtyp_apply`’s
 single-root rule; the migrator must find the root or create one. Recorded
 here as a dependency, not a schema object.
@@ -401,10 +410,10 @@ submodules.
   `-m/--mac`, `-v/--vlan`, `--force-vlan`, `-d/--desc`, `-N/--name` (rename).
   `link DEST` replaces the old `port link`/`wire link` and creates a
   `cable` between two interfaces.
-- `mt db inv wire {add,set,delete,show,link}` — if D1 is accepted, a wire is
-  `host` with a `wire` thing-type and two interfaces `a`/`b`; this command
-  is a thin specialisation of `host`. `link` connects the `a` or `b`
-  interface (default `b`) to another wire’s end.
+- `mt db inv wire {add,set,delete,show,link}` — a wire is a `host` with a
+  `wire` thing-type and two interfaces `a`/`b` (D1); this command is a thin
+  specialisation of `host`. `link` connects the `a` or `b` interface
+  (default `b`) to another wire’s end.
 - `mt db inv cable {show,…}` — list/manage cables (mostly listing; link/unlink
   happen via `iface link`).
 - `mt db inv group  {add,set,delete,show}` and host↔group membership
@@ -427,12 +436,15 @@ decision 1’s wording.
   `interface → cable → interface → (host) → other interfaces of that host`.
   Wires need no special case (D1): a wire is a host with exactly two
   interfaces, so “leave via the other interface” just works.
-- **Allocation** (`Network.alloc`) moves to a network method that scans
-  existing `interface.addr` values within the subnet, skips the DHCP range
-  (`dhcp_first..dhcp_first+dhcp_count-1`) and the network/broadcast
-  positions, applies `shift`, and returns the first free address. MAC-mode
-  networks derive the address from the interface MAC instead of scanning
-  (formula to be confirmed — see open questions).
+- **Allocation** (`Network.alloc`) moves to a network method that finds
+  the first free **`num`** (scanning small integer `interface.num` values
+  on the network, skipping the DHCP range
+  `dhcp_first..dhcp_first+dhcp_count-1` and the network/broadcast
+  positions, applying `shift`) and then materialises `addr = base +
+  (num << shift)` via the `ip.py` converter (D2). Scanning `num` is cheaper
+  and clearer than probing the 16-byte `addr`. MAC-mode networks derive
+  the address from the interface MAC instead (formula to be confirmed —
+  Q1).
 - **`host_template` / `connected_vlans`** are ported later (out of scope
   here) but depend only on the interface/cable/vlan graph, which the new
   schema represents directly.
@@ -451,10 +463,10 @@ rows in one DB transaction.
 | `InventoryRoot.vlan[*]`                          | `vlan` (`tag`=path key, `name`, `desc`, `wlan`, `passwd`)              |
 | `InventoryRoot.net[*]` (`Network`)               | `network` (`addr`+`prefix` from `net.net`, `name`, `desc`, `vlan_id` by name, `master_id` by name, `shift`, `mac`, `virt`, `dhcp_first/count`, `wlan`) |
 | `InventoryRoot.group[*]`                         | `group` (`name`)                                                       |
-| `InventoryRoot.host[*]` (`Host`)                 | `Thing` (`name`=short, `descr`=`desc`, `thingtyp`=`host`) + `host` (`domain`=FQDN, `name`=short, `loc`) |
-| `Host.net`+`Host.num` (direct)                   | `interface` (`host_id`, `name=""`, `net_id`, `addr`+`prefix` computed, `mac`←`Host.mac`) |
-| `Host.port[name]` (`HostPort`)                   | `interface` (`host_id`, `name`, `net_id`, `addr`+`prefix`, `mac`, `force_vlan`, `vlan_id` by name, `desc`) |
-| `InventoryRoot.wire[*]` (`Wire`)                 | (D1) `Thing` (`thingtyp`=`wire`) + `host` (`domain`/`name`=wire name, `loc`, `desc`) + two `interface` `a`/`b` (no address) |
+| `InventoryRoot.host[*]` (`Host`)                 | `Thing` (`name`=short, `descr`=`desc`, `thingtyp`=`host`) + `host` (`domain`=FQDN, `loc`) |
+| `Host.net`+`Host.num` (direct)                   | `interface` (`host_id`, `name=""`, `net_id`, `num`, `addr`+`prefix` materialised from `num`, `mac`←`Host.mac`) |
+| `Host.port[name]` (`HostPort`)                   | `interface` (`host_id`, `name`, `net_id`, `num`, `addr`+`prefix`, `mac`, `force_vlan`, `vlan_id` by name, `desc`) |
+| `InventoryRoot.wire[*]` (`Wire`)                 | (D1) `Thing` (`name`=wire name, `thingtyp`=`wire`) + `host` (`domain`=wire name, `loc`, `desc`) + two `interface` `a`/`b` (no address, `num`=NULL) |
 | `InventoryRoot.cable[*]` (`Cable.dest_a/dest_b`) | `cable` (`iface_a_id`, `iface_b_id` resolved from the endpoint’s host+port-name; host-direct endpoint → `""` interface; wire endpoint → `a`/`b`) |
 | `Host.groups`                                   | `host_group` rows (resolve group names)                                |
 
@@ -473,31 +485,33 @@ rows in one DB transaction.
 
 ### Address computation
 
-For each interface with a `(network, num)`:
+Each interface carries its `num` (copied straight from DistKV’s
+`Host.num` / `HostPort.num`) **and** a materialised `addr`+`prefix`:
 
-- Non-MAC network: `addr = network.addr_int + (num << network.shift)`,
-  `prefix = network.prefix`, where `addr_int` is the IPv6-normalised
-  network base. Reproduces `Network.addr(num)`.
-- Slave/master co-existence (D3): if the interface’s network has a master
-  (or is a master with slaves), create the corresponding interface row on
-  each co-existing network and compute its address with the same `num`
-  (and that network’s `shift`). This materialises `Host.netaddrs`.
-- MAC-mode network (`network.mac is True`): the address is derived from the
-  interface MAC. **The DistKV `addr()` path is not callable in MAC mode**
-  (`num << -1` raises), so DistKV never actually stored/computed a MAC-mode
-  address — it was derived ad hoc (e.g. the manual IPv6 in `host_template`).
-  The exact formula must be supplied by the maintainer; until then the
-  migrator leaves MAC-mode interface addresses `NULL` and logs a warning.
+- Non-MAC network: `addr = network.base + (num << network.shift)`,
+  `prefix = network.prefix`, where `base` is the IPv6-normalised network
+  base (IPv4 nets stored as `::ffff:a.b.c.d`). Reproduces
+  `Network.addr(num)`. Both `num` and `addr` are written to the row.
+- MAC-mode network (`network.mac is True`): `num` is `NULL`; the address
+  is derived from the interface MAC. **The DistKV `addr()` path is not
+  callable in MAC mode** (`num << -1` raises), so DistKV never actually
+  stored/computed a MAC-mode address — it was derived ad hoc (e.g. the
+  manual IPv6 in `host_template`). The exact formula must be supplied by
+  the maintainer (Q1); until then the migrator leaves MAC-mode interface
+  addresses `NULL` and logs a warning.
+- Master/slave co-existence (D3, **deferred**): the migrator records
+  `network.master_id` but does **not** materialise slave-network interface
+  rows yet. Decide the policy together with Q2.
 
 Store every computed address via the `ip.py` converter so IPv4 is
-normalised to `::ffff:a.b.c.d`.
+normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
 
 ### Edge cases / risks
 
 - **Idempotency:** the importer is *not* idempotent. Guard with a check
   (e.g. refuse if `host`/`vlan` rows already exist) or require `--force`.
-- **Name collisions:** `Thing.name` (short name) must be globally unique
-  among things and ≤40 chars (D4). The importer detects collisions and
+- **Name collisions:** `Thing.name` (the short name, D4) must be globally
+  unique among things and ≤40 chars. The importer detects collisions and
   either renames or aborts with a report.
 - **Dangling cables:** a DistKV cable whose endpoint host/port no longer
   exists is skipped and logged (DistKV tolerates these via `_resolve`
@@ -522,27 +536,28 @@ normalised to `::ffff:a.b.c.d`.
    IPv6 address from a host MAC for `network.mac is True`? (DistKV never
    implemented it coherently.) Needed for both migration and runtime
    allocation.
-2. **Slave-interface lifecycle.** When a user assigns an address on a
-   master network via `mt db inv host … iface … -n MASTER -a`, should the
-   slave-network interfaces be auto-created/updated, or managed manually?
-   (D3 assumes materialised; the creation policy is undecided.)
-3. **Wires-as-hosts (D1).** Confirm wires should be `host`+`Thing` of type
-   `wire`, not a separate table.
-4. **`Thing.name` scope (D4).** Confirm short host names may occupy the
-   global thing-name namespace (and are ≤40 chars), vs. giving Things
-   synthetic slugs.
-5. **`addr` backing type / IPv6 width.** A 128-bit IPv6 address exceeds
-   a 64-bit `BIGINT` on SQLite and PostgreSQL; only the IPv4-mapped form
-   fits. Choose: `BINARY(16)` (recommended, full IPv6) vs. `BigInteger`
-   (literal design, IPv4-only). The converter is written to swap between
-   them; pick one before the Alembic revision is generated.
+2. **Master/slave (co-existence) materialisation — deferred with D3.**
+   Should a host on a master net get mirrored interface rows on each slave
+   net, and should assigning on a master auto-create/update the slave
+   interfaces or be manual? Decide after Q1.
+3. ~~**Wires-as-hosts (D1).**~~ **Resolved — accepted:** wires are
+   `host`+`Thing` of type `wire`.
+4. ~~**`Thing.name` scope (D4).**~~ **Resolved — accepted:** no separate
+   `host.name`; the short name lives on `thing.name` (revisit only if
+   collisions/length bite).
+5. ~~**`addr` backing type.**~~ **Resolved — accepted:** `BINARY(16)`
+   (full IPv6), packed big-endian.
 6. **Removal of `moat/kv/inv`.** Schedule the follow-up that deletes the
    DistKV inventory package after the migration has run everywhere.
+7. **Arbitrary port `attrs` (D6, tentative).** At migrator-writing time,
+   scan a real DistKV tree for `attrs` in use beyond `vlan`; add a `JSON`
+   column if any matter.
 
 ## Task breakdown
 
-1. `moat/db/inv/ip.py` — address composite type + converters (with unit
-   tests for v4/v6 round-trips and v4-mapping).
+1. `moat/db/inv/ip.py` — address composite type + converters (`BINARY(16)`
+   big-endian pack/unpack; v4-mapping to/from `::ffff:a.b.c.d`; v4/v6
+   round-trip unit tests).
 2. `moat/db/inv/model.py` + `model_.py` — the seven models, relationships,
    `apply()`/`dump()`, validators.
 3. Register in `moat/db/_cfg.yaml`; add to `pyproject.toml` ty includes.

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 import moat.db.util  # noqa: F401  — attaches the sqlite ``foreign_keys=ON`` pragma listener
 from moat.db.rain import model as rain
 from moat.db.schema import Base
+from moat.lib.path import Path
 
 
 @pytest.fixture
@@ -26,12 +27,13 @@ def engine(tmp_path):
 def _seed_graph(sess):
     """Build a small but wide site graph; return the key objects by tag."""
     site = rain.Site(name="home")
-    ctrl = rain.Controller(name="C1", var="home.c1", location="rack", site=site)
+    ctrl = rain.Controller(name="C1", var=Path.from_str("home.c1"), location="rack", site=site)
     feed = rain.Feed(name="main", site=site)
     eg = rain.EnvGroup(name="std", site=site)
     valve = rain.Valve(
         name="V1",
-        var="home.v1",
+        command=Path.from_str("home.v1"),
+        state=Path.from_str("home.v1.state"),
         location="port1",
         flow=0.5,
         area=10.0,
@@ -131,6 +133,9 @@ def test_full_graph_links(engine):
         assert g["sched"].duration_td == timedelta(seconds=900)
         assert g["valve"].max_run_td is None
         assert g["valve"].min_delay_td is None
+        assert g["valve"].command == Path.from_str("home.v1")
+        assert g["valve"].state == Path.from_str("home.v1.state")
+        assert g["ctrl"].var == Path.from_str("home.c1")
         # a site-level log (null controller/valve) is in site.logs only
         assert g["ctrl"].logs == set()
         assert g["valve"].logs == set()
@@ -140,14 +145,14 @@ def test_valve_unique_per_controller(engine):
     """``(controller, name)`` is unique; the same name on another controller is fine."""
     with Session(engine) as sess:
         site = rain.Site(name="home")
-        c1 = rain.Controller(name="C1", var="h.c1", location="x", site=site)
-        c2 = rain.Controller(name="C2", var="h.c2", location="x", site=site)
+        c1 = rain.Controller(name="C1", var=Path.from_str("h.c1"), location="x", site=site)
+        c2 = rain.Controller(name="C2", var=Path.from_str("h.c2"), location="x", site=site)
         feed = rain.Feed(name="main", site=site)
         eg = rain.EnvGroup(name="std", site=site)
         sess.add(
             rain.Valve(
                 name="V",
-                var="h.v1",
+                command=Path.from_str("h.v1"),
                 location="p",
                 flow=0.5,
                 area=1.0,
@@ -160,7 +165,7 @@ def test_valve_unique_per_controller(engine):
         sess.add(
             rain.Valve(
                 name="V",
-                var="h.v2",
+                command=Path.from_str("h.v2"),
                 location="p",
                 flow=0.5,
                 area=1.0,
@@ -173,7 +178,7 @@ def test_valve_unique_per_controller(engine):
         sess.add(
             rain.Valve(
                 name="V",
-                var="h.v3",
+                command=Path.from_str("h.v3"),
                 location="p",
                 flow=0.5,
                 area=1.0,

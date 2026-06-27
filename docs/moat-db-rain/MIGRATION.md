@@ -242,12 +242,30 @@ short `String` — not a Python `Enum`, to stay simple). Unique constraint
 `(site, kind, name)`. `Feed` remains its own table (`rain_feed`) since
 its columns differ materially.
 
-### 4.5 `var` fields (MoaT-link monitor names)
+### 4.5 Link paths — `moat.lib.path.Path` columns
 
-Keep as `String(200)`, `unique=True` where the original was unique.
-`Feed.var` and `Site.var` were `unique=True, null=True`; SQLite/Postgres
-allow multiple NULLs under a unique constraint, so keep `unique=True,
-nullable=True`.
+Every column that names a MoaT-link address is a
+:class:`moat.lib.path.Path` in Python and a `VARCHAR(200)` in SQL,
+mediated by a small `PathType(TypeDecorator[Path])` declared atop
+`model.py` (bind → `str(path)`, load → `Path.from_str(s)`). The empty
+path serialises to `":""`; a nullable column maps `None` ↔ SQL `NULL`
+(SQLite/Postgres allow multiple NULLs under a unique constraint, so
+`unique=True, nullable=True` is preserved where the original was).
+
+The link roles, reflecting how each entity talks to MoaT-link:
+
+| Column | Was | Now |
+|---|---|---|
+| `Sensor.state` | `Sensor.var` (the subscribed monitor var) | renamed — the sensor's read endpoint |
+| `Valve.command` | `Valve.var` ("name of this output") | renamed — the valve's write endpoint |
+| `Valve.state` | — | new — the valve's read/feedback endpoint (`nullable`, unique) |
+| `Controller.var` | `Controller.var` (RPC name) | retyped, name kept |
+| `Feed.var` | `Feed.var` (flow monitor name) | retyped, name kept |
+| `Site.var` | `Site.var` (site name in MoaT) | retyped, name kept |
+
+`command` is mandatory (every valve must be commandable); `state` is
+optional (a valve may lack feedback). Both are unique — no two valves
+share a command or state path.
 
 ### 4.6 Drop `UserForSite` (auth deferred)
 
@@ -367,11 +385,11 @@ Plus edits to existing files (§6.4).
 
 | New class | Table | Key columns (beyond PK) | FKs / relations |
 |---|---|---|---|
-| `Site` | `rain_site` | `name` uniq, `comment`?, `var` uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
-| `Controller` | `rain_controller` | `name`, `var` uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
-| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `var` uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
-| `Feed` | `rain_feed` | `name`, `var` uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
-| `Sensor` | `rain_sensor` | `kind` str(rain/temp/wind/sun), `name`, `var` uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
+| `Site` | `rain_site` | `name` uniq, `comment`?, `var` Path uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
+| `Controller` | `rain_controller` | `name`, `var` Path uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
+| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `command` Path uniq, `state` Path? uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
+| `Feed` | `rain_feed` | `name`, `var` Path uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
+| `Sensor` | `rain_sensor` | `kind` str(rain/temp/wind/sun), `name`, `state` Path uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
 | `Group` | `rain_group` | `name`, `comment`?, `adj`? | `site`→Site; M2M `days`/`xdays`↔DayRange; M2M `valves`↔Valve. UQ(site,name) |
 | `EnvGroup` | `rain_envgroup` | `name`, `comment`?, `factor` d=1.0, `rain` bool d=True | `site`→Site; → items, valves. UQ(site,name) |
 | `EnvItem` | `rain_envitem` | `factor` d=1.0, `temp`?, `wind`?, `sun`? | `group`→EnvGroup |

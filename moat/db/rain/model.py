@@ -14,9 +14,41 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 from moat.db.schema import Base
+from moat.lib.path import Path
 from moat.util.times import now
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine.interfaces import Dialect
+
+
+class PathType(TypeDecorator[Path]):
+    """Store a :class:`moat.lib.path.Path` column as ``VARCHAR(200)``.
+
+    Binding serialises with :func:`str`; loading parses with
+    :meth:`Path.from_str`. The empty path is ``":""``; a nullable column
+    maps to ``None`` ↔ SQL ``NULL``.
+    """
+
+    impl = String(200)
+    cache_ok = True
+
+    def process_bind_param(self, value: Path | None, dialect: Dialect) -> str | None:  # noqa:ARG002
+        """Serialise a :class:`Path` (or ``None``) for the database."""
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value: str | None, dialect: Dialect) -> Path | None:  # noqa:ARG002
+        """Parse a stored string (or ``None``) back into a :class:`Path`."""
+        if value is None:
+            return None
+        return Path.from_str(value)
+
 
 # Association tables (many-to-many). Their foreign keys are string-keyed so
 # they may be declared ahead of the mapped classes that reference them via
@@ -87,7 +119,7 @@ class Site(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, type_=String(200))
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
-    var: Mapped[str | None] = mapped_column(unique=True, type_=String(200), nullable=True)
+    var: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     rate: Mapped[float] = mapped_column(default=10.0, server_default="10")
     rain_delay: Mapped[int] = mapped_column(default=300, server_default="300")
 
@@ -196,7 +228,7 @@ class Sensor(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(type_=String(8), comment="rain|temp|wind|sun")
     name: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[str] = mapped_column(unique=True, type_=String(200))
+    state: Mapped[Path] = mapped_column(type_=PathType(), unique=True)
     weight: Mapped[int] = mapped_column(type_=SmallInteger, default=10, server_default="10")
     site_id: Mapped[int] = mapped_column(
         ForeignKey("rain_site.id", name="fk_sensor_site", ondelete="CASCADE"),
@@ -213,7 +245,7 @@ class Feed(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[str | None] = mapped_column(unique=True, type_=String(200), nullable=True)
+    var: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     flow: Mapped[float | None] = mapped_column(nullable=True, default=10.0, server_default="10")
     max_flow_wait: Mapped[int] = mapped_column(default=300, server_default="300")
@@ -239,7 +271,7 @@ class Controller(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[str] = mapped_column(unique=True, type_=String(200))
+    var: Mapped[Path] = mapped_column(type_=PathType(), unique=True)
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     location: Mapped[str] = mapped_column(type_=String(200))
     max_on: Mapped[int] = mapped_column(default=3, server_default="3")
@@ -264,7 +296,8 @@ class Valve(Base):
     name: Mapped[str] = mapped_column(type_=String(200))
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
     location: Mapped[str] = mapped_column(type_=String(200))
-    var: Mapped[str] = mapped_column(unique=True, type_=String(200))
+    command: Mapped[Path] = mapped_column(type_=PathType(), unique=True)
+    state: Mapped[Path | None] = mapped_column(type_=PathType(), nullable=True, unique=True)
     verbose: Mapped[int] = mapped_column(type_=SmallInteger, default=0, server_default="0")
     flow: Mapped[float] = mapped_column()
     area: Mapped[float] = mapped_column()

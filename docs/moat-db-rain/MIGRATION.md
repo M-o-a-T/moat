@@ -68,7 +68,7 @@ properties.
 
 | Entity (old table) | Columns (excluding PK) | UT | Notes |
 |---|---|---|---|
-| **Site** (`rainman_site`) | `name` str200 uniq, `comment` str200?, `var` str200 uniq?, `host` str200, `port` posint, `db_rate` float (col `rate`), `db_rain_delay` posint (col `rain_delay`) | — | Model file *also* declares `username`/`password`/`virtualhost` (RabbitMQ); the newer migration **dropped** them and reframed `host`/`port` as "MoaT server / RPC port 50005". Dropped per §4.2. |
+| **Site** (`rainman_site`) | `name` str200 uniq, `comment` str200?, `var` str200 uniq?, `host` str200, `port` posint, `db_rate` float (col `rate`; **evaporation**, mm/sec stored / mm/day via property), `db_rain_delay` posint (col `rain_delay`) | — | Model file *also* declares `username`/`password`/`virtualhost` (RabbitMQ); the newer migration **dropped** them and reframed `host`/`port` as "MoaT server / RPC port 50005". Dropped per §4.2. |
 | **Controller** (`rainman_controller`) | `name` str200, `var` str200 uniq, `comment` str200?, `site` FK→Site, `location` str200, `max_on` int d=3 | (site,name) | |
 | **Valve** (`rainman_valve`) | `name` str200, `comment` str200?, `feed` FK→Feed, `controller` FK→Controller, `envgroup` FK→EnvGroup (col `param_group_id`), `location` str200, `var` str200 uniq, `verbose` possmallint d=0, `flow` float, `area` float, `max_level` float d=10, `start_level` float d=8, `stop_level` float d=3, `shade` float d=1, `db_max_run` posint? (col `max_run`), `db_min_delay` posint? (col `min_delay`), `runoff` float d=1, `time` dt idx d=now, `level` float d=0, `priority` bool d=False | (controller,name) | M2M `groups`→Group via `rainman_group_valves`. |
 | **Feed** (`rainman_feed`) | `name` str200, `var` str200 uniq?, `comment` str200?, `site` FK→Site, `flow` float? d=10, `db_max_flow_wait` posint (col `max_flow_wait`) d=300, `disabled` bool d=False | (site,name)¹ | Subclasses abstract `Meter` + `RangeMixin`. ¹UT inherited from `Meter`. |
@@ -224,8 +224,10 @@ from `Base`'s auto-lowercase default.
 The old `Site` carried RabbitMQ / "MoaT server" connection params.
 Connection configuration belongs in MoaT's YAML config / link setup, not
 in a per-row DB column. `rain_site` keeps only `name`, `comment`,
-`rate` (mm/day, float), `rain_delay` (seconds, int). Drops
-`host`/`port`/`username`/`password`/`virtualhost`.
+`rate` (**evaporation**, float, stored in **mm/second** — the physical
+unit the engine uses; the CLI presents it in **mm/day**, scaling by
+`24*3600` at the command boundary, see §6.3), `rain_delay` (seconds,
+int). Drops `host`/`port`/`username`/`password`/`virtualhost`.
 
 ### 4.3 Durations — integer seconds + `timedelta` property
 
@@ -433,7 +435,7 @@ Plus edits to existing files (§6.4).
 
 | New class | Table | Key columns (beyond PK) | FKs / relations |
 |---|---|---|---|
-| `Site` | `rain_site` | `name` uniq, `comment`?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
+| `Site` | `rain_site` | `name` uniq, `comment`?, `rate` float (evaporation, **mm/sec**; CLI mm/day), `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
 | `Controller` | `rain_controller` | `name`, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
 | `Valve` | `rain_valve` | `name`, `comment`?, `location`, `command` Path? uniq, `state` Path? uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
 | `Feed` | `rain_feed` | `name`, `flow_monitor` Path uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
@@ -600,7 +602,8 @@ algorithms port unchanged.
   rows (`seen=changed=forced=False`). Skip valves whose `Feed.disabled`.
 - `recalculate(sess, *, site=None, valve=None, age=…)` (old
   `recalculate`): replay `History` rows to rebuild `Level` rows:
-  `Δlevel = −evap(rate·shade·env_factor·dt) + rain·runoff − delivered`;
+  `Δlevel = −evap(rate·shade·env_factor·dt) + rain·runoff − delivered`
+  (`rate` is mm/second, `dt` in seconds, so `rate·dt` is mm evaporated);
   clamp at `max_level`; skip `Level.forced` rows. Evaporation uses the
   `EnvGroup.env_factor()` weighted-nearest-neighbour interpolation
   (ported from `env.py`).

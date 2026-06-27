@@ -20,6 +20,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import Any
+
+
+#: Seconds per day — scales the site evaporation ``rate`` between its
+#: stored unit (mm/second) and the CLI unit (mm/day).
+SECS_PER_DAY: int = 24 * 3600
 
 
 def site_of(obj):
@@ -32,6 +38,30 @@ def site_of(obj):
         return obj.session.one(Site, name=obj.site_name)
     except KeyError:
         raise click.UsageError(f"Site {obj.site_name!r} doesn't exist.") from None
+
+
+def scale_site_rate(kw: dict[str, Any]) -> None:
+    """Convert a CLI ``rate`` (mm/day) in ``kw`` to the stored mm/second.
+
+    Mutates ``kw`` in place: if a ``rate`` was supplied (i.e. not
+    :data:`~moat.util.NotGiven`), it is divided by :data:`SECS_PER_DAY`.
+    The stored :attr:`Site.rate` column is in mm/second; the CLI accepts
+    mm/day, so the command layer scales before :meth:`~Base.apply`.
+    """
+    if is_given(kw.get("rate", NotGiven)):
+        kw["rate"] = kw["rate"] / SECS_PER_DAY
+
+
+def site_dump(site: Site) -> dict[str, Any]:
+    """Dump a site for the CLI, presenting ``rate`` in mm/day.
+
+    The stored :attr:`Site.rate` is mm/second; the CLI shows mm/day, so
+    the dumped value is multiplied by :data:`SECS_PER_DAY`.
+    """
+    res = site.dump()
+    if "rate" in res:
+        res["rate"] = res["rate"] * SECS_PER_DAY
+    return res
 
 
 def require_name(obj, what: str) -> str:
@@ -190,7 +220,7 @@ def site_opts(c):
     """Decorator: the scalar options of a :class:`Site`."""
     c = option_ng("--name", "-n", type=str, help="Rename this site")(c)
     c = option_ng("--comment", "-c", type=str, help="Free-form description")(c)
-    c = option_ng("--rate", "-r", "rate", type=float, help="Default watering rate (mm/h)")(c)
+    c = option_ng("--rate", "-r", "rate", type=float, help="Evaporation rate (mm/day)")(c)
     c = option_ng("--rain-delay", "-d", "rain_delay", type=int, help="Pause after rain (seconds)")(
         c
     )

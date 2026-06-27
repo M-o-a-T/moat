@@ -11,6 +11,7 @@ from moat.util import yprint
 from moat.db import database
 from moat.lib.run import load_subgroup
 
+from .cmds._util import site_dump
 from .model import Site
 
 #: Subcommands whose entities are **global** (not per-site) and thus
@@ -65,4 +66,4 @@ async def cli(ctx, site):
         return
 
     if ctx.invoked_subcommand is None:
-        yprint(sess.one(Site, name=site).dump(), stream=obj.stdout)
+        yprint(site_dump(sess.one(Site, name=site)), stream=obj.stdout)

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
@@ -121,7 +122,9 @@ class Site(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, type_=String(200))
     comment: Mapped[str | None] = mapped_column(type_=String(200), nullable=True)
-    rate: Mapped[float] = mapped_column(default=10.0, server_default="10")
+    rate: Mapped[float] = mapped_column(
+        default=10 / 86400, server_default=text("10.0 / 86400")
+    )  # evaporation, mm/second; the CLI presents mm/day (cmds/_util.py)
     rain_delay: Mapped[int] = mapped_column(default=300, server_default="300")
 
     envgroups: Mapped[set[EnvGroup]] = relationship(

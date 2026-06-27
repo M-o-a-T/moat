@@ -13,6 +13,11 @@ from moat.lib.run import load_subgroup
 
 from .model import Site
 
+#: Subcommands whose entities are **global** (not per-site) and thus
+#: accept the dummy site ``-`` in place of a real site name.
+#: Currently the day-definition and day-range registries.
+_GLOBAL_SUBCOMMANDS: frozenset[str] = frozenset({"day", "dayrange"})
+
 
 @load_subgroup(
     sub_pre="moat.db.rain.cmds",
@@ -33,6 +38,8 @@ async def cli(ctx, site):
     \b
     Use ``moat db rain -`` to list all sites.
     Use ``moat db rain <SITE>`` (no subcommand) to show one site.
+    Use ``moat db rain - <verb>`` for global subcommands (day, dayrange)
+    that don't need a site.
     """
     obj = ctx.obj
     sess = ctx.with_resource(database(obj.cfg.db))
@@ -41,17 +48,20 @@ async def cli(ctx, site):
     obj.site_name = site
 
     if site == "-":
-        if ctx.invoked_subcommand is not None:
+        if ctx.invoked_subcommand is None:
+            seen = False
+            with sess.execute(select(Site).order_by(Site.name)) as sites:
+                for (s,) in sites:
+                    seen = True
+                    print(s.name, file=obj.stdout)
+            if not seen:
+                print("No sites defined yet. Use '--help'?", file=sys.stderr)
+            return
+        if ctx.invoked_subcommand not in _GLOBAL_SUBCOMMANDS:
             raise click.BadParameter(
-                "The site '-' triggers a list and precludes subcommands.",
+                f"The site '-' is a dummy for global commands only; "
+                f"'{ctx.invoked_subcommand}' needs a real site.",
             )
-        seen = False
-        with sess.execute(select(Site).order_by(Site.name)) as sites:
-            for (s,) in sites:
-                seen = True
-                print(s.name, file=obj.stdout)
-        if not seen:
-            print("No sites defined yet. Use '--help'?", file=sys.stderr)
         return
 
     if ctx.invoked_subcommand is None:

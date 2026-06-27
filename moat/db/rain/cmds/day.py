@@ -4,7 +4,8 @@
 
 A :class:`Day` is a named union of time fragments (:class:`DayTime`),
 scoped **globally** (not per site) — the ``<SITE>`` argument is accepted
-for consistency with the rest of the CLI but ignored here. A
+for consistency with the rest of the CLI but ignored here, so the dummy
+site ``-`` may be used (``moat db rain - day …``). A
 :class:`DayRange` (see ``moat db rain <SITE> dayrange``) intersects Days.
 
 Each :class:`DayTime` is a free-form description string (e.g.

@@ -1697,3 +1697,42 @@ async def test_add_without_key_and_history_set_delete(rain):
         "z",
     )
     assert "text: z" in r.stdout
+
+
+async def test_dummy_site_dash(rain):
+    """The dummy site '-' lists sites, and is accepted by global subcommands."""
+    # no sites yet: '-' lists nothing (hint to stderr), exit 0
+    r = await rain("db", "rain", "-")
+    assert r.stdout == ""
+
+    # global day/dayrange accept '-' as a dummy site, with no site defined
+    r = await rain("db", "rain", "-", "day", "show")
+    assert r.stdout == ""
+    r = await rain("db", "rain", "-", "day", "-n", "summer", "add")
+    assert "name: summer" in r.stdout
+    r = await rain("db", "rain", "-", "day", "show")
+    assert r.stdout == "summer\n"
+
+    r = await rain("db", "rain", "-", "dayrange", "show")
+    assert r.stdout == ""
+    r = await rain("db", "rain", "-", "dayrange", "-n", "rng", "add", "--day", "summer")
+    assert "name: rng" in r.stdout
+    r = await rain("db", "rain", "-", "dayrange", "show")
+    assert r.stdout == "rng\n"
+
+    # nested subgroup under a global command also tolerates '-'
+    r = await rain("db", "rain", "-", "day", "-n", "summer", "time", "-d", "8-12", "add")
+    assert "descr: 8-12" in r.stdout
+    r = await rain("db", "rain", "-", "day", "-n", "summer", "time", "show")
+    assert r.stdout == "8-12\n"
+
+    # a site-scoped subcommand rejects the dummy site
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "-", "controller", "show")
+    assert "dummy for global commands only" in _msg(err)
+    assert "controller" in _msg(err)
+
+    # '-' still lists real sites once one exists
+    await rain("db", "rain", "home", "add")
+    r = await rain("db", "rain", "-")
+    assert r.stdout == "home\n"

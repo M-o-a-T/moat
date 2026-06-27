@@ -1,0 +1,282 @@
+dev:
+  product: OR-WE-517
+  label: Orno
+
+  regs:
+    serial:
+      register: 0
+      reg_type: i
+      type: uint
+      len: 2
+    meter_id:
+      register: 2
+      type: uint
+      len: 1
+    baudrate:
+      register: 3
+      type: uint
+      len: 1
+    sw_vers:
+      register: 4
+      type: float
+      len: 2
+    hw_vers:
+      register: 6
+      type: float
+      len: 2
+    ct_rate:
+      register: 8
+      type: uint
+      len: 1
+    s0_rate:
+      register: 9
+      type: float
+      len: 2
+    a3:
+      register: 0x0b
+      type: uint
+      len: 1
+    cycle_time:
+      register: 0x0d
+      type: uint
+      len: 1
+    crc:
+      register: 0x41
+      type: uint
+      len: 1
+    combined:
+      register: 0x42
+      type: uint
+      len: 1
+
+regs:
+  current:
+    L1:
+      register: 0x16
+      type: float
+      unit: A
+    L2:
+      register: 0x18
+      type: float
+      unit: A
+    L3:
+      register: 0x1A
+      type: float
+      unit: A
+
+  energy:
+    total:
+      import:
+        active:
+          L1:
+            register: 0x10A
+            scale: 3
+            type: float
+            unit: Wh
+          L2:
+            register: 0x10C
+            scale: 3
+            type: float
+            unit: Wh
+          L3:
+            register: 0x10E
+            scale: 3
+            type: float
+            unit: Wh
+          sum:
+            register: 0x108
+            scale: 3
+            type: float
+            unit: Wh
+        reactive:
+          L1:
+            register: 0x122
+            scale: 3
+            type: float
+            unit: VArh
+          L2:
+            register: 0x124
+            scale: 3
+            type: float
+            unit: VArh
+          L3:
+            register: 0x126
+            scale: 3
+            type: float
+            unit: VArh
+          sum:
+            register: 0x120
+            scale: 3
+            type: float
+            unit: VArh
+      export:
+        active:
+          L1:
+            register: 0x112
+            scale: 3
+            type: float
+            unit: Wh
+          L2:
+            register: 0x114
+            scale: 3
+            type: float
+            unit: Wh
+          L3:
+            register: 0x116
+            scale: 3
+            type: float
+            unit: Wh
+          sum:
+            register: 0x110
+            scale: 3
+            type: float
+            unit: Wh
+        reactive:
+          L1:
+            register: 0x12A
+            scale: 3
+            type: float
+            unit: VArh
+          L2:
+            register: 0x12C
+            scale: 3
+            type: float
+            unit: VArh
+          L3:
+            register: 0x12E
+            scale: 3
+            type: float
+            unit: VArh
+          sum:
+            register: 0x128
+            scale: 3
+            type: float
+            unit: VArh
+      active:
+        sum:
+          register: 0x100
+          scale: 3
+          type: float
+          unit: Wh
+        L1:
+          register: 0x102
+          scale: 3
+          type: float
+          unit: Wh
+        L2:
+          register: 0x104
+          scale: 3
+          type: float
+          unit: Wh
+        L3:
+          register: 0x106
+          scale: 3
+          type: float
+          unit: Wh
+      reactive:
+        sum:
+          register: 0x118
+          scale: 3
+          type: float
+          unit: VArh
+        L1:
+          register: 0x11A
+          scale: 3
+          type: float
+          unit: VArh
+        L2:
+          register: 0x11C
+          scale: 3
+          type: float
+          unit: VArh
+        L3:
+          register: 0x11E
+          scale: 3
+          type: float
+          unit: VArh
+
+  voltage:
+    L1:
+      register: 0x0E
+      type: float
+      unit: V
+    L2:
+      register: 0x10
+      type: float
+      unit: V
+    L3:
+      register: 0x12
+      type: float
+      unit: V
+
+  factor:
+    L1:
+      register: 0x36
+      type: float
+    L2:
+      register: 0x38
+      type: float
+    L3:
+      register: 0x3A
+      type: float
+    total:
+      register: 0x34
+      type: float
+
+  power:
+    L1:
+      active:
+        register: 0x1E
+        type: float
+        unit: W
+      apparent:
+        register: 0x2E
+        type: float
+        unit: VA
+      reactive:
+        register: 0x26
+        type: float
+        unit: VAr
+    L2:
+      active:
+        register: 0x20
+        type: float
+        unit: W
+      apparent:
+        register: 0x30
+        type: float
+        unit: VA
+      reactive:
+        register: 0x28
+        type: float
+        unit: VAr
+    L3:
+      active:
+        register: 0x22
+        type: float
+        unit: W
+      apparent:
+        register: 0x32
+        type: float
+        unit: VA
+      reactive:
+        register: 0x2A
+        type: float
+        unit: VAr
+    sum:
+      active:
+        register: 0x1C
+        type: float
+        unit: W
+      apparent:
+        register: 0x2C
+        type: float
+        unit: VA
+      reactive:
+        register: 0x26
+        type: float
+        unit: VAr
+  frequency:
+    register: 0x14
+    type: float
+    unit: Hz

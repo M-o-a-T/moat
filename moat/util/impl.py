@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import logging
 import sys
-from contextlib import nullcontext, suppress
+from contextlib import nullcontext, suppress, AbstractContextManager, AbstractAsyncContextManager
 from getpass import getpass
 from math import log10
 
 from collections import deque
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -41,21 +41,22 @@ NoneType = type(None)
 NoLock = nullcontext()
 
 T = TypeVar("T")
+YieldT = TypeVar("YieldT")
 
 
-class OptCtx:
+class OptCtx(Generic[YieldT]):
     """
     Optional context. Unlike `contextlib.nullcontext` this doesn't return a
     fixed value; instead it delegates to the wrapped context manager – if
     there is one.
     """
 
-    def __init__(self, obj: object = None) -> None:
-        self.obj: object = obj
+    def __init__(self, obj: AbstractContextManager[YieldT] | AbstractAsyncContextManager[YieldT] | None = None) -> None:
+        self.obj: AbstractContextManager[YieldT] | AbstractAsyncContextManager[YieldT] | None = obj
 
-    def __enter__(self) -> object:
+    def __enter__(self) -> YieldT | None:
         if self.obj is not None:
-            return self.obj.__enter__()  # type: ignore[union-attr]  # duck typing
+            return cast(AbstractContextManager[YieldT], self.obj).__enter__()
         return None
 
     def __exit__(
@@ -63,14 +64,14 @@ class OptCtx:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ) -> object:
+    ) -> bool | None:
         if self.obj is not None:
-            return self.obj.__exit__(exc_type, exc_val, exc_tb)  # type: ignore[union-attr]  # duck typing
+            return cast(AbstractContextManager[YieldT], self.obj).__exit__(exc_type, exc_val, exc_tb)
         return None
 
-    async def __aenter__(self) -> object:
+    async def __aenter__(self) -> YieldT | None:
         if self.obj is not None:
-            return await self.obj.__aenter__()  # type: ignore[union-attr]  # duck typing
+            return await cast(AbstractAsyncContextManager[YieldT], self.obj).__aenter__()
         return None
 
     async def __aexit__(
@@ -78,13 +79,13 @@ class OptCtx:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ) -> object:
+    ) -> bool | None:
         if self.obj is not None:
-            return await self.obj.__aexit__(exc_type, exc_val, exc_tb)  # type: ignore[union-attr]  # duck typing
+            return await cast(AbstractAsyncContextManager[YieldT], self.obj).__aexit__(exc_type, exc_val, exc_tb)
         return None
 
 
-def import_(name: str, off: int = 0) -> object:
+def import_(name: str, off: int = 0) -> Any:
     """
     Import a module and access an object in it.
 
@@ -94,7 +95,7 @@ def import_(name: str, off: int = 0) -> object:
     n = name.split(".")
     mn = ".".join(n[: -off if off else 99])
     try:
-        res: object = __import__(mn)
+        res: Any = __import__(mn)
         for nn in n[1:]:
             res = getattr(res, nn)
     except Exception:
@@ -109,7 +110,7 @@ def load_from_cfg(
     _attr: str = "server",
     _raise: bool = False,
     **k: Any,
-) -> object | None:
+) -> Any | None:
     """
     A simple frontend to load a module, access a class/object from it,
     and call that with the config (and whchever other arguments you want to
@@ -140,7 +141,7 @@ def load_from_cfg(
     else:
         off = 1
     m = import_(name, off=off)
-    return m(*a, **k)  # type: ignore[operator]  # m is callable
+    return m(*a, **k)
 
 
 def singleton(cls: Callable[[], T]) -> T:
@@ -155,7 +156,7 @@ class TimeOnlyFormatter(logging.Formatter):
     default_msec_format: str = "%s.%03d"
 
 
-def count(it: Iterator[object]) -> int:
+def count(it: Iterator[Any]) -> int:
     """counts the length of an iterator"""
     n = 0
     for _ in it:
@@ -163,7 +164,7 @@ def count(it: Iterator[object]) -> int:
     return n
 
 
-async def acount(it: AsyncIterator[object]) -> int:
+async def acount(it: AsyncIterator[int]) -> int:
     """counts the length of an async iterator"""
     n = 0
     async for _ in it:
@@ -185,9 +186,9 @@ class Cache:
         self._head: int = 0
         self._tail: int = 0
         self._attr: str = "_cache__pos"
-        self._q: deque[object] = deque()
+        self._q: deque[Any] = deque()
 
-    def keep(self, entry: object) -> None:
+    def keep(self, entry: Any) -> None:
         """Store an entry in the cache"""
         if getattr(entry, self._attr, -1) > self._tail + self._size / 3:
             return
@@ -275,7 +276,7 @@ def split_arg(p: str, kw: dict[str, Any]) -> None:
 _alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
-def num2id(number: int | object, alphabet: str = _alphabet) -> str:
+def num2id(number: int | Any, alphabet: str = _alphabet) -> str:
     """
     Encode a number / object ID in base36 (by default).
 

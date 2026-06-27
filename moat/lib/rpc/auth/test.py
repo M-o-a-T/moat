@@ -4,7 +4,7 @@ Test auth.
 
 from __future__ import annotations
 
-from moat.lib.micro import Event, L
+from moat.lib.micro import L
 
 from ._base import SubAuth as _SubAuth
 
@@ -18,20 +18,13 @@ class SubAuth(_SubAuth):
     True/False/None means Accept/Deny/Ignore. Ignore is the default.
     """
 
-    _seen: Event
-
-    async def setup(self):
-        "Adds an event, for continuing"
-        await super().setup()
-        self._seen = Event()
-
     async def task(self):
         """Handle this auth method."""
         if L:
             self.set_ready()
 
         if self.is_server:
-            await self._seen.wait()
+            await self._seen_evt.wait()
             return
 
         ok = self.auth.get("ok", self.parent.cfg.get("ok", self.cfg.get("ok")))
@@ -46,7 +39,7 @@ class SubAuth(_SubAuth):
 
     async def cmd_test(self, ok=None):
         """Handle receiving a request for this auth method"""
-        self._seen.set()
+        self._seen_evt.set()
         if ok is True:
             self.accept()
         elif ok is False:

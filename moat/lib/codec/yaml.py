@@ -23,11 +23,11 @@ class Codec(_Codec):
 
     def encode(self, obj):
         "basic encoder"
-        return yprint(obj).encode("utf-8")
+        return yprint(obj).encode("utf-8", "surrogateescape")
 
     def decode(self, data):
         "basic decoder"
-        return yload(data.decode("utf-8"))
+        return yload(data.decode("utf-8", "surrogateescape"))
 
     def feed(self, data: ByteType) -> None:  # noqa: D102
         self._buf.extend(data)
@@ -36,6 +36,6 @@ class Codec(_Codec):
         i = self._buf.find(b"\n---\n")
         if i < 0:
             raise StopIteration
-        res = yload(self._buf[0 : i + 1].decode("utf-8"))
+        res = yload(self._buf[0 : i + 1].decode("utf-8", "surrogateescape"))
         self._buf[0 : i + 5] = b""
         return res

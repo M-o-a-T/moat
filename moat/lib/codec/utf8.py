@@ -36,7 +36,7 @@ class Codec(_Codec):
         "Encode UTF-8 to bytestring"
         if not isinstance(obj, str):
             raise ValueError(self, obj)  # noqa:TRY004
-        return obj.encode("utf-8")
+        return obj.encode("utf-8", "surrogateescape")
 
     def decode(self, data: ByteType) -> str:
         "Decode a bytestring to UTF-8"

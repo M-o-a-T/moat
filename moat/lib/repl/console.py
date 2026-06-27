@@ -26,14 +26,14 @@ import re
 import sys
 from abc import ABC, abstractmethod
 
-import _colorize  # type: ignore[import-not-found]
+import _colorize  # ty:ignore[unresolved-import]
 from attrs import define, field
 
 TYPE_CHECKING = False
 
 if TYPE_CHECKING:
     from collections.abc import (
-        Buffer,  # type:ignore[unresolved-import]  # Buffer: Python 3.12+
+        Buffer,  # ty:ignore[unresolved-import]  # Buffer: Python 3.12+
         Callable,
     )
 
@@ -178,12 +178,12 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
     def _excepthook(self, typ, value, tb):
         import traceback  # noqa: PLC0415
 
-        lines = traceback.format_exception(  # type: ignore[call-overload,attr-defined]
+        lines = traceback.format_exception(  # ty:ignore[no-matching-overload,attr-defined]
             typ,
             value,
             tb,
             colorize=self.can_colorize,
-            limit=traceback.BUILTIN_EXCEPTION_LIMIT,  # type: ignore[attr-defined]
+            limit=traceback.BUILTIN_EXCEPTION_LIMIT,  # ty:ignore[unresolved-attribute]
         )
         self.write("".join(lines))
 
@@ -204,7 +204,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
                 filename,
                 "exec",
                 ast.PyCF_ONLY_AST,  # ty: ignore[too-many-positional-arguments]  # Python 3.13+
-                incomplete_input=False,  # type: ignore[misc]
+                incomplete_input=False,  # ty:ignore[unknown-argument]
             )
         except SyntaxError as e:
             # If it looks like pip install was entered (a common beginner
@@ -221,9 +221,9 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         except (OverflowError, ValueError):
             self.showsyntaxerror(filename, source=source)
             return False
-        if tree.body:  # type: ignore[attr-defined]
-            *_, last_stmt = tree.body  # type: ignore[attr-defined]
-        for stmt in tree.body:  # type: ignore[attr-defined]
+        if tree.body:  # ty:ignore[unresolved-attribute]
+            *_, last_stmt = tree.body  # ty:ignore[unresolved-attribute]
+        for stmt in tree.body:  # ty:ignore[unresolved-attribute]
             if stmt is last_stmt:
                 the_symbol = symbol
                 item = ast.Interactive([stmt])
@@ -231,8 +231,8 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
                 the_symbol = "exec"
                 item = ast.Module([stmt], [])
             try:
-                code = self.compile.compiler(item, filename, the_symbol)  # type: ignore[arg-type]
-                linecache._register_code(code, source, filename)  # noqa: SLF001  # type: ignore[attr-defined]
+                code = self.compile.compiler(item, filename, the_symbol)  # ty:ignore[invalid-argument-type]
+                linecache._register_code(code, source, filename)  # noqa: SLF001  # ty:ignore[unresolved-attribute]
             except SyntaxError:
                 self.showsyntaxerror(filename, source=source)
                 return False

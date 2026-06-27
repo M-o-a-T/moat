@@ -375,3 +375,65 @@ async def sub(obj, **args):
 
     with anyio.move_on_after(args["limit"] or math.inf):
         await do_sub(obj.conn, args, cfg)
+
+
+@cli.command("init")
+@click.pass_obj
+@click.option(
+    "-d", "--dest", type=click.Path(dir_okay=False), help="Destination (default: link storage)"
+)
+async def init_(obj, dest):
+    """
+    This command generates an initial data file for `moat link server`.
+    """
+    from pathlib import Path as FSPath  # noqa:PLC0415
+
+    from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Codec, Tag  # noqa:PLC0415
+    from moat.lib.codec.moat_cbor import (  # noqa:PLC0415
+        CBOR_TAG_MOAT_FILE_END,
+        CBOR_TAG_MOAT_FILE_ID,
+    )
+
+    if dest:
+        dest = FSPath(dest)
+    else:
+        dest = FSPath("/var/lib/moat/link/data/2000-01/01")
+        dest.mkdir(parents=True, exist_ok=True)
+        dest /= "00-00.moat"
+    c = Codec()
+    with dest.open("wb") as f:
+
+        def w(x):
+            f.write(c.encode(x))
+
+        w(
+            Tag(
+                CBOR_TAG_CBOR_LEADER,
+                Tag(
+                    CBOR_TAG_MOAT_FILE_ID,
+                    [
+                        "MoaT-Link setup",
+                        dict(
+                            mode="init",
+                            name="/var/lib/moat/link/data/2000-01/01/00-00.moat",
+                            state=None,
+                            time=Tag(1, 946684800.0),
+                        ),
+                    ],
+                ),
+            )
+        )
+        w([
+            0,
+            Tag(39, []),
+            dict(
+                email="you@example.invalid",
+                location="1234 Random Street, SomeCity XYZ-ABC, XC",
+                owner="Your Name",
+            ),
+            "s-asi.INIT",
+            946684800.1,
+        ])
+        w(Tag(CBOR_TAG_MOAT_FILE_END, dict(mode="log_end", time=Tag(1, 946684800.1))))
+    if obj.debug:
+        print("Done. Next: systemctl start moat-link-server")

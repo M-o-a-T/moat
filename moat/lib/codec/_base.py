@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -142,7 +142,7 @@ class Extension:
         self, key: int | None, fn: DecoderFunc | None = None
     ) -> DecoderFunc | Callable[[DecoderFunc], DecoderFunc]:
         def _dec(fn: DecoderFunc) -> DecoderFunc:
-            self.dec[key] = fn  # type: ignore[index]  # key can be None for catch-all
+            self.dec[cast(int, key)] = fn  # ty:ignore[index]  # key can be None for catch-all
             return fn
 
         if fn is None:

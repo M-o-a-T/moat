@@ -1,0 +1,21 @@
+Source: moat-lib-xknx
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+X-DH-Compat: 13
+
+Package: python3-moat-lib-xknx
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 4.0),
+  python3-attr,
+  python3-cryptography,
+  python3-ifaddr,
+Description: Vendorized xknx KNX/IP library for MoaT
+  This package provides the xknx KNX/IP library vendorized into the
+  MoaT namespace as moat.lib.xknx.

@@ -31,7 +31,7 @@ else:
 # get the current version
 import subprocess
 
-version = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
+version = subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
 try:
     _idx = version.index("-")
 except IndexError:
@@ -262,8 +262,13 @@ nitpick_ignore = [
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
+    ("py:obj", "moat.link.client._NodeType"),
+    ("py:obj", "moat.util.impl.YieldT"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
+    ("py:class", "moat.lib.rpc.auth._base.AuthError"),
+    ("py:class", "moat.lib.rpc.auth._base._SubAuthFactory"),
+    ("py:class", "moat.link.client._NodeType"),
     ("py:class", "coroutine"),
     ("py:class", "pathlib._local.PurePath"),
     ("py:class", "pathlib._local.PosixPath"),

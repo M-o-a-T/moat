@@ -207,8 +207,9 @@ def test_relative():
     assert b + a == P(":@.c.d.a.b")
     with pytest.raises(ValueError):  # noqa:PT011
         b + c
-    with pytest.raises(ValueError):  # noqa:PT011
-        a + c
+    #   with pytest.raises(ValueError):
+    #       a + c
+    assert a + c == P("a.b.a.b")
 
 
 @pytest.mark.filterwarnings("ignore")

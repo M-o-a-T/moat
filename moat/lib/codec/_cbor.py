@@ -5,6 +5,7 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
+import math
 import struct
 
 from moat.util import OutOfData
@@ -16,7 +17,7 @@ from ._base import NoCodecError
 from typing import TYPE_CHECKING, cast  # isort:skip
 
 try:
-    from micropython import const  # type: ignore[import-not-found]  # MicroPython only
+    from micropython import const  # ty:ignore[unresolved-import]  # MicroPython only
 except ImportError:
 
     def const(x: int) -> int:
@@ -246,7 +247,7 @@ class Codec(_Codec):
 
     def _enc_string(self, val):
         if isinstance(val, str):
-            val = val.encode("utf8")
+            val = val.encode("utf8", "surrogateescape")
             self._enc_type_num(CBOR_TEXT, len(val))
         else:
             self._enc_type_num(CBOR_BYTES, len(val))
@@ -403,16 +404,20 @@ class Codec(_Codec):
         # Some special cases of CBOR_7 best handled by special struct.unpack logic here
         if tb == CBOR_FLOAT16:
             data = self._read(2)
-            pf = struct.unpack_from("!e", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!e", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(4 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT32:
             data = self._read(4)
-            pf = struct.unpack_from("!f", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!f", data, 0)[0]
+            if pf != 0:
+                pf = round(pf, int(8 - math.log10(abs(pf))))
+            return pf
         elif tb == CBOR_FLOAT64:
             data = self._read(8)
-            pf = struct.unpack_from("!d", data, 0)
-            return pf[0]
+            pf = struct.unpack_from("!d", data, 0)[0]
+            return pf
 
         tag, aux = self._dec_tag_aux(tb)
 

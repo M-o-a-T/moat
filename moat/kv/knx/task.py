@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import anyio
 
-import xknx
-from xknx.io import ConnectionConfig, ConnectionType
+from moat.lib.xknx import XKNX
+from moat.lib.xknx.io import ConnectionConfig, ConnectionType
 
 try:
     from collections.abc import Mapping
@@ -41,7 +41,7 @@ async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=
             gateway_port=cfg.get("port", 3671),
             **add,
         )
-        async with xknx.XKNX().run(connection_config=ccfg) as srv:
+        async with XKNX(connection_config=ccfg) as srv:
             await server.set_server(srv, initial=initial)
             if evt is not None:
                 evt.set()

@@ -18,8 +18,10 @@ PWD := $(shell pwd)
 
 venv:
 	python3 -m venv .venv --upgrade-deps
-	.venv/bin/pip install -e .[dev]
-	.venv/bin/pip install ty pre-commit
+	.venv/bin/pip install -U -e .
+	.venv/bin/pip install -U -e .[dev]
+	.venv/bin/pip install -U -e .[doc]
+	.venv/bin/pip install -U ty pre-commit
 
 prep:
 	git submodule update --init --recursive

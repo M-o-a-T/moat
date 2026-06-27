@@ -23,7 +23,10 @@ from typing import Any, cast
 @click.pass_context
 async def cli(ctx):
     """
-    This subcommand reads data flow controls stored in the MoaT-Link service.
+      Data flow monitoring.
+
+    This command monitors selected data for large value deltas, schema violations,
+      and missing updates.
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
@@ -373,7 +376,7 @@ class FlowMon:
                         await self._clear_error(path)
 
 
-@cli.command()
+@cli.command("for")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
 async def get(obj, path):

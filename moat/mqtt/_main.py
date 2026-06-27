@@ -136,7 +136,7 @@ def fix_will(args, cfg):
         will.retain = args["will_retain"]
         cfg.will = will
     if isinstance(cfg.will.message, str):
-        cfg.will.message = cfg.will.message.encode("utf-8")
+        cfg.will.message = cfg.will.message.encode("utf-8", errors="surrogateescape")
 
 
 @cli.command()
@@ -244,7 +244,7 @@ async def run_sub(client, topic, args, cfg):
             except CodecError as exc:
                 message = exc.msg
                 try:
-                    data = message.data.decode("utf-8")
+                    data = message.data.decode("utf-8", errors="surrogateescape")
                 except Exception:
                     data = repr(bytes(message.data))[2:-1]
                     if data == "":
@@ -253,7 +253,7 @@ async def run_sub(client, topic, args, cfg):
             else:
                 if isinstance(message.data, (bytes, bytearray)):
                     try:
-                        d = message.data.decode("utf-8")
+                        d = message.data.decode("utf-8", errors="surrogateescape")
                     except Exception:
                         d = repr(message.data)
                         if d.startswith("bytearray"):

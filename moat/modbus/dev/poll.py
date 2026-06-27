@@ -17,7 +17,7 @@ from .device import ClientDevice, ServerDevice, fixup
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.link.client import Link
+    from moat.link.client import HostCommon, Link
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0
 
-        async def make_dev(v, Reg, **kw):
+        async def make_dev(v, Reg, host: HostCommon, **kw) -> ClientDevice:
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
             merge(vs, kw, replace=False)
@@ -49,11 +49,11 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
 
             logger.info("Starting %r", vs)
 
-            dev = ClientDevice(client=cl, factory=Reg)
+            dev = ClientDevice(client=cl, factory=Reg, host=host)
             await dev.load(data=v)
 
             # return await scope.spawn_service(dev.as_scope)
-            async def task(dev, *, task_status):
+            async def task(dev: ClientDevice, *, task_status):
                 async with dev:
                     task_status.started(dev)
                     await anyio.sleep_forever()
@@ -162,19 +162,21 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
             except KeyError:
                 logger.error("No serial params for port %r", h)
                 continue
+            port_host = await cl.serial_service(h, **sp)
             for u, v in hv.items():
                 if not isinstance(u, int):
                     continue
-                dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
+                dev = await make_dev(v, Reg, port_host, serial=sp, unit=u)
                 tg.start_soon(dev.poll)
                 do_attach(v, dev)
 
         # TCP clients
         for h, hv in cfg.get("hosts", {}).items():
+            tcp_host = await cl.host_service(h, None)
             for u, v in hv.items():
                 if not isinstance(u, int):
                     continue
-                dev = await make_dev(v, Reg, host=h, unit=u)
+                dev = await make_dev(v, Reg, tcp_host, unit=u)
                 tg.start_soon(dev.poll)
                 do_attach(v, dev)
 
@@ -183,8 +185,9 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
             for p, pv in hv.items():
                 if not isinstance(p, int):
                     continue
+                tcp_host = await cl.host_service(h, p)
                 for u, v in pv.items():
-                    dev = await make_dev(v, Reg, host=h, port=p, unit=u)
+                    dev = await make_dev(v, Reg, tcp_host, unit=u)
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)
 

@@ -1,3 +1,21 @@
+moat-lib-gpio (0.9.7-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:37:48 +0200
+
+moat-lib-gpio (0.9.7-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:15:12 +0200
+
+moat-lib-gpio (0.9.6-1) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 11:00:16 +0100
+
 moat-lib-gpio (0.9.5-1) unstable; urgency=medium
 
   * New release for 26.0.11

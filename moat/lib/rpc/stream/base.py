@@ -49,6 +49,7 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable, Sequence
     from typing import Any
+    from types import TracebackType
 
 __all__ = ["HandlerStream", "StreamLink", "i_f2wire", "wire2i_f"]
 
@@ -476,7 +477,9 @@ class HandlerStream(MsgHandler):
         """
         raise NotImplementedError
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, exc_type: type[BaseException] | None,
+         exc: BaseException | None,
+         tb: TracebackType | None) -> bool | None:
         self._tgs.cancel()
         try:
             with shield():
@@ -490,7 +493,7 @@ class HandlerStream(MsgHandler):
             assert not self._msgs
 
         finally:
-            await AC_exit(self, *exc)
+            await AC_exit(self, exc_type,exc,tb)
 
 
 class StreamLink(MsgLink):

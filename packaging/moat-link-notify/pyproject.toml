@@ -13,13 +13,13 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"asyncclick",
+	"asyncclick ~= 8.3",
 	"attrs",
 	"httpx",
 	"moat-util ~= 0.63.0",
-	"moat-link ~= 0.4.0",
+	"moat-link ~= 0.7.0",
 	]
-version = "0.0.3"
+version = "0.0.4"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-notify"

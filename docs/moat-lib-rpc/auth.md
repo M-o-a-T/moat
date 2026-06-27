@@ -36,7 +36,6 @@ auth:
 
   pass:
   - !P i.ping
-  - !P i.hello
 ```
 
 Dynamic data are the caller's responsibility. In this case:
@@ -52,31 +51,24 @@ users:
 
 ## Built-in methods
 
-The following auth methods are currently implemented and can be selected via
-`auth.modes[].mode`:
+The following auth methods are currently implemented and can be selected via `mode`:
 
-- `noop`
-  (`moat.lib.rpc.auth.noop.SubAuth`) accepts immediately on both sides.
-- `anon`
-  (`moat.lib.rpc.auth.anon.SubAuth`) anonymous handshake; the client requests
-  it and the server accepts.
-- `test`
-  (`moat.lib.rpc.auth.test.SubAuth`) test-only method for forcing
-  accept/deny/ignore behavior.
-- `token`
-  (`moat.lib.rpc.auth.token.SubAuth`) token-based authentication.
+- `noop`: accepts immediately.
+- `anon`: anonymous handshake; the client requests it and the server accepts.
+- `test`: test-only method for forcing accept/deny/ignore behavior.
+- `token`: token-based authentication.
 
-Custom methods are loaded by `moat.lib.rpc.auth._base.get_auth()`.
+Custom methods are loaded by {py:func}`~moat.lib.rpc.get_auth`.
 
 ## API
 
-The main Auth handler is hooked into {py:class}`moat.lib.rpc.BaseCmdMsg` objects and
+The main Auth handler is hooked into {py:class}`~moat.lib.rpc.BaseCmdMsg` objects and
 its subclasses when an `auth` item is present in the requisite
 configuration. Users need not do anything special.
 
-The sub-handlers for individual Auth modes are `BaseCmd` instances that are
-set up with their Auth parent and a SubMsgSender pointing to their remote
-counterpart.
+The sub-handlers for individual Auth modes are {py:class}`~moat.lib.rpc.BaseCmd`
+instances that are set up with their Auth parent and a SubMsgSender
+pointing to their remote counterpart.
 
 The `BaseCmdMsg.auth` dynamic auth data object is shared with the `Auth`
 handler and forwarded to each `SubAuth` instance as its `auth` attribute.
@@ -97,8 +89,8 @@ list.
 
 ## Auth Stream App
 
-The `moat.lib.rpc.app.auth.Cmd` app protects command subtrees behind a
-single streamed endpoint.
+The {py:class}`moat.lib.rpc.app.auth.Cmd` app protects command subtrees
+that are located behind a single streamed endpoint.
 
 - Direct access to configured sub-apps is blocked.
 - The app exposes only one RPC entrypoint: the streamed root command.
@@ -107,7 +99,7 @@ single streamed endpoint.
 
 Configuration:
 
-- `auth`: required; same structure as on `BaseCmdMsg`.
+- `auth`: required; same structure as on {py:class}`~moat.lib.rpc.BaseCmdMsg`.
 - `path`: optional path to an existing subtree to expose after auth.
 - If `path` is absent, `cfg` must contain the protected app configuration
   (including its own `app` selector).
@@ -126,13 +118,15 @@ Both sides send initial commands to each other with these positional elements
 (version 1):
 
 * version#
-* server flag
-* role name
+* server flag (bool)
+* name
 * a list of supported auth methods
 
 Keyword args may be used, depending on the calling `BaseCmdMsg` class.
 The "auth" keyword may be used to transmit initial data to auth methods.
 
-These commands are *not* answered until auth negotiation completes. The
-reply consists of one positional argument, the successful auth method (if
-auth is successful), but may contain follow-up keywords.
+The Auth command is answered when auth negotiation completes. The reply
+consists of one positional argument (name of the successful auth method)
+and may contain follow-up keywords.
+
+Auth failure is conveyed by raising an exception.

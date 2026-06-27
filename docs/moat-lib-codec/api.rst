@@ -21,6 +21,16 @@ API
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: moat.lib.codec.jsonvalue
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: moat.lib.codec.jsonvalstr
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: moat.lib.codec.cbor
    :members:
    :undoc-members:

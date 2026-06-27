@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from moat.util import NotGiven
 from moat import DOC
 from moat.lib.micro import ACM, AC_exit, L, TaskGroup
-from moat.lib.path import Path
+from moat.lib.path import Path, PathElem
 from moat.lib.stream import Base
 from moat.util.exc import ungroup
 
@@ -349,6 +349,9 @@ class SubMsgSender(MsgSender):
 
     An empty path is OK.
     """
+
+    _path:Path
+    _rpath:list[PathElem]
 
     def __init__(self, root: MsgRoot, path: Path, caller=None):
         """

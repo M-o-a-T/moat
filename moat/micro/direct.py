@@ -143,7 +143,7 @@ class DirectREPL(SingleAnyioBuf):
             logger.debug("Exec: %r", cmd)
         ser = self._serial()
         srbuf = self._srbuf()
-        await ser.send(cmd.encode("utf-8"))
+        await ser.send(cmd.encode("utf-8", errors="surrogateescape"))
         await ser.send(b"\x04")
 
         if not timeout:

@@ -93,3 +93,60 @@ async with Link(cfg) as obj.conn:
 ```
 which doesn't work with `click` because it runs subcommands
 after the supercommand's code returns.
+
+
+## Command Structure Conventions
+
+Several MoaT commands deal with non-trivial data structures. We need to
+establish a common way of handling access to these.
+
+### Simple Elements at path
+
+Example: `moat link data PATH ...`. This command acts on a single data item.
+
+Here, not using a path is pointless.
+
+### Complex elements at path
+
+Example: `moat link flow at PATH ...`. While command also acts on a single data item,
+there are other commands (check data below a path, find the flow definition applicable
+to an item, …) that don't need one.
+
+### Prefix plus Path
+
+Example: `moat link metrics NAME at PATH ...`. Here there are (possibly)
+several services, with data hierarchies below them.
+
+Using `-` as the name lists available servers.
+
+## Commonly-used arguments
+
+### `-s`, `--set`
+
+Specifying typed arguments to MoaT methods or data structures can be a
+tedious business. This argument, which can be used multiple times, tries
+to make the process somewhat less tedious.
+
+`--set` takes two arguments.
+
+The first is the path to the datum to be added or
+changed *within* the affected data structure; if you want to set the
+data structure itself, use `:`. A *null* path element (`:n`) selects the
+end of an array. If it is the first element, it is also used to select
+the list of positional parameters. `+` is a shortcut for `:n:n`; if you
+really do want to access a key that's named `+`, use `:=`.
+
+The second is the actual datum, interpreted as float/integer/string
+depending on parsability. A couple of prefix characters are available to
+disambiguate:
+
+* `~str`: always string
+* `=value`: evaluated. Special names:
+  * `=-`: `NotGiven`: delete this.
+  * `=t`: `True`
+  * `=f`: `False`
+  * `=n`: `None`
+* `.path`: a path. The leading dot is stripped.
+* `:path`: also a path; the colon is not stripped.
+  Used as a convenience: `:42.answer` is the same as `.:42.answer`.
+* `^proxy`: a named proxy. Rarely used.

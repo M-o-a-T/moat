@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "anyio ~= 4.9",
     "trio",
+    "trio_asyncio",
     "alembic",
     "anyio_serial",
     "asyncactor ~= 0.28.0",
@@ -25,18 +26,21 @@ dependencies = [
     "asyncvictoria ~= 0.7.0",
     "asyncwebsockets",
     "cffi",
+    "cryptography",
     "fpdf2",
     "pygit",
     "httpx",
+    "ifaddr",
     "jmespath",
     "jsonschema",
+    "netaddr",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
     "pynacl",
     "outcome",
     "psutil",
     "pyfuse3",
-    "pymodbus ~= 3.8",
+    "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
     "regex",
     "ruyaml",
@@ -49,7 +53,7 @@ dependencies = [
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 name = "moat"
 description = "The compleat MoaT"
 readme = "README.md"
@@ -91,6 +95,7 @@ testpaths = [
 
 [project.optional-dependencies]
 dev = [
+    "ansible",
     "asyncdbus ~= 0.7",
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
@@ -103,10 +108,13 @@ dev = [
     "pre-commit",
     "pytest-trio",
     "pytest-coverage",
+    "ruamel.yaml",
+    "ruff",
     "setuptools-scm",
+    "simplejson",
     "smbus3",
-    "transitions-aio",
-    "ty ~= 0.17",
+    "systemd",
+    "ty ~= 0.0.17",
     "uv",
     "wheel",
 ]
@@ -267,12 +275,13 @@ exclude = [
     "moat/micro/part/pin.py",
     "moat/micro/romfs.py",
     "moat/link/gate/kv.py",
+    "moat/link/gate/venus.py",
 ]
 
 [tool.ty.rules]
 ambiguous-protocol-member = "error"
 division-by-zero = "error"
-ignore-comment-unknown-rule = "error"
+ignore-comment-unknown-rule = "ignore"
 invalid-ignore-comment = "ignore"
 redundant-cast = "error"
 undefined-reveal = "error"

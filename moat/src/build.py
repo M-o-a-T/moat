@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 PACK = Path("packaging")
 DIST_PYPI = Path("dist/pypi")
 DIST_DEBIAN = Path("dist/debian")
-ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode("utf-8").strip()
+ARCH = (
+    subprocess
+    .check_output(["/usr/bin/dpkg", "--print-architecture"])
+    .decode("utf-8", errors="surrogateescape")
+    .strip()
+)
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 

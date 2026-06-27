@@ -33,7 +33,7 @@ from .broker_state_machine import (
     MQTTBrokerStateMachine,
 )
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from ssl import SSLContext
@@ -224,7 +224,9 @@ class AsyncMQTTBroker:
                 self._state_machine.client_disconnected(client_state_machine.client_id, packet)
         elif isinstance(packet, MQTTSubscribePacket):
             if client_state_machine.state is MQTTClientState.CONNECTED:
-                subscr_id = packet.properties.get(PropertyType.SUBSCRIPTION_IDENTIFIER, 0)
+                subscr_id = cast(
+                    int, packet.properties.get(PropertyType.SUBSCRIPTION_IDENTIFIER, 0)
+                )
 
                 reason_codes: list[ReasonCode] = []
                 for subscr in packet.subscriptions:

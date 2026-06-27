@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any  # isort:skip
+    from types import TracebackType
 
 
 class EphemeralMsg:
@@ -294,11 +295,13 @@ class ReliableMsg(StackedMsg):
             await AC_exit(self, type(exc), exc, None)
             raise
 
-    async def __aexit__(self, *err):
+    async def __aexit__(self, exc_type: type[BaseException] | None,
+       exc: BaseException | None,
+       tb: TracebackType | None) -> bool|None:
         if self._tg is not None:
             self._tg.cancel()
         self._tg = None
-        return await AC_exit(self, *err)
+        return await AC_exit(self, exc_type,exc,tb)
 
     async def _mon(self):
         while True:
@@ -369,7 +372,7 @@ class ReliableMsg(StackedMsg):
                 try:
                     await self.s.send(msg)
                 except AttributeError:
-                    return  # closing. XXX should not happen
+                    pass  # closing. XXX should not happen
                 except TypeError:
                     if len(msg) > 1:
                         msg = [msg[0], repr(err)]

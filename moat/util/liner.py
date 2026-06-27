@@ -15,7 +15,7 @@ from moat.lib.micro import (
     wait_for_ms,
 )
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -109,7 +109,7 @@ class Liner:
             self.evt = Event()
 
     async def _partial(self, end: bool = False) -> None:
-        pr = self.buf.decode("utf-8")  # type: ignore[union-attr]  # checked that buf is not None
+        pr = cast(bytearray, self.buf).decode("utf-8", "surrogateescape")
         self.buf = None if end else bytearray()
 
         res = self.writer(self.prefix + pr + self.incomplete + ("-END-" if end else "") + "\n")
@@ -132,7 +132,7 @@ class Liner:
             idx = buf.rfind(b"\n")
         try:
             if idx != -1:
-                pr = buf[:idx].decode("utf-8").replace("\n", f"\n{self.prefix}")
+                pr = buf[:idx].decode("utf-8", "surrogateescape").replace("\n", f"\n{self.prefix}")
                 self.buf = bytearray(buf[idx + 1 :])
                 return self.writer(self.prefix + pr + "\n")
             elif iscoroutinefunction(self.writer):

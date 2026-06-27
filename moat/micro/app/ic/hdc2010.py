@@ -32,7 +32,7 @@ class Cmd(BaseCmd):
 
     async def setup(self):
         "allocate lock"
-        super().setup()
+        await super().setup()
         self.lock = Lock()
 
     async def task(self):

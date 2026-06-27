@@ -26,7 +26,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
-ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode("utf-8").strip()
+ARCH = (
+    subprocess
+    .check_output(["/usr/bin/dpkg", "--print-architecture"])
+    .decode("utf-8", errors="surrogateescape")
+    .strip()
+)
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
@@ -333,7 +338,7 @@ class Repo(git.Repo, _Common):
         for fn in res.stdout.split(b"\0"):
             if not fn:
                 continue
-            fn = Path(fn.decode("utf-8"))  # noqa:PLW2901
+            fn = Path(fn.decode("utf-8", errors="surrogateescape"))  # noqa:PLW2901
             if fn.name == ".gitignore":  # heh
                 continue
             sb = self.repo_for(fn, True)

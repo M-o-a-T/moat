@@ -82,7 +82,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
     pl = PathLongener(obj.path)
     out: dict[Any, Any] | None = {} if as_dict is not None else None
 
-    async with obj.conn.d.walk(obj.path, *args).stream_in() as mon:
+    async with obj.conn.d.walk(CODE_EXEC_ROOT + obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
             path = pl.long(n, p)
             if not isinstance(data, Mapping):
@@ -125,7 +125,7 @@ async def cli(ctx, path, meta):
         cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
     obj.meta = meta
-    obj.path = CODE_EXEC_ROOT + path
+    obj.path = path
 
     if ctx.invoked_subcommand is None:
         await _list_entries(obj, None, None, None, False, True)
@@ -139,10 +139,10 @@ async def get(obj, script):
     Read a code entry.
     """
     if obj.meta:
-        data, *meta = await obj.conn.d.get(obj.path)
+        data, *meta = await obj.conn.d.get(CODE_EXEC_ROOT + obj.path)
         out = dict(data=data, meta=MsgMeta.restore(meta).repr())
     else:
-        out = await obj.conn.d_get(obj.path)
+        out = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
 
     if script:
         if obj.meta:
@@ -176,7 +176,7 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     if data:
         msg = yload(data)
     else:
-        msg = await obj.conn.d_get(obj.path)
+        msg = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
 
     if thread:
         msg["is_async"] = False
@@ -196,7 +196,7 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     msg["vars"] = process_args(vars_, **kw)
 
     _check_exec_syntax(msg, obj.path)
-    res = await obj.conn.d_set(obj.path, msg)
+    res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -227,7 +227,7 @@ async def delete(obj):
     Remove a code entry.
     """
     try:
-        res = await obj.conn.d.delete(obj.path)
+        res = await obj.conn.d.delete(CODE_EXEC_ROOT + obj.path)
     except KeyError:
         if obj.debug:
             print("Does not exist.", file=obj.stdout)
@@ -254,10 +254,10 @@ async def edit(obj, editor):
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
 
     try:
-        original = await obj.conn.d_get(obj.path)
+        original = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
     except KeyError:
         try:
-            original = await obj.conn.d_search(P("template") + obj.path)
+            original = await obj.conn.d_search(P("template") + CODE_EXEC_ROOT + obj.path)
         except KeyError:
             original = {"code": "return 42;\n"}
     current = dict(original)
@@ -306,7 +306,7 @@ async def edit(obj, editor):
                 click.echo("No changes.", err=True)
                 return
             _check_exec_syntax(current, obj.path)
-            res = await obj.conn.d_set(obj.path, current)
+            res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, current)
             if obj.meta:
                 yprint(res, stream=obj.stdout)
             else:

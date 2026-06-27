@@ -32,6 +32,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
     - This also applies to all code which imports from `moat.lib.micro`
       (but not to moat.lib.micro itself)
     - Python 3.11 compatible syntax must be used in those parts.
+    - moat.web uses Ludic, thus requires Python 3.14.
   - Each Python package named e.g. `moat.X.Y` contains
     - code in `moat/X/Y/**.py`
     - `docs/moat-X-Y` for documentation
@@ -55,9 +56,11 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 ## Python patterns
 
+- MoaT uses anyio for async code. Never import from asyncio.
+
 - NEVER busy-loop. NEVER delay to get something to work (except in testcases).
 
-- A BaseException (that's not an Exception) MUST propagate.
+- A BaseException (that's not an Exception) MUST be re-raised.
   This includes `anyio.get_cancelled_exc_class()`.
 
 - In `moat.lib` and `moat.micro`, do not use syntax that doesn't work with
@@ -68,6 +71,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   - Python 3.12+ syntax for generic types
   - `isinstance(obj, type1 | type2)` -- use `isinstance(obj, (type1 type2))`
   - multiple inheritance (syntax works but is ignored)
+  - micropython doesn't have anyio, but we do not directly import from
+    asyncio either. Always use the compatibility code in moat.micro.compat.
 
 - Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
   from submodules. Exception: `TYPE_CHECKING` blocks.
@@ -75,7 +80,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 ### Typing
 
 - MoaT does its type checking with "ty".
-- Use "ty check --output-format github".
+- Use "ty check --output-format github" if you need to fix typing errors.
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
 - DO NOT type:ignore comments, use the "Any" type, or add casts.
@@ -85,16 +90,18 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
   not possible, duck typing (or the failure thereof) will raise a `TypeError`.
 - Do not range-check function parameters. It is sufficient to describe valid ranges
   in the docstring.
-- DO NOT replace "def foo():Awaitable[Bar]: return asyncfn()" with an async
+- DO NOT replace "def foo() -> Awaitable[Bar]: return asyncfn()" with an async
   def. The correct type is `CoroutineType[Any,Any,Bar]`.
 - After a module typechecks, add its files to the tool.ty.src.include list in
   pyproject.toml.
 
 ## Build and Test
 
-- pre-commit enforces formatting and typechecking.
+- pre-commit enforces testing, formatting and typechecking.
+  DO NOT run formatters or type checkers on your own, except when you're fixing
+  an error.
 - YAML files may contain Path objects, marked with `!P`.
-  The pre-commit yaml checker understands this.
+  The pre-commit YAML checker understands this.
 - When testing, *always write the test output to a temporary file* so you
   can analyze it more easily. Running the same test multiple times is
   inefficient.
@@ -103,10 +110,10 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 - Standard Python, 4-space indents, formatted by `ruff format`.
 - `ruff check` clean. See `pyproject.toml` for global exceptions.
-- ignore any remaining pylint, pyright or isort comments.
-  We are not using these tools any more.
-  Remove these if you're changing the line anyway.
-- Keep functions reasonably small. Do not repeat yourself.
+- ignore pylint, pyright or isort comments.
+  Remove them if you're changing the line anyway.
+- Keep functions reasonably small.
+- Do not repeat yourself. Use subclassing.
 - Follow existing practice when naming. Be concise.
 - New modules must pass `ty check`.
 - Functions and variables shall be typed concisely.
@@ -117,10 +124,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Docstrings are written in RestructuredText, with Google-style markup for
   arguments, return values etc..
 - Types are specified in the function declaration, not in the docstring.
-  - Legacy code might use something wildly different. Don't copy legacy
-    styles! Always use / convert to Google style and proper object
-    references for new or updated code, or when instructed to fix
-    documentation.
+  - Legacy code might use something different. Don't copy legacy styles!
+    Always use / convert to Google style and proper object references for
+    new or updated code, or when instructed to fix documentation.
 - All other documentation is written using Markdown (Myst).
   Only use RestructuredText syntax or blocks when Myst doesn't support a
   feature.
@@ -138,6 +144,8 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Tests should focus on exercising a module's API and its actual purpose.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
+- DO NOT use "head", "tail", or "rg" / "grep" on test output.
+  Instead, redirect to a temp file and post-process that.
 
 ## Commit & Pull Requests
 
@@ -145,12 +153,15 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Mention the affected module only if a change also affects other modules.
 - Every commit should test cleanly. pre-commit runs module-specific tests.
   Manually test other modules before committing if they might be affected.
-- Include documentation updates with the main commit, i.e. don't commit docs
-  separately.
+- Include documentation updates with the main commit.
+  Do not commit docs separately.
 - DO NOT include agent information, a verbose description of the change,
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
 - DO NOT use "--rebase" when merging or pulling.
+- DO NOT use "--no-verify" when committing.
+  - If you encounter a pre-existing failure, temporarily stash your changes
+    and run a sub-agent to fix the problem.
 
 ## Agent‑Specific Notes
 
@@ -190,3 +201,50 @@ Work is NOT complete until `git push` succeeds.
 However, if a git push/pull command fails with a permission error, STOP:
 the problem is a missing SSH key. The user needs to re-add the key before
 you can continue.
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+## Session Completion
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd dolt push
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+<!-- END BEADS INTEGRATION -->

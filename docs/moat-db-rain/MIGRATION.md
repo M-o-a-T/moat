@@ -369,22 +369,22 @@ Plus edits to existing files (§6.4).
 |---|---|---|---|
 | `Site` | `rain_site` | `name` uniq, `comment`?, `var` uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, sensors, histories, logs |
 | `Controller` | `rain_controller` | `name`, `var` uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
-| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `var` uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
+| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `var` uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx d=now, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
 | `Feed` | `rain_feed` | `name`, `var` uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
 | `Sensor` | `rain_sensor` | `kind` str(rain/temp/wind/sun), `name`, `var` uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
 | `Group` | `rain_group` | `name`, `comment`?, `adj`? | `site`→Site; M2M `days`/`xdays`↔DayRange; M2M `valves`↔Valve. UQ(site,name) |
 | `EnvGroup` | `rain_envgroup` | `name`, `comment`?, `factor` d=1.0, `rain` bool d=True | `site`→Site; → items, valves. UQ(site,name) |
 | `EnvItem` | `rain_envitem` | `factor` d=1.0, `temp`?, `wind`?, `sun`? | `group`→EnvGroup |
-| `Day` | `rain_day` | `name` str30 uniq | → times |
+| `Day` | `rain_day` | `name` str30 uniq | → times, ranges (M2M↔DayRange) |
 | `DayTime` | `rain_daytime` | `descr` str200 | `day`→Day. UQ(day,descr) |
-| `DayRange` | `rain_dayrange` | `name` str30 uniq, `comment`? | M2M `days`↔Day |
+| `DayRange` | `rain_dayrange` | `name` str30 uniq, `comment`? | M2M `days`↔Day; back `groups`/`xgroups`↔Group (via `Group.days`/`Group.xdays`) |
 | `GroupOverride` | `rain_group_override` | `name`?, `allowed` bool, `start` dt idx, `duration`(sec), `on_level`?, `off_level`? | `group`→Group. UQ(group,start) |
 | `ValveOverride` | `rain_valve_override` | `name`?, `running` bool, `start` dt idx, `duration`(sec), `on_level`?, `off_level`? | `valve`→Valve. UQ(valve,start) |
 | `GroupAdjust` | `rain_group_adjust` | `start` dt idx, `factor` float | `group`→Group. UQ(group,start) |
 | `Schedule` | `rain_schedule` | `start` dt idx, `duration`(sec), `seen`/`changed`/`forced` bool | `valve`→Valve. UQ(valve,start) |
 | `Level` | `rain_level` | `time` dt idx, `level` float, `flow` d=0, `forced` bool | `valve`→Valve. UQ(valve,time) |
 | `History` | `rain_history` | `time` dt idx, `rain` d=0, `feed` d=0, `temp`?, `wind`?, `sun`? | `site`→Site. UQ(site,time) |
-| `Log` | `rain_log` | `logger` str200, `timestamp` dt idx, `text` text | `site`→Site, `controller`?→Controller, `valve`?→Valve |
+| `Log` | `rain_log` | `logger` str200, `timestamp` dt idx d=now, `text` text | `site`→Site, `controller`?→Controller, `valve`?→Valve |
 
 ### 6.2 Association tables
 

@@ -1,10 +1,9 @@
 """End-to-end CLI tests for ``moat db rain`` (site + controller CRUD).
 
-Drives the full ``moat`` command line via :func:`moat.src.test.run`,
-redirecting ``moat.db.url`` at a shared SQLite database so the tests
-need no real server. The schema is created once per session
-(:func:`_db_url`); each test starts from an empty ``rain_*`` set, wiped
-on exit by :func:`db_url`.
+Drives the full ``moat`` command line via :func:`moat.src.test.run`
+against the shared SQLite database set up by the package
+``conftest.py`` (one schema per session, ``rain_*`` rows wiped per test).
+The standard test worlds are seeded by the ``seed_*`` fixtures there.
 """
 
 from __future__ import annotations
@@ -16,66 +15,9 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from moat.db.rain.model import Site
-from moat.db.schema import Base
 from moat.src.test import raises as _raises
-from moat.src.test import run
 
 pytestmark = pytest.mark.anyio
-
-
-@pytest.fixture(scope="session")
-def _db_url(tmp_path_factory):
-    """Initialise one SQLite database for the whole test session.
-
-    The ``rain_*`` schema is created once via :meth:`MetaData.create_all`;
-    every test reuses this file. Per-test isolation is restored by
-    :func:`db_url`, which wipes the ``rain_*`` rows on exit.
-    """
-    db_path = tmp_path_factory.mktemp("rain-cli") / "r.db"
-    url = f"sqlite:///{db_path}"
-    eng = create_engine(url)
-    Base.metadata.create_all(eng)
-    try:
-        yield url
-    finally:
-        eng.dispose()
-
-
-def _wipe_rain(url: str) -> None:
-    """Delete every row from the ``rain_*`` tables (dependents first).
-
-    Tables are cleared in reverse dependency order so foreign-key
-    constraints (enforced by the SQLite connect pragma) hold while
-    children are removed before their parents.
-    """
-    eng = create_engine(url)
-    try:
-        with eng.begin() as conn:
-            for tbl in reversed(Base.metadata.sorted_tables):
-                if tbl.name.startswith("rain_"):
-                    conn.execute(tbl.delete())
-    finally:
-        eng.dispose()
-
-
-@pytest.fixture
-def db_url(_db_url):
-    """The shared DB url; all ``rain_*`` rows are wiped after each test."""
-    try:
-        yield _db_url
-    finally:
-        _wipe_rain(_db_url)
-
-
-@pytest.fixture
-async def rain(db_url):
-    """An async ``R()`` caller against the shared session DB."""
-    url = db_url
-
-    async def R(*args, ee=0):
-        return await run("-s", "moat.db.url", url, *args, expect_exit=ee)
-
-    return R
 
 
 def _msg(err) -> str:
@@ -302,14 +244,6 @@ async def test_sensor_lifecycle(rain):
     assert r.stdout == "temp:R1\ntemp:T1\n"
 
 
-async def _seed_site(rain):
-    """Create a site with a controller, feed, and env group for valve tests."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
-    await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
-    await rain("db", "rain", "home", "env", "-n", "std", "add", "--no-rain", "-f", "0.8")
-
-
 async def test_env_lifecycle(rain):
     """EnvGroup CRUD with the rain bool toggle and rename."""
     await rain("db", "rain", "home", "add")
@@ -343,9 +277,8 @@ async def test_env_lifecycle(rain):
     assert r.stdout == ""
 
 
-async def test_valve_lifecycle(rain):
+async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     """Valve CRUD over the (controller, name) key with parents + Path fields."""
-    await _seed_site(rain)
 
     r = await rain("db", "rain", "home", "valve", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
@@ -826,62 +759,8 @@ async def test_valve_bad_parent_names(rain):
     assert "doesn't exist" in msg
 
 
-async def _seed_group_world(rain):
-    """Create a site with two controllers, two valves, and two day ranges."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
-    await rain("db", "rain", "home", "controller", "-n", "C2", "add", "-l", "field")
-    await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
-    await rain("db", "rain", "home", "env", "-n", "std", "add")
-    await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
-        "-c",
-        "C1",
-        "-n",
-        "V1",
-        "add",
-        "-F",
-        "F1",
-        "-e",
-        "std",
-        "-l",
-        "front",
-        "--flow",
-        "2",
-        "--area",
-        "10",
-    )
-    await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
-        "-c",
-        "C2",
-        "-n",
-        "V2",
-        "add",
-        "-F",
-        "F1",
-        "-e",
-        "std",
-        "-l",
-        "back",
-        "--flow",
-        "3",
-        "--area",
-        "5",
-    )
-    await rain("db", "rain", "home", "dayrange", "-n", "alldays", "add")
-    await rain("db", "rain", "home", "dayrange", "-n", "weekends", "add")
-
-
-async def test_group_lifecycle(rain):
+async def test_group_lifecycle(rain, seed_group_world):  # noqa:ARG001
     """Group CRUD with valve and day-range M2M links."""
-    await _seed_group_world(rain)
 
     r = await rain("db", "rain", "home", "group", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
@@ -981,35 +860,8 @@ async def test_group_lifecycle(rain):
     assert r.stdout == ""
 
 
-async def _seed_valve(rain):
-    """Create a site with one controller, feed, env, and valve V1 on C1."""
-    await _seed_site(rain)
-    await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
-        "-c",
-        "C1",
-        "-n",
-        "V1",
-        "add",
-        "-F",
-        "F1",
-        "-e",
-        "std",
-        "-l",
-        "front",
-        "--flow",
-        "2",
-        "--area",
-        "10",
-    )
-
-
-async def test_valve_overrides(rain):
+async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
     """ValveOverride nested subgroup CRUD, keyed by (valve, start)."""
-    await _seed_valve(rain)
     ts = "2030-01-01T12:00:00"
 
     r = await rain(
@@ -1133,9 +985,8 @@ async def test_valve_overrides(rain):
     assert "needs a name" in _msg(err)
 
 
-async def test_valve_schedules(rain):
+async def test_valve_schedules(rain, seed_valve):  # noqa:ARG001
     """Schedule nested subgroup CRUD, keyed by (valve, start)."""
-    await _seed_valve(rain)
     ts = "2030-02-01T08:00:00"
 
     r = await rain(
@@ -1205,9 +1056,8 @@ async def test_valve_schedules(rain):
     assert r.stdout == ""
 
 
-async def test_valve_levels(rain):
+async def test_valve_levels(rain, seed_valve):  # noqa:ARG001
     """Level nested subgroup CRUD, keyed by (valve, time)."""
-    await _seed_valve(rain)
     ts = "2030-03-01T10:00:00"
 
     r = await rain(
@@ -1276,9 +1126,8 @@ async def test_valve_levels(rain):
     assert r.stdout == ""
 
 
-async def test_group_overrides(rain):
+async def test_group_overrides(rain, seed_group_world):  # noqa:ARG001
     """GroupOverride nested subgroup CRUD, keyed by (group, start)."""
-    await _seed_group_world(rain)
     await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-04-01T12:00:00"
 
@@ -1343,9 +1192,8 @@ async def test_group_overrides(rain):
     assert r.stdout == ""
 
 
-async def test_group_adjusts(rain):
+async def test_group_adjusts(rain, seed_group_world):  # noqa:ARG001
     """GroupAdjust nested subgroup CRUD, keyed by (group, start)."""
-    await _seed_group_world(rain)
     await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-05-01T00:00:00"
 
@@ -1419,9 +1267,8 @@ async def test_history_lifecycle(rain):
     assert r.stdout == ""
 
 
-async def test_log_lifecycle(rain):
+async def test_log_lifecycle(rain, seed_valve):  # noqa:ARG001
     """Log event-entry CRUD (id-keyed), with controller/valve tags."""
-    await _seed_valve(rain)
 
     r = await rain(
         "db",
@@ -1496,9 +1343,8 @@ async def test_log_lifecycle(rain):
     assert log_id not in r.stdout
 
 
-async def test_nested_key_errors_and_shows(rain):
+async def test_nested_key_errors_and_shows(rain, seed_valve):  # noqa:ARG001
     """Single-keyed show, set/delete without the key, and empty-list hints."""
-    await _seed_valve(rain)
     ts = "2030-07-01T06:00:00"
 
     # single named show for each valve-nested subgroup
@@ -1591,9 +1437,8 @@ async def test_nested_key_errors_and_shows(rain):
         assert r.stdout == ""
 
 
-async def test_group_nested_key_errors_and_shows(rain):
+async def test_group_nested_key_errors_and_shows(rain, seed_group_world):  # noqa:ARG001
     """Single-keyed show, set/delete without key for group override/adjust."""
-    await _seed_group_world(rain)
     await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-08-01T06:00:00"
 
@@ -1636,9 +1481,8 @@ async def test_group_nested_key_errors_and_shows(rain):
         assert r.stdout == ""
 
 
-async def test_log_extras(rain):
+async def test_log_extras(rain, seed_valve):  # noqa:ARG001
     """Log: empty list, --timestamp, --valve clear, set/delete without id."""
-    await _seed_valve(rain)
 
     r = await rain("db", "rain", "home", "history", "log", "show")
     assert r.stdout == ""  # empty (hint to stderr)
@@ -1684,9 +1528,8 @@ async def test_log_extras(rain):
         assert "needs an id" in _msg(err)
 
 
-async def test_add_without_key_and_history_set_delete(rain):
+async def test_add_without_key_and_history_set_delete(rain, seed_group_world):  # noqa:ARG001
     """Add without the key, history set/delete without time, log set --timestamp."""
-    await _seed_group_world(rain)
     await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
 
     # add without the key (scalars present, key absent)

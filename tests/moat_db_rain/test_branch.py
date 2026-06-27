@@ -5,23 +5,13 @@ from __future__ import annotations
 import pytest
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import moat.db.util  # noqa: F401  — attaches the sqlite ``foreign_keys=ON`` pragma listener
 from moat.db.rain import model as rain
-from moat.db.schema import Base
 from moat.lib.path import Path
-
-
-@pytest.fixture
-def engine(tmp_path):
-    """A throwaway sqlite engine with the rain schema materialized."""
-    eng = create_engine(f"sqlite:///{tmp_path}/rain.db")
-    Base.metadata.create_all(eng)
-    yield eng
-    eng.dispose()
 
 
 def _seed_graph(sess):

@@ -112,11 +112,13 @@ async def _list(obj):
             print("- no data.", file=sys.stderr)
         return
 
-    k = {}
-    k["recursive"] = True
-    k["raw"] = True
-    k["empty"] = True
-    await data_get(obj.conn, P("gate") + obj.path, **k)
+    await data_get(
+        obj.conn,
+        P("gate") + obj.path,
+        recursive=True,
+        raw=True,
+        empty=True,
+    )
 
 
 @cli.command(

@@ -58,7 +58,7 @@ class CtxObj(ABC, Generic[T_Ctx]):
         if not hasattr(ctx_iter, "__aenter__"):
             # DEPRECATED
             # legacy code for `_ctx` without @asynccm
-            ctx: AbstractAsyncContextManager[T_Ctx, bool | None] = asynccontextmanager(self._ctx)()  # ty:ignore[missing-argument]  # legacy support
+            ctx: AbstractAsyncContextManager[T_Ctx, bool | None] = asynccontextmanager(self._ctx)()
         else:
             ctx = ctx_iter  # AsyncIterator with __aenter__ is an ACM
         self.__ctx = ctx  # ty:ignore[invalid-assignment]  # mixed types for legacy support

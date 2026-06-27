@@ -227,7 +227,7 @@ we reverse it for you.
                                 continue
                             C.update_n(int(c, 16), 8)
                 else:
-                    for c in samp.encode("utf-8"):
+                    for c in samp.encode("utf-8", errors="surrogateescape"):
                         C.update_n(c, 8)
             print(C.finish())
 

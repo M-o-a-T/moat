@@ -87,6 +87,9 @@ _imports = {
     "Logger": "cmd.log",
     # From auth
     "Auth": "auth._base",
+    "AuthCmdIn": "auth._base",
+    "AuthDenied": "auth._base",
+    "get_auth": "auth._base",
     # From alert
     "Alert": "alert",
     "AlertHandler": "alert",
@@ -208,6 +211,9 @@ __all__ = [  # noqa:RUF022
     "Logger",
     # From auth
     "Auth",
+    "AuthCmdIn",
+    "AuthDenied",
+    "get_auth",
     # From alert
     "Alert",
     "AlertHandler",
@@ -260,3 +266,6 @@ if _TC or _DOC:
     from .alert import Alert as Alert
     from .alert import AlertHandler as AlertHandler
     from .auth._base import Auth as Auth
+    from .auth._base import AuthCmdIn as AuthCmdIn
+    from .auth._base import AuthDenied as AuthDenied
+    from .auth._base import get_auth as get_auth

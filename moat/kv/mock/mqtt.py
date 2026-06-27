@@ -75,8 +75,9 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
     else:
         server_ctx = client_ctx = False
 
-    clock = trio.lowlevel.current_clock()
+    clock = None
     with suppress(Exception):
+        clock = trio.lowlevel.current_clock()
         clock.autojump_threshold = 0.02  # networking
 
     async def mock_get_host_port(st, host):
@@ -166,7 +167,7 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
                 done = True
                 yield st
             finally:
-                logger.info("Runtime: %s", clock.current_time())
+                logger.info("Runtime: %s", clock.current_time() if clock is not None else otm())
                 tg.cancel_scope.cancel()
     if not done:
         yield None

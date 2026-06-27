@@ -282,7 +282,7 @@ regs:
     L3:
       register: 4
       type: float
-      unit: W
+      unit: V
     avg:
       register: 42
       type: float

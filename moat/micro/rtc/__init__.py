@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import builtins
 
-    from moat.lib.rpc import RootCmd
-
     from collections.abc import Awaitable
     from typing import Any, ClassVar
 
@@ -53,10 +51,6 @@ class _RTC:
         else:
             merge(self.cfg, cfg)
             self._setup()
-
-    def set_root(self, root: RootCmd):
-        self.root = root
-        self._setup()
 
     def _setup(self, err: bool = False):
         self.backends = bes = []
@@ -272,7 +266,7 @@ class State:
         "Setter."
         if "fs" not in kw:
             kw["fs"] = self.fs
-        return self.rtc.set(self.name, data, **kw)
+        return self.rtc.set(self.name, data, **kw) # ty:ignore[invalid-return-type]
 
 
 class RTCBase:

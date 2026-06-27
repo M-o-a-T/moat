@@ -24,7 +24,7 @@ class RingBuffer(_RingBuf):
     def __init__(self, length: int):
         super().__init__(length)
 
-    async def write(self, buf: bytes) -> int:  # type:ignore[invalid-method-override]
+    async def write(self, buf: bytes) -> int:  # ty:ignore[invalid-method-override]
         """
         Adds the bytes in `buf` to the end of the buffer.
         """
@@ -47,7 +47,7 @@ class RingBuffer(_RingBuf):
                 self._w_evt = Event()
             await self._w_evt.wait()
 
-    async def readinto(self, buf: bytearray) -> int:  # type:ignore[invalid-method-override]
+    async def readinto(self, buf: bytearray) -> int:  # ty:ignore[invalid-method-override]
         """
         Copies as many bytes as will fit (or are available, whichever is
         smaller) into the buffer and advance the read counter.

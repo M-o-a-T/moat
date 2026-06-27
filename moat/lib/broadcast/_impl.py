@@ -10,12 +10,14 @@ from moat.lib.micro import EndOfStream, WouldBlock
 from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from typing import Self
 
 try:
     from weakref import WeakSet
 except ImportError:
-    WeakSet = set  # type:ignore[assignment]
+    WeakSet = set  # ty:ignore[invalid-assignment]
 
 TData = TypeVar("TData")
 
@@ -68,7 +70,7 @@ class BroadcastReader(Generic[TData]):
         self.parent = parent
         self.length = length
         self.skip = skip
-        self.value: TData = NotGiven
+        self.value: TData | EllipsisType = NotGiven
         self.loss: int = 0
 
         if self.length <= 0:
@@ -202,7 +204,7 @@ class Broadcaster(Generic[TData]):
         self.length = length
         self.send_last = send_last
         self._rdr: WeakSet[BroadcastReader] | None = None
-        self.value: TData = NotGiven
+        self.value: TData | EllipsisType = NotGiven
 
     def open(self) -> Self:
         """Open the broadcaster.

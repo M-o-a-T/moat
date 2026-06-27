@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from moat.lib.rpc import SubMsgSender
 
-    from collections.abc import AsyncIterator, Callable, Sequence
+    from collections.abc import AsyncIterator, Sequence
     from typing import Any, NoReturn
 
 
@@ -52,7 +52,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
     _inode_path_map: dict[pyfuse3.InodeT, PurePath] = {pyfuse3.ROOT_INODE: PurePosixPath("/")}
     _path_inode_map: dict[PurePath, pyfuse3.InodeT] = {PurePosixPath("/"): pyfuse3.ROOT_INODE}
-    _lookup_cnt: dict[pyfuse3.InodeT, Callable]
+    _lookup_cnt: dict[pyfuse3.InodeT, int]
     _fd_inode_map: dict[int, pyfuse3.InodeT]
     _inode_fd_map: dict[pyfuse3.InodeT, int]
     _fd_open_count: dict[int, int]
@@ -129,7 +129,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     @staticmethod
     def _name(name: pyfuse3.FileNameT) -> str:
         if isinstance(name, (bytes, bytearray, memoryview)):
-            return bytes(name).decode("utf-8")
+            return bytes(name).decode("utf-8", errors="surrogateescape")
         return str(name)
 
     async def lookup(
@@ -416,12 +416,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: symlink: p=%r n=%r t=%r ctx=%r", parent_inode, name, target, ctx)
         raise FUSEError(errno.ENOSYS)
 
-    async def rename(
+    async def rename(  # ty:ignore[override]
         self,
         parent_inode_old: pyfuse3.InodeT,
-        name_old: str,
+        name_old: pyfuse3.FileNameT,
         parent_inode_new: pyfuse3.InodeT,
-        name_new: str,
+        name_new: pyfuse3.FileNameT,
         flags: pyfuse3.FlagT,
         ctx: RequestContext,
     ) -> None:
@@ -453,8 +453,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         try:
-            p = self.i_path(parent_inode_old) / name_old
-            q = self.i_path(parent_inode_new) / name_new
+            p = self.i_path(parent_inode_old) / self._name(name_old)
+            q = self.i_path(parent_inode_new) / self._name(name_new)
 
             if flags == 0:
                 await self._link.mv(s=str(p), d=str(q))
@@ -694,7 +694,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             start_id += 1
             if not pyfuse3.readdir_reply(  # pylint: disable=I1101
                 token,
-                name.encode("utf-8"),
+                name.encode("utf-8", errors="surrogateescape"),
                 attr,
                 start_id,
             ):

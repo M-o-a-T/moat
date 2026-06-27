@@ -10,14 +10,13 @@ from __future__ import annotations
 import anyio
 import logging
 
-from moat.util import combine_dict
 from moat.lib.path import Path
 
 from .backend import get_backend
 from .model import MetricsEntry, MetricsServer
 from .worker import run_entry
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anyio.abc import TaskStatus
@@ -47,18 +46,13 @@ async def task(
     prefix = Path.build(cfg["prefix"])
     server_path = prefix / server_name
 
-    # Fetch the server-level config (host/port/backend) from its stored value
+    # Fetch the server-level config
     server_data = await link.d_get(server_path)
-    srv_cfg = combine_dict(
-        (server_data if isinstance(server_data, dict) else {}).get("server", {}),
-        cfg.get("server_default", {}),
-    )
 
     # Get the backend from config
-    backend = get_backend(srv_cfg, server_name)
 
     async with (
-        backend,
+        get_backend(server_data, server_name) as backend,
         anyio.create_task_group() as tg,
     ):
         workers: dict[Path, anyio.CancelScope] = {}
@@ -85,12 +79,15 @@ async def task(
                         await run_entry(link, entry, backend, p)
                     except Exception:
                         logger.exception("Worker for %s failed", p)
+                    finally:
+                        if workers[p] is sc:
+                            del workers[p]
 
             await tg.start(_run)
 
         # Watch the server subtree for configuration entries.
         # mark=True yields None when the initial state is complete.
-        async with cast(Any, link).d_watch(
+        async with link.d_watch(
             server_path,
             subtree=True,
             mark=True,
@@ -107,7 +104,7 @@ async def task(
                     # Server-level data changed (host/port); ignore here.
                     continue
 
-                node = mon._node.get(p)  # noqa:SLF001
+                node = mon.nodes.get(p)
                 if isinstance(node, MetricsEntry):
                     if node.is_complete():
                         await _start(p, node)

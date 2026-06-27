@@ -15,9 +15,6 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 2.0),
   moat-util,
   moat,
-Recommends:
-  moat-kv,
-  python3-trio (>= 0.22),
 Conflicts: python3-moat-mqtt, distmqtt
 Replaces: python3-moat-mqtt, distmqtt
 Description: MQTT client/broker using anyio and moat-kv

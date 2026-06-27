@@ -14,7 +14,7 @@ async def subs(client):
             if "/History" in msg.topic:
                 continue
             try:
-                pprint((msg.topic, json.loads(msg.data.decode("utf-8"))))
+                pprint((msg.topic, json.loads(msg.data.decode("utf-8", errors="surrogateescape"))))
             except ValueError:
                 pprint((msg.topic, msg.data))
 

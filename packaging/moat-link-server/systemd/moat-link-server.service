@@ -26,3 +26,6 @@ EnvironmentFile=-/etc/moat/link.env
 
 TimeoutSec=300
 WatchdogSec=10
+
+Restart=always
+RestartSec=30

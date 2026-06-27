@@ -22,7 +22,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.modbus.client import ModbusClient, Slot, Unit
+    from moat.modbus.client import Host, ModbusClient, SerialHost, Slot, Unit
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +361,10 @@ class Register:
     __str__ = __repr__
 
 
-_data = FSPath(__file__).parent / "_data"
+if FSPath("mt").exists() and FSPath(".git").exists():
+    _data = FSPath(__file__).parent / "_data"
+else:
+    _data = FSPath("/usr/share/moat/modbus-data")
 
 
 class BaseDevice:
@@ -420,21 +423,19 @@ class ClientDevice(CtxObj, BaseDevice):
 
     unit: Unit = None
 
-    def __init__(self, client: ModbusClient, factory=Register):
+    def __init__(
+        self,
+        client: ModbusClient,
+        host: Host | SerialHost,
+        factory: type = Register,
+    ):
         super().__init__(factory)
         self.client = client
+        self.host = host
 
     @asynccontextmanager
     async def _ctx(self):
-        if "host" in self.cfg.src:
-            host = await self.client.host_service(self.cfg.src.host, self.cfg.src.get("port"))
-        else:
-            host = await self.client.serial_service(
-                port=self.cfg.src.port,
-                **self.cfg.src.get("serial", {}),
-            )
-        self.unit = await host.unit_scope(self.cfg.src.unit)
-
+        self.unit = await self.host.unit_scope(self.cfg.src.unit)
         self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_slots()
         await self.add_registers()

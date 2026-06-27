@@ -89,6 +89,29 @@ def is_given(v) -> bool:
     return v is not NotGiven
 
 
+def bool_pair(set_flag: bool, clr_flag: bool, key: str) -> dict:
+    """Translate two mutually-exclusive set/clear flags into an apply arg.
+
+    Args:
+        set_flag: True if the "set" flag was passed.
+        clr_flag: True if the "clear" flag was passed.
+        key: The column name to set.
+
+    Returns:
+        ``{key: True}``, ``{key: False}``, or ``{}`` if neither flag was given.
+
+    Raises:
+        click.UsageError: if both flags were passed at once.
+    """
+    if set_flag and clr_flag:
+        raise click.UsageError(f"--{key} and --no-{key} are mutually exclusive.")
+    if set_flag:
+        return {key: True}
+    if clr_flag:
+        return {key: False}
+    return {}
+
+
 def site_opts(c):
     """Decorator: the scalar options of a :class:`Site`."""
     c = option_ng("--name", "-n", type=str, help="Rename this site")(c)

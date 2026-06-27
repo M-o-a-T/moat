@@ -34,7 +34,7 @@ async def cli(obj, kind, name):
 
 def opts(c):
     """Scalar options of a :class:`Sensor`."""
-    c = option_ng("--name", "-n", "rename", type=str, help="Rename this sensor")(c)
+    c = option_ng("--name", "-n", type=str, help="Rename this sensor")(c)
     c = option_ng(
         "--state", "-s", type=str, help="Dotted read/subscribe path (required to create)"
     )(c)

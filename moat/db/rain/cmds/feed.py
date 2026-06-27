@@ -26,7 +26,7 @@ async def cli(obj, name):
 
 def opts(c):
     """Scalar options of a :class:`Feed`."""
-    c = option_ng("--name", "-n", "rename", type=str, help="Rename this feed")(c)
+    c = option_ng("--name", "-n", type=str, help="Rename this feed")(c)
     c = option_ng(
         "--flow-monitor",
         "-f",

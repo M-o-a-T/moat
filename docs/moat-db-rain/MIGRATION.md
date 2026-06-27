@@ -842,7 +842,18 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    `database()`; rain's `controller add` (missing `--location`) is the
    first to exercise it.
 7. **Engine — algebra.** Port `range.py` (§7.1) + `test_range.py` parity
-   with the old `utils.py` self-tests.
+   with the old `utils.py` self-tests. *(Done: `range.py` ports
+   `StoredIter`, `range_coalesce`, `range_union`, `range_intersection`,
+   `range_invert`, and the `RangeMixin` helpers, typed as
+   `(datetime, timedelta)` iterators with no ORM dependency. The legacy
+   `__main__` self-test is reproduced verbatim (int tuples — the
+   arithmetic is duck-typed) plus a datetime-scaled variant and edge
+   cases. One legacy bug fixed: `range_invert` returned early (dropping
+   the tail gap) when an interval in `a` started past the window end —
+   changed `return` to `break` so the final `yield ra, rl` emits the
+   remaining tail; the old self-test never exercised that path, so
+   parity holds. 15 tests / 95% on `range.py`; 81 rain tests / 99%
+   overall.)*
 8. **Engine — `_range()` ports + generation/recalc.** `engine.py`
    (§7.2–7.3); locate/port `time_until` (§7.4). `test_engine.py` seeds a
    temp sqlite DB and asserts generated schedules / recalculated levels.

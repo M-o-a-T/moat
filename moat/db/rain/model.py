@@ -176,6 +176,24 @@ class DayTime(Base):
 
     day: Mapped[Day] = relationship("Day", back_populates="times")
 
+    def apply(self, day=NotGiven, **kw) -> None:
+        """Apply mutable day-time properties.
+
+        Args:
+            day: Name of the :class:`Day` this fragment belongs to. Required
+                for a new day-time; cannot be cleared.
+            **kw: Scalar columns (``descr``) forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if day is not NotGiven:
+                if day is None:
+                    raise ValueError("Day-times need a day")
+                self.day = sess.one(Day, name=day)
+            elif self.day is None:
+                raise ValueError("New day-times need a day")
+
 
 class EnvGroup(Base):
     """A named group of environmental factors for a :class:`Site`."""
@@ -235,6 +253,35 @@ class EnvItem(Base):
     )
 
     group: Mapped[EnvGroup] = relationship("EnvGroup", back_populates="items")
+
+    def apply(self, site=NotGiven, group=NotGiven, **kw) -> None:
+        """Apply mutable env-item properties.
+
+        Args:
+            site: Name of the :class:`Site` scoping the group lookup.
+                Required for a new item.
+            group: Name of the :class:`EnvGroup` within the site. Required for
+                a new item; cannot be cleared.
+            **kw: Scalar columns (``factor``, ``temp``, ``wind``, ``sun``)
+                forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Env items need a site")
+                site_obj = sess.one(Site, name=site)
+            elif self.group is not None:
+                site_obj = self.group.site
+            else:
+                raise ValueError("New env items need a site")
+            if group is not NotGiven:
+                if group is None:
+                    raise ValueError("Env items need a group")
+                self.group = sess.one(EnvGroup, site=site_obj, name=group)
+            elif self.group is None:
+                raise ValueError("New env items need a group")
 
 
 class Sensor(Base):
@@ -544,6 +591,24 @@ class DayRange(Base):
         "Group", secondary=group_xdays, back_populates="xdays", passive_deletes=True
     )
 
+    def apply(self, days=(), **kw) -> None:
+        """Apply mutable day-range properties.
+
+        Args:
+            days: Iterable of :class:`Day` names to link. A name prefixed with
+                ``-`` unlinks it; otherwise it is added.
+            **kw: Scalar columns (``name``, ``comment``) forwarded to
+                :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            for d in days:
+                if d.startswith("-"):
+                    self.days.remove(sess.one(Day, name=d[1:]))
+                else:
+                    self.days.add(sess.one(Day, name=d))
+
 
 class Group(Base):
     """A named bundle of valves sharing a schedule window."""
@@ -576,6 +641,53 @@ class Group(Base):
         "GroupAdjust", back_populates="group", passive_deletes=True
     )
 
+    def apply(
+        self,
+        site=NotGiven,
+        valves=(),
+        rm_valves=(),
+        days=(),
+        xdays=(),
+        **kw,
+    ) -> None:
+        """Apply mutable group properties.
+
+        Args:
+            site: Name of the :class:`Site` this group belongs to. Required
+                for a new group; cannot be cleared.
+            valves: Iterable of :class:`Valve` objects to add to the group.
+            rm_valves: Iterable of :class:`Valve` objects to remove.
+            days: Iterable of :class:`DayRange` names to link as allowed days;
+                a ``-`` prefix unlinks.
+            xdays: Iterable of :class:`DayRange` names to link as excluded
+                days; a ``-`` prefix unlinks.
+            **kw: Scalar columns (``name``, ``comment``, ``adj``) forwarded
+                to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Groups need a site")
+                self.site = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New groups need a site")
+            for v in valves:
+                self.valves.add(v)
+            for v in rm_valves:
+                self.valves.remove(v)
+            for d in days:
+                if d.startswith("-"):
+                    self.days.remove(sess.one(DayRange, name=d[1:]))
+                else:
+                    self.days.add(sess.one(DayRange, name=d))
+            for d in xdays:
+                if d.startswith("-"):
+                    self.xdays.remove(sess.one(DayRange, name=d[1:]))
+                else:
+                    self.xdays.add(sess.one(DayRange, name=d))
+
 
 class GroupOverride(Base):
     """A window that allows or blocks a :class:`Group`'s schedule."""
@@ -595,6 +707,36 @@ class GroupOverride(Base):
     )
 
     group: Mapped[Group] = relationship("Group", back_populates="overrides")
+
+    def apply(self, site=NotGiven, group=NotGiven, **kw) -> None:
+        """Apply mutable group-override properties.
+
+        Args:
+            site: Name of the :class:`Site` scoping the group lookup.
+                Required for a new override.
+            group: Name of the :class:`Group` within the site. Required for a
+                new override; cannot be cleared.
+            **kw: Scalar columns (``name``, ``allowed``, ``start``,
+                ``duration``, ``on_level``, ``off_level``) forwarded to
+                :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Overrides need a site")
+                site_obj = sess.one(Site, name=site)
+            elif self.group is not None:
+                site_obj = self.group.site
+            else:
+                raise ValueError("New overrides need a site")
+            if group is not NotGiven:
+                if group is None:
+                    raise ValueError("Overrides need a group")
+                self.group = sess.one(Group, site=site_obj, name=group)
+            elif self.group is None:
+                raise ValueError("New overrides need a group")
 
     @property
     def duration_td(self) -> timedelta:
@@ -626,6 +768,25 @@ class ValveOverride(Base):
 
     valve: Mapped[Valve] = relationship("Valve", back_populates="overrides")
 
+    def apply(self, valve=NotGiven, **kw) -> None:
+        """Apply mutable valve-override properties.
+
+        Args:
+            valve: The :class:`Valve` to override (an object, not a name —
+                valves have a compound ``(controller, name)`` key). Required
+                for a new override; cannot be cleared.
+            **kw: Scalar columns (``name``, ``running``, ``start``,
+                ``duration``, ``on_level``, ``off_level``) forwarded to
+                :meth:`Base.apply`.
+        """
+        Base.apply(self, **kw)
+        if valve is not NotGiven:
+            if valve is None:
+                raise ValueError("Valve overrides need a valve")
+            self.valve = valve
+        elif self.valve is None:
+            raise ValueError("New valve overrides need a valve")
+
     @property
     def duration_td(self) -> timedelta:
         """``duration`` as a :class:`~datetime.timedelta`."""
@@ -652,6 +813,35 @@ class GroupAdjust(Base):
 
     group: Mapped[Group] = relationship("Group", back_populates="adjusters")
 
+    def apply(self, site=NotGiven, group=NotGiven, **kw) -> None:
+        """Apply mutable group-adjust properties.
+
+        Args:
+            site: Name of the :class:`Site` scoping the group lookup.
+                Required for a new adjuster.
+            group: Name of the :class:`Group` within the site. Required for a
+                new adjuster; cannot be cleared.
+            **kw: Scalar columns (``start``, ``factor``) forwarded to
+                :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Adjusters need a site")
+                site_obj = sess.one(Site, name=site)
+            elif self.group is not None:
+                site_obj = self.group.site
+            else:
+                raise ValueError("New adjusters need a site")
+            if group is not NotGiven:
+                if group is None:
+                    raise ValueError("Adjusters need a group")
+                self.group = sess.one(Group, site=site_obj, name=group)
+            elif self.group is None:
+                raise ValueError("New adjusters need a group")
+
 
 class Schedule(Base):
     """One planned run of a :class:`Valve`."""
@@ -670,6 +860,24 @@ class Schedule(Base):
     )
 
     valve: Mapped[Valve] = relationship("Valve", back_populates="schedules")
+
+    def apply(self, valve=NotGiven, **kw) -> None:
+        """Apply mutable schedule properties.
+
+        Args:
+            valve: The :class:`Valve` to schedule (an object; valves have a
+                compound ``(controller, name)`` key). Required for a new
+                schedule; cannot be cleared.
+            **kw: Scalar columns (``start``, ``duration``, ``seen``,
+                ``changed``, ``forced``) forwarded to :meth:`Base.apply`.
+        """
+        Base.apply(self, **kw)
+        if valve is not NotGiven:
+            if valve is None:
+                raise ValueError("Schedules need a valve")
+            self.valve = valve
+        elif self.valve is None:
+            raise ValueError("New schedules need a valve")
 
     @property
     def duration_td(self) -> timedelta:
@@ -698,6 +906,24 @@ class Level(Base):
     )
 
     valve: Mapped[Valve] = relationship("Valve", back_populates="levels")
+
+    def apply(self, valve=NotGiven, **kw) -> None:
+        """Apply mutable level-sample properties.
+
+        Args:
+            valve: The :class:`Valve` sampled (an object; valves have a
+                compound ``(controller, name)`` key). Required for a new
+                sample; cannot be cleared.
+            **kw: Scalar columns (``time``, ``level``, ``flow``, ``forced``)
+                forwarded to :meth:`Base.apply`.
+        """
+        Base.apply(self, **kw)
+        if valve is not NotGiven:
+            if valve is None:
+                raise ValueError("Levels need a valve")
+            self.valve = valve
+        elif self.valve is None:
+            raise ValueError("New levels need a valve")
 
 
 class History(Base):
@@ -763,3 +989,38 @@ class Log(Base):
     site: Mapped[Site] = relationship("Site", back_populates="logs")
     controller: Mapped[Controller | None] = relationship("Controller", back_populates="logs")
     valve: Mapped[Valve | None] = relationship("Valve", back_populates="logs")
+
+    def apply(self, site=NotGiven, controller=NotGiven, valve=NotGiven, **kw) -> None:
+        """Apply mutable log-entry properties.
+
+        Args:
+            site: Name of the :class:`Site` this log is for. Required for a
+                new log; cannot be cleared.
+            controller: Name of the :class:`Controller` within the site, or
+                ``None`` / ``"-"`` to clear (optional).
+            valve: The :class:`Valve` (an object) this log concerns, or
+                ``None`` to clear (optional).
+            **kw: Scalar columns (``logger``, ``timestamp``, ``text``)
+                forwarded to :meth:`Base.apply`.
+        """
+        sess = session.get()
+        with sess.no_autoflush:
+            Base.apply(self, **kw)
+            if site is not NotGiven:
+                if site is None:
+                    raise ValueError("Logs need a site")
+                self.site = site_obj = sess.one(Site, name=site)
+            elif self.site is None:
+                raise ValueError("New logs need a site")
+            else:
+                site_obj = self.site
+            if controller is not NotGiven:
+                if controller is None or controller == "-":
+                    self.controller = None
+                else:
+                    self.controller = sess.one(Controller, site=site_obj, name=controller)
+            if valve is not NotGiven:
+                if valve is None:
+                    self.valve = None
+                else:
+                    self.valve = valve

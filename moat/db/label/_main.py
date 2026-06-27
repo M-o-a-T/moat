@@ -45,7 +45,7 @@ class CustomContext(click.Context):
 @load_subgroup(prefix="moat.label")
 @click.pass_context
 def cli(ctx):
-    """Labels for storing things."""
+    """Labels for boxes and things."""
     obj = ctx.obj
 
     sess = ctx.with_resource(database(obj.cfg.db))

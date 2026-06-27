@@ -19,7 +19,7 @@ from moat.util import yprint
 from moat.db.rain.model import Controller, Valve
 from moat.lib.run import option_ng
 
-from ._util import absent, bool_pair, get_one, is_given, site_of
+from ._util import absent, bool_pair, get_one, is_given, lookup_errors, site_of
 
 
 @click.group(name="valve", short_help="Manage irrigation valves")
@@ -119,13 +119,14 @@ async def add(obj, feed, envgroup, pri_set, pri_clr, **kw):
     kw.update(bool_pair(pri_set, pri_clr, "priority"))
     v = Valve(name=name)
     obj.session.add(v)
-    v.apply(
-        site=obj.site_name,
-        feed=feed,
-        controller=controller,
-        envgroup=envgroup,
-        **kw,
-    )
+    with lookup_errors():
+        v.apply(
+            site=obj.site_name,
+            feed=feed,
+            controller=controller,
+            envgroup=envgroup,
+            **kw,
+        )
     obj.session.flush()
     yprint(v.dump(), stream=obj.stdout)
 

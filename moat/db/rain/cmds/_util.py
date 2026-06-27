@@ -6,12 +6,19 @@ skips underscore-prefixed modules) never exposes it as a command.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import asyncclick as click
 from sqlalchemy import select
 
 from moat.util import NotGiven
 from moat.db.rain.model import Site
 from moat.lib.run import option_ng
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def site_of(obj):
@@ -84,9 +91,39 @@ def list_in_site(obj, model):
             yield row
 
 
+def list_global(obj, model):
+    """Iterate every row of ``model`` (for globally-scoped entities).
+
+    Args:
+        obj: The click object carrying the session.
+        model: The mapped class to query; must have a ``name`` column.
+    """
+    with obj.session.execute(select(model).order_by(model.name)) as rs:
+        for (row,) in rs:
+            yield row
+
+
 def is_given(v) -> bool:
     """True unless ``v`` is the ``NotGiven`` sentinel."""
     return v is not NotGiven
+
+
+@contextmanager
+def lookup_errors() -> Iterator[None]:
+    """Translate :class:`Mgr.one` lookup failures into a :class:`UsageError`.
+
+    ``apply()`` methods resolve parents and link targets by name via
+    ``sess.one(Model, ...)``; a miss raises a bare ``KeyError``. This wraps
+    such calls so the CLI surfaces a readable error instead of a traceback.
+    """
+    try:
+        yield
+    except KeyError as e:
+        model, kw = e.args[0], e.args[1]
+        name = kw.get("name")
+        if name is not None:
+            raise click.UsageError(f"{model.lower()} {name!r} doesn't exist.") from None
+        raise click.UsageError(f"This {model.lower()} doesn't exist.") from None
 
 
 def bool_pair(set_flag: bool, clr_flag: bool, key: str) -> dict:

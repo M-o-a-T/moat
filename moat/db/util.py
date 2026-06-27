@@ -10,6 +10,7 @@ from contextvars import ContextVar
 from importlib import import_module
 from pathlib import Path
 
+import asyncclick as click
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -93,8 +94,11 @@ def database(cfg: attrdict) -> Session:
             sess = Mgr(conn)
             with ctx_as(session, sess):
                 yield sess
-    except Exception as exc:
-        raise RuntimeError(f"{exc} (database: {getattr(cfg, 'url', '?')})") from exc
+    except click.Exception:
+        raise
+    except Exception:
+        logger.error("On database %r:", getattr(cfg, "url", "?"))
+        raise
 
 
 def alembic_cfg(gcfg, sess):

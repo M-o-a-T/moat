@@ -19,14 +19,17 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
-from moat.db.rain.model import Group
+from moat.db.rain.model import Group, GroupAdjust, GroupOverride
 from moat.lib.run import option_ng
 
 from ._util import (
     absent,
+    bool_pair,
     get_one,
+    is_given,
     list_in_site,
     lookup_errors,
+    parse_dt,
     require_name,
     site_of,
     valve_spec,
@@ -160,3 +163,162 @@ async def delete_(obj):
     name = require_name(obj, "group")
     g = get_one(obj, Group, "group", site=site_of(obj), name=name)
     obj.session.delete(g)
+
+
+# --- Nested subgroups: override, adjust ---------------------------------
+
+
+def _group_of(obj) -> Group:
+    """Resolve the selected group (``obj.name``) within the site."""
+    return get_one(obj, Group, "group", site=site_of(obj), name=require_name(obj, "group"))
+
+
+# GroupOverride: a window allowing/blocking the group's schedule, keyed by
+# (group, start).
+
+
+@cli.group(name="override", short_help="Manage this group's overrides")
+@click.option("--start", "-s", type=str, default=None, help="Override start (ISO timestamp)")
+@click.pass_obj
+async def override_cli(obj, start):
+    """Allow or block the group's schedule for a time window."""
+    obj.start = start
+
+
+@override_cli.command(name="show")
+@click.pass_obj
+async def override_show(obj):
+    """Show one override, or list all overrides of this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        for o in sorted(g.overrides, key=lambda o: o.start):
+            print(o.start.isoformat(), file=obj.stdout)
+        return
+    o = get_one(obj, GroupOverride, "override", group=g, start=parse_dt(obj.start))
+    yprint(o.dump(), stream=obj.stdout)
+
+
+@override_cli.command(name="add")
+@option_ng("--name", "-n", type=str, help="Label for this override")
+@option_ng("--duration", "-d", type=int, help="Window length (s)")
+@option_ng("--on-level", "on_level", type=float, help="Level to switch on at")
+@option_ng("--off-level", "off_level", type=float, help="Level to switch off at")
+@click.option("--allow", "allow_set", is_flag=True, help="Allow watering in this window")
+@click.option("--no-allow", "allow_clr", is_flag=True, help="Block watering in this window")
+@click.pass_obj
+async def override_add(obj, allow_set, allow_clr, **kw):
+    """Add an override to this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The override needs a start. Use '--start'.")
+    start = parse_dt(obj.start)
+    absent(obj, GroupOverride, "override", group=g, start=start)
+    if not is_given(kw.get("duration", ...)):
+        raise click.UsageError("An override needs --duration.")
+    kw.update(bool_pair(allow_set, allow_clr, "allowed"))
+    o = GroupOverride(start=start)
+    obj.session.add(o)
+    with lookup_errors():
+        o.apply(site=obj.site_name, group=g.name, **kw)
+    obj.session.flush()
+    yprint(o.dump(), stream=obj.stdout)
+
+
+@override_cli.command(name="set")
+@option_ng("--name", "-n", type=str, help="Label for this override")
+@option_ng("--duration", "-d", type=int, help="Window length (s)")
+@option_ng("--on-level", "on_level", type=float, help="Level to switch on at")
+@option_ng("--off-level", "off_level", type=float, help="Level to switch off at")
+@click.option("--allow", "allow_set", is_flag=True, help="Allow watering in this window")
+@click.option("--no-allow", "allow_clr", is_flag=True, help="Block watering in this window")
+@click.pass_obj
+async def override_set(obj, allow_set, allow_clr, **kw):
+    """Modify an override of this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The override needs a start. Use '--start'.")
+    o = get_one(obj, GroupOverride, "override", group=g, start=parse_dt(obj.start))
+    kw.update(bool_pair(allow_set, allow_clr, "allowed"))
+    o.apply(**kw)
+    obj.session.flush()
+    yprint(o.dump(), stream=obj.stdout)
+
+
+@override_cli.command(name="delete")
+@click.pass_obj
+async def override_delete(obj):
+    """Remove an override from this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The override needs a start. Use '--start'.")
+    o = get_one(obj, GroupOverride, "override", group=g, start=parse_dt(obj.start))
+    obj.session.delete(o)
+
+
+# GroupAdjust: a dated demand multiplier, keyed by (group, start).
+
+
+@cli.group(name="adjust", short_help="Manage this group's adjusters")
+@click.option("--start", "-s", type=str, default=None, help="Adjuster start (ISO timestamp)")
+@click.pass_obj
+async def adjust_cli(obj, start):
+    """Manage dated demand multipliers for this group."""
+    obj.start = start
+
+
+@adjust_cli.command(name="show")
+@click.pass_obj
+async def adjust_show(obj):
+    """Show one adjuster, or list all adjusters of this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        for a in sorted(g.adjusters, key=lambda a: a.start):
+            print(a.start.isoformat(), file=obj.stdout)
+        return
+    a = get_one(obj, GroupAdjust, "adjuster", group=g, start=parse_dt(obj.start))
+    yprint(a.dump(), stream=obj.stdout)
+
+
+@adjust_cli.command(name="add")
+@option_ng("--factor", "-f", type=float, help="Demand multiplier")
+@click.pass_obj
+async def adjust_add(obj, **kw):
+    """Add an adjuster to this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The adjuster needs a start. Use '--start'.")
+    start = parse_dt(obj.start)
+    absent(obj, GroupAdjust, "adjuster", group=g, start=start)
+    if not is_given(kw.get("factor", ...)):
+        raise click.UsageError("An adjuster needs --factor.")
+    a = GroupAdjust(start=start)
+    obj.session.add(a)
+    with lookup_errors():
+        a.apply(site=obj.site_name, group=g.name, **kw)
+    obj.session.flush()
+    yprint(a.dump(), stream=obj.stdout)
+
+
+@adjust_cli.command(name="set")
+@option_ng("--factor", "-f", type=float, help="Demand multiplier")
+@click.pass_obj
+async def adjust_set(obj, **kw):
+    """Modify an adjuster of this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The adjuster needs a start. Use '--start'.")
+    a = get_one(obj, GroupAdjust, "adjuster", group=g, start=parse_dt(obj.start))
+    a.apply(**kw)
+    obj.session.flush()
+    yprint(a.dump(), stream=obj.stdout)
+
+
+@adjust_cli.command(name="delete")
+@click.pass_obj
+async def adjust_delete(obj):
+    """Remove an adjuster from this group."""
+    g = _group_of(obj)
+    if obj.start is None:
+        raise click.UsageError("The adjuster needs a start. Use '--start'.")
+    a = get_one(obj, GroupAdjust, "adjuster", group=g, start=parse_dt(obj.start))
+    obj.session.delete(a)

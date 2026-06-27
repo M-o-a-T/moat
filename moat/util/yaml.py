@@ -301,7 +301,7 @@ def expect_node(self: Any, *a: Any, **kw: Any) -> None:
     self.root_context = False
 
 
-Emitter.expect_node = expect_node  # ty:ignore[invalid-assignment]  # monkey-patch
+Emitter.expect_node = expect_node  # monkey-patch
 
 
 def yload(

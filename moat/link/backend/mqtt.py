@@ -181,8 +181,9 @@ class Backend(_Backend):
         else:
             codec_obj = get_codec(codec)
         kw["no_local"] = not mine
-        kw["retain_handling"] = (
-            RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
+        kw.setdefault(
+            "retain_handling",
+            RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED,
         )
         assert self.client is not None
         try:

@@ -542,3 +542,236 @@ async def test_valve_lifecycle(rain):
     await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "delete")
     r = await rain("db", "rain", "home", "valve", "show")
     assert r.stdout == "C2:V1\n"
+
+
+async def test_day_lifecycle(rain):
+    """Global Day CRUD (site argument accepted but ignored)."""
+    await rain("db", "rain", "home", "add")
+
+    r = await rain("db", "rain", "home", "day", "show")
+    assert r.stdout == ""  # none yet (hint goes to stderr)
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "add")
+    assert "name: workday" in r.stdout
+    await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+
+    r = await rain("db", "rain", "home", "day", "show")
+    assert r.stdout == "weekend\nworkday\n"
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "show")
+    assert "name: workday" in r.stdout
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "set", "-n", "wd")
+    assert "name: wd" in r.stdout
+    r = await rain("db", "rain", "home", "day", "show")
+    assert "workday" not in r.stdout
+    assert "wd" in r.stdout
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "add")
+    assert "needs a name" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+    assert "already exists" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "nope", "show")
+    assert "doesn't exist" in _msg(err)
+
+    await rain("db", "rain", "home", "day", "-n", "wd", "delete")
+    r = await rain("db", "rain", "home", "day", "show")
+    assert r.stdout == "weekend\n"
+
+
+async def test_daytime_nested(rain):
+    """DayTime fragments managed through the nested ``time`` subgroup."""
+    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "home", "day", "-n", "workday", "add")
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    assert r.stdout == ""  # no fragments yet (hint goes to stderr)
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "8:00-12:00", "add")
+    assert "descr: 8:00-12:00" in r.stdout
+    await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add")
+
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    assert r.stdout == "14:00-18:00\n8:00-12:00\n"
+
+    r = await rain(
+        "db", "rain", "home", "day", "-n", "workday", "time", "-d", "8:00-12:00", "show"
+    )
+    assert "descr: 8:00-12:00" in r.stdout
+
+    r = await rain(
+        "db",
+        "rain",
+        "home",
+        "day",
+        "-n",
+        "workday",
+        "time",
+        "-d",
+        "8:00-12:00",
+        "set",
+        "-d",
+        "08:00-12:00",
+    )
+    assert "descr: 08:00-12:00" in r.stdout
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    assert r.stdout == "08:00-12:00\n14:00-18:00\n"
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "workday", "time", "add")
+    assert "needs a description" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain(
+            "db", "rain", "home", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add"
+        )
+    assert "already exists" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "nope", "time", "-d", "x", "add")
+    assert "doesn't exist" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "time", "-d", "x", "add")
+    assert "needs a name" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "workday", "time", "set")
+    assert "needs a description" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "day", "-n", "workday", "time", "delete")
+    assert "needs a description" in _msg(err)
+
+    await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "08:00-12:00", "delete")
+    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    assert r.stdout == "14:00-18:00\n"
+
+
+async def test_dayrange_lifecycle(rain):
+    """Global DayRange CRUD with day linking/unlinking."""
+    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "home", "day", "-n", "workday", "add")
+    await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+
+    r = await rain(
+        "db",
+        "rain",
+        "home",
+        "dayrange",
+        "-n",
+        "alldays",
+        "add",
+        "--day",
+        "workday",
+        "--day",
+        "weekend",
+    )
+    assert "name: alldays" in r.stdout
+
+    r = await rain("db", "rain", "home", "dayrange", "-n", "alldays", "show")
+    assert "name: alldays" in r.stdout
+
+    r = await rain("db", "rain", "home", "dayrange", "show")
+    assert r.stdout == "alldays\n"
+
+    r = await rain(
+        "db",
+        "rain",
+        "home",
+        "dayrange",
+        "-n",
+        "alldays",
+        "set",
+        "--rm-day",
+        "weekend",
+        "--comment",
+        "hello",
+    )
+    assert "comment: hello" in r.stdout
+
+    r = await rain("db", "rain", "home", "dayrange", "-n", "alldays", "set", "-n", "everyday")
+    assert "name: everyday" in r.stdout
+    r = await rain("db", "rain", "home", "dayrange", "show")
+    assert r.stdout == "everyday\n"
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "dayrange", "-n", "everyday", "add")
+    assert "already exists" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "dayrange", "-n", "everyday", "set", "--day", "nope")
+    assert "doesn't exist" in _msg(err)
+
+    await rain("db", "rain", "home", "dayrange", "-n", "everyday", "delete")
+    r = await rain("db", "rain", "home", "dayrange", "show")
+    assert r.stdout == ""
+
+
+async def test_valve_bad_parent_names(rain):
+    """Bad feed/envgroup names surface as readable UsageErrors, not tracebacks."""
+    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
+    await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
+    await rain("db", "rain", "home", "env", "-n", "std", "add")
+
+    base = [
+        "db",
+        "rain",
+        "home",
+        "valve",
+        "-c",
+        "C1",
+        "-n",
+        "V",
+        "add",
+        "-l",
+        "x",
+        "--flow",
+        "1",
+        "--area",
+        "1",
+    ]
+
+    with _raises(click.UsageError) as err:
+        await rain(*base, "-F", "nope", "-e", "std")
+    msg = _msg(err)
+    assert "feed" in msg
+    assert "doesn't exist" in msg
+
+    with _raises(click.UsageError) as err:
+        await rain(*base, "-F", "F1", "-e", "nope")
+    msg = _msg(err)
+    assert "envgroup" in msg
+    assert "doesn't exist" in msg
+
+    with _raises(click.UsageError) as err:
+        await rain(
+            "db",
+            "rain",
+            "home",
+            "valve",
+            "-c",
+            "nope",
+            "-n",
+            "V",
+            "add",
+            "-F",
+            "F1",
+            "-e",
+            "std",
+            "-l",
+            "x",
+            "--flow",
+            "1",
+            "--area",
+            "1",
+        )
+    msg = _msg(err)
+    assert "controller" in msg
+    assert "doesn't exist" in msg

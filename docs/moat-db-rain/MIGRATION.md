@@ -796,6 +796,23 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    (site → controller → valve → feed → sensor → group → env → day →
    override → schedule → history), each exporting a `cli` group with
    show/add/set/delete. The thin `_main.py` needs no per-entity edits.
+   *(In progress: site `add`/`set`/`delete` + `-` list / no-subcommand
+   show in `_main.py`, and `controller` {show,add,set,delete} done.
+   `cmds/_util.py` holds the shared scaffolding — `site_of`, `get_one`,
+   `absent`, `require_name`, `list_in_site`, `is_given`, `site_opts` —
+   so each entity file is little more than its options + four thin
+   commands. End-to-end tests in `test_cli.py` drive the full `moat` CLI
+   via `moat.src.test.run` with `-s moat.db.url` pointed at a temp
+   SQLite DB; 44 rain tests / 99% coverage.)*
+
+   Side fix: `moat.db.util.database()` had `except click.Exception:`
+   (asyncclick exposes no `Exception` attr — it suggests `exceptions`),
+   which turned every `UsageError` raised inside a DB command into an
+   `AttributeError`. Corrected to `except click.exceptions.ClickException:`
+   so click's user-facing errors pass through undecorated, as intended.
+   This was latent — box/thing have no CLI tests raising through
+   `database()`; rain's `controller add` (missing `--location`) is the
+   first to exercise it.
 7. **Engine — algebra.** Port `range.py` (§7.1) + `test_range.py` parity
    with the old `utils.py` self-tests.
 8. **Engine — `_range()` ports + generation/recalc.** `engine.py`

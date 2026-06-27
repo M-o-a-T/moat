@@ -93,13 +93,6 @@ async def cli(ctx, name: str) -> None:
         yprint(data)
 
 
-@cli.command("--help", hidden=True)
-@click.pass_context
-def _cli_help(ctx) -> None:
-    """Workaround so ``cli NAME --help`` produces help text."""
-    print(cli.get_help(ctx))
-
-
 def _server_options(proc):
     """Add the ``add``/``set`` options for server configuration."""
     proc = click.option(
@@ -229,13 +222,6 @@ async def at_cli(ctx, path: Path) -> None:
             recursive=False,
             out=obj.stdout,
         )
-
-
-@at_cli.command("--help", hidden=True)
-@click.pass_context
-def _at_help(ctx) -> None:
-    """Workaround so ``at PATH --help`` produces help text."""
-    print(at_cli.get_help(ctx))
 
 
 @at_cli.command("dump")

@@ -101,13 +101,6 @@ async def cli(ctx, name: str) -> None:
             print("exists, no data", file=sys.stderr)
 
 
-@cli.command("--help", hidden=True)
-@click.pass_context
-def _cli_help(ctx) -> None:
-    """Workaround so ``cli NAME --help`` produces help text."""
-    print(cli.get_help(ctx))
-
-
 def _server_options(proc):
     """Decorate ``add``/``set`` with the server-config options."""
     proc = click.option(
@@ -240,13 +233,6 @@ async def at_cli(ctx, type_: str, card: int, port: int) -> None:
             recursive=False,
             out=obj.stdout,
         )
-
-
-@at_cli.command("--help", hidden=True)
-@click.pass_context
-def _at_help(ctx) -> None:
-    """Workaround so ``at TYPE CARD PORT --help`` produces help text."""
-    print(at_cli.get_help(ctx))
 
 
 @at_cli.command("dump")

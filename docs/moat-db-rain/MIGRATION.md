@@ -299,7 +299,6 @@ moat/db/rain/
 │                      #   invoke_without_command=True) + @click.argument("site")  (wago pattern);
 │                      #   opens `database(cfg)`+begin(), sets obj.session+obj.site_name;
 │                      #   `moat db rain -` lists sites, `moat db rain <SITE>` shows one (Phase 2);
-│                      #   + a hidden `@cli.command("--help")` workaround (cf. moat.link.wago._main)
 └── cmds/              # one file per subcommand, each exporting `cli` (Loader-discovered)
     ├── __init__.py    # "Sub-command processing here."  (cf. moat.link.cmd.__init__)
     ├── add.py         # `moat db rain <SITE> add`        (create site; wago-style verb)
@@ -396,9 +395,8 @@ its subcommands from `moat/db/rain/cmds/<name>.py` — each file exports a
 `cli` (a `@click.group` with `show`/`add`/`set`/`delete`, or a leaf
 command) — via `@load_subgroup(sub_pre="moat.db.rain.cmds",
 sub_post="cli", ext_pre="moat.db.rain", ext_post="_main.cli")`, the
-`moat.link._main` / `moat.link.cmd` pattern; a hidden
-`@cli.command("--help")` workaround handles `moat db rain <SITE>
---help` (cf. `moat.link.wago._main`). This combination (`@load_subgroup`
+`moat.link._main` / `moat.link.cmd` pattern.
+This combination (`@load_subgroup`
 + positional + `invoke_without_command` + `cmds/` discovery) is proven
 by an integration test: click consumes the `nargs=1` positional as the
 first token and resolves the *second* token as the subcommand, exactly
@@ -667,9 +665,8 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    `_main.py::cli` uses `@load_subgroup(sub_pre="moat.db.rain.cmds",
    sub_post="cli", ext_pre="moat.db.rain", ext_post="_main.cli",
    invoke_without_command=True)` + `@click.argument("site")` (the wago
-   "site-before-verb" pattern), opens `database(cfg)`+`begin()`, sets
-   `obj.session`+`obj.site_name`, and adds the hidden
-   `@cli.command("--help")` workaround. Wire `CfgStore.with_` in
+   "site-before-verb" pattern), opens `database(cfg)`+`begin()`, and sets
+   `obj.session`+`obj.site_name`. Wire `CfgStore.with_` in
    `__init__.py` (no `cli` export — discovery is via `ext_pre` →
    `_main.cli`, cf. box/label/thing), append to `moat/db/_cfg.yaml`
    schemas, add ty include, hook docs toctrees. Smoke-test all three

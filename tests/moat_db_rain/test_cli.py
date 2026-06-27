@@ -147,3 +147,107 @@ async def test_site_cascade_deletes_children(rain):
 
     r = await rain("db", "rain", "home", "controller", "show")
     assert r.stdout == ""  # controllers cascaded away
+
+
+async def test_feed_lifecycle(rain):
+    """Feed CRUD with a Path field (flow_monitor) and disable/enable."""
+    await rain("db", "rain", "home", "add")
+
+    r = await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
+    assert "name: F1" in r.stdout
+    assert "flow_monitor: !P mon.flow" in r.stdout
+    assert "flow: 10.0" in r.stdout
+    assert "disabled: false" in r.stdout
+
+    r = await rain("db", "rain", "home", "feed", "show")
+    assert r.stdout == "F1\n"
+
+    r = await rain("db", "rain", "home", "feed", "-n", "F1", "show")
+    assert "name: F1" in r.stdout
+
+    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "--flow", "5", "--disable")
+    assert "flow: 5.0" in r.stdout
+    assert "disabled: true" in r.stdout
+    assert "flow_monitor: !P mon.flow" in r.stdout  # untouched
+
+    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "-f", "-")
+    assert "flow_monitor" not in r.stdout  # cleared → omitted from dump
+
+    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "--enable")
+    assert "disabled: false" in r.stdout
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "feed", "-n", "F1", "add")
+    assert "already exists" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "feed", "-n", "Q", "show")
+    assert "doesn't exist" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "feed", "add")
+    assert "needs a name" in _msg(err)
+
+    await rain("db", "rain", "home", "feed", "-n", "F1", "delete")
+    r = await rain("db", "rain", "home", "feed", "show")
+    assert r.stdout == ""
+
+
+async def test_sensor_lifecycle(rain):
+    """Sensor CRUD over the (site, kind, name) key; kind is immutable."""
+    await rain("db", "rain", "home", "add")
+
+    r = await rain("db", "rain", "home", "sensor", "show")
+    assert r.stdout == ""  # none yet (hint goes to stderr)
+
+    r = await rain(
+        "db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "sen.rain"
+    )
+    assert "kind: rain" in r.stdout
+    assert "name: R1" in r.stdout
+    assert "state: !P sen.rain" in r.stdout
+    assert "weight: 10" in r.stdout
+
+    r = await rain(
+        "db", "rain", "home", "sensor", "-k", "temp", "-n", "T1", "add", "-s", "sen.temp"
+    )
+    assert "kind: temp" in r.stdout
+
+    r = await rain("db", "rain", "home", "sensor", "show")
+    assert r.stdout == "rain:R1\ntemp:T1\n"
+
+    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "show")
+    assert r.stdout == "rain:R1\n"
+
+    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "show")
+    assert "state: !P sen.rain" in r.stdout
+
+    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "set", "-w", "20")
+    assert "weight: 20" in r.stdout
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "sensor", "-k", "wind", "-n", "W1", "add")
+    assert "needs --state" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "sensor", "-n", "X", "add", "-s", "x.y")
+    assert "needs --kind" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "sensor", "-n", "R1", "show")
+    assert "needs --kind" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "x.y")
+    assert "already exists" in _msg(err)
+
+    # same name, different kind, is distinct
+    r = await rain("db", "rain", "home", "sensor", "-k", "temp", "-n", "R1", "add", "-s", "sen.t2")
+    assert "kind: temp" in r.stdout
+
+    r = await rain("db", "rain", "home", "sensor", "show")
+    assert r.stdout == "rain:R1\ntemp:R1\ntemp:T1\n"
+
+    await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "delete")
+    r = await rain("db", "rain", "home", "sensor", "show")
+    assert r.stdout == "temp:R1\ntemp:T1\n"

@@ -490,15 +490,23 @@ moat db rain <SITE> delete           # delete site
 
 # Per-entity CRUD, scoped to <SITE> (cmds/<entity>.py::cli groups):
 moat db rain <SITE> controller  {show,add,set,delete}
-moat db rain <SITE> valve       {show,add,set,delete}
+moat db rain <SITE> valve       {show,add,set,delete, override, schedule, level}
 moat db rain <SITE> feed        {show,add,set,delete}
 moat db rain <SITE> sensor      {show,add,set,delete}   # --kind rain|temp|wind|sun
-moat db rain <SITE> group       {show,add,set,delete}   # +/-days, +/-xdays, +/-valves
-moat db rain <SITE> env         {show,add,set,delete}    # envgroup; sub: item {…}
-moat db rain <SITE> day         {show,add,set,delete}    # day; sub: time {…}; range {…} (+/-days)
-moat db rain <SITE> override    {group {…}, valve {…}, adjust {…}}
-moat db rain <SITE> schedule    {show,add,set,delete,list}  # list ≈ old listschedule
-moat db rain <SITE> history     {level {…}, hist {…}, log {…}}
+moat db rain <SITE> group       {show,add,set,delete, override, adjust}  # +/-days, +/-xdays, +/-valves
+moat db rain <SITE> env         {show,add,set,delete}    # envgroup
+moat db rain <SITE> day         {show,add,set,delete, time}   # global; time = DayTime fragments
+moat db rain <SITE> dayrange    {show,add,set,delete}    # global; +/-days links Day ranges
+moat db rain <SITE> history     {show,add,set,delete, log}     # site weather samples; log = event entries
+
+# Datetime-keyed children are nested subgroups, keyed by (parent, start|time):
+moat db rain <SITE> valve   -c <C> -n <V> override {-s TS, show,add,set,delete}  # ValveOverride
+moat db rain <SITE> valve   -c <C> -n <V> schedule {-s TS, show,add,set,delete} # Schedule
+moat db rain <SITE> valve   -c <C> -n <V> level    {-t TS, show,add,set,delete} # Level
+moat db rain <SITE> group   -n <G> override {-s TS, show,add,set,delete}        # GroupOverride
+moat db rain <SITE> group   -n <G> adjust    {-s TS, show,add,set,delete}        # GroupAdjust
+moat db rain <SITE> day     -n <D> time     {-d DESCR, show,add,set,delete}      # DayTime
+moat db rain <SITE> history -t <TS> log      {--id N, show,add,set,delete}      # Log (id-keyed)
 
 # Engine / daemon (§7); site-scoped, in cmds/{gen,recalc,monitor}.py:
 moat db rain <SITE> gen          # one-shot schedule generation  (old genschedule)
@@ -506,11 +514,19 @@ moat db rain <SITE> recalc       # one-shot level recalculation (old recalculate
 moat db rain <SITE> monitor      # long-running daemon           (old runschedule)
 ```
 
-Inside each per-entity group, `show` lists all rows (scoped to
-`obj.site_name`) when no `--name` is given, else dumps one record via
-`yprint(obj.dump())` — exactly the box/thing pattern. Multi-value
-options (`--valve`, `--day`, …) use `multiple=True` with `-NAME` meaning
-"remove" (cf. `moat box typ --in -NAME`).
+`day`/`dayrange` are **globally** scoped (not per site); the `<SITE>`
+argument is accepted for consistency with the CLI but ignored for
+them. Inside each per-entity group, `show` lists all rows (scoped to
+`obj.site_name`, or globally for `day`/`dayrange`) when no selector is
+given, else dumps one record via `yprint(obj.dump())` — exactly the
+box/thing pattern. Multi-value options (`--valve C:V`, `--day NAME`,
+`--xday NAME`, …) use `multiple=True` with a `-` prefix meaning
+"remove" (cf. `moat box typ --in -NAME`). Bool columns use paired
+`--flag`/`--no-flag` options (translated by `_util.bool_pair`).
+Timestamps parse as ISO-8601 via `_util.parse_dt` (naive → local tz).
+`Group.show` augments the scalar dump with its linked valves
+(`controller:name`) and day ranges, since `Base.dump` emits only scalar
+columns; likewise `Log`'s dump is augmented with its `id`.
 
 Each line above maps to `cmds/<name>.py::cli`; the thin `_main.py` group
 owns no per-entity logic, so adding an entity is just a new `cmds/`
@@ -796,15 +812,23 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    (site → controller → valve → feed → sensor → group → env → day →
    override → schedule → history), each exporting a `cli` group with
    show/add/set/delete. The thin `_main.py` needs no per-entity edits.
-   *(In progress: site `add`/`set`/`delete` + `-` list / no-subcommand
-   show in `_main.py`, and `controller`/`feed`/`sensor`
-   {show,add,set,delete} done.
-   `cmds/_util.py` holds the shared scaffolding — `site_of`, `get_one`,
-   `absent`, `require_name`, `list_in_site`, `is_given`, `site_opts` —
-   so each entity file is little more than its options + four thin
-   commands. End-to-end tests in `test_cli.py` drive the full `moat` CLI
-   via `moat.src.test.run` with `-s moat.db.url` pointed at a temp
-   SQLite DB; 46 rain tests / 99% coverage.)*
+   *(Done: all 11 entities. Top-level groups — `site` (in `_main.py`),
+   `controller`, `valve`, `feed`, `sensor`, `group`, `env`, `day`,
+   `dayrange`, `history` — plus the datetime-keyed children as nested
+   subgroups: `valve {override,schedule,level}`, `group {override,adjust}`,
+   `day {time}`, `history {log}`. M2M links use `multiple=True`
+   options — `--valve C:V` / `--day NAME` / `--xday NAME` with a `-`
+   prefix to unlink; `Group.show` augments the scalar dump with its
+   linked valves and day ranges. `cmds/_util.py` holds the shared
+   scaffolding — `site_of`, `get_one`, `absent`, `require_name`,
+   `list_in_site`, `list_global`, `is_given`, `bool_pair`, `valve_spec`,
+   `parse_dt`, `lookup_errors`, `site_opts` — so each entity file is
+   little more than its options + four thin commands. `lookup_errors()`
+   wraps every `apply()` that resolves a parent/link by name, turning
+   the bare `KeyError` from `Mgr.one` into a readable `UsageError`.
+   End-to-end tests in `test_cli.py` drive the full `moat` CLI via
+   `moat.src.test.run` with `-s moat.db.url` pointed at a temp SQLite
+   DB; 64 rain tests / 99% coverage.)*
 
    Side fix: `moat.db.util.database()` had `except click.Exception:`
    (asyncclick exposes no `Exception` attr — it suggests `exceptions`),

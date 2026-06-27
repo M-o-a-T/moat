@@ -18,21 +18,13 @@ from moat.lib.run import load_subgroup
 @click.argument("site", type=str, nargs=1)
 @click.pass_context
 async def cli(ctx, site):
-    """MoaT irrigation management.
+    """Irrigation management.
 
     Manage irrigation sites, controllers, valves, feeds, meters,
-    schedules, and the monitoring daemon. The site name is positional and
-    precedes the subcommand, cf. ``mt link wago NAME …``.
+    schedules, and the monitoring daemon.
     """
     obj = ctx.obj
     sess = ctx.with_resource(database(obj.cfg.db))
     ctx.with_resource(sess.begin())
     obj.session = sess
     obj.site_name = site
-
-
-@cli.command("--help", hidden=True)
-@click.pass_context
-def _cli_help(ctx):
-    """Print help for ``moat db rain SITE --help``."""
-    print(cli.get_help(ctx))

@@ -1,0 +1,758 @@
+# Migration Plan: `rainman` (Django) → `moat.db.rain` (SQLAlchemy + Alembic)
+
+This document records the analysis of the legacy Django irrigation app in
+`/src/moat-old/irrigation/` and defines how it is rebuilt as the
+`moat.db.rain` submodule, following the conventions already established by
+`moat.db.box`, `moat.db.thing`, and `moat.db.label`.
+
+Scope: **data model + command-line CRUD + the scheduler engine**, shipped
+as one installable sub-package `moat-db-rain` (Python wheel **and** Debian
+package). The engine's long-running driver is exposed as
+`moat db rain <site> monitor`.
+
+Out of scope (web UI, auth, data import — §11) are filed as beads issues.
+
+---
+
+## 1. Goals & non-goals
+
+Goals:
+
+- Recreate every persistent entity of the old `rainman` Django app as a
+  SQLAlchemy ORM model living under `moat.db.rain`.
+- Provide an `asyncclick` command-line interface for listing, showing,
+  adding, modifying, and deleting each entity, exactly like
+  `moat box …` / `moat thing …`, reached as **`moat db rain …`**.
+- Port the **scheduler engine**: the interval-algebra utilities
+  (`range_union`/`range_intersection`/`range_invert`/`range_coalesce`),
+  every entity's `_range(start,end)` generator (rewritten from Django ORM
+  queries to SQLAlchemy), and the schedule-generation / level-recalculation
+  logic. These live in `moat.db.rain` alongside the models.
+- Provide the long-running daemon **`moat db rain <site> monitor`** that
+  runs the current schedule, watches weather meters, talks to controllers
+  via MoaT-link, and maintains `Schedule`/`Level`/`History`/`Log` rows.
+  (Phased — the daemon lands last; see §10.)
+- Manage the schema with the **shared** Alembic tree at
+  `moat/db/alembic/` (owned by `moat-db`); rain's tables are added by a
+  new revision chained off the current head `dd1007d00e262b5c`.
+- Ship as `moat-db-rain` with `pyproject.toml`, README, docs, tests, **and
+  a `debian/` packaging directory** (wheel + `.deb` + systemd unit),
+  mirroring `moat-db-box` for the wheel and `moat-kv-akumuli` for the
+  Debian/systemd-daemon side.
+
+Non-goals (deferred — file beads issues, §11):
+
+- Authentication / authorization (`UserForSite`, tied to Django auth).
+- The Django web UI, Jinja templates, and admin.
+- Importing data from a live `rainman_*` database.
+- `genconfig` / `genhabconfig` (emit controller/openHAB config snippets) —
+  lower-value generators, deferred after the core engine + monitor work.
+
+---
+
+## 2. Source analysis: the old `rainman` app
+
+The Django app `rainman` (under `/src/moat-old/irrigation/rainman/`)
+defines its models in `models/*.py`. The authoritative SQL shape is the
+initial migration `migrations/0001_initial_stuff.py`; the model files
+contain additional Python behaviour (properties, range algorithms) that
+informs column semantics and is ported by the engine (§7).
+
+### 2.1 Entities and their columns
+
+Legend: PK = surrogate `id` (Django AutoField, mirrored by
+`moat.db.schema.Base`). "UT" = `unique_together`. Durations were stored as
+integer **seconds** in `db_*` columns and exposed as `timedelta` via
+properties.
+
+| Entity (old table) | Columns (excluding PK) | UT | Notes |
+|---|---|---|---|
+| **Site** (`rainman_site`) | `name` str200 uniq, `comment` str200?, `var` str200 uniq?, `host` str200, `port` posint, `db_rate` float (col `rate`), `db_rain_delay` posint (col `rain_delay`) | — | Model file *also* declares `username`/`password`/`virtualhost` (RabbitMQ); the newer migration **dropped** them and reframed `host`/`port` as "MoaT server / RPC port 50005". Dropped per §4.2. |
+| **Controller** (`rainman_controller`) | `name` str200, `var` str200 uniq, `comment` str200?, `site` FK→Site, `location` str200, `max_on` int d=3 | (site,name) | |
+| **Valve** (`rainman_valve`) | `name` str200, `comment` str200?, `feed` FK→Feed, `controller` FK→Controller, `envgroup` FK→EnvGroup (col `param_group_id`), `location` str200, `var` str200 uniq, `verbose` possmallint d=0, `flow` float, `area` float, `max_level` float d=10, `start_level` float d=8, `stop_level` float d=3, `shade` float d=1, `db_max_run` posint? (col `max_run`), `db_min_delay` posint? (col `min_delay`), `runoff` float d=1, `time` dt idx d=now, `level` float d=0, `priority` bool d=False | (controller,name) | M2M `groups`→Group via `rainman_group_valves`. |
+| **Feed** (`rainman_feed`) | `name` str200, `var` str200 uniq?, `comment` str200?, `site` FK→Site, `flow` float? d=10, `db_max_flow_wait` posint (col `max_flow_wait`) d=300, `disabled` bool d=False | (site,name)¹ | Subclasses abstract `Meter` + `RangeMixin`. ¹UT inherited from `Meter`. |
+| **Meter** (abstract) | `name` str200; UT (site,name) | — | Base for weather sensors. |
+| **WMeter** (abstract) | + `weight` possmallint d=10, `var` str200 uniq | — | Adds MoaT-link var name. |
+| **RainMeter/TempMeter/WindMeter/SunMeter** (`rainman_{rain,temp,wind,sun}meter`) | `name`, `weight`, `var`, `site` FK→Site | (site,name) | Four near-identical tables → collapsed per §4.4. |
+| **Group** (`rainman_group`) | `name` str200, `site` FK→Site, `comment` str200?, `adj` float? | (site,name) | M2M `days`→DayRange (rel `groups_y`), `xdays`→DayRange (rel `groups_n`), `valves`→Valve (through `rainman_group_valves`). |
+| **EnvGroup** (`rainman_paramgroup`) | `name` str200, `comment` str200?, `site` FK→Site, `factor` float d=1.0, `rain` bool d=True | (site,name) | |
+| **EnvItem** (`rainman_environmenteffect`) | `group` FK→EnvGroup (col `param_group_id`), `factor` float d=1.0, `temp` float?, `wind` float?, `sun` float? | — | |
+| **Day** (`rainman_day`) | `name` str30 uniq | — | Has child `DayTime`s. |
+| **DayTime** (`rainman_daytime`) | `descr` str200, `day` FK→Day | (day,descr) | `descr` parsed by `moat.times.time_until` at runtime (§7.4). |
+| **DayRange** (`rainman_dayrange`) | `name` str30 uniq, `comment` str200? | — | M2M `days`→Day (rel `ranges`). Intersection of days. |
+| **GroupOverride** (`rainman_groupoverride`) | `name` str200?, `group` FK→Group, `allowed` bool d=False, `start` dt idx, `db_duration` posint (col `duration`), `on_level` float?, `off_level` float? | (group,start) | `end = start+duration`. |
+| **ValveOverride** (`rainman_valveoverride`) | `name` str200?, `valve` FK→Valve, `running` bool d=False, `start` dt idx, `db_duration` posint (col `duration`), `on_level` float?, `off_level` float? | (valve,start) | |
+| **GroupAdjust** (`rainman_groupadjust`) | `group` FK→Group, `start` dt idx, `factor` float | (group,start) | Linearly-interpolated watering multiplier. |
+| **Schedule** (`rainman_schedule`) | `valve` FK→Valve, `start` dt idx, `db_duration` posint (col `duration`), `seen` bool, `changed` bool, `forced` bool | (valve,start) | Produced by the scheduler engine. |
+| **Level** (`rainman_level`) | `valve` FK→Valve, `time` dt idx, `level` float, `flow` float d=0, `forced` bool d=False | (valve,time) | Historic per-valve water level. |
+| **History** (`rainman_history`) | `site` FK→Site, `time` dt idx, `rain` float d=0, `feed` float d=0, `temp` float?, `wind` float?, `sun` float? | (site,time) | Historic per-site weather/water. |
+| **Log** (`rainman_log`) | `logger` str200, `timestamp` dt idx d=now, `site` FK→Site, `controller` FK?→Controller, `valve` FK?→Valve, `text` text | — | |
+| **UserForSite** (`rainman_userforsite`) | `user` 1:1 DjangoUser, `level` possmallint (0–3), M2M `sites`→Site, M2M `valves`→Valve | — | **Dropped** — §4.6. |
+
+### 2.2 Relationships summary
+
+- Site ◂── FK ── Controller, Feed, Group, EnvGroup, History, Log, Rain/Temp/Wind/SunMeter, UserForSite
+- Controller ◂── FK ── Valve, Log
+- Feed ◂── FK ── Valve
+- EnvGroup ◂── FK ── Valve (col `param_group_id`), EnvItem
+- Valve ◂── FK ── Schedule, ValveOverride, Level, Log; M2M ── Group (`rainman_group_valves`)
+- Group ── M2M ── DayRange ×2 (`days`/`xdays`); ── M2M ── Valve (same table)
+- DayRange ── M2M ── Day
+- Day ◂── FK ── DayTime
+
+### 2.3 Behaviour to port (now in scope)
+
+`rainman/utils.py` implements interval algebra (`range_union`/
+`range_intersection`/`range_invert`/`range_coalesce`/`StoredIter`/
+`RangeMixin`) — pure Python, portable near-verbatim (drop `six`). Each
+model's `_range(start,end)` generator expresses when that entity permits
+watering; these are Django-ORM-query-heavy and must be rewritten as
+SQLAlchemy `select(...).where(...)` queries. The seven management
+commands drive the engine:
+
+| Old command | Purpose | New home |
+|---|---|---|
+| `runschedule` (1416 lines) | Long-running daemon: send pending schedules to controllers, watch rain/meters, update levels/history/logs, respect rain-delay. Built on **qbroker/gevent/rpyc** → port to **anyio + moat.link**. | `moat db rain <site> monitor` (§7.5) |
+| `genschedule` | Compute when each valve should run by intersecting all `_range()` constraints + level thresholds; write `Schedule` rows. | engine `generate_schedule()` + `moat db rain <site> gen` (§7.3) |
+| `listschedule` | Report the upcoming schedule for valves/controllers/site. | `moat db rain <site|controller|valve> schedule list` |
+| `recalculate` | Recompute `Level` rows from `History` (evaporation/rain/runoff math). | engine `recalculate()` + `moat db rain <site> recalc` (§7.3) |
+| `addschedule` | Manually add a `Schedule` entry. | `moat rain schedule add` (CRUD, §6.3) |
+| `genconfig` / `genhabconfig` | Emit controller / openHAB config snippets. | **Deferred** (§11) |
+
+---
+
+## 3. Destination conventions (learned from `moat.db.{box,thing,label}`)
+
+The three existing submodules are the template. Key conventions:
+
+- **Base class** (`moat/db/schema.py`): `class Base(DeclarativeBase)` with
+  `@declared_attr __tablename__ = cls.__name__.lower()` and a surrogate
+  `id = Column(Integer, primary_key=True)`. Provides `dump()` (returns a
+  dict, skips `id`/`*_id`) and `apply(**kw)` (sets attrs, treating
+  `moat.util.NotGiven` as "leave unchanged").
+- **Two-file model split** to break import cycles:
+  - `model.py` — pure SQLAlchemy declarations (columns, FKs,
+    self-contained relationships). Cross-submodule relationships are
+    declared under `if TYPE_CHECKING:` only.
+  - `model_.py` — imported *after* all `model.py`s; monkeypatches the
+    cross-submodule `relationship()`s onto the classes and installs the
+    rich `apply()` methods that resolve FK targets **by name** via
+    `sess.one(Table, name=...)` using `moat.db.util.session` (a
+    `ContextVar`).
+- **Schema registration**: `moat/db/_cfg.yaml` holds the master `schemas:`
+  list (e.g. `moat.db.box.model`, then `moat.db.box.model_`).
+  `moat/db/util.py::load()` imports each listed module so SQLAlchemy
+  registers them on the shared `Base.metadata`. Submodule `__init__.py`
+  calls `CfgStore.with_(__name__)` to load any local `_cfg.yaml`.
+- **Sessions**: `moat.db.util.database(cfg)` is a context manager yielding
+  a `Mgr` wrapping a SQLAlchemy session, bound to the `session` ContextVar.
+  SQLite connections get `PRAGMA foreign_keys=ON` automatically.
+- **Alembic**: one shared env at `moat/db/alembic/` driven by
+  `moat.db.util.alembic_cfg()`. Revisions chain linearly; current head is
+  `dd1007d00e262b5c`. `moat db migrate rev` autogenerates off the live
+  metadata; `moat db init` stamps `head`; `moat db migrate update` upgrades.
+- **CLI loading** (`moat.lib.run.Loader`): `moat db` is a `Loader` with
+  `prefix="moat.db"` and default `sub_post="cli"`, so its
+  `list_commands` scans the `moat.db.*` namespace and loads
+  `moat.db.<name>.cli` (the `cli` attribute on the subpackage). To make
+  rain appear as **`moat db rain`**, `moat/db/rain/__init__.py` must
+  re-export the group: `from ._main import cli`. (Existing
+  `box`/`thing`/`label` deliberately do *not* export `cli` from
+  `__init__`, which is why they are top-level `moat box` etc. and not
+  `moat db box`.) Confirm with a `moat db --help` smoke test in Phase 1.
+- **CLI body** (thin group + `cmds/`, cf. `moat.link._main` /
+  `moat.link.cmd`): `_main.py` defines only the top-level `cli` group
+  via `@load_subgroup(sub_pre="moat.db.rain.cmds", sub_post="cli",
+  ext_pre="moat.db.rain", ext_post="_main.cli")`. That group opens a
+  `database(cfg)` session + `begin()` via `ctx.with_resource(...)` and
+  sets `obj.session`; it discovers its subcommands by scanning the
+  `moat.db.rain.cmds.*` namespace and importing each
+  `cmds/<name>.py::cli` (a `@click.group` with `show`/`add`/`set`/
+  `delete`, or a leaf command). Adding an entity is just a new `cmds/`
+  file — the thin `_main.py` needs no per-entity edits. Options use
+  `option_ng(...)` (allows `--name -` sentinel meaning "clear"); output
+  via `moat.util.yprint`. Everything lives under `moat.db`; **no
+  `moat.rain` top-level module is created**. The group takes a positional
+  `<SITE>` *before* the verb — `moat db rain <SITE> <verb>` — the
+  established MoaT pattern (cf. `mt link wago NAME <verb>`): the group is
+  declared `invoke_without_command=True` with `@click.argument("site")`,
+  sets `obj.site_name`, and `moat db rain -` lists sites / `moat db rain
+  <SITE>` shows one. This is implemented in the Phase-1 scaffold (proven
+  by an integration test: `@load_subgroup` + positional +
+  `invoke_without_command` + `cmds/` discovery disambiguate correctly),
+  not deferred. A separate `moat rain …` top-level alias remains out of
+  scope.
+- **Packaging (wheel)**: `packaging/moat-db-<x>/` with `pyproject.toml`
+  (deps include `moat-db ~= 0.2.7`, `moat-lib-run`, `asyncclick`),
+  `README.md` using `% start synopsis` / `% start main` / `% end …`
+  markers, and `LICENSE.txt`. `src/` is auto-populated and git-ignored.
+- **Packaging (Debian)**: a `debian/` dir (see §9) — present on
+  `moat-kv-*` / `moat-lib-codec` / `moat` but **not yet** on the existing
+  `moat-db*` packages.
+- **Docs**: `docs/moat-db-<x>/index.md` includes the packaging README's
+  `main` block, plus `api.rst`; linked from `docs/moat-db/index.md`.
+- **Typing**: `ty` is the checker; new dirs must be added to
+  `[tool.ty.src] include` in the root `pyproject.toml`. Comprehensive
+  typing, no `type:ignore`/`Any`/casts unless provably unavoidable.
+
+---
+
+## 4. Design decisions (locked)
+
+These were proposed and ACKed; they are no longer open.
+
+### 4.1 Table naming — prefix with `rain_`
+
+All rain tables share one physical database with `box`/`thing`/`label`.
+Generic names like `site`, `group`, `schedule`, `level`, `history`,
+`log`, `feed` would collide (or soon collide) with other submodules.
+Override `__tablename__` per class with a `rain_` prefix
+(e.g. `rain_site`, `rain_valve`, `rain_schedule`, `rain_group_valves`),
+exactly as the old code used `db_table="rainman_*"`. Deliberately diverges
+from `Base`'s auto-lowercase default.
+
+### 4.2 Site: drop broker/connection fields
+
+The old `Site` carried RabbitMQ / "MoaT server" connection params.
+Connection configuration belongs in MoaT's YAML config / link setup, not
+in a per-row DB column. `rain_site` keeps only `name`, `comment`, `var`,
+`rate` (mm/day, float), `rain_delay` (seconds, int). Drops
+`host`/`port`/`username`/`password`/`virtualhost`.
+
+### 4.3 Durations — integer seconds + `timedelta` property
+
+Store integer seconds in a plain `Integer` column named without the
+`db_` prefix (`max_run`, `min_delay`, `duration`, `max_flow_wait`,
+`rain_delay`), and expose a Python `@property` returning
+`timedelta(seconds=…)`. Nullable where the original was nullable. Avoids
+`Interval`/driver quirks on SQLite and matches the legacy data shape.
+
+### 4.4 Weather meters — one polymorphic `Meter` table
+
+Collapse the four structurally-identical legacy tables
+`RainMeter`/`TempMeter`/`WindMeter`/`SunMeter` into a single `rain_meter`
+table with a `kind` discriminator column (`"rain"|"temp"|"wind"|"sun"`,
+short `String` — not a Python `Enum`, to stay simple). Unique constraint
+`(site, kind, name)`. `Feed` remains its own table (`rain_feed`) since
+its columns differ materially.
+
+### 4.5 `var` fields (MoaT-link monitor names)
+
+Keep as `String(200)`, `unique=True` where the original was unique.
+`Feed.var` and `Site.var` were `unique=True, null=True`; SQLite/Postgres
+allow multiple NULLs under a unique constraint, so keep `unique=True,
+nullable=True`.
+
+### 4.6 Drop `UserForSite` (auth deferred)
+
+`UserForSite` is welded to Django's auth user model and gates web access.
+Omit entirely. Re-introducing access control is a later, cross-cutting
+concern (beads epic, §11).
+
+### 4.7 Cascades
+
+Mirror Django's default `on_delete=CASCADE` for all FKs: declare
+`ForeignKey("...", ondelete="CASCADE", name="fk_<local>_<remote>")` and
+rely on the `PRAGMA foreign_keys=ON` already enabled in
+`moat.db.util.set_sqlite_pragma`. Relationships use the default SA
+cascade (do *not* add `cascade="delete"`, let the DB do it).
+
+### 4.8 Many-to-many association tables
+
+Define explicit `Table` objects on `Base.metadata` (cf. `boxtyp_tree`):
+
+| Association table | Links | Note |
+|---|---|---|
+| `rain_group_valves` | Group ↔ Valve | replaces `rainman_group_valves` |
+| `rain_group_days` | Group → DayRange (`days`) | `related_name=groups_y` |
+| `rain_group_xdays` | Group → DayRange (`xdays`) | `related_name=groups_n` |
+| `rain_dayrange_days` | DayRange ↔ Day | |
+
+### 4.9 Schema registration — extend the central list
+
+Append `moat.db.rain.model` and `moat.db.rain.model_` to the `schemas:`
+list in `moat/db/_cfg.yaml` (precedent: that file already lists
+`box`/`thing`/`label`, which live in separate packages). `moat/db/rain/
+__init__.py` calls `CfgStore.with_(__name__)`. No separate `_cfg.yaml`
+needed initially. (A cleaner per-submodule `_cfg.yaml` refactor is filed
+as a follow-up, §11.)
+
+---
+
+## 5. Target file tree
+
+```
+moat/db/rain/
+├── __init__.py        # "MoaT irrigation database module."
+│                      #   CfgStore.with_(__name__);  from ._main import cli   ← makes `moat db rain` resolve
+├── model.py           # SQLAlchemy declarations (all rain_* tables/classes)
+├── model_.py          # cross-table relationships + apply()/dump() monkeypatches
+├── range.py           # interval algebra: range_union/intersection/invert/coalesce, StoredIter, RangeMixin  (§7.1)
+├── engine.py          # _range() ports + generate_schedule() + recalculate()  (§7.2–7.3)
+├── monitor.py         # daemon run-loop impl behind `moat db rain <site> monitor`  (§7.5)
+├── _main.py           # thin top-level `cli` group: @load_subgroup(sub_pre="moat.db.rain.cmds",
+│                      #   sub_post="cli", ext_pre="moat.db.rain", ext_post="_main.cli",
+│                      #   invoke_without_command=True) + @click.argument("site")  (wago pattern);
+│                      #   opens `database(cfg)`+begin(), sets obj.session+obj.site_name;
+│                      #   `moat db rain -` lists sites, `moat db rain <SITE>` shows one (Phase 2);
+│                      #   + a hidden `@cli.command("--help")` workaround (cf. moat.link.wago._main)
+└── cmds/              # one file per subcommand, each exporting `cli` (Loader-discovered)
+    ├── __init__.py    # "Sub-command processing here."  (cf. moat.link.cmd.__init__)
+    ├── add.py         # `moat db rain <SITE> add`        (create site; wago-style verb)
+    ├── set.py          # `moat db rain <SITE> set`        (modify site)
+    ├── delete.py       # `moat db rain <SITE> delete`     (delete site)
+    ├── controller.py   # `moat db rain <SITE> controller {show,add,set,delete}`
+    ├── valve.py        # `moat db rain <SITE> valve {…}`
+    ├── feed.py         # `moat db rain <SITE> feed {…}`
+    ├── meter.py        # `moat db rain <SITE> meter {…}`  # --kind rain|temp|wind|sun
+    ├── group.py        # `moat db rain <SITE> group {…}`  # +/-days, +/-xdays, +/-valves
+    ├── env.py          # `moat db rain <SITE> env {…}`    # envgroup + nested item
+    ├── day.py          # `moat db rain <SITE> day {…}`    # day + nested time / range
+    ├── override.py     # `moat db rain <SITE> override {group,valve,adjust}`
+    ├── schedule.py     # `moat db rain <SITE> schedule {show,add,set,delete,list}`  # list≈listschedule
+    ├── history.py      # `moat db rain <SITE> history {level,hist,log}`
+    ├── gen.py          # `moat db rain <SITE> gen`        (old genschedule; §7.3)
+    ├── recalc.py       # `moat db rain <SITE> recalc`     (old recalculate; §7.3)
+    └── monitor.py      # `moat db rain <SITE> monitor`    (old runschedule; §7.5)
+
+packaging/moat-db-rain/
+├── pyproject.toml     # name=moat-db-rain; deps: moat-db ~=0.2.7, moat-lib-run,
+│                      #   moat-link ~=0.2, asyncclick, moat-util, anyio
+├── README.md          # % start synopsis / % start main markers
+├── LICENSE.txt        # copied from packaging/moat-db-box/LICENSE.txt
+├── debian/            # Debian packaging (§9)
+│   ├── control
+│   ├── rules
+│   ├── changelog
+│   ├── source/format
+│   ├── py3dist-overrides
+│   ├── moat-db-rain@.service     # systemd template for the monitor daemon
+│   ├── moat-db-rain.install      # ships the .service to /lib/systemd/system/
+│   └── .gitignore
+│                      # (src/ auto-populated, git-ignored)
+
+docs/moat-db-rain/
+├── index.md           # mirrors docs/moat-db-box/index.md; includes README main block
+├── api.rst            # sphinx autodoc stub
+└── MIGRATION.md       # this file
+
+tests/moat_db_rain/
+├── test_model.py      # CRUD per entity, FK-by-name, M2M add/remove, unique-violations
+├── test_range.py      # interval-algebra port parity vs. old utils.py cases
+├── test_engine.py     # generate_schedule / recalculate on a seeded temp sqlite DB
+└── test_monitor.py   # daemon loop with a stubbed moat.link (no real hardware)
+```
+
+Plus edits to existing files (§6.4).
+
+---
+
+## 6. Entity → table mapping
+
+### 6.1 Core entities
+
+| New class | Table | Key columns (beyond PK) | FKs / relations |
+|---|---|---|---|
+| `Site` | `rain_site` | `name` uniq, `comment`?, `var` uniq?, `rate` float, `rain_delay` int(sec) | ← controllers, feeds, groups, envgroups, meters, histories, logs |
+| `Controller` | `rain_controller` | `name`, `var` uniq, `comment`?, `location`, `max_on` int d=3 | `site`→Site; → valves, logs. UQ(site,name) |
+| `Valve` | `rain_valve` | `name`, `comment`?, `location`, `var` uniq, `verbose` d=0, `flow`, `area`, `max_level` d=10, `start_level` d=8, `stop_level` d=3, `shade` d=1, `max_run`?(sec), `min_delay`?(sec), `runoff` d=1, `time` dt idx, `level` d=0, `priority` bool | `feed`→Feed, `controller`→Controller, `envgroup`→EnvGroup; M2M `groups`↔Group; → schedules, overrides, levels, logs. UQ(controller,name) |
+| `Feed` | `rain_feed` | `name`, `var` uniq?, `comment`?, `flow`? d=10, `max_flow_wait`(sec) d=300, `disabled` bool | `site`→Site; → valves. UQ(site,name) |
+| `Meter` | `rain_meter` | `kind` str(rain/temp/wind/sun), `name`, `var` uniq, `weight` d=10 | `site`→Site. UQ(site,kind,name) |
+| `Group` | `rain_group` | `name`, `comment`?, `adj`? | `site`→Site; M2M `days`/`xdays`↔DayRange; M2M `valves`↔Valve. UQ(site,name) |
+| `EnvGroup` | `rain_envgroup` | `name`, `comment`?, `factor` d=1.0, `rain` bool d=True | `site`→Site; → items, valves. UQ(site,name) |
+| `EnvItem` | `rain_envitem` | `factor` d=1.0, `temp`?, `wind`?, `sun`? | `group`→EnvGroup |
+| `Day` | `rain_day` | `name` str30 uniq | → times |
+| `DayTime` | `rain_daytime` | `descr` str200 | `day`→Day. UQ(day,descr) |
+| `DayRange` | `rain_dayrange` | `name` str30 uniq, `comment`? | M2M `days`↔Day |
+| `GroupOverride` | `rain_group_override` | `name`?, `allowed` bool, `start` dt idx, `duration`(sec), `on_level`?, `off_level`? | `group`→Group. UQ(group,start) |
+| `ValveOverride` | `rain_valve_override` | `name`?, `running` bool, `start` dt idx, `duration`(sec), `on_level`?, `off_level`? | `valve`→Valve. UQ(valve,start) |
+| `GroupAdjust` | `rain_group_adjust` | `start` dt idx, `factor` float | `group`→Group. UQ(group,start) |
+| `Schedule` | `rain_schedule` | `start` dt idx, `duration`(sec), `seen`/`changed`/`forced` bool | `valve`→Valve. UQ(valve,start) |
+| `Level` | `rain_level` | `time` dt idx, `level` float, `flow` d=0, `forced` bool | `valve`→Valve. UQ(valve,time) |
+| `History` | `rain_history` | `time` dt idx, `rain` d=0, `feed` d=0, `temp`?, `wind`?, `sun`? | `site`→Site. UQ(site,time) |
+| `Log` | `rain_log` | `logger` str200, `timestamp` dt idx, `text` text | `site`→Site, `controller`?→Controller, `valve`?→Valve |
+
+### 6.2 Association tables
+
+`rain_group_valves`, `rain_group_days`, `rain_group_xdays`,
+`rain_dayrange_days` — each with composite PK `(parent_id, child_id)` and
+named FK constraints (`fk_<table>_<role>`).
+
+### 6.3 CLI surface (`moat db rain …`)
+
+The thin top-level group (`_main.py::cli`) opens a DB
+session/transaction (cf. `moat box`), sets `obj.session` **and
+`obj.site_name`**, and takes a positional `<SITE>` *before* the verb —
+`moat db rain <SITE> <verb>` — the established MoaT pattern (cf.
+`mt link wago NAME <verb>`): declared `invoke_without_command=True`
+with `@click.argument("site")`, so `moat db rain -` lists sites and
+`moat db rain <SITE>` shows one (these queries land in Phase 2 with the
+`Site` model; the scaffold just records `obj.site_name`). It discovers
+its subcommands from `moat/db/rain/cmds/<name>.py` — each file exports a
+`cli` (a `@click.group` with `show`/`add`/`set`/`delete`, or a leaf
+command) — via `@load_subgroup(sub_pre="moat.db.rain.cmds",
+sub_post="cli", ext_pre="moat.db.rain", ext_post="_main.cli")`, the
+`moat.link._main` / `moat.link.cmd` pattern; a hidden
+`@cli.command("--help")` workaround handles `moat db rain <SITE>
+--help` (cf. `moat.link.wago._main`). This combination (`@load_subgroup`
++ positional + `invoke_without_command` + `cmds/` discovery) is proven
+by an integration test: click consumes the `nargs=1` positional as the
+first token and resolves the *second* token as the subcommand, exactly
+mirroring `wago`. Everything stays under `moat.db`; no `moat.rain`
+top-level module. Subcommands (all site-scoped via `obj.site_name`):
+
+```
+# Site registry (wago-style verbs on the selected site):
+moat db rain -                       # list all sites
+moat db rain <SITE>                  # show one site   (no subcommand)
+moat db rain <SITE> add              # create site
+moat db rain <SITE> set              # modify site
+moat db rain <SITE> delete           # delete site
+
+# Per-entity CRUD, scoped to <SITE> (cmds/<entity>.py::cli groups):
+moat db rain <SITE> controller  {show,add,set,delete}
+moat db rain <SITE> valve       {show,add,set,delete}
+moat db rain <SITE> feed        {show,add,set,delete}
+moat db rain <SITE> meter       {show,add,set,delete}   # --kind rain|temp|wind|sun
+moat db rain <SITE> group       {show,add,set,delete}   # +/-days, +/-xdays, +/-valves
+moat db rain <SITE> env         {show,add,set,delete}    # envgroup; sub: item {…}
+moat db rain <SITE> day         {show,add,set,delete}    # day; sub: time {…}; range {…} (+/-days)
+moat db rain <SITE> override    {group {…}, valve {…}, adjust {…}}
+moat db rain <SITE> schedule    {show,add,set,delete,list}  # list ≈ old listschedule
+moat db rain <SITE> history     {level {…}, hist {…}, log {…}}
+
+# Engine / daemon (§7); site-scoped, in cmds/{gen,recalc,monitor}.py:
+moat db rain <SITE> gen          # one-shot schedule generation  (old genschedule)
+moat db rain <SITE> recalc       # one-shot level recalculation (old recalculate)
+moat db rain <SITE> monitor      # long-running daemon           (old runschedule)
+```
+
+Inside each per-entity group, `show` lists all rows (scoped to
+`obj.site_name`) when no `--name` is given, else dumps one record via
+`yprint(obj.dump())` — exactly the box/thing pattern. Multi-value
+options (`--valve`, `--day`, …) use `multiple=True` with `-NAME` meaning
+"remove" (cf. `moat box typ --in -NAME`).
+
+Each line above maps to `cmds/<name>.py::cli`; the thin `_main.py` group
+owns no per-entity logic, so adding an entity is just a new `cmds/`
+file. The command is `moat db rain …` (not `moat rain …`), and no
+`moat.rain` top-level package is created.
+
+### 6.4 Edits to existing files
+
+1. `moat/db/_cfg.yaml` — append `moat.db.rain.model` and
+   `moat.db.rain.model_` to the `schemas:` list.
+2. Root `pyproject.toml` — add `"moat/db/rain/"` to `[tool.ty.src] include`.
+3. `docs/moat-db/index.md` — add `../moat-db-rain/index` to the toctree.
+4. `docs/index.md` — add a "DB: Irrigation" entry in the "Parts included"
+   section (synopsis include from the packaging README).
+
+No change to `moat/db/alembic/env.py` — the shared env already picks up
+`Base.metadata` via `alembic_cfg`.
+
+---
+
+## 7. Scheduler engine
+
+The engine is pure compute + IO layered over the ORM; it lives in
+`moat/db/rain/{range.py,engine.py,monitor.py}` and is exercised by the
+`gen`/`recalc`/`monitor` CLI verbs. It is ported from the legacy
+`rainman/utils.py` + model `_range()` methods + management commands, with
+the obsolete stack (qbroker/gevent/rpyc/Django ORM) replaced by
+(anyio + SQLAlchemy + moat.link).
+
+### 7.1 Interval algebra — `range.py`
+
+Port `rainman/utils.py` near-verbatim: `range_coalesce`, `range_union`,
+`range_intersection`, `range_invert`, `StoredIter`, and the `RangeMixin`
+helpers (`range()`/`list_range()`). Drop `six` and the
+request/threading middleware (dead Django plumbing). Keep the
+generator-based `(start, length)` tuple protocol and the
+`__main__` self-test (it becomes `tests/moat_db_rain/test_range.py`).
+This module has **no ORM dependency** — pure iterators over datetimes.
+
+### 7.2 Per-entity `_range()` ports — `engine.py`
+
+Each legacy model method that yields permitted-watering intervals is
+rewritten as a function taking a session + the entity + `(start, end)`:
+
+- `controller_range(sess, controller, start, end, add=…)` — limits by
+  `max_on` concurrent valves (heap of stop-times over `Schedule`).
+- `feed_range(sess, feed, start, end, plusflow, add=…)` — limits by feed
+  flow capacity (heap of `(stop, dflow)` over `Schedule`).
+- `valve_range(sess, valve, start, end, forced=False, add=…)` — the
+  orchestrator: intersects group-day ranges, group/xgroup exclusions,
+  group overrides (allowed/not-blocked), valve overrides (forced/off),
+  already-scheduled times, controller capacity, and feed capacity.
+- `group_range`, `group_allowed_range`, `group_not_blocked_range`,
+  `group_days_range`, `group_no_xdays_range`.
+- `day_range` / `daytime_range` / `dayrange_range` — `DayTime._range`
+  parses `descr` (§7.4); `DayRange` is the intersection of its `Day`s;
+  `Day` is the union of its `DayTime`s.
+
+All Django `Model.objects.filter(...)` become SQLAlchemy
+`sess.execute(select(...).where(...))`. The heapq-driven concurrency
+algorithms port unchanged.
+
+### 7.3 Generation & recalculation — `engine.py`
+
+- `generate_schedule(sess, *, site=None, controller=None, valve=None,
+  horizon=…)` (old `genschedule`): for each valve, walk
+  `valve_range(...)` over the horizon, pick slots until the valve's level
+  rises from `stop_level`→`start_level` (watering time =
+  `(start_level−stop_level)*area/flow`, adjusted by group `adj` and
+  `EnvGroup` factor), honour `max_run`/`min_delay`, and insert `Schedule`
+  rows (`seen=changed=forced=False`). Skip valves whose `Feed.disabled`.
+- `recalculate(sess, *, site=None, valve=None, age=…)` (old
+  `recalculate`): replay `History` rows to rebuild `Level` rows:
+  `Δlevel = −evap(rate·shade·env_factor·dt) + rain·runoff − delivered`;
+  clamp at `max_level`; skip `Level.forced` rows. Evaporation uses the
+  `EnvGroup.env_factor()` weighted-nearest-neighbour interpolation
+  (ported from `env.py`).
+
+Both are plain synchronous functions operating inside a caller-supplied
+session; the CLI wraps them in `database(cfg)` + `begin()`.
+
+### 7.4 `DayTime.descr` parser
+
+Old code: `from moat.times import time_until, humandelta`. **Action:**
+locate the modern MoaT equivalent of `moat.times.time_until` (a
+human-time-expression parser producing the next matching datetime). If
+the module still exists (possibly renamed under `moat.util` or
+`moat.lib.*`), depend on it; if gone, port the parser into
+`moat/db/rain/times.py` and cover it with `test_range.py`. `DayTime`
+stores `descr` verbatim regardless; parsing is engine-only.
+
+### 7.5 The `monitor` daemon — `monitor.py` + `moat db rain <site> monitor`
+
+Ports `runschedule` (1416 lines) from qbroker/gevent/rpyc to
+**anyio + moat.link**. Responsibilities, preserved:
+
+- Subscribe to weather meters (`rain_meter`/`temp_meter`/`wind_meter`/
+  `sun_meter` `var`s) via moat.link; accumulate into `History` rows;
+  deprecate stale meter readings (`METER_TIME=5 min`,
+  `METER_MAXTIME=1 h` constants).
+- Track `Site.rain_delay`: suppress scheduling while rain is recent.
+- Periodically (and on meter/level change) call `generate_schedule()`
+  for the site's valves; mark new/changed `Schedule` rows.
+- Send pending schedules (`seen=False`) to each `Controller` via
+  moat-link RPC (controller `var`); mark `seen=True`; honour
+  `changed`/`forced` flags.
+- Maintain per-valve `Level` rows (call `recalculate()` incrementally);
+  set `Valve.priority` when a cycle didn't finish.
+- Append `Log` rows for notable events (errors, rain start/stop,
+  manual overrides).
+
+Implementation notes:
+
+- Single anyio task group; one long-running task per concern (meters,
+  scheduler, dispatcher) communicating via anyio memory channels —
+  replacing the old gevent `Queue`/`Semaphore`/`AsyncResult`.
+- Use `moat.lib.run.wrap_main` / `asyncscope` for structured lifecycle
+  (same harness the test helpers use).
+- sd_notify watchdog: the systemd unit is `Type=notify`,
+  `WatchdogSec=10` (§9); ping via the existing moat notify helper.
+- **Never busy-loop / never sleep-to-workaround** (AGENTS.md): all waits
+  are event-driven (link subscriptions, channel receives, timers via
+  `anyio.sleep`).
+- `Ctrl-C`/cancel: catch `anyio.get_cancelled_exc_class()` and re-raise
+  after flushing the session.
+
+The daemon is the **last** phase (§10); `gen`/`recalc` ship first so the
+engine is testable without hardware.
+
+---
+
+## 8. Alembic strategy
+
+- Do **not** create a separate alembic tree. Reuse `moat/db/alembic/`.
+- After `model.py`/`model_.py` compile and are registered via the
+  `schemas:` list, run `moat db migrate rev "add rain"` to autogenerate a
+  new revision whose `down_revision = "dd1007d00e262b5c"` (current head).
+- Hand-check the generated revision for: correct `rain_*` table names,
+  named FK constraints (`fk_…`), `ondelete="CASCADE"`, the `kind`
+  column on `rain_meter`, composite-PK association tables, and
+  `UniqueConstraint`s for every former `unique_together`.
+- Verify with `moat db migrate check` (must report no diffs) and a
+  round-trip `moat db migrate to <rev>` / back.
+- Provide a `downgrade()` that drops the `rain_*` tables in reverse
+  dependency order.
+- The engine adds **no further migrations** — it only reads/writes rows.
+
+---
+
+## 9. Debian packaging
+
+Model the `debian/` dir on `packaging/moat-kv-akumuli/debian/` (a daemon
+package with a systemd unit) and the template at
+`moat/src/_templates/packaging/debian/`.
+
+Files under `packaging/moat-db-rain/debian/`:
+
+- **`control`** —
+  `Source:` / `Package: moat-db-rain`, `Architecture: all`,
+  `Maintainer: Matthias Urlichs <matthias@urlichs.de>`,
+  `Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  debhelper-compat (= 13), python3-setuptools, python3-wheel`,
+  `Depends: ${misc:Depends}, ${python3:Depends}, moat-db (>= 0.2.7),
+  moat-link (>= 0.2), python3-anyio (>= 4.2), python3-asyncclick`,
+  `Description:` two-line summary.
+- **`rules`** —
+  `export PYBUILD_NAME=moat-db-rain`; `dh $@ --with python3
+  --buildsystem=pybuild`; an `override_dh_auto_install` that copies
+  `moat-db-rain@.service` into `debian/` (cf. akumuli `rules`).
+- **`changelog`** — seed `moat-db-rain (0.0.1-1) unstable; urgency=medium
+  * Initial creation.` (version aligned with `pyproject.toml`).
+- **`source/format`** — `3.0 (quilt)`.
+- **`py3dist-overrides`** — map the Python distribution names of deps to
+  Debian package names where they differ (e.g. `moat_lib_run
+  python3-moat-lib-run`, `moat_lib_config python3-moat-lib-config`,
+  `moat_db python3-moat-db`, `moat_link python3-moat-link`).
+- **`moat-db-rain@.service`** — systemd template (instanced per site):
+  ```
+  [Unit]
+  Description=MoaT irrigation monitor for %i
+  After=moat-link.service
+  ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+  [Install]
+  WantedBy=multi-user.target
+
+  [Service]
+  Type=notify
+  ExecStart=/usr/bin/moat db rain %i monitor
+  EnvironmentFile=/usr/lib/moat/link/env
+  EnvironmentFile=-/etc/moat/rain.env
+  TimeoutSec=300
+  WatchdogSec=10
+  Restart=always
+  RestartSec=30
+  ```
+  (mirrors `moat-kv-akumuli@.service`, with `ExecStart=/usr/bin/moat db
+  rain %i monitor`).
+- **`moat-db-rain.install`** — `debian/moat-db-rain@.service
+  /lib/systemd/system/` (built copy target, cf. akumuli `rules`).
+- **`.gitignore`** — ignore built artifacts: `/files`, `/*.log`,
+  `/*.debhelper`, `/*.debhelper-build-stamp`, `/*.substvars`,
+  `/debhelper-build-stamp`, `/moat-db-rain`, `/moat-db-rain@.service`.
+
+**Caveat / dependency gap:** the existing `moat-db`, `moat-db-box`,
+`moat-db-label`, `moat-db-thing` packages have **no** `debian/` dir yet,
+so `moat-db-rain`'s Debian `Depends: moat-db` cannot resolve until
+`moat-db` is itself packaged. File a beads chore to add `debian/` to
+`moat-db` (and ideally the other db sub-packages); until then the wheel
+install path is the primary delivery, and the `moat-db-rain` `.deb` will
+sit unbuilt-or-local. (Out of scope for this refactor to package moat-db;
+just flagged.)
+
+Versioning: start `moat-db-rain` at `0.0.1`; allocate via
+`./mt src tag -s moat.db.rain -m` for minors.
+
+---
+
+## 10. Implementation phases
+
+Each phase is a separate commit (pre-commit runs `ty` + tests).
+
+1. **Scaffold.** Create `moat/db/rain/{__init__.py,model.py,model_.py,
+   range.py,engine.py,monitor.py,_main.py}` + `moat/db/rain/cmds/
+   {__init__.py,<one-stub>.py}` (stubs), `packaging/moat-db-rain/
+   {pyproject.toml,README.md,LICENSE.txt,debian/…}`, `docs/moat-db-rain/
+   {index.md,api.rst,MIGRATION.md}`, `tests/moat_db_rain/`. The thin
+   `_main.py::cli` uses `@load_subgroup(sub_pre="moat.db.rain.cmds",
+   sub_post="cli", ext_pre="moat.db.rain", ext_post="_main.cli",
+   invoke_without_command=True)` + `@click.argument("site")` (the wago
+   "site-before-verb" pattern), opens `database(cfg)`+`begin()`, sets
+   `obj.session`+`obj.site_name`, and adds the hidden
+   `@cli.command("--help")` workaround. Wire `CfgStore.with_`, `from
+   ._main import cli` in `__init__.py`, append to `moat/db/_cfg.yaml`
+   schemas, add ty include, hook docs toctrees. Smoke-test all three
+   layers: `moat db --help` lists `rain`; `moat db rain --help` lists
+   the stub subcommand from `cmds/`; `moat db rain <stub-site>
+   <stub-sub> --help` routes to the subcommand (proving the
+   positional-then-subcommand disambiguation).
+2. **Models — pass 1 (leaves).** `model.py` for entities with no in-rain
+   FK dependents: `Site`, `Day`, `DayTime`, `EnvGroup`, `EnvItem`,
+   `Meter`, `Feed`. Define columns + self-contained relationships +
+   `__tablename__`.
+3. **Models — pass 2 (branches).** `Controller`, `Valve`, `Group`,
+   `DayRange`, overrides, `GroupAdjust`, `Schedule`, `Level`, `History`,
+   `Log`, and the four association `Table`s.
+4. **`model_.py`.** Cross-class `relationship()`s + rich `apply()`
+   methods (name-based FK resolution, sentinel handling for M2M
+   add/remove, duration-property wiring).
+5. **Alembic revision.** Generate, hand-fix, verify (§8).
+6. **CLI — CRUD.** Implement one `cmds/<entity>.py` at a time
+   (site → controller → valve → feed → meter → group → env → day →
+   override → schedule → history), each exporting a `cli` group with
+   show/add/set/delete. The thin `_main.py` needs no per-entity edits.
+7. **Engine — algebra.** Port `range.py` (§7.1) + `test_range.py` parity
+   with the old `utils.py` self-tests.
+8. **Engine — `_range()` ports + generation/recalc.** `engine.py`
+   (§7.2–7.3); locate/port `time_until` (§7.4). `test_engine.py` seeds a
+   temp sqlite DB and asserts generated schedules / recalculated levels.
+   Expose via `cmds/gen.py` (`moat db rain <SITE> gen`) and
+   `cmds/recalc.py` (`moat db rain <SITE> recalc`).
+9. **Monitor daemon.** `monitor.py` (§7.5) on anyio + moat.link; wire
+   `cmds/monitor.py` → `moat db rain <SITE> monitor`. `test_monitor.py`
+   with a stubbed moat-link (no hardware). Add the systemd unit + Debian
+   `rules` service-copy (§9).
+10. **Polish.** Fill `README.md` synopsis/main and `index.md`; ensure
+    `ty check --output-format github` is clean; confirm files in
+    `tool.ty.src.include`; build wheel (`./mt src build`) and a local
+    `.deb` to validate packaging.
+
+---
+
+## 11. Deferred work → beads issues
+
+File these as separate issues (do **not** implement in this refactor):
+
+- **Auth/access control** — design a MoaT-native replacement for
+  `UserForSite` (cross-cutting, not rain-specific).
+- **Data import** — one-shot script to migrate a live `rainman_*`
+  SQLite/MySQL DB into `rain_*` tables (handle the dropped Site
+  connection fields and the 4→1 meter consolidation).
+- **Config-driven schema registration** — move the `schemas:` list out
+  of the central `moat/db/_cfg.yaml` into per-submodule `_cfg.yaml`s so
+  `moat-db` no longer references optional subpackages (§4.9).
+- **`genconfig` / `genhabconfig`** — port the controller-snippet and
+  openHAB-config generators once the engine + monitor are stable.
+- **Package `moat-db` (and friends) for Debian** — prerequisite for a
+  installable `moat-db-rain` `.deb` (§9 caveat).
+
+---
+
+## 12. Resolved decisions & remaining implementation questions
+
+### Resolved (ACKed)
+
+1. **Site connection fields** — dropped (§4.2).
+2. **Meter consolidation** — one `rain_meter` table with `kind` (§4.4).
+3. **Schema registration** — central-list append (§4.9).
+4. **Duration storage** — integer seconds + `timedelta` property (§4.3).
+5. **Table prefix** — `rain_*` (§4.1).
+
+### To confirm during implementation (not blocking the plan)
+
+- **`moat db rain` registration (two-layer, confirmed by inspection)**:
+  (1) `moat db` is a `Loader(prefix="moat.db")` whose `list_commands`
+  resolves subcommands via `load_ext("moat.db","<name>","cli")`, so
+  `moat/db/rain/__init__.py` must `from ._main import cli` for `rain` to
+  appear in `moat db --help`. (2) `moat db rain`'s own group uses
+  `@load_subgroup(sub_pre="moat.db.rain.cmds", sub_post="cli", …)`, so
+  its `list_commands` resolves `moat.db.rain.cmds.<name>.cli` — each
+  `cmds/<entity>.py` exports `cli`. No `moat.rain` top-level module is
+  created. (3) The group takes a positional `<SITE>` before the verb
+  (`moat db rain <SITE> <verb>`, the `mt link wago NAME <verb>` pattern):
+  `invoke_without_command=True` + `@click.argument("site")`; click
+  consumes the `nargs=1` positional as the first token and resolves the
+  second as the subcommand — proven by an integration test combining
+  `@load_subgroup` + positional + `invoke_without_command` + `cmds/`
+  discovery. Implemented in the Phase-1 scaffold, not deferred.
+- **`moat.times.time_until` successor**: locate the modern MoaT module
+  providing human-time-expression parsing for `DayTime.descr`; port if
+  absent (§7.4).
+- **moat-link client API surface** for the monitor (subscribe to meter
+  vars, RPC to controllers): pin to the current `moat.link` API in
+  Phase 9.

@@ -17,5 +17,6 @@ TODO
 ../moat-db-thing/index
 ../moat-db-label/index
 ../moat-db-box/index
+../moat-db-rain/index
 api
 ```

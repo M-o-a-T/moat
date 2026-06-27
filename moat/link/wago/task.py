@@ -64,8 +64,8 @@ async def task(
 
             # Build a local node tree and mark discovered ports present.
             root = WagoRoot()
+            srv_node = root.add_child(server_name)
             for type_name, cards in r.items():
-                srv_node = root.add_child(server_name)
                 type_node = srv_node.add_child(type_name)
                 for card_num, port_count in cards.items():
                     card_node = type_node.add_child(card_num)

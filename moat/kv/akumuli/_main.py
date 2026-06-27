@@ -65,12 +65,6 @@ async def at_cli(ctx, path):
         await data_get(obj.client, obj.server._path + obj.subpath, recursive=False, out=obj.stdout)  # noqa:SLF001
 
 
-@at_cli.command("--help", hidden=True)
-@click.pass_context
-def help(ctx):
-    print(at_cli.get_help(ctx))
-
-
 @at_cli.command("dump")
 @click.pass_obj
 @click.option("-l", "--one-line", is_flag=True, help="single line per entry")

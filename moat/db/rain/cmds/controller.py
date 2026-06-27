@@ -26,7 +26,7 @@ async def cli(obj, name):
 
 def opts(c):
     """Scalar options of a :class:`Controller`."""
-    c = option_ng("--name", "-n", "rename", type=str, help="Rename this controller")(c)
+    c = option_ng("--name", "-n", type=str, help="Rename this controller")(c)
     c = option_ng("--comment", "-c", type=str, help="Free-form description")(c)
     c = option_ng("--location", "-l", type=str, help="Where the controller lives")(c)
     c = option_ng("--max-on", "-m", "max_on", type=int, help="Max simultaneously-open valves")(c)

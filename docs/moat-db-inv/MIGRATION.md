@@ -10,14 +10,14 @@ new `moat.db.inv` package built on `moat.db` (SQLAlchemy + Alembic).
 
 It covers the SQL data structure, the package/refactoring work, and the
 one-time data migration from DistKV. It is a **plan**: nothing here is
-committed code yet. Items flagged *“decision”* are choices that should be
-confirmed before implementation; the recommendation is given in each case.
+committed code yet. Decisions marked *accepted* are locked; items in
+“Open questions” still need confirmation.
 
 ## Goal
 
 Replace the DistKV-backed inventory with a database-backed one, preserving
 the existing concepts (VLANs, networks, hosts, interfaces/ports, cables,
-wires, groups) while adopting the three design decisions below.
+wires, groups) while adopting the design decisions below.
 
 Out of scope for this initial plan: the Jinja template generator
 (`host template`), the `find` path-finder, the EMS-side `moat/ems/inv/*`
@@ -39,144 +39,176 @@ has run).
    typed thing, plus the host-specific fields defined here.
 
 3. **Addresses are stored as IPv6.**
-   The database is assumed not to support IPv6 natively, so every network
-   and interface address is stored as an **address + prefix** pair, using
-   the IPv4-mapped IPv6 representation (`::ffff:a.b.c.d`) for IPv4. The
-   original wording said “`BIGINT` + `TINYINT`”; a 128-bit IPv6 value
-   does not fit a 64-bit `BIGINT`, so per Q5 the address column is
-   realised as **`BINARY(16)`** (big-endian) with a `SMALLINT` prefix.
-   On the Python side the value is exposed as an `ipaddress.IPv4Interface`
-   (for IPv4-mapped addresses) or `ipaddress.IPv6Interface` (for native
-   IPv6); networks analogously as `IPv4Network` / `IPv6Network`.
+   Every network and interface address is stored as an **address + prefix**
+   pair, using the IPv4-mapped IPv6 representation (`::ffff:a.b.c.d`) for
+   IPv4. The original wording said “`BIGINT` + `TINYINT`”; a 128-bit IPv6
+   value does not fit a 64-bit `BIGINT`, so the address column is realised
+   as **`BINARY(16)`** (big-endian) with a `SMALLINT` prefix (see “Address
+   storage type”). On the Python side the value is exposed as an
+   `ipaddress.IPv4Interface` (for IPv4-mapped addresses) or
+   `ipaddress.IPv6Interface` (for native IPv6); networks analogously as
+   `IPv4Network` / `IPv6Network`.
+
+   *Structural refinement (this revision):* IP addresses live in their own
+   `address` table keyed by interface, not as columns on the interface
+   (see “Network and address data structure”).
+
+## Network and address data structure
+
+The model separates **L2** (a VLAN, the broadcast domain an interface is
+plugged into) from **L3** (the IP addresses carried on that VLAN):
+
+* **VLANs.** A `vlan` row (802.1Q tag, name, WLAN creds).
+
+* **Networks live on a VLAN.** Zero or more `network` rows per VLAN —
+  typically two, one IPv4 and one IPv6. A network has a **network address**
+  (host bits zeroed) and a **netmask** (`prefix`). `network.shift`, when
+  **not null**, says how to autogenerate an interface’s address on this
+  network from its sequence number:
+  `addr = network.addr + (seqnum << network.shift)`.
+
+* **Interfaces attach to a VLAN.** An `interface` belongs to a host
+  (`UNIQUE(host_id, ifname)`) and carries an `fk(vlan)`, a **MAC**, and a
+  **sequence number** (`seqnum`). `UNIQUE(vlan_id, seqnum)` is enforced
+  (see below for why this realises the requested `unique(network,
+  seqnum)`).
+
+* **Addresses are a separate table.** Zero or more `address` rows per
+  interface: `fk(interface)`, `unique(ipaddr)`. An address **may or may
+  not** be derived from `network.addr + (seqnum << network.shift)`, so it
+  is stored explicitly. The address record does **not** refer to the
+  network it is in: (a) the network can be recovered by containment lookup
+  when needed; (b) anycast / singlecast routing requires permitting
+  addresses that are not confined to a single network, or even a single
+  VLAN. This is the L2/L3 split: the interface’s `vlan_id` is layer-2
+  connectivity; an `address` is layer-3 and may roam.
+
+### How addresses are derived
+
+* **Routed networks (IPv4 or IPv6): seqnum.** For a network with
+  `shift` not null, an interface on that network’s VLAN gets
+  `addr = network.addr + (seqnum << network.shift)`. One such address row
+  is produced per routable network in the VLAN, all from the single shared
+  `seqnum`.
+* **Link-local (`fe80::/10`): MAC (EUI-64).** An interface’s link-local
+  address is derived from its MAC by the EUI-64 procedure (flip the U/L bit
+  of the first MAC octet, insert `ff:fe`, prepend `fe80::`), i.e.
+  `netaddr.EUI.ipv6_link_local()`. These are generated for every interface
+  that has a MAC and stored as `address` rows (`prefix = 64`); no `fe80::`
+  `network` row is required (link-local is implicit per VLAN).
+* **Manual / anycast:** any other `address` row, not matching a derivation,
+  stored directly. This covers routed/anycast addresses that sit on an
+  interface but belong to a network outside the interface’s VLAN.
+
+### Why `UNIQUE(vlan_id, seqnum)` ≡ `unique(network, seqnum)`
+
+An interface has exactly one `seqnum` (shared across all the VLAN’s
+networks) and exactly one `vlan_id`. Each `network` belongs to exactly one
+VLAN (`network.vlan_id` is `NOT NULL`). Therefore two interfaces claiming
+the same `seqnum` on the same VLAN would collide on every routable network
+of that VLAN; two interfaces on different VLANs never share a network. So
+`UNIQUE(vlan_id, seqnum)` (with `seqnum NOT NULL` via a partial index, or
+relying on standard NULL-distinct semantics for un-numbered interfaces) is
+the physical enforcement of the requested `unique(network, seqnum)`.
 
 ## Glossary: old term → new term
 
-| DistKV (`moat/kv/inv`)         | `moat.db.inv`                       |
-|--------------------------------|-------------------------------------|
-| `Vlan`                         | `vlan` row                          |
-| `Network`                      | `network` row                       |
-| `Host`                         | `thing` + `host` row                |
-| `Host.net` / `Host.num`        | `interface` row, `name=""`           |
-| `HostPort`                     | `interface` row                     |
-| `Wire`                         | *(see “Wires” decision)*            |
-| `Cable`                        | `cable` row                         |
-| `group` (named)                | `group` row + `host_group` M2M      |
-| `Host.mac`                     | `mac` on the `""` interface         |
-| path key `(bits, netnum)`      | `network.addr` + `network.prefix`    |
-| path key `(server, tock)` cable| `cable.id` (surrogate)              |
+| DistKV (`moat/kv/inv`)         | `moat.db.inv`                                   |
+|--------------------------------|-------------------------------------------------|
+| `Vlan`                         | `vlan` row                                      |
+| `Network`                      | `network` row (on a VLAN)                       |
+| `Host`                         | `thing` + `host` row                            |
+| `Host.net` / `Host.num`        | `interface` (seqnum) + `address` rows           |
+| `HostPort`                     | `interface` (seqnum) + `address` rows           |
+| host address                   | `address` row                                    |
+| `Wire`                         | *(see D1)*                                       |
+| `Cable`                        | `cable` row                                     |
+| group (named)                  | `group` row + `host_group` M2M                  |
+| `Host.mac`                     | `mac` on the `""` interface                     |
+| path key `(bits, netnum)` net  | `network.addr` + `network.prefix`               |
+| path key `(server, tock)` cable| `cable.id` (surrogate)                          |
 
 ## Derived decisions
 
-These follow from the three given decisions but are not spelled out by
-them. Status as of this revision:
+Status as of this revision:
 
 - **D1 — accepted.** Wires are hosts (Thing type `wire`).
-- **D2 — accepted (modified).** Store the concrete address *and* keep the
-  host offset `num` on the interface.
-- **D3 — deferred.** Master/slave co-existence: decide later; the
-  `network.master_id` column is retained as a placeholder.
+- **D2 — revised.** The interface stores `seqnum`; IP addresses live in a
+  separate `address` table (no `addr`/`prefix` on the interface).
+- **D3 — resolved (subsumed).** IPv4/IPv6 co-existence is now “two networks
+  on one VLAN”; an interface auto-gets addresses on all its VLAN’s routable
+  networks. `network.master_id` is dropped.
 - **D4 — accepted (modified).** No separate `host.name`; the short name
   lives on `thing.name`.
 - **D5 — accepted.** MAC as `BINARY(6)` → `netaddr.EUI`.
 - **D6 — tentative.** Dropping arbitrary port `attrs` is presumed fine;
   revisit when the migrator is written.
+- **Q1 — resolved.** Link-local = EUI-64 from MAC; routed = seqnum.
 
 ### D1 — Wires are hosts
 
 **Accepted.** A wire is a **`host` whose `Thing` is of a “wire”
-thing-type**, carrying exactly two interfaces named `"a"` and `"b"`
-and no address.
+thing-type**, carrying exactly two interfaces named `"a"` and `"b"`, with
+no VLAN, no MAC, no `seqnum`, and no addresses. Folding wires into the
+host+interface model lets **every cable endpoint be an interface**,
+removing the `Wire` class and all the `isinstance(cc.host, Wire)` /
+`other_end` special-casing in `connected_hosts`, `ports`, and `host_find`.
+The traversal rule “enter a host via one interface, leave via any *other*
+interface of that host” naturally handles a wire (exactly two interfaces);
+the “A end is closer to the main router” convention survives as the
+interface names `"a"`/`"b"`.
 
-Rationale: in DistKV a `Wire` is structurally a host with two fixed ports
-`"a"`/`"b"` that participates in cables exactly like a host port. Folding
-wires into the host+interface model lets **every cable endpoint be an
-interface**, removing the `Wire` class and all the
-`isinstance(cc.host, Wire)` / `other_end` special-casing in
-`connected_hosts`, `ports`, and `host_find`. The traversal rule “enter a
-host via one interface, leave via any *other* interface of that host”
-naturally handles a wire (it has exactly two interfaces). The “A end is
-closer to the main router” convention survives as the interface names
-`"a"`/`"b"`.
+### D2 — `seqnum` on the interface; addresses in their own table
 
-A wire is a physical, labelable, locatable object, so making it a `Thing`
-is arguably *more* correct than the DistKV model. Wires carry no `domain`
-FQDN (they use their hyphenated name) and no address.
+**Revised.** An `interface` stores its **`seqnum`** (the host offset within
+the VLAN) but **not** its IP address. IP addresses are rows of a separate
+`address` table (`fk(interface)`, `unique(ipaddr)`).
 
-*Alternative (not recommended):* a separate `wire` table also referencing
-a `Thing`, owning two interface rows. This forces the `interface` table to
-be polymorphic in its owner (`host_id` xor `wire_id`), or a separate
-`wire_interface` table, both of which reintroduce the special-casing the
-unification removes.
+Rationale: the interface is an L2 object (plugged into a VLAN, has a MAC,
+has a sequence number). Its addresses are L3 and there can be several (one
+per routable network in the VLAN, plus link-local, plus any manual/anycast
+addresses). Keeping `seqnum` on the interface serves the two purposes the
+user called out: (a) the routable address is still **derived from `seqnum`**
+(`addr = network.addr + (seqnum << network.shift)`); (b) **finding a free
+address** scans small integer `seqnum` values per VLAN (skipping the DHCP
+range) rather than probing the 16-byte `addr` field — cheaper and clearer.
+`seqnum` is **nullable** (`NULL` for wires, for MAC-only/link-local
+interfaces, and for not-yet-numbered interfaces).
 
-### D2 — Concrete address *and* host number, both stored
+### D3 — IPv4/IPv6 co-existence: RESOLVED (subsumed)
 
-**Accepted (modified).** An `interface` stores **both** its concrete
-address (`addr` + `prefix`) *and* its host offset **`num`** within the
-network. The `shift`/`mac` flags remain **allocation policy on the
-`network`**.
-
-Rationale: storing the address directly makes reverse lookup (IP →
-interface) a trivial indexed equality/containment query instead of the
-DistKV `net.enclosing()` + `net.by_num()` dance. Keeping `num` as a
-column serves two purposes the user called out:
-
-(a) the IPv4 (mapped) address is still **derived from `num`** —
-    `addr = network.base + (num << network.shift)` — so `num` is the
-    authoritative allocator value and the stored `addr` is its
-    materialisation (kept in sync by the writer/validator);
-(b) **finding a free host address** scans small integer `num` values
-    (skipping the DHCP range and network/broadcast positions) rather than
-    probing the 16-byte `addr` field — cheaper and clearer.
-
-`num` is **nullable**: it is `NULL` for MAC-mode interfaces (address
-derived from the MAC, see Q1), for wire `a`/`b` interfaces (no address),
-and for any interface not yet assigned an address. Uniqueness is
-`UNIQUE(net_id, num)`; SQL engines treat `NULL` as distinct in a unique
-constraint, so multiple un-numbered interfaces on a network are allowed.
-
-See “Address computation” for the MAC-mode caveat.
-
-### D3 — Master/slave (“co-existing”) networks — DEFERRED
-
-*Deferred.* Whether/how slave-network addresses are represented is left
-open for now. The `network.master_id` self-FK is **retained** as a
-placeholder so the co-existence relationship can be recorded (and
-preserved by the migrator) without committing to a materialisation policy
-yet. Decide after Q1/Q2 land.
+**Resolved.** The old master/slave machinery existed to give a host both an
+IPv4 and an IPv6 address. In the new model a VLAN simply carries **two (or
+more) networks** — typically IPv4 and IPv6 — and an interface on that VLAN
+automatically receives a derived address on **each** routable network from
+its single `seqnum` (plus a link-local address from its MAC). Co-existence
+is therefore intrinsic; no `master_id`, no slave materialisation, no
+special-case code. `network.master_id` is **dropped**.
 
 ### D4 — Short name lives on `Thing.name` only
 
-**Accepted (modified).** There is **no separate `host.name` column**; the
-short name is stored once, on `thing.name`. Thus:
-
-- `host.domain` — the FQDN (e.g. `one.you.example`), `VARCHAR(255)`,
-  **unique**. The host’s primary identifier (was the DistKV path key).
-- `thing.name` — the **short name** (e.g. `you-one`), subject to
-  `Thing.name`’s `String(40)` length and global uniqueness across *all*
-  things. `thing.descr` ← `host.desc`; `thing.comment` for free text.
-
-Consequence: a host’s short name shares the global thing-name namespace
-(and inherits the 40-char cap). If collisions or length ever bite, revisit
-by re-adding a `host.name` column and giving the `Thing` a synthetic slug;
-out of scope for now.
+**Accepted (modified).** No separate `host.name` column; the short name is
+stored once, on `thing.name` (subject to `Thing.name`’s `String(40)`
+length and global uniqueness across all things). `host.domain` is the
+FQDN (`VARCHAR(255)`, unique) and the host’s primary identifier. If
+collisions or length ever bite, revisit by re-adding `host.name` and giving
+the `Thing` a synthetic slug.
 
 ### D5 — MAC storage
 
-**Accepted.** Store MAC addresses as a 6-byte `BINARY(6)` (mirroring
-DistKV’s `EUI.packed`), exposed in Python as `netaddr.EUI` via a small
-custom `TypeDecorator`. (The design only mandates the IPv6 treatment for
-*IP* addresses; MACs are separate.) An `INTEGER`-backed 48-bit value would
-also work and be sortable; `BINARY(6)` is chosen to preserve byte identity
-and avoid endianness questions.
+**Accepted.** MAC addresses are a 6-byte `BINARY(6)` (mirroring DistKV’s
+`EUI.packed`), exposed in Python as `netaddr.EUI` via a small custom
+`TypeDecorator`. `netaddr.EUI` also provides `.ipv6_link_local()` used for
+the link-local derivation (Q1).
 
-### D6 — Arbitrary port `attrs` are dropped — TENTATIVE
+### D6 — Arbitrary port `attrs` dropped — TENTATIVE
 
 *Tentative — revisit when the migrator is written.* DistKV `HostPort`
 carried a free-form `attrs` dict (only `vlan` is actually used). The DB
-schema models the known fields (`mac`, `force_vlan`, `vlan_id`, `desc`, …)
-as columns; unknown attrs would be **dropped** on migration. Before
-finalising, the migrator should scan a real DistKV tree for any `attrs`
-actually in use beyond `vlan`; if any matter, add a `JSON` column then.
+schema models the known fields as columns; unknown attrs would be dropped
+on migration. Before finalising, the migrator should scan a real DistKV
+tree for any `attrs` in use beyond `vlan`; if any matter, add a `JSON`
+column then.
 
 ## SQL data structure
 
@@ -189,34 +221,26 @@ following the existing `box`/`thing`/`label` convention.
 A reusable `TypeDecorator`/`composite` pair in `moat/db/inv/ip.py`:
 
 - Columns: `addr BINARY(16)` (`LargeBinary`) and `prefix SMALLINT`
-  (0–128, the netmask).
+  (0–128, the netmask; nullable on `address`).
 - Python ↔ DB:
   - **DB → Python:** unpack the 16 big-endian bytes into a 128-bit int,
     reconstruct `ipaddress.IPv6Address(int)`. If it lies in
     `::ffff:0:0/96`, extract the embedded IPv4 and return
-    `IPv4Interface((ipv4, prefix))`; otherwise
-    `IPv6Interface((ipv6, prefix))`.
+    `IPv4Interface((ipv4, prefix))` (or a bare `IPv4Address` when `prefix`
+    is null); otherwise `IPv6Interface((ipv6, prefix))` (or bare
+    `IPv6Address`).
   - **Python → DB:** accept `IPv4Interface`/`IPv6Interface`/
     `IPv4Network`/`IPv6Network`/`str`. Normalise IPv4 to
     `::ffff:a.b.c.d` (`int = (0xffff << 32) | int(ipv4_address)`), then
     pack the 128-bit int as 16 big-endian bytes and store with `prefix`.
-- ORM exposure: use `sqlalchemy.orm.composite()` so each model presents a
-  single attribute (`interface.address`, `network.subnet`) that is an
-  `IPv4Interface`/`IPv6Interface`/`IPv4Network`/`IPv6Network`, backed by
-  the two columns. (A plain two-property accessor is the simpler fallback
-  if `composite()` proves awkward for mutations.)
+- ORM exposure: `sqlalchemy.orm.composite()` on the `address` and `network`
+  tables presents a single attribute (`address.ip`, `network.subnet`).
 
-**Backing type — decided (Q5): `BINARY(16)`.** A full IPv6 address is 128
-bits and does **not** fit in a 64-bit `BIGINT` on SQLite (`INTEGER` is
-8-byte signed, max `2**63−1`) or PostgreSQL (`BIGINT` is 64-bit signed).
-The IPv4-mapped form `::ffff:a.b.c.d` is only 48 bits and would fit a
-`BIGINT`, but native IPv6 (e.g. `2001:780:107::1`) would not. `BINARY(16)`
-supports full IPv6: the converter packs/unpacks the 128-bit value as 16
-big-endian bytes, and equality/range comparisons on the byte strings sort
-correctly for big-endian encoding. The converter is written against an
-abstract column type so a future switch (e.g. to a native `INET` on
-PostgreSQL) is a one-line change. Below, `addr` columns are shown as
-`BINARY(16)` reflecting this decision.
+**Backing type — decided (Q5): `BINARY(16)`.** A 128-bit IPv6 address does
+not fit a 64-bit `BIGINT` on SQLite or PostgreSQL; `BINARY(16)` supports
+full IPv6, packed big-endian so byte-string comparisons sort correctly. The
+converter is written against an abstract column type so a future switch
+(e.g. native `INET` on PostgreSQL) is a one-line change.
 
 ### Tables
 
@@ -231,23 +255,32 @@ PostgreSQL) is a one-line change. Below, `addr` columns are shown as
 | `passwd`    | VARCHAR(128)  | nullable, WLAN password                |
 
 #### `network`
-| column        | type                 | notes                                       |
-|---------------|----------------------|---------------------------------------------|
-| `id`          | PK                   |                                             |
-| `name`        | VARCHAR(64), UNIQUE  |                                             |
-| `addr`        | BINARY(16)           | subnet base address (IPv6 / v4-mapped)      |
-| `prefix`      | SMALLINT             | subnet prefix length                        |
-| `desc`        | VARCHAR(200)         | nullable                                    |
-| `vlan_id`     | FK → `vlan.id`       | nullable                                    |
-| `master_id`   | FK → `network.id`    | nullable; supernet this co-exists with       |
-| `shift`       | INT, default 0       | host-number shift (allocation policy)        |
-| `mac`         | BOOLEAN nullable     | True=MAC-derived only, False=num-derived, NULL=both |
-| `virt`        | BOOLEAN, default 0   | no cable required                           |
-| `dhcp_first`  | INT                  | nullable; first host offset in DHCP range   |
-| `dhcp_count`  | INT                  | nullable; length of DHCP range              |
-| `wlan`        | VARCHAR(64)          | nullable (preserved from DistKV `Network`)  |
+A network lives on exactly one VLAN; a VLAN carries zero or more networks
+(typically IPv4 + IPv6).
+
+| column        | type                 | notes                                            |
+|---------------|----------------------|--------------------------------------------------|
+| `id`          | PK                   |                                                  |
+| `name`        | VARCHAR(64), UNIQUE  |                                                  |
+| `vlan_id`     | FK → `vlan.id`, NOT NULL | the VLAN this network rides on              |
+| `addr`        | BINARY(16)           | network address (host bits zeroed; IPv6 / v4-mapped) |
+| `prefix`      | SMALLINT             | netmask                                          |
+| `shift`       | INT, nullable        | if set, autogen `addr = net.addr + (seqnum<<shift)`; null = no seqnum autogen |
+| `desc`        | VARCHAR(200)         | nullable                                         |
+| `virt`        | BOOLEAN, default 0   | no cable required                                |
+| `dhcp_first`  | INT                  | nullable; first `seqnum` in the DHCP range        |
+| `dhcp_count`  | INT                  | nullable; length of the DHCP range               |
 
 Composite attribute `subnet` → `IPv4Network`/`IPv6Network`.
+
+Notes:
+- `network.mac` (the old tri-state) is **gone**. Derivation mode is now:
+  `shift` not null → seqnum; link-local (`fe80::/10`) → MAC/EUI-64
+  (implicit, no network row needed); `shift` null and not link-local →
+  manual addresses only. If prefix-based link-local detection proves too
+  magical, add an explicit boolean `link_local` later.
+- `network.master_id` and `network.wlan` are **dropped** (D3; WLAN creds
+  live on the `vlan`).
 
 #### `host`
 | column      | type                 | notes                                         |
@@ -258,32 +291,55 @@ Composite attribute `subnet` → `IPv4Network`/`IPv6Network`.
 | `loc`       | VARCHAR(200)         | nullable, location                            |
 
 `desc`/`comment` live on the `Thing`; the **short name is `thing.name`**
-(D4 — no separate `host.name`). `mac`/`net`/`num` move to the `""`
-interface (decisions 1 + D2). `groups` via M2M below.
+(D4 — no separate `host.name`). The host’s MAC, VLAN attachment (`seqnum`),
+and IP addresses live on its `""` interface and that interface’s
+`address` rows (decisions 1 + D2). `groups` via M2M below.
 
 #### `interface`
-Unifies the old `HostPort` and the host’s direct attachment.
+Belongs to a host (named) and is plugged into a VLAN. Unifies the old
+`HostPort` and the host’s direct attachment.
 
 | column       | type                          | notes                                     |
 |--------------|-------------------------------|-------------------------------------------|
 | `id`         | PK                            |                                           |
 | `host_id`    | FK → `host.id`, NOT NULL      |                                           |
 | `name`       | VARCHAR(64)                   | `""` = former direct attachment; `"."` on CLI maps to `""` |
-| `net_id`     | FK → `network.id`             | nullable                                  |
-| `num`        | INT                           | nullable; host offset within `net` (allocator key; v4 addr derived from it). NULL for MAC-mode / wire / unassigned |
-| `addr`       | BINARY(16)                    | nullable; materialised interface address  |
-| `prefix`     | SMALLINT                      | nullable; netmask                         |
+| `vlan_id`    | FK → `vlan.id`                | nullable; the VLAN this interface is on (NULL for wire `a`/`b`) |
 | `mac`        | BINARY(6)                     | nullable; → `netaddr.EUI`                  |
-| `force_vlan` | BOOLEAN, default 0            |                                           |
-| `vlan_id`    | FK → `vlan.id`                | nullable; per-interface VLAN override      |
+| `seqnum`     | INT                           | nullable; host offset within the VLAN (allocator key; routable addr derived from it). NULL for wires / link-local-only / unassigned |
 | `desc`       | VARCHAR(200)                  | nullable                                  |
 
-Constraints: `UNIQUE(host_id, name)` (one `""` per host, one `"a"`/`"b"`
-per wire, unique port names per host); `UNIQUE(net_id, num)` (no two
-interfaces share a host offset on the same network; `NULL` `num` is
-distinct, so un-numbered interfaces coexist). Composite attribute
-`address` → `IPv4Interface`/`IPv6Interface`. The writer derives `addr`
-from `num` for non-MAC networks and keeps them consistent (validator).
+Constraints:
+- `UNIQUE(host_id, name)` — one `""` per host, one `"a"`/`"b"` per wire,
+  unique interface names per host.
+- `UNIQUE(vlan_id, seqnum)` — realises `unique(network, seqnum)` (see the
+  rationale above). Standard SQL treats `NULL` as distinct in a unique
+  constraint, so multiple un-numbered interfaces coexist; alternatively a
+  partial unique index `WHERE seqnum IS NOT NULL`.
+
+The interface holds **no IP columns**; its addresses are `address` rows.
+Trunk / multi-VLAN ports are out of scope (one interface = one VLAN); the
+old per-port `force_vlan`/`vlan_id` override is therefore dropped.
+
+#### `address`
+Zero or more per interface. The L3 layer.
+
+| column        | type                          | notes                                     |
+|--------------|-------------------------------|-------------------------------------------|
+| `id`         | PK                            |                                           |
+| `interface_id` | FK → `interface.id`, NOT NULL |                                           |
+| `addr`       | BINARY(16)                    | the IP address (IPv6 / v4-mapped)         |
+| `prefix`     | SMALLINT                      | nullable; netmask. Equals the containing network’s prefix when the address is in one; NULL for floating/anycast addresses with no network |
+
+Constraint: `UNIQUE(addr)` — an IP is assigned to one interface
+(`unique(ipaddr)`). The record deliberately has **no `network_id`**: the
+network is recoverable by containment lookup (point a), and anycast routing
+needs addresses not pinned to a network/VLAN (point b). Strict anycast
+(the *same* IP on multiple interfaces) would require relaxing this
+constraint — flagged as a possible future need, not supported now.
+
+Composite attribute `ip` → `IPv4Interface`/`IPv6Interface` (or a bare
+`IPv4Address`/`IPv6Address` when `prefix` is null).
 
 #### `cable`
 | column       | type                       | notes                              |
@@ -314,15 +370,16 @@ here as a dependency, not a schema object.
 ### Entity-relationship sketch
 
 ```
-thing ──1:1── host ──1:N── interface ──N:1── network ──N:1── vlan
-                   │            │                  │
-                   │            └──N:1── vlan (override)
+thing ──1:1── host ──1:N── interface ──N:1── vlan ──1:N── network
+                   │            │
+                   │            └──1:N── address   (L3; no network FK)
                    └──N:M── group (via host_group)
-
-network ──N:1── network (master_id, self-ref)
 
 cable ──2:1── interface  (iface_a_id, iface_b_id)
 ```
+
+Note the L2/L3 split: `interface → vlan → network` is layer 2; `address`
+hangs off `interface` and may belong to any network (or none).
 
 ## Package & refactoring structure
 
@@ -332,8 +389,8 @@ New package `moat.db.inv`, laid out exactly like `moat.db.box` /
 ```
 moat/db/inv/
   __init__.py        # docstring; CfgStore.with_(__name__) if a _cfg.yaml is needed
-  ip.py              # the address TypeDecorator / composite + conversion helpers
-  model.py           # ORM models: Vlan, Network, Host, Interface, Cable, Group, host_group
+  ip.py              # address TypeDecorator / composite + conversion + EUI-64 link-local helper
+  model.py           # ORM models: Vlan, Network, Host, Interface, Address, Cable, Group, host_group
   model_.py          # relationship wiring + *.apply() (resolve FKs by name, like box/thing)
   _main.py           # CLI: `mt db inv …` (load_subgroup(prefix="moat.db.inv"))
   _cfg.yaml          # optional; only if static config is required
@@ -354,12 +411,12 @@ Packaging (do during the build/tag step, not part of this plan’s commit):
 - `packaging/moat-db-inv/{pyproject.toml,README.md}` mirroring
   `packaging/moat-db-thing/`; depends on `moat-db ~= <ver>`,
   `moat-thing ~= <ver>`, `moat-lib-run ~= <ver>`, plus `netaddr` (new dep
-  for `EUI`).
+  for `EUI` and `.ipv6_link_local()`).
 - `versions.yaml` — `mt src tag -s moat.db.inv -m` allocates the entry.
 
 Alembic:
 
-- One new revision under `moat/db/alembic/versions/` creating the seven new
+- One new revision under `moat/db/alembic/versions/` creating the eight new
   tables and the thing-type seed. Generate with `mt db mig rev …` after the
   models compile, then hand-edit (the existing revisions are
   autogenerated-then-adjusted, and are excluded from ruff/ty).
@@ -385,9 +442,15 @@ Copy the established `moat.db` patterns exactly:
 - `dump()` on each model returns a `dict` of non-null, non-FK-id columns
   plus resolved names, for `yprint`.
 - Validators that need the session (e.g. “interface name unique within
-  host”, “cable endpoints distinct and unused”) use SQLAlchemy
-  `@event.listens_for(Model, "before_insert"/"before_update")` like
-  `validate_thing_coords`, or are enforced by the constraints above.
+  host”, “`UNIQUE(vlan_id, seqnum)`”, “cable endpoints distinct and
+  unused”) use SQLAlchemy `@event.listens_for(Model,
+  "before_insert"/"before_update")` like `validate_thing_coords`, or are
+  enforced by the constraints above.
+- **Address regeneration:** the interface writer regenerates derived
+  `address` rows whenever `mac` or `seqnum` or the VLAN’s networks change —
+  link-local from `mac`, one routable address per VLAN network with
+  `shift` not null from `seqnum` — and leaves manual/anycast `address` rows
+  untouched (recognised by not matching any derivation).
 
 ## CLI surface (`mt db inv …`)
 
@@ -398,22 +461,25 @@ submodules.
 
 - `mt db inv vlan   {add,set,delete,show}` — `-d/--desc`, `-w/--wlan`,
   `-p/--passwd`; id = the `tag` number.
-- `mt db inv net    {add,set,delete,show}` — `-d/--desc`, `-v/--vlan`,
-  `-a/--dhcp FIRST LEN`, `-m/-M/-B` (mac/no-mac/both), `-V/-R` (virt/real),
-  `-S/--master`, `-s/--shift`; id = the `name` (address shown via `subnet`).
+- `mt db inv net    {add,set,delete,show}` — `-v/--vlan` (required on
+  `add`), `-s/--shift` (nullable), `-d/--desc`, `-a/--dhcp FIRST LEN`,
+  `-V/-R` (virt/real); id = the `name` (address shown via `subnet`).
 - `mt db inv host   {add,set,delete,show}` — `-d/--desc` (→ `thing.descr`),
-  `-l/--loc`, `-N/--name`, `-t/--thingtyp` (defaults to `host`);
-  **address options move off the host** onto its interfaces.
+  `-l/--loc`, `-N/--name`, `-t/--thingtyp` (defaults to `host`).
 - `mt db inv host HOST iface {add,set,delete,show,link}` — manage
   interfaces. `HOST iface .` selects the empty-named interface (former
-  direct attachment). Options: `-n/--net`, `-i/--num`, `-a/--alloc`,
-  `-m/--mac`, `-v/--vlan`, `--force-vlan`, `-d/--desc`, `-N/--name` (rename).
-  `link DEST` replaces the old `port link`/`wire link` and creates a
-  `cable` between two interfaces.
+  direct attachment). Options: `-V/--vlan` (the VLAN it’s on), `-m/--mac`,
+  `-s/--seqnum`, `-a/--alloc` (pick a free `seqnum` on the VLAN), `-d/--desc`,
+  `-N/--name` (rename). `link DEST` replaces the old `port link`/`wire
+  link` and creates a `cable` between two interfaces.
+- `mt db inv host HOST iface IFACE addr {add,delete,show}` — manage the
+  interface’s `address` rows (manual/anycast addresses; derived ones are
+  regenerated automatically and shown read-only). Options: `-a/--addr`,
+  `-p/--prefix`.
 - `mt db inv wire {add,set,delete,show,link}` — a wire is a `host` with a
-  `wire` thing-type and two interfaces `a`/`b` (D1); this command is a thin
-  specialisation of `host`. `link` connects the `a` or `b` interface
-  (default `b`) to another wire’s end.
+  `wire` thing-type and two interfaces `a`/`b` (D1); a thin specialisation
+  of `host`. `link` connects the `a` or `b` interface (default `b`) to
+  another wire’s end.
 - `mt db inv cable {show,…}` — list/manage cables (mostly listing; link/unlink
   happen via `iface link`).
 - `mt db inv group  {add,set,delete,show}` and host↔group membership
@@ -426,25 +492,28 @@ decision 1’s wording.
 ## Semantic changes to call out
 
 - **Direct attachment → `""` interface.** Anything that read `Host.net` /
-  `Host.num` now reads the host’s `""` interface. `Host.netaddr` /
-  `Host.netaddrs` become “the addresses of the host’s interfaces”.
+  `Host.num` now reads the host’s `""` interface (`seqnum`) and its
+  `address` rows. `Host.netaddr` / `Host.netaddrs` become “the `address`
+  rows of the host’s interfaces”.
 - **Reverse lookup (IP → host) simplifies.** `HostRoot.by_name(IP)` did
-  `net.enclosing(IP)` then `net.by_num(offset)`. Now: query
-  `Interface` by `addr` (exact) or by containment in the interface’s
-  `/prefix`, then join to `host`. No `enclosing`/`by_num` needed.
+  `net.enclosing(IP)` then `net.by_num(offset)`. Now: query `address` by
+  `addr` (exact equality on the indexed `BINARY(16)`), join to `interface`
+  → `host`. Containment (`addr` within a `network.subnet`) is only needed
+  when you specifically want the network, not the host.
+- **IPv4/IPv6 co-existence is automatic (D3).** Putting two networks on one
+  VLAN is all it takes; an interface gets a derived address on each. No
+  master/slave code.
 - **`connected_hosts` / `host_find` traversal** becomes a graph walk over
   `interface → cable → interface → (host) → other interfaces of that host`.
   Wires need no special case (D1): a wire is a host with exactly two
   interfaces, so “leave via the other interface” just works.
-- **Allocation** (`Network.alloc`) moves to a network method that finds
-  the first free **`num`** (scanning small integer `interface.num` values
-  on the network, skipping the DHCP range
-  `dhcp_first..dhcp_first+dhcp_count-1` and the network/broadcast
-  positions, applying `shift`) and then materialises `addr = base +
-  (num << shift)` via the `ip.py` converter (D2). Scanning `num` is cheaper
-  and clearer than probing the 16-byte `addr`. MAC-mode networks derive
-  the address from the interface MAC instead (formula to be confirmed —
-  Q1).
+- **Allocation** (`Network.alloc` → a VLAN-scoped helper) finds the first
+  free **`seqnum`** on the VLAN (scanning small integer `interface.seqnum`
+  values, skipping the DHCP range `dhcp_first..dhcp_first+dhcp_count-1`
+  where the VLAN’s networks define one) and then derives the routable
+  address(es) from it. Scanning `seqnum` is cheaper and clearer than
+  probing the 16-byte `addr`. Link-local addresses come from the MAC, not
+  the allocator.
 - **`host_template` / `connected_vlans`** are ported later (out of scope
   here) but depend only on the interface/cable/vlan graph, which the new
   schema represents directly.
@@ -461,50 +530,61 @@ rows in one DB transaction.
 | DistKV                                          | Target                                                                 |
 |-------------------------------------------------|------------------------------------------------------------------------|
 | `InventoryRoot.vlan[*]`                          | `vlan` (`tag`=path key, `name`, `desc`, `wlan`, `passwd`)              |
-| `InventoryRoot.net[*]` (`Network`)               | `network` (`addr`+`prefix` from `net.net`, `name`, `desc`, `vlan_id` by name, `master_id` by name, `shift`, `mac`, `virt`, `dhcp_first/count`, `wlan`) |
+| `InventoryRoot.net[*]` (`Network`)               | `network` (`name`, `vlan_id` by the net’s VLAN, `addr`+`prefix` from `net.net`, `shift`, `desc`, `virt`, `dhcp_first/count`). Drop `mac`/`master_id`/`wlan`. |
 | `InventoryRoot.group[*]`                         | `group` (`name`)                                                       |
 | `InventoryRoot.host[*]` (`Host`)                 | `Thing` (`name`=short, `descr`=`desc`, `thingtyp`=`host`) + `host` (`domain`=FQDN, `loc`) |
-| `Host.net`+`Host.num` (direct)                   | `interface` (`host_id`, `name=""`, `net_id`, `num`, `addr`+`prefix` materialised from `num`, `mac`←`Host.mac`) |
-| `Host.port[name]` (`HostPort`)                   | `interface` (`host_id`, `name`, `net_id`, `num`, `addr`+`prefix`, `mac`, `force_vlan`, `vlan_id` by name, `desc`) |
-| `InventoryRoot.wire[*]` (`Wire`)                 | (D1) `Thing` (`name`=wire name, `thingtyp`=`wire`) + `host` (`domain`=wire name, `loc`, `desc`) + two `interface` `a`/`b` (no address, `num`=NULL) |
+| `Host.net`+`Host.num` (direct)                   | `interface` (`host_id`, `name=""`, `vlan_id`=`Host.net`’s VLAN, `mac`←`Host.mac`, `seqnum`=`Host.num`) + derived `address` rows (see “Address computation”) |
+| `Host.port[name]` (`HostPort`)                   | `interface` (`host_id`, `name`, `vlan_id`=port net’s VLAN, `mac`, `seqnum`=`HostPort.num`, `desc`) + derived `address` rows |
+| `InventoryRoot.wire[*]` (`Wire`)                 | (D1) `Thing` (`name`=wire name, `thingtyp`=`wire`) + `host` (`domain`=wire name, `loc`, `desc`) + two `interface` `a`/`b` (no VLAN, no MAC, no `seqnum`, no addresses) |
 | `InventoryRoot.cable[*]` (`Cable.dest_a/dest_b`) | `cable` (`iface_a_id`, `iface_b_id` resolved from the endpoint’s host+port-name; host-direct endpoint → `""` interface; wire endpoint → `a`/`b`) |
 | `Host.groups`                                   | `host_group` rows (resolve group names)                                |
 
 ### Ordering
 
-1. Seed `ThingTyp` `host` (and `wire`).
+1. Seed `ThingTyp` `host` and `wire`.
 2. `vlan` rows.
-3. `network` rows — insert with `master_id = NULL` first, then a second pass
-   setting `master_id` (masters may forward-reference each other).
+3. `network` rows (now a single pass — no `master_id` to defer).
 4. `group` rows.
 5. `Thing` + `host` rows (all hosts and wires).
 6. `interface` rows — host-direct `""`, each named port, and wire `a`/`b`.
-   Compute addresses here (see below).
-7. `cable` rows — resolve both endpoints to `interface.id`.
-8. `host_group` associations.
+7. `address` rows — derived per interface (see below), plus any manual
+   addresses carried over from old data.
+8. `cable` rows — resolve both endpoints to `interface.id`.
+9. `host_group` associations.
 
 ### Address computation
 
-Each interface carries its `num` (copied straight from DistKV’s
-`Host.num` / `HostPort.num`) **and** a materialised `addr`+`prefix`:
+For each interface with a MAC `M` and/or `seqnum` `S` on VLAN `V`:
 
-- Non-MAC network: `addr = network.base + (num << network.shift)`,
-  `prefix = network.prefix`, where `base` is the IPv6-normalised network
-  base (IPv4 nets stored as `::ffff:a.b.c.d`). Reproduces
-  `Network.addr(num)`. Both `num` and `addr` are written to the row.
-- MAC-mode network (`network.mac is True`): `num` is `NULL`; the address
-  is derived from the interface MAC. **The DistKV `addr()` path is not
-  callable in MAC mode** (`num << -1` raises), so DistKV never actually
-  stored/computed a MAC-mode address — it was derived ad hoc (e.g. the
-  manual IPv6 in `host_template`). The exact formula must be supplied by
-  the maintainer (Q1); until then the migrator leaves MAC-mode interface
-  addresses `NULL` and logs a warning.
-- Master/slave co-existence (D3, **deferred**): the migrator records
-  `network.master_id` but does **not** materialise slave-network interface
-  rows yet. Decide the policy together with Q2.
+- **Routable networks** (each `network` in `V` with `shift` not null):
+  `addr = network.addr + (S << network.shift)`, `prefix = network.prefix`.
+  One `address` row per such network. This reproduces DistKV’s
+  `Network.addr(num)` for the network that was `Host.net`, and
+  additionally materialises the address on every other routable network in
+  the VLAN (D3 — co-existence is now automatic).
+- **Link-local** (when `M` is not null): `addr =
+  M.ipv6_link_local()` (EUI-64, `fe80::…/64`), `prefix = 64`. One
+  `address` row. No `fe80::` `network` row is needed.
+- **MAC-mode caveat:** DistKV’s `addr()` was not callable in MAC mode
+  (`num << -1` raises), so DistKV never stored a MAC-mode address — it was
+  derived ad hoc. The new model replaces “MAC mode” with the explicit
+  link-local EUI-64 rule above, so MAC-mode networks in old data map to
+  ordinary routable networks (seqnum) where they had a `shift`, and their
+  link-local counterpart is generated from the MAC. If an old “MAC-mode”
+  network genuinely had no `shift` and no seqnum semantics, its addresses
+  are migrated as manual `address` rows; flag any such case for review.
 
 Store every computed address via the `ip.py` converter so IPv4 is
 normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
+
+### Behaviour normalisation to review
+
+Because an interface on a VLAN now auto-receives addresses on **all** the
+VLAN’s routable networks, a DistKV host that occupied only the IPv4 master
+(and had no IPv6 slave address) will gain an IPv6 address after migration
+(assuming the VLAN has an IPv6 network with a `shift`). This is the
+intended normalisation, but the migrator should **report** the expanded
+interfaces so the operator can prune unintended addresses.
 
 ### Edge cases / risks
 
@@ -519,9 +599,10 @@ normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
 - **Duplicate names:** DistKV `Network`/`Vlan` enforce unique names at
   `save()` time; the importer trusts this but verifies against the DB’s
   UNIQUE constraints and reports failures.
-- **`master` cycles / chains:** `Network._add_slave` guards against
-  cycles; the importer should too (`network.master_id` must not form a
-  cycle).
+- **VLAN ambiguity:** an interface is attached to a VLAN, but old DistKV
+  attached a host/port to a *network*. The importer derives the VLAN as
+  `Host.net.vlan`; if a network had no VLAN in old data, the importer
+  reports it and requires a VLAN to be assigned.
 - **Big (>64-bit) network numbers:** DistKV stored `>2**64` netnums as
   16-byte blobs (IPv6). The importer reads `Network.net` (`IPNetwork`)
   directly, so this is handled transparently — no special-casing needed.
@@ -532,14 +613,12 @@ normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
 
 ## Open questions
 
-1. **MAC-mode address formula.** What is the intended derivation of an
-   IPv6 address from a host MAC for `network.mac is True`? (DistKV never
-   implemented it coherently.) Needed for both migration and runtime
-   allocation.
-2. **Master/slave (co-existence) materialisation — deferred with D3.**
-   Should a host on a master net get mirrored interface rows on each slave
-   net, and should assigning on a master auto-create/update the slave
-   interfaces or be manual? Decide after Q1.
+1. ~~**MAC-mode address formula.**~~ **Resolved:** link-local `fe80::/10`
+   addresses are EUI-64 from the MAC (`netaddr.EUI.ipv6_link_local()`);
+   routed addresses use `seqnum` via `network.shift`.
+2. ~~**Master/slave materialisation (D3).**~~ **Resolved (subsumed):** v4
+   and v6 are two networks on one VLAN; an interface auto-gets addresses
+   on each. `network.master_id` dropped.
 3. ~~**Wires-as-hosts (D1).**~~ **Resolved — accepted:** wires are
    `host`+`Thing` of type `wire`.
 4. ~~**`Thing.name` scope (D4).**~~ **Resolved — accepted:** no separate
@@ -552,22 +631,36 @@ normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
 7. **Arbitrary port `attrs` (D6, tentative).** At migrator-writing time,
    scan a real DistKV tree for `attrs` in use beyond `vlan`; add a `JSON`
    column if any matter.
+8. **`seqnum` scope.** Confirmed as VLAN-wide (one `seqnum` per interface,
+   shared across the VLAN’s networks, enforcing `unique(network, seqnum)`
+   via `UNIQUE(vlan_id, seqnum)`). If per-network `seqnum` independence is
+   ever needed, switch to an `interface_network` junction with
+   `unique(network_id, seqnum)` — out of scope now.
+9. **Strict anycast.** `UNIQUE(addr)` forbids the same IP on multiple
+   interfaces. If true anycast is needed later, relax this (e.g. a flag) —
+   not supported now.
+10. **Link-local detection.** Link-local is currently recognised by the
+    `fe80::/10` prefix (implicit). If that is too magical, add an explicit
+    `network.link_local` boolean.
 
 ## Task breakdown
 
 1. `moat/db/inv/ip.py` — address composite type + converters (`BINARY(16)`
-   big-endian pack/unpack; v4-mapping to/from `::ffff:a.b.c.d`; v4/v6
-   round-trip unit tests).
-2. `moat/db/inv/model.py` + `model_.py` — the seven models, relationships,
-   `apply()`/`dump()`, validators.
+   big-endian pack/unpack; v4-mapping to/from `::ffff:a.b.c.d`; nullable
+   prefix → bare address; EUI-64 link-local helper; v4/v6 round-trip unit
+   tests).
+2. `moat/db/inv/model.py` + `model_.py` — the eight models (incl.
+   `Address`), relationships, `apply()`/`dump()`, validators, and the
+   address-regeneration hook on the interface writer.
 3. Register in `moat/db/_cfg.yaml`; add to `pyproject.toml` ty includes.
 4. `moat/db/inv/_main.py` — CLI groups (`vlan`, `net`, `host`, `iface`,
-   `wire`, `cable`, `group`).
+   `iface addr`, `wire`, `cable`, `group`).
 5. Alembic revision (autogenerate, then hand-edit) + `ThingTyp` seed.
 6. `packaging/moat-db-inv/` + `versions.yaml` entry; `docs/moat-db-inv/`
    stubs + toctree wiring.
 7. `mt db inv migrate-from-kv` importer + a test fixture built from a small
-   DistKV inventory snapshot.
+   DistKV inventory snapshot; emit the “expanded interfaces” review
+   report.
 8. Port `host_find` / `connected_hosts` / `host_template` (follow-up, out
    of scope here).
 9. Deprecate, then later remove, `moat/kv/inv` (follow-up).

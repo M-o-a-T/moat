@@ -365,3 +365,297 @@ def test_schedule_end(engine):
         sess.add(sch)
         sess.flush()
         assert sch.end == datetime(2026, 1, 1, 6, 15, tzinfo=UTC)
+
+
+def test_daytime_apply(engine):
+    """apply() links a day-time to its day by name."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        sess.add(rain.Day(name="weekend"))
+        sess.flush()
+        dt = rain.DayTime(descr="sat")
+        sess.add(dt)
+        dt.apply(day="weekend")
+        sess.flush()
+        assert dt.day.name == "weekend"
+        with pytest.raises(ValueError, match="day"):
+            rain.DayTime(descr="x").apply()
+
+
+def test_envitem_apply(engine):
+    """apply() resolves the env group within the site."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")  # provides EnvGroup "std"
+        ei = rain.EnvItem()
+        sess.add(ei)
+        ei.apply(site="home", group="std", temp=12.0)
+        sess.flush()
+        assert ei.group.name == "std"
+        assert ei.temp == 12.0
+        with pytest.raises(ValueError, match="group"):
+            rain.EnvItem().apply(site="home")
+        with pytest.raises(ValueError, match="site"):
+            rain.EnvItem().apply()
+
+
+def test_dayrange_apply_m2m(engine):
+    """apply() links/unlinks days by name with a '-' prefix."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        sess.add_all([rain.Day(name="mon"), rain.Day(name="tue")])
+        sess.flush()
+        dr = rain.DayRange(name="weekdays")
+        sess.add(dr)
+        dr.apply(days=("mon", "tue"))
+        sess.flush()
+        assert {d.name for d in dr.days} == {"mon", "tue"}
+        dr.apply(days=("-mon",))
+        sess.flush()
+        assert {d.name for d in dr.days} == {"tue"}
+
+
+def _valve(sess, name):
+    v = rain.Valve(name=name)
+    sess.add(v)
+    v.apply(**_valve_kwargs())
+    sess.flush()
+    return v
+
+
+def test_group_apply_m2m(engine):
+    """apply() adds/removes valve objects and day-range names."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        v1 = _valve(sess, "V1")
+        v2 = _valve(sess, "V2")
+        sess.add_all([rain.DayRange(name="dr1"), rain.DayRange(name="dr2")])
+        sess.flush()
+        g = rain.Group(name="G")
+        sess.add(g)
+        g.apply(site="home", valves=(v1, v2), days=("dr1",), xdays=("dr2",))
+        sess.flush()
+        assert {vv.name for vv in g.valves} == {"V1", "V2"}
+        assert {d.name for d in g.days} == {"dr1"}
+        assert {d.name for d in g.xdays} == {"dr2"}
+        g.apply(rm_valves=(v1,), days=("-dr1",))
+        sess.flush()
+        assert {vv.name for vv in g.valves} == {"V2"}
+        assert g.days == set()
+        g.apply(xdays=("-dr2",))
+        sess.flush()
+        assert g.xdays == set()
+        with pytest.raises(ValueError, match="site"):
+            rain.Group(name="x").apply()
+
+
+def test_groupoverride_apply(engine):
+    """apply() attaches an override to its group within the site."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        g = rain.Group(name="G")
+        sess.add(g)
+        g.apply(site="home")
+        sess.flush()
+        go = rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600)
+        sess.add(go)
+        go.apply(site="home", group="G", allowed=True)
+        sess.flush()
+        assert go.group.name == "G"
+        assert go.allowed is True
+        with pytest.raises(ValueError, match="group"):
+            rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600).apply(
+                site="home"
+            )
+
+
+def test_groupadjust_apply(engine):
+    """apply() attaches an adjuster to its group within the site."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        g = rain.Group(name="G")
+        sess.add(g)
+        g.apply(site="home")
+        sess.flush()
+        ga = rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.2)
+        sess.add(ga)
+        ga.apply(site="home", group="G")
+        sess.flush()
+        assert ga.group.name == "G"
+        assert ga.factor == 1.2
+
+
+def test_valveoverride_apply(engine):
+    """apply() takes the valve as an object (compound key)."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        v = _valve(sess, "V1")
+        vo = rain.ValveOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=600)
+        sess.add(vo)
+        vo.apply(valve=v, running=True)
+        sess.flush()
+        assert vo.valve.name == "V1"
+        assert vo.running is True
+        with pytest.raises(ValueError, match="valve"):
+            rain.ValveOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=600).apply()
+
+
+def test_schedule_apply(engine):
+    """apply() takes the valve as an object and exposes end."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        v = _valve(sess, "V1")
+        sch = rain.Schedule(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=900)
+        sess.add(sch)
+        sch.apply(valve=v)
+        sess.flush()
+        assert sch.valve.name == "V1"
+        assert sch.end == datetime(2026, 1, 1, 6, 15, tzinfo=UTC)
+        with pytest.raises(ValueError, match="valve"):
+            rain.Schedule(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=900).apply()
+
+
+def test_level_apply(engine):
+    """apply() takes the valve as an object."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        v = _valve(sess, "V1")
+        lv = rain.Level(time=datetime(2026, 1, 1, tzinfo=UTC), level=5.0)
+        sess.add(lv)
+        lv.apply(valve=v, flow=0.3)
+        sess.flush()
+        assert lv.valve.name == "V1"
+        assert lv.flow == 0.3
+        with pytest.raises(ValueError, match="valve"):
+            rain.Level(time=datetime(2026, 1, 1, tzinfo=UTC), level=5.0).apply()
+
+
+def test_log_apply(engine):
+    """apply() attaches site/controller by name and valve by object; both clear."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        v = _valve(sess, "V1")
+        lg = rain.Log(logger="sched", text="started")
+        sess.add(lg)
+        lg.apply(site="home", controller="C1", valve=v)
+        sess.flush()
+        assert lg.site.name == "home"
+        assert lg.controller.name == "C1"
+        assert lg.valve.name == "V1"
+        lg.apply(controller="-", valve=None)  # clear both optional parents
+        assert lg.controller is None
+        assert lg.valve is None
+        lg.apply(text="updated")  # omit controller and valve entirely
+        assert lg.text == "updated"
+        with pytest.raises(ValueError, match="site"):
+            rain.Log(logger="x", text="y").apply()
+
+
+def test_child_apply_errors(engine):
+    """Required-parent None-clears and new-needs-parent raises for children."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        g = rain.Group(name="G")
+        sess.add(g)
+        g.apply(site="home")
+        sess.flush()
+
+        with pytest.raises(ValueError, match="day"):
+            rain.DayTime(descr="x").apply(day=None)
+        with pytest.raises(ValueError, match="site"):
+            rain.EnvItem().apply(site=None)
+        with pytest.raises(ValueError, match="group"):
+            rain.EnvItem().apply(site="home", group=None)
+        with pytest.raises(ValueError, match="site"):
+            rain.Group(name="x2").apply(site=None)
+        with pytest.raises(ValueError, match="site"):
+            rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600).apply(
+                site=None
+            )
+        with pytest.raises(ValueError, match="site"):
+            rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600).apply()
+        with pytest.raises(ValueError, match="group"):
+            rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600).apply(
+                site="home", group=None
+            )
+        with pytest.raises(ValueError, match="site"):
+            rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.0).apply(site=None)
+        with pytest.raises(ValueError, match="site"):
+            rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.0).apply()
+        with pytest.raises(ValueError, match="group"):
+            rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.0).apply(
+                site="home", group=None
+            )
+        with pytest.raises(ValueError, match="group"):
+            rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.0).apply(site="home")
+        with pytest.raises(ValueError, match="valve"):
+            rain.ValveOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=600).apply(
+                valve=None
+            )
+        with pytest.raises(ValueError, match="valve"):
+            rain.Schedule(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=900).apply(
+                valve=None
+            )
+        with pytest.raises(ValueError, match="valve"):
+            rain.Level(time=datetime(2026, 1, 1, tzinfo=UTC), level=1.0).apply(valve=None)
+        with pytest.raises(ValueError, match="site"):
+            rain.Log(logger="x", text="y").apply(site=None)
+
+
+def test_child_apply_update_derives_scope(engine):
+    """Updating without re-stating site/parent derives it from the existing link."""
+    with Session(engine) as sess, ctx_as(session, Mgr(sess)):
+        _seed_site(sess, "home")
+        g = rain.Group(name="G")
+        sess.add(g)
+        g.apply(site="home")
+        v = _valve(sess, "V1")
+        sess.flush()
+
+        ei = rain.EnvItem()
+        sess.add(ei)
+        ei.apply(site="home", group="std")
+        sess.flush()
+        ei.apply(temp=5.0)  # no site → derive from self.group
+        assert ei.temp == 5.0
+
+        go = rain.GroupOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=3600)
+        sess.add(go)
+        go.apply(site="home", group="G")
+        sess.flush()
+        go.apply(allowed=True)
+        assert go.allowed is True
+
+        ga = rain.GroupAdjust(start=datetime(2026, 1, 1, tzinfo=UTC), factor=1.0)
+        sess.add(ga)
+        ga.apply(site="home", group="G")
+        sess.flush()
+        ga.apply(factor=1.5)
+        assert ga.factor == 1.5
+
+        vo = rain.ValveOverride(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=600)
+        sess.add(vo)
+        vo.apply(valve=v)
+        sess.flush()
+        vo.apply(running=True)
+        assert vo.running is True
+
+        sch = rain.Schedule(start=datetime(2026, 1, 1, 6, tzinfo=UTC), duration=900)
+        sess.add(sch)
+        sch.apply(valve=v)
+        sess.flush()
+        sch.apply(seen=True)
+        assert sch.seen is True
+
+        lv = rain.Level(time=datetime(2026, 1, 1, tzinfo=UTC), level=1.0)
+        sess.add(lv)
+        lv.apply(valve=v)
+        sess.flush()
+        lv.apply(flow=0.2)
+        assert lv.flow == 0.2
+
+        sess.add(rain.Day(name="d"))
+        sess.flush()
+        dt = rain.DayTime(descr="x")
+        sess.add(dt)
+        dt.apply(day="d")
+        sess.flush()
+        dt.apply(descr="y")
+        assert dt.descr == "y"

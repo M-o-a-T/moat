@@ -31,7 +31,7 @@ __all__ = ["Session", "alembic_cfg", "database", "load", "session"]
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     connection_record  # noqa:B018
-    if "sqlite" not in dbapi_connection.__class__.__name__:
+    if "sqlite" not in dbapi_connection.__class__.__module__:
         return
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")

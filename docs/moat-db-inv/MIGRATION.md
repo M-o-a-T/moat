@@ -90,12 +90,15 @@ plugged into) from **L3** (the IP addresses carried on that VLAN):
   `addr = network.addr + (seqnum << network.shift)`. One such address row
   is produced per routable network in the VLAN, all from the single shared
   `seqnum`.
-* **Link-local (`fe80::/10`): MAC (EUI-64).** An interface’s link-local
-  address is derived from its MAC by the EUI-64 procedure (flip the U/L bit
-  of the first MAC octet, insert `ff:fe`, prepend `fe80::`), i.e.
-  `netaddr.EUI.ipv6_link_local()`. These are generated for every interface
-  that has a MAC and stored as `address` rows (`prefix = 64`); no `fe80::`
-  `network` row is required (link-local is implicit per VLAN).
+* **Link-local (`fe80::/10`): MAC (EUI-64), computed, not stored.** An
+  interface’s link-local address is derived from its MAC by the EUI-64
+  procedure (flip the U/L bit of the first MAC octet, insert `ff:fe`,
+  prepend `fe80::`), i.e. `netaddr.EUI.ipv6_link_local()`. Because the MAC
+  is already unique per interface, this address is fully determined by the
+  interface and is **never stored** as an `address` row — it is exposed as a
+  computed property of the interface. The `address` table actively
+  **rejects** 48-bit-MAC-derived `fe80::` inserts (see the `address`
+  validator) so no redundant/duplicate row can be created.
 * **Manual / anycast:** any other `address` row, not matching a derivation,
   stored directly. This covers routed/anycast addresses that sit on an
   interface but belong to a network outside the interface’s VLAN.
@@ -274,11 +277,13 @@ A network lives on exactly one VLAN; a VLAN carries zero or more networks
 Composite attribute `subnet` → `IPv4Network`/`IPv6Network`.
 
 Notes:
-- `network.mac` (the old tri-state) is **gone**. Derivation mode is now:
-  `shift` not null → seqnum; link-local (`fe80::/10`) → MAC/EUI-64
-  (implicit, no network row needed); `shift` null and not link-local →
-  manual addresses only. If prefix-based link-local detection proves too
-  magical, add an explicit boolean `link_local` later.
+- `network.mac` (the old tri-state) is **gone**. A `network` row’s
+  derivation mode is now simply: `shift` not null → seqnum autogen
+  (`addr = net.addr + (seqnum << shift)`); `shift` null → no autogen
+  (manual addresses only). Link-local `fe80::` addresses are not a
+  network concern at all — they are computed from each interface’s MAC
+  (Q10) and never stored, so there is no link-local `network` row and no
+  prefix-based detection to worry about.
 - `network.master_id` and `network.wlan` are **dropped** (D3; WLAN creds
   live on the `vlan`).
 
@@ -337,6 +342,16 @@ network is recoverable by containment lookup (point a), and anycast routing
 needs addresses not pinned to a network/VLAN (point b). Strict anycast
 (the *same* IP on multiple interfaces) would require relaxing this
 constraint — flagged as a possible future need, not supported now.
+
+Validator (Q10): the `address` table **rejects** 48-bit-MAC-derived
+link-local addresses — any `fe80::/10` address whose interface identifier
+is an EUI-64 formed from a 48-bit MAC (detectable structurally: the
+`ff:fe` infix between the two MAC halves, with the U/L bit flipped). Such
+addresses are fully derivable from the interface’s already-unique `mac`
+(exposed as a computed property), so storing them is redundant and would
+duplicate/shadow the computed value. Manual non-EUI-64 `fe80::` addresses
+are still allowed. Implemented as a `before_insert`/`before_update`
+listener using the `ip.is_mac_link_local()` helper.
 
 Composite attribute `ip` → `IPv4Interface`/`IPv6Interface` (or a bare
 `IPv4Address`/`IPv6Address` when `prefix` is null).
@@ -447,10 +462,13 @@ Copy the established `moat.db` patterns exactly:
   "before_insert"/"before_update")` like `validate_thing_coords`, or are
   enforced by the constraints above.
 - **Address regeneration:** the interface writer regenerates derived
-  `address` rows whenever `mac` or `seqnum` or the VLAN’s networks change —
-  link-local from `mac`, one routable address per VLAN network with
-  `shift` not null from `seqnum` — and leaves manual/anycast `address` rows
-  untouched (recognised by not matching any derivation).
+  `address` rows whenever `seqnum` or the VLAN’s networks change — one
+  routable address per VLAN network with `shift` not null from `seqnum` —
+  and leaves manual/anycast `address` rows untouched (recognised by not
+  matching any derivation). Link-local addresses are **not** regenerated
+  or stored: the interface exposes `link_local` as a computed property
+  (`mac.ipv6_link_local()` when `mac` is set). The `address` validator
+  (above) prevents a MAC-derived `fe80::` row from ever being inserted.
 
 ## CLI surface (`mt db inv …`)
 
@@ -499,7 +517,11 @@ decision 1’s wording.
   `net.enclosing(IP)` then `net.by_num(offset)`. Now: query `address` by
   `addr` (exact equality on the indexed `BINARY(16)`), join to `interface`
   → `host`. Containment (`addr` within a `network.subnet`) is only needed
-  when you specifically want the network, not the host.
+  when you specifically want the network, not the host. **Link-local
+  `fe80::` addresses are not in the `address` table** (Q10); reverse lookup
+  by a link-local IP instead computes each interface’s
+  `mac.ipv6_link_local()` and matches (scope-ID disambiguation is the
+  caller’s job).
 - **IPv4/IPv6 co-existence is automatic (D3).** Putting two networks on one
   VLAN is all it takes; an interface gets a derived address on each. No
   master/slave code.
@@ -554,7 +576,8 @@ rows in one DB transaction.
 
 ### Address computation
 
-For each interface with a MAC `M` and/or `seqnum` `S` on VLAN `V`:
+For each interface with `seqnum` `S` on VLAN `V` (the MAC `M` is
+irrelevant to *stored* addresses — see Q10):
 
 - **Routable networks** (each `network` in `V` with `shift` not null):
   `addr = network.addr + (S << network.shift)`, `prefix = network.prefix`.
@@ -562,17 +585,18 @@ For each interface with a MAC `M` and/or `seqnum` `S` on VLAN `V`:
   `Network.addr(num)` for the network that was `Host.net`, and
   additionally materialises the address on every other routable network in
   the VLAN (D3 — co-existence is now automatic).
-- **Link-local** (when `M` is not null): `addr =
-  M.ipv6_link_local()` (EUI-64, `fe80::…/64`), `prefix = 64`. One
-  `address` row. No `fe80::` `network` row is needed.
+- **Link-local:** **not migrated.** The link-local `fe80::` address is
+  computed from the interface’s MAC at runtime (Q10); no `address` row is
+  created. (Old DistKV data never stored one anyway.)
 - **MAC-mode caveat:** DistKV’s `addr()` was not callable in MAC mode
   (`num << -1` raises), so DistKV never stored a MAC-mode address — it was
   derived ad hoc. The new model replaces “MAC mode” with the explicit
-  link-local EUI-64 rule above, so MAC-mode networks in old data map to
-  ordinary routable networks (seqnum) where they had a `shift`, and their
-  link-local counterpart is generated from the MAC. If an old “MAC-mode”
-  network genuinely had no `shift` and no seqnum semantics, its addresses
-  are migrated as manual `address` rows; flag any such case for review.
+  link-local EUI-64 rule (runtime-computed, not stored) for the
+  link-local part, and ordinary seqnum derivation for the routable part.
+  MAC-mode networks in old data that had a `shift` map to ordinary routable
+  networks; if an old “MAC-mode” network genuinely had no `shift` and no
+  seqnum semantics, its addresses are migrated as manual `address` rows;
+  flag any such case for review.
 
 Store every computed address via the `ip.py` converter so IPv4 is
 normalised to `::ffff:a.b.c.d` (packed into `BINARY(16)`).
@@ -626,32 +650,39 @@ interfaces so the operator can prune unintended addresses.
    collisions/length bite).
 5. ~~**`addr` backing type.**~~ **Resolved — accepted:** `BINARY(16)`
    (full IPv6), packed big-endian.
-6. **Removal of `moat/kv/inv`.** Schedule the follow-up that deletes the
-   DistKV inventory package after the migration has run everywhere.
-7. **Arbitrary port `attrs` (D6, tentative).** At migrator-writing time,
-   scan a real DistKV tree for `attrs` in use beyond `vlan`; add a `JSON`
-   column if any matter.
-8. **`seqnum` scope.** Confirmed as VLAN-wide (one `seqnum` per interface,
-   shared across the VLAN’s networks, enforcing `unique(network, seqnum)`
-   via `UNIQUE(vlan_id, seqnum)`). If per-network `seqnum` independence is
-   ever needed, switch to an `interface_network` junction with
-   `unique(network_id, seqnum)` — out of scope now.
-9. **Strict anycast.** `UNIQUE(addr)` forbids the same IP on multiple
-   interfaces. If true anycast is needed later, relax this (e.g. a flag) —
-   not supported now.
-10. **Link-local detection.** Link-local is currently recognised by the
-    `fe80::/10` prefix (implicit). If that is too magical, add an explicit
-    `network.link_local` boolean.
+6. ~~**Removal of `moat/kv/inv`.**~~ **Resolved — scheduled:** filed as a
+   separate issue, blocked by this implementation issue (removal proceeds
+   once the migration has run everywhere).
+7. **Arbitrary port `attrs` (D6, tentative).** Deferred until the
+   migrator is written: scan a real DistKV tree for `attrs` in use beyond
+   `vlan`; add a `JSON` column if any matter.
+8. ~~**`seqnum` scope.**~~ **Resolved — OK:** VLAN-wide (one `seqnum` per
+   interface, shared across the VLAN’s networks, enforcing
+   `unique(network, seqnum)` via `UNIQUE(vlan_id, seqnum)`). If
+   per-network `seqnum` independence is ever needed, switch to an
+   `interface_network` junction with `unique(network_id, seqnum)` — out
+   of scope now.
+9. ~~**Strict anycast.**~~ **Resolved — OK:** `UNIQUE(addr)` forbids the
+   same IP on multiple interfaces. If true anycast is needed later, relax
+   this (e.g. a flag) — not supported now.
+10. ~~**Link-local storage.**~~ **Resolved — not stored:** MAC-derived
+    `fe80::` link-local addresses are computed from the interface’s
+    already-unique `mac` at runtime (exposed as a computed property), never
+    stored as `address` rows. The `address` table rejects 48-bit-MAC-
+    derived `fe80::` inserts; manual non-EUI-64 `fe80::` addresses are
+    still allowed.
 
 ## Task breakdown
 
 1. `moat/db/inv/ip.py` — address composite type + converters (`BINARY(16)`
    big-endian pack/unpack; v4-mapping to/from `::ffff:a.b.c.d`; nullable
-   prefix → bare address; EUI-64 link-local helper; v4/v6 round-trip unit
-   tests).
+   prefix → bare address; EUI-64 link-local helper; `is_mac_link_local()`
+   detector for the address-table validator; v4/v6 round-trip unit tests).
 2. `moat/db/inv/model.py` + `model_.py` — the eight models (incl.
-   `Address`), relationships, `apply()`/`dump()`, validators, and the
-   address-regeneration hook on the interface writer.
+   `Address`), relationships, `apply()`/`dump()`, validators (including the
+   `address` reject-MAC-derived-link-local validator and the
+   address-regeneration hook on the interface writer), and the interface’s
+   computed `link_local` property.
 3. Register in `moat/db/_cfg.yaml`; add to `pyproject.toml` ty includes.
 4. `moat/db/inv/_main.py` — CLI groups (`vlan`, `net`, `host`, `iface`,
    `iface addr`, `wire`, `cable`, `group`).

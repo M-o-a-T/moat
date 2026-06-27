@@ -10,7 +10,10 @@ from __future__ import annotations
 import pytest
 
 import asyncclick as click
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
+from moat.db.rain.model import Site
 from moat.src.test import raises as _raises
 from moat.src.test import run
 
@@ -1736,3 +1739,26 @@ async def test_dummy_site_dash(rain):
     await rain("db", "rain", "home", "add")
     r = await rain("db", "rain", "-")
     assert r.stdout == "home\n"
+
+
+async def test_site_rate_units(tmp_path):
+    """``--rate`` is mm/day on the CLI; the stored column is mm/second."""
+    url = f"sqlite:///{tmp_path}/ru.db"
+    await run("-s", "moat.db.url", url, "db", "init")
+
+    # default evaporation is 10 mm/day
+    r = await run("-s", "moat.db.url", url, "db", "rain", "home", "add")
+    assert "rate: 10.0" in r.stdout
+
+    # set to 20 mm/day; the CLI echoes mm/day
+    r = await run("-s", "moat.db.url", url, "db", "rain", "home", "set", "--rate", "20")
+    assert "rate: 20.0" in r.stdout
+
+    # the stored column is mm/second
+    eng = create_engine(url)
+    try:
+        with Session(eng) as sess:
+            site = sess.scalars(select(Site).where(Site.name == "home")).one()
+            assert site.rate == 20 / (24 * 3600)
+    finally:
+        eng.dispose()

@@ -25,12 +25,16 @@ def engine(tmp_path):
 
 
 def test_site_defaults_and_timedelta(engine):
-    """Site fills in its defaults and exposes ``rain_delay`` as a timedelta."""
+    """Site fills in its defaults and exposes ``rain_delay`` as a timedelta.
+
+    ``rate`` is stored in mm/second; the default of 10 mm/day therefore
+    appears as ``10 / 86400``.
+    """
     with Session(engine) as sess:
         site = rain.Site(name="home")
         sess.add(site)
         sess.flush()
-        assert site.rate == 10.0
+        assert site.rate == 10 / (24 * 3600)
         assert site.rain_delay == 300
         assert site.rain_delay_td == timedelta(seconds=300)
         assert site.comment is None

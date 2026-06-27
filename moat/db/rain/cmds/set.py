@@ -7,7 +7,7 @@ import asyncclick as click
 from moat.util import yprint
 from moat.db.rain.model import Site
 
-from ._util import get_one, site_opts
+from ._util import get_one, scale_site_rate, site_dump, site_opts
 
 
 @click.command()
@@ -16,6 +16,7 @@ from ._util import get_one, site_opts
 async def cli(obj, **kw):
     """Modify an irrigation site."""
     site = get_one(obj, Site, "site", name=obj.site_name)
+    scale_site_rate(kw)
     site.apply(**kw)
     obj.session.flush()
-    yprint(site.dump(), stream=obj.stdout)
+    yprint(site_dump(site), stream=obj.stdout)

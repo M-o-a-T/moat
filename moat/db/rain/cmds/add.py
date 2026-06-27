@@ -7,7 +7,7 @@ import asyncclick as click
 from moat.util import yprint
 from moat.db.rain.model import Site
 
-from ._util import absent, site_opts
+from ._util import absent, scale_site_rate, site_dump, site_opts
 
 
 @click.command()
@@ -19,6 +19,7 @@ async def cli(obj, **kw):
     absent(obj, Site, "site", name=name)
     site = Site(name=name)
     obj.session.add(site)
+    scale_site_rate(kw)
     site.apply(**kw)
     obj.session.flush()
-    yprint(site.dump(), stream=obj.stdout)
+    yprint(site_dump(site), stream=obj.stdout)

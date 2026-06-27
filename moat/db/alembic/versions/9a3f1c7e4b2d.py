@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("comment", sa.String(length=200), nullable=True),
-        sa.Column("rate", sa.Float(), nullable=False, server_default="10"),
+        sa.Column("rate", sa.Float(), nullable=False, server_default=sa.text("10.0 / 86400")),
         sa.Column("rain_delay", sa.Integer(), nullable=False, server_default="300"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),

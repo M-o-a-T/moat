@@ -27,6 +27,23 @@ if TYPE_CHECKING:
 
 __all__ = ["CFG", "CfgStore", "current_cfg", "monitor"]
 
+
+def _has_notgiven(cfg: Any) -> bool:
+    """Recursively check whether *cfg* contains any ``NotGiven`` values.
+
+    Used by :meth:`CfgStore.redo` to detect when the in-place merge has
+    introduced ``NotGiven`` placeholders that need a follow-up pass to
+    delete (``merge`` only removes ``NotGiven`` keys that already exist).
+    """
+    if cfg is NotGiven:
+        return True
+    if isinstance(cfg, Mapping):
+        return any(_has_notgiven(v) for v in cfg.values())
+    if isinstance(cfg, (list, tuple)):
+        return any(_has_notgiven(v) for v in cfg)
+    return False
+
+
 current_cfg: ContextVar[CfgStore | None] = ContextVar("current_cfg", default=None)
 
 
@@ -385,25 +402,38 @@ class CfgStore:
             name = to_process.pop()
             self.with_(name)
 
-        lcfg = combine_dict(
-            self.preload, self.env, *(x[1] for x in self.cfg), cls=attrdict, keep=True
-        )
-        try:
-            load_all = lcfg.env.load_all
-        except AttributeError:
-            load_all = self.load_all
-        res = combine_dict(
-            lcfg,
-            self.get_config(load_all),
-            self.static,
-            cls=attrdict,
-            keep=True,
-        )
-        for p, v in self.args:
-            res.set_(p, v, apply_notgiven=False)
-        res = self.deref(res, self.here)
-        merge(self._result, res)
+        # The in-place merge aliases absent subtrees from the freshly-built
+        # ``res`` into ``_result``; if ``res`` carries ``NotGiven`` markers
+        # (e.g. from a ``mod(.., NotGiven)`` deletion of a new key) those are
+        # copied in on the first pass and only removed on the next, since
+        # ``merge`` deletes ``NotGiven`` keys solely when they already exist.
+        # Loop until no ``NotGiven`` placeholders remain (usually one pass;
+        # two when deletions of previously-absent keys are pending).
+        for _ in range(8):
+            lcfg = combine_dict(
+                self.preload, self.env, *(x[1] for x in self.cfg), cls=attrdict, keep=True
+            )
+            try:
+                load_all = lcfg.env.load_all
+            except AttributeError:
+                load_all = self.load_all
+            res = combine_dict(
+                lcfg,
+                self.get_config(load_all),
+                self.static,
+                cls=attrdict,
+                keep=True,
+            )
+            for p, v in self.args:
+                res.set_(p, v, apply_notgiven=False)
+            res = self.deref(res, self.here)
+            merge(self._result, res)
+            if not _has_notgiven(self._result):
+                break
+        else:  # pragma: no cover  # config converges within two passes
+            pass
         self.notify()
+        self._updated = self.updated
 
     @classmethod
     def with_(cls, path: str | Path) -> None:
@@ -432,6 +462,7 @@ class CfgStore:
                     merge(cfg, load_yaml(fn), replace=True)
 
         cc = cls.static
+        changed = False
         for n in range(len(parts)):
             cc = cc.setdefault(parts[n], attrdict())
             if hasattr(cc, "cfg_load_"):
@@ -442,9 +473,11 @@ class CfgStore:
             if rt is not None:
                 merge(cls.static, rt, replace=True)
             cls.updated += 1
+            changed = True
 
-        for cfg in cls.known:
-            cfg.redo()
+        if changed:
+            for cfg in cls.known:
+                cfg.redo()
 
     def __getattr__(self, key: str) -> Any:
         if key.startswith("_"):

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 import moat.db.util  # noqa: F401  — attaches the sqlite ``foreign_keys=ON`` pragma listener
 from moat.db.rain import model as rain
 from moat.db.schema import Base
+from moat.lib.path import Path
 
 
 @pytest.fixture
@@ -72,13 +73,14 @@ def test_sensor_kinds_and_unique(engine):
     """Sensors of differing kinds coexist; ``(site, kind, name)`` is unique."""
     with Session(engine) as sess:
         site = rain.Site(name="home")
-        m1 = rain.Sensor(kind="rain", name="r1", var="home.rain", site=site)
-        m2 = rain.Sensor(kind="temp", name="t1", var="home.temp", site=site)
+        m1 = rain.Sensor(kind="rain", name="r1", state=Path.from_str("home.rain"), site=site)
+        m2 = rain.Sensor(kind="temp", name="t1", state=Path.from_str("home.temp"), site=site)
         sess.add_all([m1, m2])
         sess.flush()
         assert site.sensors == {m1, m2}
         assert m1.weight == 10
-        sess.add(rain.Sensor(kind="rain", name="r1", var="dup", site=site))
+        assert m1.state == Path.from_str("home.rain")
+        sess.add(rain.Sensor(kind="rain", name="r1", state=Path.from_str("dup"), site=site))
         with pytest.raises(IntegrityError):
             sess.flush()
         sess.rollback()
@@ -119,7 +121,7 @@ def test_cascade_delete_site_removes_children(engine):
     with Session(engine) as sess:
         site = rain.Site(name="home")
         eg = rain.EnvGroup(name="std", site=site)
-        sensor = rain.Sensor(kind="rain", name="r1", var="home.rain", site=site)
+        sensor = rain.Sensor(kind="rain", name="r1", state=Path.from_str("home.rain"), site=site)
         feed = rain.Feed(name="main", site=site)
         sess.add_all([eg, sensor, feed])
         sess.flush()

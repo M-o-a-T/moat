@@ -12,7 +12,7 @@ import asyncclick as click
 from sqlalchemy import select
 
 from moat.util import NotGiven
-from moat.db.rain.model import Site
+from moat.db.rain.model import Controller, Site, Valve
 from moat.lib.run import option_ng
 
 from typing import TYPE_CHECKING
@@ -101,6 +101,24 @@ def list_global(obj, model):
     with obj.session.execute(select(model).order_by(model.name)) as rs:
         for (row,) in rs:
             yield row
+
+
+def valve_spec(obj, spec: str):
+    """Resolve a ``controller:name`` valve spec to a :class:`Valve` row.
+
+    Args:
+        obj: The click object carrying the session and site name.
+        spec: A ``controller:name`` string identifying the valve.
+
+    Raises:
+        click.UsageError: if the spec is malformed or the valve is absent.
+    """
+    try:
+        ctrl_name, vname = spec.split(":", 1)
+    except ValueError:
+        raise click.UsageError(f"Bad valve spec {spec!r}; use 'controller:name'.") from None
+    ctrl = get_one(obj, Controller, "controller", site=site_of(obj), name=ctrl_name)
+    return get_one(obj, Valve, "valve", controller=ctrl, name=vname)
 
 
 def is_given(v) -> bool:

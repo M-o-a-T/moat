@@ -775,3 +775,158 @@ async def test_valve_bad_parent_names(rain):
     msg = _msg(err)
     assert "controller" in msg
     assert "doesn't exist" in msg
+
+
+async def _seed_group_world(rain):
+    """Create a site with two controllers, two valves, and two day ranges."""
+    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
+    await rain("db", "rain", "home", "controller", "-n", "C2", "add", "-l", "field")
+    await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
+    await rain("db", "rain", "home", "env", "-n", "std", "add")
+    await rain(
+        "db",
+        "rain",
+        "home",
+        "valve",
+        "-c",
+        "C1",
+        "-n",
+        "V1",
+        "add",
+        "-F",
+        "F1",
+        "-e",
+        "std",
+        "-l",
+        "front",
+        "--flow",
+        "2",
+        "--area",
+        "10",
+    )
+    await rain(
+        "db",
+        "rain",
+        "home",
+        "valve",
+        "-c",
+        "C2",
+        "-n",
+        "V2",
+        "add",
+        "-F",
+        "F1",
+        "-e",
+        "std",
+        "-l",
+        "back",
+        "--flow",
+        "3",
+        "--area",
+        "5",
+    )
+    await rain("db", "rain", "home", "dayrange", "-n", "alldays", "add")
+    await rain("db", "rain", "home", "dayrange", "-n", "weekends", "add")
+
+
+async def test_group_lifecycle(rain):
+    """Group CRUD with valve and day-range M2M links."""
+    await _seed_group_world(rain)
+
+    r = await rain("db", "rain", "home", "group", "show")
+    assert r.stdout == ""  # none yet (hint goes to stderr)
+
+    r = await rain(
+        "db",
+        "rain",
+        "home",
+        "group",
+        "-n",
+        "G1",
+        "add",
+        "--valve",
+        "C1:V1",
+        "--valve",
+        "C2:V2",
+        "--day",
+        "alldays",
+        "--xday",
+        "weekends",
+        "--adj",
+        "1.2",
+        "-c",
+        "main",
+    )
+    assert "name: G1" in r.stdout
+    assert "adj: 1.2" in r.stdout
+    assert "C1:V1" in r.stdout
+    assert "C2:V2" in r.stdout
+    assert "alldays" in r.stdout
+    assert "weekends" in r.stdout
+
+    r = await rain("db", "rain", "home", "group", "show")
+    assert r.stdout == "G1\n"
+
+    r = await rain("db", "rain", "home", "group", "-n", "G1", "show")
+    assert "valves:" in r.stdout
+    assert "days:" in r.stdout
+    assert "xdays:" in r.stdout
+
+    # set: drop a valve, add a day, drop an xday, change adj
+    r = await rain(
+        "db",
+        "rain",
+        "home",
+        "group",
+        "-n",
+        "G1",
+        "set",
+        "--rm-valve",
+        "C2:V2",
+        "--day",
+        "weekends",
+        "--rm-xday",
+        "weekends",
+        "--adj",
+        "1.0",
+    )
+    assert "C1:V1" in r.stdout
+    assert "C2:V2" not in r.stdout
+    assert "adj: 1.0" in r.stdout
+    # days now has alldays + weekends; xdays empty
+    assert r.stdout.count("weekends") >= 1  # in days
+
+    # rename
+    r = await rain("db", "rain", "home", "group", "-n", "G1", "set", "-n", "GG1")
+    assert "name: GG1" in r.stdout
+    r = await rain("db", "rain", "home", "group", "show")
+    assert r.stdout == "GG1\n"
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "add")
+    assert "needs a name" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "-n", "GG1", "add")
+    assert "already exists" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "-n", "nope", "show")
+    assert "doesn't exist" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--valve", "bad-spec")
+    assert "bad valve spec" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--valve", "C1:nope")
+    assert "doesn't exist" in _msg(err)
+
+    with _raises(click.UsageError) as err:
+        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--day", "nope")
+    assert "doesn't exist" in _msg(err)
+
+    await rain("db", "rain", "home", "group", "-n", "GG1", "delete")
+    r = await rain("db", "rain", "home", "group", "show")
+    assert r.stdout == ""

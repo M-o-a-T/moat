@@ -1647,3 +1647,23 @@ async def test_site_rate_units(rain, db_url):
             assert site.rate == 20 / (24 * 3600)
     finally:
         eng.dispose()
+
+
+async def test_gen_cli_runs(rain, seed_valve):  # noqa:ARG001
+    """``moat db rain <site> gen`` runs and reports the valve count."""
+    r = await rain("db", "rain", "home", "gen", "--no-save")
+    assert "valves: 1" in r.stdout
+    assert "schedules: 0" in r.stdout  # V1 sits at level 0 < start_level → nothing to do
+
+
+async def test_gen_cli_verbose(rain, seed_valve):  # noqa:ARG001
+    """``--verbose`` wires the stderr narration sink (covered, output unchecked)."""
+    r = await rain("db", "rain", "home", "gen", "--verbose", "--no-save")
+    assert "valves: 1" in r.stdout
+
+
+async def test_recalc_cli_runs(rain, seed_valve):  # noqa:ARG001
+    """``moat db rain <site> recalc`` runs and reports the valve count."""
+    r = await rain("db", "rain", "home", "recalc", "--no-save")
+    assert "valves: 1" in r.stdout
+    assert "updated: 0" in r.stdout  # no level rows → nothing to recompute

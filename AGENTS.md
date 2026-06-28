@@ -25,7 +25,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 ## Project Structure & Modules
 
-- This is a monorepository. All code lives in `moat/`.
+- This is a monorepository with submodules. All code lives in `moat/`.
   - Code is CPython 13+ compatible
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
@@ -170,6 +170,11 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Do not introduce unrelated tooling or refactors unless specifically
   asked to do so.
 - Context compaction: You MUST re-read this document after compacting.
+- DO NOT use "grep -r" or similar commands on the whole repository.
+  Always use "git grep". Likewise, use "git ls-files | grep ...", not "find .".
+- If you need a command or tool that's not currently available: DO NOT
+  scan the system's directory tree. DO NOT try to install it. DO NOT
+  try to find a workaround. Instead, ask the user.
 
 # Issue Processing
 

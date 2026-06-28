@@ -362,10 +362,7 @@ class JobEntry:
                 code = link.code_at(self.code)
                 code_obj = await code
                 payload = self.data or {}
-                default = {}
-                if isinstance(code_obj._data, dict):  # noqa: SLF001
-                    default = code_obj._data.get("default", {}) or {}  # noqa: SLF001
-                kw = combine_dict(payload, default, deep=True)
+                kw = combine_dict(payload, deep=True)
                 self._q = create_queue(QLEN)
                 admin = CallAdmin(self, kw)
                 kw["_self"] = admin
@@ -1164,10 +1161,7 @@ async def debug_run(
         code = link.code_at(entry.code)
         code_obj = await code
         payload = entry.data or {}
-        default = {}
-        if isinstance(code_obj._data, dict):  # noqa: SLF001
-            default = code_obj._data.get("default", {}) or {}  # noqa: SLF001
-        kw = combine_dict(payload, default, deep=True)
+        kw = combine_dict(payload, deep=True)
         entry._q = create_queue(QLEN)  # noqa: SLF001
         admin = CallAdmin(entry, kw)
         kw["_self"] = admin

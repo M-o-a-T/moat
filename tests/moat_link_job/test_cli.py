@@ -163,7 +163,9 @@ async def test_debug_runs_job(cfg):
         # A snippet that just echoes its 'who' parameter.
         await c.d_set(
             CODE_EXEC_ROOT + P("test.greet"),
-            dict(code="return 'hi ' + who", vars=dict(who="world"), is_async=True),
+            dict(
+                code="return 'hi ' + who", vars=["who"], default=dict(who="world"), is_async=True
+            ),
         )
         await sf.run("link job at d1 set -c test.greet -t 0 -v who default")
         await c.i_sync()

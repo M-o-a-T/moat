@@ -39,7 +39,8 @@ async def test_code_at(cfg):
 assert runner.path[-1] == "async"
 return await link.d_get(P("test.base")) + inc
 """,
-                vars=dict(inc=0),
+                vars=["inc"],
+                default=dict(inc=0),
                 is_async=True,
             ),
         )
@@ -50,7 +51,8 @@ return await link.d_get(P("test.base")) + inc
 assert link is runner.link
 return left + right + len(kw)
 """,
-                vars=dict(left=0, right=0),
+                vars=["left", "right"],
+                default=dict(left=0, right=0),
             ),
         )
         await c.d_set(
@@ -60,7 +62,8 @@ return left + right + len(kw)
 import threading
 return threading.get_ident() != origin
 """,
-                vars=dict(origin=0),
+                vars=["origin"],
+                default=dict(origin=0),
                 is_async=False,
             ),
         )
@@ -74,7 +77,7 @@ return threading.get_ident() != origin
 @pytest.mark.anyio
 async def test_code_loads_once():
     "Code fetches and compiles once, then reuses the cached process."
-    link = _DummyCodeLink(dict(code="return base + inc", vars=dict(base=40)))
+    link = _DummyCodeLink(dict(code="return base + inc", vars=["base"], default=dict(base=40)))
     code = Code(link, CODE_EXEC_ROOT + P("test.cache"))
 
     assert await code(inc=1) == 41
@@ -85,17 +88,19 @@ async def test_code_loads_once():
 @pytest.mark.anyio
 async def test_code_update_reloads_without_refetch():
     "Code.update replaces data and recompiles from local state."
-    link = _DummyCodeLink(dict(code="return value", vars=dict(value=1)))
+    link = _DummyCodeLink(dict(code="return value", vars=["value"], default=dict(value=1)))
     code = Code(link, CODE_EXEC_ROOT + P("test.update"))
 
     assert await code() == 1
     assert link.calls == 1
 
-    code.update(dict(code="return value + 1", vars=dict(value=1)), compile=False)
+    code.update(
+        dict(code="return value + 1", vars=["value"], default=dict(value=1)), compile=False
+    )
     assert await code() == 2
     assert link.calls == 1
 
-    code.update(dict(code="return value + 2", vars=dict(value=1)), compile=True)
+    code.update(dict(code="return value + 2", vars=["value"], default=dict(value=1)), compile=True)
     assert await code() == 3
     assert link.calls == 1
 
@@ -110,7 +115,8 @@ if flag:
     return value + 1
 return value + 2
 """,
-            vars=dict(value=40),
+            vars=["value"],
+            default=dict(value=40),
         )
     )
     code = Code(link, CODE_EXEC_ROOT + P("test.cond"))
@@ -128,7 +134,8 @@ async def test_code_at_context_updates_and_cache(cfg):
         sf.client_() as c,
     ):
         await c.d_set(
-            CODE_EXEC_ROOT + P("test.ctx"), dict(code="return value", vars=dict(value=1))
+            CODE_EXEC_ROOT + P("test.ctx"),
+            dict(code="return value", vars=["value"], default=dict(value=1)),
         )
         await c.i_sync()
 
@@ -137,7 +144,8 @@ async def test_code_at_context_updates_and_cache(cfg):
             assert await code() == 1
 
             await c.d_set(
-                CODE_EXEC_ROOT + P("test.ctx"), dict(code="return value", vars=dict(value=2))
+                CODE_EXEC_ROOT + P("test.ctx"),
+                dict(code="return value", vars=["value"], default=dict(value=2)),
             )
             await c.i_sync()
 

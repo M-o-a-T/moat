@@ -21,6 +21,7 @@ dependencies = [
 	"simpleeval",
 	"moat-util ~= 0.63.0",
 	"sqlalchemy ~= 2.0",
+	"alembic",
 	"moat-lib-config ~= 0.2.0",
 	"moat-lib-run ~= 0.1.3",
 	]

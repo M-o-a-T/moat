@@ -86,6 +86,7 @@ extensions = [
     "sphinx_favicon",
     "sphinx_book_theme",
     "sphinx_tabs.tabs",
+    "sphinx_markdown_builder",
 ]
 myst_enable_extensions = [
     "attrs_block",

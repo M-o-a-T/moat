@@ -36,6 +36,11 @@ doc:
 	set -o pipefail -o errexit ; \
 	cd docs/; \
 	../.venv/bin/sphinx-build -b html . ../dist/docs
+spec:
+	set -o pipefail -o errexit ; \
+	cd docs/; \
+	../.venv/bin/sphinx-build -b markdown . ../build/specs
+
 docall:
 	set -o pipefail -o errexit ; \
 	cd docs/; \

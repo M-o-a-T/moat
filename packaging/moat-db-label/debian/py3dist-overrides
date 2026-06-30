@@ -1,0 +1,6 @@
+moat_db moat-db
+moat_db_box moat-db-box
+moat_db_thing moat-db-thing
+moat_lib_config python3-moat-lib-config
+moat_lib_run python3-moat-lib-run
+fpdf2 python3-fpdf2

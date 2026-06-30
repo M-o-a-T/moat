@@ -58,7 +58,7 @@ class Caller:
 
     The context manager yields an async iterator for incoming messages.
 
-    .. seealso: moat.lib.rpc.Msg
+    .. seealso:: moat.lib.rpc.Msg
 
     You should not instantiate this class directly.
     """

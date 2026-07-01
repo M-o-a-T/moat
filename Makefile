@@ -54,7 +54,7 @@ docwarn:
 setup:
 	python3 -mvenv .venv --upgrade-deps
 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
-	. .venv/bin/activate; uv pip install -U -e .
+	. .venv/bin/activate; uv pip install -U -e .[dev]
 
 release: doc
 	./mt src tag

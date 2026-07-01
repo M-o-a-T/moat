@@ -1,3 +1,33 @@
+moat-lib-codec (0.4.19-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:22 +0200
+
+moat-lib-codec (0.4.19-2) unstable; urgency=medium
+
+  * New release for 26.1.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 20:27:16 +0200
+
+moat-lib-codec (0.4.19-1) unstable; urgency=medium
+
+  * New release for 26.1.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 18:49:14 +0200
+
+moat-lib-codec (0.4.18-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:33:49 +0200
+
+moat-lib-codec (0.4.18-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:11:43 +0200
+
 moat-lib-codec (0.4.17-2) unstable; urgency=medium
 
   * New release for 26.1.1

@@ -7,8 +7,8 @@ from __future__ import annotations
 import anyio
 import logging
 
-from xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from xknx.telegram import GroupAddress
+from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from moat.lib.xknx.telegram import GroupAddress
 
 from moat.util import NotGiven
 from moat.kv.errors import ErrorRoot
@@ -66,7 +66,7 @@ class _KNXnode(_KNXbase):
 
     @property
     def tg(self):
-        return self.server.task_group
+        return self.server.tg
 
     async def setup(self, initial=False):  # noqa:ARG002
         await super().setup()

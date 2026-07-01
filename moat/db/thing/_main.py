@@ -23,7 +23,7 @@ from .model import Thing, ThingTyp
 @click.pass_context
 @click.option("--name", "-n", type=str, help="Name of the thing type")
 def cli(ctx, name):
-    """Things."""
+    """Manage a lot of things."""
     obj = ctx.obj
 
     sess = ctx.with_resource(database(obj.cfg.db))

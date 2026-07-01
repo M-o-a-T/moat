@@ -129,6 +129,7 @@ class Scaffold(CtxObj):
         self, cfg: attrdict | Literal[True], use_servers=True, tempdir: str | None = None
     ):
         cf = attrdict(
+            root=P("test.moat.link"),
             backend=attrdict(
                 driver="mqtt",
                 codec="std-cbor",
@@ -143,11 +144,17 @@ class Scaffold(CtxObj):
                 timeout=attrdict(startup=3),
             ),
         )
+        # `Link.__init__` reads the *global* ``CFG.moat.link.root``,
+        # so we always need to override the placeholder there too.
+        if CFG.result.moat.link.root == P("XXX.NotConfigured.YZ"):
+            CFG.mod(P("moat.link.root"), cf.root)
         if cfg is True:
             CFG.mod(P("moat.link"), cf)
             self.cfg = CFG.result.moat.link
         else:
             self.cfg = cfg.link
+            if self.cfg.get("root", None) == P("XXX.NotConfigured.YZ"):
+                self.cfg.root = cf.root
             merge(self.cfg, cf)
         self._tempdir = tempdir
 
@@ -277,6 +284,46 @@ class Scaffold(CtxObj):
 
         async with cli as li:
             yield li  # ty:ignore[invalid-yield] ## XXX TODO
+
+    async def run(self, *args, do_stdout: bool = True):
+        """Invoke a ``moat`` CLI command against this scaffold's broker.
+
+        Mirrors :py:meth:`moat.kv.mock.S.run`.  The scaffold's broker
+        port plus the few other settings the link client needs are
+        injected via top-level ``-s`` options so the freshly-loaded
+        configuration inside :func:`moat.src.test.run` sees them.
+
+        Args:
+            *args: command-line arguments (a single string is shell-split).
+            do_stdout: capture stdout into the returned result.
+        """
+        from moat.src.test import run as run_  # noqa:PLC0415
+
+        if len(args) == 1:
+            a0 = args[0]
+            if isinstance(a0, str):
+                args = tuple(a0.split(" "))
+            else:
+                args = tuple(a0)
+        bcfg = self.cfg.backend
+        pre: tuple[str, ...] = (
+            "-s",
+            "moat.link.backend.driver",
+            str(bcfg.get("driver", "mqtt")),
+            "-s",
+            "moat.link.backend.codec",
+            str(bcfg.get("codec", "std-cbor")),
+            "-s",
+            "moat.link.backend.host",
+            str(bcfg.get("host", "127.0.0.1")),
+            "-s",
+            "moat.link.backend.port",
+            f"={int(bcfg.port)}",
+            "-s",
+            "moat.link.root",
+            f".{self.cfg.root}",
+        )
+        return await run_(*pre, *args, do_stdout=do_stdout)
 
     @asynccontextmanager
     async def do_watch(

@@ -6,6 +6,6 @@ from __future__ import annotations
 
 from moat.lib.path import P
 
-CODE_EXEC_ROOT = P("code.exec")
+CODE_EXEC_ROOT = P("code")
 
 __all__ = ["CODE_EXEC_ROOT"]

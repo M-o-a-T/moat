@@ -1,5 +1,5 @@
 prefix: !P metrics
+backend: victoria
 server_default:
-  backend: akumuli
   host: localhost
   port: 8282

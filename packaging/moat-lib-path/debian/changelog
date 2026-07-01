@@ -1,3 +1,21 @@
+moat-lib-path (0.3.3-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 18:03:16 +0200
+
+moat-lib-path (0.3.3-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:40:58 +0200
+
+moat-lib-path (0.3.3-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:17:55 +0200
+
 moat-lib-path (0.3.2-2) unstable; urgency=medium
 
   * New release for 26.1.7

@@ -1,0 +1,17 @@
+moat-mcp (0.2.0-2) unstable; urgency=medium
+
+  * New release for 26.2.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 17 Jun 2026 15:29:06 +0200
+
+moat-mcp (0.2.0-1) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 18:07:21 +0200
+
+moat-mcp (0.0.1-1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 15 Jun 2026 12:00:00 +0000

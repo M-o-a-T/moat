@@ -15,22 +15,21 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from xknx.devices import Switch
-from xknx.dpt import DPTBinary
-from xknx.telegram import GroupAddress, Telegram
-from xknx.telegram.apci import GroupValueWrite
-
 from moat.kv.knx.mock import SimulatedBinaryDevice
+from moat.lib.xknx.devices import Switch
+from moat.lib.xknx.dpt import DPTBinary
+from moat.lib.xknx.telegram import GroupAddress, Telegram
+from moat.lib.xknx.telegram.apci import GroupValueWrite
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import xknx
+    from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
 
 
-async def test_monitor(xknx_device: xknx.XKNX, xknx_monitor: xknx.XKNX) -> None:
+async def test_monitor(xknx_device: XKNX, xknx_monitor: XKNX) -> None:
     """
     Verify that the bus monitor receives a telegram sent by the device instance.
 
@@ -67,8 +66,8 @@ async def test_monitor(xknx_device: xknx.XKNX, xknx_monitor: xknx.XKNX) -> None:
 
 
 async def test_switch_simulated_binary_device(
-    xknx_device: xknx.XKNX,
-    xknx_monitor: xknx.XKNX,
+    xknx_device: XKNX,
+    xknx_monitor: XKNX,
 ) -> None:
     """
     Verify correct interoperation between a Switch and a SimulatedBinaryDevice.
@@ -151,7 +150,7 @@ async def test_switch_simulated_binary_device(
     # processing too, so there may be one or two True entries here.
     # The final state seen must be True.
     last: bool | None = None
-    with anyio.move_on_after(0.5):
+    with anyio.move_on_after(0.2):
         async for val in sw_recv:
             last = val
     assert last is True
@@ -169,7 +168,7 @@ async def test_switch_simulated_binary_device(
     assert confirmation.payload.value == DPTBinary(0)
 
     last = None
-    with anyio.move_on_after(0.5):
+    with anyio.move_on_after(0.2):
         async for val in sw_recv:
             last = val
     assert last is False

@@ -92,18 +92,18 @@ if TYPE_CHECKING:
 
         async def spawn(
             self,
-            p: Callable[P, Awaitable[Any]],
-            *a: P.args,
-            _name: str | None = None,  # ty:ignore[invalid-paramspec]
-            **k: P.kwargs,
+            p: Callable[..., Awaitable[Any]],
+            *a: Any,
+            _name: str | None = None,
+            **k: Any,
         ) -> _anyio.CancelScope: ...
 
         def start_soon(
             self,
-            p: Callable[P, Awaitable[Any]],
-            *a: P.args,
-            _name: str | None = None,  # ty:ignore[invalid-paramspec]
-            **k: P.kwargs,
+            p: Callable[..., Awaitable[Any]],
+            *a: Any,
+            _name: str | None = None,
+            **k: Any,
         ) -> None: ...
 
         def cancel(self) -> None: ...
@@ -422,6 +422,7 @@ def TaskGroup() -> _TaskGroupProto:  # Returns augmented TaskGroup instance
                 self.cancel_scope.cancel()
 
         _tg = TaskGroup_
+    assert _tg is not None
     return _tg()
 
 

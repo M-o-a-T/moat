@@ -86,6 +86,7 @@ extensions = [
     "sphinx_favicon",
     "sphinx_book_theme",
     "sphinx_tabs.tabs",
+    "sphinx_markdown_builder",
 ]
 myst_enable_extensions = [
     "attrs_block",
@@ -127,7 +128,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints", "**/ARCHITECTURE.md"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -259,14 +260,25 @@ nitpick_ignore = [
     ("py:obj", "moat.link.backend.TData"),
     ("py:class", "moat.link.client.DataSender"),
     ("py:class", "moat.link.client.ErrSender"),
+    ("py:class", "moat.link.job.runner._Monitor"),
+    ("py:class", "moat.link.job.runner._Timer"),
+    ("py:class", "moat.link.job.runner._Watcher"),
+    ("py:class", "asyncactor.Actor"),
+    ("py:class", "asyncactor.actor.Actor"),
+    ("py:class", "asyncactor.nodelist.NodeList"),
+    ("py:mod", "asyncactor"),
+    ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
+    ("py:data", "types.EllipsisType"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
+    ("py:obj", "moat.link.client._NodeType"),
     ("py:obj", "moat.util.impl.YieldT"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
     ("py:class", "moat.lib.rpc.auth._base.AuthError"),
     ("py:class", "moat.lib.rpc.auth._base._SubAuthFactory"),
+    ("py:class", "moat.link.client._NodeType"),
     ("py:class", "coroutine"),
     ("py:class", "pathlib._local.PurePath"),
     ("py:class", "pathlib._local.PosixPath"),
@@ -296,6 +308,8 @@ nitpick_ignore = [
     ("py:class", "asyncakumuli.model.DS"),
     ("py:obj", "moat.util.ctx.T_Ctx"),
     ("py:obj", "moat.util.queue.T"),
+    ("py:class", "mcp.server.fastmcp.FastMCP"),
+    ("py:class", "mcp.server.fastmcp.server.FastMCP"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),

@@ -16,7 +16,7 @@ dependencies = [
 	"moat-db ~= 0.2.7",
 	"moat-db-box ~= 0.0.3",
 	"moat-db-label ~= 0.0.5",
-	"moat-lib-run ~= 0.1.3",
+	"moat-lib-run ~= 0.2.0",
 	]
 version = "0.0.3"
 keywords = [ "MoaT",]

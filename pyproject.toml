@@ -101,6 +101,7 @@ dev = [
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
+    "asyncwago",
     "cbor2",
     "gpiod",
     "httpx-ws",

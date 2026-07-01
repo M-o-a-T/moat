@@ -28,6 +28,41 @@ because the same function-code byte decodes to a *request* on a server and a
 itself (see `framer.py`), not a separate decoder object threaded in by the
 caller.
 
+## Inter-frame timeout (RTU) — the caller's job
+
+RTU has no length prefix and no delimiter; a frame ends only when the bus goes
+idle. Detecting that idle gap requires measuring elapsed time between byte
+arrivals — which is I/O, so it stays in `moat.modbus`, never in the sans-IO
+core. `moat.lib.modbus` exposes only the primitives the caller needs:
+
+- `FramerRTU.resetFrame()` — flush the framer's partial-frame accumulator.
+- `FramerRTU.handleFrame(data, unit_id, tid)` returning `(used, pdu|None)` with
+  `used == 0` meaning "need more bytes"; the caller decides when to give up.
+
+The **rule**: if the framer's accumulator is non-empty (a previous `handleFrame`
+left `used == 0` with bytes still buffered) and no further bytes arrive within
+an inter-frame window (~0.2 s, configurable), the caller calls `resetFrame()`
+and drops the stale partial frame — it is almost certainly noise from a torn
+frame or a collision. This is *not* a connection error: the serial link stays
+up; only the partial frame is discarded.
+
+Today this is handled inconsistently:
+- `SerialHost._reader` (client) wraps the next `receive()` in
+  `anyio.fail_after(self.timeout)` (10 s!) when bytes are buffered, and lets
+  the resulting `TimeoutError` fall into the outer `except` that tears down the
+  whole serial connection. Both wrong: the threshold is far too long, and the
+  reaction is too drastic.
+- `SerialModbusServer._reader` (server) has a crude wall-clock delta heuristic
+  (`if t2 - t > 0.2: resetFrame()`) that fires on the *next* receive rather
+  than on the idle gap itself, so it can mis-reset on a slow-but-valid stream
+  and never resets on a genuine stall followed by silence.
+
+Both readers are rewritten in Tasks 7/8 to use a uniform, correct pattern
+(buffer-non-empty ⇒ `fail_after(RTU_INTER_FRAME_TIMEOUT)` around the next
+`receive()`; on `TimeoutError` call `resetFrame()` and continue, keeping the
+connection). The constant `RTU_INTER_FRAME_TIMEOUT` (≈0.2 s) lives in
+`moat.modbus.client`/`server` (configurable per host), not in the library.
+
 ## Scope of pymodbus actually used (verified by grep)
 
 - **PDU message classes** (`pymodbus.pdu.bit_message`, `…register_message`):
@@ -349,9 +384,23 @@ separate `DecodePDU` object is threaded in. Use `unit_id` uniformly in
 argument). Reader loops keep their existing `(used, pdu)` structure.
 `ModbusError` unchanged.
 
+**RTU inter-frame timeout (fixes current bugs):** Rewrite
+`SerialHost._reader`'s recv loop so that, when the framer accumulator is
+non-empty (a prior `handleFrame` returned `used == 0` with bytes left), the
+next `stream.receive()` is wrapped in `anyio.fail_after(RTU_INTER_FRAME_TIMEOUT)`
+(~0.2 s). On `TimeoutError`: call `self.framer.resetFrame()`, drop the stale
+partial bytes, and **continue** the loop — do **not** tear down the serial
+connection (the current code wrongly routes this into the outer `except`
+cluster that closes the port). Move `RTU_INTER_FRAME_TIMEOUT` out of the old
+`self.timeout` (10 s) value; make it a per-host kwarg defaulting to ~0.2 s.
+When the accumulator is empty, `receive()` is uncapped (current behaviour
+preserved). The TCP reader is unaffected (MBAP framing is length-delimited).
+
 **Expected Result:**
 - `test_misc.py` client side green; `test_link.py` green.
 - No `pymodbus` imports remain in `client.py`.
+- A torn RTU frame followed by ≥0.2 s of silence then a valid frame decodes
+  correctly and leaves the connection up (new regression test, see Task 14).
 - `ty check` clean.
 
 **Dependency:** Tasks 5, 6.
@@ -374,9 +423,22 @@ standalone: four `DataBlock`s keyed `c/d/i/h`, exposes the `Context` protocol
 (`FramerTCP(True)` / `FramerRTU(True)`) since they decode requests, and use
 the new PDUs. `create_server` unchanged. Delete `MockAioModbusServer`.
 
+**RTU inter-frame timeout (replaces crude heuristic):** `SerialModbusServer`'s
+current recv loop uses a wall-clock delta (`if t2 - t > 0.2: resetFrame()`)
+checked on the *next* arrival, which mis-resets on a slow-but-valid stream and
+never fires on a genuine stall-then-silence. Replace it with the same uniform
+pattern as the client (Task 7): wrap the next `ser.receive()` in
+`anyio.fail_after(RTU_INTER_FRAME_TIMEOUT)` whenever the framer accumulator is
+non-empty; on `TimeoutError` call `self.framer.resetFrame()` and continue,
+keeping the serial link up. Empty accumulator ⇒ uncapped `receive()`. Share
+`RTU_INTER_FRAME_TIMEOUT` (default ~0.2 s, per-server kwarg) with the client
+side.
+
 **Expected Result:**
 - `test_misc.py` server side green; `test_dev_server.py` green.
 - No `pymodbus` imports remain in `server.py`.
+- A torn RTU request followed by ≥0.2 s of silence then a valid request is
+  served correctly (new regression test, see Task 14).
 - `ty check` clean.
 
 **Dependency:** Tasks 5, 6.
@@ -489,10 +551,15 @@ the new internal library.
 (write output to a temp file per repo guidelines), `ty check --output-format
 github`, `ruff check`/`ruff format` only as needed to fix reported errors (do
 not run formatters proactively). Confirm `git grep -n pymodbus moat/ packaging/
-pyproject.toml` is empty.
+pyproject.toml` is empty. Add **inter-frame timeout regression tests** (one
+client, one server) using `autojump_clock`: feed a torn/incomplete RTU frame,
+advance past `RTU_INTER_FRAME_TIMEOUT`, then feed a valid frame, and assert the
+valid frame decodes and the connection stays open (no reconnect occurred).
 
 **Expected Result:**
 - All modbus tests green; no regressions in `moat.dev.*` modbus-touching tests.
+- The two new inter-frame-timeout tests pass (both client and server recover
+  from a stalled partial frame without dropping the link).
 - `ty check` clean on newly added/modified files.
 - Zero `pymodbus` references in shipped code/packaging.
 
@@ -507,6 +574,14 @@ pyproject.toml` is empty.
   validated against real captured traffic (the `monitor`/relay CLI in
   `_main.py` is the tool for this). Mitigation: known-vector tests + a manual
   serial smoke test before closing the issue.
+- **Inter-frame timeout tuning**: 0.2 s is a safe default for typical baud
+  rates but may be too short for very slow links (≤1200 baud) or too long for
+  fast ones; it must stay configurable per host. Risk: a too-aggressive
+  default could reset valid frames on a congested/slow bus. Mitigation:
+  per-host `RTU_INTER_FRAME_TIMEOUT` kwarg + the Task 14 regression tests pin
+  the recovery behaviour; the Modbus spec mandates a 3.5-character-time gap,
+  which at 9600 baud ≈ 4 ms and at 1200 baud ≈ 32 ms — well under 0.2 s, so the
+  default errs toward safety while staying configurable.
 - **`Request.execute` context contract**: the `Context` `Protocol` must cover
   everything `dev/server_unit.py` needs (age-based refresh, on-demand forward).
   Risk that `update_datastore` did something subtle we depend on. Mitigation:

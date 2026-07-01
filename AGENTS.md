@@ -21,7 +21,12 @@ This file isn't just for agents …
 The purpose of issues is to remember things to do.
 Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
-`bd` cannot run in a sandbox.
+## API documentation
+
+You can use the ty language server, or read build/specs/moat-xxx/api.md.
+
+If you need details that are not documented, you may read the actual code,
+but then *create an issue* detailing what's missing to improve the docs later.
 
 ## Project Structure & Modules
 

@@ -202,6 +202,13 @@ intersphinx_mapping = {
     # "pyfuse3": ("https://M-o-a-T.org/docs/asyncclick/", None),
 }
 
+# In the Markdown output, keep only links that point to the same file or to
+# another MoaT document. Auto-generated cross-references to external
+# inventories (e.g. every ``float`` / ``None`` linking to the standard
+# library) are rendered as plain text instead, so the API docs don't waste
+# tokens when consumed by AI.
+markdown_external_references = "text"
+
 autodoc2_packages = [
     "../moat",
 ]

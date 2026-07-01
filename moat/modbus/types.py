@@ -35,7 +35,7 @@ try:
 
     from typing import TypeAlias
 
-    BaseModbusDataBlock: TypeAlias = ModbusSequentialDataBlock | ModbusSparseDataBlock
+    BaseModbusDataBlock = ModbusSparseDataBlock
 
 except ImportError:
     from pymodbus.datastore.store import BaseModbusDataBlock

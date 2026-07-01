@@ -52,7 +52,7 @@ docwarn:
 	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
 
 setup:
-	python -mvenv .venv --upgrade-deps
+	python3 -mvenv .venv --upgrade-deps
 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
 	. .venv/bin/activate; uv pip install -U -e .
 

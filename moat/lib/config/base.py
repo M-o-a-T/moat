@@ -20,7 +20,7 @@ class BaseModel(_BaseModel):
     model_config = ConfigDict(extra="allow", validate_assignment=True, strict=True)
 
     @classmethod
-    def add_field_(cls, name: str, annotation: object, **kw: Any) -> None:
+    def add_field_(cls, name: str, annotation: type[Any] | None, **kw: Any) -> None:
         """
         Add a Pydantic
 

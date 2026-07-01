@@ -23,6 +23,20 @@ def test_noop():
         c.encode(42)
 
 
+def test_null():
+    "basic tests for the null codec"
+    c = get_codec("null")
+    assert c.encode(None) == b""
+    assert c.decode(b"anything") is None
+    assert c.decode(b"") is None
+    with pytest.raises(ValueError):  # noqa:PT011
+        c.encode(0)
+    with pytest.raises(ValueError):  # noqa:PT011
+        c.encode("")
+    with pytest.raises(ValueError):  # noqa:PT011
+        get_codec("null", ext=object())
+
+
 def test_utf8():
     "basic UTF-8 string tests"
     c = get_codec("utf8")

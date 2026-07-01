@@ -113,8 +113,9 @@ class MsgMeta:
         """
         kw = dict(self.kw)
         kw["origin"] = self.origin
-        kw["timestamp"] = self.timestamp
-        kw["_timestamp"] = ts2iso(self.timestamp, delta=True, msec=3)
+        if self.timestamp is not None:
+            kw["timestamp"] = self.timestamp
+            kw["_timestamp"] = ts2iso(self.timestamp, delta=True, msec=3)
         return kw
 
     @classmethod

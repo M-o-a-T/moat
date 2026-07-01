@@ -147,6 +147,10 @@ class MsgWriter(_MsgRW):
         self.buf: list[bytes] = []
         self.buflen: int = buflen
         self.curlen: int = 0
+        # Serializes the underlying stream writes so concurrent callers do not
+        # observe a half-mutated buffer or interleave their writes at the OS
+        # level.
+        self._write_lock = anyio.Lock()
 
     async def __aexit__(
         self,
@@ -162,7 +166,10 @@ class MsgWriter(_MsgRW):
     async def __call__(self, msg: Any) -> None:
         """Write a message (bytes) to the buffer.
 
-        Flushing writes a multiple of ``buflen`` bytes."""
+        Flushing writes a multiple of ``buflen`` bytes.
+
+        Safe to call from multiple tasks concurrently.
+        """
         assert self.stream is not None  # stream is set in __aenter__
         msg_bytes = self.codec.encode(msg)
         if not isinstance(msg_bytes, bytes):
@@ -171,18 +178,27 @@ class MsgWriter(_MsgRW):
         self.curlen += len(msg_bytes)
         if self.curlen >= self.buflen:
             buf = b"".join(self.buf)
-            await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
+            # Reset buffer state *before* awaiting so a concurrent caller does
+            # not observe (and re-emit) bytes we are already flushing.
             self.buf = []
+            self.curlen = 0
+            async with self._write_lock:
+                await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
 
     async def flush(self, force: bool = True) -> None:
         """Flush the buffer.
 
         @force: do write partial data.
+
+        Safe to call from multiple tasks concurrently.
         """
         assert self.stream is not None  # stream is set in __aenter__
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
-            await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
+            self.curlen = 0
+            async with self._write_lock:
+                await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
         if force:
-            await self.stream.flush()  # ty:ignore[unresolved-attribute]  # AsyncFile has flush
+            async with self._write_lock:
+                await self.stream.flush()  # ty:ignore[unresolved-attribute]  # AsyncFile has flush

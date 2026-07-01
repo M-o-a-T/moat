@@ -27,7 +27,7 @@ async def cli(ctx):
     obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
 
 
-@cli.command()
+@cli.command("for")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
 async def get(obj, path):

@@ -21,6 +21,17 @@ if TYPE_CHECKING:
     from typing import Any
 
 
+params_info = """\
+MoaT-KV gateway parameters (use ``-s KEY VALUE`` to set):
+
+\b
+  codec  Codec for values (default: std-cbor).
+
+MoaT-KV connection settings are read from the ``kv`` section of the
+MoaT-Link configuration file.\
+"""
+
+
 class Gate(_Gate):  # noqa: D101
     kv: Client
 

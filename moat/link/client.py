@@ -50,7 +50,7 @@ from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 try:
     from .schema import schema_path, validate_instance
@@ -85,6 +85,7 @@ if TYPE_CHECKING:
         get: Callable[[Path], Awaitable[Any]]
         search: Callable[[Path], Awaitable[Any]]
         set: Callable[[Path, Any, MsgMeta], Awaitable[Any]]
+        delete: Callable[..., Awaitable[Any]]
         walk: Callable[..., Caller]
 
     class ErrSender(Protocol):
@@ -99,6 +100,8 @@ if TYPE_CHECKING:
 
 NotGivenType = type(NotGiven)
 
+_NodeType = TypeVar("_NodeType", bound=Node)
+
 
 class _Requeue(Exception):
     pass
@@ -112,6 +115,7 @@ __all__ = [
     "LinkCommon",
     "LinkSender",
     "Walker",
+    "Watcher",
     "get_link",
 ]
 
@@ -594,28 +598,6 @@ class LinkSender(MsgSender):
             return res[0]
         return res[0], MsgMeta.restore(res[1:])
 
-    @overload
-    async def d_set(
-        self,
-        path: Path,
-        data: Any = NotGiven,
-        t: float | None = None,
-        meta: Literal[True] = True,
-        retain: bool | None = None,
-        verify: bool | None = False,
-    ) -> bool | None: ...
-
-    @overload
-    async def d_set(
-        self,
-        path: Path,
-        data: Any = NotGiven,
-        t: float | None = None,
-        meta: Literal[False] = False,
-        retain: bool | None = None,
-        verify: bool | None = False,
-    ) -> bool | None: ...
-
     async def d_set(
         self,
         path: Path,
@@ -732,71 +714,85 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: bool = False,
         meta: Literal[False] = False,
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[Any]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False] = False,
         meta: Literal[True] = True,
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False],
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False] = False,
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[tuple[Path, Any]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[False] = False,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[True],
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any, MsgMeta]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     @overload
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
         state: bool | NotGivenType | None = None,
-    ) -> AbstractAsyncContextManager[AsyncIterator[None | tuple[Path, Any]]]: ...
+        cls: type[Node] = Node,
+    ) -> Watcher[Node]: ...
 
     def d_watch(
         self,
@@ -809,7 +805,7 @@ class LinkSender(MsgSender):
         min_length: int | None = None,
         max_length: int | None = None,
         cls: type[Node] = Node,
-    ):
+    ) -> Watcher[Node]:
         """
         Monitor a node or subtree.
 
@@ -920,6 +916,30 @@ class LinkSender(MsgSender):
         """
         await self.e.ok(path, **kw)
 
+    async def is_client_alive(self, name: str) -> bool:
+        """Check whether the server can still reach client ``name``.
+
+        Sends an empty command to ``cl/<name>``; the server forwards it
+        to the named client.  This works for both stable cluster
+        members and anonymous (``_``-prefixed) connection IDs.
+
+        Returns:
+            `False` if the server doesn't know about that client (it
+            raises a :py:class:`KeyError`), `True` otherwise.  Any
+            other exception is treated as evidence that the client is
+            indeed reachable (the server only got as far as it did
+            *because* the client was there to receive the dispatch).
+        """
+        try:
+            await self.cmd(P("cl") / name)
+        except KeyError:
+            return False
+        except Exception:  # noqa: S110 "no such command" is fine
+            # Any other failure (typically ShortCommandError)
+            # means the server was able to reach it.
+            pass
+        return True
+
     @asynccontextmanager
     async def e_wrap(self, path: Path, **kw):
         """
@@ -986,18 +1006,10 @@ class LinkSender(MsgSender):
         return st
 
     async def _get_tree(self, path, *, task_status, **kw):
-        async with Watcher(
-            self,
-            path,
-            bool(kw.get("meta", False)),
-            bool(kw.get("subtree", False)),
-            kw.get("state", None),
-            kw.get("age", None),
-            bool(kw.get("mark", False)),
-            kw.get("cls", Node),
-            kw.get("min_length", None),
-            kw.get("max_length", None),
-        ) as w:
+        """
+        Helper task to monitor a (sub)tree
+        """
+        async with Watcher(self, path, **kw) as w:
             task_status.started(await w.get_node())
             await anyio.sleep_forever()
 
@@ -1017,7 +1029,12 @@ class LinkSender(MsgSender):
 
             tree = await self._link.tg.start(
                 partial(
-                    self._get_tree, P("codec"), subtree=True, state=None, meta=False, cls=CodecNode
+                    self._get_tree,
+                    P("codec"),
+                    subtree=True,
+                    state=None,
+                    meta=False,
+                    node_cls=CodecNode,
                 )
             )
             self._codec_tree = tree
@@ -1292,13 +1309,23 @@ class Link(LinkCommon, CtxObj):
 
         # Try Unix socket first, if configured
         if self._socket_path is not None:
+            entered = False
             try:
-                with anyio.fail_after(self.cfg.client.init_timeout):
-                    async with self._connect_one(self._socket_path) as rem:
-                        await self._connect_run(rem, task_status=task_status)
+                async with (
+                    ungroup,
+                    timed_ctx(
+                        self.cfg.client.init_timeout, self._connect_one(self._socket_path)
+                    ) as rem,
+                ):
+                    entered = True
+                    await self._connect_run(rem, task_status=task_status)
             except OSError as exc:
+                if entered:
+                    raise
                 self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
             except TimeoutError:
+                if entered:
+                    raise
                 self.logger.info("%r timed out, trying announcements", self._socket_path)
             finally:
                 self.current_server = None
@@ -1502,7 +1529,7 @@ class BasicLink(LinkCommon, CtxObj):
 
 
 @define(eq=False)
-class Watcher(CtxObj):
+class Watcher(CtxObj, Generic[_NodeType]):
     """
     Helper class for monitoring (and coalescint the data of) either-or-both
     * a MQTT subscription to a subtree of our MoaT-Link hierarchy
@@ -1511,18 +1538,19 @@ class Watcher(CtxObj):
 
     link: LinkSender = field()
     path: Path = field()
-    meta: bool = field()
-    subtree: bool = field()
-    state: bool | None | NotGivenType = field()
-    age: float | None = field()
-    mark: bool = field()
-    node_cls: type[Node] = field()
-    min_length: int | None = field()
-    max_length: int | None = field()
+    meta: bool = field(default=False)
+    subtree: bool = field(default=False)
+    state: bool | None | NotGivenType = field(default=None)
+    age: float | None = field(default=None)
+    mark: bool = field(default=False)
+    node_cls: type[_NodeType] = field(default=Node)  # ty:ignore[invalid-assignment]
+    min_length: int | None = field(default=None)
+    max_length: int | None = field(default=None)
+
+    nodes: _NodeType = field(init=False)
 
     _qr = field(init=False, repr=False)
     _tg = field(init=False, repr=False)
-    _node = field(init=False, default=None)
 
     _current_done: anyio.Event | None = field(init=False, default=None)
 
@@ -1592,7 +1620,7 @@ class Watcher(CtxObj):
     @asynccontextmanager
     async def _ctx(self):
         async with anyio.create_task_group() as tg:
-            self._node = self.node_cls()
+            self.nodes = self.node_cls()
             self._current_done = anyio.Event()
             self._tg = tg
             qw, self._qr = anyio.create_memory_object_stream(10)
@@ -1607,14 +1635,14 @@ class Watcher(CtxObj):
             await qw.aclose()
             yield self
             tg.cancel_scope.cancel()
-            self._node = None
+            del self.nodes
 
     def __aiter__(self):
         return self
 
     @property
     @asynccontextmanager
-    async def node(self) -> AsyncIterator[Node]:
+    async def node(self) -> AsyncIterator[_NodeType]:
         """
         Helper for fetching data in background.
 
@@ -1622,12 +1650,12 @@ class Watcher(CtxObj):
         managers. If you then call :py.meth.`get_node` on one of them,
         the data from the other(s) might overwhelm the input queue.
         """
-        if self._node is not None:
+        if hasattr(self, "nodes"):
             raise RuntimeError("Use `await get_node()`")
         async with self:
             yield await self.get_node()
 
-    async def get_node(self, background=True) -> Node:
+    async def get_node(self, background=True) -> _NodeType:
         """
         Wait until fetching the static data is complete, then return the
         watched node.
@@ -1641,7 +1669,7 @@ class Watcher(CtxObj):
         if self._current_done is None:
             raise RuntimeError("Missing done event")
         await self._current_done.wait()
-        return self._node
+        return self.nodes
 
     async def _iter(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status.started()
@@ -1653,7 +1681,7 @@ class Watcher(CtxObj):
             except anyio.EndOfStream:
                 return
             p, d, m = msg
-            self._node.set(p, d, m)
+            self.nodes.set(p, d, m)
 
     async def __anext__(self):
         while True:
@@ -1666,7 +1694,7 @@ class Watcher(CtxObj):
             p, d, m = msg
             if self._current_done is None:
                 raise RuntimeError("Missing done event")
-            if self._node.set(p, d, m, force=self._current_done.is_set()):
+            if self.nodes.set(p, d, m, force=self._current_done.is_set()):
                 if self.meta:
                     return (p, d, m) if self.subtree else (d, m)
                 else:

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import sys
 
 try:
@@ -196,20 +197,86 @@ def _bin_from_hex(loader: BaseConstructor, node: Node) -> bytearray:
     return bytearray.fromhex(value.replace(":", ""))
 
 
+# Characters that need escaping in a ``!bina`` scalar: any non-printable
+# byte (i.e. outside 0x20–0x7E plus tab/newline/return) or a literal
+# backslash. Operating on a latin-1 string makes each codepoint map 1:1
+# to a byte value.
+_BINA_ENCODE_RE = re.compile(r"[^ -~\t\n\r]|\\")
+
+# The inverse: a doubled backslash (literal backslash) or a ``\xHH``
+# escape. Matching left-to-right removes any ambiguity between the two.
+_BINA_DECODE_RE = re.compile(r"\\\\|\\x([0-9a-fA-F]{2})")
+
+
+def _bina_encode_match(match: re.Match[str]) -> str:
+    """Escape a single backslash or non-printable character for ``!bina``."""
+    char = match.group(0)
+    if char == "\\":
+        return "\\\\"
+    return f"\\x{ord(char):02x}"
+
+
+def _bina_decode_match(match: re.Match[str]) -> str:
+    """Unescape a doubled backslash or ``\\xHH`` escape from ``!bina``."""
+    hex_digits = match.group(1)
+    if hex_digits is None:
+        return "\\"
+    return chr(int(hex_digits, 16))
+
+
+def _bin_from_bina(loader: BaseConstructor, node: Node) -> bytes:
+    """Decode a ``!bina`` tagged value back into bytes.
+
+    The ``!bina`` tag encodes non-printable bytes as ``\\xHH`` escape
+    sequences and literal backslashes as ``\\\\`` so that the resulting
+    string is valid ASCII.
+    """
+    value = loader.construct_scalar(node)
+    return _BINA_DECODE_RE.sub(_bina_decode_match, value).encode("latin-1")
+
+
+def _is_printable(b: int) -> bool:
+    """Return True if a byte value is considered printable.
+
+    Printable ASCII is 0x20–0x7E, plus the common whitespace
+    characters tab (0x09), newline (0x0A) and carriage return (0x0D).
+    """
+    return (0x20 <= b <= 0x7E) or b in (0x09, 0x0A, 0x0D)
+
+
+def _data_bytes(data: bytes | bytearray | memoryview) -> bytes:
+    """Normalise any bytestring source to a plain ``bytes`` object."""
+    return data.tobytes() if isinstance(data, memoryview) else bytes(data)
+
+
 def _bin_to_ascii(dumper: SafeRepresenterType, data: bytes | bytearray | memoryview) -> Node:
+    """Represent a bytestring in YAML.
+
+    1. If it decodes as valid UTF-8, tag it ``!bin``.
+    2. Otherwise, if fewer than 10 % of bytes are non-printable, tag it
+       ``!bina`` with ``\\xHH`` escapes for the non-printable bytes and
+       ``\\\\`` for literal backslashes.
+    3. If it is shorter than 33 bytes, use ``!hex`` with colon-separated
+       hex pairs.
+    4. Otherwise fall back to ``!binary``.
+    """
+    data_bytes = _data_bytes(data)
     try:
-        if isinstance(data, memoryview):
-            data_str = data.tobytes().decode("utf-8", errors="surrogateescape")
-        else:
-            data_str = data.decode("utf-8", errors="surrogateescape")
+        data_str = data_bytes.decode("utf-8")
     except UnicodeError:
-        data_bytes = data.tobytes() if isinstance(data, memoryview) else data
-        if len(data_bytes) < 33:
-            return dumper.represent_scalar("!hex", data_bytes.hex(":"))
-        else:
-            return dumper.represent_binary(data_bytes)
+        pass
     else:
         return dumper.represent_scalar("!bin", data_str)
+
+    nonprintable = sum(1 for b in data_bytes if not _is_printable(b))
+    threshold = max(1, len(data_bytes) * 10 // 100)
+    if nonprintable < threshold:
+        encoded = _BINA_ENCODE_RE.sub(_bina_encode_match, data_bytes.decode("latin-1"))
+        return dumper.represent_scalar("!bina", encoded)
+
+    if len(data_bytes) < 33:
+        return dumper.represent_scalar("!hex", data_bytes.hex(":"))
+    return dumper.represent_binary(data_bytes)
 
 
 SafeRepresenter.add_representer(bytes, _bin_to_ascii)
@@ -217,6 +284,7 @@ SafeRepresenter.add_representer(bytearray, _bin_to_ascii)
 SafeRepresenter.add_representer(memoryview, _bin_to_ascii)
 
 SafeConstructor.add_constructor("!bin", _bin_from_ascii)
+SafeConstructor.add_constructor("!bina", _bin_from_bina)
 SafeConstructor.add_constructor("!hex", _bin_from_hex)
 
 
@@ -233,7 +301,7 @@ def expect_node(self: Any, *a: Any, **kw: Any) -> None:
     self.root_context = False
 
 
-Emitter.expect_node = expect_node  # ty:ignore[invalid-assignment]  # monkey-patch
+Emitter.expect_node = expect_node  # monkey-patch
 
 
 def yload(
@@ -282,6 +350,7 @@ def yprint(
     else:
         y = yaml.YAML(typ=typ)
         y.default_flow_style = compact
+        y.width = sys.maxsize
         y.dump(data, stream=stream)
 
 

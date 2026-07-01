@@ -22,6 +22,11 @@ qos: 0
 # Hostname of the main server.
 main: some_host
 
+codec:
+  prefix: !P codec
+conv:
+  prefix: !P conv
+
 target:
   # Well-known prefixes off the root
 

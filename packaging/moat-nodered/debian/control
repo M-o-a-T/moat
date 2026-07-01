@@ -2,10 +2,9 @@ Source: moat-nodered
 Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: javascript
 Priority: optional
-Build-Depends: debhelper (>= 13),
+Build-Depends: debhelper (>= 13), debhelper-compat (= 13),
 Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
-X-DH-Compat: 13
 
 Package: moat-node-red
 Architecture: all

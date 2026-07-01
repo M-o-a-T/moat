@@ -14,7 +14,7 @@ from time import time
 
 import asyncclick as click
 
-from moat.util import _help_preserve_blocks
+from moat.util import help_preserve_blocks
 from moat.lib.config import CFG
 from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -339,7 +339,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     patho.close()
 
 
-@cli.command("path", help=_help_preserve_blocks(Path.__doc__), no_args_is_help=True)
+@cli.command("path", help=help_preserve_blocks(Path.__doc__), no_args_is_help=True)
 @click.option(
     "-e",
     "--encode",
@@ -347,24 +347,34 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     help="evaluate a Python expr and encode to a pathstr",
 )
 @click.option("-d", "--decode", is_flag=True, help="decode a path to a list")
+@click.option("-s", "--slash", is_flag=True, help="convert a path to its slashed repr")
+@click.option("-S", "--unslash", is_flag=True, help="input is slashed repr")
 @click.argument("path", nargs=-1)
-async def path_(encode, decode, path):
+async def path_(encode, decode, slash, unslash, path: list[str]):
     """Explain/test MoaT paths"""
-    if not encode and not decode:
-        raise click.UsageError("Need -e or -d option.")
-    elif not decode:
+    if not encode and not decode and not slash:
+        raise click.UsageError("Need -e / -d / -s option.")
+    if bool(encode) + bool(decode) + bool(slash) > 1:
+        raise click.UsageError("Only one of -e / -d / -s please.")
+    pp: list[Path]
+    if encode:
         try:
             path = path_eval(" ".join(path))
         except Exception as exc:  # pylint:disable=broad-exception-caught
             print(repr(exc), file=sys.stderr)
-        if not isinstance(path, (list, tuple)):
-            path = path[0]
+        pp = [Path.build(path)]
+    elif unslash:
+        pp = [Path.from_slashed(p) for p in path]
         print(Path(*path))
-    elif encode:
-        raise click.UsageError("encode and decode at the same time??")
     else:
-        for p in path:
-            print(repr(list(P(p))))
+        pp: list[Path] = [P(p) for p in path]
+    for p in pp:
+        if decode:
+            print(repr(list(p)))
+        elif slash:
+            print(p.slashed)
+        else:
+            print(p)
 
 
 @cli.command("cfg", help="Retrieve+show a config value", no_args_is_help=True)

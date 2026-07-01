@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
+    if len(args) == 1:
+        args = args[0]
+        if isinstance(args, str):
+            args = args.split(" ")
     args = ("-s", "env.load_all", "=n", *args)
 
     with CFG.with_config_(CfgStore()) as cfg:

@@ -22,12 +22,13 @@ from moat.db import database
 from moat.lib.run import load_subgroup, option_ng
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
-from .pdf import Labels
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.util import attrdict
+
+    from .pdf import Labels
 
 log = logging.getLogger()
 
@@ -45,7 +46,7 @@ class CustomContext(click.Context):
 @load_subgroup(prefix="moat.label")
 @click.pass_context
 def cli(ctx):
-    """Labels for storing things."""
+    """Labels for boxes and things."""
     obj = ctx.obj
 
     sess = ctx.with_resource(database(obj.cfg.db))
@@ -217,6 +218,8 @@ def print_(obj, printer, output):
         prt.name_ = printer
 
     obj.printer = prt
+
+    from .pdf import Labels  # noqa: PLC0415
 
     obj.pdf = Labels(prt)
     obj.filename = output

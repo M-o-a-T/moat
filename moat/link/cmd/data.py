@@ -12,9 +12,9 @@ import asyncclick as click
 from moat.util import (
     MsgReader,
     NotGiven,
-    _help_preserve_blocks,
     combine_dict,
     edit_text,
+    help_preserve_blocks,
     yformat,
     yload,
     yprint,
@@ -84,7 +84,7 @@ async def _dump_data(obj, as_dict: bool = False) -> None:
                 m = None
             with suppress(BrokenPipeError):
                 if as_dict:
-                    yprint(_encode_dict_entry(p, d, m), stream=obj.stdout)
+                    yprint(_encode_dict_entry(obj.path + p, d, m), stream=obj.stdout)
                 else:
                     if m is None:
                         yprint([p, d], stream=obj.stdout)
@@ -191,18 +191,18 @@ async def cli(ctx, path, meta):
     "for values. Default: return as list",
 )
 @click.option(
-    "-m",
+    "-n",
     "--maxdepth",
     type=int,
     default=None,
     help="Limit recursion depth. Default: whole tree",
 )
 @click.option(
-    "-M",
+    "-N",
     "--mindepth",
     type=int,
     default=None,
-    help="Starting depth. Default: whole tree",
+    help="Starting depth. Default: root",
 )
 @click.option("-e", "--empty", is_flag=True, help="Include empty nodes")
 @click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
@@ -229,14 +229,14 @@ async def get(obj, **k):
     "for values. Default: return as list",
 )
 @click.option(
-    "-m",
+    "-N",
     "--maxdepth",
     type=int,
     default=1,
     help="Limit recursion depth. Default: 1 (single layer).",
 )
 @click.option(
-    "-M",
+    "-N",
     "--mindepth",
     type=int,
     default=1,
@@ -363,9 +363,15 @@ async def edit(obj, yes, editor):
     help="Don't delete entries created after this timestamp",
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
+@click.option(
+    "-s",
+    "--sub",
+    is_flag=True,
+    help="Delete the subtree below the entry but keep the entry itself",
+)
 @click.option("-m", "--mqtt", is_flag=True, help="Delete via MQTT message")
 @click.pass_obj
-async def delete(obj, before, recursive, mqtt):
+async def delete(obj, before, recursive, sub, mqtt):
     """
     Delete an entry, or a subtree.
 
@@ -374,18 +380,23 @@ async def delete(obj, before, recursive, mqtt):
 
     The root entry cannot be deleted.
     """
-    if mqtt and (recursive or before):
-        raise click.UsageError("--mqtt and --recursive/--before don't like each other")
+    if recursive and sub:
+        raise click.UsageError("--recursive and --sub are mutually exclusive")
+    if mqtt:
+        if recursive or sub or before:
+            raise click.UsageError("--mqtt and --recursive/--sub/--before don't like each other")
+        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
+        return
+
     args = {}
     if recursive:
         args["rec"] = recursive
+    if sub:
+        args["sub"] = sub
     if before:
         args["ts"] = before
-    if mqtt:
-        await obj.conn.send(Root.get() + obj.path, NotGiven, retain=True)
-        return
-    else:
-        res = await obj.conn.d.delete(obj.path, **args)
+
+    res = await obj.conn.d.delete(obj.path, **args)
     if obj.meta:
         res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:
@@ -394,18 +405,19 @@ async def delete(obj, before, recursive, mqtt):
 
 
 @cli.command()
-@click.option("-m", "--mode", type=str, help="Retrieval mode", default="s")
-@click.option("-M", "--mark", is_flag=True, help="Retrieval mode")
+@click.option("-m", "--mode", type=str, help="Retrieval mode", default="s", metavar="MODE")
+@click.option("-M", "--mark", is_flag=True, help="Insert static-part-done flag")
 @click.option("-o", "--only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-s", "--subtree", is_flag=True, help="Read the whole tree.")
 @click.option("-p", "--path-only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.option("-i", "--ignore", multiple=True, type=P, help="Skip this (sub)tree")
-@click.option("-n", "--min-length", type=int, help="Minimum path length")
-@click.option("-N", "--max-length", type=int, help="Maximum path length")
-@click.option("-a", "--max-age", type=int, help="Skip entries older than N seconds")
+@click.option("-n", "--mindepth", type=int, help="Minimum path length")
+@click.option("-N", "--maxdepth", type=int, help="Maximum path length")
+@click.option("-a", "--maxage", type=int, help="Skip entries older than N seconds")
 @click.option("-t", "--timeout", type=int, help="Stop reading after N seconds")
 @click.pass_obj
+@help_preserve_blocks
 async def monitor(
     obj,
     mode,
@@ -415,14 +427,14 @@ async def monitor(
     ignore,
     mark,
     subtree,
-    min_length,
-    max_length,
-    max_age,
+    mindepth,
+    maxdepth,
+    maxage,
     timeout,
 ):
     """Monitor a MoaT-Link subtree.
 
-    The mode can be:
+    MODE can be:
     * c  current   read current data from the server
     * u  update    read updates from MQTT
     * s  stream    current plus updates
@@ -456,9 +468,9 @@ async def monitor(
             mark=mark,
             meta=True,
             subtree=subtree,
-            max_length=max_length,
-            min_length=min_length,
-            age=max_age,
+            max_length=maxdepth,
+            min_length=mindepth,
+            age=maxage,
         ) as mon:
             async for pdm in mon:
                 if pdm is None:
@@ -485,9 +497,6 @@ async def monitor(
                     obj.stdout.flush()
 
 
-monitor.help = _help_preserve_blocks(monitor.help)
-
-
 @cli.command()
 @click.option("-d", "--dict", "as_dict", is_flag=True, help="Write dict-based dump docs.")
 @click.pass_obj
@@ -510,6 +519,115 @@ async def load(obj, infile, force):
     Load path+data+metadata tuples from YAML docs into a subtree.
     """
     await _load_data(obj, infile, force)
+
+
+async def _import_data(
+    obj,
+    infile: str,
+    *,
+    as_dict: str | None,
+) -> None:
+    """Import legacy MoaT-KV ``data … get -r [-d KEY]`` output.
+
+    The whole input file is parsed as a single YAML document.
+
+    Args:
+        obj: the command-context object (provides ``conn`` and ``path``).
+        infile: source file name, or ``-`` for stdin.
+        as_dict: if given, parse the input as the nested-dict form
+            emitted by ``mt kv data … get -r -d KEY`` (with KEY marking
+            value leaves). If `None`, parse the list form emitted by
+            ``mt kv data … get -r``.
+
+    Raises:
+        click.UsageError: if the input does not match the expected
+            shape.
+    """
+    path = "/dev/stdin" if infile == "-" else infile
+    async with await anyio.open_file(path, "rb") as f:
+        raw = await f.read()
+    try:
+        doc = yload(raw.decode("utf-8", "surrogateescape"))
+    except Exception as exc:
+        raise click.UsageError(f"Cannot parse YAML input: {exc}") from exc
+
+    if as_dict is None:
+        await _import_legacy_list(obj, doc)
+    else:
+        await _import_legacy_dict(obj, doc, as_dict)
+
+
+def _as_path(p) -> Path:
+    """Coerce a YAML-decoded path representation to :class:`Path`."""
+    if isinstance(p, Path):
+        return p
+    if isinstance(p, str):
+        return P(p)
+    if isinstance(p, (list, tuple)):
+        return Path.build(p)
+    raise click.UsageError(f"Cannot interpret {p!r} as a path.")
+
+
+async def _import_legacy_list(obj, doc) -> None:
+    """Import the list-of-singleton-dicts form from ``mt kv data … get -r``."""
+    if not isinstance(doc, list):
+        raise click.UsageError(
+            "--legacy expects the YAML list emitted by 'mt kv data … get -r'.",
+        )
+    for item in doc:
+        if not isinstance(item, dict) or len(item) != 1:
+            raise click.UsageError(
+                "--legacy expects each list entry to be a single {path: value} mapping.",
+            )
+        p, v = next(iter(item.items()))
+        await obj.conn.d_set(obj.path + _as_path(p), v)
+
+
+async def _import_legacy_dict(obj, doc, as_dict: str) -> None:
+    """Import the nested-dict form from ``mt kv data … get -r -d KEY``."""
+    if not isinstance(doc, dict):
+        raise click.UsageError(
+            "--as-dict expects the YAML mapping emitted by 'mt kv data … get -r -d KEY'.",
+        )
+
+    async def walk(prefix: Path, node: dict) -> None:
+        for k, v in node.items():
+            if k == as_dict:
+                await obj.conn.d_set(obj.path + prefix, v)
+            elif isinstance(v, dict):
+                await walk(prefix + Path.build((k,)), v)
+
+    await walk(Path(), doc)
+
+
+@cli.command("import", short_help="Import data from a MoaT-KV dump")
+@click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
+@click.option(
+    "--legacy",
+    is_flag=True,
+    help="Input is from 'mt kv data … get -r' (a YAML list).",
+)
+@click.option(
+    "-d",
+    "--as-dict",
+    "as_dict",
+    default=None,
+    metavar="KEY",
+    help="Input is from 'mt kv data … get -r -d KEY' (a nested mapping).",
+)
+@click.pass_obj
+async def import_(obj, infile: str, legacy: bool, as_dict: str | None) -> None:
+    """Import data from a ``mt kv data … get -r`` dump.
+
+    Exactly one of ``--legacy`` or ``--as-dict`` must be given to
+    indicate which on-disk format the input is in. Imported values are
+    written below the current ``PATH``.
+    """
+    if legacy == (as_dict is not None):
+        raise click.UsageError(
+            "Pass exactly one of --legacy or --as-dict to select the input format.",
+        )
+    await _import_data(obj, infile, as_dict=as_dict)
 
 
 @cli.command()

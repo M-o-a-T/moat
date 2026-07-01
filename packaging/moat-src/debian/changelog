@@ -1,3 +1,45 @@
+moat-src (0.12.4-2) unstable; urgency=medium
+
+  * New release for 26.2.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Jun 2026 16:08:50 +0200
+
+moat-src (0.12.4-1) unstable; urgency=medium
+
+  * New release for 26.2.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 17 Jun 2026 15:26:49 +0200
+
+moat-src (0.12.3-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:34 +0200
+
+moat-src (0.12.3-2) unstable; urgency=medium
+
+  * New release for 26.1.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 20:28:15 +0200
+
+moat-src (0.12.3-1) unstable; urgency=medium
+
+  * New release for 26.1.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 18:50:00 +0200
+
+moat-src (0.12.2-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:37:05 +0200
+
+moat-src (0.12.2-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:14:32 +0200
+
 moat-src (0.12.1-2) unstable; urgency=medium
 
   * New release for 26.0.19

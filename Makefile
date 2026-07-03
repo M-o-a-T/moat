@@ -57,9 +57,8 @@ setup:
 	python3 -mvenv .venv --upgrade-deps
 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
 	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
-	mkdir -p ${MOAT_EXT} ext
-	./mt src submod get ${MOAT_EXT}
-	cd ext; ln -sf $$(cd .. && cd "${MOAT_EXT}" && /bin/pwd)/* .
+	rm -f ext; ln -sf "${MOAT_EXT}" ext
+	./mt src submod get
 
 release: doc
 	./mt src tag

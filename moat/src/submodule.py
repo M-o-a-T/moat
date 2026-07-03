@@ -268,16 +268,24 @@ async def collect_ext_revs(base: anyio.Path, ext: dict) -> bool:
 
 
 @cli.command("commit")
-async def commit_cmd() -> None:
+@click.option("-f", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
+async def commit_cmd(no_dirty: bool) -> None:
     """Record the current HEAD of each external repository into ``versions.yaml``.
 
     For every entry in the ``ext`` section, the HEAD commit of
     ``ext/<name>`` is read via ``git rev-parse HEAD`` and written back
     to ``versions.yaml``.  ``ext`` must be a symlink or directory created
     by ``make setup``.
+
+    Aborts if any repository has uncommitted changes, unless ``--no-dirty``
+    is given.
     """
     base = _EXT
     ext = _load_ext()
+    if not no_dirty:
+        dirty = await check_ext_clean(base, ext)
+        if dirty:
+            raise click.ClickException("External repositories are not clean: " + " ".join(dirty))
     changed = await collect_ext_revs(base, ext)
     if changed:
         _save_ext(ext)

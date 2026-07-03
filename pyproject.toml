@@ -267,6 +267,7 @@ include = [
     "moat/link/",
     "moat/mcp/",
     "moat/micro/",
+    "moat/src/",
     "moat/util/",
 ]
 exclude = [

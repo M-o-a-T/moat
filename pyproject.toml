@@ -28,7 +28,7 @@ dependencies = [
     "cffi",
     "cryptography",
     "fpdf2",
-    "pygit",
+    "gitpython",
     "httpx",
     "ifaddr",
     "jmespath",

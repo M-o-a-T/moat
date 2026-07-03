@@ -88,10 +88,12 @@ def cli() -> None:
     """Manage external git repositories declared in ``versions.yaml``."""
 
 
+_EXT = anyio.Path("ext")
+
+
 @cli.command("get")
-@click.argument("dest_", metavar="DIR", type=click.Path(file_okay=False, writable=True))
-async def get_cmd(dest_: str) -> None:
-    """Check out each external repository into DIR/<name>.
+async def get_cmd() -> None:
+    """Check out each external repository into ext/<name>.
 
     Repositories are read from the ``ext`` section of ``versions.yaml``.
     Each entry may contain one or more remote keys (e.g. ``github``, ``url``);
@@ -101,9 +103,10 @@ async def get_cmd(dest_: str) -> None:
 
     If the target directory already exists the remote is fetched; otherwise
     the repository is cloned.  In both cases the working tree is checked out
-    at the recorded ``rev``.
+    at the recorded ``rev``.  ``ext`` must be a symlink or directory created
+    by ``make setup``.
     """
-    base = anyio.Path(dest_)
+    base = _EXT
     await base.mkdir(parents=True, exist_ok=True)
     ext = _load_ext()
 
@@ -194,19 +197,22 @@ async def get_cmd(dest_: str) -> None:
             )
 
 
-@cli.command("commit")
-@click.argument("dest_", metavar="DIR", type=click.Path(exists=True, file_okay=False))
-async def commit_cmd(dest_: str) -> None:
-    """Record the current HEAD of each external repository into ``versions.yaml``.
+async def collect_ext_revs(base: anyio.Path, ext: dict) -> bool:
+    """Read the HEAD commit of each external repository and update *ext* in-place.
 
-    For every entry in the ``ext`` section, the HEAD commit of
-    ``DIR/<name>`` is read via ``git rev-parse HEAD`` and written back
-    to ``versions.yaml``.
+    For every entry in *ext*, the HEAD commit of ``base/<name>`` is read
+    via ``git rev-parse HEAD`` and stored back into ``ext[name]["rev"]``.
+    Entries whose target directory is not a git repository are skipped with
+    a warning.
+
+    Args:
+        base: Parent directory that contains one sub-directory per repo.
+        ext: The ``ext`` mapping from ``versions.yaml``, modified in-place.
+
+    Returns:
+        ``True`` if at least one ``rev`` value was updated.
     """
-    base = anyio.Path(dest_)
-    ext = _load_ext()
     changed = False
-
     for name, info in ext.items():
         dest = base / name
         if not await (dest / ".git").exists():
@@ -224,7 +230,21 @@ async def commit_cmd(dest_: str) -> None:
             print(f"[{name}] {old[:12] or '(none)'} → {head[:12]}", flush=True)
         else:
             print(f"[{name}] unchanged ({head[:12]})", flush=True)
+    return changed
 
+
+@cli.command("commit")
+async def commit_cmd() -> None:
+    """Record the current HEAD of each external repository into ``versions.yaml``.
+
+    For every entry in the ``ext`` section, the HEAD commit of
+    ``ext/<name>`` is read via ``git rev-parse HEAD`` and written back
+    to ``versions.yaml``.  ``ext`` must be a symlink or directory created
+    by ``make setup``.
+    """
+    base = _EXT
+    ext = _load_ext()
+    changed = await collect_ext_revs(base, ext)
     if changed:
         _save_ext(ext)
         print("versions.yaml updated.", flush=True)

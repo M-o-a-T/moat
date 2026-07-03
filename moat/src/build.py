@@ -22,6 +22,7 @@ from moat.util.exec import run as run_
 from ._repo import Repo
 from ._toml import tomlkit
 from ._util import dash
+from .submodule import _EXT, collect_ext_revs
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +490,7 @@ it is dropped when you use '--dput'.
     multiple=True,
     help="Update external dependency",
 )
+@click.option("-E", "--no-ext", is_flag=True, help="don't record external repository HEAD commits")
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
@@ -513,6 +515,7 @@ async def cli(
     forcetag,
     autotag,
     twine_repo,
+    no_ext,
 ):
     """
     Rebuild all modified packages.
@@ -667,7 +670,11 @@ async def cli(
             print("Please fix(?) and try again.", file=sys.stderr)
             no.commit = True
 
-    # Step 8: commit the result
+    # Step 8: record external repo HEADs
+    if not no_ext:
+        await collect_ext_revs(_EXT, repo.versions.get("ext", {}))
+
+    # Step 9: commit the result
     if not no.run:
         if repo.write_tags() and not no.commit:
             repo.index.commit(f"Build version {forcetag}")

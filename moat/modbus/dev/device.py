@@ -310,6 +310,13 @@ class Register:
 
     def encode(self):
         """Encode myself (with transformations applied)"""
+        try:
+            return self.__encode()
+        except (ValueError, TypeError) as exc:
+            logger.error("Encode: %r: %r", self.data.src, exc)
+            raise
+
+    def __encode(self):
         # Only apply transformations if they exist (factor != 1 or offset != 0)
         if self.factor == 1 and self.offset == 0:
             return self.reg.encode()

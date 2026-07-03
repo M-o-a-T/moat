@@ -6,6 +6,8 @@ PACKAGE = moat
 MAKEINCL = $(shell ./mt src path)/make/py
 PWD := $(shell pwd)
 
+MOAT_EXT ?= ../moat-ext
+
 #ifneq ($(wildcard $(MAKEINCL)),)
 #include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr
@@ -55,6 +57,9 @@ setup:
 	python3 -mvenv .venv --upgrade-deps
 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
 	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
+	mkdir -p ${MOAT_EXT} ext
+	./mt src submod get ${MOAT_EXT}
+	cd ext; ln -sf $$(cd .. && cd "${MOAT_EXT}" && /bin/pwd)/* .
 
 release: doc
 	./mt src tag

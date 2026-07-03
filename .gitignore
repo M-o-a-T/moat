@@ -2,6 +2,7 @@
 .#*
 \#*
 /bin/
+/ext/
 /*.build
 /build
 /*.buildinfo

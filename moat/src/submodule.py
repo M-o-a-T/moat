@@ -18,6 +18,7 @@ import anyio
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
 
 import asyncclick as click
 
@@ -35,22 +36,52 @@ if TYPE_CHECKING:
 
 #: Mapping of YAML key → function that converts the key's value to a clone URL.
 #: Add entries here to support additional hosting services.
+#:
+#: These remotes use anonymous, read-only transports (typically HTTPS) and are
+#: fine for fetching, but they cannot be pushed to.  Use :data:`EDIT_REMOTES`
+#: (selected by ``submodule get --edit``) when you need write access.
 REMOTES: dict[str, Callable[[str], str]] = {
     "url": lambda arg: arg,
     "github": lambda arg: f"https://github.com/{arg}",
 }
 
+#: Like :data:`REMOTES` but produces SSH-style URLs suitable for pushing.
+#:
+#: Selected by ``submodule get --edit``.  Any candidate that still resolves to
+#: an ``http``/``https`` URL is skipped — see :func:`_remote_urls`.
+EDIT_REMOTES: dict[str, Callable[[str], str]] = {
+    "url": lambda arg: arg,
+    "github": lambda arg: f"git@github.com:{arg}",
+}
 
-def _remote_urls(info: dict) -> list[tuple[str, str]]:
+
+def _is_http_url(url: str) -> bool:
+    """Return ``True`` if *url* uses the ``http`` or ``https`` scheme."""
+    return urlparse(url).scheme in ("http", "https")
+
+
+def _remote_urls(info: dict, *, edit: bool = False) -> list[tuple[str, str]]:
     """Return ``[(key, url), …]`` for every known remote key found in *info*.
 
-    Keys that are not in :data:`REMOTES` are silently skipped.
+    Keys absent from the selected remote table are silently skipped.
     Order follows the iteration order of *info*.
+
+    Args:
+        info: A single ``ext`` entry from ``versions.yaml``.
+        edit: When true, use :data:`EDIT_REMOTES` (SSH-style URLs) instead of
+            :data:`REMOTES` so that the resulting remotes can be pushed to.
+            Candidates that still resolve to an ``http``/``https`` URL are
+            skipped, since such URLs cannot be pushed to.
     """
+    remotes = EDIT_REMOTES if edit else REMOTES
     result: list[tuple[str, str]] = []
     for key, value in info.items():
-        if key in REMOTES:
-            result.append((key, REMOTES[key](value)))
+        if key not in remotes:
+            continue
+        url = remotes[key](value)
+        if edit and _is_http_url(url):
+            continue
+        result.append((key, url))
     return result
 
 
@@ -92,7 +123,12 @@ _EXT = anyio.Path("ext")
 
 
 @cli.command("get")
-async def get_cmd() -> None:
+@click.option(
+    "--edit",
+    is_flag=True,
+    help="Use SSH-style remotes (suitable for pushing) instead of read-only HTTPS.",
+)
+async def get_cmd(edit: bool) -> None:
     """Check out each external repository into ext/<name>.
 
     Repositories are read from the ``ext`` section of ``versions.yaml``.
@@ -105,13 +141,19 @@ async def get_cmd() -> None:
     the repository is cloned.  In both cases the working tree is checked out
     at the recorded ``rev``.  ``ext`` must be a symlink or directory created
     by ``make setup``.
+
+    By default the read-only remotes from ``REMOTES`` are used.  Pass
+    ``--edit`` to select ``EDIT_REMOTES`` instead, which resolves to SSH-style
+    URLs so that the subsequent push of ``HEAD:moat`` succeeds.  Remotes that
+    resolve to an ``http``/``https`` URL are skipped in this mode; an entry
+    with no pushable remote is left untouched (no checkout, no push).
     """
     base = _EXT
     await base.mkdir(parents=True, exist_ok=True)
     ext = _load_ext()
 
     for name, info in ext.items():
-        candidates = _remote_urls(info)
+        candidates = _remote_urls(info, edit=edit)
         if not candidates:
             print(f"[{name}] no known remote key – skipping", flush=True)
             continue

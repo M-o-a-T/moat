@@ -22,7 +22,7 @@ from moat.util.exec import run as run_
 from ._repo import Repo
 from ._toml import tomlkit
 from ._util import dash
-from .submodule import _EXT, collect_ext_revs
+from .submodule import _EXT, check_ext_clean, collect_ext_revs
 
 logger = logging.getLogger(__name__)
 
@@ -583,6 +583,16 @@ async def cli(
             else:
                 print("Please commit changes and try again.", file=sys.stderr)
                 return
+
+        if not no_ext:
+            dirty_ext = await check_ext_clean(_EXT, repo.versions.get("ext", {}))
+            if dirty_ext:
+                if no.run:
+                    print("*** External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                else:
+                    print("External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                    print("Please commit changes and try again.", file=sys.stderr)
+                    return
 
     # Step 1: check for changed files since last tagging
     if autotag:

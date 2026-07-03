@@ -197,6 +197,40 @@ async def get_cmd() -> None:
             )
 
 
+async def check_ext_clean(base: anyio.Path, ext: dict) -> list[str]:
+    """Return the names of external repositories that have uncommitted changes.
+
+    Runs ``git status --porcelain --ignore-submodules=all`` in each repo
+    directory.  Entries whose target directory is not a git repository are
+    silently skipped.
+
+    Args:
+        base: Parent directory that contains one sub-directory per repo.
+        ext: The ``ext`` mapping from ``versions.yaml``.
+
+    Returns:
+        List of repository names that are dirty.
+    """
+    dirty: list[str] = []
+    for name in ext:
+        dest = base / name
+        if not await (dest / ".git").exists():
+            continue
+        raw = await run_(
+            "git",
+            "-C",
+            str(dest),
+            "status",
+            "--porcelain",
+            "--ignore-submodules=all",
+            capture=True,
+        )
+        assert raw is not None
+        if raw.strip():
+            dirty.append(name)
+    return dirty
+
+
 async def collect_ext_revs(base: anyio.Path, ext: dict) -> bool:
     """Read the HEAD commit of each external repository and update *ext* in-place.
 

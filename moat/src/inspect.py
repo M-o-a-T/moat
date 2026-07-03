@@ -36,7 +36,8 @@ class CancelTracer:
 
     def scope_entered(self, scope):  # noqa: D102
         scope._stack = s = []  # noqa: SLF001
-        f = inspect.currentframe().f_back
+        frame = inspect.currentframe()
+        f = frame.f_back if frame is not None else None
         while f:
             s.append(f)
             f = f.f_back

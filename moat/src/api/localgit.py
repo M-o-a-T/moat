@@ -38,7 +38,7 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         try:
             return self.api.cfg.git_url
         except AttributeError:
-            return f"https://{self.api.host}/{self.cfg.get('repo', self.name + '.git')}"
+            return f"https://{self.api.host}/{self.api.cfg.get('repo', self.name + '.git')}"
 
     @property
     def ext_url(self) -> str:  # noqa: D102
@@ -47,7 +47,7 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         except AttributeError:
             return f"https://{self.api.host}/{self.api.cfg.get('repo', self.name)}"
 
-    async def load_(self) -> RepoInfo:  # noqa: D102
+    async def load_(self) -> None:  # noqa: D102
         try:
             async with self.repo.git_lock:
                 await self.repo.exec("git", "remote", "get-url", self.api.name, capture=True)

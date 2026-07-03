@@ -26,9 +26,10 @@ if TYPE_CHECKING:
 class CommitInfo(BaseCommitInfo):  # noqa: D101
     data = field(init=False)
 
-    def __init__(self, repo, json):
+    def __init__(self, repo: BaseRepoInfo, json: dict) -> None:
         self.data = to_attrdict(json)
-        super().__init__(repo, self.data.commit.sha)
+        self.repo = repo
+        self.hash = self.data.commit.sha
 
 
 class RepoInfo(BaseRepoInfo):  # noqa: D101
@@ -37,6 +38,7 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
     @property
     def parent(self) -> dict | None:
         "Return info about the parent repo, or None"
+        assert self.data is not None
         if (par := self.data.get("parent", None)) is not None:
             return par
         if (par := self.data.get("source", None)) is not None:

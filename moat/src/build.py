@@ -13,7 +13,7 @@ from anyio import Path
 from contextlib import suppress
 
 import asyncclick as click
-import git
+from git import TagReference
 from packaging.requirements import Requirement
 
 from moat.util import attrdict
@@ -175,6 +175,8 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
         if not await p.is_dir():
             continue
         try:
+            tag = ""
+            ptag = 0
             if await (rd / "debian" / "changelog").exists():
                 res = await run_(
                     "dpkg-parsechangelog",
@@ -186,6 +188,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                     capture=True,
                     echo=debug,
                 )
+                assert res is not None
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
@@ -199,6 +202,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                             capture=True,
                             echo=debug,
                         )
+                        assert res is not None
                         if not res.strip().endswith(f" for {gtag}"):
                             break
                         # New version for this tag.
@@ -688,4 +692,4 @@ async def cli(
     if not no.run:
         if repo.write_tags() and not no.commit:
             repo.index.commit(f"Build version {forcetag}")
-            git.TagReference.create(repo, forcetag)
+            TagReference.create(repo, forcetag)

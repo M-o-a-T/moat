@@ -154,11 +154,8 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
 - DO NOT use "head", "tail", or "rg" / "grep" on test output.
-  This is an agent-side constraint, not a testcase rule: tests run normally
-  (pytest captures their output itself) and must NOT redirect their own
-  output. When you, the agent, cannot inspect output via the tmux helper,
-  redirect the command's stdout/stderr to a temp file yourself and
-  post-process that file — never pipe live test output through
+  Results need to go directly to tmux (for observability), or
+  a temp file for post-processing. Do not pipe live output through
   head/tail/grep.
 - moat.src.test contains wrappers "run" (process a `moat ...` command line)
   and `raises` (like pytest.raises but ignores exception groups).

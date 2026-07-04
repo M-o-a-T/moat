@@ -17,7 +17,8 @@ adapter provides a nice client/server UX. The package must ultimately run in the
 Mirrored capabilities, phased:
 
 - **Phase 1 — wire-compatible core (no streaming):** request/response RPC with
-  asynchronous replies; cancellation (client- and server-initiated) and
+  asynchronous replies; cancellation (server-initiated on the wire; a client
+  "cancel" of a non-streaming call is local-only, see §4.8) and
   exception forwarding; hierarchical, path-addressed command dispatch
   (`cmd_*` / `sub_*`); built-in meta commands `dir_`, `doc_`, `rdy_`; CBOR
   codec (`cbor2`) with MoaT's standard extension tags; WebSocket and TCP
@@ -52,13 +53,14 @@ ts/moat-lib-rpc/
   README.md                  # synopsis + main (Myst-friendly)
   LICENSE                   # MIT (compatible with cbor2)
   Makefile                   # build / minify / test / publish targets
-  .eslintrc / .prettierrc    # lint/format config
+  eslint.config.js           # ESLint flat config
+  .prettierrc                # format config
   .gitignore                 # node_modules, dist, *.tsbuildinfo, coverage
   src/
     index.ts                 # public barrel + re-exports
     const.ts                 # B_*, E_*, S_*, SD_* constants
     errors.ts                # StreamError taxonomy + decodeStreamError()
-    wire.ts                  # i_f2wire / wire2i_f header packing (bitwise)
+    wire.ts                  # i_f2wire / wire2i_f header packing (arithmetic)
     codec.ts                 # cbor2 wiring + MoaT tag table
     path.ts                  # Path type (encode/decode tag 39, optional)
     proxy.ts                 # Proxy/DProxy + error marshalling (tags 27/32769)
@@ -77,7 +79,7 @@ ts/moat-lib-rpc/
       framing.ts             # incremental cbor2 decoder helper
     async/
       adapter.ts             # sans-IO core <-> Promises/AsyncIterators
-      caller.ts              # Caller: thenable (+ async iterable in P2)
+                             # (Caller lives in dispatch/sender.ts)
   examples/
     client.ts                # async client demo
     server.ts                # async server demo
@@ -142,19 +144,21 @@ On the receiving side (`HandlerStream.msg_in`), the decoded id is then
 the originator (≥ 1); the responder sees them as negative and reuses the
 negative id in replies. ID `0` is never sent as a live id.
 
-**Bitwise shifts are fine:** ids never exceed 2³⁰ (small ids encode to fewer CBOR
-bytes, which is the whole point), so JS 32-bit `<<` / `>>` / `&` are safe and
-keep the port a direct translation of the Python:
+**Use arithmetic, not 32-bit shifts:** JS `<<`/`>>`/`&` truncate to signed
+32 bits, which overflows already at id > 2²⁹ (`(id-1) << 2` must stay
+≤ 2³¹−1). Multiplication/floor-division are exact up to 2⁵³ and match
+Python's semantics for negative ids too: `id*4` has zero low bits, so
+`| flag` ≡ `+ flag`, and Python's `>>= 2` is floor division:
 
 ```ts
 function i_f2wire(id: number, flag: number): number {
   // assert id !== 0; 0<=flag<=3 || flag===7
   if (id > 0) id -= 1;
-  return (id << 2) | (flag & 3);
+  return id * 4 + (flag & 3);
 }
 function wire2i_f(w: number): [number, number] {
-  const f = w & 3;
-  let id = w >> 2;
+  const f = ((w % 4) + 4) % 4;
+  let id = Math.floor(w / 4);
   if (id >= 0) id += 1;
   return [id, f];   // caller then does i = -i
 }
@@ -166,17 +170,21 @@ wire `0`; responder decodes `(1,0)` → flips to `-1`; reply with id=-1, flag=0
 
 ### 4.3 ID allocation and the reuse delay (important)
 
-Originator maintains a free-id pool; allocate by popping a freed id or
-incrementing a counter (starting at 1). An id may be reused only after **both**
-directions have sent their final (stream-bit-clear) message.
+Originator maintains **tiered free-id pools** (`<6`, `<64`, rest — small ids
+encode to fewer CBOR bytes) and allocates from the smallest tier first;
+otherwise a counter (starting at 1) is incremented. An id may be reused only
+after **both** directions have sent their final (stream-bit-clear) message.
 
-**The reuse delay must be preserved.** Python delays recycling a freed id by
-~1 second before returning it to the pool; this avoids races where a late
-in-flight message for the just-closed id collides with a freshly reused one.
-The TS core replicates this: freed ids enter a holding queue and are returned to
-the pool only after the delay (implemented in the async adapter via a timer,
-since the sans-IO core has no clocks — see §6.5). Wire compatibility only
-requires uniqueness-while-live, but the delay is required for correctness.
+**The reuse delay must be preserved.** In its `L` (CPython/large) build — the
+peer we interop with — Python delays recycling a freed id by ~1 second before
+returning it to the pool (`HandlerStream._dly`); this avoids races where a
+late in-flight message for the just-closed id collides with a freshly reused
+one. (The small/MicroPython build recycles immediately.) The TS core
+replicates the `L` behaviour: freed ids enter a single holding queue and are
+returned to the tiered pools only after the delay (implemented in the async
+adapter, since the sans-IO core has no clocks — see §6.5). Wire compatibility
+only requires uniqueness-while-live, but the delay is required for
+correctness.
 
 ### 4.4 Flags (low 2 bits of the header)
 
@@ -193,7 +201,10 @@ transmitted distinctly; it is reconstructed on decode: a message with flag `3`
 whose payload is a single integer is reclassified as internal flow control
 (`flag = 7`). Consequently **user warnings may not consist of a lone integer**
 (the codec appends an empty `{}` to disambiguate — see §4.7). Flow control and
-warnings are **phase 2** (streaming); phase 1 only uses flags 0 and 2.
+warnings are **phase 2** (streaming); phase 1 only *sends* flags 0 and 2 but
+must tolerate receiving the others: a stream-flagged request gets an
+`E_NO_STREAM` error reply (Python's `NoStream` path), warnings are logged and
+dropped.
 
 ### 4.5 Stream states & directions (phase 2)
 
@@ -224,16 +235,26 @@ payload to a concrete type):
 Non-int payloads (proxies/strings/exceptions) reconstruct the original
 exception or fall back to `RemoteError`. The TS port defines an `RpcError`
 hierarchy mirroring these (`StopMe`, `NoStream`, `NoCmds`, `NoCmd`,
-`SkippedData`, `MustStream`, `RemoteError`, `NotReadyError`,
+`SkippedData`, `MustStream`, `WantsStream`, `RemoteError`, `NotReadyError`,
 `Short/LongCommandError`) plus a `Flow` signal object (phase 2; not thrown,
 surfaced via the flow-control callback).
+
+Note that an **unknown command** is *not* signalled with `E_NO_CMD` on the
+wire: Python's `handle()` raises `KeyError`, which is marshalled like any
+other exception (tag 27, `["_rErr", "KeyError", …]`). `[E_NO_CMD]` is only
+sent when the stream has no command handler at all. Golden vectors pin both
+behaviours.
 
 ### 4.7 Payload conventions
 
 - A message array is `[header, *args, ?kwargsMap]`.
 - **First** message of a call (incoming side): `[header, cmdPath, *args, ?kw]`.
-  `cmdPath` is a `Path`; if the args tail is empty the path defaults to the
-  empty `Path` (`msg_in`: `cmd = a.pop(0) if a else Path()`).
+  On the wire `cmdPath` is a **plain array** of path elements — Python's
+  `HandlerStream.handle()` sends `msg.rcmd` re-reversed, i.e. a plain list,
+  *not* a tag-39 `Path` (tag 39 only appears for `Path` values nested in
+  payloads). The TS port sends a plain array too (byte parity) and on decode
+  accepts array, tag-39 `Path`, or string; an empty args tail defaults to the
+  empty path (`msg_in`: `cmd = a.pop(0) if a else Path()`).
 - Subsequent messages: `[header, *args, ?kw]`.
 - **kwargs** use `moat.util.pp.push_kw` / `pop_kw`:
   - Encode (`push_kw`): append the kwargs `Map` to the args array iff (a) kwargs
@@ -242,8 +263,11 @@ surfaced via the flow-control callback).
     trailing map is otherwise omitted.
   - Decode (`pop_kw`): if the last array element is a `Map`, pop and treat as
     kwargs; else `{}`.
-  - The TS port uses `Map` for all CBOR maps (cbor2 default) so kwargs vs.
-    positional-map disambiguation is positional and unambiguous.
+  - The TS port uses `Map` for all CBOR maps on the wire path so kwargs vs.
+    positional-map disambiguation is positional and unambiguous. **Do not rely
+    on cbor2's defaults** — set the map-decoding option explicitly and
+    unit-test that string-keyed maps decode to `Map`. (The kwargs map may be
+    converted to a plain object at the public API boundary for ergonomics.)
 - **Sentinels:** `NotGiven` ≡ `Ellipsis` → CBOR `undefined` (0xF7). `true`/
   `false`/`null` map naturally. Booleans must be emitted as CBOR bool (not
   int 0/1).
@@ -257,6 +281,13 @@ surfaced via the flow-control callback).
 - Responder decodes, flips sign, dispatches by path, and replies using the
   (negative) id. Exactly one stream-bit-clear message must be sent in each
   direction; the interaction ends when both are delivered.
+- **Cancellation:** the responder cancels by sending `[E_CANCEL]` with
+  `B_ERROR` as its final message. The originator of a *non-streaming* call
+  cannot cancel on the wire — its direction is already closed after the
+  initial flag-0 message (`Msg.kill()` is a no-op once `set_end()` ran); a
+  client-side cancel merely abandons the call locally and the eventual reply
+  is dropped as "late". Wire-level client cancel needs an open outgoing
+  direction, i.e. streaming (phase 2).
 - (Phase 2) Streaming: the originator may not send streamed data before
   receiving the initial reply with the stream bit set. Initial and final
   messages are out-of-band. Warnings (flag 3) attach conceptually to the
@@ -294,10 +325,17 @@ decode to a `Tag` object (matches Python's fallback) so forward-compat holds.
 
 - Immutable, backed by an array of elements (`string | number | bigint |
   boolean | null | Uint8Array | Path`).
-- **Encode:** emit `new Tag(39, elements)` (we always tag on send).
+- **Encode:** `Path` *values* (in args/kw) emit `new Tag(39, elements)`,
+  mirroring `_enc_path` — which uses `raw_rooted`: a rooted path carries its
+  `RootPath` prefix as the first element, itself encoded as a tag-32769 proxy
+  such as `"R"`. The **command slot** of a call's first message is sent as a
+  plain array (§4.7).
 - **Decode:** accept **either** tag 39 **or** a plain array. When the command
   path slot (or any path-bearing field) is a plain array, build the `Path` from
   it directly. This tolerates peers/older firmware that send paths untagged.
+  Tolerate a leading root proxy on decode (mirrors
+  `Path.build(val, decoded=True)`); full `RootPath` semantics arrive with the
+  phase-3 `moat.link.client` subset.
 - Support `build()`, `raw`, `parent`, concatenation, and the slash/dot string
   forms needed for logging and tests. (Full parser fidelity is stretch; the wire
   only needs the array form.)
@@ -305,6 +343,12 @@ decode to a `Tag` object (matches Python's fallback) so forward-compat holds.
 ### 5.4 Proxy / error marshalling (`src/proxy.ts`)
 
 - Maintain a name⇆constructor registry mirroring `moat.lib.proxy`.
+- **Pre-register the standard error proxy names** so interop reconstructs
+  concrete exception types instead of degrading everything to `RemoteError`:
+  `_rErr`, `_CSMErr`, `_CSDErr`, `_CNsErr`, `_CNCsErr`, `_CNCErr`, `_CWSErr`,
+  `_CMSErr`, `_NRdyErr`, `_SCmdErr`, `_LCmdErr` (cf. `moat/lib/rpc/errors.py`),
+  plus the `moat.lib.codec.errors` proxies and the root-path proxies (`"R"`,
+  `_P…`).
 - Encode an `Error`: prefer a registered proxy name under tag 32769; else emit
   tag 27 `["_rErr", errorClassName, ...args]` (matches `enc_any`'s exception
   fallback). Decode reverses both, reconstructing an `RpcError` subtype when
@@ -331,8 +375,8 @@ and queues. The **TS core is stricter**: a pure, synchronous state machine with
   flip sign, route to an existing `StreamLink` or spawn a new one and invoke
   the registered command handler.
 - **Outputs (sync):** `core.drain(): unknown[][]` returns queued outbound
-  frames; alternatively a callback `core.onOutgoing = (frame) => …`. The async
-  adapter pumps these to the transport.
+  frames (pull-based; composes best with deterministic sans-IO tests). The
+  async adapter pumps these to the transport.
 - **Callbacks** the core invokes on the adapter: `onResult`, `onError`,
   `onNewCommand`, and (phase 2) `onStreamItem`, `onStreamEnd`, `onFlowCredit`.
 - Pure state ⇒ trivially testable with deterministic step sequences.
@@ -353,8 +397,13 @@ only the single-result (non-streaming) lifecycle.
 ### 6.4 Dispatch (`src/dispatch/`)
 
 - `MsgHandler`: resolve `cmd_<name>` / `sub_<name>`, plus the built-in `dir_`,
-  `doc_`, `rdy_` meta commands. Match Python's `handle()` precedence exactly
-  (doc_ → rdy_ → sub_ → cmd_ → stream_ → `NoCmd`); `stream_` arrives in phase 2.
+  `doc_`, `rdy_` meta commands. Match Python's `handle()` order exactly:
+  empty path (direct `cmd`/`stream`, else `ShortCommandError`) → `doc_` →
+  leaf `cmd_X`/`stream_X` → `rdy_` readiness check → `sub_X` recursion →
+  rdy-fallback `result(None)` → `KeyError` (marshalled as `_rErr`, §4.6).
+  Note `doc_`/`rdy_`/`dir_` match at the **end** of the path (`rcmd[0]` of the
+  reversed list); the `rdy_` check is `L`-gated in Python — phase 1 implements
+  the trivial "answer `None`" fallback. `stream_` handlers arrive in phase 2.
 - `MsgSender` + `Caller`: the client side. In phase 1 `Caller` is a **thenable**
   (`await sender.cmd("foo", 42)`). The async-iterator / context-manager
   streaming surface (`for await (const m of sender.cmd("bar")) { … }`) lands in
@@ -365,9 +414,11 @@ only the single-result (non-streaming) lifecycle.
 The core never awaits and has no clock. The async adapter turns core callbacks
 into Promises/AsyncIterators and turns user Promises into outbound frames
 pushed through `core`. The **reuse delay** (§4.3) is owned by the adapter: when
-the core detaches a link, the adapter schedules a ~1 s timer and only then
-returns the id to the core's free pool. This keeps the core pure while
-preserving the race-avoidance behaviour Python relies on.
+the core detaches a link, the adapter appends `(id, now)` to a single holding
+queue with **one** scheduled — and, on Node, `unref()`ed — timeout (not one
+timer per id, which would keep the event loop alive) and only then returns
+the id to the core's free pools. This keeps the core pure while preserving
+the race-avoidance behaviour Python relies on.
 
 ## 7. Public TypeScript API (sketch)
 
@@ -410,21 +461,25 @@ tests, **tsx** to run TS interop scripts.
   (Python-produced) byte blobs with expected decoded forms; `golden-gen.py`
   regenerates them from the Python library so drift is caught. Covers: simple
   call, reply, error, kwargs disambiguation, tagged/plain Path, Set, Date,
-  error marshal. (Warnings/flow/streamed items added in phase 2.)
+  error marshal, unknown-command `KeyError`, and float width parity (Python
+  emits shortest-lossless floats f16→f32→f64; configure cbor2 to match and pin
+  e.g. `1.5`, `0.1`, `NaN`). (Warnings/flow/streamed items added in phase 2.)
 - **Loopback** (`test/loopback/`): TS↔TS end-to-end over an in-memory duplex,
   over a real localhost WebSocket, and over a localhost TCP socket — exercises
   the full async adapter.
 - **Interop** (`test/interop/`): TS↔Python. A Vitest fixture spawns a Python
   process (using the repo's `moat.lib.rpc` + `moat.lib.stream`) as either
   client or server, and the TS side as the peer, over (a) WebSocket and (b) raw
-  TCP, asserting identical behaviour for: simple call, error forwarding, and
-  cancellation. Reverse direction (Python client → TS server) is also covered.
-  (Streaming/flow-control interop is added in phase 2, once the Python WS
-  transport `moat-ad2.1` is available.) Python is invoked from the repo venv;
-  the fixture skips gracefully if Python/the venv is unavailable.
-
-Tests run normally (pytest/Vitest captures their own output); they do **not**
-redirect to files.
+  TCP, asserting identical behaviour for: simple call, error forwarding,
+  server-initiated cancellation, and local abandonment of a call (client-side
+  "cancel", §4.8). Reverse direction (Python client → TS server) is also
+  covered, including a Python *streaming* request against the phase-1 TS
+  server (expect `E_NO_STREAM`). (Full streaming/flow-control interop is added
+  in phase 2, once the Python WS transport `moat-ad2.1` is available.) Python
+  is invoked from the repo venv; the fixture skips gracefully if Python/the
+  venv is unavailable — **except** when `REQUIRE_INTEROP=1` is set (as it is
+  in CI), where a missing Python peer fails the run instead of silently
+  masking drift.
 
 ## 10. NPM packaging
 
@@ -468,7 +523,8 @@ Standard targets (idiomatic for the repo, independent of the Python `mt`):
 - `make build` — `npm run build` (ESM + CJS + types into `dist/`).
 - `make min` — produce `dist/moat-lib-rpc.min.js` (esbuild, terser-gzip-sized
   banner) + a `.min.js.map`.
-- `make test` / `make test:interop` — run Vitest suites.
+- `make test` / `make test-interop` — run Vitest suites (no colon in target
+  names; GNU make reserves it. The *npm script* may still be `test:interop`).
 - `make lint` / `make fmt` / `make typecheck`.
 - `make example` — boot server + run client example.
 - `make pack` — `npm pack` (dry-run-safe) into `dist/`.
@@ -480,7 +536,8 @@ Standard targets (idiomatic for the repo, independent of the Python `mt`):
 ## 13. Phasing
 
 ### Phase 1 — wire-compatible core (no streaming)
-Request/response, error forwarding, cancellation, hierarchical dispatch
+Request/response, error forwarding, server-side cancellation (§4.8),
+hierarchical dispatch
 (`cmd_`/`sub_` + `dir_`/`doc_`/`rdy_`), `cbor2` codec with MoaT tags, optional
 tag-39 Path, WS + TCP transports, sans-IO core + async adapter (with reuse
 delay), TS↔TS loopback and TS↔Python interop (non-streaming), minified build,
@@ -506,21 +563,29 @@ updates (watch/`d.walk`/`d.watch`).
 - **Header scheme drift:** the README's "id=1 → 4 / reply -5" disagreed with
   the code's "id=1 → 0 / reply -4" (fixed in the README, commit `e9d2823a8`);
   golden vectors pin the code's behaviour.
-- **Bitwise shifts are safe:** ids stay < 2³⁰ by design; use `<<`/`>>`/`&`
-  directly (a 1:1 translation of the Python).
-- **Reuse delay kept:** ~1 s hold before recycling freed ids, replicated in the
-  async adapter, to avoid late-message races. Not optional.
-- **`Map` vs plain objects:** use `Map` for CBOR maps everywhere so kwargs
-  detection is positional and unambiguous (matches `pop_kw`).
+- **Header packing uses arithmetic** (`id*4`, `Math.floor(w/4)`): JS 32-bit
+  bitwise ops overflow at id > 2²⁹; multiplication is exact to 2⁵³ and matches
+  Python's floor-shift semantics for negative ids.
+- **Reuse delay kept:** ~1 s hold before recycling freed ids (mirrors Python's
+  `L` build; the small build recycles immediately), replicated in the async
+  adapter via a single unref'ed timer, to avoid late-message races. Not
+  optional. Id pools are tiered (`<6`, `<64`, rest) like Python's.
+- **`Map` vs plain objects:** use `Map` for CBOR maps on the wire path so
+  kwargs detection is positional and unambiguous (matches `pop_kw`); configure
+  cbor2's map handling explicitly rather than trusting defaults.
 - **`NotGiven`/`undefined`:** `NotGiven` ≡ CBOR `undefined`; never confuse with
   `null`.
-- **Path tag 39 optional:** always tag on send; accept plain arrays on decode.
+- **Path tag 39:** tag `Path` *values* on send; the command slot is a plain
+  array (matching Python's bytes, §4.7); accept tagged or plain on decode.
 - **No `msg_prefix`:** RPC owns its stream; no console multiplexing.
 - **Strict sans-IO:** the TS core is purer than Python's `HandlerStream` (no
   internal taskgroup); the async adapter owns scheduling and the reuse-delay
   timer. Documented, deliberate divergence.
-- **License MIT** (compatible with `cbor2`); repo GPL code is not linked into
-  this package.
+- **License MIT.** The repo is **LGPL v3**, and this package is a port
+  (derivative work) of the Python library — publishing under MIT is a
+  deliberate relicensing by the copyright holder, not a mere compatibility
+  question (the MIT `cbor2` dependency imposes nothing). Check for third-party
+  contributions to `moat.lib.rpc` before the first release.
 - **Scope honesty:** "same features" is delivered in phases; phase 1 is the
   non-streaming wire-compatible core + interop. Streaming/auth/browser are
   phase 2; the broader framework and `moat.link.client` subset are phase 3.

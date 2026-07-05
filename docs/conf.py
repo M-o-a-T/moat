@@ -208,6 +208,10 @@ intersphinx_mapping = {
 # library) are rendered as plain text instead, so the API docs don't waste
 # tokens when consumed by AI.
 markdown_external_references = "text"
+# To additionally retain manually-authored external links (e.g. to GitHub or
+# Wikipedia) while still dropping the auto-generated intersphinx links,
+# replace the line above with:
+# markdown_external_references = "manual"
 
 autodoc2_packages = [
     "../moat",

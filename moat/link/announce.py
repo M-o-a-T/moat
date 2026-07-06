@@ -302,10 +302,12 @@ async def announcing(
 
 
 @asynccontextmanager
-async def as_service(obj: attrdict | None = None):
+async def as_service(obj: attrdict | None = None, **kw):
     """
     This is a replacement for the legacy :func:`moat.util.as_service`
     helper that also registers the named service with MoaT-Link.
+
+    Unknown arguments are passed to :func:`announcing`.
     """
     if obj is None:
         obj = attrdict()
@@ -314,6 +316,6 @@ async def as_service(obj: attrdict | None = None):
     async with (
         _as_service(obj) as mon,
         Link(obj.cfg.link, common=True) as mon.link,
-        announcing(mon.link, via=mon.evt),
+        announcing(mon.link, via=mon.evt, **kw),
     ):
         yield mon

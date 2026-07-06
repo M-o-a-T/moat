@@ -21,7 +21,7 @@ from moat.lib.path import P, Path
 from .client import Link
 from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
     from .client import LinkSender
 
-    from typing import Any
+    from typing import Any, Unpack
 
 __all__ = ["announcing"]
 
@@ -301,13 +301,28 @@ async def announcing(
             tg.cancel_scope.cancel()
 
 
+class _AsServiceKwargs(TypedDict, total=False):
+    """Keyword arguments forwarded to :func:`announcing`.
+
+    ``link`` and ``via`` are supplied by :func:`as_service` itself and
+    must not be passed by the caller.
+    """
+
+    name: Path | None
+    host: Path | str | bool
+    force: bool
+    service: MsgSender | None
+    value: Any
+
+
 @asynccontextmanager
-async def as_service(obj: attrdict | None = None, **kw):
+async def as_service(obj: attrdict | None = None, **kw: Unpack[_AsServiceKwargs]):
     """
     This is a replacement for the legacy :func:`moat.util.as_service`
     helper that also registers the named service with MoaT-Link.
 
-    Unknown arguments are passed to :func:`announcing`.
+    Keyword arguments other than ``obj`` are forwarded to :func:`announcing`,
+    except for ``link`` and ``via``, which are set by this function.
     """
     if obj is None:
         obj = attrdict()

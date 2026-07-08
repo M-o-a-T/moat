@@ -198,10 +198,9 @@ Work is NOT complete until `git push` succeeds.
 
 ### Issue Workflow
 
-1. **Set up a worktree named after the issue**, assuming one doesn't
-   already exist.
-   Do all work there. Don't forget the ext/ link.
-   The worktree may already exist. That's OK: simply continue there.
+1. **Use a worktree named after the issue**, in `/src/work/moat-XXX`.
+   The worktree may already exist. If so, simply continue there.
+   Otherwise, create it, switch to it, and run `make setup`.
 1. If the work requires planning *or* the issue instructs you to plan,
    but there is no `PLAN.md` file, enter planning mode. See below.
 1. If the work consists of *distinct steps*, work on the first one that's
@@ -233,8 +232,9 @@ Work is NOT complete until `git push` succeeds.
      run `git merge intern main`. Fix conflicts, if any, then go back to
      step A.
 
-   - (D) `git worktree remove ISSUE_BRANCH`
-   - (E) `git branch -d ISSUE_BRANCH`
+   - (D) `git status` (must be clean)
+   - (E) `git worktree remove ISSUE_BRANCH`
+   - (F) `git branch -d ISSUE_BRANCH`
 
 ### Planning Mode
 

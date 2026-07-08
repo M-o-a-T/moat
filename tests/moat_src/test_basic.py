@@ -4,15 +4,26 @@ Tests for ``moat.src.submodule``.
 
 from __future__ import annotations
 
+import anyio
+import subprocess
+
 from moat.src.submodule import (
     EDIT_REMOTES,
     REMOTES,
+    _config_get,
     _https_to_ssh,
+    _immediate_submodule_paths,
     _is_http_url,
+    _maybe_ssh_upgrade,
     _prefer_ssh,
     _remote_urls,
 )
 from moat.src.test import raises
+
+
+def _git(*args: str) -> None:
+    """Run ``git`` synchronously for test setup."""
+    subprocess.run(["git", *args], check=True, capture_output=True)
 
 
 def test_nothing():
@@ -126,3 +137,57 @@ def test_prefer_ssh_leaves_non_http_alone():
     assert _prefer_ssh([("url", "ssh://git@github.com/M-o-a-T/foo.git")]) == [
         ("url", "ssh://git@github.com/M-o-a-T/foo.git"),
     ]
+
+
+async def test_immediate_submodule_paths_reads_gitmodules(tmp_path):
+    """:func:`_immediate_submodule_paths` parses ``.gitmodules`` via git config."""
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "a"]\n\tpath = lib/a\n\turl = https://x/a.git\n'
+        '[submodule "my sub"]\n\tpath = sub dir/b\n\turl = https://x/b.git\n',
+        encoding="utf-8",
+    )
+    paths = await _immediate_submodule_paths(anyio.Path(tmp_path))
+    assert sorted(paths) == ["lib/a", "sub dir/b"]
+
+
+async def test_immediate_submodule_paths_no_gitmodules(tmp_path):
+    """No ``.gitmodules`` → empty list (no error)."""
+    assert await _immediate_submodule_paths(anyio.Path(tmp_path)) == []
+
+
+async def test_maybe_ssh_upgrade_skips_when_no_ssh_set(tmp_path):
+    """``moat.no-ssh=true`` suppresses probing; the URL is left untouched."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git("init", "-q", str(repo))
+    _git("-C", str(repo), "config", "moat.no-ssh", "true")
+    _git("-C", str(repo), "config", "remote.origin.url", "https://github.com/x/y.git")
+
+    await _maybe_ssh_upgrade(anyio.Path(repo), "r")
+
+    assert await _config_get(anyio.Path(repo), "remote.origin.url") == "https://github.com/x/y.git"
+
+
+async def test_maybe_ssh_upgrade_skips_non_http_origin(tmp_path):
+    """A non-HTTP origin URL is left as-is and ``moat.no-ssh`` is not set."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git("init", "-q", str(repo))
+    _git("-C", str(repo), "config", "remote.origin.url", "file:///tmp/x.git")
+
+    await _maybe_ssh_upgrade(anyio.Path(repo), "r")
+
+    assert await _config_get(anyio.Path(repo), "remote.origin.url") == "file:///tmp/x.git"
+    assert await _config_get(anyio.Path(repo), "moat.no-ssh") is None
+
+
+async def test_maybe_ssh_upgrade_skips_when_no_origin(tmp_path):
+    """A repo with no ``origin`` remote is left untouched."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git("init", "-q", str(repo))
+
+    await _maybe_ssh_upgrade(anyio.Path(repo), "r")
+
+    assert await _config_get(anyio.Path(repo), "remote.origin.url") is None
+    assert await _config_get(anyio.Path(repo), "moat.no-ssh") is None

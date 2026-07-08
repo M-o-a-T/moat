@@ -132,6 +132,109 @@ def _prefer_ssh(candidates: list[tuple[str, str]]) -> list[tuple[str, str]]:
     return result
 
 
+async def _config_get(repo: anyio.Path, key: str) -> str | None:
+    """Return the value of git config *key* in *repo*, or ``None`` if unset.
+
+    Always goes through ``git config`` (never direct file IO), which lets it
+    resolve the gitfile indirection used by submodules.
+    """
+    try:
+        out = await run_("git", "-C", str(repo), "config", "--get", key, capture=True)
+    except subprocess.CalledProcessError:
+        return None
+    assert out is not None
+    return out.rstrip("\n") or None
+
+
+async def _immediate_submodule_paths(repo: anyio.Path) -> list[str]:
+    """Return paths of immediate submodules declared in *repo*'s ``.gitmodules``.
+
+    Reads via ``git config --file``; the file is never modified.  Returns an
+    empty list when *repo* has no ``.gitmodules`` or it declares no submodules.
+    """
+    gm = repo / ".gitmodules"
+    try:
+        keys = await run_(
+            "git",
+            "config",
+            "--file",
+            str(gm),
+            "--name-only",
+            "--get-regexp",
+            r"^submodule\..*\.path$",
+            capture=True,
+        )
+    except subprocess.CalledProcessError:
+        return []
+    assert keys is not None
+    paths: list[str] = []
+    for key in keys.splitlines():
+        if not key:
+            continue
+        val = await run_("git", "config", "--file", str(gm), "--get", key, capture=True)
+        assert val is not None
+        paths.append(val.rstrip("\n"))
+    return paths
+
+
+async def _maybe_ssh_upgrade(repo: anyio.Path, disp: str) -> None:
+    """Try to switch *repo*'s ``origin`` remote from HTTP(S) to SSH.
+
+    Does nothing when ``origin`` is unset or already non-HTTP(S) (e.g. SSH);
+    the ``moat.no-ssh`` check is only performed when the current ``origin``
+    URL is HTTP(S), so an already-SSH origin short-circuits without reading
+    it.  When ``moat.no-ssh`` is set the URL is left untouched.  Probes SSH
+    with ``git fetch``; on success ``remote.origin.url`` is rewritten to the
+    SSH URL, on failure ``moat.no-ssh`` is set to ``true`` to suppress
+    retries.  All config access goes through ``git config`` (never direct
+    file IO), which correctly resolves the gitfile indirection used by
+    submodules.
+
+    Args:
+        repo: The repository whose ``origin`` URL to upgrade.
+        disp: Human-readable label used in progress messages.
+    """
+    url = await _config_get(repo, "remote.origin.url")
+    if url is None or not _is_http_url(url):
+        return
+    if await _config_get(repo, "moat.no-ssh") == "true":
+        return
+    ssh = _https_to_ssh(url)
+    assert ssh is not None  # url is HTTP(S)
+    print(f"[{disp}] probing SSH: {ssh}", flush=True)
+    try:
+        await run_("git", "-C", str(repo), "fetch", ssh, capture=False)
+    except subprocess.CalledProcessError:
+        print(f"[{disp}] SSH fetch failed – marking no-ssh", flush=True)
+        await run_("git", "-C", str(repo), "config", "moat.no-ssh", "true", capture=False)
+        return
+    print(f"[{disp}] SSH OK – switching origin to {ssh}", flush=True)
+    await run_("git", "-C", str(repo), "config", "remote.origin.url", ssh, capture=False)
+
+
+async def _sshify_submodules(repo: anyio.Path, *, root: anyio.Path) -> None:
+    """Recursively switch HTTP(S) submodule URLs to SSH beneath *repo*.
+
+    Walks the immediate submodules declared in *repo*'s ``.gitmodules``,
+    applies :func:`_maybe_ssh_upgrade` to each, and recurses.  Neither
+    *repo*'s nor any ancestor's ``.gitmodules`` is ever modified; only each
+    submodule's own ``remote.origin.url`` / ``moat.no-ssh`` config (via
+    ``git config``) is touched.
+
+    Args:
+        repo: The repository whose submodules to walk.
+        root: Ancestor used to render relative progress labels.
+    """
+    for child_rel in await _immediate_submodule_paths(repo):
+        child = repo / child_rel
+        try:
+            disp = str(child.relative_to(root))
+        except ValueError:
+            disp = str(child)
+        await _maybe_ssh_upgrade(child, disp)
+        await _sshify_submodules(child, root=root)
+
+
 # ---------------------------------------------------------------------------
 # versions.yaml helpers
 # ---------------------------------------------------------------------------
@@ -192,10 +295,16 @@ async def get_cmd(edit: bool) -> None:
     By default the read-only remotes from ``REMOTES`` are used.  For each
     HTTP(S) candidate an SSH equivalent is tried first, falling back to the
     original HTTP(S) URL if SSH fails; the subsequent push of ``HEAD:moat``
-    likewise prefers SSH.  Pass ``--edit`` to select ``EDIT_REMOTES`` instead,
-    which resolves to SSH-style URLs directly.  Remotes that resolve to an
-    ``http``/``https`` URL are skipped in this mode; an entry with no
-    pushable remote is left untouched (no checkout, no push).
+    likewise prefers SSH.  After the recursive ``git submodule update`` each
+    nested submodule's ``origin`` URL is likewise probed for an SSH
+    alternative: on success the submodule's ``remote.origin.url`` is switched
+    to SSH, on failure a ``moat.no-ssh`` flag is recorded in the submodule's
+    git config so the attempt is not repeated.  The superproject's
+    ``.gitmodules`` is never modified.  Pass ``--edit`` to select
+    ``EDIT_REMOTES`` instead, which resolves to SSH-style URLs directly.
+    Remotes that resolve to an ``http``/``https`` URL are skipped in this
+    mode; an entry with no pushable remote is left untouched (no checkout,
+    no push).
     """
     base = _EXT
     await base.mkdir(parents=True, exist_ok=True)
@@ -268,6 +377,7 @@ async def get_cmd(edit: bool) -> None:
             "--recursive",
             capture=False,
         )
+        await _sshify_submodules(dest, root=base)
 
         pushed = False
         for pkey, purl in candidates:

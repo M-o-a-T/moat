@@ -85,6 +85,53 @@ def _remote_urls(info: dict, *, edit: bool = False) -> list[tuple[str, str]]:
     return result
 
 
+def _https_to_ssh(url: str) -> str | None:
+    """Convert an HTTP(S) *url* to an SSH clone URL.
+
+    Returns ``ssh://git@<host>[:<port>]<path>`` for ``http``/``https``
+    URLs and ``None`` for any other scheme.  Embedded user info is dropped
+    in favour of the ``git`` user.
+
+    Args:
+        url: A candidate remote URL.
+
+    Returns:
+        The SSH equivalent of *url*, or ``None`` if *url* is not HTTP(S).
+    """
+    if not _is_http_url(url):
+        return None
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if host is None:
+        return None
+    port = parsed.port
+    netloc = host if port is None else f"{host}:{port}"
+    return f"ssh://git@{netloc}{parsed.path}"
+
+
+def _prefer_ssh(candidates: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Prepend an SSH variant before each HTTP(S) candidate.
+
+    For every HTTP(S) URL in *candidates* an SSH equivalent (see
+    :func:`_https_to_ssh`) is inserted ahead of it, so a clone or fetch
+    tries SSH first and falls back to the original HTTP(S) URL on failure.
+    Candidates that are not HTTP(S) URLs are returned unchanged.
+
+    Args:
+        candidates: Ordered ``(key, url)`` remote candidates.
+
+    Returns:
+        Candidates with SSH predecessors inserted before HTTP(S) entries.
+    """
+    result: list[tuple[str, str]] = []
+    for key, url in candidates:
+        ssh = _https_to_ssh(url)
+        if ssh is not None:
+            result.append((key, ssh))
+        result.append((key, url))
+    return result
+
+
 # ---------------------------------------------------------------------------
 # versions.yaml helpers
 # ---------------------------------------------------------------------------
@@ -142,11 +189,13 @@ async def get_cmd(edit: bool) -> None:
     at the recorded ``rev``.  ``ext`` must be a symlink or directory created
     by ``make setup``.
 
-    By default the read-only remotes from ``REMOTES`` are used.  Pass
-    ``--edit`` to select ``EDIT_REMOTES`` instead, which resolves to SSH-style
-    URLs so that the subsequent push of ``HEAD:moat`` succeeds.  Remotes that
-    resolve to an ``http``/``https`` URL are skipped in this mode; an entry
-    with no pushable remote is left untouched (no checkout, no push).
+    By default the read-only remotes from ``REMOTES`` are used.  For each
+    HTTP(S) candidate an SSH equivalent is tried first, falling back to the
+    original HTTP(S) URL if SSH fails; the subsequent push of ``HEAD:moat``
+    likewise prefers SSH.  Pass ``--edit`` to select ``EDIT_REMOTES`` instead,
+    which resolves to SSH-style URLs directly.  Remotes that resolve to an
+    ``http``/``https`` URL are skipped in this mode; an entry with no
+    pushable remote is left untouched (no checkout, no push).
     """
     base = _EXT
     await base.mkdir(parents=True, exist_ok=True)
@@ -157,6 +206,8 @@ async def get_cmd(edit: bool) -> None:
         if not candidates:
             print(f"[{name}] no known remote key – skipping", flush=True)
             continue
+        if not edit:
+            candidates = _prefer_ssh(candidates)
 
         rev: str = info["rev"]
         dest = base / name

@@ -4,7 +4,14 @@ Tests for ``moat.src.submodule``.
 
 from __future__ import annotations
 
-from moat.src.submodule import EDIT_REMOTES, REMOTES, _is_http_url, _remote_urls
+from moat.src.submodule import (
+    EDIT_REMOTES,
+    REMOTES,
+    _https_to_ssh,
+    _is_http_url,
+    _prefer_ssh,
+    _remote_urls,
+)
 from moat.src.test import raises
 
 
@@ -86,3 +93,36 @@ def test_edit_remotes_table():
     assert EDIT_REMOTES["github"]("M-o-a-T/foo.git") == "git@github.com:M-o-a-T/foo.git"
     # 'url' is passthrough in both tables.
     assert EDIT_REMOTES["url"]("ssh://x/y.git") == "ssh://x/y.git"
+
+
+def test_https_to_ssh():
+    """:func:`_https_to_ssh` rewrites HTTP(S) URLs to ``ssh://git@…``."""
+    assert _https_to_ssh("https://github.com/M-o-a-T/micropython.git") == (
+        "ssh://git@github.com/M-o-a-T/micropython.git"
+    )
+    assert _https_to_ssh("http://example.com/foo/bar.git") == "ssh://git@example.com/foo/bar.git"
+    # A port is preserved; embedded user info is replaced by ``git``.
+    assert _https_to_ssh("https://alice@git.example.com:2222/x/y.git") == (
+        "ssh://git@git.example.com:2222/x/y.git"
+    )
+    # Non-HTTP(S) URLs are not converted.
+    assert _https_to_ssh("git@github.com:foo/bar.git") is None
+    assert _https_to_ssh("ssh://git@github.com/foo/bar.git") is None
+
+
+def test_prefer_ssh_prepends_ssh_before_https():
+    """Each HTTP(S) candidate gains an SSH predecessor."""
+    assert _prefer_ssh([("github", "https://github.com/M-o-a-T/foo.git")]) == [
+        ("github", "ssh://git@github.com/M-o-a-T/foo.git"),
+        ("github", "https://github.com/M-o-a-T/foo.git"),
+    ]
+
+
+def test_prefer_ssh_leaves_non_http_alone():
+    """Already-SSH or other non-HTTP candidates are returned unchanged."""
+    assert _prefer_ssh([("url", "git@github.com:M-o-a-T/foo.git")]) == [
+        ("url", "git@github.com:M-o-a-T/foo.git"),
+    ]
+    assert _prefer_ssh([("url", "ssh://git@github.com/M-o-a-T/foo.git")]) == [
+        ("url", "ssh://git@github.com/M-o-a-T/foo.git"),
+    ]

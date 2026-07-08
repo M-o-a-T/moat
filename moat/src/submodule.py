@@ -214,6 +214,7 @@ async def get_cmd(edit: bool) -> None:
             "submodule",
             "update",
             "--init",
+            "--recursive",
             capture=False,
         )
 

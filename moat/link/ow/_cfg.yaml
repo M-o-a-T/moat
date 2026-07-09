@@ -1,4 +1,4 @@
-prefix: !P ow
+prefix: !P "1wire"
 
 # There is no "server" entry, that's stored in the MoaT-Link node
 server_default:

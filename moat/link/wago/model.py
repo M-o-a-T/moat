@@ -183,7 +183,8 @@ class WagoRoot(Node):
 
     def add_child(self, item: Key) -> WagoServer:
         """Create child servers as :class:`WagoServer`."""
-        if item in self._sub:
-            raise ValueError(f"exists: {item!r}")
-        self._sub[item] = s = WagoServer()
-        return s
+        try:
+            return self._sub[item]
+        except KeyError:
+            self._sub[item] = s = WagoServer()
+            return s

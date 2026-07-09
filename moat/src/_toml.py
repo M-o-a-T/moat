@@ -5,6 +5,7 @@ Get tomlkit and teach yaml about its classes.
 from __future__ import annotations
 
 import tomlkit
+import tomlkit.items
 
 from moat.util import add_repr
 

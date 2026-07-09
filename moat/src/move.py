@@ -16,6 +16,11 @@ from moat.util.exec import run as run_proc
 
 from .api import API, RepoInfo, get_api
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Sequence
+
 logger = logging.getLogger(__name__)
 
 ProcErr = subprocess.CalledProcessError
@@ -251,7 +256,7 @@ async def mv_repo(cfg, name):
 
 
 @asynccontextmanager
-async def apis(cfg) -> list[RepoInfo]:
+async def apis(cfg: attrdict) -> AsyncGenerator[list[API], None]:
     "Async context for our APIs"
     async with AsyncExitStack() as ex:
         res = [await ex.enter_async_context(get_api(cfg["src"], "src"))]
@@ -261,7 +266,7 @@ async def apis(cfg) -> list[RepoInfo]:
         yield res
 
 
-async def mv_repos(cfg: dict, all: bool = False, names: list[str] = ()):  # noqa: A002
+async def mv_repos(cfg: attrdict, all: bool = False, names: Sequence[str] = ()):  # noqa: A002
     """Move many repos off Github.
 
     @all: if False, don't touch repos that have a parent.

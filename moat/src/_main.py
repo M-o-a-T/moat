@@ -10,6 +10,7 @@ from pathlib import Path
 
 import asyncclick as click
 import tomlkit
+import tomlkit.items
 from packaging.requirements import Requirement
 
 from moat.util import make_proc, yload
@@ -127,7 +128,7 @@ class Replace:
 _l_t = (list, tuple)
 
 
-def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> dict:
+def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> bool:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.

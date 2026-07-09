@@ -504,3 +504,16 @@ moat-util:
   pypi: 0.63.9
   rev: 2fb87a587f285b25b90fdf61771f0bdac7c80dd1
   tag: 0.63.9
+ext:
+  micropython:
+    github: M-o-a-T/micropython.git
+    rev: fa6f764ff40b262081f897d09c867d8ac93463ca
+  mpdb:
+    github: M-o-a-T/mpdb.git
+    rev: c944351c3c75e41c26084168e1446833689db928
+  serialpacker:
+    github: M-o-a-T/serialpacker.git
+    rev: a3c631bc03079b2cbc6c1e2215ef13bc0735f2b3
+  xknx:
+    github: M-o-a-T/xknx.git
+    rev: bef67394dc9c51328e0e778338e805923d56ced9

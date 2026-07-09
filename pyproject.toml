@@ -28,7 +28,7 @@ dependencies = [
     "cffi",
     "cryptography",
     "fpdf2",
-    "pygit",
+    "gitpython",
     "httpx",
     "ifaddr",
     "jmespath",
@@ -123,6 +123,7 @@ dev = [
 doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
+    "sphinx-favicon",
     "sphinx-immaterial",
     "sphinx-tabs",
     "sphinx-toolbox",
@@ -196,7 +197,7 @@ explicit-preview-rules = true
 "docs/conf.py" = ["ALL"]
 "docs/**" = ["D1","F841","TC003"]
 "tests/moat_mqtt/**" = ["PT"]
-"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
+"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S603","S607"]
 "examples/**" = ["S108"]
 "moat/mcp/_server.py" = ["I002"]
 "moat/micro/_test.py" = ["ASYNC240"]
@@ -266,6 +267,7 @@ include = [
     "moat/link/",
     "moat/mcp/",
     "moat/micro/",
+    "moat/src/",
     "moat/util/",
 ]
 exclude = [

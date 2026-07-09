@@ -1,0 +1,22 @@
+Source: moat-link-ow
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat
+
+Package: moat-link-ow
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-util,
+  moat-link,
+Recommends:
+  python3-trio (>= 0.22),
+Description: 1-Wire (OWFS) connector for MoaT-Link
+ Bridges MoaT-Link values to and from 1-Wire device attributes via the
+ asyncowfs library and an owserver connection.
+ .
+ Part of the MoaT ecosystem for distributed home automation.

@@ -33,7 +33,7 @@ class TcpLink(AnyioBuf):
         sl = retry.get("delay", 0.1)
         er: OSError | None = None
         try:
-            with anyio.fail_after(retry.get("timeout", 999)):
+            with anyio.fail_after(retry.get("timeout", 10)):
                 while True:
                     try:
                         s = await anyio.connect_tcp(self.host, self.port)

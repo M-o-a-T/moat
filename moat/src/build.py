@@ -13,7 +13,7 @@ from anyio import Path
 from contextlib import suppress
 
 import asyncclick as click
-import git
+from git import TagReference
 from packaging.requirements import Requirement
 
 from moat.util import attrdict
@@ -22,6 +22,7 @@ from moat.util.exec import run as run_
 from ._repo import Repo
 from ._toml import tomlkit
 from ._util import dash
+from .submodule import _EXT, check_ext_clean, collect_ext_revs
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,8 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
         if not await p.is_dir():
             continue
         try:
+            tag = ""
+            ptag = 0
             if await (rd / "debian" / "changelog").exists():
                 res = await run_(
                     "dpkg-parsechangelog",
@@ -185,6 +188,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                     capture=True,
                     echo=debug,
                 )
+                assert res is not None
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
@@ -198,6 +202,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                             capture=True,
                             echo=debug,
                         )
+                        assert res is not None
                         if not res.strip().endswith(f" for {gtag}"):
                             break
                         # New version for this tag.
@@ -489,6 +494,7 @@ it is dropped when you use '--dput'.
     multiple=True,
     help="Update external dependency",
 )
+@click.option("-E", "--no-ext", is_flag=True, help="don't record external repository HEAD commits")
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
@@ -513,6 +519,7 @@ async def cli(
     forcetag,
     autotag,
     twine_repo,
+    no_ext,
 ):
     """
     Rebuild all modified packages.
@@ -580,6 +587,16 @@ async def cli(
             else:
                 print("Please commit changes and try again.", file=sys.stderr)
                 return
+
+        if not no_ext:
+            dirty_ext = await check_ext_clean(_EXT, repo.versions.get("ext", {}))
+            if dirty_ext:
+                if no.run:
+                    print("*** External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                else:
+                    print("External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                    print("Please commit changes and try again.", file=sys.stderr)
+                    return
 
     # Step 1: check for changed files since last tagging
     if autotag:
@@ -667,8 +684,12 @@ async def cli(
             print("Please fix(?) and try again.", file=sys.stderr)
             no.commit = True
 
-    # Step 8: commit the result
+    # Step 8: record external repo HEADs
+    if not no_ext:
+        await collect_ext_revs(_EXT, repo.versions.get("ext", {}))
+
+    # Step 9: commit the result
     if not no.run:
         if repo.write_tags() and not no.commit:
             repo.index.commit(f"Build version {forcetag}")
-            git.TagReference.create(repo, forcetag)
+            TagReference.create(repo, forcetag)

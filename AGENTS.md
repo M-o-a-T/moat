@@ -30,7 +30,7 @@ but then *create an issue* detailing what's missing to improve the docs later.
 
 ## Project Structure & Modules
 
-- This is a monorepository with submodules. All code lives in `moat/`.
+- This is a monorepository. All code lives in `moat/`.
   - Code is CPython 13+ compatible
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
@@ -59,6 +59,10 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - Build output should be created in, or moved to, the `dist/` folder.
 - `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
+- `ext/` is a symlink to required support libraries. It is not checked into
+  git. Immediately after creating a new worktree, you *must* re-create the
+  link there: it must point to the same tree.
+
 ## Python patterns
 
 - MoaT uses anyio for async code. Never import from asyncio.
@@ -84,7 +88,7 @@ but then *create an issue* detailing what's missing to improve the docs later.
 
 ### Typing
 
-- MoaT does its type checking with "ty".
+- MoaT type checks using "ty".
 - Use "ty check --output-format github" if you need to fix typing errors.
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
@@ -150,7 +154,9 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
 - DO NOT use "head", "tail", or "rg" / "grep" on test output.
-  Instead, redirect to a temp file (or check tmux content) and post-process that.
+  Results need to go directly to tmux (for observability), or
+  a temp file for post-processing. Do not pipe live output through
+  head/tail/grep.
 - moat.src.test contains wrappers "run" (process a `moat ...` command line)
   and `raises` (like pytest.raises but ignores exception groups).
 
@@ -190,11 +196,23 @@ This section only applies when resolving a Beads issue.
 After editing and updating/closing issues, you MUST complete ALL steps below.
 Work is NOT complete until `git push` succeeds.
 
-### Workflow
+### Issue Workflow
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up.
+1. **Use a worktree named after the issue**, in `/src/work/moat-XXX`.
+   The worktree may already exist. If so, simply continue there.
+   Otherwise, create it, switch to it, and run `make setup`.
+1. If the work requires planning *or* the issue instructs you to plan,
+   but there is no `PLAN.md` file, enter planning mode. See below.
+1. If the work consists of *distinct steps*, work on the first one that's
+   open. You may coalesce, split or re-order steps if warranted, but keep
+   in mind that large changes are harder to maintain than several small
+   ones.
 1. "git commit" runs quality gates automatically. If errors are reported,
    fix and resubmit.
+1. **Do not do unrelated work.** Instead, file follow-up issues.
+1. If this work blocks your progress, mark its issue as blocking the
+   one you're working on. Then update your issue's plan *without* committing
+   and stop. You'll be re-scheduled when the problem is solved.
 1. **Commit all work**. Reference the issue(s) you worked on, if any, in
    the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
@@ -205,17 +223,25 @@ Work is NOT complete until `git push` succeeds.
    Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
-1. **Push to remote**:
-   - run `git push intern HEAD:main`
-   - If there are conflicts,
-     - git pull --no-edit
-     - resolve merge conflicts, if any
-     - retry `git push`
-     - repeat until successful
-   ```
-However, if a git push/pull command fails with a permission error, STOP:
-the problem is a missing SSH key. The user needs to re-add the key before
-you can continue.
+1. **After closing an issue**:
+   - (A) Run `git merge main`. Fix conflicts if any.
+   - (B) In the main arc and `git merge --ff-only ISSUE_BRANCH`.
+     If that does not work, go back to step A.
+
+   - (C) `git push intern main`. If that fails, go back to the worktree and
+     run `git merge intern main`. Fix conflicts, if any, then go back to
+     step A.
+
+   - (D) `git status` (must be clean)
+   - (E) `git worktree remove ISSUE_BRANCH`
+   - (F) `git branch -d ISSUE_BRANCH`
+
+### Planning Mode
+
+1. Write a detailed step-by-step plan to TODO/<issue-tag>.md
+1. Commit the plan.
+1. Create a `review` issue and block your issue on it.
+1. **Stop work**.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker

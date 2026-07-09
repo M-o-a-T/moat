@@ -48,6 +48,16 @@ def _tagsplit(tag: str | None):
 
 
 class _Common:
+    @property
+    def last_tag(self) -> str | None:
+        """Latest tag string for this component."""
+        raise NotImplementedError
+
+    @property
+    def vers(self) -> attrdict:
+        """Version dict for this component."""
+        raise NotImplementedError
+
     def next_tag(
         self,
         major: bool = False,
@@ -92,12 +102,15 @@ class Package(_Common):
     name: str = field()
     under: str = field(init=False, repr=False)
     path: Path = field(init=False, repr=False)
-    files: set(Path) = field(init=False, factory=set, repr=False)
+    files: set[Path] = field(init=False, factory=set, repr=False)
     subs: dict[str, Package] = field(factory=dict, init=False, repr=False)
     hidden: bool = field(init=False, repr=False)
 
-    def __init__(self, repo, name):
-        self.__attrs_init__(repo, name)
+    def __init__(self, repo: Repo, name: str) -> None:
+        self._repo = repo
+        self.name = name
+        self.files: set[Path] = set()
+        self.subs: dict[str, Package] = {}
         self.under = name.replace(".", "_")
         self.path = Path(*name.split("."))
         self.hidden = not (PACK / self.dash).exists()
@@ -161,6 +174,7 @@ class Package(_Common):
         ctl = PACK / self.dash / "debian" / "control"
         src = ctl.read_text()
         sm = SRC.match(src)
+        assert sm is not None
         return sm.group(1)
 
     def copy(self) -> None:
@@ -267,7 +281,7 @@ class Repo(git.Repo, _Common):
         return True
 
     @property
-    def last_tag(self) -> git.Tag | None:
+    def last_tag(self) -> str | None:
         """
         Return the most-recent tag for this repo
         """
@@ -275,13 +289,13 @@ class Repo(git.Repo, _Common):
             return self._last_tag
 
         tag = None
-        vers = None
+        vers: Version | None = None
         for tt in self._commit_tags.values():
             for t in tt:
                 if "/" in t.name:
                     continue
                 tv = Version(t.name)
-                if tag is None or vers < tv:
+                if vers is None or vers < tv:
                     tag = t
                     vers = tv
 
@@ -293,6 +307,7 @@ class Repo(git.Repo, _Common):
     @property
     def last_commit(self) -> str:
         t = self.last_tag
+        assert t is not None
         c = self.tags[t].commit
         return c.hexsha
 
@@ -324,7 +339,7 @@ class Repo(git.Repo, _Common):
             pp.subs[nam] = p
         return p
 
-    def _make_repos(self) -> dict:
+    def _make_repos(self) -> None:
         """Collect subrepos"""
         for fn in Path("packaging").iterdir():
             if not fn.is_dir() or "." in fn.name:
@@ -350,7 +365,7 @@ class Repo(git.Repo, _Common):
                 raise RuntimeError(f"Inconsistent repo data: {sb} not found")
             self._repos[sb].files.add(fn)
 
-    def repo_for(self, path: Path | str, main: bool | None) -> str:
+    def repo_for(self, path: Path | str, main: bool | None) -> str | None:
         """
         Given a file path, returns the subrepo in question
         """
@@ -415,7 +430,7 @@ class Repo(git.Repo, _Common):
             return True
         return False
 
-    def tagged(self, c: git.Commit = None) -> git.Tag | None:
+    def tagged(self, c: git.Commit | None = None) -> git.Tag | None:
         """Return a commit's tag name.
         Defaults to the head commit.
         Returns None if no tag, raises ValueError if more than one is found.

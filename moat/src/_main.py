@@ -19,6 +19,7 @@ from moat.lib.run import load_subgroup
 from moat.util.exec import run as run_
 
 from ._repo import Repo
+from ._toml import get_table
 from ._util import dash, undash
 
 from collections import defaultdict
@@ -295,17 +296,17 @@ def apply_templates(repo: Repo, part):
         proj = tomlkit.TOMLDocument()
 
     mod = default_dict(t1, proj, t2, repl=repl, cls=tomlkit.items.Table)
-    try:
-        proc = proj["tool"]["moat"]["fixup"]
-    except KeyError:
-        p = proj
-    else:
-        del proj["tool"]["moat"]["fixup"]
+    moat = get_table(get_table(proj, "tool"), "moat")
+    if moat is not None and "fixup" in moat:
+        proc = moat["fixup"]
+        del moat["fixup"]
         proc = make_proc(proc, ("toml",), f"{pr('pyproject.toml')}:tool.moat.fixup")
         s1 = proj.as_string()
         proc(proj)
         s2 = proj.as_string()
         mod |= s1 != s2
+    else:
+        p = proj
 
     if mod:
         for p in commas:

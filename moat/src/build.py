@@ -20,7 +20,7 @@ from moat.util import attrdict
 from moat.util.exec import run as run_
 
 from ._repo import Repo
-from ._toml import tomlkit
+from ._toml import get_array, get_table, tomlkit
 from ._util import dash
 from .submodule import _EXT, check_ext_clean, collect_ext_revs
 
@@ -134,23 +134,20 @@ async def do_versions(repo, repos, tags, no):
         if await p.is_file():
             content = await p.read_text()
             pr = tomlkit.loads(content)
-            pr["project"]["version"] = r.vers.get("new", r.last_tag)
+            proj = get_table(pr, "project")
+            if proj is not None:
+                proj["version"] = r.vers.get("new", r.last_tag)
             changed = r.has_changes(True)
 
             if not no.version:
-                try:
-                    deps = pr["project"]["dependencies"]
-                except KeyError:
-                    pass
-                else:
+                deps = get_array(proj, "dependencies")
+                if deps is not None:
                     fix_deps(deps, tags, changed)
-                try:
-                    deps = pr["project"]["optional_dependencies"]
-                except KeyError:
-                    pass
-                else:
-                    for v in deps.values():
-                        fix_deps(v, tags, changed)
+                opt = get_table(proj, "optional_dependencies")
+                if opt is not None:
+                    for v in opt.values():
+                        if isinstance(v, tomlkit.items.Array):
+                            fix_deps(v, tags, changed)
             await p.write_text(pr.as_string())
 
             repo.index.add(str(p))

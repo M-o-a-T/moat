@@ -13,6 +13,7 @@ from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
 from attrs import define, field
+from typing_extensions import TypedDict
 
 from moat.util import NotGiven, attrdict, gen_ident
 from moat.util import as_service as _as_service
@@ -21,7 +22,7 @@ from moat.lib.path import P, Path
 from .client import Link
 from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
@@ -301,7 +302,7 @@ async def announcing(
             tg.cancel_scope.cancel()
 
 
-class _AsServiceKwargs(TypedDict, total=False):
+class _AsServiceKwargs(TypedDict, total=False, closed=True):
     """Keyword arguments forwarded to :func:`announcing`.
 
     ``link`` and ``via`` are supplied by :func:`as_service` itself and

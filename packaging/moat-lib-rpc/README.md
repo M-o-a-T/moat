@@ -86,10 +86,14 @@ scheme allows for five (four) concurrent messages per direction before
 encoding to two bytes is required.
 
 Negative integers signal that the ID has been allocated by that
-message's recipient. They are inverted bit-wise, i.e. `(-1-id)`. An
-ID of zero is legal. The bits described above are not affected by this
-inversion. Thus a command with ID=1 (no streaming, no error) is sent
-with an initial integer of 4; the reply would use -5.
+message's recipient: the recipient reuses the sign-flipped ID of the
+incoming message for its replies. Positive originator IDs are
+decremented by one before being shifted into the high bits, so that the
+first few IDs encode as compact non-negative CBOR integers; the receiver
+increments a non-negative ID back by one. Zero is not used as an ID, to
+keep this mapping unambiguous. The flag bits are unaffected by the
+sign. Thus a command with ID=1 (no streaming, no error) is sent with an
+initial integer of 0; the reply uses -4.
 
 An interaction has concluded when both sides have transmitted exactly one
 message with the Streaming bit clear.

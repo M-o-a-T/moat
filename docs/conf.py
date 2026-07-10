@@ -31,7 +31,7 @@ else:
 # get the current version
 import subprocess
 
-version = subprocess.check_output(["git", "describe"]).decode("utf-8").strip()
+version = subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
 try:
     _idx = version.index("-")
 except IndexError:
@@ -86,6 +86,7 @@ extensions = [
     "sphinx_favicon",
     "sphinx_book_theme",
     "sphinx_tabs.tabs",
+    "sphinx_markdown_builder",
 ]
 myst_enable_extensions = [
     "attrs_block",
@@ -127,7 +128,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints", "**/ARCHITECTURE.md"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -201,6 +202,17 @@ intersphinx_mapping = {
     # "pyfuse3": ("https://M-o-a-T.org/docs/asyncclick/", None),
 }
 
+# In the Markdown output, keep only links that point to the same file or to
+# another MoaT document. Auto-generated cross-references to external
+# inventories (e.g. every ``float`` / ``None`` linking to the standard
+# library) are rendered as plain text instead, so the API docs don't waste
+# tokens when consumed by AI.
+markdown_external_references = "text"
+# To additionally retain manually-authored external links (e.g. to GitHub or
+# Wikipedia) while still dropping the auto-generated intersphinx links,
+# replace the line above with:
+# markdown_external_references = "manual"
+
 autodoc2_packages = [
     "../moat",
 ]
@@ -257,12 +269,30 @@ nitpick_ignore = [
     ("py:obj", "NotGiven"),
     ("py:obj", "moat.lib.broadcast._impl.TData"),
     ("py:obj", "moat.link.backend.TData"),
+    ("py:class", "moat.link.client.DataSender"),
+    ("py:class", "moat.link.client.ErrSender"),
+    ("py:class", "moat.link.job.runner._Monitor"),
+    ("py:class", "moat.link.job.runner._Timer"),
+    ("py:class", "moat.link.job.runner._Watcher"),
+    ("py:class", "asyncactor.Actor"),
+    ("py:class", "asyncactor.actor.Actor"),
+    ("py:class", "asyncactor.nodelist.NodeList"),
+    ("py:mod", "asyncactor"),
+    ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
+    ("py:data", "types.EllipsisType"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
     ("py:obj", "moat.lib.priomap._impl.Priority"),
+    ("py:obj", "moat.link.client._NodeType"),
+    ("py:obj", "moat.util.impl.YieldT"),
     ("py:class", "moat.lib.priomap._impl.Comparable"),
     ("py:class", "moat.lib.rpc.base.MsgRoot"),
+    ("py:class", "moat.lib.rpc.auth._base.AuthError"),
+    ("py:class", "moat.lib.rpc.auth._base._SubAuthFactory"),
+    ("py:class", "moat.link.client._NodeType"),
     ("py:class", "coroutine"),
+    ("py:class", "pathlib._local.PurePath"),
+    ("py:class", "pathlib._local.PosixPath"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),
@@ -289,6 +319,8 @@ nitpick_ignore = [
     ("py:class", "asyncakumuli.model.DS"),
     ("py:obj", "moat.util.ctx.T_Ctx"),
     ("py:obj", "moat.util.queue.T"),
+    ("py:class", "mcp.server.fastmcp.FastMCP"),
+    ("py:class", "mcp.server.fastmcp.server.FastMCP"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),

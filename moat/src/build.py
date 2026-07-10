@@ -13,22 +13,28 @@ from anyio import Path
 from contextlib import suppress
 
 import asyncclick as click
-import git
+from git import TagReference
 from packaging.requirements import Requirement
 
 from moat.util import attrdict
 from moat.util.exec import run as run_
 
 from ._repo import Repo
-from ._toml import tomlkit
+from ._toml import get_array, get_table, tomlkit
 from ._util import dash
+from .submodule import _EXT, check_ext_clean, collect_ext_revs
 
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
 DIST_PYPI = Path("dist/pypi")
 DIST_DEBIAN = Path("dist/debian")
-ARCH = subprocess.check_output(["/usr/bin/dpkg", "--print-architecture"]).decode("utf-8").strip()
+ARCH = (
+    subprocess
+    .check_output(["/usr/bin/dpkg", "--print-architecture"])
+    .decode("utf-8", errors="surrogateescape")
+    .strip()
+)
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
@@ -128,23 +134,20 @@ async def do_versions(repo, repos, tags, no):
         if await p.is_file():
             content = await p.read_text()
             pr = tomlkit.loads(content)
-            pr["project"]["version"] = r.vers.get("new", r.last_tag)
+            proj = get_table(pr, "project")
+            if proj is not None:
+                proj["version"] = r.vers.get("new", r.last_tag)
             changed = r.has_changes(True)
 
             if not no.version:
-                try:
-                    deps = pr["project"]["dependencies"]
-                except KeyError:
-                    pass
-                else:
+                deps = get_array(proj, "dependencies")
+                if deps is not None:
                     fix_deps(deps, tags, changed)
-                try:
-                    deps = pr["project"]["optional_dependencies"]
-                except KeyError:
-                    pass
-                else:
-                    for v in deps.values():
-                        fix_deps(v, tags, changed)
+                opt = get_table(proj, "optional_dependencies")
+                if opt is not None:
+                    for v in opt.values():
+                        if isinstance(v, tomlkit.items.Array):
+                            fix_deps(v, tags, changed)
             await p.write_text(pr.as_string())
 
             repo.index.add(str(p))
@@ -169,6 +172,8 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
         if not await p.is_dir():
             continue
         try:
+            tag = ""
+            ptag = 0
             if await (rd / "debian" / "changelog").exists():
                 res = await run_(
                     "dpkg-parsechangelog",
@@ -180,6 +185,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                     capture=True,
                     echo=debug,
                 )
+                assert res is not None
                 tag, ptag = res.strip().rsplit("-", 1)
                 ptag = int(ptag)
                 if tag != ltag or r.vers.pkg > ptag:
@@ -193,6 +199,7 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                             capture=True,
                             echo=debug,
                         )
+                        assert res is not None
                         if not res.strip().endswith(f" for {gtag}"):
                             break
                         # New version for this tag.
@@ -322,10 +329,10 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                         file=sys.stderr,
                     )
             else:
-                if debug:
-                    print(f"\n=== Failure packaging {r.name}", file=sys.stderr)
-                else:
-                    print(f"Failure packaging {r.name}: {exc.stderr.strip()}", file=sys.stderr)
+                err = exc.stderr or "?"
+                print(f"Failure packaging {r.name}: {err.strip()}", file=sys.stderr)
+                if not debug and not exc.stderr:
+                    raise
                 no.commit = True
                 no.deb = True
                 no.pypi = True
@@ -484,6 +491,7 @@ it is dropped when you use '--dput'.
     multiple=True,
     help="Update external dependency",
 )
+@click.option("-E", "--no-ext", is_flag=True, help="don't record external repository HEAD commits")
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
@@ -508,6 +516,7 @@ async def cli(
     forcetag,
     autotag,
     twine_repo,
+    no_ext,
 ):
     """
     Rebuild all modified packages.
@@ -575,6 +584,16 @@ async def cli(
             else:
                 print("Please commit changes and try again.", file=sys.stderr)
                 return
+
+        if not no_ext:
+            dirty_ext = await check_ext_clean(_EXT, repo.versions.get("ext", {}))
+            if dirty_ext:
+                if no.run:
+                    print("*** External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                else:
+                    print("External repositories are not clean:", *dirty_ext, file=sys.stderr)
+                    print("Please commit changes and try again.", file=sys.stderr)
+                    return
 
     # Step 1: check for changed files since last tagging
     if autotag:
@@ -662,8 +681,12 @@ async def cli(
             print("Please fix(?) and try again.", file=sys.stderr)
             no.commit = True
 
-    # Step 8: commit the result
+    # Step 8: record external repo HEADs
+    if not no_ext:
+        await collect_ext_revs(_EXT, repo.versions.get("ext", {}))
+
+    # Step 9: commit the result
     if not no.run:
         if repo.write_tags() and not no.commit:
             repo.index.commit(f"Build version {forcetag}")
-            git.TagReference.create(repo, forcetag)
+            TagReference.create(repo, forcetag)

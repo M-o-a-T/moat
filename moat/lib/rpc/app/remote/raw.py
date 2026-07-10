@@ -7,13 +7,14 @@ from __future__ import annotations
 from moat.lib.micro import AC_use
 from moat.lib.rpc.stream.cmdbbm import BaseCmdBBM
 
-from typing import TYPE_CHECKING, cast  # isort:skip
+from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgSender
-    from moat.lib.stream import BaseBuf
-    from typing import Any
     from types import CoroutineType
+
+    from moat.lib.stream import BaseBuf
+
+    from typing import Any
 
 
 class Raw(BaseCmdBBM):
@@ -25,6 +26,6 @@ class Raw(BaseCmdBBM):
 
     doc = dict(_c=dict(_d="Data forwarding", path="path:dest"))
 
-    def stream(self) -> CoroutineType[Any,Any,BaseBuf]:
+    def stream(self) -> CoroutineType[Any, Any, BaseBuf]:
         """Returns the link."""
         return AC_use(self, self.root.sub_at(self.cfg["path"]))

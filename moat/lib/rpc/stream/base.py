@@ -43,6 +43,8 @@ from moat.lib.rpc import (
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from moat.lib.micro import _TaskGroupProto
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseMsgHandler, OptDict
@@ -128,6 +130,8 @@ class HandlerStream(MsgHandler):
     """
 
     _tg: _TaskGroupProto | None = None
+    _send_q: Queue[tuple[StreamLink, Sequence, OptDict, int]]
+    _dly_q: Queue[tuple[int, int]]
     _id = 0
 
     def __init__(self, sender: BaseMsgHandler | None, logger: object | None = None):
@@ -438,7 +442,7 @@ class HandlerStream(MsgHandler):
             await AC_exit(self, type(exc), exc, None)
             raise
 
-    async def _run_read(self, evt):
+    async def _run_read(self, evt: Event):
         try:
             if self.reader_done.is_set():
                 self.reader_done = Event()
@@ -448,7 +452,7 @@ class HandlerStream(MsgHandler):
             self.reader_done.set()
             self._read_task = None
 
-    async def _run_write(self, evt):
+    async def _run_write(self, evt: Event):
         try:
             if self.writer_done.is_set():
                 self.writer_done = Event()
@@ -476,7 +480,12 @@ class HandlerStream(MsgHandler):
         """
         raise NotImplementedError
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
         self._tgs.cancel()
         try:
             with shield():
@@ -490,7 +499,7 @@ class HandlerStream(MsgHandler):
             assert not self._msgs
 
         finally:
-            await AC_exit(self, *exc)
+            await AC_exit(self, exc_type, exc, tb)
 
 
 class StreamLink(MsgLink):

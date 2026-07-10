@@ -1,3 +1,27 @@
+moat-lib-repl (0.1.6-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:44 +0200
+
+moat-lib-repl (0.1.6-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:38:24 +0200
+
+moat-lib-repl (0.1.6-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:15:46 +0200
+
+moat-lib-repl (0.1.5-2) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 11:00:34 +0100
+
 moat-lib-repl (0.1.5-1) unstable; urgency=medium
 
   * New release for 26.0.11

@@ -46,7 +46,7 @@ class _Server:
     async def _accept(self, conn: Any) -> None:
         conn_: Any = conn
         if self.ssl:
-            conn_ = await anyio.streams.tls.TLSStream.wrap(  # type: ignore[attr-defined]  # anyio.streams.tls available at runtime
+            conn_ = await anyio.streams.tls.TLSStream.wrap(  # ty:ignore[unresolved-attribute]  # anyio.streams.tls available at runtime
                 conn,
                 server_side=True,
                 ssl_context=self.ssl,

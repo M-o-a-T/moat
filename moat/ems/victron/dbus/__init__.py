@@ -659,7 +659,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # @param value The new value.
     # @return completion-code When successful a 0 is return, and when not a -1 is returned.
     @dbus.method()
-    async def SetValue(self, newvalue: v) -> i:  # noqa: D102,F821
+    async def SetValue(self, newvalue: DbusType["v"]) -> DbusType["i"]:  # noqa: D102,F821,UP037
         if not self._writeable:
             return 1  # NOT OK
 
@@ -682,7 +682,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # @param length Lenght of the language string.
     # @return description
     @dbus.method()
-    def GetDescription(self, language: s, length: i) -> s:  # noqa: D102,F821
+    def GetDescription(self, language: DbusType["s"], length: DbusType["i"]) -> DbusType["s"]:  # noqa: D102,F821,UP037
         language, length  # noqa: B018
         return self._description if self._description is not None else "No description given"
 
@@ -690,14 +690,14 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # Returns the value.
     # @return the value when valid, and otherwise an empty array
     @dbus.method()
-    def GetValue(self) -> v:  # noqa: D102,F821
+    def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
         return wrap_dbus_value(self._value)
 
     ## Dbus exported method GetText
     # Returns the value as string of the dbus-object-path.
     # @return text A text-value. '---' when local value is invalid
     @dbus.method()
-    def GetText(self) -> s:  # noqa: D102,F821
+    def GetText(self) -> DbusType["s"]:  # noqa: D102,F821,UP037
         return self.get_text()
 
     async def get_text(self):  # noqa: D102

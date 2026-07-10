@@ -5,7 +5,7 @@ PDF subclass
 from __future__ import annotations
 
 try:
-    from fpdf2 import FPDF, ViewerPreferences  # type:ignore[unresolved-import]
+    from fpdf2 import FPDF, ViewerPreferences  # ty:ignore[unresolved-import]
 except ImportError:
     from fpdf import FPDF
     from fpdf.prefs import ViewerPreferences

@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.path import PathElem
-    from moat.lib.rpc import Msg
+    from moat.lib.rpc import Msg, SubMsgSender
 
-    from collections.abc import Awaitable, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
 
 
 class _Send:
@@ -61,7 +61,7 @@ class _Step:
 
     call = None  # subcmd or feeder
 
-    p: Awaitable = None
+    p: SubMsgSender | None = None
     a: tuple
     k: dict
     append: bool = False
@@ -70,7 +70,7 @@ class _Step:
     t: int | None = None
     si: bool = False
     so: bool = False
-    msg: Msg = None
+    msg: Msg | None = None
 
     last_a: Sequence | None = None
     last_kw: Mapping | None = None
@@ -96,7 +96,10 @@ class _Step:
             self.append = cfg.get("append", self.append)
             self.keep = cfg.get("keep", self.keep)
         if p is not None:
-            self.p = trans.root.sub_at(p)
+            sp = trans.root.sub_at(p)
+            if not hasattr(sp, "stream_out"):
+                raise TypeError(sp)
+            self.p = sp
 
     def __repr__(self):
         return f"‹TS:{self.trans.path / self.id}›"
@@ -113,12 +116,14 @@ class _Step:
 
     async def run_i(self) -> None:
         "Open a write-only pipe to the remote"
+        assert self.p is not None
         async with self.p.stream_out(*self.a, **self.kw) as self.msg:
             self._ready.set()
             await self.run_t()
 
     async def run_o(self) -> None:
         "Open a pipe to the remote and read from it"
+        assert self.p is not None
         async with (self.p.stream if self.si else self.p.stream_in)(*self.a, **self.kw) as msg:
             self._ready.set()
             if self.si:
@@ -144,6 +149,7 @@ class _Step:
             ra, rkw = a, kw
         if self.si:
             await self._ready.wait()
+            assert self.msg is not None
             await self.msg.send(*a, **kw)
             return
 
@@ -161,7 +167,7 @@ class _Step:
             if self.kw:
                 kw = combine_dict(kw, self.kw)
             try:
-                msg = await self.p.cmd((), *a, **kw)
+                msg = await self.p.cmd(Path(), *a, **kw)
             except Exception as exc:
                 raise RemoteError(f"{self}: {exc}") from exc
 
@@ -178,7 +184,7 @@ class _Step:
         # pass on
         await self.cont(a, kw)
 
-    async def cont(self, a, kw) -> Awaitable:
+    async def cont(self, a, kw) -> None:
         """
         Take this data and continue to the next step
         """
@@ -213,9 +219,8 @@ class Transfer(BaseCmd):
       - get: path (or list of paths) to extract data from the result
     """
 
-    tg: TaskGroup
     steps: list[_Step]
-    t_last: int = None
+    t_last: int | None = None
 
     doc = dict(
         _c=dict(
@@ -271,7 +276,7 @@ class Transfer(BaseCmd):
 
     async def reload(self):
         "restart"
-        super().reload()
+        await super().reload()
         self.tg.cancel()
 
     async def cont(self, i, a, kw):
@@ -281,7 +286,7 @@ class Transfer(BaseCmd):
         if i < len(self.data):
             s = self.steps[i]
             if not s.si:
-                await s(a, kw)
+                await s((a, kw))
 
     doc_w = dict(_d="data", qs="int:dest step (default first)", _s=True)
 
@@ -292,9 +297,9 @@ class Transfer(BaseCmd):
         if msg.can_stream:
             async with msg.stream_in() as md:
                 async for m in md:
-                    await s0(m.a, m.kw)
+                    await s0((list(m.args), m.kw))
         else:
-            await s0(msg.a, kw)
+            await s0((list(msg.args), kw))
 
     doc_r = dict(
         _d="data monitor",
@@ -333,8 +338,8 @@ class Transfer(BaseCmd):
             for a, kw in self.data:
                 await md.send(*a, **kw)
 
-    async def handle(self, msg: Msg, rpath: list[PathElem]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         "Intercept qs"
-        if rpath and isinstance(rpath[-1], int):
-            msg.kw["qs"] = rpath.pop()
-        await super().handle(msg, rpath)
+        if rcmd and isinstance(rcmd[-1], int):
+            msg.kw["qs"] = rcmd.pop()
+        await super().handle(msg, rcmd)

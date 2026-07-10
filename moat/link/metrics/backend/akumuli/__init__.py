@@ -38,12 +38,11 @@ class Backend(_Backend):
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[Self]:
         """Connect to the Akumuli server."""
-        conn_cfg = {
-            "host": self.cfg.get("host", "localhost"),
-            "port": self.cfg.get("port", 8282),
-            "delta": self.cfg.get("delta", True),
-        }
-        async with akumuli.connect(**conn_cfg) as self.srv:
+        cfg = self.cfg.get("server", {})
+        if "delta" in self.cfg:
+            cfg = dict(cfg)
+            cfg["delta"] = self.cfg["delta"]
+        async with akumuli.connect(**cfg) as self.srv:
             try:
                 yield self
             finally:

@@ -113,7 +113,7 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        s = getattr(self,"_spi")
+        s = self._spi
         if s is not None:
             del self._spi
             s.close()

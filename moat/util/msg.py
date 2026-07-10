@@ -65,7 +65,7 @@ class _MsgRW:
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"
-            self.stream = await anyio.open_file(p, self._mode)  # type: ignore[arg-type]  # _mode is str literal in subclasses
+            self.stream = await anyio.open_file(p, self._mode)  # ty:ignore[no-matching-overload]  # _mode is str literal in subclasses
         return self
 
     async def __aexit__(
@@ -114,7 +114,7 @@ class MsgReader(_MsgRW):
                 pass
 
             assert self.stream is not None  # stream is set in __aenter__
-            d = await self.stream.read(self.buflen)  # type: ignore[attr-defined]  # AsyncFile has read
+            d = await self.stream.read(self.buflen)  # ty:ignore[unresolved-attribute]  # AsyncFile has read
             if d == b"":
                 raise StopAsyncIteration
             self.codec.feed(d)
@@ -147,7 +147,10 @@ class MsgWriter(_MsgRW):
         self.buf: list[bytes] = []
         self.buflen: int = buflen
         self.curlen: int = 0
-        self.excess: int = 0
+        # Serializes the underlying stream writes so concurrent callers do not
+        # observe a half-mutated buffer or interleave their writes at the OS
+        # level.
+        self._write_lock = anyio.Lock()
 
     async def __aexit__(
         self,
@@ -157,40 +160,45 @@ class MsgWriter(_MsgRW):
     ) -> None:
         assert self.stream is not None  # stream is set in __aenter__
         with anyio.fail_after(2, shield=True):
-            if self.buf:
-                await self.stream.write(b"".join(self.buf))  # type: ignore[attr-defined]  # AsyncFile has write
-            await super().__aexit__(exc_type, exc_val, exc_tb)
+            await self.flush(force=True)
+        await super().__aexit__(exc_type, exc_val, exc_tb)
 
     async def __call__(self, msg: Any) -> None:
         """Write a message (bytes) to the buffer.
 
-        Flushing writes a multiple of ``buflen`` bytes."""
+        Flushing writes a multiple of ``buflen`` bytes.
+
+        Safe to call from multiple tasks concurrently.
+        """
         assert self.stream is not None  # stream is set in __aenter__
         msg_bytes = self.codec.encode(msg)
         if not isinstance(msg_bytes, bytes):
             msg_bytes = bytes(msg_bytes)
         self.buf.append(msg_bytes)
         self.curlen += len(msg_bytes)
-        if self.curlen + self.excess >= self.buflen:
+        if self.curlen >= self.buflen:
             buf = b"".join(self.buf)
-            pos = self.buflen * ((self.curlen + self.excess) // self.buflen) - self.excess
-            assert pos > 0
-            wb, buf = buf[:pos], buf[pos:]
-            self.curlen = len(buf)
-            self.buf = [buf]
-            self.excess = 0
-            await self.stream.write(wb)  # type: ignore[attr-defined]  # AsyncFile has write
+            # Reset buffer state *before* awaiting so a concurrent caller does
+            # not observe (and re-emit) bytes we are already flushing.
+            self.buf = []
+            self.curlen = 0
+            async with self._write_lock:
+                await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
 
     async def flush(self, force: bool = True) -> None:
         """Flush the buffer.
 
         @force: do write partial data.
+
+        Safe to call from multiple tasks concurrently.
         """
         assert self.stream is not None  # stream is set in __aenter__
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
-            self.excess = (self.excess + len(buf)) % self.buflen
-            await self.stream.write(buf)  # type: ignore[attr-defined]  # AsyncFile has write
-            if force:
-                await self.stream.flush()  # type: ignore[attr-defined]  # AsyncFile has flush
+            self.curlen = 0
+            async with self._write_lock:
+                await self.stream.write(buf)  # ty:ignore[unresolved-attribute]  # AsyncFile has write
+        if force:
+            async with self._write_lock:
+                await self.stream.flush()  # ty:ignore[unresolved-attribute]  # AsyncFile has flush

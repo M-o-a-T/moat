@@ -3,7 +3,6 @@ Description=MoaT-KV main server
 After=mosquitto.service
 Wants=mosquitto.service
 Conflicts=moat-kv-recover.service
-Conflicts=distkv.service
 OnFailure=moat-kv-recover.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
@@ -25,3 +24,6 @@ EnvironmentFile=-/etc/moat/kv.env
 
 TimeoutSec=300
 WatchdogSec=300  # Sigh
+
+Restart=always
+RestartSec=30

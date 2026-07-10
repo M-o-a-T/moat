@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import anyio
+import time
 from contextlib import nullcontext
 
 import asyncclick as click
 
 from moat.util import NotGiven, yprint
+from moat.util.times import humandelta
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
@@ -14,10 +16,11 @@ from moat.link.client import Link
 from moat.link.meta import MsgMeta
 
 
-@click.group(cls=AliasedGroup, short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.group(cls=AliasedGroup, short_help="Manage error data", invoke_without_command=True)  # pylint: disable=undefined-variable
+@click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path):
+async def cli(ctx, path, meta):
     """
     This subcommand reads and manipulates errors stored in the MoaT-Link service.
     """
@@ -25,8 +28,9 @@ async def cli(ctx, path):
     cfg = obj.cfg["link"]
     obj.conn = await ctx.with_async_resource(Link(cfg))
     path = P("error") + path
+    obj.meta = meta
     if ctx.invoked_subcommand is None:
-        await data_get(obj.conn, path, meta=True, out=obj.stdout, recursive=False)
+        await data_get(obj.conn, path, meta=obj.meta, out=obj.stdout, recursive=False)
     else:
         obj.path = path
 
@@ -53,7 +57,7 @@ async def set_(obj, ok, **kw):
     Update some MoaT-Link error entry.
     """
     if ok is not None:
-        kw["eval_"]["ok"] = repr(ok)
+        kw["eval_"] = (*kw["eval_"], ("ok", repr(ok)))
     res = await node_attr(obj, obj.path, **kw)
 
     if obj.meta:
@@ -92,6 +96,46 @@ async def delete(obj, before, recursive):
     else:
         res = res[0]
     yprint(res, stream=obj.stdout)
+
+
+@cli.command("list")
+@click.pass_obj
+@click.option("-k/-A", "--ok/--all", is_flag=True, help="only list if ok / list all")
+@click.option("-r", "--raw", is_flag=True, help="show age in seconds")
+async def list_(obj, ok, raw):
+    """
+    List all errors with their paths and age.
+
+    Shows the name and age of each error.
+
+    The default is to list only open errors.
+    """
+    seen = False
+    now = time.time()
+    if ok is None:
+        ok = False
+    elif ok is False:
+        ok = None
+
+    async with obj.conn.d_watch(
+        obj.path,
+        state=True,
+        meta=True,
+        subtree=True,
+    ) as mon:
+        async for pdm in mon:
+            if pdm is None:
+                break
+            p, d, m = pdm
+            if ok is not None and d.get("ok", False) != ok:
+                continue
+
+            print(f"{int(now-m.timestamp) if raw else humandelta(now-m.timestamp) :10} {p}",
+                  file=obj.stdout)
+            seen = True
+
+    if not seen:
+        print("No errors found.", file=obj.stdout)
 
 
 @cli.command()

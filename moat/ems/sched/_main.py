@@ -49,12 +49,12 @@ def Loader(name, key=None):
 async def cli(obj, config, **attrs):
     """Battery Manager: Scheduling"""
 
-    cfg = obj.cfg.bms.sched
+    cfg = obj.cfg.ems.sched
     if config:
         f = await anyio.Path(config).read_text()
         cc = yload(f)
         merge(cfg, cc)
-    obj.cfg.bms.sched = process_args(cfg, **attrs)
+    obj.cfg.ems.sched = process_args(cfg, **attrs)
 
 
 @cli.command()
@@ -63,7 +63,7 @@ def dump(obj):
     """
     Dump the current configuration as YAML
     """
-    yprint(obj.cfg.bms.sched)
+    yprint(obj.cfg.ems.sched)
 
 
 @cli.command()
@@ -145,7 +145,7 @@ async def analyze(obj, all_, force):
     """
     Analyze future data.
     """
-    cfg = obj.cfg.bms.sched
+    cfg = obj.cfg.ems.sched
 
     t = None
     if force:

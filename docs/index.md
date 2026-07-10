@@ -71,9 +71,23 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [Job Runner](moat-link-job/index.md)
+
+```{include} ../packaging/moat-link-job/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [Metrics Connector](moat-link-metrics/index.md)
 
 ```{include} ../packaging/moat-link-metrics/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [KNX Connector](moat-link-knx/index.md)
+
+```{include} ../packaging/moat-link-knx/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -95,6 +109,13 @@ contribution guide, code and documentation style, and all that.
 ### [Command Line](moat/index.md)
 
 ```{include} ../packaging/moat/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+### [MCP Server](moat-mcp/index.md)
+
+```{include} ../packaging/moat-mcp/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -149,6 +170,13 @@ things is TODO.
 #### [Boxes](moat-db-box/index.md)
 
 ```{include} ../packaging/moat-db-box/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [Irrigation](moat-db-rain/index.md)
+
+```{include} ../packaging/moat-db-rain/README.md
 :start-after: % start synopsis
 :end-before: % end synopsis
 ```
@@ -464,6 +492,7 @@ moat-link/index
 moat-lib
 moat-micro/index
 moat/index
+moat-mcp/index
 moat-modbus/index
 moat-dev/index
 moat-bus/index

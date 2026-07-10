@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -17,10 +17,10 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
     """Walk into a mapping or object structure."""
     for pp in p:
         try:
-            cur = getattr(cur, pp)  # type: ignore[arg-type]  # pp might be int but then getattr raises
+            cur = getattr(cur, pp)  # ty:ignore[invalid-argument-type]  # pp might be int but then getattr raises
         except (TypeError, AttributeError):
             try:
-                cur = cur[pp]  # type: ignore[invalid-argument-type]
+                cur = cur[pp]  # ty:ignore[invalid-argument-type]
             except TypeError:
                 if pp is None:
                     raise KeyError(p, pp) from None
@@ -28,7 +28,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             except KeyError:
                 if not add:
                     raise KeyError(p, pp) from None
-                cur[pp] = nc = []  # type: ignore[invalid-assignment]
+                cur[cast(int,pp)] = nc = []
                 cur = nc
     return cur
 
@@ -54,7 +54,7 @@ def set_part(cur: Any, p: Sequence[str | int], v: Any, keep: bool = False) -> No
             if pp is None or (isinstance(pp, int) and len(cur) == pp):
                 cur.append(v)
             else:
-                setattr(cur, pp, v)  # type: ignore[arg-type]  # pp might be int but then we append above
+                setattr(cur, cast(str, pp), v)  # ty:ignore[arg-type]  # pp might be int but then we append above
 
 
 def enc_part(

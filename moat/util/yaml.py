@@ -6,14 +6,15 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import sys
 
 try:
     import ruyaml as yaml
     from ruyaml import constructor, emitter, representer
 except ImportError:
-    import ruamel.yaml as yaml  # fallback if ruyaml unavailable
-    from ruamel.yaml import constructor, emitter, representer  # fallback if ruyaml unavailable
+    import ruamel.yaml as yaml
+    from ruamel.yaml import constructor, emitter, representer
 
 from moat.lib.path import Path
 
@@ -31,15 +32,15 @@ if TYPE_CHECKING:
         from ruyaml.representer import BaseRepresenter
         from ruyaml.representer import SafeRepresenter as SafeRepresenterType
     except ImportError:
-        from ruamel.yaml.constructor import BaseConstructor  # fallback if ruyaml unavailable
+        from ruamel.yaml.constructor import BaseConstructor
         from ruamel.yaml.constructor import (
-            SafeConstructor as SafeConstructorType,  # fallback if ruyaml unavailable
+            SafeConstructor as SafeConstructorType,
         )
-        from ruamel.yaml.emitter import Emitter as EmitterType  # fallback if ruyaml unavailable
-        from ruamel.yaml.nodes import Node  # fallback if ruyaml unavailable
-        from ruamel.yaml.representer import BaseRepresenter  # fallback if ruyaml unavailable
+        from ruamel.yaml.emitter import Emitter as EmitterType
+        from ruamel.yaml.nodes import Node
+        from ruamel.yaml.representer import BaseRepresenter
         from ruamel.yaml.representer import (
-            SafeRepresenter as SafeRepresenterType,  # fallback if ruyaml unavailable
+            SafeRepresenter as SafeRepresenterType,
         )
 
     from collections.abc import Callable
@@ -48,8 +49,8 @@ if TYPE_CHECKING:
 try:
     from moat.lib.proxy import DProxy, Proxy
 except ImportError:
-    Proxy = None  # type: ignore[assignment, misc]  # optional import
-    DProxy = None  # type: ignore[assignment, misc]  # optional import
+    Proxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
+    DProxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
 
 __all__ = [
     "add_repr",
@@ -73,13 +74,13 @@ def load_ansible_repr() -> None:
     "Call me if you're using `moat.util` in conjunction with Ansible."
 
     # optional dependencies, imported at runtime
-    from ansible.parsing.yaml.objects import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.parsing.yaml.objects import (  # noqa: PLC0415
         AnsibleUnicode,
     )
-    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.utils.unsafe_proxy import (  # noqa: PLC0415
         AnsibleUnsafeText,
     )
-    from ansible.vars.hostvars import (  # noqa: PLC0415  # type:ignore[unresolved-import]
+    from ansible.vars.hostvars import (  # noqa: PLC0415
         HostVars,
         HostVarsVars,
     )
@@ -105,7 +106,7 @@ def float_presenter(dumper: BaseRepresenter, data: float) -> Node:
     Round appropriately
     """
     if data != 0:
-        data = round(data, int(7 - math.log10(abs(data))))
+        data = round(data, int(14 - math.log10(abs(data))))
     return dumper.represent_scalar("tag:yaml.org,2002:float", str(data))
 
 
@@ -196,20 +197,86 @@ def _bin_from_hex(loader: BaseConstructor, node: Node) -> bytearray:
     return bytearray.fromhex(value.replace(":", ""))
 
 
+# Characters that need escaping in a ``!bina`` scalar: any non-printable
+# byte (i.e. outside 0x20–0x7E plus tab/newline/return) or a literal
+# backslash. Operating on a latin-1 string makes each codepoint map 1:1
+# to a byte value.
+_BINA_ENCODE_RE = re.compile(r"[^ -~\t\n\r]|\\")
+
+# The inverse: a doubled backslash (literal backslash) or a ``\xHH``
+# escape. Matching left-to-right removes any ambiguity between the two.
+_BINA_DECODE_RE = re.compile(r"\\\\|\\x([0-9a-fA-F]{2})")
+
+
+def _bina_encode_match(match: re.Match[str]) -> str:
+    """Escape a single backslash or non-printable character for ``!bina``."""
+    char = match.group(0)
+    if char == "\\":
+        return "\\\\"
+    return f"\\x{ord(char):02x}"
+
+
+def _bina_decode_match(match: re.Match[str]) -> str:
+    """Unescape a doubled backslash or ``\\xHH`` escape from ``!bina``."""
+    hex_digits = match.group(1)
+    if hex_digits is None:
+        return "\\"
+    return chr(int(hex_digits, 16))
+
+
+def _bin_from_bina(loader: BaseConstructor, node: Node) -> bytes:
+    """Decode a ``!bina`` tagged value back into bytes.
+
+    The ``!bina`` tag encodes non-printable bytes as ``\\xHH`` escape
+    sequences and literal backslashes as ``\\\\`` so that the resulting
+    string is valid ASCII.
+    """
+    value = loader.construct_scalar(node)
+    return _BINA_DECODE_RE.sub(_bina_decode_match, value).encode("latin-1")
+
+
+def _is_printable(b: int) -> bool:
+    """Return True if a byte value is considered printable.
+
+    Printable ASCII is 0x20–0x7E, plus the common whitespace
+    characters tab (0x09), newline (0x0A) and carriage return (0x0D).
+    """
+    return (0x20 <= b <= 0x7E) or b in (0x09, 0x0A, 0x0D)
+
+
+def _data_bytes(data: bytes | bytearray | memoryview) -> bytes:
+    """Normalise any bytestring source to a plain ``bytes`` object."""
+    return data.tobytes() if isinstance(data, memoryview) else bytes(data)
+
+
 def _bin_to_ascii(dumper: SafeRepresenterType, data: bytes | bytearray | memoryview) -> Node:
+    """Represent a bytestring in YAML.
+
+    1. If it decodes as valid UTF-8, tag it ``!bin``.
+    2. Otherwise, if fewer than 10 % of bytes are non-printable, tag it
+       ``!bina`` with ``\\xHH`` escapes for the non-printable bytes and
+       ``\\\\`` for literal backslashes.
+    3. If it is shorter than 33 bytes, use ``!hex`` with colon-separated
+       hex pairs.
+    4. Otherwise fall back to ``!binary``.
+    """
+    data_bytes = _data_bytes(data)
     try:
-        if isinstance(data, memoryview):
-            data_str = data.tobytes().decode("utf-8")
-        else:
-            data_str = data.decode("utf-8")
+        data_str = data_bytes.decode("utf-8")
     except UnicodeError:
-        data_bytes = data.tobytes() if isinstance(data, memoryview) else data
-        if len(data_bytes) < 33:
-            return dumper.represent_scalar("!hex", data_bytes.hex(":"))
-        else:
-            return dumper.represent_binary(data_bytes)
+        pass
     else:
         return dumper.represent_scalar("!bin", data_str)
+
+    nonprintable = sum(1 for b in data_bytes if not _is_printable(b))
+    threshold = max(1, len(data_bytes) * 10 // 100)
+    if nonprintable < threshold:
+        encoded = _BINA_ENCODE_RE.sub(_bina_encode_match, data_bytes.decode("latin-1"))
+        return dumper.represent_scalar("!bina", encoded)
+
+    if len(data_bytes) < 33:
+        return dumper.represent_scalar("!hex", data_bytes.hex(":"))
+    return dumper.represent_binary(data_bytes)
 
 
 SafeRepresenter.add_representer(bytes, _bin_to_ascii)
@@ -217,6 +284,7 @@ SafeRepresenter.add_representer(bytearray, _bin_to_ascii)
 SafeRepresenter.add_representer(memoryview, _bin_to_ascii)
 
 SafeConstructor.add_constructor("!bin", _bin_from_ascii)
+SafeConstructor.add_constructor("!bina", _bin_from_bina)
 SafeConstructor.add_constructor("!hex", _bin_from_hex)
 
 
@@ -233,7 +301,7 @@ def expect_node(self: Any, *a: Any, **kw: Any) -> None:
     self.root_context = False
 
 
-Emitter.expect_node = expect_node  # type: ignore[method-assign]  # monkey-patch
+Emitter.expect_node = expect_node  # monkey-patch
 
 
 def yload(
@@ -248,7 +316,7 @@ def yload(
     y = yaml.YAML(typ=typ)
     if attr:
 
-        class AttrConstructor(SafeConstructor):  # type: ignore[misc, valid-type]  # runtime class creation
+        class AttrConstructor(SafeConstructor):  # ty:ignore[unsupported-base, valid-type]  # runtime class creation
             def __init__(self, *a: Any, **k: Any) -> None:
                 super().__init__(*a, **k)
                 self.yaml_base_dict_type = attrdict if attr is True else attr
@@ -282,10 +350,11 @@ def yprint(
     else:
         y = yaml.YAML(typ=typ)
         y.default_flow_style = compact
+        y.width = sys.maxsize
         y.dump(data, stream=stream)
 
 
-def yformat(data: Any, compact: bool | None = None) -> str:
+def yformat(data: Any, compact: bool = False) -> str:
     """
     Return ``data`` as a multi-line YAML string.
 
@@ -296,7 +365,7 @@ def yformat(data: Any, compact: bool | None = None) -> str:
     from io import StringIO  # noqa: PLC0415
 
     s = StringIO()
-    yprint(data, compact=compact, stream=s)  # type: ignore[arg-type]  # StringIO is compatible with TextIOWrapper
+    yprint(data, compact=compact, stream=s)  # ty:ignore[arg-type]  # StringIO is compatible with TextIOWrapper
     return s.getvalue()
 
 

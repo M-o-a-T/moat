@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=moat-link-ow
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_install:
+	dh_auto_install
+	install -D -m 644 systemd/moat-link-ow@.service \
+		debian/moat-link-ow/usr/lib/systemd/system/moat-link-ow@.service

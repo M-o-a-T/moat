@@ -2,12 +2,11 @@ Source: moat-mqtt
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-all, debhelper (>= 13),
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
   python3-setuptools,
   python3-wheel,
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/moat-mqtt
-X-DH-Compat: 13
 
 Package: moat-mqtt
 Architecture: all
@@ -15,9 +14,6 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 2.0),
   moat-util,
   moat,
-Recommends:
-  moat-kv,
-  python3-trio (>= 0.22),
 Conflicts: python3-moat-mqtt, distmqtt
 Replaces: python3-moat-mqtt, distmqtt
 Description: MQTT client/broker using anyio and moat-kv

@@ -143,7 +143,7 @@ class ModbusError(RuntimeError):
         self.result = result
 
 
-class _HostCommon:
+class HostCommon:
     stream = None
     framer = None  # overridden
 
@@ -258,7 +258,7 @@ class _HostCommon:
                 self._transactions.pop(request.transaction_id, None)
 
 
-class Host(_HostCommon, CtxObj):
+class Host(HostCommon, CtxObj):
     """This is a single host which moat-modbus talks to.
     It has a number of modbus units (attribute 'units').
 
@@ -433,7 +433,7 @@ class Host(_HostCommon, CtxObj):
             await s.close()
 
 
-class SerialHost(_HostCommon, CtxObj):
+class SerialHost(HostCommon, CtxObj):
     """This is a "host" that's actually a serial interface.
 
     Do not instantiate directly; instead, use

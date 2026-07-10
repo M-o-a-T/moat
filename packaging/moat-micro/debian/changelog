@@ -1,3 +1,51 @@
+moat-micro (0.22.0-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:29 +0200
+
+moat-micro (0.22.0-2) unstable; urgency=medium
+
+  * New release for 26.1.16
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 26 May 2026 10:40:05 +0200
+
+moat-micro (0.22.0-1) unstable; urgency=medium
+
+  * New release for 26.1.15
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 26 May 2026 07:02:56 +0200
+
+moat-micro (0.21.3-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:35:41 +0200
+
+moat-micro (0.21.3-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:13:19 +0200
+
+moat-micro (0.21.2-2) unstable; urgency=medium
+
+  * New release for 26.0.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 22 Mar 2026 16:05:47 +0100
+
+moat-micro (0.21.2-1) unstable; urgency=medium
+
+  * New release for 26.0.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 16 Mar 2026 21:28:29 +0100
+
+moat-micro (0.21.1-1) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:59:05 +0100
+
 moat-micro (0.21.0-1) unstable; urgency=medium
 
   * New release for 26.0.11

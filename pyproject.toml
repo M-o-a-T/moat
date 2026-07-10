@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "anyio ~= 4.9",
     "trio",
+    "trio_asyncio",
     "alembic",
     "anyio_serial",
     "asyncactor ~= 0.28.0",
@@ -25,18 +26,22 @@ dependencies = [
     "asyncvictoria ~= 0.7.0",
     "asyncwebsockets",
     "cffi",
+    "cryptography",
     "fpdf2",
-    "pygit",
+    "gitpython",
     "httpx",
+    "ifaddr",
     "jmespath",
     "jsonschema",
+    "mcp",
+    "netaddr",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",
     "pynacl",
     "outcome",
     "psutil",
     "pyfuse3",
-    "pymodbus ~= 3.8",
+    "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
     "regex",
     "ruyaml",
@@ -49,7 +54,7 @@ dependencies = [
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 name = "moat"
 description = "The compleat MoaT"
 readme = "README.md"
@@ -91,10 +96,12 @@ testpaths = [
 
 [project.optional-dependencies]
 dev = [
+    "ansible",
     "asyncdbus ~= 0.7",
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
+    "asyncwago",
     "cbor2",
     "gpiod",
     "httpx-ws",
@@ -103,16 +110,20 @@ dev = [
     "pre-commit",
     "pytest-trio",
     "pytest-coverage",
+    "ruamel.yaml",
+    "ruff",
     "setuptools-scm",
+    "simplejson",
     "smbus3",
-    "transitions-aio",
-    "ty ~= 0.17",
+    "systemd",
+    "ty == 0.0.55",
     "uv",
     "wheel",
 ]
 doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
+    "sphinx-favicon",
     "sphinx-immaterial",
     "sphinx-tabs",
     "sphinx-toolbox",
@@ -120,6 +131,7 @@ doc = [
     "sphinx-design",
     "sphinx-book-theme",
     "sphinx-last-updated-by-git",
+    "sphinx-markdown-builder @ git+https://github.com/M-o-a-T/sphinx-markdown-builder@main",
     "enum_tools[sphinx] >= 0.12.0",
     "prometheus_client",
 ]
@@ -185,8 +197,9 @@ explicit-preview-rules = true
 "docs/conf.py" = ["ALL"]
 "docs/**" = ["D1","F841","TC003"]
 "tests/moat_mqtt/**" = ["PT"]
-"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
+"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S603","S607"]
 "examples/**" = ["S108"]
+"moat/mcp/_server.py" = ["I002"]
 "moat/micro/_test.py" = ["ASYNC240"]
 
 [tool.ruff.lint.flake8-comprehensions]
@@ -246,12 +259,15 @@ python-version = "3.11"
 include = [
     "moat/db/__init__.py",
     "moat/db/box/",
+    "moat/db/inv/",
     "moat/db/label/",
     "moat/db/thing/",
+    "moat/db/rain/",
     "moat/lib/",
-    "moat/link/_data.py",
-    "moat/link/_test.py",
-    "moat/link/host.py",
+    "moat/link/",
+    "moat/mcp/",
+    "moat/micro/",
+    "moat/src/",
     "moat/util/",
 ]
 exclude = [
@@ -261,12 +277,20 @@ exclude = [
     "packaging/**",
     "docs/**",
     "moat/lib/victron/**",
+    "moat/micro/_embed/**",
+    "moat/micro/**/_test.py",
+    "moat/micro/**/_test/**",
+    "moat/micro/part/pin.py",
+    "moat/micro/romfs.py",
+    "moat/link/gate/kv.py",
+    "moat/link/gate/venus.py",
+    "moat/mcp/_server.py",
 ]
 
 [tool.ty.rules]
 ambiguous-protocol-member = "error"
 division-by-zero = "error"
-ignore-comment-unknown-rule = "error"
+ignore-comment-unknown-rule = "ignore"
 invalid-ignore-comment = "ignore"
 redundant-cast = "error"
 undefined-reveal = "error"

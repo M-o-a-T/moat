@@ -13,20 +13,20 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
-    from moat.lib.rpc import MsgSender
+    from moat.lib.rpc import MsgHandler, MsgSender
 
     from collections.abc import AsyncGenerator
 
 
 @asynccontextmanager
 async def TCPConn(
-    cmd: MsgSender | None,
+    cmd: MsgHandler | MsgSender | None,
     *a,
     codec: str | Codec = "std-cbor",
     debug: bool = False,
     logger=None,
     **kw,
-) -> AsyncGenerator[..., MsgSender]:
+) -> AsyncGenerator[MsgHandler, MsgSender]:
     """
     Connection to a MoaT server.
 
@@ -48,13 +48,13 @@ async def TCPConn(
 
 @asynccontextmanager
 async def UnixConn(
-    cmd: MsgSender | None,
+    cmd: MsgHandler | MsgSender | None,
     *a,
     codec: str | Codec = "std-cbor",
     debug: bool = False,
     logger=None,
     **kw,
-) -> AsyncGenerator[..., MsgSender]:
+) -> AsyncGenerator[MsgHandler, MsgSender]:
     """
     Connection to a MoaT server.
 

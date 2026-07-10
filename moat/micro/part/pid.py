@@ -6,13 +6,13 @@ from __future__ import annotations
 
 from moat.lib.broadcast import Broadcaster
 from moat.lib.micro import AC_use, TaskGroup
+from moat.lib.path import Path
 from moat.lib.pid import CPID
 from moat.lib.rpc import BaseCmd
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.path import Path
     from moat.lib.rpc import Msg, MsgSender
 
 _state_d = dict(t="int:last time", e="float:error", i="float:integral")
@@ -40,6 +40,9 @@ class PID(BaseCmd):
     split: tuple[float, float, float] | None = None
     state_path: Path | None = None
     state_rtc: MsgSender | None = None
+    _locked: bool = False
+    _lock_up: bool | None = None
+    _lock_i: float = 0.0
 
     doc = dict(
         _c=dict(
@@ -92,11 +95,23 @@ class PID(BaseCmd):
         """
         self.val_in = val
         self.split = s = self.pid.integrate(val, t=t)
+        if self._locked:
+            i_new = s[1]
+            lock_up = self._lock_up
+            i_limit = self._lock_i
+            if (
+                lock_up is None
+                or (lock_up and i_new > i_limit)
+                or (not lock_up and i_new < i_limit)
+            ):
+                self.pid.i = i_limit
+                self.pid.state.i = i_limit
+                self.split = s = (s[0], i_limit, s[2])
         if (sr := self.state_rtc) is None and self.state_path is not None:
             self.state_rtc = sr = self.root.sub_at(self.state_path)
             await sr.rdy_()
         if sr is not None:
-            await sr.w(self.pid.state, fs=False)
+            await sr.cmd(Path.build(("w",)), self.pid.state, fs=False)
         return self.pid.sum(s)
 
     doc_sp = dict(
@@ -156,6 +171,36 @@ class PID(BaseCmd):
         if self.split:
             res["o"] = self.pid.sum(self.split)
         return res
+
+    doc_lock = dict(
+        _d="I-term lock",
+        up="bool|None:block I increase(T), decrease(F), or all change(None)",
+    )
+
+    async def stream_lock(self, msg: Msg):
+        """
+        Inhibits I-term updates.
+
+        While a Lock command is active, the I part of the PID cannot
+        increase / decrease further (controlled by the ``up`` parameter).
+
+        Params:
+        - up: prevents I from increasing (True), decreasing (False) or
+          changing at all (None)
+
+        Only one lock can be active at a time.
+        """
+        if self._locked:
+            raise RuntimeError("PID lock already active")
+        self._locked = True
+        self._lock_up = msg.get("up", None)
+        self._lock_i = self.pid.i
+        try:
+            async with msg.stream_in() as ms:
+                async for _ in ms:
+                    pass
+        finally:
+            self._locked = False
 
     async def reload(self):
         "reload me"

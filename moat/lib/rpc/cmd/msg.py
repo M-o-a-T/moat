@@ -83,7 +83,7 @@ class BaseCmdMsg(BaseCmd):
 
     tg: object | None = None
     __stream = None
-    __rprefix = ()
+    __rprefix:tuple[PathElem,...] = ()
     stream_owner_obj_: object
 
     doc = dict(_d="Foo")
@@ -103,7 +103,7 @@ class BaseCmdMsg(BaseCmd):
             if "pytest" in sys.modules:
                 tcfg = cfg.auth.get("test", None)
                 if tcfg is not None:
-                    self.auth.update(tcfg)
+                    self.auth.update(tcfg)  # ty:ignore[attr-defined]
             self._auth = Auth(cfg.auth, self)
 
     @property
@@ -203,7 +203,7 @@ class BaseCmdMsg(BaseCmd):
         if rprefix:
             rprefix = list(rprefix)
             rprefix.reverse()
-            self.__rprefix = rprefix
+            self.__rprefix = rprefix  # ty:ignore[invalid-assignment]
 
     async def task(self):
         """

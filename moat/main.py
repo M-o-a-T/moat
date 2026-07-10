@@ -9,6 +9,8 @@ import os
 import sys
 
 import asyncclick as click
+from asyncclick.exceptions import UsageError
+from asyncclick.utils import echo
 from asyncscope import main_scope
 
 from moat.util import NotGiven, attrdict, exc_iter, to_attrdict, ungroup
@@ -18,8 +20,24 @@ from moat.util.exc import ExpectedError
 __all__ = ["cmd", "run"]
 
 
-def cmd(backend="trio"):
+def _show_usage_error(self, file=sys.stderr):
+    color = None
+    if self.ctx is not None:
+        color = self.ctx.color
+        echo(self.ctx.get_help() + "\n", file=file, color=color)
+    echo(f"Error: {self.format_message()}", file=file, color=color)
+
+
+UsageError.show = _show_usage_error
+
+
+def cmd(backend=None):
     "The standard MoaT command line handler"
+    if backend is None:
+        if "knx" in sys.argv:
+            backend = "asyncio"
+        else:
+            backend = "trio"
     return _cmd(attrdict(sub_pre="moat", sub_post="_main.cli"), backend=backend)
 
 

@@ -14,7 +14,7 @@ from time import time
 
 import asyncclick as click
 
-from moat.util import _help_preserve_blocks
+from moat.util import help_preserve_blocks
 from moat.lib.config import CFG
 from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -134,7 +134,7 @@ y, yr   Year (2023–)
 @click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
-@attr_args(with_var=False, with_eval="eval_", with_path=False)  # type: ignore[call-arg]  # with_eval accepts str to specify target param
+@attr_args(with_var=False, with_eval="eval_", with_path=False)  # ty:ignore[call-arg]  # with_eval accepts str to specify target param
 def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     """File conversion / mangling utility.
 
@@ -179,7 +179,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return eval, pformat, False, False
 
         if n == "json":
-            import simplejson as json  # type: ignore[import-not-found]  # optional dependency  # noqa: PLC0415
+            import simplejson as json  # noqa:PLC0415
 
             if stream:
 
@@ -200,10 +200,10 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             try:
                 import ruyaml as yaml  # noqa: PLC0415
             except ImportError:
-                import ruamel.yaml as yaml  # fallback if ruyaml unavailable  # noqa: PLC0415
+                import ruamel.yaml as yaml  # noqa: PLC0415
 
             y = yaml.YAML(typ="safe")
-            y.default_flow_style = True, False
+            y.default_flow_style = True
             from moat.util import yload  # noqa: PLC0415
 
             def ypr(d, s):
@@ -282,26 +282,26 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
                 if long:
                     if isinstance(data, Sequence) and len(data) > 1:
                         d, p, *x = data  # noqa:PLW2901
-                        p = cast(long, PathLongener).long(d, p)
+                        p = cast(PathLongener, long).long(d, p)
                         data = [p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "depth" in data and "path" in data:
-                        data["path"] = cast(long, PathLongener).long(
+                        data["path"] = cast(PathLongener, long).long(
                             data.pop("depth"), data["path"]
                         )
                 if short:
                     if isinstance(data, Sequence) and len(data) > 0:
                         p, *x = data
-                        d, p = cast(short, PathShortener).short(p)  # noqa:PLW2901
+                        d, p = cast(PathShortener, short).short(p)  # noqa:PLW2901
                         data = [d, p, *x]  # noqa:PLW2901
                     elif isinstance(data, Mapping) and "path" in data:
                         assert isinstance(data, Mapping)
-                        d, p = cast(short, PathShortener).short(  # noqa:PLW2901
-                            data["path"]  # type:ignore[invalid-argument-type]
+                        d, p = cast(PathShortener, short).short(  # noqa:PLW2901
+                            data["path"]  # ty:ignore[invalid-argument-type]
                         )
-                        data["depth"] = d  # type: ignore[index]  # data is Mapping after isinstance check
-                        data["path"] = p  # type: ignore[index]  # data is Mapping after isinstance check
+                        data["depth"] = d  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check
+                        data["path"] = p  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check
 
-                data = process_args(data, **kw)  # type: ignore[arg-type]  # data is dict-like  # noqa:PLW2901
+                data = process_args(data, **kw)  # ty:ignore[invalid-argument-type]  # data is dict-like  # noqa:PLW2901
                 if cse:
                     if f_dump:
                         buf = bt()
@@ -339,7 +339,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     patho.close()
 
 
-@cli.command("path", help=_help_preserve_blocks(Path.__doc__), no_args_is_help=True)
+@cli.command("path", help=help_preserve_blocks(Path.__doc__), no_args_is_help=True)
 @click.option(
     "-e",
     "--encode",
@@ -347,24 +347,34 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
     help="evaluate a Python expr and encode to a pathstr",
 )
 @click.option("-d", "--decode", is_flag=True, help="decode a path to a list")
+@click.option("-s", "--slash", is_flag=True, help="convert a path to its slashed repr")
+@click.option("-S", "--unslash", is_flag=True, help="input is slashed repr")
 @click.argument("path", nargs=-1)
-async def path_(encode, decode, path):
+async def path_(encode, decode, slash, unslash, path: list[str]):
     """Explain/test MoaT paths"""
-    if not encode and not decode:
-        raise click.UsageError("Need -e or -d option.")
-    elif not decode:
+    if not encode and not decode and not slash:
+        raise click.UsageError("Need -e / -d / -s option.")
+    if bool(encode) + bool(decode) + bool(slash) > 1:
+        raise click.UsageError("Only one of -e / -d / -s please.")
+    pp: list[Path]
+    if encode:
         try:
             path = path_eval(" ".join(path))
         except Exception as exc:  # pylint:disable=broad-exception-caught
             print(repr(exc), file=sys.stderr)
-        if not isinstance(path, (list, tuple)):
-            path = path[0]
+        pp = [Path.build(path)]
+    elif unslash:
+        pp = [Path.from_slashed(p) for p in path]
         print(Path(*path))
-    elif encode:
-        raise click.UsageError("encode and decode at the same time??")
     else:
-        for p in path:
-            print(repr(list(P(p))))
+        pp: list[Path] = [P(p) for p in path]
+    for p in pp:
+        if decode:
+            print(repr(list(p)))
+        elif slash:
+            print(p.slashed)
+        else:
+            print(p)
 
 
 @cli.command("cfg", help="Retrieve+show a config value", no_args_is_help=True)

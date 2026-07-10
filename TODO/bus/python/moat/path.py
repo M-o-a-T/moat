@@ -530,7 +530,7 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
                 try:
                     data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
                 except CalledProcessError as exc:
-                    print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                    print(exc.stderr.decode("utf-8", errors="surrogateescape"), file=sys.stderr)
                     pass
                 else:
                     src = ABytes(src.with_suffix(".mpy"), data.stdout)

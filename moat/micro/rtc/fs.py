@@ -14,6 +14,11 @@ from moat.lib.micro import log
 
 from . import RTCBase
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import builtins
+
 _codec = CBOR()
 
 
@@ -146,7 +151,7 @@ class RTC(RTCBase):
         self._save()
         return True
 
-    async def keys(self) -> set[str]:
+    async def keys(self) -> builtins.set[str]:
         """
         Get all available keys.
 

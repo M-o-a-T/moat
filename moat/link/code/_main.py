@@ -10,7 +10,7 @@ import asyncclick as click
 
 from moat.util import NotGiven, edit_text, edit_yaml, yload, yprint
 from moat.lib.path import P, Path, PathLongener
-from moat.lib.run import AliasedGroup, attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.run import make_proc
@@ -26,13 +26,32 @@ EDIT_SAVE = "s"
 EDIT_ABORT = "a"
 
 
-def _sanitize_vars(value: Any) -> dict[str, Any]:
-    "Normalize the configured argument defaults."
+def _sanitize_vars(value: Any) -> list[str]:
+    "Normalize the declared variable-name list."
+    if value in (NotGiven, None):
+        return []
+    if not isinstance(value, list | tuple):
+        raise TypeError("vars must be a list of names")
+    res: list[str] = []
+    for name in value:
+        if not isinstance(name, str):
+            raise TypeError("vars entries must be strings")
+        res.append(name)
+    return res
+
+
+def _sanitize_default(value: Any) -> dict[str | None, Any]:
+    "Normalize the configured default values."
     if value in (NotGiven, None):
         return {}
     if not isinstance(value, Mapping):
-        raise TypeError("vars must be a mapping")
-    return dict(value)
+        raise TypeError("default must be a mapping")
+    res: dict[str | None, Any] = {}
+    for key, val in value.items():
+        if not isinstance(key, str):
+            raise TypeError("default keys must be strings")
+        res[key] = val
+    return res
 
 
 def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
@@ -42,7 +61,8 @@ def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
         raise KeyError(path / "code")
     if not isinstance(code, str):
         raise TypeError("code must be a string")
-    _sanitize_vars(data.get("vars", {}))
+    _sanitize_vars(data.get("vars", ()))
+    _sanitize_default(data.get("default", {}))
     is_async = data.get("is_async", None)
     if is_async not in (None, True, False):
         raise TypeError("is_async must be true, false, or null")
@@ -76,7 +96,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
     pl = PathLongener(obj.path)
     out: dict[Any, Any] | None = {} if as_dict is not None else None
 
-    async with obj.conn.d.walk(obj.path, *args).stream_in() as mon:
+    async with obj.conn.d.walk(CODE_EXEC_ROOT + obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
             path = pl.long(n, p)
             if not isinstance(data, Mapping):
@@ -119,7 +139,7 @@ async def cli(ctx, path, meta):
         cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg, common=True))
     obj.meta = meta
-    obj.path = CODE_EXEC_ROOT + path
+    obj.path = path
 
     if ctx.invoked_subcommand is None:
         await _list_entries(obj, None, None, None, False, True)
@@ -133,10 +153,10 @@ async def get(obj, script):
     Read a code entry.
     """
     if obj.meta:
-        data, *meta = await obj.conn.d.get(obj.path)
+        data, *meta = await obj.conn.d.get(CODE_EXEC_ROOT + obj.path)
         out = dict(data=data, meta=MsgMeta.restore(meta).repr())
     else:
-        out = await obj.conn.d_get(obj.path)
+        out = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
 
     if script:
         if obj.meta:
@@ -170,7 +190,7 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     if data:
         msg = yload(data)
     else:
-        msg = await obj.conn.d_get(obj.path)
+        msg = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
 
     if thread:
         msg["is_async"] = False
@@ -186,11 +206,13 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     elif "code" not in msg:
         raise click.UsageError("Missing script")
 
-    vars_ = _sanitize_vars(msg.get("vars", {}))
-    msg["vars"] = process_args(vars_, **kw)
+    vars_ = _sanitize_vars(msg.get("vars", ()))
+    msg["vars"] = vars_
+    msg["default"] = msg.get("default", {})
+    msg["args"] = kw
 
     _check_exec_syntax(msg, obj.path)
-    res = await obj.conn.d_set(obj.path, msg)
+    res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -221,7 +243,7 @@ async def delete(obj):
     Remove a code entry.
     """
     try:
-        res = await obj.conn.d.delete(obj.path)
+        res = await obj.conn.d.delete(CODE_EXEC_ROOT + obj.path)
     except KeyError:
         if obj.debug:
             print("Does not exist.", file=obj.stdout)
@@ -248,10 +270,10 @@ async def edit(obj, editor):
         editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
 
     try:
-        original = await obj.conn.d_get(obj.path)
+        original = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
     except KeyError:
         try:
-            original = await obj.conn.d_search(P("template") + obj.path)
+            original = await obj.conn.d_search(P("template") + CODE_EXEC_ROOT + obj.path)
         except KeyError:
             original = {"code": "return 42;\n"}
     current = dict(original)
@@ -300,7 +322,7 @@ async def edit(obj, editor):
                 click.echo("No changes.", err=True)
                 return
             _check_exec_syntax(current, obj.path)
-            res = await obj.conn.d_set(obj.path, current)
+            res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, current)
             if obj.meta:
                 yprint(res, stream=obj.stdout)
             else:

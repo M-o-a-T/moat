@@ -352,8 +352,19 @@ class HostList(CtxObj):
                         with suppress(KeyError, AttributeError):
                             h = self.hsi.pop(p)
                             await self.drop_path(h, p)
+                            # Notify subscribers unconditionally: a path was
+                            # removed.  Without ``changed=True`` the state
+                            # machine swallows the event when ``data.h``
+                            # still has other entries (which happens when a
+                            # client holds several parallel announcements)
+                            # or when the resulting base state equals the
+                            # current one.  Consumers such as
+                            # ``moat link host list`` need this signal to
+                            # detect a per-path DOWN transition.
                             if not h.data.h:
-                                self.tg.start_soon(h.trigger, _E.DEL_HOST)
+                                self.tg.start_soon(partial(h.trigger, _E.DEL_HOST, changed=True))
+                            else:
+                                self.tg.start_soon(partial(h.trigger, _E.MSG_HOST, changed=True))
 
                         continue
 
@@ -365,7 +376,9 @@ class HostList(CtxObj):
                         if h.id != id:
                             await self.drop_path(h, p)
                             if not h.data.h:
-                                self.tg.start_soon(h.trigger, _E.DEL_HOST)
+                                self.tg.start_soon(partial(h.trigger, _E.DEL_HOST, changed=True))
+                            else:
+                                self.tg.start_soon(partial(h.trigger, _E.MSG_HOST, changed=True))
                             # unconditionally updated below
 
                     try:

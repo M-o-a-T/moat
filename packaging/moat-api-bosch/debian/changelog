@@ -1,3 +1,21 @@
+moat-api-bosch (0.1.2-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 18:03:51 +0200
+
+moat-api-bosch (0.1.2-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:41:17 +0200
+
+moat-api-bosch (0.1.2-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:18:11 +0200
+
 moat-api-bosch (0.1.1-4) unstable; urgency=medium
 
   * New release for 26.0.6

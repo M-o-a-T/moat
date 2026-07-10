@@ -2,19 +2,18 @@ Source: moat-lib-run
 Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-all, debhelper (>= 13),
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
   python3-setuptools,
   python3-wheel,
 Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
-X-DH-Compat: 13
 
 Package: python3-moat-lib-run
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.0),
   moat-util (>= 0.6),
-  python3-asyncclick (>= 8.0),
+  python3-asyncclick (>= 8.3),
   python3-simpleeval (>= 1.0),
 Description: Main command entry point infrastructure for MoaT applications
   This module provides the infrastructure for building command-line interfaces

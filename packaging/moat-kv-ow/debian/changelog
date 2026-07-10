@@ -1,3 +1,27 @@
+moat-kv-ow (0.9.16-5) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:19 +0200
+
+moat-kv-ow (0.9.16-4) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:33:07 +0200
+
+moat-kv-ow (0.9.16-3) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:11:08 +0200
+
+moat-kv-ow (0.9.16-2) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:57:51 +0100
+
 moat-kv-ow (0.9.16-1) unstable; urgency=medium
 
   * New release for 26.0.11

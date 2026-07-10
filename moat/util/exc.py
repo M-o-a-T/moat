@@ -31,6 +31,7 @@ class ExpectedError(Exception):
     """
     An error that shouldn't elicit a traceback
     """
+
     pass
 
 

@@ -10,6 +10,7 @@ from contextvars import ContextVar
 from importlib import import_module
 from pathlib import Path
 
+import asyncclick as click
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -30,7 +31,7 @@ __all__ = ["Session", "alembic_cfg", "database", "load", "session"]
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     connection_record  # noqa:B018
-    if "sqlite" not in dbapi_connection.__class__.__name__:
+    if "sqlite" not in dbapi_connection.__class__.__module__:
         return
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
@@ -88,11 +89,16 @@ def database(cfg: attrdict) -> Session:
     """Start a database session."""
 
     load(cfg)
-
-    with Session() as conn:
-        sess = Mgr(conn)
-        with ctx_as(session, sess):
-            yield sess
+    try:
+        with Session() as conn:
+            sess = Mgr(conn)
+            with ctx_as(session, sess):
+                yield sess
+    except click.exceptions.ClickException:
+        raise
+    except Exception:
+        logger.error("On database %r:", getattr(cfg, "url", "?"))
+        raise
 
 
 def alembic_cfg(gcfg, sess):
@@ -101,12 +107,12 @@ def alembic_cfg(gcfg, sess):
     from alembic.config import Config  # noqa: PLC0415
     from moat import db  # noqa: PLC0415
 
-    cfg = gcfg.db
+    cfg = gcfg.moat.db
 
     c = Config()
     c.file_config = RawConfigParser()
     c.set_section_option("alembic", "script_location", str(Path(db.__path__[0]) / "alembic"))
-    c.set_section_option("alembic", "timezone", gcfg.env.timezone)
+    # c.set_section_option("alembic", "timezone", gcfg.env.timezone)
     c.set_section_option("alembic", "file_template", "%(rev)s")
     c.set_section_option("alembic", "version_path_separator", "os")
 

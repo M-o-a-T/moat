@@ -450,6 +450,10 @@ class ErrorRoot(ClientRoot):
         elif other.node < entry.node:
             return entry, other
 
+        if entry.tock < other.tock:
+            return other, entry
+        elif other.tock < entry.tock:
+            return entry, other
         raise RuntimeError(f"This cannot happen: {entry.node} {entry.tock}")
 
     async def record_working(  # pylint: disable=dangerous-default-value

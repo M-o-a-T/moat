@@ -93,12 +93,6 @@ async def info_(obj):
         print(r.path[-1], file=obj.stdout)
 
 
-@at_cli.command("--help", hidden=True)
-@click.pass_context
-def help_(ctx):  # noqa:D103
-    print(at_cli.get_help(ctx))
-
-
 @at_cli.command("path")
 @click.pass_obj
 async def path__(obj):

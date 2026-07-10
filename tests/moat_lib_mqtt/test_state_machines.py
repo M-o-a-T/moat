@@ -50,7 +50,7 @@ def client_session_pairs() -> list[tuple[MQTTClientStateMachine, MQTTBrokerClien
         assert len(packets) == 1
         assert isinstance(packets[0], MQTTConnAckPacket)
         # https://github.com/python/mypy/issues/17096
-        assert client.state is MQTTClientState.CONNECTED  # type: ignore[comparison-overlap]
+        assert client.state is MQTTClientState.CONNECTED  # ty:ignore[comparison-overlap]
         assert client_session.state is MQTTClientState.CONNECTED
 
         # Add the client session to the broker

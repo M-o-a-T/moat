@@ -39,4 +39,3 @@ The `CfgStore` class combines configuration from multiple sources (in order of p
 - Explicitly added config files (via `add` method)
 - Default config files (from standard paths)
 - Static module configurations (loaded via `with_`)
-

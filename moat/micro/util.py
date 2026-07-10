@@ -73,6 +73,8 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         dn = str(dst)[:-3].replace("/", ".").lstrip(".")
         dn = dn.removeprefix("lib.")
         dn = dn.removesuffix(".__init__")
+        if hash_fn is None:
+            return False
         try:
             res = await hash_fn(dn)
             if res is None:

@@ -12,7 +12,7 @@ ADC_BITS = 10
 __ALL__ = ["thermistor2celsius", "celsius2thermistor"]
 
 
-def thermistor2celsius(B: int, raw: int, bits: int = ADC_BITS) -> float:
+def thermistor2celsius(B: int, raw: int, bits: int = ADC_BITS) -> float | None:
     """
     Convert thermistor measurement to temperature.
 
@@ -29,7 +29,7 @@ def thermistor2celsius(B: int, raw: int, bits: int = ADC_BITS) -> float:
     return res
 
 
-def celsius2thermistor(B: int, degC: float, bits: int = ADC_BITS) -> int:
+def celsius2thermistor(B: int, degC: float | None, bits: int = ADC_BITS) -> int:
     """
     Convert temperature to thermistor measurement.
     """

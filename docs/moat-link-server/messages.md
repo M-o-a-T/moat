@@ -6,14 +6,14 @@ Command contents are described via OpenAPI.
 
 There are no "methods"
 
-Initially both client and server send an "i.hello" command.
+Initially both client and server send an Auth command `:n`.
 
-Further commands may be exchanged once both the "i.hello" (and any
+Further commands may be exchanged once the Auth (and any
 authorization required by it) is complete.
 
 ## Command details
 
-### i.hello
+### `:n`
 
 Both sides independently call this method to tell the other side about
 them and their requirements for proceeding.
@@ -22,30 +22,22 @@ The message includes a list of auth methods the remote side needs to
 support. Both sides MUST perform one of these schemes successfully
 before replying to this message.
 
-A Hello message MAY contain auth data in anticipation of the server's
-request. Thus:
+An Auth message MAY contain auth data in anticipation of the server's
+request. Thus if client A connects to server B:
 
-> A\>B (1) i.hello(1.1, client_A,server_B, True, token="foobar") B\>A
-> (1) i.hello(1.2, server_B,client_A, "token") A\<B (1) (True) B\<A (1)
-> (True)
+> A\>B (1) Auth(1, client\_A,server\_B, True, token="foobar")
+> B\>A (1) Auth(2, server\_B,client\_A, "token")
+> A\<B (1) (True)
+> B\<A (1) (True)
 
-negotiates protocol version 1.2 and a client that successfully presented
-the token "foobar" for login.
+negotiates protocol version 1; the client successfully presented
+the token "foobar" for the "token" login method.
 
-### i.auth.X
+### `:n.X`
 
-The client sends this subcommand to authorize itself.
+Auth subcommand for method X, initiated by the . Should be streamed if the interaction
+comprises more than one message per direction.
 
-Depending on the auth protocol ("X"), the message exchange required for
-authentication may be streamed.
-
-#### i.auth.token
-
-Not used.
-
-The single argument is the current magic key, as read from MQTT.
-
-On error the server replies with an error message.
 
 #### i.bye
 

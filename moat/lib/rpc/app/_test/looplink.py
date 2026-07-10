@@ -283,4 +283,3 @@ class LoopLink(BaseCmd):
 
     doc_crw = BaseCmdBBM.doc_crw
     stream_crw = BaseCmdBBM.stream_crw
-

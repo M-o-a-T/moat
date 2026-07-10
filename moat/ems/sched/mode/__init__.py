@@ -45,7 +45,7 @@ class BaseLoader:
         """
         The battery's current SoC.
         """
-        res = cfg.bms.sched.start.soc
+        res = cfg.ems.sched.start.soc
         if res < 0:
             raise NotImplementedError("You need to set the 'start.soc' parameter")
         return res

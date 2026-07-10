@@ -56,91 +56,26 @@ async def test_ls_basic(cfg):  # noqa: D103
 
 
 @pytest.mark.anyio
-async def test_ls_legacy_hello_fallback(cfg, monkeypatch):
-    "A client without RPC auth support falls back to legacy Hello/auth."
-    orig_modes = Hello._rpc_modes  # noqa: SLF001
-
-    def _rpc_modes(self):
-        if self.rpc_auth_server is False:
-            return ()
-        return orig_modes(self)
-
-    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
-
-    async with Scaffold(cfg, use_servers=True) as sf:
-        await sf.server(init={"Hello": "there!", "test": 123})
-        c = await sf.client()
-        assert c.id.startswith("C_"), c.id
-        assert c._link._ping_path[-1] == c.id  # noqa: SLF001
-        assert c._link._id_path[-1] == c.id  # noqa: SLF001
-        r = await c.cmd(P("i.乒"), "pling")
-        assert r.args == ["乓", "pling"]
-
-
-@pytest.mark.anyio
-async def test_ls_legacy_hello_beats_delayed_rpc_reject(cfg, monkeypatch):
-    "Server accepts legacy hello and falls back even if the :n rejection arrives late."
-    orig_modes = Hello._rpc_modes  # noqa: SLF001
-    orig_handle = Hello.handle
-    saw_late_reject = False
-    saw_server_fallback = False
-
-    def _rpc_modes(self):
-        if self.rpc_auth_server is False:
-            return ()
-        return orig_modes(self)
-
-    async def _handle(self, msg, rcmd, *prefix):
-        nonlocal saw_late_reject, saw_server_fallback
-        if (
-            self.rpc_auth_server is True
-            and self._rpc_in is not None
-            and len(rcmd) == 2
-            and rcmd[-1] == "i"
-            and rcmd[0] == "hello"
-        ):
-            saw_server_fallback = True
-        if self.rpc_auth_server is False and self._rpc_in is None and rcmd and rcmd[-1] is None:
-            saw_late_reject = True
-            await anyio.sleep(0.05)
-        return await orig_handle(self, msg, rcmd, *prefix)
-
-    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
-    monkeypatch.setattr(Hello, "handle", _handle)
-
-    async with Scaffold(cfg, use_servers=True) as sf:
-        await sf.server(init={"Hello": "there!", "test": 123})
-        c = await sf.client()
-        r = await c.cmd(P("i.乒"), "pling")
-        assert r.args == ["乓", "pling"]
-        await c.i_sync()
-        await anyio.sleep(0.1)
-        r = await c.cmd(P("i.乒"), "plong")
-        assert r.args == ["乓", "plong"]
-
-    assert saw_late_reject
-    assert saw_server_fallback
-
-
-@pytest.mark.anyio
-async def test_ls_client_fallback_on_remote_no_helloauth(cfg, monkeypatch, caplog):
-    "Client falls back to legacy Hello if RPC auth gets a remote No Hello/Auth error first."
-    orig_modes = Hello._rpc_modes  # noqa: SLF001
+async def test_ls_rpc_waits_for_server_auth_start(cfg, monkeypatch, caplog):
+    "Incoming RPC auth waits for server startup instead of failing with KeyError(None)."
     orig_run = Hello.run
-
-    def _rpc_modes(self):
-        if self.rpc_auth_server is True:
-            return ()
-        return orig_modes(self)
+    orig_handle = Hello.handle
+    saw_early_rpc = False
 
     async def _run(self, sender, **kw):
         if self.rpc_auth_server is True:
             await anyio.sleep(0.05)
         return await orig_run(self, sender, **kw)
 
-    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
+    async def _handle(self, msg, rcmd, *prefix):
+        nonlocal saw_early_rpc
+        if self.rpc_auth_server is True and self._rpc_in is None and rcmd and rcmd[-1] is None:
+            saw_early_rpc = True
+        return await orig_handle(self, msg, rcmd, *prefix)
+
     monkeypatch.setattr(Hello, "run", _run)
-    caplog.set_level(logging.WARNING)
+    monkeypatch.setattr(Hello, "handle", _handle)
+    caplog.set_level(logging.ERROR)
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -148,31 +83,53 @@ async def test_ls_client_fallback_on_remote_no_helloauth(cfg, monkeypatch, caplo
         r = await c.cmd(P("i.乒"), "pling")
         assert r.args == ["乓", "pling"]
 
-    assert not any("Link failed:" in r.message for r in caplog.records)
+    assert saw_early_rpc
+    assert not any("KeyError(None)" in rec.getMessage() for rec in caplog.records)
 
 
 @pytest.mark.anyio
-async def test_ls_client_fallback_if_hello_precedes_nohelloauth(cfg, monkeypatch, caplog):
-    "Client fallback must not time out if legacy hello completes before :n gets rejected."
-    orig_modes = Hello._rpc_modes  # noqa: SLF001
-    orig_handle = Hello.handle
-    saw_delayed_nohelloauth = False
+async def test_ls_rpc_allows_post_auth_backend_query(cfg, monkeypatch, caplog):
+    "Named-server backend query must not fail while RPC auth teardown is still running."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+    from moat.link.client import Link  # noqa: PLC0415
 
-    def _rpc_modes(self):
-        if self.rpc_auth_server is True:
-            return ()
-        return orig_modes(self)
+    orig_task = AuthCmdIn.task
 
-    async def _handle(self, msg, rcmd, *prefix):
-        nonlocal saw_delayed_nohelloauth
-        if self.rpc_auth_server is True and rcmd and rcmd[-1] is None:
-            saw_delayed_nohelloauth = True
+    async def _task(self):
+        res = await orig_task(self)
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
             await anyio.sleep(0.05)
-        return await orig_handle(self, msg, rcmd, *prefix)
+        return res
 
-    monkeypatch.setattr(Hello, "_rpc_modes", _rpc_modes)
-    monkeypatch.setattr(Hello, "handle", _handle)
+    monkeypatch.setattr(AuthCmdIn, "task", _task)
     caplog.set_level(logging.WARNING)
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv = await sf.server(init={"test": 1})
+        async with Link(sf.cfg, only=srv.name) as c:
+            r = await c.cmd(P("i.乒"), "pling")
+            assert r.args == ["乓", "pling"]
+
+    assert not any("Could not query backend" in rec.getMessage() for rec in caplog.records)
+    assert not any("No Auth" in rec.getMessage() for rec in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_ls_rpc_auth_cmd_before_subtask_setup(cfg, monkeypatch, caplog):
+    "RPC auth mode commands may arrive before subauth setup has run."
+    from moat.lib.rpc.auth._base import AuthCmdIn  # noqa: PLC0415
+
+    orig_run = AuthCmdIn._run  # noqa: SLF001
+
+    async def _run(self, s_a):
+        hello = getattr(self.parent.parent, "hello", None)
+        if hello is not None and hello.rpc_auth_server is True:
+            await anyio.sleep(0.05)
+        return await orig_run(self, s_a)
+
+    monkeypatch.setattr(AuthCmdIn, "_run", _run)
+    caplog.set_level(logging.ERROR)
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 123})
@@ -180,8 +137,7 @@ async def test_ls_client_fallback_if_hello_precedes_nohelloauth(cfg, monkeypatch
         r = await c.cmd(P("i.乒"), "pling")
         assert r.args == ["乓", "pling"]
 
-    assert saw_delayed_nohelloauth
-    assert not any("Link failed:" in r.message for r in caplog.records)
+    assert not any("has no attribute '_seen'" in rec.getMessage() for rec in caplog.records)
 
 
 async def data(s):  # noqa: D103
@@ -312,6 +268,76 @@ async def test_delete(cfg):  # noqa: D103
         await chk(NotGiven, "a.b")
         await chk(NotGiven, "a.b.c")
         await chk(NotGiven, "a.b.c.e")
+
+
+@pytest.mark.anyio
+async def test_delete_open(cfg):  # noqa: D103
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        await c.d.set(P("a.b"), 12)
+        await c.d.set(P("a.b.c"), 123)
+        await c.d.set(P("a.b.c.d"), 1234)
+        await c.d.set(P("a.b.c.e"), 1235)
+
+        async def chk(want, path):
+            if want is NotGiven:
+                with pytest.raises(KeyError):
+                    await c.d.get(P(path))
+            else:
+                res = await c.d.get(P(path))
+                assert res[0] == want, (res, want)
+
+        await c.d.delete(P("a"), rec=True)
+        await chk(NotGiven, "a")
+        await chk(NotGiven, "a.b")
+        await chk(NotGiven, "a.b.c")
+        await chk(NotGiven, "a.b.c.e")
+
+
+@pytest.mark.anyio
+async def test_delete_sub(cfg):
+    """`sub=True` deletes the subtree below a node but keeps the node itself."""
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+
+        await c.d.set(P("a"), 1)
+        await c.d.set(P("a.b"), 12)
+        await c.d.set(P("a.b.c"), 123)
+        await c.d.set(P("a.b.c.d"), 1234)
+        await c.d.set(P("a.b.c.e"), 1235)
+
+        async def chk(want, path):
+            if want is NotGiven:
+                with pytest.raises(KeyError):
+                    await c.d.get(P(path))
+            else:
+                res = await c.d.get(P(path))
+                assert res[0] == want, (res, want)
+
+        # Sub-delete of a node with no own value: children gone, no error.
+        await c.d.set(P("q.r"), 7)
+        await c.d.set(P("q.r.s"), 8)
+        await c.d.delete(P("q"), sub=True)
+        await chk(NotGiven, "q")
+        await chk(NotGiven, "q.r")
+        await chk(NotGiven, "q.r.s")
+
+        # Sub-delete: keep a, drop everything below.
+        await c.d.delete(P("a"), sub=True)
+        await chk(1, "a")
+        await chk(NotGiven, "a.b")
+        await chk(NotGiven, "a.b.c")
+        await chk(NotGiven, "a.b.c.d")
+        await chk(NotGiven, "a.b.c.e")
+
+        # rec and sub together are rejected.
+        from moat.lib.rpc.errors import RemoteError  # noqa: PLC0415
+
+        with pytest.raises((RemoteError, ValueError)):
+            await c.d.delete(P("a"), rec=True, sub=True)
 
 
 @pytest.mark.anyio

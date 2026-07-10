@@ -7,71 +7,153 @@ from __future__ import annotations
 import anyio
 from contextlib import AsyncExitStack
 
-from moat.util import NotGiven
+from moat.util import NotGiven, gen_ident
 from moat.lib.path import P, Path
+from moat.link.backend import Backend, get_backend
 from moat.link.meta import MsgMeta
+from moat.link.node.codec import CodecNode
 
 from . import Gate as _Gate
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.link.node.codec import CodecNode
+    from moat.link.client import Link
 
     from . import GateNode
 
     from typing import Any
 
 
-class Gate(_Gate):  # noqa: D101
+params_info = """\
+MQTT gateway parameters (use ``-s KEY VALUE`` to set):
+
+\b
+  codec    Codec name, or path to a codec-vector conversion tree.
+  backend  Dict describing a separate MQTT broker;
+           ``driver`` defaults to ``mqtt``.\
+"""
+
+
+class Gate(_Gate):
+    """MQTT gateway driver.
+
+    Bridges a MoaT-Link subtree (``cf.src``) to a raw MQTT topic tree
+    (``cf.dst``).  By default the gateway reuses the primary MoaT-Link
+    MQTT connection.  When ``cf.backend`` is present, a dedicated
+    connection to a separate broker is opened instead and kept alive for
+    the lifetime of the gateway.
+
+    Configuration keys (stored at ``:R.gate.NAME``):
+
+    Attributes:
+        cf.src: Source path inside MoaT-Link.
+        cf.dst: Destination topic prefix on the external MQTT broker.
+        cf.codec: Codec name or path to conversion-vector tree.
+        cf.backend: Optional dict describing a separate MQTT broker.
+            Supports all keys accepted by :class:`moat.link.backend.mqtt.Backend`;
+            ``driver`` defaults to ``mqtt``.
+    """
+
     codecs: CodecNode | None = None
+
+    backend: Backend | Link
+
+    def _path_dropped(self, path: Path) -> bool:
+        """Consult the codec-vector tree for a null-codec placeholder.
+
+        Falls back to the base implementation (which inspects
+        :attr:`codec`) when no codec-vector tree is configured or the
+        path isn't covered.
+        """
+        codec_vecs = getattr(self, "codec_vecs", None)
+        if codec_vecs is not None:
+            try:
+                vd = codec_vecs.search(path)
+            except (KeyError, ValueError):
+                pass
+            else:
+                try:
+                    if vd.data.get("codec") == "null":
+                        return True
+                except (AttributeError, ValueError):
+                    pass
+        return super()._path_dropped(path)
+
+    def _backend_cfg(self) -> dict[str, Any]:
+        """Return a *copy* of the gate-local backend config.
+
+        Subclasses may override to inject driver-specific defaults
+        (e.g. a wire codec) without mutating ``self.cf``, which would
+        cause the equality check in
+        :py:meth:`moat.link.gate.Gate._restart` to trigger a spurious
+        restart on every iteration.
+        """
+        bcfg = dict(self.cf.backend)
+        bcfg.setdefault("driver", "mqtt")
+        return bcfg
+
+    async def setup_(self) -> None:
+        """Enter the gate-specific backend into ``self.ex`` before ``self.tg`` is created."""
+        if "backend" not in self.cf:
+            self.backend = self.link
+        else:
+            bcfg = self._backend_cfg()
+            name = "gate_" + gen_ident()
+            self.backend = await self.ex.enter_async_context(
+                get_backend({"backend": bcfg}, name=name)
+            )
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Main loop. Overridden to fetch the codecs"
-        async with AsyncExitStack() as ex:
+        async with AsyncExitStack() as ts:
             if isinstance(self.cf.codec, Path):
-                cdv = await ex.enter_async_context(
+                # The watcher must live within self.tg's scope (Trio's strict
+                # LIFO nursery rule): use a local context here.
+                # TODO: The codec-vector node therefore doesn't receive live
+                # updates after run_() returns; fix this properly once the
+                # Watcher API grows a task-group-free update path.
+                cdv = await ts.enter_async_context(
                     self.link.d_watch(
                         P("conv") + self.cf.codec, subtree=True, state=None, meta=False
                     )
                 )
                 self.codec_vecs = await cdv.get_node()
-
                 self.codecs = await self.link.get_codec_tree()
 
             await super().run_(task_status=task_status)
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "fetch destination"
-        async with AsyncExitStack() as ex:
-            if self.codecs is not None:
-                codec = "noop"
+        if self.codecs is not None:
+            codecs = self.codecs
+            codec = "noop"
 
-                def conv(p, d):
-                    # two step
-                    # (a) look up the codec type in the vector
-                    try:
-                        vd = self.codec_vecs.search(p)
-                        cd = self.codecs.get(Path.build(vd.data["codec"]))
-                    except (KeyError, ValueError):
-                        return NotGiven
-                    # (b) decode it
-                    try:
-                        return cd.dec_value(d)
-                    except Exception as exc:
-                        self.logger.error("Decode: %s %r: %r", p, d, exc)
-                        return NotGiven
+            def conv(p, d):
+                # two steps:
+                # (a) look up the codec type in the vector
+                try:
+                    vd = self.codec_vecs.search(p)
+                    cd = codecs.get(Path.build(vd.data["codec"]))
+                    if not isinstance(cd, CodecNode):
+                        return NotGiven, None
+                except (KeyError, ValueError):
+                    return NotGiven, None
+                # (b) decode it
+                try:
+                    return cd.dec_value(d), vd
+                except Exception as exc:
+                    self.logger.error("Decode: %s %r: %r", p, d, exc)
+                    return NotGiven, None
 
-            else:
-                codec = self.codec
+        else:
+            codec = self.codec
 
-                def conv(p, d):
-                    p  # noqa:B018
-                    return d
+            def conv(p, d):
+                p  # noqa:B018
+                return d, None
 
-            mon = await ex.enter_async_context(
-                self.link.monitor(self.cf.dst, subtree=True, codec=codec)
-            )
+        async with self.backend.monitor(self.cf.dst, subtree=True, codec=codec) as mon:
             task_status.started()
             ld = len(self.cf.dst)
             while True:
@@ -81,10 +163,12 @@ class Gate(_Gate):  # noqa: D101
                 except TimeoutError:
                     break
                 p = Path.build(msg.topic[ld:])
-                res = conv(p, msg.data)
+                res, vd = conv(p, msg.data)
                 if res is NotGiven:
                     continue
-                await self.set_src(p, res, msg.meta)
+
+                spd = None if vd is None else vd.get("speed", None)
+                await self.set_src(p, res, msg.meta, speed=spd)
             self.dst_is_current()
 
             async for msg in mon:
@@ -94,21 +178,30 @@ class Gate(_Gate):  # noqa: D101
                 p = Path.build(msg.topic[ld:])
                 if msg.data == b"":
                     res = NotGiven
+                    spd = None
                 else:
-                    res = conv(p, msg.data)
+                    res, vd = conv(p, msg.data)
                     if res is NotGiven:
                         continue
+                    spd = None if vd is None else vd.get("speed", None)
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
         "update destination"
-        meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
+        if meta is None:
+            meta = MsgMeta(origin=self.origin)
+        else:
+            meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
         if data is NotGiven:
-            await self.link.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
+            await self.backend.send(self.cf.dst + path, b"", retain=True, codec="noop", meta=meta)
         elif self.codecs is not None:
+            codecs = self.codecs
             try:
                 vd = self.codec_vecs.search(path)
-                cd = self.codecs.get(Path.build(vd.data["codec"]))
+                cd = codecs.get(Path.build(vd.data["codec"]))
+                if not isinstance(cd, CodecNode):
+                    self.logger.error("Bad codec node: %s", path)
+                    return
             except (ValueError, KeyError):
                 self.logger.error("No codec: %s %r", path, data)
                 return
@@ -118,29 +211,31 @@ class Gate(_Gate):  # noqa: D101
                 self.logger.error("Encode: %s %r: %r", path, data, exc)
             else:
                 if isinstance(res, (str, bytes, bytearray)):
-                    await self.link.send(
+                    await self.backend.send(
                         self.cf.dst + path, res, retain=True, codec="noop", meta=meta
                     )
                 else:
                     self.logger.error("Bad codec: %s %r > %r", path, data, res)
 
         else:
-            await self.link.send(
+            await self.backend.send(
                 self.cf.dst + path, data, retain=True, codec=self.codec, meta=meta
             )
 
         node.ext_meta = meta
 
-    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:
         """
         Test whether this is an update.
 
         @data is currently ignored.
         """
         data  # noqa:B018
+        if aux is None:
+            return True
         # if the old metadata match the new, it's not an update.
         try:
-            if node.ext_meta.origin == meta.origin and node.ext_meta.timestamp == meta.timestamp:
+            if node.ext_meta.origin == aux.origin and node.ext_meta.timestamp == aux.timestamp:
                 return False
         except (AttributeError, KeyError):
             pass

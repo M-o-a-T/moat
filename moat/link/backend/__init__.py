@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from types import EllipsisType
 
     from moat.lib.codec import Codec
-    from moat.lib.mqtt import QoS
+    from moat.lib.mqtt import QoS, RetainHandling
     from moat.link.meta import MsgMeta
 
     from collections.abc import AsyncIterator
@@ -100,6 +100,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         echo: bool = False,
         no_local: bool = False,
         subtree: bool = False,
+        retain_handling: RetainHandling | None = None,
     ) -> AbstractAsyncContextManager[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.

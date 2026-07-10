@@ -42,7 +42,7 @@ def hookup(runner: Runner | None = None) -> None:
     if runner is None:
         import inspect  # noqa: PLC0415
 
-        f: FrameType | None = inspect.currentframe().f_back  # type: ignore[union-attr]  # currentframe can return None but we know we're in a function
+        f: FrameType | None = inspect.currentframe().f_back  # ty:ignore[unresolved-attribute]  # currentframe can return None but we know we're in a function
         while f is not None and "runner" not in f.f_locals:
             f = f.f_back
             if f is None:

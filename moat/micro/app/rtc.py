@@ -199,6 +199,15 @@ class Cmd(BaseCmd):
 
         rcmd is reversed, so rtc.cfg.w arrives as ["w", "cfg"]
         """
-        if len(rcmd) == 2 and rcmd[1][-1] != "_" and rcmd[0] in "rwcx" and "n" not in msg:
-            msg.kw["n"] = rcmd.pop()
+        if len(rcmd) == 2 and "n" not in msg.kw:
+            n_ = rcmd[1]
+            c_ = rcmd[0]
+            if (
+                isinstance(n_, str)
+                and n_
+                and n_[-1] != "_"
+                and isinstance(c_, str)
+                and c_ in "rwcx"
+            ):
+                msg.kw["n"] = rcmd.pop()
         await super().handle(msg, rcmd)

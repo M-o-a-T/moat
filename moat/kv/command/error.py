@@ -50,7 +50,7 @@ async def resolve(obj, path, subsys):
 async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
     """Dump error entries."""
     path = P(path)
-    path_ = obj.cfg["errors"].prefix
+    path_ = obj.cfg.kv.errors.prefix
     d = 2
 
     async def one(r):

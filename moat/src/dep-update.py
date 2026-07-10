@@ -12,6 +12,7 @@ import asyncclick as click
 import tomlkit as toml
 
 from moat.util import attrdict, yload
+from moat.src._toml import get_array, get_table
 
 DEP_NAME_RE = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
@@ -206,9 +207,8 @@ async def cli():
             with open(pkg_info.pyproject, "r") as f:  # noqa:ASYNC230
                 pyproject = toml.load(f)
 
-            try:
-                current_deps = pyproject["project"]["dependencies"]
-            except KeyError:
+            current_deps = get_array(get_table(pyproject, "project"), "dependencies")
+            if current_deps is None:
                 print(f"Warning: {pkg_name} has no dependencies section")
                 continue
 

@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=moat-link-wago
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_install:
+	dh_auto_install
+	install -D -m 644 systemd/moat-link-wago@.service \
+		debian/moat-link-wago/usr/lib/systemd/system/moat-link-wago@.service

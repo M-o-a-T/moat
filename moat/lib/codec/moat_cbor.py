@@ -22,9 +22,10 @@ from ipaddress import (
 )
 
 from ._moat_cbor import Codec, std_ext
+from .cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
 
 # Typing
-from .cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Tag
+from typing import cast
 
 __all__ = [
     "CBOR_TAG_MOAT_CHANGE",
@@ -233,9 +234,9 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
     codec  # noqa:B018
     if isinstance(buf, dict) and len(buf) == 1:
         mask, buf = next(iter(buf.items()))
-        if len(buf) == 4:
+        if len(cast(bytes, buf)) == 4:
             return IPv4Network((bytes(buf), mask))
-        elif len(buf) == 16:
+        elif len(cast(bytes, buf)) == 16:
             return IPv6Network((bytes(buf), mask))
 
     raise ValueError(f"invalid ipnetwork value {buf!r}")

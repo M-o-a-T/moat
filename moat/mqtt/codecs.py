@@ -68,7 +68,7 @@ async def decode_string(reader) -> bytes:
     :param reader: Stream reader
     :return: UTF-8 string read from stream
     """
-    return (await decode_data_with_length(reader)).decode("utf-8")
+    return (await decode_data_with_length(reader)).decode("utf-8", errors="surrogateescape")
 
 
 async def decode_data_with_length(reader) -> bytes:
@@ -84,7 +84,7 @@ async def decode_data_with_length(reader) -> bytes:
 
 
 def encode_string(string: str) -> bytes:  # noqa: D103
-    return encode_data_with_length(string.encode("utf-8"))
+    return encode_data_with_length(string.encode("utf-8", errors="surrogateescape"))
 
 
 def encode_data_with_length(data: bytes) -> bytes:  # noqa: D103
@@ -110,4 +110,4 @@ def int_to_bytes_str(value: int) -> bytes:
     :param value: int value to convert
     :return: bytes array
     """
-    return str(value).encode("utf-8")
+    return str(value).encode("utf-8", errors="surrogateescape")

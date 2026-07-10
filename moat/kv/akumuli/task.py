@@ -43,7 +43,7 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # noqa:
                     tags = msg.setdefault("tags", {})
                     for k, v in tags.items():
                         if isinstance(v, bytes):
-                            tags[k] = v.decode("utf-8")
+                            tags[k] = v.decode("utf-8", errors="surrogateescape")
                         else:
                             tags[k] = str(v)
                             # no-op if it's already a string

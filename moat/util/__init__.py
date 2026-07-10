@@ -111,7 +111,7 @@ _imports = {
     "get_part": "part",
     "set_part": "part",
     # help
-    "_help_preserve_blocks": "help",
+    "help_preserve_blocks": "help",
     # edit
     "edit_text": "edit",
     "edit_yaml": "edit",

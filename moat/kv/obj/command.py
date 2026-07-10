@@ -107,7 +107,7 @@ def std_command(cli, *a, **kw):
         invoke_without_command=True,
         short_help=tinv.short_help,
         help=f"""\
-            Manager for {tinv.long_name}s.
+            Manager for {tinv.long_name}.
 
             \b
             Use '… {tname} -' to list all entries.
@@ -171,14 +171,7 @@ def std_command(cli, *a, **kw):
             n = this(obj).allocate(name)
         return n
 
-    # This is a hack for groups that take arguments. Doesn't work for
-    # multiple arguments, but you shouldn't do that anyway.
-    @typ.command("--help", hidden=True)
-    @click.pass_context
-    def help_(ctx):  # pylint:disable=unused-variable  # oh boy
-        print(typ.get_help(ctx))
-
-    @typ.command(short_help="Add a " + tinv.long_name)
+    @typ.command(short_help=f"Add a {tinv.long_name} server")
     @tinv.id_arg
     @tinv.apply_aux
     @click.pass_obj
@@ -195,10 +188,10 @@ def std_command(cli, *a, **kw):
         await _v_mod(obj, n, **kw)
 
     add.__doc__ = f"""
-        Add a {tinv.long_name}
+        Add a {tinv.long_name} server.
         """
 
-    @typ.command("set", short_help="Modify a " + tinv.long_name)
+    @typ.command("set", short_help=f"Modify a {tinv.long_name} server")
     @tinv.apply_aux
     @click.pass_obj
     async def set_(obj, **kw):
@@ -209,10 +202,10 @@ def std_command(cli, *a, **kw):
         await _v_mod(obj, n, **kw)
 
     set_.__doc__ = f"""
-        Modify a {tinv.long_name}
+        Modify a {tinv.long_name} server.
         """
 
-    @typ.command(short_help="Delete a " + tinv.long_name)
+    @typ.command(short_help=f"Delete a {tinv.long_name} server")
     @click.pass_obj
     async def delete(obj, **kw):  # noqa: ARG001
         name = obj[tnname]
@@ -221,7 +214,7 @@ def std_command(cli, *a, **kw):
             await n.delete()
 
     delete.__doc__ = """
-        Delete a {tinv.long_name}
+        Delete a {tinv.long_name} server.
         """
 
     async def _v_mod(obj, thing, **kw):

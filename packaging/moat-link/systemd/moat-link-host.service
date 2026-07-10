@@ -1,5 +1,7 @@
 [Unit]
 Description=MoaT-Link host service
+After=moat-link-server.service
+After=flashmq.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 
@@ -20,3 +22,6 @@ EnvironmentFile=-/etc/moat/link.env
 
 TimeoutSec=300
 WatchdogSec=10
+
+Restart=always
+RestartSec=30

@@ -34,7 +34,7 @@ class DetailedCalledProcessError(CalledProcessError):
         def dec(s: bytes | str) -> bytes | str:
             if isinstance(s, bytes):
                 try:
-                    s = s.decode("utf-8")
+                    s = s.decode("utf-8", errors="surrogateescape")
                 except UnicodeDecodeError:
                     pass
             return s
@@ -117,7 +117,7 @@ async def run(
             kw["stdin"] = DEVNULL
     else:
         if isinstance(input, str):
-            input = input.encode("utf-8")  # noqa: A001
+            input = input.encode("utf-8", errors="surrogateescape")  # noqa: A001
 
     if capture and kw.get("stdout", PIPE) != PIPE:
         raise ValueError("can't capture if stdout is not PIPE")
@@ -178,7 +178,7 @@ async def run(
         assert out is not None  # stdout is PIPE when capture is True
         res = out.getvalue()
         if capture is True:
-            res = res.decode("utf-8")
+            res = res.decode("utf-8", errors="surrogateescape")
         return res
 
     return None

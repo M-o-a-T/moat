@@ -1,7 +1,6 @@
 [Unit]
 Description=MoaT-KV single-node runner for %i
 After=moat-kv.service
-Requires=moat-kv.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

@@ -11,6 +11,11 @@ from moat.util import NotGiven
 from moat.lib.micro import Event, TaskGroup
 from moat.lib.rpc import BaseCmd
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from types import EllipsisType
+
 PINS = {}
 
 
@@ -23,7 +28,7 @@ class Pin(BaseCmd):
 
     doc = dict(_c=dict(_d="A fake I/O pin", pin="int:pin#"))
 
-    flag: Event | None = None
+    flag: Event
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -50,7 +55,7 @@ class Pin(BaseCmd):
         await self.flag.wait()
         return self._value
 
-    async def cmd(self, val: bool = NotGiven) -> None | bool:
+    async def cmd(self, val: bool | EllipsisType = NotGiven) -> None | bool:
         "Simple Data protocol."
         if val is NotGiven:
             return self.value
@@ -119,12 +124,7 @@ class ADC(BaseCmd):
             else 0
         )
         self.bias = 0
-        try:
-            self.rand = random.Random(cfg.get("seed", None))
-        except AttributeError:
-            from moat.util.random import Random  # noqa: PLC0415
-
-            self.rand = Random(cfg["seed"] if "seed" in cfg else random.getrandbits(32))
+        self.rand = random.Random(cfg.get("seed", None))
 
     doc_r = dict(_d="read")
 

@@ -3,8 +3,12 @@ from __future__ import annotations  # noqa: D100
 import io
 import os
 import re
+import shlex
+import shutil
 import sys
-from shlex import quote
+from anyio.to_thread import run_sync
+
+from moat.util.exec import CalledProcessError, run
 
 from typing import TYPE_CHECKING
 
@@ -12,13 +16,13 @@ if TYPE_CHECKING:
     from typing import Protocol
 
     class Pager(Protocol):
-        def __call__(self, text: str, title: str = "") -> None: ...
+        async def __call__(self, text: str, title: str = "") -> None: ...
 
 
 __all__ = ["pipe_pager", "plain_pager", "tempfile_pager"]
 
 
-def get_pager() -> Pager:
+async def get_pager() -> Pager:
     """Decide what method to use for paging through text."""
     if not hasattr(sys.stdin, "isatty"):
         return plain_pager
@@ -31,31 +35,37 @@ def get_pager() -> Pager:
     use_pager = os.environ.get("MANPAGER") or os.environ.get("PAGER")
     if use_pager:
         if sys.platform == "win32":  # pipes completely broken in Windows
-            return lambda text, title="": tempfile_pager(plain(text), use_pager)  # noqa: ARG005
+            return _make_tempfile(use_pager, plain_text=True)
         elif os.environ.get("TERM") in ("dumb", "emacs"):
-            return lambda text, title="": pipe_pager(plain(text), use_pager, title)
+            return _make_pipe(use_pager, plain_text=True)
         else:
-            return lambda text, title="": pipe_pager(text, use_pager, title)
+            return _make_pipe(use_pager, plain_text=False)
     if os.environ.get("TERM") in ("dumb", "emacs"):
         return plain_pager
     if sys.platform == "win32":
-        return lambda text, title="": tempfile_pager(plain(text), "more <")  # noqa: ARG005
-    if hasattr(os, "system") and os.system("(pager) 2>/dev/null") == 0:  # noqa: S605, S607
-        return lambda text, title="": pipe_pager(text, "pager", title)
-    if hasattr(os, "system") and os.system("(less) 2>/dev/null") == 0:  # noqa: S605, S607
-        return lambda text, title="": pipe_pager(text, "less", title)
+        return _make_tempfile("more", plain_text=True)
+    for prog in ("pager", "less", "more"):
+        if shutil.which(prog) is not None:
+            return _make_pipe(prog, plain_text=False)
+    return tty_pager
 
-    import tempfile  # noqa: PLC0415
 
-    (fd, filename) = tempfile.mkstemp()
-    os.close(fd)
-    try:
-        if hasattr(os, "system") and os.system(f'more "{filename}"') == 0:  # noqa: S605
-            return lambda text, title="": pipe_pager(text, "more", title)
-        else:
-            return tty_pager
-    finally:
-        os.unlink(filename)
+def _make_pipe(cmd: str, *, plain_text: bool) -> Pager:
+    """Build a pager that feeds *text* to *cmd* via its standard input."""
+
+    async def pager(text: str, title: str = "") -> None:
+        await pipe_pager(plain(text) if plain_text else text, cmd, title)
+
+    return pager
+
+
+def _make_tempfile(cmd: str, *, plain_text: bool) -> Pager:
+    """Build a pager that presents *text* to *cmd* via a temporary file."""
+
+    async def pager(text: str, title: str = "") -> None:  # noqa: ARG001
+        await tempfile_pager(plain(text) if plain_text else text, cmd)
+
+    return pager
 
 
 def escape_stdout(text: str) -> str:
@@ -73,8 +83,8 @@ def plain(text: str) -> str:
     return re.sub(".\b", "", text)
 
 
-def tty_pager(text: str, title: str = "") -> None:  # noqa: ARG001
-    """Page through text on a text terminal."""
+def _tty_pager_sync(text: str, title: str) -> None:  # noqa: ARG001
+    """Page through text on a text terminal (blocking)."""
     lines = plain(escape_stdout(text)).split("\n")
     has_tty = False
     try:
@@ -127,15 +137,18 @@ def tty_pager(text: str, title: str = "") -> None:  # noqa: ARG001
             termios.tcsetattr(fd, termios.TCSAFLUSH, old)
 
 
-def plain_pager(text: str, title: str = "") -> None:  # noqa: ARG001
+async def tty_pager(text: str, title: str = "") -> None:
+    """Page through text on a text terminal."""
+    await run_sync(_tty_pager_sync, text, title, abandon_on_cancel=True)
+
+
+async def plain_pager(text: str, title: str = "") -> None:  # noqa: ARG001
     """Simply print unformatted text.  This is the ultimate fallback."""
     sys.stdout.write(plain(escape_stdout(text)))
 
 
-def pipe_pager(text: str, cmd: str, title: str = "") -> None:
+async def pipe_pager(text: str, cmd: str, title: str = "") -> None:
     """Page through text by feeding it to another program."""
-    import subprocess  # noqa: PLC0415
-
     env = os.environ.copy()
     if title:
         title += " "
@@ -149,41 +162,43 @@ def pipe_pager(text: str, cmd: str, title: str = "") -> None:
         " (press h for help or q to quit)"
     )
     env["LESS"] = f"-RmPm{prompt_string}$PM{prompt_string}$"
-    proc = subprocess.Popen(  # noqa: S602
-        cmd, shell=True, stdin=subprocess.PIPE, errors="backslashreplace", env=env
-    )
-    assert proc.stdin is not None
     try:
-        with proc.stdin as pipe:
-            try:
-                pipe.write(text)
-            except KeyboardInterrupt:
-                # We've hereby abandoned whatever text hasn't been written,
-                # but the pager is still in control of the terminal.
-                pass
-    except OSError:
-        pass  # Ignore broken pipes caused by quitting the pager program.
-    while True:
-        try:
-            proc.wait()
-            break
-        except KeyboardInterrupt:
-            # Ignore ctl-c like the pager itself does.  Otherwise the pager is
-            # left running and the terminal is in raw mode and unusable.
-            pass
+        await run(
+            *shlex.split(cmd),
+            input=text,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            env=env,
+        )
+    except (ConnectionError, CalledProcessError):
+        pass  # the pager quit early or returned nonzero
 
 
-def tempfile_pager(text: str, cmd: str, title: str = "") -> None:  # noqa: ARG001
+async def tempfile_pager(text: str, cmd: str, title: str = "") -> None:  # noqa: ARG001
     """Page through text by invoking a program on a temporary file."""
     import tempfile  # noqa: PLC0415
 
     with tempfile.TemporaryDirectory() as tempdir:
         filename = os.path.join(tempdir, "pydoc.out")
-        with open(
-            filename,
-            "w",
-            errors="backslashreplace",
-            encoding=os.device_encoding(0) if sys.platform == "win32" else None,
-        ) as file:
-            file.write(text)
-        os.system(cmd + quote(filename))  # noqa: S605
+        encoding = os.device_encoding(0) if sys.platform == "win32" else None
+
+        def _write() -> None:
+            with open(
+                filename,
+                "w",
+                errors="backslashreplace",
+                encoding=encoding,
+            ) as file:
+                file.write(text)
+
+        await run_sync(_write)
+        try:
+            await run(
+                *shlex.split(cmd),
+                filename,
+                stdin=sys.stdin,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+        except CalledProcessError:
+            pass  # the pager returned nonzero

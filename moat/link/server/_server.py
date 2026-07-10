@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import anyio
 import anyio.abc
+import dataclasses
 import logging
 import os
 import random
 import signal
+import struct
 import sys
 import time
 from anyio.abc import SocketAttribute
@@ -37,6 +39,7 @@ from moat.util import (
     to_attrdict,
 )
 from moat.lib.broadcast import Broadcaster, BroadcastReader
+from moat.lib.codec import get_codec
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.lib.codec.moat_cbor import (
     CBOR_TAG_MOAT_CHANGE,
@@ -53,7 +56,6 @@ from moat.lib.path import (
     Root,
 )
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
-from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.backend import Backend, get_backend
 from moat.link.client import BasicLink, LinkCommon
 from moat.link.common import _Sub_i as _CommonSubI
@@ -62,14 +64,18 @@ from moat.link.hello import Hello
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 from moat.util.exc import ExpKeyError, exc_iter
+from moat.util.times import simple_time_delta
 
 from collections import defaultdict
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
+# CBOR encoding of Tag(CBOR_TAG_MOAT_FILE_END, ...) - used to locate the trailer
+# Tag 0x4D656F46 in CBOR: major type 6, 4-byte uint → 0xDA followed by 4 bytes
+_CBOR_FILE_END_MARKER: bytes = b"\xda" + struct.pack(">I", CBOR_TAG_MOAT_FILE_END)
+
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
-    from types import CoroutineType
 
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
@@ -79,9 +85,106 @@ if TYPE_CHECKING:
 
     PathType = anyio.Path | FSPath | str
 
+NotGivenType = type(NotGiven)
+
 
 class BadFile(ValueError):
-    pass
+    """Raised when a state file cannot be parsed."""
+
+
+@dataclasses.dataclass
+class StateFileInfo:
+    """Metadata extracted from a saved server state file.
+
+    Attributes:
+        path: Filesystem path to the state file.
+        timestamp: Start timestamp (Unix epoch) read from the file header.
+        mode: File mode from the header (``'full'``, ``'incr'``, or ``'init'``).
+        trailer: Decoded trailer mapping, or ``None`` if not yet loaded.
+    """
+
+    path: anyio.Path
+    timestamp: float
+    mode: str
+    trailer: dict[str, Any] | None = dataclasses.field(default=None)
+
+    @property
+    def is_incr(self) -> bool:
+        """True if this is an incremental (delta-only) file."""
+        return self.mode == "incr"
+
+    @property
+    def is_error(self) -> bool:
+        """True if the file’s trailer indicates an error during writing."""
+        t = self.trailer
+        return t is not None and t.get("mode") == "error"
+
+
+async def _read_state_header(path: anyio.Path) -> tuple[float, str]:
+    """Read the header record of a state file.
+
+    Args:
+        path: Path to the ``.moat`` state file.
+
+    Returns:
+        A ``(timestamp, mode)`` pair where *timestamp* is the file’s start
+        time as a Unix epoch float and *mode* is the header mode string
+        (e.g. ``'full'``, ``'incr'``).
+
+    Raises:
+        BadFile: if the file does not begin with a valid header tag.
+        StopAsyncIteration: if the file is empty.
+    """
+    async with MsgReader(path, codec="std-cbor") as rdr:
+        msg = await anext(rdr)
+    # CBOR_TAG_CBOR_LEADER is stripped transparently by the decoder, but check
+    # defensively in case a future codec version behaves differently.
+    if isinstance(msg, Tag) and msg.tag == CBOR_TAG_CBOR_LEADER:
+        msg = msg.value
+    if not isinstance(msg, Tag) or msg.tag != CBOR_TAG_MOAT_FILE_ID:
+        raise BadFile(f"No file-ID tag in {path}")
+    _text, meta = msg.value
+    ts: Any = meta.get("time", 0)
+    if hasattr(ts, "timestamp"):
+        ts = ts.timestamp()
+    mode: str = meta.get("mode", "full")
+    return float(ts), mode
+
+
+async def _read_state_trailer(path: anyio.Path) -> dict[str, Any] | None:
+    """Read the trailer record from a state file.
+
+    Reads the last 1 kiB of *path*, locates the :data:`CBOR_TAG_MOAT_FILE_END`
+    marker, and decodes the tag value.
+
+    Args:
+        path: Path to the ``.moat`` state file.
+
+    Returns:
+        The decoded trailer mapping if a valid trailer is found,
+        an empty dict if the tag has no mapping payload,
+        or ``None`` if no trailer marker exists (truncated / in-progress file).
+    """
+    try:
+        size = (await path.stat()).st_size
+        async with await anyio.open_file(path, "rb") as f:
+            await f.seek(max(0, size - 1024))
+            data = await f.read(1024)
+        idx = data.rfind(_CBOR_FILE_END_MARKER)
+        if idx < 0:
+            return None
+        codec = get_codec("std-cbor")
+        codec.feed(data[idx:])
+        try:
+            tag = next(codec)
+        except StopIteration:
+            return None
+        if isinstance(tag, Tag) and tag.tag == CBOR_TAG_MOAT_FILE_END:
+            val = tag.value
+            return val if isinstance(val, dict) else {}
+        return None
+    except Exception:
+        return None
 
 
 class _NotGiven:
@@ -98,7 +201,8 @@ async def EventSetter(evt):
 
 Stream = anyio.abc.ByteStream
 
-ClosedResourceError = anyio.ClosedResourceError
+StreamDied = (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream)
+StreamEnd = (EOFError,) + StreamDied
 
 _client_nr = 0
 
@@ -206,6 +310,7 @@ class _Sub_d(MsgHandler):
         _99="MsgMeta:optional",
         t="float:Time of+ last change",
         rec="bool:recursive",
+        sub="bool:delete children only, keep this node",
     )
     doc_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
 
@@ -237,9 +342,14 @@ class _Sub_d(MsgHandler):
         return await self.parent.d_set_(path, value, meta=meta, t=t)
 
     async def cmd_delete(
-        self, path: Path, meta: MsgMeta | None = None, t: float | None = None, rec: bool = False
+        self,
+        path: Path,
+        meta: MsgMeta | None = None,
+        t: float | None = None,
+        rec: bool = False,
+        sub: bool = False,
     ) -> Any:
-        return await self.parent.d_delete_(path, meta=meta, t=t, rec=rec)
+        return await self.parent.d_delete_(path, meta=meta, t=t, rec=rec, sub=sub)
 
 
 class _Sub_e(MsgHandler):
@@ -275,7 +385,7 @@ class _Sub_i(_CommonSubI):
     "Server informational namespace."
 
     def __init__(self, parent: ServerClient):
-        super().__init__(parent.server)
+        super().__init__(parent)
         self.parent = parent
 
     doc_state = dict(_d="state", _r="MsgMeta:optional")
@@ -330,9 +440,11 @@ class ServerClient(LinkCommon):
     protocol_version: int = -1
     prefix: str
     name: str
+    server: Server
 
     def __init__(self, server: Server, prefix: str, stream: Stream):
         self.server = server
+        self.cfg = server.cfg
         self.prefix = prefix
         self.stream = stream
 
@@ -371,7 +483,6 @@ class ServerClient(LinkCommon):
             them=self.name,
             me=self.server.name,
             me_server=True,
-            auth_in=[TokenAuth(*self.server.tokens), AnonAuth()],
             rpc_auth_modes=("token", "anon"),
             rpc_auth_data={"token": self.server.tokens},
             rpc_auth_server=True,
@@ -394,6 +505,8 @@ class ServerClient(LinkCommon):
                 them = self._hello.them
                 self.is_server = self._hello.they_server
                 if True:  # self.is_server:
+                    if them is None:
+                        raise RuntimeError("No remote name after handshake")
                     try:
                         self.server.rename_client(self, them)
                     except ValueError:
@@ -442,24 +555,30 @@ class ServerClient(LinkCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def handle(self, msg, rpath) -> CoroutineType[Any, Any, None]:
+    async def handle(self, msg, rcmd):
         """
         Message handlers that intercepts (a) authorization, (b) a "d_"
         path-based "simple data" command
         """
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.handle(msg, rpath)
+            if self._hello.is_auth_cmd(rcmd):
+                return await self._hello.handle(msg, rcmd)
+            if not self._hello.auth_accepting:
+                await msg.ml_send_error(ValueError("No Auth"))
+                return
 
-        if rpath[-1] == "d_":
+        if rcmd[-1] == "d_":
             # Simple Data. If both a path vector and a `p` argument is
             # given, concatenate them.
             if "p" not in msg.kw:
-                msg.kw["p"] = Path.build(rpath[-2::-1])  # reversed, without last element
-            elif len(rpath) > 1:
-                msg.kw["p"] = Path.build(rpath[-2::-1]) + msg["p"]
-            return msg.call_simple(self.d_simple_)
+                msg._kw = dict(msg.kw)  # noqa: SLF001
+                msg._kw["p"] = Path.build(rcmd[-2::-1])  # noqa: SLF001
+            elif len(rcmd) > 1:
+                msg._kw = dict(msg.kw)  # noqa: SLF001
+                msg._kw["p"] = Path.build(rcmd[-2::-1]) + msg["p"]  # noqa: SLF001
+            return await msg.call_simple(self.d_simple_)
 
-        return super().handle(msg, rpath)
+        return await super().handle(msg, rcmd)
 
     async def d_get_stream_(self, msg):
         """Get the data of a sub-node.
@@ -477,7 +596,10 @@ class ServerClient(LinkCommon):
         else:
             data = self.server.data
         d = data[path]
-        await msg.result(d.data, *d.meta.dump())
+        if d.meta is None:
+            await msg.result(d.data)
+        else:
+            await msg.result(d.data, *d.meta.dump())
 
     async def d_collect_stream_(self, msg):
         """Collate the dicts on the path from some root to a sub-node.
@@ -647,30 +769,46 @@ class ServerClient(LinkCommon):
 
         return self.server.maybe_update(path, value, meta, force=True)
 
-    async def d_delete_(self, path, meta=None, t: float | None = None, rec: bool = False):
+    async def d_delete_(
+        self,
+        path,
+        meta=None,
+        t: float | None = None,
+        rec: bool = False,
+        sub: bool = False,
+    ):
         """Delete a node's value.
 
         Arguments:
         * pathname
         * optional: new metadata
         * optional: t: timestamp of last change
+        * optional: rec: recursively delete the node and its subtree
+        * optional: sub: recursively delete the node's children only,
+          leaving the node itself intact
+
+        ``rec`` and ``sub`` are mutually exclusive.
 
         You should only call this if you don't know whether the data exists.
         If you do, send an empty value to the MQTT topic directly.
         """
+        if rec and sub:
+            raise ValueError("'rec' and 'sub' are mutually exclusive")
         if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
         path = Path.build(path)
 
         try:
-            node = self.server.data[path]
-            dv = node.data
-            dm = node.meta
-        except (KeyError, ValueError):
+            node = self.server.data.get(path, create=False)
+        except KeyError:
             node = None
-        else:
-            if rec:
+
+        if node is not None:
+            dv = node.data_
+            dm = node.meta if dv is not NotGiven else None
+
+            if rec or sub:
 
                 async def rec_del(n, p):
                     await anyio.sleep(0.01)
@@ -678,51 +816,63 @@ class ServerClient(LinkCommon):
                         await rec_del(nn, p / pp)
                     self.server.maybe_update(p, NotGiven, meta)
 
-                await rec_del(node, path)
+                if sub:
+                    for pp, nn in list(node.items()):
+                        await rec_del(nn, path / pp)
+                else:
+                    await rec_del(node, path)
             else:
-                if t is not None and abs(node.meta.timestamp - t) > 0.001:
+                if dv is NotGiven:
+                    return None
+                if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
                     raise OutOfDateError(node.meta)
                 self.server.maybe_update(path, NotGiven, meta)
 
-        if node is None:
+        if node is None or dv is NotGiven:
             return None
         else:
+            if dm is None:
+                return dv
             return dv, *dm.dump()
 
     def e_exc_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], kw, MsgMeta(origin=self.name))
 
     def e_info_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], kw, MsgMeta(origin=self.name))
 
     def e_ack_stream_(self, msg: Msg) -> Awaitable:
         """Acknowledge an error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 2:
-            msg.kw["args"] = msg.args[2:]
-        msg.kw["ack"] = True
-        return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[2:]
+        kw["ack"] = True
+        return self.server.set_error(msg[0], NotGiven, kw, MsgMeta(origin=self.name))
 
     def e_ok_stream_(self, msg: Msg) -> Awaitable:
         """Report not-an-error"""
+        kw = dict(msg.kw)
         if len(msg.args) > 1:
-            msg.kw["args"] = msg.args[1:]
-        return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
+            kw["args"] = msg.args[1:]
+        return self.server.set_error(msg[0], None, kw, MsgMeta(origin=self.name))
 
     async def e_mon_stream_(self, msg: Msg):
         path = msg[0]
-        kw = msg.kw
+        kw = dict(msg.kw)
         kw["start"] = time.time()
         kw["log"] = log = []
         try:
             async with msg.stream_in() as mon:
-                async for msg in mon:
-                    a = msg.to_list(dict_only=True)
+                async for mon_msg in mon:
+                    a = mon_msg.to_list(dict_only=True)
                     if not a and log and not log[-1]:
                         continue
                     log.append(a)
@@ -798,16 +948,16 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-    async def s_log_(self, path: str, *, state: bool = False):
+    async def s_log_(self, path: str, *, state: bool = False) -> bool:
         await self.server.run_saver(path, save_state=state)
         return True
 
-    async def s_save_(self, path: str, prefix=Path()):
+    async def s_save_(self, path: str, prefix=Path()) -> bool:
         await self.server.save(path, prefix=prefix)
 
         return True
 
-    async def s_load_(self, path, *, prefix=Path()):
+    async def s_load_(self, path, *, prefix=Path()) -> tuple[int, int, list[Tag], str]:
         return await self.server.load_file(fn=path, prefix=prefix)
 
 
@@ -859,7 +1009,7 @@ class Server(MsgHandler):
 
     _ping_history: Sequence[str] = ()
 
-    _server_link: dict[str, tuple[anyio.CancelScope, BasicLink]]
+    _server_link: dict[str, tuple[anyio.CancelScope, BasicLink | None]]
     _server_link_add: anyio.Event
 
     _f_load: anyio.Path | None = None
@@ -1135,7 +1285,7 @@ class Server(MsgHandler):
     async def set_error(
         self,
         path: Path,
-        err: str | BaseException | None | NotGiven,
+        err: str | BaseException | None | NotGivenType,
         kw: dict[str, Any],
         meta: MsgMeta,
     ):
@@ -1181,7 +1331,7 @@ class Server(MsgHandler):
 
         # this shortcuts maybe_update
         # forcing is required because we just modified the dict in-place
-        if dt.set(..., dd, meta, force=True):
+        if dt.set(Path(), dd, meta, force=True):
             self.write_monitor((p, dd, meta))
 
     async def _save(
@@ -1223,6 +1373,26 @@ class Server(MsgHandler):
                 ftr = self.gen_hdr_stop()
             await writer(ftr)
 
+    def _name_for_file(self, path: anyio.Path | FSPath | str) -> str:
+        """Return the name to embed in a file\'s header or trailer.
+
+        When *path* lives under ``save.dir`` the result is a path relative to
+        that directory, so that renaming the directory does not break the
+        stored chain.  Otherwise the absolute path string is returned.
+
+        Args:
+            path: The filesystem path being written.
+
+        Returns:
+            A relative or absolute path string suitable for storing in a
+            CBOR header/trailer.
+        """
+        try:
+            dest = anyio.Path(self.cfg.server.save.dir)
+            return str(anyio.Path(path).relative_to(dest))
+        except ValueError:
+            return str(path)
+
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
         from moat.lib.codec.moat_cbor import gen_start  # noqa: PLC0415
@@ -1263,13 +1433,13 @@ class Server(MsgHandler):
             self._writing.add(spath)
             async with MsgWriter(path=path, codec="std-cbor") as mw:
                 task_status.started()
-                await self._save(mw, shorter, name=str(path), mode="full", **kw)
+                await self._save(mw, shorter, name=self._name_for_file(path), mode="full", **kw)
         finally:
             self._writing.remove(spath)
 
     async def save_stream(
         self,
-        path: str | anyio.Path | FSPath | None = None,
+        path: str | anyio.Path | FSPath,
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
         **kw,
@@ -1300,7 +1470,7 @@ class Server(MsgHandler):
                 ):
                     try:
                         msg = self.gen_hdr_stop(
-                            name=str(path),
+                            name=self._name_for_file(path),
                             mode="restart" if save_state else "next",
                         )
                         # This ensures that the Stop message isn't seen by
@@ -1310,7 +1480,7 @@ class Server(MsgHandler):
                         task_status.started(scope)
 
                         msg = self.gen_hdr_start(
-                            name=str(path),
+                            name=self._name_for_file(path),
                             mode="full" if save_state else "incr",
                             state=None if save_state else False,
                             **kw,
@@ -1320,7 +1490,7 @@ class Server(MsgHandler):
                         except Exception as exc:
                             self.logger.error("MSG WRITE FAIL %r", msg, exc_info=exc)
                             msg = self.gen_hdr_start(
-                                name=str(path),
+                                name=self._name_for_file(path),
                                 mode="full" if save_state else "incr",
                                 state=None if save_state else False,
                             )
@@ -1428,26 +1598,239 @@ class Server(MsgHandler):
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 
+    async def _unlink_state_file(self, path: anyio.Path) -> None:
+        """Delete a state file and remove any now-empty parent directories.
+
+        Parent directories are removed up to (but not including)
+        ``save.dir``.  If the file no longer exists the call is a no-op.
+        Errors during directory removal are silently ignored.
+
+        Args:
+            path: Path to the state file to delete.
+        """
+        try:
+            await path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            self.logger.warning("Could not delete %s: %s", path, exc)
+            return
+
+        # Walk up the directory tree, removing empty parents.
+        dest = anyio.Path(self.cfg.server.save.dir)
+        parent = path.parent
+        while parent != dest and parent != parent.parent:
+            try:
+                await parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+
+    async def _collect_state_files(self, dest: anyio.Path) -> list[StateFileInfo]:
+        """Scan *dest* for all ``.moat`` state files and return them newest-first.
+
+        Files whose headers cannot be read are silently skipped.
+
+        Args:
+            dest: The save directory to scan.
+
+        Returns:
+            List of :class:`StateFileInfo` objects sorted by descending timestamp.
+        """
+        files: list[StateFileInfo] = []
+        if not await dest.is_dir():
+            return files
+        async for fn in dest.rglob("*.moat"):
+            try:
+                ts, mode = await _read_state_header(fn)
+                files.append(StateFileInfo(path=fn, timestamp=ts, mode=mode))
+            except Exception as exc:
+                self.logger.debug("Skipping unreadable state file %s: %s", fn, exc)
+        files.sort(key=lambda f: f.timestamp, reverse=True)
+        return files
+
+    async def _cleanup_state_files(
+        self,
+        files: list[StateFileInfo],
+        save: attrdict,
+    ) -> None:
+        """Delete old state files according to the ``save.keep`` policy.
+
+        Processes the ``keep`` list in order.  For each entry:
+
+        * Files that no longer exist on disk are silently removed from
+          *files* whenever they are encountered; in particular, integer
+          skip entries only count *existing* files.
+        * Incremental files (``mode="incr"``) at the current position are
+          skipped over (preserved) before the entry is applied.
+        * If the current file has ``mode="error"`` in its trailer:
+
+          - If ``pos < save.errors``: the file is preserved and ``pos`` advances
+            past it without consuming the keep entry.
+          - Otherwise the file is deleted and removed from *files*.
+
+        * An integer ``N > 0`` advances ``pos`` by ``N`` *existing* files
+          (keeping them).  Non-existent files in that range are dropped.
+        * A string is parsed as a human-readable duration via
+          :func:`~moat.util.times.simple_time_delta`.  The largest window
+          ``span`` is found such that
+          ``files[pos].timestamp − files[pos+span].timestamp ≤ delta``.
+          Files strictly between ``pos`` and ``pos+span`` are deleted.
+          ``pos`` advances by 1 (unless ``span=0``).
+
+        After all keep entries are exhausted, every file with index ``> pos``
+        is deleted.
+
+        The *files* list is modified in-place.
+
+        Args:
+            files: State file list sorted newest-first.  Modified in place.
+            save: The ``server.save`` configuration section.
+        """
+        keep: list[int | str] = save.keep
+        errors_limit: int = save.get("errors", 10)
+        pos = 0
+
+        for entry in keep:
+            # Pre-step: drop non-existent files, advance past incremental files,
+            # and consume error files.  Non-existent files are silently removed.
+            # Error files within the tolerance are skipped (pos advances, no
+            # keep-entry consumed).  Error files beyond the tolerance are deleted.
+            while True:
+                # Drop non-existent files and skip over incremental ones.
+                found = False
+                while pos < len(files):
+                    if not await files[pos].path.exists():
+                        files.pop(pos)
+                        continue
+                    if not files[pos].is_incr:
+                        found = True
+                        break
+                    pos += 1
+                if not found:
+                    return
+
+                fi = files[pos]
+                if fi.trailer is None:
+                    fi.trailer = await _read_state_trailer(fi.path)
+
+                if not fi.is_error:
+                    break  # ready to apply the keep entry
+
+                if errors_limit > pos:
+                    # Within tolerance: preserve, skip past this error file
+                    pos += 1
+                else:
+                    # Too many error files: delete this one (may already be gone)
+                    await self._unlink_state_file(fi.path)
+                    files.pop(pos)
+                    # pos stays; the deletion shifted subsequent entries down
+
+            if len(files) <= pos:
+                return
+
+            # Apply the keep entry.
+            if isinstance(entry, int) and entry > 0:
+                # Advance pos past N existing files; drop non-existent ones.
+                count = 0
+                while count < entry and pos < len(files):
+                    if not await files[pos].path.exists():
+                        files.pop(pos)
+                    else:
+                        pos += 1
+                        count += 1
+            elif isinstance(entry, str):
+                delta = simple_time_delta(entry)
+                # Find largest span: files[pos].ts - files[pos+span].ts <= delta.
+                # Drop non-existent files encountered during the scan.
+                span = 0
+                while pos + span + 1 < len(files):
+                    j = pos + span + 1
+                    if not await files[j].path.exists():
+                        files.pop(j)
+                        continue
+                    if files[pos].timestamp - files[j].timestamp <= delta:
+                        span += 1
+                    else:
+                        break
+                # Delete files strictly between pos and pos+span.
+                for j in range(pos + span - 1, pos, -1):
+                    await self._unlink_state_file(files[j].path)
+                    files.pop(j)
+                if span > 0:
+                    pos += 1  # advance to what was files[pos+span]
+
+        # Delete every file beyond the current position.
+        for fi in files[pos + 1 :]:
+            await self._unlink_state_file(fi.path)
+        del files[pos + 1 :]
+
     async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
-        Background task to periodically restart the saver task
+        Background task to periodically restart the saver task.
+
+        After each save interval, the previous file is added to the front of
+        the state-file list and :meth:`_cleanup_state_files` is called to
+        enforce the configured retention policy.
         """
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         rewrite = 0
-        kw = {}
+        kw: dict[str, Any] = {}
+
+        # Collect existing state files and run an initial cleanup pass
+        state_files = await self._collect_state_files(dest)
+        if state_files:
+            await self._cleanup_state_files(state_files, save)
+
+        prev_fn: anyio.Path | None = None
+
         while True:
-            now = datetime.now(UTC)
+            if save.get("use_local_time", False):
+                now = datetime.now().astimezone()
+            else:
+                now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
+
+            # Handle collisions (e.g., DST change) by adding a suffix
+            if await fn.exists():
+                base = fn.with_suffix("")
+                suffix = fn.suffix
+                counter = 1
+                while True:
+                    fn = anyio.Path(f"{base}.{counter}{suffix}")
+                    if not await fn.exists():
+                        break
+                    counter += 1
+
+            # Starting the new saver sends a STOP to the previous one.
             await self.run_saver(path=fn, save_state=rewrite == 0, **kw)
 
             task_status.started()
             task_status = anyio.TASK_STATUS_IGNORED
 
+            # If there was a previous file, wait for it to finish writing,
+            # then add it to the list and run cleanup.
+            if prev_fn is not None:
+                prev_str = str(prev_fn)
+                if prev_str in self._writing:
+                    # Wait for the previous saver task to finish flushing the file.
+                    # save_stream sets _writing_done in its finally block.
+                    with anyio.move_on_after(5):
+                        await self._writing_done.wait()
+                try:
+                    ts, mode = await _read_state_header(prev_fn)
+                    state_files.insert(0, StateFileInfo(path=prev_fn, timestamp=ts, mode=mode))
+                    await self._cleanup_state_files(state_files, save)
+                except Exception as exc:
+                    self.logger.warning("Could not read state file header %s: %s", prev_fn, exc)
+
+            prev_fn = fn
+
             await anyio.sleep(save.interval)
             rewrite = (rewrite or save.rewrite) - 1
-            kw["prev"] = str(fn)
+            kw["prev"] = self._name_for_file(fn)
 
     async def run_saver(self, path: PathType | None, save_state: bool = True, **kw):
         """
@@ -1492,19 +1875,21 @@ class Server(MsgHandler):
         """
         The method that opens a backend connection and actually runs the server.
 
-        This will terminate when `stop` is called (in another task).
+        This will terminate when `stop` is called (in another task),
+        or when cancelled.
         """
+        # root path
+        csr = self.cfg.root
+        csr = P(csr) if isinstance(csr, str) else Path.build(csr)
+        Root.set(csr)
+
+        # termination notice
         will_data = attrdict(
             topic=P(":R.run.service.main.server") / self.name,
             data=NotGiven,
             qos=1,
             retain=True,
         )
-
-        # root path
-        csr = self.cfg.root
-        csr = P(csr) if isinstance(csr, str) else Path.build(csr)
-        Root.set(csr)
 
         self._stop_flag = anyio.Event()
         self._stopped = anyio.Event()
@@ -1712,50 +2097,47 @@ class Server(MsgHandler):
             await anyio.sleep(30)
             self.last_auth = None
 
-    async def _run_server_link(self, name, data, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _run_server_link(
+        self, name: str, data: dict[str, Any], *, task_status=anyio.TASK_STATUS_IGNORED
+    ):
         """
         Run a single client link to another server.
+
+        Exactly one connection attempt is made.  On failure, or when
+        the link later drops, the entry is removed from
+        :attr:`_server_link` and the task exits.  :meth:`_watch_up`
+        will start a new task if the remote server re-announces itself
+        on the MQTT topic.
         """
         # TODO: There should be only one TCP link between server A and B, not two
         # (plus another for syncing).
-
-        backoff = 0
 
         with anyio.CancelScope() as sc:
             self._server_link[name] = (sc, None)
             task_status.started()
 
-            while True:
-                try:
-                    async with BasicLink(self.cfg, name=self.name, data=data) as conn:
-                        conn.add_sub("cl")
-                        if self._server_link[name][0] is not sc:
-                            return
-                        self._server_link[name] = (sc, conn)
-                        self._server_link_add.set()
-                        self._server_link_add = anyio.Event()
-
-                        await anyio.sleep(30)
-                        backoff = 0
-                        await anyio.sleep_forever()
-
-                except* (EOFError, anyio.ClosedResourceError, anyio.EndOfStream):
-                    self.logger.warning("Link to %s closed", name)
-
-                except* OSError:
-                    self.logger.warning("Link to %s died", name)
-
-                except* Exception as exc:
-                    self.logger.warning("Link to %s died", name, exc_info=exc)
-
-                finally:
-                    if name in self._server_link and self._server_link[name][0] is sc:
-                        self._server_link[name] = (sc, None)
-                    else:
+            try:
+                async with BasicLink(self.cfg, name=self.name, data=data) as conn:
+                    conn.add_sub("cl")
+                    if self._server_link[name][0] is not sc:
                         return
+                    self._server_link[name] = (sc, conn)
+                    self._server_link_add.set()
+                    self._server_link_add = anyio.Event()
+                    await anyio.sleep_forever()
 
-                backoff = min(backoff * 1.2 + 0.1, 30)
-                await anyio.sleep(backoff)
+            except* StreamEnd:
+                self.logger.warning("Link to %s closed", name)
+
+            except* OSError:
+                self.logger.warning("Link to %s died", name)
+
+            except* Exception as exc:
+                self.logger.warning("Link to %s died", name, exc_info=exc)
+
+            finally:
+                if name in self._server_link and self._server_link[name][0] is sc:
+                    self._server_link.pop(name)
 
     async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1912,8 +2294,8 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd, _skp, tags = await self.load_file(fn=fn)
-        if not upd:
+        upd, _skp, tags, mode = await self.load_file(fn=fn)
+        if mode != "init" and not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):
             raise RuntimeError("No or incomplete tags!")
@@ -1963,11 +2345,9 @@ class Server(MsgHandler):
             return
 
         done = set()
-        fs = []
-        async for p, _d, f in dest.walk():
-            for ff in f:
-                if ff.endswith(".moat"):
-                    fs.append(p / ff)
+        fs: list[anyio.Path] = []
+        async for fn in dest.rglob("*.moat"):
+            fs.append(fn)
         fs.sort()
         fn = None
 
@@ -1982,13 +2362,21 @@ class Server(MsgHandler):
             done.add(sfn)
 
             try:
-                upd, _skp, tags = await self.load_file(fn=fn)
+                upd, _skp, tags, mode = await self.load_file(fn=fn)
             except Exception as exc:
                 self.logger.error("Failed to load %s", fn, exc_info=exc)
-                await fn.rename(fn.with_suffix(".moat.bad"))
+                try:
+                    await fn.rename(fn.with_suffix(".moat.bad"))
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    try:
+                        await fn.unlink()
+                    except OSError as exc:
+                        self.logger.error("Failed to remove bad %s", fn, exc_info=exc)
                 continue
 
-            if not upd or not tags:
+            if mode != "init" and (not upd or not tags):
                 continue
             if not tag_check(tags):
                 # extract the first tag's value
@@ -1999,14 +2387,17 @@ class Server(MsgHandler):
                     tt = tt[1]
                 fn = tt.get("prev", None)
                 if fn is not None:
-                    fn = anyio.Path(fn)
+                    # Resolve relative paths (new files) against dest;
+                    # pathlib silently ignores dest when fn is absolute
+                    # (backward-compat with old files storing absolute paths).
+                    fn = dest / anyio.Path(fn)
                 continue
             ready.set()
             return
 
     async def load_file(
         self, fn: anyio.Path, prefix: Path = Path(), local: bool = False
-    ) -> tuple[int, int, list[Tag]]:
+    ) -> tuple[int, int, list[Tag], str]:
         """
         Load a file.
 
@@ -2014,6 +2405,7 @@ class Server(MsgHandler):
         plus the tags from the file.
         """
         self.logger.info("Loading from %r", fn)
+        mode = "?"
         async with MsgReader(fn, codec="std-cbor") as rdr:
             pl = PathLongener(prefix)
             upd, skp, tags = 0, 0, []
@@ -2028,6 +2420,7 @@ class Server(MsgHandler):
                         # concatenated files?
                         if ehdr is not None:
                             raise ValueError("START within file %r", str(fn))
+                        mode = msg.value[1].get("mode", "?")
                         # TODO verify that these belong together
 
                     elif msg.tag == CBOR_TAG_MOAT_CHANGE:
@@ -2037,6 +2430,7 @@ class Server(MsgHandler):
                     elif msg.tag == CBOR_TAG_MOAT_FILE_END:
                         if ehdr is None:
                             raise ValueError("END without start in %r", str(fn))
+                        if ehdr.tag == CBOR_TAG_MOAT_FILE_END:
                             raise ValueError("Duplicate END in %r", str(fn))
                     else:
                         self.logger.warning("Unknown tag %r: %r", str(fn), msg)
@@ -2048,7 +2442,7 @@ class Server(MsgHandler):
                 elif ehdr.tag != CBOR_TAG_MOAT_FILE_ID:
                     raise ValueError("Data %r after tag: %r", msg, ehdr)
 
-                # Any other problems just raise the exception
+                # Any other problems just raise an exception
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
                 meta = MsgMeta.restore(mt)
@@ -2061,9 +2455,15 @@ class Server(MsgHandler):
                     skp += 1
 
             self.logger.info("Loading from %r done: %d/%d", fn, upd, skp)
-            return upd, skp, tags
+            return upd, skp, tags, mode
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
+        """
+        Iterate over service announcement messages and sync from remote servers.
+
+        Retries syncing from a server if the TCP link is not yet established,
+        up to a limited number of attempts per server.
+        """
         seen = defaultdict(lambda: 0)
         async for msg in main:
             if msg.meta.origin == self.name:
@@ -2143,21 +2543,19 @@ class Server(MsgHandler):
                 if self._clients.get(c.name, None) is c:
                     del self._clients[c.name]
 
-        except (ClosedResourceError, anyio.EndOfStream):
+        except StreamDied:
             self.logger.debug("Client C_%s closed", cnr)
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             self.logger.debug("End Client C_%s %r", cnr, exc)
-            if hasattr(exc, "split"):
-                exc = exc.split(CancelExc)[1]  # pyright: ignore
-                ex = list(exc_iter(exc))
-                if len(ex) == 1:
-                    exc = ex[0]
-            elif hasattr(exc, "filter"):
-                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)  # pyright: ignore
+            ex = [e for e in exc_iter(exc) if not isinstance(e, CancelExc)]
+            if not ex:
+                exc = None
+            elif len(ex) == 1:
+                exc = ex[0]
 
             if exc is not None and not isinstance(exc, CancelExc):
-                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
+                if isinstance(exc, StreamDied):
                     self.logger.debug("Client C_%s closed", cnr)
                 elif isinstance(exc, TimeoutError):
                     self.logger.warning("Client C_%s timed out", cnr)
@@ -2181,14 +2579,16 @@ class Server(MsgHandler):
         """
         "Local subcommand redirect for 'cl'"
         name = rcmd.pop()
+        if not isinstance(name, str):
+            raise KeyError(name)
         try:
             cl = self._clients[name]
-        except KeyError:
+        except KeyError as exc:
             for cl in self._clients.values():
                 if f"{cl.prefix}_{cl.client_nr}" == name:
                     break
             else:
-                raise
+                raise ExpKeyError(name) from exc
         return await cl.sender.handle(msg, rcmd)
 
     async def stream_cl(self, msg: Msg) -> None:
@@ -2208,6 +2608,8 @@ class Server(MsgHandler):
         Direct a message to another server.
         """
         name = rcmd.pop()
+        if not isinstance(name, str):
+            raise KeyError(name)
         if name == self.name:
             return await self.handle(msg, rcmd)
 
@@ -2246,7 +2648,7 @@ class Server(MsgHandler):
                 name = msg.topic[-1]
                 if msg.data is NotGiven:
                     self.known_ids.discard(name)
-                else:
+                elif isinstance(name, str):
                     self.known_ids.add(name)
 
     async def _monitor_pings(self, *, task_status):

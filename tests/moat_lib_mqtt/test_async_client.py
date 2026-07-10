@@ -12,11 +12,16 @@ if sys.version_info < (3, 11):  # noqa: UP036
 
 pytestmark = pytest.mark.anyio
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 @pytest.mark.parametrize("qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
 @pytest.mark.parametrize("qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
-async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:  # noqa: D103
-    async with AsyncMQTTClient() as client:
+async def test_publish_subscribe(mqtt_broker_port: int, qos_sub: QoS, qos_pub: QoS) -> None:  # noqa: D103
+    async with AsyncMQTTClient(port=mqtt_broker_port) as client:
         if qos_pub > client.cap_qos:
             return  # TODO add pytest.skip
 
@@ -37,12 +42,12 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:  # noqa: D
             assert packets[1].qos == min(qos_sub, qos_pub)
 
 
-async def test_publish_overlap() -> None:  # noqa: D103
+async def test_publish_overlap(mqtt_broker_port: int) -> None:  # noqa: D103
     # Same as above but there's another overlapping suscription
     # so we need to skip duplicates IF the server doesn't filter them
     async with (
-        AsyncMQTTClient() as client,
-        AsyncMQTTClient() as c2,
+        AsyncMQTTClient(port=mqtt_broker_port) as client,
+        AsyncMQTTClient(port=mqtt_broker_port) as c2,
         anyio.create_task_group() as tg,
         client.subscribe("test/+") as messages,
         client.subscribe("#") as drain,
@@ -73,9 +78,9 @@ async def test_publish_overlap() -> None:  # noqa: D103
         tg.cancel_scope.cancel()
 
 
-async def test_retained_message() -> None:  # noqa: D103
+async def test_retained_message(mqtt_broker_port: int) -> None:  # noqa: D103
     try:
-        async with AsyncMQTTClient() as client:
+        async with AsyncMQTTClient(port=mqtt_broker_port) as client:
             if not client.cap_retain:
                 pytest.skip("Retain not available")
             await client.publish("retainedtest", "test åäö", retain=True)

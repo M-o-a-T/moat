@@ -163,7 +163,9 @@ def _get_sysfs_machine_name():
 def get_machine_name():  # noqa: D103
     # First try calling the venus utility script
     try:
-        return check_output("/usr/bin/product-name").strip().decode("UTF-8")
+        return (
+            check_output("/usr/bin/product-name").strip().decode("UTF-8", errors="surrogateescape")
+        )
     except (CalledProcessError, OSError):
         pass
 

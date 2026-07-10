@@ -8,6 +8,7 @@ import threading
 
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.run import Code
 
 
@@ -32,34 +33,37 @@ async def test_code_at(cfg):
         await c.d_set(P("test.base"), 41)
 
         await c.d_set(
-            P("code.exec.test.async"),
+            CODE_EXEC_ROOT + P("test.async"),
             dict(
                 code="""
-assert runner.path == P("code.exec.test.async")
+assert runner.path[-1] == "async"
 return await link.d_get(P("test.base")) + inc
 """,
-                vars=dict(inc=0),
+                vars=["inc"],
+                default=dict(inc=0),
                 is_async=True,
             ),
         )
         await c.d_set(
-            P("code.exec.test.sync"),
+            CODE_EXEC_ROOT + P("test.sync"),
             dict(
                 code="""
 assert link is runner.link
 return left + right + len(kw)
 """,
-                vars=dict(left=0, right=0),
+                vars=["left", "right"],
+                default=dict(left=0, right=0),
             ),
         )
         await c.d_set(
-            P("code.exec.test.thread"),
+            CODE_EXEC_ROOT + P("test.thread"),
             dict(
                 code="""
 import threading
 return threading.get_ident() != origin
 """,
-                vars=dict(origin=0),
+                vars=["origin"],
+                default=dict(origin=0),
                 is_async=False,
             ),
         )
@@ -73,8 +77,8 @@ return threading.get_ident() != origin
 @pytest.mark.anyio
 async def test_code_loads_once():
     "Code fetches and compiles once, then reuses the cached process."
-    link = _DummyCodeLink(dict(code="return base + inc", vars=dict(base=40)))
-    code = Code(link, P("code.exec.test.cache"))
+    link = _DummyCodeLink(dict(code="return base + inc", vars=["base"], default=dict(base=40)))
+    code = Code(link, CODE_EXEC_ROOT + P("test.cache"))
 
     assert await code(inc=1) == 41
     assert await code(inc=2) == 42
@@ -84,17 +88,19 @@ async def test_code_loads_once():
 @pytest.mark.anyio
 async def test_code_update_reloads_without_refetch():
     "Code.update replaces data and recompiles from local state."
-    link = _DummyCodeLink(dict(code="return value", vars=dict(value=1)))
-    code = Code(link, P("code.exec.test.update"))
+    link = _DummyCodeLink(dict(code="return value", vars=["value"], default=dict(value=1)))
+    code = Code(link, CODE_EXEC_ROOT + P("test.update"))
 
     assert await code() == 1
     assert link.calls == 1
 
-    code.update(dict(code="return value + 1", vars=dict(value=1)), compile=False)
+    code.update(
+        dict(code="return value + 1", vars=["value"], default=dict(value=1)), compile=False
+    )
     assert await code() == 2
     assert link.calls == 1
 
-    code.update(dict(code="return value + 2", vars=dict(value=1)), compile=True)
+    code.update(dict(code="return value + 2", vars=["value"], default=dict(value=1)), compile=True)
     assert await code() == 3
     assert link.calls == 1
 
@@ -109,10 +115,11 @@ if flag:
     return value + 1
 return value + 2
 """,
-            vars=dict(value=40),
+            vars=["value"],
+            default=dict(value=40),
         )
     )
-    code = Code(link, P("code.exec.test.cond"))
+    code = Code(link, CODE_EXEC_ROOT + P("test.cond"))
 
     assert await code(flag=True) == 41
     assert await code(flag=False) == 42
@@ -126,14 +133,20 @@ async def test_code_at_context_updates_and_cache(cfg):
         sf.server_(init={"Hello": "there!", "test": 123}),
         sf.client_() as c,
     ):
-        await c.d_set(P("code.exec.test.ctx"), dict(code="return value", vars=dict(value=1)))
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.ctx"),
+            dict(code="return value", vars=["value"], default=dict(value=1)),
+        )
         await c.i_sync()
 
         async with c.code_at(P("test.ctx")) as code:
             assert (await c.code_at(P("test.ctx"))) is code
             assert await code() == 1
 
-            await c.d_set(P("code.exec.test.ctx"), dict(code="return value", vars=dict(value=2)))
+            await c.d_set(
+                CODE_EXEC_ROOT + P("test.ctx"),
+                dict(code="return value", vars=["value"], default=dict(value=2)),
+            )
             await c.i_sync()
 
             with anyio.fail_after(0.5):
@@ -151,7 +164,7 @@ async def test_code_at_context_parallel_enter(cfg):
         sf.server_(init={"Hello": "there!", "test": 123}),
         sf.client_() as c,
     ):
-        await c.d_set(P("code.exec.test.par"), dict(code="return 42"))
+        await c.d_set(CODE_EXEC_ROOT + P("test.par"), dict(code="return 42"))
         await c.i_sync()
 
         seen = []

@@ -1,3 +1,51 @@
+moat-kv-akumuli (0.8.15-3) unstable; urgency=medium
+
+  * New release for 26.2.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2026 17:44:11 +0200
+
+moat-kv-akumuli (0.8.15-2) unstable; urgency=medium
+
+  * New release for 26.1.19
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 20:26:12 +0200
+
+moat-kv-akumuli (0.8.15-1) unstable; urgency=medium
+
+  * New release for 26.1.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 03 Jun 2026 18:47:53 +0200
+
+moat-kv-akumuli (0.8.14-2) unstable; urgency=medium
+
+  * New release for 26.1.16
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 26 May 2026 10:38:57 +0200
+
+moat-kv-akumuli (0.8.14-1) unstable; urgency=medium
+
+  * New release for 26.1.15
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 26 May 2026 07:01:20 +0200
+
+moat-kv-akumuli (0.8.13-2) unstable; urgency=medium
+
+  * New release for 26.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 24 Apr 2026 15:30:59 +0200
+
+moat-kv-akumuli (0.8.13-1) unstable; urgency=medium
+
+  * New release for 26.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Apr 2026 21:09:45 +0200
+
+moat-kv-akumuli (0.8.12-5) unstable; urgency=medium
+
+  * New release for 26.0.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 04 Mar 2026 10:56:44 +0100
+
 moat-kv-akumuli (0.8.12-4) unstable; urgency=medium
 
   * New release for 26.0.8

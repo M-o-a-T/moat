@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 try:
     # MicroPython. Use milliseconds. Type resolved below.
-    from time import ticks_ms as time  # type:ignore[unresolved-import]
+    from time import ticks_ms as time  # ty:ignore[unresolved-import]
 
     PID_TC = 1000
     MAX_VAL = 2**31 - 1
@@ -402,7 +402,7 @@ class CPID(PID):
             self.i = o + i * self.Kp
             self.e = i
 
-    def __call__(self, i: float, t: float | None = None) -> float:  # type:ignore[invalid-method-override]
+    def __call__(self, i: float, t: float | None = None) -> float:  # ty:ignore[invalid-method-override]
         """
         Run a PID step.
 
@@ -418,7 +418,7 @@ class CPID(PID):
         self._update_state()
         return res
 
-    def integrate(self, i: float, t=None) -> tuple[float, float, float]:  # type:ignore[call-non-callable]
+    def integrate(self, i: float, t=None) -> tuple[float, float, float]:  # ty:ignore[invalid-method-override]
         """
         Run a PID step.
 

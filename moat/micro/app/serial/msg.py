@@ -31,8 +31,6 @@ class Msg(BaseCmdBBM):
         ser = SerialPackerBlkBuf(
             get_serial(self.cfg),
             frame=self.cfg.get("frame", attrdict()),
-            cons=self.cfg.get(
-                "console",
-            ),
+            console=self.cfg.get("cons", False),
         )
         return await AC_use(self, BaseCmdBBM(ser))

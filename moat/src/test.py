@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
+    if len(args) == 1:
+        args = args[0]
+        if isinstance(args, str):
+            args = args.split(" ")
     args = ("-s", "env.load_all", "=n", *args)
 
     with CFG.with_config_(CfgStore()) as cfg:
@@ -33,7 +37,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
                 OptCtx(main_scope(name="run") if scope.get() is None else None),
                 scope.using_scope(),
             ):
-                res = await wrap_main(
+                _wm = wrap_main(
                     args=args,
                     wrap=True,
                     cfg=cfg,
@@ -41,6 +45,8 @@ async def run(*args, expect_exit=0, do_stdout=True):
                     sub_pre="moat",
                     sub_post="_main.cli",
                 )
+                assert _wm is not None
+                res = await _wm
             if res is None:
                 res = attrdict()
             return res
@@ -59,7 +65,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
             assert expect_exit == 0
             return res
         finally:
-            if do_stdout and res is not None:
+            if do_stdout and res is not None and not isinstance(res, BaseException):
                 res.stdout = out.getvalue()
 
 

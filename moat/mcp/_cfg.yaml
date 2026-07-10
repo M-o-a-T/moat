@@ -1,0 +1,4 @@
+# supported MCP services and their config, if any
+
+services:
+  link: {}

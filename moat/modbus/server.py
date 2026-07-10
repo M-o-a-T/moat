@@ -12,7 +12,7 @@ from anyio.abc import SocketAttribute
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
 
-from moat.util import CtxObj
+from moat.util import CtxObj, ungroup
 
 try:
     from pymodbus.datastore import ModbusDeviceContext, ModbusServerContext
@@ -275,11 +275,12 @@ class SerialModbusServer(BaseModbusServer):
         response.transaction_id = tid
         if isinstance(response, ExceptionResponse):
             _logger.error(
-                "Source: %r %d %d %d",
-                type(request),
-                request.function_code,
+                "Source: %r %d %d %d %s",
+                type(request).__name__,
+                unit,
                 request.address,
                 getattr(request, "count", 1),
+                response,
             )
 
         if not broadcast:
@@ -443,14 +444,20 @@ class ModbusServer(BaseModbusServer):
                     unit = request.dev_id
                     tid = request.transaction_id
                     try:
-                        response = await self.process_request(request)
+                        with ungroup:
+                            response = await self.process_request(request)
                     except NoSuchSlaveException:
                         _logger.debug("requested unit does not exist: %d", request.dev_id)
                         response = ExceptionResponse(
                             request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
                         )
-                    except Exception as exc:  # pylint: disable=broad-except
-                        _logger.warning("Datastore unable to fulfill request", exc_info=exc)
+                    except TimeoutError:
+                        _logger.info("request to unit %d timed out", request.dev_id)
+                        response = ExceptionResponse(
+                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
+                        )
+                    except Exception as exc:
+                        _logger.warning("Unable to fulfill request", exc_info=exc)
                         response = ExceptionResponse(
                             request.function_code, ExcCodes.DEVICE_FAILURE
                         )

@@ -29,7 +29,10 @@ async def test_basic(cfg, free_tcp_port_factory):
         mcfg = cfg.link.metrics
 
         # Store per-server config (can carry overrides; empty is fine).
-        await c.d_set(mcfg.prefix / "test", {"server": {"port": t.TCP_PORT}})
+        await c.d_set(
+            mcfg.prefix / "test",
+            {"backend": "akumuli", "server": {"port": t.TCP_PORT}},
+        )
 
         # Set the source value *before* creating the entry so that
         # d_watch inside the worker sees an initial value.

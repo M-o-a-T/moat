@@ -568,8 +568,12 @@ class Path(Sequence[PathElem]):
         if len(self) == 0 and self._prefix is None:
             return Path.build(other)
         if isinstance(other, Path):
-            if isinstance(other._prefix, Path):
-                raise ValueError(f"Add with prefix: {self} + {other}")  # noqa:TRY004
+            if (
+                isinstance(other._prefix, Path)
+                and self._prefix is not None
+                and self._prefix != other._prefix
+            ):
+                raise ValueError(f"Add with prefix: {self} + {other}")
             # Prefix=True (relative) is OK
             other = other._data
         elif not isinstance(other, (list, tuple)):
@@ -606,6 +610,9 @@ class Path(Sequence[PathElem]):
 
     def __repr__(self):
         return f"P({str(self)!r})"
+
+    def __format__(self, spec):
+        return str(self).__format__(spec)
 
     @classmethod
     def from_str(cls, path, *, mark="", scan=False):
@@ -1103,7 +1110,7 @@ class PathLongener:
     Caution: this longener ignores path marks.
     """
 
-    cls = Path
+    cls: type[Path] = Path
 
     def __init__(self, prefix: Path | PathTuple = ()):
         if isinstance(prefix, Path):

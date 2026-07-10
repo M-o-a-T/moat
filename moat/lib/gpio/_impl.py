@@ -166,7 +166,7 @@ class Line:
     ) -> None:
         self._chip = chip
         self._offset = offset
-        self._consumer = consumer.encode("utf-8")
+        self._consumer = consumer.encode("utf-8", errors="surrogateescape")
         self._line: Any | None = None
         if settings is not None and kw:
             raise TypeError("Either implicit or explicit settings please.")
@@ -236,7 +236,7 @@ class Line:
         """Context management for use with :meth:`open` and :meth:`monitor`."""
         if self._line is not None:
             raise OSError("This line is already in use")
-        line = self._chip.request_lines({self._offset: self._settings})
+        line = self._chip.request_lines({(self._offset,): self._settings})
 
         try:
             line.__enter__()

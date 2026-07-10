@@ -70,7 +70,7 @@ def upgrade() -> None:
         ),
     )
     op.add_column("label", sa.Column("thing_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_label_thing", "label", "box", ["thing_id"], ["id"])
+    op.create_foreign_key("fk_label_thing", "label", "thing", ["thing_id"], ["id"])
     # ### end Alembic commands ###
 
 

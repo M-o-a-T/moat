@@ -8,7 +8,6 @@ import anyio
 import logging
 import struct
 
-from pymodbus.datastore.store import BaseModbusDataBlock
 from pymodbus.pdu.bit_message import (
     ReadCoilsRequest,
     ReadCoilsResponse,
@@ -29,6 +28,19 @@ from pymodbus.pdu.register_message import (
     WriteSingleRegisterRequest,
     WriteSingleRegisterResponse,
 )
+
+try:
+    from pymodbus.datastore.sequential import ModbusSequentialDataBlock
+    from pymodbus.datastore.sparse import ModbusSparseDataBlock
+
+    from typing import TypeAlias
+
+    BaseModbusDataBlock = ModbusSparseDataBlock
+
+except ImportError:
+    from pymodbus.datastore.store import ModbusSparseDataBlock
+
+    pass
 
 MAX_REQ_LEN = 30
 
@@ -396,11 +408,11 @@ class StringValue(ByteValue):
     @length is in bytes, NOT UTF-8 characters"""
 
     def _encode(self, value):
-        value = value.encode("utf-8")
+        value = value.encode("utf-8", errors="surrogateescape")
         return super()._encode(value)
 
     def _decode(self, regs):
-        return super()._decode(regs).rstrip(b"\0").decode("utf-8")
+        return super()._decode(regs).rstrip(b"\0").decode("utf-8", errors="surrogateescape")
 
 
 class SwappedStringValue(StringValue):
@@ -488,7 +500,7 @@ class InputRegisters(TypeCodec):
     decoder_m = WriteMultipleRegistersResponse
 
 
-class DataBlock(dict, BaseModbusDataBlock):
+class DataBlock(ModbusSparseDataBlock):
     """Your basic sparse data block.
 
     The @changed attribute is an event that triggers when a write request
@@ -497,12 +509,37 @@ class DataBlock(dict, BaseModbusDataBlock):
 
     def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
         super().__init__()
+        self.__data = dict()
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
         self.changed = anyio.Event()
 
     def __bool__(self):
         return True
+
+    def __len__(self):
+        return len(self.__data)
+
+    def __getitem__(self, k):
+        return self.__data[k]
+
+    def __setitem__(self, k, v):
+        self.__data[k] = v
+
+    def __delitem__(self, k):
+        del self.__data[k]
+
+    def keys(self):
+        "mapping keys"
+        return self.__data.keys()
+
+    def values(self):
+        "mapping values"
+        return self.__data.values()
+
+    def items(self):
+        "mapping items"
+        return self.__data.items()
 
     def reset(self):
         """

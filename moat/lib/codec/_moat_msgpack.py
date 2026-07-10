@@ -56,7 +56,7 @@ def _enc_path(codec, obj):
 @std_ext.encoder(4, Proxy)
 def _enc_proxy(codec, obj):
     codec  # noqa:B018
-    return obj.name.encode("utf-8")
+    return obj.name.encode("utf-8", "surrogateescape")
 
 
 @std_ext.encoder(None, object)
@@ -66,7 +66,7 @@ def _enc_any(codec, obj):
     except KeyError:
         pass
     else:
-        return 4, name.encode("utf-8")
+        return 4, name.encode("utf-8", "surrogateescape")
 
     try:
         name = obj2name(type(obj))
@@ -82,7 +82,7 @@ def _enc_any(codec, obj):
             codec.encode(x) for x in obj.args
         )
 
-    return 4, get_proxy(obj).encode("utf-8")
+    return 4, get_proxy(obj).encode("utf-8", "surrogateescape")
 
 
 @std_ext.decoder(3)
@@ -99,7 +99,7 @@ def _dec_proxy(codec, data):
     if isinstance(data, memoryview):
         data = bytearray(data)
     try:
-        n = data.decode("utf-8")
+        n = data.decode("utf-8", "surrogateescape")
     except UnicodeError:
         n = str(data)
     try:

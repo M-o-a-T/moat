@@ -35,7 +35,7 @@ repos:
     - id: ty
       name: ty type checker
       description: Run ty type checker on configured files
-      entry: .venv/bin/ty check
+      entry: ty check
       language: system
       types: [python]
       pass_filenames: false

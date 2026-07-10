@@ -60,8 +60,8 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
 - `ext/` is a symlink to required support libraries. It is not checked into
-  git. Immediately after creating a new worktree, you *must* re-create the
-  link there: it must point to the same tree.
+  git. Immediately after creating a new worktree, run "make setup"
+  to recreate the link and to set up the local virtual environment.
 
 ## Python patterns
 
@@ -201,18 +201,31 @@ Work is NOT complete until `git push` succeeds.
 1. **Use a worktree named after the issue**, in `/src/work/moat-XXX`.
    The worktree may already exist. If so, simply continue there.
    Otherwise, create it, switch to it, and run `make setup`.
+
 1. If the work requires planning *or* the issue instructs you to plan,
-   but there is no `PLAN.md` file, enter planning mode. See below.
-1. If the work consists of *distinct steps*, work on the first one that's
-   open. You may coalesce, split or re-order steps if warranted, but keep
-   in mind that large changes are harder to maintain than several small
-   ones.
+   but does not mention a `*.md` file (and TODO/<issue>.md does not exist),
+   enter planning mode. See below.
+
+1. If your prompt contains review comments or similar, and does *not*
+   explicitly instruct you to go ahead, apply the comments, then **stop**.
+
+1. If the plan mentions a blocking issue, check that the blocker is closed.
+   Then remove it from your plan and re-commit.
+
+1. If the issue's plan consists of *distinct steps*, work on the first one
+   that's open. You may coalesce, split or re-order steps if warranted, but
+   keep in mind that large changes are harder to maintain than several
+   small ones.
+
+1. After completing a step, update the plan.
+
 1. "git commit" runs quality gates automatically. If errors are reported,
-   fix and resubmit.
-1. **Do not do unrelated work.** Instead, file follow-up issues.
-1. If this work blocks your progress, mark its issue as blocking the
-   one you're working on. Then update your issue's plan *without* committing
-   and stop. You'll be re-scheduled when the problem is solved.
+   fix and re-commit. Do not run "ruff" or "ty" on your own, it's duplicate
+   work.
+
+1. If the commit breaks on unrelated issues, **Do not fix.** Instead, file
+   follow-up issues. See below.
+
 1. **Commit all work**. Reference the issue(s) you worked on, if any, in
    the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
@@ -236,12 +249,19 @@ Work is NOT complete until `git push` succeeds.
    - (E) `git worktree remove ISSUE_BRANCH`
    - (F) `git branch -d ISSUE_BRANCH`
 
-### Planning Mode
+#### Planning Mode
 
 1. Write a detailed step-by-step plan to TODO/<issue-tag>.md
 1. Commit the plan.
-1. Create a `review` issue and block your issue on it.
+1. Create a `review` sub-issue and block your main issue on it.
 1. **Stop work**.
+
+#### Unrelated bugs
+
+1. Create a new issue for the problem you found.
+1. Add it as a blocker for your own work item ('bd dep add …`).
+1. Note the requirement to commit in your plan, then **stop**.
+   You'll be re-scheduled when the problem is solved.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker

@@ -25,3 +25,8 @@ API
    Lowercase letters.
 
 .. autoclass:: moat.util.server._Server
+
+.. automodule:: moat.util.liner
+   :members:
+   :undoc-members:
+   :show-inheritance:

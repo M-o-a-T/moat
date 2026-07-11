@@ -3,7 +3,7 @@
 # Invent a typical day
 from __future__ import annotations
 
-from moat.bms.sched import FutureData, Hardware, Model
+from moat.ems.sched import FutureData, Hardware, Model
 
 
 def F(price, load, pv):  # noqa: D103

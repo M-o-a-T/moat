@@ -21,7 +21,7 @@ dependencies = [
   "moat-util ~= 0.63.0",
   "moat-db ~= 0.2.7",
   "moat-lib-run ~= 0.2.0",
-  "moat-link ~= 0.9.1",
+  "moat-link ~= 0.10.0",
   "asyncclick >= 8.3",
   "anyio >= 4.10",
 ]

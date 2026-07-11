@@ -620,3 +620,46 @@ async def test_recovering_job_clears_error(cfg):
             st = await _wait_state(c, state_path, until=lambda s: s.get("backoff", 0) == 0)
             assert st.get("result") == "ok"
             tg.cancel_scope.cancel()
+
+
+async def test_restart_when_code_changes(cfg):
+    """Changing a running job's code snippet cancels and restarts it.
+
+    The job initially runs a snippet that sleeps forever (after
+    signalling setup).  Rewriting the code at
+    ``code.exec.test.sleeper`` to a snippet that returns immediately
+    must cause the runner to notice the change, cancel the long-running
+    task, and re-run the job with the new code.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, _job_path, state_path = await _setup_long_job(sf, c, "rc")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            # Wait until the long-running job is actually running here.
+            await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            # Replace the snippet with one that returns immediately.
+            await c.d_set(
+                CODE_EXEC_ROOT + P("test.sleeper"),
+                dict(code="return 'restarted'", is_async=True),
+            )
+            await c.i_sync()
+
+            # The runner notices the change, cancels the old task, and
+            # restarts the job with the new code, which completes.
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("result") == "restarted",
+            )
+            assert st["stopped"] > 0
+            tg.cancel_scope.cancel()

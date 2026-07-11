@@ -27,6 +27,7 @@ from asyncactor import AuthPingEvent, NodeList, PingEvent, TagEvent, UntagEvent
 
 from moat.util import NotGiven, attrdict, combine_dict, create_queue, digits
 from moat.lib.path import P, Path, logger_for
+from moat.link.code import CODE_EXEC_ROOT
 from moat.util.spawn import spawn
 
 from .actor import (
@@ -458,6 +459,13 @@ class CallAdmin:
 
             data["_self"] = self
 
+            # Restart the job when its code snippet is updated.  The
+            # watcher is established before the snippet runs so that no
+            # change arriving during startup is missed; cancelling the
+            # scope lets the scheduler re-run the job with the new code.
+            if isinstance(self._entry.runner, JobRunner):
+                await tg.start(self._watch_code_change)
+
             oka = getattr(self._entry, "ok_after", 0) or 0
             if oka > 0:
 
@@ -476,6 +484,28 @@ class CallAdmin:
         """Cancel the running task."""
         if self._taskgroup is not None:
             self._taskgroup.cancel_scope.cancel()
+
+    async def _watch_code_change(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Restart the job when its code snippet is updated.
+
+        Subscribes to the snippet's link path for updates.  When the
+        stored code changes, the running task is cancelled; the runner's
+        scheduler then restarts the job, which re-fetches the
+        now-current snippet.
+        """
+        path = self._entry.code
+        if path is None:
+            task_status.started()
+            return
+        full = CODE_EXEC_ROOT + Path.build(path)
+        async with self._link.d_watch(full, state=False, meta=False) as mon:
+            task_status.started()
+            async for _data in mon:
+                self._entry._comment = "Cancel: Code changed"  # noqa: SLF001
+                sc = self._entry.scope
+                if sc is not None:
+                    sc.cancel()
+                return
 
     async def spawn(
         self,

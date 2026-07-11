@@ -1,3 +1,9 @@
+moat-link-wago (0.10.2-2) unstable; urgency=medium
+
+  * New release for 26.2.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2026 15:11:15 +0200
+
 moat-link-wago (0.10.2-1) unstable; urgency=medium
 
   * New release for 26.2.9

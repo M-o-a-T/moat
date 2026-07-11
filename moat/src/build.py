@@ -683,7 +683,7 @@ async def cli(
 
     # Step 8: record external repo HEADs
     if not no_ext:
-        await collect_ext_revs(_EXT, repo.versions.get("ext", {}))
+        await collect_ext_revs(obj, _EXT, repo.versions.get("ext", {}))
 
     # Step 9: commit the result
     if not no.run:

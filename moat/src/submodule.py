@@ -435,7 +435,7 @@ async def check_ext_clean(base: anyio.Path, ext: dict) -> list[str]:
     return dirty
 
 
-async def collect_ext_revs(base: anyio.Path, ext: dict) -> bool:
+async def collect_ext_revs(obj, base: anyio.Path, ext: dict) -> bool:
     """Read the HEAD commit of each external repository and update *ext* in-place.
 
     For every entry in *ext*, the HEAD commit of ``base/<name>`` is read
@@ -466,14 +466,15 @@ async def collect_ext_revs(base: anyio.Path, ext: dict) -> bool:
             info["rev"] = head
             changed = True
             print(f"[{name}] {old[:12] or '(none)'} → {head[:12]}", flush=True)
-        else:
+        elif obj.debug > 1:
             print(f"[{name}] unchanged ({head[:12]})", flush=True)
     return changed
 
 
 @cli.command("commit")
+@click.pass_obj
 @click.option("-f", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
-async def commit_cmd(no_dirty: bool) -> None:
+async def commit_cmd(obj, no_dirty: bool) -> None:
     """Record the current HEAD of each external repository into ``versions.yaml``.
 
     For every entry in the ``ext`` section, the HEAD commit of
@@ -490,7 +491,7 @@ async def commit_cmd(no_dirty: bool) -> None:
         dirty = await check_ext_clean(base, ext)
         if dirty:
             raise click.ClickException("External repositories are not clean: " + " ".join(dirty))
-    changed = await collect_ext_revs(base, ext)
+    changed = await collect_ext_revs(obj, base, ext)
     if changed:
         _save_ext(ext)
         print("versions.yaml updated.", flush=True)

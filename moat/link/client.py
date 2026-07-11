@@ -1122,6 +1122,7 @@ class Link(LinkCommon, CtxObj):
     _common: bool = False
     _only: str | None = None
     _ctx_active: bool = False
+    _setup_done: bool = False
     announced: set[Path]
     sdr: LinkSender
 
@@ -1156,10 +1157,11 @@ class Link(LinkCommon, CtxObj):
         """Attach sub-handlers, unless this shared link is already active."""
         # Re-entering a common Link (cached in ``_the_link``, e.g. via
         # ``as_service`` while ``obj.conn`` already holds it) must not
-        # re-register the "i" sub-handler ("sub_i: already known").
-        if hasattr(self, "sub_i"):
+        # re-register the sub-handlers.
+        if self._setup_done:
             return
         await super().setup()
+        self._setup_done = True
 
     async def set_state(self, state: str):
         """
@@ -1309,6 +1311,7 @@ class Link(LinkCommon, CtxObj):
                         self.logger.warning("Could not send Close message", exc_info=exc)
         finally:
             self._ctx_active = False
+            self._setup_done = False
 
     def cancel(self):
         "Stop me"

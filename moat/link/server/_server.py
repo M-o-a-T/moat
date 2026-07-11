@@ -2648,7 +2648,7 @@ class Server(MsgHandler):
                 name = msg.topic[-1]
                 if msg.data is NotGiven:
                     self.known_ids.discard(name)
-                else:
+                elif isinstance(name, str):
                     self.known_ids.add(name)
 
     async def _monitor_pings(self, *, task_status):

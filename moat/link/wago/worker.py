@@ -128,42 +128,38 @@ async def run_out(
             try:
                 with anyio.CancelScope() as sc:
                     worker = sc
-                    logger.error(f"{subpath} on 3")
                     async with work:
                         if state is not None:
                             await link.d_set(state, True)
                         await work.wait()
-                    logger.error(f"{subpath} on 5")
             finally:
-                if worker is sc:
-                    logger.error(f"{subpath} onx 6")
-                    worker = None
-                    if worker_done is done_evt:
-                        worker_done = None
-                    done_evt.set()
                 with anyio.fail_after(2, shield=True):
                     if state is not None:
-                        logger.error(f"{subpath} onx 7")
                         try:
                             v = await srv.read_output(card, port)
                         except anyio.ClosedResourceError:
                             pass
                         else:
-                            await link.d_set(state, v != rest)
-                        logger.error(f"{subpath} onx 8")
-                logger.error(f"{subpath} on 9")
+                            if v != rest:
+                                # The timed output did not return to rest
+                                # after expiry (e.g. a stale output on
+                                # reattach). Clear it manually.
+                                await srv.write_output(card, port, rest)
+                            await link.d_set(state, False)
+                    if worker is sc:
+                        worker = None
+                        if worker_done is done_evt:
+                            worker_done = None
+                        done_evt.set()
 
         async def _do_oneshot(val: bool) -> None:
             await _cancel_oneshot()
             if val:
-                logger.error(f"{subpath} on 1")
                 await _run_oneshot(srv.write_timed_output(card, port, not rest, t_on))
             else:
-                logger.error(f"{subpath} off 1")
                 await srv.write_output(card, port, rest)
                 if state is not None:
                     await link.d_set(state, False)
-                logger.error(f"{subpath} off 9")
 
         mon = await srv.find_monitor(card, port)
         if mon is not None:
@@ -173,7 +169,6 @@ async def run_out(
             async for val in wp:
                 if not isinstance(val, bool):
                     continue
-                logger.error(f"{subpath} get {val}")
                 link.link.tg.start_soon(_do_oneshot, val)
 
     elif mode == "pulse":
@@ -203,11 +198,6 @@ async def run_out(
                             await link.d_set(state, t_on / (t_on + t_off))
                         await work.wait()
             finally:
-                if worker is sc:
-                    worker = None
-                    if worker_done is done_evt:
-                        worker_done = None
-                    done_evt.set()
                 with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
@@ -216,6 +206,11 @@ async def run_out(
                             pass
                         else:
                             await link.d_set(state, v != rest)
+                    if worker is sc:
+                        worker = None
+                        if worker_done is done_evt:
+                            worker_done = None
+                        done_evt.set()
 
         async def _do_pulse(val: bool) -> None:
             await _cancel_pulse()

@@ -2,6 +2,7 @@
 .#*
 \#*
 /bin/
+/ext/
 /*.build
 /build
 /*.buildinfo
@@ -24,6 +25,7 @@ docs/_build/
 docs/build/
 docs/tmp/
 /downloads/
+/ext
 *.egg
 /*.egg
 /*.egg-info/
@@ -87,3 +89,6 @@ __pycache__/
 .dolt/
 *.db
 .beads-credential-key
+
+# Beads / Dolt files (added by bd init)
+.beads/proxieddb/

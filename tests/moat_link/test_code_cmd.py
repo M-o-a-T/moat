@@ -41,16 +41,17 @@ def test_check_exec_syntax_ok():
     "Check compiling a code record with vars and async flag."
     data = dict(
         code="return foo * bar",
-        vars=dict(foo=21, bar=2),
+        vars=["foo", "bar"],
+        default=dict(foo=21, bar=2),
         is_async=False,
     )
     _check_exec_syntax(data, CODE_EXEC_ROOT + P("test.mul"))
 
 
 def test_check_exec_syntax_bad_vars():
-    "Reject non-mapping vars configuration."
-    data = dict(code="return 1", vars=["x"])
-    with pytest.raises(TypeError, match="vars must be a mapping"):
+    "Reject non-list vars configuration."
+    data = dict(code="return 1", vars=dict(x=1))
+    with pytest.raises(TypeError, match="vars must be a list of names"):
         _check_exec_syntax(data, CODE_EXEC_ROOT + P("test.bad"))
 
 

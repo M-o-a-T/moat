@@ -842,12 +842,48 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
    `database()`; rain's `controller add` (missing `--location`) is the
    first to exercise it.
 7. **Engine — algebra.** Port `range.py` (§7.1) + `test_range.py` parity
-   with the old `utils.py` self-tests.
+   with the old `utils.py` self-tests. *(Done: `range.py` ports
+   `StoredIter`, `range_coalesce`, `range_union`, `range_intersection`,
+   `range_invert`, and the `RangeMixin` helpers, typed as
+   `(datetime, timedelta)` iterators with no ORM dependency. The legacy
+   `__main__` self-test is reproduced verbatim (int tuples — the
+   arithmetic is duck-typed) plus a datetime-scaled variant and edge
+   cases. One legacy bug fixed: `range_invert` returned early (dropping
+   the tail gap) when an interval in `a` started past the window end —
+   changed `return` to `break` so the final `yield ra, rl` emits the
+   remaining tail; the old self-test never exercised that path, so
+   parity holds. 15 tests / 95% on `range.py`; 81 rain tests / 99%
+   overall.)*
 8. **Engine — `_range()` ports + generation/recalc.** `engine.py`
    (§7.2–7.3); locate/port `time_until` (§7.4). `test_engine.py` seeds a
    temp sqlite DB and asserts generated schedules / recalculated levels.
    Expose via `cmds/gen.py` (`moat db rain <SITE> gen`) and
-   `cmds/recalc.py` (`moat db rain <SITE> recalc`).
+   `cmds/recalc.py` (`moat db rain <SITE> recalc`). *(Done: `engine.py`
+   ports every legacy `_range()` method as a session-taking function —
+   `daytime_range`/`day_range`/`dayrange_range`, `group_{days,no_xdays,
+   allowed,not_blocked,range}`, `valve_{group,group_x,not_blocked,forced,
+   not_scheduled,range}`, `controller_range`, `feed_range` — plus
+   `_EnvCalc` (the weighted-nearest-neighbour `env_factor` interpolation,
+   with the per-triple cache), `recalculate` (replays `History` to rebuild
+   `Level` rows: evaporation `rate·shade·envgroup.factor·env_factor·adj·dt`,
+   rain runoff, delivered flow, `max_level`/zero clamps, forced anchors), and
+   `generate_schedule` (forced schedules first, then demand-based slots
+   until the level deficit is met, honouring `max_run`/`min_delay`, skipping
+   disabled feeds, driest-first). `time_until` survives at
+   `moat.util.times.time_until` (signature `now=`→`t_now=`); the engine feeds
+   it aware-UTC `t_now` so the suite is host-timezone-independent.
+   Datetime handling: SQLite strips `tzinfo` on load, so a `_u()` helper
+   normalises every param and every DB-loaded datetime to aware-UTC (the
+   legacy Django store was all-UTC); the unreachable `feed.flow is None`
+   single-valve guard is marked `# pragma: no cover` (the schema's
+   `default`+`server_default` never store NULL). `cmds/gen.py` and
+   `cmds/recalc.py` wrap the engine with `--controller`/`--valve`/
+   `--horizon`/`--age`/`--save`/`--verbose` options and a `--verbose` stderr
+   narration sink (`emit_log` in `cmds/_util.py`). Side fix: the conftest
+   `engine` fixture is now function-scoped — the session-scoped engine's
+   pooled connections retained a stale view of the per-test `db_url` row
+   wipe, leaking prior tests' rows into later tests under `pytest-randomly`
+   ordering. 133 rain tests, 98% coverage; `ty` clean.)*
 9. **Monitor daemon.** `monitor.py` (§7.5) on anyio + moat.link; wire
    `cmds/monitor.py` → `moat db rain <SITE> monitor`. `test_monitor.py`
    with a stubbed moat-link (no hardware). Add the systemd unit + Debian

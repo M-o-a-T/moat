@@ -14,10 +14,13 @@ classifiers = [
 dependencies = [
 	"moat-util ~= 0.63.0",
 	"moat-db ~= 0.2.7",
+	"moat-db-box ~= 0.0.3",
+	"moat-db-thing ~= 0.0.3",
 	"moat-lib-config ~= 0.2.0",
+	"fpdf2 >= 2.3",
 	"moat-lib-run ~= 0.2.0",
 	]
-version = "0.0.6"
+version = "0.0.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db-label"

@@ -598,28 +598,6 @@ class LinkSender(MsgSender):
             return res[0]
         return res[0], MsgMeta.restore(res[1:])
 
-    @overload
-    async def d_set(
-        self,
-        path: Path,
-        data: Any = NotGiven,
-        t: float | None = None,
-        meta: Literal[True] = True,
-        retain: bool | None = None,
-        verify: bool | None = False,
-    ) -> bool | None: ...
-
-    @overload
-    async def d_set(
-        self,
-        path: Path,
-        data: Any = NotGiven,
-        t: float | None = None,
-        meta: Literal[False] = False,
-        retain: bool | None = None,
-        verify: bool | None = False,
-    ) -> bool | None: ...
-
     async def d_set(
         self,
         path: Path,
@@ -736,6 +714,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: bool = False,
         meta: Literal[False] = False,
         subtree: Literal[False] = False,
@@ -747,6 +726,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False] = False,
         meta: Literal[True] = True,
         subtree: Literal[False] = False,
@@ -758,6 +738,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False],
         meta: Literal[True],
         subtree: Literal[True],
@@ -769,6 +750,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[False] = False,
         meta: Literal[False] = False,
         subtree: Literal[True] = True,
@@ -780,6 +762,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[False] = False,
@@ -791,6 +774,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[True],
         subtree: Literal[True],
@@ -802,6 +786,7 @@ class LinkSender(MsgSender):
     def d_watch(
         self,
         path: Path,
+        *,
         mark: Literal[True],
         meta: Literal[False] = False,
         subtree: Literal[True] = True,

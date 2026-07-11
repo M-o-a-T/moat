@@ -28,7 +28,7 @@ dependencies = [
     "cffi",
     "cryptography",
     "fpdf2",
-    "pygit",
+    "gitpython",
     "httpx",
     "ifaddr",
     "jmespath",
@@ -101,6 +101,7 @@ dev = [
     "asyncowfs ~= 0.15",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
+    "asyncwago",
     "cbor2",
     "gpiod",
     "httpx-ws",
@@ -115,13 +116,14 @@ dev = [
     "simplejson",
     "smbus3",
     "systemd",
-    "ty ~= 0.0.17",
+    "ty == 0.0.55",
     "uv",
     "wheel",
 ]
 doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
+    "sphinx-favicon",
     "sphinx-immaterial",
     "sphinx-tabs",
     "sphinx-toolbox",
@@ -129,6 +131,7 @@ doc = [
     "sphinx-design",
     "sphinx-book-theme",
     "sphinx-last-updated-by-git",
+    "sphinx-markdown-builder @ git+https://github.com/M-o-a-T/sphinx-markdown-builder@main",
     "enum_tools[sphinx] >= 0.12.0",
     "prometheus_client",
 ]
@@ -194,7 +197,7 @@ explicit-preview-rules = true
 "docs/conf.py" = ["ALL"]
 "docs/**" = ["D1","F841","TC003"]
 "tests/moat_mqtt/**" = ["PT"]
-"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S607"]
+"tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S603","S607"]
 "examples/**" = ["S108"]
 "moat/mcp/_server.py" = ["I002"]
 "moat/micro/_test.py" = ["ASYNC240"]
@@ -256,6 +259,7 @@ python-version = "3.11"
 include = [
     "moat/db/__init__.py",
     "moat/db/box/",
+    "moat/db/inv/",
     "moat/db/label/",
     "moat/db/thing/",
     "moat/db/rain/",
@@ -263,6 +267,7 @@ include = [
     "moat/link/",
     "moat/mcp/",
     "moat/micro/",
+    "moat/src/",
     "moat/util/",
 ]
 exclude = [

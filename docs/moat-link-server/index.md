@@ -17,5 +17,6 @@ TODO
 structure
 messages
 savefile
+link-sync
 api
 ```

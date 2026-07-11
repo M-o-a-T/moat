@@ -13,16 +13,17 @@ from contextlib import asynccontextmanager
 
 from attr import define, field
 
-from moat.util import CtxObj
+from moat.util import CtxObj, attrdict
 from moat.util.exec import run as run_
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from moat.util import attrdict
+    from anyio.abc import TaskGroup
+
     from moat.src.move import RepoMover as RepoMover
 
-    from collections.abc import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator
     from typing import Self
 
 
@@ -40,17 +41,36 @@ class RepoExists(RuntimeError):
 
 @define
 class Repo:  # noqa: D101
-    name = field()
-    cwd = field(default=None, type=anyio.Path)
+    name: str = field()
+    cwd: anyio.Path | None = field(default=None)
+    cfg: attrdict = field(factory=attrdict)
+    git_lock: anyio.Lock = field(factory=anyio.Lock)
 
-    def __attrs_post_init__(self):
-        if self.cwd is None:
+    def __attrs_post_init__(self) -> None:
+        if self.cwd is None and self.cfg:
             self.cwd = anyio.Path(self.cfg.cache) / self.name
 
-    def run(self, *a, **kw) -> Awaitable:
-        """Run a program in this repo's directory"""
-        kw.setdefault("cwd", self.cwd)
-        return run_(*a, **kw)
+    async def exec(
+        self,
+        *a: str,
+        capture: bool = False,
+        cwd: anyio.Path | str | None = None,
+        echo: bool = False,
+        input: str | bytes | None = None,  # noqa: A002
+        env: dict[str, str] | None = None,
+    ) -> str | None:
+        """Run a program in this repo's directory."""
+        if cwd is None:
+            cwd = self.cwd
+        if capture:
+            return await run_(*a, capture=True, cwd=cwd, echo=echo, input=input, env=env)
+        await run_(*a, cwd=cwd, echo=echo, input=input, env=env)
+        return None
+
+    @property
+    def description(self) -> str:
+        """One-line repository description."""
+        raise NotImplementedError
 
 
 @define
@@ -58,7 +78,8 @@ class RepoInfo(metaclass=ABCMeta):
     """Wrapper for a particular remote repository."""
 
     api: API = field()
-    repo: Repo = field()
+    repo: Repo | RepoMover = field()
+    cls_CommitInfo: ClassVar[type[CommitInfo]]
 
     @property
     def description(self) -> str:
@@ -100,14 +121,14 @@ class RepoInfo(metaclass=ABCMeta):
         await self.create()
         await self.load_()
 
-    async def get_branches(self) -> AsyncIterator[str]:
+    def get_branches(self) -> AsyncIterator[CommitInfo]:
         """
         List known (local) branches.
         """
         # only required for source repo
         raise NotImplementedError
 
-    async def get_tags(self) -> AsyncIterator[str]:
+    def get_tags(self) -> AsyncIterator[dict]:
         """
         List known tags.
         """
@@ -138,13 +159,13 @@ class RepoInfo(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    async def push(self) -> CommitInfo:
+    async def push(self) -> None:
         """
         git-push to this repo.
         """
         await self.repo.exec("git", "push", self.api.name)
 
-    async def pull(self) -> CommitInfo:
+    async def pull(self) -> None:
         """
         git-pull from this repo.
         """
@@ -168,9 +189,15 @@ class RepoInfo(metaclass=ABCMeta):
 
 
 @define
-class CommitInfo(metaclass=ABCMeta):  # noqa: D101,B024
-    repo = field(type=RepoInfo)
-    hash = field(type=str)
+class CommitInfo(metaclass=ABCMeta):  # noqa: B024
+    """Information about a specific commit in a remote repository."""
+
+    repo: RepoInfo = field()
+    hash: str = field()
+    data: attrdict | None = field(default=None, init=False)
+
+
+RepoInfo.cls_CommitInfo = CommitInfo
 
 
 class API(CtxObj, metaclass=ABCMeta):
@@ -179,7 +206,7 @@ class API(CtxObj, metaclass=ABCMeta):
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 
-    _tg: anyio.abc.TaskGroup
+    _tg: TaskGroup
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
@@ -201,14 +228,14 @@ class API(CtxObj, metaclass=ABCMeta):
         "Host to talk to"
         raise NotImplementedError
 
-    async def list_repos(self) -> AsyncIterator[str]:
+    def list_repos(self) -> AsyncIterator[RepoInfo]:
         """
         List accessible repositories.
         """
         # only required for source repo
         raise NotImplementedError
 
-    def repo_info_for(self, repo: Repo) -> RepoInfo:
+    def repo_info_for(self, repo: Repo | RepoMover) -> RepoInfo:
         """
         Fetch info data for this repository.
 
@@ -217,7 +244,7 @@ class API(CtxObj, metaclass=ABCMeta):
         return self.cls_RepoInfo(self, repo)
 
 
-def get_api(cfg: dict, name: str) -> API:
+def get_api(cfg: attrdict, name: str) -> API:
     """
     Return the API from the config (module ``cfg['api']``).
 

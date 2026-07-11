@@ -21,7 +21,7 @@ from moat.lib.micro import (
 )
 from moat.lib.rpc import BaseCmd
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Msg, SubMsgSender
@@ -294,7 +294,7 @@ class Control(BaseCmd):
             and self._sync_cfg(mode).get("lock")
         )
         if should_lock and not self._sync_suspended:
-            await self._start_pid_lock(cast(str, mode))
+            await self._start_pid_lock(mode)
 
         remaining = t_ms
         last = ticks_ms()

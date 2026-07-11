@@ -21,7 +21,12 @@ This file isn't just for agents …
 The purpose of issues is to remember things to do.
 Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
-`bd` cannot run in a sandbox.
+## API documentation
+
+You can use the ty language server, or read build/specs/moat-xxx/api.md.
+
+If you need details that are not documented, you may read the actual code,
+but then *create an issue* detailing what's missing to improve the docs later.
 
 ## Project Structure & Modules
 
@@ -54,6 +59,10 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Build output should be created in, or moved to, the `dist/` folder.
 - `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
+- `ext/` is a symlink to required support libraries. It is not checked into
+  git. Immediately after creating a new worktree, run "make setup"
+  to recreate the link and to set up the local virtual environment.
+
 ## Python patterns
 
 - MoaT uses anyio for async code. Never import from asyncio.
@@ -79,7 +88,7 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 
 ### Typing
 
-- MoaT does its type checking with "ty".
+- MoaT type checks using "ty".
 - Use "ty check --output-format github" if you need to fix typing errors.
 - Files need to be typed comprehensively, i.e. all variables,
   arguments and return types.
@@ -145,7 +154,9 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - 100% coverage is a goal to aspire to, but not the main focus of our tests.
 - Don't repeat tests or assertions.
 - DO NOT use "head", "tail", or "rg" / "grep" on test output.
-  Instead, redirect to a temp file (or check tmux content) and post-process that.
+  Results need to go directly to tmux (for observability), or
+  a temp file for post-processing. Do not pipe live output through
+  head/tail/grep.
 - moat.src.test contains wrappers "run" (process a `moat ...` command line)
   and `raises` (like pytest.raises but ignores exception groups).
 
@@ -170,6 +181,11 @@ Thus, DO NOT create issues for one-off changes that you'd immediately close.
 - Do not introduce unrelated tooling or refactors unless specifically
   asked to do so.
 - Context compaction: You MUST re-read this document after compacting.
+- DO NOT use "grep -r" or similar commands on the whole repository.
+  Always use "git grep". Likewise, use "git ls-files | grep ...", not "find .".
+- If you need a command or tool that's not currently available: DO NOT
+  scan the system's directory tree. DO NOT try to install it. DO NOT
+  try to find a workaround. Instead, ask the user.
 
 # Issue Processing
 
@@ -180,11 +196,36 @@ This section only applies when resolving a Beads issue.
 After editing and updating/closing issues, you MUST complete ALL steps below.
 Work is NOT complete until `git push` succeeds.
 
-### Workflow
+### Issue Workflow
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up.
+1. **Use a worktree named after the issue**, in `/src/work/moat-XXX`.
+   The worktree may already exist. If so, simply continue there.
+   Otherwise, create it, switch to it, and run `make setup`.
+
+1. If the work requires planning *or* the issue instructs you to plan,
+   but does not mention a `*.md` file (and TODO/<issue>.md does not exist),
+   enter planning mode. See below.
+
+1. If your prompt contains review comments or similar, and does *not*
+   explicitly instruct you to go ahead, apply the comments, then **stop**.
+
+1. If the plan mentions a blocking issue, check that the blocker is closed.
+   Then remove it from your plan and re-commit.
+
+1. If the issue's plan consists of *distinct steps*, work on the first one
+   that's open. You may coalesce, split or re-order steps if warranted, but
+   keep in mind that large changes are harder to maintain than several
+   small ones.
+
+1. After completing a step, update the plan.
+
 1. "git commit" runs quality gates automatically. If errors are reported,
-   fix and resubmit.
+   fix and re-commit. Do not run "ruff" or "ty" on your own, it's duplicate
+   work.
+
+1. If the commit breaks on unrelated issues, **Do not fix.** Instead, file
+   follow-up issues. See below.
+
 1. **Commit all work**. Reference the issue(s) you worked on, if any, in
    the first line.
    Example: "Fix moat-abc: wrangled the zumblicator"
@@ -195,19 +236,34 @@ Work is NOT complete until `git push` succeeds.
    Close finished work, update in-progress items.
    Include the commit ID. Example: "Fixed in COMMIT\_ID\_PREFIX".
    Don't add information to the bug that's also in the commit's text.
-1. **Push to remote**:
-   - run `git push intern HEAD:main`
-   - If there are conflicts,
-     - git pull --no-edit
-     - resolve merge conflicts, if any
-     - retry `git push`
-     - repeat until successful
-   ```
-However, if a git push/pull command fails with a permission error, STOP:
-the problem is a missing SSH key. The user needs to re-add the key before
-you can continue.
+1. **After closing an issue**:
+   - (A) Run `git merge main`. Fix conflicts if any.
+   - (B) In the main arc and `git merge --ff-only ISSUE_BRANCH`.
+     If that does not work, go back to step A.
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+   - (C) `git push intern main`. If that fails, go back to the worktree and
+     run `git merge intern main`. Fix conflicts, if any, then go back to
+     step A.
+
+   - (D) `git status` (must be clean)
+   - (E) `git worktree remove ISSUE_BRANCH`
+   - (F) `git branch -d ISSUE_BRANCH`
+
+#### Planning Mode
+
+1. Write a detailed step-by-step plan to TODO/<issue-tag>.md
+1. Commit the plan.
+1. Create a `review` sub-issue and block your main issue on it.
+1. **Stop work**.
+
+#### Unrelated bugs
+
+1. Create a new issue for the problem you found.
+1. Add it as a blocker for your own work item ('bd dep add …`).
+1. Note the requirement to commit in your plan, then **stop**.
+   You'll be re-scheduled when the problem is solved.
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -227,29 +283,61 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+
+## Agent Context Profiles
+
+The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
+
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+This protocol applies when ending a Beads implementation workflow. It is subordinate to explicit user, repository, and orchestrator instructions.
 
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create beads for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **Handle git/sync by active profile**:
    ```bash
-   git pull --rebase
-   bd dolt push
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+   # Conservative/minimal/default: report status and proposed commands; wait for approval.
+   git status
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+   # Team-maintainer opt-in only, unless current instructions forbid it:
+   git pull --rebase
+   git push
+   git status
+   ```
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+
+**Critical rules:**
+- Explicit user or orchestrator instructions override this Beads block.
+- Do not commit or push without clear authority from the active profile or the current user request.
+- If a required sync or push is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
+
+<!-- BEGIN BEADS CODEX SETUP: generated by bd setup codex -->
+## Beads Issue Tracker
+
+Use Beads (`bd`) for durable task tracking in repositories that include it. Use the `beads` skill at `.agents/skills/beads/SKILL.md` (project install) or `~/.agents/skills/beads/SKILL.md` (global install) for Beads workflow guidance, then use the `bd` CLI for issue operations.
+
+### Quick Reference
+
+```bash
+bd ready                # Find available work
+bd show <id>            # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>           # Complete work
+bd prime                # Refresh Beads context
+```
+
+### Rules
+
+- Use `bd` for all task tracking; do not create markdown TODO lists.
+- Run `bd prime` when Beads context is missing or stale. Codex 0.129.0+ can load Beads context automatically through native hooks; use `/hooks` to inspect or toggle them.
+- Keep persistent project memory in Beads via `bd remember`; do not create ad hoc memory files.
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+<!-- END BEADS CODEX SETUP -->

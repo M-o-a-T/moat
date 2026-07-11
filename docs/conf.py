@@ -86,6 +86,7 @@ extensions = [
     "sphinx_favicon",
     "sphinx_book_theme",
     "sphinx_tabs.tabs",
+    "sphinx_markdown_builder",
 ]
 myst_enable_extensions = [
     "attrs_block",
@@ -127,7 +128,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints", "**/ARCHITECTURE.md"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -200,6 +201,17 @@ intersphinx_mapping = {
     # "asyncclick": ("https://M-o-a-T.org/docs/asyncclick/", None),
     # "pyfuse3": ("https://M-o-a-T.org/docs/asyncclick/", None),
 }
+
+# In the Markdown output, keep only links that point to the same file or to
+# another MoaT document. Auto-generated cross-references to external
+# inventories (e.g. every ``float`` / ``None`` linking to the standard
+# library) are rendered as plain text instead, so the API docs don't waste
+# tokens when consumed by AI.
+markdown_external_references = "text"
+# To additionally retain manually-authored external links (e.g. to GitHub or
+# Wikipedia) while still dropping the auto-generated intersphinx links,
+# replace the line above with:
+# markdown_external_references = "manual"
 
 autodoc2_packages = [
     "../moat",

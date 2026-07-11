@@ -275,11 +275,12 @@ class SerialModbusServer(BaseModbusServer):
         response.transaction_id = tid
         if isinstance(response, ExceptionResponse):
             _logger.error(
-                "Source: %r %d %d %d",
-                type(request),
-                request.function_code,
+                "Source: %r %d %d %d %s",
+                type(request).__name__,
+                unit,
                 request.address,
                 getattr(request, "count", 1),
+                response,
             )
 
         if not broadcast:

@@ -500,6 +500,20 @@ class Valve(Base):
         """``min_delay`` as a :class:`~datetime.timedelta`, or ``None``."""
         return None if self.min_delay is None else timedelta(seconds=self.min_delay)
 
+    @property
+    def adj(self) -> float:
+        """Product of the non-zero group adjustment factors affecting this valve.
+
+        Mirrors the legacy ``Valve.adj``: groups with a ``None`` or zero
+        ``adj`` are skipped (a zero factor does **not** null the product),
+        so the result is always positive.
+        """
+        f = 1.0
+        for g in self.groups:
+            if g.adj:
+                f *= g.adj
+        return f
+
     def apply(
         self,
         site=NotGiven,

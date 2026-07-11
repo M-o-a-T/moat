@@ -13,6 +13,7 @@ from anyio.abc import TaskStatus
 from contextlib import asynccontextmanager
 
 from attrs import define, field
+from typing_extensions import TypedDict
 
 from moat.util import NotGiven, attrdict, gen_ident
 from moat.util import as_service as _as_service
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 
     from .client import LinkSender
 
-    from typing import Any
+    from typing import Any, Unpack
 
 __all__ = ["announcing"]
 
@@ -301,11 +302,28 @@ async def announcing(
             tg.cancel_scope.cancel()
 
 
+class _AsServiceKwargs(TypedDict, total=False, closed=True):
+    """Keyword arguments forwarded to :func:`announcing`.
+
+    ``link`` and ``via`` are supplied by :func:`as_service` itself and
+    must not be passed by the caller.
+    """
+
+    name: Path | None
+    host: Path | str | bool
+    force: bool
+    service: MsgSender | None
+    value: Any
+
+
 @asynccontextmanager
-async def as_service(obj: attrdict | None = None):
+async def as_service(obj: attrdict | None = None, **kw: Unpack[_AsServiceKwargs]):
     """
     This is a replacement for the legacy :func:`moat.util.as_service`
     helper that also registers the named service with MoaT-Link.
+
+    Keyword arguments other than ``obj`` are forwarded to :func:`announcing`,
+    except for ``link`` and ``via``, which are set by this function.
     """
     if obj is None:
         obj = attrdict()
@@ -314,6 +332,6 @@ async def as_service(obj: attrdict | None = None):
     async with (
         _as_service(obj) as mon,
         Link(obj.cfg.link, common=True) as mon.link,
-        announcing(mon.link, via=mon.evt),
+        announcing(mon.link, via=mon.evt, **kw),
     ):
         yield mon

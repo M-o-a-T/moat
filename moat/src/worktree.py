@@ -58,6 +58,7 @@ async def _read_submodule_list(base: Path, debug: int = 0) -> str:
     if not (base / ".git").exists():
         return ""
     res = await run_("git", "submodule", cwd=base, capture=True, echo=debug > 1)
+    assert res is not None
     return res
 
 
@@ -123,12 +124,14 @@ def _parse_worktree_list(data: str) -> dict[Path, str | None]:
 async def _read_worktree_list(base: Path) -> dict[Path, str | None]:
     """Read worktree metadata for ``base``."""
     data = await run_("git", "worktree", "list", cwd=base, capture=True)
+    assert data is not None
     return _parse_worktree_list(data)
 
 
 async def _read_current_branch(base: Path, debug: int = 0) -> str | None:
     """Read the current branch name for ``base``."""
     branch = await run_("git", "branch", "--show-current", cwd=base, capture=True, echo=debug > 1)
+    assert branch is not None
     branch = branch.strip()
     if not branch:
         return None

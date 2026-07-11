@@ -30,6 +30,14 @@ regs:
       register: 513
       values:
         1: reset
+    keepalive:
+      _doc: Keepalive
+      reg_type: h
+      type: uint
+      len: 1
+      register: 304
+      values:
+        1: live
 
   state:
     state:
@@ -178,6 +186,14 @@ regs:
     _c4:
       _doc: const 1
       register: 944
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        1: known
+    _c5:
+      _doc: const 1
+      register: 1027
       len: 1
       reg_type: h
       type: int

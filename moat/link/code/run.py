@@ -106,7 +106,6 @@ class Code:
 
     _proc: CodeType | None = None
     _is_async: bool | None = None
-    _vars: dict[str, Any] = {}
     _data: Mapping[str, Any] | Any = NotGiven
 
     def __init__(self, link: LinkSender, path: Path):
@@ -167,7 +166,18 @@ class Code:
             self._load(self._data)
         assert self._proc is not None  # set by _load
 
-        call_kw = combine_dict(kw, self._data.get("vars", {}), self._globals(kw))
+        # ``vars`` declares the snippet's named parameters (a list of
+        # names, cf. ``moat.kv.code``); ``default`` optionally maps some of
+        # them to default values.  Declared-but-unset parameters are set to
+        # ``None`` so the snippet never hits a ``NameError``; the caller's
+        # ``kw`` (job data) takes priority over the code's defaults.
+        vars_: Any = self._data.get("vars", ())
+        if vars_ is None:
+            vars_ = ()
+        declared = {name: None for name in vars_}
+        defaults: Mapping[str, Any] = self._data.get("default", {}) or {}
+        var_defaults = combine_dict(defaults, declared)
+        call_kw = combine_dict(kw, var_defaults, self._globals(kw))
 
         if self._is_async is False:
             try:

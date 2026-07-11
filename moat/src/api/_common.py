@@ -6,14 +6,14 @@ from __future__ import annotations
 
 from attr import define
 
-from moat.util import to_attrdict
+from moat.util import attrdict, to_attrdict
 
 from . import API as BaseAPI
 from . import CommitInfo as BaseCommitInfo
 from . import NoSuchRepo, RepoExists
 from . import RepoInfo as BaseRepoInfo
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from . import Repo
@@ -36,9 +36,17 @@ class CommitInfo(BaseCommitInfo):
 class RepoInfo(BaseRepoInfo):
     """Remote repository data,"""
 
+    data: attrdict | None
+    cls_CommitInfo: ClassVar[type[BaseCommitInfo]] = BaseCommitInfo
+
     def __init__(self, api: API, repo: Repo):
         self.data = None  # setup
         super().__init__(api, repo)
+
+    @property
+    def name(self) -> str:
+        """Repository name."""
+        return self.repo.name
 
     @property
     def git_url(self) -> str:
@@ -59,9 +67,10 @@ class RepoInfo(BaseRepoInfo):
 
     @property
     def description(self) -> str:
+        assert self.data is not None
         return self.data.description.strip().split("\n", 1)[0]
 
-    async def load_(self) -> RepoInfo:
+    async def load_(self) -> None:
         url = f"repos/{self.api.org}/{self.repo.name}"
         res = await self.api.http.get(url)
         if res.status_code == 404:
@@ -101,6 +110,7 @@ class RepoInfo(BaseRepoInfo):
     @property
     def parent(self) -> dict | None:
         "Return info about the parent repo, or None"
+        assert self.data is not None
         if (par := self.data.get("parent", None)) is not None:
             return par
         return None
@@ -108,12 +118,14 @@ class RepoInfo(BaseRepoInfo):
     @property
     def main(self) -> str:
         """name of main branch"""
+        assert self.data is not None
         return self.data["default_branch"]
 
     async def clone_from_remote(self):
         """
         Clone this repository to the local cache.
         """
+        assert self.repo.cwd is not None
         if await self.repo.cwd.exists():
             async with self.repo.git_lock:
                 await self.repo.exec("git", "remote", "update")
@@ -130,6 +142,7 @@ class RepoInfo(BaseRepoInfo):
             )
 
             async for br in self.get_branches():
+                assert br.data is not None
                 brn = br.data.name
                 await self.repo.exec("git", "branch", "--no-track", brn, f"src/{brn}")
 
@@ -143,6 +156,7 @@ class RepoInfo(BaseRepoInfo):
         """
         Get the name of the default branch.
         """
+        assert self.data is not None
         return self.data.default_branch
 
     async def set_default_branch(self, name) -> None:
@@ -153,7 +167,7 @@ class RepoInfo(BaseRepoInfo):
         res = await self.api.http.patch(url, json=dict(default_branch=name))
         res.raise_for_status()
 
-    async def get_branch(self, name) -> CommitInfo:
+    async def get_branch(self, name: str) -> BaseCommitInfo:
         """
         Return info on this branch.
         """
@@ -162,7 +176,7 @@ class RepoInfo(BaseRepoInfo):
         res.raise_for_status()
         return self.cls_CommitInfo(self, res.json())
 
-    async def get_branches(self) -> AsyncIterator[str]:
+    async def get_branches(self) -> AsyncIterator[BaseCommitInfo]:
         """
         List known branches.
         """
@@ -172,7 +186,7 @@ class RepoInfo(BaseRepoInfo):
         for r in res.json():
             yield self.cls_CommitInfo(self, r)
 
-    async def get_tags(self) -> AsyncIterator[str]:
+    async def get_tags(self) -> AsyncIterator[dict]:
         """
         List known tags.
         """
@@ -202,7 +216,7 @@ class API(BaseAPI):
         "user/organization to use"
         return self.cfg.get("org", self.cfg.user)
 
-    async def list_repos(self) -> AsyncIterator[str]:
+    async def list_repos(self) -> AsyncIterator[RepoInfo]:
         """
         List accessible repositories.
         """

@@ -346,7 +346,7 @@ async def monitor(obj, local_ip, initial) -> None:
     """Stand-alone task to talk to a single KNX gateway."""
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj) as srv:
+    async with as_service(obj, host=False) as srv:
         await task(
             obj.conn,
             obj.knx_cfg,

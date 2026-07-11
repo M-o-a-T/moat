@@ -78,9 +78,14 @@ def db_url(_db_url):
         _wipe_rain(_db_url)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def _engine(_db_url):
-    """A SQLAlchemy engine bound to the shared DB, reused for the session."""
+    """A SQLAlchemy engine bound to the shared DB.
+
+    Fresh per test so no pooled connection retains a stale view of the
+    ``db_url`` wipe — the session-scoped engine leaked prior tests' rows
+    into later tests under ``pytest-randomly`` ordering.
+    """
     eng = create_engine(_db_url)
     try:
         yield eng

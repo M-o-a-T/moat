@@ -1121,6 +1121,7 @@ class Link(LinkCommon, CtxObj):
     _state: str = "init"
     _common: bool = False
     _only: str | None = None
+    _ctx_active: bool = False
     announced: set[Path]
     sdr: LinkSender
 
@@ -1150,6 +1151,15 @@ class Link(LinkCommon, CtxObj):
         if self._only is None:
             with suppress(AttributeError):
                 self._only = str(self.cfg.client.name)
+
+    async def setup(self):
+        """Attach sub-handlers, unless this shared link is already active."""
+        # Re-entering a common Link (cached in ``_the_link``, e.g. via
+        # ``as_service`` while ``obj.conn`` already holds it) must not
+        # re-register the "i" sub-handler ("sub_i: already known").
+        if hasattr(self, "sub_i"):
+            return
+        await super().setup()
 
     async def set_state(self, state: str):
         """
@@ -1241,55 +1251,64 @@ class Link(LinkCommon, CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        from .backend import get_backend  # noqa: PLC0415
+        # Re-entering a shared common Link must not open a second backend
+        # connection or task group; hand out the already-running sender.
+        if self._ctx_active:
+            yield self.sdr
+            return
+        self._ctx_active = True
+        try:
+            from .backend import get_backend  # noqa: PLC0415
 
-        # clears our announcement on disconnect
-        will = attrdict(
-            data=dict(up=False, state="will"),
-            topic=P(":R") + self._ping_path,
-            retain=False,
-            qos=QoS.AT_LEAST_ONCE,
-        )
-        async with (
-            ctx_as(Root, self.cfg["root"]),
-            get_backend(self.cfg, name=self.name, will=will) as self.backend,
-        ):
-            try:
-                async with anyio.create_task_group() as self.tg:
-                    if self._port is not None:
-                        sdr = await self.tg.start(self._connected_port)
-                    else:
-                        if self.cfg.client.init_timeout:
-                            # connect to the main server
-                            await self.tg.start(self._run_server_link)
-                        sdr = LinkSender(self)
-                    sdr.add_sub("cl")
-                    sdr.add_sub("d")
-                    sdr.add_sub("d_")
-                    sdr.add_sub("e")
-                    sdr.add_sub("i")
-                    try:
-                        self.sdr = sdr
-                        await self.tg.start(self._monitor_ping)
-                        await self.tg.start(self._send_ping)
-
-                        with ctx_as(_the_link, self) if self._common else nullcontext():
-                            yield sdr
-                    finally:
-                        del self.sdr
-                    self.tg.cancel_scope.cancel()
-
-            finally:
+            # clears our announcement on disconnect
+            will = attrdict(
+                data=dict(up=False, state="will"),
+                topic=P(":R") + self._ping_path,
+                retain=False,
+                qos=QoS.AT_LEAST_ONCE,
+            )
+            async with (
+                ctx_as(Root, self.cfg["root"]),
+                get_backend(self.cfg, name=self.name, will=will) as self.backend,
+            ):
                 try:
-                    with anyio.move_on_after(2, shield=True):
-                        await self.backend.send(
-                            Root.get() + self._ping_path,
-                            data=dict(up=False, state="closed"),
-                            retain=False,
-                            meta=False,
-                        )
-                except Exception as exc:
-                    self.logger.warning("Could not send Close message", exc_info=exc)
+                    async with anyio.create_task_group() as self.tg:
+                        if self._port is not None:
+                            sdr = await self.tg.start(self._connected_port)
+                        else:
+                            if self.cfg.client.init_timeout:
+                                # connect to the main server
+                                await self.tg.start(self._run_server_link)
+                            sdr = LinkSender(self)
+                        sdr.add_sub("cl")
+                        sdr.add_sub("d")
+                        sdr.add_sub("d_")
+                        sdr.add_sub("e")
+                        sdr.add_sub("i")
+                        try:
+                            self.sdr = sdr
+                            await self.tg.start(self._monitor_ping)
+                            await self.tg.start(self._send_ping)
+
+                            with ctx_as(_the_link, self) if self._common else nullcontext():
+                                yield sdr
+                        finally:
+                            del self.sdr
+                        self.tg.cancel_scope.cancel()
+
+                finally:
+                    try:
+                        with anyio.move_on_after(2, shield=True):
+                            await self.backend.send(
+                                Root.get() + self._ping_path,
+                                data=dict(up=False, state="closed"),
+                                retain=False,
+                                meta=False,
+                            )
+                    except Exception as exc:
+                        self.logger.warning("Could not send Close message", exc_info=exc)
+        finally:
+            self._ctx_active = False
 
     def cancel(self):
         "Stop me"

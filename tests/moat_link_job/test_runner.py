@@ -92,7 +92,9 @@ async def test_anyrunner_simple_job(cfg):
     ):
         await c.d_set(
             CODE_EXEC_ROOT + P("test.greet"),
-            dict(code="return 'hi ' + who", vars=dict(who="world"), is_async=True),
+            dict(
+                code="return 'hi ' + who", vars=["who"], default=dict(who="world"), is_async=True
+            ),
         )
 
         job_cfg = _job_cfg(sf)

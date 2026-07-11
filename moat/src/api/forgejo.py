@@ -26,6 +26,7 @@ class CommitInfo(BaseCommitInfo):  # noqa: D101
 class RepoInfo(BaseRepoInfo):  # noqa: D101
     @property
     def git(self) -> str:  # noqa: D102
+        assert self.data is not None
         return self.data.git_url.replace("git://github.com/", "git@github.com:")
 
 

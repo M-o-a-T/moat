@@ -10,7 +10,7 @@ import asyncclick as click
 
 from moat.util import NotGiven, edit_text, edit_yaml, yload, yprint
 from moat.lib.path import P, Path, PathLongener
-from moat.lib.run import AliasedGroup, attr_args, process_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.run import make_proc
@@ -26,18 +26,31 @@ EDIT_SAVE = "s"
 EDIT_ABORT = "a"
 
 
-def _sanitize_vars(value: Any) -> dict[str | None, Any]:
-    "Normalize the configured argument defaults."
+def _sanitize_vars(value: Any) -> list[str]:
+    "Normalize the declared variable-name list."
+    if value in (NotGiven, None):
+        return []
+    if not isinstance(value, list | tuple):
+        raise TypeError("vars must be a list of names")
+    res: list[str] = []
+    for name in value:
+        if not isinstance(name, str):
+            raise TypeError("vars entries must be strings")
+        res.append(name)
+    return res
+
+
+def _sanitize_default(value: Any) -> dict[str | None, Any]:
+    "Normalize the configured default values."
     if value in (NotGiven, None):
         return {}
     if not isinstance(value, Mapping):
-        raise TypeError("vars must be a mapping")
+        raise TypeError("default must be a mapping")
     res: dict[str | None, Any] = {}
     for key, val in value.items():
-        if key is None or isinstance(key, str):
-            res[key] = val
-        else:
-            raise TypeError("vars keys must be strings")
+        if not isinstance(key, str):
+            raise TypeError("default keys must be strings")
+        res[key] = val
     return res
 
 
@@ -48,7 +61,8 @@ def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
         raise KeyError(path / "code")
     if not isinstance(code, str):
         raise TypeError("code must be a string")
-    _sanitize_vars(data.get("vars", {}))
+    _sanitize_vars(data.get("vars", ()))
+    _sanitize_default(data.get("default", {}))
     is_async = data.get("is_async", None)
     if is_async not in (None, True, False):
         raise TypeError("is_async must be true, false, or null")
@@ -192,8 +206,10 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     elif "code" not in msg:
         raise click.UsageError("Missing script")
 
-    vars_ = _sanitize_vars(msg.get("vars", {}))
-    msg["vars"] = process_args(vars_, **kw)
+    vars_ = _sanitize_vars(msg.get("vars", ()))
+    msg["vars"] = vars_
+    msg["default"] = msg.get("default", {})
+    msg["args"] = kw
 
     _check_exec_syntax(msg, obj.path)
     res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)

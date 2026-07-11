@@ -34,7 +34,7 @@ def main() -> int:
         print(f"Error: {docs_dir} directory not found")
         return 1
 
-    build_dir = Path("dist/docs")
+    build_dir = Path("build/specs")
 
     print("=" * 60)
     print("Building Sphinx documentation...")
@@ -48,7 +48,7 @@ def main() -> int:
             "../.venv/bin/sphinx-build",
             "-W",  # Warnings are errors
             "-b",
-            "html",
+            "markdown",
             ".",  # Source directory (current = docs/)
             f"../{build_dir}",  # Output to dist/docs
         ],

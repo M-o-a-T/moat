@@ -10,7 +10,7 @@ from subprocess import CalledProcessError
 
 from attr import define
 
-from moat.util import to_attrdict
+from moat.util import attrdict, to_attrdict
 
 from . import API as BaseAPI
 from . import CommitInfo as BaseCommitInfo
@@ -38,7 +38,7 @@ class CommitInfo(BaseCommitInfo):  # noqa: D101
 @define
 class RepoInfo(BaseRepoInfo):  # noqa: D101
     rid: str | None = None
-    data: dict | None = None
+    data: attrdict | None = None
 
     @property
     def git_url(self) -> str:
@@ -58,10 +58,12 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
     @property
     def description(self) -> str:
         "Repo description."
+        assert self.data is not None
         return self.data.payload["xyz.radicle.project"].description
 
     @property
     def name(self) -> str:  # noqa: D102
+        assert self.data is not None
         return self.data.payload["xyz.radicle.project"].name
 
     async def clone_from_remote(self):
@@ -71,7 +73,9 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
 
     async def load_(self):  # noqa: D102
         try:
-            self.rid = (await self.repo.exec("rad", ".", capture=True)).strip()
+            raw = await self.repo.exec("rad", ".", capture=True)
+            assert raw is not None
+            self.rid = raw.strip()
         except CalledProcessError as exc:
             raise NoSuchRepo(self) from exc
         async with (
@@ -86,23 +90,25 @@ exec cat <$1 >{g.name!r}
 """
                 )
                 await f.aclose()
-                await anyio.Path(f.name).chmod(0o555)
+                fname = str(f.name)
+                await anyio.Path(fname).chmod(0o555)
                 await self.repo.exec(
                     "rad",
                     "id",
                     "update",
                     "--edit",
-                    env={"EDITOR": f.name, "HOME": os.environ["HOME"]},
+                    env={"EDITOR": fname, "HOME": os.environ["HOME"]},
                 )
                 import json  # noqa: PLC0415
 
                 self.data = to_attrdict(json.loads(await g.read()))
             finally:
                 with anyio.CancelScope(shield=True):
-                    await anyio.Path(f.name).unlink()
+                    await anyio.Path(str(f.name)).unlink()
 
-    async def get_default_branch(self):
+    async def get_default_branch(self) -> str:
         "Get the default branch."
+        assert self.data is not None
         return self.data.payload["xyz.radicle.project"].defaultBranch
 
     async def set_default_branch(self, name):
@@ -111,26 +117,28 @@ exec cat <$1 >{g.name!r}
         """
         async with anyio.NamedTemporaryFile(delete=False) as f:
             try:
-                await f.write_text(
+                await f.write(
                     f"""\
 #!/bin/sh
 T=$(mktemp)
 jq <$1 >$T f'setpath(["payload","xyz.radicle.project","defaultBranch"];{name!r})'
 mv $T $1
-"""
+""".encode()
                 )
                 await f.aclose()
-                await anyio.Path(f.name).chmod(0o555)
+                fname = str(f.name)
+                await anyio.Path(fname).chmod(0o555)
                 await self.repo.exec(
                     "rad",
                     "id",
                     "update",
                     "--edit",
-                    env={"EDITOR": f.name, "HOME": os.environ["HOME"]},
+                    env={"EDITOR": fname, "HOME": os.environ["HOME"]},
                 )
             finally:
                 with anyio.CancelScope(shield=True):
-                    await anyio.Path(f.name).unlink()
+                    await anyio.Path(str(f.name)).unlink()
+        assert self.data is not None
         self.data.payload["xyz.radicle.project"].defaultBranch = name
 
     async def create(self):  # noqa: D102
@@ -184,7 +192,7 @@ class API(BaseAPI):  # noqa: D101
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 
-    async def list_repos(self) -> AsyncIterator[str]:
+    async def list_repos(self) -> AsyncIterator[RepoInfo]:
         """
         List accessible repositories.
         """

@@ -1,0 +1,21 @@
+Source: moat-db-box
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat
+X-DH-Compat: 13
+
+Package: moat-db-box
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-db,
+  moat-db-label,
+  moat-db-thing,
+Description: MoaT support for managing containers
+ Boxes are containers: rooms, cupboards, drawers, rows of books, and so on.
+ .
+ Boxes are typed, may nest, and may be movable; each box carries labels.

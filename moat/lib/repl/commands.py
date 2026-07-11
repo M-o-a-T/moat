@@ -477,8 +477,8 @@ class show_history(Command):
 
         history = os.linesep.join(self.reader.history[:])
         await self.reader.console.restore()
-        pager = get_pager()
-        pager(history, gethistoryfile())
+        pager = await get_pager()
+        await pager(history, gethistoryfile())
         await self.reader.console.prepare()
 
         # We need to copy over the state so that it's consistent between

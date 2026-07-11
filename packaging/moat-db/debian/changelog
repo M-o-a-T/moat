@@ -1,0 +1,17 @@
+moat-db (0.2.9-2) unstable; urgency=medium
+
+  * New release for 26.2.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2026 07:48:47 +0200
+
+moat-db (0.2.9-1) unstable; urgency=medium
+
+  * New release for 26.2.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2026 03:11:25 +0200
+
+moat-db (0.2.7-1) unstable; urgency=medium
+
+  * Initial release for 26.1.6.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2026 16:29:27 +0200

@@ -6,6 +6,7 @@ skips underscore-prefixed modules) never exposes it as a command.
 
 from __future__ import annotations
 
+import sys
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -225,3 +226,13 @@ def site_opts(c):
         c
     )
     return c
+
+
+def emit_log(msg: str) -> None:
+    """Print a scheduler event line to stderr (the ``--verbose`` sink).
+
+    The engine's ``log`` callback is a plain ``Callable[[str], None]``;
+    the CLI wires ``--verbose`` to this printer so ``gen`` / ``recalc``
+    narrate their decisions without polluting the YAML result on stdout.
+    """
+    print(msg, file=sys.stderr)

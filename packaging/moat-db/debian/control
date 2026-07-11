@@ -1,0 +1,20 @@
+Source: moat-db
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat
+X-DH-Compat: 13
+
+Package: moat-db
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat,
+Description: MoaT database support
+ Core database support for MoaT, built on SQLAlchemy and Alembic.
+ .
+ Provides schema handling, sessions, and Alembic-based migrations for the
+ moat-db-box, moat-db-label, and moat-db-thing sub-packages.

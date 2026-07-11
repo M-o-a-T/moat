@@ -135,12 +135,6 @@ async def run_out(
                         await work.wait()
                     logger.error(f"{subpath} on 5")
             finally:
-                if worker is sc:
-                    logger.error(f"{subpath} onx 6")
-                    worker = None
-                    if worker_done is done_evt:
-                        worker_done = None
-                    done_evt.set()
                 with anyio.fail_after(2, shield=True):
                     if state is not None:
                         logger.error(f"{subpath} onx 7")
@@ -151,6 +145,12 @@ async def run_out(
                         else:
                             await link.d_set(state, v != rest)
                         logger.error(f"{subpath} onx 8")
+                    if worker is sc:
+                        logger.error(f"{subpath} onx 6")
+                        worker = None
+                        if worker_done is done_evt:
+                            worker_done = None
+                        done_evt.set()
                 logger.error(f"{subpath} on 9")
 
         async def _do_oneshot(val: bool) -> None:
@@ -203,11 +203,6 @@ async def run_out(
                             await link.d_set(state, t_on / (t_on + t_off))
                         await work.wait()
             finally:
-                if worker is sc:
-                    worker = None
-                    if worker_done is done_evt:
-                        worker_done = None
-                    done_evt.set()
                 with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
@@ -216,6 +211,11 @@ async def run_out(
                             pass
                         else:
                             await link.d_set(state, v != rest)
+                    if worker is sc:
+                        worker = None
+                        if worker_done is done_evt:
+                            worker_done = None
+                        done_evt.set()
 
         async def _do_pulse(val: bool) -> None:
             await _cancel_pulse()

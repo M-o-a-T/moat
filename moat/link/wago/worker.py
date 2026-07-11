@@ -140,7 +140,12 @@ async def run_out(
                         except anyio.ClosedResourceError:
                             pass
                         else:
-                            await link.d_set(state, v != rest)
+                            if v != rest:
+                                # The timed output did not return to rest
+                                # after expiry (e.g. a stale output on
+                                # reattach). Clear it manually.
+                                await srv.write_output(card, port, rest)
+                            await link.d_set(state, False)
                     if worker is sc:
                         worker = None
                         if worker_done is done_evt:

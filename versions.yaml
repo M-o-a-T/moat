@@ -1,5 +1,5 @@
 _:
-  new: 26.2.9
+  new: 26.2.10
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -372,10 +372,10 @@ moat-lib-xknx:
   rev: 43d36f1b36ce7fef0933915a67e26532e8aab691
   tag: 3.15.0
 moat-link:
-  deb: 0.10.0-2
+  deb: 0.10.0-3
   new: 0.10.0
-  pkg: 2
-  pkgrev: 9e3f6ca0626df15fba4f2ecbb2f1ab275905c2ab
+  pkg: 3
+  pkgrev: e6118f61c2be1125ca38abb575c31ba37506011f
   pypi: 0.9.1
   rev: 6a21b2660ab11490e99ebfb7d2fb5b6d35ea5624
   tag: 0.9.1
@@ -388,10 +388,10 @@ moat-link-gate:
   rev: 6a21b2660ab11490e99ebfb7d2fb5b6d35ea5624
   tag: 0.0.11
 moat-link-job:
-  deb: 0.0.2-2
+  deb: 0.0.2-3
   new: 0.0.2
-  pkg: 2
-  pkgrev: 9e3f6ca0626df15fba4f2ecbb2f1ab275905c2ab
+  pkg: 3
+  pkgrev: e6118f61c2be1125ca38abb575c31ba37506011f
   pypi: 0.0.2
   rev: 6a21b2660ab11490e99ebfb7d2fb5b6d35ea5624
   tag: 0.0.2
@@ -460,9 +460,10 @@ moat-link-server:
   rev: 6a21b2660ab11490e99ebfb7d2fb5b6d35ea5624
   tag: 0.6.3
 moat-link-wago:
-  deb: 0.10.2-1
+  deb: 0.10.2-2
   new: 0.10.2
-  pkg: 1
+  pkg: 2
+  pkgrev: e6118f61c2be1125ca38abb575c31ba37506011f
   pypi: 0.10.2
   rev: 9e3f6ca0626df15fba4f2ecbb2f1ab275905c2ab
   tag: 0.10.2

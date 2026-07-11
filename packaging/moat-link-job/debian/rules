@@ -3,6 +3,3 @@
 export PYBUILD_NAME=moat-link-job
 %:
 	dh $@ --with python3 --buildsystem=pybuild
-
-execute_after_dh_install:
-	$(MAKE) installsystemd PREFIX=debian/moat-link-job

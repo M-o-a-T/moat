@@ -219,3 +219,118 @@ class _FakeCtx:
 
     async def __aexit__(self, *_a):
         pass
+
+
+class _BlockingWork:
+    """Fake timed-output work whose ``wait()`` blocks until ``fire()``."""
+
+    def __init__(self):
+        self._evt = anyio.Event()
+
+    async def wait(self):
+        await self._evt.wait()
+
+    def fire(self):
+        self._evt.set()
+
+
+@pytest.mark.trio
+async def test_out_oneshot_clears_state_on_expire(monkeypatch, autojump_clock):  # noqa:ARG001
+    """A one-shot's state path is cleared when the timer expires."""
+    entry = _make_entry(mode="oneshot", t_on=1.5, state=("state", "x"))
+    link = _link_with([(0, True)])
+    srv = MagicMock()
+    srv.write_output = AsyncMock(return_value=None)
+    work = MagicMock()
+    work.wait = AsyncMock(return_value=None)  # timer fires immediately
+    srv.write_timed_output = MagicMock(return_value=_FakeCtx(work))
+    srv.read_output = AsyncMock(return_value=False)  # at rest after expiry
+    srv.find_monitor = AsyncMock(return_value=None)
+
+    async with anyio.create_task_group() as tg:
+        link.link.tg = tg
+        tg.start_soon(
+            wago_worker.run_out,
+            link,
+            srv,
+            entry,
+            1,
+            3,
+            P("input:1:3"),
+        )
+        await anyio.sleep(0.2)
+        tg.cancel_scope.cancel()
+
+    calls = [c.args for c in link.d_set.call_args_list]
+    assert (P("state.x"), True) in calls
+    assert (P("state.x"), False) in calls
+
+
+@pytest.mark.trio
+async def test_out_oneshot_retrigger_keeps_state_cleared(monkeypatch, autojump_clock):  # noqa:ARG001
+    """Re-triggering a one-shot must not leave its state stuck on.
+
+    The cancelled instance's shielded state reconciliation must finish
+    (and signal done) *before* the new instance starts, so a stale
+    ``d_set(state, True)`` cannot land after the new instance's expiry
+    clear. The first ``read_output`` is slowed to widen the race window;
+    it returns ``True`` to stand in for reading the wire while the new
+    one-shot holds it set.
+    """
+    entry = _make_entry(mode="oneshot", t_on=0.1, state=("state", "x"))
+    link = _link_with([(0, True), (0.05, True)])
+
+    srv = MagicMock()
+    srv.write_output = AsyncMock(return_value=None)
+    srv.find_monitor = AsyncMock(return_value=None)
+
+    created: list[_BlockingWork] = []
+
+    def make_ctx(*_a):
+        w = _BlockingWork()
+        created.append(w)
+        return _FakeCtx(w)
+
+    srv.write_timed_output = MagicMock(side_effect=make_ctx)
+
+    seq: list[bool] = []
+
+    async def d_set(_path, val):
+        seq.append(bool(val))
+
+    link.d_set = AsyncMock(side_effect=d_set)
+
+    ro_seen: list[int] = []
+
+    async def read_output(_card, _port):
+        ro_seen.append(len(ro_seen) + 1)
+        if len(ro_seen) == 1:
+            await anyio.sleep(1.0)  # slow: delays the cancelled instance's write
+            return True
+        return False
+
+    srv.read_output = read_output
+
+    async with anyio.create_task_group() as tg:
+        link.link.tg = tg
+        tg.start_soon(
+            wago_worker.run_out,
+            link,
+            srv,
+            entry,
+            1,
+            3,
+            P("input:1:3"),
+        )
+        await anyio.sleep(0.06)  # let the first trigger start, then re-trigger
+        for _ in range(400):
+            if len(created) >= 2:
+                break
+            await anyio.sleep(0.05)
+        assert len(created) >= 2, "second one-shot never started"
+        created[1].fire()  # expire the current one-shot
+        await anyio.sleep(2.0)  # let the slow reconciliation finish
+        tg.cancel_scope.cancel()
+
+    assert any(seq), "state was never set"
+    assert seq[-1] is False, "state was not cleared after re-trigger"

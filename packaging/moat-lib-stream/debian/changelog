@@ -1,3 +1,9 @@
+moat-lib-stream (0.3.3-2) unstable; urgency=medium
+
+  * New release for 26.2.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2026 07:53:26 +0200
+
 moat-lib-stream (0.3.3-1) unstable; urgency=medium
 
   * New release for 26.2.8

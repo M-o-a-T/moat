@@ -11,11 +11,16 @@ from __future__ import annotations
 import anyio
 import logging
 
+from asyncwago import WagoRejected
+
 from moat.util import NotGiven
 
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+    from asyncwago.server import MonitorChat
+
     from moat.lib.path import Path
     from moat.link.client import LinkSender
 
@@ -121,20 +126,26 @@ async def run_out(
                 worker = None
                 worker_done = None
 
-        async def _run_oneshot(work) -> None:
+        async def _run_oneshot(
+            work: MonitorChat,
+            *,
+            task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
+        ) -> None:
             nonlocal worker, worker_done
             done_evt = anyio.Event()
             worker_done = done_evt
+            sc = anyio.CancelScope()
             try:
-                with anyio.CancelScope() as sc:
+                with sc:
                     worker = sc
                     async with work:
+                        task_status.started()
                         if state is not None:
                             await link.d_set(state, True)
                         await work.wait()
             finally:
-                with anyio.fail_after(2, shield=True):
-                    if state is not None:
+                try:
+                    with anyio.fail_after(2, shield=True):
                         try:
                             v = await srv.read_output(card, port)
                         except anyio.ClosedResourceError:
@@ -145,31 +156,39 @@ async def run_out(
                                 # after expiry (e.g. a stale output on
                                 # reattach). Clear it manually.
                                 await srv.write_output(card, port, rest)
-                            await link.d_set(state, False)
+                            if state is not None:
+                                await link.d_set(state, False)
+                finally:
                     if worker is sc:
                         worker = None
-                        if worker_done is done_evt:
-                            worker_done = None
-                        done_evt.set()
-
-        async def _do_oneshot(val: bool) -> None:
-            await _cancel_oneshot()
-            if val:
-                await _run_oneshot(srv.write_timed_output(card, port, not rest, t_on))
-            else:
-                await srv.write_output(card, port, rest)
-                if state is not None:
-                    await link.d_set(state, False)
+                    if worker_done is done_evt:
+                        worker_done = None
+                    done_evt.set()
 
         mon = await srv.find_monitor(card, port)
         if mon is not None:
-            link.link.tg.start_soon(_run_oneshot, mon)
+            try:
+                await link.link.tg.start(_run_oneshot, mon)
+            except WagoRejected as exc:
+                logger.warning("Cannot resume oneshot at %s: %s", subpath, exc)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
             async for val in wp:
                 if not isinstance(val, bool):
                     continue
-                link.link.tg.start_soon(_do_oneshot, val)
+                await _cancel_oneshot()
+                if val:
+                    try:
+                        await link.link.tg.start(
+                            _run_oneshot,
+                            srv.write_timed_output(card, port, not rest, t_on),
+                        )
+                    except WagoRejected as exc:
+                        logger.warning("Oneshot at %s rejected: %s", subpath, exc)
+                else:
+                    await srv.write_output(card, port, rest)
+                    if state is not None:
+                        await link.d_set(state, False)
 
     elif mode == "pulse":
         t_on = cast(float, entry.t_on)
@@ -186,52 +205,71 @@ async def run_out(
                 worker = None
                 worker_done = None
 
-        async def _run_pulse(work) -> None:
+        async def _run_pulse(
+            work: MonitorChat,
+            *,
+            task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
+        ) -> None:
             nonlocal worker, worker_done
             done_evt = anyio.Event()
             worker_done = done_evt
+            sc = anyio.CancelScope()
             try:
-                with anyio.CancelScope() as sc:
+                with sc:
                     worker = sc
                     async with work:
+                        task_status.started()
                         if state is not None:
                             await link.d_set(state, t_on / (t_on + t_off))
                         await work.wait()
             finally:
-                with anyio.fail_after(2, shield=True):
-                    if state is not None:
+                try:
+                    with anyio.fail_after(2, shield=True):
                         try:
                             v = await srv.read_output(card, port)
                         except anyio.ClosedResourceError:
                             pass
                         else:
-                            await link.d_set(state, v != rest)
+                            if v != rest:
+                                # The pulsed output did not return to rest
+                                # (e.g. a stale output on reattach).
+                                # Clear it manually.
+                                await srv.write_output(card, port, rest)
+                            if state is not None:
+                                await link.d_set(state, False)
+                finally:
                     if worker is sc:
                         worker = None
-                        if worker_done is done_evt:
-                            worker_done = None
-                        done_evt.set()
-
-        async def _do_pulse(val: bool) -> None:
-            await _cancel_pulse()
-            if val:
-                if t_on is None or t_off is None:
-                    raise RuntimeError("t_on or t_off is None")
-                await _run_pulse(srv.write_pulsed_output(card, port, not rest, t_on, t_off))
-            else:
-                await srv.write_output(card, port, rest)
-                if state is not None:
-                    await link.d_set(state, False)
+                    if worker_done is done_evt:
+                        worker_done = None
+                    done_evt.set()
 
         mon = await srv.find_monitor(card, port)
         if mon is not None:
-            link.link.tg.start_soon(_run_pulse, mon)
+            try:
+                await link.link.tg.start(_run_pulse, mon)
+            except WagoRejected as exc:
+                logger.warning("Cannot resume pulse at %s: %s", subpath, exc)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
             async for val in wp:
                 if not isinstance(val, bool):
                     continue
-                link.link.tg.start_soon(_do_pulse, val)
+                await _cancel_pulse()
+                if val:
+                    if t_on is None or t_off is None:
+                        raise RuntimeError("t_on or t_off is None")
+                    try:
+                        await link.link.tg.start(
+                            _run_pulse,
+                            srv.write_pulsed_output(card, port, not rest, t_on, t_off),
+                        )
+                    except WagoRejected as exc:
+                        logger.warning("Pulse at %s rejected: %s", subpath, exc)
+                else:
+                    await srv.write_output(card, port, rest)
+                    if state is not None:
+                        await link.d_set(state, False)
 
     else:
         logger.warning("Unknown output mode %r at %s", mode, subpath)

@@ -276,7 +276,7 @@ _EXT = anyio.Path("ext")
 @click.option(
     "--edit",
     is_flag=True,
-    help="Use SSH-style remotes (suitable for pushing) instead of read-only HTTPS.",
+    help="Use SSH-style remotes, skipping any that resolve to http(s).",
 )
 async def get_cmd(edit: bool) -> None:
     """Check out each external repository into ext/<name>.
@@ -294,17 +294,15 @@ async def get_cmd(edit: bool) -> None:
 
     By default the read-only remotes from ``REMOTES`` are used.  For each
     HTTP(S) candidate an SSH equivalent is tried first, falling back to the
-    original HTTP(S) URL if SSH fails; the subsequent push of ``HEAD:moat``
-    likewise prefers SSH.  After the recursive ``git submodule update`` each
-    nested submodule's ``origin`` URL is likewise probed for an SSH
-    alternative: on success the submodule's ``remote.origin.url`` is switched
-    to SSH, on failure a ``moat.no-ssh`` flag is recorded in the submodule's
-    git config so the attempt is not repeated.  The superproject's
-    ``.gitmodules`` is never modified.  Pass ``--edit`` to select
-    ``EDIT_REMOTES`` instead, which resolves to SSH-style URLs directly.
-    Remotes that resolve to an ``http``/``https`` URL are skipped in this
-    mode; an entry with no pushable remote is left untouched (no checkout,
-    no push).
+    original HTTP(S) URL if SSH fails.  After the recursive ``git submodule
+    update`` each nested submodule's ``origin`` URL is likewise probed for an
+    SSH alternative: on success the submodule's ``remote.origin.url`` is
+    switched to SSH, on failure a ``moat.no-ssh`` flag is recorded in the
+    submodule's git config so the attempt is not repeated.  The
+    superproject's ``.gitmodules`` is never modified.  Pass ``--edit`` to
+    select ``EDIT_REMOTES`` instead, which resolves to SSH-style URLs
+    directly; remotes that resolve to an ``http``/``https`` URL are skipped
+    in this mode, so an entry with no SSH remote is left untouched.
     """
     base = _EXT
     await base.mkdir(parents=True, exist_ok=True)
@@ -378,27 +376,6 @@ async def get_cmd(edit: bool) -> None:
             capture=False,
         )
         await _sshify_submodules(dest, root=base)
-
-        pushed = False
-        for pkey, purl in candidates:
-            try:
-                print(f"[{name}] pushing HEAD:moat via {pkey}", flush=True)
-                await run_(
-                    "git",
-                    "-C",
-                    str(dest),
-                    "push",
-                    purl,
-                    "HEAD:moat",
-                    capture=False,
-                )
-                pushed = True
-            except subprocess.CalledProcessError:
-                print(f"[{name}]   ↳ push to {purl!r} failed", flush=True)
-        if not pushed:
-            raise RuntimeError(
-                f"[{name}] push failed on all remotes: {[u for _, u in candidates]}"
-            )
 
 
 async def check_ext_clean(base: anyio.Path, ext: dict) -> list[str]:

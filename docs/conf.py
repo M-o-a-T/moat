@@ -300,6 +300,8 @@ nitpick_ignore = [
     ("py:class", "coroutine"),
     ("py:class", "pathlib._local.PurePath"),
     ("py:class", "pathlib._local.PosixPath"),
+    ("py:class", "moat.lib.micro.T"),
+    ("py:class", "moat.lib.proxy._proxy.T"),
     # TODO
     ("py:func", "asyncclick.command"),
     ("py:func", "asyncclick.group"),

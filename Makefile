@@ -66,7 +66,7 @@ ifeq ($(notdir $(PWD)),moat)
 else
 	test -d "${MOAT_EXT}" || { echo "MOAT_EXT '${MOAT_EXT}' not found; run 'make setup' in the main 'moat' checkout first." >&2; exit 1; }
 endif
-	rm -f ext; ln -sf "${MOAT_EXT}" ext
+	rm -rf ext; ln -sf "${MOAT_EXT}" ext
 	./mt src submod get
 
 release: doc

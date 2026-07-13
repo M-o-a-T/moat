@@ -133,7 +133,7 @@ doc = [
     "sphinx-book-theme",
     "sphinx-last-updated-by-git",
     "sphinx-markdown-builder @ git+https://github.com/M-o-a-T/sphinx-markdown-builder@main",
-    "enum_tools[sphinx] >= 0.13.0.1",
+    "enum_tools[sphinx] @ git+https://github.com/M-o-a-T/enum_tools@bugfix",
     "prometheus_client",
 ]
 

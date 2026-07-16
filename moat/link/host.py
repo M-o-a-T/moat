@@ -507,7 +507,7 @@ class ServiceMon(HostList):
     """
 
     def __init__(self, *a, fake: bool = False, **kw):
-        """ """
+        """Initialize the service monitor."""
         super().__init__(*a, **kw)
         self.hostdown: TimerMap[Path] = TimerMap()
         self.hostup: TimerMap[Path] = TimerMap()
@@ -515,16 +515,14 @@ class ServiceMon(HostList):
         self.fake: bool = fake
 
     async def start_tasks(self):
-        "internal helper"
+        """Start internal helper tasks."""
         await super().start_tasks()
         self.tg.start_soon(self._mon_hostdown)
         self.tg.start_soon(self._mon_hostup)
 
     async def _mon_hostdown(self):
         # watch host comings+goings, complain if one is down for too long
-        # (TODO: or goes down+up too often)
         async for path in self.hostdown:
-            # print("******** TIME",path)
             if path in self.hsi:
                 # Present. Clear error.
                 await self._no_err(path)
@@ -534,9 +532,7 @@ class ServiceMon(HostList):
 
     async def _mon_hostup(self):
         # watch host.data.up
-        # (TODO: or goes down+up too often)
         async for path in self.hostup:
-            # print("******** TIMEUP",path)
             try:
                 host = self.hsi[path]
             except KeyError:
@@ -548,7 +544,7 @@ class ServiceMon(HostList):
                     await self._err(None, path, "not up")
 
     async def drop_id(self, host):
-        "Delete a host's ID message"
+        """Delete a host's ID message."""
         if "i" in host.data:
             if self.fake:
                 print("DEL", host.id, host)
@@ -557,18 +553,19 @@ class ServiceMon(HostList):
         await super().drop_id(host)
 
     async def drop_host(self, host):
-        "Delete a host's Service messages (yes all of them)"
+        """Delete a host's Service messages (yes all of them)."""
         for p in host.data.h.keys():
             if self.fake:
                 print("DEL", p)
             else:
                 await self.link.d_set(P("run.host") + p, retain=True)
-            self.hostdown[p] = self.cfg.timeout.restart.error
+            self.hostdown[p] = self.cfg.timeout.ping.down
             with suppress(KeyError):
                 del self.hostup[p]
         await super().drop_host(host)
 
     async def _err(self, host: Service | None, path: Path, msg: str, data: Any = None):
+        """Generate or update an error entry for a host path."""
         if self.errored.get(path, "") != msg:
             dat = {"msg": msg, "level": 4}
             if data is not None:
@@ -582,6 +579,7 @@ class ServiceMon(HostList):
             self.errored[path] = msg
 
     async def _no_err(self, path: Path):
+        """Clear any error entry for a host path."""
         if self.errored.get(path, True) is not False:
             if self.fake:
                 print("OK ", path)
@@ -590,8 +588,7 @@ class ServiceMon(HostList):
             self.errored[path] = False
 
     def add_path(self, host: Service, path: Path, msg: dict):
-        "Add a path with this message to the service"
-        # print("******** ADD",path)
+        """Add a path with this message to the service"""
         super().add_path(host, path, msg)
         self.hostdown[path] = self.cfg.timeout.restart.flap
         if msg.get("up", False):
@@ -601,8 +598,7 @@ class ServiceMon(HostList):
             self.hostup[path] = self.cfg.timeout.restart.up
 
     async def drop_path(self, host: Service, path: Path):
-        "Remove a path with this message from the service"
-        # print("******** DROP",path)
+        """Remove a path with this message from the service"""
         try:
             msg = host.data.h[path]
         except KeyError:
@@ -610,10 +606,10 @@ class ServiceMon(HostList):
         try:
             self.hostdown.pop(path)
         except KeyError:
-            self.hostdown[path] = self.cfg.timeout.restart.error
+            self.hostdown[path] = self.cfg.timeout.ping.down
         else:
             if msg is not None and msg.get("up", False):
                 await self._err(host, path, "flapping", msg)
             else:
-                self.hostdown[path] = self.cfg.timeout.restart.error
+                self.hostdown[path] = self.cfg.timeout.ping.down
         await super().drop_path(host, path)

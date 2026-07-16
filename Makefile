@@ -6,10 +6,20 @@ PACKAGE = moat
 MAKEINCL = $(shell ./mt src path)/make/py
 PWD := $(shell pwd)
 
-ifeq ($(notdir $(PWD)),moat)
+# Detect whether we're in the main checkout or a worktree.
+# "git worktree list" always lists the main checkout first.
+WT_MAIN := $(firstword $(shell git worktree list 2>/dev/null))
+
+ifeq ($(PWD),$(WT_MAIN))
+# Main checkout (standalone clone, or root with worktrees):
+# venv from scratch, ext/ next to us
 MOAT_EXT ?= ../moat-ext
+IS_WORKTREE :=
 else
-MOAT_EXT ?= ../../moat-ext
+# Worktree: copy venv from main checkout (reflink to save space),
+# ext/ next to the main checkout
+MOAT_EXT ?= $(dir $(WT_MAIN))moat-ext
+IS_WORKTREE := 1
 endif
 
 VENV ?= N
@@ -67,14 +77,17 @@ docwarn:
 
 setup:
 ifneq ($(VENV),N)
- 	python3 -mvenv .venv --upgrade-deps
- 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
- 	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
+ifdef IS_WORKTREE
+	test -d .venv || cp -a --reflink=auto "$(WT_MAIN)/.venv" .venv
 endif
-ifeq ($(notdir $(PWD)),moat)
-	mkdir -p "${MOAT_EXT}"
+	python3 -mvenv .venv --upgrade-deps
+	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
+	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
+endif
+ifdef IS_WORKTREE
+	test -d "${MOAT_EXT}" || { echo "MOAT_EXT '${MOAT_EXT}' not found; run 'make setup' in the main checkout first." >&2; exit 1; }
 else
-	test -d "${MOAT_EXT}" || { echo "MOAT_EXT '${MOAT_EXT}' not found; run 'make setup' in the main 'moat' checkout first." >&2; exit 1; }
+	mkdir -p "${MOAT_EXT}"
 endif
 	rm -rf ext; ln -sf "${MOAT_EXT}" ext
 	./mt src submod get

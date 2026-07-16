@@ -60,8 +60,9 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
 - `ext/` is a symlink to required support libraries. It is not checked into
-  git. Immediately after creating a new worktree, run "make setup"
-  to recreate the link and to set up the local virtual environment.
+  git. Always run `make setup` after cloning the repository or creating a new
+  worktree, to recreate the link, set up the local virtual environment, fetch
+  submodules, and bootstrap the beads database.
 
 ## Python patterns
 
@@ -172,6 +173,8 @@ but then *create an issue* detailing what's missing to improve the docs later.
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
 - DO NOT use "--rebase" when merging or pulling.
+- After merging, if `pyproject.toml` or `versions.yaml` changed, run
+  `make setup` to update the virtual environment.
 - DO NOT use "--no-verify" when committing.
   - If you encounter a pre-existing failure, temporarily stash your changes
     and run a sub-agent to fix the problem.

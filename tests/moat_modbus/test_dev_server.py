@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.trio
-async def test_transformation_serving(autojump_clock, free_tcp_port_factory):
+async def test_transformation_serving(autojump_clock):
     """Test that transformations are applied when serving registers.
 
     This test verifies that when a client reads from a remote device and applies
@@ -33,16 +33,14 @@ async def test_transformation_serving(autojump_clock, free_tcp_port_factory):
     """
     autojump_clock.autojump_threshold = 0.05
 
-    # Create two ports: one for the "remote device", one for the gateway
-    remote_port = free_tcp_port_factory()
-    gateway_port = free_tcp_port_factory()
-
-    # Remote device config - simulates the actual device
+    # Remote device config - simulates the actual device.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     remote_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {remote_port}
+    port: 0
     units:
       1:
         regs:
@@ -60,11 +58,16 @@ server:
         remote = await tg.start(dev_poll, remote_cfg, None)
         await anyio.sleep(0.1)
 
+        # Actual port assigned by the OS
+        remote_port = remote.server[0].port
+
         # Set a raw value in the remote device
         remote_reg = remote.server[0].units[1].regs.raw_value
         remote_reg.value = 10
 
-        # Gateway config - reads from remote device with transformation and serves
+        # Gateway config - reads from remote device with transformation and serves.
+        # The gateway's own server port is 0 (OS-assigned); the hostports
+        # section references the remote device's actual port.
         gateway_cfg = yload(
             f"""
 slots:
@@ -74,7 +77,7 @@ slots:
 
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
 
 hostports:
   localhost:
@@ -95,7 +98,8 @@ hostports:
         )
 
         # Start the gateway (reads from remote, serves transformed)
-        _gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway_port = gateway.server[0].port
         # await anyio.sleep(1)  # Let it read
 
         ## Gateway should have read and transformed: (10 * 2) + 42 = 62
@@ -133,7 +137,7 @@ hostports:
 
 
 @pytest.mark.trio
-async def test_register_remapping(autojump_clock, free_tcp_port_factory):
+async def test_register_remapping(autojump_clock):
     """Test that registers can be remapped via 'server' parameter.
 
     Verifies that:
@@ -142,15 +146,14 @@ async def test_register_remapping(autojump_clock, free_tcp_port_factory):
     """
     autojump_clock.autojump_threshold = 0.05
 
-    remote_port = free_tcp_port_factory()
-    gateway_port = free_tcp_port_factory()
-
-    # Remote device with two registers
+    # Remote device with two registers.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     remote_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {remote_port}
+    port: 0
     units:
       1:
         regs:
@@ -173,11 +176,16 @@ server:
         remote = await tg.start(dev_poll, remote_cfg, None)
         await anyio.sleep(0.1)
 
+        # Actual port assigned by the OS
+        remote_port = remote.server[0].port
+
         # Set values
         remote.server[0].units[1].regs.value_a.value = 42
         remote.server[0].units[1].regs.value_b.value = 99
 
-        # Gateway config: remap register 100 to 200, hide register 101
+        # Gateway config: remap register 100 to 200, hide register 101.
+        # The gateway's own server port is 0 (OS-assigned); the hostports
+        # section references the remote device's actual port.
         gateway_cfg = yload(
             f"""
 slots:
@@ -186,7 +194,7 @@ slots:
 
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
 
 hostports:
   localhost:
@@ -213,7 +221,8 @@ hostports:
         )
 
         # Start gateway
-        await tg.start(dev_poll, gateway_cfg, None)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway_port = gateway.server[0].port
         await anyio.sleep(1)  # Let it read
 
         # Test: Read from gateway server
@@ -244,7 +253,7 @@ hostports:
 
 
 @pytest.mark.trio
-async def test_forward_parameter(autojump_clock, free_tcp_port_factory):
+async def test_forward_parameter(autojump_clock):
     """Test that 'forward' parameter controls transparent forwarding.
 
     Verifies that:
@@ -253,15 +262,14 @@ async def test_forward_parameter(autojump_clock, free_tcp_port_factory):
     """
     autojump_clock.autojump_threshold = 0.05
 
-    remote_port = free_tcp_port_factory()
-    gateway_port = free_tcp_port_factory()
-
-    # Remote device with multiple registers
+    # Remote device with multiple registers.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     remote_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {remote_port}
+    port: 0
     units:
       1:
         regs:
@@ -289,12 +297,17 @@ server:
         remote = await tg.start(dev_poll, remote_cfg, None)
         await anyio.sleep(0.1)
 
+        # Actual port assigned by the OS
+        remote_port = remote.server[0].port
+
         # Set values
         remote.server[0].units[1].regs.reg_100.value = 100
         remote.server[0].units[1].regs.reg_101.value = 101
         remote.server[0].units[1].regs.reg_102.value = 102
 
-        # Gateway with forward=false: only register 100 configured
+        # Gateway with forward=false: only register 100 configured.
+        # The gateway's own server port is 0 (OS-assigned); the hostports
+        # section references the remote device's actual port.
         gateway_cfg = yload(
             f"""
 slots:
@@ -303,7 +316,7 @@ slots:
 
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
 
 hostports:
   localhost:
@@ -323,7 +336,8 @@ hostports:
         )
 
         # Start gateway
-        await tg.start(dev_poll, gateway_cfg, None)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway_port = gateway.server[0].port
         await anyio.sleep(1)  # Let it read
 
         # Test: Read from gateway server with forward=false
@@ -350,7 +364,7 @@ hostports:
 
 
 @pytest.mark.trio
-async def test_forward_true(autojump_clock, free_tcp_port_factory):
+async def test_forward_true(autojump_clock):
     """Test that forward=true enables transparent forwarding of unconfigured registers.
 
     Verifies that:
@@ -360,15 +374,14 @@ async def test_forward_true(autojump_clock, free_tcp_port_factory):
     """
     autojump_clock.autojump_threshold = 0.05
 
-    remote_port = free_tcp_port_factory()
-    gateway_port = free_tcp_port_factory()
-
-    # Remote device with multiple registers
+    # Remote device with multiple registers.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     remote_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {remote_port}
+    port: 0
     units:
       1:
         regs:
@@ -401,19 +414,24 @@ server:
         remote = await tg.start(dev_poll, remote_cfg, None)
         await anyio.sleep(0.1)
 
+        # Actual port assigned by the OS
+        remote_port = remote.server[0].port
+
         # Set values on remote device
         remote.server[0].units[1].regs.reg_100.value = 10
         remote.server[0].units[1].regs.reg_101.value = 20
         remote.server[0].units[1].regs.reg_102.value = 30
         remote.server[0].units[1].regs.reg_103.value = 40
 
-        # Gateway with forward=true: only configure register 100 with transformation
-        # Registers 101, 102, 103 should be forwarded transparently
+        # Gateway with forward=true: only configure register 100 with transformation.
+        # Registers 101, 102, 103 should be forwarded transparently.
+        # The gateway's own server port is 0 (OS-assigned); the hostports
+        # section references the remote device's actual port.
         gateway_cfg = yload(
             f"""
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
 
 hostports:
   localhost:
@@ -434,7 +452,8 @@ hostports:
         )
 
         # Start gateway
-        await tg.start(dev_poll, gateway_cfg, None)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway_port = gateway.server[0].port
         await anyio.sleep(0.5)
 
         # Test: Read from gateway server
@@ -483,18 +502,18 @@ hostports:
 
 
 @pytest.mark.trio
-async def test_const_scalar(autojump_clock, free_tcp_port_factory):
+async def test_const_scalar(autojump_clock):
     """Test serving constant scalar values."""
     autojump_clock.autojump_threshold = 0.05
 
-    gateway_port = free_tcp_port_factory()
-
-    # Gateway config with const values
+    # Gateway config with const values.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     gateway_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
     units:
       1:
         regs:
@@ -518,7 +537,8 @@ server:
 
     async with anyio.create_task_group() as tg:
         # Start gateway
-        await tg.start(dev_poll, gateway_cfg, None)
+        gateway = await tg.start(dev_poll, gateway_cfg, None)
+        gateway_port = gateway.server[0].port
         await anyio.sleep(0.1)
 
         # Test: Read const values
@@ -543,7 +563,7 @@ server:
 
 
 @pytest.mark.trio
-async def test_const_mqtt(cfg, autojump_clock, free_tcp_port_factory):  # noqa: ARG001
+async def test_const_mqtt(cfg, autojump_clock):  # noqa: ARG001
     """Test serving values from MQTT via const: !P path.
 
     This tests that:
@@ -553,14 +573,14 @@ async def test_const_mqtt(cfg, autojump_clock, free_tcp_port_factory):  # noqa: 
     """
     autojump_clock.autojump_threshold = 0.05
 
-    gateway_port = free_tcp_port_factory()
-
-    # Gateway config with const MQTT subscription
+    # Gateway config with const MQTT subscription.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     gateway_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {gateway_port}
+    port: 0
     units:
       1:
         regs:
@@ -587,6 +607,7 @@ server:
         async with anyio.create_task_group() as tg:
             # Start gateway
             gateway = await tg.start(dev_poll, gateway_cfg, c)
+            gateway_port = gateway.server[0].port
             await anyio.sleep(0.5)
 
             # Get the register to check internal state
@@ -641,7 +662,6 @@ server:
 async def test_age_based_rereading(
     cfg,  # noqa: ARG001
     autojump_clock,
-    free_tcp_port_factory,
     monkeypatch,
 ):
     """Test basic age-based slot behavior.
@@ -656,14 +676,14 @@ async def test_age_based_rereading(
     # Make anyio.current_time() use Trio's clock for autojump to work
     monkeypatch.setattr("anyio.current_time", trio.current_time)
 
-    remote_port = free_tcp_port_factory()
-
-    # Remote device
+    # Remote device.
+    # port: 0 lets the OS assign a free port; the actual port is read back
+    # from the config after the server starts.
     remote_cfg = yload(
-        f"""
+        """
 server:
   - host: 127.0.0.1
-    port: {remote_port}
+    port: 0
     units:
       1:
         regs:
@@ -684,11 +704,13 @@ server:
     ):
         # Start remote device
         remote = await tg.start(dev_poll, remote_cfg, None)
+        remote_port = remote.server[0].port
         remote_reg = remote.server[0].units[1].regs.counter
         remote_reg.value = 100
         await anyio.sleep(0.1)
 
-        # Gateway with age=2 seconds
+        # Gateway with age=2 seconds.
+        # The hostports section references the remote device's actual port.
         gateway_cfg = yload(
             f"""
 slots:

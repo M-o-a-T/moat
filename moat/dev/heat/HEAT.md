@@ -294,7 +294,6 @@ class PumpCfg(BaseModel):
 A unit reads its config as:
 ```python
 from moat.lib.config import CFG
-
 cfg = PumpCfg.model_validate(CFG.app.heat.pump)
 ```
 or, for live reload, by `d_watch`ing `cfg.app.heat.pump` and

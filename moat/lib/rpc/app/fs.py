@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.util import attrdict
+    from moat.lib.rpc import Msg
 
     from typing import Protocol
 
@@ -147,6 +148,62 @@ class Cmd(LockBaseCmd):
         fh = self._fd(f)
         fh.seek(o)
         return await to_thread(fh.write, d)
+
+    doc_srd = dict(
+        _d="stream-read file",
+        _0="str:path",
+        n="int:chunk size (default 64)",
+        o="int:offset (default 0)",
+        _s=True,
+        _o="bytes:chunks",
+    )
+
+    async def stream_srd(self, msg: Msg):
+        """
+        Stream the contents of a file.
+
+        Opens @p, seeks to @o, then sends chunks of @n bytes until EOF.
+        """
+        p = self._fsp(msg.get(0))
+        off = msg.get("o", 0)
+        blk = msg.get("n", 64)
+        f = await to_thread(_efix, open, p, "rb")
+        if off:
+            await to_thread(f.seek, off)
+        try:
+            async with msg.stream_out() as st:
+                while True:
+                    data = await to_thread(f.read, blk)
+                    if not data:
+                        break
+                    await st.send(data)
+        finally:
+            await to_thread(f.close)
+
+    doc_swr = dict(
+        _d="stream-write file",
+        _0="str:path",
+        a="bool:append (default False)",
+        _s=True,
+        _i="bytes:chunks",
+    )
+
+    async def stream_swr(self, msg: Msg):
+        """
+        Stream data to a file.
+
+        Opens @p for writing (or appending if @a is set), then receives
+        chunks and writes them sequentially.
+        """
+        p = self._fsp(msg.get(0))
+        append = msg.get("a", False)
+        f = await to_thread(_efix, open, p, "ab" if append else "wb")
+        try:
+            async with msg.stream_in() as st:
+                async for m in st:
+                    await to_thread(f.write, m[0])
+        finally:
+            await to_thread(f.close)
 
     doc_cl = dict(_d="close file", _0="int:fileid")
 

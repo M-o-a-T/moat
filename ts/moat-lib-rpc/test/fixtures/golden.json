@@ -1,0 +1,123 @@
+{
+  "header": {
+    "id1_flag0": 0,
+    "id1_flag1": 1,
+    "id2_flag0": 4,
+    "id_neg1_flag0": -4,
+    "id_neg1_flag2": -2,
+    "decode_0": [
+      1,
+      0
+    ],
+    "decode_4": [
+      2,
+      0
+    ],
+    "decode_neg4": [
+      -1,
+      0
+    ],
+    "decode_neg2": [
+      -1,
+      2
+    ]
+  },
+  "simple_call": {
+    "wire": "8200816470696e67",
+    "expected": [
+      0,
+      [
+        "ping"
+      ]
+    ]
+  },
+  "simple_reply": {
+    "wire": "82238164706f6e67",
+    "expected": [
+      -4,
+      [
+        "pong"
+      ]
+    ]
+  },
+  "error_reply": {
+    "wire": "82218122",
+    "expected": [
+      -2,
+      [
+        -3
+      ]
+    ]
+  },
+  "call_with_args": {
+    "wire": "840081646563686f182a6568656c6c6f",
+    "expected": [
+      0,
+      [
+        "echo"
+      ],
+      42,
+      "hello"
+    ]
+  },
+  "call_with_kwargs": {
+    "wire": "83008163636d64a1636b65796576616c7565",
+    "expected": [
+      0,
+      [
+        "cmd"
+      ],
+      {
+        "key": "value"
+      }
+    ]
+  },
+  "path_tag39": {
+    "wire": "d8278263666f6f63626172",
+    "note": "Path values are tagged with 39"
+  },
+  "set_tag258": {
+    "wire": "d9010283010203",
+    "note": "Set is tagged with 258"
+  },
+  "date_tag1": {
+    "wire": "c1fb41d9694790000000",
+    "note": "Date is tagged with 1 (epoch seconds)"
+  },
+  "float_1_5": {
+    "wire": "f93e00"
+  },
+  "float_0_1": {
+    "wire": "fb3fb999999999999a"
+  },
+  "error_codes": {
+    "E_UNSPEC": -1,
+    "E_NO_STREAM": -2,
+    "E_CANCEL": -3,
+    "E_NO_CMDS": -4,
+    "E_SKIP": -5,
+    "E_ERROR": -7,
+    "E_NO_CMD": -11
+  },
+  "keyerror_marshall": {
+    "note": "Unknown commands raise KeyError, marshalled as tag 27 [_rErr, KeyError, ...]"
+  },
+  "bool_true": {
+    "wire": "f5"
+  },
+  "bool_false": {
+    "wire": "f4"
+  },
+  "null": {
+    "wire": "f6"
+  },
+  "undefined": {
+    "wire": "f7"
+  },
+  "bytes": {
+    "wire": "43010203"
+  },
+  "text": {
+    "wire": "6568656c6c6f"
+  }
+}

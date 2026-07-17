@@ -18,11 +18,13 @@ if not shutil.which("akumulid"):
 
 
 @pytest.mark.anyio
-async def test_basic(cfg, free_tcp_port_factory):
+async def test_basic(cfg):
     """Metrics entries are forwarded to the Akumuli mock."""
+    # AkumuliTester manages its own port allocation internally (PID-based),
+    # since akumulid is an external process that needs the port in its config.
     async with (
         Scaffold(cfg, use_servers=True) as sf,
-        AkumuliTester(free_tcp_port_factory(), free_tcp_port_factory()).run() as t,
+        AkumuliTester().run() as t,
     ):
         await sf.server(init="INIT")
         c = await sf.client()

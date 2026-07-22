@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import anyio
+import os
 import sys
 import time
 from contextlib import asynccontextmanager, nullcontext
@@ -65,15 +66,11 @@ async def run_broker(cfg, *, task_status):
 
     else:
         # Use a standalone instance of FlashMQ.
-        from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
-        from socket import SOCK_STREAM  # noqa: PLC0415
-
-        port = FreePortFactory(SOCK_STREAM)()
-
         async with (
             anyio.TemporaryDirectory() as td,
             anyio.create_task_group() as tg,
         ):
+            sock_path = str(anyio.Path(td) / "flashmq.sock")
             tf = anyio.Path(td) / "config"
             await tf.write_text(
                 f"""\
@@ -86,9 +83,8 @@ log_subscriptions true
 
 listen {{
     protocol mqtt
-    port {port}
-    inet_protocol ip4
-    inet4_bind_address 127.0.0.1
+    inet_protocol unix
+    unix_socket_path {sock_path}
 }}
 """
             )
@@ -99,12 +95,12 @@ listen {{
                     ["flashmq", "-c", str(tf)],
                     stderr=sys.stderr,
                     stdout=sys.stdout,
-                    env=dict(HOME=td),
+                    env=dict(HOME=td, PATH=os.environ.get("PATH", "")),
                 )
             )
             for _ in range(20):
                 try:
-                    sock = await anyio.connect_tcp("127.0.0.1", port)
+                    sock = await anyio.connect_unix(sock_path)
                 except OSError:
                     await anyio.sleep(0.1)
                 else:
@@ -113,7 +109,7 @@ listen {{
             else:
                 raise RuntimeError("Could not connect to FlashMQ")
 
-            task_status.started(port)
+            task_status.started(sock_path)
 
 
 class Scaffold(CtxObj):
@@ -179,8 +175,9 @@ class Scaffold(CtxObj):
                 anyio.create_task_group() as tg,
                 anyio.create_task_group() as self.tg,
             ):
-                bport = await tg.start(run_broker, self.cfg)
-                self.cfg.backend.port = bport
+                bsock = await tg.start(run_broker, self.cfg)
+                self.cfg.backend.transport = "unix"
+                self.cfg.backend.host = bsock
                 try:
                     yield self
                 finally:
@@ -315,11 +312,11 @@ class Scaffold(CtxObj):
             "moat.link.backend.codec",
             str(bcfg.get("codec", "std-cbor")),
             "-s",
+            "moat.link.backend.transport",
+            str(bcfg.get("transport", "tcp")),
+            "-s",
             "moat.link.backend.host",
             str(bcfg.get("host", "127.0.0.1")),
-            "-s",
-            "moat.link.backend.port",
-            f"={int(bcfg.port)}",
             "-s",
             "moat.link.root",
             f".{self.cfg.root}",

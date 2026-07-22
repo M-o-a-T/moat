@@ -140,10 +140,10 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         cm = await sf.client()
         await sf.tg.start(mon, cm)
 
-        URI = f"mqtt://127.0.0.1:{sf.cfg.backend.port}/"
+        URI = f"mqtt://{sf.cfg.backend.host}"
 
         async def mock_get_host_port(kvs, host):  # noqa: ARG001
-            return "127.0.0.1", sf.cfg.backend.port
+            return sf.cfg.backend.host
 
         TESTCFG = copy.deepcopy(cfg.kv)
         TESTCFG.server.port = None
@@ -159,7 +159,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
             "server": {
                 "bind_default": {
                     "host": "127.0.0.1",
-                    "port": 40000 + (sf.cfg.backend.port + 1) % 10000,
+                    "port": 40000 + (hash(sf.cfg.backend.host) + 1) % 10000,
                     "ssl": False,
                 },
                 "backend": "mqtt",
@@ -665,12 +665,12 @@ async def test_gate_mqtt_backend(cfg):
         await c.d_set(P("test.a.two"), 2)
 
         # Start a *second* MQTT broker for the gate's dedicated backend.
-        ext_port = await sf.tg.start(run_broker, sf.cfg)
+        ext_sock = await sf.tg.start(run_broker, sf.cfg)
         ext_backend_cfg = attrdict(
             backend=attrdict(
                 driver="mqtt",
-                host="127.0.0.1",
-                port=ext_port,
+                transport="unix",
+                host=ext_sock,
                 codec="json",
                 keep_alive=9999,
             )
@@ -693,8 +693,8 @@ async def test_gate_mqtt_backend(cfg):
                 codec="json",
                 backend=dict(
                     driver="mqtt",
-                    host="127.0.0.1",
-                    port=ext_port,
+                    transport="unix",
+                    host=ext_sock,
                     codec="json",
                     keep_alive=9999,
                 ),

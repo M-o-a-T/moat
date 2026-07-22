@@ -15,16 +15,16 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-async def mqtt_broker_port() -> AsyncGenerator[int, None]:
+async def mqtt_broker_port() -> AsyncGenerator[str, None]:
     """
-    Start a test MQTT broker and return the port it's listening on.
+    Start a test MQTT broker and return the Unix socket path it's listening on.
 
     Uses the MQTT broker from moat.link._test (FlashMQ).
     """
     cfg = attrdict()
     async with anyio.create_task_group() as tg:
-        port = await tg.start(run_broker, cfg)
+        sock_path = await tg.start(run_broker, cfg)
         try:
-            yield port
+            yield sock_path
         finally:
             tg.cancel_scope.cancel()

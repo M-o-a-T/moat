@@ -1,6 +1,6 @@
 """Command-line interface for irrigation sensors.
 
-``moat db rain <SITE> sensor {show,add,set,delete}``
+``moat db rain at <SITE> sensor {show,add,set,delete}``
 
 A sensor is identified by ``(site, kind, name)`` — ``kind`` is one of
 ``rain`` / ``temp`` / ``wind`` / ``sun`` and is immutable once set.
@@ -14,10 +14,9 @@ import asyncclick as click
 from sqlalchemy import select
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import absent, get_one, is_given, require_name, site_of
 from moat.db.rain.model import Sensor
 from moat.lib.run import option_ng
-
-from ._util import absent, get_one, is_given, require_name, site_of
 
 KINDS = ["rain", "temp", "wind", "sun"]
 

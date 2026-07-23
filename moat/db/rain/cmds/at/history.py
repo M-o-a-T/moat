@@ -1,6 +1,6 @@
 """Command-line interface for irrigation history and logs.
 
-``moat db rain <SITE> history {show,add,set,delete,log}``
+``moat db rain at <SITE> history {show,add,set,delete,log}``
 
 A :class:`History` row is a site-scoped weather/feed sample keyed by
 ``(site, time)``. The nested ``log`` subgroup manages :class:`Log` event
@@ -16,10 +16,7 @@ import asyncclick as click
 from sqlalchemy import select
 
 from moat.util import NotGiven, yprint
-from moat.db.rain.model import History, Log
-from moat.lib.run import option_ng
-
-from ._util import (
+from moat.db.rain.cmds._util import (
     absent,
     get_one,
     is_given,
@@ -28,6 +25,8 @@ from ._util import (
     site_of,
     valve_spec,
 )
+from moat.db.rain.model import History, Log
+from moat.lib.run import option_ng
 
 
 @click.group(name="history", short_help="Manage weather history and logs")

@@ -1,12 +1,11 @@
-"""Delete an irrigation site: ``moat db rain <SITE> delete``."""
+"""Delete an irrigation site: ``moat db rain at <SITE> delete``."""
 
 from __future__ import annotations
 
 import asyncclick as click
 
+from moat.db.rain.cmds._util import get_one
 from moat.db.rain.model import Site
-
-from ._util import get_one
 
 
 @click.command()

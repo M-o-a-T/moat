@@ -1,6 +1,6 @@
 """Command-line interface for irrigation valve groups.
 
-``moat db rain <SITE> group {show,add,set,delete}``
+``moat db rain at <SITE> group {show,add,set,delete}``
 
 A :class:`Group` is a site-scoped bundle of valves that share a schedule
 window. It links to valves (by ``controller:name`` spec) and to day
@@ -19,10 +19,7 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
-from moat.db.rain.model import Group, GroupAdjust, GroupOverride
-from moat.lib.run import option_ng
-
-from ._util import (
+from moat.db.rain.cmds._util import (
     absent,
     bool_pair,
     get_one,
@@ -34,6 +31,8 @@ from ._util import (
     site_of,
     valve_spec,
 )
+from moat.db.rain.model import Group, GroupAdjust, GroupOverride
+from moat.lib.run import option_ng
 
 
 @click.group(name="group", short_help="Manage valve groups")

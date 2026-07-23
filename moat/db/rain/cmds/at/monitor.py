@@ -1,6 +1,6 @@
 """Command-line interface: run the irrigation monitor daemon.
 
-``moat db rain <SITE> monitor [--tick N]``
+``moat db rain at <SITE> monitor [--tick N]``
 
 Launches the long-running monitor daemon that subscribes to weather
 sensors, generates schedules, dispatches valve commands via moat.link,
@@ -35,8 +35,8 @@ async def cli(obj, tick_sec, debug):
     commands via moat.link, and maintains level / history / log rows.
 
     Designed to run as a systemd ``Type=notify`` service.  The site name
-    comes from the positional ``<SITE>`` argument of the parent
-    ``moat db rain`` group.
+    comes from the ``<SITE>`` argument of the ``moat db rain at``
+    group.
     """
     link = obj.get("link")
     if link is None:

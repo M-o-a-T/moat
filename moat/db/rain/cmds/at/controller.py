@@ -1,6 +1,6 @@
 """Command-line interface for irrigation controllers.
 
-``moat db rain <SITE> controller {show,add,set,delete}``
+``moat db rain at <SITE> controller {show,add,set,delete}``
 """
 
 from __future__ import annotations
@@ -10,10 +10,9 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import absent, get_one, is_given, list_in_site, require_name, site_of
 from moat.db.rain.model import Controller
 from moat.lib.run import option_ng
-
-from ._util import absent, get_one, is_given, list_in_site, require_name, site_of
 
 
 @click.group(name="controller", short_help="Manage irrigation controllers")

@@ -2,7 +2,7 @@
 
 Ports the legacy ``runschedule`` management command (qbroker / gevent /
 rpyc) to **anyio + moat.link + SQLAlchemy**.  The daemon is launched by
-``moat db rain <SITE> monitor`` (see :mod:`moat.db.rain.cmds.monitor`) and
+``moat db rain at <SITE> monitor`` (see :mod:`moat.db.rain.cmds.at.monitor`) and
 runs as a ``Type=notify`` systemd service (see
 ``packaging/moat-db-rain/moat-db-rain@.service``).
 

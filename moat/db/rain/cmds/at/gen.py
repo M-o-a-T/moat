@@ -1,6 +1,6 @@
 """Command-line interface: generate irrigation schedules.
 
-``moat db rain <SITE> gen [--controller C] [--valve V] […]``
+``moat db rain at <SITE> gen [--controller C] [--valve V] […]``
 
 Plans valve runs within ``[now+delay, now+delay+horizon)``: forced
 (force-on) schedules first, then demand-based slots until each valve's
@@ -14,9 +14,8 @@ from datetime import timedelta
 import asyncclick as click
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import emit_log
 from moat.db.rain.engine import generate_schedule
-
-from ._util import emit_log
 
 
 @click.command(name="gen", short_help="Generate valve schedules")

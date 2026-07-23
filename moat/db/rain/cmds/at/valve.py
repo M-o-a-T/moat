@@ -1,6 +1,6 @@
 """Command-line interface for irrigation valves.
 
-``moat db rain <SITE> valve {show,add,set,delete}``
+``moat db rain at <SITE> valve {show,add,set,delete}``
 
 A valve is identified by ``(controller, name)`` within the site, and is
 linked to a :class:`Feed` (water source) and an :class:`EnvGroup`. Its
@@ -16,10 +16,7 @@ import asyncclick as click
 from sqlalchemy import select
 
 from moat.util import yprint
-from moat.db.rain.model import Controller, Level, Schedule, Valve, ValveOverride
-from moat.lib.run import option_ng
-
-from ._util import (
+from moat.db.rain.cmds._util import (
     absent,
     bool_pair,
     get_one,
@@ -28,6 +25,8 @@ from ._util import (
     parse_dt,
     site_of,
 )
+from moat.db.rain.model import Controller, Level, Schedule, Valve, ValveOverride
+from moat.lib.run import option_ng
 
 
 @click.group(name="valve", short_help="Manage irrigation valves")

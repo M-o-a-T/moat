@@ -55,14 +55,16 @@ under `moat/db/rain/`:
   subscribes to weather sensors, tracks rain-delay, periodically calls
   the scheduler engine, dispatches pending valve commands to
   controllers via moat-link RPC, and maintains level / history / log
-  rows. Launched by `moat db rain <SITE> monitor` and run as a
+  rows. Launched by `moat db rain at <SITE> monitor` and run as a
   `Type=notify` systemd service.
 - **`cmds`** (`moat.db.rain.cmds`) — the command-line interface, one
   file per entity (`controller`, `valve`, `feed`, `sensor`, `group`,
   `env`, `day`, `dayrange`, `override`, `schedule`, `history`) plus the
-  `gen`, `recalc`, and `monitor` verbs. Reached as
-  `moat db rain <SITE> <verb>`; adding an entity is a new `cmds/` file
-  with no per-entity edits to the thin `_main.py` group.
+  `gen`, `recalc`, and `monitor` verbs. Global subcommands (day,
+  dayrange) are reached as `moat db rain <verb>`; site-specific
+  subcommands are grouped under `moat db rain at <SITE> <verb>`;
+  adding an entity is a new `cmds/at/` file with no per-entity edits
+  to the thin `_main.py` group.
 
 ## Manual
 

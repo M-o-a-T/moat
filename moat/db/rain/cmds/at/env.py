@@ -1,6 +1,6 @@
 """Command-line interface for irrigation environment groups.
 
-``moat db rain <SITE> env {show,add,set,delete}``
+``moat db rain at <SITE> env {show,add,set,delete}``
 
 An :class:`EnvGroup` bundles environment parameters (rain gating, a
 scaling factor, and per-item temperature/wind/sun thresholds) that a
@@ -14,10 +14,9 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import absent, bool_pair, get_one, list_in_site, require_name, site_of
 from moat.db.rain.model import EnvGroup
 from moat.lib.run import option_ng
-
-from ._util import absent, bool_pair, get_one, list_in_site, require_name, site_of
 
 
 @click.group(name="env", short_help="Manage environment groups")

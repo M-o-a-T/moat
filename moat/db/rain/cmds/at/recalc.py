@@ -1,6 +1,6 @@
 """Command-line interface: recalculate valve water levels.
 
-``moat db rain <SITE> recalc [--controller C] [--valve V] [--age D]``
+``moat db rain at <SITE> recalc [--controller C] [--valve V] [--age D]``
 
 Replays :class:`~moat.db.rain.model.History` to rebuild
 :class:`~moat.db.rain.model.Level` rows for the matching valves, starting
@@ -16,9 +16,8 @@ from datetime import timedelta
 import asyncclick as click
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import emit_log
 from moat.db.rain.engine import recalculate
-
-from ._util import emit_log
 
 
 @click.command(name="recalc", short_help="Recalculate valve water levels")

@@ -1,18 +1,16 @@
 """Command-line interface for irrigation day definitions.
 
-``moat db rain <SITE> day {show,add,set,delete,time}``
+``moat db rain day {show,add,set,delete,time}``
 
 A :class:`Day` is a named union of time fragments (:class:`DayTime`),
-scoped **globally** (not per site) — the ``<SITE>`` argument is accepted
-for consistency with the rest of the CLI but ignored here, so the dummy
-site ``-`` may be used (``moat db rain - day …``). A
-:class:`DayRange` (see ``moat db rain <SITE> dayrange``) intersects Days.
+scoped **globally** (not per site). A :class:`DayRange` (see
+``moat db rain dayrange``) intersects Days.
 
 Each :class:`DayTime` is a free-form description string (e.g.
 ``"8:00-12:00"``) belonging to one Day, addressed through the nested
 ``time`` subgroup::
 
-    moat db rain <SITE> day -n <DAY> time {show,add,set,delete}
+    moat db rain day -n <DAY> time {show,add,set,delete}
 """
 
 from __future__ import annotations

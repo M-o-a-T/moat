@@ -1,6 +1,6 @@
 """Command-line interface for irrigation feeds.
 
-``moat db rain <SITE> feed {show,add,set,delete}``
+``moat db rain at <SITE> feed {show,add,set,delete}``
 """
 
 from __future__ import annotations
@@ -10,10 +10,9 @@ import sys
 import asyncclick as click
 
 from moat.util import yprint
+from moat.db.rain.cmds._util import absent, get_one, list_in_site, require_name, site_of
 from moat.db.rain.model import Feed
 from moat.lib.run import option_ng
-
-from ._util import absent, get_one, list_in_site, require_name, site_of
 
 
 @click.group(name="feed", short_help="Manage water feeds")

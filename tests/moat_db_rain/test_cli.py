@@ -27,172 +27,172 @@ def _msg(err) -> str:
 
 async def test_site_lifecycle(rain):
     """Create, list, show, modify, duplicate, and delete a site."""
-    r = await rain("db", "rain", "-")
+    r = await rain("db", "rain", "at", "-")
     assert r.stdout == ""
 
-    r = await rain("db", "rain", "home", "add")
+    r = await rain("db", "rain", "at", "home", "add")
     assert "name: home" in r.stdout
     assert "rate: 10.0" in r.stdout
     assert "rain_delay: 300" in r.stdout
 
-    r = await rain("db", "rain", "-")
+    r = await rain("db", "rain", "at", "-")
     assert r.stdout == "home\n"
 
-    r = await rain("db", "rain", "home")
+    r = await rain("db", "rain", "at", "home")
     assert "name: home" in r.stdout
 
-    r = await rain("db", "rain", "home", "set", "--rate", "20", "--comment", "hi")
+    r = await rain("db", "rain", "at", "home", "set", "--rate", "20", "--comment", "hi")
     assert "rate: 20.0" in r.stdout
     assert "comment: hi" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "add")
+        await rain("db", "rain", "at", "home", "add")
     assert "already exists" in _msg(err)
 
-    await rain("db", "rain", "home", "delete")
-    r = await rain("db", "rain", "-")
+    await rain("db", "rain", "at", "home", "delete")
+    r = await rain("db", "rain", "at", "-")
     assert r.stdout == ""
 
 
 async def test_controller_lifecycle(rain):
     """Full controller CRUD plus the error paths."""
-    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "at", "home", "add")
 
-    r = await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
+    r = await rain("db", "rain", "at", "home", "controller", "-n", "C1", "add", "-l", "shed")
     assert "name: C1" in r.stdout
     assert "location: shed" in r.stdout
     assert "max_on: 3" in r.stdout
 
-    r = await rain("db", "rain", "home", "controller", "show")
+    r = await rain("db", "rain", "at", "home", "controller", "show")
     assert r.stdout == "C1\n"
 
-    r = await rain("db", "rain", "home", "controller", "-n", "C1", "show")
+    r = await rain("db", "rain", "at", "home", "controller", "-n", "C1", "show")
     assert "name: C1" in r.stdout
 
-    r = await rain("db", "rain", "home", "controller", "-n", "C1", "set", "-c", "hi", "-m", "5")
+    r = await rain("db", "rain", "at", "home", "controller", "-n", "C1", "set", "-c", "hi", "-m", "5")
     assert "comment: hi" in r.stdout
     assert "max_on: 5" in r.stdout
     assert "location: shed" in r.stdout  # untouched by `set`
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "-n", "C2", "add")
+        await rain("db", "rain", "at", "home", "controller", "-n", "C2", "add")
     assert "needs --location" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "x")
+        await rain("db", "rain", "at", "home", "controller", "-n", "C1", "add", "-l", "x")
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "-n", "Q", "show")
+        await rain("db", "rain", "at", "home", "controller", "-n", "Q", "show")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "-n", "Q", "set", "-l", "x")
+        await rain("db", "rain", "at", "home", "controller", "-n", "Q", "set", "-l", "x")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "-n", "Q", "delete")
+        await rain("db", "rain", "at", "home", "controller", "-n", "Q", "delete")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "controller", "add", "-l", "x")
+        await rain("db", "rain", "at", "home", "controller", "add", "-l", "x")
     assert "needs a name" in _msg(err)
 
-    await rain("db", "rain", "home", "controller", "-n", "C1", "delete")
-    r = await rain("db", "rain", "home", "controller", "show")
+    await rain("db", "rain", "at", "home", "controller", "-n", "C1", "delete")
+    r = await rain("db", "rain", "at", "home", "controller", "show")
     assert r.stdout == ""
 
 
 async def test_dash_precludes_subcommands(rain):
-    """``moat db rain - <verb>`` is rejected: '-' lists, it takes no verb."""
+    """``moat db rain at - <verb>`` is rejected: '-' lists, it takes no verb."""
     with _raises(click.BadParameter):
-        await rain("db", "rain", "-", "controller", "show")
+        await rain("db", "rain", "at", "-", "controller", "show")
 
 
 async def test_missing_site(rain):
     """Operating on an unknown site fails cleanly."""
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "nosuch", "controller", "-n", "C", "add", "-l", "x")
+        await rain("db", "rain", "at", "nosuch", "controller", "-n", "C", "add", "-l", "x")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "nosuch", "set", "--rate", "1")
+        await rain("db", "rain", "at", "nosuch", "set", "--rate", "1")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "nosuch", "delete")
+        await rain("db", "rain", "at", "nosuch", "delete")
     assert "doesn't exist" in _msg(err)
 
 
 async def test_site_cascade_deletes_children(rain):
     """Deleting a site removes its controllers (FK CASCADE)."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
-    await rain("db", "rain", "home", "controller", "-n", "C2", "add", "-l", "field")
+    await rain("db", "rain", "at", "home", "add")
+    await rain("db", "rain", "at", "home", "controller", "-n", "C1", "add", "-l", "shed")
+    await rain("db", "rain", "at", "home", "controller", "-n", "C2", "add", "-l", "field")
 
-    r = await rain("db", "rain", "home", "controller", "show")
+    r = await rain("db", "rain", "at", "home", "controller", "show")
     assert r.stdout == "C1\nC2\n"
 
-    await rain("db", "rain", "home", "delete")
-    await rain("db", "rain", "home", "add")  # recreate the site
+    await rain("db", "rain", "at", "home", "delete")
+    await rain("db", "rain", "at", "home", "add")  # recreate the site
 
-    r = await rain("db", "rain", "home", "controller", "show")
+    r = await rain("db", "rain", "at", "home", "controller", "show")
     assert r.stdout == ""  # controllers cascaded away
 
 
 async def test_feed_lifecycle(rain):
     """Feed CRUD with a Path field (flow_monitor) and disable/enable."""
-    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "at", "home", "add")
 
-    r = await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
+    r = await rain("db", "rain", "at", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
     assert "name: F1" in r.stdout
     assert "flow_monitor: !P mon.flow" in r.stdout
     assert "flow: 10.0" in r.stdout
     assert "disabled: false" in r.stdout
 
-    r = await rain("db", "rain", "home", "feed", "show")
+    r = await rain("db", "rain", "at", "home", "feed", "show")
     assert r.stdout == "F1\n"
 
-    r = await rain("db", "rain", "home", "feed", "-n", "F1", "show")
+    r = await rain("db", "rain", "at", "home", "feed", "-n", "F1", "show")
     assert "name: F1" in r.stdout
 
-    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "--flow", "5", "--disable")
+    r = await rain("db", "rain", "at", "home", "feed", "-n", "F1", "set", "--flow", "5", "--disable")
     assert "flow: 5.0" in r.stdout
     assert "disabled: true" in r.stdout
     assert "flow_monitor: !P mon.flow" in r.stdout  # untouched
 
-    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "-f", "-")
+    r = await rain("db", "rain", "at", "home", "feed", "-n", "F1", "set", "-f", "-")
     assert "flow_monitor" not in r.stdout  # cleared → omitted from dump
 
-    r = await rain("db", "rain", "home", "feed", "-n", "F1", "set", "--enable")
+    r = await rain("db", "rain", "at", "home", "feed", "-n", "F1", "set", "--enable")
     assert "disabled: false" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "feed", "-n", "F1", "add")
+        await rain("db", "rain", "at", "home", "feed", "-n", "F1", "add")
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "feed", "-n", "Q", "show")
+        await rain("db", "rain", "at", "home", "feed", "-n", "Q", "show")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "feed", "add")
+        await rain("db", "rain", "at", "home", "feed", "add")
     assert "needs a name" in _msg(err)
 
-    await rain("db", "rain", "home", "feed", "-n", "F1", "delete")
-    r = await rain("db", "rain", "home", "feed", "show")
+    await rain("db", "rain", "at", "home", "feed", "-n", "F1", "delete")
+    r = await rain("db", "rain", "at", "home", "feed", "show")
     assert r.stdout == ""
 
 
 async def test_sensor_lifecycle(rain):
     """Sensor CRUD over the (site, kind, name) key; kind is immutable."""
-    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "at", "home", "add")
 
-    r = await rain("db", "rain", "home", "sensor", "show")
+    r = await rain("db", "rain", "at", "home", "sensor", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
 
     r = await rain(
-        "db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "sen.rain"
+        "db", "rain", "at", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "sen.rain"
     )
     assert "kind: rain" in r.stdout
     assert "name: R1" in r.stdout
@@ -200,94 +200,91 @@ async def test_sensor_lifecycle(rain):
     assert "weight: 10" in r.stdout
 
     r = await rain(
-        "db", "rain", "home", "sensor", "-k", "temp", "-n", "T1", "add", "-s", "sen.temp"
+        "db", "rain", "at", "home", "sensor", "-k", "temp", "-n", "T1", "add", "-s", "sen.temp"
     )
     assert "kind: temp" in r.stdout
 
-    r = await rain("db", "rain", "home", "sensor", "show")
+    r = await rain("db", "rain", "at", "home", "sensor", "show")
     assert r.stdout == "rain:R1\ntemp:T1\n"
 
-    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "show")
+    r = await rain("db", "rain", "at", "home", "sensor", "-k", "rain", "show")
     assert r.stdout == "rain:R1\n"
 
-    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "show")
+    r = await rain("db", "rain", "at", "home", "sensor", "-k", "rain", "-n", "R1", "show")
     assert "state: !P sen.rain" in r.stdout
 
-    r = await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "set", "-w", "20")
+    r = await rain("db", "rain", "at", "home", "sensor", "-k", "rain", "-n", "R1", "set", "-w", "20")
     assert "weight: 20" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "sensor", "-k", "wind", "-n", "W1", "add")
+        await rain("db", "rain", "at", "home", "sensor", "-k", "wind", "-n", "W1", "add")
     assert "needs --state" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "sensor", "-n", "X", "add", "-s", "x.y")
+        await rain("db", "rain", "at", "home", "sensor", "-n", "X", "add", "-s", "x.y")
     assert "needs --kind" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "sensor", "-n", "R1", "show")
+        await rain("db", "rain", "at", "home", "sensor", "-n", "R1", "show")
     assert "needs --kind" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "x.y")
+        await rain("db", "rain", "at", "home", "sensor", "-k", "rain", "-n", "R1", "add", "-s", "x.y")
     assert "already exists" in _msg(err)
 
     # same name, different kind, is distinct
-    r = await rain("db", "rain", "home", "sensor", "-k", "temp", "-n", "R1", "add", "-s", "sen.t2")
+    r = await rain("db", "rain", "at", "home", "sensor", "-k", "temp", "-n", "R1", "add", "-s", "sen.t2")
     assert "kind: temp" in r.stdout
 
-    r = await rain("db", "rain", "home", "sensor", "show")
+    r = await rain("db", "rain", "at", "home", "sensor", "show")
     assert r.stdout == "rain:R1\ntemp:R1\ntemp:T1\n"
 
-    await rain("db", "rain", "home", "sensor", "-k", "rain", "-n", "R1", "delete")
-    r = await rain("db", "rain", "home", "sensor", "show")
+    await rain("db", "rain", "at", "home", "sensor", "-k", "rain", "-n", "R1", "delete")
+    r = await rain("db", "rain", "at", "home", "sensor", "show")
     assert r.stdout == "temp:R1\ntemp:T1\n"
 
 
 async def test_env_lifecycle(rain):
     """EnvGroup CRUD with the rain bool toggle and rename."""
-    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "at", "home", "add")
 
-    r = await rain("db", "rain", "home", "env", "-n", "std", "add", "--no-rain", "-f", "0.8")
+    r = await rain("db", "rain", "at", "home", "env", "-n", "std", "add", "--no-rain", "-f", "0.8")
     assert "name: std" in r.stdout
     assert "factor: 0.8" in r.stdout
     assert "rain: false" in r.stdout
 
-    r = await rain("db", "rain", "home", "env", "show")
+    r = await rain("db", "rain", "at", "home", "env", "show")
     assert r.stdout == "std\n"
 
-    r = await rain("db", "rain", "home", "env", "-n", "std", "show")
+    r = await rain("db", "rain", "at", "home", "env", "-n", "std", "show")
     assert "rain: false" in r.stdout
 
-    r = await rain("db", "rain", "home", "env", "-n", "std", "set", "--rain", "-f", "1.0")
+    r = await rain("db", "rain", "at", "home", "env", "-n", "std", "set", "--rain", "-f", "1.0")
     assert "rain: true" in r.stdout
     assert "factor: 1.0" in r.stdout
 
-    r = await rain("db", "rain", "home", "env", "-n", "std", "set", "-n", "default")
+    r = await rain("db", "rain", "at", "home", "env", "-n", "std", "set", "-n", "default")
     assert "name: default" in r.stdout
-    r = await rain("db", "rain", "home", "env", "show")
+    r = await rain("db", "rain", "at", "home", "env", "show")
     assert r.stdout == "default\n"
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "env", "-n", "default", "add")
+        await rain("db", "rain", "at", "home", "env", "-n", "default", "add")
     assert "already exists" in _msg(err)
 
-    await rain("db", "rain", "home", "env", "-n", "default", "delete")
-    r = await rain("db", "rain", "home", "env", "show")
+    await rain("db", "rain", "at", "home", "env", "-n", "default", "delete")
+    r = await rain("db", "rain", "at", "home", "env", "show")
     assert r.stdout == ""
 
 
 async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     """Valve CRUD over the (controller, name) key with parents + Path fields."""
 
-    r = await rain("db", "rain", "home", "valve", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -316,18 +313,15 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     assert "area: 10.0" in r.stdout
     assert "priority: true" in r.stdout
 
-    r = await rain("db", "rain", "home", "valve", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "show")
     assert r.stdout == "C1:V1\n"
 
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "show")
     assert "command: !P cmd.v1" in r.stdout
 
     # set: change flow, clear command (monitor-only), drop priority
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -347,10 +341,7 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     # required-field errors
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -369,10 +360,7 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -396,15 +384,12 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
         ("area", ["-F", "F1", "-e", "std", "-l", "x", "--flow", "1"]),
     ]:
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V2", "add", *args)
+            await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V2", "add", *args)
         assert f"needs --{label}" in _msg(err)
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-n",
             "V2",
             "add",
@@ -423,10 +408,7 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "add",
@@ -445,10 +427,7 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -469,20 +448,17 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
 
     # set / delete without --name
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "valve", "-c", "C1", "set", "--flow", "9")
+        await rain("db", "rain", "at", "home", "valve", "-c", "C1", "set", "--flow", "9")
     assert "needs a name" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "valve", "-c", "C1", "delete")
+        await rain("db", "rain", "at", "home", "valve", "-c", "C1", "delete")
     assert "needs a name" in _msg(err)
 
     # --priority and --no-priority are mutually exclusive
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -494,12 +470,9 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     assert "mutually exclusive" in _msg(err)
 
     # same name on a different controller is distinct
-    await rain("db", "rain", "home", "controller", "-n", "C2", "add", "-l", "field")
+    await rain("db", "rain", "at", "home", "controller", "-n", "C2", "add", "-l", "field")
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C2",
         "-n",
@@ -518,79 +491,76 @@ async def test_valve_lifecycle(rain, seed_site):  # noqa:ARG001
     )
     assert "name: V1" in r.stdout
 
-    r = await rain("db", "rain", "home", "valve", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "show")
     assert r.stdout == "C1:V1\nC2:V1\n"
 
-    await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "delete")
-    r = await rain("db", "rain", "home", "valve", "show")
+    await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "delete")
+    r = await rain("db", "rain", "at", "home", "valve", "show")
     assert r.stdout == "C2:V1\n"
 
 
 async def test_day_lifecycle(rain):
-    """Global Day CRUD (site argument accepted but ignored)."""
-    await rain("db", "rain", "home", "add")
+    """Global Day CRUD (no site argument needed)."""
+    await rain("db", "rain", "at", "home", "add")
 
-    r = await rain("db", "rain", "home", "day", "show")
+    r = await rain("db", "rain", "day", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "add")
+    r = await rain("db", "rain", "day", "-n", "workday", "add")
     assert "name: workday" in r.stdout
-    await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+    await rain("db", "rain", "day", "-n", "weekend", "add")
 
-    r = await rain("db", "rain", "home", "day", "show")
+    r = await rain("db", "rain", "day", "show")
     assert r.stdout == "weekend\nworkday\n"
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "show")
+    r = await rain("db", "rain", "day", "-n", "workday", "show")
     assert "name: workday" in r.stdout
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "set", "-n", "wd")
+    r = await rain("db", "rain", "day", "-n", "workday", "set", "-n", "wd")
     assert "name: wd" in r.stdout
-    r = await rain("db", "rain", "home", "day", "show")
+    r = await rain("db", "rain", "day", "show")
     assert "workday" not in r.stdout
     assert "wd" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "add")
+        await rain("db", "rain", "day", "add")
     assert "needs a name" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+        await rain("db", "rain", "day", "-n", "weekend", "add")
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "nope", "show")
+        await rain("db", "rain", "day", "-n", "nope", "show")
     assert "doesn't exist" in _msg(err)
 
-    await rain("db", "rain", "home", "day", "-n", "wd", "delete")
-    r = await rain("db", "rain", "home", "day", "show")
+    await rain("db", "rain", "day", "-n", "wd", "delete")
+    r = await rain("db", "rain", "day", "show")
     assert r.stdout == "weekend\n"
 
 
 async def test_daytime_nested(rain):
     """DayTime fragments managed through the nested ``time`` subgroup."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "day", "-n", "workday", "add")
+    await rain("db", "rain", "at", "home", "add")
+    await rain("db", "rain", "day", "-n", "workday", "add")
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    r = await rain("db", "rain", "day", "-n", "workday", "time", "show")
     assert r.stdout == ""  # no fragments yet (hint goes to stderr)
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "8:00-12:00", "add")
+    r = await rain("db", "rain", "day", "-n", "workday", "time", "-d", "8:00-12:00", "add")
     assert "descr: 8:00-12:00" in r.stdout
-    await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add")
+    await rain("db", "rain", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add")
 
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    r = await rain("db", "rain", "day", "-n", "workday", "time", "show")
     assert r.stdout == "14:00-18:00\n8:00-12:00\n"
 
     r = await rain(
-        "db", "rain", "home", "day", "-n", "workday", "time", "-d", "8:00-12:00", "show"
+        "db", "rain", "day", "-n", "workday", "time", "-d", "8:00-12:00", "show"
     )
     assert "descr: 8:00-12:00" in r.stdout
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "day",
+        "db", "rain", "day",
         "-n",
         "workday",
         "time",
@@ -601,51 +571,48 @@ async def test_daytime_nested(rain):
         "08:00-12:00",
     )
     assert "descr: 08:00-12:00" in r.stdout
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    r = await rain("db", "rain", "day", "-n", "workday", "time", "show")
     assert r.stdout == "08:00-12:00\n14:00-18:00\n"
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "workday", "time", "add")
+        await rain("db", "rain", "day", "-n", "workday", "time", "add")
     assert "needs a description" in _msg(err)
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db", "rain", "home", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add"
+            "db", "rain", "day", "-n", "workday", "time", "-d", "14:00-18:00", "add"
         )
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "nope", "time", "-d", "x", "add")
+        await rain("db", "rain", "day", "-n", "nope", "time", "-d", "x", "add")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "time", "-d", "x", "add")
+        await rain("db", "rain", "day", "time", "-d", "x", "add")
     assert "needs a name" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "workday", "time", "set")
+        await rain("db", "rain", "day", "-n", "workday", "time", "set")
     assert "needs a description" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "day", "-n", "workday", "time", "delete")
+        await rain("db", "rain", "day", "-n", "workday", "time", "delete")
     assert "needs a description" in _msg(err)
 
-    await rain("db", "rain", "home", "day", "-n", "workday", "time", "-d", "08:00-12:00", "delete")
-    r = await rain("db", "rain", "home", "day", "-n", "workday", "time", "show")
+    await rain("db", "rain", "day", "-n", "workday", "time", "-d", "08:00-12:00", "delete")
+    r = await rain("db", "rain", "day", "-n", "workday", "time", "show")
     assert r.stdout == "14:00-18:00\n"
 
 
 async def test_dayrange_lifecycle(rain):
     """Global DayRange CRUD with day linking/unlinking."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "day", "-n", "workday", "add")
-    await rain("db", "rain", "home", "day", "-n", "weekend", "add")
+    await rain("db", "rain", "at", "home", "add")
+    await rain("db", "rain", "day", "-n", "workday", "add")
+    await rain("db", "rain", "day", "-n", "weekend", "add")
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "dayrange",
+        "db", "rain", "dayrange",
         "-n",
         "alldays",
         "add",
@@ -656,17 +623,14 @@ async def test_dayrange_lifecycle(rain):
     )
     assert "name: alldays" in r.stdout
 
-    r = await rain("db", "rain", "home", "dayrange", "-n", "alldays", "show")
+    r = await rain("db", "rain", "dayrange", "-n", "alldays", "show")
     assert "name: alldays" in r.stdout
 
-    r = await rain("db", "rain", "home", "dayrange", "show")
+    r = await rain("db", "rain", "dayrange", "show")
     assert r.stdout == "alldays\n"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "dayrange",
+        "db", "rain", "dayrange",
         "-n",
         "alldays",
         "set",
@@ -677,36 +641,33 @@ async def test_dayrange_lifecycle(rain):
     )
     assert "comment: hello" in r.stdout
 
-    r = await rain("db", "rain", "home", "dayrange", "-n", "alldays", "set", "-n", "everyday")
+    r = await rain("db", "rain", "dayrange", "-n", "alldays", "set", "-n", "everyday")
     assert "name: everyday" in r.stdout
-    r = await rain("db", "rain", "home", "dayrange", "show")
+    r = await rain("db", "rain", "dayrange", "show")
     assert r.stdout == "everyday\n"
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "dayrange", "-n", "everyday", "add")
+        await rain("db", "rain", "dayrange", "-n", "everyday", "add")
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "dayrange", "-n", "everyday", "set", "--day", "nope")
+        await rain("db", "rain", "dayrange", "-n", "everyday", "set", "--day", "nope")
     assert "doesn't exist" in _msg(err)
 
-    await rain("db", "rain", "home", "dayrange", "-n", "everyday", "delete")
-    r = await rain("db", "rain", "home", "dayrange", "show")
+    await rain("db", "rain", "dayrange", "-n", "everyday", "delete")
+    r = await rain("db", "rain", "dayrange", "show")
     assert r.stdout == ""
 
 
 async def test_valve_bad_parent_names(rain):
     """Bad feed/envgroup names surface as readable UsageErrors, not tracebacks."""
-    await rain("db", "rain", "home", "add")
-    await rain("db", "rain", "home", "controller", "-n", "C1", "add", "-l", "shed")
-    await rain("db", "rain", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
-    await rain("db", "rain", "home", "env", "-n", "std", "add")
+    await rain("db", "rain", "at", "home", "add")
+    await rain("db", "rain", "at", "home", "controller", "-n", "C1", "add", "-l", "shed")
+    await rain("db", "rain", "at", "home", "feed", "-n", "F1", "add", "-f", "mon.flow")
+    await rain("db", "rain", "at", "home", "env", "-n", "std", "add")
 
     base = [
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -734,10 +695,7 @@ async def test_valve_bad_parent_names(rain):
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "nope",
             "-n",
@@ -762,14 +720,11 @@ async def test_valve_bad_parent_names(rain):
 async def test_group_lifecycle(rain, seed_group_world):  # noqa:ARG001
     """Group CRUD with valve and day-range M2M links."""
 
-    r = await rain("db", "rain", "home", "group", "show")
+    r = await rain("db", "rain", "at", "home", "group", "show")
     assert r.stdout == ""  # none yet (hint goes to stderr)
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "group",
+        "db", "rain", "at", "home", "group",
         "-n",
         "G1",
         "add",
@@ -793,20 +748,17 @@ async def test_group_lifecycle(rain, seed_group_world):  # noqa:ARG001
     assert "alldays" in r.stdout
     assert "weekends" in r.stdout
 
-    r = await rain("db", "rain", "home", "group", "show")
+    r = await rain("db", "rain", "at", "home", "group", "show")
     assert r.stdout == "G1\n"
 
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "show")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "show")
     assert "valves:" in r.stdout
     assert "days:" in r.stdout
     assert "xdays:" in r.stdout
 
     # set: drop a valve, add a day, drop an xday, change adj
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "group",
+        "db", "rain", "at", "home", "group",
         "-n",
         "G1",
         "set",
@@ -826,37 +778,37 @@ async def test_group_lifecycle(rain, seed_group_world):  # noqa:ARG001
     assert r.stdout.count("weekends") >= 1  # in days
 
     # rename
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "set", "-n", "GG1")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "set", "-n", "GG1")
     assert "name: GG1" in r.stdout
-    r = await rain("db", "rain", "home", "group", "show")
+    r = await rain("db", "rain", "at", "home", "group", "show")
     assert r.stdout == "GG1\n"
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "add")
+        await rain("db", "rain", "at", "home", "group", "add")
     assert "needs a name" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "GG1", "add")
+        await rain("db", "rain", "at", "home", "group", "-n", "GG1", "add")
     assert "already exists" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "nope", "show")
+        await rain("db", "rain", "at", "home", "group", "-n", "nope", "show")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--valve", "bad-spec")
+        await rain("db", "rain", "at", "home", "group", "-n", "G2", "add", "--valve", "bad-spec")
     assert "bad valve spec" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--valve", "C1:nope")
+        await rain("db", "rain", "at", "home", "group", "-n", "G2", "add", "--valve", "C1:nope")
     assert "doesn't exist" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "G2", "add", "--day", "nope")
+        await rain("db", "rain", "at", "home", "group", "-n", "G2", "add", "--day", "nope")
     assert "doesn't exist" in _msg(err)
 
-    await rain("db", "rain", "home", "group", "-n", "GG1", "delete")
-    r = await rain("db", "rain", "home", "group", "show")
+    await rain("db", "rain", "at", "home", "group", "-n", "GG1", "delete")
+    r = await rain("db", "rain", "at", "home", "group", "show")
     assert r.stdout == ""
 
 
@@ -865,10 +817,7 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
     ts = "2030-01-01T12:00:00"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -887,19 +836,16 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
     assert "duration: 3600" in r.stdout
     assert "name: noon" in r.stdout
 
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "show")
     assert r.stdout == f"{ts}\n"
 
     r = await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "show"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "show"
     )
     assert "running: true" in r.stdout
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -917,10 +863,7 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -934,10 +877,7 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -951,10 +891,7 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -970,18 +907,18 @@ async def test_valve_overrides(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", "bad", "show"
+            "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", "bad", "show"
         )
     assert "bad timestamp" in _msg(err)
 
     await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "delete"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "delete"
     )
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "show")
     assert r.stdout == ""
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "valve", "-c", "C1", "override", "show")
+        await rain("db", "rain", "at", "home", "valve", "-c", "C1", "override", "show")
     assert "needs a name" in _msg(err)
 
 
@@ -990,10 +927,7 @@ async def test_valve_schedules(rain, seed_valve):  # noqa:ARG001
     ts = "2030-02-01T08:00:00"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1010,14 +944,11 @@ async def test_valve_schedules(rain, seed_valve):  # noqa:ARG001
     assert "forced: true" in r.stdout
     assert "seen: false" in r.stdout
 
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "show")
     assert r.stdout == f"{ts}\n"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1034,10 +965,7 @@ async def test_valve_schedules(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -1050,9 +978,9 @@ async def test_valve_schedules(rain, seed_valve):  # noqa:ARG001
     assert "needs --duration" in _msg(err)
 
     await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "delete"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "delete"
     )
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "show")
     assert r.stdout == ""
 
 
@@ -1061,10 +989,7 @@ async def test_valve_levels(rain, seed_valve):  # noqa:ARG001
     ts = "2030-03-01T10:00:00"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1081,14 +1006,11 @@ async def test_valve_levels(rain, seed_valve):  # noqa:ARG001
     assert "level: 5.5" in r.stdout
     assert "flow: 2.0" in r.stdout
 
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "show")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "show")
     assert r.stdout == f"{ts}\n"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1106,10 +1028,7 @@ async def test_valve_levels(rain, seed_valve):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -1121,21 +1040,18 @@ async def test_valve_levels(rain, seed_valve):  # noqa:ARG001
         )
     assert "needs --level" in _msg(err)
 
-    await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "delete")
-    r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "show")
+    await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "delete")
+    r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "show")
     assert r.stdout == ""
 
 
 async def test_group_overrides(rain, seed_group_world):  # noqa:ARG001
     """GroupOverride nested subgroup CRUD, keyed by (group, start)."""
-    await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-04-01T12:00:00"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "group",
+        "db", "rain", "at", "home", "group",
         "-n",
         "G1",
         "override",
@@ -1151,14 +1067,11 @@ async def test_group_overrides(rain, seed_group_world):  # noqa:ARG001
     assert "allowed: true" in r.stdout
     assert "name: hol" in r.stdout
 
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "override", "show")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", "show")
     assert r.stdout == f"{ts}\n"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "group",
+        "db", "rain", "at", "home", "group",
         "-n",
         "G1",
         "override",
@@ -1174,10 +1087,7 @@ async def test_group_overrides(rain, seed_group_world):  # noqa:ARG001
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "group",
+            "db", "rain", "at", "home", "group",
             "-n",
             "G1",
             "override",
@@ -1187,50 +1097,47 @@ async def test_group_overrides(rain, seed_group_world):  # noqa:ARG001
         )
     assert "needs --duration" in _msg(err)
 
-    await rain("db", "rain", "home", "group", "-n", "G1", "override", "-s", ts, "delete")
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "override", "show")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", "-s", ts, "delete")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", "show")
     assert r.stdout == ""
 
 
 async def test_group_adjusts(rain, seed_group_world):  # noqa:ARG001
     """GroupAdjust nested subgroup CRUD, keyed by (group, start)."""
-    await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-05-01T00:00:00"
 
     r = await rain(
-        "db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "add", "--factor", "1.5"
+        "db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "add", "--factor", "1.5"
     )
     assert "factor: 1.5" in r.stdout
 
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "show")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "show")
     assert r.stdout == f"{ts}\n"
 
     r = await rain(
-        "db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "set", "--factor", "2.0"
+        "db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "set", "--factor", "2.0"
     )
     assert "factor: 2.0" in r.stdout
 
     with _raises(click.UsageError) as err:
         await rain(
-            "db", "rain", "home", "group", "-n", "G1", "adjust", "-s", "2031-01-01T00:00:00", "add"
+            "db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", "2031-01-01T00:00:00", "add"
         )
     assert "needs --factor" in _msg(err)
 
-    await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "delete")
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "show")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "delete")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "show")
     assert r.stdout == ""
 
 
 async def test_history_lifecycle(rain):
     """History weather-sample CRUD, keyed by (site, time)."""
-    await rain("db", "rain", "home", "add")
+    await rain("db", "rain", "at", "home", "add")
     ts = "2030-06-01T12:00:00"
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "-t",
         ts,
         "add",
@@ -1245,25 +1152,25 @@ async def test_history_lifecycle(rain):
     assert "temp: 22.0" in r.stdout
     assert "sun: 800.0" in r.stdout
 
-    r = await rain("db", "rain", "home", "history", "show")
+    r = await rain("db", "rain", "at", "home", "history", "show")
     assert r.stdout == f"{ts}\n"
 
-    r = await rain("db", "rain", "home", "history", "-t", ts, "show")
+    r = await rain("db", "rain", "at", "home", "history", "-t", ts, "show")
     assert "rain: 1.5" in r.stdout
 
-    r = await rain("db", "rain", "home", "history", "-t", ts, "set", "--rain", "2.0")
+    r = await rain("db", "rain", "at", "home", "history", "-t", ts, "set", "--rain", "2.0")
     assert "rain: 2.0" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "add", "--rain", "1")
+        await rain("db", "rain", "at", "home", "history", "add", "--rain", "1")
     assert "needs a time" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "-t", ts, "add", "--rain", "1")
+        await rain("db", "rain", "at", "home", "history", "-t", ts, "add", "--rain", "1")
     assert "already exists" in _msg(err)
 
-    await rain("db", "rain", "home", "history", "-t", ts, "delete")
-    r = await rain("db", "rain", "home", "history", "show")
+    await rain("db", "rain", "at", "home", "history", "-t", ts, "delete")
+    r = await rain("db", "rain", "at", "home", "history", "show")
     assert r.stdout == ""
 
 
@@ -1271,10 +1178,7 @@ async def test_log_lifecycle(rain, seed_valve):  # noqa:ARG001
     """Log event-entry CRUD (id-keyed), with controller/valve tags."""
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "add",
         "--logger",
@@ -1288,17 +1192,14 @@ async def test_log_lifecycle(rain, seed_valve):  # noqa:ARG001
     assert "text: started V1" in r.stdout
     log_id = r.stdout.split("id:")[1].split()[0]
 
-    r = await rain("db", "rain", "home", "history", "log", "show")
+    r = await rain("db", "rain", "at", "home", "history", "log", "show")
     assert r.stdout == f"{log_id}\n"
 
-    r = await rain("db", "rain", "home", "history", "log", "--id", log_id, "show")
+    r = await rain("db", "rain", "at", "home", "history", "log", "--id", log_id, "show")
     assert "text: started V1" in r.stdout
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "--id",
         log_id,
@@ -1311,10 +1212,7 @@ async def test_log_lifecycle(rain, seed_valve):  # noqa:ARG001
     assert "text: started V1 ok" in r.stdout
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "add",
         "--logger",
@@ -1327,19 +1225,19 @@ async def test_log_lifecycle(rain, seed_valve):  # noqa:ARG001
     assert "text: manual" in r.stdout
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "log", "add", "--logger", "x")
+        await rain("db", "rain", "at", "home", "history", "log", "add", "--logger", "x")
     assert "needs --text" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "log", "add", "--text", "x")
+        await rain("db", "rain", "at", "home", "history", "log", "add", "--text", "x")
     assert "needs --logger" in _msg(err)
 
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "log", "--id", "999", "show")
+        await rain("db", "rain", "at", "home", "history", "log", "--id", "999", "show")
     assert "doesn't exist" in _msg(err)
 
-    await rain("db", "rain", "home", "history", "log", "--id", log_id, "delete")
-    r = await rain("db", "rain", "home", "history", "log", "show")
+    await rain("db", "rain", "at", "home", "history", "log", "--id", log_id, "delete")
+    r = await rain("db", "rain", "at", "home", "history", "log", "show")
     assert log_id not in r.stdout
 
 
@@ -1349,10 +1247,7 @@ async def test_nested_key_errors_and_shows(rain, seed_valve):  # noqa:ARG001
 
     # single named show for each valve-nested subgroup
     await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1366,15 +1261,12 @@ async def test_nested_key_errors_and_shows(rain, seed_valve):  # noqa:ARG001
         "--run",
     )
     r = await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "show"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "show"
     )
     assert "running: true" in r.stdout
 
     await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1387,15 +1279,12 @@ async def test_nested_key_errors_and_shows(rain, seed_valve):  # noqa:ARG001
         "60",
     )
     r = await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "show"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "show"
     )
     assert "duration: 60" in r.stdout
 
     await rain(
-        "db",
-        "rain",
-        "home",
-        "valve",
+        "db", "rain", "at", "home", "valve",
         "-c",
         "C1",
         "-n",
@@ -1408,45 +1297,42 @@ async def test_nested_key_errors_and_shows(rain, seed_valve):  # noqa:ARG001
         "1.0",
     )
     r = await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "show"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "show"
     )
     assert "level: 1.0" in r.stdout
 
     # set / delete without the key → "needs a start/time"
     for verb in ("set", "delete"):
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", verb)
+            await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", verb)
         assert "needs a start" in _msg(err)
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", verb)
+            await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", verb)
         assert "needs a start" in _msg(err)
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", verb)
+            await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", verb)
         assert "needs a time" in _msg(err)
 
     # cleanup empties the lists
     await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "delete"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "override", "-s", ts, "delete"
     )
     await rain(
-        "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "delete"
+        "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "schedule", "-s", ts, "delete"
     )
-    await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "delete")
+    await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "-t", ts, "delete")
     for sub in ("override", "schedule", "level"):
-        r = await rain("db", "rain", "home", "valve", "-c", "C1", "-n", "V1", sub, "show")
+        r = await rain("db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", sub, "show")
         assert r.stdout == ""
 
 
 async def test_group_nested_key_errors_and_shows(rain, seed_group_world):  # noqa:ARG001
     """Single-keyed show, set/delete without key for group override/adjust."""
-    await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
     ts = "2030-08-01T06:00:00"
 
     await rain(
-        "db",
-        "rain",
-        "home",
-        "group",
+        "db", "rain", "at", "home", "group",
         "-n",
         "G1",
         "override",
@@ -1457,41 +1343,38 @@ async def test_group_nested_key_errors_and_shows(rain, seed_group_world):  # noq
         "60",
         "--allow",
     )
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "override", "-s", ts, "show")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", "-s", ts, "show")
     assert "allowed: true" in r.stdout
 
     await rain(
-        "db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "add", "--factor", "1.0"
+        "db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "add", "--factor", "1.0"
     )
-    r = await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "show")
+    r = await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "show")
     assert "factor: 1.0" in r.stdout
 
     for verb in ("set", "delete"):
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "group", "-n", "G1", "override", verb)
+            await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", verb)
         assert "needs a start" in _msg(err)
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "group", "-n", "G1", "adjust", verb)
+            await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", verb)
         assert "needs a start" in _msg(err)
 
-    await rain("db", "rain", "home", "group", "-n", "G1", "override", "-s", ts, "delete")
-    await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "-s", ts, "delete")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "override", "-s", ts, "delete")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "-s", ts, "delete")
     for sub in ("override", "adjust"):
-        r = await rain("db", "rain", "home", "group", "-n", "G1", sub, "show")
+        r = await rain("db", "rain", "at", "home", "group", "-n", "G1", sub, "show")
         assert r.stdout == ""
 
 
 async def test_log_extras(rain, seed_valve):  # noqa:ARG001
     """Log: empty list, --timestamp, --valve clear, set/delete without id."""
 
-    r = await rain("db", "rain", "home", "history", "log", "show")
+    r = await rain("db", "rain", "at", "home", "history", "log", "show")
     assert r.stdout == ""  # empty (hint to stderr)
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "add",
         "--logger",
@@ -1505,10 +1388,7 @@ async def test_log_extras(rain, seed_valve):  # noqa:ARG001
     log_id = r.stdout.split("id:")[1].split()[0]
 
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "--id",
         log_id,
@@ -1519,26 +1399,23 @@ async def test_log_extras(rain, seed_valve):  # noqa:ARG001
         "tagged",
     )
     assert "text: tagged" in r.stdout
-    r = await rain("db", "rain", "home", "history", "log", "--id", log_id, "set", "--valve", "-")
+    r = await rain("db", "rain", "at", "home", "history", "log", "--id", log_id, "set", "--valve", "-")
     assert "text: tagged" in r.stdout
 
     for verb in ("set", "delete"):
         with _raises(click.UsageError) as err:
-            await rain("db", "rain", "home", "history", "log", verb)
+            await rain("db", "rain", "at", "home", "history", "log", verb)
         assert "needs an id" in _msg(err)
 
 
 async def test_add_without_key_and_history_set_delete(rain, seed_group_world):  # noqa:ARG001
     """Add without the key, history set/delete without time, log set --timestamp."""
-    await rain("db", "rain", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
+    await rain("db", "rain", "at", "home", "group", "-n", "G1", "add", "--valve", "C1:V1")
 
     # add without the key (scalars present, key absent)
     with _raises(click.UsageError) as err:
         await rain(
-            "db",
-            "rain",
-            "home",
-            "valve",
+            "db", "rain", "at", "home", "valve",
             "-c",
             "C1",
             "-n",
@@ -1551,34 +1428,31 @@ async def test_add_without_key_and_history_set_delete(rain, seed_group_world):  
     assert "needs a start" in _msg(err)
     with _raises(click.UsageError) as err:
         await rain(
-            "db", "rain", "home", "valve", "-c", "C1", "-n", "V1", "level", "add", "--level", "1"
+            "db", "rain", "at", "home", "valve", "-c", "C1", "-n", "V1", "level", "add", "--level", "1"
         )
     assert "needs a time" in _msg(err)
     with _raises(click.UsageError) as err:
         await rain(
-            "db", "rain", "home", "group", "-n", "G1", "override", "add", "--duration", "60"
+            "db", "rain", "at", "home", "group", "-n", "G1", "override", "add", "--duration", "60"
         )
     assert "needs a start" in _msg(err)
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "group", "-n", "G1", "adjust", "add", "--factor", "1")
+        await rain("db", "rain", "at", "home", "group", "-n", "G1", "adjust", "add", "--factor", "1")
     assert "needs a start" in _msg(err)
 
     # history set / delete without --time
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "set", "--rain", "1")
+        await rain("db", "rain", "at", "home", "history", "set", "--rain", "1")
     assert "needs a time" in _msg(err)
     with _raises(click.UsageError) as err:
-        await rain("db", "rain", "home", "history", "delete")
+        await rain("db", "rain", "at", "home", "history", "delete")
     assert "needs a time" in _msg(err)
 
     # log set with --timestamp
-    r = await rain("db", "rain", "home", "history", "log", "add", "--logger", "x", "--text", "y")
+    r = await rain("db", "rain", "at", "home", "history", "log", "add", "--logger", "x", "--text", "y")
     log_id = r.stdout.split("id:")[1].split()[0]
     r = await rain(
-        "db",
-        "rain",
-        "home",
-        "history",
+        "db", "rain", "at", "home", "history",
         "log",
         "--id",
         log_id,
@@ -1592,51 +1466,49 @@ async def test_add_without_key_and_history_set_delete(rain, seed_group_world):  
 
 
 async def test_dummy_site_dash(rain):
-    """The dummy site '-' lists sites, and is accepted by global subcommands."""
+    """The dummy site '-' lists sites; global subcommands don't need a site."""
     # no sites yet: '-' lists nothing (hint to stderr), exit 0
-    r = await rain("db", "rain", "-")
+    r = await rain("db", "rain", "at", "-")
     assert r.stdout == ""
 
     # global day/dayrange accept '-' as a dummy site, with no site defined
-    r = await rain("db", "rain", "-", "day", "show")
+    r = await rain("db", "rain", "day", "show")
     assert r.stdout == ""
-    r = await rain("db", "rain", "-", "day", "-n", "summer", "add")
+    r = await rain("db", "rain", "day", "-n", "summer", "add")
     assert "name: summer" in r.stdout
-    r = await rain("db", "rain", "-", "day", "show")
+    r = await rain("db", "rain", "day", "show")
     assert r.stdout == "summer\n"
 
-    r = await rain("db", "rain", "-", "dayrange", "show")
+    r = await rain("db", "rain", "dayrange", "show")
     assert r.stdout == ""
-    r = await rain("db", "rain", "-", "dayrange", "-n", "rng", "add", "--day", "summer")
+    r = await rain("db", "rain", "dayrange", "-n", "rng", "add", "--day", "summer")
     assert "name: rng" in r.stdout
-    r = await rain("db", "rain", "-", "dayrange", "show")
+    r = await rain("db", "rain", "dayrange", "show")
     assert r.stdout == "rng\n"
 
     # nested subgroup under a global command also tolerates '-'
-    r = await rain("db", "rain", "-", "day", "-n", "summer", "time", "-d", "8-12", "add")
+    r = await rain("db", "rain", "day", "-n", "summer", "time", "-d", "8-12", "add")
     assert "descr: 8-12" in r.stdout
-    r = await rain("db", "rain", "-", "day", "-n", "summer", "time", "show")
+    r = await rain("db", "rain", "day", "-n", "summer", "time", "show")
     assert r.stdout == "8-12\n"
 
     # a site-scoped subcommand rejects the dummy site
-    with _raises(click.UsageError) as err:
-        await rain("db", "rain", "-", "controller", "show")
-    assert "dummy for global commands only" in _msg(err)
-    assert "controller" in _msg(err)
+    with _raises(click.BadParameter):
+        await rain("db", "rain", "at", "-", "controller", "show")
 
     # '-' still lists real sites once one exists
-    await rain("db", "rain", "home", "add")
-    r = await rain("db", "rain", "-")
+    await rain("db", "rain", "at", "home", "add")
+    r = await rain("db", "rain", "at", "-")
     assert r.stdout == "home\n"
 
 
 async def test_site_rate_units(rain, db_url):
     """``--rate`` is mm/day on the CLI; the stored column is mm/second."""
-    r = await rain("db", "rain", "home", "add")
+    r = await rain("db", "rain", "at", "home", "add")
     assert "rate: 10.0" in r.stdout
 
     # set to 20 mm/day; the CLI echoes mm/day
-    r = await rain("db", "rain", "home", "set", "--rate", "20")
+    r = await rain("db", "rain", "at", "home", "set", "--rate", "20")
     assert "rate: 20.0" in r.stdout
 
     # the stored column is mm/second
@@ -1651,19 +1523,19 @@ async def test_site_rate_units(rain, db_url):
 
 async def test_gen_cli_runs(rain, seed_valve):  # noqa:ARG001
     """``moat db rain <site> gen`` runs and reports the valve count."""
-    r = await rain("db", "rain", "home", "gen", "--no-save")
+    r = await rain("db", "rain", "at", "home", "gen", "--no-save")
     assert "valves: 1" in r.stdout
     assert "schedules: 0" in r.stdout  # V1 sits at level 0 < start_level → nothing to do
 
 
 async def test_gen_cli_verbose(rain, seed_valve):  # noqa:ARG001
     """``--verbose`` wires the stderr narration sink (covered, output unchecked)."""
-    r = await rain("db", "rain", "home", "gen", "--verbose", "--no-save")
+    r = await rain("db", "rain", "at", "home", "gen", "--verbose", "--no-save")
     assert "valves: 1" in r.stdout
 
 
 async def test_recalc_cli_runs(rain, seed_valve):  # noqa:ARG001
     """``moat db rain <site> recalc`` runs and reports the valve count."""
-    r = await rain("db", "rain", "home", "recalc", "--no-save")
+    r = await rain("db", "rain", "at", "home", "recalc", "--no-save")
     assert "valves: 1" in r.stdout
     assert "updated: 0" in r.stdout  # no level rows → nothing to recompute

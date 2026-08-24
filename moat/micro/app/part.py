@@ -19,6 +19,7 @@ _attrs = {
     "Transfer": "transfer",
     "Average": "average",
     "Triac": "triac",
+    "MPlex": "mplex",
 }
 
 

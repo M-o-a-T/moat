@@ -97,4 +97,13 @@ release: doc
 	./mt src tag
 	./mt -V src build -ar
 
-.PHONY: doc docall docwarn setup release venv prep
+# Run all TS/JS package tests
+jstest:
+	@for dir in ts/*/ js/*/ ; do \
+	  if [ -f "$$dir/package.json" ]; then \
+	    echo "Running tests in $$dir"; \
+	    (cd "$$dir" && npx vitest run) || exit 1; \
+	  fi; \
+	done
+
+.PHONY: doc docall docwarn setup release venv prep jstest

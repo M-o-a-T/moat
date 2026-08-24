@@ -87,6 +87,7 @@ if TYPE_CHECKING:
         set: Callable[[Path, Any, MsgMeta], Awaitable[Any]]
         delete: Callable[..., Awaitable[Any]]
         walk: Callable[..., Caller]
+        list: Callable[[Path], Caller]
 
     class ErrSender(Protocol):
         "Protocol for `e.*` RPC sender helpers."
@@ -659,6 +660,16 @@ class LinkSender(MsgSender):
 
         async with self.d.walk(*args).stream_in() as mon:
             yield Walker(mon, meta=meta)
+
+    async def d_list(self, path: Path) -> AsyncIterator[str]:
+        """
+        List the child names of a node.
+
+        Unlike :meth:`d_walk`, this also returns children that hold no data.
+        """
+        async with self.d.list(path).stream_in() as mon:
+            async for msg in mon:
+                yield msg[0]
 
     async def stream_watch(self, msg: Msg):
         """

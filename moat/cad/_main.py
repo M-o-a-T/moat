@@ -1,18 +1,18 @@
 """
-This module dies some 3d stuff.
+This module does some 3d stuff.
 """
 
 from __future__ import annotations
 
 import anyio
-
-# pylint: disable=missing-module-docstring
 import logging
 from pathlib import Path as FSPath
 
 import asyncclick as click
 
 from moat.lib.run import load_subgroup
+
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ usage1 = """
 
 @load_subgroup(sub_pre="moat.cad", sub_post="cli", ext_pre="moat.cad", ext_post="_main.cli")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx: click.Context) -> None:
     """
     MoaT 3D editor support.
 
@@ -34,8 +34,8 @@ async def cli(ctx):
 @cli.command("edit")
 @click.pass_obj
 @click.argument("files", nargs=-1, default=None)
-async def edit_(obj, files):
-    "Start the editor."
+async def edit_(obj: Any, files: tuple[str, ...]) -> None:
+    """Start the editor."""
     #    base: "/opt/cq"
     # paths:
     #  - "/src/CQ-editor"
@@ -94,8 +94,8 @@ async def edit_(obj, files):
 @click.pass_obj
 @click.argument("file", nargs=1)
 @click.argument("args", nargs=-1)
-async def run_(obj, file, args):
-    "Run a script."
+async def run_(obj: Any, file: str, args: tuple[str, ...]) -> None:
+    """Run a script."""
 
     import os  # noqa: PLC0415
     import sys  # noqa: PLC0415
@@ -139,8 +139,8 @@ async def run_(obj, file, args):
 
 @cli.command("gcode")
 @click.option("-p", "--printer", type=str, default="xl")
-async def gcode(printer):
-    "Emit gcode template"
+async def gcode(printer: str) -> None:
+    """Emit gcode template"""
     from anyio import Path  # noqa: PLC0415
 
     from jinja2 import Environment  # noqa: PLC0415

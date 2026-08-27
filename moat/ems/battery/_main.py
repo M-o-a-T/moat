@@ -48,7 +48,7 @@ async def cli(obj, bat):
 
 @asynccontextmanager
 async def _bat(obj):
-    async with RootCmd(cfg, run=True) as dsp, dsp.sub_at(obj.bat) as bat:
+    async with RootCmd(obj.cfg) as dsp, dsp.sub_at(obj.bat) as bat:
         yield bat
 
 

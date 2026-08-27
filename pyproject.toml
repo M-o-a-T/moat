@@ -303,18 +303,7 @@ exclude = [
     "moat/link/gate/kv.py",
     "moat/link/gate/venus.py",
     "moat/mcp/_server.py",
-    # moat/ems: pre-existing typing debt (bucket B+C) outside this task's scope.
-    # Remove after introducing a typed sched-config schema (WORK.md step 6).
-    "moat/ems/sched/**",
     "moat/ems/battery/OFF/**",
-    "moat/ems/battery/_base.py",
-    "moat/ems/battery/_main.py",
-    "moat/ems/battery/conv/**",
-    "moat/ems/battery/diy_serial/**",
-    "moat/ems/inv/__init__.py",
-    "moat/ems/inv/remote.py",
-    "moat/ems/victron/dbus/__init__.py",
-    "moat/ems/victron/dbus/monitor.py",
 ]
 
 [tool.ty.rules]

@@ -80,6 +80,8 @@ class Cell(BaseCell):
         )
 
     def m_temp(self, msg):  # noqa:D102
+        assert self.b_coeff_ext is not None
+        assert self.b_coeff_bal is not None
         self.batt_temp = thermistor2celsius(self.b_coeff_ext, msg.extRaw)
         self.load_temp = thermistor2celsius(self.b_coeff_bal, msg.intRaw)
 
@@ -117,6 +119,8 @@ class Cell(BaseCell):
 
     async def cmd_u(self):
         "read cell voltage"
+        if self.v_now is not None:
+            return self.v_now
         res = (await self.comm(p=RequestVoltages(), s=self.cfg.pos))[0]
         return self._raw2volt(res.voltRaw & 0x1FFF)
 
@@ -161,12 +165,14 @@ class Cell(BaseCell):
         if vcal is None and t is None and v is None:
             return dict(vcal=self.v_calibration, t=self.load_temp, v=self.load_volt)
         else:
+            assert self.b_coeff_bal is not None
+            assert self.v_calibration is not None
+            rc = RequestConfig()
+            rc.voltageCalibration = self.v_calibration
+            rc.bypassTempRaw = celsius2thermistor(self.b_coeff_bal, self.load_temp)
+            rc.bypassVoltRaw = self._volt2raw(self.load_volt)
             await self.comm(
-                p=RequestConfig(
-                    self.v_calibration,
-                    celsius2thermistor(self.b_coeff_bal, self.load_temp),
-                    self._volt2raw(self.load_volt),
-                ),
+                p=rc,
                 s=self.cfg.pos,
             )
 
@@ -191,7 +197,9 @@ class Cell(BaseCell):
         Balance down: set the balancer level; get balancer level and current PWM power
         """
         if thr is not None:
-            await self.comm(p=RequestBalanceLevel(self._volt2raw(thr)), s=self.cfg.pos)
+            rl = RequestBalanceLevel()
+            rl.levelRaw = self._volt2raw(thr)
+            await self.comm(p=rl, s=self.cfg.pos)
             self.bal_level = thr
             return
 

@@ -1,1 +1,1 @@
-# noqa:D104
+"""Rudimentary debugging support."""

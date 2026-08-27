@@ -21,25 +21,21 @@ from moat.mqtt.mqtt.constants import QOS_1, QOS_2
 
 logger = logging.getLogger(__name__)
 
-
 async def uptime_coro():
-    async with open_mqttclient(uri="mqtt://test.mosquitto.org/") as C:
+    async with open_mqttclient(uri='mqtt://test.mosquitto.org/') as C:
         # Subscribe to '$SYS/broker/uptime' with QOS=1
         # Subscribe to '$SYS/broker/load/#' with QOS=2
         await C.subscribe([
-            ("$SYS/broker/uptime", QOS_1),
-            ("$SYS/broker/load/#", QOS_2),
-        ])
+                ('$SYS/broker/uptime', QOS_1),
+                ('$SYS/broker/load/#', QOS_2),
+             ])
         for i in range(1, 100):
             message = await C.deliver_message()
             packet = message.publish_packet
-            print(
-                "%d:  %s => %s" % (i, packet.variable_header.topic_name, str(packet.payload.data))
-            )
-        await C.unsubscribe(["$SYS/broker/uptime", "$SYS/broker/load/#"])
+            print("%d:  %s => %s" % (i, packet.variable_header.topic_name, str(packet.payload.data)))
+        await C.unsubscribe(['$SYS/broker/uptime', '$SYS/broker/load/#'])
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     anyio.run(uptime_coro)

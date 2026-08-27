@@ -27,6 +27,7 @@ from moat.lib.micro import byte2utf8, const
 from ._base import Codec as _Codec
 from ._base import NoCodecError
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -524,7 +525,7 @@ class Packer:
                     n -= 1
                     todo.append(obj[n])
                 continue
-            if is_(obj, dict):
+            if is_(obj, Mapping):
                 n = len(obj)
                 if n <= 0x0F:
                     wb(struct.pack("B", 0x80 + n))

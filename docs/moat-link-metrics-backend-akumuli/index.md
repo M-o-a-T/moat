@@ -39,7 +39,7 @@ output = input * factor + offset
     "mode": "gauge",
     "factor": 1.0,
     "offset": 0.0,
-    "t_min": 60.0,  # minimum 60 seconds between writes
+    "t_min": 60.0  # minimum 60 seconds between writes
 }
 ```
 

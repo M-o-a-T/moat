@@ -65,6 +65,6 @@ class API(BaseAPI):  # noqa: D101
             yield self
 
     @property
-    def host(self):
-        "Host to talk to"
+    def host(self) -> str:
+        """Host to talk to"""
         return self.cfg.get("host", "github.com")

@@ -21,7 +21,7 @@ def build_aa_data(serial, code, timer):  # noqa:D103
 
 @dataclass
 class aa_record:  # noqa:D101
-    serial: bytes = None
+    serial: bytes | None = None
     flags: int = 0
     t_continue: int = 0
     t_live: int = 0
@@ -62,7 +62,9 @@ class aa_record:  # noqa:D101
         return self
 
     @property
-    def packet(self):  # noqa:D102
+    def packet(self) -> bytes:
+        """Serialize this record to bytes."""
+        assert self.serial is not None
         ls = len(self.serial) - 1
         if not 0 <= ls <= 0x0F:
             raise RuntimeError(f"Serial too long: {self.serial!r}")

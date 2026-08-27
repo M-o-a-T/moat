@@ -143,6 +143,13 @@ class ArrayCmd(BaseSuperCmd):
             else:
                 return await self._cmd_all(msg, rcmd)
 
+        # Check for cmd_XXX methods on this handler before treating as sub-app index
+        if isinstance(cmd, str) and not rcmd:
+            if not msg.can_stream and (method := getattr(self, f"cmd_{cmd}", None)) is not None:
+                return await msg.call_simple(method)
+            if (method := getattr(self, f"stream_{cmd}", None)) is not None:
+                return await msg.call_stream(method)
+
         if not isinstance(cmd, int):
             raise NoPathError(
                 self.path,
@@ -199,6 +206,16 @@ class ArrayCmd(BaseSuperCmd):
             r = await snd.cmd(Path.build(cmd), *msg.args, **msg.kw)
             res.append((r.args, r.kw))
         await msg.result(*res)
+
+    async def cmd_all(self, cmd: str, *args, **kw) -> list:
+        """Call a command on all sub-apps and return a list of results."""
+        res = []
+        snd = MsgSender(self)
+        for app in self.apps:
+            snd.set_root(app)
+            r = await snd.cmd(Path.build([cmd]), *args, **kw)
+            res.extend(r.args)
+        return res
 
     async def _stream_all(self, msg, rcmd):
         """

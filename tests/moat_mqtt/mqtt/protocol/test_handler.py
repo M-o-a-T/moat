@@ -6,6 +6,7 @@ from __future__ import annotations
 import anyio
 import logging
 import random
+from anyio.abc import SocketAttribute
 from functools import partial
 
 from tests.moat_mqtt import anyio_run
@@ -51,11 +52,12 @@ class TestProtocolHandler:  # noqa: D101
             with anyio.fail_after(1, shield=True):
                 await sock.aclose()
 
-    def run_(self, server_mock, test_coro, port):  # noqa: D102
+    def run_(self, server_mock, test_coro):  # noqa: D102
         async def runner():
             async with anyio.create_task_group() as tg:
                 self.plugin_manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
-                server = await anyio.create_tcp_listener(local_port=port, local_host="127.0.0.1")
+                server = await anyio.create_tcp_listener(local_port=0, local_host="127.0.0.1")
+                port = server.listeners[0].extra(SocketAttribute.local_address)[1]
 
                 async def _serve():
                     async with server:
@@ -71,7 +73,7 @@ class TestProtocolHandler:  # noqa: D101
 
         anyio_run(runner)
 
-    def test_start_stop(self, free_tcp_port):  # noqa: D102
+    def test_start_stop(self):  # noqa: D102
         async def server_mock(stream):  # pylint: disable=unused-argument
             pass
 
@@ -82,9 +84,9 @@ class TestProtocolHandler:  # noqa: D101
             await self.start_handler(handler, s)
             await self.stop_handler(handler, s)
 
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_publish_qos0(self, free_tcp_port):  # noqa: D102
+    def test_publish_qos0(self):  # noqa: D102
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.variable_header.topic_name == "/topic"
@@ -105,9 +107,9 @@ class TestProtocolHandler:  # noqa: D101
             assert message.pubcomp_packet is None
             await self.stop_handler(handler, s)
 
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_publish_qos1(self, free_tcp_port):  # noqa: D102
+    def test_publish_qos1(self):  # noqa: D102
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.variable_header.topic_name == "/topic"
@@ -133,9 +135,9 @@ class TestProtocolHandler:  # noqa: D101
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_publish_qos2(self, free_tcp_port):  # noqa: D102
+    def test_publish_qos2(self):  # noqa: D102
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -167,9 +169,9 @@ class TestProtocolHandler:  # noqa: D101
 
         self.handler = None
 
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_receive_qos0(self, free_tcp_port):  # noqa: D102
+    def test_receive_qos0(self):  # noqa: D102
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -196,9 +198,9 @@ class TestProtocolHandler:  # noqa: D101
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_receive_qos1(self, free_tcp_port):  # noqa: D102
+    def test_receive_qos1(self):  # noqa: D102
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -229,9 +231,9 @@ class TestProtocolHandler:  # noqa: D101
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_receive_qos2(self, free_tcp_port):  # noqa: D102
+    def test_receive_qos2(self):  # noqa: D102
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -268,7 +270,7 @@ class TestProtocolHandler:  # noqa: D101
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
     async def start_handler(self, handler, session):  # noqa: D102
         self.check_empty_waiters(handler)
@@ -291,7 +293,7 @@ class TestProtocolHandler:  # noqa: D101
         assert not session.inflight_out
         assert not session.inflight_in
 
-    def test_publish_qos1_retry(self, free_tcp_port):  # noqa: D102
+    def test_publish_qos1_retry(self):  # noqa: D102
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -321,9 +323,9 @@ class TestProtocolHandler:  # noqa: D101
 
         self.handler = None
 
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)
 
-    def test_publish_qos2_retry(self, free_tcp_port):  # noqa: D102
+    def test_publish_qos2_retry(self):  # noqa: D102
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -358,4 +360,4 @@ class TestProtocolHandler:  # noqa: D101
 
         self.handler = None
 
-        self.run_(server_mock, test_coro, free_tcp_port)
+        self.run_(server_mock, test_coro)

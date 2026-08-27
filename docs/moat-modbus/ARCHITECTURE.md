@@ -1,26 +1,31 @@
-# Architecture — moat.modbus
+# Architecture -- moat.modbus
 
 Opinionated async Modbus client + server for both Modbus-TCP and Modbus-RTU
-(serial). Builds on `pymodbus` primitives (framers, PDUs, datastores) but
-reimplements connection management and polling. `__init__.py` describes it as
+(serial). Builds on `moat.lib.modbus` (a sans-IO protocol core, stdlib-only)
+for PDU encoding/decoding and framing, then reimplements connection
+management and polling on top of anyio. `__init__.py` describes it as
 "an opinionated async Modbus client and server."
 
 ## Client (`modbus/client.py`)
 
-- **`ModbusClient`** — top-level container/registry of `hosts`. Async ctx mgr
+- **`ModbusClient`** -- top-level container/registry of `hosts`. Async ctx mgr
   (`CtxObj`) spawning a task group. `host()` (TCP), `serial()` (RTU),
   `conn(cfg)` (config-driven dispatch); `*_service()` variants run connections
   as background tasks via `task_status.started()`.
-- **`HostCommon`** — base for `Host`/`SerialHost`. Manages transactions
+- **`HostCommon`** -- base for `Host`/`SerialHost`. Manages transactions
   (`_transactions` keyed by TID), write queue, capacity limiter (`cap`), send
   lock, `_connected` event. `execute(request)` builds a frame, sends, awaits
   a `ValueEvent` reply matched by `transaction_id`.
-- **`Host`** (TCP, `FramerSocket`) — `_reader()` connects via
+- **`Host`** (TCP, `FramerTCP(False)`) -- `_reader()` connects via
   `anyio.connect_tcp`, sets SO_LINGER for RST, re-sends open transactions on
   reconnect, decodes frames, resolves by TID. Reconnect-with-delay.
-- **`SerialHost`** (RTU, `FramerRTU`) — `_reader()` opens
+- **`SerialHost`** (RTU, `FramerRTU(False)`) -- `_reader()` opens
   `anyio_serial.Serial`; optionally routes replies through a `monitor`
   callback (passive sniffing) instead of TID matching. TID always 0.
+  Uses `RTU_INTER_FRAME_TIMEOUT` (~0.2 s) to detect stale partial frames:
+  when the framer accumulator is non-empty, the next `receive()` is wrapped
+  in `anyio.fail_after(RTU_INTER_FRAME_TIMEOUT)`; on `TimeoutError`,
+  `resetFrame()` is called and the loop continues (connection stays up).
 - **`Unit`** — one slave address under a host; owns `Slot`s; stamps
   `unit_id` and forwards to `host.execute()`.
 - **`Slot`** — an "atomic access" group polled at a common cadence. Holds

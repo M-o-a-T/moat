@@ -833,7 +833,8 @@ async def copytree(
                         cross_args.append(f"-march={arch}")
                     data = await run(*cross_args, capture="raw")
                 except CalledProcessError as exc:
-                    print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                    if exc.stderr:
+                        print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     # copy this file unmodified
                 else:
                     assert isinstance(src, APath)

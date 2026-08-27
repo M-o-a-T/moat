@@ -45,6 +45,8 @@ from .exceptions import (
     error_types,
 )
 
+from collections.abc import Mapping
+
 logger = logging.getLogger(__name__)
 
 ClosedResourceError = anyio.ClosedResourceError
@@ -563,7 +565,7 @@ class Client:
             return res
 
         res = await res.get()
-        if isinstance(res, dict):
+        if isinstance(res, Mapping):
             self.logger.debug("Result %s", res)
 
         if iter is True and not isinstance(res, StreamedRequest):

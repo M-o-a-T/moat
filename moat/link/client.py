@@ -50,6 +50,7 @@ from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 try:
@@ -87,6 +88,7 @@ if TYPE_CHECKING:
         set: Callable[[Path, Any, MsgMeta], Awaitable[Any]]
         delete: Callable[..., Awaitable[Any]]
         walk: Callable[..., Caller]
+        list: Callable[[Path], Caller]
 
     class ErrSender(Protocol):
         "Protocol for `e.*` RPC sender helpers."
@@ -660,6 +662,16 @@ class LinkSender(MsgSender):
         async with self.d.walk(*args).stream_in() as mon:
             yield Walker(mon, meta=meta)
 
+    async def d_list(self, path: Path) -> AsyncIterator[str]:
+        """
+        List the child names of a node.
+
+        Unlike :meth:`d_walk`, this also returns children that hold no data.
+        """
+        async with self.d.list(path).stream_in() as mon:
+            async for msg in mon:
+                yield msg[0]
+
     async def stream_watch(self, msg: Msg):
         """
         A hook for reading data. Used mainly by `moat.lib.rpc.app.link.Cmd`.
@@ -828,13 +840,13 @@ class LinkSender(MsgSender):
                         task_status.started()
                         continue
                     p, d = pd
-                    if type(d) is dict:
+                    if isinstance(d, Mapping):
                         d = to_attrdict(d)
                     dl = list(p)
                     while dl:
                         n = dl.pop()
                         d = attrdict({n: d})
-                    if not isinstance(d, dict):
+                    if not isinstance(d, Mapping):
                         self._link.logger.warning("Item at %r is %r, not a dict, ignoring", p, d)
                         continue
                     merge(res, d)

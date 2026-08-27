@@ -56,6 +56,9 @@ class CellSim(_CellSim):
         self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
     async def task(self):
+        # Wait for the ctrl link to be ready
+        ctrl_name = self.cfg["ctrl"][0]
+        await self.root.sub[ctrl_name].wait_ready()
         self.set_ready()
         await super().task()
 
@@ -66,6 +69,9 @@ class _SingleCellSim(_CellSim):
     """
 
     def __init__(self, cell, ctrl):
+        from moat.util import attrdict  # noqa:PLC0415
+
+        super().__init__(attrdict())
         self.cell = cell
         self.ctrl = ctrl
 
@@ -89,6 +95,10 @@ class CellsSim(_CellSim):
         self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
     async def task(self):
+        # Wait for the ctrl link to be ready
+        ctrl_name = self.cfg["ctrl"][0]
+        await self.root.sub[ctrl_name].wait_ready()
+
         cell = self.cfg["cell"]
 
         def _mput(q, m):

@@ -13,6 +13,8 @@ from ._dir import BaseSubCmd as BaseSubCmd
 from ._dir import BaseSuperCmd as BaseSuperCmd
 from ._dir import DirCmd as DirCmd
 
+from collections.abc import Mapping
+
 
 class _NotGiven:
     # This is distinct from the "real" NotGiven. This is intentional.
@@ -96,12 +98,12 @@ class CfgStore(SubStore):
             if empty:
                 ocd = {}
                 ocl = []
-            for k, v in c.items() if isinstance(c, dict) else enumerate(c):
+            for k, v in c.items() if isinstance(c, Mapping) else enumerate(c):
                 if isinstance(k, str) and k.startswith("_"):
                     continue
-                if isinstance(v, (dict, list)):
+                if isinstance(v, (Mapping, list)):
                     if isinstance(c, list) or isinstance(ocd, list):
-                        if isinstance(ocd, dict) and not empty:
+                        if isinstance(ocd, Mapping) and not empty:
                             await _set(p, [])
                             ocd = []
                         if k is None:
@@ -110,7 +112,7 @@ class CfgStore(SubStore):
                         await self.sd.c(p=p + (k,), d=type(v)(), keep=keep)
                     if v:
                         await _set(p + (k,), v, empty=empty)
-                elif isinstance(ocd, dict):
+                elif isinstance(ocd, Mapping):
                     if ocd.get(k, _NotGiven) != v:
                         await self.sd.c(p=p + (k,), d=v, keep=keep)
                 elif isinstance(ocd, list):
@@ -122,7 +124,7 @@ class CfgStore(SubStore):
             if not replace:
                 return
             # drop those client cfg snippets that are not on the server
-            okd = ocd.keys() if isinstance(ocd, dict) else ()
+            okd = ocd.keys() if isinstance(ocd, Mapping) else ()
             for k in chain(okd, ocl):
                 if k not in c:
                     await self.sd.c(p=p + (k,), d=NotGiven)

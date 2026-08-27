@@ -1,5 +1,10 @@
 """
 A hacked-up copy of some parts of `moat.util`.
+
+Note: unlike the CPython version in ``moat.lib.proxy._proxy``, this
+MicroPython port uses strong references for all proxies. Auto-generated
+proxies must be dropped manually via ``drop_proxy``. MicroPython lacks
+``weakref.WeakValueDictionary``, so automatic release is not available.
 """
 
 from __future__ import annotations

@@ -104,7 +104,14 @@ class Backend(_Backend):
 
         kw["client_id"] = self.name
 
-        a = (kw.pop("host"),) if "host" in kw else ()
+        if kw.get("transport") == "unix":
+            # Unix socket path is stored as 'port' (the endpoint selector),
+            # not 'host' (the network address). It becomes the positional
+            # ``host_or_path`` argument of ``AsyncMQTTClient``.
+            a = (kw.pop("port"),) if "port" in kw else ()
+            kw.pop("host", None)  # discard stale TCP host
+        else:
+            a = (kw.pop("host"),) if "host" in kw else ()
         self.codec = get_codec(codec)
         self.mcodec = get_codec("std-cbor")
 

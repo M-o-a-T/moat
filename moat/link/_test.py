@@ -95,7 +95,7 @@ listen {{
                     ["flashmq", "-c", str(tf)],
                     stderr=sys.stderr,
                     stdout=sys.stdout,
-                    env=dict(HOME=td, PATH=os.environ.get("PATH", "")),
+                    env={**os.environ, "HOME": td},
                 )
             )
             for _ in range(20):
@@ -177,7 +177,7 @@ class Scaffold(CtxObj):
             ):
                 bsock = await tg.start(run_broker, self.cfg)
                 self.cfg.backend.transport = "unix"
-                self.cfg.backend.host = bsock
+                self.cfg.backend.port = bsock
                 try:
                     yield self
                 finally:
@@ -304,23 +304,28 @@ class Scaffold(CtxObj):
             else:
                 args = tuple(a0)
         bcfg = self.cfg.backend
-        pre: tuple[str, ...] = (
+        pre: list[str] = [
             "-s",
             "moat.link.backend.driver",
             str(bcfg.get("driver", "mqtt")),
             "-s",
             "moat.link.backend.codec",
             str(bcfg.get("codec", "std-cbor")),
-            "-s",
-            "moat.link.backend.transport",
-            str(bcfg.get("transport", "tcp")),
-            "-s",
-            "moat.link.backend.host",
-            str(bcfg.get("host", "127.0.0.1")),
-            "-s",
-            "moat.link.root",
-            f".{self.cfg.root}",
-        )
+        ]
+        transport = bcfg.get("transport", "tcp")
+        pre.extend(("-s", "moat.link.backend.transport", str(transport)))
+        if transport == "unix":
+            pre.extend(("-s", "moat.link.backend.port", str(bcfg.port)))
+        else:
+            pre.extend((
+                "-s",
+                "moat.link.backend.host",
+                str(bcfg.get("host", "127.0.0.1")),
+                "-s",
+                "moat.link.backend.port",
+                f"={int(bcfg.port)}",
+            ))
+        pre.extend(("-s", "moat.link.root", f".{self.cfg.root}"))
         return await run_(*pre, *args, do_stdout=do_stdout)
 
     @asynccontextmanager

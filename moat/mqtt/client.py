@@ -692,6 +692,11 @@ class MQTTClient:
                             await conn.aclose()
                         raise
                 adapter = StreamAdapter(conn)
+            elif scheme == "mqtt+unix":
+                # Unix domain socket; the path is in the URI's netloc or path.
+                sock_path = uri_attributes.netloc or uri_attributes.path
+                conn = await anyio.connect_unix(sock_path)
+                adapter = StreamAdapter(conn)
             elif scheme in ("ws", "wss"):
                 if kwargs.pop("autostart_tls", False):
                     kwargs["ssl"] = kwargs.pop("ssl_context")

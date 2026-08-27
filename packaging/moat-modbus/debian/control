@@ -13,14 +13,16 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat,
-  python3-pymodbus (>= 3.7),
+  moat-lib-modbus,
 Replaces: python3-moat-modbus
 Conflicts: python3-moat-modbus
 Description: An async modbus client/server library
- This is an anyio-enabled async frontend for pymodbus.
+ An anyio-enabled async Modbus client/server, built on the sans-IO
+ protocol core moat-lib-modbus.
  .
- This module diverges from `pymodbus` in that it does not expose a data
- store, context to the user. Instead, every bus value is a separate object,
- with arbitrary length and encapsulating its encoding and decoding rules.
+ This module diverges from standard Modbus libraries in that it does not
+ expose a data store / context to the user. Instead, every bus value is
+ a separate object, with arbitrary length and encapsulating its
+ encoding and decoding rules.
  .
  This module was previously named "asyncmodbus".

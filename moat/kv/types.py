@@ -11,6 +11,8 @@ from moat.lib.path import P, Path
 from .exceptions import ACLError, ClientError
 from .model import Entry
 
+from collections.abc import Mapping
+
 logger = logging.getLogger(__name__)
 
 # TYPES
@@ -36,7 +38,11 @@ class TypeEntry(Entry):
     def check_value(self, value, entry=None, **kv):  # noqa: D102
         self.parent.check_value(value, entry=entry, **kv)
         if self._schema is not None:
-            jsonschema.validate(instance=value, schema=self._schema)
+            if isinstance(value, Mapping):
+                v = dict(value) if not isinstance(value, dict) else value
+            else:
+                v = value
+            jsonschema.validate(instance=v, schema=self._schema)
         if self._code is not None:
             self._code(value, entry=entry, data=self._data, **kv)
 

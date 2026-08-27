@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 class PathType(TypeDecorator[Path]):
     """Store a :class:`moat.lib.path.Path` column as ``VARCHAR(200)``.
 
-    Binding serialises with :func:`str`; loading parses with
-    :meth:`Path.from_str`. The empty path is ``":""``; a nullable column
+    Binding serialises with :class:`str`; loading parses with
+    :meth:`moat.lib.path.Path.from_str`. The empty path is ``":""``; a nullable column
     maps to ``None`` ↔ SQL ``NULL``.
     """
 
@@ -41,13 +41,13 @@ class PathType(TypeDecorator[Path]):
     cache_ok = True
 
     def process_bind_param(self, value: Path | None, dialect: Dialect) -> str | None:  # noqa:ARG002
-        """Serialise a :class:`Path` (or ``None``) for the database."""
+        """Serialise a :class:`moat.lib.path.Path` (or ``None``) for the database."""
         if value is None:
             return None
         return str(value)
 
     def process_result_value(self, value: str | None, dialect: Dialect) -> Path | None:  # noqa:ARG002
-        """Parse a stored string (or ``None``) back into a :class:`Path`."""
+        """Parse a stored string (or ``None``) back into a :class:`moat.lib.path.Path`."""
         if value is None:
             return None
         return Path.from_str(value)
@@ -315,7 +315,7 @@ class Sensor(Base):
             kind: One of ``rain`` / ``temp`` / ``wind`` / ``sun``. Immutable
                 once set.
             state: The sensor's read/subscribe path as a dotted string;
-                parsed with :meth:`Path.from_str`. Required for new sensors;
+                parsed with :meth:`moat.lib.path.Path.from_str`. Required for new sensors;
                 cannot be cleared.
             **kw: Scalar columns (``name``, ``weight``) forwarded to
                 :meth:`Base.apply`.
@@ -376,7 +376,7 @@ class Feed(Base):
                 new feed; cannot be cleared.
             flow_monitor: Dotted path of the flow-monitoring sensor, or
                 ``None`` / ``"-"`` to clear. Parsed with
-                :meth:`Path.from_str`.
+                :meth:`moat.lib.path.Path.from_str`.
             **kw: Scalar columns (``name``, ``comment``, ``flow``,
                 ``max_flow_wait``, ``disabled``) forwarded to
                 :meth:`Base.apply`.
@@ -537,9 +537,9 @@ class Valve(Base):
             envgroup: Name of the :class:`EnvGroup` within the site. Required
                 for a new valve; cannot be cleared.
             command: Dotted write path, or ``None`` / ``"-"`` to clear (a valve
-                may be monitor-only). Parsed with :meth:`Path.from_str`.
+                may be monitor-only). Parsed with :meth:`moat.lib.path.Path.from_str`.
             state: Dotted read/feedback path, or ``None`` / ``"-"`` to clear (a
-                valve may be control-only). Parsed with :meth:`Path.from_str`.
+                valve may be control-only). Parsed with :meth:`moat.lib.path.Path.from_str`.
             **kw: Scalar columns forwarded to :meth:`Base.apply`.
         """
         sess = session.get()

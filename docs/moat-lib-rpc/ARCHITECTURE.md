@@ -45,6 +45,16 @@ streams (`stream/`): a single `Msg` can open a linked channel over which
 multiple values flow in either direction until closed. Used by MoaT-Link
 `d.walk`/`d.watch` and by MicroPython file transfers.
 
+### Shared iterators
+
+`BaseCmdMsg` provides a `mon_` streaming command that multiplexes remote
+iterators locally.  Multiple local consumers can subscribe to the same
+remote streaming command via `mon_`; the first subscriber opens the remote
+stream and subsequent subscribers receive the same data through
+`moat.lib.broadcast.Broadcaster` readers.  When the last subscriber
+disconnects, the remote stream is closed.
+This avoids opening multiple remote streams for the same data source.
+
 ## Auth & nesting
 
 `auth/` authenticates RPC links (Diffie-Hellman via `moat.lib.diffiehellman`;

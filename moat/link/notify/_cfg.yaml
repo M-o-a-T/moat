@@ -20,6 +20,14 @@ path: !P notify
 # ignore messages older than … seconds
 max_age: 30
 
+# Mirror errors to notifications.
+# Path to a notify-vecs subtree below conv.* that dynamically describes
+# how to mirror errors.  The subtree is walked with Node.collect, so
+# more-specific branches override less-specific ones.
+# Each leaf dict may contain: min_level, skip, prio, title.
+# If unset, all errors at warning+ are mirrored.
+# vecs: !P notify
+
 # Backends
 backend:
   - ntfy

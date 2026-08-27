@@ -18,20 +18,21 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg, SubMsgSender
 
     from collections.abc import Mapping, Sequence
+    from typing import Any, Self
 
 
 class _Send:
     # A null context that delegates its .send method to the wrapped destination
-    def __init__(self, dest):
+    def __init__(self, dest: Any) -> None:
         self.dest = dest
 
-    def send(self, *a, **kw):
+    def send(self, *a: Any, **kw: Any) -> Any:
         return self.dest(*a, **kw)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(self, *tb: object) -> None:
         return None
 
 
@@ -76,10 +77,10 @@ class _Step:
     last_kw: Mapping | None = None
     _ready: Event
 
-    def __init__(self, trans: Transfer, id: int, cfg: Path | dict):
+    def __init__(self, trans: Transfer, id: int, cfg: Path | dict) -> None:
         self.trans = trans
         self.id = id
-        self.q = set()  # output queue(s)
+        self.q: set[Any] = set()  # output queue(s)
         self._ready = Event()
         self.is_ready = self._ready.wait
 
@@ -101,7 +102,7 @@ class _Step:
                 raise TypeError(sp)
             self.p = sp
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹TS:{self.trans.path / self.id}›"
 
     async def run(self) -> None:
@@ -115,14 +116,14 @@ class _Step:
             await self.run_t()
 
     async def run_i(self) -> None:
-        "Open a write-only pipe to the remote"
+        """Open a write-only pipe to the remote."""
         assert self.p is not None
         async with self.p.stream_out(*self.a, **self.kw) as self.msg:
             self._ready.set()
             await self.run_t()
 
     async def run_o(self) -> None:
-        "Open a pipe to the remote and read from it"
+        """Open a pipe to the remote and read from it."""
         assert self.p is not None
         async with (self.p.stream if self.si else self.p.stream_in)(*self.a, **self.kw) as msg:
             self._ready.set()
@@ -132,7 +133,7 @@ class _Step:
                 await self.cont(m.args, m.kw)
 
     async def run_t(self) -> None:
-        "Run the task."
+        """Run the task."""
         self._ready.set()
         await idle()
 
@@ -184,7 +185,7 @@ class _Step:
         # pass on
         await self.cont(a, kw)
 
-    async def cont(self, a, kw) -> None:
+    async def cont(self, a: Any, kw: Any) -> None:
         """
         Take this data and continue to the next step
         """
@@ -243,13 +244,13 @@ class Transfer(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
-        self.steps = []
-        self.data = []
+        self.steps: list[_Step] = []
+        self.data: list[tuple[list, dict]] = []
 
-    async def task(self):
-        "Step tasks runner"
+    async def task(self) -> None:
+        """Step tasks runner."""
         while True:
             # TG gets cancelled when reloading
             async with TaskGroup() as self.tg:
@@ -275,13 +276,13 @@ class Transfer(BaseCmd):
                             self.t_last = ticks_ms()
                             await self.steps[0]()
 
-    async def reload(self):
-        "restart"
+    async def reload(self) -> None:
+        """Restart."""
         await super().reload()
         self.tg.cancel()
 
-    async def cont(self, i, a, kw):
-        "Data forwarding"
+    async def cont(self, i: int, a: Any, kw: Any) -> None:
+        """Data forwarding."""
         self.data[i] = (a, kw)
         i += 1
         if i < len(self.data):
@@ -291,8 +292,8 @@ class Transfer(BaseCmd):
 
     doc_w = dict(_d="data", qs="int:dest step (default first)", _s=True)
 
-    async def stream_w(self, msg: Msg):
-        "send data to (first) step"
+    async def stream_w(self, msg: Msg) -> None:
+        """Send data to (first) step."""
         kw = msg.kw
         s0 = self.steps[kw.pop("qs", 0)]
         if msg.can_stream:
@@ -309,8 +310,8 @@ class Transfer(BaseCmd):
         _s=True,
     )
 
-    async def stream_r(self, msg: Msg):
-        "read data from (last) step"
+    async def stream_r(self, msg: Msg) -> None:
+        """Read data from (last) step."""
         s0 = self.steps[msg.get("qs", -1)]
         q = Queue(1)
         qp = q.put
@@ -333,14 +334,14 @@ class Transfer(BaseCmd):
 
     doc_s = dict(_d="send state", _o="any")
 
-    async def stream_s(self, msg: Msg):
-        "feed current state"
+    async def stream_s(self, msg: Msg) -> None:
+        """Feed current state."""
         async with msg.stream_out(t=self.t_last) as md:
             for a, kw in self.data:
                 await md.send(*a, **kw)
 
     async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
-        "Intercept qs"
+        """Intercept qs."""
         if rcmd and isinstance(rcmd[-1], int):
             msg.kw["qs"] = rcmd.pop()
         await super().handle(msg, rcmd)

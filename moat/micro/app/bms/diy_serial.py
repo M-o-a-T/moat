@@ -4,8 +4,13 @@ Communicate with diyBMS (MoaT firmware)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
-def Comm(cfg):
+if TYPE_CHECKING:
+    from typing import Any
+
+
+def Comm(cfg: dict) -> Any:
     """
     Communicator for the serially-connected cell controllers.
 
@@ -17,7 +22,7 @@ def Comm(cfg):
     return BattComm(cfg)
 
 
-def Cell(cfg):
+def Cell(cfg: dict) -> Any:
     """
     Direct interface to a single cell.
 

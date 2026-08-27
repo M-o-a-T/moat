@@ -12,10 +12,12 @@ Extension types defined here:
 from __future__ import annotations
 
 from moat.lib.path import Path
-from moat.lib.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
+from moat.lib.proxy import DProxy, Proxy, _lookup_proxy, get_proxy, obj2name, unwrap_obj, wrap_obj
 
 from . import Extension
 from . import msgpack as _msgpack
+
+from collections.abc import Mapping
 
 __all__ = ["Codec", "std_ext"]
 
@@ -34,7 +36,7 @@ class Codec(_msgpack.Codec):
 @std_ext.encoder(5, DProxy)
 def _enc_dproxy(codec, obj):
     a = obj.a[:]
-    if obj.k or (a and isinstance(a[-1], dict)):
+    if obj.k or (a and isinstance(a[-1], Mapping)):
         a.append(obj.k)
     return codec.encode(obj.name) + b"".join(codec.encode(x) for x in a)
 
@@ -103,7 +105,7 @@ def _dec_proxy(codec, data):
     except UnicodeError:
         n = str(data)
     try:
-        return _CProxy[n]
+        return _lookup_proxy(n)
     except KeyError:
         return Proxy(n)
 

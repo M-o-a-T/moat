@@ -115,7 +115,7 @@ class Control(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         self._load()
         self.out_evt = Event()
@@ -131,7 +131,7 @@ class Control(BaseCmd):
             lock=cfg.get("lock", False),
         )
 
-    def _load(self):
+    def _load(self) -> None:
         cfg = self.cfg
         self.base = cfg.get("base", self.base)
         self.init = cfg.get("init", self.init)
@@ -139,7 +139,7 @@ class Control(BaseCmd):
         self.sync_low = self._load_sync("sync_low")
         self.sync_high = self._load_sync("sync_high")
 
-    def _load_sync_path(self):
+    def _load_sync_path(self) -> None:
         # Calling `await self.sync_path()` returns the float to check
         # cfg.sync_low.bound or cfg.sync_high.bound against.
         # Must be called after the command is attached (root is available).
@@ -151,7 +151,7 @@ class Control(BaseCmd):
             raise TypeError(sp)
         self.sync_path = sp
 
-    def _load_sync_pid(self):
+    def _load_sync_pid(self) -> None:
         # Stores a sender to the PID's "lock" sub-command.
         # Must be called after the command is attached (root is available).
         if "sync_pid" not in self.cfg:
@@ -159,20 +159,20 @@ class Control(BaseCmd):
             return
         self._sync_pid = self.root.sub_at(self.cfg.sync_pid / "lock")
 
-    async def reload(self):
-        "reload from config"
+    async def reload(self) -> None:
+        """Reload from config."""
         self._load()
         self._load_sync_path()
         self._load_sync_pid()
         await super().reload()
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self._load_sync_path()
         self._load_sync_pid()
         self.value = self.init
 
-    async def task(self):  # noqa:D102
+    async def task(self) -> None:  # noqa:D102
         async with TaskGroup() as self._tg:
             if L:
                 self.set_ready()
@@ -404,8 +404,8 @@ class Control(BaseCmd):
         _i=dict(_0="float:new value [0..base]"),
     )
 
-    async def stream_w(self, msg: Msg):
-        "change value"
+    async def stream_w(self, msg: Msg) -> float | None:
+        """Change value."""
         force = msg.get("f", False)
 
         if msg.can_stream:
@@ -418,7 +418,7 @@ class Control(BaseCmd):
     doc_r = dict(_d="wait for output change", _r="float:next [0..1] output")
 
     async def stream_r(self, msg: Msg) -> None:
-        "read value"
+        """Read value."""
         if msg.can_stream:
             async with msg.stream_out() as md:
                 while True:
@@ -440,7 +440,7 @@ class Control(BaseCmd):
     )
 
     async def cmd_s(self) -> Mapping:
-        "Returns the current state."
+        """Returns the current state."""
         res: dict[str, object] = dict(val=self.value, out=self.out)
         if self.force is not None:
             res["force"] = self.force

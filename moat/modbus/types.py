@@ -8,36 +8,24 @@ import anyio
 import logging
 import struct
 
-from pymodbus.pdu.bit_message import (
+from moat.lib.modbus.pdu import (
     ReadCoilsRequest,
     ReadCoilsResponse,
     ReadDiscreteInputsRequest,
     ReadDiscreteInputsResponse,
-    WriteMultipleCoilsRequest,
-    WriteMultipleCoilsResponse,
-    WriteSingleCoilRequest,
-    WriteSingleCoilResponse,
-)
-from pymodbus.pdu.register_message import (
     ReadHoldingRegistersRequest,
     ReadHoldingRegistersResponse,
     ReadInputRegistersRequest,
     ReadInputRegistersResponse,
+    WriteMultipleCoilsRequest,
+    WriteMultipleCoilsResponse,
     WriteMultipleRegistersRequest,
     WriteMultipleRegistersResponse,
+    WriteSingleCoilRequest,
+    WriteSingleCoilResponse,
     WriteSingleRegisterRequest,
     WriteSingleRegisterResponse,
 )
-
-try:
-    from pymodbus.datastore.sparse import ModbusSparseDataBlock
-
-    BaseModbusDataBlock = ModbusSparseDataBlock
-
-except ImportError:
-    from pymodbus.datastore.store import ModbusSparseDataBlock
-
-    pass
 
 MAX_REQ_LEN = 30
 
@@ -497,7 +485,7 @@ class InputRegisters(TypeCodec):
     decoder_m = WriteMultipleRegistersResponse
 
 
-class DataBlock(ModbusSparseDataBlock):
+class DataBlock:
     """Your basic sparse data block.
 
     The @changed attribute is an event that triggers when a write request
@@ -505,7 +493,6 @@ class DataBlock(ModbusSparseDataBlock):
     """
 
     def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
-        super().__init__()
         self.__data = dict()
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
@@ -525,6 +512,13 @@ class DataBlock(ModbusSparseDataBlock):
 
     def __delitem__(self, k):
         del self.__data[k]
+
+    def __contains__(self, k):
+        return k in self.__data
+
+    def pop(self, k, default=None):
+        """Remove and return the value at *k*, or *default* if not found."""
+        return self.__data.pop(k, default)
 
     def keys(self):
         "mapping keys"
@@ -572,10 +566,6 @@ class DataBlock(ModbusSparseDataBlock):
                 pass
         self[offset] = val
         val.block = self
-
-    def validate(self, address: int, count: int = 1):  # noqa: ARG002
-        "does nothing. Compatibility with pymodbus 3.8"
-        return True
 
     def ranges(self, changed=False, max_len=MAX_REQ_LEN):
         """Iterate over to-be-retrieved/sent range(s).

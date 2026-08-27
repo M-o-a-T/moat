@@ -23,4 +23,5 @@ moat-lib-proxy/index
 moat-lib-ring/index
 moat-lib-repl/index
 moat-lib-diffiehellman/index
+moat-lib-modbus/index
 ```

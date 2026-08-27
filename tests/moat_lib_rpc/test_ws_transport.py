@@ -13,12 +13,12 @@ from moat.lib.stream.ws import WsLink
 pytestmark = pytest.mark.anyio
 
 
-async def test_ws_transport(free_tcp_port):
+async def test_ws_transport():
     "binary blocks and text console share one websocket transport"
     got = {}
-    port = free_tcp_port
 
-    async with WsIter("127.0.0.1", port, "/rpc") as conns, anyio.create_task_group() as tg:
+    async with WsIter("127.0.0.1", 0, "/rpc") as conns, anyio.create_task_group() as tg:
+        port = conns.port
 
         async def server():
             conn = await anext(conns)

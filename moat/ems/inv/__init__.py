@@ -12,7 +12,7 @@ from __future__ import annotations
 import anyio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 from asyncdbus import DBusError
 from asyncdbus.service import method
@@ -60,7 +60,7 @@ class BusVars(CtxObj):
     VARS = {}
     VARS_RO = {}
 
-    _intf: Dbus = None
+    _intf: Dbus | None = None
 
     def __init__(self, bus):
         self._bus = bus
@@ -213,54 +213,54 @@ class InvControl(BusVars):
     #
 
     # distkv
-    _dkv = None
-    _dkv_evt = None
+    _dkv: Any | None = None
+    _dkv_evt: Any | None = None
 
-    _mode = None
+    _mode: Any | None = None
     MODES = {}
 
     # Declared in VARS and VARS_RO. Here due to pylint.
-    acc_vebus = None
-    s_battery = None
-    n_phase = None
-    _u_dc = None
-    _i_batt = None
-    _i_inv = None
-    _i_pv = None
-    _batt_soc = None
-    _p_cons1 = None
-    _p_cons2 = None
-    _p_cons3 = None
-    _p_grid1 = None
-    _p_grid2 = None
-    _p_grid3 = None
+    acc_vebus: Any = None
+    s_battery: Any = None
+    n_phase: Any = None
+    _u_dc: Any = None
+    _i_batt: Any = None
+    _i_inv: Any = None
+    _i_pv: Any = None
+    _batt_soc: Any = None
+    _p_cons1: Any = None
+    _p_cons2: Any = None
+    _p_cons3: Any = None
+    _p_grid1: Any = None
+    _p_grid2: Any = None
+    _p_grid3: Any = None
 
-    p_grid_: list = None
-    p_cons_: list = None
-    p_cur_: list = None
-    load: list = None
-    u_min = None
-    u_max = None
-    _ib_chg = None
-    _ib_dis = None
-    _ok_chg = None
-    _ok_dis = None
-    b_cap = None
-    p_set_ = None
-    p_run_ = None
-    _p_inv = None
-    _mode_task = None
-    _mode_task_stopped = None
-    dest_p = None
-    last_p = None
-    distkv_prefix = None
-    _bms_intf = None
-    _batt_intf = None
-    _change_mode_evt = None
-    _ctrl = None
-    _srv = None
-    _tg = None
-    step = None
+    p_grid_: list[Any] | None = None
+    p_cons_: list[Any] | None = None
+    p_cur_: list[Any] | None = None
+    load: list[Any] | None = None
+    u_min: Any = None
+    u_max: Any = None
+    _ib_chg: Any = None
+    _ib_dis: Any = None
+    _ok_chg: Any = None
+    _ok_dis: Any = None
+    b_cap: Any = None
+    p_set_: Any = None
+    p_run_: Any = None
+    _p_inv: Any = None
+    _mode_task: Any | None = None
+    _mode_task_stopped: Any | None = None
+    dest_p: Any | None = None
+    last_p: float = 0
+    distkv_prefix: Any = None
+    _bms_intf: Any | None = None
+    _batt_intf: Any | None = None
+    _change_mode_evt: Any | None = None
+    _ctrl: Any | None = None
+    _srv: Any | None = None
+    _tg: Any | None = None
+    step: int = 0
 
     @classmethod
     def register(cls, target):
@@ -396,11 +396,13 @@ class InvControl(BusVars):
     @property
     def p_cons(self):
         "Power from other AC consumers, between this inverter and the home meter."
+        assert self.p_cons_ is not None
         return -sum(x.value for x in self.p_cons_)
 
     @property
     def p_grid(self):
         "Power as measured by the grid meter."
+        assert self.p_grid_ is not None
         return sum(x.value for x in self.p_grid_)
 
     @property
@@ -465,7 +467,7 @@ class InvControl(BusVars):
         with anyio.move_on_after(5):
             await self._trigger.wait()
 
-    i_batt_avg = None
+    i_batt_avg: Any | None = None
 
     async def _i_batt_task(self, evt):
         """
@@ -515,9 +517,11 @@ class InvControl(BusVars):
         """setup exports"""
         srv = self.srv
         evt = anyio.Event()
-        self._tg.start_soon(self._i_batt_task, evt)
-        self._tg.start_soon(self._avg_task)
-        self._tg.start_soon(self._distkv_main)
+        assert self._tg is not None
+        tg = self._tg
+        tg.start_soon(self._i_batt_task, evt)
+        tg.start_soon(self._avg_task)
+        tg.start_soon(self._distkv_main)
 
         await srv.add_mandatory_paths(
             processname=__file__,
@@ -556,7 +560,9 @@ class InvControl(BusVars):
             # TODO verify the new mode's parameters
             if self._mode_task is not None:
                 self._mode_task.cancel()
-                await self._mode_task_stopped.wait()
+                assert self._mode_task_stopped is not None
+            assert self._mode_task_stopped is not None
+            await self._mode_task_stopped.wait()
             self._change_mode_evt.set()
 
         # TODO verify parameters for current mode
@@ -588,9 +594,11 @@ class InvControl(BusVars):
         finally:
             logger.debug("MODE STOP %s", m._name)  # noqa:SLF001
             self._mode_task = None
-            self._mode_task_stopped.set()
+            assert self._mode_task_stopped is not None
+        self._mode_task_stopped.set()
 
     async def _start_mode_task(self):
+        assert self._tg is not None
         self._tg.start_soon(self._run_mode_task)
 
     async def _solar_log(self):
@@ -598,14 +606,14 @@ class InvControl(BusVars):
             power = 0
             dkv = await self.distkv
             if dkv:
+                assert self.distkv_prefix is not None
                 val = await dkv.get(self.distkv_prefix / "solar" / "energy")
                 if val and "value" in val:
                     power = val.value
             t = anyio.current_time()
             t_sol = t + 5
             mt = (
-                min(time_until((n, "min")) for n in range(0, 60, 15))
-                - datetime.now(tz=datetime.UTC)
+                min(time_until((n, "min")) for n in range(0, 60, 15)) - datetime.now(tz=UTC)
             ).seconds
             print(mt)
             while True:
@@ -652,6 +660,7 @@ class InvControl(BusVars):
 
     async def _distkv_main(self):
         if "distkv" not in self.cfg:
+            assert self._dkv_evt is not None
             self._dkv_evt.set()
             self._dkv_evt = None
             return
@@ -664,6 +673,7 @@ class InvControl(BusVars):
             async with distkv_client(**self.cfg["distkv"]) as dkv:
                 self._dkv = dkv
                 self.distkv_prefix = self.cfg["distkv"]["root"]
+                assert self._dkv_evt is not None
                 self._dkv_evt.set()
                 await anyio.sleep_forever()
         finally:
@@ -690,24 +700,29 @@ class InvControl(BusVars):
 
     async def get_bms_work(self, poll: bool = False, clear: bool = False):
         "BMS: get current work"
+        assert self._bms_intf is not None
         return await self._bms_intf.call_get_work(poll, clear)
 
     async def get_bms_voltages(self):
         "BMS: get current cell voltages"
+        assert self._bms_intf is not None
         return [unwrap_dbus_dict(x) for x in await self._bms_intf.call_get_voltages()]
 
     async def get_bms_currents(self):
         "BMS: get currents"
+        assert self._bms_intf is not None
         return await self._bms_intf.call_get_currents()
 
     async def get_bms_config(self):
         "BMS: get config data"
+        assert self._bms_intf is not None
         return unwrap_dbus_dict(await self._bms_intf.call_get_config())
 
     async def set_bms_capacity(self, n: int, cap: float, loss: float, top: bool = False):
         "BMS: update actual capacity"
         if n != 0:
             raise NotImplementedError(n)
+        assert self._batt_intf is not None
         return await self._batt_intf[n].call_set_capacity(cap, loss, top)
 
     async def run(self, mode=None):
@@ -1104,6 +1119,7 @@ class InvControl(BusVars):
         are not exceeded.
         """
 
+        assert self.p_cons_ is not None
         self.load = [-b.value for b in self.p_cons_]
         load_avg = sum(self.load) / self.n_phase
 

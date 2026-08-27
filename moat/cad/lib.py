@@ -4,6 +4,7 @@ Collection of useful shortcuts for 3D modelling with build123d.
 
 from __future__ import annotations
 
+import logging
 import math
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from build123d import (
     RegularPolygon,
     Rot,
     Shape,
+    Vector,
     export_step,
     export_stl,
     import_step,
@@ -33,13 +35,12 @@ from build123d import (
 
 from moat.util import InexactFloat
 
-# from bd_warehouse.gear import InvoluteToothProfile, SpurGear, SpurGearPlan
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collection.abc import Sequence
+    from types import EllipsisType
 
-import logging
+    from collections.abc import Callable
 
 log = logging.getLogger("moat.d3")
 
@@ -90,21 +91,21 @@ AMIN = {"align": (Align.MIN, Align.MIN, Align.MIN)}
 ACCM = {"align": (Align.CENTER, Align.CENTER, Align.MIN)}
 
 
-def D(n, **kw):
+def D(n: float, **kw: Any) -> InexactFloat:
     """
-    A wrapper for `moat.util.InexactFloat`. Saves on typing.
+    A wrapper for :class:`moat.util.InexactFloat`. Saves on typing.
     """
     return InexactFloat(n, **kw)
 
 
-def Loc(a, b, c):
+def Loc(a: float, b: float, c: float) -> Location:
     """
     Shorthand for Location.
     """
     return Location((a, b, c))
 
 
-def LocR(d, a, h=0):
+def LocR(d: float, a: float, h: float = 0) -> Location:
     """
     Locate radially, distance d, angle a, clockwise from top.
     """
@@ -112,7 +113,7 @@ def LocR(d, a, h=0):
     return Loc(d * math.sin(a), d * math.cos(a), h)
 
 
-def Cyl(d, h, d2=None):
+def Cyl(d: float, h: float, d2: float | None = None) -> Cone | Cylinder:
     """
     A cylinder with diameter d and height h, centered but with +z.
     """
@@ -121,14 +122,16 @@ def Cyl(d, h, d2=None):
     return Cylinder(d / 2, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
-def Up(z):
+def Up(z: float) -> Location:
     """
     Move something up. Shorthand for Location(0,0,z).
     """
     return Location((0, 0, z))
 
 
-def ArcAt(line, radius, angle=90, twist=0, at_end=True):
+def ArcAt(
+    line: Shape, radius: float, angle: float = 90, twist: float = 0, at_end: bool = True
+) -> Shape:
     """
     Add an arc to the end of a path. @twist modifies the direction the arc
     bends towards.
@@ -137,15 +140,14 @@ def ArcAt(line, radius, angle=90, twist=0, at_end=True):
     res = RX1 * Rot(0, twist, 0) * res
 
     if at_end:
-        return Location(line @ 1) * RotateTo(res, line % 1)
-    else:
-        return Location(line @ 0) * RotateTo(res, -(line % 0))
+        return Location(line @ 1) * RotateTo(res, line % 1)  # ty:ignore[unsupported-operator]
+    return Location(line @ 0) * RotateTo(res, -(line % 0))  # ty:ignore[unsupported-operator]
 
     # Location(line@.9)*Rot(line%1)*JernArc((0,0,0),(1,0,0),radius,angle)
     # Rot(0,0,twist)*
 
 
-def PolyCap(d, n=6):
+def PolyCap(d: float, n: int = 6) -> Part:
     """
     Given a polygonal rod, this returns its end cap.
     """
@@ -153,12 +155,12 @@ def PolyCap(d, n=6):
     return stack(RegularPolygon(d / 2, n, align=al), d / 4, RegularPolygon(d / 4, n, align=al))
 
 
-def RotateTo(thing, direction):  # noqa:D103
-    ax = Axis((0, 0, 0), (0, 0, 1) + direction.normalized())
+def RotateTo(thing: Shape, direction: Vector) -> Shape:  # noqa:D103
+    ax = Axis((0, 0, 0), Vector(0, 0, 1) + direction.normalized())
     return thing.rotate(ax, 180)
 
 
-def RotAxis(axis, angle):
+def RotAxis(axis: Axis, angle: float) -> Rot:
     """
     Rotation matrix for this angle around that axis.
     """
@@ -169,30 +171,30 @@ def RotAxis(axis, angle):
     rtm.rotate(axis, angle)
     rtm = [[rtm[x, y] for y in range(3)] for x in range(3)]
     rtm = [a * 180 / math.pi for a in mat2euler(rtm, "szyx")]
-    return Rot(*rtm, Intrinsic.XYZ)
+    return Rot(tuple(rtm), Intrinsic.XYZ)
 
 
-def sin(a):
-    "sin (angle in degrees)"
+def sin(a: float) -> float:
+    """sin (angle in degrees)"""
     return math.sin(a * math.pi / 180)
 
 
-def cos(a):
-    "cos (angle in degrees)"
+def cos(a: float) -> float:
+    """cos (angle in degrees)"""
     return math.cos(a * math.pi / 180)
 
 
-def tan(a):
-    "tan (angle in degrees)"
+def tan(a: float) -> float:
+    """tan (angle in degrees)"""
     return math.tan(a * math.pi / 180)
 
 
-def atan(a, b=None):
-    "tan⁻¹ (angle in degrees)"
+def atan(a: float, b: float | None = None) -> float:
+    """tan⁻¹ (angle in degrees)"""
     return (math.atan(a) if b is None else math.atan2(a, b)) * 180 / math.pi
 
 
-def stack(*x: Sequence[int | float | Shape]):
+def stack(*x: float | Shape | None) -> Part:
     """
     A sequence of 2d things, loft-ed.
 
@@ -201,10 +203,13 @@ def stack(*x: Sequence[int | float | Shape]):
     A z None: shorthand for A z A.
     """
     obj = Part()
-    d = None
-    p = 0
+    d: Shape | None = None
+    p = 0.0
     i = iter(x)
-    d = last_shape = next(i)
+    first = next(i)
+    assert isinstance(first, Shape)
+    last_shape: Shape | None = first
+    d = last_shape
     did_num = False
     for w in i:
         if isinstance(w, (int, float)):
@@ -217,8 +222,10 @@ def stack(*x: Sequence[int | float | Shape]):
                 w = last_shape  # noqa:PLW2901
             else:
                 last_shape = w
-            nd = Up(p) * w
-            obj += loft([d, nd])
+            assert w is not None
+            nd: Shape = Up(p) * w
+            assert d is not None
+            obj += loft([d, nd])  # ty:ignore[invalid-argument-type]
             d = nd
             did_num = False
         elif w is None:
@@ -232,10 +239,10 @@ def stack(*x: Sequence[int | float | Shape]):
     return obj
 
 
-s_o = ...
+s_o: Callable[..., None] | EllipsisType | None = ...
 
 
-def show(obj, name=None, dest=None):
+def show(obj: Shape, name: str | None = None, dest: str | Path | None = None) -> None:
     """
     Display this thing.
 
@@ -256,37 +263,37 @@ def show(obj, name=None, dest=None):
         s_o(obj, name)
 
     if dest is not None:
-        dest = Path(dest)
-        if dest.is_dir():
-            export_stl(obj, str(dest / f"{name}.stl"))
-            dest /= f"{name}.step"
+        dest_p = Path(dest)
+        if dest_p.is_dir():
+            export_stl(obj, str(dest_p / f"{name}.stl"))
+            dest_p /= f"{name}.step"
 
-        export_step(obj, str(dest))
+        export_step(obj, str(dest_p))
 
 
-def read_step(name):
+def read_step(name: str | Path) -> Shape:
     """
     Read this STEP file.
     """
     return import_step(name)
 
 
-def read_stl(name):
+def read_stl(name: str | Path) -> Shape:
     """
     Read this STL file.
     """
     return import_stl(name)
 
 
-def quarter(res):
+def quarter(res: Shape) -> Shape:
     """
     Given an object in the +x/+y quarter, mirror it twice.
     """
-    res_xz = mirror(res, about=Plane.XZ)
+    res_xz = mirror(res, about=Plane.XZ)  # ty:ignore[invalid-argument-type]
     return res + res_xz + mirror(res_xz + res, about=Plane.YZ)
 
 
-def gear_turn(n1, a1, n2, a2, minimize=True):
+def gear_turn(n1: int, a1: float, n2: int, a2: float, minimize: bool = True) -> float:
     """
     Given gear1 with n1 teeth, turned to angle a1, and gear2 with n2 teeth
     positioned at angle a2 relative to gear 1: how far do we need to turn
@@ -313,44 +320,49 @@ def gear_turn(n1, a1, n2, a2, minimize=True):
     return res
 
 
-def pos(x=None, y=None):
-    "Line drawing et al. Start position."
-    ctx = BuildLine._get_context(log=False)  # noqa:SLF001
+def pos(x: float | None = None, y: float | None = None) -> tuple[float, float] | None:
+    """Line drawing et al. Start position."""
+    ctx = BuildLine._get_context(log=False)  # noqa: SLF001
+    res: tuple[float, float] | None
     try:
-        res = ctx._mt_pos  # noqa:SLF001
+        res = ctx._mt_pos  # noqa: SLF001  # ty:ignore[unresolved-attribute]
     except AttributeError:
         if x is None:
             raise
         res = None
-    if y is not None:
-        ctx._mt_pos = (x, y)  # noqa:SLF001
+    if y is not None and ctx is not None:
+        ctx._mt_pos = x, y  # noqa: SLF001  # ty:ignore[unresolved-attribute]
     return res
 
 
-def lto(x=None, y=None):
-    "Line to absolute position"
-    ctx = BuildLine._get_context(log=False)  # noqa:SLF001
-    p = ctx._mt_pos  # noqa:SLF001
+def lto(x: float | None = None, y: float | None = None) -> None:
+    """Line to absolute position"""
+    ctx = BuildLine._get_context(log=False)  # noqa: SLF001
+    if ctx is None:
+        raise RuntimeError("No BuildLine context")
+    p: tuple[float, float] = ctx._mt_pos  # noqa: SLF001
     if x is None:
         x = p[0]
     if y is None:
         y = p[1]
     p2 = (x, y)
-    ctx._mt_pos = p2  # noqa:SLF001
+    ctx._mt_pos = p2  # noqa: SLF001  # ty:ignore[unresolved-attribute]
     Line(p, p2)
 
 
-def li(x=0, y=0):
-    "Relative line"
-    ctx = BuildLine._get_context(log=False)  # noqa:SLF001
-    p = ctx._mt_pos  # noqa:SLF001
+def li(x: float = 0, y: float = 0) -> None:
+    """Relative line"""
+    ctx = BuildLine._get_context(log=False)  # noqa: SLF001
+    if ctx is None:
+        raise RuntimeError("No BuildLine context")
+    p: tuple[float, float] = ctx._mt_pos  # noqa: SLF001
     p2 = (p[0] + x, p[1] + y)
-    ctx._mt_pos = p2  # noqa:SLF001
+    ctx._mt_pos = p2  # noqa: SLF001  # ty:ignore[unresolved-attribute]
     Line(p, p2)
 
 
-def RX(x):
-    "Rotate 90°*x"
+def RX(x: int) -> Rot:
+    """Rotate 90°*x"""
     return Rot(90 * x, 0, 0)
 
 
@@ -359,8 +371,8 @@ RX2 = RX(2)
 RX3 = RX(3)
 
 
-def RY(y):
-    "Rotate 90°*y"
+def RY(y: int) -> Rot:
+    """Rotate 90°*y"""
     return Rot(0, 90 * y, 0)
 
 
@@ -369,8 +381,8 @@ RY2 = RY(2)
 RY3 = RY(3)
 
 
-def RZ(z):
-    "Rotate 90°*z"
+def RZ(z: int) -> Rot:
+    """Rotate 90°*z"""
     return Rot(0, 0, 90 * z)
 
 

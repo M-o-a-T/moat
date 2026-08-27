@@ -35,20 +35,20 @@ class RTC(RTCBase):
     is_FS = False
     is_ASYNC = True
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
-        self._path = cfg.get("path", ("rtc",))
+        self._path: tuple[str, ...] = cfg.get("path", ("rtc",))
         if isinstance(self._path, str):
             self._path = tuple(self._path.split("."))
 
-    def _get_sender(self):
+    def _get_sender(self) -> Any:
         """Get the SubMsgSender for our path."""
         root = _RTC.root
         if root is None:
             raise NotSync("No root connection")
         return root.sub_at(self._path)
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload is a no-op for the link backend."""
         pass
 

@@ -648,8 +648,14 @@ class ServerClient(LinkCommon):
         * strings
         """
 
+        try:
+            d = self.server.data.get(Path.build(msg[0]), create=False)
+        except KeyError:
+            async with msg.stream_out():
+                return
+
         async with msg.stream_out():
-            for k in list(self.server.data[msg[0]].keys()):
+            for k in list(d.keys()):
                 await msg.send(k)
 
     async def d_walk_stream_(self, msg):

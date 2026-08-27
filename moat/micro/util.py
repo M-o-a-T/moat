@@ -19,24 +19,27 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.micro.files import MoatPath
 
+    from collections.abc import Awaitable, Callable
+    from typing import Any
+
 
 __all__ = ["Repeater", "Sensor", "del_p", "get_p", "hash256", "run_update", "set_p"]
 
 
-def hash256(data):
-    "Hash a chunk of bytes the way git does"
+def hash256(data: bytes) -> bytes:
+    """Hash a chunk of bytes the way git does."""
     h = hashlib.sha256()
     h.update(data)
     return h.digest()
 
 
-async def _rd(f):
-    "return file contents"
+async def _rd(f: APath) -> bytes:
+    """Return file contents."""
     async with await f.open("rb") as fd:
         return await fd.read()
 
 
-async def run_update(*a, **kw):
+async def run_update(*a: Any, **kw: Any) -> None:
     """
     Update a remote file system.
 
@@ -55,13 +58,18 @@ async def run_update(*a, **kw):
 
 
 async def _run_update(
-    src, dest: MoatPath, check=None, cross=None, arch: str | None = None, hash_fn=None
-):
-    # update a single _embed/lib directory
+    src: APath,
+    dest: MoatPath,
+    check: Any = None,
+    cross: Any = None,
+    arch: str | None = None,
+    hash_fn: Callable[[str], Awaitable[bytes | None]] | None = None,
+) -> None:
+    """Update a single _embed/lib directory."""
 
-    async def drop(dst):
+    async def drop(dst: APath) -> bool | None:
         """
-        delete files on the satellite that didn't change between the
+        Delete files on the satellite that didn't change between the
         version in their firmware and our current version.
         """
         # rp = dst.relative_to(emb_r)

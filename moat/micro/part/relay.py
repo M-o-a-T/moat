@@ -10,6 +10,11 @@ from moat.lib.micro import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 class Relay(BaseCmd):
     """
@@ -42,32 +47,32 @@ class Relay(BaseCmd):
         ],
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError("Pin not set")  # noqa:TRY004
         t = cfg.get("t", attrdict())
-        self.t = [t.get("off", 0), t.get("on", 0)]
+        self.t: list[int] = [t.get("off", 0), t.get("on", 0)]
 
-    async def reload(self):
-        "reload timings"
+    async def reload(self) -> None:
+        """Reload timings."""
         t = self.cfg.get("t", attrdict())
         self.t = [t.get("off", 0), t.get("on", 0)]
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.pin = self.root.sub_at(self.cfg["pin"])
         if await self.pin.rdy_():
             raise StoppedError("pin")
         await self.cmd_w()
 
-    async def run(self):  # noqa:D102
+    async def run(self) -> None:  # noqa:D102
         async with TaskGroup() as self.__tg:
             await super().run()
 
     doc_w = dict(_d="change", _0="bool:new value", f="bool|None:force?")
 
-    async def cmd_w(self, v=None, f=NotGiven):
+    async def cmd_w(self, v: bool | None = None, f: Any = NotGiven) -> None:
         """
         Change relay state.
 
@@ -91,7 +96,7 @@ class Relay(BaseCmd):
             return
         await self._set()
 
-    async def _set(self):
+    async def _set(self) -> None:
         val = self.value if self.force is None else self.force
         if val is None:
             return
@@ -109,12 +114,12 @@ class Relay(BaseCmd):
         self._delay = await self.__tg.spawn(self._run_delay, t, _name="Rly")
         self.t_last = ticks_ms()
 
-    async def _run_delay(self, t):
+    async def _run_delay(self, t: int) -> None:
         await sleep_ms(t)
         self._delay = None
         await self._set()
 
-    def get_sync(self):
+    def get_sync(self) -> bool | None:
         """
         Return the current intended state.
         """
@@ -122,15 +127,15 @@ class Relay(BaseCmd):
             return self.force
         return self.value
 
-    async def get(self):
+    async def get(self) -> bool | None:
         """
         Return the current intended state (async version)
         """
         return self.get_sync()
 
     @property
-    def delayed(self):
-        "flag whether the relay is delaying a change"
+    def delayed(self) -> bool:
+        """Flag whether the relay is delaying a change."""
         return self._delay is not None
 
     doc_r = dict(
@@ -140,7 +145,7 @@ class Relay(BaseCmd):
         ),
     )
 
-    async def cmd_r(self):
+    async def cmd_r(self) -> dict[str, Any]:
         """
         Returns the current state, as a mapping.
 
@@ -149,7 +154,7 @@ class Relay(BaseCmd):
         d: delay until next change (msec) or None
         p: actual pin state
         """
-        p = await self.pin.r()
+        p = await self.pin()
         return dict(
             v=self.value,
             f=self.force,
@@ -157,11 +162,13 @@ class Relay(BaseCmd):
             d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
         )
 
-    async def cmd(self, v=None) -> bool | None:
+    async def cmd(self, v: bool | None = None) -> bool | None:
         """
         Simple Data Protocol.
         """
         if v is None:
             return self.value
         self.value = v
+        if self.force is None and self._delay is not None:
+            return
         await self._set()

@@ -6,13 +6,14 @@ import os
 import pytest
 import time
 
+from moat.util import attrdict, merge
 from moat.ems.battery.diy_serial.packet import RequestTiming
 from moat.lib.micro import log
 from moat.lib.rpc._test import rpc_stack
 
 from .support import CF, as_attr
 
-pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
+pytestmark = [pytest.mark.anyio]
 
 TT = 250  # XXX assume that this is OK
 
@@ -69,7 +70,7 @@ ca:
   n: 4
 """
 CFG4 = as_attr(CFG4)
-CFG4.ca.cfg = CF.c
+CFG4.ca.cfg = merge(attrdict(app="bms._test.cell.Cell"), CF.c, replace=True)
 
 
 async def test_cell4(tmp_path):
@@ -191,7 +192,7 @@ b:
     w: 500
 """
 CFGA = as_attr(CFGA)
-CFGA.b.cfg.cfg = CF.c
+CFGA.b.cfg = merge(attrdict(app="bms._test.cell.DiyBMSCell"), CF.c, replace=True)
 
 
 async def test_batt(tmp_path):
@@ -215,6 +216,7 @@ async def test_batt(tmp_path):
         assert u > 25  # 1% plus
         uu = await b.all("u")
         log("%r", uu)
+        uu = [x[0][0] for x in uu]
         xu = max(uu)  # maX and miN-U
         nu = min(uu)
         assert xu > 8.3
@@ -225,6 +227,7 @@ async def test_batt(tmp_path):
         await a.u(h=nu)
         await anyio.sleep(2)
         uu = await b.all("u")
+        uu = [x[0][0] for x in uu]
         xu2 = max(uu)  # maX and miN-U
         nu2 = min(uu)  # maX and miN-U
         assert xu2 < xu
@@ -236,6 +239,7 @@ async def test_batt(tmp_path):
             xux = xu2
             await anyio.sleep(2)
             uu = await b.all("u")
+            uu = [x[0][0] for x in uu]
             xu2 = max(uu)  # maX and miN-U
             nu2 = min(uu)  # maX and miN-U
             if xu2 == xux:
@@ -247,6 +251,7 @@ async def test_batt(tmp_path):
         # ensure that balancing stops
         await anyio.sleep(2)
         uu = await b.all("u")
+        uu = [x[0][0] for x in uu]
         xu3 = max(uu)  # maX and miN-U
         nu3 = min(uu)  # maX and miN-U
         assert xu2 == xu3

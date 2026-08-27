@@ -79,6 +79,10 @@ class Node:
                 return None
             if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
                 return False
+            if meta.timestamp == s._meta.timestamp:  # noqa:SLF001
+                # Same timestamp but data comparison failed (e.g. deserialised
+                # exceptions use identity eq). Treat as a duplicate delivery.
+                return None
         s.set_(item, data, meta)
         return True
 

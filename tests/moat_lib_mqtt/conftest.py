@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-async def mqtt_broker_port() -> AsyncGenerator[str, None]:
+async def mqtt_broker_addr() -> AsyncGenerator[str, None]:
     """
     Start a test MQTT broker and return the Unix socket path it's listening on.
 

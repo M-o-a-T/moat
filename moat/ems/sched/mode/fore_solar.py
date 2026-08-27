@@ -4,9 +4,9 @@ Get solar data from forecast.solar
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-import asks
+import httpx
 
 from . import BaseLoader
 
@@ -17,7 +17,7 @@ class Loader(BaseLoader):
     """
 
     @staticmethod
-    async def _solar(cfg, t, session, a=None):
+    async def _solar(cfg, t, session, a: dict):
         """
         Projected solar power, in kW.
 
@@ -28,7 +28,7 @@ class Loader(BaseLoader):
         """
 
         factor = cfg.data.fore_solar.factor
-        start = datetime.fromtimestamp(t - 3600, tz=datetime.UTC).strftime("%H:%M")
+        start = datetime.fromtimestamp(t - 3600, tz=UTC).strftime("%H:%M")
         t_step = int(3600 / cfg.steps)
         cmp = a["compass"]
         if cmp > 180:
@@ -94,7 +94,7 @@ class Loader(BaseLoader):
     @classmethod
     async def solar(cls, cfg, t):
         "Collect solar input"
-        async with asks.sessions.Session(connections=2) as s:
+        async with httpx.AsyncClient(limits=httpx.Limits(max_connections=2)) as s:
             a = [cls._solar(cfg, t, s, a) for a in cfg.solar.array]
             while True:
                 val = 0

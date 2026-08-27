@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
         def write(self, data: bytes) -> int: ...
 
+        def flush(self) -> object: ...
+
 
 def _fty(s, **r):
     # file type/size: stat array to dict
@@ -125,15 +127,22 @@ class Cmd(LockBaseCmd):
         else:
             self._fs_prefix += "/" + p
 
-    doc_open = dict(_d="open file", _0="str:path", m="str:mode (r,w)", _r="int:fileid")
+    doc_open = dict(_d="open file", _0="str:path", m="str:mode (r,w,r+)", _r="int:fileid")
 
     async def cmd_open(self, p: str, m: str = "r"):
-        "open @f in binary mode @m (r,w)"
+        "open @f in binary mode @m (r,w,r+)"
         p = self._fsp(p)
         f = await to_thread(_efix, open, p, m + "b")
         return self._add_f(f)
 
-    doc_rd = dict(_d="read file", _0="int:fileid", _1="int:offset", n="int:length")
+    doc_rd = dict(
+        _d="read file",
+        _0="int:fileid",
+        _1="int:offset",
+        n="int:length / chunk size (64)",
+        _r="bytes:data (non-streaming)",
+        _o="bytes:chunks (streaming)",
+    )
 
     async def cmd_rd(self, f: int, o: int = 0, n: int = 64):
         "read @n bytes from @f at offset @o"
@@ -141,7 +150,27 @@ class Cmd(LockBaseCmd):
         fh.seek(o)
         return await to_thread(fh.read, n)
 
-    doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
+    async def stream_rd(self, msg: Msg):
+        """Stream the contents of file @f from offset @o in @n-byte chunks."""
+        fh = self._fd(msg.get(0))
+        off = msg.get(1, 0)
+        blk = msg.get("n", 64)
+        if off:
+            fh.seek(off)
+        async with msg.stream_out() as st:
+            while True:
+                data = await to_thread(fh.read, blk)
+                if not data:
+                    break
+                await st.send(data)
+
+    doc_wr = dict(
+        _d="write file",
+        _0="int:fileid",
+        _1="int:offset",
+        d="bytes:data (non-streaming)",
+        _i="bytes:chunks (streaming)",
+    )
 
     async def cmd_wr(self, f: int, o: int = 0, d: bytes = b"") -> int:
         "write @d to @f at offset @o"
@@ -149,61 +178,16 @@ class Cmd(LockBaseCmd):
         fh.seek(o)
         return await to_thread(fh.write, d)
 
-    doc_srd = dict(
-        _d="stream-read file",
-        _0="str:path",
-        n="int:chunk size (default 64)",
-        o="int:offset (default 0)",
-        _s=True,
-        _o="bytes:chunks",
-    )
-
-    async def stream_srd(self, msg: Msg):
-        """
-        Stream the contents of a file.
-
-        Opens @p, seeks to @o, then sends chunks of @n bytes until EOF.
-        """
-        p = self._fsp(msg.get(0))
-        off = msg.get("o", 0)
-        blk = msg.get("n", 64)
-        f = await to_thread(_efix, open, p, "rb")
+    async def stream_wr(self, msg: Msg):
+        """Stream data to file @f at offset @o."""
+        fh = self._fd(msg.get(0))
+        off = msg.get(1, 0)
         if off:
-            await to_thread(f.seek, off)
-        try:
-            async with msg.stream_out() as st:
-                while True:
-                    data = await to_thread(f.read, blk)
-                    if not data:
-                        break
-                    await st.send(data)
-        finally:
-            await to_thread(f.close)
-
-    doc_swr = dict(
-        _d="stream-write file",
-        _0="str:path",
-        a="bool:append (default False)",
-        _s=True,
-        _i="bytes:chunks",
-    )
-
-    async def stream_swr(self, msg: Msg):
-        """
-        Stream data to a file.
-
-        Opens @p for writing (or appending if @a is set), then receives
-        chunks and writes them sequentially.
-        """
-        p = self._fsp(msg.get(0))
-        append = msg.get("a", False)
-        f = await to_thread(_efix, open, p, "ab" if append else "wb")
-        try:
-            async with msg.stream_in() as st:
-                async for m in st:
-                    await to_thread(f.write, m[0])
-        finally:
-            await to_thread(f.close)
+            fh.seek(off)
+        async with msg.stream() as st:
+            async for m in st:
+                fh.write(bytes(m[0]))
+        fh.flush()
 
     doc_cl = dict(_d="close file", _0="int:fileid")
 

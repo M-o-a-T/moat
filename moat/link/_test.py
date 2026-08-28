@@ -87,6 +87,7 @@ log_subscriptions true
 listen {{
     protocol mqtt
     port {port}
+    inet_protocol ip4
     inet4_bind_address 127.0.0.1
 }}
 """

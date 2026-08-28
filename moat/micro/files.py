@@ -192,6 +192,15 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
         # pylint: disable=no-member
         return type(self)(super().joinpath(*args)).connect_repl(self._repl)
 
+    def __truediv__(self, other: str | PathLike[str]) -> Self:
+        """Append a path segment, preserving the connected REPL.
+
+        ``pathlib`` implements ``/`` without dispatching to :meth:`joinpath`,
+        so the override above wouldn't run and ``_repl`` would be dropped.
+        Delegate explicitly to keep path arithmetic consistent.
+        """
+        return self.joinpath(other)
+
     @property
     def parent(self):
         "parent directory"

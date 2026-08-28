@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+import shutil
 
 from moat.lib.xknx.dpt import DPTValue1ByteUnsigned
 from moat.lib.xknx.telegram import GroupAddress
@@ -47,6 +48,8 @@ if TYPE_CHECKING:
     from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
+if not shutil.which("knxd"):
+    pytestmark = pytest.mark.skip(reason="knxd not found in PATH")
 
 # ── Fixed addresses and path names used throughout ──────────────────────── #
 

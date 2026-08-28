@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+import shutil
 
 from moat.kv.knx.mock import SimulatedBinaryDevice
 from moat.lib.xknx.devices import Switch
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
     from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
+if not shutil.which("knxd"):
+    pytestmark = pytest.mark.skip(reason="knxd not found in PATH")
 
 
 async def test_monitor(xknx_device: XKNX, xknx_monitor: XKNX) -> None:

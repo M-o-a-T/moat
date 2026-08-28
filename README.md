@@ -80,6 +80,13 @@ As of 2026-01, we're on [Github](https://github.com/M-o-a-T/moat).
 
 This will change, in favor of Codeberg and Radicle. TODO.
 
+### Testing
+
+Complete test coverage depend on the availability of
+- knxd
+- victoria-metrics
+- flashmq
+- python-ortools
 
 ## Support
 

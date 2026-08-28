@@ -121,6 +121,9 @@ dev = [
     "uv",
     "wheel",
 ]
+ortools = [
+    "ortools",
+]
 doc = [
     "sphinx",
     "sphinx-autodoc-typehints",

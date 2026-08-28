@@ -1,6 +1,7 @@
 from __future__ import annotations  # noqa: D100
 
 import anyio
+import pytest
 import subprocess
 from time import time
 
@@ -18,8 +19,6 @@ AkumuliRoot = akumuli_model.AkumuliRoot
 try:
     res = subprocess.run(["akumulid", "--help"], check=False)
 except Exception:
-    import pytest
-
     pytestmark = pytest.mark.skip
 
 
@@ -30,6 +29,7 @@ def _hook(e):
 akumuli_model._test_hook = _hook  # noqa: SLF001
 
 
+@pytest.mark.anyio
 async def test_basic(free_tcp_port_factory):  # no autojump  # noqa: D103
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,

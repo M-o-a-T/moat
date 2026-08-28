@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import pytest
 from copy import deepcopy
 from functools import partial
 
@@ -40,6 +41,7 @@ basic_tree = {
 }
 
 
+@pytest.mark.trio
 async def test_alarm(mock_clock):  # noqa: D103
     mock_clock.autojump_threshold = 0.1
     my_tree = deepcopy(basic_tree)

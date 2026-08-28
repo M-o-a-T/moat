@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+import shutil
 
 from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
 from moat.lib.xknx.dpt import DPTArray, DPTBinary
@@ -51,6 +52,8 @@ if TYPE_CHECKING:
     from moat.lib.xknx import XKNX
 
 pytestmark = pytest.mark.anyio
+if not shutil.which("knxd"):
+    pytestmark = pytest.mark.skip(reason="knxd not found in PATH")
 
 # ── Fixed addresses and path names ────────────────────────────────────────── #
 

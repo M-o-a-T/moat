@@ -173,6 +173,7 @@ async def test_debug_runs_job(cfg):
         # Override 'who' on the fly via ``-v``.
         r = await sf.run("link job at d1 debug -v who alice")
         assert "hi alice" in r.stdout
+        await c.i_sync()
 
         # The stored job's ``data`` is untouched.
         stored = await c.d_get(prefix + sub + P("d1"))
@@ -243,6 +244,7 @@ async def test_debug_logs_to_stderr(cfg, capfd):
             ),
         )
         await sf.run("link job at chatty set -c test.chatty -t -")
+        await c.i_sync()
 
         # ``capfd`` snapshots fd-level stderr; clear the prior buffer so
         # we only see the debug invocation's output.

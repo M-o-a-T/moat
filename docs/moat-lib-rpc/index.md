@@ -106,13 +106,13 @@ no `cmd_NAME` method.
 
 ```python
 class Baz(BaseCmd):
-    async def stream_quux(self, msg:Msg):
+    async def stream_quux(self, msg: Msg):
         if msg.can_stream:
             n = msg[0]
             async with msg.stream_out(0) as ms:
-                for n in range(1,n+1):
+                for n in range(1, n + 1):
                     await ms.send(n)
-                await ms.result(n*(n+1)/2)  # sum ;-)
+                await ms.result(n * (n + 1) / 2)  # sum ;-)
         else:
             print(f"Wanted: {msg[0]} quux.")
 ```

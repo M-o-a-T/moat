@@ -16,8 +16,9 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --show-fixes]
+        exclude: '(^|/)OFF/'
       - id: ruff-format
-        exclude: "docs/.*"
+        exclude: "docs/.*|(^|/)OFF/"
 
 # - repo: https://github.com/allganize/ty-pre-commit
 #   rev: v0.0.17

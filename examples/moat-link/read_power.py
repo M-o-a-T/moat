@@ -1,4 +1,5 @@
-#!/usr/bin/python3  # noqa:D100
+#!/usr/bin/python3
+"""Replay a stored Akumuli time series into MoaT-KV."""
 
 from __future__ import annotations
 

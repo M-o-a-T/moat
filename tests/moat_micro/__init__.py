@@ -34,7 +34,7 @@ def make_upy(force: bool = False, dupterm: bool = False):  # noqa: D103
         p.mkdir()
     env = os.environ.copy()
     env["PYTHONPATH"] = str(here)
-    run(  # noqa:S603
+    run(
         ["make", "STRIP=", "DEBUG=1", f"VARIANT_DIR={var}", f"BUILD={p}", "-j5"],
         cwd=mk,
         check=True,

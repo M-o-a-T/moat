@@ -289,7 +289,7 @@ class Cell:
         if self.balance_Ah is not None:
             res.bal_ah = self.balance_Ah
         if self.in_balance:
-            res.balancing = self.balance_pwm if self.balance_pwm else 0.001
+            res.balancing = self.balance_pwm or 0.001
         else:
             res.balancing = 0
         res.balance_to = self.cfg.u.balance

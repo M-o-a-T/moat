@@ -12,11 +12,6 @@ if sys.version_info < (3, 11):  # noqa: UP036
 
 pytestmark = pytest.mark.anyio
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing import Any
-
 
 @pytest.mark.parametrize("qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
 @pytest.mark.parametrize("qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])

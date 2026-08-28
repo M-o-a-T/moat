@@ -1,4 +1,6 @@
-#!/usr/bin/python3  # noqa: D100
+#!/usr/bin/python3
+"""Simulate a mass-spring-damper plant driven by a moat PID controller."""
+
 from __future__ import annotations
 
 from examples.mass_spring_damper import MassSpringDamper

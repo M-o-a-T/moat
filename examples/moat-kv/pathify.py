@@ -1,8 +1,10 @@
-#!/usr/bin/python3  # noqa: D100
+#!/usr/bin/python3
+"""Batch-convert data.
 
-# Batch-convert data. In this case I had some entries which were stored as
-# a list, but using Path made much more sense (esp when you need to
-# view/edit the yaml export).
+Some entries were stored as a list, but using Path made much more sense
+(esp when you need to view/edit the yaml export).
+"""
+
 from __future__ import annotations
 
 import asyncclick as click

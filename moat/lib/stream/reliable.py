@@ -295,13 +295,16 @@ class ReliableMsg(StackedMsg):
             await AC_exit(self, type(exc), exc, None)
             raise
 
-    async def __aexit__(self, exc_type: type[BaseException] | None,
-       exc: BaseException | None,
-       tb: TracebackType | None) -> bool|None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
         if self._tg is not None:
             self._tg.cancel()
         self._tg = None
-        return await AC_exit(self, exc_type,exc,tb)
+        return await AC_exit(self, exc_type, exc, tb)
 
     async def _mon(self):
         while True:

@@ -1,6 +1,6 @@
-#!/usr/bin/python  # noqa: D100
+#!/usr/bin/python
+"""Exercise the EMS scheduler with a synthetic day of price/load/PV data."""
 
-# Invent a typical day
 from __future__ import annotations
 
 from moat.ems.sched import FutureData, Hardware, Model

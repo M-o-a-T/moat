@@ -83,7 +83,7 @@ class BaseCmdMsg(BaseCmd):
 
     tg: object | None = None
     __stream = None
-    __rprefix:tuple[PathElem,...] = ()
+    __rprefix: tuple[PathElem, ...] = ()
     stream_owner_obj_: object
 
     doc = dict(_d="Foo")

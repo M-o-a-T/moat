@@ -30,10 +30,7 @@ from pymodbus.pdu.register_message import (
 )
 
 try:
-    from pymodbus.datastore.sequential import ModbusSequentialDataBlock
     from pymodbus.datastore.sparse import ModbusSparseDataBlock
-
-    from typing import TypeAlias
 
     BaseModbusDataBlock = ModbusSparseDataBlock
 

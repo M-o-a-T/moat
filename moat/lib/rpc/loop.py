@@ -24,8 +24,9 @@ else:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.rpc import MsgRoot
     from types import TracebackType
+
+    from moat.lib.rpc import MsgRoot
 
 __all__ = ["StreamLoop"]
 
@@ -70,9 +71,12 @@ class StreamLoop(HandlerStream):
             raise RuntimeError("No remote")
         await other.writer_done.wait()
 
-    async def __aexit__(self, exc_type: type[BaseException] | None,
-                        exc: BaseException | None,
-                        tb: TracebackType | None) -> bool | None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
         other = self.__other
         if other is None:
             raise RuntimeError("No remote")
@@ -80,7 +84,7 @@ class StreamLoop(HandlerStream):
             await other.closed_input()
         try:
             with ungroup:
-                await super().__aexit__(exc_type,exc,tb)
+                await super().__aexit__(exc_type, exc, tb)
         finally:
             if not self.is_idle:
                 log("*** WARNING *** %r: not idle; %r", self, vars(self))

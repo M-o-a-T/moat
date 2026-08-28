@@ -35,16 +35,15 @@ import anyio
 import pytest
 import shutil
 
-from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from moat.lib.xknx.dpt import DPTArray, DPTBinary
-from moat.lib.xknx.telegram import GroupAddress, Telegram
-from moat.lib.xknx.telegram.apci import GroupValueWrite
-
 from moat.util import attrdict
 from moat.kv.knx.model import KNXroot
 from moat.kv.knx.task import task
 from moat.kv.mock.mqtt import stdtest
 from moat.lib.path import P, Path
+from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from moat.lib.xknx.dpt import DPTArray, DPTBinary
+from moat.lib.xknx.telegram import GroupAddress, Telegram
+from moat.lib.xknx.telegram.apci import GroupValueWrite
 
 from typing import TYPE_CHECKING
 

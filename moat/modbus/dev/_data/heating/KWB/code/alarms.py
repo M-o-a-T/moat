@@ -1,4 +1,6 @@
-#!/usr/bin/env python3  # noqa: D100
+#!/usr/bin/env python3
+"""Convert a KWB alarm-register CSV table into a MoaT enum attrdict."""
+
 from __future__ import annotations
 
 import csv

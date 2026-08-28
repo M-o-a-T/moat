@@ -19,6 +19,7 @@
 ```python
 from moat.api.bosch.bmv080 import BMV080, BMV080Output
 
+
 class MySPILink:
     """Example SPI link implementation."""
 
@@ -33,12 +34,15 @@ class MySPILink:
     def delay_ms(self, duration_ms: int) -> None:
         # Implement delay
         import time
+
         time.sleep(duration_ms / 1000)
 
     def time_ms(self) -> int:
         # Return monotonic tick in milliseconds
         import time
+
         return int(time.monotonic() * 1000)
+
 
 # Create link and sensor
 spi = MySPILink()

@@ -8,12 +8,12 @@ from contextlib import nullcontext
 import asyncclick as click
 
 from moat.util import NotGiven, yprint
-from moat.util.times import humandelta
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+from moat.util.times import humandelta
 
 
 @click.group(cls=AliasedGroup, short_help="Manage error data", invoke_without_command=True)  # pylint: disable=undefined-variable
@@ -130,8 +130,10 @@ async def list_(obj, ok, raw):
             if ok is not None and d.get("ok", False) != ok:
                 continue
 
-            print(f"{int(now-m.timestamp) if raw else humandelta(now-m.timestamp) :10} {p}",
-                  file=obj.stdout)
+            print(
+                f"{int(now - m.timestamp) if raw else humandelta(now - m.timestamp):10} {p}",
+                file=obj.stdout,
+            )
             seen = True
 
     if not seen:

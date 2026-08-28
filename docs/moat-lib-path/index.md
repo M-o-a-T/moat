@@ -35,7 +35,7 @@ from moat.lib.path import PathShortener, PathLongener
 shortener = PathShortener()
 depth1, short1 = shortener.short(P("a.b.c.d"))  # (4, ("a","b","c","d"))
 depth2, short2 = shortener.short(P("a.b.c.e"))  # (3, ("e",))
-depth3, short3 = shortener.short(P("a.b.f"))    # (2, ("f",))
+depth3, short3 = shortener.short(P("a.b.f"))  # (2, ("f",))
 
 # Longener reconstructs full paths
 longener = PathLongener()
@@ -99,7 +99,7 @@ db_host = db_config / "host"
 db_port = db_config / "port"
 
 # Config data
-data = attrdict(config=attrdict(database=attrdict(host="loclhost",port="5432")))
+data = attrdict(config=attrdict(database=attrdict(host="loclhost", port="5432")))
 
 # Accessing the data
 assert data.get_(db_port) == 5432
@@ -109,6 +109,7 @@ assert data.get_(db_port) == 5432
 
 ```python
 from moat.lib.path import Path
+
 
 # Route messages by path
 def handle_message(path, data):

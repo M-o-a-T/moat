@@ -350,8 +350,8 @@ class SubMsgSender(MsgSender):
     An empty path is OK.
     """
 
-    _path:Path
-    _rpath:list[PathElem]
+    _path: Path
+    _rpath: list[PathElem]
 
     def __init__(self, root: MsgRoot, path: Path, caller=None):
         """

@@ -7,12 +7,11 @@ from __future__ import annotations
 import anyio
 import logging
 
-from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
-from moat.lib.xknx.telegram import GroupAddress
-
 from moat.util import NotGiven
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import ClientEntry, ClientRoot
+from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
+from moat.lib.xknx.telegram import GroupAddress
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,6 @@
-#!/usr/bin/env python  # noqa: D100
+#!/usr/bin/env python
+"""Helpers for exposing Victron devices on the system DBus."""
+
 from __future__ import annotations
 
 import anyio

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
 import anyio
+import pytest
 
-from moat.link._test import run_broker
 from moat.util import attrdict
+from moat.link._test import run_broker
 
 from typing import TYPE_CHECKING
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from contextlib import nullcontext, suppress, AbstractContextManager, AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, AbstractContextManager, nullcontext, suppress
 from getpass import getpass
 from math import log10
 
@@ -51,7 +51,10 @@ class OptCtx(Generic[YieldT]):
     there is one.
     """
 
-    def __init__(self, obj: AbstractContextManager[YieldT] | AbstractAsyncContextManager[YieldT] | None = None) -> None:
+    def __init__(
+        self,
+        obj: AbstractContextManager[YieldT] | AbstractAsyncContextManager[YieldT] | None = None,
+    ) -> None:
         self.obj: AbstractContextManager[YieldT] | AbstractAsyncContextManager[YieldT] | None = obj
 
     def __enter__(self) -> YieldT | None:
@@ -66,7 +69,9 @@ class OptCtx(Generic[YieldT]):
         exc_tb: TracebackType | None,
     ) -> bool | None:
         if self.obj is not None:
-            return cast(AbstractContextManager[YieldT], self.obj).__exit__(exc_type, exc_val, exc_tb)
+            return cast(AbstractContextManager[YieldT], self.obj).__exit__(
+                exc_type, exc_val, exc_tb
+            )
         return None
 
     async def __aenter__(self) -> YieldT | None:
@@ -81,7 +86,9 @@ class OptCtx(Generic[YieldT]):
         exc_tb: TracebackType | None,
     ) -> bool | None:
         if self.obj is not None:
-            return await cast(AbstractAsyncContextManager[YieldT], self.obj).__aexit__(exc_type, exc_val, exc_tb)
+            return await cast(AbstractAsyncContextManager[YieldT], self.obj).__aexit__(
+                exc_type, exc_val, exc_tb
+            )
         return None
 
 

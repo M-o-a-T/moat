@@ -100,9 +100,10 @@ Rewrites the FlashMQ config for satellite 1 to point the bridge at the new port 
 
 ```python
 import os, signal
+
 await config_path.write_text(make_config(sat_port, new_bridge_port))
 os.kill(process.pid, signal.SIGHUP)
-await anyio.sleep(0.3)   # give bridge time to reconnect
+await anyio.sleep(0.3)  # give bridge time to reconnect
 ```
 
 ---
@@ -150,7 +151,7 @@ Repeat the other direction (c2 → c1).
 ### Phase 2 – Network split (master killed)
 
 ```python
-s1_proc.terminate()   # or .kill() — this is the *master* process
+s1_proc.terminate()  # or .kill() — this is the *master* process
 await anyio.sleep(0.3)
 ```
 
@@ -166,27 +167,35 @@ Store the gate config in LS1's data tree. Include the **Sat2 backend address**
 so the remote `Link` connects to the correct MQTT broker:
 
 ```python
-await c1.d_set(P("gate.test_gate"), {
-    "driver": "link",
-    "src": Root.get(),          # sync the whole root
-    "server": "LS2",
-    "delay": 0.1,
-    "name": "test_gate",
-    # ← tells gate/link.py which MQTT broker to use for the remote Link
-    "backend": {"host": "127.0.0.1", "port": s2_port},
-})
+await c1.d_set(
+    P("gate.test_gate"),
+    {
+        "driver": "link",
+        "src": Root.get(),  # sync the whole root
+        "server": "LS2",
+        "delay": 0.1,
+        "name": "test_gate",
+        # ← tells gate/link.py which MQTT broker to use for the remote Link
+        "backend": {"host": "127.0.0.1", "port": s2_port},
+    },
+)
 ```
 
 Run the gate as a background task:
 
 ```python
 from moat.link.gate import run_gate
+
 gate_cs = anyio.CancelScope()
+
+
 async def run_the_gate():
     with gate_cs:
         await run_gate(cfg1, c1, P("gate.test_gate"))
+
+
 tg.start_soon(run_the_gate)
-await anyio.sleep(0.5)   # wait for gate sync to finish
+await anyio.sleep(0.5)  # wait for gate sync to finish
 ```
 
 Assert that:
@@ -205,11 +214,14 @@ Set up a raw MQTT counter on one path. Use a `Backend` monitor on satellite 1 wa
 
 ```python
 updates: list[Any] = []
+
+
 async def count_updates():
     async with get_backend(cfg1) as bk:
         async with bk.monitor(P("data.dedup"), subtree=False) as mon:
             async for msg in mon:
                 updates.append(msg.data)
+
 
 tg.start_soon(count_updates)
 ```
@@ -217,7 +229,7 @@ tg.start_soon(count_updates)
 Now update via `c1`:
 ```python
 await c1.d_set(P("data.dedup"), 42)
-await anyio.sleep(0.3)   # longer than gate delay=0.1
+await anyio.sleep(0.3)  # longer than gate delay=0.1
 ```
 
 Assert:

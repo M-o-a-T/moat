@@ -27,9 +27,6 @@ import anyio
 import pytest
 import shutil
 
-from moat.lib.xknx.dpt import DPTValue1ByteUnsigned
-from moat.lib.xknx.telegram import GroupAddress
-
 from moat.util import attrdict
 from moat.kv.knx.mock import (
     SimulatedActuator,
@@ -41,6 +38,8 @@ from moat.kv.knx.model import KNXroot
 from moat.kv.knx.task import task
 from moat.kv.mock.mqtt import stdtest
 from moat.lib.path import P, Path
+from moat.lib.xknx.dpt import DPTValue1ByteUnsigned
+from moat.lib.xknx.telegram import GroupAddress
 
 from typing import TYPE_CHECKING
 

@@ -422,4 +422,4 @@ class HistoricalReader(Reader):
             self.history.append(ret)
 
 
-should_auto_add_history:bool = True
+should_auto_add_history: bool = True

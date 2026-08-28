@@ -28,7 +28,7 @@ def get_part(cur: Any, p: Sequence[str | int], add: bool = False) -> Any:
             except KeyError:
                 if not add:
                     raise KeyError(p, pp) from None
-                cur[cast(int,pp)] = nc = []
+                cur[cast(int, pp)] = nc = []
                 cur = nc
     return cur
 

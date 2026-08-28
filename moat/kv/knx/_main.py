@@ -4,12 +4,12 @@ from __future__ import annotations
 import logging
 
 import asyncclick as click
-from moat.lib.xknx.remote_value import RemoteValueSensor
 
 from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import node_attr, res_get, res_update
 from moat.lib.path import P, Path, path_eval
 from moat.lib.run import AliasedGroup, attr_args
+from moat.lib.xknx.remote_value import RemoteValueSensor
 from moat.link.announce import as_service
 
 from collections.abc import Mapping

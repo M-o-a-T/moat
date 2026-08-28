@@ -256,7 +256,9 @@ class WindowsConsole(Console):  # noqa: D101
             return nt._inputhook  # noqa: SLF001
         return None
 
-    async def __write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int) -> None:  # noqa:ARG002
+    async def __write_changed_line(
+        self, y: int, oldline: str, newline: str, _px_coord: int
+    ) -> None:
         minlen = min(wlen(oldline), wlen(newline))
         x_pos = 0
         x_coord = 0

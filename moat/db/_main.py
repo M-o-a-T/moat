@@ -12,8 +12,8 @@ import sys
 import asyncclick as click
 from alembic import command
 
-from moat.lib.run import load_subgroup
 from moat.lib.config import CFG
+from moat.lib.run import load_subgroup
 
 from .util import alembic_cfg, database, load
 

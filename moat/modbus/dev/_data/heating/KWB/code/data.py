@@ -1,4 +1,6 @@
-#!/usr/bin/env python3  # noqa: D100
+#!/usr/bin/env python3
+"""Build a KWB heating-controller register map from a CSV table and enum YAML."""
+
 from __future__ import annotations
 
 import csv

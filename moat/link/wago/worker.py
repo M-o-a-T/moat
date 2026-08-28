@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from anyio.abc import TaskStatus
+
     from asyncwago.server import MonitorChat
 
     from moat.lib.path import Path

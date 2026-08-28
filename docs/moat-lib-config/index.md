@@ -34,13 +34,12 @@ from moat.lib.config import CfgStore
 cfg = CfgStore(
     name="myotherapp",
     preload={"debug": True},
-    load_all=False  # Stop after the first config file found
+    load_all=False,  # Stop after the first config file found
 )
 
 # Access values
 database_host = cfg.database.host
 cache_size = cfg["cache"]["size"]
-
 ```
 
 You can use them to replace the `CFG` object's context, e.g. to run two
@@ -58,7 +57,6 @@ with CFG.with_config_(cfg):
 # Access myotherapp's config data
 assert CFG.env.foo.bar == "baz"
 print(CFG.database.host)  # fails if 'myapp.cfg' doesn't contain that
-
 ```
 
 

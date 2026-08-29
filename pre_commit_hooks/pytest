@@ -21,6 +21,13 @@ from pathlib import Path
 
 COVERAGE_FILE = Path(".coverage-baseline")
 
+# Prefer the project's pinned virtualenv so the hook runs against the same
+# dependency versions (e.g. pymodbus ~= 3.9.0) the code targets. Fall back to
+# whichever ``pytest`` is on PATH when no venv is present.
+_VENV_PYTEST = Path(".venv/bin/pytest")
+_USE_VENV = _VENV_PYTEST.is_file() and os.access(_VENV_PYTEST, os.X_OK)
+PYTEST = str(_VENV_PYTEST) if _USE_VENV else "pytest"
+
 
 def get_test_dir(filepath: str) -> Path | None:
     """
@@ -142,8 +149,8 @@ def main(filenames: list[str]) -> int:
         env = os.environ.copy()
         env["PYTHONPATH"] = "."
         result = subprocess.run(  # noqa:S603
-            [  # noqa:S607
-                "pytest",
+            [
+                PYTEST,
                 "--override-ini=addopts=-x",  # Override default addopts to disable --no-cov
                 f"--cov={module_name}",
                 "--cov-report=term",

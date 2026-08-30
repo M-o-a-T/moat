@@ -302,6 +302,7 @@ async def test_gate_codec(cfg):  # noqa: D103
         await c.i_sync()
 
         await sf.tg.start(run_gate, sf.cfg, c, "tester")
+        await c.i_sync()
 
         a = await data_get(c, P("test.a"), out=False)
         b = await backend_get(cc, P("test.b"), out=False)

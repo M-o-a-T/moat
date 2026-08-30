@@ -85,7 +85,7 @@ packages = [ "moat",]
 
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
-addopts = "-x --no-cov"
+addopts = "-x --no-cov -n auto --dist loadfile"
 log_cli_level = "DEBUG"
 pythonpath = [
     ".",
@@ -111,6 +111,7 @@ dev = [
     "pre-commit",
     "pytest-trio",
     "pytest-coverage",
+    "pytest-xdist",
     "ruamel.yaml",
     "ruff",
     "setuptools-scm",

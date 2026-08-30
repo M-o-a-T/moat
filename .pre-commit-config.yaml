@@ -50,13 +50,20 @@ repos:
       args: [--allow-multiple-documents]
 
     - id: pytest-modified
-      name: pytest on modified modules
-      description: runs pytest on test directories for modified moat modules
-      entry: pre_commit_hooks/pytest
-      language: python
+      name: pytest
+      entry: pytest -x
+      language: system
       types: [python]
-      pass_filenames: true
-      require_serial: true
+      pass_filenames: false
+
+#   - id: pytest-modified
+#     name: pytest on modified modules
+#     description: runs pytest on test directories for modified moat modules
+#     entry: pre_commit_hooks/pytest
+#     language: python
+#     types: [python]
+#     pass_filenames: true
+#     require_serial: true
 
     - id: sphinx-build
       name: sphinx documentation build

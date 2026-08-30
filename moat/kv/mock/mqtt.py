@@ -132,7 +132,7 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
                             "server": {
                                 "bind_default": {
                                     "host": "127.0.0.1",
-                                    "port": i + PORT + 1,
+                                    "port": 0,  # assigned by the OS
                                     "ssl": server_ctx,
                                 },
                                 "backend": "mqtt",

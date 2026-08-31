@@ -164,13 +164,6 @@ class ProtocolHandler:
             "Broker" if "Broker" in type(self).__name__ else "Client",
             self.session.client_id if self.session else "?",
         )
-        if self._reader_task is None:
-            return
-        try:
-            self._reader_task.start_soon(self._timeout_loop)
-        except RuntimeError:
-            # This can happen when stuff overlaps
-            pass
 
     async def stop(self):  # noqa: D102
         # Stop messages flow waiter
@@ -442,30 +435,31 @@ class ProtocolHandler:
             await self._send_packet(pubcomp_packet)
             app_message.pubcomp_packet = pubcomp_packet
 
-    async def _timeout_loop(self):
-        keepalive_timeout = self.session.keep_alive
-        if keepalive_timeout <= 0:
-            keepalive_timeout = None
-
-        while True:
-            while True:
-                with anyio.move_on_after(keepalive_timeout):
-                    await self._got_packet.wait()
-                    self._got_packet = anyio.Event()
-                    continue
-            self.logger.debug(
-                "%s Input stream read timeout",
-                self.session.client_id if self.session else "?",
-            )
-            await self.handle_read_timeout()
-
     async def _reader_loop(self, evt):
         self.logger.debug("%s Starting reader coro", self.session.client_id)
         self._got_packet = anyio.Event()
 
+        async def _timeout_loop():
+            keepalive_timeout = self.session.keep_alive
+            if keepalive_timeout <= 0:
+                keepalive_timeout = None
+
+            while True:
+                while True:
+                    with anyio.move_on_after(keepalive_timeout):
+                        await self._got_packet.wait()
+                        self._got_packet = anyio.Event()
+                        continue
+                self.logger.debug(
+                    "%s Input stream read timeout",
+                    self.session.client_id if self.session else "?",
+                )
+                await self.handle_read_timeout()
+
         try:
             async with anyio.create_task_group() as tg:
                 self._reader_task = tg
+                tg.start_soon(_timeout_loop)
                 evt.set()
                 while True:
                     try:

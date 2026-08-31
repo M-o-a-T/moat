@@ -8,6 +8,7 @@ import math
 import os
 import re
 import sys
+from pathlib import PosixPath
 
 try:
     import ruyaml as yaml
@@ -68,6 +69,8 @@ Emitter: type[EmitterType] = emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
+
+SafeRepresenter.add_representer(PosixPath, SafeRepresenter.represent_str)
 
 
 def load_ansible_repr() -> None:

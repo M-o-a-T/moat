@@ -32,6 +32,17 @@ class _Row(_Base):
     mac: Mapped[EUI | None] = mapped_column(MacAddr, nullable=True)
 
 
+@pytest.fixture
+def eng():
+    "In-memory SQLite engine with the test schema; disposed after each test."
+    e = create_engine("sqlite:///:memory:")
+    _Base.metadata.create_all(e)
+    try:
+        yield e
+    finally:
+        e.dispose()
+
+
 def test_from_ip_v4_mapping():
     "IPv4 addresses are stored IPv4-mapped and decode back to v4."
     v = IpValue.from_ip("10.0.0.5/24")
@@ -111,10 +122,8 @@ def test_is_mac_link_local():
     assert is_mac_link_local(ipaddress.IPv6Address("fe80::211:22ff:fe33:4455")) is True
 
 
-def test_mac_addr_accepts_eui_str_bytes():
+def test_mac_addr_accepts_eui_str_bytes(eng):
     ":class:`MacAddr` binds EUI, str, int, and bytes identically."
-    eng = create_engine("sqlite:///:memory:")
-    _Base.metadata.create_all(eng)
     inputs = [
         EUI("00:11:22:33:44:55"),
         "00:11:22:33:44:55",
@@ -135,10 +144,8 @@ def test_mac_addr_accepts_eui_str_bytes():
         assert row.ip == IpValue.from_ip("10.0.0.5/24")
 
 
-def test_orm_roundtrip():
+def test_orm_roundtrip(eng):
     "The composite and MAC type survive a SQLite round-trip."
-    eng = create_engine("sqlite:///:memory:")
-    _Base.metadata.create_all(eng)
     with Session(eng) as sess:
         rows = [
             ("10.0.0.5/24", EUI("00:11:22:33:44:55")),

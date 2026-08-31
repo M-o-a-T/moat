@@ -284,6 +284,7 @@ nitpick_ignore = [
     ("py:mod", "asyncactor"),
     ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
     ("py:data", "types.EllipsisType"),
+    ("py:data", "types.CoroutineType"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:class", "moat.micro.part.transfer._Step"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),

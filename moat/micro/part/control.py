@@ -13,6 +13,7 @@ from moat.lib.micro import (
     Event,
     L,
     TaskGroup,
+    aclosing,
     every_ms,
     idle,
     retry_ms,
@@ -298,36 +299,37 @@ class Control(BaseCmd):
 
         remaining = t_ms
         last = ticks_ms()
-        async for _value in every_ms(interval):
-            now = ticks_ms()
-            dt = ticks_diff(now, last)
-            last = now
+        async with aclosing(every_ms(interval)) as _iter:
+            async for _value in _iter:
+                now = ticks_ms()
+                dt = ticks_diff(now, last)
+                last = now
 
-            if p is not None and self._sync_active is not None:
-                cfg = self._sync_cfg(self._sync_active)
-                bound = cfg.get("bound")
-                if bound is not None:
-                    sync_value = await retry_ms(0, 10, p, _exc=ValueError)
-                    assert sync_value is not None
-                    prev = self._sync_suspended
-                    cond = (
-                        sync_value < bound
-                        if self.sync_invert == (self._sync_active == "low")
-                        else sync_value > bound
-                    )
-                    self._sync_suspended = cond
-                    if prev != cond:
-                        self._apply_value(self.val)
-                        if should_lock:
-                            if cond:  # became suspended → output no longer forced
-                                self._end_pid_lock()
-                            else:  # became not-suspended → output forced again
-                                await self._start_pid_lock(self._sync_active)
+                if p is not None and self._sync_active is not None:
+                    cfg = self._sync_cfg(self._sync_active)
+                    bound = cfg.get("bound")
+                    if bound is not None:
+                        sync_value = await retry_ms(0, 10, p, _exc=ValueError)
+                        assert sync_value is not None
+                        prev = self._sync_suspended
+                        cond = (
+                            sync_value < bound
+                            if self.sync_invert == (self._sync_active == "low")
+                            else sync_value > bound
+                        )
+                        self._sync_suspended = cond
+                        if prev != cond:
+                            self._apply_value(self.val)
+                            if should_lock:
+                                if cond:  # became suspended → output no longer forced
+                                    self._end_pid_lock()
+                                else:  # became not-suspended → output forced again
+                                    await self._start_pid_lock(self._sync_active)
 
-            if not self._sync_suspended:
-                remaining -= dt
-            if remaining <= 0:
-                break
+                if not self._sync_suspended:
+                    remaining -= dt
+                if remaining <= 0:
+                    break
 
         # Clear scope before _end_resync so it does not try to cancel itself.
         self._resync_scope = None

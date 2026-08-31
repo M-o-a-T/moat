@@ -43,26 +43,26 @@ basic_tree = {
 
 async def _run_mock_ow(link, cfg_ow, name, tree, *, task_status):
     """Serve a mock owserver and run the connector task for one server."""
-    listener = await anyio.create_tcp_listener(
+    async with await anyio.create_tcp_listener(
         local_host="127.0.0.1",
         local_port=0,
         reuse_port=True,
-    )
-    addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
-    port = addr[1]
+    ) as listener:
+        addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
+        port = addr[1]
 
-    prefix = Path.build(cfg_ow["prefix"])
-    await link.d_set(prefix / name, {"server": {"host": "127.0.0.1", "port": port}})
-    await link.i_sync()
+        prefix = Path.build(cfg_ow["prefix"])
+        await link.d_set(prefix / name, {"server": {"host": "127.0.0.1", "port": port}})
+        await link.i_sync()
 
-    async with anyio.create_task_group() as tg:
+        async with anyio.create_task_group() as tg:
 
-        async def serve():
-            with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
-                await listener.serve(partial(some_server, tree, {}))
+            async def serve():
+                with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
+                    await listener.serve(partial(some_server, tree, {}))
 
-        tg.start_soon(serve)
-        await task(link, cfg_ow, name, task_status=task_status)
+            tg.start_soon(serve)
+            await task(link, cfg_ow, name, task_status=task_status)
 
 
 async def _expect_link(c, path, want, timeout=5.0):

@@ -10,12 +10,14 @@ from .task import task
 
 
 async def server(client, tree: dict | None = None, options: dict | None = None, evt=None):  # noqa: D103
-    async with anyio.create_task_group() as tg:
-        listener = await anyio.create_tcp_listener(
+    async with (
+        anyio.create_task_group() as tg,
+        await anyio.create_tcp_listener(
             local_host="127.0.0.1",
             local_port=0,
             reuse_port=True,
-        )
+        ) as listener,
+    ):
 
         async def may_close():
             with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):

@@ -419,73 +419,77 @@ class ModbusServer(BaseModbusServer):
             self.taskgroup = None
 
     async def _serve_one(self, conn):
-        reset_frame = False
-        framer = self.framer(decoder=self.decoder)
+        # anyio's `serve` hands us the stream but does not close it; the
+        # handler must. Without this, accepted connections leak their
+        # underlying socket on EOF / error / cancellation.
+        async with conn:
+            reset_frame = False
+            framer = self.framer(decoder=self.decoder)
 
-        while True:
-            try:
-                data = await conn.receive(4096)
-                if data == b"":
-                    break
-                if _logger.isEnabledFor(logging.DEBUG):
-                    _logger.debug(  # pylint: disable=logging-not-lazy
-                        "Handling data: " + hexlify_packets(data),  # noqa:G003
-                    )
-
-                reqs = []
-                while True:
-                    used, pdu = framer.handleFrame(data, 0, 0)
-                    data = data[used:]
-                    if pdu is None:
+            while True:
+                try:
+                    data = await conn.receive(4096)
+                    if data == b"":
                         break
-                    reqs.append(pdu)
-
-                for request in reqs:
-                    unit = request.dev_id
-                    tid = request.transaction_id
-                    try:
-                        with ungroup:
-                            response = await self.process_request(request)
-                    except NoSuchSlaveException:
-                        _logger.debug("requested unit does not exist: %d", request.dev_id)
-                        response = ExceptionResponse(
-                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
-                        )
-                    except TimeoutError:
-                        _logger.info("request to unit %d timed out", request.dev_id)
-                        response = ExceptionResponse(
-                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
-                        )
-                    except Exception as exc:
-                        _logger.warning("Unable to fulfill request", exc_info=exc)
-                        response = ExceptionResponse(
-                            request.function_code, ExcCodes.DEVICE_FAILURE
-                        )
-                    response.transaction_id = tid
-                    response.dev_id = unit
-                    # self.server.control.Counter.BusMessage += 1
-                    pdu = framer.buildFrame(response)
                     if _logger.isEnabledFor(logging.DEBUG):
-                        _logger.debug("send: %s", b2a_hex(pdu))
-                    await conn.send(pdu)
+                        _logger.debug(  # pylint: disable=logging-not-lazy
+                            "Handling data: " + hexlify_packets(data),  # noqa:G003
+                        )
 
-            except TimeoutError as msg:
-                _logger.debug("Socket timeout occurred: %r", msg)
-                reset_frame = True
-            except OSError as msg:
-                _logger.error("Socket error occurred: %r", msg)
-                return
-            except anyio.get_cancelled_exc_class():
-                raise
-            except anyio.BrokenResourceError:
-                return
-            except Exception:  # pylint: disable=broad-except
-                _logger.exception("Server error")
-                return
-            finally:
-                if reset_frame:
-                    framer.resetFrame()
-                    reset_frame = False
+                    reqs = []
+                    while True:
+                        used, pdu = framer.handleFrame(data, 0, 0)
+                        data = data[used:]
+                        if pdu is None:
+                            break
+                        reqs.append(pdu)
+
+                    for request in reqs:
+                        unit = request.dev_id
+                        tid = request.transaction_id
+                        try:
+                            with ungroup:
+                                response = await self.process_request(request)
+                        except NoSuchSlaveException:
+                            _logger.debug("requested unit does not exist: %d", request.dev_id)
+                            response = ExceptionResponse(
+                                request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
+                            )
+                        except TimeoutError:
+                            _logger.info("request to unit %d timed out", request.dev_id)
+                            response = ExceptionResponse(
+                                request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
+                            )
+                        except Exception as exc:
+                            _logger.warning("Unable to fulfill request", exc_info=exc)
+                            response = ExceptionResponse(
+                                request.function_code, ExcCodes.DEVICE_FAILURE
+                            )
+                        response.transaction_id = tid
+                        response.dev_id = unit
+                        # self.server.control.Counter.BusMessage += 1
+                        pdu = framer.buildFrame(response)
+                        if _logger.isEnabledFor(logging.DEBUG):
+                            _logger.debug("send: %s", b2a_hex(pdu))
+                        await conn.send(pdu)
+
+                except TimeoutError as msg:
+                    _logger.debug("Socket timeout occurred: %r", msg)
+                    reset_frame = True
+                except OSError as msg:
+                    _logger.error("Socket error occurred: %r", msg)
+                    return
+                except anyio.get_cancelled_exc_class():
+                    raise
+                except anyio.BrokenResourceError:
+                    return
+                except Exception:  # pylint: disable=broad-except
+                    _logger.exception("Server error")
+                    return
+                finally:
+                    if reset_frame:
+                        framer.resetFrame()
+                        reset_frame = False
 
 
 class MockAioModbusServer(ModbusServer):

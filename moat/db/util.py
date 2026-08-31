@@ -4,6 +4,7 @@ Database support.
 
 from __future__ import annotations
 
+import atexit
 import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Session", "alembic_cfg", "database", "load", "session"]
+__all__ = ["Session", "alembic_cfg", "database", "dispose", "load", "session"]
 
 
 @event.listens_for(Engine, "connect")
@@ -45,6 +46,27 @@ session = ContextVar("session")
 
 _loaded = False
 
+# One engine per database URL, reused across calls. Creating a fresh engine
+# on every ``load()`` (and thus every ``database()`` / CLI invocation) leaks
+# the previous engine and its pooled connections -- they get GC'd mid-session
+# and anyio/SQLite reports ``unclosed database``. The idiomatic SQLAlchemy
+# pattern is a single engine per process, with many short-lived sessions.
+_engines: dict[str, Engine] = {}
+
+
+def dispose() -> None:
+    """Dispose every cached engine and drop it.
+
+    Registered with :mod:`atexit` so connections close cleanly on interpreter
+    exit; tests may also call it explicitly at session end.
+    """
+    while _engines:
+        _, eng = _engines.popitem()
+        eng.dispose()
+
+
+atexit.register(dispose)
+
 
 def load(cfg: attrdict) -> MetaData:
     """Load database models as per config."""
@@ -58,7 +80,11 @@ def load(cfg: attrdict) -> MetaData:
             import_module(schema)
         _loaded = True
 
-    engine = create_engine(cfg.url, echo=cfg.get("verbose", False))
+    # Reuse one engine per URL; the first call's ``echo`` setting wins.
+    engine = _engines.get(cfg.url)
+    if engine is None:
+        engine = create_engine(cfg.url, echo=cfg.get("verbose", False))
+        _engines[cfg.url] = engine
     Session.configure(bind=engine)
 
     return Base.metadata

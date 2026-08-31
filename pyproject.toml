@@ -34,7 +34,7 @@ dependencies = [
     "ifaddr",
     "jmespath",
     "jsonschema",
-    "mcp",
+    "mcp >1.29.1,<2",
     "netaddr",
     "pydantic ~= 2.12",
     "pydantic_variants ~= 0.3",

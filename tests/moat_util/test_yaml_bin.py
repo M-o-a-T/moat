@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 
-from moat.lib.path import Path
+from moat.lib.path import P, Path
 from moat.util.yaml import yformat, yload, yprint
 
 
@@ -220,7 +220,7 @@ class TestPathTag:
 
     def test_path_and_bin_together(self):
         """Verify !P tag still works alongside bin tags."""
-        data = {"path": Path("/moat/test_path"), "blob": b"\x80abc"}
+        data = {"path": P("moat.test_path"), "blob": b"\x80abc"}
         text = yformat(data)
         loaded = yload(text)
         assert isinstance(loaded["path"], Path)

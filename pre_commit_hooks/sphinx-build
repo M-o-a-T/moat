@@ -44,8 +44,8 @@ def main() -> int:
     # -W: turn warnings into errors
     # -b html: build HTML output
     result = subprocess.run(  # noqa: S603
-        [
-            "../.venv/bin/sphinx-build",
+        [  # noqa: S607
+            "sphinx-build",
             "-W",  # Warnings are errors
             "-b",
             "markdown",

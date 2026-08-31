@@ -7,7 +7,7 @@ This is intended for regularly moving data from A to B.
 from __future__ import annotations
 
 from moat.util import Queue, QueueFull, combine_dict
-from moat.lib.micro import Event, L, TaskGroup, every_ms, idle, is_async, log, ticks_ms
+from moat.lib.micro import Event, L, TaskGroup, aclosing, every_ms, idle, is_async, log, ticks_ms
 from moat.lib.path import Path
 from moat.lib.rpc import BaseCmd, RemoteError
 
@@ -270,9 +270,10 @@ class Transfer(BaseCmd):
                 if t is None:
                     await idle()
                 else:
-                    async for _ in every_ms(t):
-                        self.t_last = ticks_ms()
-                        await self.steps[0]()
+                    async with aclosing(every_ms(t)) as _iter:
+                        async for _ in _iter:
+                            self.t_last = ticks_ms()
+                            await self.steps[0]()
 
     async def reload(self):
         "restart"

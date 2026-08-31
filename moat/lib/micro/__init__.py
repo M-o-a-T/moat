@@ -26,6 +26,7 @@ from moat.util import Queue as _Queue
 from moat.util import QueueEmpty, QueueFull, merge
 
 from collections.abc import (  # noqa: TC002
+    AsyncGenerator,
     AsyncIterator,
     Iterable,
     Mapping,
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
         @overload
         def __call__(
             self, t: float, p: None = None, /, *a: Any, **k: Any
-        ) -> AsyncIterator[None]: ...
+        ) -> AsyncGenerator[None, None]: ...
 
         @overload
         def __call__(
@@ -60,7 +61,7 @@ if TYPE_CHECKING:
             /,
             *a: P.args,
             **k: P.kwargs,
-        ) -> AsyncIterator[R]: ...
+        ) -> AsyncGenerator[R | None, None]: ...
 
     class _RunProto(Protocol):
         def __call__(
@@ -321,7 +322,7 @@ async def wait_for_ms(timeout: float, p: Callable[..., Awaitable[R]], *a, **k) -
 
 async def every_ms(
     t: float, p: Callable[..., Awaitable[R]] | None = None, *a, **k
-) -> AsyncIterator[R | None]:
+) -> AsyncGenerator[R | None, None]:
     "every t milliseconds, call ``p(*a,**k)``"
     tt = ticks_add(ticks_ms(), int(t))
     while True:
@@ -339,7 +340,7 @@ async def every_ms(
             tt = ticks_add(tn, int(t))
 
 
-def every(t: float, *a, **k) -> AsyncIterator[Any]:
+def every(t: float, *a, **k) -> AsyncGenerator[Any, None]:
     "every t seconds, call ``p(*a,**k)``"
     return every_ms(t * 1000, *a, **k)
 

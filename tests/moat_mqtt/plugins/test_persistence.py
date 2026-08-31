@@ -18,15 +18,20 @@ class TestSQLitePlugin(unittest.TestCase):  # noqa: D101
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"persistence": {"file": dbfile}}
-        SQLitePlugin(context)
-
-        conn = sqlite3.connect(dbfile)
-        cursor = conn.cursor()
-        rows = cursor.execute("SELECT name FROM sqlite_master where type = 'table'")
-        tables = []
-        for row in rows:
-            tables.append(row[0])
-        assert "session" in tables
+        plugin = SQLitePlugin(context)
+        try:
+            conn = sqlite3.connect(dbfile)
+            try:
+                cursor = conn.cursor()
+                rows = cursor.execute("SELECT name FROM sqlite_master where type = 'table'")
+                tables = []
+                for row in rows:
+                    tables.append(row[0])
+                assert "session" in tables
+            finally:
+                conn.close()
+        finally:
+            plugin.close()
 
     # def test_save_session(self):
     #     dbfile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")

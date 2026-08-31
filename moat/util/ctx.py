@@ -153,6 +153,7 @@ class ContextMgr(Generic[T_CtxType]):
                 assert self.stopped is not None  # set above
                 self.stopped.set()
                 self.ctx = None
+        self.qr.close()  # ty:ignore[unresolved-attribute]  # close() exists on MemoryObjectReceiveStream
 
     def close(self) -> None:
         """

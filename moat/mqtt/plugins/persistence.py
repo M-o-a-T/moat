@@ -69,7 +69,12 @@ class SQLitePlugin:  # noqa: D101
             self.cursor.execute("DELETE FROM session where client_id=?", (client_id,))
             self.conn.commit()
 
-    async def on_broker_post_shutdown(self):  # noqa: D102
+    def close(self):  # noqa: D102
         if self.conn:
             self.conn.close()
+            self.conn = None
+            self.cursor = None
             self.context.logger.info("Database file '%s' closed", self.db_file)
+
+    async def on_broker_post_shutdown(self):  # noqa: D102
+        self.close()

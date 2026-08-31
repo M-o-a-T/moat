@@ -21,7 +21,7 @@ try:
     from cysystemd.daemon import Notification, notify
 except ImportError:
     try:
-        from systemd.daemon import notify  # ty:ignore[unresolved-import]
+        from systemd.daemon import notify
     except ImportError:
         notify = None  # ty:ignore[conflicting-declarations]
 

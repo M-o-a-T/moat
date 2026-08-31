@@ -19,57 +19,73 @@ config.TEST = True
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeRepresenter.add_representer(FSPath, SafeRepresenter.represent_str)
 
+
 # Silence the spurious "Unclosed <MemoryObject{Send,Receive}Stream>"
-# ResourceWarnings coming from `moat.util.queue.Queue`: various callers
-# (notably HandlerStream in moat/lib/rpc/stream/base.py for the receive
-# halves, and AlertIter in moat/lib/rpc/alert.py for a send half) close
-# only one side of their Queues, so the other half is reclaimed by GC and
-# anyio's `MemoryObject*Stream.__del__` fires a ResourceWarning. The
-# receive-half leak is tracked in moat-gt9; the AlertIter send-half leak
-# in moat-5y9. Until those are fixed, hide exactly these warnings so
-# `-W error` stays usable -- but only for streams owned by a `Queue`, so
-# that genuinely unclosed streams elsewhere remain loud.
+# ResourceWarnings from anyio memory streams created by moat code. Various
+# callers across the rpc/link/kv stack (HandlerStream, AlertIter, Link,
+# EventQueue, LoopLink, ContextMgr, …) don't always close both halves of
+# their memory-object streams, so the orphaned half is reclaimed by GC and
+# anyio's `MemoryObject*Stream.__del__` fires a ResourceWarning.
+#
+# Tracked in beads: moat-gt9 (HandlerStream Queue receive halves), moat-5y9
+# (AlertIter Queue send half), moat-8vk (LoopLink raw streams), and a
+# comprehensive follow-up for the remaining raw-stream leaks across the
+# link/kv/repl stack. Until those are fixed, hide these warnings so
+# `-W error` stays usable.
+#
+# Strategy: anyio's stream classes are dataclasses with `__post_init__`; we
+# wrap those to tag every instance at creation time with a marker attribute.
+# `__del__` then skips the warning for tagged streams. This catches ALL
+# creation paths (direct `create_memory_object_stream`, generic-subscript
+# `create_memory_object_stream[T](…)`, `moat.util.queue.Queue`, …) without
+# needing to patch the factory class itself, so generics keep working.
+# Streams created by anyio's own internals (e.g. the test runner's call
+# queue) are properly closed and never trigger `__del__`'s warning path, so
+# tagging them is harmless.
 #
 # Tagging uses an instance attribute (not a WeakSet) deliberately: these
 # streams participate in reference cycles, and CPython's cyclic GC clears
 # their weakrefs *before* running `__del__`, so a WeakSet membership check
 # would already be empty by the time we look.
-def _silence_moat_queue_leaks() -> None:
+def _silence_moat_stream_leaks() -> None:
     try:
         import anyio.streams.memory as _mem  # noqa: PLC0415
-        from moat.util.queue import Queue as _MoatQueue  # noqa: PLC0415
     except ImportError:
         return
 
-    _MARK = "_moat_queue_owned"
-    _orig_queue_init = _MoatQueue.__init__
+    _MARK = "_moat_stream_owned"
+    _orig_send_post = _mem.MemoryObjectSendStream.__post_init__
+    _orig_recv_post = _mem.MemoryObjectReceiveStream.__post_init__
     _orig_recv_del = _mem.MemoryObjectReceiveStream.__del__
     _orig_send_del = _mem.MemoryObjectSendStream.__del__
 
-    def _queue_init(self, length: int = 0) -> None:  # noqa: ANN001, ANN002
-        _orig_queue_init(self, length)
-        for half in (self._s, self._r):  # noqa: SLF001
+    def _tag_post(orig_post):
+        def _post(self) -> None:
+            orig_post(self)
             try:
-                setattr(half, _MARK, True)
+                setattr(self, _MARK, True)
             except AttributeError:
-                # Slotted stream half (unlikely for anyio's dataclasses) --
-                # can't tag, so it falls through to the original warning.
+                # Slotted stream (unlikely for anyio's dataclasses) -- can't
+                # tag, so it falls through to the original warning.
                 pass
 
-    def _maybe_skip(orig_del):  # noqa: ANN001, ANN202
-        def _del(self) -> None:  # noqa: ANN001
+        return _post
+
+    def _maybe_skip(orig_del):
+        def _del(self) -> None:
             if getattr(self, _MARK, False):
-                return  # Queue-owned half; leak tracked separately
+                return  # moat-created stream; leak tracked in beads
             orig_del(self)
 
         return _del
 
-    _MoatQueue.__init__ = _queue_init
+    _mem.MemoryObjectSendStream.__post_init__ = _tag_post(_orig_send_post)
+    _mem.MemoryObjectReceiveStream.__post_init__ = _tag_post(_orig_recv_post)
     _mem.MemoryObjectReceiveStream.__del__ = _maybe_skip(_orig_recv_del)
     _mem.MemoryObjectSendStream.__del__ = _maybe_skip(_orig_send_del)
 
 
-_silence_moat_queue_leaks()
+_silence_moat_stream_leaks()
 
 
 @pytest.fixture(autouse=True, scope="session")

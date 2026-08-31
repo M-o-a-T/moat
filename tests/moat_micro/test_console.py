@@ -68,7 +68,7 @@ async def test_repl(tmp_path, free_tcp_port):
         co = d.sub_at(P("r.co"))
         cob = []
         d.tg.start_soon(readcons, "CO ", co.r, cob)
-        await anyio.sleep(0.1)
+        await anyio.sleep(0.3)
         await co.w(b"'Foo',2*21\n")
         await anyio.sleep(0.1)
         cb = "".join(cob)
@@ -113,7 +113,7 @@ async def test_repl_stream(tmp_path, free_tcp_port):
             return (await anext(co_r))[0]
 
         tg.start_soon(readcons, "CO ", co_next, cob)
-        await anyio.sleep(0.1)
+        await anyio.sleep(0.3)
         await co.send(b"'Foo',2*21\n")
         await anyio.sleep(0.1)
         cb = "".join(cob)

@@ -325,93 +325,103 @@ class Host(HostCommon, CtxObj):
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write")
 
-        data = bytearray()
+        try:
+            data = bytearray()
 
-        while True:
-            try:
-                if self.stream is None:
-                    with anyio.fail_after(self.timeout):
-                        self.stream = await anyio.connect_tcp(self.addr, self.port)
-                        # set so_linger to force sending RST instead of FIN
-                        self.stream.extra(SocketAttribute.raw_socket).setsockopt(
-                            socket.SOL_SOCKET,
-                            socket.SO_LINGER,
-                            struct.pack("ii", 1, 0),
+            while True:
+                try:
+                    if self.stream is None:
+                        with anyio.fail_after(self.timeout):
+                            self.stream = await anyio.connect_tcp(self.addr, self.port)
+                            # set so_linger to force sending RST instead of FIN
+                            self.stream.extra(SocketAttribute.raw_socket).setsockopt(
+                                socket.SOL_SOCKET,
+                                socket.SO_LINGER,
+                                struct.pack("ii", 1, 0),
+                            )
+                            # re-send open requests
+                            await _send_trans()
+                            self._connected.set()
+                            if task_status is not None:
+                                task_status.started()
+                                task_status = None
+                        data = bytearray()
+
+                    data += await self.stream.receive(4096)
+                    # pylint: disable=logging-not-lazy
+                    self._trace("recv: " + " ".join([hex(x) for x in data]))
+
+                    replies = []
+
+                    while True:
+                        used, pdu = self.framer.handleFrame(data, 0, 0)
+                        data = data[used:]
+                        if pdu is not None:
+                            replies.append(pdu)
+                        if not used:
+                            break
+
+                except (
+                    IncompleteRead,
+                    ConnectionRefusedError,
+                    ConnectionResetError,
+                    ClosedResourceError,
+                    ModbusIOException,
+                    anyio.BrokenResourceError,
+                    anyio.EndOfStream,
+                    TimeoutError,
+                ) as exc:
+                    if self._connected.is_set():
+                        self._connected = anyio.Event()
+                    t, self._transactions = self._transactions, {}
+                    if t:
+                        for req in t.values():
+                            req._response_value.set_error(exc)  # noqa: SLF001
+                    else:
+                        _logger.error(
+                            "Read from %s:%d: %r (%d)",
+                            self.addr,
+                            self.port,
+                            exc,
+                            len(self._transactions),
                         )
-                        # re-send open requests
-                        await _send_trans()
-                        self._connected.set()
-                        if task_status is not None:
-                            task_status.started()
-                            task_status = None
-                    data = bytearray()
 
-                data += await self.stream.receive(4096)
-                # pylint: disable=logging-not-lazy
-                self._trace("recv: " + " ".join([hex(x) for x in data]))
+                    s, self.stream = self.stream, None
+                    if s:
+                        await s.aclose()
 
-                replies = []
+                    # delay somewhat, to give the device the chance to reinitialize
+                    await anyio.sleep(DISCONNECT_DELAY)
 
-                while True:
-                    used, pdu = self.framer.handleFrame(data, 0, 0)
-                    data = data[used:]
-                    if pdu is not None:
-                        replies.append(pdu)
-                    if not used:
-                        break
+                except anyio.get_cancelled_exc_class():
+                    raise
 
-            except (
-                IncompleteRead,
-                ConnectionRefusedError,
-                ConnectionResetError,
-                ClosedResourceError,
-                ModbusIOException,
-                anyio.BrokenResourceError,
-                anyio.EndOfStream,
-                TimeoutError,
-            ) as exc:
-                if self._connected.is_set():
-                    self._connected = anyio.Event()
-                t, self._transactions = self._transactions, {}
-                if t:
+                except BaseException as exc:
+                    _logger.exception("Error: %r", exc)  # noqa: TRY401
+
+                    t, self._transactions = self._transactions, {}
                     for req in t.values():
                         req._response_value.set_error(exc)  # noqa: SLF001
+                    raise
+
                 else:
-                    _logger.error(
-                        "Read from %s:%d: %r (%d)",
-                        self.addr,
-                        self.port,
-                        exc,
-                        len(self._transactions),
-                    )
-
-                s, self.stream = self.stream, None
-                if s:
+                    for reply in replies:
+                        tid = reply.transaction_id
+                        try:
+                            request = self._transactions.pop(tid)
+                        except KeyError:
+                            _logger.info("Unrequested message: %s", reply)
+                        else:
+                            request._response_value.set(reply)  # noqa: SLF001
+        finally:
+            # Ensure the connection is closed when the reader exits for any
+            # reason (error, cancellation, or normal shutdown). Without this
+            # the TCP socket leaks: _reader re-raises Cancelled without
+            # closing self.stream, and Host._ctx only cancels the task group.
+            s, self.stream = self.stream, None
+            if s is not None:
+                with anyio.CancelScope(shield=True):
                     await s.aclose()
-
-                # delay somewhat, to give the device the chance to reinitialize
-                await anyio.sleep(DISCONNECT_DELAY)
-
-            except anyio.get_cancelled_exc_class():
-                raise
-
-            except BaseException as exc:
-                _logger.exception("Error: %r", exc)  # noqa: TRY401
-
-                t, self._transactions = self._transactions, {}
-                for req in t.values():
-                    req._response_value.set_error(exc)  # noqa: SLF001
-                raise
-
-            else:
-                for reply in replies:
-                    tid = reply.transaction_id
-                    try:
-                        request = self._transactions.pop(tid)
-                    except KeyError:
-                        _logger.info("Unrequested message: %s", reply)
-                    else:
-                        request._response_value.set(reply)  # noqa: SLF001
 
     async def aclose(self):
         """Stop talking."""

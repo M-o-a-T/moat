@@ -221,7 +221,11 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         )
         await c.i_sync()
 
-        kcfg.conn = dict(host="127.0.0.1", port=kcfg.server.bind_default.port)
+        # Connect to the port the KV server actually bound to. ``bind_default.port``
+        # is 0 so the OS assigns one at listen time; the real port is read back via
+        # ``kvs.ports`` (see the readiness handshake above) and must be propagated
+        # to clients — connecting to port 0 is meaningless.
+        kcfg.conn = dict(host="127.0.0.1", port=port)
         await sf.tg.start(run_gate, dict(kv=kcfg), c, "test")
 
         await c.i_sync()

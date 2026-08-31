@@ -118,7 +118,7 @@ dev = [
     "simplejson",
     "smbus3",
     "systemd",
-    "ty == 0.0.55",
+    "ty == 0.0.75",
     "uv",
     "wheel",
 ]

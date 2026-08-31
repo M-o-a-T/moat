@@ -12,6 +12,12 @@ else
 MOAT_EXT ?= ../../moat-ext
 endif
 
+VENV ?= N
+
+ifneq ($(VENV),N)
+	export PATH=.venv/bin:$(PATH)
+endif
+
 #ifneq ($(wildcard $(MAKEINCL)),)
 #include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr
@@ -23,11 +29,13 @@ endif
 #endif
 
 venv:
+ifneq ($(VENV),N)
 	python3 -m venv .venv --upgrade-deps
-	.venv/bin/pip install -U -e .
-	.venv/bin/pip install -U -e .[dev]
-	.venv/bin/pip install -U -e .[doc]
-	.venv/bin/pip install -U ty pre-commit
+	uv pip install -U -e .
+	uv pip install -U -e .[dev]
+	uv pip install -U -e .[doc]
+	uv pip install -U ty pre-commit
+endif
 
 prep:
 	git submodule update --init --recursive
@@ -41,26 +49,28 @@ prep:
 doc:
 	set -o pipefail -o errexit ; \
 	cd docs/; \
-	../.venv/bin/sphinx-build -b html . ../dist/docs
+	sphinx-build -b html . ../dist/docs
 spec:
 	set -o pipefail -o errexit ; \
 	cd docs/; \
-	../.venv/bin/sphinx-build -b markdown . ../build/specs
+	sphinx-build -b markdown . ../build/specs
 
 docall:
 	set -o pipefail -o errexit ; \
 	cd docs/; \
-	../.venv/bin/sphinx-build -E -b html . ../dist/docs
+	sphinx-build -E -b html . ../dist/docs
 docwarn:
 	set -o pipefail -o errexit ; \
 	cd docs/; \
-	../.venv/bin/sphinx-build -E -b html . ../dist/docs 2>&1 | \
+	sphinx-build -E -b html . ../dist/docs 2>&1 | \
 	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
 
 setup:
-	python3 -mvenv .venv --upgrade-deps
-	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
-	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
+ifneq ($(VENV),N)
+ 	python3 -mvenv .venv --upgrade-deps
+ 	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
+ 	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
+endif
 ifeq ($(notdir $(PWD)),moat)
 	mkdir -p "${MOAT_EXT}"
 else

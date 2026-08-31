@@ -70,7 +70,20 @@ Emitter: type[EmitterType] = emitter.Emitter
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
 
-SafeRepresenter.add_representer(PosixPath, SafeRepresenter.represent_str)
+
+def _posixpath_repr(dumper: BaseRepresenter, data: Any) -> Node:
+    """Render a stdlib :class:`pathlib.Path` as a plain string.
+
+    ``SafeRepresenter.represent_str`` cannot be used here: it calls
+    ``represent_scalar`` with ``data`` unchanged, so a non-``str`` value is
+    stored verbatim as the scalar node's value. The resolver then indexes it
+    (``value[0]``) and raises ``TypeError: 'PosixPath' object is not
+    subscriptable``. Cast to ``str`` first.
+    """
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(data))
+
+
+SafeRepresenter.add_representer(PosixPath, _posixpath_repr)
 
 
 def load_ansible_repr() -> None:

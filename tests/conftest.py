@@ -17,7 +17,18 @@ from moat.lib.path import P, Root
 config.TEST = True
 
 SafeRepresenter = yaml.representer.SafeRepresenter
-SafeRepresenter.add_representer(FSPath, SafeRepresenter.represent_str)
+
+
+def _fspath_repr(dumper, data):
+    """Render a stdlib :class:`pathlib.Path` as a plain string.
+
+    Mirrors the fix in :mod:`moat.util.yaml`: ``represent_str`` stores a
+    non-``str`` value verbatim, which later crashes the resolver. Cast first.
+    """
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(data))
+
+
+SafeRepresenter.add_representer(FSPath, _fspath_repr)
 
 
 # Silence the spurious "Unclosed <MemoryObject{Send,Receive}Stream>"

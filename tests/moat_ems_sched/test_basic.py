@@ -182,3 +182,79 @@ async def test_results_msgpack(cfg, tmp_path):
     assert isinstance(data, list), f"Expected list, got {type(data)}"
     assert len(data) > 0
     assert "grid" in data[0]
+
+
+# --- Regression: no stale BMS references -------------------------------------
+# The ``bms``→``ems`` rename left stale ``moat.bms.sched`` / ``bms/sched`` /
+# ``moat bms sched`` references scattered across code, configs, examples, and
+# docs. They silently broke every ``Loader()`` call (``load_ext`` returned
+# ``None`` → ``AttributeError``) and pointed users at a non-existent CLI /
+# path layout. Guard against any recurrence by scanning the scheduler package,
+# its example directory, and the EMS docs.
+
+_STALE_BMS_PATTERNS = (
+    "moat.bms.sched",
+    "bms/sched/",
+    "moat bms sched",
+)
+
+
+def _scan_for_stale_bms_refs(root: Path, dirs: tuple[str, ...]):
+    """Walk *dirs* (relative to *root*) and collect stale-BMS hits."""
+    hits: list[str] = []
+    skip_dirs = {"__pycache__", ".venv", ".git"}
+    for rel in dirs:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file():
+                continue
+            if any(part in skip_dirs for part in path.parts):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for pat in _STALE_BMS_PATTERNS:
+                if pat in text:
+                    hits.append(f"{path.relative_to(root)}: stale {pat!r}")
+    return hits
+
+
+def test_no_stale_bms_refs_in_sched_package():
+    """Regression: moat/ems/sched/ must contain no ``moat.bms.sched`` refs."""
+    root = Path(__file__).resolve().parents[2]
+    hits = _scan_for_stale_bms_refs(root, ("moat/ems/sched",))
+    assert not hits, "Stale BMS references in moat/ems/sched:\n  " + "\n  ".join(hits)
+
+
+def test_no_stale_bms_refs_in_example_and_docs():
+    """Regression: the ems-sched example + EMS docs must not advertise the dead ``bms sched`` CLI/paths."""
+    root = Path(__file__).resolve().parents[2]
+    hits = _scan_for_stale_bms_refs(root, ("examples/moat-ems-sched", "docs/moat-ems"))
+    # WORK.md legitimately describes the historical bug — exclude it.
+    hits = [h for h in hits if "WORK.md" not in h]
+    assert not hits, "Stale BMS references in example/docs:\n  " + "\n  ".join(hits)
+
+
+def test_example_test_py_removed():
+    """The broken example/test.py imported removed symbols (FutureData/Hardware)."""
+    root = Path(__file__).resolve().parents[2]
+    assert not (root / "examples" / "moat-ems-sched" / "test.py").exists()
+
+
+def test_example_params_yaml_loads_clean():
+    """The example params.yaml must parse and carry no stale ``bms`` keys."""
+    import yaml  # noqa: PLC0415
+
+    root = Path(__file__).resolve().parents[2]
+    p = root / "examples" / "moat-ems-sched" / "params.yaml"
+    data = yaml.safe_load(p.read_text())
+    assert isinstance(data, dict)
+    # core sections the optimizer needs
+    for key in ("battery", "inverter", "grid", "mode", "data", "start"):
+        assert key in data, f"params.yaml missing top-level key {key!r}"
+    # buy-price derivation mirrors the old (price+0.2)*1.2 example
+    assert data["data"]["file2"]["factor"] == 1.2
+    assert data["data"]["file2"]["offset"] == 0.24

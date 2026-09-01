@@ -29,6 +29,11 @@ class Cell(BaseCell):
     @i: cell number there
 
     This BaseCell translates commands to Comm requests.
+
+    Configuration::
+
+        u:
+          offset: 0  # voltage offset calibration, volts
     """
 
     code_version = None
@@ -39,7 +44,6 @@ class Cell(BaseCell):
     b_coeff_bal = None
     external_B = None
     n_samples = None
-    v_offset = 0
 
     in_balance = None
     balance_over_temp = None
@@ -53,7 +57,6 @@ class Cell(BaseCell):
     load_temp = None
     load_maxtemp = None
     load_volt = None  # balance down up to here
-    val_u = None  # cached voltage
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -61,17 +64,19 @@ class Cell(BaseCell):
             self.cfg.pid = attrdict()
         if "load" not in self.cfg:
             self.cfg.load = attrdict()
+        if "u" not in self.cfg:
+            self.cfg.u = attrdict(offset=0)
 
     def _raw2volt(self, val):
         if val is None or self.n_samples is None or val == 0:
             return None
-        return val * self.v_per_ADC / self.n_samples * self.v_calibration + self.v_offset
+        return val * self.v_per_ADC / self.n_samples * self.v_calibration + self.cfg.u.offset
 
     def _volt2raw(self, val):
         if val is None or self.n_samples is None or val == 0:
             return 0
         return int(
-            (val - self.v_offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
+            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
         )
 
     def m_temp(self, msg):  # noqa:D102

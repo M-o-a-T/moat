@@ -39,7 +39,7 @@ async def generate_data(cfg, t):
         yield val
 
 
-def add_piecewise(solver, x, y, points: list[int, int], name):
+def add_piecewise(solver, x, y, points: list[tuple[int, int]], name):
     """
     Add a piecewise-linear constraint on y=a*x+b.
 

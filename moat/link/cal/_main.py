@@ -92,7 +92,7 @@ async def run_(obj, name):
         password=cal_cfg["pass"],
     )
     principal = await client.principal()
-    calendar = await principal.calendar(name=cal_cfg.get("calendar", "privat nu"))
+    calendar = await principal.calendar(name=cal_cfg["calendar"])
     while True:
         t_now = now_l()
         if t_now < t_scan:

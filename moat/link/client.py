@@ -233,12 +233,6 @@ class LinkCommon(CmdCommon):
                 await msg.ml_send_error(ValueError("No Auth"))
                 return
 
-        if rcmd and rcmd[-1] == "d_":
-            msg._kw = dict(msg.kw)  # noqa: SLF001
-            # reversed path, without the local "d_" suffix
-            msg._kw["p"] = Path.build(rcmd[-2::-1])  # noqa: SLF001
-            return await msg.call_stream(self.sdr.stream_d_)
-
         return await super().handle(msg, rcmd)
 
     @property
@@ -466,7 +460,6 @@ class LinkSender(MsgSender):
     _codec_tree_wait: anyio.Event | None = None
     _code_watch: dict[Path, _CodeWatch | anyio.Event]
     d: DataSender
-    d_: MsgSender
     e: ErrSender
     i: MsgSender
     cl: MsgSender
@@ -506,8 +499,6 @@ class LinkSender(MsgSender):
         """
         Standard handler, forwards to the remote side.
         """
-        if rcmd and rcmd[-1] == "d_":
-            return await self._link.handle(msg, rcmd)
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
@@ -527,34 +518,6 @@ class LinkSender(MsgSender):
 
         async with ann(self, *a, **kw) as res:
             yield res
-
-    async def stream_d_(self, msg: Msg):
-        """
-        Simple Data Protocol on the client, possibly with subpath.
-        """
-        try:
-            p = msg["p"]
-        except KeyError:
-            p = msg[0]
-            off = 1
-        else:
-            off = 0
-
-        p = Path.build(p)
-
-        try:
-            try:
-                d = msg["d"]
-            except KeyError:
-                d = msg[off]
-            # write
-
-            await self.d_set(p, d)
-
-        except (KeyError, IndexError):
-            # read
-            res = await self.d_get(p)
-            await msg.result(res)
 
     @overload
     async def d_get(self, path: Path, meta: Literal[True]) -> tuple[Any, MsgMeta]: ...
@@ -1284,7 +1247,6 @@ class Link(LinkCommon, CtxObj):
                             sdr = LinkSender(self)
                         sdr.add_sub("cl")
                         sdr.add_sub("d")
-                        sdr.add_sub("d_")
                         sdr.add_sub("e")
                         sdr.add_sub("i")
                         try:

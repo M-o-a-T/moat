@@ -6,6 +6,11 @@ from weakref import ref
 
 import trio
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.bus.server.server import Server
+
 
 class NoServerError(RuntimeError):
     """
@@ -33,6 +38,8 @@ class BaseObj:
     serial = None
     working_until = None
     polled: bool = False  # poll bit (in address request) is set
+    _server: ref[Server] | None = None
+    bus_id: int | None = None
 
     def __init__(self, serial, create=None):
         create  # noqa:B018
@@ -61,8 +68,11 @@ class BaseObj:
             return self.working_until > trio.current_time()
 
     @property
-    def server(self):  # noqa:D102
-        return self._server()
+    def server(self) -> Server:  # noqa:D102
+        s = self._server() if self._server is not None else None
+        if s is None:
+            raise NoServerError
+        return s
 
     async def attach(self, server):
         """
@@ -92,16 +102,11 @@ class BaseObj:
 
     async def msg_out(
         self, code: int, data: bytes, *, src: int | None = None, dst: int | None = None
-    ):
+    ) -> None:
         """
         Send a message to the device.
         """
         m = self.server
-        if not m:
-            raise NoServerError
-        m = m()
-        if not m:
-            raise NoServerError
         if self.client_id is None:
             raise NoClientError
 

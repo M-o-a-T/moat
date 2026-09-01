@@ -153,19 +153,27 @@ async def _check_path(
     do_copied: bool,
     do_stale_age: bool = True,
     queue_copied: bool = False,
+    changed_at: dict[Path, float] | None = None,
 ) -> tuple[
     set[Path],
     dict[Path, tuple[str, Mapping[str, Any], Any]],
     list[_Timeout],
     list[_Copied],
+    set[_Same],
 ]:
     """
     Evaluate one message against flow rules.
+
+    Parameters:
+        changed_at: Map of path → timestamp when the value last changed.
+            Used by ``maxsame`` to determine how long a value has been
+            unchanged.  Modified in place.
     """
     checked: set[Path] = set()
     errors: dict[Path, tuple[str, Mapping[str, Any], Any]] = {}
     timeouts: list[_Timeout] = []
     copied: list[_Copied] = []
+    sames: set[_Same] = set()
 
     for rel, check in _iter_checks(flow):
         err_p = _error_path(path, rel)
@@ -227,7 +235,47 @@ async def _check_path(
                 age = now - ts
                 errors[err_p] = (f"Stale data: {age:g}s > {timeout:g}s", check, value)
 
-    return checked, errors, timeouts, copied
+        maxsame = check.get("maxsame", None)
+        if maxsame is not None:
+            try:
+                maxsame = float(maxsame)
+            except (TypeError, ValueError):
+                maxsame = None
+
+        if maxsame is not None and maxsame > 0:
+            ts = getattr(meta, "timestamp", None)
+            if ts is None:
+                ts = now
+
+            if changed_at is not None:
+                ca_key = prev_key
+                ca_prev = changed_at.get(ca_key, None)
+                if ca_prev is not None and prev_val == value:
+                    # Value unchanged — arm maxsame timer from when it last changed
+                    sames.add(_Same(err_p, maxsame, check, value, rel))
+                    if do_stale_age:
+                        age = now - ca_prev
+                        if age > maxsame and err_p not in errors:
+                            errors[err_p] = (
+                                f"Unchanged for {age:g}s > {maxsame:g}s",
+                                check,
+                                value,
+                            )
+                else:
+                    # Value changed (or first sighting) — record when
+                    changed_at[ca_key] = ts
+            else:
+                # Snapshot mode (no changed_at tracking): behave like timeout
+                sames.add(_Same(err_p, maxsame, check, value, rel))
+                if do_stale_age and ts is not None and now - ts > maxsame and err_p not in errors:
+                    age = now - ts
+                    errors[err_p] = (
+                        f"Unchanged for {age:g}s > {maxsame:g}s",
+                        check,
+                        value,
+                    )
+
+    return checked, errors, timeouts, copied, sames
 
 
 @define
@@ -267,6 +315,27 @@ class _Copied:
         return False
 
 
+@define
+class _Same:
+    """Staleness timer entry for ``maxsame`` checks."""
+
+    path: Path = field()
+    timeout: float = field()
+    check: Mapping[str, Any] = field()
+    value: Any = field()
+    rel: Path = field()
+
+    def __hash__(self):
+        return hash(self.path)
+
+    def __eq__(self, other: object):
+        if isinstance(other, _Same):
+            other = other.path
+        if isinstance(other, Path):
+            return self.path == other
+        return False
+
+
 class FlowMon:
     """
     Monitor incoming messages and create flow errors.
@@ -276,8 +345,10 @@ class FlowMon:
         self.conn = conn
         self.path = path
         self.previous: dict[Path, Any] = {}
+        self.changed_at: dict[Path, float] = {}
         self.timeout: TimerMap[_Timeout] = TimerMap()
         self.copied: TimerMap[_Copied] = TimerMap()
+        self.same: TimerMap[_Same] = TimerMap()
         self.errs: Node = Node()
         self.flows: Node = Node()
 
@@ -320,6 +391,12 @@ class FlowMon:
                 continue
             await self._set_error(cp.path, msg, cp.check, cp.value)
 
+    async def _run_same(self) -> None:
+        """Generate errors for ``maxsame`` timer expirations."""
+        async for sm in self.same:
+            msg = f"Unchanged for {sm.timeout:g}s"
+            await self._set_error(sm.path, msg, sm.check, sm.value)
+
     async def run(self) -> None:
         """
         Run the monitor.
@@ -334,13 +411,14 @@ class FlowMon:
             self.errs = errs
             tg.start_soon(self._run_timeouts)
             tg.start_soon(self._run_copied)
+            tg.start_soon(self._run_same)
 
             async for rel, data, meta in mon:
                 flow = _flow_for(flows, self.path + rel)
                 if flow is None:
                     continue
 
-                checked, errors, timeouts, copied = await _check_path(
+                checked, errors, timeouts, copied, sames = await _check_path(
                     self.conn,
                     path=rel,
                     data=data,
@@ -351,22 +429,30 @@ class FlowMon:
                     do_copied=False,
                     do_stale_age=False,
                     queue_copied=True,
+                    changed_at=self.changed_at,
                 )
 
                 for path in checked:
                     if path not in timeouts:
                         with suppress(KeyError):
                             del self.timeout[cast(_Timeout, path)]
-
                     if path not in copied:
                         with suppress(KeyError):
                             del self.copied[cast(_Copied, path)]
+
+                for path in checked:
+                    if path not in sames:
+                        with suppress(KeyError):
+                            del self.same[cast(_Same, path)]
 
                 for tm in timeouts:
                     self.timeout[tm] = tm.timeout
 
                 for cp in copied:
                     self.copied[cp] = cp.delay
+
+                for sm in sames:
+                    self.same[sm] = sm.timeout
 
                 for path in checked:
                     if path in errors:
@@ -426,7 +512,7 @@ async def check(obj, path, verbose, monitor):
                 n_skip += 1
                 continue
 
-            checked, errors, _timeouts, _copied = await _check_path(
+            checked, errors, _timeouts, _copied, _sames = await _check_path(
                 obj.conn,
                 path=rel,
                 data=data,

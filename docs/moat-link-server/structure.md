@@ -57,8 +57,9 @@ The `schema/_` sub-hierarchy contains MoaT objects like
 Flow-check configuration.
 
 Entries below `flow/#` mirror data paths and define runtime checks such as
-minimum/maximum values, maximum step size, copied-value verification, and
-timeouts for stale data detection.
+minimum/maximum values, maximum step size, copied-value verification,
+timeouts for stale data detection, and maximum-unchanged-time limits for
+detecting frozen sensors.
 
 ## Message Metadata
 

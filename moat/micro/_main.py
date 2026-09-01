@@ -165,6 +165,7 @@ async def cli(ctx, section, remote, path):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@click.option("--arch", help="target architecture for mpy-cross (-march=ARCH)")
 @click.option("-M", "--mode", help="Mode add_on (filename, section)")
 @click.option(
     "-m",
@@ -238,6 +239,7 @@ async def setup_(ctx, run_section=None, mode=None, **kw):
 )
 @click.option("-d", "--dest", type=str, default=".", help="Destination path")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@click.option("--arch", help="target architecture for mpy-cross (-march=ARCH)")
 @click.option("-B/-b", "--boot/--no-boot", help="Reboot after updating")
 @click.option("-U/-V", "--update/--no-update", is_flag=True, help="Run standard updates")
 @catch_errors
@@ -273,7 +275,7 @@ async def sync_(ctx, **kw):
     st = {k: (v if v != "-" else NotGiven) for k, v in cfg.get("sync", {}).items() if k in kw}
     st = combine_dict(param, st, default)
 
-    async def syn(source=(), dest=".", cross=None, update=False, boot=False):
+    async def syn(source=(), dest=".", cross=None, arch=None, update=False, boot=False):
         if cross == "-":
             cross = None
         dest = dest.lstrip("/")  # needs to be relative
@@ -296,9 +298,9 @@ async def sync_(ctx, **kw):
                 return await rsys.hash(p=p)
 
             if update:
-                await do_update(dst, root, cross, hsh)
+                await do_update(dst, root, cross, hsh, arch=arch)
             for s in source:
-                await do_copy(s, root, dest, cross if cross != "-" else None)
+                await do_copy(s, root, dest, cross if cross != "-" else None, arch=arch)
             if boot:
                 await rsys.boot(code="SysBooT", m=1)
 

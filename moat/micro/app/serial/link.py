@@ -11,6 +11,11 @@ from moat.micro.app._doc import _link_d, _log_d, _mode_d
 
 from ._util import get_serial
 
+from typing import TYPE_CHECKING as _TC
+
+if _TC:
+    from typing import Any
+
 
 class Link(BaseCmdMsg):
     """r/w: exchange MoaT messages, possibly framed."""
@@ -25,6 +30,6 @@ class Link(BaseCmdMsg):
         )
     )
 
-    async def stream(self):
+    async def stream(self) -> Any:
         """Returns the console-stack-wrapped serial stream."""
         return await AC_use(self, serial_stack(get_serial(self.cfg), self.cfg))

@@ -14,6 +14,11 @@ from moat.util import attrdict
 from moat.lib.micro import AC_use, log
 from moat.lib.stream import AnyioBuf
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 # Serial link driver
 # cfg:
@@ -27,7 +32,7 @@ class Serial(AnyioBuf):
     We don't have numbered serial ports on Unix.
     """
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a: Any, **k: Any) -> None:
         raise NotImplementedError("Use NamedSerial on Unix")
 
 
@@ -38,7 +43,7 @@ class NamedSerial(AnyioBuf):
 
     pack = None
 
-    async def stream(self):  # noqa:D102
+    async def stream(self) -> Any:  # noqa:D102
         cfg = self.cfg
         uart_cfg = {}
         uart_cfg["port"] = cfg["port"]

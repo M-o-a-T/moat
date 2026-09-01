@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import builtins
 
+    from typing import Any
+
 _codec = CBOR()
 
 
@@ -34,14 +36,14 @@ class RTC(RTCBase):
     is_FS = True
     is_ASYNC = None  # configurable
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
-        self._d = {}
+        self._d: dict[str, Any] = {}
         self._dest = cfg.get("dest", "moat.data")
-        self._direct = cfg.get("direct", {"state": "moat.state"})
+        self._direct: dict[str, str] = cfg.get("direct", {"state": "moat.state"})
         self._load()
 
-    def _load(self):
+    def _load(self) -> None:
         """Load data from the state file."""
         try:
             with open(self._dest, "rb") as f:
@@ -59,13 +61,13 @@ class RTC(RTCBase):
             log("RTC fs load error", err=exc)
             self._d = {}
 
-    def _save(self):
+    def _save(self) -> None:
         """Save data to the state file."""
         tagged = Tag(CBOR_TAG_CBOR_FILEHEADER, self._d)
         with open(self._dest, "wb") as f:
             f.write(_codec.encode(tagged))
 
-    def _get_direct(self, name: str):
+    def _get_direct(self, name: str) -> str:
         """Get a value from a direct file."""
         fn = self._direct[name]
         try:
@@ -92,11 +94,11 @@ class RTC(RTCBase):
             pass
         return True
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload data from the state file."""
         self._load()
 
-    async def get(self, name: str):
+    async def get(self, name: str) -> Any:
         """
         Get a value from the file system.
 
@@ -118,7 +120,7 @@ class RTC(RTCBase):
             raise KeyError(name)
         return self._d[name]
 
-    async def set(self, name: str, data) -> bool:
+    async def set(self, name: str, data: Any) -> bool:
         """
         Set a value in the file system.
 

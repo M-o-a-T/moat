@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Protocol
+    from typing import Any, Protocol
 
     class HasValueTaskReplies(Protocol):
         """Required reply methods on command objects."""
@@ -45,7 +45,7 @@ class ValueTask:
         p: Callable[..., Awaitable[object]],
         *a: object,
         **k: object,
-    ):
+    ) -> None:
         self.cmd = cmd
         self.i = i
         self.p = p
@@ -54,13 +54,13 @@ class ValueTask:
         self.x = x
         self._t: Cancellable | None = None
 
-    async def start(self, tg):
-        "Task starter. Called from the command."
+    async def start(self, tg: Any) -> None:
+        """Task starter. Called from the command."""
         if self._t is not None:
             raise RuntimeError("dup")
         self._t = await tg.spawn(self._wrap, _name="Val")
 
-    async def _wrap(self):
+    async def _wrap(self) -> None:
         try:
             res = await self.p(*self.a, **self.k)
         except Exception as err:  # pylint:disable=broad-exception-caught
@@ -68,17 +68,17 @@ class ValueTask:
             return
         await self.reply_result(res)
 
-    async def reply_result(self, res):
-        "forward the task's return value to the caller"
+    async def reply_result(self, res: object) -> None:
+        """Forward the task's return value to the caller."""
         await self.cmd.reply_result(self.i, res)
 
-    def cancel(self):
-        "cancel the iterator"
+    def cancel(self) -> None:
+        """Cancel the iterator."""
         if self._t is not None:
             self._t.cancel()
             self._t = None
 
-    async def set_error(self, err):
-        "tell the iterator to raise an error"
+    async def set_error(self, err: Exception) -> None:
+        """Tell the iterator to raise an error."""
         self.cancel()
         await self.cmd.reply_error(self.i, err, self.x)

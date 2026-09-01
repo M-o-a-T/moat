@@ -36,19 +36,24 @@ from moat.lib.rpc import Msg, RootCmd
 from moat.lib.run import attr_args, load_subgroup, process_args
 from moat.micro.util import TEST_MAGIC
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
 skip_exc = {FileNotFoundError, FileExistsError, ConnectionRefusedError}
 
 
-def catch_errors(fn):
+def catch_errors(fn: Any) -> Any:
     """
     Wrapper for commands so that some errors don't cause a stack trace.
     """
 
     @wraps(fn)
-    async def wrapper(*a, **k):
+    async def wrapper(*a: Any, **k: Any) -> Any:
         try:
             return await fn(*a, **k)
         except (NoPathError, ConnectionRefusedError) as e:
@@ -87,7 +92,12 @@ def catch_errors(fn):
 @click.option("-S", "--section", type=P, help="Section to use")
 @click.option("-R", "--remote", type=P, help="Path for talking to the satellite")
 @click.option("-P", "--path", type=(str, P), multiple=True, help="named remote component")
-async def cli(ctx, section, remote, path):
+async def cli(
+    ctx: click.Context,
+    section: P | None,
+    remote: P | None,
+    path: tuple[tuple[str, P], ...],
+) -> None:
     """Run MicroPython satellites
 
     'moat micro' configures MoaT satellites and runs the link to them,
@@ -173,7 +183,12 @@ async def cli(ctx, section, remote, path):
     help="file to use as main_.py",
 )
 @catch_errors
-async def setup_(ctx, run_section=None, mode=None, **kw):
+async def setup_(
+    ctx: click.Context,
+    run_section: P | None = None,
+    mode: str | None = None,
+    **kw: Any,
+) -> Any:
     """
     Initial sync of MoaT code to a MicroPython device.
 
@@ -241,7 +256,7 @@ async def setup_(ctx, run_section=None, mode=None, **kw):
 @click.option("-B/-b", "--boot/--no-boot", help="Reboot after updating")
 @click.option("-U/-V", "--update/--no-update", is_flag=True, help="Run standard updates")
 @catch_errors
-async def sync_(ctx, **kw):
+async def sync_(ctx: click.Context, **kw: Any) -> None:
     """
     Sync of MoaT code to a running MicroPython device.
 
@@ -273,7 +288,13 @@ async def sync_(ctx, **kw):
     st = {k: (v if v != "-" else NotGiven) for k, v in cfg.get("sync", {}).items() if k in kw}
     st = combine_dict(param, st, default)
 
-    async def syn(source=(), dest=".", cross=None, update=False, boot=False):
+    async def syn(
+        source: tuple = (),
+        dest: str = ".",
+        cross: Any = None,
+        update: bool = False,
+        boot: bool = False,
+    ) -> None:
         if cross == "-":
             cross = None
         dest = dest.lstrip("/")  # needs to be relative
@@ -292,7 +313,7 @@ async def sync_(ctx, **kw):
             root = MoatFSPath("/").connect_repl(rfs)
             dst = MoatFSPath(dest).connect_repl(rfs)
 
-            async def hsh(p):
+            async def hsh(p: str) -> Any:
                 return await rsys.hash(p=p)
 
             if update:
@@ -311,7 +332,7 @@ async def sync_(ctx, **kw):
 @click.pass_obj
 @click.option("-s", "--state", help="State after reboot")
 @catch_errors
-async def boot(obj, state):
+async def boot(obj: attrdict, state: str | None) -> None:
     """
     Restart a MoaT node
 
@@ -349,7 +370,7 @@ async def boot(obj, state):
 @click.option("-t", "--time", is_flag=True, help="Time the command")
 @click.option("-S", "--stream", is_flag=True, help="Get data stream from remote")
 @catch_errors
-async def cmd(obj, path, time, parts, stream, **attrs):
+async def cmd(obj: attrdict, path: P, time: bool, parts: bool, stream: bool, **attrs: Any) -> None:
     """
     Send a MoaT command.
 
@@ -420,7 +441,7 @@ async def cmd(obj, path, time, parts, stream, **attrs):
 @click.pass_obj
 @click.argument("path", nargs=1, type=P)
 @catch_errors
-async def cons(obj, path):
+async def cons(obj: attrdict, path: P) -> None:
     """
     Read a Moat console.
 
@@ -465,20 +486,20 @@ async def cons(obj, path):
 @attr_args(with_proxy=True)
 @catch_errors
 async def cfg_(
-    obj,
-    read,
-    read_sat,
-    config,
-    config_sat,
-    write,
-    write_sat,
-    sync,
-    send,
-    stdout,
-    auth,
-    prio,
-    **attrs,
-):
+    obj: attrdict,
+    read: Any,
+    read_sat: str | None,
+    config: bool,
+    config_sat: bool,
+    write: Any,
+    write_sat: str | None,
+    sync: bool,
+    send: bool,
+    stdout: bool,
+    auth: bool,
+    prio: str,
+    **attrs: Any,
+) -> None:
     """
     Print, update and/or modify a remote configuration.
 
@@ -610,7 +631,7 @@ async def cfg_(
 @cli.command("run", short_help="Run the multiplexer")
 @click.pass_obj
 @catch_errors
-async def run_(obj):
+async def run_(obj: attrdict) -> None:
     """
     Run the MoaT stack.
     """
@@ -623,7 +644,7 @@ async def run_(obj):
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
 @click.pass_obj
 @catch_errors
-async def mount_(obj, path, blocksize):
+async def mount_(obj: attrdict, path: str, blocksize: int) -> None:
     """Mount a controller's file system on the host"""
     from moat.micro.fuse import wrap  # noqa: PLC0415
 
@@ -646,7 +667,7 @@ async def mount_(obj, path, blocksize):
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
 @click.pass_obj
 @catch_errors
-async def rom(obj, path, device):
+async def rom(obj: attrdict, path: str, device: int) -> None:
     """Send a file system to the device's ROM"""
     path  # noqa:B018
     raise NotImplementedError
@@ -678,7 +699,7 @@ async def rom(obj, path, device):
 @click.pass_obj
 @click.option("-m", "--manifest", is_flag=True, help="main manifest")
 @catch_errors
-async def path_(obj, manifest):
+async def path_(obj: attrdict, manifest: bool) -> None:
     """Path to the embedded system's files"""
 
     import pathlib  # noqa: PLC0415
@@ -699,7 +720,7 @@ async def path_(obj, manifest):
 
 @cli.command
 @click.pass_obj
-async def repl(obj):
+async def repl(obj: attrdict) -> None:
     """Connect to the Python prompt on a remote"""
 
     cfg = obj.mcfg
@@ -717,7 +738,7 @@ async def repl(obj):
         print("--- Connected.  Quit: Ctrl+] --- ", file=sys.stderr)
 
         @tg.start_soon
-        async def t_12():
+        async def t_12() -> None:
             async for msg in t1:
                 tx = msg[0]
                 if tx and tx[0] == 0:

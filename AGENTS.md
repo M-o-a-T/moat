@@ -73,8 +73,8 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - A BaseException (that's not an Exception) MUST be re-raised.
   This includes `anyio.get_cancelled_exc_class()`.
 
-- In `moat.lib` and `moat.micro`, do not use syntax that doesn't work with
-  MicroPython. Specifically:
+- In `moat.lib` and `moat.micro`, do not use syntax or semantics that
+  don't work with MicroPython. Specifically:
   - `(foo,bar,*baz)` list expansion
   - `with (x,y)`
   - def foo(bar,/) positional-only arguments
@@ -83,6 +83,9 @@ but then *create an issue* detailing what's missing to improve the docs later.
   - multiple inheritance (syntax works but is ignored)
   - micropython doesn't have anyio, but we do not directly import from
     asyncio either. Always use the compatibility code in moat.micro.compat.
+  - micropython's `typing` module only exports the bare minimum:
+    `TYPE_CHECKING`, `Any`, and `cast`. *All* other imports from it *must*
+    be guarded with an `if TYPE_CHECKING:` test.
 
 - Prefer to import from moat.lib.XX, moat.link.XX, or moat.YY modules, not
   from submodules. Exception: `TYPE_CHECKING` blocks.

@@ -271,7 +271,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
 
     if len(path) not in (1, 2):
         raise click.UsageError("The path must consist of 1 or 2 words.")
-    cp = obj.hass_name + Path.build((typ, *path, "config"))
+    cp = obj.hass_name / typ + path / "config"
 
     try:
         res = await obj.conn.d_get(cp)
@@ -374,7 +374,7 @@ async def get(obj, typ, path, cmd):
         def cmd(x):
             return x
 
-    cp = obj.hass_name + Path.build((typ,))
+    cp = obj.hass_name / typ
     if path == "-":
         async for name in obj.conn.d_list(cp):
             dp = cp + P(name)
@@ -418,7 +418,7 @@ async def delete(obj, typ, path):
     if typ not in _types:
         raise click.UsageError("I don't know this type.")
 
-    cp = obj.hass_name + Path.build((typ, *path))
+    cp = obj.hass_name / typ + path
 
     try:
         val = await obj.conn.d_get(cp | "config")

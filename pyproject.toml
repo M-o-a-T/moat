@@ -85,7 +85,7 @@ packages = [ "moat",]
 
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
-addopts = "-x --no-cov -n auto --dist loadfile"
+addopts = "-x --no-cov -n 0"
 log_cli_level = "DEBUG"
 pythonpath = [
     ".",

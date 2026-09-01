@@ -8,14 +8,16 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 import asyncclick as click
-from distkv.util import P
 
 from moat.bus.util import CtxObj
+from moat.lib.path import P
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from moat.bus.message import BusMessage
+
+    from collections.abc import AsyncIterator
 
 
 class UnknownParamError(RuntimeError):
@@ -43,19 +45,20 @@ class BaseBusHandler(CtxObj):
                 await process(msg)
     """
 
-    short_help = None
-    need_host = False
+    short_help: str | None = None
+    need_host: bool = False
 
-    PARAMS = {}
+    PARAMS: dict[str, tuple[Any, str, Any, Any, str]] = {}
     # name: type checker default
 
     @classmethod
-    def repr(cls, cfg: dict):  # noqa:D102
-        cfg  # noqa:B018
-        return " ".join(f"{k}:{v}" for k, v in dict.items())
+    def repr(cls, cfg: dict[str, Any]) -> str:
+        """Render a config dict as a string."""
+        return " ".join(f"{k}:{v}" for k, v in cfg.items())
 
     @classmethod
-    def check_config(cls, cfg: dict):  # noqa:D102
+    def check_config(cls, cfg: dict[str, Any]) -> None:
+        """Validate configuration parameters."""
         for k, v in cfg.items():
             try:
                 x = cls.PARAMS[k]
@@ -76,19 +79,20 @@ class BaseBusHandler(CtxObj):
             if n not in cfg:
                 cfg[n] = d
 
-    def __init__(self, client):
+    def __init__(self, client: Any = None) -> None:
         pass
 
     @asynccontextmanager
-    async def _ctx(self):
+    async def _ctx(self) -> AsyncIterator[BaseBusHandler]:
         yield self
 
-    async def send(self, msg: BusMessage):  # noqa:D102
+    async def send(self, msg: BusMessage) -> None:
+        """Send a message on the bus."""
         msg  # noqa:B018
         raise RuntimeError("Override @send!")
 
-    def __aiter__(self):
+    def __aiter__(self) -> BaseBusHandler:
         raise RuntimeError("Override @__aiter__!")
 
-    async def __anext__(self):
+    async def __anext__(self) -> BusMessage:
         raise RuntimeError("Override @__anext__!")

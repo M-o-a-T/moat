@@ -285,6 +285,7 @@ nitpick_ignore = [
     ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
     ("py:data", "types.EllipsisType"),
     ("py:data", "types.CoroutineType"),
+    ("py:data", "_SKIP_METHODS"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:class", "moat.micro.part.transfer._Step"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),

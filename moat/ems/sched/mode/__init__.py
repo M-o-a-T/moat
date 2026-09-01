@@ -70,7 +70,7 @@ class BaseLoader:
 
 def Loader(name, key=None):
     """Fetch a named loader class"""
-    res = load_ext(f"moat.bms.sched.mode.{name}")
+    res = load_ext(f"moat.ems.sched.mode.{name}")
     if res is None:
         raise AttributeError(name)
     res = res.Loader

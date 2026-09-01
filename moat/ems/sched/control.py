@@ -8,6 +8,7 @@ import anyio
 import logging
 import time
 from contextlib import nullcontext
+from functools import partial
 
 from moat.util import attrdict
 from moat.util.times import humandelta, ts2iso
@@ -293,10 +294,16 @@ class Model:
                     )
 
                     if res is not None:
-                        tg.start_soon(res, cfg, val)
+                        tg.start_soon(partial(res, cfg, **val))
                         res = None
                         if res2 is None:
                             break
 
                     if res2 is not None:
                         await res2.send(val)
+
+        return (
+            self.g_buy.solution_value() - self.g_sell.solution_value(),
+            self.cap.solution_value() / cfg.battery.capacity,
+            self.money.solution_value(),
+        )

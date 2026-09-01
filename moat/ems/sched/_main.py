@@ -13,10 +13,10 @@ from textwrap import dedent as _dedent
 import asyncclick as click
 
 from moat.util import merge, yload, yprint
-from moat.lib.run import attr_args, list_ext, load_ext, load_subgroup, process_args
+from moat.lib.run import attr_args, list_ext, load_subgroup, process_args
 
 from .control import Model
-from .mode import BaseLoader
+from .mode import BaseLoader, Loader
 
 log = logging.getLogger()
 
@@ -26,18 +26,7 @@ def dedent(s):
     return _dedent(s).strip()
 
 
-def Loader(name, key=None):
-    """load a named mode"""
-    res = load_ext(f"moat.bms.sched.mode.{name}")
-    if key is False:
-        return res
-    res = res.Loader
-    if key is not None:
-        res = getattr(res, key)
-    return res
-
-
-@load_subgroup(prefix="moat.bms.sched")
+@load_subgroup(prefix="moat.ems.sched")
 @click.pass_obj
 @click.option(
     "-c",
@@ -79,7 +68,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
         mn = [
             # pylint:disable=unexpected-keyword-arg
             m
-            for m, _ in list_ext("moat.bms.sched.mode", pkg_only=False)
+            for m, _ in list_ext("moat.ems.sched.mode", pkg_only=False)
         ]
         mn.extend(static.keys())
         ml = max(len(m) for m in mn)

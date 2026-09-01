@@ -56,3 +56,19 @@ async def test_list_types(cfg):
         assert "light" in r.stdout
         assert "switch" in r.stdout
         assert "sensor" in r.stdout
+
+
+async def test_get_dash_dash(cfg):
+    """``moat ha get - -`` lists all configured types."""
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        # add a light device so the 'light' type node exists
+        await sf.run("link ha set light kitchen -s uid my-light-1")
+        await c.i_sync()
+
+        r = await sf.run("link ha get - -")
+        assert "light" in r.stdout

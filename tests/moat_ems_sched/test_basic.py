@@ -105,6 +105,58 @@ async def test_propose_with_result_sink(cfg, tmp_path):
     assert "grid" in content, f"Expected 'grid' in result file, got: {content}"
 
 
+def _mk_empty_data(tmp_path: Path) -> dict[str, Path]:
+    """Create empty (zero-row) data files and return their paths."""
+    paths: dict[str, Path] = {}
+    for key in ("price_sell", "solar", "load"):
+        p = tmp_path / f"empty_{key}.data"
+        p.write_text("")
+        paths[key] = p
+    return paths
+
+
+async def test_propose_empty_data_raises_clear_error(cfg, tmp_path):
+    """Regression: propose() with no data rows must raise a clear ValueError.
+
+    Previously the empty-data path crashed with an opaque
+    ``UnboundLocalError: cannot access local variable 'cap'`` in
+    ``_setup()`` (the loop body never ran, so ``cap`` was unbound), and
+    even if that were survived, ``self.g_buy``/``self.cap``/``self.money``
+    stayed ``None``, so ``propose()``'s return raised
+    ``AttributeError: 'NoneType' has no attribute 'solution_value'``.
+    """
+    c = copy.deepcopy(cfg.ems.sched)
+    paths = _mk_empty_data(tmp_path)
+
+    c.steps = 1
+    c.battery.capacity = 14
+    c.battery.max = copy.deepcopy(c.battery.max)
+    c.battery.soc.min = 0.05
+    c.battery.soc.max = 0.95
+    c.battery.soc.value.current = 0.0
+    c.battery.soc.value.end = 0.1
+    c.inverter.max.charge = 10
+    c.inverter.max.discharge = 10
+    c.grid.max.buy = 100
+    c.grid.max.sell = 100
+    c.mode.price_sell = "file"
+    c.mode.price_buy = "file2"
+    c.mode.solar = "file"
+    c.mode.load = "file"
+    c.mode.soc = None
+    c.start.soc = 0.3
+    c.data.file.price_sell = str(paths["price_sell"])
+    c.data.file.solar = str(paths["solar"])
+    c.data.file.load = str(paths["load"])
+    c.data.file.result = str(tmp_path / "result.out")
+    c.data.file2.factor = 1.2
+    c.data.file2.offset = 0.02
+
+    m = Model(c, t=0)
+    with pytest.raises(ValueError, match="No scheduling data"):
+        await m.propose(0.3)
+
+
 async def test_results_yaml(cfg, tmp_path):
     """Defect 3: results() yaml codec should write trajectory."""
     c = _base_cfg(cfg, tmp_path)

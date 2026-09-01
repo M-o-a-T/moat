@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 import asyncclick as click
-from fakebus.client import Client
+
+from moat.bus.fake.client import Client
 
 
 @click.command()
@@ -14,7 +15,10 @@ from fakebus.client import Client
 @click.option("-T", "--timerB", type=float, help="Timer B in msec", default=5)
 @click.option("-v", "--verbose", is_flag=True, help="Be verbose")
 @click.option("-D", "--dest", type=int, help="Destination addr", default=None)
-async def run(socket, timeout, timerb, bits, dest, verbose):  # noqa: D103
+async def run(
+    socket: str, timeout: float, timerb: float, bits: int, dest: int | None, verbose: bool
+) -> None:
+    """Receive and print messages from the fake bus."""
     async with Client(
         wires=bits,
         socket=socket,

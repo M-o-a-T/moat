@@ -124,8 +124,8 @@ class Monitor:
       ``state`` path via ``link.d_watch``, accumulates weighted readings,
       and writes ``History`` rows.  Signals the scheduler on each update.
     * **Scheduler** — on each wake-up (timer or sensor signal), opens a
-      DB session, calls :func:`generate_schedule` and
-      :func:`recalculate`, and enqueues pending schedules for the
+      DB session, calls :func:`moat.db.rain.engine.generate_schedule` and
+      :func:`moat.db.rain.engine.recalculate`, and enqueues pending schedules for the
       dispatcher.
     * **Dispatcher** — drains the pending-schedule channel and sends
       valve commands via ``link.d_set`` to the controller's link
@@ -316,7 +316,8 @@ class Monitor:
         On each tick (every ``self.tick`` seconds, or sooner if woken by
         a sensor event), opens a fresh DB session, flushes accumulated
         sensor readings into a ``History`` row, calls
-        :func:`recalculate` then :func:`generate_schedule`, and logs the
+        :func:`moat.db.rain.engine.recalculate` then
+        :func:`moat.db.rain.engine.generate_schedule`, and logs the
         result.  Skips generation while rain-delay is active.
 
         Pending schedules collected by the tick are dispatched to their

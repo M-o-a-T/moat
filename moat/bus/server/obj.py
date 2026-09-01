@@ -34,34 +34,35 @@ class BaseObj:
     Override this.
     """
 
-    client_id = None
-    serial = None
-    working_until = None
+    client_id: int | None = None
+    serial: bytes | None = None
+    working_until: float | None = None
     polled: bool = False  # poll bit (in address request) is set
     _server: ref[Server] | None = None
     bus_id: int | None = None
+    is_ready: trio.Event
 
-    def __init__(self, serial, create=None):
+    def __init__(self, serial: bytes | int, create: bool | None = None) -> None:
         create  # noqa:B018
         if self.serial is not None:
             return  # already done
 
         if not isinstance(serial, bytes):
             ln = serial.bit_length()
-            ln = (ln + 7) / 8
+            ln = (ln + 7) // 8
             serial = serial.to_bytes(ln, "big")
 
         self.serial = serial
         self.is_ready = trio.Event()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.client_id:
             return f"<{self.__class__.__name__}: {self.serial} @{self.client_id}>"
         else:
             return f"<{self.__class__.__name__}: {self.serial}>"
 
     @property
-    def working(self):  # noqa:D102
+    def working(self) -> bool:  # noqa:D102
         if self.working_until is None:
             return True
         else:
@@ -74,14 +75,14 @@ class BaseObj:
             raise NoServerError
         return s
 
-    async def attach(self, server):
+    async def attach(self, server: Server) -> None:
         """
         Attach me to this server.
         """
         await self.detach()
         self._server = ref(server)
 
-    async def detach(self, server=None):
+    async def detach(self, server: Server | None = None) -> None:
         """
         Detach me from my server.
 
@@ -92,7 +93,7 @@ class BaseObj:
         server  # noqa:B018
         self._server = None
 
-    async def msg_in(self, cmd: int, broadcast: bool, data: bytes):
+    async def msg_in(self, cmd: int, broadcast: bool, data: bytes) -> None:
         """
         Process a message from this device.
 
@@ -116,7 +117,7 @@ class BaseObj:
             dst = self.client_id
         await m.send(src=src, dst=dst, code=code, data=data)
 
-    async def new_addr(self):
+    async def new_addr(self) -> None:
         """
         Called from the server when the device has been assigned an
         address.
@@ -128,7 +129,7 @@ class BaseObj:
         """
         self.is_ready.set()
 
-    async def poll_start(self, duration):
+    async def poll_start(self, duration: float) -> None:
         """
         Called when a poll message arrives from the device.
 
@@ -140,7 +141,7 @@ class BaseObj:
         """
 
     @property
-    def seen(self):
+    def seen(self) -> bool:
         """
         Flag whether this obj is on some bus
         """

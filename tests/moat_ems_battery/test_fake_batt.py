@@ -141,7 +141,6 @@ assert CFGA.b.cfg == "CFGA"
 CFGA.b.cfg = merge(attrdict(app="bms._test.cell.Cell"), CFGC.c, replace=True)
 
 
-@pytest.mark.xfail(reason="ArrayCmd doesn't support cfg_ command needed by BaseBalancer")
 async def test_batt(tmp_path):
     "Basic BMS test"
     with contextlib.suppress(FileNotFoundError):
@@ -163,6 +162,7 @@ async def test_batt(tmp_path):
         assert u > 25  # 1% plus
         uu = await b.all("u")
         log("%r", uu)
+        uu = [x[0][0] for x in uu]
         xu = max(uu)  # maX and miN-U
         nu = min(uu)
         assert xu > 8.3
@@ -173,6 +173,7 @@ async def test_batt(tmp_path):
         await a.u(h=nu)
         await anyio.sleep(2)
         uu = await b.all("u")
+        uu = [x[0][0] for x in uu]
         xu2 = max(uu)  # maX and miN-U
         nu2 = min(uu)  # maX and miN-U
         assert xu2 < xu
@@ -184,6 +185,7 @@ async def test_batt(tmp_path):
             xux = xu2
             await anyio.sleep(2)
             uu = await b.all("u")
+            uu = [x[0][0] for x in uu]
             xu2 = max(uu)  # maX and miN-U
             nu2 = min(uu)  # maX and miN-U
             if xu2 == xux:
@@ -195,6 +197,7 @@ async def test_batt(tmp_path):
         # ensure that balancing stops
         await anyio.sleep(2)
         uu = await b.all("u")
+        uu = [x[0][0] for x in uu]
         xu3 = max(uu)  # maX and miN-U
         nu3 = min(uu)  # maX and miN-U
         assert xu2 == xu3

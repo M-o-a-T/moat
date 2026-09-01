@@ -395,6 +395,10 @@ class BaseCells(ArrayCmd):
             return 0.5
         return self.w / self.w_max
 
+    async def cmd_all(self, cmd_name):
+        """Call a command on all sub-apps and return the results as a list."""
+        return [await getattr(app, f"cmd_{cmd_name}")() for app in self.apps]
+
     doc_u = dict(_d="voltage sum", _r="float")
 
     async def cmd_u(self):
@@ -582,7 +586,7 @@ class BaseBattery(BaseCells):
     async def cmd_ud(self):
         """Get delta between cell voltage sum and battery voltage."""
         u1 = await self.cmd_u()
-        u2 = sum(await self.all("u"))
+        u2 = sum(await self.cmd_all("u"))
         return u2 - u1
 
 
@@ -626,12 +630,16 @@ class BaseBalancer(BaseCmd):
         self.n = self.cfg.get("n", 9999)
         self.bat = self.root.sub_at(self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
-            # get battery limits from cell 0's config
-            cell0 = self.root.sub_at(self.cfg["bat"] / 0)
-            c = await cell0.cfg_(("lim", "u", "ext"))
+            # wait for the battery to be ready before reading its config
+            bat_name = self.cfg["bat"][0]
+            await self.root.sub[bat_name].wait_ready()
+            # get battery limits from the battery's cell config template
+            bat_app = self.root.sub[bat_name]
+            cell_cfg = bat_app.cfg["cfg"]
+            c = cell_cfg["lim"]["u"]["ext"]
             self.dis_max = c["max"]
             self.chg_min = c["min"]
-            c = await cell0.cfg_(("lim", "u", "std"))
+            c = cell_cfg["lim"]["u"]["std"]
             self.dis_min = c["max"]
             self.chg_max = c["min"]
             c = self.cfg.get("u", {})
@@ -685,12 +693,13 @@ class BaseBalancer(BaseCmd):
             res = await self._run_h(u)
             # res = (await self._run_l(u)) || res
 
-    async def _run_h(self, u):
+    async def _run_h(self, uu):
+        u = [x[0][0] for x in uu]
         maxv = max(u)
         minv = min(u)
 
         # discharger states
-        st = await self.bat.all("dis")
+        st = [x[0][0] for x in await self.bat.all("dis")]
 
         if not self.uh or self.uh > maxv:
             for uv, f in st:
@@ -732,12 +741,12 @@ class BaseBalancer(BaseCmd):
                     if st[i][0] < minv:
                         # don't balance below the minimum
                         log("Balance1 %s", cv)
-                        await self.bat(i, "dis", v=cv)
+                        await self.bat[i].dis(v=cv)
                         # don't spam the system when the min level changes
                 else:
                     # goal reached.
                     log("Unbalance1 %s", cv)
-                    await self.bat(i, "dis", v=0)
+                    await self.bat[i].dis(v=0)
 
             elif cv >= thrv1 + d:
                 want += 1
@@ -760,7 +769,7 @@ class BaseBalancer(BaseCmd):
                 continue
             if st[i][0] > cv and cv < thrv2:
                 log("Unbalance2 %s", cv)
-                await self.bat(i, "dis", v=0)
+                await self.bat[i].dis(v=0)
                 cur -= 1
 
         # Step 2, turn on balancing on cells that need it
@@ -773,7 +782,7 @@ class BaseBalancer(BaseCmd):
                 break
             if cv >= thrv1 + d:
                 log("Balance2 %d %s", i, cv)
-                await self.bat(i, "dis", v=minv)
+                await self.bat[i].dis(v=minv)
                 cur += 1
                 ret = True
                 continue

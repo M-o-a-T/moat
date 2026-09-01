@@ -128,20 +128,29 @@ class Loader(BaseLoader):
     @staticmethod
     async def results(cfg, it):
         """
-        Print the resulting data, as a YAML array.
+        Send the resulting data to a file, as a sequence.
+
+        Accepts an asynchronous iterator of per-period result mappings and
+        serializes the whole trajectory to ``data.file.results``.
+
+        Args:
+            cfg: The scheduler configuration.
+            it: An async iterator yielding one result mapping per period.
 
         Config:
-            data.results.format: yaml, json, or msgpack
+            data.file.results: path to the output file.
+            data.format.results: ``yaml``, ``json``, ``cbor``, or ``msgpack``.
         """
-        f = cfg.data.format.results
-        if f == "yaml":
+        fmt = cfg.data.format.results
+        dest = cfg.data.file.results
+        if fmt == "yaml":
             from moat.util import yformat  # noqa: PLC0415
 
-            async with await anyio.Path(cfg.data.file.result).open("w") as f:
+            async with await anyio.Path(dest).open("w") as f:
                 async for kw in it:
                     await f.write(yformat([kw]))
 
-        elif f == "cbor":
+        elif fmt == "cbor":
             res = []
             async for kw in it:
                 res.append(kw)
@@ -149,10 +158,10 @@ class Loader(BaseLoader):
 
             packer = StdCBOR().encode
 
-            async with await anyio.Path(cfg.data.file.result).open("wb") as f:
+            async with await anyio.Path(dest).open("wb") as f:
                 await f.write(packer(res))
 
-        elif f == "msgpack":
+        elif fmt == "msgpack":
             res = []
             async for kw in it:
                 res.append(kw)
@@ -160,18 +169,18 @@ class Loader(BaseLoader):
 
             packer = StdMsgpack().encode
 
-            async with await anyio.Path(cfg.data.file.result).open("wb") as f:
+            async with await anyio.Path(dest).open("wb") as f:
                 await f.write(packer(res))
 
-        elif f == "json":
+        elif fmt == "json":
             import json  # noqa: PLC0415
 
             res = []
             async for kw in it:
                 res.append(kw)
-            async with await anyio.Path(cfg.data.file.result).open("w") as f:
+            async with await anyio.Path(dest).open("w") as f:
                 await f.write(json.dumps(res))
 
         else:
-            print(f"Unknown output format {f!r}. Use yaml/msgpack/json.")
+            print(f"Unknown output format {fmt!r}. Use yaml/json/cbor/msgpack.")
             sys.exit(1)

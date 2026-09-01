@@ -243,6 +243,11 @@ class Model:
                 self.money = money
             i += 1
 
+        if not self.caps:
+            raise ValueError(
+                "No scheduling data: the configured data sources yielded no rows.",
+            )
+
         # Attribute a fake monetary value of ending up with a charged battery
         self.objective.SetCoefficient(cap, cfg.battery.soc.value.end / cfg.battery.capacity)
 
@@ -263,7 +268,12 @@ class Model:
         self.constr_init.SetLb(charge)
         self.constr_init.SetUb(charge)
 
-        self.solver.Solve()
+        status = self.solver.Solve()
+        if status != self.solver.OPTIMAL:
+            raise RuntimeError(
+                f"Scheduling failed: solver status {status} "
+                f"(expected OPTIMAL={self.solver.OPTIMAL}).",
+            )
 
         async with anyio.create_task_group() as tg:
             res = cfg.mode.result

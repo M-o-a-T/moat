@@ -9,12 +9,13 @@ import contextlib
 import os
 import pytest
 
+from moat.util import attrdict, merge
 from moat.lib.micro import log
 from moat.lib.rpc._test import rpc_stack
 
 from .support import CF, as_attr
 
-pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
+pytestmark = [pytest.mark.anyio]
 
 TT = 250  # XXX assume that this is OK
 
@@ -137,9 +138,10 @@ b:
 """
 CFGA = as_attr(CFGA)
 assert CFGA.b.cfg == "CFGA"
-CFGA.b.cfg = CFGC.c
+CFGA.b.cfg = merge(attrdict(app="bms._test.cell.Cell"), CFGC.c, replace=True)
 
 
+@pytest.mark.xfail(reason="ArrayCmd doesn't support cfg_ command needed by BaseBalancer")
 async def test_batt(tmp_path):
     "Basic BMS test"
     with contextlib.suppress(FileNotFoundError):

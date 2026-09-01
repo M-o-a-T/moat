@@ -6,13 +6,14 @@ import os
 import pytest
 import time
 
+from moat.util import attrdict, merge
 from moat.ems.battery.diy_serial.packet import RequestTiming
 from moat.lib.micro import log
 from moat.lib.rpc._test import rpc_stack
 
 from .support import CF, as_attr
 
-pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
+pytestmark = [pytest.mark.anyio]
 
 TT = 250  # XXX assume that this is OK
 
@@ -69,7 +70,7 @@ ca:
   n: 4
 """
 CFG4 = as_attr(CFG4)
-CFG4.ca.cfg = CF.c
+CFG4.ca.cfg = merge(attrdict(app="bms._test.cell.Cell"), CF.c, replace=True)
 
 
 async def test_cell4(tmp_path):
@@ -194,6 +195,7 @@ CFGA = as_attr(CFGA)
 CFGA.b.cfg.cfg = CF.c
 
 
+@pytest.mark.xfail(reason="ArrayCmd doesn't support cfg_ command needed by BaseBalancer")
 async def test_batt(tmp_path):
     "Basic BMS test"
     with contextlib.suppress(FileNotFoundError):

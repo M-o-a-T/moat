@@ -527,7 +527,7 @@ class ReplyBalanceCurrentCounter(_Reply):  # noqa:D101
         cell.balance_current_count = self.counter
 
     def __setstate__(self, m):
-        self.cmounter = m["c"]
+        self.counter = m["c"]
 
     def __getstate__(self):
         return dict(c=self.counter)

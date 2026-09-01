@@ -54,7 +54,9 @@ async def run_update(*a, **kw):
         await _run_update(src, *a, **kw)
 
 
-async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None):
+async def _run_update(
+    src, dest: MoatPath, check=None, cross=None, arch: str | None = None, hash_fn=None
+):
     # update a single _embed/lib directory
 
     async def drop(dst):
@@ -84,4 +86,4 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         rs = await _rd(sp)
         return res == hash256(rs)[: len(res)]
 
-    await copytree(src, dest, check=check, drop=drop, cross=cross)
+    await copytree(src, dest, check=check, drop=drop, cross=cross, arch=arch)

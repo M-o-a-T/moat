@@ -38,16 +38,18 @@ class Average(BaseCmd):
 
     flag: Event
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         if "t" not in self.cfg:
             raise ValueError("Average: need react time constant")
-        self._value = cfg.get("init", None)
-        self._t = None if self._value is None else ticks_ms() - cfg.get("age", self.cfg["t"])
+        self._value: float | None = cfg.get("init", None)
+        self._t: int | None = (
+            None if self._value is None else ticks_ms() - cfg.get("age", self.cfg["t"])
+        )
         self.flag = Event()
 
-    def in_value(self, val, t=None):
-        "update value"
+    def in_value(self, val: float, t: float | None = None) -> None:
+        """Update value."""
         tn = ticks_ms()
         if t is None:
             t = ticks_diff(tn, self._t) if self._t is not None else 1
@@ -63,8 +65,8 @@ class Average(BaseCmd):
         _d="read", t="int:last timestamp (systime)", _r="float:current avg", _s=True, _o=True
     )
 
-    async def stream_r(self, msg: Msg):
-        "read. Wait for change if timestamp didn't change"
+    async def stream_r(self, msg: Msg) -> None:
+        """Read. Wait for change if timestamp didn't change."""
         if self._t is None or msg.get("t", None) == self._t:
             await self.flag.wait()
         if msg.can_stream:
@@ -80,8 +82,8 @@ class Average(BaseCmd):
 
     doc_w = dict(_d="write", _0="float:update", _t="float:Timestamp(ms)", _s=True, _i=True)
 
-    async def stream_w(self, msg):
-        "update"
+    async def stream_w(self, msg: Msg) -> None:
+        """Update."""
         if msg.can_stream:
             async with msg.stream_in() as mon:
                 async for m in mon:

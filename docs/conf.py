@@ -285,6 +285,7 @@ nitpick_ignore = [
     ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
     ("py:data", "types.EllipsisType"),
     ("py:data", "types.CoroutineType"),
+    ("py:data", "_SKIP_METHODS"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:class", "moat.micro.part.transfer._Step"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),
@@ -333,6 +334,30 @@ nitpick_ignore = [
     ("py:obj", "moat.util.queue.T"),
     ("py:class", "mcp.server.fastmcp.FastMCP"),
     ("py:class", "mcp.server.fastmcp.server.FastMCP"),
+    # SQLAlchemy-internal types rendered by sphinx_autodoc_typehints in
+    # column annotations (e.g. ``Mapped[int]``); their definition-site
+    # paths are not exposed by the SQLAlchemy docs/intersphinx.
+    ("py:class", "sqlalchemy.orm.base.Mapped"),
+    ("py:class", "sqlalchemy.sql.type_api.TypeDecorator"),
+    # Auto-displayed base class of ``PathType`` and names pulled in from
+    # SQLAlchemy's inherited ``TypeDecorator`` docstring; unresolvable
+    # without a SQLAlchemy intersphinx inventory.
+    ("py:class", "TypeDecorator"),
+    ("py:class", "ExternalType"),
+    ("py:class", "UserDefinedType"),
+    ("std:ref", "sql_caching"),
+    # moat.db API referenced from moat.db.rain docstrings but not (yet)
+    # exposed via an automodule directive.
+    ("py:class", "moat.db.schema.Base"),
+    ("py:meth", "Base.apply"),
+    ("py:class", "moat.db.util.Mgr"),
+    ("py:func", "moat.db.util.database"),
+    ("py:mod", "moat.db.rain.range"),
+    ("py:mod", "moat.db.rain.cmds.monitor"),
+    ("py:func", "moat.util.times.time_until"),
+    ("py:class", "moat.db.rain.monitor._AsyncCMIter"),
+    # Test-only stand-in referenced from ``Monitor``'s docstring.
+    ("py:class", "StubLink"),
 ]
 nitpick_ignore_regex = [
     (r".*", r"'Broadcaster'"),
@@ -612,6 +637,29 @@ suppress_warnings = [
 def setup(app):
     # monkey_patch_parse_see_also()
     app.connect("autodoc-skip-member", autodoc_skip_member)
+
+    # SQLAlchemy's inherited docstrings use a ``:paramref:`` role (defined
+    # in SQLAlchemy's own docs config) that moat's Sphinx does not provide;
+    # autodoc pulls those docstrings in via ``autoclass_content = "both"``.
+    # Register passthroughs so they render instead of raising "Unknown
+    # interpreted text role / directive" errors.
+    from docutils import nodes
+    from docutils.parsers.rst import Directive
+
+    def _paramref(role, rawtext, text, lineno, inliner, options=None, content=None):
+        return [nodes.literal(rawtext, text)], []
+
+    app.add_role("paramref", _paramref)
+
+    class _Legacy(Directive):
+        has_content = True
+        optional_arguments = 99
+
+        def run(self):
+            return []
+
+    app.add_directive("legacy", _Legacy)
+
     # app.connect("autodoc-process-bases", autodoc_process_bases)
     # app.connect("autodoc-process-signature", autodoc_process_signature)
     gen_icons()
@@ -639,6 +687,19 @@ def setup(app):
     import moat.link.server
     import moat.lib.stream.anyio
     import moat.lib.repl.commands
+
+    # SQLAlchemy's ``@util.preload_module`` pattern skips its runtime
+    # imports when ``typing.TYPE_CHECKING`` is True (see e.g.
+    # ``sqlalchemy.pool.events._accept_with``), so a module-level
+    # ``@event.listens_for(Engine, ...)`` decorator raises
+    # ``UnboundLocalError`` if its module is first imported under that
+    # flag.  Import the affected ``moat.db`` modules now, while
+    # ``TYPE_CHECKING`` is still False, so autodoc later reuses the
+    # cached modules instead of re-executing their decorators.
+    import moat.db.util
+    import moat.db.rain.model
+    import moat.db.rain.engine
+    import moat.db.rain.monitor
 
     import typing
 

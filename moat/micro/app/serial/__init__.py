@@ -11,6 +11,8 @@ if _TC:
     from .msg import Msg as Msg
     from .raw import Raw as Raw
 
+    from typing import Any
+
 _imports = {
     "Link": "link",
     "Msg": "msg",
@@ -18,7 +20,7 @@ _imports = {
 }
 
 
-def __getattr__(attr: str):
+def __getattr__(attr: str) -> Any:
     try:
         mod = _imports[attr]
     except KeyError:
@@ -28,7 +30,7 @@ def __getattr__(attr: str):
     return value
 
 
-def __dir__():
+def __dir__() -> list[str]:
     """Expose all lazy-loaded attributes for introspection."""
     return sorted(set(list(__all__) + [k for k in globals().keys() if not k.startswith("_")]))
 

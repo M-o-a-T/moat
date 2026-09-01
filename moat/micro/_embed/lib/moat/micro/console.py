@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     from moat.lib.rpc import Msg
 
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Callable
 
 #
 # The purpose of this code is to run asyncio from the console read loop.
@@ -205,7 +205,6 @@ class Console(io.IOBase):
                 create_task(wait_for_ms(self.cfg.get("sleep", 20), self._rb.readinto, buf))
             )
         except TimeoutError:
-            # if self._wb.n_avail < 100: self.write(b"_")
             return None
         except BaseException as exc:
             self.__exit__()
@@ -229,7 +228,6 @@ class Console(io.IOBase):
         """
         ioctl to test for readiness.
         """
-        # if self._wb.n_avail < 100: self.write(f"IOC {req} {flags}\n".encode("utf-8"))
         if req == 3:  # MP_STREAM_POLL
             if flags & 1:
                 try:
@@ -240,7 +238,6 @@ class Console(io.IOBase):
                             )
                         )
                 except TimeoutError:
-                    # if self._wb.n_avail < 100: self.write(b"-")
                     flags &= ~1
 
             return flags & 5  # read or write
@@ -249,7 +246,7 @@ class Console(io.IOBase):
 
         return -1  # Other requests are unsupported
 
-    async def put_in(self, buf: bytes | memoryview) -> Awaitable:
+    async def put_in(self, buf: bytes | memoryview) -> None:
         "feed to read buffer"
         if main.user_task is not None and len(buf) == 1 and buf[0] == 3:
             main.user_task.cancel()
@@ -260,12 +257,10 @@ class Console(io.IOBase):
         if main.console is not None:
             raise RuntimeError("Already up")
 
-        # if self._wb.n_avail < 100: self.write(b"Dup ")
         if self.cfg["keep"]:
             os.dupterm(self, 1)
         else:
             self._term = os.dupterm(self, 0)
-        # if self._wb.n_avail < 100: self.write(b"Duped.\n")
         if self.cfg.get("repl", False):
             main.start(self)
         return self
@@ -305,9 +300,9 @@ class Cmd(BaseCmd):
         buf = bytearray(n)
         res = await self.cons.get_out(buf)
         if not res:
-            buf = b""
-        elif res < n:
-            buf = memoryview(buf)[:res]
+            return b""
+        if res < n:
+            return memoryview(buf)[:res]
         return buf
 
     doc_w = dict(_d="Write console data", _0="bytes: data")
@@ -331,7 +326,11 @@ class Cmd(BaseCmd):
             @tg.start_soon
             async def rd():
                 while True:
-                    await st.send(await self.cmd_r(n))
+                    try:
+                        await st.send(await self.cmd_r(n))
+                    except EOFError:
+                        break
+                tg.cancel()
 
             async for m in st:
                 await self.cmd_w(m[0])
@@ -346,7 +345,9 @@ class Cmd(BaseCmd):
             async with msg.stream_w() as ms:
                 while True:
                     res = await self.cons.readinto(buf)
-                    await ms.send(buf[:res])
+                    if not res:
+                        break
+                    await ms.send(memoryview(buf)[:res])
         else:
             res = await self.cons.readinto(buf)
             if not res:

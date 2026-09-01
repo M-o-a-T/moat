@@ -6,8 +6,13 @@ from __future__ import annotations
 
 from moat.micro.part.serial import NamedSerial
 
+from typing import TYPE_CHECKING as _TC
 
-def get_serial(cfg):
+if _TC:
+    from typing import Any
+
+
+def get_serial(cfg: dict) -> Any:
     """
     Get the appropriate serial class for the given config.
 

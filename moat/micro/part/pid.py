@@ -13,6 +13,9 @@ from moat.lib.rpc import BaseCmd
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Any
+
+if TYPE_CHECKING:
     from moat.lib.rpc import Msg, MsgSender
 
 _state_d = dict(t="int:last time", e="float:error", i="float:integral")
@@ -55,7 +58,7 @@ class PID(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         self.pid = CPID(cfg)
         self.state_path = cfg.get("state", None)
@@ -63,8 +66,8 @@ class PID(BaseCmd):
 
         self._set_bc = Broadcaster(1)
 
-    async def setup(self):
-        "retrieve state"
+    async def setup(self) -> None:
+        """Retrieve state."""
         await super().setup()
         await AC_use(self, self._set_bc)
         if self.state_path is not None:
@@ -83,8 +86,8 @@ class PID(BaseCmd):
 
     doc_sw = dict(_d="update state", **_state_d)
 
-    def cmd_sw(self, t: int | None, e: float | None, i: float | None, **_kw):
-        "Update the PID state."
+    def cmd_sw(self, t: int | None, e: float | None, i: float | None, **_kw: Any) -> None:
+        """Update the PID state."""
         self.pid.set_state(t, e, i)
 
     doc_w = dict(_d="step", _0="float:current value", _r="float:new output")
@@ -122,8 +125,8 @@ class PID(BaseCmd):
         ],
     )
 
-    async def cmd_sp(self, sp: float | None = None):
-        "Sets/Returns the current setpoint"
+    async def cmd_sp(self, sp: float | None = None) -> float | None:
+        """Sets/Returns the current setpoint."""
         if sp is None:
             return self.pid.state.setpoint
         self.pid.setpoint(sp)
@@ -141,12 +144,12 @@ class PID(BaseCmd):
         **_state_d,
     )
 
-    async def stream_sp(self, msg: Msg):
-        "Sets/Returns the current setpoint"
+    async def stream_sp(self, msg: Msg) -> None:
+        """Sets/Returns the current setpoint."""
         async with msg.stream() as ms, TaskGroup() as tg:
 
             @tg.start_soon
-            async def _sp_evt():
+            async def _sp_evt() -> None:
                 async with self._set_bc.reader(1) as spr:
                     async for sp in spr:
                         await ms.send(sp)
@@ -155,7 +158,7 @@ class PID(BaseCmd):
                 self.pid.setpoint(m[0])
                 self._set_bc(m[0])
 
-    async def cmd_s(self, **kw):
+    async def cmd_s(self, **kw: Any) -> dict[str, Any]:
         """
         Sets/Returns the current state.
         """
@@ -177,16 +180,16 @@ class PID(BaseCmd):
         up="bool|None:block I increase(T), decrease(F), or all change(None)",
     )
 
-    async def stream_lock(self, msg: Msg):
+    async def stream_lock(self, msg: Msg) -> None:
         """
         Inhibits I-term updates.
 
         While a Lock command is active, the I part of the PID cannot
         increase / decrease further (controlled by the ``up`` parameter).
 
-        Params:
-        - up: prevents I from increasing (True), decreasing (False) or
-          changing at all (None)
+        Args:
+            up: prevents I from increasing (True), decreasing (False) or
+                changing at all (None)
 
         Only one lock can be active at a time.
         """
@@ -202,8 +205,8 @@ class PID(BaseCmd):
         finally:
             self._locked = False
 
-    async def reload(self):
-        "reload me"
+    async def reload(self) -> None:
+        """Reload me."""
         await super().reload()
         self.pid.cfg_updated()
         self.state_rtc = None

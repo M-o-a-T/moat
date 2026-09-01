@@ -12,13 +12,15 @@ if _TC:
     from .hdc2010 import Cmd as HDC2010
     from .tmp102 import Cmd as TMP102
 
+    from typing import Any
+
 _imports = {
     "HDC2010": ("hdc2010", "Cmd"),
     "TMP102": ("tmp102", "Cmd"),
 }
 
 
-def __getattr__(attr: str):
+def __getattr__(attr: str) -> Any:
     try:
         mod, name = _imports[attr]
     except KeyError:
@@ -28,7 +30,7 @@ def __getattr__(attr: str):
     return value
 
 
-def __dir__():
+def __dir__() -> list[str]:
     """Expose all lazy-loaded attributes for introspection."""
     return sorted(set(list(__all__) + [k for k in globals().keys() if not k.startswith("_")]))
 

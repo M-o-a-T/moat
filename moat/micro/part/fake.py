@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from types import EllipsisType
 
+    from moat.lib.rpc import Msg
+
 PINS = {}
 
 
@@ -30,46 +32,46 @@ class Pin(BaseCmd):
 
     flag: Event
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         PINS[cfg["pin"]] = self
-        self._value = cfg.get("init", False)
+        self._value: bool = cfg.get("init", False)
         self.flag = Event()
 
-    def in_value(self, val):
-        "set+send pin value unconditionally"
+    def in_value(self, val: bool) -> None:
+        """Set+send pin value unconditionally."""
         self.flag.set()
         self.flag = Event()
         self._value = val
 
     @property
-    def value(self):
-        "current pin value"
+    def value(self) -> bool:
+        """Current pin value."""
         return self._value
 
-    def __aiter__(self):
+    def __aiter__(self) -> Pin:
         return self
 
-    async def get(self):
-        "Wait for + get the next value"
+    async def get(self) -> bool:
+        """Wait for + get the next value."""
         await self.flag.wait()
         return self._value
 
     async def cmd(self, val: bool | EllipsisType = NotGiven) -> None | bool:
-        "Simple Data protocol."
+        """Simple Data protocol."""
         if val is NotGiven:
             return self.value
         self.in_value(val)
 
-    async def stream(self, msg):
+    async def stream(self, msg: Msg) -> None:
         """
         R/W data stream. The initial argument says whether you want to
         read. Waits for change if @o (old value) is not None.
         """
-        o = msg.get("o", None)
+        o: bool | None = msg.get("o", None)
         async with TaskGroup() as tg, msg.stream() as m:
 
-            async def _rd():
+            async def _rd() -> None:
                 val = self.value
                 if o is not val:
                     await m.send(val)
@@ -110,26 +112,26 @@ class ADC(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         cfg = self.cfg
-        self.min = cfg.get("min", 0)
-        self.max = cfg.get("max", 1)
-        self.border = cfg.get("border", 2)
-        self.step = cfg["step"] / (self.max - self.min) / 2 if "step" in cfg else 0.1
+        self.min: float = cfg.get("min", 0)
+        self.max: float = cfg.get("max", 1)
+        self.border: float = cfg.get("border", 2)
+        self.step: float = cfg["step"] / (self.max - self.min) / 2 if "step" in cfg else 0.1
 
-        self.val = (
+        self.val: float = (
             atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2)
             if "init" in cfg
             else 0
         )
-        self.bias = 0
-        self.rand = random.Random(cfg.get("seed", None))
+        self.bias: float = 0
+        self.rand: random.Random = random.Random(cfg.get("seed", None))
 
     doc_r = dict(_d="read")
 
-    async def cmd_r(self):
-        "read current value"
+    async def cmd_r(self) -> float:
+        """Read current value."""
         b = self.bias + (self.rand.random() - 0.5) * self.step
         v = self.val + b
         if v > self.border and b > 0:

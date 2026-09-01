@@ -1,33 +1,74 @@
-system:
-  capacity: 14
-  batt_max_chg: 5
-  batt_max_dis: 8
-  inv_max_dis: 10
-  inv_max_chg: 10
-  buy_factor: 1.2
-  buy_const: 0.24
-  kwp: 10
+# Example configuration for ``moat ems sched``.
+#
+# Paths are relative to the current directory; run from this folder so
+# that ``load.data``, ``solar.data``, and ``price.data`` resolve.
+#
+# Usage:
+#   moat ems sched -c params.yaml analyze --force
 
-  # position
+steps: 1
+
+battery:
+  capacity: 14
+  soc:
+    min: 0.05
+    max: 0.95
+    value:
+      current: 0
+      end: 0.1
+  max:
+    charge: 5
+    discharge: 8
+  efficiency:
+    charge: 0.97
+    discharge: 0.97
+
+inverter:
+  max:
+    charge: 10
+    discharge: 10
+  efficiency:
+    charge: 0.9
+    discharge: 0.9
+
+grid:
+  max:
+    buy: 999
+    sell: 999
+
+solar:
   lat: 45.6
   long: 12.3
-  # orientation
-  degrees: 180
-  azimuth: 0
-sources:
-  akumuli:
-    host: localhost
-    port: 8282
-  forecast_solar:
-    api-key: XXXXXXXXXXXXXXXX
-    query:
-      # see https://doc.forecast.solar/doku.php?id=api for possibilities
-      damping: 1.0
-solar:
-  source: forefast_solar
-price:
-  source: akumuli
-  series: price
-  tags:
-    type: power
-per_hour: 1
+  damping: 0.5
+  array:
+  - peak: 10
+    compass: 180
+    tilt: 30
+
+start:
+  soc: 0.3
+
+data:
+  file:
+    price_sell: price.data
+    solar: solar.data
+    load: load.data
+    result: /dev/stdout
+    results: /dev/stdout
+  # price_buy is derived from price_sell by the file2 mode:
+  #   price_buy = factor * price_sell + offset = 1.2 * (price + 0.2)
+  file2:
+    factor: 1.2
+    offset: 0.24
+  format:
+    result: yaml
+    results: yaml
+
+mode:
+  price_sell: file
+  price_buy: file2
+  solar: file
+  load: file
+  soc: null
+  result: file
+  results: null

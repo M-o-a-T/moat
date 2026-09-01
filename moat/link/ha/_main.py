@@ -352,11 +352,9 @@ set_.__doc__ = """
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
 async def get(obj, typ, path, cmd):
-    path = P(path)
     if typ == "-":
-        async with obj.conn.d_walk(obj.hass_name, min_depth=1, max_depth=1) as mon:
-            async for p, _d in mon:
-                print(p[-1], file=obj.stdout)
+        async for name in obj.conn.d_list(obj.hass_name):
+            print(name, file=obj.stdout)
         return
     try:
         t = _types[typ]
@@ -376,17 +374,22 @@ async def get(obj, typ, path, cmd):
         def cmd(x):
             return x
 
-    cp = obj.hass_name + Path.build((typ,)) + path
-    if not len(path):
-        async with obj.conn.d_walk(cp) as mon:
-            async for p, d in mon:
-                if p[-1] != "config":
-                    continue
-                print(d["name"], typ, p[:-1], file=obj.stdout)
+    cp = obj.hass_name + Path.build((typ,))
+    if path == "-":
+        async for name in obj.conn.d_list(cp):
+            dp = cp + P(name)
+            try:
+                val = await obj.conn.d_get(dp | "config")
+            except KeyError:
+                continue
+            if val is NotGiven:
+                continue
+            print(val["name"], typ, name, file=obj.stdout)
         return
 
+    path = P(path)
     try:
-        val = await obj.conn.d_get(cp | "config")
+        val = await obj.conn.d_get(cp + path | "config")
     except KeyError:
         print("Not found.")
         return

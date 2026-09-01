@@ -1,10 +1,25 @@
-Test Usage:
+Example configuration for the ``moat ems sched`` optimizer.
 
-moat bms sched analyze \
-    -p bms/sched/example/params.yaml \
-    -L bms/sched/example/load.data \
-    -S bms/sched/example/solar.data \
-    -P bms/sched/example/price.data \
-    -s 0.3
+The scheduler is driven by a YAML config file (see ``params.yaml``) that
+selects pluggable data loaders for price, solar, and load forecasts, sets
+the battery / inverter / grid hardware limits, and chooses where to write
+results.
 
-which is equivalent to running example/test.py
+Run the optimizer from this folder (so the relative data-file paths in
+``params.yaml`` resolve):
+
+    moat ems sched -c params.yaml analyze --force
+
+``--force`` skips the "you must be near a timeslot boundary" check; drop it
+when running on the hour in production. Add ``--all`` to emit the full
+multi-period trajectory instead of just the first interval.
+
+Input data files (one float per line, in kW / $ per kWh):
+
+- ``price.data``  — sell prices per hour
+- ``solar.data`` — projected solar power per hour
+- ``load.data``  — projected local consumption per hour
+
+Buy prices are derived from the sell prices by the ``file2`` mode:
+``price_buy = factor * price_sell + offset`` (here ``1.2 * price + 0.24``,
+equivalent to ``(price + 0.2) * 1.2``).

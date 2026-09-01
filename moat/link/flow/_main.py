@@ -159,7 +159,7 @@ async def _check_path(
     dict[Path, tuple[str, Mapping[str, Any], Any]],
     list[_Timeout],
     list[_Copied],
-    list[_Same],
+    set[_Same],
 ]:
     """
     Evaluate one message against flow rules.
@@ -173,7 +173,7 @@ async def _check_path(
     errors: dict[Path, tuple[str, Mapping[str, Any], Any]] = {}
     timeouts: list[_Timeout] = []
     copied: list[_Copied] = []
-    sames: list[_Same] = []
+    sames: set[_Same] = set()
 
     for rel, check in _iter_checks(flow):
         err_p = _error_path(path, rel)
@@ -252,7 +252,7 @@ async def _check_path(
                 ca_prev = changed_at.get(ca_key, None)
                 if ca_prev is not None and prev_val == value:
                     # Value unchanged — arm maxsame timer from when it last changed
-                    sames.append(_Same(err_p, maxsame, check, value, rel))
+                    sames.add(_Same(err_p, maxsame, check, value, rel))
                     if do_stale_age:
                         age = now - ca_prev
                         if age > maxsame and err_p not in errors:
@@ -266,7 +266,7 @@ async def _check_path(
                     changed_at[ca_key] = ts
             else:
                 # Snapshot mode (no changed_at tracking): behave like timeout
-                sames.append(_Same(err_p, maxsame, check, value, rel))
+                sames.add(_Same(err_p, maxsame, check, value, rel))
                 if do_stale_age and ts is not None and now - ts > maxsame and err_p not in errors:
                     age = now - ts
                     errors[err_p] = (

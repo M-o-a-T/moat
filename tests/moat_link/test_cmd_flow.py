@@ -112,7 +112,7 @@ async def test_flow_monitor_e2e_writes_and_clears_maxsame_error(cfg):
         sf.client_() as writer,
         sf.client_() as watcher,
     ):
-        await writer.d_set(P("flow.state.stuck"), {"_": {"maxsame": 0.05}})
+        await writer.d_set(P("flow.state.stuck"), {"_": {"maxsame": 0.1}})
         await writer.i_sync()
 
         obj = attrdict(conn=watcher, stdout=StringIO())
@@ -122,22 +122,25 @@ async def test_flow_monitor_e2e_writes_and_clears_maxsame_error(cfg):
         ):
             tg.start_soon(flow_cmd.monitor.callback.__wrapped__, obj, P("state"))
 
+            # Let the monitor subscribe before we start writing
+            await anyio.sleep(0.1)
+
             # Initial value
             await writer.d_set(P("state.stuck"), 10)
             await writer.i_sync()
-            await anyio.sleep(0.02)
+            await anyio.sleep(0.1)
 
             # Same value again — triggers maxsame timer
             await writer.d_set(P("state.stuck"), 10)
             await writer.i_sync()
 
-            # Wait for the maxsame timer to expire (> 0.05s)
-            await anyio.sleep(0.12)
+            # Wait for the maxsame timer to expire (> 0.1s)
+            await anyio.sleep(0.2)
 
             # Change the value — should clear the error
             await writer.d_set(P("state.stuck"), 11)
             await writer.i_sync()
-            await anyio.sleep(0.05)
+            await anyio.sleep(0.1)
 
             tg.cancel_scope.cancel()
 
@@ -147,7 +150,7 @@ async def test_flow_monitor_e2e_writes_and_clears_maxsame_error(cfg):
         p1, d1 = events[0]
         assert p1 == P("stuck")
         assert "maxsame" in d1["check"]
-        assert d1["check"]["maxsame"] == pytest.approx(0.05)
+        assert d1["check"]["maxsame"] == pytest.approx(0.1)
         assert d1["data"] == 10
 
         p2, d2 = events[1]

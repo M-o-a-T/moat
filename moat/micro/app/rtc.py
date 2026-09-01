@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import Msg
 
+    from typing import Any
+
 
 class _NotGiven:
     pass
@@ -30,7 +32,7 @@ class Cmd(BaseCmd):
 
     doc = dict(_c=dict(_d="RTC access"))
 
-    async def cmd(self, k=_NotGiven, v=_NotGiven):
+    async def cmd(self, k: Any = _NotGiven, v: Any = _NotGiven) -> Any:
         """
         Direct R/W access to RTC.
 
@@ -52,11 +54,11 @@ class Cmd(BaseCmd):
 
     doc_r = dict(_d="read data", p="path", _r="parts")
 
-    def __init__(self, cfg: dict):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
-        self._data = {}
+        self._data: dict[str, Any] = {}
 
-    async def stream_r(self, msg: Msg):
+    async def stream_r(self, msg: Msg) -> None:
         """
         Read (part of) the RTC data area.
 
@@ -99,7 +101,7 @@ class Cmd(BaseCmd):
 
     doc_w = dict(_d="write data", _0="str:name", _1="any:data")
 
-    async def stream_w(self, msg: Msg):
+    async def stream_w(self, msg: Msg) -> None:
         """
         Write to RTC.
 
@@ -126,7 +128,7 @@ class Cmd(BaseCmd):
 
     doc_c = dict(_d="write cached data", _0="str:name", _1="path:pos", d="any:deletes if missing")
 
-    async def stream_c(self, msg: Msg):
+    async def stream_c(self, msg: Msg) -> None:
         """
         Write to the cached data.
 
@@ -157,7 +159,7 @@ class Cmd(BaseCmd):
 
     doc_x = dict(_d="activate data")
 
-    async def cmd_x(self, n: str, **kw):
+    async def cmd_x(self, n: str, **kw: Any) -> Any:
         """
         Write the current cache entry with this name to RTC.
 
@@ -177,7 +179,7 @@ class Cmd(BaseCmd):
                 await self.root.reload()
         return res
 
-    async def stream(self, msg: Msg):
+    async def stream(self, msg: Msg) -> None:
         """
         Get all data.
 
@@ -193,7 +195,7 @@ class Cmd(BaseCmd):
                     k = (k, await RTC.get(k, fs=fs))  # noqa:PLW2901
                 await ms.send(k)
 
-    async def handle(self, msg: Msg, rcmd: list[PathElem]):
+    async def handle(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Handler override for adding the name to the path.
 

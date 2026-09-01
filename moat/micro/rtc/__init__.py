@@ -34,12 +34,12 @@ class _RTC:
     backends: list[RTCBase]
     root = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<RTC>"
 
-    def init(self, cfg: dict | None = None):
+    def init(self, cfg: dict | None = None) -> None:
         self.cfg = cfg or {"use": ["mem", "fs"]}
-        self._be = {}
+        self._be: dict[str, RTCBase] = {}
         self._setup()
 
         try:
@@ -52,9 +52,9 @@ class _RTC:
             merge(self.cfg, cfg)
             self._setup()
 
-    def _setup(self, err: bool = False):
+    def _setup(self, err: bool = False) -> None:
         self.backends = bes = []
-        nbe = set(self._be.keys())
+        nbe: set[str] = set(self._be.keys())
         mp = "moat.micro.rtc."  # module name prefix
 
         for i, c in enumerate(self.cfg.get("use", [])):
@@ -93,9 +93,9 @@ class _RTC:
             bes.append(be)
             nbe.discard(n)
         for n in nbe:
-            be = self._be.pop(n)
+            self._be.pop(n)
 
-    def reload(self):
+    def reload(self) -> None:
         self._setup(err=True)
 
     def state(self, name: str) -> State:
@@ -104,7 +104,7 @@ class _RTC:
         """
         return State(self, name)
 
-    def get_sync(self, name, fs=None, default=NotGiven):
+    def get_sync(self, name: str, fs: bool | None = None, default: Any = NotGiven) -> Any:
         """
         Synchronous getter for RTC data.
 
@@ -126,7 +126,7 @@ class _RTC:
                 raise
             return default
 
-    def set_sync(self, name: str, value: Any, **kw):
+    def set_sync(self, name: str, value: Any, **kw: Any) -> None:
         """
         Synchronous setter for RTC data.
 
@@ -251,19 +251,19 @@ class State:
     Accessor for a single state.
     """
 
-    def __init__(self, rtc: RTCBase | _RTC, name: str, fs: bool | None = None):
+    def __init__(self, rtc: RTCBase | _RTC, name: str, fs: bool | None = None) -> None:
         self.rtc = rtc
         self.name = name
         self.fs = fs
 
-    def get(self, **kw) -> Awaitable[Any]:
-        "Getter."
+    def get(self, **kw: Any) -> Awaitable[Any]:
+        """Getter."""
         if "fs" not in kw:
             kw["fs"] = self.fs
         return self.rtc.get(self.name, **kw)
 
-    def set(self, data: Any, **kw) -> Awaitable[None]:
-        "Setter."
+    def set(self, data: Any, **kw: Any) -> Awaitable[None]:
+        """Setter."""
         if "fs" not in kw:
             kw["fs"] = self.fs
         return self.rtc.set(self.name, data, **kw)  # ty:ignore[invalid-return-type]
@@ -285,7 +285,7 @@ class RTCBase:
     is_FS: ClassVar[bool] = False
     is_ASYNC: bool | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         self.cfg = cfg
         sync = cfg.get("sync", None)
         if self.is_ASYNC is None:
@@ -293,11 +293,15 @@ class RTCBase:
         elif sync is (not self.is_ASYNC):
             raise ValueError("Sync settings don't match")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self._name}>"
 
+    def reload(self) -> None:
+        """Reload cached data. Override in subclasses with data to reload."""
+        pass
+
     @property
-    def _name(self):
+    def _name(self) -> str:
         try:
             return self.cfg["name"]
         except KeyError:
@@ -334,7 +338,7 @@ class RTCBase:
         raise NotImplementedError
 
 
-def at(*a, **kw):
+def at(*a: Any, **kw: Any) -> None:
     """
     Setter for debugging.
 
@@ -347,7 +351,7 @@ def at(*a, **kw):
             return
     except KeyError:
         pass
-    data = (a, kw) if a and kw else (a or kw)
+    data: Any = (a, kw) if a and kw else (a or kw)
     try:
         RTC.set_sync("debug", data, fs=False)
     except NotImplementedError:

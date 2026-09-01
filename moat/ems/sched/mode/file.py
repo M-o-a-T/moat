@@ -147,7 +147,7 @@ class Loader(BaseLoader):
                 res.append(kw)
             from moat.lib.codec.moat_cbor import Codec as StdCBOR  # noqa: PLC0415
 
-            packer = StdCBOR.encode
+            packer = StdCBOR().encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(res))
@@ -158,7 +158,7 @@ class Loader(BaseLoader):
                 res.append(kw)
             from moat.lib.codec.moat_msgpack import Codec as StdMsgpack  # noqa: PLC0415
 
-            packer = StdMsgpack.encode
+            packer = StdMsgpack().encode
 
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(res))
@@ -166,6 +166,7 @@ class Loader(BaseLoader):
         elif f == "json":
             import json  # noqa: PLC0415
 
+            res = []
             async for kw in it:
                 res.append(kw)
             async with await anyio.Path(cfg.data.file.result).open("w") as f:

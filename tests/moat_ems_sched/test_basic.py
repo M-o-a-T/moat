@@ -1,12 +1,184 @@
 """
-Empty test file
+Tests for moat.ems.sched — exercises the three fixed defects:
+  1. Loader() uses moat.ems.sched (not stale moat.bms.sched)
+  2. Model.propose() doesn't crash on start_soon kwargs + returns tuple
+  3. file.py results() handles cbor/msgpack/json codecs correctly
 """
 
 from __future__ import annotations
 
+import copy
+import json
+import pytest
+from pathlib import Path
 
-def test_nothing():
-    """
-    Empty test
-    """
-    pass  # pylint: disable=unnecessary-pass
+from moat.ems.sched.control import Model
+from moat.ems.sched.mode import Loader
+
+pytestmark = [pytest.mark.anyio]
+
+
+def _mk_data(tmp_path: Path) -> dict[str, Path]:
+    """Create sample data files and return their paths."""
+    paths: dict[str, Path] = {}
+    for key, values in {
+        "price_sell": [0.30, 0.25, 0.35, 0.40],
+        "solar": [0.0, 2.0, 5.0, 1.0],
+        "load": [1.0, 1.0, 1.0, 1.0],
+    }.items():
+        p = tmp_path / f"{key}.data"
+        p.write_text("\n".join(str(v) for v in values) + "\n")
+        paths[key] = p
+    return paths
+
+
+def _base_cfg(cfg, tmp_path: Path):
+    """Deep-copy the default cfg and override for testing."""
+    c = copy.deepcopy(cfg.ems.sched)
+    paths = _mk_data(tmp_path)
+
+    c.steps = 1
+    c.battery.capacity = 14
+    c.battery.max = copy.deepcopy(c.battery.max)  # ensure mutable
+    c.battery.soc.min = 0.05
+    c.battery.soc.max = 0.95
+    c.battery.soc.value.current = 0.0
+    c.battery.soc.value.end = 0.1
+
+    c.inverter.max.charge = 10
+    c.inverter.max.discharge = 10
+
+    c.grid.max.buy = 100
+    c.grid.max.sell = 100
+
+    c.mode.price_sell = "file"
+    c.mode.price_buy = "file2"
+    c.mode.solar = "file"
+    c.mode.load = "file"
+    c.mode.soc = None
+
+    c.start.soc = 0.3
+
+    c.data.file.price_sell = str(paths["price_sell"])
+    c.data.file.solar = str(paths["solar"])
+    c.data.file.load = str(paths["load"])
+    c.data.file.result = str(tmp_path / "result.out")
+
+    c.data.file2.factor = 1.2
+    c.data.file2.offset = 0.02
+
+    return c
+
+
+async def test_loader_uses_ems_not_bms():
+    """Defect 1: Loader() must resolve moat.ems.sched.mode.*, not moat.bms.sched.mode.*."""
+    cls = Loader("file")
+    assert cls is not None, "Loader('file') returned None — stale bms ref?"
+    assert hasattr(cls, "price_sell"), "Loaded class missing price_sell"
+
+
+async def test_propose_returns_tuple(cfg, tmp_path):
+    """Defect 2: propose() must not crash and must return (grid, soc, money)."""
+    c = _base_cfg(cfg, tmp_path)
+    m = Model(c, t=0)
+    grid, soc, money = await m.propose(0.3)
+
+    assert isinstance(grid, float), f"grid should be float, got {type(grid)}"
+    assert isinstance(soc, float), f"soc should be float, got {type(soc)}"
+    assert isinstance(money, float), f"money should be float, got {type(money)}"
+
+
+async def test_propose_with_result_sink(cfg, tmp_path):
+    """Defect 2: propose() with result sink must not crash on start_soon kwargs."""
+    c = _base_cfg(cfg, tmp_path)
+    c.mode.result = "file"
+    c.data.format.result = "yaml"
+
+    m = Model(c, t=0)
+    grid, _soc, _money = await m.propose(0.3)
+
+    assert isinstance(grid, float)
+    # The result file should have been written
+    result_path = Path(c.data.file.result)
+    assert result_path.exists(), "Result file was not written"
+    content = result_path.read_text()
+    assert "grid" in content, f"Expected 'grid' in result file, got: {content}"
+
+
+async def test_results_yaml(cfg, tmp_path):
+    """Defect 3: results() yaml codec should write trajectory."""
+    c = _base_cfg(cfg, tmp_path)
+    c.mode.result = None
+    c.mode.results = "file"
+    c.data.format.results = "yaml"
+
+    m = Model(c, t=0)
+    _grid, _soc, _money = await m.propose(0.3)
+
+    result_path = Path(c.data.file.result)
+    assert result_path.exists(), "Results file was not written"
+    content = result_path.read_text()
+    assert "grid" in content
+
+
+async def test_results_json(cfg, tmp_path):
+    """Defect 3: results() json codec — res must be initialised before append."""
+    c = _base_cfg(cfg, tmp_path)
+    c.mode.result = None
+    c.mode.results = "file"
+    c.data.format.results = "json"
+
+    m = Model(c, t=0)
+    _grid, _soc, _money = await m.propose(0.3)
+
+    result_path = Path(c.data.file.result)
+    assert result_path.exists(), "Results file was not written"
+    content = result_path.read_text()
+    data = json.loads(content)
+    assert isinstance(data, list), f"Expected list, got {type(data)}"
+    assert len(data) > 0, "Empty results list"
+    assert "grid" in data[0], f"Missing 'grid' key in first result: {data[0]}"
+
+
+async def test_results_cbor(cfg, tmp_path):
+    """Defect 3: results() cbor codec — must use Codec().encode, not bare class attr."""
+    from moat.lib.codec.moat_cbor import Codec as StdCBOR  # noqa: PLC0415
+
+    c = _base_cfg(cfg, tmp_path)
+    c.mode.result = None
+    c.mode.results = "file"
+    c.data.format.results = "cbor"
+
+    m = Model(c, t=0)
+    _grid, _soc, _money = await m.propose(0.3)
+
+    result_path = Path(c.data.file.result)
+    assert result_path.exists(), "Results file was not written"
+    raw = result_path.read_bytes()
+    assert len(raw) > 0, "Empty CBOR file"
+    data = StdCBOR().decode(raw)
+    assert isinstance(data, list), f"Expected list, got {type(data)}"
+    assert len(data) > 0
+    assert "grid" in data[0]
+
+
+async def test_results_msgpack(cfg, tmp_path):
+    """Defect 3: results() msgpack codec — must use Codec().encode, not bare class attr."""
+    from moat.lib.codec.moat_msgpack import Codec as StdMsgpack  # noqa: PLC0415
+
+    c = _base_cfg(cfg, tmp_path)
+    c.mode.result = None
+    c.mode.results = "file"
+    c.data.format.results = "msgpack"
+
+    m = Model(c, t=0)
+    _grid, _soc, _money = await m.propose(0.3)
+
+    result_path = Path(c.data.file.result)
+    assert result_path.exists(), "Results file was not written"
+    raw = result_path.read_bytes()
+    assert len(raw) > 0, "Empty msgpack file"
+    data = StdMsgpack().decode(raw)
+    assert isinstance(data, list), f"Expected list, got {type(data)}"
+    assert len(data) > 0
+    assert "grid" in data[0]

@@ -1157,6 +1157,24 @@ path_eval = _eval.eval
 # Here we declare our bunch of "root" variables.
 
 
+class _NoResetToken:
+    """Token returned by :meth:`Var.set`.
+
+    ``Var`` has no context to restore, so unlike a real ``ContextVar`` token
+    this carries no state: its only job is to be recognisable to
+    :meth:`Var.reset` so the ``set``/``reset`` protocol driven by ``ctx_as``
+    works uniformly for both ``ContextVar`` and ``Var``.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "<Var no-reset token>"
+
+
+_VAR_SET_TOKEN = _NoResetToken()
+
+
 class Var:
     """
     This mimics a ContextVar but without the context.
@@ -1178,12 +1196,29 @@ class Var:
         # If the root is a.b.c, a new identical value will arrive as an
         # empty path with a root of a.b.c. That's bad. Thus silently don't
         # update in that case.
+        #
+        # We detect that case structurally.
+        #
+        # Match by the RootPath's *key* ("R"), not by ``_var is self``:
+        # the ``RootPath`` embedded in @val may hold a stale ``Var`` (a
+        # second ``Root`` instance created, if the namespace-packaged
+        # ``moat.lib.path._impl`` is loaded more than once), so identity
+        # would fail even though @val denotes the same root.
+        if (
+            not force
+            and self.data is not NotGiven
+            and isinstance(val, Path)
+            and isinstance(val._prefix, RootPath)  # noqa:SLF001
+            and val._prefix._key == "R"  # noqa:SLF001
+            and not len(val._data)  # noqa:SLF001
+        ):
+            return _VAR_SET_TOKEN
         if not force and self.data is not NotGiven:
             if self.data.slashed != val.slashed:
                 raise ValueError("Already set", self.data, val)
-            return 42
+            return _VAR_SET_TOKEN
         self.data = val
-        return 42
+        return _VAR_SET_TOKEN
 
     def __bool__(self):
         "check if value is set"
@@ -1191,7 +1226,7 @@ class Var:
 
     def reset(self, token):
         "reset value; no-op"
-        if token != 42:
+        if token is not _VAR_SET_TOKEN:
             raise ValueError(token)
 
 

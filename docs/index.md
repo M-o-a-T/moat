@@ -92,6 +92,20 @@ contribution guide, code and documentation style, and all that.
 :end-before: % end synopsis
 ```
 
+#### [GPIO Connector](moat-link-gpio/index.md)
+
+```{include} ../packaging/moat-link-gpio/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
+#### [GPIO Connector](moat-link-gpio/index.md)
+
+```{include} ../packaging/moat-link-gpio/README.md
+:start-after: % start synopsis
+:end-before: % end synopsis
+```
+
 #### [TODO: Web Frontend](moat-link-web/index.md)
 
 ```{include} ../packaging/moat-link-web/README.md

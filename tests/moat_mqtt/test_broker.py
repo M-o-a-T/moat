@@ -7,8 +7,6 @@ import anyio
 import logging
 import pytest
 import unittest
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
 from unittest.mock import MagicMock, call, patch
 
 from moat.mqtt.adapters import StreamAdapter
@@ -39,17 +37,26 @@ from . import anyio_run
 log = logging.getLogger(__name__)
 
 
-def _PUT():
-    PORT = FreePortFactory(SOCK_STREAM)()
-    URL = f"mqtt://127.0.0.1:{PORT}/"
+def _broker_config():
+    """Build a broker config that binds to port 0 (OS-assigned).
+
+    The real port is read back from the broker after startup via
+    ``broker._servers["default"].port``.
+    """
     test_config = {
         "listeners": {
-            "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}", "max_connections": 10},
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
         },
         "sys_interval": 0,
         "auth": {"allow-anonymous": True},
     }
-    return PORT, URL, test_config
+    return test_config
+
+
+def _port_url(broker, listener="default"):
+    """Extract the OS-assigned port and build an mqtt:// URL from a running broker."""
+    port = broker._servers[listener].port  # noqa: SLF001
+    return port, f"mqtt://127.0.0.1:{port}/"
 
 
 class AsyncMock(MagicMock):  # noqa: D101
@@ -64,7 +71,7 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_start_stop(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: D102
         async def test_coro():
-            _, _URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
@@ -95,11 +102,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
@@ -116,11 +124,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect_will_flag(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            PORT, _, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                PORT, _ = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
@@ -153,11 +162,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient(
@@ -176,11 +186,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe(self, MockPluginManager):  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
@@ -213,11 +224,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_twice(self, MockPluginManager):  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
@@ -256,11 +268,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_unsubscribe(self, MockPluginManager):  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
@@ -300,11 +313,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish(self, MockPluginManager):  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
@@ -332,11 +346,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     # @patch('moat.mqtt.broker.PluginManager', new_callable=AsyncMock)
     def test_client_publish_dup(self):  # noqa: D102
         async def test_coro():
-            PORT, _, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                PORT, _ = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
@@ -373,11 +388,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
@@ -393,11 +409,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_big(self, MockPluginManager):  # noqa: D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
@@ -428,11 +445,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
@@ -454,11 +472,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
 
@@ -475,11 +494,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
@@ -509,11 +529,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_invalid(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
@@ -535,11 +556,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
@@ -563,11 +585,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                 assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
@@ -591,11 +614,12 @@ class BrokerTest(unittest.TestCase):  # noqa: D101
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
     def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument  # noqa: ARG002, D102
         async def test_coro():
-            _, URL, test_config = _PUT()
+            test_config = _broker_config()
             async with create_broker(
                 test_config,
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
+                _, URL = _port_url(broker)
                 with anyio.fail_after(3):
                     broker.plugins_manager._tg = broker._tg  # noqa: SLF001
                     assert broker.transitions.is_started()

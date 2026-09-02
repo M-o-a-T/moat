@@ -7,6 +7,7 @@ import anyio
 import logging
 import socket
 import ssl
+from anyio.abc import SocketAttribute
 from copy import deepcopy
 
 from collections import deque
@@ -68,11 +69,14 @@ class RetainedApplicationMessage:  # noqa: D101
 
 
 class Server:  # noqa: D101
-    def __init__(self, listener_name, server_instance, max_connections=-1):
+    def __init__(self, listener_name, server_instance, max_connections=-1, port=None):
         self.logger = logging.getLogger(__name__)
         self.instance = server_instance
         self.conn_count = 0
         self.listener_name = listener_name
+        #: The actual port the listener is bound to. ``None`` until the
+        #: listener reports it (relevant when ``port=0`` was requested).
+        self.port = port
 
         self.max_connections = max_connections
         if self.max_connections > 0:
@@ -377,7 +381,11 @@ class Broker:
                                 local_port=port,
                                 local_host=address,
                             )
-                            await evt.set(scope)
+                            # Capture the OS-assigned port when port=0 was used.
+                            bound_port = int(
+                                sock.listeners[0].extra(SocketAttribute.local_address)[1]
+                            )
+                            await evt.set((scope, bound_port))
 
                             async def _maybe_wrap(conn):
                                 if ssl_context:
@@ -412,13 +420,16 @@ class Broker:
                         sc,
                         name=listener_name,
                     )
-                    instance = await fut.get()
-                    self._servers[listener_name] = Server(listener_name, instance, max_connections)
+                    instance, bound_port = await fut.get()
+                    self._servers[listener_name] = Server(
+                        listener_name, instance, max_connections, port=bound_port
+                    )
 
                     self.logger.info(
-                        "Listener '%s' bind to %s (max_connections=%d)",
+                        "Listener '%s' bind to %s:%d (max_connections=%d)",
                         listener_name,
-                        listener["bind"],
+                        address,
+                        bound_port,
                         max_connections,
                     )
 

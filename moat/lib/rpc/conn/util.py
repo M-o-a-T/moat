@@ -22,20 +22,37 @@ class BaseConnIter:
     Iterate incoming connections.
 
     You need to override the "accept" method.
+
+    Subclasses set ``port`` to the actual listening port in their
+    ``__init__`` and update it after binding when ``port=0`` was used.
+    """
+
+    port: int | None = None
+    """The port this listener is bound to.
+
+    Initially ``None``; after binding it holds the actual (possibly
+    OS-assigned) port number.
     """
 
     def __init__(self):
         self.q = Queue(1)
         self.evt = Event()
+        self._port_ready = Event()
 
     async def __aenter__(self):
         self.tg = await ACM(self)(TaskGroup())
         try:
             self.tg.start_soon(self.accept)
+            if self.port is None or self.port == 0:
+                await self._port_ready.wait()
             return self
         except BaseException as exc:
             await AC_exit(self, type(exc), exc, getattr(exc, "__traceback__", None))
             raise
+
+    def _port_assigned(self) -> None:
+        """Called by accept() after the port is bound."""
+        self._port_ready.set()
 
     async def __aexit__(self, *exc):
         await AC_exit(self, *exc)

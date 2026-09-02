@@ -242,12 +242,14 @@ def run(p, *a, **k):
 
 # Helper task to run a TCP stream server.
 # Callbacks (i.e. connection handlers) may run in a different taskgroup.
-async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None) -> Never:
+async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None, port_cb=None) -> Never:
     """
     Task that runs a TCP stream server.
     Callbacks (i.e. connection handlers) may run in a different taskgroup.
 
     The optional event is set when the socket is listening.
+    The optional ``port_cb`` callback is called with the actual bound port
+    after the socket is bound (useful when ``port=0`` for OS-assigned ports).
     """
     import socket  # noqa: PLC0415
 
@@ -258,6 +260,26 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None) -> Nev
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(host[-1])
     s.listen(backlog)
+    if port_cb is not None:
+        if port == 0:
+            # MicroPython's socket lacks getsockname(); read the
+            # actual port from /proc/self/net/tcp (Linux only),
+            # matching by the socket's inode.
+            fd = s.fileno()
+            with open("/proc/self/fdinfo/" + str(fd)) as ff:  # noqa:ASYNC230
+                inode = None
+                for line in ff:
+                    if line[:4] == "ino:":
+                        inode = line[4:].strip()
+                        break
+            with open("/proc/self/net/tcp") as f:  # noqa:ASYNC230
+                for line in f:
+                    parts = line.split()
+                    if len(parts) > 9 and parts[3] == "0A" and parts[9] == inode:
+                        port_cb(int(parts[1].split(":")[1], 16))
+                        break
+        else:
+            port_cb(port)
     if evt is not None:
         evt.set()
 

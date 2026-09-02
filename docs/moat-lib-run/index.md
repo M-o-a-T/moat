@@ -30,7 +30,6 @@ The `main_` command is the default entry point for MoaT applications:
 ```python
 from moat.lib.run import main_
 
-
 @main_.command()
 async def my_command(ctx):
     """A custom command"""
@@ -44,7 +43,6 @@ Use `load_subgroup` to create command groups that automatically discover and loa
 ```python
 from moat.lib.run import load_subgroup
 import asyncclick as click
-
 
 @load_subgroup(prefix="myapp.commands")
 @click.pass_context
@@ -63,7 +61,6 @@ The `attr_args` decorator provides flexible argument handling:
 
 ```python
 from moat.lib.run import attr_args, process_args
-
 
 @main_.command()
 @attr_args(with_path=True, with_eval=True)
@@ -87,8 +84,9 @@ from moat.lib.run import Loader
 from functools import partial
 import asyncclick as click
 
-
-@click.command(cls=partial(Loader, _util_sub_pre="myapp.commands", _util_sub_post="cli"))
+@click.command(cls=partial(Loader,
+    _util_sub_pre='myapp.commands',
+    _util_sub_post='cli'))
 async def main():
     """Main command"""
     pass

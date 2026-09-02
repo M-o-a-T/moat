@@ -31,9 +31,7 @@ else:
 # get the current version
 import subprocess
 
-version = (
-    subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
-)
+version = subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
 try:
     _idx = version.index("-")
 except IndexError:

@@ -1,8 +1,16 @@
 """
 A hacked-up copy of some parts of `moat.util`.
+
+Proxies are named references to objects that cannot be serialized directly.
+Named proxies (registered via ``as_proxy``) are held strongly and persist
+until explicitly dropped. Auto-generated proxies (created by ``get_proxy``
+when encoding an unknown object) are held weakly: they are released
+automatically when the referenced object is garbage-collected.
 """
 
 from __future__ import annotations
+
+from weakref import WeakValueDictionary, finalize
 
 from typing import TYPE_CHECKING, cast, overload
 
@@ -27,8 +35,83 @@ NotGiven: object = ...  # from moat.util import NotGiven
 
 
 _pkey: int = 1
-_CProxy: dict[str, Any] = {}  # name > object
-_RProxy: dict[int, str] = {}  # object > name
+
+# Strong references for named proxies registered via ``as_proxy``.
+# Also holds objects that cannot be weak-referenced (e.g. ``Ellipsis``).
+# These persist until ``drop_proxy`` is called.
+_SProxy: dict[str, Any] = {}
+
+# Name → object. Auto-generated proxies are held weakly;
+# named proxies are kept alive by ``_SProxy``.
+# Objects that don't support weakrefs are stored in ``_SProxy`` instead.
+_CProxy: WeakValueDictionary[str, Any] = WeakValueDictionary()
+
+# id(obj) → name. Entries for auto-generated proxies are removed
+# automatically when the object is garbage-collected (via the
+# finalizer installed in ``get_proxy``). Named-proxy entries
+# persist because ``_SProxy`` keeps the object alive.
+_RProxy: dict[int, str] = {}
+
+
+def _try_weakref(obj: Any) -> bool:
+    """Return True if *obj* supports weak references."""
+    try:
+        finalize(obj, lambda: None)  # type: ignore[arg-type]
+    except TypeError:
+        return False
+    return True
+
+
+def _store_proxy(name: str, obj: Any) -> None:
+    """
+    Store a proxy entry.
+
+    Objects that support weak references go into ``_CProxy`` (weak).
+    Objects that don't (e.g. ``Ellipsis``, builtins) go into ``_SProxy``
+    (strong) as a fallback.
+    """
+    if _try_weakref(obj):
+        _CProxy[name] = obj
+    else:
+        _SProxy[name] = obj
+
+
+def _lookup_proxy(name: str) -> Any:
+    """Look up a proxy by name, checking both weak and strong stores."""
+    try:
+        return _CProxy[name]
+    except KeyError:
+        return _SProxy[name]
+
+
+def _pop_proxy(name: str) -> Any:
+    """Remove and return a proxy from whichever store holds it."""
+    try:
+        return _CProxy.pop(name)
+    except KeyError:
+        return _SProxy.pop(name)
+
+
+def _register_named(name: str, obj: Any) -> None:
+    """Register a named proxy with a strong reference."""
+    _SProxy[name] = obj
+    if _try_weakref(obj):
+        _CProxy[name] = obj
+    _RProxy[id(obj)] = name
+
+
+def _track_finalizer(obj: Any, oid: int) -> None:
+    """
+    Install a finalizer that removes the ``_RProxy`` entry for *obj*
+    when it is garbage-collected.
+
+    Objects that do not support weak references are skipped — the entry
+    in ``_RProxy`` will persist but is harmless.
+    """
+    try:
+        finalize(obj, _RProxy.pop, oid, None)
+    except TypeError:
+        pass  # Object doesn't support weakrefs; nothing to clean up.
 
 
 @overload
@@ -45,10 +128,9 @@ def name2obj(name: str, obj: Any = NotGiven) -> Any | None:
 
     If @obj is given, associate.
     """
-    if obj is NotGiven and _CProxy:
-        return _CProxy[name]
-    _CProxy[name] = obj
-    _RProxy[id(obj)] = name
+    if obj is NotGiven:
+        return _lookup_proxy(name)
+    _register_named(name, obj)
     return None
 
 
@@ -63,7 +145,9 @@ def get_proxy(obj: object) -> str:
     """
     Given a proxied object, return the name referring to it.
 
-    If unknown, create a new temporary name.
+    If unknown, create a new temporary name. Auto-generated proxies are
+    held weakly: when the object is garbage-collected the proxy entry
+    is removed automatically.
     """
     try:
         return _RProxy[id(obj)]
@@ -71,8 +155,9 @@ def get_proxy(obj: object) -> str:
         global _pkey
         k = "p_" + str(_pkey)
         _pkey += 1
-        _CProxy[k] = obj
+        _store_proxy(k, obj)
         _RProxy[id(obj)] = k
+        _track_finalizer(obj, id(obj))
         return k
 
 
@@ -96,6 +181,9 @@ def as_proxy(
     """
     Export an object as a named proxy.
 
+    Named proxies are held with strong references and persist until
+    ``drop_proxy`` is called.
+
     Usage::
 
         @as_proxy("foo")
@@ -109,10 +197,9 @@ def as_proxy(
         "Export @obj as a proxy."
         if not replace and name in _CProxy and _CProxy[name] is not obj:
             raise ValueError("Proxy: " + repr(name) + " already exists")
-        _CProxy[name] = obj
-        _RProxy[id(obj)] = name
-        #       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):
-        #           obj.__getstate__ = _getstate
+        if not replace and name in _SProxy and _SProxy[name] is not obj:
+            raise ValueError("Proxy: " + repr(name) + " already exists")
+        _register_named(name, obj)
         return obj
 
     if obj is NotImplemented:
@@ -124,6 +211,8 @@ def as_proxy(
 
 def drop_proxy(p: str | object) -> None:
     """
+    Drop a named proxy.
+
     After sending a proxy we keep it in memory in case the remote returns
     it, or an expression with it.
 
@@ -133,8 +222,9 @@ def drop_proxy(p: str | object) -> None:
         p = _RProxy[id(p)]
     if p == "" or p[0] == "_":
         raise ValueError("Can't delete a system proxy")
-    r = _CProxy.pop(p)
-    del _RProxy[id(r)]
+    r = _pop_proxy(p)
+    _SProxy.pop(p, None)
+    _RProxy.pop(id(r), None)
 
 
 class NoProxyError(ValueError):

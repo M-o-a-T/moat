@@ -5,10 +5,8 @@ This module contains code that helps with MoaT-KV testing.
 from __future__ import annotations
 
 import anyio
-from anyio.pytest_plugin import FreePortFactory
 from contextlib import asynccontextmanager
 from functools import partial
-from socket import SOCK_STREAM
 
 from moat.kv.client import client_scope, open_client
 from moat.kv.server import Server as _Server
@@ -33,50 +31,51 @@ class Server(_Server):  # noqa: D101
 
 
 @asynccontextmanager
-async def server(mqtt_port: int | None = None, moat_kv_port: int | None = None):
+async def server():
     """
     An async context manager which creates a stand-alone MoaT-KV server.
 
     The server has a `test_client` method: an async context manager that
     returns a client that's connected to this server.
 
-    Ports are allocated based on the current process's PID.
+    Both the MQTT broker and the MoaT-KV server bind to port 0; the
+    OS-assigned ports are read back after startup.
     """
-    if mqtt_port is None:
-        mqtt_port = FreePortFactory(SOCK_STREAM)()
-    if moat_kv_port is None:
-        moat_kv_port = FreePortFactory(SOCK_STREAM)()
-
     broker_cfg = {
-        "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{mqtt_port}"}},
+        "listeners": {"default": {"type": "tcp", "bind": "127.0.0.1:0"}},
         "timeout-disconnect-delay": 2,
         "auth": {"allow-anonymous": True, "password-file": None},
     }
     server_cfg = {
         "server": {
-            "bind_default": {"host": "127.0.0.1", "port": moat_kv_port},
+            "bind_default": {"host": "127.0.0.1", "port": 0},
             "backend": "mqtt",
-            "mqtt": {"uri": f"mqtt://127.0.0.1:{mqtt_port}/"},
+            "mqtt": {"uri": None},  # filled in after the broker starts
         },
     }
 
-    s = Server(name="gpio_test", cfg=server_cfg, init="GPIO")
     async with create_broker(config=broker_cfg) as broker:
+        # Read back the broker's OS-assigned port and fill in the URI.
+        mqtt_port = broker._servers["default"].port  # noqa: SLF001
+        server_cfg["server"]["mqtt"]["uri"] = f"mqtt://127.0.0.1:{mqtt_port}/"
+
+        s = Server(name="gpio_test", cfg=server_cfg, init="GPIO")
         evt = anyio.Event()
         broker._tg.start_soon(partial(s.serve, ready_evt=evt))  # noqa: SLF001
         await evt.wait()
 
-        s.moat_kv_port = moat_kv_port  # pylint: disable=attribute-defined-outside-init
+        # Read back the kv server's OS-assigned port.
+        s.moat_kv_port = s.ports[0][1]  # pylint: disable=attribute-defined-outside-init
         yield s
 
 
 @asynccontextmanager
-async def client(mqtt_port: int | None = None, moat_kv_port: int | None = None):
+async def client():
     """
     An async context manager which creates a stand-alone MoaT-KV client.
     """
     async with (
-        server(mqtt_port=mqtt_port, moat_kv_port=moat_kv_port) as s,
+        server() as s,
         s.test_client() as c,
     ):
         yield c

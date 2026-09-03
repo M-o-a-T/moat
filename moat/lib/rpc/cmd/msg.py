@@ -8,17 +8,29 @@ import sys
 
 from moat.util import attrdict, merge
 from moat.lib.codec.errors import SilentRemoteError
-from moat.lib.micro import AC_use, BaseExceptionGroup, L, TaskGroup, idle, log  # noqa:A004
+from moat.lib.micro import (
+    AC_use,
+    BaseExceptionGroup,  # noqa:A004
+    L,
+    Queue,
+    TaskGroup,
+    WouldBlock,
+    idle,
+    log,
+)
 from moat.lib.rpc import BaseCmd, HandlerStream
 
-__all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SingleCmdMsg"]
+__all__ = ["BaseCmdMsg", "CmdMsg", "ExtCmdMsg", "MsgStream", "SharedIter", "SingleCmdMsg"]
 
 # Typing
 from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.path import PathElem
-    from moat.lib.rpc import Auth, BaseMsgHandler
+    from anyio.abc import CancelScope
+
+    from moat.lib.micro import _TaskGroupProto
+    from moat.lib.path import Path, PathElem
+    from moat.lib.rpc import Auth, BaseMsgHandler, MsgSender
     from moat.lib.rpc.msg import Msg
     from moat.lib.stream import BaseMsg
     from moat.lib.stream.base import Buffer, MutBuffer
@@ -30,6 +42,117 @@ if TYPE_CHECKING:
         async def crd(self, buf: MutBuffer) -> int: ...
 
         async def cwr(self, buf: Buffer) -> None: ...
+
+
+class SharedIter:
+    """Fan-out wrapper for a remote iterator.
+
+    This class allows multiple local consumers to share a single remote
+    streaming command.  When the first subscriber attaches, the remote
+    stream is opened; subsequent subscribers receive the same data via
+    individual :class:`~moat.lib.micro.Queue` instances.  When the last
+    subscriber detaches, the remote stream is closed.
+
+    Args:
+        sender: the :class:`~moat.lib.rpc.MsgSender` for reaching the remote side.
+        path: the remote command path to subscribe to.
+        tg: a :class:`~moat.lib.micro.TaskGroup` to spawn the reader task in.
+        args: positional arguments for the remote call.
+        kw: keyword arguments for the remote call.
+    """
+
+    _sender: MsgSender
+    _path: Path
+    _tg: _TaskGroupProto
+    _args: tuple[Any, ...]
+    _kw: Mapping[str, Any]
+    _subs: set[Queue]
+    _task: CancelScope | None = None
+
+    def __init__(
+        self,
+        sender: MsgSender,
+        path: Path,
+        tg: _TaskGroupProto,
+        *args: Any,
+        **kw: Any,
+    ):
+        self._sender = sender
+        self._path = path
+        self._tg = tg
+        self._args = args
+        self._kw = kw
+        self._subs = set()
+
+    @property
+    def subs(self) -> set[Queue]:
+        """Currently-active subscriber queues."""
+        return self._subs
+
+    async def __aenter__(self) -> Queue:
+        """Attach a new subscriber.
+
+        Returns a :class:`Queue` from which the subscriber reads data.
+        """
+        q: Queue = Queue(10)
+        self._subs.add(q)
+        if self._task is None:
+            # First subscriber: open the remote stream.
+            self._task = await self._tg.spawn(self._reader)
+        return q
+
+    async def __aexit__(self, *tb: object) -> None:
+        """Detach this subscriber's queue."""
+        # The caller's queue is identified by being the smallest still-present;
+        # since we don't track per-context, we rely on the caller closing it.
+        # In practice, the subscriber's ``__aexit__`` closes their queue.
+        pass
+
+    def detach(self, q: Queue) -> None:
+        """Remove a subscriber queue and close it."""
+        self._subs.discard(q)
+        q.close_sender()
+        if not self._subs and self._task is not None:
+            # Last subscriber gone: stop the reader task.
+            task = self._task
+            self._task = None
+            try:
+                task.cancel()  # type: ignore[union-attr]
+            except RuntimeError:
+                pass
+
+    async def _reader(self) -> None:
+        """Background task: read from the remote stream and fan out."""
+        sender = self._sender
+        try:
+            cmd = sender.cmd(self._path, *self._args, **self._kw)
+            async with cmd.stream_in() as st:
+                async for data in st:
+                    dead: list[Queue] = []
+                    for q in self._subs:
+                        try:
+                            q.put_nowait(tuple(data.args))
+                        except WouldBlock:
+                            dead.append(q)
+                    for q in dead:
+                        self._subs.discard(q)
+                        q.close_sender()
+        except EOFError:
+            pass
+        except Exception as exc:
+            if L:
+                log("SharedIter %r: %r", self._path, exc)
+            for q in list(self._subs):
+                try:
+                    q.put_nowait_error(exc)
+                except WouldBlock:
+                    pass
+                q.close_sender()
+        finally:
+            self._task = None
+            for q in list(self._subs):
+                q.close_sender()
+            self._subs.clear()
 
 
 class MsgStream(HandlerStream):
@@ -85,6 +208,7 @@ class BaseCmdMsg(BaseCmd):
     __stream = None
     __rprefix: tuple[PathElem, ...] = ()
     stream_owner_obj_: object
+    _shared: dict[tuple[PathElem, ...], SharedIter] | None = None
 
     doc = dict(_d="Foo")
     auth: attrdict | None = None
@@ -181,8 +305,15 @@ class BaseCmdMsg(BaseCmd):
         return getattr(self, "stream_owner_obj_", self)
 
     async def teardown(self):
-        "also cancel auth"
+        "also cancel auth and shared iterators"
         self.auth_stop()
+        # Cancel any active shared iterators.
+        shared = self._shared
+        if shared is not None:
+            self._shared = None
+            for si in list(shared.values()):
+                for q in list(si.subs):
+                    si.detach(q)
         await super().teardown()
 
     async def stream(self) -> BaseMsg:
@@ -196,7 +327,7 @@ class BaseCmdMsg(BaseCmd):
         raise NotImplementedError("Create the stream: ", self.__class__.__name__)
 
     async def setup(self):
-        "Sets ``__rprefix``"
+        "Sets ``__rprefix`` and creates the shared-iterator task group."
         await super().setup()
 
         rprefix = self.cfg.get("prefix", {}).get("send", ())
@@ -204,6 +335,9 @@ class BaseCmdMsg(BaseCmd):
             rprefix = list(rprefix)
             rprefix.reverse()
             self.__rprefix = rprefix  # ty:ignore[invalid-assignment]
+
+        # Create a task group for shared-iterator reader tasks.
+        self.tg = await AC_use(self, TaskGroup())
 
     async def task(self):
         """
@@ -326,6 +460,71 @@ class BaseCmdMsg(BaseCmd):
             async for m in st:
                 await self.cmd_cwr(m[0])
             tg.cancel()
+
+    doc_mon_ = dict(
+        _d="Subscribe to a shared remote iterator",
+        _0="path:remote command path",
+        _o="data from the remote iterator",
+    )
+
+    async def stream_mon_(self, msg: Msg):
+        """Stream data from a shared remote iterator.
+
+        The first caller for a given path opens the remote stream;
+        subsequent callers receive the same data.  When the last
+        subscriber disconnects, the remote stream is closed.
+
+        Args:
+            msg[0]: the remote command path to subscribe to.
+        """
+        from moat.lib.path import Path  # noqa: PLC0415
+
+        path = msg.get(0)
+        if path is None:
+            raise KeyError("path required")
+        if not isinstance(path, Path):
+            path = Path.build((path,))
+
+        # Remaining args/kwargs are forwarded to the remote command.
+        rem_args = tuple(msg.args[1:])
+        rem_kw = dict(msg.kw) if msg.kw else {}
+
+        root = self.root
+        if root is None:
+            raise RuntimeError("Not attached")
+        sender = root.sender
+
+        # Apply the send prefix, if any.
+        sprefix = self.cfg.get("prefix", {}).get("send", ())
+        if sprefix:
+            sender = sender.sub_at(sprefix)
+
+        # Lazily create a task group for shared-iterator reader tasks.
+        tg = self.tg
+        if tg is None:
+            raise RuntimeError("No task group")
+
+        if self._shared is None:
+            self._shared = {}
+        key = tuple(path)
+        si = self._shared.get(key, None)
+        if si is None:
+            si = SharedIter(sender, path, cast("_TaskGroupProto", tg), *rem_args, **rem_kw)
+            self._shared[key] = si
+
+        async with msg.stream_out() as st:
+            q = await si.__aenter__()
+            try:
+                while True:
+                    try:
+                        data = await q.get()
+                    except EOFError:
+                        break
+                    await st.send(*data)
+            finally:
+                si.detach(q)
+                if not si.subs and key in self._shared:
+                    del self._shared[key]
 
 
 class CmdMsg(BaseCmdMsg):

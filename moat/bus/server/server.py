@@ -15,12 +15,19 @@ import trio
 from moat.bus.message import BusMessage
 from moat.bus.util import CtxObj, Dispatcher
 
-from .obj import Obj
+from .obj import NoServerError, Obj
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.bus.backend import BaseBusHandler
+    from moat.bus.server.obj import BaseObj
+
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+    from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +36,7 @@ packer = msgpack.Packer(
     use_bin_type=True,  # default=_encode
 ).pack
 unpacker = partial(msgpack.unpackb, raw=False)
+
 
 # Errors
 
@@ -49,10 +57,10 @@ class ServerEvent:  # noqa:D101
 
 
 class _ClientEvent(ServerEvent):
-    def __init__(self, obj):
-        self.obj = obj
+    def __init__(self, obj: BaseObj) -> None:
+        self.obj: BaseObj = obj
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{} {}>".format(self.__class__.__name__.replace("Event", ""), self.obj)
 
 
@@ -82,19 +90,28 @@ class DropClientEvent(_ClientEvent):
 
 
 class ClientStore:  # noqa:D101
-    def __init__(self, server):
+    _server: ref[Server]
+    _id2obj: dict[int, BaseObj]
+    _ser2obj: dict[bytes, BaseObj]
+    _next_id: int
+    _reporter: set[Callable[[ServerEvent], Awaitable[None]]]
+
+    def __init__(self, server: Server) -> None:
         self._server = ref(server)
-        self._id2obj = dict()
-        self._ser2obj = dict()
+        self._id2obj = {}
+        self._ser2obj = {}
         self._next_id = 1  # last valid ID
         self._reporter = set()
         super().__init__()
 
     @property
-    def server(self):  # noqa:D102
-        return self._server()
+    def server(self) -> Server:  # noqa:D102
+        s = self._server()
+        if s is None:
+            raise NoServerError
+        return s
 
-    def obj_serial(self, serial, create=None):
+    def obj_serial(self, serial: bytes, create: bool | None = None) -> BaseObj:
         """
         Get object by serial#.
         """
@@ -109,14 +126,14 @@ class ClientStore:  # noqa:D101
                 raise KeyError
         return obj
 
-    def obj_client(self, client: int):
+    def obj_client(self, client: int) -> BaseObj:
         """
         Get object by current client ID
         """
         return self._id2obj[client]
 
     @property
-    def free_client_id(self):
+    def free_client_id(self) -> int:
         """
         Property: Returns a free client ID.
         """
@@ -133,7 +150,7 @@ class ClientStore:  # noqa:D101
             if nid == self._next_id:
                 raise NoFreeID(self)
 
-    async def register(self, obj):
+    async def register(self, obj: BaseObj) -> None:
         """
         Register a bus object.
         """
@@ -145,7 +162,9 @@ class ClientStore:  # noqa:D101
             if new_id is None:
                 obj.client_id = self.free_client_id
 
+            assert obj.serial is not None
             self._ser2obj[obj.serial] = obj
+            assert obj.client_id is not None
             self._id2obj[obj.client_id] = obj
             if new_id is None:
                 await obj.attach(self.server)
@@ -158,23 +177,25 @@ class ClientStore:  # noqa:D101
                 await self.deregister(obj)
             raise
 
-    async def deregister(self, obj):
+    async def deregister(self, obj: BaseObj) -> None:
         """
         De-register a bus object.
         """
-        if obj.serial in self._ser2obj:
+        if obj.serial is not None and obj.serial in self._ser2obj:
             await self.report(DropClientEvent(obj))
         await obj.detach(self.server)
         try:
             # Order is important.
+            assert obj.serial is not None
             del self._ser2obj[obj.serial]
+            assert obj.client_id is not None
             del self._id2obj[obj.client_id]
             del obj.client_id
         except (AttributeError, KeyError):
             pass
 
     @contextmanager
-    def watch(self):  # noqa:D102
+    def watch(self) -> Iterator[Any]:  # noqa:D102
         q_w, q_r = trio.open_memory_channel(10)
         self._reporter.add(q_w.send)
         try:
@@ -182,7 +203,7 @@ class ClientStore:  # noqa:D101
         finally:
             self._reporter.remove(q_w.send)
 
-    async def report(self, evt):  # noqa:D102
+    async def report(self, evt: ServerEvent) -> None:  # noqa:D102
         for q in self._reporter:
             await q(evt)
 
@@ -199,12 +220,15 @@ class Server(CtxObj, Dispatcher):
                 await server.send_msg(some_message)
     """
 
-    _check_task = None
+    _check_task: Any = None
+    _back: BaseBusHandler
+    __id: int
+    __n: Any
 
-    def __init__(self, backend: BaseBusHandler, id=1):
+    def __init__(self, backend: BaseBusHandler, id: int = 1) -> None:
         if id < 1 or id > 3:
             raise RuntimeError("My ID must be within 1…3")
-        self.logger = logging.getLogger(f"{__name__}.{backend.id}")
+        self.logger = logging.getLogger(f"{__name__}.{backend.id}")  # ty:ignore[union-attr]
         self._back = backend
         self.__id = id - 4  # my server ID
         self.objs = ClientStore(self)
@@ -212,10 +236,10 @@ class Server(CtxObj, Dispatcher):
         super().__init__()
 
     @property
-    def my_id(self):  # noqa:D102
+    def my_id(self) -> int:  # noqa:D102
         return self.__id
 
-    async def sync_in(self, client):
+    async def sync_in(self, client: int) -> None:
         """
         Check if a sync message has arrived on the bus; if so, wait until
         the change described in it has arrived on the client
@@ -223,7 +247,7 @@ class Server(CtxObj, Dispatcher):
         client  # noqa:B018
         pass  # TODO
 
-    async def sync_out(self, client, chain):
+    async def sync_out(self, client: int, chain: Any) -> None:
         """
         Send a "this chain must have arrived at your node to proceed"
         message to the bus
@@ -235,7 +259,7 @@ class Server(CtxObj, Dispatcher):
         await self.send(src=self.id, dst=-4, code=0, data=packer(msg))
 
     @asynccontextmanager
-    async def _ctx(self):
+    async def _ctx(self) -> AsyncIterator[Server]:
         async with trio.open_nursery() as n:
             await n.start(self._reader)
             try:
@@ -245,16 +269,24 @@ class Server(CtxObj, Dispatcher):
                 del self.__n
                 n.cancel_scope.cancel()
 
-    async def _reader(self, *, task_status=trio.TASK_STATUS_IGNORED):
+    async def _reader(self, *, task_status: TaskStatus[None]) -> None:
         task_status.started()
         async for msg in self._back:
             await self.dispatch(msg)
 
-    def get_code(self, msg):
+    def get_code(self, msg: BusMessage) -> Any:
         """Code zero"""
         return msg.code
 
-    async def send(self, src, dst, code, data=b"", prio=0):  # noqa:D102
+    async def send(
+        self,
+        src: int,
+        dst: int,
+        code: int,
+        data: bytes = b"",
+        prio: int = 0,
+    ) -> None:
+        """Send a message on the bus."""
         msg = BusMessage()
         msg.start_send()
         msg.src = src
@@ -264,10 +296,19 @@ class Server(CtxObj, Dispatcher):
         msg.add_data(data)
         await self.send_msg(msg)
 
-    async def send_msg(self, msg):  # noqa:D102
+    async def send_msg(self, msg: BusMessage) -> None:  # noqa:D102
         await self._back.send(msg)
 
-    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):  # noqa:D102
+    async def reply(
+        self,
+        msg: BusMessage,
+        src: int | None = None,
+        dest: int | None = None,
+        code: int | None = None,
+        data: bytes = b"",
+        prio: int = 0,
+    ) -> None:
+        """Reply to a received message."""
         if src is None:
             src = msg.dst
         if dest is None:

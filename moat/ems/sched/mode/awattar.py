@@ -4,7 +4,7 @@ Germany: Get next-day prices from awattar.de API
 
 from __future__ import annotations
 
-import asks
+import httpx
 
 from . import BaseLoader
 
@@ -26,7 +26,7 @@ class Loader(BaseLoader):
         factor = cfg.data.awattar.factor
         offset = cfg.data.awattar.offset
 
-        async with asks.sessions.Session() as s:
+        async with httpx.AsyncClient() as s:
             r = await s.get(cfg.data.awattar.url, params=dict(start=start * 1000, end=end * 1000))
             dd = r.json()["data"]
             for d in dd[24:]:

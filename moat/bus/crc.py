@@ -9,8 +9,14 @@ We do not reverse the actual input.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
-def _bitrev(x, n):
+if TYPE_CHECKING:
+    from typing import Any
+
+
+def _bitrev(x: int, n: int) -> int:
+    """Reverse the low @n bits of @x."""
     y = 0
     for _i in range(n):
         y = (y << 1) | (x & 1)
@@ -18,7 +24,8 @@ def _bitrev(x, n):
     return y
 
 
-def _bytecrc_r(crc, poly, depth):
+def _bytecrc_r(crc: int, poly: int, depth: int) -> int:
+    """Calculate CRC over one byte, reversed algorithm."""
     for _i in range(depth):
         if crc & 1:
             crc = (crc >> 1) ^ poly
@@ -28,7 +35,12 @@ def _bytecrc_r(crc, poly, depth):
 
 
 class _CRCmeta(type):
-    def __new__(typ, name, bases, dct):
+    def __new__(
+        typ,
+        name: str,
+        bases: tuple[type, ...],
+        dct: dict[str, Any],
+    ):
         poly = dct.get("_poly", None)
         if poly is None:
             return super().__new__(typ, name, bases, dct)
@@ -42,16 +54,17 @@ class _CRCmeta(type):
 
 
 class _CRC(metaclass=_CRCmeta):
-    _table = None  # filled by metaclasse
-    _width = None  # degree of polynomial
-    _poly = None  # non-reversed polynomial, no 2^_width term!
+    _table: list[int]  # filled by metaclass / __init__
+    _width: int  # degree of polynomial
+    _poly: int  # non-reversed polynomial, no 2^_width term!
+    _depth: int  # bits processed per lookup
 
     """
     Simple CRC update function. @n is the bit length of the input.
     """
 
-    def __init__(self, bits=None):
-        self.crc = 0
+    def __init__(self, bits: int | None = None) -> None:
+        self.crc: int = 0
         if bits is None:
             bits = self._depth
         self._bits = bits
@@ -60,20 +73,21 @@ class _CRC(metaclass=_CRCmeta):
         for b in range(1 << bits):
             table.append(_bytecrc_r(b, poly, bits))
 
-    def reset(self):
+    def reset(self) -> None:
+        """Reset the CRC accumulator."""
         self.crc = 0
 
-    def update(self, data):
+    def update(self, data: int) -> None:
         """
-        Mix a `self._bits`-bit data word into the CRC.
+        Mix a ``self._bits``-bit data word into the CRC.
 
-        Equal to, but faster than, `crc.update_n(data,crc._bits)`.
+        Equal to, but faster than, ``crc.update_n(data, crc._bits)``.
         """
         self.crc = self._table[(data ^ self.crc) & ((1 << self._bits) - 1)] ^ (
             self.crc >> self._bits
         )
 
-    def update_n(self, data, bits):
+    def update_n(self, data: int, bits: int) -> None:
         """
         Mix an n-bit data word into the CRC.
         """
@@ -91,7 +105,8 @@ class _CRC(metaclass=_CRCmeta):
             bits -= 1
         self.crc = t[((data ^ crc) & ((1 << bits) - 1))] ^ (crc >> bits)
 
-    def finish(self):
+    def finish(self) -> int:
+        """Return the final CRC value."""
         return self.crc
 
 
@@ -131,7 +146,7 @@ if __name__ == "__main__":
 
     import click
 
-    def h_int(x):  # noqa:D103
+    def h_int(x: str) -> int:  # noqa:D103
         return int(x, 16)
 
     @click.command(

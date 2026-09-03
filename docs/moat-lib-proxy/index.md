@@ -30,12 +30,10 @@ Register classes and objects for proxy serialization:
 ```python
 from moat.lib.proxy import name2obj, obj2name
 
-
 # Register a class
 class RemoteService:
     def process(self, data):
         return data.upper()
-
 
 name2obj("myapp.RemoteService", RemoteService)
 
@@ -68,7 +66,6 @@ Use `DProxy` for objects that should carry their state:
 ```python
 from moat.lib.proxy import DProxy
 
-
 class ConfigData(DProxy):
     """Configuration that travels with its data"""
 
@@ -79,7 +76,6 @@ class ConfigData(DProxy):
     def __reduce__(self):
         # Define serialization
         return (self.__class__, (self.host, self.port))
-
 
 # Register the class
 name2obj("myapp.ConfigData", ConfigData)
@@ -96,7 +92,6 @@ Wrap and unwrap objects for transmission:
 ```python
 from moat.lib.proxy import wrap_obj, unwrap_obj
 
-
 # Prepare an object for serialization
 class MyData:
     def __init__(self, value):
@@ -104,7 +99,6 @@ class MyData:
 
     def __reduce__(self):
         return (self.__class__, (self.value,))
-
 
 name2obj("myapp.MyData", MyData)
 data = MyData(42)
@@ -125,6 +119,7 @@ The proxy system integrates with MoaT's serialization formats:
 ### CBOR Integration
 
 ```python
+
 # Proxied objects are automatically handled in CBOR
 data = {"service": as_proxy(RemoteService())}
 serialized = cbor.dumps(data)
@@ -159,7 +154,6 @@ class Calculator:
     def add(self, a, b):
         return a + b
 
-
 name2obj("app.Calculator", Calculator)
 
 # Client side gets a proxy and can call methods
@@ -179,7 +173,6 @@ class DatabaseConfig(DProxy):
 
     def __reduce__(self):
         return (self.__class__, (self.host, self.port, self.name))
-
 
 # Configuration can be serialized and distributed
 config = DatabaseConfig("db.example.com", 5432, "myapp")

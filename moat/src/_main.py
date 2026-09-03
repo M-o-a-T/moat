@@ -13,16 +13,17 @@ import tomlkit
 import tomlkit.items
 from packaging.requirements import Requirement
 
-from moat.util import make_proc, yload
+from moat.util import attrdict, make_proc, yload
 from moat.lib.path import P
 from moat.lib.run import load_subgroup
 from moat.util.exec import run as run_
 
 from ._repo import Repo
 from ._toml import get_table
-from ._util import dash, undash
+from ._util import Replace, dash, decomma, encomma, undash
 
 from collections import defaultdict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
 @load_subgroup(sub_pre="moat.src", sub_post="cli")
-async def cli():
+async def cli() -> None:
     """
     This collection of commands is useful for managing and building MoaT itself.
     """
@@ -46,9 +47,15 @@ async def cli():
 
 @cli.command("rerepo")
 @click.option("-a", "--all", is_flag=True, help="Move all your repositories.")
+@click.option(
+    "-w",
+    "--workspace",
+    is_flag=True,
+    help="Create a non-bare working copy alongside the bare clone.",
+)
 @click.argument("names", type=str, nargs=-1)
 @click.pass_obj
-async def move_repo(obj, **kw):
+async def move_repo(obj: attrdict, **kw: Any) -> None:
     """Move from forge A to forge B.
 
     This command moves your repositories from A (github …) to a local copy,
@@ -63,10 +70,17 @@ async def move_repo(obj, **kw):
     See `moat util cfg -l moat.src src` for defaults.
 
     If the local copy is present, it will be refreshed via `git fetch`.
+
+    The '--workspace' flag creates a non-bare working copy of each
+    migrated repository in ``<cache>/<name>-ws``, allowing local
+    development immediately after migration.
     """
     from .move import mv_repos  # noqa: PLC0415
 
-    await mv_repos(obj.cfg.src.move, **kw)
+    cfg = obj.cfg.src.move
+    if kw.pop("workspace", False):
+        cfg.work.workspace = True
+    await mv_repos(cfg, **kw)
 
 
 def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
@@ -82,7 +96,7 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     return work
 
 
-async def run_tests(pkg: str | None, *opts) -> bool:
+async def run_tests(pkg: str | None, *opts: str) -> bool:
     """Run subtests for subpackage @pkg."""
 
     if pkg is None:
@@ -113,23 +127,16 @@ async def run_tests(pkg: str | None, *opts) -> bool:
         return True
 
 
-class Replace:
-    """Encapsulates a series of string replacements."""
-
-    def __init__(self, **kw):
-        self.changes = kw
-
-    def __call__(self, s):
-        if isinstance(s, str):
-            for k, v in self.changes.items():
-                s = s.replace(k, v)
-        return s
-
-
 _l_t = (list, tuple)
 
 
-def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> bool:
+def default_dict(
+    a: Any,
+    b: Any,
+    c: Any,
+    cls: type = dict,
+    repl: Any = lambda x: x,
+) -> bool:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
@@ -197,29 +204,7 @@ def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> bool:
     return mod
 
 
-def _mangle(proj, path, mangler):
-    try:
-        for k in path[:-1]:
-            proj = proj[k]
-        k = path[-1]
-        v = proj[k]
-    except KeyError:
-        return
-    v = mangler(v)
-    proj[k] = v
-
-
-def decomma(proj, path):
-    """comma-delimited string > list"""
-    _mangle(proj, path, lambda x: x.split(","))
-
-
-def encomma(proj, path):
-    """list > comma-delimited string"""
-    _mangle(proj, path, lambda x: ",".join(x))  # noqa:PLW0108
-
-
-def apply_hooks(repo, force=False):
+def apply_hooks(repo: Repo, force: bool = False) -> None:
     h = Path(repo.git_dir) / "hooks"
     drop = set()
     seen = set()
@@ -244,7 +229,7 @@ def apply_hooks(repo, force=False):
 @cli.command
 @click.argument("part", type=str)
 @click.pass_obj
-def setup(obj, part):
+def setup(obj: attrdict, part: str) -> None:
     """
     Create a new MoaT subcommand.
     """
@@ -258,7 +243,7 @@ def setup(obj, part):
     apply_templates(repo, part)
 
 
-def apply_templates(repo: Repo, part):
+def apply_templates(repo: Repo, part: str) -> None:
     """
     Apply template files to this component.
     """
@@ -371,14 +356,14 @@ def apply_templates(repo: Repo, part):
 
 
 @cli.command("path")
-def path_():
+def path_() -> None:
     "Path to source templates"
     print(Path(__file__).parent / "_templates")
 
 
 @cli.command()
 @click.pass_obj
-def tags(obj):
+def tags(obj: attrdict) -> None:
     """
     List all tags
     """
@@ -409,7 +394,17 @@ def tags(obj):
 )
 @click.option("-b", "--build", is_flag=True, help="set/increment the build number")
 @click.pass_obj
-def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
+def tag(
+    obj: attrdict,
+    run: bool,
+    minor: bool,
+    major: bool,
+    subtree: str | None,
+    force: str | None,
+    FORCE: bool,
+    show: bool,
+    build: bool,
+) -> None:
     """
     Tag the repository (or a subtree).
 

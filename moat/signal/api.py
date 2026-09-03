@@ -12,13 +12,18 @@ from re import sub as re_sub
 from uuid import uuid4
 from warnings import warn
 
-from httpx import AsyncClient
+from httpx import USE_CLIENT_DEFAULT, AsyncClient
 from jmespath import search as j_search
 from magic import from_buffer, from_file
 from packaging.version import parse as version_parse
 
+from typing import TYPE_CHECKING, Any
 
-def bytearray_to_rfc_2397_data_url(byte_array: bytearray):
+if TYPE_CHECKING:
+    from httpx import Response
+
+
+def bytearray_to_rfc_2397_data_url(byte_array: bytearray) -> str:
     """
     Convert bytearray to RFC 2397 data url.
 
@@ -34,18 +39,21 @@ def bytearray_to_rfc_2397_data_url(byte_array: bytearray):
     return f"data:{mime};base64,{b64encode(bytes(byte_array)).decode()}"
 
 
-def get_attachments(attachments_as_files, attachments_as_bytes):
+def get_attachments(
+    attachments_as_files: list[str] | None,
+    attachments_as_bytes: list[bytearray] | None,
+) -> list[str]:
     """
     Get attachments from either files and/or bytes.
 
     Args:
-        attachments_as_files: (list, optional): List of `str` w/ files to send as attachment(s).
+        attachments_as_files (list, optional): List of `str` w/ files to send as attachment(s).
         attachments_as_bytes (list, optional): List of `bytearray` to send as attachment(s).
 
     Returns:
         attachments (list): List of attachments to send.
     """
-    attachments = []
+    attachments: list[str] = []
     if attachments_as_files is not None:
         for filename in attachments_as_files:
             mime = from_file(filename, mime=True)
@@ -69,7 +77,13 @@ class SignalClient:
     SignalClient
     """
 
-    def __init__(self, endpoint: str, account: str, auth: tuple = (), **kw):
+    def __init__(
+        self,
+        endpoint: str,
+        account: str,
+        auth: tuple[str, str] | None = None,
+        **kw: Any,
+    ):
         """
         SignalClient
 
@@ -77,15 +91,20 @@ class SignalClient:
             endpoint (str): signal-cli JSON-RPC endpoint.
             account (str): signal-cli account to use.
             auth (tuple): basic authentication credentials (e.g. `("user", "pass")`)
-        … and any other arguments of `httpx.AsyncClient`.
+            … and any other arguments of `httpx.AsyncClient`.
 
         """
         self._session = AsyncClient(**kw)
         self._endpoint = endpoint
         self._account = account
-        self._auth = auth or None
+        self._auth = auth
 
-    async def _jsonrpc(self, method: str, params: object = None, **kwargs):
+    async def _jsonrpc(
+        self,
+        method: str,
+        params: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> Any:
         """
         Args:
             method (str): JSON-RPC method. Equals signal-cli command.
@@ -99,7 +118,7 @@ class SignalClient:
             :exc:`moat.signal.api.SignalError`
         """
         request_id = kwargs.get("request_id") or str(uuid4())
-        if not params:
+        if params is None:
             params = {}
         params.update({"account": self._account})
         data = {
@@ -109,10 +128,10 @@ class SignalClient:
             "params": params,
         }
         try:
-            res = await self._session.post(
+            res: Response = await self._session.post(
                 url=f"{self._endpoint}",
                 json=data,
-                auth=self._auth,
+                auth=self._auth if self._auth is not None else USE_CLIENT_DEFAULT,
             )
             res.raise_for_status()
             ret = res.json()
@@ -125,7 +144,7 @@ class SignalClient:
             raise SignalError(f"signal-cli JSON RPC request failed: {error}") from err
 
     @property
-    async def version(self):
+    async def version(self) -> str:
         """
         Fetch version.
 
@@ -140,13 +159,13 @@ class SignalClient:
     async def send_message(
         self,
         message: str,
-        recipients: list,
+        recipients: list[str],
         mention: str = "",
-        attachments_as_files: list | None = None,
-        attachments_as_bytes: list | None = None,
+        attachments_as_files: list[str] | None = None,
+        attachments_as_bytes: list[bytearray] | None = None,
         cleanup_attachments: bool = False,
-        **kwargs,
-    ):  # pylint: disable=too-many-arguments,too-many-locals
+        **kwargs: object,
+    ) -> dict[str, object]:  # pylint: disable=too-many-arguments,too-many-locals
         """
         Send message.
 
@@ -174,17 +193,16 @@ class SignalClient:
         response_method_mapping = {
             "recipient": "recipientAddress.number",
         }
-        timestamps = {}
-        contacts = []
-        groups = []
-        attachments = []
+        timestamps: dict[object, object] = {}
+        contacts: list[str] = []
+        groups: list[str] = []
         attachments = get_attachments(
             attachments_as_files,
             attachments_as_bytes,
         )
         try:
             _unknown, contacts, groups = await self.get_recipients(recipients)
-            params = {
+            params: dict[str, object] = {
                 "account": self._account,
                 "message": message,
                 "attachment": attachments,
@@ -220,23 +238,23 @@ class SignalClient:
                         )
             return {"timestamps": timestamps}
         finally:
-            if cleanup_attachments:
+            if cleanup_attachments and attachments_as_files is not None:
                 for filename in attachments_as_files:
                     os_remove(filename)
 
     async def update_group(
         self,
         name: str,
-        members: list,
+        members: list[str],
         add_member_permissions: str = "only-admins",
         edit_group_permissions: str = "only-admins",
         group_link: str = "disabled",
-        admins: list | None = None,
+        admins: list[str] | None = None,
         description: str = "",
         message_expiration_timer: int = 0,
         avatar_as_bytes: bytearray = bytearray(),
-        **kwargs,
-    ):  # pylint: disable=too-many-arguments
+        **kwargs: object,
+    ) -> str:  # pylint: disable=too-many-arguments
         """
         Update (create) a group.
 
@@ -264,7 +282,7 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {
+        params: dict[str, object] = {
             "name": name,
             "member": members,
             "setPermissionAddMember": add_member_permissions,
@@ -275,7 +293,7 @@ class SignalClient:
             "expiration": message_expiration_timer,
         }
         if avatar_as_bytes:  # pragma: no cover
-            if version_parse(self.version) < version_parse("0.11.6"):
+            if version_parse(await self.version) < version_parse("0.11.6"):
                 warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
             else:
                 params.update({"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)})
@@ -286,8 +304,8 @@ class SignalClient:
         self,
         groupid: str,
         delete: bool = False,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> object:
         """
         Quit (leave) group.
 
@@ -304,7 +322,7 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {
+        params: dict[str, object] = {
             "groupId": groupid,
             "delete": delete,
         }
@@ -312,8 +330,8 @@ class SignalClient:
 
     async def list_groups(
         self,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> list[object]:
         """
          List groups.
 
@@ -329,11 +347,12 @@ class SignalClient:
         """
         res = await self._jsonrpc(
             method="listGroups",
+            params=None,
             **kwargs,
         )
         return res or []
 
-    async def get_group(self, groupid: str):
+    async def get_group(self, groupid: str) -> list[dict[str, object]]:
         """
         Get group details.
 
@@ -352,8 +371,8 @@ class SignalClient:
     async def join_group(
         self,
         uri: str,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> object:
         """
         Join group.
 
@@ -365,7 +384,7 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {
+        params: dict[str, object] = {
             "uri": uri,
         }
         return await self._jsonrpc(method="joinGroup", params=params, **kwargs)
@@ -376,8 +395,8 @@ class SignalClient:
         family_name: str = "",
         about: str = "",
         avatar_as_bytes: bytearray = bytearray(),
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> bool:
         """
         Update profile.
 
@@ -394,7 +413,7 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {}
+        params: dict[str, object] = {}
         if given_name:
             params.update({"givenName": family_name})
         if family_name:
@@ -402,7 +421,7 @@ class SignalClient:
         if about:
             params.update({"about": about})
         if avatar_as_bytes:  # pragma: no cover
-            if version_parse(self.version) < version_parse("0.11.6"):
+            if version_parse(await self.version) < version_parse("0.11.6"):
                 warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
             else:
                 params.update({"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)})
@@ -418,8 +437,8 @@ class SignalClient:
         target_timestamp: int,
         remove: bool = False,
         groupid: str = "",
-        **kwargs,
-    ):  # pylint: disable=too-many-arguments
+        **kwargs: object,
+    ) -> object:  # pylint: disable=too-many-arguments
         """
         Send reaction.
 
@@ -436,9 +455,8 @@ class SignalClient:
 
         Returns:
             timestamp (int): Timestamp of reaction.
-
         """
-        params = {
+        params: dict[str, object] = {
             "emoji": emoji,
             "remove": remove,
             "targetAuthor": target_author,
@@ -450,7 +468,7 @@ class SignalClient:
         ret = await self._jsonrpc(method="sendReaction", params=params, **kwargs)
         return ret.get("timestamp")
 
-    async def get_user_status(self, recipients: list, **kwargs):
+    async def get_user_status(self, recipients: list[str], **kwargs: object) -> object:
         """
         Get user network status (is registered?).
 
@@ -466,15 +484,16 @@ class SignalClient:
             :exc:`moat.signal.api.SignalError`
         """
         recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
+        params: dict[str, object] = {
+            "recipient": recipients,
+        }
         return await self._jsonrpc(
             method="getUserStatus",
-            params={
-                "recipient": recipients,
-            },
+            params=params,
             **kwargs,
         )
 
-    async def register(self, captcha: str = "", voice: bool = False, **kwargs):
+    async def register(self, captcha: str = "", voice: bool = False, **kwargs: object) -> object:
         """
         Register account.
 
@@ -492,14 +511,14 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {}
+        params: dict[str, object] = {}
         if captcha:  # pragma: no cover
             params.update({"captcha": captcha})
         if voice:  # pragma: no cover
             params.update({"voice": voice})
         return await self._jsonrpc(method="register", params=params, **kwargs)
 
-    async def verify(self, verification_code: str, pin: str = "", **kwargs):
+    async def verify(self, verification_code: str, pin: str = "", **kwargs: object) -> object:
         """
         Verify pending account registration.
 
@@ -515,14 +534,17 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        params = {
+        params: dict[str, object] = {
             "verificationCode": verification_code,
         }
         if pin:  # pragma: no cover
             params.update({"pin": pin})
         return await self._jsonrpc(method="verify", params=params, **kwargs)
 
-    async def get_recipients(self, recipients: list):
+    async def get_recipients(
+        self,
+        recipients: list[str],
+    ) -> tuple[list[str], list[str], list[str]]:
         """
         Get recipients. Could be either a valid recipient
         registered with the network or a group.
@@ -533,10 +555,10 @@ class SignalClient:
         Returns:
             result (tuple): Tuple of `(unknown, contacts, groups)`
         """
-        unknown = []
-        contacts = []
-        groups = []
-        check_registered = []
+        unknown: list[str] = []
+        contacts: list[str] = []
+        groups: list[str] = []
+        check_registered: list[str] = []
         for recipient in recipients:
             if j_search(f"[?id==`{recipient}`]", await self.list_groups()):  # pragma: no cover
                 groups.append(recipient)
@@ -545,6 +567,7 @@ class SignalClient:
                 unknown.append(recipient)
                 continue
             check_registered.append(recipient)
+        registered: object | None = None
         if check_registered:
             registered = await self.get_user_status(recipients=check_registered)
         for recipient in check_registered:

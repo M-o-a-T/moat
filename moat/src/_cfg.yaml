@@ -47,6 +47,8 @@ move:
     migrate: true  # generate a "migrated" README
     parallel: 1
     main: true  # rename "master" branch
+    moved: false  # mark as moved on the source (skip default-branch switch)
+    workspace: false  # create a non-bare working copy alongside the bare clone
   readme:
     name: "README.md"  # use LOCATIONS.md if mot removing from source
     content: |

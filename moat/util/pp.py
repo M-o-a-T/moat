@@ -34,10 +34,10 @@ def push_kw(args: list[Any], kwargs: dict[str, Any], is_warn: bool = False) -> N
     """
     if (
         kwargs
-        or (args and isinstance(args[-1], dict))
+        or (args and isinstance(args[-1], Mapping))
         or (is_warn and len(args) == 1 and isinstance(args[0], int))
     ):
-        args.append(kwargs if isinstance(kwargs, dict) else {})
+        args.append(kwargs if isinstance(kwargs, Mapping) else {})
 
 
 def pop_kw(ak: list[Any]) -> MutableMapping[str, Any]:

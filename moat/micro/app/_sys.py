@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any
 
 
 class Cmd(BaseCmd):
@@ -25,13 +26,13 @@ class Cmd(BaseCmd):
 
     doc = dict(_c=dict(_d="System level commands"))
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
-        self.cache = {}
+        self.cache: dict[str, Any] = {}
 
     doc_test = dict(_d="enc test str", _r="str:fancy string")
 
-    async def cmd_test(self):
+    async def cmd_test(self) -> bytes:
         """
         Returns a test string: r CR n LF - NUL c ^C e ESC !
 
@@ -41,7 +42,7 @@ class Cmd(BaseCmd):
 
     doc_unproxy = dict(_d="drop proxy", _0="Proxy")
 
-    async def cmd_unproxy(self, p):
+    async def cmd_unproxy(self, p: str) -> None:
         """
         Tell the client to forget about a proxy.
 
@@ -59,12 +60,19 @@ class Cmd(BaseCmd):
         k="dict:fn kwargs",
     )
 
-    async def cmd_eval(self, x, r: str | bool = False, a=None, k=None):
+    async def cmd_eval(
+        self,
+        x: Any,
+        r: str | bool = False,
+        a: tuple | None = None,
+        k: dict | None = None,
+    ) -> Any:
         """
         Debugging/Introspection/Evaluation.
 
         @x can be
-        * a string: evaluated, context is the eval cahce
+
+        * a string: evaluated, context is the eval cache
         * a list: descend into an object.
           the first item must be a proxy (object reference)
           or a string (eval cache lookup)
@@ -139,7 +147,7 @@ class Cmd(BaseCmd):
 
     doc_ping = dict(_d="Reply test", m="any:Return data", _r=dict(m="any:Return data"))
 
-    async def cmd_ping(self, m=None):
+    async def cmd_ping(self, m: Any = None) -> dict[str, Any]:
         """
         Echo @m.
 
@@ -153,7 +161,7 @@ class Cmd(BaseCmd):
         _r=dict(t="int:seconds", ms="int:milliseconds", us="int:microseconds"),
     )
 
-    async def cmd_time(self):
+    async def cmd_time(self) -> dict[str, Any]:
         """
         Return the current time.
         """

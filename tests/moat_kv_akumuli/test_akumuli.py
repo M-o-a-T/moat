@@ -30,12 +30,15 @@ akumuli_model._test_hook = _hook  # noqa: SLF001
 
 
 @pytest.mark.anyio
-async def test_basic(free_tcp_port_factory):  # no autojump  # noqa: D103
+async def test_basic():  # noqa: D103
+    # AkumuliTester manages its own port allocation internally (PID-based),
+    # since akumulid is an external process that needs the port in its config.
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
         st.client(0) as client,
-        AkumuliTester(free_tcp_port_factory(), free_tcp_port_factory()).run() as t,
+        AkumuliTester().run() as t,
     ):
+        # AkumuliTester selects a per-PID TCP port in the 4xxxx range.
         await st.run(f"akumuli test add -h 127.0.0.1 -p {t.TCP_PORT}")
         await client.set(P("test.one.two"), value=41)
         await st.run("akumuli test at test.foo.bar add test.one.two whatever foo=bar")

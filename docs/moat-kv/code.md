@@ -197,28 +197,24 @@ writing boilerplate code like this:
 ```python
 import anyio
 import moat.kv.runner
-
 """
 Assume we want to process changes from these two subtrees
 for 100 seconds
 """
 async with _client.watch(_P("some.special.path")) as w1:
-    async with _client.watch(P("some.other.path")) as w2:
-        q = anyio.create_queue()  # q_s,q_r = anyio.create_memory_object_stream()
-
-        async def _watch(w):
-            async for msg in w:
-                await q.put(msg)  # q_s.send(msg)
-
-        async def _timeout(t):
-            await anyio.sleep(t)
-            await process_timeout()
-
-        await _self.spawn(_watch, w1)
-        await _self.spawn(_watch, w2)
-        await _self.spawn(_timeout, 100)
-        async for msg in q:  # q_r
-            await process_data(msg)
+   async with _client.watch(P("some.other.path")) as w2:
+      q = anyio.create_queue()  # q_s,q_r = anyio.create_memory_object_stream()
+      async def _watch(w):
+         async for msg in w:
+            await q.put(msg)  # q_s.send(msg)
+      async def _timeout(t):
+         await anyio.sleep(t)
+         await process_timeout()
+      await _self.spawn(_watch, w1)
+      await _self.spawn(_watch, w2)
+      await _self.spawn(_timeout, 100)
+      async for msg in q:  # q_r
+         await process_data(msg)
 ```
 
 you can simplify this to:
@@ -228,12 +224,12 @@ await _self.watch(_P("some.special.path"))
 await _self.watch(_P("some.other.path"))
 await _self.timer(100)
 async for msg in _info:
-    if msg is None:
-        return  # system was stalled
-    elif isinstance(msg, _cls.TimerMsg):
-        await process_timeout()
-    elif isinstance(msg, _cls.ChangeMsg):
-        await process_data(msg.msg)
+   if msg is None:
+      return  # system was stalled
+   elif isinstance(msg, _cls.TimerMsg):
+      await process_timeout()
+   elif isinstance(msg, _cls.ChangeMsg):
+      await process_data(msg.msg)
 ```
 
 Distinguishing messages from different sources can be further simplified

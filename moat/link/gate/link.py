@@ -59,7 +59,7 @@ class Gate(DelayedGate):
     _remote: Any  # LinkSender
     _skip_paths: frozenset
 
-    def __init__(self, cfg, cf, path, link):
+    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link) -> None:
         super().__init__(cfg, cf, path, link)
         # Build the set of paths to skip
         extra_skip = cf.get("skip", [])
@@ -73,7 +73,7 @@ class Gate(DelayedGate):
             return False
         return path[0] in self._skip_paths
 
-    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Run the gateway with a connection to the remote server.
         """
@@ -98,7 +98,7 @@ class Gate(DelayedGate):
             self._remote = remote
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Monitor data from the remote server.
         """
@@ -119,7 +119,7 @@ class Gate(DelayedGate):
                     continue
                 await self.set_src(p, d, m)
 
-    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None):
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None) -> None:
         """
         Queue an update to the remote server, with filtering.
         """
@@ -128,7 +128,7 @@ class Gate(DelayedGate):
             return
         await super()._set_dst(path, node, data, meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode) -> None:
         """
         Send data to the remote server.
         """
@@ -156,7 +156,7 @@ class Gate(DelayedGate):
             pass
         return True
 
-    def newer_dst(self, node: GateNode):
+    def newer_dst(self, node: GateNode) -> bool | None:
         """
         Check whether the remote data is newer.
 

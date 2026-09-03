@@ -8,20 +8,38 @@ import time
 from contextlib import asynccontextmanager
 
 import trio
-from distmqtt.utils import Queue
-from moatbus.handler import ERR, BaseHandler
+
+from moat.bus.handler import ERR, BaseHandler
+
+from typing import Any
 
 
 class Client(BaseHandler):  # noqa:D101
+    __socket: str
+    __timeout: float
+    __timeout2: float
+    __dest: int | None
+    __msg: Any
+    __wire_in: int
+    __wire_out: int | None
+    __evt: dict[int, Any]
+    __c: Any
+    __t: float | None
+    __v: bool
+    __sock: Any
+    __q: Any
+    __tg: trio.Nursery
+    __kick: Any
+
     def __init__(
         self,
-        wires,
-        timeout=0.01,
-        timeout2=0.005,
-        socket="/tmp/moatbus",  # noqa:S108
-        verbose=False,
-        dest=None,
-    ):
+        wires: int,
+        timeout: float = 0.01,
+        timeout2: float = 0.005,
+        socket: str = "/tmp/moatbus",  # noqa:S108
+        verbose: bool = False,
+        dest: int | None = None,
+    ) -> None:
         self.__socket = socket
         self.__timeout = timeout
         self.__timeout2 = timeout2
@@ -32,12 +50,12 @@ class Client(BaseHandler):  # noqa:D101
         self.__wire_out = None
         self.__evt = {}
         self.__c = None
-        self.__t = None
+        self.__t: float | None = None
         self.__v = verbose
 
         super().__init__(wires=wires)
 
-    async def main(self, task_status):  # noqa:D102
+    async def main(self, *, task_status: Any = trio.TASK_STATUS_IGNORED) -> None:  # noqa:D102
         task_status.started()
         while True:
             if self.__t is not None:
@@ -84,25 +102,26 @@ class Client(BaseHandler):  # noqa:D101
                     self.__t = None
                     self.timeout()
 
-    async def send(self, msg):  # noqa: D102
+    async def send(self, msg: Any) -> None:  # ty:ignore[invalid-method-override]
+        """Send a message and wait for the result."""
         mi = id(msg)
         if mi in self.__evt:
             raise RuntimeError("Already sending")
         self.__evt[mi] = ev = trio.Event()
         super().send(msg)
         await ev.wait()
-        return self.__evt.pop(mi)
+        self.__evt.pop(mi)
 
-    def get_wire(self):  # noqa: D102
+    def get_wire(self) -> int:  # noqa: D102
         return self.__wire_in
 
-    def set_wire(self, wire):  # noqa: D102
-        self.debug("OUT! %s", wire)
-        self.__wire_out = wire
+    def set_wire(self, bits: int) -> None:  # noqa: D102
+        self.debug("OUT! %s", bits)
+        self.__wire_out = bits
         if self.__c is not None:
             self.__c.cancel()
 
-    def transmitted(self, msg, res):  # noqa: D102
+    def transmitted(self, msg: Any, res: Any) -> None:  # noqa: D102
         msg.res = res
         self.debug("SENT %r %s", msg, res)
         mi = id(msg)
@@ -110,15 +129,16 @@ class Client(BaseHandler):  # noqa:D101
         self.__evt[mi] = res
         ev.set()
 
-    def process(self, msg):  # noqa: D102
+    def process(self, msg: Any) -> bool:  # noqa: D102
         self.debug("RCVD %r", msg)
         if self.__dest is not None and self.__dest == msg.dst:
             self.__msg = msg
             return True
         elif self.__dest is None:
             self.__msg = msg
+        return False
 
-    def report_error(self, typ, **kw):  # noqa: D102
+    def report_error(self, typ: Any, **kw: Any) -> None:  # noqa: D102
         if kw:
             self.debug("ERROR %s %s", typ, kw, v=True)
         else:
@@ -126,14 +146,15 @@ class Client(BaseHandler):  # noqa:D101
         if typ == ERR.COLLISION:
             print("COLL", kw)
 
-    def debug(self, msg, *a, v=False):  # noqa: D102
+    def debug(self, msg: str, *a: Any, v: bool = False) -> None:  # noqa: D102
         if not v and not self.__v:
             return
         if a:
             msg %= a
         print(msg)
 
-    def set_timeout(self, t):  # noqa: D102
+    def set_timeout(self, timeout: float) -> None:  # noqa: D102
+        t = timeout
         if t < 0:
             self.debug("TIME --")
         elif t == 0:
@@ -150,13 +171,13 @@ class Client(BaseHandler):  # noqa:D101
             self.__t = self.__timeout2
 
     @asynccontextmanager
-    async def run(self):  # noqa: D102
+    async def run(self) -> Any:  # noqa: D102
         async with trio.open_nursery() as tg:
             with trio.socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 await sock.connect(self.__socket)
                 self.__tg = tg
                 self.__sock = sock
-                self.__q = Queue(100)
+                self.__q = trio.open_memory_channel(100)[1]
 
                 await tg.start(self.main)
                 try:
@@ -167,8 +188,8 @@ class Client(BaseHandler):  # noqa:D101
                     if e.errno != errno.EBADF:
                         raise
 
-    def __aiter__(self):
+    def __aiter__(self) -> Client:
         return self
 
-    def __anext__(self):
-        return self.__q.get()
+    async def __anext__(self) -> Any:
+        return await self.__q.get()

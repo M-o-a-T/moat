@@ -11,32 +11,16 @@ import time
 from anyio.abc import SocketAttribute
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 from moat.util import CtxObj, ungroup
-
-try:
-    from pymodbus.datastore import ModbusDeviceContext, ModbusServerContext
-except ImportError:
-    from pymodbus.datastore import ModbusServerContext
-    from pymodbus.datastore import ModbusSlaveContext as ModbusDeviceContext
-
-try:
-    # pymodbus 3.11+
-    from pymodbus.pdu.device import ModbusControlBlock, ModbusDeviceIdentification
-except ImportError:
-    # pymodbus 3.9
-    from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
-
-try:
-    # pymodbus 3.11+
-    from pymodbus.exceptions import NoSuchIdException as NoSuchSlaveException
-except ImportError:
-    # pymodbus 3.9
-    from pymodbus.exceptions import NoSuchSlaveException
-from pymodbus.constants import ExcCodes
-from pymodbus.pdu import DecodePDU, ExceptionResponse
-from pymodbus.utilities import hexlify_packets
-
+from moat.lib.modbus import (
+    ExcCodes,
+    ExceptionResponse,
+    FramerRTU,
+    FramerTCP,
+)
+from moat.lib.modbus.pdu import PDU, execute_request
 from moat.modbus.types import BaseValue, DataBlock, TypeCodec
 
 _logger = logging.getLogger(__name__)
@@ -51,21 +35,46 @@ __all__ = [
 ]
 
 
-class UnitContext(ModbusDeviceContext):
-    """
-    This module implements a slave context for servers that stores
-    individual variables.
+# RTU inter-frame timeout (shared with the client side).
+RTU_INTER_FRAME_TIMEOUT = 0.2
+
+
+@dataclass
+class Identity:
+    """Modbus device identification (MEI type 0x2B).
+
+    A simplified replacement for pymodbus'
+    ``ModbusDeviceIdentification``.
     """
 
-    def __init__(self, server=None, unit=None):
-        super().__init__(
-            di=DataBlock(),
-            co=DataBlock(),
-            ir=DataBlock(),
-            hr=DataBlock(),
-        )
-        if server:
-            self.unit = unit
+    VendorName: str = ""
+    ProductCode: str = ""
+    VendorUrl: str = ""
+    ProductName: str = ""
+    ModelName: str = ""
+    MajorMinorRevision: str = ""
+
+
+class UnitContext:
+    """
+    Standalone slave context for servers that stores individual variables.
+
+    This replaces pymodbus' ``ModbusDeviceContext``.  It holds four
+    :class:`~moat.modbus.types.DataBlock` instances keyed by ``c``
+    (coils), ``d`` (discrete inputs), ``i`` (input registers), and
+    ``h`` (holding registers), and exposes the :class:`Context`
+    protocol that :meth:`moat.lib.modbus.pdu.Request.execute` consumes.
+    """
+
+    def __init__(self, server: BaseModbusServer | None = None, unit: int | None = None) -> None:
+        self.store: dict[str, DataBlock] = {
+            "c": DataBlock(),
+            "d": DataBlock(),
+            "i": DataBlock(),
+            "h": DataBlock(),
+        }
+        self.unit = unit
+        if server is not None and unit is not None:
             server._add_unit(self)  # noqa: SLF001
 
     def add(
@@ -76,12 +85,13 @@ class UnitContext(ModbusDeviceContext):
     ) -> BaseValue:
         """Add a field to be served.
 
-        :param typ: The `TypeCodec` instance to use.
-        :param offset: The value's numeric offset, zero-based.
-        :param val: The data type (baseValue instance)
+        Args:
+            typ: The ``TypeCodec`` instance to use.
+            offset: The value's numeric offset, zero-based.
+            val: The data type (``BaseValue`` subclass) or instance.
 
-        `val` is either the decoder (subclass of `BaseValue`),
-        or an existing `BaseValue` instance.
+        Returns:
+            The added ``BaseValue`` instance.
         """
         k = self.store[typ.key]
         if isinstance(val, type):
@@ -90,38 +100,60 @@ class UnitContext(ModbusDeviceContext):
         return val
 
     def remove(self, typ: TypeCodec, offset: int):
-        """Remove a field to be requested.
+        """Remove a field.
 
-        :param typ: the `TypeCodec` to use
-        :param offset: the offset where the value is located
+        Args:
+            typ: The ``TypeCodec`` to use.
+            offset: The offset where the value is located.
 
-        Returns the field in question, or none if it doesn't exist.
+        Returns:
+            The removed field, or ``None`` if not found.
         """
         k = self.store[typ.key]
         return k.delete(offset + 1)
+
+    # ---- Context protocol (consumed by moat.lib.modbus.pdu.Request.execute) ----
+
+    def get_values(self, kind: str, address: int, count: int) -> list[int]:
+        """Return *count* values starting at *address* for data kind *kind*.
+
+        Addresses are 1-based (pymodbus convention) to match
+        :meth:`DataBlock.getValues`.
+        """
+        block = self.store[kind]
+        return block.getValues(address + 1, count)
+
+    def set_values(self, kind: str, address: int, values: list[int]) -> None:
+        """Set *values* starting at *address* for data kind *kind*.
+
+        Addresses are 1-based (pymodbus convention) to match
+        :meth:`DataBlock.setValues`.
+        """
+        block = self.store[kind]
+        block.setValues(address + 1, values)
+
+    # ---- camelCase aliases for backward compatibility ----
+
+    def getValues(self, kind: str, address: int, count: int) -> list[int]:
+        """Alias for :meth:`get_values`."""
+        return self.get_values(kind, address, count)
+
+    def setValues(self, kind: str, address: int, values: list[int]) -> None:
+        """Alias for :meth:`set_values`."""
+        self.set_values(kind, address, values)
 
 
 class BaseModbusServer(CtxObj):
     """Basic base class for servers."""
 
-    def __init__(self, identity=None, response_manipulator=None):
-        self.context = ModbusServerContext(single=False)
-        self.units = {}
-        if hasattr(self.context, "_devices"):  # pymodbus 3.11
-            self.context._devices = self.units  # noqa: SLF001
-        else:  # pymodbus 3.9
-            self.context._slaves = self.units  # noqa: SLF001
-        self.control = ModbusControlBlock()
+    def __init__(self, identity: Identity | None = None, response_manipulator=None):
+        self.units: dict[int, UnitContext] = {}
         self.broadcast_enable = False
         self.response_manipulator = response_manipulator
-
-        self.ignored = set()
-
-        if isinstance(identity, ModbusDeviceIdentification):
-            self.control.Identity.update(identity)
+        self.ignored: set[int] = set()
 
         if identity is None:
-            identity = ModbusDeviceIdentification()
+            identity = Identity()
             identity.VendorName = "Matthias Urlichs"
             identity.ProductCode = "MoaT.modbus"
             identity.VendorUrl = "http://M-o-a-T.org/"
@@ -130,7 +162,7 @@ class BaseModbusServer(CtxObj):
             identity.MajorMinorRevision = "1.0"
         self.identity = identity
 
-    def add_unit(self, unit, ctx=None) -> UnitContext:
+    def add_unit(self, unit: int, ctx: UnitContext | None = None) -> UnitContext:
         """
         Add an empty unit (= slave context) to this server (and return it).
 
@@ -141,29 +173,33 @@ class BaseModbusServer(CtxObj):
         if ctx is None:
             return UnitContext(self, unit)
         self.units[unit] = ctx
+        return ctx
 
-    def add_ignored_unit(self, *unit) -> None:
+    def add_ignored_unit(self, *unit: int) -> None:
         """
         Add to the list of units we don't complain about when a client
         tries to access them.
         """
         self.ignored |= set(unit)
 
-    def _add_unit(self, unit):
-        self.units[unit.unit] = unit
-        self.context[unit.unit] = unit
+    def _add_unit(self, unit_ctx: UnitContext) -> None:
+        self.units[unit_ctx.unit] = unit_ctx
 
     async def serve(self, opened=None):
         """The actual server. Override me."""
         raise NotImplementedError("You need to override .serve")
 
-    async def process_request(self, request):
-        """Basic request processor"""
-        context = self.context[request.dev_id]
+    async def process_request(self, request: PDU) -> PDU:
+        """Basic request processor."""
+        try:
+            context = self.units[request.unit_id]
+        except KeyError:
+            raise KeyError(request.unit_id) from None
+
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:
-            response = await request.update_datastore(context)
+            response = execute_request(request, context)
         return response
 
     @asynccontextmanager
@@ -184,7 +220,7 @@ class SerialModbusServer(BaseModbusServer):
     """
 
     _serial = None
-    framer = None
+    framer: FramerRTU
     ignore_missing_devices = False
     single = False
 
@@ -192,31 +228,13 @@ class SerialModbusServer(BaseModbusServer):
         super().__init__(identity=identity)
         self.args = args
         self.timeout = timeout
-
-        try:
-            # pymodbus 3.11+
-            from pymodbus.framer.rtu import (  # noqa: PLC0415
-                FramerRTU as ModbusRtuFramer,
-            )
-        except ImportError:
-            # pymodbus 3.9
-            from pymodbus.framer.rtu_framer import (  # noqa: PLC0415
-                ModbusRtuFramer,
-            )
-
-        class Framer(ModbusRtuFramer):
-            def _validate_dev_id(self, unit, single):  # noqa: ARG002
-                return True
-
-        self.decoder = DecodePDU(False)  # pylint: disable=no-value-for-parameter ## duh?
-        self.Framer = Framer
+        self.framer = FramerRTU(True)
 
     async def serve(self, opened=None):  # noqa: D102
         from anyio_serial import Serial  # pylint: disable=import-outside-toplevel  # noqa:PLC0415,I001
 
         async with Serial(**self.args) as ser:
             self._serial = ser
-            self.framer = self.Framer(self.decoder)
 
             if opened is not None:
                 opened.set()
@@ -226,18 +244,24 @@ class SerialModbusServer(BaseModbusServer):
                     await ser.receive()
                     break
             while True:
-                if self.timeout:
-                    with anyio.fail_after(self.timeout):
+                try:
+                    if self.timeout:
+                        with anyio.fail_after(self.timeout):
+                            data = await ser.receive()
+                    else:
                         data = await ser.receive()
-                else:
-                    data = await ser.receive()
+                except TimeoutError:
+                    # Inter-frame timeout: reset and continue
+                    self.framer.resetFrame()
+                    continue
+
                 t2 = time.monotonic()
-                if t2 - t > 0.2:
+                if t2 - t > RTU_INTER_FRAME_TIMEOUT:
                     self.framer.resetFrame()
                 t = t2
-                msgs = []
+                msgs: list[PDU] = []
                 while True:
-                    used, pdu = self.framer.handleFrame(data, 0, 0)
+                    used, pdu = self.framer.handleFrame(bytes(data))
                     data = data[used:]
                     if pdu is None:
                         break
@@ -247,7 +271,7 @@ class SerialModbusServer(BaseModbusServer):
                     with anyio.fail_after(2):
                         await self._process(msg)
 
-    async def _process(self, request):
+    async def _process(self, request: PDU):
         broadcast = False
         unit = request.unit_id
         tid = request.transaction_id
@@ -257,11 +281,12 @@ class SerialModbusServer(BaseModbusServer):
                 broadcast = True
                 # if broadcasting then execute on all slave contexts,
                 # note response will be ignored
-                for unit_id in self.context.slaves():
-                    response = await request.execute(self.context[unit_id])
+                for unit_id in self.units:
+                    ctx = self.units[unit_id]
+                    response = execute_request(request, ctx)
             else:
                 response = await self.process_request(request)
-        except NoSuchSlaveException:
+        except KeyError:
             if unit not in self.ignored:
                 _logger.error("requested unit does not exist: %d", request.unit_id)
             if self.ignore_missing_devices:
@@ -278,7 +303,7 @@ class SerialModbusServer(BaseModbusServer):
                 "Source: %r %d %d %d %s",
                 type(request).__name__,
                 unit,
-                request.address,
+                getattr(request, "address", 0),
                 getattr(request, "count", 1),
                 response,
             )
@@ -291,8 +316,6 @@ class SerialModbusServer(BaseModbusServer):
                 response, skip_encoding = self.response_manipulator(response)
             if not skip_encoding:
                 response = self.framer.buildFrame(response)
-            #           if _logger.isEnabledFor(logging.DEBUG):
-            #               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
 
             await self._serial.send(response)
 
@@ -334,7 +357,7 @@ class RelayServer:
         self._client = client
         super().__init__(*a, **k)
 
-    async def _process(self, request):
+    async def _process(self, request: PDU):
         request = self.mon_request(request)
         tid = request.transaction_id
         resp = await self._client.execute(request)
@@ -344,11 +367,11 @@ class RelayServer:
         resp = self.framer.buildFrame(resp)  # pylint:disable=no-member
         await self._serial.send(resp)  # pylint:disable=no-member
 
-    def mon_request(self, request):
+    def mon_request(self, request: PDU) -> PDU:
         """Request monitor. Override me."""
         return request
 
-    def mon_response(self, response):
+    def mon_response(self, response: PDU) -> PDU | None:
         """Response monitor. Override me."""
         return response
 
@@ -356,8 +379,7 @@ class RelayServer:
 class ModbusServer(BaseModbusServer):
     """TCP Modbus server.
 
-    If the identity structure is not passed in, the ModbusControlBlock
-    uses its own empty structure.
+    If the identity structure is not passed in, a default is used.
 
     :param identity: An optional identity structure
     :param address: An optional address to bind to.
@@ -370,31 +392,14 @@ class ModbusServer(BaseModbusServer):
     def __init__(self, identity=None, address=None, port=None):
         super().__init__(identity=identity)
 
-        try:
-            # pymodbus 3.11+
-            from pymodbus.framer.socket import (  # noqa: PLC0415
-                FramerSocket,
-            )
-        except ImportError:
-            # pymodbus 3.9 - try socket_framer module
-            try:
-                from pymodbus.framer.socket_framer import (  # noqa: PLC0415
-                    ModbusSocketFramer as FramerSocket,
-                )
-            except ImportError:
-                # Fallback if neither works
-                from pymodbus.framer.socket import (  # noqa: PLC0415
-                    FramerSocket,
-                )
-
-        self.decoder = DecodePDU(True)
-        self.framer = FramerSocket
+        self.framer_cls = FramerTCP
         self.address = address or "localhost"
         self.port = port if port is not None else 502
 
     async def serve(self, opened: anyio.Event | None = None):
         """Run this server.
-        Sets the `opened` event, if given, as soon as the server port is open.
+
+        Sets the ``opened`` event, if given, as soon as the server port is open.
         """
         try:
             async with anyio.create_task_group() as tg:
@@ -419,80 +424,69 @@ class ModbusServer(BaseModbusServer):
             self.taskgroup = None
 
     async def _serve_one(self, conn):
-        # anyio's `serve` hands us the stream but does not close it; the
-        # handler must. Without this, accepted connections leak their
-        # underlying socket on EOF / error / cancellation.
-        async with conn:
-            reset_frame = False
-            framer = self.framer(decoder=self.decoder)
+        reset_frame = False
+        framer = FramerTCP(True)
 
-            while True:
-                try:
-                    data = await conn.receive(4096)
-                    if data == b"":
+        while True:
+            try:
+                data = await conn.receive(4096)
+                if data == b"":
+                    break
+                if _logger.isEnabledFor(logging.DEBUG):
+                    _logger.debug(  # pylint: disable=logging-not-lazy
+                        "Handling data: " + b2a_hex(data).decode(),  # noqa:G003
+                    )
+
+                reqs: list[PDU] = []
+                while True:
+                    used, pdu = framer.handleFrame(bytes(data))
+                    data = data[used:]
+                    if pdu is None:
                         break
-                    if _logger.isEnabledFor(logging.DEBUG):
-                        _logger.debug(  # pylint: disable=logging-not-lazy
-                            "Handling data: " + hexlify_packets(data),  # noqa:G003
+                    reqs.append(pdu)
+
+                for request in reqs:
+                    unit = request.unit_id
+                    tid = request.transaction_id
+                    try:
+                        with ungroup:
+                            response = await self.process_request(request)
+                    except KeyError:
+                        _logger.debug("requested unit does not exist: %d", request.unit_id)
+                        response = ExceptionResponse(
+                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
                         )
+                    except TimeoutError:
+                        _logger.info("request to unit %d timed out", request.unit_id)
+                        response = ExceptionResponse(
+                            request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
+                        )
+                    except Exception as exc:
+                        _logger.warning("Unable to fulfill request", exc_info=exc)
+                        response = ExceptionResponse(
+                            request.function_code, ExcCodes.DEVICE_FAILURE
+                        )
+                    response.transaction_id = tid
+                    response.unit_id = unit
+                    pdu = framer.buildFrame(response)
+                    if _logger.isEnabledFor(logging.DEBUG):
+                        _logger.debug("send: %s", b2a_hex(pdu))
+                    await conn.send(pdu)
 
-                    reqs = []
-                    while True:
-                        used, pdu = framer.handleFrame(data, 0, 0)
-                        data = data[used:]
-                        if pdu is None:
-                            break
-                        reqs.append(pdu)
-
-                    for request in reqs:
-                        unit = request.dev_id
-                        tid = request.transaction_id
-                        try:
-                            with ungroup:
-                                response = await self.process_request(request)
-                        except NoSuchSlaveException:
-                            _logger.debug("requested unit does not exist: %d", request.dev_id)
-                            response = ExceptionResponse(
-                                request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
-                            )
-                        except TimeoutError:
-                            _logger.info("request to unit %d timed out", request.dev_id)
-                            response = ExceptionResponse(
-                                request.function_code, ExcCodes.GATEWAY_NO_RESPONSE
-                            )
-                        except Exception as exc:
-                            _logger.warning("Unable to fulfill request", exc_info=exc)
-                            response = ExceptionResponse(
-                                request.function_code, ExcCodes.DEVICE_FAILURE
-                            )
-                        response.transaction_id = tid
-                        response.dev_id = unit
-                        # self.server.control.Counter.BusMessage += 1
-                        pdu = framer.buildFrame(response)
-                        if _logger.isEnabledFor(logging.DEBUG):
-                            _logger.debug("send: %s", b2a_hex(pdu))
-                        await conn.send(pdu)
-
-                except TimeoutError as msg:
-                    _logger.debug("Socket timeout occurred: %r", msg)
-                    reset_frame = True
-                except OSError as msg:
-                    _logger.error("Socket error occurred: %r", msg)
-                    return
-                except anyio.get_cancelled_exc_class():
-                    raise
-                except anyio.BrokenResourceError:
-                    return
-                except Exception:  # pylint: disable=broad-except
-                    _logger.exception("Server error")
-                    return
-                finally:
-                    if reset_frame:
-                        framer.resetFrame()
-                        reset_frame = False
-
-
-class MockAioModbusServer(ModbusServer):
-    """A test modbus server with static data"""
-
-    pass
+            except TimeoutError as msg:
+                _logger.debug("Socket timeout occurred: %r", msg)
+                reset_frame = True
+            except OSError as msg:
+                _logger.error("Socket error occurred: %r", msg)
+                return
+            except anyio.get_cancelled_exc_class():
+                raise
+            except anyio.BrokenResourceError:
+                return
+            except Exception:  # pylint: disable=broad-except
+                _logger.exception("Server error")
+                return
+            finally:
+                if reset_frame:
+                    framer.resetFrame()
+                    reset_frame = False

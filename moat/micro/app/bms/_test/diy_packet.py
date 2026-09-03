@@ -123,8 +123,12 @@ class ReplyTemperature(P.ReplyTemperature):
         t = await cell.t()
         tb = await cell.tb()
         bc_i, bc_e = await cell.b_coeff()
-        self.intRaw = celsius2thermistor(bc_i, tb)
-        self.extRaw = celsius2thermistor(bc_e, t)
+        # Production Cell.m_temp maps:
+        #   batt_temp = thermistor2celsius(b_coeff_ext=BCoeffInternal, extRaw)
+        #   load_temp = thermistor2celsius(b_coeff_bal=BCoeffExternal, intRaw)
+        # So extRaw must encode batt_temp with bc_i, intRaw must encode load_temp with bc_e.
+        self.extRaw = celsius2thermistor(bc_i, tb)
+        self.intRaw = celsius2thermistor(bc_e, t)
 
     def to_bytes(self):
         b1 = self.intRaw & 0xFF

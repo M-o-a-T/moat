@@ -358,6 +358,10 @@ class SubMsgSender(MsgSender):
         Setup.
         """
         super().__init__(root)
+        if isinstance(path, str):
+            from moat.lib.path import Path  # noqa: PLC0415
+
+            path = Path.build((path,))
         self._path = path
         self._rpath = list(path)
         self._rpath.reverse()

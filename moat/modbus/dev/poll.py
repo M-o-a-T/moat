@@ -14,6 +14,7 @@ from moat.modbus.server import create_server
 
 from .device import ClientDevice, ServerDevice, fixup
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -146,7 +147,7 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                             reg_len = d.len if hasattr(d, "len") else 1
                             for offset in range(register_num, register_num + reg_len):
                                 unit_ctx.add_mapping(offset, d.reg_type.key, d.slot)
-                elif isinstance(d, dict):
+                elif isinstance(d, Mapping):
                     for v in d.values():
                         add_registers(v)
 
@@ -191,10 +192,12 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)
 
-        for s in servers:
+        for s, srv in zip(cfg.get("server", ()), servers, strict=False):
             evt = anyio.Event()
-            tg.start_soon(partial(s.serve, opened=evt))
+            tg.start_soon(partial(srv.serve, opened=evt))
             await evt.wait()
+            if hasattr(srv, "port"):
+                s["port"] = srv.port
 
         task_status.started(cfg)
 

@@ -14,7 +14,13 @@ import math
 import cadquery as cq
 
 
-def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True):  # noqa:D103
+def gridbox(
+    x_grid_number: int = 2,
+    y_grid_number: int = 2,
+    unit_height: int = 6,
+    disable_mholes: bool = True,
+) -> cq.Workplane:
+    """Generate a Gridfinity-compatible box."""
     # adjust these three variables to change the grid size
 
     # box stackability is implemented!

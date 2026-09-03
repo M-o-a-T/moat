@@ -16,11 +16,15 @@ TODO
 
 tracking
 kv-migration-guide
+extend
 errors
 ../moat-link-job/index
 ../moat-link-metrics/index
 ../moat-link-knx/index
 ../moat-link-ow/index
+../moat-link-cal/index
+../moat-link-ha/index
+../moat-link-gpio/index
 ../moat-link-gate/index
 ../moat-link-schema/index
 ../moat-link-notify/index

@@ -701,7 +701,7 @@ class ServerClient:
         res = await fn(msg)
         if res is None:
             res = {}
-        elif not isinstance(res, dict):
+        elif not isinstance(res, Mapping):
             res = {"result": res}
         res["seq"] = msg.seq
         await self.send(res)

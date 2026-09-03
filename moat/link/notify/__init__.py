@@ -18,13 +18,181 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.link.client import Link
+    from moat.link.node import Node
 
     from collections.abc import AsyncIterator
-    from typing import Self
+    from typing import Any, Self
 
-__all__ = ["Notifier", "Notify", "get_backend"]
+__all__ = ["ErrorMirror", "Notifier", "Notify", "get_backend"]
 
 logger = logging.getLogger(__name__)
+
+#: Severity levels recognised by the mirror.
+#: Higher numbers mean more severe.
+_SEVERITY: dict[str, int] = {
+    "debug": 1,
+    "info": 2,
+    "warning": 3,
+    "error": 4,
+    "fatal": 5,
+}
+
+
+class ErrorMirror:
+    """Mirror error entries to the notification subtree.
+
+    Watches ``error.*`` and, for each entry, collects mirroring rules from a
+    dynamic ``notify_vecs`` subtree (stored below ``conv.*`` in the link data
+    tree, analogous to the ``codec_vecs`` mechanism used by the Venus gateway).
+    Rules are looked up with :meth:`~moat.link.node.Node.collect`, which merges data from all
+    matching wildcard branches — more specific branches override less
+    specific ones.
+
+    A rule dict may contain:
+
+    - ``min_level`` — minimum severity to mirror (default ``"warning"``).
+    - ``skip`` — set to ``True`` to suppress mirroring for this branch.
+    - ``prio`` — override the notification priority.
+    - ``title`` — override the notification title.
+
+    When an error is cleared (``ok=True`` or deleted) the corresponding
+    notification is removed.
+    """
+
+    link: Link
+    cfg: attrdict
+    notify_vecs: Node | None
+
+    def __init__(self, cfg: attrdict):
+        """Set up the mirror.
+
+        Args:
+            cfg: The ``link.notify`` sub-configuration.  Relevant keys
+                 are documented in ``_cfg.yaml``.
+        """
+        self.cfg = cfg
+        self.notify_vecs = None
+
+    async def run(self, link: Link, evt: anyio.Event | None = None) -> None:
+        """Run the mirror task.
+
+        Args:
+            link: A connected link client.
+            evt: Optional readiness event.
+        """
+        self.link = link
+        notify_path = self.cfg.get("path", P("notify"))
+
+        # Fetch the notify-vecs tree, if configured.
+        # This mirrors the codec_vecs pattern in moat/link/gate/venus.py.
+        vecs_path = self.cfg.get("vecs", None)
+        if isinstance(vecs_path, Path):
+            async with link.d_watch(
+                P("conv") + vecs_path, subtree=True, state=None, meta=False
+            ) as cdv:
+                self.notify_vecs = await cdv.get_node()
+            await self._run_loop(link, notify_path, evt)
+        else:
+            # No vecs tree configured — mirror everything at warning+.
+            await self._run_loop(link, notify_path, evt)
+
+    async def _run_loop(self, link: Link, notify_path: Path, evt: anyio.Event | None) -> None:
+        """Watch the error subtree and mirror qualifying entries."""
+        async with link.d_watch(P("error"), subtree=True, state=None, meta=True) as mon:
+            if evt is not None:
+                evt.set()
+
+            async for path, data, _meta in mon:
+                # The watcher is rooted at 'error', so 'path' is already
+                # the original path without the 'error' prefix.
+                orig = path
+
+                if data is NotGiven:
+                    # Error entry deleted → clear notification.
+                    await link.d_set(notify_path + orig, NotGiven)
+                    continue
+
+                if isinstance(data, dict) and data.get("ok", False):
+                    # Error resolved → clear notification.
+                    await link.d_set(notify_path + orig, NotGiven)
+                    continue
+
+                # Collect mirroring rules from the notify_vecs tree.
+                # Node.collect merges data from all matching branches,
+                # with more specific matches overriding less specific ones.
+                rule: attrdict = attrdict()
+                if self.notify_vecs is not None:
+                    try:
+                        rule = self.notify_vecs.collect(orig)
+                    except (KeyError, ValueError):
+                        rule = attrdict()
+
+                # Check if this branch should be skipped.
+                if rule.get("skip", False):
+                    continue
+
+                # Determine severity.
+                level = data.get("level", 3) if isinstance(data, dict) else 3
+                if isinstance(level, str):
+                    sev = _SEVERITY.get(level, 3)
+                else:
+                    sev = int(level)
+
+                # Check severity threshold from the collected rule.
+                min_level = rule.get("min_level", "warning")
+                min_severity = (
+                    _SEVERITY.get(min_level, 3) if isinstance(min_level, str) else int(min_level)
+                )
+                if sev < min_severity:
+                    continue
+
+                # Build the notification message.
+                msg: dict[str, Any] = {}
+                if isinstance(data, dict):
+                    msg_text = data.get("msg", "")
+                    exc = data.get("exc", "")
+                    bt = data.get("bt", "")
+                    msg["msg"] = str(msg_text or exc)
+                    if bt:
+                        msg["bt"] = bt
+                    # Priority: rule override > severity mapping.
+                    prio = rule.get("prio", None)
+                    if prio is None:
+                        prio = self._severity_to_prio(sev)
+                    if prio is not None:
+                        msg["prio"] = prio
+                    # Title: rule override > original path.
+                    title = rule.get("title", None)
+                    msg["title"] = str(title) if title is not None else str(orig)
+                    # Carry over auxiliary data.
+                    for key in ("data", "aux", "n", "first"):
+                        if key in data:
+                            msg[key] = data[key]
+                else:
+                    msg["msg"] = str(data)
+                    msg["title"] = str(orig)
+
+                await link.d_set(notify_path + orig, msg)
+
+    @staticmethod
+    def _severity_to_prio(sev: int) -> str | None:
+        """Map a numeric severity to a notification priority string.
+
+        Args:
+            sev: Severity level (1–5).
+
+        Returns:
+            Priority name understood by the ntfy backend, or ``None``.
+        """
+        if sev >= 5:
+            return "fatal"
+        if sev >= 4:
+            return "error"
+        if sev >= 3:
+            return "warning"
+        if sev >= 2:
+            return "info"
+        return "debug"
 
 
 class Notify:

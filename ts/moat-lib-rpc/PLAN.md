@@ -60,7 +60,7 @@ ts/moat-lib-rpc/
     index.ts                 # public barrel + re-exports
     const.ts                 # B_*, E_*, S_*, SD_* constants
     errors.ts                # StreamError taxonomy + decodeStreamError()
-    wire.ts                  # i_f2wire / wire2i_f header packing (arithmetic)
+    wire.ts                  # i_f2wire / wire2i_f header packing (bitwise shifts)
     codec.ts                 # cbor2 wiring + MoaT tag table
     path.ts                  # Path type (encode/decode tag 39, optional)
     proxy.ts                 # Proxy/DProxy + error marshalling (tags 27/32769)
@@ -144,21 +144,20 @@ On the receiving side (`HandlerStream.msg_in`), the decoded id is then
 the originator (≥ 1); the responder sees them as negative and reuses the
 negative id in replies. ID `0` is never sent as a live id.
 
-**Use arithmetic, not 32-bit shifts:** JS `<<`/`>>`/`&` truncate to signed
-32 bits, which overflows already at id > 2²⁹ (`(id-1) << 2` must stay
-≤ 2³¹−1). Multiplication/floor-division are exact up to 2⁵³ and match
-Python's semantics for negative ids too: `id*4` has zero low bits, so
-`| flag` ≡ `+ flag`, and Python's `>>= 2` is floor division:
+**Bitwise shifts, matching Python:** JS `<<`/`>>`/`&` coerce to signed 32 bits,
+which could overflow at id > 2²⁹. However, IDs are recycled, so the number of
+in-flight requests stays far below that threshold. Bitwise shifts mirror
+Python's implementation exactly:
 
 ```ts
 function i_f2wire(id: number, flag: number): number {
   // assert id !== 0; 0<=flag<=3 || flag===7
   if (id > 0) id -= 1;
-  return id * 4 + (flag & 3);
+  return (id << 2) | (flag & 3);
 }
 function wire2i_f(w: number): [number, number] {
-  const f = ((w % 4) + 4) % 4;
-  let id = Math.floor(w / 4);
+  const f = w & 3;
+  let id = w >> 2;
   if (id >= 0) id += 1;
   return [id, f];   // caller then does i = -i
 }
@@ -476,10 +475,7 @@ tests, **tsx** to run TS interop scripts.
   covered, including a Python *streaming* request against the phase-1 TS
   server (expect `E_NO_STREAM`). (Full streaming/flow-control interop is added
   in phase 2, once the Python WS transport `moat-ad2.1` is available.) Python
-  is invoked from the repo venv; the fixture skips gracefully if Python/the
-  venv is unavailable — **except** when `REQUIRE_INTEROP=1` is set (as it is
-  in CI), where a missing Python peer fails the run instead of silently
-  masking drift.
+  is invoked from the repo venv, which always provides `moat.lib.rpc`.
 
 ## 10. NPM packaging
 
@@ -563,9 +559,9 @@ updates (watch/`d.walk`/`d.watch`).
 - **Header scheme drift:** the README's "id=1 → 4 / reply -5" disagreed with
   the code's "id=1 → 0 / reply -4" (fixed in the README, commit `e9d2823a8`);
   golden vectors pin the code's behaviour.
-- **Header packing uses arithmetic** (`id*4`, `Math.floor(w/4)`): JS 32-bit
-  bitwise ops overflow at id > 2²⁹; multiplication is exact to 2⁵³ and matches
-  Python's floor-shift semantics for negative ids.
+- **Header packing uses bitwise shifts** (`(id << 2) | (flag & 3)`, `w >> 2`):
+  mirrors Python exactly. JS 32-bit coercion could overflow at id > 2²⁹, but
+  IDs are recycled so in-flight counts stay far below that threshold.
 - **Reuse delay kept:** ~1 s hold before recycling freed ids (mirrors Python's
   `L` build; the small build recycles immediately), replicated in the async
   adapter via a single unref'ed timer, to avoid late-message races. Not

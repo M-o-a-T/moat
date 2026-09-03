@@ -774,6 +774,7 @@ async def copytree(
     check=None,
     drop=None,
     cross=None,
+    arch: str | None = None,
 ):
     """
     Copy a file or directory tree from @src to @dst.
@@ -789,6 +790,10 @@ async def copytree(
     default) does a standard sync-and-update, `None` ignores it.
 
     If @wdst is set, new files get written there; they will be deleted from @dst.
+
+    @cross is the path to the mpy-cross compiler.  @arch is the target
+    architecture to pass to mpy-cross via ``-march=<arch>``; if `None`,
+    mpy-cross uses its default (host) architecture.
     """
     n = 0
     if wdst is None:
@@ -823,9 +828,13 @@ async def copytree(
                     p = str(src)
                     if (pi := p.find("/_embed/lib/")) > 0:
                         p = p[pi + 12 :]
-                    data = await run(cross, str(src), "-s", p, "-o", "/dev/stdout", capture="raw")
+                    cross_args = [cross, str(src), "-s", p, "-o", "/dev/stdout"]
+                    if arch is not None:
+                        cross_args.append(f"-march={arch}")
+                    data = await run(*cross_args, capture="raw")
                 except CalledProcessError as exc:
-                    print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                    if exc.stderr:
+                        print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     # copy this file unmodified
                 else:
                     assert isinstance(src, APath)
@@ -886,13 +895,16 @@ async def copytree(
                 d,
                 check=check,
                 cross=cross,
+                arch=arch,
                 drop=drop,
                 wdst=None if wdst is dst else wdst.joinpath(s.name),
             )
         return n
 
 
-async def copy_over(src, dst, cross=None, wdst: MoatPath | APath | None = None):
+async def copy_over(
+    src, dst, cross=None, arch: str | None = None, wdst: MoatPath | APath | None = None
+):
     """
     Transfer a file tree from @src to @dst.
 
@@ -904,7 +916,7 @@ async def copy_over(src, dst, cross=None, wdst: MoatPath | APath | None = None):
     if await src.is_file():
         if await dst.is_dir():
             dst /= src.name
-    while n := await copytree(src, dst, cross=cross, wdst=wdst):
+    while n := await copytree(src, dst, cross=cross, arch=arch, wdst=wdst):
         tn += n
     #       if n == 1:
     #           logger.info("One file changed. Verifying.")

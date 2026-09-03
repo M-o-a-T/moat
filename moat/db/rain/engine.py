@@ -158,12 +158,12 @@ def daytime_range(daytime: DayTime, start: datetime, end: datetime) -> Iterator[
 
 
 def day_range(day: Day, start: datetime, end: datetime) -> Iterator[_Span]:
-    """Union of a :class:`Day`'s :class:`DayTime` spans."""
+    """Union of a :class:`moat.db.rain.model.Day`'s :class:`moat.db.rain.model.DayTime` spans."""
     return range_union(*(daytime_range(t, start, end) for t in day.times))
 
 
 def dayrange_range(dayrange: DayRange, start: datetime, end: datetime) -> Iterator[_Span]:
-    """Intersection of a :class:`DayRange`'s :class:`Day` unions.
+    """Intersection of a :class:`moat.db.rain.model.DayRange`'s day unions.
 
     A day-range with no days vacuously imposes no restriction, so the
     whole window is yielded. (The legacy ``DayRange._range`` crashed on
@@ -691,7 +691,7 @@ def recalculate(
     save: bool = True,
     log: Callable[[str], None] | None = None,
 ) -> dict[str, int]:
-    """Rebuild :class:`Level` rows by replaying :class:`History` for matching valves.
+    """Rebuild :class:`moat.db.rain.model.Level` rows from :class:`moat.db.rain.model.History`.
 
     Starts from the latest forced level in range (or, failing that, the
     earliest level — promoted to forced) and walks forward, applying
@@ -976,7 +976,7 @@ def generate_schedule(
         start: Plan from this moment (default: now).
         horizon: How far ahead to plan.
         delay: Offset from ``start`` before planning begins.
-        save: Insert the computed :class:`Schedule` rows.
+        save: Insert the computed :class:`moat.db.rain.model.Schedule` rows.
         log: Optional event sink.
 
     Returns:

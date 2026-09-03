@@ -171,7 +171,7 @@ class Cell(BalBaseCell):
 class DiyBMSCell(Cell):
     bc_i = 1000
     bc_e = 2000
-    v_per_ADC = 0.001
+    v_per_ADC = 0.003
     n_samples = 3
     v_calibration = 1.0
     v_offset = 0
@@ -191,9 +191,9 @@ class DiyBMSCell(Cell):
     doc_raw = dict(_d="calc real volt", _r="float:voltage", _0="int:value")
 
     async def cmd_raw2v(self, val):
-        if val is None or self.cfg.u.samples is None or val == 0:
+        if val is None or self.n_samples is None or val == 0:
             return None
-        return val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration + self.cfg.u.offset
+        return val * self.v_per_ADC / self.n_samples * self.v_calibration + self.v_offset
 
     doc_settings = dict(
         _d="get settings",

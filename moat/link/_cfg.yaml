@@ -47,6 +47,7 @@ timeout:
     stale: 15  # no initial ping received
     delete: 150  # time before removing run.host.* messages
     delay: 3  # no service deletions
+    down: 15  # delayed error after a host goes down, give it a chance to come back
 
   restart:
     error: 30  # generate an error if not back in this many seconds

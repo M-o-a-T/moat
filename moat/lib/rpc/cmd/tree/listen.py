@@ -98,6 +98,9 @@ class BaseListenOneCmd(BaseLayerCmd):
         tg = cast("_TaskGroupProto", tg)
         listener = cast("Callable[[], BaseConnIter]", self.listener)
         async with listener() as conns:
+            # The listener's __aenter__ blocks until the port is assigned.
+            if isinstance(conns.port, int):
+                self.cfg["port"] = conns.port
             async for conn in conns:
 
                 async def _handle(conn=conn) -> None:
@@ -155,6 +158,9 @@ class BaseListenCmd(BaseSubCmd):
         tg = cast("_TaskGroupProto", tg)
         listener = cast("Callable[[], BaseConnIter]", self.listener)
         async with listener() as conns:
+            # The listener's __aenter__ blocks until the port is assigned.
+            if isinstance(conns.port, int):
+                self.cfg["port"] = conns.port
             if L:
                 self.set_ready()
             async for conn in conns:

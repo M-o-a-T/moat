@@ -94,7 +94,7 @@ describe('golden vectors: header packing', () => {
     expect(wire2i_f(3)).toEqual(hdr.decode_3);
   });
 
-  it('large id (2^29) does not overflow', () => {
+  it('large id (2^29-1 shifted) round-trips correctly', () => {
     expect(i_f2wire(0x20000000, 0)).toBe(hdr.big_id_wire);
     expect(wire2i_f(hdr.big_id_wire)).toEqual(hdr.big_id_decode);
   });

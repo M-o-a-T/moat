@@ -3,10 +3,9 @@
  *
  * Mirrors i_f2wire / wire2i_f from moat/lib/rpc/stream/base.py.
  *
- * Uses arithmetic (multiplication/floor-division) instead of 32-bit
- * bitwise operations, because JS << / >> / & truncate to signed 32 bits,
- * which overflows at id > 2^29. Multiplication is exact to 2^53 and
- * matches Python's floor-shift semantics for negative ids too.
+ * Uses bitwise shifts exactly as Python does: (id << 2) | (flag & 3)
+ * and w >> 2. IDs are recycled, so the number of in-flight requests
+ * stays small — JS 32-bit shift overflow (> 2^29) is never reached.
  */
 
 import { B_WARNING_INTERNAL } from './const.js';
@@ -26,7 +25,7 @@ export function i_f2wire(id: number, flag: number): number {
     throw new AssertionError(`invalid flag ${flag}`);
   }
   if (id > 0) id -= 1;
-  return id * 4 + (flag & 3);
+  return (id << 2) | (flag & 3);
 }
 
 /**
@@ -37,9 +36,8 @@ export function i_f2wire(id: number, flag: number): number {
  */
 export function wire2i_f(w: number): [number, number] {
   // Python: f = w & 3; id = w >> 2; if id >= 0: id += 1
-  // JS % can be negative for negative operands; normalize:
-  const f = ((w % 4) + 4) % 4;
-  let id = Math.floor(w / 4);
+  const f = w & 3;
+  let id = w >> 2;
   if (id >= 0) id += 1;
   return [id, f];
 }

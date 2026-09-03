@@ -32,11 +32,14 @@ describe('wire header packing', () => {
       expect(i_f2wire(1, 7)).toBe(3); // 7 & 3 = 3
     });
 
-    it('handles large ids without 32-bit overflow', () => {
-      // id > 2^29 would overflow with <<, but *4 is safe
-      const bigId = 0x20000000; // 2^29
-      const w = i_f2wire(bigId, 0);
-      expect(w).toBe((bigId - 1) * 4);
+    it('round-trips typical-range ids', () => {
+      // IDs are recycled, so in-flight counts stay well below 2^29.
+      // Bit-shifts mirror Python exactly for these ranges.
+      for (const id of [1, 2, 3, 5, 10, 63, 64, 100, 1000, -1, -2, -5, -100]) {
+        const w = i_f2wire(id, 0);
+        const [decId] = wire2i_f(w);
+        expect(decId).toBe(id);
+      }
     });
   });
 

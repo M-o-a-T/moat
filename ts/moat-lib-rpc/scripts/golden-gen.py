@@ -62,7 +62,7 @@ def main():
     hdr["decode_neg2"] = list(wire2i_f(-2))  # [-1, 2]
     hdr["decode_1"] = list(wire2i_f(1))  # [1, 1]
     hdr["decode_3"] = list(wire2i_f(3))  # [1, 3]
-    # Large id (no 32-bit overflow)
+    # Large id round-trip
     big_id = 0x20000000  # 2^29
     hdr["big_id_wire"] = i_f2wire(big_id, 0)
     hdr["big_id_decode"] = list(wire2i_f(hdr["big_id_wire"]))

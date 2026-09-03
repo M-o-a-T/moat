@@ -110,6 +110,63 @@ class RepoMover:
                 await src.set_default_branch("main")
             await self.exec("git", "push", "src", f":{defbr}")
 
+    async def _ensure_push_refspec(self, ref: str) -> None:
+        """Ensure ``remote.src.push`` includes *ref*, adding it if missing.
+
+        Uses ``git config --get-all`` to check whether the refspec is
+        already present, avoiding duplicates on repeated migrations.
+        """
+        refspec = f"refs/heads/{ref}"
+        try:
+            current = await self.exec(
+                "git", "config", "--get-all", "remote.src.push", capture=True
+            )
+        except ProcErr:
+            current = ""
+        if current is not None and refspec in current.splitlines():
+            return
+        async with self.git_lock:
+            await self.exec(
+                "git",
+                "config",
+                "set",
+                "--append",
+                "remote.src.push",
+                refspec,
+            )
+
+    async def create_workspace(self) -> anyio.Path:
+        """Create a non-bare working copy (workspace) of the migrated repo.
+
+        The workspace is placed alongside the bare clone, in a
+        ``<cache>/<name>-ws`` directory.  It shares objects with the bare
+        clone via alternates, so the disk overhead is minimal.
+
+        Returns:
+            The path to the created workspace directory.
+        """
+        ws_path = anyio.Path(self.cfg.cache) / f"{self.name}-ws"
+        if await ws_path.exists():
+            logger.debug("Workspace %s already exists", ws_path)
+            return ws_path
+
+        logger.debug("Creating workspace %s", ws_path)
+        await self.exec(
+            "git",
+            "clone",
+            "--shared",
+            str(self.cwd),
+            str(ws_path),
+            cwd=".",
+        )
+        # Checkout the main branch (or whatever the default branch is)
+        try:
+            await self.exec("git", "checkout", self.cfg.branch, cwd=str(ws_path))
+        except ProcErr:
+            # Fall back to whatever branch HEAD points at
+            pass
+        return ws_path
+
     async def move(self, dst: RepoInfo) -> None:
         """Copy our repo to B."""
 
@@ -150,17 +207,8 @@ class RepoMover:
                 await self.exec("git", "branch", cfg.src.branch, hash.strip())
 
                 if cfg.work.kill:
-                    async with self.git_lock:
-                        await self.exec(
-                            "git",
-                            "config",
-                            "set",
-                            "--append",
-                            "remote.src.push",
-                            f"refs/heads/{cfg.src.branch}",
-                        )
-                    # otherwise we push everything anyway
-                # TODO update-or-add
+                    await self._ensure_push_refspec(cfg.src.branch)
+                # otherwise we push everything anyway
             else:
                 # check whether we're updating the README
                 r = render(cfg.readme.content)
@@ -193,6 +241,11 @@ class RepoMover:
                     assert hash is not None
                     await self.exec("git", "branch", "-f", cfg.src.branch, hash.strip())
 
+                # Ensure the push refspec is set even when updating an
+                # existing migrated branch.
+                if cfg.work.kill:
+                    await self._ensure_push_refspec(cfg.src.branch)
+
             await self.exec("git", "push", "src", cfg.src.branch)
             await src_repo.set_default_branch(cfg.src.branch)
 
@@ -216,6 +269,10 @@ class RepoMover:
                         tags.append(ta["name"])
                     await src_repo.drop_tags(*tags)
 
+        # Optionally create a workspace (non-bare working copy).
+        if cfg.work.workspace:
+            await self.create_workspace()
+
 
 async def _mv_repo(cfg: attrdict, a_src: API, a_dst: list[API], name: str) -> None:
     rm = RepoMover(cfg, name)
@@ -227,7 +284,6 @@ async def _mv_repo(cfg: attrdict, a_src: API, a_dst: list[API], name: str) -> No
         rm.repos[d.name] = ri = d.repo_info_for(rm)
         await ri.load(create=None)
 
-    rm.repos[d.name] = ri = d.repo_info_for(rm)
     for k, v in rm.repos.items():
         if k != "src":
             await rm.move(v)

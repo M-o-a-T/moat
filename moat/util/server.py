@@ -7,6 +7,7 @@ from __future__ import annotations
 import anyio
 from anyio.abc import SocketAttribute
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -84,7 +85,7 @@ async def run_tcp_server(*a: Any, **kv: Any) -> _Server:
 
 
 def gen_ssl(
-    ctx: bool | SSLContext | dict[str, str] = False,
+    ctx: bool | SSLContext | Mapping[str, str] = False,
     server: bool = True,
 ) -> SSLContext | None:
     """
@@ -98,7 +99,7 @@ def gen_ssl(
         return None
     if ctx is True:
         ctx = {}
-    if not isinstance(ctx, dict):
+    if not isinstance(ctx, Mapping):
         return ctx
 
     import ssl  # noqa: PLC0415
@@ -107,5 +108,6 @@ def gen_ssl(
         purpose=ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
     )
     if "key" in ctx:
-        ctx_.load_cert_chain(ctx["cert"], ctx["key"])
+        d = {k: v for k, v in ctx.items()}
+        ctx_.load_cert_chain(d["cert"], d["key"])  # ty:ignore[invalid-argument-type]  # values are str at runtime
     return ctx_

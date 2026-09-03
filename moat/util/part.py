@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from moat.util import NotGiven
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -72,11 +73,11 @@ def enc_part(
     """
 
     def _complex(v: Any) -> bool:
-        if isinstance(v, (dict, list, tuple)):
+        if isinstance(v, (Mapping, list, tuple)):
             return True
         return False
 
-    if isinstance(cur, dict):
+    if isinstance(cur, Mapping):
         c: dict[Any, Any] = {}
         s: list[str | int] = []
         for k, v in cur.items():

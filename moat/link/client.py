@@ -50,6 +50,7 @@ from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 try:
@@ -839,13 +840,13 @@ class LinkSender(MsgSender):
                         task_status.started()
                         continue
                     p, d = pd
-                    if type(d) is dict:
+                    if isinstance(d, Mapping):
                         d = to_attrdict(d)
                     dl = list(p)
                     while dl:
                         n = dl.pop()
                         d = attrdict({n: d})
-                    if not isinstance(d, dict):
+                    if not isinstance(d, Mapping):
                         self._link.logger.warning("Item at %r is %r, not a dict, ignoring", p, d)
                         continue
                     merge(res, d)

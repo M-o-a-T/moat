@@ -17,6 +17,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from moat.util import CtxObj, NotGiven
 from moat.lib.run import load_ext
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ async def services(cfg: attrdict, tg: TaskGroup) -> AsyncIterator[list[Service]]
     svc: list[Service] = []
     async with AsyncExitStack() as stack:
         for sname, scfg in cfg.get("services", {}).items():
-            if not isinstance(scfg, dict):
+            if not isinstance(scfg, Mapping):
                 if scfg in (None, False, NotGiven):
                     continue
                 raise ValueError(f"MCP config for {sname!r} is {scfg!r} ??")

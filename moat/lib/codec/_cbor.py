@@ -13,6 +13,8 @@ from moat.util import OutOfData
 from ._base import Codec as _Codec
 from ._base import NoCodecError
 
+from collections.abc import Mapping
+
 # Typing
 from typing import TYPE_CHECKING, cast  # isort:skip
 
@@ -297,7 +299,7 @@ class Codec(_Codec):
         elif isinstance(ob, (list, tuple)):
             self._enc_array(ob)
         # TODO: accept other enumerables and emit a variable length array
-        elif isinstance(ob, dict):
+        elif isinstance(ob, Mapping):
             self._enc_dict(ob)
         elif isinstance(ob, float):
             self._enc_float(ob)

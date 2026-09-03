@@ -300,8 +300,6 @@ exclude = [
     "moat/micro/**/_test/**",
     "moat/micro/part/pin.py",
     "moat/micro/romfs.py",
-    "moat/link/gate/kv.py",
-    "moat/link/gate/venus.py",
     "moat/mcp/_server.py",
     "moat/ems/battery/OFF/**",
 ]

@@ -1,0 +1,108 @@
+{
+  "name": "@moat/lib-rpc",
+  "version": "0.1.0",
+  "description": "TypeScript port of MoaT's moat.lib.rpc — wire-compatible CBOR RPC with Python interop",
+  "type": "module",
+  "license": "MIT",
+  "author": "Matthias Urlichs <matthias@urlichs.de>",
+  "homepage": "https://github.com/moat-project/moat",
+  "repository": {
+    "type": "git",
+    "url": "https://git.intern.smurf.noris.de/moat.git",
+    "directory": "ts/moat-lib-rpc"
+  },
+  "keywords": [
+    "rpc",
+    "cbor",
+    "moat",
+    "wire-protocol",
+    "sans-io"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./codec": {
+      "import": {
+        "types": "./dist/codec.d.ts",
+        "default": "./dist/codec.js"
+      },
+      "require": {
+        "types": "./dist/codec.d.cts",
+        "default": "./dist/codec.cjs"
+      }
+    },
+    "./transport/ws": {
+      "import": {
+        "types": "./dist/transport/ws.d.ts",
+        "default": "./dist/transport/ws.js"
+      },
+      "require": {
+        "types": "./dist/transport/ws.d.cts",
+        "default": "./dist/transport/ws.cjs"
+      }
+    },
+    "./transport/tcp": {
+      "import": {
+        "types": "./dist/transport/tcp.d.ts",
+        "default": "./dist/transport/tcp.js"
+      },
+      "require": {
+        "types": "./dist/transport/tcp.d.cts",
+        "default": "./dist/transport/tcp.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:interop": "vitest run --config vitest.interop.config.ts",
+    "lint": "eslint src test examples",
+    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts' 'examples/**/*.ts'",
+    "typecheck": "tsc --noEmit",
+    "min": "node scripts/build-min.mjs",
+    "example": "tsx examples/server.ts & sleep 1 && tsx examples/client.ts && kill %1 2>/dev/null",
+    "pack": "npm pack --dry-run",
+    "prepublishOnly": "npm run build && npm run min && npm run test"
+  },
+  "dependencies": {
+    "cbor2": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "fast-check": "^3.23.0",
+    "prettier": "^3.4.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "ws": "^8.18.0"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  }
+}

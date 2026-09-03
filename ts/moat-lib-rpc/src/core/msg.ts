@@ -236,6 +236,16 @@ export class Msg extends MsgLink {
     return this._cmd;
   }
 
+  /** Whether a result (ok or error) has been received. */
+  get hasResult(): boolean {
+    return this._result !== null;
+  }
+
+  /** Whether the result is an error. */
+  get isError(): boolean {
+    return this._result !== null && !this._result.ok;
+  }
+
   /** Reversed command path (for dispatch). */
   get rcmd(): PathElem[] {
     if (this._cmd === null) return [];

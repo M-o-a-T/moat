@@ -149,7 +149,7 @@ class Relay(BaseCmd):
         d: delay until next change (msec) or None
         p: actual pin state
         """
-        p = await self.pin.r()
+        p = await self.pin()
         return dict(
             v=self.value,
             f=self.force,
@@ -164,4 +164,6 @@ class Relay(BaseCmd):
         if v is None:
             return self.value
         self.value = v
+        if self.force is None and self._delay is not None:
+            return
         await self._set()

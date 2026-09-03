@@ -1106,7 +1106,6 @@ class ServiceSender(MsgSender):
     _inner: MsgSender | None
     _watch_scope: anyio.CancelScope | None
     _ready: anyio.Event
-    _lock: anyio.Lock
 
     def __init__(self, sender: LinkSender, srv: Path):
         """Args:
@@ -1119,7 +1118,6 @@ class ServiceSender(MsgSender):
         self._inner = None
         self._watch_scope = None
         self._ready = anyio.Event()
-        self._lock = anyio.Lock()
 
     def __repr__(self):
         inner = self._inner
@@ -1260,7 +1258,10 @@ class ServiceSender(MsgSender):
         inner = self._inner
         if inner is None:
             raise RuntimeError("Service not available: destination terminated")
-        return inner.cmd(Path(), *a, _list=_list, **kw)
+        # Delegate to SubMsgSender.__call__ which creates a Caller with
+        # the full service path as the command, ensuring ClientCaller
+        # sends the correct path to the server.
+        return inner(*a, _list=_list, **kw)  # ty:ignore[call-non-callable]  # type: ignore[operator]
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
         """Return a SubMsgSender relative to the current service path.

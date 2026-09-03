@@ -30,9 +30,9 @@ auth:
     - mode: token
       name: TOK
 
-    - mode: userpass
-      data: users
+    - mode: password
       path: !P admin
+      fail_invalid: true
 
   pass:
   - !P i.ping
@@ -42,12 +42,10 @@ Dynamic data are the caller's responsibility. In this case:
 
 ```
 TOK: SomeRandomSecreT
-users:
-  fred: FlInTsToNe123
+password:
+  alice: $ecret
+  bob: hunter2
 ```
-
-`userpass` in the example above is illustrative only; no built-in
-`moat.lib.rpc.auth.userpass` method exists at this time.
 
 ## Built-in methods
 

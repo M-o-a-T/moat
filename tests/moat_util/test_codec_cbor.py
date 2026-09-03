@@ -72,8 +72,7 @@ def test_bar():
     c = codec.decode(codec.encode(b))
     assert b == c
 
-    bar94 = Bar(94)  # keep a reference so the auto-proxy survives
-    cc = codec.encode(bar94)
+    cc = codec.encode(Bar(94))
     dec = get_codec("cbor")
     cd = dec.decode(cc)
     assert isinstance(cd, Tag)

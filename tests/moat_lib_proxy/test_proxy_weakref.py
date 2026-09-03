@@ -21,7 +21,7 @@ from moat.lib.proxy import (
     name2obj,
     obj2name,
 )
-from moat.lib.proxy._proxy import _CProxy, _SProxy
+from moat.lib.proxy._proxy import _LRU_SIZE, _CProxy, _SProxy
 
 
 class Widget:
@@ -44,12 +44,20 @@ class RegisteredWidget(Widget):
 
 
 def test_auto_proxy_release():
-    """Auto-generated proxies are released when the object is GC'd."""
+    """Auto-generated proxies are released once aged out of the LRU and GC'd."""
     w = Widget(42)
     name = get_proxy(w)
     assert name.startswith("p_")
     assert name2obj(name) is w
     assert obj2name(w) == name
+
+    # Age `w` out of the LRU so it's no longer pinned.
+    for i in range(_LRU_SIZE):
+        get_proxy(Widget(100 + i))
+
+    # Still alive despite having aged out of the LRU: the weakref cache,
+    # not the pin, keeps it referable.
+    assert name2obj(name) is w
 
     # Drop our reference and force GC
     del w
@@ -173,7 +181,7 @@ def test_cbor_roundtrip_named_proxy():
 
 
 def test_auto_proxy_does_not_leak():
-    """Verify that auto-generated proxies don't accumulate indefinitely."""
+    """Verify that auto-generated proxies don't accumulate beyond the LRU."""
     # Create and discard many objects
     for i in range(100):
         w = Widget(i)
@@ -182,9 +190,9 @@ def test_auto_proxy_does_not_leak():
 
     gc.collect()
 
-    # All auto-proxies should be gone
+    # At most the LRU's worth of auto-proxies may still be pinned
     remaining = [k for k in _CProxy if k.startswith("p_")]
-    assert remaining == [], f"Leaked proxies: {remaining}"
+    assert len(remaining) <= _LRU_SIZE, f"Too many proxies: {remaining}"
 
 
 def test_named_proxies_in_separate_store():

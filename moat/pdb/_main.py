@@ -1,4 +1,4 @@
-"Rudimentary debugging."
+"""Rudimentary debugging."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from moat.lib.run import main_
 
 @main_.command(short_help="Import the debugger")
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
-async def cli(args):  # pylint: disable=unused-argument  # safe
+async def cli(args: tuple[str, ...]) -> None:
     """
     This command imports PDB and continues to process arguments.
     """

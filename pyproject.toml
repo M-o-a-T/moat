@@ -14,6 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "anyio ~= 4.9",
+    "bitstring",
     "trio",
     "trio_asyncio",
     "alembic",
@@ -42,7 +43,6 @@ dependencies = [
     "outcome",
     "psutil",
     "pyfuse3",
-    "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
     "regex",
     "ruyaml",
@@ -204,6 +204,7 @@ explicit-preview-rules = true
 "tests/moat_mqtt/**" = ["PT"]
 "tests/**" = ["ASYNC240","D104","E501","PLW2901","RUF040","S105","S110","S603","S607"]
 "examples/**" = ["S108"]
+"ts/**" = ["E402"]
 "moat/mcp/_server.py" = ["I002"]
 "moat/micro/_test.py" = ["ASYNC240"]
 
@@ -262,12 +263,14 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/api/",
     "moat/db/__init__.py",
     "moat/db/box/",
     "moat/db/inv/",
     "moat/db/label/",
     "moat/db/thing/",
     "moat/db/rain/",
+    "moat/bus/",
     "moat/ems/",
     "moat/lib/",
     "moat/link/",
@@ -291,8 +294,8 @@ exclude = [
     "moat/link/gate/kv.py",
     "moat/link/gate/venus.py",
     "moat/mcp/_server.py",
-    # moat/ems: pre-existing typing debt outside moat-iov scope.
-    # moat-iov will remove the sched exclusion after fixing bucket A+B.
+    # moat/ems: pre-existing typing debt (bucket B+C) outside this task's scope.
+    # Remove after introducing a typed sched-config schema (WORK.md step 6).
     "moat/ems/sched/**",
     "moat/ems/battery/OFF/**",
     "moat/ems/battery/_base.py",

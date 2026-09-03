@@ -7,6 +7,7 @@ from __future__ import annotations
 import anyio
 import logging
 
+from moat.lib.modbus.pdu import execute_request
 from moat.modbus.server import UnitContext
 
 logger = logging.getLogger(__name__)
@@ -169,4 +170,4 @@ class ServerUnitContext(UnitContext):
                     await slot.getValues()
 
         # Now process the request normally
-        return await request.update_datastore(self)
+        return execute_request(request, self)

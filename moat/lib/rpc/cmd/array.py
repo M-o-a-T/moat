@@ -143,6 +143,13 @@ class ArrayCmd(BaseSuperCmd):
             else:
                 return await self._cmd_all(msg, rcmd)
 
+        # Check for cmd_XXX methods on this handler before treating as sub-app index
+        if isinstance(cmd, str) and not rcmd:
+            if not msg.can_stream and (method := getattr(self, f"cmd_{cmd}", None)) is not None:
+                return await msg.call_simple(method)
+            if (method := getattr(self, f"stream_{cmd}", None)) is not None:
+                return await msg.call_stream(method)
+
         if not isinstance(cmd, int):
             raise NoPathError(
                 self.path,

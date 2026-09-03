@@ -26,7 +26,6 @@ pin:
   pin: X
 """
 
-
 @pytest.mark.anyio
 async def test_something(tmp_path):
     async with rpc_stack(tmp_path, CFG) as d:
@@ -177,7 +176,7 @@ assert await pin() is False
 
 # Now switching to val=25 (t_off=150 ms) fires the wakeup event at once.
 await app.w(25)
-await sleep_ms(20)  # one scheduler pass to let the app switch
+await sleep_ms(20)       # one scheduler pass to let the app switch
 assert await pin() is True
 ```
 

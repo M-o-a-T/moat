@@ -3,8 +3,8 @@
 % start synopsis
 % start main
 
-This is an anyio-enabled async frontend for pymodbus (though the goal is to
-eventually replace pymodbus, as it is not at all MicroPython-friendly).
+This is an anyio-enabled async Modbus client/server, built on the sans-IO
+protocol core ``moat-lib-modbus`` (no ``pymodbus`` dependency).
 
 % end synopsis
 

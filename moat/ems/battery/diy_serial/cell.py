@@ -29,6 +29,11 @@ class Cell(BaseCell):
     @i: cell number there
 
     This BaseCell translates commands to Comm requests.
+
+    Configuration::
+
+        u:
+          offset: 0  # voltage offset calibration, volts
     """
 
     code_version = None
@@ -59,11 +64,13 @@ class Cell(BaseCell):
             self.cfg.pid = attrdict()
         if "load" not in self.cfg:
             self.cfg.load = attrdict()
+        if "u" not in self.cfg:
+            self.cfg.u = attrdict(offset=0)
 
     def _raw2volt(self, val):
-        if val is None or self.cfg.u.samples is None or val == 0:
+        if val is None or self.n_samples is None or val == 0:
             return None
-        return val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration + self.cfg.u.offset
+        return val * self.v_per_ADC / self.n_samples * self.v_calibration + self.cfg.u.offset
 
     def _volt2raw(self, val):
         if val is None or self.n_samples is None or val == 0:
@@ -110,8 +117,6 @@ class Cell(BaseCell):
 
     async def cmd_u(self):
         "read cell voltage"
-        if self.val_u is not None:
-            return self.val_u
         res = (await self.comm(p=RequestVoltages(), s=self.cfg.pos))[0]
         return self._raw2volt(res.voltRaw & 0x1FFF)
 
@@ -127,16 +132,14 @@ class Cell(BaseCell):
 
     async def cmd_t(self):
         "read cell temperature"
-        if self.load_temp is None:
-            res = (await self.comm(p=RequestTemperature(), s=self.cfg.pos))[0]
-            res.to_cell(self)
+        res = (await self.comm(p=RequestTemperature(), s=self.cfg.pos))[0]
+        res.to_cell(self)
         return self.load_temp
 
     async def cmd_tb(self):
         "read balancer temperature"
-        if self.batt_temp is None:
-            res = (await self.comm(p=RequestTemperature(), s=self.cfg.pos))[0]
-            res.to_cell(self)
+        res = (await self.comm(p=RequestTemperature(), s=self.cfg.pos))[0]
+        res.to_cell(self)
         return self.batt_temp
 
     def m_pid(self, msg):  # noqa:D102
@@ -176,7 +179,7 @@ class Cell(BaseCell):
         if pid:
             self.cfg.pid.update(pid)
             await self.comm(p=RequestWritePIDconfig(**self.cfg.pid), s=self.cfg.pos)
-        if len(self.cfg.pid != 3):
+        if len(self.cfg.pid) != 3:
             res = (await self.comm(p=RequestReadPIDconfig(), s=self.cfg.pos))[0]
             self.m_pid(res)
         return self.cfg.pid

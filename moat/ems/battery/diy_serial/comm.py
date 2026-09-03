@@ -50,6 +50,9 @@ class BattComm(BaseCmd):
         self.comm = self.root.sub_at(self.cfg["comm"])
 
     async def task(self):  # noqa:D102
+        # Wait for the comm link to be ready before reading
+        comm_name = self.cfg["comm"][0]
+        await self.root.sub[comm_name].wait_ready()
         self.set_ready()
         await self._read()
 

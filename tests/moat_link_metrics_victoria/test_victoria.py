@@ -19,11 +19,13 @@ if not shutil.which("victoria-metrics"):
 
 @pytest.mark.skip  # does not work yet -- server needs more time?
 @pytest.mark.anyio
-async def test_basic(cfg, free_tcp_port_factory):
+async def test_basic(cfg):
     """Metrics entries are forwarded to the VictoriaMetrics mock."""
+    # VictoriaTester manages its own port allocation internally (PID-based),
+    # since victoria-metrics is an external process that needs the port in its config.
     async with (
         Scaffold(cfg, use_servers=True) as sf,
-        VictoriaTester(free_tcp_port_factory(), free_tcp_port_factory()).run() as t,
+        VictoriaTester().run() as t,
     ):
         await sf.server(init="INIT")
         c = await sf.client()

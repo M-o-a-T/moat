@@ -15,7 +15,12 @@ from moat.bus.util import Processor, byte2mini
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.bus.message import BusMessage
+    from moat.bus.server.obj import BaseObj
+    from moat.bus.server.server import Server
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +31,7 @@ packer = msgpack.Packer(
 unpacker = partial(msgpack.unpackb, raw=False)
 
 
-def build_aa_data(serial, code, timer):  # noqa:D103
+def build_aa_data(serial: bytes, code: int, timer: int) -> bytes:  # noqa:D103
     raise NotImplementedError
 
 
@@ -43,24 +48,26 @@ class FlashControl(Processor):
     """
 
     CODE = 0
+    server: Server
+    logger: logging.Logger
 
-    def __init__(self, server, code=0):
+    def __init__(self, server: Server, code: int = 0) -> None:
         self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.server = server
         super().__init__(server, code)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         await self.spawn(self._poller)
         await self.spawn(self._fwd)
 
-    async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
+    async def _fwd(self, *, task_status: TaskStatus[None]) -> None:
         task_status.started()
         with self.objs.watch() as w:
             async for evt in w:
                 await self.put(evt)
 
-    async def process(self, msg):
+    async def process(self, msg: BusMessage) -> None:
         """Code zero"""
         # All Code-0 messages must include a serial
         d = msg.data
@@ -104,7 +111,7 @@ class FlashControl(Processor):
             else:  # client
                 await self._process_client_direct(msg)
 
-    async def _process_reply(self, msg: BusMessage):
+    async def _process_reply(self, msg: BusMessage) -> None:
         """
         Some other server has assigned the address.
 
@@ -124,13 +131,13 @@ class FlashControl(Processor):
     #   elif o.client_id != msg.dest:
     #       await self.q_w.put(OldDevice(obj))
 
-    async def _process_request(self, serial, flags, timer):
+    async def _process_request(self, serial: bytes, flags: int, timer: int) -> None:
         """
         Control broadcast>broadcast
         AA: request
         """
 
-        async def accept(cid, code=0, timer=0):
+        async def accept(cid: int, code: int = 0, timer: int = 0) -> None:
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
             await self.send(
                 src=self.my_id,
@@ -139,7 +146,7 @@ class FlashControl(Processor):
                 data=build_aa_data(serial, code, timer),
             )
 
-        async def reject(err, dly=0):
+        async def reject(err: int, dly: int = 0) -> None:
             self.logger.info("Reject x%x for %r", err, serial)
             await self.send(src=self.my_id, dst=-4, code=0, data=build_aa_data(serial, err, dly))
 
@@ -150,41 +157,45 @@ class FlashControl(Processor):
             await self.objs.register(obj)
         if timer:
 
-            async def do_dly(obj):
+            async def do_dly(obj: BaseObj) -> None:
                 await trio.sleep(byte2mini(timer))
+                assert obj.client_id is not None
                 await accept(obj.client_id, 0)
 
             await self.spawn(do_dly, obj)
         else:
+            assert obj.client_id is not None
             await accept(obj.client_id, 0)
 
-    async def _process_inter_server(self, msg):
+    async def _process_inter_server(self, msg: BusMessage) -> None:
         """
         Inter-server sync for AA. Reserved.
         AA: nack
         """
         self.logger.debug("Not implemented: inter-server-sync %r", msg)
 
-    async def _process_nack(self, msg):
+    async def _process_nack(self, msg: BusMessage) -> None:
         """
         Control server>broadcast
         AA: nack
         """
         self.logger.debug("Not implemented: server nack %r", msg)
 
-    async def _process_client_nack(self, msg):
+    async def _process_client_nack(self, msg: BusMessage) -> None:
         """
         Control client>broadcast; NACK by client, addr collision
         """
         self.logger.warning("Not implemented: control_cb %r", msg)
 
-    async def _process_client_reply(self, client, serial, flags, timer):
+    async def _process_client_reply(
+        self, client: int, serial: bytes, flags: int, timer: int
+    ) -> None:
         """
         Client>server
         """
         flags, timer  # noqa:B018
         objs = self.objs
-        obj2 = None
+        obj2: BaseObj | None = None
         try:
             obj1 = objs.obj_client(client)
         except KeyError:
@@ -218,23 +229,23 @@ class FlashControl(Processor):
             await objs.deregister(obj2)
             await objs.register(obj2)
 
-    async def _process_client_reply_mon(self, msg):
+    async def _process_client_reply_mon(self, msg: BusMessage) -> None:
         self.logger.warning("Not implemented: reply_mon %r", msg)
 
-    async def _process_client_direct(self, msg):
+    async def _process_client_direct(self, msg: BusMessage) -> None:
         """
         Control client>client
         """
         self.logger.warning("Not implemented: client_direct %r", msg)
 
-    async def _poller(self, *, task_status=trio.TASK_STATUS_IGNORED):
+    async def _poller(self, *, task_status: TaskStatus[None]) -> None:
         task_status.started()
         await trio.sleep(1)
         while True:
             await self._send_poll()
             await trio.sleep(100)
 
-    async def _send_poll(self):
+    async def _send_poll(self) -> None:
         """
         Send a poll request
 
@@ -242,7 +253,16 @@ class FlashControl(Processor):
         """
         await self.send(self.my_id, -4, 0, b"\x23\x14")
 
-    async def reply(self, msg, src=None, dest=None, code=None, data=b"", prio=0):  # noqa:D102
+    async def reply(
+        self,
+        msg: BusMessage,
+        src: int | None = None,
+        dest: int | None = None,
+        code: int | None = None,
+        data: bytes = b"",
+        prio: int = 0,
+    ) -> None:
+        """Reply to a received message."""
         if src is None:
             src = msg.dst
         if dest is None:
@@ -251,7 +271,7 @@ class FlashControl(Processor):
             code = 3  # standard reply
         await self.send(src, dest, code, data=data, prio=prio)
 
-    async def _handle_assign_reply(self, msg: BusMessage):
+    async def _handle_assign_reply(self, msg: BusMessage) -> None:
         """
         Some other server has assigned the address.
 

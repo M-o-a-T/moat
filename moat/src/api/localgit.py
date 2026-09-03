@@ -20,7 +20,7 @@ class CommitInfo(BaseCommitInfo):  # noqa: D101
 
 class RepoInfo(BaseRepoInfo):  # noqa: D101
     @property
-    def name(self):  # noqa: D102
+    def name(self) -> str:  # noqa: D102
         return self.repo.name
 
     @property
@@ -56,13 +56,13 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
 
         self.data = attrdict()
 
-    async def create(self):
+    async def create(self) -> None:
         """
         Create this repository.
         """
         await self.repo.exec(self.api.cfg.command, self.name)
 
-    async def set_remote(self):
+    async def set_remote(self) -> None:
         """
         Override: the config program is responsible for push setup
         """
@@ -73,13 +73,13 @@ class API(BaseAPI):  # noqa: D101
     cls_RepoInfo = RepoInfo
     cls_CommitInfo = CommitInfo
 
-    async def clone_from_remote(self):
+    async def clone_from_remote(self) -> None:
         """
         Clone this repository to the local cache.
         """
         raise NotImplementedError
 
-    async def add_repo(self, name: str, description: str):
+    async def add_repo(self, name: str, description: str) -> None:
         """
         Add this repository.
         """
@@ -106,5 +106,5 @@ class API(BaseAPI):  # noqa: D101
     #               url = u.strip().lstrip("<").rstrip(">")
     #               break
 
-    async def get_repo(self, name) -> RepoInfo:  # noqa: D102
-        return self.cls_RepoInfo(self, name)
+    async def get_repo(self, name: str) -> RepoInfo:  # noqa: D102
+        return self.cls_RepoInfo(self, name)  # ty: ignore[invalid-argument-type]  # localgit passes name as repo placeholder

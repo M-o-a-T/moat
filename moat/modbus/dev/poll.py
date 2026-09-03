@@ -191,10 +191,12 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)
 
-        for s in servers:
+        for s, srv in zip(cfg.get("server", ()), servers, strict=False):
             evt = anyio.Event()
-            tg.start_soon(partial(s.serve, opened=evt))
+            tg.start_soon(partial(srv.serve, opened=evt))
             await evt.wait()
+            if hasattr(srv, "port"):
+                s["port"] = srv.port
 
         task_status.started(cfg)
 

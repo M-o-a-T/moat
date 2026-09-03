@@ -13,12 +13,12 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 4.2",
-	"pymodbus ~= 3.9.0",
+	"moat-lib-modbus ~= 0.1",
 	"anyio-serial",
 	"moat-util ~= 0.63.0",
 	"asyncscope ~= 0.8.3",
 	"moat-lib-run ~= 0.2.0",
-	]
+]
 version = "0.9.5"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"

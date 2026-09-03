@@ -451,10 +451,8 @@ start with the usual Blinkenlights example:
 ```python
 from moat.lib.micro import sleep_ms as sleep
 from machine import Pin
-
-
 async def blink():
-    p = Pin(4, Pin.OUT)
+    p=Pin(4,Pin.OUT)
     try:
         while True:
             p(1)
@@ -463,10 +461,7 @@ async def blink():
             await sleep(500)
     finally:
         p(0)
-
-
 import moat
-
 res = moat.bg(blink)
 ```
 

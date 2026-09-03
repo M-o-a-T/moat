@@ -29,6 +29,7 @@ class UnixIter(BaseConnIter):
     def __init__(self, path):
         super().__init__()
         self.path = path
+        self.port = -1  # prevent blocking
 
     async def accept(self) -> Never:  # noqa:D102
         li = await anyio.create_unix_listener(self.path)

@@ -3,16 +3,17 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from moat.bus.message import BusMessage
 from moat.lib.path import P, Path
 
-import typing
+from . import BaseBusHandler, UnknownParamError
 
-if typing.TYPE_CHECKING:
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
     from moat.kv.client import Client
 
-from moat.bus.message import BusMessage
-
-from . import BaseBusHandler, UnknownParamError
+    from collections.abc import AsyncIterator
 
 
 class Handler(BaseBusHandler):
@@ -23,8 +24,14 @@ class Handler(BaseBusHandler):
 
     short_help = "tunnel through MoaT-KV"
 
-    def __init__(self, client: Client, topic: Path):
-        super().__init__()
+    client: Client
+    topic: Path
+    _mqtt: Any
+    _mqtt_it: Any
+    id: Any
+
+    def __init__(self, client: Client, topic: Path) -> None:
+        super().__init__(client)
         self.client = client
         self.topic = topic
 
@@ -38,8 +45,9 @@ class Handler(BaseBusHandler):
         ),
     }
 
-    @staticmethod
-    def check_config(cfg: dict):  # noqa:D102
+    @classmethod
+    def check_config(cls, cfg: dict[str, Any]) -> None:
+        """Validate configuration."""
         for k, v in cfg.items():
             if k != "topic":
                 raise UnknownParamError(k)
@@ -47,16 +55,16 @@ class Handler(BaseBusHandler):
                 raise TypeError(k, v)
 
     @asynccontextmanager
-    async def _ctx(self):
-        async with self.client.msg_monitor(topic=self.topic) as CH:
+    async def _ctx(self) -> AsyncIterator[Handler]:
+        async with self.client.msg_monitor(topic=tuple(self.topic)) as CH:
             self._mqtt = CH
             yield self
 
-    def __aiter__(self):
+    def __aiter__(self) -> Handler:
         self._mqtt_it = self._mqtt.__aiter__()
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> BusMessage:
         while True:
             msg = await self._mqtt_it.__anext__()
             try:
@@ -64,17 +72,18 @@ class Handler(BaseBusHandler):
             except AttributeError:
                 continue
             try:
-                id = msg.pop("_id")
+                id_ = msg.pop("_id")
             except KeyError:
                 continue
             else:
-                if id == self.id:
+                if id_ == self.id:
                     continue
                 msg = BusMessage(**msg)
-                msg._mqtt_id = id  # noqa:SLF001
+                msg._mqtt_id = id_  # noqa:SLF001
                 return msg
 
-    async def send(self, msg):  # noqa:D102
-        data = {k: getattr(msg, k) for k in msg._attrs}  # noqa:SLF001
+    async def send(self, msg: BusMessage) -> None:
+        """Send a message via MoaT-KV."""
+        data: dict[str, Any] = {k: getattr(msg, k) for k in msg._attrs}  # noqa:SLF001
         data["_id"] = getattr(msg, "_mqtt_id", self.id)
         await self._mqtt.msg_send(topic=self.topic, data=data)

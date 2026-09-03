@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import anyio
-import inspect
 
 from moat.lib.rpc import MsgHandler
 
@@ -15,47 +14,58 @@ if TYPE_CHECKING:
 
 __all__ = ["MsgTerm"]
 
+#: Methods that should not be exposed as RPC commands despite being async.
+_SKIP_METHODS = frozenset({"setup", "teardown", "stream"})
+
 
 class MsgTerm(MsgHandler):
     """
-    RPC handler that wraps a TermBuf instance and exposes its methods via cmd_* handlers.
+    RPC handler that wraps a :class:`~moat.lib.stream.TermBuf` instance and
+    exposes its terminal methods as ``cmd_*`` handlers.
 
-    This allows remote access to terminal operations via the MsgSender interface.
+    This allows remote access to terminal operations via the MsgSender
+    interface.  Public async methods of the wrapped ``TermBuf`` (except
+    lifecycle methods in :data:`_SKIP_METHODS`) are automatically forwarded.
     """
 
     def __init__(self, term: TermBuf):
         self.term = term
 
-        for k in dir(term):
-            if k[0] == "_":
+        import inspect  # noqa: PLC0415
+
+        for name in dir(term):
+            if name[0] == "_" or name in _SKIP_METHODS:
                 continue
             try:
-                v = getattr(term, k)
+                meth = getattr(term, name)
             except AttributeError:
                 continue
-            if inspect.iscoroutinefunction(v):
-                fn = f"cmd_{k}"
+            if inspect.iscoroutinefunction(meth):
+                fn = f"cmd_{name}"
                 if not hasattr(self, fn):
-                    setattr(self, f"cmd_{k}", v)
+                    setattr(self, fn, meth)
 
     async def stream_raw(self, msg: Msg):
-        """
-        RPC data stream for raw I/O.
+        """RPC bidirectional data stream for raw terminal I/O.
+
+        Switches the terminal to raw mode for the duration of the stream,
+        forwarding keystrokes to the remote side and writing remote data
+        back to the terminal.  The terminal is restored to its original
+        state on exit.
         """
         async with msg.stream() as ms, anyio.create_task_group() as tg:
             try:
                 await self.term.set_raw()
 
                 @tg.start_soon
-                async def sender():
+                async def _sender():
                     buf = bytearray(32)
                     while True:
                         try:
                             n = await self.term.rd(buf)
-                            data = bytes(buf[:n])
                         except EOFError:
                             break
-                        await ms.send(data)
+                        await ms.send(bytes(buf[:n]))
                     tg.cancel_scope.cancel()
 
                 async for data in ms:

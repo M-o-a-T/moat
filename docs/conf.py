@@ -31,9 +31,7 @@ else:
 # get the current version
 import subprocess
 
-version = (
-    subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
-)
+version = subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
 try:
     _idx = version.index("-")
 except IndexError:
@@ -94,6 +92,10 @@ myst_enable_extensions = [
     "attrs_block",
     "colon_fence",
 ]
+
+# Generate anchors for the first two heading levels so that
+# `[text](#section-slug)`-style intra-document links resolve.
+myst_heading_anchors = 2
 
 sd_custom_directives = {
     "dropdown-syntax": {
@@ -285,6 +287,7 @@ nitpick_ignore = [
     ("py:data", "moat.link.code.CODE_EXEC_ROOT"),
     ("py:data", "types.EllipsisType"),
     ("py:data", "types.CoroutineType"),
+    ("py:data", "_SKIP_METHODS"),
     ("py:obj", "moat.lib.micro.T"),
     ("py:class", "moat.micro.part.transfer._Step"),
     ("py:obj", "moat.lib.priomap._impl.KeyT"),

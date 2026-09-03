@@ -66,12 +66,12 @@ class RepoInfo(BaseRepoInfo):  # noqa: D101
         assert self.data is not None
         return self.data.payload["xyz.radicle.project"].name
 
-    async def clone_from_remote(self):
-        "Copy a remote repo."
+    async def clone_from_remote(self) -> None:
+        """Copy a remote repo."""
         await self.repo.exec("rad", "clone", self.rad_urn, str(self.repo.cwd), cwd="/tmp")  # noqa:S108
         await self.load_()
 
-    async def load_(self):  # noqa: D102
+    async def load_(self) -> None:  # noqa: D102
         try:
             raw = await self.repo.exec("rad", ".", capture=True)
             assert raw is not None
@@ -111,7 +111,7 @@ exec cat <$1 >{g.name!r}
         assert self.data is not None
         return self.data.payload["xyz.radicle.project"].defaultBranch
 
-    async def set_default_branch(self, name):
+    async def set_default_branch(self, name: str) -> None:
         """
         Set the default branch to this.
         """
@@ -141,7 +141,7 @@ mv $T $1
         assert self.data is not None
         self.data.payload["xyz.radicle.project"].defaultBranch = name
 
-    async def create(self):  # noqa: D102
+    async def create(self) -> None:  # noqa: D102
         await self.repo.exec(
             "rad",
             "init",
@@ -213,7 +213,7 @@ class API(BaseAPI):  # noqa: D101
                     url = u.strip().lstrip("<").rstrip(">")
                     break
 
-    async def get_repo(self, name) -> RepoInfo:  # noqa: D102
+    async def get_repo(self, name: str) -> RepoInfo:  # noqa: D102
         url = f"/repos/{self.cfg.user}/{name}"
         res = await self.http.get(url)
         res.raise_for_status()

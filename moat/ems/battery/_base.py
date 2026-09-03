@@ -18,7 +18,7 @@ from moat.lib.micro import (
 from moat.lib.proxy import as_proxy
 from moat.lib.rpc import ArrayCmd, BaseCmd
 from moat.lib.rpc.alert import Alert
-from moat.micro.rtc import state as rtc_state
+from moat.micro.rtc import RTC
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -265,9 +265,9 @@ class BaseCell(BaseCmd):
             tf = 1
         else:
             if t > lt["abs"]["max"]:
-                raise HighTemperature(t, self.path)
+                raise HighTemperature(t)
             if t < lt["abs"]["min"]:
-                raise LowTemperature(t, self.path)
+                raise LowTemperature(t)
 
             tf = val2pos(lt["abs"]["max"], t, lt["ext"]["max"], clamp=True) * val2pos(
                 lt["abs"]["min"],
@@ -277,11 +277,11 @@ class BaseCell(BaseCmd):
             )
 
         if u > lu["abs"]["max"]:
-            raise HighCellVoltage(u, self.path)
+            raise HighCellVoltage(dict(u=u))
         chg = tf * val2pos(lu["ext"]["max"], u, lu["std"]["max"], clamp=True)
 
         if u < lu["abs"]["min"]:
-            raise LowCellVoltage(u, self.path)
+            raise LowCellVoltage(dict(u=u))
         dis = tf * val2pos(lu["ext"]["min"], u, lu["std"]["min"], clamp=True)
 
         # TODO use an exponent != 1
@@ -381,8 +381,8 @@ class BaseCells(ArrayCmd):
         await super().setup()
         await self._setup()
         try:
-            w = rtc_state[("state",) + self.path]
-        except KeyError:
+            w = RTC.get_sync(("state",) + self.path)
+        except (KeyError, AttributeError):
             pass
         else:
             self.work = attrdict(**w)
@@ -394,6 +394,10 @@ class BaseCells(ArrayCmd):
         if self.w_max is None:
             return 0.5
         return self.w / self.w_max
+
+    async def cmd_all(self, cmd_name):
+        """Call a command on all sub-apps and return the results as a list."""
+        return [await getattr(app, f"cmd_{cmd_name}")() for app in self.apps]
 
     doc_u = dict(_d="voltage sum", _r="float")
 
@@ -541,7 +545,10 @@ class BaseCells(ArrayCmd):
         self.n_save += 1
         if self.n_save > 99:
             self.n_save = 0
-            rtc_state[("state",) + self.path] = self.work
+            try:
+                RTC.set_sync(("state",) + self.path, self.work)
+            except (KeyError, AttributeError):
+                pass
 
     def get_work(self, clear: bool = False, poll: bool = False):
         poll  # noqa:B018
@@ -579,7 +586,7 @@ class BaseBattery(BaseCells):
     async def cmd_ud(self):
         """Get delta between cell voltage sum and battery voltage."""
         u1 = await self.cmd_u()
-        u2 = sum(await self.all("u"))
+        u2 = sum(await self.cmd_all("u"))
         return u2 - u1
 
 
@@ -623,11 +630,16 @@ class BaseBalancer(BaseCmd):
         self.n = self.cfg.get("n", 9999)
         self.bat = self.root.sub_at(self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
-            # get battery limits
-            c = await self.bat.cfg_(("cfg", "lim", "u", "ext"))
+            # wait for the battery to be ready before reading its config
+            bat_name = self.cfg["bat"][0]
+            await self.root.sub[bat_name].wait_ready()
+            # get battery limits from the battery's cell config template
+            bat_app = self.root.sub[bat_name]
+            cell_cfg = bat_app.cfg["cfg"]
+            c = cell_cfg["lim"]["u"]["ext"]
             self.dis_max = c["max"]
             self.chg_min = c["min"]
-            c = await self.bat.cfg_(("cfg", "lim", "u", "std"))
+            c = cell_cfg["lim"]["u"]["std"]
             self.dis_min = c["max"]
             self.chg_max = c["min"]
             c = self.cfg.get("u", {})
@@ -681,12 +693,13 @@ class BaseBalancer(BaseCmd):
             res = await self._run_h(u)
             # res = (await self._run_l(u)) || res
 
-    async def _run_h(self, u):
+    async def _run_h(self, uu):
+        u = [x[0][0] for x in uu]
         maxv = max(u)
         minv = min(u)
 
         # discharger states
-        st = await self.bat.all("dis")
+        st = [x[0][0] for x in await self.bat.all("dis")]
 
         if not self.uh or self.uh > maxv:
             for uv, f in st:
@@ -728,12 +741,12 @@ class BaseBalancer(BaseCmd):
                     if st[i][0] < minv:
                         # don't balance below the minimum
                         log("Balance1 %s", cv)
-                        await self.bat(i, "dis", v=cv)
+                        await self.bat[i].dis(v=cv)
                         # don't spam the system when the min level changes
                 else:
                     # goal reached.
                     log("Unbalance1 %s", cv)
-                    await self.bat(i, "dis", v=0)
+                    await self.bat[i].dis(v=0)
 
             elif cv >= thrv1 + d:
                 want += 1
@@ -756,7 +769,7 @@ class BaseBalancer(BaseCmd):
                 continue
             if st[i][0] > cv and cv < thrv2:
                 log("Unbalance2 %s", cv)
-                await self.bat(i, "dis", v=0)
+                await self.bat[i].dis(v=0)
                 cur -= 1
 
         # Step 2, turn on balancing on cells that need it
@@ -769,7 +782,7 @@ class BaseBalancer(BaseCmd):
                 break
             if cv >= thrv1 + d:
                 log("Balance2 %d %s", i, cv)
-                await self.bat(i, "dis", v=minv)
+                await self.bat[i].dis(v=minv)
                 cur += 1
                 ret = True
                 continue

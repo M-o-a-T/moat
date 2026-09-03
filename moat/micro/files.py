@@ -825,7 +825,8 @@ async def copytree(
                         p = p[pi + 12 :]
                     data = await run(cross, str(src), "-s", p, "-o", "/dev/stdout", capture="raw")
                 except CalledProcessError as exc:
-                    print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                    if exc.stderr:
+                        print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     # copy this file unmodified
                 else:
                     assert isinstance(src, APath)

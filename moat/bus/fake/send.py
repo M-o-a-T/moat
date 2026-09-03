@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import asyncclick as click
-from fakebus.client import Client
-from moatbus.message import BusMessage
+
+from moat.bus.fake.client import Client
+from moat.bus.message import BusMessage
 
 
 @click.command()
@@ -18,7 +19,18 @@ from moatbus.message import BusMessage
 @click.option("-C", "--cmd", help="Command", default=0)
 @click.option("-v", "--verbose", is_flag=True, help="Be verbose")
 @click.argument("data", nargs=-1)
-async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose):  # noqa:D103
+async def run(
+    socket: str,
+    timeout: float,
+    timerb: float,
+    source: str,
+    dest: str,
+    cmd: str,
+    data: tuple[str, ...],
+    bits: int,
+    verbose: bool,
+) -> None:
+    """Send a message on the fake bus."""
     async with Client(
         wires=bits,
         socket=socket,
@@ -27,15 +39,15 @@ async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose): 
         verbose=verbose,
     ).run() as client:
         msg = BusMessage()
-        msg.src = source
-        msg.dst = dest
-        msg.code = cmd
-        data = " ".join(data).encode("utf-8", errors="surrogateescape")
+        msg.src = int(source)
+        msg.dst = int(dest)
+        msg.code = int(cmd)
+        data_bytes = " ".join(data).encode("utf-8", errors="surrogateescape")
         msg.start_send()
-        msg.add_data(data)
+        msg.add_data(data_bytes)
 
-        await client.send(dest, msg)
-        print(msg.res)
+        await client.send(msg)
+        print(getattr(msg, "res", None))
 
 
 if __name__ == "__main__":

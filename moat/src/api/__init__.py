@@ -97,16 +97,16 @@ class RepoInfo(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def load_(self):
+    async def load_(self) -> None:
         "load data. Will raise NoSuchRepo if it doesn't exist."
         pass
 
     @abstractmethod
-    async def create(self):
+    async def create(self) -> None:
         "create remote repo."
         pass
 
-    async def load(self, create: bool | None = None):
+    async def load(self, create: bool | None = None) -> None:
         "load this repo's data. You might want to overide `load_` instead."
         try:
             await self.load_()
@@ -135,7 +135,7 @@ class RepoInfo(metaclass=ABCMeta):
         # only required for source repo
         raise NotImplementedError
 
-    async def get_branch(self, name) -> CommitInfo:
+    async def get_branch(self, name: str) -> CommitInfo:
         """
         Return info on this branch.
         """
@@ -147,13 +147,13 @@ class RepoInfo(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    async def set_default_branch(self, name):
+    async def set_default_branch(self, name: str) -> None:
         """
         Set the default branch to this.
         """
         raise NotImplementedError
 
-    async def get_tag(self, name) -> CommitInfo:
+    async def get_tag(self, name: str) -> CommitInfo:
         """
         Return info on this tag.
         """
@@ -215,7 +215,7 @@ class API(CtxObj, metaclass=ABCMeta):
         self.cfg = cfg
         self.logger = logging.getLogger(f"moat.src.api.{name}")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹{self.cfg.api}›"
 
     @asynccontextmanager
@@ -224,8 +224,8 @@ class API(CtxObj, metaclass=ABCMeta):
             yield self
 
     @property
-    def host(self):
-        "Host to talk to"
+    def host(self) -> str:
+        """Host to talk to"""
         raise NotImplementedError
 
     def list_repos(self) -> AsyncIterator[RepoInfo]:

@@ -1,0 +1,17 @@
+Source: moat-lib-modbus
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat
+
+Package: moat-lib-modbus
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+Description: Sans-IO Modbus protocol core
+ A dependency-free, sans-IO implementation of the minimal Modbus
+ protocol subset used by moat-modbus: PDU encoding/decoding for
+ function codes 1,2,3,4,5,6,15,16, plus TCP (MBAP) and RTU framers.

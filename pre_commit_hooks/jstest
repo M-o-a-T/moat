@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+Pre-commit hook to run vitest on TS packages with modified files.
+
+Mirrors the pytest-modified hook: takes the list of modified files from
+pre-commit, filters for files under ts/ (or js/), determines which package
+directory they belong to, and runs `npx vitest run` in that directory.
+
+If no TS/JS files are modified, exits 0 (nothing to test).
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+def get_package_dir(filepath: str) -> Path | None:
+    """
+    Given a file path, return the TS/JS package directory it belongs to.
+
+    For ts/moat-lib-rpc/src/codec.ts → ts/moat-lib-rpc/
+    For ts/moat-lib-rpc/test/unit/wire.test.ts → ts/moat-lib-rpc/
+
+    Returns None if the file is not under ts/ or js/.
+    """
+    path = Path(filepath)
+    parts = path.parts
+
+    # Only consider files under ts/ or js/
+    if not parts or parts[0] not in ("ts", "js"):
+        return None
+
+    # The package directory is the second-level directory
+    # e.g. ts/moat-lib-rpc/ or js/moat-meta-codec/
+    if len(parts) < 2:
+        return None
+
+    pkg_dir = Path(parts[0]) / parts[1]
+    if pkg_dir.is_dir() and (pkg_dir / "package.json").exists():
+        return pkg_dir
+
+    return None
+
+
+def main(filenames: list[str]) -> int:
+    """
+    Main entry point for pre-commit hook.
+
+    Args:
+        filenames: List of modified files from pre-commit.
+
+    Returns:
+        0 if all tests pass, non-zero otherwise.
+    """
+    # Check whether to skip
+    if os.environ.get("NO_TEST", "") in {"1", "Y", "y"}:
+        return 0
+
+    # Collect unique package directories
+    pkg_dirs: set[Path] = set()
+
+    for filename in filenames:
+        if (pkg_dir := get_package_dir(filename)) is not None:
+            pkg_dirs.add(pkg_dir)
+
+    # If no TS/JS packages found, nothing to test
+    if not pkg_dirs:
+        return 0
+
+    failed_pkgs: list[Path] = []
+
+    for pkg_dir in sorted(pkg_dirs):
+        print(f"\n{'=' * 60}")
+        print(f"Running vitest in {pkg_dir}")
+        print("=" * 60)
+
+        result = subprocess.run(
+            ["npx", "vitest", "run"],  # noqa: S607
+            cwd=str(pkg_dir),
+            check=False,
+        )
+
+        if result.returncode != 0:
+            failed_pkgs.append(pkg_dir)
+
+    if failed_pkgs:
+        print(f"\n{'=' * 60}")
+        print("FAILED test packages:")
+        for d in failed_pkgs:
+            print(f"  - {d}")
+        print("=" * 60)
+        return 1
+
+    print(f"\n{'=' * 60}")
+    print("All TS/JS tests passed!")
+    print("=" * 60)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

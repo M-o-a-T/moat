@@ -15,10 +15,15 @@ from moat.util.times import humandelta, ts2iso
 
 from .mode import Loader
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ortools.linear_solver import pywraplp
+
 logger = logging.getLogger(__name__)
 
 
-async def generate_data(cfg, t):
+async def generate_data(cfg: attrdict, t: float):
     # loads, prices, solar, buy_factor, buy_const):
     """
     Generate data chunks from iterators
@@ -39,7 +44,7 @@ async def generate_data(cfg, t):
         yield val
 
 
-def add_piecewise(solver, x, y, points: list[int, int], name):
+def add_piecewise(solver, x, y, points: list[tuple[int, int]], name):
     """
     Add a piecewise-linear constraint on y=a*x+b.
 
@@ -98,22 +103,22 @@ class Model:
     the SoC at that time.
     """
 
-    money = None
-    cap = None
-    g_sell = None
-    g_buy = None
-    g_sells = None
-    g_buys = None
-    moneys = None
-    caps = None
-    b_diss = None
-    b_chgs = None
-    cap_init = None
-    constr_init = None
-    objective = None
-    solver = None
+    money: pywraplp.Variable | None = None
+    cap: pywraplp.Variable | None = None
+    g_sell: pywraplp.Variable | None = None
+    g_buy: pywraplp.Variable | None = None
+    g_sells: list[pywraplp.Variable] | None = None
+    g_buys: list[pywraplp.Variable] | None = None
+    moneys: list[pywraplp.Variable] | None = None
+    caps: list[pywraplp.Variable] | None = None
+    b_diss: list[pywraplp.Variable] | None = None
+    b_chgs: list[pywraplp.Variable] | None = None
+    cap_init: Any | None = None
+    constr_init: Any | None = None  # ortools Constraint
+    objective: Any | None = None  # ortools Objective
+    solver: Any | None = None  # ortools Solver
 
-    def __init__(self, cfg: dict, t=None):
+    def __init__(self, cfg: attrdict, t: float | None = None):
         if t is None:
             t_slot = 3600 / cfg.steps
             t_now = time.time()
@@ -260,9 +265,11 @@ class Model:
         cfg = self.cfg
 
         charge *= cfg.battery.capacity
+        assert self.constr_init is not None
         self.constr_init.SetLb(charge)
         self.constr_init.SetUb(charge)
 
+        assert self.solver is not None
         self.solver.Solve()
 
         async with anyio.create_task_group() as tg:
@@ -277,6 +284,12 @@ class Model:
                 res2 = sch
 
             async with res2 if res2 is not None else nullcontext():
+                assert self.g_buys is not None
+                assert self.g_sells is not None
+                assert self.b_chgs is not None
+                assert self.b_diss is not None
+                assert self.caps is not None
+                assert self.moneys is not None
                 for g_buy, g_sell, b_chg, b_dis, cap, money in zip(
                     self.g_buys,
                     self.g_sells,
@@ -302,6 +315,10 @@ class Model:
                     if res2 is not None:
                         await res2.send(val)
 
+        assert self.g_buy is not None
+        assert self.g_sell is not None
+        assert self.cap is not None
+        assert self.money is not None
         return (
             self.g_buy.solution_value() - self.g_sell.solution_value(),
             self.cap.solution_value() / cfg.battery.capacity,

@@ -29,6 +29,7 @@ from .utils import CtxObj, unwrap_dbus_value, wrap_dbus_value
 from .utils import call as _call
 
 from collections import defaultdict
+from typing import Any
 
 notfound = object()  # For lookups where None is a valid result
 
@@ -110,7 +111,7 @@ class DbusMonitor(CtxObj):
             ...
     """
 
-    _tg = None
+    _tg: Any | None = None
 
     def __init__(
         self,
@@ -244,6 +245,7 @@ class DbusMonitor(CtxObj):
         if not name.startswith("com.victronenergy."):
             return
 
+        assert self._tg is not None
         self._tg.start_soon(self._process_name_owner_changed, name, oldowner, newowner)
 
     async def _process_name_owner_changed(self, name, _oldowner, newowner):
@@ -342,7 +344,8 @@ class DbusMonitor(CtxObj):
                     if text is notfound:
                         text = await self.call_bus(serviceName, path, None, "GetText")
                 except DBusError as e:
-                    if e.reply.error_name in {
+                    reply = e.reply
+                    if reply is not None and reply.error_name in {
                         "org.freedesktop.DBus.Error.ServiceUnknown",
                         "org.freedesktop.DBus.Error.Disconnected",
                     }:
@@ -415,6 +418,7 @@ class DbusMonitor(CtxObj):
 
         # And do the rest of the processing in on the mainloop
         if self.valueChangedCallback is not None:
+            assert self._tg is not None
             self._tg.start_soon(
                 self._execute_value_changes,
                 service.name,

@@ -13,7 +13,7 @@ from asyncdbus.message_bus import MessageBus
 from .utils import CtxObj, call, unwrap_dbus_value, wrap_dbus_value
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from asyncdbus import DbusType
@@ -282,11 +282,12 @@ class ServiceContext:  # noqa: D101
             await self.parent._dbusnodes["/"].ItemsChanged(self.changes)  # noqa: SLF001
 
 
-class TrackerDict(defaultdict):
+class TrackerDict(defaultdict[str, Any]):
     """Same as defaultdict, but passes the key to default_factory."""
 
     def __missing__(self, key):
-        self[key] = x = self.default_factory(key)  # pylint: disable=not-callable
+        assert self.default_factory is not None
+        self[key] = x = self.default_factory(key)  # pylint: disable=not-callable  # ty: ignore[too-many-positional-arguments]
         return x
 
 
@@ -296,7 +297,7 @@ class DbusRootTracker:
     into traditional events, then pass it to the original eventCallback
     method."""
 
-    _intf = None
+    _intf: Any | None = None
 
     def __init__(self, bus, serviceName):
         self._bus = bus
@@ -309,6 +310,7 @@ class DbusRootTracker:
         await self._intf.on_items_changed(self._items_changed_handler)
 
     async def close(self):  # noqa: D102
+        assert self._intf is not None
         await self._intf.off_items_changed(self._items_changed_handler)
         self._intf = None
 
@@ -370,10 +372,10 @@ class DbusRootTracker:
 
 class DbusItemImport:  # noqa: D101
     _roots = {}
-    _proxy = None
-    _interface = None
-    _cachedvalue = None
-    _exists = None
+    _proxy: Any | None = None
+    _interface: Any | None = None
+    _cachedvalue: Any | None = None
+    _exists: Any | None = None
 
     def __new__(cls, bus, serviceName, path, eventCallback=None, createsignal=True):  # noqa: D102
         serviceName, path, eventCallback  # noqa: B018
@@ -381,7 +383,7 @@ class DbusItemImport:  # noqa: D101
 
         # If signal tracking should be done, also add to root tracker
         if createsignal and "_roots" not in cls.__dict__:
-            cls._roots = TrackerDict(lambda k: DbusRootTracker(bus, k))
+            cls._roots = TrackerDict(lambda k: DbusRootTracker(bus, k))  # ty: ignore[no-matching-overload]
 
         return instance
 
@@ -439,6 +441,7 @@ class DbusItemImport:  # noqa: D101
             r.remove(self)
 
         if self._match:
+            assert self._interface is not None
             await self._interface.off_properties_changed(self._properties_changed_handler)
             self._match = False
         self._proxy = None
@@ -446,6 +449,7 @@ class DbusItemImport:  # noqa: D101
 
     async def refresh(self):  # noqa: D102
         try:
+            assert self._interface is not None
             v = await self._interface.call_get_value()
         except DBusError:
             self._cachedvalue = None
@@ -478,6 +482,7 @@ class DbusItemImport:  # noqa: D101
 
     ## Writes a new value to the dbus-item
     async def set_value(self, newvalue):  # noqa: D102
+        assert self._interface is not None
         r = await self._interface.call_set_value(wrap_dbus_value(newvalue))
 
         # instead of just saving the value, go to the dbus and get it. So
@@ -489,6 +494,7 @@ class DbusItemImport:  # noqa: D101
 
     ## Resets the item to its default value
     async def set_default(self):  # noqa: D102
+        assert self._interface is not None
         await self._interface.call_set_default()
         await self.refresh()
 
@@ -499,6 +505,7 @@ class DbusItemImport:  # noqa: D101
     #
     # Note that this depends on how the dbus-producer has implemented this.
     async def get_text(self):  # noqa: D102
+        assert self._interface is not None
         return await self._interface.call_get_text()
 
     ## Returns true of object path exists, and false if it doesn't

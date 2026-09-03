@@ -1090,7 +1090,7 @@ class ServiceSender(MsgSender):
         sender: the LinkSender that owns this service reference.
         srv: the service path (relative to ``run.host``).
         """
-        super().__init__(sender)
+        super().__init__(sender.root)
         self._sender = sender
         self._srv = srv
         self._inner = None

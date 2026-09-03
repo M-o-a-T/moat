@@ -20,7 +20,10 @@ class LinkIn(BaseListenOneCmd):
     def listener(self):
         """Returns the websocket listener."""
         return WsIter(
-            self.cfg.get("host", "127.0.0.1"), self.cfg["port"], self.cfg.get("path", "/")
+            self.cfg.get("host", "127.0.0.1"),
+            self.cfg["port"],
+            self.cfg.get("path", "/"),
+            subprotocols=self.cfg.get("subprotocols", None),
         )
 
     def wrapper(self, conn):

@@ -21,6 +21,8 @@ errors
 ../moat-link-metrics/index
 ../moat-link-knx/index
 ../moat-link-ow/index
+../moat-link-cal/index
+../moat-link-ha/index
 ../moat-link-gate/index
 ../moat-link-schema/index
 ../moat-link-notify/index

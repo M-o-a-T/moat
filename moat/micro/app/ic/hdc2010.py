@@ -30,13 +30,13 @@ class Cmd(BaseCmd):
 
     doc = dict(_c=dict(_d="HDC2010 temp+humid sensor", bus="path:i2c bus", adr="int:bus address"))
 
-    async def setup(self):
-        "allocate lock"
+    async def setup(self) -> None:
+        """Allocate lock."""
         await super().setup()
         self.lock = Lock()
 
-    async def task(self):
-        "wrapper, for i2c bus access"
+    async def task(self) -> None:
+        """Wrapper, for i2c bus access."""
         self.adr = self.cfg["adr"]
         async with self.root.sub_at(self.cfg["bus"]) as self.bus:
             await super().task()
@@ -47,7 +47,7 @@ class Cmd(BaseCmd):
         o="bool:old: wait until value differs",
     )
 
-    async def _rdt(self):
+    async def _rdt(self) -> int:
         async with self.lock:
             await self.bus.wr(self.adr, bytes((15, 0x01)))
             # OneShot+Shutdown, Extended
@@ -62,10 +62,10 @@ class Cmd(BaseCmd):
         (t,) = struct.unpack("<H", res)
         return t
 
-    async def stream_rt(self, msg: Msg):
-        "Wait for change if @o (old value) is not None"
-        t = msg.get("t", 10000)
-        o = msg.get("o", None)
+    async def stream_rt(self, msg: Msg) -> None:
+        """Wait for change if @o (old value) is not None."""
+        t: int = msg.get("t", 10000)
+        o: float | None = msg.get("o", None)
         if o is not None:
             o = int((o + 40) * 65536 / 165)
         d = int(msg.get("d", 0) * 65536 / 165)
@@ -85,7 +85,7 @@ class Cmd(BaseCmd):
             val = await self._rdt()
         await msg.result(val * 165 / 65536 - 40)
 
-    async def _rdh(self):
+    async def _rdh(self) -> int:
         async with self.lock:
             await self.bus.wr(self.adr, bytes((15, 0x01)))
             # OneShot+Shutdown, Extended
@@ -100,10 +100,10 @@ class Cmd(BaseCmd):
         (h,) = struct.unpack("<H", res)
         return h
 
-    async def stream_rh(self, msg: Msg):
-        "Wait for change if @o (old value) is not None"
-        t = msg.get("t", 10000)
-        o = msg.get("o", None)
+    async def stream_rh(self, msg: Msg) -> None:
+        """Wait for change if @o (old value) is not None."""
+        t: int = msg.get("t", 10000)
+        o: float | None = msg.get("o", None)
         if o is not None:
             o = int(o * 65536 / 100)
         d = int(msg.get("d", 0) * 65536 / 100)
@@ -123,7 +123,7 @@ class Cmd(BaseCmd):
             val = await self._rdh()
         await msg.result(val * 100 / 65536)
 
-    async def _rdth(self):
+    async def _rdth(self) -> tuple[int, int]:
         async with self.lock:
             await self.bus.wr(self.adr, bytes((15, 0x01)))
             # OneShot+Shutdown, Extended
@@ -138,13 +138,13 @@ class Cmd(BaseCmd):
         (t, h) = struct.unpack("<HH", res)
         return t, h
 
-    async def stream_rth(self, msg: Msg):
-        "Wait for change if @o (old value) is not None"
-        t = msg.get("t", 10000)
-        ot = msg.get("ot", None)
+    async def stream_rth(self, msg: Msg) -> None:
+        """Wait for change if @o (old value) is not None."""
+        t: int = msg.get("t", 10000)
+        ot: float | None = msg.get("ot", None)
         if ot is not None:
             ot = int((ot + 40) * 65536 / 165)
-        oh = msg.get("oh", None)
+        oh: float | None = msg.get("oh", None)
         if oh is not None:
             oh = int(oh * 65536 / 100)
         dt = int(msg.get("d", 0) * 65536 / 165)

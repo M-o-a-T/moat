@@ -13,6 +13,8 @@ import trio
 from .crc import CRC16
 from .message import BusMessage
 
+from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,7 +65,17 @@ class SerBus:
     spinner = ["/", "-", "\\", "|"]
     spin_pos = 0
 
-    def __init__(self):
+    m_in: BusMessage | None
+    crc_in: CRC16 | int
+    len_in: int
+    prio_in: int
+    crc_out: int
+    s_in: S
+    idle: int
+    log_buf: bytes
+    log_buf_t: float
+
+    def __init__(self) -> None:
         # incoming
         self.m_in = None  # bus message
         self.crc_in = 0
@@ -80,55 +92,57 @@ class SerBus:
 
         self.log_buf = b""
 
-    def report_error(self, typ, **kw):
+    def report_error(self, typ: ERR, **kw: Any) -> None:
         """
         OVERRIDE: There's been a comm problem.
         """
         raise NotImplementedError("Override me")
 
-    def set_timeout(self, flag):
+    def set_timeout(self, flag: bool) -> None:
         """
         OVERRIDE: Arrange to periodically call .timeout, or not,
-        depending on whether @fag is True, or not.
+        depending on whether @flag is True, or not.
         """
         raise NotImplementedError("Override me")
 
-    def process(self, msg):
+    def process(self, msg: BusMessage) -> None:
         """
         OVERRIDE: Process this message.
         """
         raise NotImplementedError("Override me")
 
-    def process_ack(self):
+    def process_ack(self) -> None:
         """
         OVERRIDE: Process this incoming ACK.
         """
         raise NotImplementedError("Override me")
 
-    def data_out(self, data: bytes):
+    def data_out(self, data: bytes) -> None:
         """
-        OVERRIDE: Send these serial data
+        OVERRIDE: Send these serial data.
         """
         raise NotImplementedError("Override me")
 
-    def alloc_in(self):  # noqa:D102
+    def alloc_in(self) -> None:
+        """Allocate a fresh incoming message buffer."""
         self.m_in = BusMessage()
         self.crc_in = CRC16()
         self.m_in.start_add()
 
-    def send(self, msg):
+    def send(self, msg: BusMessage) -> None:
         """
-        Queue a message
+        Queue a message.
         """
         self.data_out(self.send_data(msg))
 
-    def send_ack(self):
+    def send_ack(self) -> None:
         """
-        Queue an ACK
+        Queue an ACK.
         """
         self.data_out(b"\x06")
 
-    def dump_log_buf(self):  # noqa:D102
+    def dump_log_buf(self) -> None:
+        """Flush the log buffer to the logger."""
         if not self.log_buf:
             return
         try:
@@ -144,12 +158,13 @@ class SerBus:
         self.log_buf = b""
 
     @staticmethod
-    def now():  # noqa:D102
+    def now() -> float:
+        """Return the current monotonic time."""
         return trio.current_time()
 
-    def char_in(self, ci: int):
+    def char_in(self, ci: int) -> None:
         """
-        process an incoming serial character
+        Process an incoming serial character.
         """
         self.idle = 0
 
@@ -193,7 +208,9 @@ class SerBus:
             self.s_in = S.DATA
 
         elif self.s_in == S.DATA:
+            assert self.m_in is not None
             self.m_in.add_chunk(ci, 8)
+            assert isinstance(self.crc_in, CRC16)
             self.crc_in.update(ci)
             self.len_in -= 1
             if self.len_in == 0:
@@ -201,11 +218,13 @@ class SerBus:
                 self.crc_in = self.crc_in.finish()
 
         elif self.s_in == S.CRC1:
-            self.crc_in ^= ci << 8
+            assert isinstance(self.crc_in, int)
+            self.crc_in = self.crc_in ^ (ci << 8)
             self.s_in = S.CRC2
 
         elif self.s_in == S.CRC2:
-            self.crc_in ^= ci
+            assert isinstance(self.crc_in, int)
+            self.crc_in = self.crc_in ^ ci
             self.set_timeout(False)
 
             if self.crc_in:
@@ -213,6 +232,7 @@ class SerBus:
                 self.s_in = S.IDLE
             else:
                 self.s_in = S.DONE
+                assert self.m_in is not None
                 self.process(self.m_in)
                 self.send_ack()
             self.alloc_in()
@@ -222,12 +242,12 @@ class SerBus:
             # ugh, overflow?
             self.report_error(ERR.OVERFLOW)
 
-    def send_data(self, msg) -> bytes:
+    def send_data(self, msg: BusMessage) -> bytes:
         """
         Generate chunk of bytes to send for this message.
         """
         res = bytearray()
-        res.append(self.prio_data[msg.get("prio", 1)])
+        res.append(self.prio_data[getattr(msg, "prio", 1)])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
             res.append(0x80 | (n_b >> 8))
@@ -249,9 +269,9 @@ class SerBus:
         crc = crc.finish()
         res.append(crc >> 8)
         res.append(crc & 0xFF)
-        return res
+        return bytes(res)
 
-    def recv(self):
+    def recv(self) -> BusMessage | None:
         """
         Did we receive a message? if so, return it.
         """
@@ -259,14 +279,15 @@ class SerBus:
             return None
 
         msg = self.m_in
+        assert msg is not None
         msg.prio = self.prio_in
         self.alloc_in()
         return msg
 
-    def timeout(self):
+    def timeout(self) -> None:
         """
         Call this periodically (e.g. every 10ms on 9600 baud) whenever
-        `set_timeout` told you to.
+        ``set_timeout`` told you to.
         """
         if self.s_in != S.IDLE:
             self.idle += 1
@@ -275,6 +296,7 @@ class SerBus:
                 self.report_error(ERR.LOST)
                 self.s_in = S.IDLE
                 self.crc_in = CRC16()
+                assert self.m_in is not None
                 self.m_in.start_add()
                 self.set_timeout(False)
         else:
@@ -285,31 +307,37 @@ class SerBus:
 
 class SerBusDump(SerBus):
     """
-    A SerBus version useable for debugging
+    A SerBus version useable for debugging.
     """
 
     _n = 0
 
-    def report_error(self, typ, **kw):  # noqa:D102
+    def report_error(self, typ: ERR, **kw: Any) -> None:
+        """Print errors."""
         print("ERROR", typ, kw)
 
-    def set_timeout(self, flag):  # noqa:D102
-        pass
+    def set_timeout(self, flag: bool) -> None:
+        """No-op timeout."""
 
-    def process(self, msg):  # noqa:D102
+    def process(self, msg: BusMessage) -> None:
+        """Print received messages."""
         print("MSG IN", msg)
 
-    def process_ack(self):  # noqa:D102
+    def process_ack(self) -> None:
+        """Print ACKs."""
         print("ACK")
 
-    def data_out(self, data: bytes):  # noqa:D102
+    def data_out(self, data: bytes) -> None:
+        """Print sent data."""
         print("SEND", repr(data))
 
-    def now(self):  # noqa:D102
+    def now(self) -> float:
+        """Return a synthetic monotonic clock."""
         self._n += 1
         return self._n
 
-    def dump_log_buf(self):  # noqa:D102
+    def dump_log_buf(self) -> None:
+        """Flush the log buffer."""
         if not self.log_buf:
             return
         try:

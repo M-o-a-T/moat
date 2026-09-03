@@ -8,6 +8,7 @@ from ._impl import DProxy as DProxy
 from ._impl import NoProxyError as NoProxyError
 from ._impl import Proxy as Proxy
 from ._impl import _CProxy as _CProxy
+from ._impl import _lookup_proxy as _lookup_proxy
 from ._impl import as_proxy as as_proxy
 from ._impl import drop_proxy as drop_proxy
 from ._impl import get_proxy as get_proxy
@@ -21,6 +22,7 @@ __all__ = [
     "NoProxyError",
     "Proxy",
     "_CProxy",
+    "_lookup_proxy",
     "as_proxy",
     "drop_proxy",
     "get_proxy",

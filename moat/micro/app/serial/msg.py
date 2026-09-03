@@ -12,6 +12,11 @@ from moat.micro.app._doc import _cons_d, _frame_d, _mode_d
 
 from ._util import get_serial
 
+from typing import TYPE_CHECKING as _TC
+
+if _TC:
+    from typing import Any
+
 
 class Msg(BaseCmdBBM):
     """snd/rcv: packetized data, via SerialPacker."""
@@ -26,7 +31,7 @@ class Msg(BaseCmdBBM):
         )
     )
 
-    async def stream(self):
+    async def stream(self) -> Any:
         """Returns the packetized serial stream."""
         ser = SerialPackerBlkBuf(
             get_serial(self.cfg),

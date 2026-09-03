@@ -22,7 +22,7 @@ async def broker_coro():
             await anyio.sleep(99999)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     anyio.run(broker_coro)

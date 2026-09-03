@@ -12,9 +12,6 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
-
 from moat.util import gen_ident
 from moat.mqtt.broker import create_broker
 from moat.mqtt.client import open_mqttclient
@@ -33,41 +30,33 @@ from . import anyio_run
 log = logging.getLogger(__name__)
 
 
-def _PBD():
-    # Port for moat-kv-based broker
-    PORT = FreePortFactory(SOCK_STREAM)()
-    # Port for base broker
-    PORT_B = FreePortFactory(SOCK_STREAM)()
-    # Port for moat-kv
-    PORT_D = FreePortFactory(SOCK_STREAM)()
+def _configs():
+    """Build configs for the base broker, kv server, and moat-kv broker.
 
-    URI_B = f"mqtt://127.0.0.1:{PORT_B}/"
-
-    # log.debug("Ports: moat_kv=%d up=%d low=%d", PORT_D, PORT, PORT_B)
-
+    All listeners bind to port 0 (OS-assigned). The real ports are filled
+    in by :func:`moat_kv_server` after the base broker and kv server start.
+    """
     broker_config = {
-        "broker": {"uri": f"mqtt://127.0.0.1:{PORT_B}"},
+        "broker": {"uri": None},  # filled in after base broker starts
         "kv": {
             "topic": "test_" + gen_ident(7, alphabet="al_az"),
             "base": ("test", "retain"),
             "transparent": (("test", "vis"),),
-            "conn": {"port": PORT_D},
+            "conn": {"port": None},  # filled in after kv server starts
             "server": {
                 "backend": "mqtt",
-                "mqtt": {"uri": URI_B},
-                "bind": [{"host": "localhost", "port": PORT_D, "ssl": False}],
+                "mqtt": {"uri": None},  # filled in after base broker starts
+                "bind": [{"host": "localhost", "port": 0, "ssl": False}],
             },
         },
-        "listeners": {
-            "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}", "max_connections": 10}
-        },
+        "listeners": {"default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10}},
         "sys_interval": 0,
         "auth": {"allow-anonymous": True},
     }
 
     test_config = {
         "listeners": {
-            "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT_B}", "max_connections": 10},
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
         },
         "sys_interval": 0,
         "retain": False,
@@ -81,12 +70,22 @@ async def moat_kv_server(n, broker_config, test_config):  # noqa: D103
     msgs = []
     async with (
         anyio.create_task_group() as tg,
-        create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins"),
+        create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins") as base_broker,
     ):
+        # Read back the base broker's OS-assigned port and fill in the URIs.
+        port_b = base_broker._servers["default"].port  # noqa: SLF001
+        uri_b = f"mqtt://127.0.0.1:{port_b}"
+        broker_config["broker"]["uri"] = uri_b
+        broker_config["kv"]["server"]["mqtt"]["uri"] = uri_b
+
         s = Server("test", cfg=broker_config["kv"], init="test")
         evt = anyio.Event()
         tg.start_soon(partial(s.serve, ready_evt=evt))
         await evt.wait()
+
+        # Read back the kv server's OS-assigned port and fill in the client config.
+        port_d = s.ports[0][1]
+        broker_config["kv"]["conn"]["port"] = port_d
 
         async with open_client(**broker_config["kv"]) as cl:
 
@@ -121,7 +120,7 @@ class TestMQTTClient:  # noqa:D101
         data = b"data 123 a"
 
         async def test_coro():
-            broker_config, test_config = _PBD()
+            broker_config, test_config = _configs()
             async with moat_kv_server(1, broker_config, test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
@@ -147,7 +146,7 @@ class TestMQTTClient:  # noqa:D101
         data = b"data 123 t"
 
         async def test_coro():
-            broker_config, test_config = _PBD()
+            broker_config, test_config = _configs()
             async with moat_kv_server(1, broker_config, test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
@@ -173,7 +172,7 @@ class TestMQTTClient:  # noqa:D101
         data = b"data 123 b"
 
         async def test_coro():
-            broker_config, test_config = _PBD()
+            broker_config, test_config = _configs()
             async with (
                 moat_kv_server(0, broker_config, test_config),
                 create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
@@ -196,7 +195,7 @@ class TestMQTTClient:  # noqa:D101
         cfg  # noqa:B018
 
         async def test_coro():
-            broker_config, test_config = _PBD()
+            broker_config, test_config = _configs()
             async with (
                 moat_kv_server(0, broker_config, test_config),
                 create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),

@@ -28,20 +28,21 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg
 
     from collections.abc import Mapping
+    from typing import Any, Self
 
 
 class _Send:
     # A null context that delegates its .send method to the wrapped destination
-    def __init__(self, dest):
+    def __init__(self, dest: Any) -> None:
         self.dest = dest
 
-    def send(self, *a, **kw):
+    def send(self, *a: Any, **kw: Any) -> Any:
         return self.dest(*a, **kw)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(self, *tb: object) -> None:
         return None
 
 
@@ -85,32 +86,32 @@ class PWM(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError(f"Pin not set {cfg}")  # noqa:TRY004
         self._load()
         self.evt = Event()
 
-    def _load(self):
+    def _load(self) -> None:
         cfg = self.cfg
         self.min = cfg.get("min", self.min)
         self.max = cfg.get("max", self.max)
         self.so = cfg.get("so", False)
 
-    async def reload(self):
-        "reload from config"
+    async def reload(self) -> None:
+        """Reload from config."""
         self._load()
         await super().reload()
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.pin = self.root.sub_at(self.cfg["pin"], cmd=not self.so)
         if await self.pin.rdy_():
             raise StoppedError("pin")
         self.set_times(0.0)
 
-    async def task(self):  # noqa:D102
+    async def task(self) -> None:  # noqa:D102
         async with _Send(self.pin) if not self.so else self.pin.stream_out() as self.ps:
             try:
                 if L:
@@ -220,11 +221,11 @@ class PWM(BaseCmd):
     )
 
     async def cmd_w(self, val: float) -> None:
-        "change ratio"
+        """Change ratio."""
         self.set_times(val)
 
-    async def stream_w(self, msg: Msg):
-        "change ratio (streaming)"
+    async def stream_w(self, msg: Msg) -> None:
+        """Change ratio (streaming)."""
         async with msg.stream_in() as md:
             async for m in md:
                 self.set_times(m[0])
@@ -232,7 +233,7 @@ class PWM(BaseCmd):
     doc_r = dict(_d="read value", _r="float:current value [0..1]")
 
     async def cmd_r(self) -> float:
-        "Returns the current value."
+        """Returns the current value."""
         return self.value
 
     doc_s = dict(
@@ -247,7 +248,7 @@ class PWM(BaseCmd):
     )
 
     async def cmd_s(self) -> Mapping:
-        "Returns the current state."
+        """Returns the current state."""
         now = ticks_ms()
         res: dict[str, object] = dict(
             on=self.t_on,

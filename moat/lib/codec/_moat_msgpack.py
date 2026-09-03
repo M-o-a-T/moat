@@ -12,7 +12,7 @@ Extension types defined here:
 from __future__ import annotations
 
 from moat.lib.path import Path
-from moat.lib.proxy import DProxy, Proxy, _CProxy, get_proxy, obj2name, unwrap_obj, wrap_obj
+from moat.lib.proxy import DProxy, Proxy, _lookup_proxy, get_proxy, obj2name, unwrap_obj, wrap_obj
 
 from . import Extension
 from . import msgpack as _msgpack
@@ -103,7 +103,7 @@ def _dec_proxy(codec, data):
     except UnicodeError:
         n = str(data)
     try:
-        return _CProxy[n]
+        return _lookup_proxy(n)
     except KeyError:
         return Proxy(n)
 

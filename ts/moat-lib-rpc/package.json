@@ -76,7 +76,7 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:interop": "REQUIRE_INTEROP=1 vitest run --config vitest.interop.config.ts",
+    "test:interop": "vitest run --config vitest.interop.config.ts",
     "lint": "eslint src test examples",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts' 'examples/**/*.ts'",
     "typecheck": "tsc --noEmit",

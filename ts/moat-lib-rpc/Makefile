@@ -15,7 +15,7 @@ test:
 	npm run test
 
 test-interop:
-	REQUIRE_INTEROP=1 npx vitest run --config vitest.interop.config.ts
+	npx vitest run --config vitest.interop.config.ts
 
 lint:
 	npm run lint

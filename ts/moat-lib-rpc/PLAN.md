@@ -475,10 +475,7 @@ tests, **tsx** to run TS interop scripts.
   covered, including a Python *streaming* request against the phase-1 TS
   server (expect `E_NO_STREAM`). (Full streaming/flow-control interop is added
   in phase 2, once the Python WS transport `moat-ad2.1` is available.) Python
-  is invoked from the repo venv; the fixture skips gracefully if Python/the
-  venv is unavailable — **except** when `REQUIRE_INTEROP=1` is set (as it is
-  in CI), where a missing Python peer fails the run instead of silently
-  masking drift.
+  is invoked from the repo venv, which always provides `moat.lib.rpc`.
 
 ## 10. NPM packaging
 

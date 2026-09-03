@@ -102,7 +102,9 @@ jstest:
 	@for dir in ts/*/ js/*/ ; do \
 	  if [ -f "$$dir/package.json" ]; then \
 	    echo "Running tests in $$dir"; \
-	    (cd "$$dir" && npx vitest run) || exit 1; \
+	    (cd "$$dir" && { [ -d node_modules ] || npm ci; } \
+	      && npx vitest run \
+	      && { [ ! -f vitest.interop.config.ts ] || npx vitest run --config vitest.interop.config.ts; }) || exit 1; \
 	  fi; \
 	done
 

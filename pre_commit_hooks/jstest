@@ -12,9 +12,69 @@ If no TS/JS files are modified, exits 0 (nothing to test).
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+# Prefer the project's pinned virtualenv so child processes (notably the
+# Python interop server spawned by vitest) run against the same interpreter
+# and installed dependencies as the rest of the repo, not pre-commit's
+# isolated hook environment. Fall back to a PATH lookup when no venv exists.
+_VENV_PYTHON = Path(".venv/bin/python3")
+
+
+def _resolve_python() -> str | None:
+    """Return a ``python3`` that can ``import moat``, or ``None``.
+
+    Order: project venv, then candidates on PATH. Skips interpreters that
+    can't import moat (e.g. pre-commit's bare hook env).
+    """
+    candidates: list[str] = []
+    if _VENV_PYTHON.is_file() and os.access(_VENV_PYTHON, os.X_OK):
+        candidates.append(str(_VENV_PYTHON))
+    if shutil.which("python3"):
+        candidates.append("python3")
+    # System interpreter as a last resort; pre-commit shadows PATH with its
+    # own env, so /usr/bin/python3 is reached explicitly.
+    candidates.append("/usr/bin/python3")
+
+    seen: set[str] = set()
+    for cand in candidates:
+        if cand in seen:
+            continue
+        seen.add(cand)
+        try:
+            r = subprocess.run(  # noqa: S603
+                [cand, "-c", "import moat.lib.rpc"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if r.returncode == 0:
+            return cand
+    return None
+
+
+def _python_env() -> dict[str, str]:
+    """Env for the vitest subprocess, with a moat-capable python3 on PATH.
+
+    Vitest's interop tests spawn ``python3``; ensure that resolves to an
+    interpreter that can import moat (preferring the project venv). Falls
+    back to the inherited environment unchanged if no such interpreter is
+    found — the interop suite will then surface the import failure itself.
+    """
+    env = os.environ.copy()
+    py = _resolve_python()
+    if py is None:
+        return env
+    py_dir = str(Path(py).resolve().parent)
+    path = env.get("PATH", "")
+    env["PATH"] = py_dir + (":" + path if path else "")
+    return env
 
 
 def get_package_dir(filepath: str) -> Path | None:
@@ -71,20 +131,49 @@ def main(filenames: list[str]) -> int:
         return 0
 
     failed_pkgs: list[Path] = []
+    env = _python_env()
 
     for pkg_dir in sorted(pkg_dirs):
         print(f"\n{'=' * 60}")
-        print(f"Running vitest in {pkg_dir}")
+        if (pkg_dir / "node_modules").is_dir():
+            print(f"Running vitest in {pkg_dir}")
+        else:
+            print(f"Installing deps in {pkg_dir}")
         print("=" * 60)
+
+        # Install dependencies if missing, matching `make jstest`.
+        if not (pkg_dir / "node_modules").is_dir():
+            inst = subprocess.run(
+                ["npm", "ci"],  # noqa: S607
+                cwd=str(pkg_dir),
+                check=False,
+                env=env,
+            )
+            if inst.returncode != 0:
+                failed_pkgs.append(pkg_dir)
+                continue
 
         result = subprocess.run(
             ["npx", "vitest", "run"],  # noqa: S607
             cwd=str(pkg_dir),
             check=False,
+            env=env,
         )
 
         if result.returncode != 0:
             failed_pkgs.append(pkg_dir)
+            continue
+
+        # Also run the interop suite if this package has one.
+        if (pkg_dir / "vitest.interop.config.ts").exists():
+            result = subprocess.run(
+                ["npx", "vitest", "run", "--config", "vitest.interop.config.ts"],  # noqa: S607
+                cwd=str(pkg_dir),
+                check=False,
+                env=env,
+            )
+            if result.returncode != 0:
+                failed_pkgs.append(pkg_dir)
 
     if failed_pkgs:
         print(f"\n{'=' * 60}")

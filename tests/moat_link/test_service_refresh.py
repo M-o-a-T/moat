@@ -168,3 +168,50 @@ async def test_service_sender_repr(cfg):
             d = await res.yes(22)
             assert d[0] == 44
             evt2.set()
+
+
+@pytest.mark.anyio
+async def test_service_call_with_list(cfg):
+    """Verify that ServiceSender.__call__ separates _list from **kw.
+
+    ``_list`` must reach the Caller as a separate parameter, not be
+    packed into the command kwargs that travel over the wire.
+    """
+
+    class CmdI(MsgHandler):
+        async def cmd(self, yeah):  # root command
+            return yeah * 2
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+
+        c1 = await sf.client()
+        c2 = await sf.client()
+        evt = anyio.Event()
+        evt2 = anyio.Event()
+        async with anyio.create_task_group() as tg:
+
+            @tg.start_soon
+            async def ann1():
+                async with c1.announcing(P("foo.bar"), service=CmdI(), host=False) as s:
+                    s.set()
+                    evt.set()
+                    await evt2.wait()
+
+            await evt.wait()
+            await c1.i_sync()
+            res = await c2.get_service(P("foo.bar"))
+
+            # Direct __call__ delegates to SubMsgSender.__call__,
+            # which creates a Caller with the full service path as cmd.
+            # _list must be separated from kwargs, not packed into them.
+            caller = res(22, _list=True)
+            assert caller._list is True  # noqa:SLF001
+            _, _, kw = caller.data
+            assert "_list" not in kw, "_list leaked into command kwargs"
+
+            # The call should reach the service's root command.
+            d = await caller
+            assert d[0] == 44
+
+            evt2.set()

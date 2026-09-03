@@ -256,21 +256,20 @@ class Gate(_Gate):
         # If the internal message has a copy of the outside metadata, it's
         # either unmodified or older. Test the data to be sure.
         meta = node.meta
-        if meta is None:
-            return True
-        if "gw" in meta:
-            if meta["gw"] == node.ext_meta:
-                return None if node.data_ == node.ext_data else True
-            else:
-                return True
+        if meta is not None:
+            if "gw" in meta:
+                if meta["gw"] == node.ext_meta:
+                    return None if node.data_ == node.ext_data else True
+                else:
+                    return True
 
-        # Otherwise, if the external message is ours, it's old.
-        if node.ext_meta.origin == self.origin:
-            return False
+            # Otherwise, if the external message is ours, it's old.
+            if node.ext_meta.origin == self.origin:
+                return False
 
-        # if the timestamps are too close, there might be a problem.
-        if abs(node.ext_meta.timestamp - meta.timestamp) < 0.1:
-            return None
+            # if the timestamps are too close, there might be a problem.
+            if abs(node.ext_meta.timestamp - meta.timestamp) < 0.1:
+                return None
 
-        # Otherwise use the message with the newer timestamp.
-        return node.ext_meta.timestamp > meta.timestamp
+            # Otherwise use the message with the newer timestamp.
+            return node.ext_meta.timestamp > meta.timestamp

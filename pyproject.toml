@@ -42,6 +42,7 @@ dependencies = [
     "pynacl",
     "outcome",
     "psutil",
+    "python-magic",
     "pyfuse3",
     "range_set ~= 0.3",
     "regex",
@@ -276,6 +277,7 @@ include = [
     "moat/link/",
     "moat/mcp/",
     "moat/micro/",
+    "moat/signal/",
     "moat/src/",
     "moat/util/",
 ]

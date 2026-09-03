@@ -97,29 +97,45 @@ describeOrSkip('interop: TS client ↔ Python server (TCP)', () => {
     }
   });
 
-  it('ping → pong', async () => {
-    // Connect via TCP
+  /** Connect to the Python server over TCP, run one command, return its result. */
+  async function callPython(cmd: string, ...args: unknown[]): Promise<{ args: readonly unknown[] }> {
     const { TcpClientTransport } = await import('../../src/transport/tcp.js');
     const { AsyncAdapter } = await import('../../src/async/adapter.js');
     const { RpcCore } = await import('../../src/core/handler.js');
     const { MsgSender } = await import('../../src/dispatch/sender.js');
-    const { encodeMessage, decodeMessage } = await import('../../src/codec.js');
+    const { encodeMessage } = await import('../../src/codec.js');
 
     const transport = await TcpClientTransport.connect('localhost', PORT);
     const core = new RpcCore(null, {});
-    const adapter = new AsyncAdapter(core, transport, encodeMessage, decodeMessage);
+    const adapter = new AsyncAdapter(core, transport, encodeMessage);
     adapter.start();
+    try {
+      const sender = new MsgSender(core);
+      const result = await Promise.race([
+        sender.cmd(cmd, ...args) as unknown as Promise<unknown>,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 5000),
+        ),
+      ]);
+      return result as unknown as { args: readonly unknown[] };
+    } finally {
+      await adapter.stop();
+    }
+  }
 
-    const sender = new MsgSender(core);
-    const result = await Promise.race([
-      sender.cmd('ping') as unknown as Promise<unknown>,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 5000),
-      ),
-    ]);
+  it('ping → pong', async () => {
+    const result = await callPython('ping');
+    expect(result.args[0]).toBe('pong');
+  }, 10000);
 
-    expect(result).toBeDefined();
-    await adapter.stop();
+  it('echo → echoes arguments', async () => {
+    const result = await callPython('echo', 42, 'hello');
+    expect(Array.from(result.args[0] as unknown[])).toEqual([42, 'hello']);
+  }, 10000);
+
+  it('add → sums two integers', async () => {
+    const result = await callPython('add', 3, 4);
+    expect(result.args[0]).toBe(7);
   }, 10000);
 });
 

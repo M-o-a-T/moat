@@ -16,7 +16,7 @@ import type { OutboundMsg } from '../core/handler.js';
 /** Transport interface that the async adapter expects. */
 export interface WsTransport {
   write(data: Uint8Array): Promise<void>;
-  onMessage(cb: (data: Uint8Array) => void): void;
+  onMessage(cb: (msg: unknown[]) => void): void;
   close(): Promise<void>;
 }
 
@@ -38,7 +38,7 @@ export class WsClientTransport implements WsTransport {
         this._ws.terminate();
         return;
       }
-      this._emitter.emit('message', new Uint8Array(data));
+      this._emitter.emit('message', decodeMessage(new Uint8Array(data)));
     });
     this._ws.on('close', () => {
       this._closed = true;
@@ -64,7 +64,7 @@ export class WsClientTransport implements WsTransport {
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
+  onMessage(cb: (msg: unknown[]) => void): void {
     this._emitter.on('message', cb);
   }
 
@@ -106,7 +106,7 @@ export class WsServerTransport implements WsTransport {
         this._ws.terminate();
         return;
       }
-      this._emitter.emit('message', new Uint8Array(data));
+      this._emitter.emit('message', decodeMessage(new Uint8Array(data)));
     });
     this._ws.on('close', () => {
       this._closed = true;
@@ -123,7 +123,7 @@ export class WsServerTransport implements WsTransport {
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
+  onMessage(cb: (msg: unknown[]) => void): void {
     this._emitter.on('message', cb);
   }
 

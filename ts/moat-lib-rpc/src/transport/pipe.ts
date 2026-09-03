@@ -11,7 +11,7 @@ import { IncrementalDecoder } from './framing.js';
 /** Transport interface that the async adapter expects. */
 export interface PipeTransport {
   write(data: Uint8Array): Promise<void>;
-  onMessage(cb: (data: Uint8Array) => void): void;
+  onMessage(cb: (msg: unknown[]) => void): void;
   close(): Promise<void>;
 }
 
@@ -62,10 +62,8 @@ export class PipeTransport implements PipeTransport {
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
-    this._emitter.on('message', (msg: unknown) => {
-      cb(msg as unknown as Uint8Array);
-    });
+  onMessage(cb: (msg: unknown[]) => void): void {
+    this._emitter.on('message', cb);
   }
 
   close(): Promise<void> {

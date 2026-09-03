@@ -68,6 +68,15 @@ repos:
       pass_filenames: true
       require_serial: true
 
+    - id: jstest-modified
+      name: vitest on modified TS packages
+      description: runs vitest on TS/JS packages with modified files
+      entry: pre_commit_hooks/jstest
+      language: python
+      types_or: [ts, javascript]
+      pass_filenames: true
+      require_serial: true
+
     - id: sphinx-build
       name: sphinx documentation build
       description: builds sphinx documentation and fails on warnings or errors

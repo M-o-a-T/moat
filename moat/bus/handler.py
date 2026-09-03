@@ -1,18 +1,20 @@
-# noqa:D100
+"""Sans-IO bus message handler."""
+
 from __future__ import annotations
 
 import inspect
 from enum import IntEnum
 from random import random
 
-from moatbus.crc import CRC11
-from moatbus.message import BusMessage
+from moat.bus.crc import CRC11
+from moat.bus.message import BusMessage
 
 from collections import deque
+from typing import Any
 
-LEN = [None, None, 7, 5, 3, 3, 2]  # messages per chunk
-BITS = [None, None, 11, 14, 11, 14, 11]  # messages per header chunk (11 bits)
-N_END = [None, None, 3, 2, 1, 1, 1]  # flips at end
+LEN: list[int | None] = [None, None, 7, 5, 3, 3, 2]  # messages per chunk
+BITS: list[int | None] = [None, None, 11, 14, 11, 14, 11]  # messages per header chunk (11 bits)
+N_END: list[int | None] = [None, None, 3, 2, 1, 1, 1]  # flips at end
 
 
 class S(IntEnum):
@@ -97,7 +99,48 @@ class BaseHandler:
     * timeout()         -- when the timeout runs out
     """
 
-    def __init__(self, wires=3):
+    WIRES: int
+    MAX: int
+    LEN: int
+    BITS: int
+    N_END: int
+    VAL_END: int
+    VAL_MAX: int
+    LEN_CRC: int
+    crc: CRC11
+
+    last: int
+    current: int
+    settle: bool
+
+    _q: deque[BusMessage]
+    _prio_q: deque[BusMessage]
+    sending: BusMessage = None  # ty:ignore[invalid-assignment]
+    want_prio: int = None  # ty:ignore[invalid-assignment]
+    current_prio: int = None  # ty:ignore[invalid-assignment]
+
+    backoff: float
+    no_backoff: bool
+    tries: int = None  # ty:ignore[invalid-assignment]
+
+    last_zero: int | None
+    flapping: int
+
+    state: S
+
+    intended: int = None  # ty:ignore[invalid-assignment]
+    pos: int | None
+    cur_pos: int = None  # ty:ignore[invalid-assignment]
+    cur_chunk: list[int] | tuple[()] = None  # ty:ignore[invalid-assignment]
+    ack_mask: int = None  # ty:ignore[invalid-assignment]
+    nack_mask: int
+    ack_masks: int
+    msg_in: BusMessage
+    val: int
+    nval: int
+    write_state: W
+
+    def __init__(self, wires: int = 3) -> None:
         """
         Set up a MoatBus handler using these many bits with this line
         delay.
@@ -108,9 +151,9 @@ class BaseHandler:
         """
         self.WIRES = wires
         self.MAX = (1 << wires) - 1
-        self.LEN = LEN[wires]
-        self.BITS = BITS[wires]
-        self.N_END = N_END[wires]
+        self.LEN = LEN[wires]  # ty:ignore[invalid-assignment]
+        self.BITS = BITS[wires]  # ty:ignore[invalid-assignment]
+        self.N_END = N_END[wires]  # ty:ignore[invalid-assignment]
         self.VAL_END = self.MAX**self.N_END - 1
         self.VAL_MAX = 1 << self.BITS
         # The CRC is 11 bits, so on 3-wire we can skip a transition
@@ -122,16 +165,16 @@ class BaseHandler:
 
         self._q = deque()
         self._prio_q = deque()
-        self.sending = None
-        self.want_prio = None
-        self.current_prio = None
+        self.sending = None  # ty:ignore[invalid-assignment]
+        self.want_prio = None  # ty:ignore[invalid-assignment]
+        self.current_prio = None  # ty:ignore[invalid-assignment]
 
         # Delay after a packet.
         self.backoff = T_BACKOFF
         # Flag to ignore backoff delay. Set immediately after a collision
         self.no_backoff = False
         # How often to try. Filled by state of first attempt.
-        self.tries = None
+        self.tries = None  # ty:ignore[invalid-assignment]
 
         self.last_zero = None if self.current else 0
         # set this to zero when .current is zeroed, None when .current is set to something else.
@@ -145,39 +188,38 @@ class BaseHandler:
         self.reset()
         self._set_timeout(T_ZERO)
 
-    def report_error(self, typ, **kw):
+    def report_error(self, typ: ERR, **kw: Any) -> None:
         """
         OVERRIDE: There's been a comm problem.
         """
         typ, kw  # noqa:B018
         raise NotImplementedError("Override me")
 
-    def debug(self, msg, *a):
+    def debug(self, msg: str, *a: Any) -> None:
         """
         OVERRIDE: Debug me!
         """
-        pass
 
-    def set_timeout(self, timeout):
+    def set_timeout(self, timeout: float) -> None:
         """
         OVERRIDE: Arrange to call .timeout after @timeout usecs. <0=off,
         zero=Timer B, anything else: Timer A.
         """
         raise NotImplementedError("Override me")
 
-    def set_wire(self, bits):
+    def set_wire(self, bits: int) -> None:
         """
         OVERRIDE: Pull down these bits.
         """
         raise NotImplementedError("Override me")
 
-    def get_wire(self):
+    def get_wire(self) -> int:
         """
         OVERRIDE: Get the current wire state (pulled-low bits).
         """
         raise NotImplementedError("Override me")
 
-    def process(self, msg):
+    def process(self, msg: BusMessage) -> bool:
         """
         OVERRIDE: Process this message.
         Return True if it was for us and thus should be ACKd.
@@ -185,7 +227,7 @@ class BaseHandler:
         msg  # noqa:B018
         raise NotImplementedError("Override me")
 
-    def transmitted(self, msg, res):
+    def transmitted(self, msg: BusMessage, res: RES) -> None:
         """
         OVERRIDE: This message has been transmitted.
         @res is 0/1/2/-1 for OK/missed/error/fatal.
@@ -195,7 +237,7 @@ class BaseHandler:
 
     ########################################
 
-    def send(self, msg):
+    def send(self, msg: BusMessage) -> None:
         """
         Queue this message for sending.
         """
@@ -205,10 +247,8 @@ class BaseHandler:
         self.send_next()
         # all other states: do nothing.
 
-    def wire(self, bits):
-        """
-        Process wire changes.
-        """
+    def wire(self, bits: int) -> None:
+        """Process wire changes."""
         while True:
             self.last_zero = None if bits else 0
             self.current = bits
@@ -232,7 +272,7 @@ class BaseHandler:
             self.settle = True
             self._set_timeout(T_SETTLE)
 
-    def wire_settle(self, bits):
+    def wire_settle(self, bits: int) -> None:
         """
         The wire state has changed: now these bits are pulled low.
         """
@@ -261,7 +301,7 @@ class BaseHandler:
             if bits & ~(self.intended | self.last):
                 self.write_collision(bits & ~(self.intended | self.last), False)
 
-    def _set_timeout(self, val):
+    def _set_timeout(self, val: float) -> None:
         """
         Set a timeout.
 
@@ -277,12 +317,12 @@ class BaseHandler:
             self.last_zero += val
         self.set_timeout(val)
 
-    def _transmitted(self, msg, res):
+    def _transmitted(self, msg: BusMessage, res: RES) -> None:
         self.transmitted(msg, res)
-        self.tries = None
+        self.tries = None  # ty:ignore[invalid-assignment]
         self.backoff = max(self.backoff / 2, T_BACKOFF)
 
-    def timeout(self):
+    def timeout(self) -> None:
         """
         The timeout has arrived.
 
@@ -307,7 +347,7 @@ class BaseHandler:
                 self.settle = True
                 self._set_timeout(1)
 
-    def timeout_settle(self):
+    def timeout_settle(self) -> None:
         """
         State machine: we waited long enough for nothing to happen
         """
@@ -389,7 +429,8 @@ class BaseHandler:
         else:
             raise RuntimeError("Unhandled state in timeout", self.state)
 
-    def retry(self, msg, res):  # noqa:D102
+    def retry(self, msg: BusMessage, res: RES) -> None:
+        """Retry sending a message after a failure."""
         self.debug("Retry:%d %s", res, msg)
         if res == RES.MISSING:
             r = 2
@@ -406,7 +447,7 @@ class BaseHandler:
             self._q.appendleft(msg)
             self.send_next()
 
-    def next_step(self, timeout: bool):
+    def next_step(self, timeout: bool) -> None:
         """
         State machine: something should happen
 
@@ -467,15 +508,19 @@ class BaseHandler:
 
     ########################################
 
-    def clear_sending(self):  # noqa:D102
-        msg, self.sending = self.sending, None
-        self.want_prio = None
+    def clear_sending(self) -> BusMessage:
+        """Clear the current sending message and return it."""
+        msg = self.sending
+        self.sending = None  # ty:ignore[invalid-assignment]
+        self.want_prio = None  # ty:ignore[invalid-assignment]
         return msg
 
-    def start_reader(self):  # noqa:D102
+    def start_reader(self) -> None:
+        """Start the reader state machine."""
         self.set_state(S.READ_ACQUIRE)
 
-    def start_writer(self):  # noqa:D102
+    def start_writer(self) -> None:
+        """Start the writer state machine."""
         self.cur_chunk = ()
         self.settle = True
         self.sending.start_extract()
@@ -489,10 +534,11 @@ class BaseHandler:
         state the writer is in.
         """
         assert not self.cur_pos, self.cur_pos
-        res = None
+        res: list[int] | None = None
+        val: int = 0
 
         if self.write_state == W.MORE:
-            val = self.sending.extract_chunk(self.BITS)
+            val = self.sending.extract_chunk(self.BITS)  # ty:ignore[invalid-assignment]
             if val is None:
                 self.write_state = W.FINAL
                 self.cur_pos = n = self.N_END
@@ -547,7 +593,7 @@ class BaseHandler:
         self.intended = self.last ^ res
         return True
 
-    def write_collision(self, bits: int, settled: bool):
+    def write_collision(self, bits: int, settled: bool) -> None:
         """
         We noticed a collision when writing.
 
@@ -594,7 +640,8 @@ class BaseHandler:
             self.read_next(bits)
         self.no_backoff = True
 
-    def send_next(self):  # noqa:D102
+    def send_next(self) -> None:
+        """Start sending the next queued message, if applicable."""
         if self.sending is None:
             if self._prio_q:
                 self.sending = self._prio_q.popleft()
@@ -615,9 +662,11 @@ class BaseHandler:
         if self.state == S.IDLE and not self.settle:
             self.start_writer()
 
-    def read_done(self, crc_ok: bool):  # noqa:D102
+    def read_done(self, crc_ok: bool) -> None:
+        """Finish reading a message."""
         self.no_backoff = False
-        msg_in, self.msg_in = self.msg_in, None
+        msg_in = self.msg_in
+        self.msg_in = None  # ty:ignore[invalid-assignment]
         self.set_ack_mask()
         if not crc_ok:
             self.report_error(ERR.CRC, msg=msg_in)
@@ -634,7 +683,8 @@ class BaseHandler:
                 # The message is not for us
                 self.set_state(S.WAIT_IDLE)
 
-    def set_ack_mask(self):  # noqa:D102
+    def set_ack_mask(self) -> None:
+        """Compute the ACK/NACK bit masks."""
         # This part is somewhat fragile. Cannot be helped.
         bits = self.last if self.settle else self.current
 
@@ -646,7 +696,8 @@ class BaseHandler:
         # self.debug("AckBits %02x / %02x due to %02x/%d",
         # self.ack_mask,self.nack_mask,bits,self.settle)
 
-    def read_next(self, bits):  # noqa:D102
+    def read_next(self, bits: int) -> None:
+        """Process the next set of bits while reading."""
         bits ^= self.last
         # print("BIT",self.addr,bits-1)
         if not bits:
@@ -670,7 +721,7 @@ class BaseHandler:
                 self.read_crc()
             elif self.nval == self.LEN:
                 if self.val >= self.VAL_MAX + (1 << (self.BITS - 8)):
-                    self.error(ERR.CRC, msg=self.msg_in)  # eventually. We hope.
+                    self.error(ERR.CRC)  # eventually. We hope.
                 elif self.val >= self.VAL_MAX:
                     self.debug("Add Residual x%x", self.val - self.VAL_MAX)
                     self.msg_in.add_chunk(self.val - self.VAL_MAX, self.BITS - 8)
@@ -681,13 +732,14 @@ class BaseHandler:
                     self.nval = 0
                     self.val = 0
 
-    def read_crc(self):
+    def read_crc(self) -> None:
         """Switch to reading the CRC."""
         self.nval = 0
         self.val = 0
         self.set_state(S.READ_CRC)
 
-    def error(self, typ):  # noqa:D102
+    def error(self, typ: ERR) -> None:
+        """Handle a bus error."""
         if self.state == S.ERROR:
             return
         if typ == ERR.HOLDTIME and not self.current:
@@ -698,12 +750,17 @@ class BaseHandler:
             return
 
         f = inspect.currentframe()
+        assert f is not None
+        assert f.f_back is not None
+        fb = f.f_back
+        assert fb.f_back is not None
+        assert fb.f_back.f_back is not None
         self.debug(
             "Error %d @%d %d %d",
             typ,
-            f.f_back.f_lineno,
-            f.f_back.f_back.f_lineno,
-            f.f_back.f_back.f_back.f_lineno,
+            fb.f_lineno,
+            fb.f_back.f_lineno,
+            fb.f_back.f_back.f_lineno,
         )
         if typ < 0:
             if self.backoff < 3 * T_BACKOFF:
@@ -723,13 +780,14 @@ class BaseHandler:
         else:
             self.set_state(S.WAIT_IDLE)
 
-    def reset(self):  # noqa:D102
-        self.intended = None
+    def reset(self) -> None:
+        """Reset the handler's internal state."""
+        self.intended = None  # ty:ignore[invalid-assignment]
 
         self.pos = None
-        self.cur_pos = None
-        self.cur_chunk = None
-        self.ack_mask = None
+        self.cur_pos = None  # ty:ignore[invalid-assignment]
+        self.cur_chunk = None  # ty:ignore[invalid-assignment]
+        self.ack_mask = None  # ty:ignore[invalid-assignment]
         self.msg_in = BusMessage()
         self.msg_in.start_add()
 
@@ -737,17 +795,23 @@ class BaseHandler:
         self.nval = 0
         self.settle = False
 
-    def set_state(self, state):  # noqa:D102
+    def set_state(self, state: S) -> None:
+        """Transition to a new bus state."""
         if state == self.state:
             return
 
         f = inspect.currentframe()
+        assert f is not None
+        assert f.f_back is not None
+        fb = f.f_back
+        assert fb.f_back is not None
+        assert fb.f_back.f_back is not None
         self.debug(
             "State %s @%d %d %d",
             state,
-            f.f_back.f_lineno,
-            f.f_back.f_back.f_lineno,
-            f.f_back.f_back.f_back.f_lineno,
+            fb.f_lineno,
+            fb.f_back.f_lineno,
+            fb.f_back.f_back.f_lineno,
         )
 
         if state < S.WRITE and self.state >= S.WRITE:

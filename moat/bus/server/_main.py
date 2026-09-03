@@ -11,7 +11,7 @@ import logging
 import asyncclick as click
 from anyio_serial import Serial
 
-from moat.bus.backend.stream import StreamBusHandler
+from moat.bus.backend._stream import StreamHandler
 from moat.lib.codec.moat_msgpack import Codec as StdMsgpack
 from moat.mqtt.client import open_mqttclient
 
@@ -25,7 +25,7 @@ class MqttServer(Server):
         self.serial = serial
         self.mqtt = mqtt_in
         self.topic = topic_out
-        self.bus = StreamBusHandler(serial, "Ser")
+        self.bus = StreamHandler("Ser", serial)
         super().__init__(self.bus)
 
     async def reader(self):

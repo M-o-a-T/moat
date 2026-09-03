@@ -29,13 +29,11 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.client import Link, Watcher
 
-    from typing import Any
-
 __all__ = ["DelayedGate", "Gate", "GateNode"]
 
 
 class GateVanished(RuntimeError):
-    "internal error: gate got dropped, or driver changed"
+    """Internal error: gate got dropped, or driver changed."""
 
     pass
 
@@ -55,18 +53,18 @@ class GateNode(Node):
     src_write_time: float = field(init=False, default=0.0)
 
     @property
-    def has_src(self):
-        "Check whether source (i.e. MoaT-Link) data is present"
+    def has_src(self) -> bool:
+        """Check whether source (i.e. MoaT-Link) data is present"""
         return self.data_ is not NotGiven or self.meta not in (None, NotGiven)
 
     @property
-    def has_dst(self):
-        "Check whether destination (i.e. external) data is present"
+    def has_dst(self) -> bool:
+        """Check whether destination (i.e. external) data is present"""
         return self.ext_data is not NotGiven or self.ext_meta not in (None, NotGiven)
 
     @property
-    def has_both(self):
-        "Check whether both source and destination data are present"
+    def has_both(self) -> bool:
+        """Check whether both source and destination data are present"""
         if self.data_ is NotGiven and self.meta is None:
             return False
         if self.ext_data is NotGiven and self.ext_meta is None:
@@ -96,10 +94,10 @@ class _DelayedUpdate:
     node: GateNode = field()
     to_dst: bool = field(default=False)  # True if this update is going to destination
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.path, self.to_dst))
 
-    def __eq__(self, other: object):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, _DelayedUpdate):
             return self.path == other.path and self.to_dst == other.to_dst
         if isinstance(other, tuple) and len(other) == 2:
@@ -155,7 +153,7 @@ class Gate:
     cfg: attrdict
     cf: attrdict
 
-    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link):
+    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link) -> None:
         """
         Setup.
         @cfg: initial data for this gateway.
@@ -186,7 +184,7 @@ class Gate:
         """
         return isinstance(self.codec, _NullCodec)
 
-    async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Fetch the internal data.
         """
@@ -212,7 +210,7 @@ class Gate:
                     node.set_(p, d, m)
                     node.todo = True
 
-    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta):
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta) -> None:
         if self._path_dropped(path):
             return
         node.ext_data = NotGiven
@@ -223,11 +221,11 @@ class Gate:
         async with node.lock:
             await self.set_dst(path, data, meta, node)
 
-    def dst_is_current(self):
-        "Must be called when the initial destination data has been read"
+    def dst_is_current(self) -> None:
+        """Called when the initial destination data has been read."""
         self._dst_done.set()
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         A task that fetches external data.
 
@@ -240,7 +238,9 @@ class Gate:
         """
         raise NotImplementedError
 
-    async def set_src(self, path: Path, data: Any, aux: MsgMeta, speed: float | None = None):
+    async def set_src(
+        self, path: Path, data: Any, aux: MsgMeta, speed: float | None = None
+    ) -> None:
         """
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
@@ -276,7 +276,7 @@ class Gate:
             node.ext_meta = aux or NotGiven
             node.todo = True
 
-    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None):
+    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None) -> None:
         async with node.lock:
             if not self.is_update(node, data, aux):
                 return
@@ -291,7 +291,7 @@ class Gate:
             node.ext_meta = aux or NotGiven
             node.todo = False
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode) -> None:
         """
         Called to update the destination state. @meta is the source
         metadata, in case it is useful in some way.
@@ -300,7 +300,7 @@ class Gate:
         """
         raise NotImplementedError
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None):  # noqa: ARG002
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:  # noqa: ARG002
         """
         Check whether this new destination data is an update.
 
@@ -308,7 +308,7 @@ class Gate:
         """
         return True
 
-    def newer_dst(self, node) -> bool | None:
+    def newer_dst(self, node: GateNode) -> bool | None:
         """
         Test whether the destination data is newer, based on the node's
         metadata. Must return `True` if the data should be copied to the source,
@@ -321,7 +321,7 @@ class Gate:
         """
         raise NotImplementedError
 
-    async def run(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def run(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Run a bidirectional copy.
 
@@ -352,8 +352,8 @@ class Gate:
                 task_status = anyio.TASK_STATUS_IGNORED
                 await anyio.sleep(1)
 
-    async def _restart(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "Restart the thing when the root changes."
+    async def _restart(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
+        """Restart the thing when the root changes."""
         async with self.link.d_watch(self.path) as mon:
             task_status.started()
             async for d in mon:
@@ -375,7 +375,7 @@ class Gate:
         The default implementation does nothing.
         """
 
-    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         The core runner for the gateway.
 
@@ -394,7 +394,7 @@ class Gate:
         self.running = True
 
         # resolve any conflicts in the initial data
-        async def visit(path: Path, node: Node):
+        async def visit(path: Path, node: Node) -> None:
             node = cast(GateNode, node)
             if not node.todo:
                 return
@@ -462,7 +462,7 @@ class Gate:
         self.tg.start_soon(self._process_pending, self._waiting)
         task_status.started()
 
-    async def state_updater(self, mon: Watcher, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def state_updater(self, mon: Watcher, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Status update handler.
 
@@ -529,12 +529,12 @@ class DelayedGate(Gate):
     _pending: TimerMap[_DelayedUpdate]
     _delay: float
 
-    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link):
+    def __init__(self, cfg: dict[str, Any], cf: dict[str, Any], path: Path, link: Link) -> None:
         super().__init__(cfg, cf, path, link)
         self._delay = cf.get("delay", 0.1)
         self._pending = TimerMap()
 
-    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None):
+    async def _set_dst(self, path: Path, node: GateNode, data: Any, meta: MsgMeta | None) -> None:
         """
         Queue an update to the destination, with delay.
         """
@@ -546,7 +546,7 @@ class DelayedGate(Gate):
         update = _DelayedUpdate(path=path, data=data, meta=meta, node=node, to_dst=True)
         self._pending[update] = self._delay
 
-    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None):
+    async def _set_src(self, path: Path, node: GateNode, data: Any, aux: MsgMeta | None) -> None:
         """
         Queue an update to the source, with delay.
 
@@ -562,7 +562,7 @@ class DelayedGate(Gate):
         update = _DelayedUpdate(path=rel_path, data=data, meta=aux, node=node, to_dst=False)
         self._pending[update] = self._delay
 
-    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Run the gateway with pending update processing.
         """
@@ -571,8 +571,8 @@ class DelayedGate(Gate):
 
 
 async def run_gate(
-    cfg: dict, link: Link, cf: Path | str, *, task_status=anyio.TASK_STATUS_IGNORED
-):
+    cfg: dict[str, Any], link: Link, cf: Path | str, *, task_status=anyio.TASK_STATUS_IGNORED
+) -> None:
     """
     Run a gate in @link, described by @name.
     """

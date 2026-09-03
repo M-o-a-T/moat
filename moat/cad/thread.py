@@ -9,24 +9,27 @@ from math import pi, tan
 import bd_warehouse.thread as _t
 import cadquery
 
+from typing import Any
+
 __all__ = ["AngledThread", "ISO228_Thread"]
 
 IN = 25.4  # mm per inch
 
 
-def radians(x):
+def radians(x: float) -> float:
+    """Convert degrees to radians."""
     return x * pi / 180
 
 
 def AngledThread(
-    radius,
-    offset,
-    apex=0,
-    angle=45,
+    radius: float,
+    offset: float,
+    apex: float = 0,
+    angle: float = 45,
     external: bool = True,
     simple: bool = False,
-    **kw,
-):
+    **kw: Any,
+) -> _t.Thread:
     """
     Create a thread with a defined angle.
 
@@ -67,9 +70,9 @@ def AngledThread(
 
 
 class ISO228_Thread(_t.TrapezoidalThread):
-    "Threads for fittings. ISO 228."
+    """Threads for fittings. ISO 228."""
 
-    specs = {
+    specs: dict[str, tuple[int, float]] = {
         # nominal size: threads per inch / diameter at center of thread
         "1/16": (28, 7.142),
         "1/8": (28, 9.147),
@@ -100,8 +103,8 @@ class ISO228_Thread(_t.TrapezoidalThread):
     thread_angle = 27.5  # degrees
 
     @classmethod
-    def parse_size(cls, x):
-        "not called here. Yes we're duck typing."
+    def parse_size(cls, x: Any) -> Any:
+        """not called here. Yes we're duck typing."""
         x  # noqa:B018
         raise RuntimeError("Not applicable")
 
@@ -111,8 +114,8 @@ class ISO228_Thread(_t.TrapezoidalThread):
         length: float,
         adj: float = 0,
         external: bool = True,
-        **kw,
-    ):
+        **kw: Any,
+    ) -> None:
         kw.setdefault("end_finishes", ("fade", "fade"))
 
         self.external = external
@@ -155,13 +158,13 @@ class ISO228_Thread(_t.TrapezoidalThread):
         )
         self.end_finishes = cq_object.end_finishes
         self.hand = "right" if cq_object.right_hand else "left"
-        cadquery.Solid.__init__(self, cq_object.wrapped)
+        cadquery.Solid.__init__(self, cq_object.wrapped)  # ty:ignore[invalid-argument-type]
 
 
 class ISO1222_Thread(ISO228_Thread):
-    "Threads for photo tripods. ISO 1222."
+    """Threads for photo tripods. ISO 1222."""
 
-    specs = {
+    specs: dict[str, tuple[int, float]] = {
         # nominal size: threads per inch / diameter at center of thread
         "1/4": (20, 5.525),
         "3/8": (16, 8.494),
@@ -170,8 +173,8 @@ class ISO1222_Thread(ISO228_Thread):
     thread_angle = 30  # degrees
 
     @classmethod
-    def parse_size(cls, x):
-        "not called here. Yes we're duck typing."
+    def parse_size(cls, x: Any) -> Any:
+        """not called here. Yes we're duck typing."""
         x  # noqa:B018
         raise RuntimeError("Not applicable")
 
@@ -181,8 +184,8 @@ class ISO1222_Thread(ISO228_Thread):
         length: float,
         adj: float = 0,
         external: bool = True,
-        **kw,
-    ):
+        **kw: Any,
+    ) -> None:
         kw.setdefault("end_finishes", ("fade", "fade"))
 
         self.external = external
@@ -225,4 +228,4 @@ class ISO1222_Thread(ISO228_Thread):
         )
         self.end_finishes = cq_object.end_finishes
         self.hand = "right" if cq_object.right_hand else "left"
-        cadquery.Solid.__init__(self, cq_object.wrapped)
+        cadquery.Solid.__init__(self, cq_object.wrapped)  # ty:ignore[invalid-argument-type]

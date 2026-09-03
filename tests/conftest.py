@@ -113,17 +113,18 @@ def clear_root():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def in_test(free_tcp_port_factory):
+def in_test():
     """
     This fixture ensures that the configuration for moat-link clients
     does not access port 1883 and thus won't disturb / depend on a
-    locally runnign MQTT server.
+    locally running MQTT server.
     """
     from moat.lib.config import CFG  # noqa:PLC0415
 
     def fix_for_testing(cfg):
         if "backend" in cfg.link and cfg.link.backend.get("port", 1883) == 1883:
-            cfg.link.backend.port = free_tcp_port_factory()
+            # Use a privileged port that no MQTT broker would listen on.
+            cfg.link.backend.port = 1
 
     CFG.set_env_(P("in_test"), "fix_for_testing")
     try:

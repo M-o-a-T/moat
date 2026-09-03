@@ -31,10 +31,10 @@ logger = logging.getLogger(__name__)
 all = ["setup", "install", "do_update", "do_copy"]  # noqa: A001
 
 
-async def do_update(dst, root, cross, hfn):  # noqa: D103
+async def do_update(dst, root, cross, hfn, arch: str | None = None):  # noqa: D103
     from moat.micro.files import APath, copytree  # noqa: PLC0415
 
-    await run_update(dst / "lib", cross=cross, hash_fn=hfn)
+    await run_update(dst / "lib", cross=cross, arch=arch, hash_fn=hfn)
 
     # do not use "/". Running micropython tests locally requires
     # all satellite paths to be relative.
@@ -51,6 +51,7 @@ async def do_copy(
     dst: anyio.Path,
     dest: str | None,
     cross: str | anyio.Path | None,
+    arch: str | None = None,
     wdst: anyio.Path | None = None,
 ):
     """
@@ -59,6 +60,8 @@ async def do_copy(
     if @dest is `None`, append the source path behind ``/_embed/`` (if it exists).
 
     @cross is the path of the mpy-cross executable.
+
+    @arch is the target architecture for mpy-cross (``-march=<arch>``).
     """
     from .files import APath, copy_over  # noqa: PLC0415
 
@@ -71,7 +74,7 @@ async def do_copy(
     else:
         dst /= dest
     awdst = None if wdst is None else APath(wdst)
-    await copy_over(source, dst, cross=cross, wdst=awdst)
+    await copy_over(source, dst, cross=cross, arch=arch, wdst=awdst)
 
 
 def _clean_cfg(cfg):
@@ -93,6 +96,7 @@ async def setup(
     state: str | None = None,
     config: dict | None = None,
     cross: str | anyio.Path | None = None,
+    arch: str | None = None,
     update: bool = False,
     watch: bool = False,
     main: str | anyio.Path | bool | None = False,
@@ -103,6 +107,10 @@ async def setup(
     teach it to run the MoaT loop.
 
     Parameters: see "moat micro setup --help".
+
+    @arch is the target architecture for mpy-cross (``-march=<arch>``).
+    If `None` and @install is set, the architecture is derived from the
+    target port/board.
     """
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
@@ -216,11 +224,11 @@ async def setup(
 
                     async with anyio.TemporaryDirectory() as tf:
                         wdst = anyio.Path(tf)
-                        await do_copy(source, dst, dest, cross, wdst=wdst)
-                        rom_data = await make_romfs(wdst, cross)
+                        await do_copy(source, dst, dest, cross, arch=arch, wdst=wdst)
+                        rom_data = await make_romfs(wdst, cross, arch=arch)
                         await write_romfs(sd, rom_data)
                 else:
-                    await do_copy(source, dst, dest, cross)
+                    await do_copy(source, dst, dest, cross, arch=arch)
             if state and not watch:
                 await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close(); del f")
             if large is True:
@@ -252,7 +260,7 @@ async def setup(
                     )
                     return eval(res)
 
-                await do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
+                await do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn, arch=arch)
 
             need_run = True
             if reset:
@@ -292,6 +300,34 @@ def find_p(prog: str):
             return pp
 
     return None
+
+
+_PORT_ARCH: dict[str, str] = {
+    "esp32": "xtensawin",
+    "esp8266": "xtensa",
+    "rp2": "armv6m",
+    "stm32": "armv7em",
+    "nrf": "armv7em",
+    "samd": "armv7em",
+    "mimxrt": "armv7em",
+}
+
+
+def _port_arch(device: str, board: str | None = None) -> str | None:
+    """
+    Determine the mpy-cross ``-march`` value for a given port/board.
+
+    Returns `None` if the architecture is unknown.
+    """
+    arch = _PORT_ARCH.get(device)
+    if arch is None:
+        return None
+    # Some ports need finer-grained selection based on the board;
+    # e.g. RP2350 uses armv7m, not armv6m.
+    if device == "rp2" and board is not None:
+        if "pico2" in board.lower() or "rp2350" in board.lower():
+            return "armv7m"
+    return arch
 
 
 async def install_(cfg, dest: str | anyio.Path | None = None):
@@ -445,4 +481,5 @@ async def install_(cfg, dest: str | anyio.Path | None = None):
         update=True,
         state="once",
         cross=str(mpydir / "mpy-cross" / "build" / "mpy-cross"),
+        arch=_port_arch(device, board),
     )

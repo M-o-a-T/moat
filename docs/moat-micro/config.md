@@ -157,6 +157,20 @@ Start the target in verbose mode.
 `mpy-cross` compiler. If set, files ending in `.py` will be
 cross-compiled and uploaded with an extension of `.mpy`.
 
+###### arch
+
+Target architecture for mpy-cross, passed as ``-march=<arch>``.
+Set this to the architecture of the target MCU so that
+``@micropython.native`` decorators compile to the correct machine
+code. Common values: ``xtensawin`` (ESP32), ``xtensa`` (ESP8266),
+``armv6m`` (RP2040), ``armv7m`` (RP2350), ``armv7em`` (STM32).
+
+If not set, mpy-cross uses its default (host) architecture, which
+produces native code that won't run on the target MCU.
+
+When installing firmware via ``moat micro setup --install``, the
+architecture is auto-detected from the target port and board.
+
 #### run
 
 This configuration is used by "moat micro run". It typically includes

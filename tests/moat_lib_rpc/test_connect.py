@@ -34,14 +34,14 @@ app:
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
 @pytest.mark.parametrize("unix", [False, True])
-async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
+async def test_net(tmp_path, server_first, link_in, unix):
     "basic connectivity test"
     if unix:
         sock = tmp_path / "test.sock"
         with suppress(FileNotFoundError):
             sock.unlink()
     else:
-        port = free_tcp_port
+        port = 0
 
     async def set_server(c):
         if unix:
@@ -82,9 +82,23 @@ async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
         })
 
     async with rpc_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as c:
-        await (set_server if server_first else set_client)(c)
-        await sleep_ms(100)
-        await (set_client if server_first else set_server)(c)
+        if not unix:
+            # For TCP, always start the server first to get the
+            # OS-assigned port, then configure the client with it.
+            await set_server(c)
+            # Wait for the server's port to be assigned by polling.
+            for _ in range(100):
+                await sleep_ms(10)
+                port = (await d.cmd(P("c.r"), p=P("app.r.port")))[0]
+                if port:
+                    break
+            await set_client(c)
+        else:
+            # Unix sockets: no port allocation needed.
+            await (set_server if server_first else set_client)(c)
+            await sleep_ms(100)
+            await (set_client if server_first else set_server)(c)
+
         await d.cmd(P("l.!.rdy_"))
         await d.cmd(P("r.!.rdy_"))
         res = await d.cmd(P("l.a.echo"), m="hello")

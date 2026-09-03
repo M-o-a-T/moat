@@ -9,6 +9,8 @@ from moat.lib.path import Path
 from ._misc import de_async as de_async
 from ._misc import wait_complain as wait_complain
 
+from collections.abc import Mapping
+
 # Typing
 
 
@@ -95,7 +97,7 @@ def srepr(x, bare=False):
         if bare:
             return ",".join(srepr(v) for v in x)
         return "[" + ",".join(srepr(v) for v in x) + "]"
-    if isinstance(x, dict):
+    if isinstance(x, Mapping):
         if bare:
             return ",".join(drepr(k, v) for k, v in x.items())
         return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"

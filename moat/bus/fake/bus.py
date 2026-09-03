@@ -4,7 +4,6 @@
 This is a simulated MoaT bus. It offers a Unix socket.
 
 *** This bus simulation is active high ***
-
 """
 
 from __future__ import annotations
@@ -17,21 +16,33 @@ from random import random
 
 import asyncclick as click
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup as _TG
+
 _seq = 0
 
 
 class Main:  # noqa:D101
-    def __init__(self, **kw):
+    clients: set[Any]
+    trigger: anyio.Event
+    verbose: bool
+    max_delay: int
+    delay: int
+    t: float | None
+
+    def __init__(self, **kw: Any) -> None:
         self.clients = set()
-        self.trigger = anyio.create_event()
+        self.trigger = anyio.Event()
         for k, v in kw.items():
             setattr(self, k, v)
         self.t = None
 
-    def trigger_update(self):  # noqa:D102
+    def trigger_update(self) -> None:  # noqa:D102
         self.trigger.set()
 
-    def add(self, client):  # noqa:D102
+    def add(self, client: Any) -> None:  # noqa:D102
         client.last_b = b""
         self.clients.add(client)
         if self.verbose:
@@ -39,7 +50,7 @@ class Main:  # noqa:D101
 
         self.trigger_update()
 
-    def remove(self, client):  # noqa:D102
+    def remove(self, client: Any) -> None:  # noqa:D102
         try:
             self.clients.remove(client)
         except KeyError:
@@ -52,17 +63,17 @@ class Main:  # noqa:D101
             if not self.clients:
                 self.t = None
 
-    def report(self, n, val):  # noqa:D102
+    def report(self, n: int, val: int) -> None:  # noqa:D102
         if not self.verbose:
             return
         t = time.monotonic()
         self.t, t = t, (0 if self.t is None else t - self.t)
 
-        n = f"{n:%02d}" if n else "--"
+        n_str = f"{n:%02d}" if n else "--"
 
-        print(f"{t:6.3f} {n} {val:02x}")
+        print(f"{t:6.3f} {n_str} {val:02x}")
 
-    async def run(self):  # noqa:D102
+    async def run(self) -> None:  # noqa:D102
         last = -1
         val = 0
         while True:
@@ -71,7 +82,7 @@ class Main:  # noqa:D101
             else:
                 await self.trigger.wait()
             if self.trigger.is_set():
-                self.trigger = anyio.create_event()
+                self.trigger = anyio.Event()
 
             val = 0
             for c in self.clients:
@@ -91,7 +102,7 @@ class Main:  # noqa:D101
 
             last = val
 
-    async def serve(self, client):  # noqa:D102
+    async def serve(self, client: Any) -> None:  # noqa:D102
         global _seq
         _seq += 1
         n = _seq
@@ -121,9 +132,9 @@ class Main:  # noqa:D101
 
 
 @asynccontextmanager
-async def mainloop(tg, **kw):  # noqa:D103
+async def mainloop(tg: _TG, **kw: Any) -> Any:  # noqa:D103
     mc = Main(**kw)
-    await tg.spawn(mc.run)
+    tg.start_soon(mc.run)
     yield mc
 
 
@@ -132,7 +143,7 @@ async def mainloop(tg, **kw):  # noqa:D103
 @click.option("-v", "--verbose", help="Report changes", is_flag=True)
 @click.option("-d", "--delay", type=int, help="fixed delay (msec)", default=0)
 @click.option("-D", "--max-delay", type=int, help="random delay (msec)", default=0)
-async def main(sockname, **kw):  # noqa:D103
+async def main(sockname: str, **kw: Any) -> None:  # noqa:D103
     with suppress(OSError):
         os.unlink(sockname)
 

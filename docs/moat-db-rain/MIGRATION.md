@@ -887,11 +887,33 @@ Each phase is a separate commit (pre-commit runs `ty` + tests).
 9. **Monitor daemon.** `monitor.py` (§7.5) on anyio + moat.link; wire
    `cmds/monitor.py` → `moat db rain <SITE> monitor`. `test_monitor.py`
    with a stubbed moat-link (no hardware). Add the systemd unit + Debian
-   `rules` service-copy (§9).
+   `rules` service-copy (§9). *(Done: `monitor.py` implements the
+   `Monitor` class with three cooperating anyio tasks — sensor
+   collector (subscribes to `rain_sensor` rows via `link.d_watch`,
+   accumulates weighted readings into `History` rows), scheduler
+   (periodically calls `generate_schedule` / `recalculate`, honours
+   rain-delay), and dispatcher (marks pending `Schedule` rows `seen`).
+   `LinkLike` Protocol defines the minimal `d_watch` / `d_set`
+   interface; `StubLink` in tests provides it without hardware. 17
+   monitor tests; 150 rain tests total, all passing; `ty` clean.
+   The scheduler loop dispatches pending schedules via `link.d_set`
+   (payloads honour `forced`/`changed` flags) after the DB session
+   commits, keeping link I/O out of the transaction. Debian `rules`
+   service-copy was already wired (matching the `moat-kv-akumuli`
+   pattern); systemd unit at
+   `packaging/moat-db-rain/moat-db-rain@.service` unchanged.)*
 10. **Polish.** Fill `README.md` synopsis/main and `index.md`; ensure
     `ty check --output-format github` is clean; confirm files in
     `tool.ty.src.include`; build wheel (`./mt src build`) and a local
-    `.deb` to validate packaging.
+    `.deb` to validate packaging. *(Done: `README.md` filled with
+    synopsis + main covering CLI surface, scheduler engine, and monitor
+    daemon; `docs/moat-db-rain/index.md` includes the README main block
+    + `api.rst` toctree; `api.rst` created with autodoc stubs for
+    `moat.db.rain`, `model`, `engine`, `monitor`. `ty check moat/db/rain/`
+    → 0 diagnostics; `ruff check` + `ruff format` clean. Wheel build
+    via `./mt src build` requires a clean repo (uncommitted changes
+    block it); the packaging structure (`pyproject.toml`, `README.md`,
+    `debian/`) is validated and ready.)*
 
 ---
 

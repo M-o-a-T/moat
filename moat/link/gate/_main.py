@@ -10,12 +10,14 @@ import sys
 import asyncclick as click
 
 import moat.link.gate as _gate_pkg
-from moat.util import NotGiven, yprint
-from moat.lib.path import P
+from moat.util import NotGiven, attrdict, yprint
+from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.client import Link
 from moat.link.meta import MsgMeta
+
+from typing import Any
 
 _drivers: list[str] = sorted(
     m.name for m in pkgutil.iter_modules(_gate_pkg.__path__) if not m.name.startswith("_")
@@ -60,7 +62,7 @@ class _GateSetCommand(click.Command):
 @click.group(cls=AliasedGroup, short_help="Manage gateways.", invoke_without_command=True)
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path):
+async def cli(ctx: click.Context, path: Path) -> None:
     """
     This subcommand gates MoaT-Link data to/from other channels.
     """
@@ -76,7 +78,7 @@ async def cli(ctx, path):
 
 @cli.command()
 @click.pass_obj
-async def run(obj):
+async def run(obj: attrdict) -> None:
     """
     Run a gateway setup.
     """
@@ -94,14 +96,14 @@ async def run(obj):
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj: attrdict) -> None:
     """
     List gates / a gate's data.
     """
     await _list(obj)
 
 
-async def _list(obj):
+async def _list(obj: attrdict) -> None:
     if not obj.path:
         seen = False
         async with obj.conn.d_walk(P("gate"), min_depth=1, max_depth=1) as mon:
@@ -132,7 +134,9 @@ async def _list(obj):
 @click.option("-D", "--dst", type=P, help="Destination (driver specific)")
 @click.option("-d", "--driver", type=str, help="Driver name or full module path")
 @click.pass_obj
-async def set_(obj, src, dst, driver, **kw):
+async def set_(
+    obj: attrdict, src: Path | None, dst: Path | None, driver: str | None, **kw: Any
+) -> None:
     """
     Add/change a gateway entry.
     """
@@ -149,7 +153,7 @@ async def set_(obj, src, dst, driver, **kw):
 
 
 class nstr:
-    def __new__(cls, val):
+    def __new__(cls, val: Any) -> Any:
         if val is NotGiven:
             return val
         return str(val)
@@ -164,7 +168,7 @@ class nstr:
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
 @click.pass_obj
-async def delete(obj, before, recursive):
+async def delete(obj: attrdict, before: float | None, recursive: bool) -> None:
     """
     Delete an entry, or a subtree.
 

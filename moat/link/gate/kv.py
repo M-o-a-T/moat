@@ -35,12 +35,12 @@ MoaT-Link configuration file.\
 class Gate(_Gate):  # noqa: D101
     kv: Client
 
-    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "Main loop. Overridden to start a Moat-KV client"
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
+        """Main loop. Overridden to start a MoaT-KV client."""
         async with open_client("moat.link.gate.kv", **self.cfg["kv"]) as self.kv:
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):  # noqa: D102
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:  # noqa: D102
         pl = PathLongener()
         # This chops the `self.cf.dst` prefix off the resulting path
         async with self.kv.watch(self.cf.dst, fetch=True, long_path=False, nchain=2) as mon:
@@ -57,10 +57,14 @@ class Gate(_Gate):  # noqa: D101
                     MsgMeta(origin=msg.chain.node, t=msg.chain.tick),
                 )
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta, node: GateNode):
-        "Set KV data."
-
-        meta  # noqa:B018
+    async def set_dst(
+        self,
+        path: Path,
+        data: Any,
+        meta: MsgMeta | None,  # noqa: ARG002
+        node: GateNode,
+    ) -> None:
+        """Set KV data."""
 
         # XXX ideally we should have the previous value's external chain
         # available here, just to be able to complain when there's a conflict
@@ -71,33 +75,41 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = res.chain
 
-    def is_update(self, node: GateNode, data: Any, meta: MsgMeta):
-        "Check for update"
-        data  # noqa:B018
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:  # noqa: ARG002
+        """
+        Check whether this new destination data is an update.
+
+        @data is currently ignored.
+        """
+        # If there's no aux metadata, this is not an echo.
+        if aux is None:
+            return True
         # If the message is an echo of what we sent earlier, ignore it.
         try:
-            if meta.origin == node.ext_meta.node and meta["t"] == node.ext_meta.tick:
+            if aux.origin == node.ext_meta.node and aux["t"] == node.ext_meta.tick:
                 return False
         except (AttributeError, KeyError):
             pass
         return True
 
-    def newer_dst(self, node):  # noqa: D102
+    def newer_dst(self, node: GateNode) -> bool | None:  # noqa: D102
         # If the internal message has a copy of the outside metadata, it
         # should be either unmodified or older. Test the data to be sure.
         # Otherwise compare the chains.
-        if node.meta.origin == self.origin:
-            return None
+        meta = node.meta
+        if meta is not None:
+            if meta.origin == self.origin:
+                return None
 
-        if "gw" in node.meta:
-            last_node = node.meta["gw"]
-            if last_node.origin != node.ext_meta.origin:
-                return True
-            if last_node["t"] < node.ext_meta["t"]:
-                return True
-            if last_node["t"] > node.ext_meta["t"]:
-                return False
-            return None
+            if "gw" in meta:
+                last_node = meta["gw"]
+                if last_node.origin != node.ext_meta.origin:
+                    return True
+                if last_node["t"] < node.ext_meta["t"]:
+                    return True
+                if last_node["t"] > node.ext_meta["t"]:
+                    return False
+                return None
 
         # same data = nothing to do
         # XXX may require inexact comparison for floats

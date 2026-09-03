@@ -160,10 +160,10 @@ Set to -1 to clear.
 """,
     )
 
-    _limit = None
-    _limits: dict = None
-    _powers: dict = None
-    _power: float = None
+    _limit: float | None = None
+    _limits: dict | None = None
+    _powers: dict | None = None
+    _power: float | None = None
 
     async def run(self):
         "do the work"
@@ -191,6 +191,9 @@ Set to -1 to clear.
 
     async def _dkv_mon_l(self, evt):
         lims = self._limits
+        if lims is None:
+            lims = {}
+            self._limits = lims
         intf = self.intf
         dkv = await intf.distkv
         if dkv is None:
@@ -217,6 +220,9 @@ Set to -1 to clear.
 
     async def _dkv_mon_p(self, evt):
         pows = self._powers
+        if pows is None:
+            pows = {}
+            self._powers = pows
         intf = self.intf
         dkv = await intf.distkv
         if dkv is None:
@@ -258,8 +264,8 @@ Set to -1 to clear.
                     logger.warning("DistKV is active: power setting is ignored!")
                     del self.intf.op["power"]
 
-            p: float = None
-            ip: float = None
+            p: float | None = None
+            ip: float | None = None
             soc = intf.batt_soc
             if soc <= self.soc_low_zero:
                 self.mode = 1
@@ -281,9 +287,9 @@ Set to -1 to clear.
             elif self.mode == 2:
                 ip = min(intf.solar_p, -intf.p_cons)
             elif self.mode == 3:
-                p = max(intf.solar_p + intf.p_cons, self._power)
+                p = max(intf.solar_p + intf.p_cons, self._power or 0)
             else:
-                p = self._power
+                p = self._power or 0
             state.mode = self.mode
             state.p_want = p
             state.ip = ip
@@ -295,6 +301,7 @@ Set to -1 to clear.
             if ipn is not None:
                 ip = ipn
             if ip is None:
+                assert p is not None
                 if dkv:
                     await dkv.set(intf.distkv_prefix / "solar" / "max", p, idem=True)
                 exc = self.power_ref - p

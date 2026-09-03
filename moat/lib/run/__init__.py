@@ -107,6 +107,20 @@ def _no_config(*_a: Any, **_k: Any) -> None:
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
 
+def _to_plain_dict(d: Any) -> Any:
+    """Recursively convert a Mapping/sequence tree to plain ``dict``/``list``.
+
+    ``logging.config.dictConfig`` mutates its input in place; feeding it the
+    shared ``CfgStore.static`` logging subtree would corrupt the store (and
+    embed unpicklable ``Handler`` objects with ``RLock``s).
+    """
+    if isinstance(d, Mapping):
+        return {k: _to_plain_dict(v) for k, v in d.items()}
+    if isinstance(d, (list, tuple)):
+        return [_to_plain_dict(v) for v in d]
+    return d
+
+
 def attr_args(
     proc: Callable[..., Any] | None = None,
     with_combined: bool | str = "s",
@@ -961,7 +975,11 @@ def wrap_main(
         for k in log:
             k, v = k.split("=")
             cfg.mod(P("logging.loggers") / k / "level", v)
-        logging.config.dictConfig(cfg.logging)
+        # dictConfig mutates its input in place (it replaces handler /
+        # filter / formatter entries with the realised objects, which
+        # carry an unpicklable RLock). Pass a plain-dict copy so the
+        # shared CfgStore.static logging subtree is not corrupted.
+        logging.config.dictConfig(_to_plain_dict(cfg.logging))
 
     process_args(
         set_=set_,

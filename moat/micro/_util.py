@@ -11,15 +11,15 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable, Callable
-    from typing import ClassVar
+    from typing import Any, ClassVar
 
 # like get/set_part but without the attributes
 
 TEST_MAGIC = b"r:\x0dn:\x0arn:\x0d\x0a-\x00x\x0ce\x1b" + "🖖🏼  ".encode("utf-8") + b"!"
 
 
-def get_p(cur, p, add=False):
-    "retrieve an item"
+def get_p(cur: dict, p: tuple, add: bool = False) -> dict:
+    """Retrieve an item."""
     for pp in p:
         try:
             cur = cur[pp]
@@ -31,14 +31,14 @@ def get_p(cur, p, add=False):
     return cur
 
 
-def set_p(cur, p, v):
-    "set an item"
+def set_p(cur: dict, p: tuple, v: Any) -> None:
+    """Set an item."""
     cur = get_p(cur, p[:-1], add=True)
     cur[p[-1]] = v
 
 
-def del_p(cur, p):
-    "delete an item"
+def del_p(cur: dict, p: tuple) -> None:
+    """Delete an item."""
     pp = p[0]
     if pp in cur:
         if len(p) > 1:
@@ -82,14 +82,14 @@ class Repeater:
         max: float = 99999,  # noqa:A002
         diff: float = 99999,
     ) -> None:
-        self.cfg = cfg
-        self.rdr = rdr
-        self.min = min
-        self.max = max
-        self.diff = diff
+        self.cfg: dict = cfg
+        self.rdr: Callable[[], Awaitable[float]] = rdr
+        self.min: float = min
+        self.max: float = max
+        self.diff: float = diff
 
     def state(self) -> dict:
-        "Current state"
+        """Current state."""
         res = dict(r=self.retries, rr=self.rr, val=self.val)
         if self.err is not None:
             res["err"] = self.err
@@ -98,7 +98,7 @@ class Repeater:
             res["wait"] = self.evt is not True
         return res
 
-    async def get(self, force: bool = False):
+    async def get(self, force: bool = False) -> float:
         """
         Read the next bit. Ignore the *diff* parameter if *force* is
         ``True``.
@@ -115,14 +115,14 @@ class Repeater:
         if isinstance(self.evt, Event):
             while isinstance(self.evt, Event):
                 await self.evt.wait()
-            return self.val
+            return self.val  # type:ignore[return-value]
 
         try:
             self.evt = True
             self.rr = 0
-            rep = self.cfg.get("repeat", 3)
-            val = None
-            err = None
+            rep: int | None = self.cfg.get("repeat", 3)
+            val: float | None = None
+            err: Exception | None = None
             while True:
                 try:
                     val = await self.rdr()
@@ -177,8 +177,8 @@ class Sensor(BaseCmd):
     MIN: ClassVar[int | float] = -999999
     MAX: ClassVar[int | float] = 999999
 
-    async def setup(self):
-        "Allocate events"
+    async def setup(self) -> None:
+        """Allocate events."""
         await super().setup()
         self._rep = Repeater(self.cfg, self.read, min=self.MIN, max=self.MAX)
 
@@ -198,7 +198,7 @@ class Sensor(BaseCmd):
         o="bool:old: wait until value differs",
     )
 
-    async def read(self):
+    async def read(self) -> float:
         """
         Read a value. Must be overridden.
         """
@@ -208,15 +208,15 @@ class Sensor(BaseCmd):
         _d="Status", _r=dict(val="float:last value", r="int:Retries", rr="int:current retries")
     )
 
-    async def cmd_st(self):
-        "Status"
+    async def cmd_st(self) -> dict:
+        """Status."""
         return self._rep.state()
 
-    async def stream(self, msg: Msg):
-        "Wait for change if @o (old value) is not None"
-        t = msg.get("t", 10000)
-        o = msg.get("o", None)
-        d = msg.get("d", 0)
+    async def stream(self, msg: Msg) -> None:
+        """Wait for change if @o (old value) is not None."""
+        t: int = msg.get("t", 10000)
+        o: float | None = msg.get("o", None)
+        d: float = msg.get("d", 0)
         if msg.can_stream:
             async with msg.stream_out() as m:
                 while True:

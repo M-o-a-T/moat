@@ -79,7 +79,7 @@ class VfsRomWriter:  # noqa: D101
     async def copy_in():  # noqa: D102
         pass
 
-    async def copy_recursively(self, src_dir):  # noqa: D102
+    async def copy_recursively(self, src_dir, arch: str | None = None):  # noqa: D102
         DIR = 1 << 14
         dir_contents = sorted(os.listdir(src_dir))
         for name in dir_contents:
@@ -89,7 +89,7 @@ class VfsRomWriter:  # noqa: D101
             if st[0] & DIR:
                 # A directory, enter it and copy its contents recursively.
                 self.opendir(name)
-                await self.copy_recursively(src_name)
+                await self.copy_recursively(src_name, arch=arch)
                 self.closedir()
             else:
                 # A file.
@@ -100,7 +100,10 @@ class VfsRomWriter:  # noqa: D101
                     if not await anyio.Path(src_name_mpy).is_file():
                         if mpy_cross_run is not None:
                             did_mpy = True
-                            mpy_cross_run(src_name)
+                            kwargs = {}
+                            if arch is not None:
+                                kwargs["march"] = arch
+                            mpy_cross_run(src_name, **kwargs)
                 if did_mpy:
                     name = name_mpy  # noqa:PLW2901
                     src_name = src_name_mpy
@@ -108,11 +111,11 @@ class VfsRomWriter:  # noqa: D101
                 self.mkfile(name, src)
 
 
-async def make_romfs(src: anyio.Path, mpy_cross):  # noqa: D103
-    vfs = VfsRomWriter()
+async def make_romfs(src: anyio.Path, mpy_cross, arch: str | None = None):  # noqa: D103
+    vfs = VfsRomWriter(mpy_cross)
 
     # Build the filesystem recursively.
-    await vfs.copy_recursively(src, mpy_cross)
+    await vfs.copy_recursively(src, arch=arch)
     return vfs.finalise()
 
 

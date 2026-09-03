@@ -8,8 +8,6 @@ import logging
 import os
 import pytest
 import unittest
-from anyio.pytest_plugin import FreePortFactory
-from socket import SOCK_STREAM
 
 from moat.util import ungroup
 from moat.mqtt.broker import create_broker
@@ -21,23 +19,34 @@ from . import anyio_run
 log = logging.getLogger(__name__)
 
 
-def _PUB():
-    pf = FreePortFactory(SOCK_STREAM)
-    PORT = pf()
-    WSPORT = pf()
-    WSSPORT = pf()
-    URI = f"mqtt://127.0.0.1:{PORT}/"
+def _broker_config():
+    """Build a broker config with three listeners (tcp/ws/wss) all bound to port 0.
 
+    The real ports are read back from the broker after startup via
+    ``broker._servers[<name>].port``.
+    """
     broker_config = {
         "listeners": {
-            "mqtt": {"type": "tcp", "bind": f"127.0.0.1:{PORT}", "max_connections": 10},
-            "ws": {"type": "ws", "bind": f"127.0.0.1:{WSPORT}", "max_connections": 10},
-            "wss": {"type": "ws", "bind": f"127.0.0.1:{WSSPORT}", "max_connections": 10},
+            "mqtt": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
+            "ws": {"type": "ws", "bind": "127.0.0.1:0", "max_connections": 10},
+            "wss": {"type": "ws", "bind": "127.0.0.1:0", "max_connections": 10},
         },
         "sys_interval": 0,
         "auth": {"allow-anonymous": True},
     }
-    return PORT, WSPORT, WSSPORT, URI, broker_config
+    return broker_config
+
+
+def _ports(broker):
+    """Extract the OS-assigned ports from a running broker.
+
+    Returns ``(mqtt_port, ws_port, wss_port, mqtt_uri)``.
+    """
+    mqtt_port = broker._servers["mqtt"].port  # noqa: SLF001
+    ws_port = broker._servers["ws"].port  # noqa: SLF001
+    wss_port = broker._servers["wss"].port  # noqa: SLF001
+    uri = f"mqtt://127.0.0.1:{mqtt_port}/"
+    return mqtt_port, ws_port, wss_port, uri
 
 
 class MQTTClientTest(unittest.TestCase):  # noqa: D101
@@ -69,7 +78,9 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_connect_tcp_failure(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, _broker_config = _PUB()
+            # No broker is started; connecting to a privileged port where
+            # nothing listens reliably triggers ConnectException.
+            URI = "mqtt://127.0.0.1:1/"
             with pytest.raises(ConnectException), ungroup:
                 async with open_mqttclient(config={"auto_reconnect": False}) as client:
                     await client.connect(URI)
@@ -91,11 +102,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_connect_ws(self):  # noqa: D102
         async def test_coro():
-            _, WSPORT, _, _, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, WSPORT, _, _ = _ports(broker)
                 await client.connect(f"ws://127.0.0.1:{WSPORT}/")
                 assert client.session is not None
 
@@ -103,11 +115,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_reconnect_ws_retain_username_password(self):  # noqa: D102
         async def test_coro():
-            _, WSPORT, _, _, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, WSPORT, _, _ = _ports(broker)
                 await client.connect(f"ws://fred:password@127.0.0.1:{WSPORT}/")
                 assert client.session is not None
                 await client.reconnect()
@@ -119,11 +132,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_connect_ws_secure(self):  # noqa: D102
         async def test_coro():
-            _, _, WSSPORT, _, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, WSSPORT, _ = _ports(broker)
                 ca = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)),
                     "mosquitto.org.crt",
@@ -135,11 +149,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_ping(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, _, URI = _ports(broker)
                 await client.connect(URI)
                 assert client.session is not None
                 await client.ping()
@@ -148,11 +163,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_subscribe(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, _, URI = _ports(broker)
                 await client.connect(URI)
                 assert client.session is not None
                 ret = await client.subscribe(
@@ -170,11 +186,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_unsubscribe(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, _, URI = _ports(broker)
                 await client.connect(URI)
                 assert client.session is not None
                 ret = await client.subscribe([("$SYS/broker/uptime", QOS_0)])
@@ -187,11 +204,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
         data = b"data"
 
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, _, URI = _ports(broker)
                 await client.connect(URI)
                 assert client.session is not None
                 ret = await client.subscribe([("test_topic", QOS_0)])
@@ -209,11 +227,12 @@ class MQTTClientTest(unittest.TestCase):  # noqa: D101
 
     def test_deliver_timeout(self):  # noqa: D102
         async def test_coro():
-            _, _, _, URI, broker_config = _PUB()
+            broker_config = _broker_config()
             async with (
-                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"),
+                create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins") as broker,
                 open_mqttclient() as client,
             ):
+                _, _, _, URI = _ports(broker)
                 await client.connect(URI)
                 assert client.session is not None
                 ret = await client.subscribe([("test_topic", QOS_0)])

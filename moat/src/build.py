@@ -19,7 +19,7 @@ from packaging.requirements import Requirement
 from moat.util import attrdict
 from moat.util.exec import run as run_
 
-from ._repo import Repo
+from ._repo import Package, Repo
 from ._toml import get_array, get_table, tomlkit
 from ._util import dash
 from .submodule import _EXT, check_ext_clean, collect_ext_revs
@@ -55,7 +55,7 @@ def fix_deps(deps: list[str], tags: dict[str, str], changed: bool = False) -> bo
     return work
 
 
-async def run_tests(pkg: str | None, opts, debug: bool) -> bool:
+async def run_tests(pkg: str | None, opts: tuple[str, ...], debug: bool) -> bool:
     """Run subtests for subpackage @pkg."""
 
     if pkg is None:
@@ -87,8 +87,10 @@ async def run_tests(pkg: str | None, opts, debug: bool) -> bool:
         return True
 
 
-def do_autotag(repo, repos, major, minor, tags):
-    "Create tags for updated subrepos"
+def do_autotag(
+    repo: Repo, repos: list[Package], major: bool, minor: bool, tags: dict[str, str]
+) -> None:
+    """Create tags for updated subrepos"""
     for r in repos:
         if r.has_changes(True) or "tag" not in r.vers:
             r.next_tag(major, minor)
@@ -110,17 +112,19 @@ def do_autotag(repo, repos, major, minor, tags):
             logger.debug("No Changes: %s %s", r.name, r.verstr)
 
 
-async def do_runtest(repos, pytest_opts, debug):
-    "Run tests"
-    fails = set()
+async def do_runtest(repos: list[Package], pytest_opts: tuple[str, ...], debug: bool) -> set[str]:
+    """Run tests"""
+    fails: set[str] = set()
     for r in repos:
         if not await run_tests(r.under, pytest_opts, debug):
             fails.add(r.name)
     return fails
 
 
-async def do_versions(repo, repos, tags, no):
-    "set versions"
+async def do_versions(
+    repo: Repo, repos: list[Package], tags: dict[str, str], no: attrdict
+) -> None:
+    """set versions"""
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
@@ -153,13 +157,20 @@ async def do_versions(repo, repos, tags, no):
             repo.index.add(str(p))
 
 
-def do_copy_repos(repos):
-    "copy repos to packaging dir"
+def do_copy_repos(repos: list[Package]) -> None:
+    """copy repos to packaging dir"""
     for r in repos:
         r.copy()
 
 
-async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
+async def do_build_deb(
+    repo: Repo,
+    repos: list[Package],
+    deb_opts: list[str],
+    no: attrdict,
+    debug: bool,
+    gtag: str,
+) -> None:
     "Build Debian packages"
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
@@ -338,10 +349,12 @@ async def do_build_deb(repo, repos, deb_opts, no, debug, gtag):
                 no.pypi = True
 
 
-async def do_build_pypi(repos, no, debug):
-    "build for pypi"
-    err = set()
-    up = set()
+async def do_build_pypi(
+    repos: list[Package], no: attrdict, debug: bool
+) -> tuple[set[Package], set[str]]:
+    """build for pypi"""
+    err: set[str] = set()
+    up: set[Package] = set()
     await DIST_PYPI.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
@@ -375,9 +388,9 @@ async def do_build_pypi(repos, no, debug):
     return up, err
 
 
-async def do_upload_pypi(up, debug, no, twine_repo):
-    "send packages to pypi"
-    err = set()
+async def do_upload_pypi(up: set[Package], debug: bool, no: attrdict, twine_repo: str) -> set[str]:
+    """send packages to pypi"""
+    err: set[str] = set()
     official = twine_repo == "pypi"
 
     for r in up:
@@ -413,9 +426,14 @@ async def do_upload_pypi(up, debug, no, twine_repo):
     return err
 
 
-async def do_upload_deb(repos, debug, dput_opts, g_done):
-    "Upload to Debian"
-    err = set()
+async def do_upload_deb(
+    repos: list[Package],
+    debug: bool,
+    dput_opts: list[str],
+    g_done: Path | None,
+) -> set[str]:
+    """Upload to Debian"""
+    err: set[str] = set()
     if not dput_opts:
         dput_opts = ["-u", "ext"]
     for r in repos:
@@ -495,45 +513,45 @@ it is dropped when you use '--dput'.
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
-    obj,
-    no_commit,
-    no_dirty,
-    no_test,
-    no_tag,
-    no_pypi,
-    parts,
-    dput_opts,
-    pytest_opts,
-    deb_opts,
-    run,
-    no_test_chg,
-    version,
-    no_version,
-    no_deb,
-    skip_,
-    major,
-    minor,
-    forcetag,
-    autotag,
-    twine_repo,
-    no_ext,
-):
+    obj: attrdict,
+    no_commit: bool,
+    no_dirty: bool,
+    no_test: bool,
+    no_tag: bool,
+    no_pypi: bool,
+    parts: tuple[str, ...],
+    dput_opts: tuple[str, ...],
+    pytest_opts: tuple[str, ...],
+    deb_opts: tuple[str, ...],
+    run: bool,
+    no_test_chg: bool,
+    version: tuple[tuple[str, str], ...],
+    no_version: bool,
+    no_deb: bool,
+    skip_: tuple[str, ...],
+    major: bool,
+    minor: bool,
+    forcetag: str | None,
+    autotag: bool,
+    twine_repo: str,
+    no_ext: bool,
+) -> None:
     """
     Rebuild all modified packages.
     """
     cfg = obj.cfg
-    g_done = cfg.get("src", {}).get("done")
+    g_done: Path | None = cfg.get("src", {}).get("done")
     if g_done is not None:
         g_done = Path(g_done)
     repo = Repo(cfg.src.toplevel, None)
 
-    tags = dict(version)
-    skip = set()
+    tags: dict[str, str] = dict(version)
+    skip: set[str] = set()
     for s in skip_:
         for sn in s.split(","):
             skip.add(dash(sn))
-    parts = set(dash(s) for s in parts)
-    debversion = {}
+    parts_ = set(dash(s) for s in parts)
+    debversion: dict[str, str] = {}
 
     no = attrdict()
     no.commit = bool(no_commit)
@@ -558,8 +576,8 @@ async def cli(
     if forcetag is None:
         forcetag = repo.next_tag(major, minor)
 
-    if parts:
-        repos = [repo.part(x) for x in parts]
+    if parts_:
+        repos = [repo.part(x) for x in parts_]
     else:
         if not skip:
             pass
@@ -600,7 +618,7 @@ async def cli(
         do_autotag(repo, repos, major, minor, tags)
 
     elif not no.tag:
-        err = set()
+        err: set[str] = set()
         for r in repos:
             try:
                 tag = r.last_tag
@@ -610,6 +628,7 @@ async def cli(
                 if not await p.is_file():
                     continue
                 raise
+            assert tag is not None
             tags[r.mdash] = tag
             if r.has_changes(True):
                 err.add(r.dash)
@@ -642,9 +661,10 @@ async def cli(
 
     # Step 4: build Debian package
     if not no.deb:
-        if not deb_opts:
-            deb_opts = ["--no-sign"]
-        await do_build_deb(repo, repos, deb_opts, no, obj.debug > 1, forcetag)
+        deb_opts_list: list[str] = list(deb_opts)
+        if not deb_opts_list:
+            deb_opts_list = ["--no-sign"]
+        await do_build_deb(repo, repos, deb_opts_list, no, obj.debug > 1, forcetag)
 
     # Step 5: build PyPI package
     if not no.pypi:
@@ -673,7 +693,8 @@ async def cli(
 
     # Step 7: upload Debian package
     if not no.run and not no.deb:
-        err = await do_upload_deb(repos, obj.debug > 1, dput_opts, g_done)
+        dput_opts_list: list[str] = list(dput_opts)
+        err = await do_upload_deb(repos, obj.debug > 1, dput_opts_list, g_done)
 
         if err:
             print("Upload errors:", file=sys.stderr)

@@ -36,3 +36,24 @@ async def run(obj, backend):
         cfg.backends = backend
     async with announcing(obj.conn) as ann:
         await Notify(cfg).run(obj.conn, evt=ann)
+
+
+@cli.command()
+@click.pass_obj
+async def mirror(obj):
+    """
+    Mirror errors to the notification subtree.
+
+    This command watches the 'error' subtree and writes qualifying
+    error entries to the 'notify' subtree so that ``moat link notify run``
+    forwards them to the configured backends.
+
+    Mirroring rules are read from a notify-vecs subtree below ``conv.*``
+    (configured via ``link.notify.vecs``).  When no vecs path is set,
+    all errors at warning level or higher are mirrored.
+    """
+    from moat.link.notify import ErrorMirror  # noqa: PLC0415
+
+    cfg = obj.cfg.link.notify
+    async with announcing(obj.conn) as ann:
+        await ErrorMirror(cfg).run(obj.conn, evt=ann)

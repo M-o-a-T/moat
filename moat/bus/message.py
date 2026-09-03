@@ -4,28 +4,34 @@ Message structure for MoatBus
 
 from __future__ import annotations
 
-from bitstring import BitArray
-from distkv.util import attrdict
+from bitstring import BitArray, Bits
+
+from moat.util import attrdict
+
+from typing import Any
 
 
-class LongMessageError:
+class LongMessageError(Exception):
     """
     Message is too long.
     """
 
-    pass
 
+class BusMessage:
+    """A MoaT bus message."""
 
-class BusMessage:  # noqa:D101
-    dst: int = None
-    src: int = None
+    # These are initialized to None but guaranteed to be set before use.
+    dst: int = None  # ty:ignore[invalid-assignment]
+    src: int = None  # ty:ignore[invalid-assignment]
 
-    code: int = None
-    prio: int = None
+    code: int = None  # ty:ignore[invalid-assignment]
+    prio: int = 1
 
-    _data: BitArray = None
+    _data: BitArray
 
-    _attrs = tuple("src dst code data".split())
+    _attrs = ("src", "dst", "code", "data")
+
+    _mqtt_id: Any = None
 
     def __init__(
         self,
@@ -34,17 +40,23 @@ class BusMessage:  # noqa:D101
         code: int | None = None,
         data: bytes | None = None,
         prio: int = 1,
-    ):
+    ) -> None:
         """
         Set up an empty buffer.
         """
-        self.src = src
-        self.dst = dst
-        self.code = code
+        self.src = src  # ty:ignore[invalid-assignment]
+        self.dst = dst  # ty:ignore[invalid-assignment]
+        self.code = code  # ty:ignore[invalid-assignment]
         self.prio = prio
         self._data = BitArray(data)
 
-    def decode(self, spec=None):  # noqa:D102
+    def decode(self, spec: Any = None) -> attrdict:
+        """
+        Decode this message into a human-readable representation.
+
+        Args:
+            spec: Unused placeholder.
+        """
         spec  # noqa:B018
         res = attrdict()
         if self.src == -4:
@@ -89,19 +101,21 @@ class BusMessage:  # noqa:D101
             res.cmd = f"?{self.code}"
         return res
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BusMessage):
+            return NotImplemented
         return all(getattr(self, a) == getattr(other, a) for a in self._attrs)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(getattr(self, a) for a in self._attrs))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{}: {}>".format(
             self.__class__.__name__,
             " ".join(f"{k}={v}" for k, v in vars(self).items()),
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data) >> 3
 
     @property
@@ -135,9 +149,9 @@ class BusMessage:  # noqa:D101
         else:
             return 2
 
-    def first_bits(self, off):
+    def first_bits(self, off: int) -> BitArray:
         """
-        Return the first @off bits
+        Return the first @off bits.
         """
         hdr = self.header
         if off > hdr.length:
@@ -147,42 +161,41 @@ class BusMessage:  # noqa:D101
 
     ## sender
 
-    def start_send(self):
+    def start_send(self) -> None:
         """
         Start adding data to be sent to this message.
 
         The buffer is usually new.
         """
-        pass
 
-    def add_data(self, data):
+    def add_data(self, data: bytes) -> None:
         """
         Add data (bytes) to this message.
 
         The buffer is stuffed with zeroes if not on a byte boundary.
 
-        This is synonymous to `buf += b"data"`.
+        This is synonymous to ``buf += b"data"``.
         """
         if self._data.length & 7:
-            self._data.append(uint=0, length=8 - (self._data.length & 7))
+            self._data.append(Bits(uint=0, length=8 - (self._data.length & 7)))
         self._data.append(data)
 
     __iadd__ = add_data
 
-    def send_bits(self, **kw):
+    def send_bits(self, **kw: Any) -> None:
         """
         Add an arbitrary number of bits to the buffer.
         """
-        self._data.append(**kw)
+        self._data.append(Bits(**kw))
 
-    def start_extract(self):
+    def start_extract(self) -> None:
         """
         Start extracting chunks from this buffer.
         """
         self.chunk_offset = 0
-        self.hdr_data = self.header
+        self.hdr_data: BitArray | None = self.header
 
-    def extract_chunk(self, frame_bits):
+    def extract_chunk(self, frame_bits: int) -> int | None:
         """
         Extract the next chunk of @length bits from the data stream.
 
@@ -222,18 +235,19 @@ class BusMessage:  # noqa:D101
 
     ## receiver
 
-    def start_add(self):  # noqa:D102
+    def start_add(self) -> None:
+        """Initialize the buffer for receiving."""
         assert self._data.length == 0
         assert self.code is None
 
-    def add_chunk(self, data, frame_bits):
+    def add_chunk(self, data: int, frame_bits: int) -> None:
         """
         Feed data into this buffer. (The buffer should initially be new.)
 
         As soon as the header is complete, it's removed from the input
         stream and available as attributes.
 
-        A missing header is discovered by .code being `None`.
+        A missing header is discovered by .code being ``None``.
         """
         if data & (1 << frame_bits):
             frame_bits -= 8
@@ -243,7 +257,7 @@ class BusMessage:  # noqa:D101
         if self.code is None:
             self._gen_code()
 
-    def add_written(self, data):
+    def add_written(self, data: BitArray) -> None:
         """
         Feed data into this buffer. (The buffer should initially be new.)
 
@@ -256,7 +270,7 @@ class BusMessage:  # noqa:D101
         if self.code is None:
             self._gen_code()
 
-    def _gen_code(self):
+    def _gen_code(self) -> None:
         frame_len = 3 + 3
         b = self._data
         if not b.length:
@@ -296,13 +310,14 @@ class BusMessage:  # noqa:D101
         del self._data[0:frame_len]
 
     @property
-    def data(self):
+    def data(self) -> bytes:
         """
         Extract the current data buffer.
         """
         return self._data.bytes
 
-    def align(self):  # noqa:D102
+    def align(self) -> None:
+        """Drop trailing bits that don't fill a complete byte."""
         n = self._data.length % 8
         if n:
             del self._data[-n:]

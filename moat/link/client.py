@@ -1027,8 +1027,14 @@ class LinkSender(MsgSender, MsgRoot):
 
         The returned :class:`ServiceSender` monitors the service
         announcement and automatically re-resolves the path when the
-        destination terminates or restarts (i.e. when the service ID
-        changes or the announcement is cleared and re-announced).
+        destination restarts (i.e. when the service ID changes or the
+        announcement is cleared and re-announced).
+
+        Note that the service may still terminate *while* a call or a
+        stream is in progress, or it may not come back at all.  Callers
+        must therefore be prepared to handle errors from individual
+        commands and streams; :class:`ServiceSender` only relieves them
+        of the need to manually re-resolve the path between calls.
         """
 
         ss = ServiceSender(self, srv)
@@ -1080,14 +1086,19 @@ class ServiceSender(MsgSender):
 
     This class wraps the :class:`~moat.lib.rpc.base.SubMsgSender` returned
     by :meth:`LinkSender.get_service` and monitors the service's
-    announcement at ``run.host.<path>``.  When the destination terminates
-    or restarts — i.e. the announcement is cleared or the service ID
-    changes — the inner SubMsgSender is re-resolved transparently.
+    announcement at ``run.host.<path>``.  When the destination restarts
+    — i.e. the service ID changes or the announcement is cleared and
+    re-announced — the inner SubMsgSender is re-resolved transparently.
 
-    Callers use this object exactly like a SubMsgSender: attribute access
+    Callers use this object like a SubMsgSender: attribute access
     (``svc.yes(42)``), :meth:`sub_at`, :meth:`handle`, etc. all delegate
-    to the current inner sender.  No manual refresh or error-recovery
-    logic is needed on the caller side.
+    to the current inner sender.
+
+    However, the service may still terminate *during* a call or a
+    stream, or it may not come back at all.  Individual commands and
+    streams can therefore fail; callers must be prepared to handle
+    such errors.  :class:`ServiceSender` only eliminates the need to
+    manually re-resolve the service path between calls.
     """
 
     _sender: LinkSender
@@ -1211,14 +1222,22 @@ class ServiceSender(MsgSender):
         return self._inner
 
     def handle(self, msg, rcmd):
-        """Forward the message via the current inner sender."""
+        """Forward the message via the current inner sender.
+
+        Raises:
+            RuntimeError: if the service is currently unavailable.
+        """
         inner = self._inner
         if inner is None:
             raise RuntimeError("Service not available: destination terminated")
         return inner.handle(msg, rcmd)
 
     def cmd(self, cmd, *a, **kw):
-        """Run a command via the current inner sender."""
+        """Run a command via the current inner sender.
+
+        Raises:
+            RuntimeError: if the service is currently unavailable.
+        """
         inner = self._inner
         if inner is None:
             raise RuntimeError("Service not available: destination terminated")
@@ -1244,7 +1263,11 @@ class ServiceSender(MsgSender):
         return inner.cmd(Path(), *a, _list=_list, **kw)
 
     def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
-        """Return a SubMsgSender relative to the current service path."""
+        """Return a SubMsgSender relative to the current service path.
+
+        Raises:
+            RuntimeError: if the service is currently unavailable.
+        """
         inner = self._inner
         if inner is None:
             raise RuntimeError("Service not available: destination terminated")

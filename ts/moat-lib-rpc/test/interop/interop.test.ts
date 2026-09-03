@@ -144,15 +144,15 @@ describeOrSkip('interop: Python client → TS server', () => {
   const PORT = 18098;
 
   class TsInteropHandler extends MsgHandler {
-    async cmd_ping(_msg: Msg): Promise<string> {
+    async cmd_ping(): Promise<string> {
       return 'pong';
     }
 
-    async cmd_echo(_msg: Msg, ...args: unknown[]): Promise<unknown[]> {
+    async cmd_echo(...args: unknown[]): Promise<unknown[]> {
       return args;
     }
 
-    async cmd_add(_msg: Msg, a: number, b: number): Promise<number> {
+    async cmd_add(a: number, b: number): Promise<number> {
       return a + b;
     }
   }

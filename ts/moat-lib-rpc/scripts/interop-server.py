@@ -30,7 +30,7 @@ repo_root = FSPath(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
 from moat.lib.codec.moat_cbor import Codec as MoatCborCodec
-from moat.lib.rpc import Msg, MsgHandler
+from moat.lib.rpc import MsgHandler
 from moat.lib.rpc.stream.base import HandlerStream
 
 

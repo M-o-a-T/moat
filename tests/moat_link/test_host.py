@@ -259,64 +259,66 @@ async def test_mon(cfg):
                 h = await sel_br(ibr, sid)
                 raise AssertionError(h)
 
-            if False:
-                async with cl.announcing(host="test123", name=P("test.mon")) as s:
-                    await anyio.sleep(0.5)
+            # Scenario 1: service announces but never calls .set() (up stays False)
+            async with cl.announcing(host="test123", name=P("test.mon")) as s:
                 await anyio.sleep(0.5)
-                assert len(emsgs) == 3
-                assert emsgs[0]["msg"] == "not up"
-                assert emsgs[1] is Ellipsis
-                assert emsgs[2]["msg"] == "down"
-                assert len(hmsgs) == 2
-                assert hmsgs[0]["up"] is False
-                assert hmsgs[1] is Ellipsis
-                hmsgs = []
-                emsgs = []
-                # should update state when setting
-                # should error when not started after TIME
+            await anyio.sleep(0.5)
+            assert len(emsgs) == 3
+            assert emsgs[0]["msg"] == "not up"
+            assert emsgs[1] is Ellipsis
+            assert emsgs[2]["msg"] == "down"
+            assert len(hmsgs) == 2
+            assert hmsgs[0]["up"] is False
+            assert hmsgs[1] is Ellipsis
+            hmsgs = []
+            emsgs = []
 
-                async with announcing(cl, host="test123", name=P("test.mon")) as s:
-                    s.set()
-                    await anyio.sleep(0.5)
-                    assert len(emsgs) == 1
+            # Scenario 2: service announces and calls .set() immediately (up=True)
+            async with announcing(cl, host="test123", name=P("test.mon")) as s:
+                s.set()
                 await anyio.sleep(0.5)
-                assert len(emsgs) == 2
-                assert emsgs[0] is Ellipsis
-                assert emsgs[1]["msg"] == "down"
-                assert len(hmsgs) == 3
-                assert hmsgs[0]["up"] is False
-                assert hmsgs[1]["up"] is True
-                assert hmsgs[2] is Ellipsis
-                hmsgs = []
-                emsgs = []
-
-                async with cl.announcing(host="test123", name=P("test.mon")) as s:
-                    await anyio.sleep(0.1)
-                    s.set()
-                    await anyio.sleep(0.1)
-                    s.value = 42
-                    await anyio.sleep(0.1)
-                assert len(emsgs) == 0
-                await anyio.sleep(0.1)
                 assert len(emsgs) == 1
-                assert emsgs[0]["msg"] == "flapping"
+            await anyio.sleep(0.5)
+            assert len(emsgs) == 2
+            assert emsgs[0] is Ellipsis
+            assert emsgs[1]["msg"] == "down"
+            assert len(hmsgs) == 3
+            assert hmsgs[0]["up"] is False
+            assert hmsgs[1]["up"] is True
+            assert hmsgs[2] is Ellipsis
+            hmsgs = []
+            emsgs = []
 
-                assert 2 <= len(hmsgs) <= 4
-                assert hmsgs[0]["up"] is False
-                assert hmsgs[1]["up"] is True
-                assert hmsgs[-2]["up"] is True
-                assert hmsgs[-2]["value"] == 42
-                assert hmsgs[-1] is Ellipsis
-                hmsgs = []
-                emsgs = []
+            # Scenario 3: flapping — service comes up briefly then disappears
+            async with cl.announcing(host="test123", name=P("test.mon")) as s:
+                await anyio.sleep(0.1)
+                s.set()
+                await anyio.sleep(0.1)
+                s.value = 42
+                await anyio.sleep(0.1)
+            assert len(emsgs) == 0
+            await anyio.sleep(0.1)
+            assert len(emsgs) == 1
+            assert emsgs[0]["msg"] == "flapping"
 
+            assert 2 <= len(hmsgs) <= 4
+            assert hmsgs[0]["up"] is False
+            assert hmsgs[1]["up"] is True
+            assert hmsgs[-2]["up"] is True
+            assert hmsgs[-2]["value"] == 42
+            assert hmsgs[-1] is Ellipsis
+            hmsgs = []
+            emsgs = []
+
+            # Scenario 4: service announces with a value but never calls .set()
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
                 s.value = 43
                 await anyio.sleep(0.25)
             await anyio.sleep(0.25)
-            assert len(emsgs) in (2, 3)
+            assert len(emsgs) == 3
             assert emsgs[0]["msg"] == "not up"
-            assert emsgs[-1] is Ellipsis or emsgs[-1]["msg"] == "down"
+            assert emsgs[1] is Ellipsis
+            assert emsgs[2]["msg"] == "down"
             assert 2 <= len(hmsgs) <= 4
             assert hmsgs[-2]["up"] is False
             assert hmsgs[-2]["value"] == 43

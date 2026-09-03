@@ -57,10 +57,14 @@ class Gate(_Gate):  # noqa: D101
                     MsgMeta(origin=msg.chain.node, t=msg.chain.tick),
                 )
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode) -> None:
+    async def set_dst(
+        self,
+        path: Path,
+        data: Any,
+        meta: MsgMeta | None,  # noqa: ARG002
+        node: GateNode,
+    ) -> None:
         """Set KV data."""
-
-        meta  # noqa:B018
 
         # XXX ideally we should have the previous value's external chain
         # available here, just to be able to complain when there's a conflict
@@ -71,16 +75,18 @@ class Gate(_Gate):  # noqa: D101
 
         node.ext_meta = res.chain
 
-    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:
-        """Check for update."""
-        data  # noqa:B018
+    def is_update(self, node: GateNode, data: Any, aux: MsgMeta | None) -> bool:  # noqa: ARG002
+        """
+        Check whether this new destination data is an update.
+
+        @data is currently ignored.
+        """
+        # If there's no aux metadata, this is not an echo.
+        if aux is None:
+            return True
         # If the message is an echo of what we sent earlier, ignore it.
         try:
-            if (
-                aux is not None
-                and aux.origin == node.ext_meta.node
-                and aux["t"] == node.ext_meta.tick
-            ):
+            if aux.origin == node.ext_meta.node and aux["t"] == node.ext_meta.tick:
                 return False
         except (AttributeError, KeyError):
             pass
@@ -91,20 +97,19 @@ class Gate(_Gate):  # noqa: D101
         # should be either unmodified or older. Test the data to be sure.
         # Otherwise compare the chains.
         meta = node.meta
-        if meta is None:
-            return True
-        if meta.origin == self.origin:
-            return None
+        if meta is not None:
+            if meta.origin == self.origin:
+                return None
 
-        if "gw" in meta:
-            last_node = meta["gw"]
-            if last_node.origin != node.ext_meta.origin:
-                return True
-            if last_node["t"] < node.ext_meta["t"]:
-                return True
-            if last_node["t"] > node.ext_meta["t"]:
-                return False
-            return None
+            if "gw" in meta:
+                last_node = meta["gw"]
+                if last_node.origin != node.ext_meta.origin:
+                    return True
+                if last_node["t"] < node.ext_meta["t"]:
+                    return True
+                if last_node["t"] > node.ext_meta["t"]:
+                    return False
+                return None
 
         # same data = nothing to do
         # XXX may require inexact comparison for floats

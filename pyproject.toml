@@ -103,6 +103,9 @@ dev = [
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
     "asyncwago",
+    "bd_warehouse",
+    "build123d",
+    "cadquery",
     "cbor2",
     "gpiod",
     "httpx-ws",
@@ -118,6 +121,7 @@ dev = [
     "simplejson",
     "smbus3",
     "systemd",
+    "transforms3d",
     "ty == 0.0.75",
     "uv",
     "wheel",
@@ -262,6 +266,7 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/cad/",
     "moat/db/__init__.py",
     "moat/db/box/",
     "moat/db/inv/",
@@ -282,6 +287,7 @@ exclude = [
     "TODO/**",
     "packaging/**",
     "docs/**",
+    "moat/cad/**",
     "moat/lib/victron/**",
     "moat/micro/_embed/**",
     "moat/micro/**/_test.py",

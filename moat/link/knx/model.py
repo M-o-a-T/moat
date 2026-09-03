@@ -18,12 +18,12 @@ from moat.lib.path import Path
 from moat.lib.xknx.telegram import GroupAddress
 from moat.link.node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import Key
 
-    from collections.abc import Mapping
     from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -76,26 +76,26 @@ class KnxEntry(Node):
     def type_(self) -> str | None:
         """``in`` or ``out`` direction, or ``None`` if unset."""
         d = self.data_
-        return d.get("type") if isinstance(d, dict) else None
+        return d.get("type") if isinstance(d, Mapping) else None
 
     @property
     def mode(self) -> str | None:
         """XKNX data-point type name, or ``None`` if unset."""
         d = self.data_
-        return d.get("mode") if isinstance(d, dict) else None
+        return d.get("mode") if isinstance(d, Mapping) else None
 
     @property
     def src(self) -> Path | None:
         """Source path (for ``type=out``), or ``None``."""
         d = self.data_
-        s = d.get("src") if isinstance(d, dict) else None
+        s = d.get("src") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def dest(self) -> Path | None:
         """Destination path (for ``type=in``), or ``None``."""
         d = self.data_
-        s = d.get("dest") if isinstance(d, dict) else None
+        s = d.get("dest") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
@@ -107,14 +107,14 @@ class KnxEntry(Node):
         suppressed.
         """
         d = self.data_
-        s = d.get("state") if isinstance(d, dict) else None
+        s = d.get("state") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def idem(self) -> bool:
         """Whether to skip writes when the value is unchanged."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        if not isinstance(d, dict):
+        if not isinstance(d, Mapping):
             return True
         return bool(d.get("idem", True))
 
@@ -171,10 +171,10 @@ class KnxServer(Node):
     def cfg(self) -> Mapping[str, Any]:
         """Server-level config dict (``host``/``port``)."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return {}
         s = d.get("server", {})
-        return s if isinstance(s, dict) else {}
+        return s if isinstance(s, Mapping) else {}
 
 
 @define

@@ -8,6 +8,8 @@ import asyncclick as click
 
 from moat.util import NotGiven
 
+from collections.abc import Mapping
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["std_command"]
@@ -140,7 +142,7 @@ def std_command(cli, *a, **kw):
                 v = getattr(n, k, None)
                 if v is not None:
                     cnt += 1
-                    if isinstance(v, dict):
+                    if isinstance(v, Mapping):
                         v = v.items()
                     if isinstance(v, type({}.items())):  # pylint: disable=W1116
                         for kk, vv in sorted(v):
@@ -149,7 +151,7 @@ def std_command(cli, *a, **kw):
                                     vv = " ".join(str(x) for x in vv)  # noqa:PLW2901
                                 else:
                                     vv = "-"  # noqa:PLW2901
-                            elif isinstance(vv, dict):
+                            elif isinstance(vv, Mapping):
                                 vv = " ".join(f"{x}={y}" for x, y in sorted(vv.items()))  # noqa:PLW2901
                             print(f"{k} {kk} {vv}", file=obj.stdout)
                     else:

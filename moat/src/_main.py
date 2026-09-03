@@ -23,6 +23,7 @@ from ._toml import get_table
 from ._util import Replace, dash, decomma, encomma, undash
 
 from collections import defaultdict
+from collections.abc import Mapping
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -170,10 +171,10 @@ def default_dict(
                     mod = True
                 continue
             else:
-                b[k] = {} if isinstance(vc, dict) else [] if isinstance(vc, _l_t) else 0
+                b[k] = {} if isinstance(vc, Mapping) else [] if isinstance(vc, _l_t) else 0
                 vb = b[k]
             va = None
-        if isinstance(va, dict) or isinstance(vb, dict) or isinstance(vc, dict):
+        if isinstance(va, Mapping) or isinstance(vb, Mapping) or isinstance(vc, Mapping):
             if vb is None:
                 b[k] = {}
                 vb = b[k]

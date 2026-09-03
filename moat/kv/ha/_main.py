@@ -19,6 +19,8 @@ from moat.lib.path import (
 )
 from moat.lib.run import AliasedGroup, attr_args, process_args
 
+from collections.abc import Mapping
+
 logger = logging.getLogger(__name__)
 
 _DEV_CLS = {
@@ -343,7 +345,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
         if k == "uid":
             if "unique_id" in val and i.uid != val.unique_id and not force:
                 raise click.UsageError("A unique ID is fixed. You can't change it.")
-        elif isinstance(v, dict):
+        elif isinstance(v, Mapping):
             continue  # plus option
         elif not force and k not in t:
             logger.warning("Key %r may be unknown. Skipping.", k)

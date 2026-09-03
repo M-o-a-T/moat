@@ -18,6 +18,7 @@ from moat.util import attrdict, yload, yprint
 from ._util import dash, undash
 
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -139,7 +140,7 @@ class Package(_Common):
         except KeyError:
             self._repo.versions[self.dash] = v = attrdict()
         else:
-            if not isinstance(v, dict):
+            if not isinstance(v, Mapping):
                 tag, commit = v
                 v = attrdict(
                     tag=tag,

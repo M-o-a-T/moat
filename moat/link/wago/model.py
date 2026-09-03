@@ -17,6 +17,7 @@ from moat.util import NotGiven
 from moat.lib.path import Path
 from moat.link.node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -49,59 +50,59 @@ class WagoPort(Node):
     def mode(self) -> str | None:
         """Port mode, or ``None`` if unset."""
         d = self.data_
-        return d.get("mode") if isinstance(d, dict) else None
+        return d.get("mode") if isinstance(d, Mapping) else None
 
     @property
     def dest(self) -> Path | None:
         """Destination path (input modes), or ``None``."""
         d = self.data_
-        s = d.get("dest") if isinstance(d, dict) else None
+        s = d.get("dest") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def src(self) -> Path | None:
         """Source path (output modes), or ``None``."""
         d = self.data_
-        s = d.get("src") if isinstance(d, dict) else None
+        s = d.get("src") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def state(self) -> Path | None:
         """Optional state path (output modes), or ``None``."""
         d = self.data_
-        s = d.get("state") if isinstance(d, dict) else None
+        s = d.get("state") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def rest(self) -> bool:
         """Rest-state flag (default ``False``)."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        return bool(d.get("rest", False)) if isinstance(d, dict) else False
+        return bool(d.get("rest", False)) if isinstance(d, Mapping) else False
 
     @property
     def interval(self) -> float | None:
         """Polling interval (for ``mode=count``), or ``None``."""
         d = self.data_
-        return d.get("interval") if isinstance(d, dict) else None
+        return d.get("interval") if isinstance(d, Mapping) else None
 
     @property
     def count(self) -> bool | None:
         """Pulse direction (``True``/``False``/``None``)."""
         d = self.data_
-        v = d.get("count") if isinstance(d, dict) else None
+        v = d.get("count") if isinstance(d, Mapping) else None
         return v if v is None else bool(v)
 
     @property
     def t_on(self) -> float | None:
         """On-time in seconds (for ``mode=oneshot|pulse``), or ``None``."""
         d = self.data_
-        return d.get("t_on") if isinstance(d, dict) else None
+        return d.get("t_on") if isinstance(d, Mapping) else None
 
     @property
     def t_off(self) -> float | None:
         """Off-time in seconds (for ``mode=pulse``), or ``None``."""
         d = self.data_
-        return d.get("t_off") if isinstance(d, dict) else None
+        return d.get("t_off") if isinstance(d, Mapping) else None
 
     @property
     def card(self) -> int:
@@ -168,10 +169,10 @@ class WagoServer(Node):
     def cfg(self) -> dict[str, Any]:
         """Server-level config dict (``host``/``port``)."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return {}
         s = d.get("server", {})
-        return s if isinstance(s, dict) else {}
+        return s if isinstance(s, Mapping) else {}
 
 
 @define

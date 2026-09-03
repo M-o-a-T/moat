@@ -14,6 +14,7 @@ from attrs import define, field
 from moat.util import NotGiven
 from moat.link.node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -68,7 +69,7 @@ class MetricsEntry(Node):
     def source(self) -> tuple | None:
         """Source path from the stored config, or None."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return None
         return d.get("source")
 
@@ -76,7 +77,7 @@ class MetricsEntry(Node):
     def series(self) -> str | None:
         """Akumuli series name."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return None
         return d.get("series")
 
@@ -84,7 +85,7 @@ class MetricsEntry(Node):
     def tags(self) -> dict | None:
         """Akumuli tags dict."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return None
         return d.get("tags")
 
@@ -92,32 +93,32 @@ class MetricsEntry(Node):
     def mode(self) -> str:
         """Backend-specific data-series mode."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        m = d.get("mode", "gauge") if isinstance(d, dict) else "gauge"
+        m = d.get("mode", "gauge") if isinstance(d, Mapping) else "gauge"
         return m if isinstance(m, str) else str(m)
 
     @property
     def attr(self) -> tuple:
         """Attribute path to extract from the watched value."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        return d.get("attr", ()) if isinstance(d, dict) else ()
+        return d.get("attr", ()) if isinstance(d, Mapping) else ()
 
     @property
     def factor(self) -> float:
         """Multiplicative scaling factor."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        return d.get("factor", 1) if isinstance(d, dict) else 1
+        return d.get("factor", 1) if isinstance(d, Mapping) else 1
 
     @property
     def offset(self) -> float:
         """Additive offset."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        return d.get("offset", 0) if isinstance(d, dict) else 0
+        return d.get("offset", 0) if isinstance(d, Mapping) else 0
 
     @property
     def t_min(self) -> float | None:
         """Minimum interval between writes, in seconds."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        return d.get("t_min") if isinstance(d, dict) else None
+        return d.get("t_min") if isinstance(d, Mapping) else None
 
     def is_complete(self) -> bool:
         """Check whether this entry has enough data to start a worker."""

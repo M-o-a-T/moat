@@ -262,6 +262,7 @@ python-version = "3.11"
 
 [tool.ty.src]
 include = [
+    "moat/api/",
     "moat/db/__init__.py",
     "moat/db/box/",
     "moat/db/inv/",

@@ -6,6 +6,13 @@ Named proxies (registered via ``as_proxy``) are held strongly and persist
 until explicitly dropped. Auto-generated proxies (created by ``get_proxy``
 when encoding an unknown object) are held weakly: they are released
 automatically when the referenced object is garbage-collected.
+
+To avoid dropping an auto proxy *prematurely* (e.g. between encoding an
+object and decoding the resulting reference while no caller holds it), the
+most recently auto-proxied objects are also kept alive in a tiny LRU
+(``_pins``). Eviction from the LRU only releases that strong pin; the
+weakref entry survives as long as the object itself is reachable, so a
+still-live object remains referable after ageing out of the LRU.
 """
 
 from __future__ import annotations
@@ -51,6 +58,15 @@ _CProxy: WeakValueDictionary[str, Any] = WeakValueDictionary()
 # finalizer installed in ``get_proxy``). Named-proxy entries
 # persist because ``_SProxy`` keeps the object alive.
 _RProxy: dict[int, str] = {}
+
+#: Number of recently auto-proxied objects kept alive as a safeguard
+#: against premature garbage-collection between encode and decode.
+_LRU_SIZE = 5
+
+#: Most recently auto-proxied objects (strong refs), oldest first. Eviction
+#: only releases this strong pin; ``_CProxy``/``_RProxy`` are left intact so
+#: a still-live object remains referable after ageing out of the LRU.
+_pins: list[Any] = []
 
 
 def _try_weakref(obj: Any) -> bool:
@@ -114,6 +130,46 @@ def _track_finalizer(obj: Any, oid: int) -> None:
         pass  # Object doesn't support weakrefs; nothing to clean up.
 
 
+def _evict() -> None:
+    """Release the oldest strong pins down to ``_LRU_SIZE``.
+
+    Only the pin is dropped; ``_CProxy`` and ``_RProxy`` are left untouched,
+    so a still-reachable object keeps resolving after ageing out of the LRU.
+    """
+    while len(_pins) > _LRU_SIZE:
+        _pins.pop(0)
+
+
+def _pin(obj: Any) -> None:
+    """Add a strong pin for a newly auto-proxied object."""
+    _pins.append(obj)
+    _evict()
+
+
+def _promote(obj: Any) -> None:
+    """Move *obj* to the most-recently-used end of the auto LRU.
+
+    Comparison is by identity so that objects with a custom ``__eq__`` are
+    not confused with equal-but-distinct instances. An object that aged out
+    of the LRU but is still alive is re-pinned.
+    """
+    for i, o in enumerate(_pins):
+        if o is obj:
+            del _pins[i]
+            _pins.append(obj)
+            return
+    _pins.append(obj)
+    _evict()
+
+
+def _unpin(obj: Any) -> None:
+    """Remove *obj*'s strong pin if present (identity comparison)."""
+    for i, o in enumerate(_pins):
+        if o is obj:
+            del _pins[i]
+            return
+
+
 @overload
 def name2obj(name: str) -> Any: ...
 
@@ -148,17 +204,24 @@ def get_proxy(obj: object) -> str:
     If unknown, create a new temporary name. Auto-generated proxies are
     held weakly: when the object is garbage-collected the proxy entry
     is removed automatically.
+
+    The most recently auto-proxied objects are also pinned in a small LRU
+    (``_pins``) so they survive brief windows in which no caller holds
+    a reference (e.g. between encoding and decoding). Re-using ``get_proxy``
+    on an already-known object refreshes its position in that LRU.
     """
-    try:
-        return _RProxy[id(obj)]
-    except KeyError:
-        global _pkey
-        k = "p_" + str(_pkey)
-        _pkey += 1
-        _store_proxy(k, obj)
-        _RProxy[id(obj)] = k
-        _track_finalizer(obj, id(obj))
-        return k
+    name = _RProxy.get(id(obj))
+    if name is not None:
+        _promote(obj)
+        return name
+    global _pkey
+    name = "p_" + str(_pkey)
+    _pkey += 1
+    _store_proxy(name, obj)
+    _RProxy[id(obj)] = name
+    _track_finalizer(obj, id(obj))
+    _pin(obj)
+    return name
 
 
 # def _getstate(self):
@@ -224,6 +287,7 @@ def drop_proxy(p: str | object) -> None:
         raise ValueError("Can't delete a system proxy")
     r = _pop_proxy(p)
     _SProxy.pop(p, None)
+    _unpin(r)
     _RProxy.pop(id(r), None)
 
 

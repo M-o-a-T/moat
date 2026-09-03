@@ -51,16 +51,11 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
     if C_OUT is not NotGiven:
         TESTCFG["stdout"] = C_OUT
 
-    from anyio.pytest_plugin import FreePortFactory  # noqa: PLC0415
-    from socket import SOCK_STREAM  # noqa: PLC0415
-
-    PORT = FreePortFactory(SOCK_STREAM)()
     broker_cfg = {
-        "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}"}},
+        "listeners": {"default": {"type": "tcp", "bind": "127.0.0.1:0"}},
         "timeout-disconnect-delay": 2,
         "auth": {"allow-anonymous": True, "password-file": None},
     }
-    URI = f"mqtt://127.0.0.1:{PORT}/"
 
     if ssl:
         import ssl  # noqa:PLC0415,I001
@@ -118,6 +113,11 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
                 await scope.service("moat.mqtt.broker", run_broker, broker_cfg)
                 s._scope = scope.get()  # noqa:SLF001
                 return await s._scoped_serve(*a, **k)  # noqa:SLF001
+
+            # Start the broker first to obtain the OS-assigned port.
+            broker = await scope.service("moat.mqtt.broker", run_broker, broker_cfg)
+            PORT = broker._servers["default"].port  # noqa:SLF001
+            URI = f"mqtt://127.0.0.1:{PORT}/"
 
             args_def = kw.get("args", attrdict())
             for i in range(n):

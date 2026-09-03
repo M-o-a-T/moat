@@ -31,14 +31,14 @@ class Cmd(Sensor):
     doc_c["adr"] = "path:bus address"
     doc["_c"] = doc_c
 
-    async def task(self):
-        "wrapper, for i2c bus access"
+    async def task(self) -> None:
+        """Wrapper, for i2c bus access."""
         self.adr = self.cfg["adr"]
         async with self.root.sub_at(self.cfg["bus"]) as self.bus:
             await super().task()
 
-    async def read(self):
-        "read sensor"
+    async def read(self) -> float:
+        """Read sensor."""
         await self.bus.wr(self.adr, bytes((1, 0x81, 0x10)))
         # OneShot+Shutdown, Extended
         for _ in range(20):

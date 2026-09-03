@@ -64,9 +64,10 @@ real-time inverter control, and offline charge/discharge cost optimization.
   data loaders, runs OR-Tools, writes results via callbacks/files. No
   link/RPC/D-Bus coupling.
 
-CLIs use legacy `moat.bms.*` subgroup prefixes (`sub_pre="moat.bms"`,
-`prefix="moat.bms.sched"`) despite living under `moat.ems.*` — evidence of a
-`bms→ems` rename.
+Some CLIs retain legacy `moat.bms.*` subgroup prefixes (`sub_pre="moat.bms"`
+in `battery`) despite living under `moat.ems.*` — evidence of a `bms→ems`
+rename. The scheduler's CLI was migrated to `moat.ems.sched` and no longer
+carries the stale `bms` prefix.
 
 ## Entry points
 
@@ -76,5 +77,5 @@ CLIs use legacy `moat.bms.*` subgroup prefixes (`sub_pre="moat.bms"`,
 - `battery/OFF/_main.py`: `cli` → `state` (uses `get_link`).
 - `inv/_main.py`: standalone `cli` connecting to system D-Bus, calling
   `InvControl.run(mode)`; runnable directly (`if __name__=="__main__"`).
-- `sched/_main.py`: `cli` (`moat.bms.sched`) → `dump`, `modes`, `analyze`
+- `sched/_main.py`: `cli` (`moat.ems.sched`) → `dump`, `modes`, `analyze`
   (runs `Model.propose`).

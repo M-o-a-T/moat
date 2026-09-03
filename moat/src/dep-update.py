@@ -41,7 +41,7 @@ def implicit_parent_package(pkg_name: str, known_packages: dict[str, attrdict]) 
 
 
 @click.command
-async def cli():
+async def cli() -> None:
     """
     Update cross-package dependencies.
 
@@ -95,9 +95,9 @@ async def cli():
     print(f"Found {len(packages)} packages with pyproject.toml")
     print()
 
-    def find_imports_in_file(filepath):
+    def find_imports_in_file(filepath: Path) -> set[str]:
         """Find all moat.* imports in a Python file, including multi-line imports."""
-        imports = set()
+        imports: set[str] = set()
 
         try:
             with open(filepath, "r") as f:

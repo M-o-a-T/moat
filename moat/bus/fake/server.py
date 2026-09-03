@@ -8,23 +8,26 @@ from subprocess import PIPE
 
 import asyncclick as click
 import trio
-from moatbus.backend.stream import StreamBusHandler
-from moatbus.server import Server
+
+from moat.bus.backend._stream import StreamHandler
+from moat.bus.server import Server
 
 
 @click.command()
-async def main():  # noqa:D103
+async def main() -> None:  # noqa:D103
     try:
-        async with await trio.open_process(
+        proc = await trio.lowlevel.open_process(
             ["bin/fake_serialbus"],
             stdin=PIPE,
             stdout=PIPE,
-        ) as backend:
-            backstream = trio.StapledStream(backend.stdin, backend.stdout)
+        )
+        assert proc.stdin is not None
+        assert proc.stdout is not None
+        backstream = trio.StapledStream(proc.stdin, proc.stdout)
 
-            async with StreamBusHandler(backstream) as sb, Server(sb) as m:
-                async for _evt in m:
-                    print(m)
+        async with StreamHandler(None, backstream) as sb, Server(sb) as m:  # ty:ignore[invalid-argument-type]
+            async for _evt in m:
+                print(m)
     except trio.ClosedResourceError:
         print("Closed.", file=sys.stderr)
 

@@ -16,6 +16,7 @@ __all__ = [
     "NoProxyError",
     "Proxy",
     "_CProxy",
+    "_lookup_proxy",
     "as_proxy",
     "drop_proxy",
     "get_proxy",
@@ -33,6 +34,7 @@ from moat.lib.proxy._proxy import (
     NotGiven,
     Proxy,
     _CProxy,
+    _lookup_proxy,
     as_proxy,
     drop_proxy,
     get_proxy,
@@ -132,7 +134,7 @@ def unwrap_obj(s: list[Any] | tuple[Any, ...]) -> Any:
         if isinstance(pk, Proxy):
             pk = pk.name
         try:
-            pk = _CProxy[cast(str, pk)]
+            pk = _lookup_proxy(cast(str, pk))
         except KeyError:
             kw = pop_kw(a)
             return DProxy(cast(str, pk), a, kw)

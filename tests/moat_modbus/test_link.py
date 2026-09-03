@@ -67,13 +67,13 @@ async def mon(c):  # noqa: D103
 
 
 @pytest.mark.trio
-async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
+async def test_kv_poll(cfg, autojump_clock):  # noqa: D103
     cfg  # noqa:B018
     autojump_clock.autojump_threshold = 0.05
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
-    cfg1.server[0].port = free_tcp_port
-    cfg2.hostports.localhost[free_tcp_port] = cfg2.hostports.localhost.PORT
+    cfg1.server[0].port = 0
+    cfg2.hostports.localhost[0] = cfg2.hostports.localhost.PORT
     del cfg2.hostports.localhost.PORT
 
     from moat.lib.config import CFG  # noqa: PLC0415
@@ -93,6 +93,9 @@ async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
         await c.d_set(P("a.srv.src"), data=42)
         await c.i_sync()
         cfg1 = await tg.start(dev_poll, cfg1, c)
+        actual_port = cfg1.server[0].port
+        # Update cfg2's hostports mapping with the actual port
+        cfg2.hostports.localhost[actual_port] = cfg2.hostports.localhost.pop(0)
         reg = cfg1.server[0].units[32].regs.no_question
         await trio.sleep(1)
         assert reg.value_w == 42
@@ -124,7 +127,7 @@ async def test_kv_poll(cfg, autojump_clock, free_tcp_port):  # noqa: D103
 
         async with (
             ModbusClient() as g,
-            g.host("localhost", free_tcp_port) as h,
+            g.host("localhost", actual_port) as h,
             h.unit(32) as u,
             u.slot("default") as s,
         ):

@@ -27,7 +27,8 @@ class poll_cp_record:
     t_sleep: int = 0
 
     @classmethod
-    def unpack(cls, msg, logger):  # noqa:D102
+    def unpack(cls, msg: BusMessage, logger: logging.Logger) -> poll_cp_record | None:
+        """Unpack a poll record from a bus message."""
         self = cls()
 
         d = msg.data
@@ -49,29 +50,21 @@ class poll_cp_record:
         return self
 
     @property
-    def packet(self):  # noqa:D102
-        ls = len(self.serial) - 1
-        if not 0 <= ls <= 0x0F:
-            raise RuntimeError(f"Serial too long: {self.serial!r}")
-        ls <<= 4
-        more = []
+    def packet(self) -> bytes:
+        """Serialize this poll record to bytes."""
         flags = self.flags
+        more: list[int] = []
 
-        if self.t_continue:
-            flags |= 0x01
-        if self.t_live or self.t_sleep:
-            flags |= 0x08
         if flags & 0x01:
-            more.append(self.t_continue)
+            more.append(0)
         if flags & 0x08:
             more.append(self.t_live)
             more.append(self.t_sleep)
 
         if flags:
-            ls |= 0x04
             more.insert(0, flags)
 
-        return bytes((ls,)) + self.serial + bytes(more)
+        return bytes((flags,)) + bytes(more)
 
 
 class PollControl(Processor):

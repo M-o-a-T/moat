@@ -43,6 +43,9 @@ s:
 async def test_repl(tmp_path, free_tcp_port):
     "basic REPL test"
     cfg = yload(CFG1, attr=True)
+    # MpyRaw is a raw byte stream, not a command tree — we can't read
+    # back the OS-assigned port from the subprocess.  Use a pre-allocated
+    # port instead.
     cfg.s.cfg.app.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
     cfg.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
 
@@ -79,6 +82,9 @@ async def test_repl(tmp_path, free_tcp_port):
 async def test_repl_stream(tmp_path, free_tcp_port):
     "REPL as data stream"
     cfg = yload(CFG1, attr=True)
+    # MpyRaw is a raw byte stream, not a command tree — we can't read
+    # back the OS-assigned port from the subprocess.  Use a pre-allocated
+    # port instead.
     cfg.s.cfg.app.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
     cfg.r.update(host="127.0.0.1", port=free_tcp_port, wait=False)
 

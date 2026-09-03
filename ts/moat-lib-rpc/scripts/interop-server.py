@@ -37,19 +37,19 @@ from moat.lib.rpc.stream.base import HandlerStream
 class InteropHandler(MsgHandler):
     """Simple handler with a few commands for interop testing."""
 
-    async def cmd_ping(self, msg: Msg) -> str:  # noqa: ARG002
+    async def cmd_ping(self) -> str:
         """Reply with ``"pong"``."""
         return "pong"
 
-    async def cmd_echo(self, msg: Msg, *args):  # noqa: ARG002
+    async def cmd_echo(self, *args):
         """Return the supplied arguments unchanged."""
         return args
 
-    async def cmd_add(self, msg: Msg, a: int, b: int) -> int:  # noqa: ARG002
+    async def cmd_add(self, a: int, b: int) -> int:
         """Return the sum of *a* and *b*."""
         return a + b
 
-    async def cmd_error_test(self, msg: Msg):  # noqa: ARG002
+    async def cmd_error_test(self):
         """Raise a ``ValueError`` to exercise error forwarding."""
         raise ValueError("test error from Python")
 

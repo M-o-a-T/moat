@@ -149,7 +149,7 @@ class Gate(_MqttGate):
                 new.kw[k] = v
         return new
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """Subscribe to ``N/<id>/...``, decode JSON payloads, drive keep-alive."""
         async with self.backend.monitor(self._read_prefix, subtree=True, codec="json") as mon:
             task_status.started()

@@ -18,8 +18,8 @@ import type { PathElem } from '../path.js';
 import { ShortCommandError, NotReadyError } from '../errors.js';
 import type { CommandDispatcher } from '../core/handler.js';
 
-/** Type for a command handler function. */
-export type CmdFn = (msg: Msg, ...args: unknown[]) => Promise<unknown> | unknown;
+/** Type for a command handler function (takes wire args, not msg). */
+export type CmdFn = (...args: unknown[]) => Promise<unknown> | unknown;
 export type StreamFn = (msg: Msg) => Promise<void>;
 
 /**
@@ -124,7 +124,7 @@ export abstract class MsgHandler implements CommandDispatcher {
   /** Handle a non-streamed call endpoint. */
   private async _callSimple(msg: Msg, cmd: CmdFn): Promise<void> {
     try {
-      const res = await cmd.call(this, msg, ...msg.args);
+      const res = await cmd.call(this, ...msg.args);
       if (res instanceof Msg) {
         await msg.result(...res.args);
       } else if (res !== undefined) {

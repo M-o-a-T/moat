@@ -61,7 +61,7 @@ function tick(): Promise<void> {
 describe('loopback: TS↔TS in-memory', () => {
   it('simple ping/pong call', async () => {
     class PingHandler extends MsgHandler {
-      async cmd_ping(msg: Msg): Promise<unknown> {
+      async cmd_ping(): Promise<unknown> {
         return 'pong';
       }
     }
@@ -98,7 +98,7 @@ describe('loopback: TS↔TS in-memory', () => {
 
   it('call with arguments', async () => {
     class EchoHandler extends MsgHandler {
-      async cmd_echo(msg: Msg, ...args: unknown[]): Promise<unknown> {
+      async cmd_echo(...args: unknown[]): Promise<unknown> {
         return args;
       }
     }

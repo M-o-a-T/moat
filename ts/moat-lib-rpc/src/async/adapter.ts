@@ -68,7 +68,6 @@ export class AsyncAdapter {
   private _delayTimer: ReturnType<typeof setTimeout> | null = null;
   private _running = false;
   private _pumpScheduled = false;
-  private _newCommandHandler: ((msg: Msg, link: StreamLink) => Promise<void>) | null = null;
 
   constructor(
     core: RpcCore,
@@ -82,46 +81,37 @@ export class AsyncAdapter {
     this._reuseDelayMs = options.reuseDelayMs ?? DEFAULT_REUSE_DELAY;
   }
 
-  /** Set the handler for new incoming commands (server side). */
-  setCommandHandler(handler: (msg: Msg, link: StreamLink) => Promise<void>): void {
-    this._newCommandHandler = handler;
-  }
-
-  /** Start the adapter — registers transport listener, begins pumping. */
+  /** Start the adapter — wires callbacks, begins pumping. */
   start(): void {
     if (this._running) return;
     this._running = true;
 
-    // Hook onDetach to pump after links close
-    const origCallbacks = this._core['_callbacks' as keyof RpcCore] as unknown as CoreCallbacks;
-    if (origCallbacks.onNewCommand) {
-      const origOnNew = origCallbacks.onNewCommand;
-      origCallbacks.onNewCommand = (msg: Msg, link: StreamLink) => {
-        // Call the original handler, then pump any resulting outbound messages
-        Promise.resolve(origOnNew(msg, link)).finally(() => {
-          this._pump();
-        });
+    const callbacks = this._core['_callbacks' as keyof RpcCore] as unknown as CoreCallbacks;
+
+    // Wire onDetach to the reuse-delay timer so freed ids are recycled.
+    callbacks.onDetach = (id: number) => {
+      this._enqueueFree(id);
+    };
+
+    // Wrap onNewCommand to pump after the handler produces outbound messages.
+    if (callbacks.onNewCommand) {
+      const origOnNew = callbacks.onNewCommand;
+      callbacks.onNewCommand = (msg: Msg, link: StreamLink) => {
+        Promise.resolve(origOnNew(msg, link)).finally(() => this._schedulePump());
       };
     }
 
-    // Also pump after the core sends (e.g. client initiating a call)
-    // We patch the core's send method to trigger a pump
+    // Wrap core.send to trigger a pump whenever the core queues outbound
+    // messages (covers client-side call() and server-side result()).
     const origSend = this._core.send.bind(this._core) as (link: StreamLink, a: unknown[], kw: import('../core/msg.js').OptKw, flag: number) => void;
     this._core.send = (link: StreamLink, a: unknown[], kw: import('../core/msg.js').OptKw, flag: number) => {
       origSend(link, a, kw, flag);
-      // Pump on next microtask to batch multiple sends
-      if (!this._pumpScheduled) {
-        this._pumpScheduled = true;
-        Promise.resolve().then(() => {
-          this._pumpScheduled = false;
-          this._pump();
-        });
-      }
+      this._schedulePump();
     };
 
     this._transport.onMessage((msg: unknown[]) => {
       this._core.feed(msg);
-      this._pump();
+      this._schedulePump();
     });
   }
 
@@ -136,8 +126,23 @@ export class AsyncAdapter {
     await this._transport.close();
   }
 
-  /** Pump outbound messages from the core to the transport. */
-  private _pump(): void {
+  /** Immediately drain and send outbound messages. */
+  pump(): void {
+    this._doPump();
+  }
+
+  /** Schedule a pump on the next microtask (batching multiple sends). */
+  private _schedulePump(): void {
+    if (this._pumpScheduled) return;
+    this._pumpScheduled = true;
+    Promise.resolve().then(() => {
+      this._pumpScheduled = false;
+      this._doPump();
+    });
+  }
+
+  /** Drain queued outbound messages and write them to the transport. */
+  private _doPump(): void {
     const outbound = this._core.drain();
     for (const msg of outbound) {
       const encoded = this._encode(msg.payload);
@@ -145,6 +150,12 @@ export class AsyncAdapter {
         // Transport write failed — the transport is probably closing
       });
     }
+  }
+
+  /** Enqueue a freed id for delayed recycling. */
+  private _enqueueFree(id: number): void {
+    this._pendingFree.push({ id, freedAt: Date.now() });
+    this._scheduleDelay();
   }
 
   /** Schedule the reuse-delay timer for freed ids. */

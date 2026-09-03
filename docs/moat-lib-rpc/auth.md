@@ -219,3 +219,26 @@ consists of one positional argument (name of the successful auth method)
 and may contain follow-up keywords.
 
 Auth failure is conveyed by raising an exception.
+
+## Stream-based auth
+
+`rpc_on_rpc()` accepts an optional `auth` keyword argument. When provided,
+the CmdStream runs an auth negotiation handshake before becoming available
+to the caller. After auth completes, `cmdo.auth` contains the resulting
+`SubAuth` instance (or an exception is raised if auth was denied).
+
+One side must be designated as the server by passing `is_server=True`;
+the other side is the client (the default).
+
+```python
+async with msg.stream(), rpc_on_rpc(
+    MyHandler(), msg, auth=auth_cfg, is_server=True
+) as cmdo:
+    # cmdo.auth is now populated
+    result = await MsgSender(cmdo).cmd("some_command", ...)
+```
+
+The auth configuration is an `attrdict` with an `auth` key containing
+`modes` (list of auth method configs) and method-specific parameters.
+For the built-in `test` method, set `ok: true` to accept or `ok: false`
+to deny.

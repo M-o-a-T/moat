@@ -14,6 +14,7 @@ from cffi import FFI
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from typing import Any
 
 
@@ -36,7 +37,7 @@ __all__ = ["DLL"]
 
 
 @contextmanager
-def DLL(id: str, cdef: str, *paths: str | Path) -> tuple[FFI, Any]:
+def DLL(id: str, cdef: str, *paths: str | Path) -> Iterator[tuple[FFI, Any]]:
     """
     Refcounted CFFI.dlopen() wrapper.
 
@@ -48,7 +49,7 @@ def DLL(id: str, cdef: str, *paths: str | Path) -> tuple[FFI, Any]:
 
     stack = ExitStack()
     with _lock, stack:
-        ref = None
+        ref: DLLref | None = None
         try:
             if id in _libs:
                 ref = _libs[id]
@@ -65,7 +66,7 @@ def DLL(id: str, cdef: str, *paths: str | Path) -> tuple[FFI, Any]:
 
                 ref = DLLref(stack=stack.pop_all(), ffi=ffi, lib=lib)
                 _libs[id] = ref
-            yield ffi, lib
+            yield ref.ffi, ref.lib
 
         finally:
             if ref is None:

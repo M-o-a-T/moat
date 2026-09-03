@@ -29,9 +29,8 @@ import asyncio
 repo_root = FSPath(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo_root))
 
-from moat.lib.codec.moat_cbor import Codec as MoatCborCodec
 from moat.lib.rpc import MsgHandler
-from moat.lib.rpc.stream.base import HandlerStream
+from moat.lib.rpc.anyio import AioStream
 
 
 class InteropHandler(MsgHandler):
@@ -49,6 +48,10 @@ class InteropHandler(MsgHandler):
         """Return the sum of *a* and *b*."""
         return a + b
 
+    async def cmd_multiply(self, a: int, b: int) -> int:
+        """Return the product of *a* and *b*."""
+        return a * b
+
     async def cmd_error_test(self):
         """Raise a ``ValueError`` to exercise error forwarding."""
         raise ValueError("test error from Python")
@@ -56,84 +59,57 @@ class InteropHandler(MsgHandler):
 
 async def run_stdio():
     """Run RPC over stdin/stdout (CBOR arrays, no framing)."""
-
-    codec = MoatCborCodec()
     handler = InteropHandler()
 
-    # Create a HandlerStream that reads from stdin and writes to stdout
-    class StdioStream(HandlerStream):
-        async def read_stream(self):
-            while True:
-                data = await asyncio.to_thread(sys.stdin.buffer.read, 4096)
-                if not data:
-                    break
-                # Decode all complete CBOR objects from the buffer
-                # (Simplified: assumes one message per read for phase 1)
-                try:
-                    msg = codec.decode(data)
-                    if isinstance(msg, list):
-                        await self.msg_in(msg)
-                except Exception:  # noqa: S110  tolerate malformed frames
-                    pass
+    class StdioRW:
+        async def read(self, n):
+            return await asyncio.to_thread(sys.stdin.buffer.read, n)
 
-        async def write_stream(self):
-            while True:
-                try:
-                    msg = await self.msg_out()
-                except EOFError:
-                    break
-                data = codec.encode(msg)
-                sys.stdout.buffer.write(data)
-                sys.stdout.buffer.flush()
+        async def write(self, data):
+            sys.stdout.buffer.write(data)
+            sys.stdout.buffer.flush()
 
-    async with StdioStream(handler):
+    stream = AioStream(handler, StdioRW())
+    async with stream:
         await asyncio.sleep(999)  # keep running
 
 
 async def run_tcp(port: int):
     """Run RPC over TCP."""
-
-    codec = MoatCborCodec()
     handler = InteropHandler()
 
-    server = await asyncio.start_server(
-        lambda r, w: handle_connection(r, w, handler, codec),
-        "localhost",
-        port,
-    )
+    async def handle_connection(reader, writer):
+        rw = _TcpRW(reader, writer)
+        stream = AioStream(handler, rw)
+        try:
+            async with stream:
+                await asyncio.sleep(999)
+        finally:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except Exception:  # noqa: S110
+                pass
+
+    server = await asyncio.start_server(handle_connection, "localhost", port)
     print(f"Python TCP server listening on port {port}", file=sys.stderr)
     async with server:
         await server.serve_forever()
 
 
-async def handle_connection(reader, writer, handler, codec):
-    """Handle a single TCP connection."""
+class _TcpRW:
+    """Adapt asyncio StreamReader/StreamWriter to AioStream's interface."""
 
-    class TcpStream(HandlerStream):
-        async def read_stream(self):
-            while True:
-                data = await reader.read(4096)
-                if not data:
-                    break
-                try:
-                    msg = codec.decode(data)
-                    if isinstance(msg, list):
-                        await self.msg_in(msg)
-                except Exception:  # noqa: S110  tolerate malformed frames
-                    pass
+    def __init__(self, reader, writer):
+        self._reader = reader
+        self._writer = writer
 
-        async def write_stream(self):
-            while True:
-                try:
-                    msg = await self.msg_out()
-                except EOFError:
-                    break
-                data = codec.encode(msg)
-                writer.write(data)
-                await writer.drain()
+    async def read(self, n):
+        return await self._reader.read(n)
 
-    async with TcpStream(handler):
-        await asyncio.sleep(999)
+    async def write(self, data):
+        self._writer.write(data)
+        await self._writer.drain()
 
 
 async def run_ws(port: int):
@@ -144,33 +120,36 @@ async def run_ws(port: int):
         print("websockets not installed; skipping WS mode", file=sys.stderr)
         return
 
-    codec = MoatCborCodec()
     handler = InteropHandler()
 
     async def ws_handler(websocket):
-        class WsStream(HandlerStream):
-            async def read_stream(self):
-                async for data in websocket:
-                    if isinstance(data, bytes):
-                        msg = codec.decode(data)
-                        if isinstance(msg, list):
-                            await self.msg_in(msg)
-
-            async def write_stream(self):
-                while True:
-                    try:
-                        msg = await self.msg_out()
-                    except EOFError:
-                        break
-                    data = codec.encode(msg)
-                    await websocket.send(data)
-
-        async with WsStream(handler):
-            await asyncio.sleep(999)
+        rw = _WsRW(websocket)
+        stream = AioStream(handler, rw)
+        try:
+            async with stream:
+                await asyncio.sleep(999)
+        except Exception:  # noqa: S110
+            pass
 
     async with websockets.serve(ws_handler, "localhost", port):
         print(f"Python WS server listening on port {port}", file=sys.stderr)
         await asyncio.Future()  # run forever
+
+
+class _WsRW:
+    """Adapt a websocket to AioStream's interface."""
+
+    def __init__(self, websocket):
+        self._ws = websocket
+
+    async def read(self, _n):
+        data = await self._ws.recv()
+        if isinstance(data, bytes):
+            return data
+        return data.encode() if isinstance(data, str) else b""
+
+    async def write(self, data):
+        await self._ws.send(data)
 
 
 def main():

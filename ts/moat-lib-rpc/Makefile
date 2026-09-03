@@ -1,4 +1,4 @@
-.PHONY: install build min minified-build test test-interop lint fmt typecheck example pack publish clean
+.PHONY: install build min minified-build test test-interop test-all lint fmt typecheck example pack publish clean
 
 install:
 	npm ci
@@ -16,6 +16,8 @@ test:
 
 test-interop:
 	npx vitest run --config vitest.interop.config.ts
+
+test-all: test test-interop
 
 lint:
 	npm run lint

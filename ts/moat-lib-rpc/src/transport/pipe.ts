@@ -46,8 +46,11 @@ export class PipeTransport implements PipeTransport {
   }
 
   /** Spawn a child process and create a pipe transport. */
-  static spawn(cmd: string, args: string[] = []): PipeTransport {
-    const proc = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'inherit'] });
+  static spawn(cmd: string, args: string[] = [], options?: { cwd?: string }): PipeTransport {
+    const proc = spawn(cmd, args, {
+      stdio: ['pipe', 'pipe', 'inherit'],
+      ...(options?.cwd ? { cwd: options.cwd } : {}),
+    });
     const transport = new PipeTransport(
       proc.stdin,
       proc.stdout,

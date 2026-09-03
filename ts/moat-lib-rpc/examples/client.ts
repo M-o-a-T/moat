@@ -4,7 +4,7 @@
  * Run with: npx tsx examples/client.ts
  */
 
-import { RpcClient } from '../src/rpc.js';
+import { RpcClient } from '../src/client.js';
 
 async function main() {
   const client = await RpcClient.connectWs('ws://localhost:8080');

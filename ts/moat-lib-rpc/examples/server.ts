@@ -5,7 +5,7 @@
  */
 
 import { MsgHandler } from '../src/dispatch/handler.js';
-import { RpcServer } from '../src/rpc.js';
+import { RpcServer } from '../src/server.js';
 import type { Msg } from '../src/core/msg.js';
 
 class ExampleHandler extends MsgHandler {

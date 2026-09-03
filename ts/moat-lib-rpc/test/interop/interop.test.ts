@@ -1,9 +1,8 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { spawn, spawnSync } from 'node:child_process';
-import { RpcClient } from '../../src/rpc.js';
-import { RpcServer } from '../../src/rpc.js';
+import { RpcClient } from '../../src/client.js';
+import { RpcServer } from '../../src/server.js';
 import { MsgHandler } from '../../src/dispatch/handler.js';
-import type { Msg } from '../../src/core/msg.js';
 import { resolve } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..', '..');
@@ -73,7 +72,6 @@ describeOrSkip('interop: TS client ↔ Python server (stdio)', () => {
 
 describeOrSkip('interop: TS client ↔ Python server (TCP)', () => {
   let pythonProc: ReturnType<typeof spawn> | null = null;
-  let client: RpcClient | null = null;
   const PORT = 18099;
 
   beforeAll(async () => {
@@ -91,51 +89,38 @@ describeOrSkip('interop: TS client ↔ Python server (TCP)', () => {
       pythonProc.kill();
       pythonProc = null;
     }
-    if (client) {
-      await client.close();
-      client = null;
-    }
   });
 
-  /** Connect to the Python server over TCP, run one command, return its result. */
-  async function callPython(cmd: string, ...args: unknown[]): Promise<{ args: readonly unknown[] }> {
-    const { TcpClientTransport } = await import('../../src/transport/tcp.js');
-    const { AsyncAdapter } = await import('../../src/async/adapter.js');
-    const { RpcCore } = await import('../../src/core/handler.js');
-    const { MsgSender } = await import('../../src/dispatch/sender.js');
-    const { encodeMessage } = await import('../../src/codec.js');
-
-    const transport = await TcpClientTransport.connect('localhost', PORT);
-    const core = new RpcCore(null, {});
-    const adapter = new AsyncAdapter(core, transport, encodeMessage);
-    adapter.start();
-    try {
-      const sender = new MsgSender(core);
-      const result = await Promise.race([
-        sender.cmd(cmd, ...args) as unknown as Promise<unknown>,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 5000),
-        ),
-      ]);
-      return result as unknown as { args: readonly unknown[] };
-    } finally {
-      await adapter.stop();
-    }
+  /** Connect to the Python server over TCP and return a client. */
+  async function connectPython(): Promise<RpcClient> {
+    return RpcClient.connectTcp('localhost', PORT, { timeoutMs: 5000 });
   }
 
   it('ping → pong', async () => {
-    const result = await callPython('ping');
-    expect(result.args[0]).toBe('pong');
+    const client = await connectPython();
+    try {
+      expect(await client.call('ping')).toBe('pong');
+    } finally {
+      await client.close();
+    }
   }, 10000);
 
   it('echo → echoes arguments', async () => {
-    const result = await callPython('echo', 42, 'hello');
-    expect(Array.from(result.args[0] as unknown[])).toEqual([42, 'hello']);
+    const client = await connectPython();
+    try {
+      expect(await client.call('echo', 42, 'hello')).toEqual([42, 'hello']);
+    } finally {
+      await client.close();
+    }
   }, 10000);
 
   it('add → sums two integers', async () => {
-    const result = await callPython('add', 3, 4);
-    expect(result.args[0]).toBe(7);
+    const client = await connectPython();
+    try {
+      expect(await client.call('add', 3, 4)).toBe(7);
+    } finally {
+      await client.close();
+    }
   }, 10000);
 });
 
@@ -171,15 +156,9 @@ describeOrSkip('interop: Python client → TS server', () => {
   });
 
   it('TS server responds to ping', async () => {
-    const client = await RpcClient.connectWs(`ws://localhost:${PORT}`);
+    const client = await RpcClient.connectWs(`ws://localhost:${PORT}`, { timeoutMs: 5000 });
     try {
-      const result = await Promise.race([
-        client.cmd('ping'),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 5000),
-        ),
-      ]);
-      expect(result).toBeDefined();
+      expect(await client.call('ping')).toBe('pong');
     } finally {
       await client.close();
     }

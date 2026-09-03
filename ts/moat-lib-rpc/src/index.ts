@@ -73,4 +73,7 @@ export type { TcpTransport } from './transport/tcp.js';
 export { PipeTransport } from './transport/pipe.js';
 
 // High-level convenience
-export { RpcServer, RpcClient } from './rpc.js';
+export { RpcClient } from './client.js';
+export type { ClientOptions } from './client.js';
+export { RpcServer } from './server.js';
+export type { ServerOptions } from './server.js';

@@ -6,6 +6,8 @@ import { MsgHandler } from '../../src/dispatch/handler.js';
 import { encodeMessage, decodeMessage } from '../../src/codec.js';
 import { AsyncAdapter } from '../../src/async/adapter.js';
 import type { Transport } from '../../src/async/adapter.js';
+import { RpcClient } from '../../src/client.js';
+import { RpcServer } from '../../src/server.js';
 
 /**
  * In-memory duplex transport — pipes writes to the other side's onMessage callback.
@@ -167,5 +169,94 @@ describe('loopback: TS↔TS in-memory', () => {
 
     await clientAdapter.stop();
     await serverAdapter.stop();
+  });
+});
+
+/**
+ * RpcClient over an in-memory transport pair — covers the high-level
+ * call()/callKw() API, result unwrapping, and per-call timeout, without
+ * needing a real socket or Python peer.
+ */
+describe('loopback: RpcClient high-level API', () => {
+  /** Wire a RpcClient to a RpcServer sharing one MsgHandler, in-memory. */
+  async function makeClient(handler: MsgHandler, timeoutMs = 0): Promise<RpcClient> {
+    const [clientT, serverT] = createTransportPair();
+    const server = new RpcServer(handler);
+    // Drive the server's per-connection accept manually.
+    (server as unknown as { _handleConnection: (t: Transport) => void })._handleConnection(serverT);
+    return RpcClient.connectTransport(clientT, { timeoutMs });
+  }
+
+  it('call() returns a single positional arg directly', async () => {
+    class H extends MsgHandler {
+      async cmd_one(): Promise<unknown> {
+        return 42;
+      }
+    }
+    const client = await makeClient(new H());
+    try {
+      expect(await client.call('one')).toBe(42);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('call() returns undefined for no args', async () => {
+    class H extends MsgHandler {
+      async cmd_void(): Promise<undefined> {
+        return undefined;
+      }
+    }
+    const client = await makeClient(new H());
+    try {
+      expect(await client.call('void')).toBeUndefined();
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('call() returns the array for multiple positional args', async () => {
+    class H extends MsgHandler {
+      async cmd_pair(): Promise<[number, string]> {
+        return [1, 'two'];
+      }
+    }
+    const client = await makeClient(new H());
+    try {
+      expect(await client.call('pair')).toEqual([1, 'two']);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('callKw() forwards positional arguments', async () => {
+    // Keyword arguments travel on the wire as msg.kw; handlers access them
+    // via the message object rather than named parameters (JS has no **kw).
+    class H extends MsgHandler {
+      async cmd_greet(name: string, greeting: string): Promise<string> {
+        return `${greeting}, ${name}!`;
+      }
+    }
+    const client = await makeClient(new H());
+    try {
+      expect(await client.callKw('greet', {}, 'World', 'Hi')).toBe('Hi, World!');
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('call() times out when the server does not respond', async () => {
+    // A handler that never replies.
+    class H extends MsgHandler {
+      async cmd_slow(): Promise<undefined> {
+        return new Promise(() => {});
+      }
+    }
+    const client = await makeClient(new H(), 50);
+    try {
+      await expect(client.call('slow')).rejects.toThrow('timed out');
+    } finally {
+      await client.close();
+    }
   });
 });

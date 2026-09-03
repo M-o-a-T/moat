@@ -68,7 +68,7 @@ time for avoiding replace/delete collisions.
 Error records shall be generated (via
 {py:meth}`~moat.link.client.LinkSender.e_info`) for `run.host.XXX` entries when
 * the associated program goes down / disappears, and doesn't come back up
-  after `timeout.restart.error` seconds
+  after `timeout.ping.down` seconds
 * the program doesn't transition to `up=True` within `timeout.restart.up`
   seconds
 * the program restarts again (i.e. the `run.host.XXX` message is

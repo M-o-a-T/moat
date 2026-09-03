@@ -12,7 +12,7 @@ import type { Transport } from '../../src/async/adapter.js';
  */
 class InMemoryTransport implements Transport {
   private _other: InMemoryTransport | null = null;
-  private _cb: ((data: Uint8Array) => void) | null = null;
+  private _cb: ((msg: unknown[]) => void) | null = null;
   private _closed = false;
 
   connect(other: InMemoryTransport): void {
@@ -23,17 +23,19 @@ class InMemoryTransport implements Transport {
   write(data: Uint8Array): Promise<void> {
     if (this._closed) return Promise.reject(new Error('closed'));
     if (this._other?._cb) {
-      // Defer to next microtask to simulate async transport
+      // Defer to next microtask to simulate async transport. Deliver the
+      // decoded message — transports own inbound decoding.
+      const msg = decodeMessage(data);
       Promise.resolve().then(() => {
         if (!this._closed && this._other?._cb) {
-          this._other._cb(data);
+          this._other._cb(msg);
         }
       });
     }
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
+  onMessage(cb: (msg: unknown[]) => void): void {
     this._cb = cb;
   }
 
@@ -71,11 +73,11 @@ describe('loopback: TS↔TS in-memory', () => {
         return serverHandler.handle(msg, msg.rcmd);
       },
     });
-    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage, decodeMessage);
+    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage);
     serverAdapter.start();
 
     const clientCore = new RpcCore(null, {});
-    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage, decodeMessage);
+    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage);
     clientAdapter.start();
 
     const { msg } = clientCore.call('ping', [], {});
@@ -108,11 +110,11 @@ describe('loopback: TS↔TS in-memory', () => {
         return serverHandler.handle(msg, msg.rcmd);
       },
     });
-    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage, decodeMessage);
+    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage);
     serverAdapter.start();
 
     const clientCore = new RpcCore(null, {});
-    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage, decodeMessage);
+    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage);
     clientAdapter.start();
 
     const { msg } = clientCore.call('echo', [42, 'hello'], {});
@@ -145,11 +147,11 @@ describe('loopback: TS↔TS in-memory', () => {
         });
       },
     });
-    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage, decodeMessage);
+    const serverAdapter = new AsyncAdapter(serverCore, serverT, encodeMessage);
     serverAdapter.start();
 
     const clientCore = new RpcCore(null, {});
-    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage, decodeMessage);
+    const clientAdapter = new AsyncAdapter(clientCore, clientT, encodeMessage);
     clientAdapter.start();
 
     const { msg } = clientCore.call('nonexistent', [], {});

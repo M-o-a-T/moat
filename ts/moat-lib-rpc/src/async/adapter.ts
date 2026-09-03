@@ -18,12 +18,18 @@ import type { CoreCallbacks } from '../core/link.js';
 import { Msg, MsgResult } from '../core/msg.js';
 import { decodeStreamError } from '../errors.js';
 
-/** Transport interface — push/pull bytes or frames. */
+/** Transport interface — push bytes out, pull decoded messages in.
+ *
+ * Transports own inbound decoding: ``onMessage`` delivers already-decoded
+ * wire messages, so the adapter feeds them straight to the core without
+ * a second decode step. (Raw byte transports decode their frames/streams
+ * internally before invoking the callback.)
+ */
 export interface Transport {
   /** Send a message (already CBOR-encoded). */
   write(data: Uint8Array): Promise<void>;
-  /** Register a callback for received messages. */
-  onMessage(cb: (data: Uint8Array) => void): void;
+  /** Register a callback for received, decoded messages. */
+  onMessage(cb: (msg: unknown[]) => void): void;
   /** Close the transport. */
   close(): Promise<void>;
 }
@@ -47,7 +53,7 @@ interface PendingFree {
  *
  * Usage:
  * ```ts
- * const adapter = new AsyncAdapter(core, transport, codec);
+ * const adapter = new AsyncAdapter(core, transport, encode);
  * await adapter.start();
  * // ... use sender.cmd(...)
  * await adapter.stop();
@@ -57,7 +63,6 @@ export class AsyncAdapter {
   private _core: RpcCore;
   private _transport: Transport;
   private _encode: (msg: unknown[]) => Uint8Array;
-  private _decode: (data: Uint8Array) => unknown;
   private _reuseDelayMs: number;
   private _pendingFree: PendingFree[] = [];
   private _delayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,13 +74,11 @@ export class AsyncAdapter {
     core: RpcCore,
     transport: Transport,
     encode: (msg: unknown[]) => Uint8Array,
-    decode: (data: Uint8Array) => unknown,
     options: AdapterOptions = {},
   ) {
     this._core = core;
     this._transport = transport;
     this._encode = encode;
-    this._decode = decode;
     this._reuseDelayMs = options.reuseDelayMs ?? DEFAULT_REUSE_DELAY;
   }
 
@@ -116,12 +119,9 @@ export class AsyncAdapter {
       }
     };
 
-    this._transport.onMessage((data: Uint8Array) => {
-      const decoded = this._decode(data) as unknown[];
-      if (Array.isArray(decoded)) {
-        this._core.feed(decoded);
-        this._pump();
-      }
+    this._transport.onMessage((msg: unknown[]) => {
+      this._core.feed(msg);
+      this._pump();
     });
   }
 

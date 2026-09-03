@@ -12,7 +12,7 @@ import { IncrementalDecoder } from './framing.js';
 /** Transport interface that the async adapter expects. */
 export interface TcpTransport {
   write(data: Uint8Array): Promise<void>;
-  onMessage(cb: (data: Uint8Array) => void): void;
+  onMessage(cb: (msg: unknown[]) => void): void;
   close(): Promise<void>;
 }
 
@@ -33,12 +33,6 @@ export class TcpClientTransport implements TcpTransport {
     this._socket.on('data', (data: Buffer) => {
       this._decoder.feed(new Uint8Array(data));
       for (const msg of this._decoder.drain()) {
-        // Re-encode to get raw bytes for the transport callback
-        // Actually, the adapter expects raw CBOR bytes, not decoded values.
-        // We should pass the raw bytes. But with incremental decode we lose
-        // the byte boundaries. For phase 1, we pass the decoded value directly
-        // via a custom emitter and the adapter uses decodeMessage.
-        // Better: pass the raw buffer chunks and let the adapter decode.
         this._emitter.emit('message', msg);
       }
     });
@@ -67,15 +61,8 @@ export class TcpClientTransport implements TcpTransport {
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
-    // For TCP, we emit decoded messages. The adapter needs to handle this.
-    // We wrap the callback to accept decoded values.
-    this._emitter.on('message', (msg: unknown) => {
-      // The adapter expects raw bytes, but for TCP we have decoded values.
-      // We re-encode to bytes for consistency.
-      // This is a simplification for phase 1.
-      cb(msg as unknown as Uint8Array);
-    });
+  onMessage(cb: (msg: unknown[]) => void): void {
+    this._emitter.on('message', cb);
   }
 
   close(): Promise<void> {
@@ -122,10 +109,8 @@ export class TcpServerTransport implements TcpTransport {
     return Promise.resolve();
   }
 
-  onMessage(cb: (data: Uint8Array) => void): void {
-    this._emitter.on('message', (msg: unknown) => {
-      cb(msg as unknown as Uint8Array);
-    });
+  onMessage(cb: (msg: unknown[]) => void): void {
+    this._emitter.on('message', cb);
   }
 
   close(): Promise<void> {

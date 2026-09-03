@@ -11,7 +11,7 @@ import { StreamLink } from './core/link.js';
 import { MsgHandler } from './dispatch/handler.js';
 import { MsgSender } from './dispatch/sender.js';
 import { AsyncAdapter } from './async/adapter.js';
-import { encodeMessage, decodeMessage } from './codec.js';
+import { encodeMessage } from './codec.js';
 import {
   WsClientTransport,
   WsServerTransport,
@@ -68,12 +68,7 @@ export class RpcServer {
       },
     });
 
-    const adapter = new AsyncAdapter(
-      core,
-      transport,
-      encodeMessage,
-      (data: Uint8Array) => decodeMessage(data),
-    );
+    const adapter = new AsyncAdapter(core, transport, encodeMessage);
 
     adapter.start();
     this._adapters.push(adapter);
@@ -115,12 +110,7 @@ export class RpcClient {
       },
     });
 
-    const adapter = new AsyncAdapter(
-      core,
-      transport,
-      encodeMessage,
-      (data: Uint8Array) => decodeMessage(data),
-    );
+    const adapter = new AsyncAdapter(core, transport, encodeMessage);
 
     adapter.start();
 

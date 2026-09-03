@@ -18,6 +18,7 @@ _attrs = {
     "Relay": "relay",
     "Transfer": "transfer",
     "Average": "average",
+    "Triac": "triac",
 }
 
 

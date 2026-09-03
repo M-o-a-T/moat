@@ -125,3 +125,78 @@ starts.
 
 Path to an enabling pin. The pin will be cleared set after `t.init` has
 passed and cleared on shutdown.
+
+### part.Triac
+
+A triac is a solid-state switch for AC loads.  Once triggered, a triac
+conducts until the next natural zero crossing of the AC supply — there
+is no way to actively turn it off.  Power is controlled by **phase-angle
+triggering**: after each zero crossing the gate is pulsed after a delay
+proportional to `(1-val)` of the half-cycle period.  At 100 % the gate
+is held on continuously; at 0 % it is never fired.
+
+This part is MicroPython-only.  It uses a hardware interrupt on the
+zero-crossing input pin (recording microsecond timestamps) and a
+hardware `Timer` to fire the gate pulse at the correct phase angle.
+The line frequency is measured adaptively from the zero-crossing
+timestamps, with glitch rejection via a median filter.
+
+A zero-crossing detector input pin is **required**.
+
+#### Commands
+
+##### r
+
+Read the triac state. A map with `v` (set value, float 0..1), `f`
+(forced value), `p` (actual gate pin state, bool), and `h` (measured
+half-cycle period in microseconds).
+
+##### w
+
+Set the triac power. `v` is a float in [0..1]. `f` overrides `v` and
+applies immediately.
+
+#### Config
+
+    triac:
+        pin: 20
+        zero: 0
+        invert: false
+        zc_edge: 0
+        timer: 1
+        pulse: 100
+        cycle: 20
+
+##### pin
+
+Gate output pin number.
+
+##### zero
+
+Zero-crossing detector input pin number.  **Required.**  The pin's
+interrupt records microsecond timestamps used for phase-angle timing
+and line-frequency estimation.
+
+##### invert
+
+If `True`, the gate output is inverted (active-low).
+
+##### zc_edge
+
+Which edge to trigger the ZC interrupt on: `0` = falling (default),
+`1` = rising, `2` = both.
+
+##### timer
+
+Hardware timer number for the gate pulse (default 1).
+
+##### pulse
+
+Gate pulse width in microseconds (default 100).  The gate is turned on
+for this duration and then off again, unless the triac is at 100 %.
+
+##### cycle
+
+Nominal AC cycle period in milliseconds (default 20, i.e. 50 Hz).
+Used as an initial estimate only; the actual frequency is measured
+from ZC interrupts.

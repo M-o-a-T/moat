@@ -16,7 +16,7 @@ from moat.util.exec import run as run_proc
 
 from .api import API, RepoInfo, get_api
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
@@ -31,7 +31,7 @@ class RepoMover:
 
     cf: dict
 
-    def __init__(self, cfg, name):
+    def __init__(self, cfg: attrdict, name: str) -> None:
         self.cfg = cfg
         self.name = name
 
@@ -43,10 +43,10 @@ class RepoMover:
         self.git_lock = anyio.Lock()
 
     @property
-    def description(self):  # noqa: D102
+    def description(self) -> str:  # noqa: D102
         return self.repos.src.description
 
-    async def exec(self, *a, **kw):
+    async def exec(self, *a: str, **kw: Any) -> str | None:
         """Helper to run an external program"""
 
         if "cwd" not in kw:
@@ -58,7 +58,7 @@ class RepoMover:
 
         return await run_proc(*a, **kw)
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Copy from src to local, set up generic stuff."""
         src = self.repos.src
 
@@ -110,13 +110,13 @@ class RepoMover:
                 await src.set_default_branch("main")
             await self.exec("git", "push", "src", f":{defbr}")
 
-    async def move(self, dst: RepoInfo):
+    async def move(self, dst: RepoInfo) -> None:
         """Copy our repo to B."""
 
         await dst.load()  # creates it if it doesn't exist
         await dst.push()
 
-    async def finish(self):
+    async def finish(self) -> None:
         """Finalize the move"""
         cfg = self.cfg
         src_repo = self.repos.src
@@ -135,15 +135,18 @@ class RepoMover:
                 hash = await self.exec(  # noqa: A001
                     "git", "hash-object", "-w", "--stdin", input=r, capture=True
                 )
+                assert hash is not None
                 hash = await self.exec(  # noqa: A001
                     "git",
                     "mktree",
                     input=f"100644 blob {hash.strip()}\t{cfg.readme.name}\n",
                     capture=True,
                 )
+                assert hash is not None
                 hash = await self.exec(  # noqa: A001
                     "git", "commit-tree", hash.strip(), input="Migration README\n", capture=True
                 )
+                assert hash is not None
                 await self.exec("git", "branch", cfg.src.branch, hash.strip())
 
                 if cfg.work.kill:
@@ -162,9 +165,11 @@ class RepoMover:
                 # check whether we're updating the README
                 r = render(cfg.readme.content)
                 hash = await self.exec("git", "hash-object", "--stdin", input=r, capture=True)  # noqa: A001
+                assert hash is not None
                 hash2 = await self.exec(
                     "git", "ls-tree", cfg.src.branch, cfg.readme.name, capture=True
                 )
+                assert hash2 is not None
                 hash2 = hash2.split("\t", 1)[0]
                 hash2 = hash2.split(" ", 2)[2]
                 if hash.strip() != hash2:
@@ -175,6 +180,7 @@ class RepoMover:
                         input=f"100644 blob {hash.strip()}\t{cfg.readme.name}\n",
                         capture=True,
                     )
+                    assert hash is not None
                     hash = await self.exec(  # noqa: A001
                         "git",
                         "commit-tree",
@@ -184,6 +190,7 @@ class RepoMover:
                         capture=True,
                         input="Migration README update\n",
                     )
+                    assert hash is not None
                     await self.exec("git", "branch", "-f", cfg.src.branch, hash.strip())
 
             await self.exec("git", "push", "src", cfg.src.branch)
@@ -210,7 +217,7 @@ class RepoMover:
                     await src_repo.drop_tags(*tags)
 
 
-async def _mv_repo(cfg: dict, a_src: API, a_dst: list[API], name: str):
+async def _mv_repo(cfg: attrdict, a_src: API, a_dst: list[API], name: str) -> None:
     rm = RepoMover(cfg, name)
     rm.repos.src = ri = a_src.repo_info_for(rm)
     await ri.load(create=False)
@@ -228,13 +235,13 @@ async def _mv_repo(cfg: dict, a_src: API, a_dst: list[API], name: str):
 
 
 async def _mv_arepo(
-    cfg: dict,
+    cfg: attrdict,
     a_src: API,
     a_dst: list[API],
     lim: anyio.CapacityLimiter,
     name: str,
     filter: bool,  # noqa: A002
-):
+) -> None:
     # move, then release the capacity limiter
     srci = None
     try:
@@ -248,7 +255,7 @@ async def _mv_arepo(
         lim.release_on_behalf_of(name)
 
 
-async def mv_repo(cfg, name):
+async def mv_repo(cfg: attrdict, name: str) -> None:
     """Move one repo off Github."""
 
     async with apis(cfg) as (a_src, *a_dst):

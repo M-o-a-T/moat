@@ -39,7 +39,7 @@ class RepoInfo(BaseRepoInfo):
     data: attrdict | None
     cls_CommitInfo: ClassVar[type[BaseCommitInfo]] = BaseCommitInfo
 
-    def __init__(self, api: API, repo: Repo):
+    def __init__(self, api: API, repo: Repo) -> None:
         self.data = None  # setup
         super().__init__(api, repo)
 
@@ -50,19 +50,19 @@ class RepoInfo(BaseRepoInfo):
 
     @property
     def git_url(self) -> str:
-        "URL used to pull with git"
+        """URL used to pull with git"""
         if "git_url" in self.api.cfg:
             return self.api.cfg.git_url.replace("{{repo}}", self.name)
         return f"https://{self.api.host}/{self.api.org}/{self.repo.name}.git"
 
     @property
     def ssh_url(self) -> str:
-        "URL to write to the repository via git"
+        """URL to write to the repository via git"""
         return f"git+ssh://git@{self.api.host}/{self.api.org}/{self.repo.name}.git"
 
     @property
     def ext_url(self) -> str:
-        "URL used to view the thing"
+        """URL used to view the thing"""
         return f"https://{self.api.host}/{self.api.org}/{self.repo.name}"
 
     @property
@@ -78,7 +78,7 @@ class RepoInfo(BaseRepoInfo):
         res.raise_for_status()
         self.data = to_attrdict(res.json())
 
-    async def create(self):
+    async def create(self) -> None:
         """
         Create this repository.
         """
@@ -97,7 +97,7 @@ class RepoInfo(BaseRepoInfo):
         res.raise_for_status()
         await self.set_remote()
 
-    async def set_remote(self):
+    async def set_remote(self) -> None:
         """
         Set this remote's URL, and configure pushing
         """
@@ -109,7 +109,7 @@ class RepoInfo(BaseRepoInfo):
 
     @property
     def parent(self) -> dict | None:
-        "Return info about the parent repo, or None"
+        """Return info about the parent repo, or None"""
         assert self.data is not None
         if (par := self.data.get("parent", None)) is not None:
             return par
@@ -121,7 +121,7 @@ class RepoInfo(BaseRepoInfo):
         assert self.data is not None
         return self.data["default_branch"]
 
-    async def clone_from_remote(self):
+    async def clone_from_remote(self) -> None:
         """
         Clone this repository to the local cache.
         """
@@ -159,7 +159,7 @@ class RepoInfo(BaseRepoInfo):
         assert self.data is not None
         return self.data.default_branch
 
-    async def set_default_branch(self, name) -> None:
+    async def set_default_branch(self, name: str) -> None:
         """
         Set the default branch to this.
         """
@@ -207,13 +207,13 @@ class API(BaseAPI):
         return f"https://{self.cfg.get('api_host', self.cfg.host)}"
 
     @property
-    def host(self):
-        "Host to talk to"
+    def host(self) -> str:
+        """Host to talk to"""
         return self.cfg.host
 
     @property
-    def org(self):
-        "user/organization to use"
+    def org(self) -> str:
+        """user/organization to use"""
         return self.cfg.get("org", self.cfg.user)
 
     async def list_repos(self) -> AsyncIterator[RepoInfo]:

@@ -414,6 +414,8 @@ class Msg(MsgLink, MsgResult):
     warnings: list
 
     _loaded: bool = False
+    _sent_cancel: bool = False
+    _got_cancel: bool = False
 
     def __init__(self):
         """
@@ -475,6 +477,10 @@ class Msg(MsgLink, MsgResult):
 
         If @new is set, this not being a "new" stream will raise a runtime
         exception.
+
+        On the originator side, a ``[E_CANCEL]`` is delivered to the remote
+        so that the responder can abort its handler task.  On the responder
+        side (``_got_cancel`` set), no cancel is echoed back.
         """
         try:
             if new:
@@ -487,7 +493,19 @@ class Msg(MsgLink, MsgResult):
             self._stream_out = S_END
             if self._msg_in is not None:
                 self._msg_in.set()
-            await super().kill()
+            rem = self._remote
+            if rem is not None and not self._got_cancel:
+                # We are initiating the kill — send a cancel to the remote.
+                try:
+                    with shield():
+                        await rem.ml_recv([E_CANCEL], None, B_ERROR)
+                except Exception:  # noqa:S110
+                    pass
+            # Finalize the link from our end.
+            if not self._end:
+                self.set_end()
+            if rem is not None and not rem.end_here:
+                rem.set_end()
 
     async def ml_send(
         self, a: Sequence, kw: OptDict, flags: int, initial: bool | None = None
@@ -496,7 +514,11 @@ class Msg(MsgLink, MsgResult):
         Sender of data to the other side.
         """
         if self._stream_out == S_END:
-            return
+            # Allow a single B_ERROR (cancel) after the outgoing direction
+            # has ended, so non-streaming clients can signal cancellation.
+            if not (flags & B_ERROR) or self._sent_cancel:
+                return
+            self._sent_cancel = True
         if not flags & B_STREAM:
             self._stream_out = S_END
         else:
@@ -529,6 +551,12 @@ class Msg(MsgLink, MsgResult):
                 self._stream_out = S_OFF
             if self._recv_q is not None:
                 self._recv_q.close_sender()
+            # If this is a client-side cancel of a non-streaming call,
+            # force the outgoing direction closed so _ended() can finalize
+            # and cancel the handler task via stream_detach.
+            if flags & B_ERROR and len(a) == 1 and a[0] == E_CANCEL:
+                self._stream_out = S_END
+                self._got_cancel = True
 
         elif flags & B_ERROR:
             # Warning.

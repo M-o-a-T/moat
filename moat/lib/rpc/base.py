@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 from moat.util import NotGiven
 from moat import DOC
-from moat.lib.micro import ACM, AC_exit, L, TaskGroup
+from moat.lib.micro import ACM, AC_exit, L, TaskGroup, shield
 from moat.lib.path import Path, PathElem
 from moat.lib.stream import Base
 from moat.util.exc import ungroup
@@ -96,7 +96,7 @@ class Caller:
         return self._call()
 
     async def _call(self):
-        "helper for __await__ that calls the remote side"
+        """helper for __await__ that calls the remote side"""
         from .msg import Msg  # noqa: PLC0415
 
         cmd, args, kw = self.data
@@ -104,8 +104,15 @@ class Caller:
             cmd = Path.build((cmd,))
         msg = Msg.Call(cmd, list(args), kw)
 
-        await self.sender.handle(msg, msg.rcmd)
-        await msg.wait_replied()
+        try:
+            await self.sender.handle(msg, msg.rcmd)
+            await msg.wait_replied()
+        except BaseException:
+            # Cancelled or errored locally: signal the remote side to cancel
+            # the handler task, then re-raise.
+            with shield():
+                await msg.kill()
+            raise
 
         if self._list is NotGiven:
             return msg

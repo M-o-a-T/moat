@@ -1,4 +1,4 @@
-.PHONY: install build min test test-interop lint fmt typecheck example pack publish clean
+.PHONY: install build min minified-build test test-interop lint fmt typecheck example pack publish clean
 
 install:
 	npm ci
@@ -6,7 +6,9 @@ install:
 build:
 	npm run build
 
-min:
+min: minified-build
+
+minified-build:
 	node scripts/build-min.mjs
 
 test:

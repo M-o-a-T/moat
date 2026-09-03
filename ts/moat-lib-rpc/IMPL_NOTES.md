@@ -54,19 +54,18 @@ def wire2i_f(w):
 receives them, flips the sign (`i = -i`), and uses the negative ID in replies.
 ID `0` is never sent as a live ID.
 
-**Critical for JS:** use arithmetic, not 32-bit bitwise shifts. JS `<<`/`>>`/
-`&` truncate to signed 32 bits, overflowing at `id > 2²⁹` (`(id-1) << 2` must
-stay ≤ 2³¹−1). Multiplication/floor-division are exact up to 2⁵³ and match
-Python's semantics for negative IDs too:
+**JS port:** uses bitwise shifts exactly as Python does. IDs are recycled, so
+the number of in-flight requests stays small — JS 32-bit shift overflow
+(> 2²⁹) is never reached:
 
 ```ts
 function i_f2wire(id: number, flag: number): number {
   if (id > 0) id -= 1;
-  return id * 4 + (flag & 3);
+  return (id << 2) | (flag & 3);
 }
 function wire2i_f(w: number): [number, number] {
-  const f = ((w % 4) + 4) % 4;  // handle negative w correctly
-  let id = Math.floor(w / 4);
+  const f = w & 3;
+  let id = w >> 2;
   if (id >= 0) id += 1;
   return [id, f];
   // caller then does: i = -i
@@ -910,8 +909,9 @@ class Msg {
 
 ## 5. Summary of key implementation decisions for the TS port
 
-1. **Header packing:** use `id * 4 + (flag & 3)` and `Math.floor(w / 4)`, NOT
-   bitwise shifts (JS 32-bit overflow at `id > 2²⁹`).
+1. **Header packing:** use `(id << 2) | (flag & 3)` and `w >> 2`,
+   mirroring Python's bitwise shifts exactly. IDs are recycled so
+   in-flight counts stay small — JS 32-bit overflow (> 2²⁹) is unreachable.
 
 2. **Sign flip:** originator uses positive IDs (≥ 1); responder flips to
    negative; replies use the negative ID. ID `0` is never live.

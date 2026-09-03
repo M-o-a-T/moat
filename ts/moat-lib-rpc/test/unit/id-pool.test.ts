@@ -214,8 +214,8 @@ describe('ID pool: detach triggers onDetach callback', () => {
   });
 });
 
-describe('ID pool: large ID handling (no 32-bit overflow)', () => {
-  it('handles IDs near 2^29 without overflow', () => {
+describe('ID pool: large ID handling', () => {
+  it('recycles IDs from the upper tier', () => {
     const core = new RpcCore(null, {});
 
     // Free a large ID directly

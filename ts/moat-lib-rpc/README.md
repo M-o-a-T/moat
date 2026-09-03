@@ -61,8 +61,9 @@ await client.close();
 
 Each RPC message is one CBOR array: `[header, *args, ?kwargsMap]`.
 
-The header integer packs the sub-channel id and flags using arithmetic
-(`id*4 + flag`), not 32-bit shifts (which overflow at id > 2²⁹).
+The header integer packs the sub-channel id and flags using bitwise shifts
+(`(id << 2) | flag`), mirroring the Python implementation. IDs are recycled,
+so in-flight counts stay far below the 2²⁹ JS 32-bit overflow threshold.
 
 Positive ids are allocated by the originator; the responder sees them as
 negative (sign-flipped on receive) and reuses the negative id in replies.

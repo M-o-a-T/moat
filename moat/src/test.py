@@ -15,10 +15,15 @@ from moat.util import OptCtx, attrdict
 from moat.lib.config import CFG, CfgStore
 from moat.lib.run import wrap_main
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
-async def run(*args, expect_exit=0, do_stdout=True):
+async def run(*args: Any, expect_exit: int = 0, do_stdout: bool = True) -> Any:
     """Call a MoaT command handler"""
     if len(args) == 1:
         args = args[0]
@@ -74,7 +79,7 @@ class DidNotRaise(Exception):  # noqa: D101
 
 
 @contextmanager
-def raises(*exc):
+def raises(*exc: type[BaseException]) -> Any:
     """
     Like pytest.raises, but handles exception groups
     """

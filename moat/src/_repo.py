@@ -18,7 +18,7 @@ from moat.util import attrdict, yload, yprint
 from ._util import dash, undash
 
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -35,7 +35,7 @@ ARCH = (
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
-def _tagsplit(tag: str | None):
+def _tagsplit(tag: str | None) -> list[int]:
     if not tag:
         return []
     try:
@@ -64,7 +64,7 @@ class _Common:
         minor: bool = False,
         new_tag: str | None = None,
         incr: bool = True,
-    ):
+    ) -> str:
         try:
             tag = self.last_tag
         except (AttributeError, ValueError):
@@ -116,22 +116,24 @@ class Package(_Common):
         self.hidden = not (PACK / self.dash).exists()
 
     @property
-    def dash(self):
+    def dash(self) -> str:
         return dash(self.name)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Package):
+            return NotImplemented
         return self.name == other.name
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
     @property
-    def verstr(self):
+    def verstr(self) -> str:
         v = self.vers
         return f"{v.tag}-{v.pkg}"
 
     @property
-    def vers(self):
+    def vers(self) -> attrdict:
         try:
             v = self._repo.versions[self.dash]
         except KeyError:
@@ -148,29 +150,29 @@ class Package(_Common):
         return v
 
     @vers.setter
-    def vers(self, d):
+    def vers(self, d: attrdict) -> attrdict:
         v = self.vers
         v.update(d)
         return v
 
     @property
-    def last_tag(self):
+    def last_tag(self) -> str | None:
         return self.vers.get("tag", None)
 
     @property
-    def last_commit(self):
+    def last_commit(self) -> str:
         return self.vers.get("rev", "0" * 40)
 
     @property
-    def last_pkg_commit(self):
+    def last_pkg_commit(self) -> str:
         return self.vers.get("pkgrev", self.last_commit)
 
     @property
-    def mdash(self):
+    def mdash(self) -> str:
         return dash(self.name)
 
     @property
-    def srcname(self):
+    def srcname(self) -> str:
         ctl = PACK / self.dash / "debian" / "control"
         src = ctl.read_text()
         sm = SRC.match(src)
@@ -243,14 +245,14 @@ class Repo(git.Repo, _Common):
 
     toplevel: str
 
-    def __init__(self, toplevel: str, *a, **k):
+    def __init__(self, toplevel: str, *a: Any, **k: Any) -> None:
         self.toplevel = toplevel
 
         super().__init__(*a, **k)
-        self._commit_tags = defaultdict(list)
-        self._commit_topo = {}
+        self._commit_tags: defaultdict[Any, list[Any]] = defaultdict(list)
+        self._commit_topo: dict[Any, Any] = {}
 
-        self._repos = {}
+        self._repos: dict[str, Package] = {}
         self._make_repos()
 
         for t in self.tags:
@@ -264,14 +266,14 @@ class Repo(git.Repo, _Common):
         self.orig_versions = deepcopy(self.versions)
 
     @property
-    def vers(self):
+    def vers(self) -> attrdict:
         try:
             v = self.versions["_"]
         except KeyError:
             self.versions["_"] = v = attrdict()
         return v
 
-    def write_tags(self):
+    def write_tags(self) -> bool:
         if self.versions == self.orig_versions:
             logger.warning("No changes.")
             return False
@@ -311,21 +313,21 @@ class Repo(git.Repo, _Common):
         c = self.tags[t].commit
         return c.hexsha
 
-    def part(self, name):
+    def part(self, name: str) -> Package:
         return self._repos[dash(name)]
 
     @property
-    def _repo(self):
+    def _repo(self) -> Repo:
         return self
 
     @property
-    def parts(self):
+    def parts(self) -> Any:
         return self._repos.values()
 
     def tags_of(self, c: git.Commit) -> Sequence[git.Tag]:
         return self._commit_tags[c]
 
-    def _add_repo(self, name):
+    def _add_repo(self, name: str) -> Package:
         dn = dash(name)
         pn = undash(name)
         if dn in self._repos:
@@ -392,7 +394,7 @@ class Repo(git.Repo, _Common):
 
         return None
 
-    def commits(self, ref=None):
+    def commits(self, ref: git.Commit | None = None) -> Any:
         """Iterate over topo sort of commits following @ref, or HEAD.
 
         WARNING: this code does not do a true topological breadth-first
@@ -403,8 +405,8 @@ class Repo(git.Repo, _Common):
         if ref is None:
             ref = self.head.commit
 
-        visited = set()
-        work = deque([ref])
+        visited: set[git.Commit] = set()
+        work: deque[git.Commit] = deque([ref])
         while work:
             ref = work.popleft()
             if ref in visited:

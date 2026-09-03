@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hmac
 import pytest
+from contextlib import suppress
 from hashlib import sha256
 from os import urandom
 
@@ -13,12 +14,19 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from moat.util import attrdict
+from moat.util import attrdict, yload
 from moat.lib.micro import Event
+from moat.lib.path import P
+from moat.lib.rpc._test import rpc_stack
 from moat.lib.rpc.auth import password as auth_password
+from moat.lib.rpc.auth._base import AuthDenied
 from moat.lib.rpc.auth.password import _derive_dh_key, _generate_dh_parameters, _to_bytes
 
 pytestmark = pytest.mark.anyio
+
+# End-to-end tests are skipped until the Dispatcher refactoring
+# (moat.lib.cmd._dispatch) is wired into DirCmd.
+_skip_e2e = pytest.mark.skip(reason="DirCmd._subs missing — pending Dispatcher refactor")
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +100,153 @@ def test_dh_key_agreement_roundtrip():
     assert alice_shared == bob_shared
     # Derived keys also match
     assert _derive_dh_key(alice_shared) == _derive_dh_key(bob_shared)
+
+
+# ---------------------------------------------------------------------------
+# End-to-end tests via unix socket
+# ---------------------------------------------------------------------------
+
+CFG_PLAIN = """
+app:
+  app: dir
+  a:
+    app: _test_.Cmd
+  l:
+    app: net.unix.Link
+    port: /tmp/test.sock
+    retry:
+      delay: 0.05
+    auth:
+      modes:
+      - mode: password
+      test:
+        password:
+          user: alice
+          password: sekrit
+    log:
+      txt: "!L"
+  r:
+    app: net.unix.Port
+    port: /tmp/test.sock
+    auth:
+      modes:
+      - mode: password
+      test:
+        password:
+          alice: sekrit
+          bob: hunter2
+    log:
+      txt: "!R"
+"""
+
+
+CFG_DH = """
+app:
+  app: dir
+  a:
+    app: _test_.Cmd
+  l:
+    app: net.unix.Link
+    port: /tmp/test.sock
+    retry:
+      delay: 0.05
+    auth:
+      modes:
+      - mode: password
+        dh: true
+      test:
+        password:
+          user: alice
+          password: sekrit
+    log:
+      txt: "!L"
+  r:
+    app: net.unix.Port
+    port: /tmp/test.sock
+    auth:
+      modes:
+      - mode: password
+        dh: true
+      test:
+        password:
+          alice: sekrit
+          bob: hunter2
+    log:
+      txt: "!R"
+"""
+
+
+@_skip_e2e
+@pytest.mark.parametrize(
+    "cfg_text",
+    [pytest.param(CFG_PLAIN, id="plain"), pytest.param(CFG_DH, id="dh")],
+)
+async def test_password_net(tmp_path, cfg_text):
+    """Password auth works end-to-end (plain and DH)."""
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(cfg_text, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+
+    async with rpc_stack(tmp_path, cfg) as d:
+        res = await d.cmd(P("l.a.echo"), m="hello")
+        assert res.kw == dict(r="hello")
+
+
+@_skip_e2e
+@pytest.mark.parametrize(
+    "cfg_text",
+    [pytest.param(CFG_PLAIN, id="plain"), pytest.param(CFG_DH, id="dh")],
+)
+async def test_password_net_wrong_password(tmp_path, cfg_text):
+    """Wrong password is rejected when fail_invalid is set."""
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(cfg_text, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+    # Set wrong password and enable fail_invalid on server
+    cfg.app.l.auth.test.password.password = "wrong"
+    cfg.app.r.auth.modes[0].fail_invalid = True
+
+    async def _run():
+        async with rpc_stack(tmp_path, cfg) as d:
+            await d.cmd(P("l.a.echo"), m="hello")
+
+    with pytest.raises(ExceptionGroup) as err:
+        await _run()
+    assert err.group_contains(AuthDenied)
+
+
+@_skip_e2e
+@pytest.mark.parametrize(
+    "cfg_text",
+    [pytest.param(CFG_PLAIN, id="plain"), pytest.param(CFG_DH, id="dh")],
+)
+async def test_password_net_unknown_user(tmp_path, cfg_text):
+    """Unknown user is rejected when fail_invalid is set."""
+    sock = tmp_path / "test.sock"
+    with suppress(FileNotFoundError):
+        sock.unlink()
+
+    cfg = yload(cfg_text, attr=True)
+    cfg.app.r.port = str(sock)
+    cfg.app.l.port = str(sock)
+    cfg.app.l.auth.test.password.user = "eve"
+    cfg.app.r.auth.modes[0].fail_invalid = True
+
+    async def _run():
+        async with rpc_stack(tmp_path, cfg) as d:
+            await d.cmd(P("l.a.echo"), m="hello")
+
+    with pytest.raises(ExceptionGroup) as err:
+        await _run()
+    assert err.group_contains(AuthDenied)
 
 
 # ---------------------------------------------------------------------------

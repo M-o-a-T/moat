@@ -104,8 +104,8 @@ class Gate(_Gate):
                 get_backend({"backend": bcfg}, name=name)
             )
 
-    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "Main loop. Overridden to fetch the codecs"
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
+        """Main loop. Overridden to fetch the codecs"""
         async with AsyncExitStack() as ts:
             if isinstance(self.cf.codec, Path):
                 # The watcher must live within self.tg's scope (Trio's strict
@@ -123,13 +123,13 @@ class Gate(_Gate):
 
             await super().run_(task_status=task_status)
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "fetch destination"
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
+        """Fetch destination."""
         if self.codecs is not None:
             codecs = self.codecs
             codec = "noop"
 
-            def conv(p, d):
+            def conv(p: Path, d: Any) -> tuple[Any, Any]:
                 # two steps:
                 # (a) look up the codec type in the vector
                 try:
@@ -149,7 +149,7 @@ class Gate(_Gate):
         else:
             codec = self.codec
 
-            def conv(p, d):
+            def conv(p: Path, d: Any) -> tuple[Any, Any]:
                 p  # noqa:B018
                 return d, None
 
@@ -186,8 +186,8 @@ class Gate(_Gate):
                     spd = None if vd is None else vd.get("speed", None)
                 await self.set_src(p, res, msg.meta)
 
-    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode):
-        "update destination"
+    async def set_dst(self, path: Path, data: Any, meta: MsgMeta | None, node: GateNode) -> None:
+        """Update destination."""
         if meta is None:
             meta = MsgMeta(origin=self.origin)
         else:
@@ -241,8 +241,8 @@ class Gate(_Gate):
             pass
         return True
 
-    def newer_dst(self, node):
-        "Check for newer metadata"
+    def newer_dst(self, node: GateNode) -> bool | None:
+        """Check for newer metadata."""
         # If the external message has no metadata, it can't be from us,
         # thus assume it's newer.
         if not node.ext_meta:
@@ -255,8 +255,11 @@ class Gate(_Gate):
 
         # If the internal message has a copy of the outside metadata, it's
         # either unmodified or older. Test the data to be sure.
-        if "gw" in node.meta:
-            if node.meta["gw"] == node.ext_meta:
+        meta = node.meta
+        if meta is None:
+            return True
+        if "gw" in meta:
+            if meta["gw"] == node.ext_meta:
                 return None if node.data_ == node.ext_data else True
             else:
                 return True
@@ -266,8 +269,8 @@ class Gate(_Gate):
             return False
 
         # if the timestamps are too close, there might be a problem.
-        if abs(node.ext_meta.timestamp - node.meta.timestamp) < 0.1:
+        if abs(node.ext_meta.timestamp - meta.timestamp) < 0.1:
             return None
 
         # Otherwise use the message with the newer timestamp.
-        return node.ext_meta.timestamp > node.meta.timestamp
+        return node.ext_meta.timestamp > meta.timestamp

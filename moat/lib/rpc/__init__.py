@@ -78,7 +78,6 @@ _imports = {
     "CmdMsg": "cmd.msg",
     "SingleCmdMsg": "cmd.msg",
     "ExtCmdMsg": "cmd.msg",
-    "SharedIter": "cmd.msg",
     # From stream.xcmd
     "BBMCmd": "stream.xcmd",
     "MsgCmd": "stream.xcmd",
@@ -203,7 +202,6 @@ __all__ = [  # noqa:RUF022
     "CmdMsg",
     "SingleCmdMsg",
     "ExtCmdMsg",
-    "SharedIter",
     # From stream.xcmd
     "BBMCmd",
     "MsgCmd",
@@ -258,7 +256,6 @@ if _TC or _DOC:
     from .cmd.msg import CmdMsg as CmdMsg
     from .cmd.msg import ExtCmdMsg as ExtCmdMsg
     from .cmd.msg import MsgStream as MsgStream
-    from .cmd.msg import SharedIter as SharedIter
     from .cmd.msg import SingleCmdMsg as SingleCmdMsg
     from .stream.xcmd import BBMCmd as BBMCmd
     from .stream.xcmd import BlkCmd as BlkCmd

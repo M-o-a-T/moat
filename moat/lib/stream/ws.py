@@ -39,16 +39,35 @@ if TYPE_CHECKING:
 class WsLink(BaseBlk):
     """
     A block stream that connects to a remote websocket server.
+
+    Args:
+        url: WebSocket URL to connect to.
+        retry: Reconnection parameters (delay, timeout, attempts, backoff).
+        subprotocols: Optional list of WebSocket subprotocols to offer
+            during the handshake. The negotiated subprotocol is stored in
+            :attr:`subprotocol` after a successful connection.
+        **kw: Additional keyword arguments forwarded to
+            ``httpx_ws.aconnect_ws``.
     """
 
     _crd_buf: bytearray
+    subprotocol: str | None
 
-    def __init__(self, url: str, retry: dict | None = None, **kw):
+    def __init__(
+        self,
+        url: str,
+        retry: dict | None = None,
+        *,
+        subprotocols: list[str] | None = None,
+        **kw,
+    ):
         self.url = url
         if retry is None:
             retry = {}
         self.retry = retry
         self.kw = kw
+        self.subprotocols = subprotocols
+        self.subprotocol = None
 
     async def stream(self):  # noqa:D102
         from httpx_ws import (  # noqa:PLC0415
@@ -64,10 +83,13 @@ class WsLink(BaseBlk):
         deadline = anyio.current_time() + retry.get("timeout", 999)
         attempts = retry.get("attempts", 10)
         client = await AC_use(self, httpx.AsyncClient())
+        kw = dict(self.kw)
+        if self.subprotocols is not None:
+            kw["subprotocols"] = self.subprotocols
         try:
             while True:
                 try:
-                    ws = await AC_use(self, aconnect_ws(self.url, client=client, **self.kw))
+                    ws = await AC_use(self, aconnect_ws(self.url, client=client, **kw))
                 except (
                     OSError,
                     httpx.HTTPError,
@@ -85,6 +107,7 @@ class WsLink(BaseBlk):
                 else:
                     if n:
                         log("Success: %s", self.url)
+                    self.subprotocol = ws.subprotocol
                     return ws
         except TimeoutError:
             log("Fail: %s, %r", self.url, er)
@@ -183,15 +206,34 @@ class WsLink(BaseBlk):
 class SingleWsBlk(BaseBlk):
     """
     Adapt a single accepted TCP connection to a websocket block stream.
+
+    Args:
+        stream: The underlying byte stream (typically a TCP connection).
+        path: Optional URL path to accept. Connections to other paths
+            are rejected with HTTP 404.
+        subprotocols: Optional list of WebSocket subprotocols the server
+            is willing to negotiate. During the handshake, the first
+            subprotocol offered by the client that also appears in this
+            list is selected. The negotiated subprotocol is stored in
+            :attr:`subprotocol`.
     """
 
     _crd_buf: bytearray
     _ws: wsproto.WSConnection | None
     path: str | None
+    subprotocol: str | None
 
-    def __init__(self, stream: ByteStream, path: str | None = None):
+    def __init__(
+        self,
+        stream: ByteStream,
+        path: str | None = None,
+        *,
+        subprotocols: list[str] | None = None,
+    ):
         self._stream = stream
         self.path = path
+        self.subprotocols = subprotocols
+        self.subprotocol = None
 
     async def stream(self):  # noqa:D102
         return await AC_use(self, self._stream)
@@ -240,7 +282,16 @@ class SingleWsBlk(BaseBlk):
                     if self.path is not None and urlsplit(event.target).path != self.path:
                         await self._send_raw(ws.send(RejectConnection(status_code=404)))
                         raise EOFError
-                    await self._send_raw(ws.send(AcceptConnection()))
+                    sel = None
+                    if self.subprotocols is not None:
+                        for proto in event.subprotocols:
+                            if proto in self.subprotocols:
+                                sel = proto
+                                break
+                    self.subprotocol = sel
+                    await self._send_raw(
+                        ws.send(AcceptConnection(subprotocol=sel) if sel else AcceptConnection())
+                    )
                     return
                 if isinstance(event, CloseConnection):
                     with suppress(EOFError):

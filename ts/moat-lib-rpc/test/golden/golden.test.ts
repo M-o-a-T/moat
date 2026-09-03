@@ -1,3 +1,11 @@
+/**
+ * Golden vector tests — byte-level compatibility with Python moat.lib.rpc.
+ *
+ * These tests verify that our TS CBOR encoder produces the exact same bytes
+ * as Python's moat.lib.codec.moat_cbor for every message type, and that
+ * our decoder round-trips them correctly.
+ */
+
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { encodeMoat, decodeMoat } from '../../src/codec.js';
@@ -10,129 +18,284 @@ const golden = JSON.parse(
   readFileSync(new URL('../fixtures/golden.json', import.meta.url), 'utf-8'),
 );
 
+// Helper: assert our encoded bytes match Python's golden hex
+function expectWireMatch(section: string, key: string, value: unknown): void {
+  const sec = (golden as Record<string, Record<string, { wire: string }>>)[section];
+  if (!sec) throw new Error(`No golden section '${section}'`);
+  const entry = sec[key];
+  if (!entry || !entry.wire) throw new Error(`No golden vector for ${section}.${key}`);
+  const expected = hexToBytes(entry.wire);
+  const encoded = encodeMoat(value);
+  expect(encoded).toEqual(expected);
+}
+
 describe('golden vectors: header packing', () => {
-  it('id=1 flag=0 → 0 (matches Python)', () => {
-    expect(i_f2wire(1, 0)).toBe(golden.header.id1_flag0);
+  const hdr = golden.header;
+
+  it('id=1 flag=0 → 0', () => {
+    expect(i_f2wire(1, 0)).toBe(hdr.id1_flag0);
+  });
+  it('id=1 flag=1 → 1', () => {
+    expect(i_f2wire(1, 1)).toBe(hdr.id1_flag1);
+  });
+  it('id=1 flag=2 → 2', () => {
+    expect(i_f2wire(1, 2)).toBe(hdr.id1_flag2);
+  });
+  it('id=1 flag=3 → 3', () => {
+    expect(i_f2wire(1, 3)).toBe(hdr.id1_flag3);
+  });
+  it('id=2 flag=0 → 4', () => {
+    expect(i_f2wire(2, 0)).toBe(hdr.id2_flag0);
+  });
+  it('id=2 flag=1 → 5', () => {
+    expect(i_f2wire(2, 1)).toBe(hdr.id2_flag1);
+  });
+  it('id=2 flag=2 → 6', () => {
+    expect(i_f2wire(2, 2)).toBe(hdr.id2_flag2);
+  });
+  it('id=2 flag=3 → 7', () => {
+    expect(i_f2wire(2, 3)).toBe(hdr.id2_flag3);
+  });
+  it('id=3 flag=0 → 8', () => {
+    expect(i_f2wire(3, 0)).toBe(hdr.id3_flag0);
+  });
+  it('id=-1 flag=0 → -4', () => {
+    expect(i_f2wire(-1, 0)).toBe(hdr['id-1_flag0']);
+  });
+  it('id=-1 flag=1 → -3', () => {
+    expect(i_f2wire(-1, 1)).toBe(hdr['id-1_flag1']);
+  });
+  it('id=-1 flag=2 → -2', () => {
+    expect(i_f2wire(-1, 2)).toBe(hdr['id-1_flag2']);
+  });
+  it('id=-1 flag=3 → -1', () => {
+    expect(i_f2wire(-1, 3)).toBe(hdr['id-1_flag3']);
+  });
+  it('id=-2 flag=0 → -8', () => {
+    expect(i_f2wire(-2, 0)).toBe(hdr['id-2_flag0']);
   });
 
-  it('id=1 flag=1 → 1 (matches Python)', () => {
-    expect(i_f2wire(1, 1)).toBe(golden.header.id1_flag1);
+  it('decode(0) → [1, 0]', () => {
+    expect(wire2i_f(0)).toEqual(hdr.decode_0);
+  });
+  it('decode(4) → [2, 0]', () => {
+    expect(wire2i_f(4)).toEqual(hdr.decode_4);
+  });
+  it('decode(-4) → [-1, 0]', () => {
+    expect(wire2i_f(-4)).toEqual(hdr.decode_neg4);
+  });
+  it('decode(-2) → [-1, 2]', () => {
+    expect(wire2i_f(-2)).toEqual(hdr.decode_neg2);
+  });
+  it('decode(1) → [1, 1]', () => {
+    expect(wire2i_f(1)).toEqual(hdr.decode_1);
+  });
+  it('decode(3) → [1, 3]', () => {
+    expect(wire2i_f(3)).toEqual(hdr.decode_3);
   });
 
-  it('id=2 flag=0 → 4 (matches Python)', () => {
-    expect(i_f2wire(2, 0)).toBe(golden.header.id2_flag0);
-  });
-
-  it('id=-1 flag=0 → -4 (matches Python)', () => {
-    expect(i_f2wire(-1, 0)).toBe(golden.header.id_neg1_flag0);
-  });
-
-  it('id=-1 flag=2 → -2 (matches Python)', () => {
-    expect(i_f2wire(-1, 2)).toBe(golden.header.id_neg1_flag2);
-  });
-
-  it('decode(0) → [1, 0] (matches Python)', () => {
-    expect(wire2i_f(0)).toEqual(golden.header.decode_0);
-  });
-
-  it('decode(4) → [2, 0] (matches Python)', () => {
-    expect(wire2i_f(4)).toEqual(golden.header.decode_4);
-  });
-
-  it('decode(-4) → [-1, 0] (matches Python)', () => {
-    expect(wire2i_f(-4)).toEqual(golden.header.decode_neg4);
-  });
-
-  it('decode(-2) → [-1, 2] (matches Python)', () => {
-    expect(wire2i_f(-2)).toEqual(golden.header.decode_neg2);
+  it('large id (2^29) does not overflow', () => {
+    expect(i_f2wire(0x20000000, 0)).toBe(hdr.big_id_wire);
+    expect(wire2i_f(hdr.big_id_wire)).toEqual(hdr.big_id_decode);
   });
 });
 
-describe('golden vectors: CBOR wire format', () => {
+describe('golden vectors: request messages', () => {
+  const req = golden.requests;
+
   it('simple call [0, ["ping"]] matches Python bytes', () => {
-    const expected = hexToBytes(golden.simple_call.wire);
-    const encoded = encodeMoat([0, ['ping']]);
-    expect(encoded).toEqual(expected);
+    expectWireMatch('requests', 'simple', [0, ['ping']]);
+    const hex = golden.requests.simple;
+    expect(encodeMoat([0, ['ping']])).toEqual(hexToBytes(hex.wire));
   });
 
-  it('simple reply [-4, ["pong"]] matches Python bytes', () => {
-    const expected = hexToBytes(golden.simple_reply.wire);
-    const encoded = encodeMoat([-4, ['pong']]);
-    expect(encoded).toEqual(expected);
+  it('call with args [0, ["echo"], 42, "hello"]', () => {
+    expect(encodeMoat([0, ['echo'], 42, 'hello'])).toEqual(hexToBytes(req.with_args.wire));
   });
 
-  it('error reply [-2, [-3]] matches Python bytes', () => {
-    const expected = hexToBytes(golden.error_reply.wire);
-    const encoded = encodeMoat([-2, [-3]]);
-    expect(encoded).toEqual(expected);
+  it('call with kwargs [0, ["cmd"], {"key":"value"}]', () => {
+    expect(encodeMoat([0, ['cmd'], { key: 'value' }])).toEqual(hexToBytes(req.with_kwargs.wire));
   });
 
-  it('call with args [0, ["echo"], 42, "hello"] matches Python bytes', () => {
-    const expected = hexToBytes(golden.call_with_args.wire);
-    const encoded = encodeMoat([0, ['echo'], 42, 'hello']);
-    expect(encoded).toEqual(expected);
+  it('empty cmd [0, []]', () => {
+    expect(encodeMoat([0, []])).toEqual(hexToBytes(req.empty_cmd.wire));
   });
 
-  it('call with kwargs [0, ["cmd"], {key:value}] matches Python bytes', () => {
-    const expected = hexToBytes(golden.call_with_kwargs.wire);
-    const encoded = encodeMoat([0, ['cmd'], { key: 'value' }]);
-    expect(encoded).toEqual(expected);
+  it('multi-id [4, ["test"]]', () => {
+    expect(encodeMoat([4, ['test']])).toEqual(hexToBytes(req.multi_id.wire));
+  });
+
+  it('round-trips: decode(encode(request)) === request', () => {
+    const msg = [0, ['echo'], 42, 'hello'];
+    const decoded = decodeMoat(encodeMoat(msg));
+    expect(decoded).toEqual(msg);
   });
 });
 
-describe('golden vectors: MoaT extension tags', () => {
-  it('Path tag 39 matches Python bytes', () => {
-    const expected = hexToBytes(golden.path_tag39.wire);
-    const path = Path.build(['foo', 'bar']);
-    const encoded = encodeMoat(path);
-    expect(encoded).toEqual(expected);
+describe('golden vectors: response messages', () => {
+  const resp = golden.responses;
+
+  it('simple reply [-4, ["pong"]]', () => {
+    expect(encodeMoat([-4, ['pong']])).toEqual(hexToBytes(resp.simple.wire));
   });
 
-  it('Set tag 258 matches Python bytes', () => {
-    const expected = hexToBytes(golden.set_tag258.wire);
-    const encoded = encodeMoat(new Set([1, 2, 3]));
-    // Sets may have different ordering; compare decoded instead
-    const decodedExpected = decodeMoat(expected);
-    const decodedActual = decodeMoat(encoded);
-    expect(decodedActual).toEqual(decodedExpected);
+  it('none result [-4, [null]]', () => {
+    expect(encodeMoat([-4, [null]])).toEqual(hexToBytes(resp.none_result.wire));
+  });
+
+  it('multi result [-4, [1, 2, 3]]', () => {
+    expect(encodeMoat([-4, [1, 2, 3]])).toEqual(hexToBytes(resp.multi.wire));
+  });
+
+  it('response with kwargs [-4, ["ok"], {"status":"done"}]', () => {
+    expect(encodeMoat([-4, ['ok'], { status: 'done' }])).toEqual(hexToBytes(resp.with_kwargs.wire));
+  });
+
+  it('round-trips: decode(encode(response)) === response', () => {
+    const msg = [-4, ['ok'], { status: 'done' }];
+    const decoded = decodeMoat(encodeMoat(msg));
+    expect(decoded).toEqual(msg);
+  });
+});
+
+describe('golden vectors: error messages', () => {
+  const errs = golden.errors;
+
+  it.each([
+    ['cancel', -3],
+    ['no_stream', -2],
+    ['generic', -7],
+    ['unspec', -1],
+    ['no_cmds', -4],
+    ['skip', -5],
+    ['must_stream', -6],
+    ['no_cmd', -11],
+  ])('error %s: [-2, [%d]] matches Python', (name, code) => {
+    expect(encodeMoat([-2, [code]])).toEqual(hexToBytes(errs[name].wire));
+  });
+
+  it('flow positive [-2, [42]] — not an error, just Flow(n)', () => {
+    expect(encodeMoat([-2, [42]])).toEqual(hexToBytes(errs.flow_positive.wire));
+  });
+
+  it('round-trips: decode(encode(error)) === error', () => {
+    const msg = [-2, [-3]];
+    const decoded = decodeMoat(encodeMoat(msg));
+    expect(decoded).toEqual(msg);
+  });
+});
+
+describe('golden vectors: warning messages', () => {
+  const warns = golden.warnings;
+
+  it('flow control int [-3, [42]] (flag 3 + single int → internal)', () => {
+    expect(encodeMoat([-3, [42]])).toEqual(hexToBytes(warns.flow_control_int.wire));
+  });
+
+  it('user warning with kw [-3, [42, {}]] (disambiguates from flow control)', () => {
+    expect(encodeMoat([-3, [42, {}]])).toEqual(hexToBytes(warns.user_warning_with_kw.wire));
+  });
+});
+
+describe('golden vectors: stream messages', () => {
+  const streams = golden.streams;
+
+  it('stream data [1, [42]] (flag 1 = B_STREAM)', () => {
+    expect(encodeMoat([1, [42]])).toEqual(hexToBytes(streams.data_item.wire));
+  });
+
+  it('stream final [0, [42]] (flag 0 = final)', () => {
+    expect(encodeMoat([0, [42]])).toEqual(hexToBytes(streams.stream_final.wire));
+  });
+});
+
+describe('golden vectors: CBOR tags', () => {
+  const tags = golden.tags;
+
+  it('Path("foo","bar") → tag 39', () => {
+    const path = Path.build(['foo', 'bar']);
+    expect(encodeMoat(path)).toEqual(hexToBytes(tags.path_simple.wire));
+    const decoded = decodeMoat(encodeMoat(path));
+    expect(decoded).toBeInstanceOf(Path);
+    expect((decoded as Path).length).toBe(2);
+  });
+
+  it('empty Path → tag 39 with empty array', () => {
+    const path = Path.build([]);
+    expect(encodeMoat(path)).toEqual(hexToBytes(tags.path_empty.wire));
+  });
+
+  it('nested Path("a","b","c","d") → tag 39', () => {
+    const path = Path.build(['a', 'b', 'c', 'd']);
+    expect(encodeMoat(path)).toEqual(hexToBytes(tags.path_nested.wire));
+  });
+
+  it('Set → tag 258', () => {
+    const s = new Set([1, 2, 3]);
+    expect(encodeMoat(s)).toEqual(hexToBytes(tags.set_ints.wire));
+    const decoded = decodeMoat(encodeMoat(s));
+    expect(decoded).toBeInstanceOf(Set);
+  });
+
+  it('empty Set → tag 258 with empty array', () => {
+    const s = new Set();
+    expect(encodeMoat(s)).toEqual(hexToBytes(tags.set_empty.wire));
   });
 });
 
 describe('golden vectors: primitives', () => {
-  it('true → 0xf5 (CBOR bool, not int 1)', () => {
-    expect(encodeMoat(true)).toEqual(hexToBytes(golden.bool_true.wire));
-  });
+  const prim = golden.primitives;
 
-  it('false → 0xf4 (CBOR bool, not int 0)', () => {
-    expect(encodeMoat(false)).toEqual(hexToBytes(golden.bool_false.wire));
+  it('bool true → f5', () => {
+    expect(encodeMoat(true)).toEqual(hexToBytes(prim.bool_true.wire));
   });
-
-  it('null → 0xf6', () => {
-    expect(encodeMoat(null)).toEqual(hexToBytes(golden.null.wire));
+  it('bool false → f4', () => {
+    expect(encodeMoat(false)).toEqual(hexToBytes(prim.bool_false.wire));
   });
-
-  it('undefined → 0xf7', () => {
-    expect(encodeMoat(undefined)).toEqual(hexToBytes(golden.undefined.wire));
+  it('null → f6', () => {
+    expect(encodeMoat(null)).toEqual(hexToBytes(prim.null.wire));
   });
-
-  it('bytes → 0x43010203', () => {
-    expect(encodeMoat(new Uint8Array([1, 2, 3]))).toEqual(hexToBytes(golden.bytes.wire));
+  it('undefined → f7', () => {
+    expect(encodeMoat(undefined)).toEqual(hexToBytes(prim.undefined.wire));
   });
-
-  it('text "hello" → 0x6568656c6c6f', () => {
-    expect(encodeMoat('hello')).toEqual(hexToBytes(golden.text.wire));
+  it('empty bytes → 40', () => {
+    expect(encodeMoat(new Uint8Array(0))).toEqual(hexToBytes(prim.empty_bytes.wire));
+  });
+  it('bytes [1,2,3] → 43010203', () => {
+    expect(encodeMoat(new Uint8Array([1, 2, 3]))).toEqual(hexToBytes(prim.bytes_123.wire));
+  });
+  it('text "hello" → 6568656c6c6f', () => {
+    expect(encodeMoat('hello')).toEqual(hexToBytes(prim.text_hello.wire));
+  });
+  it('int 1 → 01', () => {
+    expect(encodeMoat(1)).toEqual(hexToBytes(prim.int_pos_small.wire));
+  });
+  it('int -1 → 20', () => {
+    expect(encodeMoat(-1)).toEqual(hexToBytes(prim.int_neg_small.wire));
+  });
+  it('int 0 → 00', () => {
+    expect(encodeMoat(0)).toEqual(hexToBytes(prim.int_zero.wire));
+  });
+  it('int 1000000 → 1a000f4240', () => {
+    expect(encodeMoat(1000000)).toEqual(hexToBytes(prim.int_large.wire));
+  });
+  it('float 1.5 → f93e00', () => {
+    expect(encodeMoat(1.5)).toEqual(hexToBytes(prim.float_1_5.wire));
+  });
+  it('float 0.1 → fb3fb999999999999a', () => {
+    expect(encodeMoat(0.1)).toEqual(hexToBytes(prim.float_0_1.wire));
   });
 });
 
-describe('golden vectors: float widths', () => {
-  it('1.5 → f16 (0xf93e00)', () => {
-    expect(encodeMoat(1.5)).toEqual(hexToBytes(golden.float_1_5.wire));
-  });
+describe('golden vectors: error codes match Python constants', () => {
+  const codes = golden.error_codes;
 
-  // 0.1 cannot be represented in f16 or f32, needs f64
-  it('0.1 → f64 (0xfb3fb999999999999a)', () => {
-    const encoded = encodeMoat(0.1);
-    const decoded = decodeMoat(encoded);
-    expect(decoded).toBe(0.1);
-  });
+  it('E_UNSPEC = -1', () => expect(codes.E_UNSPEC).toBe(-1));
+  it('E_NO_STREAM = -2', () => expect(codes.E_NO_STREAM).toBe(-2));
+  it('E_CANCEL = -3', () => expect(codes.E_CANCEL).toBe(-3));
+  it('E_NO_CMDS = -4', () => expect(codes.E_NO_CMDS).toBe(-4));
+  it('E_SKIP = -5', () => expect(codes.E_SKIP).toBe(-5));
+  it('E_MUST_STREAM = -6', () => expect(codes.E_MUST_STREAM).toBe(-6));
+  it('E_ERROR = -7', () => expect(codes.E_ERROR).toBe(-7));
+  it('E_NO_CMD = -11', () => expect(codes.E_NO_CMD).toBe(-11));
 });

@@ -9,18 +9,19 @@ from __future__ import annotations
 
 import os
 from anyio import ContextManagerMixin
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from enum import IntEnum
 
 from moat.api._dll import DLL
 
-from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Self, cast, runtime_checkable
 
 if TYPE_CHECKING:
     from cffi import FFI
 
     from collections.abc import Generator
+    from typing import Any
 
 __all__ = [
     "BMV080",
@@ -327,16 +328,16 @@ class BMV080(ContextManagerMixin):
         self._libs_path = libs_path
 
         self._ffi: FFI | None = None
-        self._lib = None
-        self._handle = None
-        self._handle_ptr = None
+        self._lib: Any = None
+        self._handle: Any = None
+        self._handle_ptr: Any = None
 
         # Store callbacks to prevent garbage collection
-        self._read_cb = None
-        self._write_cb = None
-        self._delay_cb = None
-        self._tick_cb = None
-        self._data_ready_cb = None
+        self._read_cb: Any = None
+        self._write_cb: Any = None
+        self._delay_cb: Any = None
+        self._tick_cb: Any = None
+        self._data_ready_cb: Any = None
 
         # Store exception from callback for re-raising
         self._logged_exc: BaseException | None = None
@@ -393,6 +394,8 @@ class BMV080(ContextManagerMixin):
         if self._handle is not None:
             return
 
+        assert self._ffi is not None
+
         # Check library version before proceeding
         version = self._get_driver_version_raw()
         if version < _MIN_VERSION or version >= _MAX_VERSION:
@@ -408,9 +411,9 @@ class BMV080(ContextManagerMixin):
         # sercom_handle is passed by the C library but unused; we use self._link
         @self._ffi.callback("bmv080_callback_read_t")
         def read_cb(
-            sercom_handle: object,  # noqa: ARG001
+            sercom_handle: Any,  # noqa: ARG001
             header: int,
-            payload: object,
+            payload: Any,
             length: int,
         ) -> int:
             try:
@@ -424,9 +427,9 @@ class BMV080(ContextManagerMixin):
 
         @self._ffi.callback("bmv080_callback_write_t")
         def write_cb(
-            sercom_handle: object,  # noqa: ARG001
+            sercom_handle: Any,  # noqa: ARG001
             header: int,
-            payload: object,
+            payload: Any,
             length: int,
         ) -> int:
             try:
@@ -448,7 +451,7 @@ class BMV080(ContextManagerMixin):
 
         # params is passed by the C library but unused
         @self._ffi.callback("bmv080_callback_data_ready_t")
-        def data_ready_cb(output: object, _params: object) -> None:
+        def data_ready_cb(output: Any, _params: Any) -> None:
             out = BMV080Output(
                 runtime_in_sec=output.runtime_in_sec,
                 pm2_5_mass_concentration=output.pm2_5_mass_concentration,
@@ -488,6 +491,8 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting version fails.
         """
+        assert self._ffi is not None
+
         major = self._ffi.new("uint16_t*")
         minor = self._ffi.new("uint16_t*")
         patch = self._ffi.new("uint16_t*")
@@ -548,10 +553,15 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting ID fails.
         """
+        assert self._ffi is not None
+
         id_buf = self._ffi.new("char[13]")
         status = self._lib.bmv080_get_sensor_id(self._handle, id_buf)
         self._check_status(status)
-        return self._ffi.string(id_buf).decode("ascii")
+        res = self._ffi.string(id_buf)
+        with suppress(AttributeError):
+            res = cast(bytes, res).decode("ascii")
+        return res
 
     def set_parameter(self, key: str, value: bool | float | str) -> None:
         """Set a sensor parameter.
@@ -564,6 +574,8 @@ class BMV080(ContextManagerMixin):
             BMV080Error: If setting parameter fails.
             TypeError: If value type is not supported.
         """
+        assert self._ffi is not None
+
         key_bytes = key.encode("utf-8", errors="surrogateescape")
 
         if isinstance(value, bool):
@@ -593,6 +605,8 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
+        assert self._ffi is not None
+
         key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("bool*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
@@ -611,6 +625,8 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
+        assert self._ffi is not None
+
         key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("uint16_t*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
@@ -629,6 +645,8 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
+        assert self._ffi is not None
+
         key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("float*")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
@@ -647,11 +665,16 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If getting parameter fails.
         """
+        assert self._ffi is not None
+
         key_bytes = key.encode("utf-8", errors="surrogateescape")
         val_ptr = self._ffi.new("char[256]")
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
-        return self._ffi.string(val_ptr).decode("utf-8", errors="surrogateescape")
+        res = self._ffi.string(val_ptr)
+        with suppress(AttributeError):
+            res = cast(bytes, res).decode("utf-8", errors="surrogateescape")
+        return res
 
     def start_continuous_measurement(self) -> None:
         """Start particle measurement in continuous mode.
@@ -677,6 +700,7 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If starting measurement fails.
         """
+        assert self._ffi is not None
 
         @self._ffi.callback("bmv080_callback_tick_t")
         def tick_cb() -> int:
@@ -705,6 +729,7 @@ class BMV080(ContextManagerMixin):
         Raises:
             BMV080Error: If serving interrupt fails.
         """
+        assert self._ffi is not None
 
         status = self._lib.bmv080_serve_interrupt(
             self._handle, self._data_ready_cb, self._ffi.NULL

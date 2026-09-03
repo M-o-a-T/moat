@@ -4,6 +4,13 @@ A couple of helper functions
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from moat.lib.path import P
+
+    from collections.abc import Callable
+
 
 def dash(n: str) -> str:
     """
@@ -29,7 +36,8 @@ def undash(n: str) -> str:
     return n.replace("-", ".")
 
 
-def _mangle(proj, path, mangler):
+def _mangle(proj: Any, path: P, mangler: Callable[[Any], Any]) -> None:
+    """Apply *mangler* to the value at *proj[path]*."""
     try:
         for k in path[:-1]:
             proj = proj[k]
@@ -41,12 +49,12 @@ def _mangle(proj, path, mangler):
     proj[k] = v
 
 
-def decomma(proj, path):
+def decomma(proj: Any, path: P) -> None:
     """comma-delimited string > list"""
     _mangle(proj, path, lambda x: x.split(","))
 
 
-def encomma(proj, path):
+def encomma(proj: Any, path: P) -> None:
     """list > comma-delimited string"""
     _mangle(proj, path, lambda x: ",".join(x))  # noqa:PLW0108
 
@@ -54,10 +62,10 @@ def encomma(proj, path):
 class Replace:
     """Encapsulates a series of string replacements."""
 
-    def __init__(self, **kw):
-        self.changes = kw
+    def __init__(self, **kw: str) -> None:
+        self.changes: dict[str, str] = kw
 
-    def __call__(self, s):
+    def __call__(self, s: str) -> str:
         if isinstance(s, str):
             for k, v in self.changes.items():
                 s = s.replace(k, v)

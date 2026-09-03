@@ -299,7 +299,9 @@ export class RpcCore {
     if (this._closing) throw new EOFError();
 
     const cmdPath = typeof cmd === 'string' ? Path.build([cmd]) : cmd;
-    const rcmd = cmdPath.reverse();
+    // Python sends the command path in original (non-reversed) order on the wire.
+    // rcmd (reversed) is used for dispatch, not for the wire.
+    const wireCmd = cmdPath.toArray();
 
     const i = this._genId();
     const msg = Msg.Call(cmdPath, [...args], { ...kw });
@@ -307,8 +309,8 @@ export class RpcCore {
     msg.replaceWith(link);
     this.attach(link);
 
-    // Queue the initial message: [rcmd, *args, ?kw]
-    const wireArgs: unknown[] = [rcmd, ...msg.args];
+    // Queue the initial message: [cmdPath, *args, ?kw]
+    const wireArgs: unknown[] = [wireCmd, ...msg.args];
     const flag = canStream ? B_STREAM : 0;
     this.send(link, wireArgs, msg._kw, flag);
 

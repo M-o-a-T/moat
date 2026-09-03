@@ -229,3 +229,147 @@ describe('ID pool: large ID handling', () => {
     core.freeId(bigId);
   });
 });
+
+describe('ID pool: exhaustion and mass allocation', () => {
+  it('allocates 1000 IDs sequentially without collisions', () => {
+    const core = new RpcCore(null, {});
+    const seen = new Set<number>();
+
+    for (let i = 0; i < 1000; i++) {
+      const { link } = core.call(`cmd${i}`, [], {});
+      expect(seen.has(link.id)).toBe(false);
+      seen.add(link.id);
+    }
+
+    // Counter should be at 1000
+    const { link: next } = core.call('extra', [], {});
+    expect(next.id).toBe(1001);
+  });
+
+  it('mass-recycle then reallocate maintains tier ordering', () => {
+    const core = new RpcCore(null, {});
+
+    // Allocate 70 IDs
+    const infos: { link: StreamLink; msg: Msg }[] = [];
+    for (let i = 0; i < 70; i++) {
+      const info = core.call(`c${i}`, [], {});
+      infos.push(info);
+      core.drain(); // flush outbound so isIdle is accurate
+    }
+
+    // Detach and free all of them
+    for (const { link, msg } of infos) {
+      msg.setEnd();
+      core.detach(link);
+      core.freeId(link.id);
+    }
+
+    // Reallocate 70 — should reuse from pools in tier order
+    const reused: number[] = [];
+    for (let i = 0; i < 70; i++) {
+      const { link } = core.call(`d${i}`, [], {});
+      reused.push(link.id);
+      core.drain();
+    }
+
+    // First 5 should come from _id1 (ids 1-5)
+    const tier1 = reused.slice(0, 5).sort((a, b) => a - b);
+    expect(tier1).toEqual([1, 2, 3, 4, 5]);
+
+    // Next 58 should come from _id2 (ids 6-63)
+    const tier2 = reused.slice(5, 63).sort((a, b) => a - b);
+    expect(tier2[0]).toBeGreaterThanOrEqual(6);
+    expect(tier2[tier2.length - 1]).toBeLessThan(64);
+
+    // Remaining 7 should come from _id3 (ids 64-70)
+    const tier3 = reused.slice(63).sort((a, b) => a - b);
+    expect(tier3[0]).toBeGreaterThanOrEqual(64);
+  });
+});
+
+describe('ID pool: reuse-delay timing (async adapter)', () => {
+  it('freed IDs are held in pending queue before recycling', () => {
+    const core = new RpcCore(null, {});
+    const { link, msg } = core.call('test', [], {});
+    const id = link.id;
+
+    // Flush outbound and detach so the link is gone
+    core.drain();
+
+    // Mark as pending-free (simulating adapter behavior)
+    core.markPendingFree(id);
+    expect(core.isIdle).toBe(false); // pending free keeps it non-idle
+
+    // While pending, the ID is NOT in the free pool
+    const { link: l2 } = core.call('second', [], {});
+    expect(l2.id).not.toBe(id); // should get a new id, not the pending one
+
+    // Now free it (simulate delay expiry)
+    core.freeId(id);
+    expect(core.isIdle).toBe(false); // still have l2 in flight
+
+    // Cleanup l2
+    core.drain();
+    l2.setEnd();
+    core.detach(l2);
+    core.freeId(l2.id);
+  });
+
+  it('freeId clears pending-free status', () => {
+    const core = new RpcCore(null, {});
+    const { link, msg } = core.call('test', [], {});
+    const id = link.id;
+
+    core.drain();
+    core.markPendingFree(id);
+    expect(core.isIdle).toBe(false);
+
+    // Detach the link so the id is no longer in _msgs
+    msg.setEnd();
+    core.detach(link);
+    core.freeId(id);
+
+    // After freeing, the id should be available for reuse
+    const { link: l2 } = core.call('reuse', [], {});
+    expect(l2.id).toBe(id);
+
+    // Cleanup
+    core.drain();
+    l2.setEnd();
+    core.detach(l2);
+    core.freeId(l2.id);
+  });
+
+  it('multiple pending-free IDs all released after delay', () => {
+    const core = new RpcCore(null, {});
+
+    // Allocate 5 IDs
+    const infos = [];
+    for (let i = 0; i < 5; i++) {
+      const info = core.call(`c${i}`, [], {});
+      infos.push(info);
+      core.drain(); // flush outbound
+    }
+
+    // Mark all as pending-free
+    for (const { link } of infos) {
+      link.setEnd();
+      core.detach(link);
+    }
+
+    // After detach, onDetach fires → adapter would enqueue them.
+    // Here we simulate by marking pending.
+    for (const { link } of infos) {
+      core.markPendingFree(link.id);
+    }
+
+    expect(core.isIdle).toBe(false);
+
+    // Release all
+    for (const { link } of infos) {
+      core.freeId(link.id);
+    }
+
+    expect(core.isIdle).toBe(true);
+  });
+});

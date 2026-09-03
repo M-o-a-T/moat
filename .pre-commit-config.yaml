@@ -73,7 +73,7 @@ repos:
       description: runs vitest on TS/JS packages with modified files
       entry: pre_commit_hooks/jstest
       language: python
-      types: [ts, javascript]
+      types_or: [ts, javascript]
       pass_filenames: true
       require_serial: true
 

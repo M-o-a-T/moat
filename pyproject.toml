@@ -41,6 +41,7 @@ dependencies = [
     "pynacl",
     "outcome",
     "psutil",
+    "python-magic",
     "pyfuse3",
     "pymodbus ~= 3.9.0",
     "range_set ~= 0.3",
@@ -273,6 +274,7 @@ include = [
     "moat/link/",
     "moat/mcp/",
     "moat/micro/",
+    "moat/signal/",
     "moat/src/",
     "moat/util/",
 ]

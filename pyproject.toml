@@ -291,18 +291,7 @@ exclude = [
     "moat/link/gate/kv.py",
     "moat/link/gate/venus.py",
     "moat/mcp/_server.py",
-    # moat/ems: pre-existing typing debt outside moat-iov scope.
-    # moat-iov will remove the sched exclusion after fixing bucket A+B.
-    "moat/ems/sched/**",
     "moat/ems/battery/OFF/**",
-    "moat/ems/battery/_base.py",
-    "moat/ems/battery/_main.py",
-    "moat/ems/battery/conv/**",
-    "moat/ems/battery/diy_serial/**",
-    "moat/ems/inv/__init__.py",
-    "moat/ems/inv/remote.py",
-    "moat/ems/victron/dbus/__init__.py",
-    "moat/ems/victron/dbus/monitor.py",
 ]
 
 [tool.ty.rules]

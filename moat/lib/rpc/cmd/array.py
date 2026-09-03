@@ -200,6 +200,16 @@ class ArrayCmd(BaseSuperCmd):
             res.append((r.args, r.kw))
         await msg.result(*res)
 
+    async def cmd_all(self, cmd: str, *args, **kw) -> list:
+        """Call a command on all sub-apps and return a list of results."""
+        res = []
+        snd = MsgSender(self)
+        for app in self.apps:
+            snd.set_root(app)
+            r = await snd.cmd(Path.build([cmd]), *args, **kw)
+            res.extend(r.args)
+        return res
+
     async def _stream_all(self, msg, rcmd):
         """
         Call all sub-apps and send the results.

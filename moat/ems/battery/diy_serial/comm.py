@@ -33,7 +33,7 @@ class BattComm(BaseCmd):
     to the link, and returns the reply packets.
     """
 
-    n_cells: int = None
+    n_cells: int | None = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -61,7 +61,7 @@ class BattComm(BaseCmd):
         """
         await self.wait_ready()
 
-        err = None
+        err: Exception | None = None
         max_t = self.n_cells * 300 if self.n_cells else 5000
         if not isinstance(p, (list, tuple)):
             p = (p,)
@@ -72,6 +72,7 @@ class BattComm(BaseCmd):
             except (TimeoutError, MessageLost) as exc:
                 if err is None:
                     err = exc
+        assert err is not None
         raise err from None
 
     async def _send(self, pkt, start=None, end=None, broadcast=False, max_t=5000):
@@ -87,7 +88,9 @@ class BattComm(BaseCmd):
         # contains data.
         end  # noqa:B018
 
-        h = PacketHeader(start=start or 0, broadcast=broadcast)
+        h = PacketHeader()
+        h.start = start or 0
+        h.broadcast = broadcast
 
         async with self.w_lock:
             h.sequence = seq = self.seq
@@ -123,6 +126,7 @@ class BattComm(BaseCmd):
             # by the header size *and* it adds the reply.
             msg = h.encode_all(pkt)
             n_cells = h.cells + 1
+            assert h.command is not None
             mlen = len(msg) + n_cells * (replyClass[h.command].S.size + h.S.size + 3) + 2
 
             # A byte needs ten bit slots to transmit. However, the modules'

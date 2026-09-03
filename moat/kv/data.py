@@ -146,7 +146,7 @@ async def data_get(
 
                 def simplex(d):
                     for k, v in d.items():
-                        if isinstance(v, dict):
+                        if isinstance(v, Mapping):
                             d[k] = simplex(d[k])
                     if as_dict in d and d[as_dict] is None:
                         if len(d) == 1:

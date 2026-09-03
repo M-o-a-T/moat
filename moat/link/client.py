@@ -259,11 +259,11 @@ class LinkCommon(CmdCommon):
 
     @asynccontextmanager
     async def _connect_one(
-        self, remote: dict[str, Any] | str, data: dict[str, Any] | None = None
+        self, remote: Mapping[str, Any] | str, data: Mapping[str, Any] | None = None
     ) -> AsyncIterator[MsgSender]:
         rpc_auth_modes = ["anon"]
         rpc_auth_data: dict[str, Any] = {}
-        if isinstance(remote, dict):
+        if isinstance(remote, Mapping):
             if data is not None:
                 with suppress(KeyError):
                     token = data["auth"]["token"]
@@ -271,8 +271,8 @@ class LinkCommon(CmdCommon):
                     rpc_auth_data["token"] = token
             conn_ = TCPConn(
                 self,
-                remote_host=remote["host"],
-                remote_port=remote["port"],
+                remote_host=remote.get("host"),
+                remote_port=remote.get("port"),
                 logger=self.logger,
             )
         else:
@@ -294,7 +294,7 @@ class LinkCommon(CmdCommon):
             if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")
 
-            if isinstance(res, dict):
+            if isinstance(res, Mapping):
                 name = res.pop("name", None)
                 if name is not None:
                     self.name = name
@@ -1673,7 +1673,7 @@ class Link(LinkCommon, CtxObj):
 
         # Backend connection
         link = srv.data["link"]
-        if isinstance(link, dict):
+        if isinstance(link, Mapping):
             link = (link,)
 
         local_ok = srv.data.get("node", "localhost")
@@ -1710,7 +1710,7 @@ class BasicLink(LinkCommon, CtxObj):
     @asynccontextmanager
     async def _ctx(self):
         link = self.data["link"]
-        if isinstance(link, dict):
+        if isinstance(link, Mapping):
             link = (link,)
 
         err = None

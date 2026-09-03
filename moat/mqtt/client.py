@@ -10,6 +10,8 @@ import ssl
 from functools import wraps
 from urllib.parse import urlparse, urlunparse
 
+from collections.abc import Mapping
+
 try:
     from contextlib import asynccontextmanager
 except ImportError:
@@ -469,7 +471,7 @@ class MQTTClient:
                     codec = get_codec("noop")
                 elif isinstance(codec, str):
                     codec = get_codec(codec)
-                elif isinstance(codec, dict):
+                elif isinstance(codec, Mapping):
                     codec = get_codec(**codec)
                 self.codec = codec
                 self._q = None
@@ -610,7 +612,7 @@ class MQTTClient:
             codec = self.codec
         elif isinstance(codec, str):
             codec = get_codec(codec)
-        elif isinstance(codec, dict):
+        elif isinstance(codec, Mapping):
             codec = get_codec(**codec)
 
         with anyio.CancelScope() as scope:

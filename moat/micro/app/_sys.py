@@ -12,6 +12,7 @@ from moat.lib.proxy import Proxy, drop_proxy
 from moat.lib.rpc import BaseCmd
 from moat.micro.util import TEST_MAGIC
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -130,8 +131,8 @@ class Cmd(BaseCmd):
             set_part(self.cache, r, res)
             return None
 
-        if isinstance(res, (dict, list, tuple)):
-            # dicts+lists always get encoded
+        if isinstance(res, (Mapping, list, tuple)):
+            # mappings+lists always get encoded
             res = enc_part(res)
         elif not isinstance(res, (int, float, Proxy)):
             if r is True:

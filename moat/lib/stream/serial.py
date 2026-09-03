@@ -9,6 +9,7 @@ from moat.lib.stream import BaseBuf, BaseMsg, StackedBlk
 
 from ._console import _CReader
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -135,7 +136,7 @@ def serial_stack(stream, cfg: attrdict, cons: bool = False):
 
         stream = LogMsg(stream, log_raw)
 
-    if isinstance(frame, dict):
+    if isinstance(frame, Mapping):
         from moat.lib.stream import CBORMsgBlk  # noqa: PLC0415
 
         stream = SerialPackerBlkBuf(stream, frame=frame, console=cons)

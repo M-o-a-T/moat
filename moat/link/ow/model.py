@@ -29,6 +29,7 @@ from moat.util import NotGiven
 from moat.lib.path import Path
 from moat.link.node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -90,41 +91,41 @@ class OwAttr(Node):
     def dest(self) -> Path | None:
         """Destination path (read direction), or ``None``."""
         d = self.data_
-        s = d.get("dest") if isinstance(d, dict) else None
+        s = d.get("dest") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def src(self) -> Path | None:
         """Source path (write direction), or ``None``."""
         d = self.data_
-        s = d.get("src") if isinstance(d, dict) else None
+        s = d.get("src") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def interval(self) -> float | None:
         """Polling interval in seconds (read direction), or ``None``."""
         d = self.data_
-        return d.get("interval") if isinstance(d, dict) else None
+        return d.get("interval") if isinstance(d, Mapping) else None
 
     @property
     def dest_attr(self) -> Path | None:
         """Sub-attribute merged into ``dest``'s value, or ``None``."""
         d = self.data_
-        s = d.get("dest_attr") if isinstance(d, dict) else None
+        s = d.get("dest_attr") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def src_attr(self) -> Path | None:
         """Sub-attribute extracted from ``src``'s value, or ``None``."""
         d = self.data_
-        s = d.get("src_attr") if isinstance(d, dict) else None
+        s = d.get("src_attr") if isinstance(d, Mapping) else None
         return s if s is None else Path.build(s)
 
     @property
     def idem(self) -> bool:
         """Idempotency flag (default ``True``)."""
         d = self.data_ if self.data_ is not NotGiven else {}
-        if not isinstance(d, dict):
+        if not isinstance(d, Mapping):
             return True
         return bool(d.get("idem", True))
 
@@ -186,10 +187,10 @@ class OwServer(Node):
     def cfg(self) -> dict[str, Any]:
         """Server-level config dict (``host``/``port``)."""
         d = self.data_
-        if d is NotGiven or not isinstance(d, dict):
+        if d is NotGiven or not isinstance(d, Mapping):
             return {}
         s = d.get("server", {})
-        return s if isinstance(s, dict) else {}
+        return s if isinstance(s, Mapping) else {}
 
 
 @define

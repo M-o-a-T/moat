@@ -91,7 +91,7 @@ class MPlex(BaseCmd):
         super().__init__(cfg)
         merge(cfg, DEFAULT, replace=False)
         inv = cfg["inv"]
-        self.inv: list[bool] = [inv["scan"], inv["input"], inv["output"]]
+        inv = self.inv = [inv["scan"], inv["input"], inv["output"]]
 
         self.scan: list[Pin] = [Pin(x, mode=Pin.OUT, value=inv[SCAN]) for x in cfg["scan"]]
         self.input: list[Pin] = [Pin(x, mode=Pin.IN, value=inv[INPUT]) for x in cfg["input"]]

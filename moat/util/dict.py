@@ -12,7 +12,7 @@ from moat.lib.path import Path
 from . import NotGiven
 from ._merge import merge
 
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Hashable, Mapping, MutableMapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
@@ -22,17 +22,17 @@ if TYPE_CHECKING:
 
 __all__ = ["attrdict", "combine_dict", "to_attrdict"]
 
-T = TypeVar("T", bound=dict)
+T = TypeVar("T", bound=MutableMapping)
 
 _Nope = object()
 
 
 def combine_dict(
     *d: Mapping[Hashable, Any] | EllipsisType,
-    cls: type[dict] = dict,
+    cls: type[MutableMapping] = dict,
     deep: bool = False,
     keep: bool = False,
-) -> dict | EllipsisType:
+) -> MutableMapping | EllipsisType:
     """
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
@@ -50,13 +50,13 @@ def combine_dict(
         deep: if set, always copy.
         keep: whether to *not* delete `NotGiven` inputs.
     """
-    res: dict = cls()
+    res: MutableMapping = cls()
     if not d:
         return res
     if d[0] is NotGiven:
         return NotGiven if keep else res
 
-    keys: dict[Hashable, list[Any]] = {}
+    keys: MutableMapping[Hashable, list[Any]] = {}
     post: bool | None = False if issubclass(cls, attrdict) else None
 
     if len(d) == 1 and deep and not isinstance(d[0], Mapping):
@@ -72,8 +72,8 @@ def combine_dict(
             continue
         if kv is NotGiven:
             break
-        if not isinstance(kv, dict):
-            raise TypeError("All arguments must be dicts")
+        if not isinstance(kv, Mapping):
+            raise TypeError("All arguments must be mappings")
         for k, v in kv.items():
             if k not in keys:
                 keys[k] = []
@@ -124,9 +124,9 @@ def _check_post(a: Hashable | None, b: Any) -> bool:
     return False
 
 
-class attrdict(dict[Hashable, Any]):
+class attrdict(MutableMapping[Hashable, Any]):
     """
-    A dictionary which can be accessed via attributes.
+    A mapping which can be accessed via attributes.
 
     Attributes with leading or trailing underscores are not stored.
 
@@ -142,8 +142,21 @@ class attrdict(dict[Hashable, Any]):
     "Callback. Used by moat.lib.config."
 
     def __init__(self, *a: Any, **kw: Any) -> None:
-        super().__init__(*a, **kw)
-        for a_key, b in self.items():
+        # Internal storage; not a dict subclass.
+        object.__setattr__(self, "_d", {})
+        if a:
+            if len(a) > 1:
+                raise TypeError(f"expected at most 1 argument, got {len(a)}")
+            src = a[0]
+            if isinstance(src, Mapping):
+                for k, v in src.items():
+                    self._d[k] = v
+            else:
+                for k, v in src:
+                    self._d[k] = v
+        for k, v in kw.items():
+            self._d[k] = v
+        for a_key, b in self._d.items():
             if _check_post(a_key, b):
                 self._post = True
                 return
@@ -175,9 +188,9 @@ class attrdict(dict[Hashable, Any]):
     def __setitem__(self, a: Hashable, b: Any) -> None:
         if isinstance(b, attrdict):
             b._super = ref(self)  # noqa: SLF001  # accessing own class member
-        if a not in self or _check_post(a, b) or self[a] != b:
+        if a not in self._d or _check_post(a, b) or self._d[a] != b:
             self._mark_post()
-        super().__setitem__(a, b)
+        self._d[a] = b
 
     def _mark_post(self) -> None:
         s: attrdict = self
@@ -195,33 +208,81 @@ class attrdict(dict[Hashable, Any]):
 
     def __setattr__(self, a: str, b: Any) -> None:
         if (a and a.startswith("_")) or a.endswith("_"):
-            super().__setattr__(a, b)
+            object.__setattr__(self, a, b)
         else:
             self[a] = b
 
     def __delattr__(self, a: str) -> None:
         if (a and a.startswith("_")) or a.endswith("_"):
-            super().__delattr__(a)
+            object.__delattr__(self, a)
         else:
             try:
                 del self[a]
             except KeyError:
                 raise AttributeError(a) from None
 
+    def __getitem__(self, a: Hashable) -> Any:
+        return self._d[a]
+
     def __delitem__(self, a: Hashable) -> None:
-        super().__delitem__(a)
+        del self._d[a]
         self._mark_post()
+
+    def __iter__(self):
+        return iter(self._d)
+
+    def __len__(self) -> int:
+        return len(self._d)
+
+    def __contains__(self, a: object) -> bool:
+        return a in self._d
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._d!r})"
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Mapping):
+            return dict(self._d) == dict(other)
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
+
+    def __hash__(self) -> int:  # type: ignore[override]
+        raise TypeError(f"unhashable type: {type(self).__name__!r}")
 
     def pop(self, a: Hashable, default: Any = _Nope) -> Any:
         "remove and mark"
         try:
-            res = super().pop(a)
+            res = self._d.pop(a)
         except KeyError:
             if default is _Nope:
                 raise
             return default
         self._mark_post()
         return res
+
+    def popitem(self) -> tuple[Hashable, Any]:
+        "Remove and return a (key, value) pair. Marks post."
+        res = self._d.popitem()
+        self._mark_post()
+        return res
+
+    def clear(self) -> None:
+        "Remove all items. Marks post."
+        self._d.clear()
+        self._mark_post()
+
+    def copy(self) -> attrdict:
+        """Return a shallow copy."""
+        cls = type(self)
+        new = cls()
+        new._d.update(self._d)
+        new._post = self._post
+        return new
 
     @property
     def needs_post_(self) -> bool:
@@ -266,8 +327,6 @@ class attrdict(dict[Hashable, Any]):
         """
         if a in self:
             return self[a]
-        if b is None:
-            b = None
         self[a] = b
         return b
 
@@ -464,7 +523,7 @@ def to_attrdict(d: Any) -> Any:
     """
     Return a hierarchy with all dicts converted to attrdicts.
     """
-    if isinstance(d, dict):
+    if isinstance(d, Mapping):
         return attrdict((k, to_attrdict(v)) for k, v in d.items())
     if isinstance(d, tuple | list):
         return [to_attrdict(v) for v in d]

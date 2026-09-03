@@ -40,7 +40,7 @@ class NotARegisterError(ValueError):
 
 
 def mark_orig(d):  # noqa: D103
-    if isinstance(d, dict):
+    if isinstance(d, Mapping):
         d._is_orig = True  # noqa: SLF001
         for k, v in d.items():
             if k != "default":
@@ -470,7 +470,7 @@ class ClientDevice(CtxObj, BaseDevice):
         async def a_r(d, path=Path()):
             seen = False
             for k, v in d.items():
-                if not isinstance(v, dict):
+                if not isinstance(v, Mapping):
                     continue
                 if await a_r(v, path / k):
                     seen = True
@@ -571,7 +571,7 @@ class ServerDevice(BaseDevice):
         async def a_r(d, path=Path()):
             seen = False
             for k, v in d.items():
-                if not isinstance(v, dict):
+                if not isinstance(v, Mapping):
                     continue
                 if await a_r(v, path / k):
                     seen = True

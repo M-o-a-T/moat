@@ -14,6 +14,7 @@ from moat.modbus.server import create_server
 
 from .device import ClientDevice, ServerDevice, fixup
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -146,7 +147,7 @@ async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNOR
                             reg_len = d.len if hasattr(d, "len") else 1
                             for offset in range(register_num, register_num + reg_len):
                                 unit_ctx.add_mapping(offset, d.reg_type.key, d.slot)
-                elif isinstance(d, dict):
+                elif isinstance(d, Mapping):
                     for v in d.values():
                         add_registers(v)
 

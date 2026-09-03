@@ -14,7 +14,7 @@ import machine
 import moat.micro.console as cons
 from moat.util import attrdict, merge, to_attrdict
 from moat.lib.codec.moat_cbor import Codec as CBOR
-from moat.lib.micro import AC_use, L, TaskGroup, sleep_ms
+from moat.lib.micro import AC_use, L, Mapping, TaskGroup, sleep_ms
 from moat.lib.rpc import MsgSender
 
 WDT = None
@@ -47,7 +47,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     if isinstance(cfg, str):
         with open(cfg, "rb") as f:
             cfg = CBOR().decode(f.read())
-    if type(cfg) is dict:
+    if isinstance(cfg, Mapping):
         cfg = to_attrdict(cfg)
 
     from moat.micro.rtc import RTC  # noqa:PLC0415

@@ -29,7 +29,6 @@ See ``tests/moat_lib_rpc/test_nest.py`` for an example.
 from __future__ import annotations
 
 import anyio
-import sys
 
 from moat.lib.micro import ACM, AC_exit, log
 
@@ -130,10 +129,11 @@ class _AuthAdapter:
             from moat.util import attrdict as ad  # noqa: PLC0415
 
             self.auth = ad()
-            if "pytest" in sys.modules:
-                tcfg = cfg.auth.get("test", None)
-                if tcfg is not None:
-                    self.auth.update(tcfg)
+            # Propagate method-specific auth data so auth methods can
+            # read their config from ``self.auth.get(method_name)``.
+            for name, val in cfg.auth.items():
+                if name not in ("modes", "ok"):
+                    self.auth[name] = val
 
         self._auth = Auth(cfg.auth, self)  # ty:ignore[invalid-argument-type]
         self._stream: CmdStream | None = None
@@ -190,9 +190,16 @@ class _AuthAdapter:
             raise ok
         self._auth_result = ok
 
-        # Swap the CmdStream handler to the user's handler.
-        # Post-auth commands now go directly to the user.
-        stream._sender = self.cmd  # noqa: SLF001
+        # Swap the CmdStream handler to the auth-adjusted sender.
+        # ``_auth_root`` is set by ``auth_done()`` to the result of
+        # ``sender_for_ok()``, which may apply a path adjustment from
+        # the auth method's ``cfg.path``.  Falling back to ``self.cmd``
+        # handles the ``AuthNoRemote`` case where ``_auth_root`` is
+        # ``base_root`` (equivalent to the raw handler).
+        sender = self._auth._auth_root  # noqa: SLF001
+        if sender is None:
+            sender = self.cmd
+        stream._sender = sender  # noqa: SLF001
         return stream
 
     async def stop(self) -> None:
@@ -309,10 +316,8 @@ class rpc_on_rpc:
 
             return stream
 
-        except BaseException:
-            if self._adapter is not None:
-                await self._adapter.stop()
-                self._adapter = None
+        except BaseException as exc:
+            await AC_exit(self, type(exc), exc, None)
             raise
 
     async def __aexit__(self, *exc):

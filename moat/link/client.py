@@ -41,6 +41,7 @@ from moat.lib.path import (
     set_root,
 )
 from moat.lib.rpc import Caller, MsgSender
+from moat.lib.rpc.base import MsgRoot
 from moat.util.random import al_unique
 
 from .common import CmdCommon
@@ -114,6 +115,7 @@ __all__ = [
     "Link",
     "LinkCommon",
     "LinkSender",
+    "ServiceSender",
     "Walker",
     "Watcher",
     "get_link",
@@ -442,7 +444,7 @@ class CodeCaller:
         await self._exit()
 
 
-class LinkSender(MsgSender):
+class LinkSender(MsgSender, MsgRoot):
     """
     This is the client-side front-end to a "standard" MoaT-Link connection.
 
@@ -502,7 +504,7 @@ class LinkSender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def find_handler(self, path: Path, cmd: bool = False) -> tuple[MsgSender, Path]:
+    def find_handler(self, path: Path, cmd: bool = False) -> tuple[MsgRoot, Path]:
         """
         Standard sub-dispatcher redirector, no-op.
         """
@@ -1006,26 +1008,21 @@ class LinkSender(MsgSender):
         assert self._codec_tree is not None
         return self._codec_tree
 
-    async def get_service(self, srv: Path, wait: bool = False) -> MsgSender:
+    async def get_service(self, srv: Path, wait: bool = False) -> ServiceSender:
         """
         Retrieve a SubDispatcher that connects to the given announced
         service.
+
+        The returned :class:`ServiceSender` monitors the service
+        announcement and automatically re-resolves the path when the
+        destination terminates or restarts (i.e. when the service ID
+        changes or the announcement is cleared and re-announced).
         """
 
-        srv = P("run.host") + srv
-        try:
-            res = await self.d_get(srv)
-        except KeyError:
-            if not wait:
-                raise
-            async with self.d_watch(srv) as mon:
-                async for res in mon:
-                    if res not in (None, NotGiven):
-                        break
-
-        res2 = await self.d_get(P("run.id") / res["id"])
-
-        return self.sub_at(Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"])
+        ss = ServiceSender(self, srv)
+        await ss._resolve(wait=wait)  # noqa: SLF001
+        await ss._start_monitor()  # noqa: SLF001
+        return ss
 
     async def _code_get(self, p: Path) -> Code:
         "Return cached code while monitored, otherwise a fresh wrapper."
@@ -1063,6 +1060,202 @@ class LinkSender(MsgSender):
         context manager to keep one shared wrapper updated.
         """
         return CodeCaller(self, path)
+
+
+class ServiceSender(MsgSender):
+    """
+    A self-refreshing SubDispatcher for MoaT-Link services.
+
+    This class wraps the :class:`~moat.lib.rpc.base.SubMsgSender` returned
+    by :meth:`LinkSender.get_service` and monitors the service's
+    announcement at ``run.host.<path>``.  When the destination terminates
+    or restarts — i.e. the announcement is cleared or the service ID
+    changes — the inner SubMsgSender is re-resolved transparently.
+
+    Callers use this object exactly like a SubMsgSender: attribute access
+    (``svc.yes(42)``), :meth:`sub_at`, :meth:`handle`, etc. all delegate
+    to the current inner sender.  No manual refresh or error-recovery
+    logic is needed on the caller side.
+    """
+
+    _sender: LinkSender
+    _srv: Path
+    _inner: MsgSender | None
+    _watch_scope: anyio.CancelScope | None
+    _ready: anyio.Event
+    _lock: anyio.Lock
+
+    def __init__(self, sender: LinkSender, srv: Path):
+        """Args:
+        sender: the LinkSender that owns this service reference.
+        srv: the service path (relative to ``run.host``).
+        """
+        super().__init__(sender)
+        self._sender = sender
+        self._srv = srv
+        self._inner = None
+        self._watch_scope = None
+        self._ready = anyio.Event()
+        self._lock = anyio.Lock()
+
+    def __repr__(self):
+        inner = self._inner
+        if inner is not None:
+            return f"<ServiceSender:{inner._path}>"  # noqa:SLF001
+        return f"<ServiceSender:{self._srv} (unresolved)>"
+
+    @property
+    def sender(self) -> ServiceSender:
+        """Return self for compatibility with handler-root callers."""
+        return self
+
+    @property
+    def root(self):
+        """The root dispatcher this service's sender forwards to."""
+        return self._sender.root
+
+    @property
+    def path(self):
+        """The subpath accessible with this object."""
+        if self._inner is not None:
+            return self._inner._path  # noqa:SLF001
+        return P("run.host") + self._srv
+
+    async def _resolve(self, *, wait: bool = False) -> None:
+        """Resolve (or re-resolve) the inner SubMsgSender from the announcement."""
+
+        srv = P("run.host") + self._srv
+        sender = self._sender
+        try:
+            res = await sender.d_get(srv)
+        except KeyError:
+            if not wait:
+                raise
+            async with sender.d_watch(srv) as mon:
+                async for res in mon:
+                    if res not in (None, NotGiven):
+                        break
+
+        res2 = await sender.d_get(P("run.id") / res["id"])
+        self._inner = sender.sub_at(
+            Path.build(("srv", res2["srv"], "cl", res["id"])) + res["path"]
+        )
+        self._ready.set()
+
+    async def _start_monitor(self) -> None:
+        """Start a background task that watches for service changes."""
+
+        srv = P("run.host") + self._srv
+        sender = self._sender
+
+        async def _monitor(*, task_status=anyio.TASK_STATUS_IGNORED):
+            """Background watcher for service announcement changes."""
+            with anyio.CancelScope() as scope:
+                task_status.started(scope)
+                async with sender.d_watch(srv, state=False) as mon:
+                    async for msg in mon:
+                        if msg is NotGiven:
+                            # Service terminated: clear inner, wait for re-announce
+                            self._inner = None
+                            self._ready = anyio.Event()
+                            sender._link.logger.debug(  # noqa:SLF001
+                                "ServiceSender: service %s terminated", self._srv
+                            )
+                        elif msg is not None:
+                            # Service changed/restarted: re-resolve
+                            old_inner = self._inner
+                            try:
+                                await self._resolve_from_msg(msg)
+                            except Exception:
+                                sender._link.logger.warning(  # noqa:SLF001
+                                    "ServiceSender: re-resolve failed for %s",
+                                    self._srv,
+                                    exc_info=True,
+                                )
+                                self._inner = None
+                                self._ready = anyio.Event()
+                            else:
+                                if old_inner is not None:
+                                    sender._link.logger.debug(  # noqa:SLF001
+                                        "ServiceSender: service %s restarted",
+                                        self._srv,
+                                    )
+
+        self._watch_scope = await sender._link.tg.start(_monitor)  # noqa:SLF001
+
+    async def _resolve_from_msg(self, msg: dict) -> None:
+        """Re-resolve the inner sender from a watch message."""
+        sender = self._sender
+        res2 = await sender.d_get(P("run.id") / msg["id"])
+        self._inner = sender.sub_at(
+            Path.build(("srv", res2["srv"], "cl", msg["id"])) + msg["path"]
+        )
+        self._ready.set()
+
+    async def _ensure_inner(self) -> MsgSender:
+        """Wait for and return the inner sender, re-resolving if needed."""
+        while self._inner is None:
+            await self._ready.wait()
+        return self._inner
+
+    def handle(self, msg, rcmd):
+        """Forward the message via the current inner sender."""
+        inner = self._inner
+        if inner is None:
+            raise RuntimeError("Service not available: destination terminated")
+        return inner.handle(msg, rcmd)
+
+    def cmd(self, cmd, *a, **kw):
+        """Run a command via the current inner sender."""
+        inner = self._inner
+        if inner is None:
+            raise RuntimeError("Service not available: destination terminated")
+        return inner.cmd(cmd, *a, **kw)
+
+    def stream(self, *a, **kw):
+        """Issue a bidirectional streaming call to the service."""
+        return self.cmd(Path(), *a, **kw).stream()
+
+    def stream_in(self, *a, **kw):
+        """Issue an inbound-only streaming call to the service."""
+        return self.cmd(Path(), *a, **kw).stream_in()
+
+    def stream_out(self, *a, **kw):
+        """Issue an outbound-only streaming call to the service."""
+        return self.cmd(Path(), *a, **kw).stream_out()
+
+    def __call__(self, *a, _list=None, **kw):
+        """Invoke a direct call against the service."""
+        inner = self._inner
+        if inner is None:
+            raise RuntimeError("Service not available: destination terminated")
+        return inner.cmd(Path(), *a, _list=_list, **kw)
+
+    def sub_at(self, prefix: Path, caller=None, cmd: bool = False) -> MsgSender:
+        """Return a SubMsgSender relative to the current service path."""
+        inner = self._inner
+        if inner is None:
+            raise RuntimeError("Service not available: destination terminated")
+        return inner.sub_at(prefix, caller=caller, cmd=cmd)
+
+    def __getattr__(self, x):
+        """Delegate attribute access to the inner sender."""
+        # Avoid recursion for dunder/private attributes
+        if x.startswith("_"):
+            raise AttributeError(x)
+        inner = self.__dict__.get("_inner")
+        if inner is None:
+            raise RuntimeError("Service not available: destination terminated")
+        return inner.sub_at(Path.build((x,)))
+
+    __getitem__ = __getattr__
+
+    async def __aenter__(self):
+        await self._ensure_inner()
+        return await super().__aenter__()
+
+    async def __aexit__(self, *tb):
+        pass
 
 
 class Link(LinkCommon, CtxObj):

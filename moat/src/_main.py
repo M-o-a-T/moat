@@ -47,6 +47,12 @@ async def cli() -> None:
 
 @cli.command("rerepo")
 @click.option("-a", "--all", is_flag=True, help="Move all your repositories.")
+@click.option(
+    "-w",
+    "--workspace",
+    is_flag=True,
+    help="Create a non-bare working copy alongside the bare clone.",
+)
 @click.argument("names", type=str, nargs=-1)
 @click.pass_obj
 async def move_repo(obj: attrdict, **kw: Any) -> None:
@@ -64,10 +70,17 @@ async def move_repo(obj: attrdict, **kw: Any) -> None:
     See `moat util cfg -l moat.src src` for defaults.
 
     If the local copy is present, it will be refreshed via `git fetch`.
+
+    The '--workspace' flag creates a non-bare working copy of each
+    migrated repository in ``<cache>/<name>-ws``, allowing local
+    development immediately after migration.
     """
     from .move import mv_repos  # noqa: PLC0415
 
-    await mv_repos(obj.cfg.src.move, **kw)
+    cfg = obj.cfg.src.move
+    if kw.pop("workspace", False):
+        cfg.work.workspace = True
+    await mv_repos(cfg, **kw)
 
 
 def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:

@@ -30,9 +30,9 @@ auth:
     - mode: token
       name: TOK
 
-    - mode: userpass
-      data: users
+    - mode: password
       path: !P admin
+      fail_invalid: true
 
   pass:
   - !P i.ping
@@ -42,12 +42,10 @@ Dynamic data are the caller's responsibility. In this case:
 
 ```
 TOK: SomeRandomSecreT
-users:
-  fred: FlInTsToNe123
+password:
+  alice: $ecret
+  bob: hunter2
 ```
-
-`userpass` in the example above is illustrative only; no built-in
-`moat.lib.rpc.auth.userpass` method exists at this time.
 
 ## Built-in methods
 
@@ -57,8 +55,99 @@ The following auth methods are currently implemented and can be selected via `mo
 - `anon`: anonymous handshake; the client requests it and the server accepts.
 - `test`: test-only method for forcing accept/deny/ignore behavior.
 - `token`: token-based authentication.
+- `password`: username/password authentication, optionally shielded via
+  Diffie-Hellman key exchange (see [below](#password-auth-with-dh-shielding)).
 
 Custom methods are loaded by {py:func}`~moat.lib.rpc.get_auth`.
+
+## Password auth with DH shielding
+
+The `password` auth method supports an optional Diffie-Hellman key
+exchange that shields the password digest during transmission.  When
+enabled (``dh: true`` in the mode config), the password hash is
+encrypted under a DH-derived shared secret before it crosses the wire.
+
+All cryptographic operations use the vetted [`cryptography`](https://cryptography.io)
+package — no custom crypto is rolled.
+
+### Cryptographic primitives
+
+| Component | Algorithm |
+|-----------|-----------|
+| Key exchange | Diffie-Hellman, MODP Group 14 (2048-bit, RFC 3526) |
+| Key derivation | HKDF-SHA256, info = `b"moat-rpc-password-dh"`, 32-byte output |
+| Symmetric encryption | AES-256-GCM (12-byte nonce, authenticated) |
+| Password hashing | SHA-256 |
+
+### Configuration
+
+Set ``dh: true`` on both client and server mode configs:
+
+```
+auth:
+  modes:
+  - mode: password
+    dh: true          # shield password via DH
+    fail_invalid: true  # (server) reject bad credentials
+```
+
+Both sides must agree on the ``dh`` setting.  If the client has ``dh: false``
+(or omits it), the plain path is used — the password hash is sent
+directly, relying on TLS for confidentiality.
+
+### Handshake flow
+
+**Phase 1 — key exchange:**
+
+```
+Client → Server:  (client_public_key_PEM,)
+Server → Client:  (server_public_key_PEM, nonce, encrypted_challenge)
+```
+
+The server generates a DH keypair, derives the shared secret from the
+client's public key, and uses the HKDF-derived key to AES-GCM-encrypt a
+random 12-byte challenge.  It returns its public key, the nonce, and the
+ciphertext.
+
+**Phase 2 — credential submission:**
+
+```
+Client → Server:  (username, enc_nonce, encrypted_password_hash, challenge_response)
+```
+
+The client decrypts the challenge, encrypts the SHA-256 password hash
+under the shared key, and sends the username along with the ciphertext,
+a fresh nonce, and the decrypted challenge (proving possession of the
+shared secret).
+
+The server verifies the challenge response, decrypts the password hash,
+compares it against the expected hash with `hmac.compare_digest`, and
+accepts or denies accordingly.
+
+### Graceful fallback
+
+If DH negotiation fails on the client side (server returns `None`,
+malformed response, or an exception occurs), the client automatically
+falls back to the plain submission path:
+
+```
+Client → Server:  (username, password_hash)
+```
+
+This relies on the underlying TLS transport for confidentiality.  The
+fallback is transparent — the server sees a standard plain-mode
+credential submission.
+
+### Secret hygiene
+
+- The raw DH shared secret and the derived AES key are held only in
+  local variables during the handshake.
+- After phase 2 completes (success or failure), the server clears
+  `_dh_key` and `_dh_challenge` via `_cleanup_dh_state()`.
+- The client deletes the shared secret and derived key after sending.
+- Neither the shared secret nor the derived key is ever logged.
+- DH parameters (2048-bit MODP group) are generated once and cached at
+  module level; ephemeral keypairs are generated per connection.
 
 ## API
 

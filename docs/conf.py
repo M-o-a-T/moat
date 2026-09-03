@@ -93,6 +93,10 @@ myst_enable_extensions = [
     "colon_fence",
 ]
 
+# Generate anchors for the first two heading levels so that
+# `[text](#section-slug)`-style intra-document links resolve.
+myst_heading_anchors = 2
+
 sd_custom_directives = {
     "dropdown-syntax": {
         "inherit": "dropdown",

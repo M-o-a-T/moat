@@ -283,6 +283,7 @@ include = [
     "moat/mcp/",
     "moat/micro/",
     "moat/signal/",
+    "moat/pdb/",
     "moat/src/",
     "moat/util/",
 ]

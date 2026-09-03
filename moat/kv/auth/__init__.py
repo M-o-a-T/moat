@@ -338,7 +338,10 @@ class BaseServerAuth(_AuthLoaded):
 
     async def auth(self, cmd: StreamCommand, data):  # noqa:ARG002
         """Verify that @data authenticates this user."""
-        jsonschema.validate(instance=data.get("data", {}), schema=type(self).schema)
+        d = data.get("data", {})
+        if not isinstance(d, dict):
+            d = dict(d)
+        jsonschema.validate(instance=d, schema=type(self).schema)
 
     def aux_conv(self, data: Entry, root: Entry):  # noqa:D102
         from moat.kv.types import ConvNull  # noqa: PLC0415

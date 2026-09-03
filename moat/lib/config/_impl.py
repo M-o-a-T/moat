@@ -91,7 +91,7 @@ def get_base(base: Any, root: attrdict, result: attrdict, loc: Path, here: FSPat
         for v in masked:
             cfg.delete_(v)
         merge(result, cfg, replace=False)
-    elif isinstance(base, dict):
+    elif isinstance(base, Mapping):
         for k, v in base.items():
             if isinstance(result, MutableSequence) and isinstance(k, int):
                 if len(result) == k:

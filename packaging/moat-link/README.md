@@ -85,6 +85,6 @@ simply normal (but tagged) data structures and thus are introspectable.
 
 [aiomqtt]: https://github.com/sbtinstruments/aiomqtt
 [cbor]: https://cbor.io/
-[msgpack]: https://msgpack.org.
+[msgpack]: https://msgpack.org
 
 % end main

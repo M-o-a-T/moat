@@ -91,7 +91,6 @@ else
 endif
 	rm -rf ext; ln -sf "${MOAT_EXT}" ext
 	./mt src submod get
-	bd bootstrap -y || bd list -n1 >/dev/null 2>&1
 
 release: doc
 	./mt src tag

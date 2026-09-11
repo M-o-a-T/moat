@@ -1,5 +1,7 @@
 """
-Basic support for SEW motors
+Basic support for SEW motors.
+
+This module sets up the ``moat dev sew`` command subgroup.
 """
 
 from __future__ import annotations
@@ -12,14 +14,16 @@ from moat.util import combine_dict, load_cfg, merge
 from moat.lib.path import P, Path
 from moat.lib.run import load_subgroup
 
+from typing import Any
+
 log = logging.getLogger()
 
 
 @load_subgroup(prefix="moat.dev.sew")
 @click.pass_obj
 @click.option("--sub", "-s", type=P, default=P("dev.sew"), help="SEW sub-config")
-async def cli(obj, sub):
-    """Device Manager for SEW MOVITRAC motor controllers"""
+async def cli(obj: Any, sub: Path) -> None:
+    """Device Manager for SEW MOVITRAC motor controllers."""
     from moat.mqtt.client import get_codec  # noqa: PLC0415
 
     obj.sub = sub
@@ -31,7 +35,7 @@ async def cli(obj, sub):
         replace=False,
     )
 
-    mqw = obj.sew["mqtt"].get("will", {})
+    mqw: dict[str, Any] = obj.sew["mqtt"].get("will", {})
     try:
         top = mqw["topic"]
     except KeyError:
@@ -50,11 +54,11 @@ async def cli(obj, sub):
 
 @cli.command("run")
 @click.pass_obj
-async def run_(obj):
+async def run_(obj: Any) -> None:
     """
-    Run a simple SEW MOVITRAC control process
+    Run a simple SEW MOVITRAC control process.
     """
-    cfg = obj.sew
+    cfg: dict[str, Any] = obj.sew
 
     from .control import run  # noqa: PLC0415
 
@@ -64,8 +68,9 @@ async def run_(obj):
 @cli.command("set")
 @click.pass_obj
 @click.argument("value", type=float)
-async def set_(obj, value):
-    cfg = obj.sew
+async def set_(obj: Any, value: float) -> None:
+    """Set the SEW MOVITRAC to a given power level (-1…1)."""
+    cfg: dict[str, Any] = obj.sew
     if value < -1 or value > 1:
         log.error("Value must be between -1 and 1")
         return

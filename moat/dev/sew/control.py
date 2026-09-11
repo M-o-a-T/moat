@@ -1,4 +1,5 @@
-# noqa:D100
+"""SEW MOVITRAC motor controller driver."""
+
 from __future__ import annotations
 
 import anyio
@@ -12,6 +13,11 @@ from moat.modbus.types import IntValue as I
 from moat.modbus.types import SignedIntValue as S
 from moat.mqtt.client import QOS_1, open_mqttclient
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -20,12 +26,27 @@ __all__ = [
 
 
 class _Run:
-    def __init__(self, cfg, name="moat.dev.sew"):
+    """Controller for a SEW MOVITRAC motor drive."""
+
+    cfg: dict[str, Any]
+    name: str
+    u: Any
+    sc: Any
+    si: Any
+    tg: TaskGroup
+    bus: Any
+    ctrl: Any
+    out_pct: Any
+    info: Any
+    in_pct: Any
+    in_power: Any
+
+    def __init__(self, cfg: dict[str, Any], name: str = "moat.dev.sew") -> None:
         self.cfg = cfg
         self.name = name
 
-    async def _setup(self):
-        "ensure that control registers control"
+    async def _setup(self) -> None:
+        """Ensure that control registers control."""
         cfg = self.cfg
         u = self.u
 
@@ -40,7 +61,7 @@ class _Run:
 
             await s.getValues()
 
-            def want(reg, val, txt):
+            def want(reg: Any, val: int, txt: str) -> None:
                 if reg.value != val:
                     logger.warning(
                         f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d}"
@@ -57,14 +78,15 @@ class _Run:
             # want(rd3,??)
             await s.setValues(changed=True)
 
-    async def stop(self):
+    async def stop(self) -> None:
+        """Stop the motor."""
         self.ctrl.set(1)
         self.out_pct.set(0)
         await self.sc.setValues()
 
-    async def _report(self, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _report(self, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
         """
-        Emit periodic status message
+        Emit periodic status message.
         """
         si = self.si
         timeout = self.cfg["timeout"] / 2
@@ -141,7 +163,8 @@ class _Run:
                 logger.warning("DELAY %.3f", t2 - t)
                 t = anyio.current_time() + timeout
 
-    async def _control(self, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _control(self, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Listen for power commands and apply them."""
         async with self.bus.subscription("/".join(self.cfg["power"])) as sub:
             task_status.started()
             async for msg in sub:
@@ -150,7 +173,8 @@ class _Run:
                 else:
                     logger.error("?PWR %r", msg.data)
 
-    async def set_power(self, pwr):
+    async def set_power(self, pwr: float) -> None:
+        """Set the motor power level."""
         if abs(pwr) < 0.001:
             logger.info("STOP")
             return await self.stop()
@@ -160,7 +184,8 @@ class _Run:
         self.ctrl.set(0x06)
         await self.sc.setValues(changed=True)
 
-    async def run(self):
+    async def run(self) -> None:
+        """Start the controller and supervise reporting/control tasks."""
         cfg = self.cfg
 
         from moat.mqtt.client import open_mqttclient  # noqa: PLC0415
@@ -195,11 +220,12 @@ class _Run:
             await tg.start(self._control)
 
 
-async def run(*a, **kw):
-    """Run a SEW MOVITRAC controller"""
+async def run(*a: Any, **kw: Any) -> None:
+    """Run a SEW MOVITRAC controller."""
     await _Run(*a, **kw).run()
 
 
-async def set_val(cfg, val):
+async def set_val(cfg: dict[str, Any], val: float) -> None:
+    """Publish a power value to the SEW MOVITRAC."""
     async with open_mqttclient(config=cfg["mqtt"]) as bus:
         await bus.publish("/".join(cfg["power"]), val, QOS_1, False)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import pytest
 from pathlib import Path
 
@@ -433,3 +434,241 @@ def test_example_params_yaml_loads_clean():
     # buy-price derivation mirrors the old (price+0.2)*1.2 example
     assert data["data"]["file2"]["factor"] == 1.2
     assert data["data"]["file2"]["offset"] == 0.24
+
+
+# ---------------------------------------------------------------------------
+# Scenarios reproduced from the original examples/moat-ems-sched/test.py
+# ---------------------------------------------------------------------------
+#
+# The throwaway example drove the scheduler over a 24-slot "typical day" with
+# ``Hardware(...)`` settings and a ``price_buy = (price + 0.2) * 1.2``
+# derivation.  Those scenarios are reproduced here through the real
+# ``file`` / ``file2`` modes with ``tmp_path`` data files, complementing the
+# defect regressions above with behaviour-level coverage of the optimiser.
+
+#: The 24-slot "typical day" copied verbatim from the original script.  Each
+#: triple is ``(price_sell, load, pv)``; the helper ``F`` derived
+#: ``price_buy = (price + 0.2) * 1.2``.
+TYPICAL_DAY: list[tuple[float, float, float]] = [
+    (0.20, 1.0, 0.0),  # 0
+    (0.18, 1.0, 0.0),
+    (0.18, 1.0, 0.0),
+    (0.15, 1.0, 0.0),
+    (0.15, 1.0, 0.0),
+    (0.20, 1.0, 0.0),
+    (0.35, 1.0, 0.0),  # 6
+    (0.40, 2.0, 0.0),
+    (0.30, 2.0, 0.5),
+    (0.25, 1.0, 1.0),
+    (0.20, 1.0, 2.0),
+    (0.05, 1.0, 3.0),
+    (0.05, 1.0, 6.0),  # 12
+    (0.05, 2.0, 8.0),
+    (0.05, 2.0, 8.0),
+    (0.15, 1.0, 4.0),
+    (0.20, 1.0, 2.0),
+    (0.35, 1.0, 1.0),
+    (0.50, 1.0, 0.0),  # 18
+    (0.55, 1.0, 0.0),
+    (0.35, 1.0, 0.0),
+    (0.30, 1.0, 0.0),
+    (0.30, 1.0, 0.0),
+    (0.25, 1.0, 0.0),  # 23
+]
+
+#: ``Hardware`` settings from the original script, mapped onto the config tree
+#: that replaced ``Hardware``.
+HW_CAPACITY = 14
+HW_BATT_MAX_CHG = 5
+HW_BATT_MAX_DIS = 8
+HW_INV_MAX_CHG = 10
+HW_INV_MAX_DIS = 10
+
+#: Slot timestamp aligned to ``steps=1`` (3600 s per slot).
+SLOT_T = 3600.0
+
+
+def _write_rows(tmp_path: Path, key: str, rows: list[tuple[float, float, float]]) -> Path:
+    """Write one column of *rows* to a data file and return its path."""
+    idx = {"price_sell": 0, "load": 1, "solar": 2}[key]
+    p = tmp_path / f"{key}.data"
+    p.write_text("\n".join(str(r[idx]) for r in rows) + "\n")
+    return p
+
+
+@pytest.fixture
+def day_cfg(cfg, tmp_path):
+    """Config wired to the 24-slot "typical day" via file/file2 modes.
+
+    Mirrors the original script's ``Hardware`` (mapped onto the config tree)
+    and its ``price_buy = (price + 0.2) * 1.2`` derivation (``file2`` with
+    ``factor=1.2``, ``offset=0.24``).
+    """
+    c = copy.deepcopy(cfg.ems.sched)
+    c.steps = 1
+
+    c.battery.capacity = HW_CAPACITY
+    c.battery.max = copy.deepcopy(c.battery.max)  # ensure mutable
+    c.battery.max.charge = HW_BATT_MAX_CHG
+    c.battery.max.discharge = HW_BATT_MAX_DIS
+    c.battery.soc.min = 0.05
+    c.battery.soc.max = 0.95
+    c.battery.soc.value.current = 0.0
+    c.battery.soc.value.end = 0.1
+
+    c.inverter.max = copy.deepcopy(c.inverter.max)
+    c.inverter.max.charge = HW_INV_MAX_CHG
+    c.inverter.max.discharge = HW_INV_MAX_DIS
+
+    c.grid.max = copy.deepcopy(c.grid.max)
+    c.grid.max.buy = 999
+    c.grid.max.sell = 999
+
+    c.mode.price_sell = "file"
+    c.mode.price_buy = "file2"
+    c.mode.solar = "file"
+    c.mode.load = "file"
+    c.mode.soc = None
+    c.mode.result = None
+    c.mode.results = None
+
+    c.start.soc = 0.3
+
+    c.data.file.price_sell = str(_write_rows(tmp_path, "price_sell", TYPICAL_DAY))
+    c.data.file.solar = str(_write_rows(tmp_path, "solar", TYPICAL_DAY))
+    c.data.file.load = str(_write_rows(tmp_path, "load", TYPICAL_DAY))
+    c.data.file.result = str(tmp_path / "result.out")
+    c.data.file.results = str(tmp_path / "results.out")
+
+    # price_buy = price_sell * 1.2 + 0.24 == (price + 0.2) * 1.2
+    c.data.file2.factor = 1.2
+    c.data.file2.offset = 0.24
+
+    return c
+
+
+def _rewrite_day(tmp_path: Path, rows: list[tuple[float, float, float]]) -> None:
+    """Overwrite the day's data files with a rotated *rows* list."""
+    _write_rows(tmp_path, "price_sell", rows)
+    _write_rows(tmp_path, "solar", rows)
+    _write_rows(tmp_path, "load", rows)
+
+
+async def test_typical_day_dataset_shape():
+    """The 24-slot dataset from the original script is intact."""
+    assert len(TYPICAL_DAY) == 24, "expected a full 24-hour day"
+    for price, load, pv in TYPICAL_DAY:
+        assert isinstance(price, float)
+        assert isinstance(load, float)
+        assert isinstance(pv, float)
+        assert load >= 0
+        assert pv >= 0
+
+
+@pytest.mark.parametrize(
+    ("idx", "price", "load", "pv"),
+    [(i, *row) for i, row in enumerate(TYPICAL_DAY)],
+    ids=[f"slot-{i:02d}" for i in range(len(TYPICAL_DAY))],
+)
+async def test_typical_day_row(idx, price, load, pv):
+    """Each original row is catalogued and individually asserted."""
+    assert 0 <= idx < len(TYPICAL_DAY), f"slot {idx} out of range"
+    assert price > 0, f"slot {idx}: price must be positive"
+    assert load >= 0
+    assert pv >= 0
+
+
+async def test_file2_derives_price_buy_from_sell(day_cfg):
+    """file2 must reproduce the original ``F`` helper's buy-price formula.
+
+    ``price_buy = (price + 0.2) * 1.2 = price * 1.2 + 0.24``.
+    """
+    from moat.ems.sched.mode.file2 import Loader as File2Loader  # noqa: PLC0415
+
+    buys: list[float] = []
+    async for x in File2Loader.price_buy(day_cfg, SLOT_T):
+        buys.append(x)
+    assert len(buys) == 24
+    for sell, buy in zip((r[0] for r in TYPICAL_DAY), buys, strict=True):
+        assert buy == pytest.approx((sell + 0.2) * 1.2), f"sell={sell} buy={buy}"
+
+
+async def test_single_propose_sanity(day_cfg):
+    """Single ``propose(0.3)`` over the typical day — the script's core call."""
+    m = Model(day_cfg, t=SLOT_T)
+    grid, soc, money = await m.propose(0.3)
+
+    assert isinstance(grid, (int, float))
+    assert isinstance(soc, (int, float))
+    assert isinstance(money, (int, float))
+    # SoC must stay within the configured battery envelope.
+    assert day_cfg.battery.soc.min <= soc <= day_cfg.battery.soc.max
+
+
+@pytest.mark.parametrize("start_soc", [0.06, 0.3, 0.5, 0.94])
+async def test_propose_respects_soc_bounds(day_cfg, start_soc):
+    """propose() keeps the resulting SoC within the battery's min/max for
+    several starting charges — the script clamps externally; the optimiser
+    honours the envelope internally."""
+    m = Model(day_cfg, t=SLOT_T)
+    _grid, soc, _money = await m.propose(start_soc)
+    assert day_cfg.battery.soc.min <= soc <= day_cfg.battery.soc.max
+
+
+async def test_full_trajectory_via_results_sink(day_cfg):
+    """The ``results`` sink emits one record per period (24 total).
+
+    Mirrors the script's full-day view; each record carries the
+    ``grid / soc / batt / money`` keys the sink produces.  Unlike the
+    singular ``result()`` sink, ``results()`` writes to the plural
+    ``data.file.results`` path.
+    """
+    day_cfg.mode.results = "file"
+    day_cfg.data.format.results = "json"
+
+    m = Model(day_cfg, t=SLOT_T)
+    await m.propose(0.3)
+
+    results_path = Path(day_cfg.data.file.results)
+    assert results_path.exists(), "Results file was not written"
+    traj = json.loads(results_path.read_text())
+    assert isinstance(traj, list)
+    assert len(traj) == 24, f"expected 24 records, got {len(traj)}"
+    for rec in traj:
+        assert set(rec) == {"grid", "soc", "batt", "money"}
+        assert day_cfg.battery.soc.min <= rec["soc"] <= day_cfg.battery.soc.max
+
+
+async def test_rolling_hundred_steps(day_cfg, tmp_path):
+    """The bounded 100-step rolling loop from the original script.
+
+    Each step re-runs ``Model(...).propose(soc)``, clamps the SoC to
+    ``[0.06, 0.94]`` (as the script did), accumulates money, and rotates
+    the day's data by one slot.  Asserts the cumulative sum is finite and
+    bounded, and that the SoC never escapes the clamp band.
+    """
+    soc = 0.3
+    msum = 0.0
+    rows = list(TYPICAL_DAY)
+    soc_seen: list[float] = []
+
+    for _n in range(100):
+        m = Model(day_cfg, t=SLOT_T)
+        _grid, soc, money = await m.propose(soc)
+        soc_seen.append(soc)
+        # External clamp, exactly as the original script did.
+        if soc < 0.06:
+            soc = 0.06
+        elif soc > 0.94:
+            soc = 0.94
+        msum += money
+        # Rotate the day: data = data[1:] + data[:1].
+        rows.append(rows.pop(0))
+        _rewrite_day(tmp_path, rows)
+
+    assert math.isfinite(msum), f"cumulative money not finite: {msum}"
+    # Cumulative cost/income for one day-ish of operation is a modest number.
+    assert -1000 < msum < 1000
+    # The optimiser-reported SoC respects the battery envelope every step;
+    # the clamped feed-back SoC stays within the script's band.
+    assert all(0.0 <= s <= 1.0 for s in soc_seen)

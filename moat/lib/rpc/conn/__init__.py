@@ -6,6 +6,6 @@ from __future__ import annotations
 
 from .tcp import TcpIter
 from .unix import UnixIter
-from .util import BaseConnIter
+from .util import BaseConnIter, ListenerLink
 
-__all__ = ["BaseConnIter", "TcpIter", "UnixIter"]
+__all__ = ["BaseConnIter", "ListenerLink", "TcpIter", "UnixIter"]

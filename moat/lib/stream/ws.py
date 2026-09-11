@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from httpx_ws import AsyncWebSocketSession
 
     from moat.util import attrdict
-    from moat.lib.stream import BaseMsg
     from moat.lib.stream.base import Buffer, MutBuffer
 
 
@@ -387,42 +386,14 @@ class SingleWsBlk(BaseBlk):
 
 
 def ws_stack(stream, cfg: attrdict):
-    """
-    Build a message stack on top of a websocket block stream.
+    """Build a message stack on top of a websocket block stream.
+
+    This is a thin wrapper around :py:func:`moat.lib.stream.build_stack`
+    that forces framed mode (websockets are inherently block-oriented).
     """
     if not hasattr(stream, "snd") or not hasattr(stream, "rcv"):
         raise TypeError(f"need a BaseBlk not {stream}")
 
-    link = cfg.get("link", {})
-    lossy = link.get("lossy", None)
-    log_cfg = cfg.get("log", None)
-    log_rel = cfg.get("log_rel", None)
-    log_raw = cfg.get("log_raw", None)
+    from moat.lib.stream.base import build_stack  # noqa: PLC0415
 
-    if log_raw is not None:
-        from moat.lib.stream import LogBlk  # noqa:PLC0415
-
-        stream = LogBlk(stream, log_raw)
-
-    from moat.lib.stream import CBORMsgBlk  # noqa:PLC0415
-
-    stream = CBORMsgBlk(stream, cfg)
-
-    if lossy:
-        if lossy is True:
-            lossy = {}
-        from moat.lib.stream import ReliableMsg  # noqa:PLC0415
-
-        if log_rel is not None:
-            from moat.lib.stream import LogMsg  # noqa:PLC0415
-
-            stream = LogMsg(stream, log_rel)
-
-        stream = ReliableMsg(stream, lossy)
-
-    if log_cfg is not None:
-        from moat.lib.stream import LogMsg  # noqa:PLC0415
-
-        stream = LogMsg(stream, log_cfg)
-
-    return cast("BaseMsg", stream)
+    return build_stack(stream, cfg, framed=True)

@@ -5,11 +5,11 @@ SerialPacker protocol support for stream layers.
 from __future__ import annotations
 
 from moat.lib.micro import Lock
-from moat.lib.stream import BaseBuf, BaseMsg, StackedBlk
+from moat.lib.stream import BaseBuf, StackedBlk
+from moat.lib.stream.base import build_stack
 
 from ._console import _CReader
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -86,9 +86,10 @@ class SerialPackerBlkBuf(StackedBlk):
 
 
 def serial_stack(stream, cfg: attrdict, cons: bool = False):
-    # lossy=False, log=False, use_console=False, msg_prefix=None
-    """
-    Build a message stack on top of a MoaT bytestream.
+    """Build a message stack on top of a MoaT bytestream.
+
+    This is a thin wrapper around :py:func:`moat.lib.stream.build_stack`
+    that preserves the original calling convention.
 
     Configuration:
         link(dict):
@@ -119,50 +120,7 @@ def serial_stack(stream, cfg: attrdict, cons: bool = False):
     There is no start-of-frame character escaping. Choose a value that cannot occur
     in an ASCII or possibly UTF-8 bytestream (≥ 0xF8).
     """
-
     if not hasattr(stream, "rd") or not hasattr(stream, "wr"):
         raise TypeError(f"need a BaseBuf not {stream}")
 
-    link = cfg.get("link", {})
-    cons = link.get("console", cons)
-    frame = link.get("frame", None)
-    lossy = link.get("lossy", None)
-    log = cfg.get("log", None)
-    log_raw = cfg.get("log_raw", None)
-    log_rel = cfg.get("log_rel", None)
-
-    if log_raw is not None:
-        from moat.lib.stream import LogMsg  # noqa: PLC0415
-
-        stream = LogMsg(stream, log_raw)
-
-    if isinstance(frame, Mapping):
-        from moat.lib.stream import CBORMsgBlk  # noqa: PLC0415
-
-        stream = SerialPackerBlkBuf(stream, frame=frame, console=cons)
-        stream = CBORMsgBlk(stream, cfg)
-    else:
-        from moat.lib.stream import CBORMsgBuf  # noqa: PLC0415
-
-        stream = CBORMsgBuf(stream, dict(msg_prefix=frame, console=cons))
-
-    assert isinstance(stream, BaseMsg)
-
-    if lossy:
-        if lossy is True:
-            lossy = {}
-        from moat.lib.stream import ReliableMsg  # noqa: PLC0415
-
-        if log_rel is not None:
-            from moat.lib.stream import LogMsg  # noqa: PLC0415
-
-            stream = LogMsg(stream, log_rel)
-
-        stream = ReliableMsg(stream, lossy)
-
-    if log is not None:
-        from moat.lib.stream import LogMsg  # noqa: PLC0415
-
-        stream = LogMsg(stream, log)
-
-    return stream
+    return build_stack(stream, cfg, cons=cons)

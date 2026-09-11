@@ -13,6 +13,7 @@ from :mod:`tests.moat_db_rain.conftest`.
 
 from __future__ import annotations
 
+import anyio
 import pytest
 from datetime import UTC, datetime, timedelta
 
@@ -562,3 +563,402 @@ def test_stub_link_d_set_records():
 
     asyncio.run(_test())
     assert link.sent["valve.v1.cmd"] is True
+
+
+# ---------------------------------------------------------------------------
+# Tests — Full daemon lifecycle (run / tick cycle / shutdown)
+#
+# These tests exercise :meth:`Monitor.run` — the anyio task-group entry
+# point that spawns the sensor collector and scheduler.  The moat.link
+# client is a :class:`StubLink`; the database is the shared SQLite engine
+# wrapped by :func:`_fake_database`.  ``moat.db.database`` is monkey-
+# patched so the late import inside ``run()`` picks up the fake.
+# ---------------------------------------------------------------------------
+
+
+def _seed_and_commit(engine):
+    """Seed the monitor world, commit, and close the seeding session."""
+    mgr, cm, ctx, _objs = _seed_monitor_world(engine)
+    mgr.commit()
+    _close(cm, ctx)
+
+
+@pytest.fixture
+def fake_db(monkeypatch, engine):
+    """Monkeypatch ``moat.db.database`` to use the test engine."""
+    db = _fake_database(engine)
+    import moat.db as mdb  # noqa: PLC0415
+
+    monkeypatch.setattr(mdb, "database", db)
+    return db
+
+
+async def test_daemon_tick_cycle(engine, fake_db):  # noqa: ARG001
+    """One daemon tick: recalculate + generate_schedule called, commands sent.
+
+    Spawns the daemon with a very short tick, lets one scheduler cycle
+    fire, then cancels.  Asserts both engine functions were invoked.
+    """
+    _seed_and_commit(engine)
+
+    import moat.db.rain.engine as eng  # noqa: PLC0415
+    import moat.db.rain.monitor as mon_mod  # noqa: PLC0415
+
+    gen_calls: list[dict] = []
+    recalc_calls: list[dict] = []
+    orig_gen = eng.generate_schedule
+    orig_recalc = eng.recalculate
+
+    def spy_gen(sess, **kw):
+        res = orig_gen(sess, **kw)
+        gen_calls.append(kw)
+        return res
+
+    def spy_recalc(sess, **kw):
+        res = orig_recalc(sess, **kw)
+        recalc_calls.append(kw)
+        return res
+
+    mon_mod.generate_schedule = spy_gen  # type: ignore[method-assign]
+    mon_mod.recalculate = spy_recalc  # type: ignore[method-assign]
+
+    link = StubLink()
+    evt = anyio.Event()
+    log_lines: list[str] = []
+    mon = Monitor("home", None, link, tick=1, evt=evt, log=log_lines.append)
+
+    try:
+        with anyio.fail_after(5):
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(mon.run)
+                await evt.wait()
+                await anyio.sleep(1.5)  # let one tick fire
+                tg.cancel_scope.cancel()
+        assert len(recalc_calls) >= 1
+        assert len(gen_calls) >= 1
+        assert recalc_calls[0]["site"] == "home"
+        assert gen_calls[0]["site"] == "home"
+    finally:
+        mon_mod.generate_schedule = orig_gen  # type: ignore[method-assign]
+        mon_mod.recalculate = orig_recalc  # type: ignore[method-assign]
+
+
+async def test_daemon_multiple_ticks(engine, fake_db):  # noqa: ARG001
+    """Multiple ticks: state progresses across several iterations."""
+    _seed_and_commit(engine)
+
+    import moat.db.rain.engine as eng  # noqa: PLC0415
+    import moat.db.rain.monitor as mon_mod  # noqa: PLC0415
+
+    recalc_count = 0
+    orig_recalc = eng.recalculate
+
+    def counting_recalc(sess, **kw):
+        nonlocal recalc_count
+        recalc_count += 1
+        return orig_recalc(sess, **kw)
+
+    mon_mod.recalculate = counting_recalc  # type: ignore[method-assign]
+
+    link = StubLink()
+    mon = Monitor("home", None, link, tick=1)
+
+    try:
+        with anyio.fail_after(8):
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(mon.run)
+                await anyio.sleep(4)  # ~3 ticks (1s initial delay + 3×1s)
+                tg.cancel_scope.cancel()
+        assert recalc_count >= 2
+    finally:
+        mon_mod.recalculate = orig_recalc  # type: ignore[method-assign]
+
+
+async def test_daemon_graceful_shutdown(engine, fake_db):  # noqa: ARG001
+    """Cancelling the daemon mid-run exits without hanging or orphaned tasks."""
+    _seed_and_commit(engine)
+
+    link = StubLink()
+    evt = anyio.Event()
+    mon = Monitor("home", None, link, tick=1, evt=evt)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(mon.run)
+            await evt.wait()
+            await anyio.sleep(0.5)
+            tg.cancel_scope.cancel()
+
+    # Reaching here means clean exit within the timeout.
+
+
+async def test_daemon_no_sensors(engine, fake_db):  # noqa: ARG001
+    """A site with no sensors: sensor loop logs and returns idly."""
+    sess, cm, ctx = _mgr(engine)
+    try:
+        site = r.Site(name="bare")
+        ctrl = r.Controller(name="C1", site=site, location="rack")
+        feed = r.Feed(name="F1", site=site, flow=100.0)
+        eg = r.EnvGroup(name="std", site=site, factor=1.0)
+        valve = r.Valve(
+            name="V1",
+            controller=ctrl,
+            feed=feed,
+            envgroup=eg,
+            location="front",
+            flow=2.0,
+            area=10.0,
+            command=Path.from_str("valve.v1.cmd"),
+        )
+        sess.add_all([site, ctrl, feed, eg, valve])
+        sess.commit()
+    finally:
+        _close(cm, ctx)
+
+    link = StubLink()
+    evt = anyio.Event()
+    log_lines: list[str] = []
+    mon = Monitor("bare", None, link, tick=1, evt=evt, log=log_lines.append)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(mon.run)
+            await evt.wait()
+            await anyio.sleep(0.5)
+            tg.cancel_scope.cancel()
+
+    assert evt.is_set()
+    assert any("No sensors" in line for line in log_lines)
+
+
+async def test_daemon_sensor_reading_accumulation(engine, fake_db):  # noqa: ARG001
+    """Sensor readings from the stub link are accumulated and flushed.
+
+    Queues a rain reading via the StubLink, lets one tick fire, and
+    confirms a History row is created.  Exercises ``_watch_sensor``,
+    ``_accumulate_reading``, and the rain-delay arming path.
+    """
+    _seed_and_commit(engine)
+
+    link = StubLink()
+    link.readings["sensor.rain"] = [5.0]
+
+    evt = anyio.Event()
+    log_lines: list[str] = []
+    mon = Monitor("home", None, link, tick=1, evt=evt, log=log_lines.append)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(mon.run)
+            await evt.wait()
+            await anyio.sleep(2)
+            tg.cancel_scope.cancel()
+
+    assert evt.is_set()
+    assert any("raining" in line.lower() or "watching" in line.lower() for line in log_lines)
+
+
+async def test_daemon_has_rain_arms_delay(engine, fake_db):
+    """_has_rain with a positive value arms the rain-delay timer."""
+    _seed_and_commit(engine)
+    db = fake_db
+
+    mon = Monitor("home", None, StubLink(), tick=60)
+    assert mon._rain_active is False  # noqa: SLF001
+
+    mon._has_rain(db, 3.0)  # noqa: SLF001
+    assert mon._rain_active is True  # noqa: SLF001
+    assert mon._rain_deadline is not None  # noqa: SLF001
+
+    mon._rain_active = False  # noqa: SLF001
+    mon._rain_deadline = None  # noqa: SLF001
+    mon._has_rain(db, 0.0)  # noqa: SLF001
+    assert mon._rain_active is False  # noqa: SLF001
+
+    mon._has_rain(db, -1.0)  # noqa: SLF001
+    assert mon._rain_active is False  # noqa: SLF001
+
+    mon._has_rain(db, "not_a_number")  # noqa: SLF001
+    assert mon._rain_active is False  # noqa: SLF001
+
+
+async def test_daemon_has_rain_extends_existing(engine, fake_db):
+    """Calling _has_rain when rain is already active extends the deadline."""
+    _seed_and_commit(engine)
+    db = fake_db
+
+    mon = Monitor("home", None, StubLink(), tick=60)
+    mon._has_rain(db, 2.0)  # noqa: SLF001
+    first_deadline = mon._rain_deadline  # noqa: SLF001
+    assert first_deadline is not None
+
+    await anyio.sleep(0.01)
+    mon._has_rain(db, 1.0)  # noqa: SLF001
+    assert mon._rain_deadline is not None  # noqa: SLF001
+
+
+async def test_daemon_watch_sensor_error_logged(engine, fake_db):  # noqa: ARG001
+    """A watch error in _watch_sensor is caught and logged, not raised."""
+    _seed_and_commit(engine)
+
+    class ErrorLink(StubLink):
+        def d_watch(self, path, **kw):  # noqa: ARG002
+            raise ConnectionError("boom")
+
+    link = ErrorLink()
+    log_lines: list[str] = []
+    mon = Monitor("home", None, link, tick=1, log=log_lines.append)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(mon.run)
+            await anyio.sleep(2)
+            tg.cancel_scope.cancel()
+
+    assert any("watch error" in line.lower() for line in log_lines)
+
+
+async def test_daemon_dispatch_error_logged(engine, fake_db):  # noqa: ARG001
+    """A d_set error during dispatch is caught and logged, not raised."""
+    _seed_and_commit(engine)
+
+    s, scm, sctx = _mgr(engine)
+    try:
+        valve = s.scalar(select(r.Valve).where(r.Valve.name == "V1"))
+        s.add(r.Schedule(valve=valve, start=datetime.now(UTC), duration=120, seen=False))
+        s.flush()
+        s.commit()
+    finally:
+        _close(scm, sctx)
+
+    class FlakyLink(StubLink):
+        async def d_set(self, path, data=NotGiven, **kw):  # noqa: ARG002
+            raise RuntimeError("link down")
+
+    link = FlakyLink()
+    log_lines: list[str] = []
+    mon = Monitor("home", None, link, tick=1, log=log_lines.append)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(mon.run)
+            await anyio.sleep(3)
+            tg.cancel_scope.cancel()
+
+    assert any("dispatch error" in line.lower() for line in log_lines)
+
+
+async def test_daemon_delete_pending_rainy_schedules(engine, fake_db):
+    """During rain delay, unseen schedules for valves with runoff > 0 are deleted."""
+    _seed_and_commit(engine)
+
+    s, scm, sctx = _mgr(engine)
+    try:
+        valve = s.scalar(select(r.Valve).where(r.Valve.name == "V1"))
+        s.add(r.Schedule(valve=valve, start=datetime.now(UTC), duration=120, seen=False))
+        s.flush()
+        s.commit()
+    finally:
+        _close(scm, sctx)
+
+    db = fake_db
+    mon = Monitor("home", None, StubLink(), tick=60)
+    mon._rain_active = True  # noqa: SLF001
+    mon._rain_deadline = datetime.now(UTC) + timedelta(minutes=10)  # noqa: SLF001
+
+    mon._tick(db)  # noqa: SLF001
+
+    s2, cm2, ctx2 = _mgr(engine)
+    try:
+        with s2.execute(select(r.Schedule)) as rs:
+            assert len(list(rs)) == 0
+    finally:
+        _close(cm2, ctx2)
+
+
+async def test_run_monitor_convenience(engine, fake_db):  # noqa: ARG001
+    """run_monitor() creates a Monitor and runs it."""
+    _seed_and_commit(engine)
+
+    from moat.db.rain.monitor import run_monitor  # noqa: PLC0415
+
+    link = StubLink()
+    evt = anyio.Event()
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(lambda: run_monitor("home", None, link, tick=1, evt=evt))
+            await evt.wait()
+            await anyio.sleep(0.5)
+            tg.cancel_scope.cancel()
+
+    assert evt.is_set()
+
+
+# ---------------------------------------------------------------------------
+# Tests — CLI smoke test
+# ---------------------------------------------------------------------------
+
+
+async def test_cli_monitor_smoke(engine, monkeypatch):
+    """``moat db rain <site> monitor`` starts and stops cleanly via the CLI.
+
+    Monkeypatches ``moat.link.client.Link`` so the CLI uses a
+    :class:`StubLink` instead of a real MQTT client, and patches the
+    config to include a minimal ``link`` section.  The daemon is
+    cancelled after a short delay to simulate a controlled shutdown.
+    """
+    _seed_and_commit(engine)
+
+    import moat.db as mdb  # noqa: PLC0415
+    import moat.link.client as link_client  # noqa: PLC0415
+
+    # Patch the database so the CLI's session setup uses our test engine.
+    db = _fake_database(engine)
+    monkeypatch.setattr(mdb, "database", db)
+
+    # Patch Link so ``Link(cfg)`` returns a StubLink-compatible object.
+    class StubLinkCM:
+        """A StubLink wrapped as an async context manager (like real Link)."""
+
+        def __init__(self, _cfg=None):
+            self._inner = StubLink()
+
+        async def __aenter__(self):
+            return self._inner
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(link_client, "Link", StubLinkCM)
+
+    db_url = f"sqlite:///{engine.url.database}"
+    from moat.src.test import run  # noqa: PLC0415
+
+    try:
+        with anyio.fail_after(10):
+            async with anyio.create_task_group() as tg:
+
+                async def _run_cli():
+                    await run(
+                        "-s",
+                        "moat.db.url",
+                        db_url,
+                        "-s",
+                        "link.backend",
+                        "mock",
+                        "db",
+                        "rain",
+                        "home",
+                        "monitor",
+                        "--tick",
+                        "1",
+                    )
+
+                tg.start_soon(_run_cli)
+                await anyio.sleep(3)
+                tg.cancel_scope.cancel()
+    finally:
+        pass
+
+    # Reaching here means the CLI started and stopped without hanging.

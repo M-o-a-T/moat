@@ -35,9 +35,18 @@ Class-level shared state: `static` (defaults pulled from modules'
 - `mod(path, value)` — record a manual override at a `Path`; `NotGiven`
   deletes. Flags `_redo`.
 - `redo()` — drain pending `to_process` registrations, then loop ≤8 passes:
-  combine `preload`+`env`+files+`static`, apply manual `args`, resolve
-  relative `Path` refs (`deref`), `merge` into `_result` until no
-  `NotGiven` placeholders remain. Calls `notify()`.
+  combine `preload`+`env`+files+`static`, apply manual `args` (with
+  `apply_notgiven=False` so `NotGiven` markers are staged rather than
+  immediately deleted), resolve relative `Path` refs (`deref`), `merge`
+  into `_result` until no `NotGiven` placeholders remain. Calls `notify()`.
+  The loop is needed because `merge` only removes `NotGiven` keys that
+  *already exist* in `_result`; a `mod(path, NotGiven)` for a newly-added
+  key leaves a placeholder that requires a second pass to clear.
+- `safe_reload()` — snapshot `_result` via `deepcopy`, set `_redo=True`,
+  call `redo()`.  On exception: restore the snapshot, clear `_redo`,
+  reset `_updated`, return `False`.  Returns `True` on success.  This
+  lets callers attempt a risky reload without losing the last-known-good
+  configuration.
 - `with_(path)` (classmethod) — walk dotted module path segments, import
   each, read that package's `_cfg.yaml` into `Cls.static`, pop `$root`
   remapping, bump `updated`, trigger `redo()` on all known stores. This is

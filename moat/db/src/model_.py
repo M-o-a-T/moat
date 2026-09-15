@@ -70,25 +70,27 @@ ArchiveRole.apply = cast(Any, archiverole_apply)
 
 
 def branchrole_apply(
-    self, *, comment: Any = NotGiven, abstract: bool = False, real: bool = False, **kw: Any
+    self, *, comment: Any = NotGiven, abstract: Any = NotGiven, real: Any = NotGiven, **kw: Any
 ) -> None:
     """Apply mutable branch-role properties.
 
     Args:
         comment: Free-text description, or ``None`` to clear.
-        abstract: Set ``abstract=True`` (short-lived role).
-        real: Set ``abstract=False`` (long-lived role).
+        abstract: Set ``abstract=True`` (short-lived role). ``NotGiven`` ⇒
+            leave unchanged.
+        real: Set ``abstract=False`` (long-lived role). ``NotGiven`` ⇒ leave
+            unchanged.
         **kw: Other scalar columns forwarded to :meth:`Base.apply`.
 
     Raises:
         ValueError: if both ``abstract`` and ``real`` are requested.
     """
     Base.apply(self, comment=comment, **kw)
-    if abstract:
-        if real:
+    if abstract is not NotGiven and abstract:
+        if real is not NotGiven and real:
             raise ValueError("A branch role can't be both abstract and real")
         self.abstract = True
-    elif real:
+    elif real is not NotGiven and real:
         self.abstract = False
 
 

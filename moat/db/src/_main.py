@@ -26,8 +26,121 @@ from sqlalchemy import select
 from moat.util import NotGiven, yprint
 from moat.db import database
 from moat.lib.run import load_subgroup, option_ng
+from moat.util.times import humandelta, now
 
 from .model import Archive, ArchiveRole, BranchRole, LocalBranch, Spkg
+
+
+def _detail_options(c):
+    """Options governing the SPKG detail view (``at SPKG`` / ``at SPKG list``)."""
+    c = click.option(
+        "-y",
+        "--yaml",
+        is_flag=True,
+        default=False,
+        help="Emit the raw YAML dump instead of the human-readable view.",
+    )(c)
+    c = click.option(
+        "-n",
+        "--n-branches",
+        type=int,
+        default=5,
+        show_default=True,
+        help="Number of branches to show (0 = all).",
+    )(c)
+    return c
+
+
+def _col(rows, idx):
+    """Width of column ``idx`` across ``rows`` (0 if empty)."""
+    return max((len(r[idx]) for r in rows), default=0)
+
+
+def _render_detail(obj, spkg: Spkg, *, yaml: bool, n_branches: int) -> None:
+    """Render one source package's detail.
+
+    By default a compact human-readable view::
+
+        name (prefix): comment
+
+        Remotes:
+        * name role url
+
+        Branches:
+          name role age status
+
+    With ``--yaml`` the raw :meth:`Spkg.dump` mapping is emitted instead.
+    Branches are sorted by age (most-recently-updated first) and capped at
+    ``n_branches`` (0 = all); a trailing ``(… and N more)`` line notes any
+    elided tail. Columns are padded to the widest value in each section
+    but never truncated.
+    """
+    if yaml:
+        yprint(spkg.dump(), stream=obj.stdout)
+        return
+
+    out = obj.stdout
+
+    # Header: name (prefix): comment  — skip (prefix) if absent or == name.
+    header = spkg.name
+    if spkg.prefix and spkg.prefix != spkg.name:
+        header += f" ({spkg.prefix})"
+    if spkg.comment:
+        header += f": {spkg.comment}"
+    print(header, file=out)
+
+    # Remotes.
+    if spkg.archives:
+        print("Remotes:", file=out)
+        rows = [
+            ("*" if ar.default else " ", ar.name, ar.archiverole.name, ar.url)
+            for ar in sorted(spkg.archives, key=lambda a: a.name)
+        ]
+        wn = _col(rows, 1)
+        wr = _col(rows, 2)
+        for mark, name, role, url in rows:
+            print(f"{mark} {name:<{wn}} {role:<{wr}} {url}", file=out)
+
+    # Branches — sorted by age (newest first); cap at n_branches.
+    if spkg.branches:
+        print("Branches:", file=out)
+        cur = now()
+        # Stored datetimes are offset-naive (SQLite strips tzinfo on write);
+        # ``now()`` is tz-aware local. Compare in the stored (naive) frame by
+        # dropping the awareness from ``cur`` so the delta is real elapsed time.
+        cur_naive = cur.replace(tzinfo=None)
+
+        def _age_key(b: LocalBranch):
+            if b.updated is None:
+                return cur_naive  # never updated ⇒ sorts last (newest-first)
+            return b.updated
+
+        ordered = sorted(spkg.branches, key=_age_key, reverse=True)
+        if n_branches:
+            shown, rest = ordered[:n_branches], ordered[n_branches:]
+        else:
+            shown, rest = ordered, []
+        rows = []
+        for br in shown:
+            role = br.branchrole.name if br.branchrole is not None else "-"
+            if br.updated is not None:
+                # humandelta(ago=True) labels *negative* deltas as "X ago";
+                # elapsed-since-update is positive, so pass (updated - now).
+                age = humandelta(br.updated - cur_naive, ago=True)
+            else:
+                age = "-"
+            status = br.status if br.status is not None else ""
+            rows.append((br.name, role, age, status))
+        wn = _col(rows, 0)
+        wr = _col(rows, 1)
+        wa = _col(rows, 2)
+        for name, role, age, status in rows:
+            line = f"  {name:<{wn}} {role:<{wr}} {age:<{wa}}"
+            if status:
+                line += f" {status}"
+            print(line, file=out)
+        if rest:
+            print(f"  (… and {len(rest)} more)", file=out)
 
 
 @load_subgroup(
@@ -331,9 +444,10 @@ async def branch_delete(obj, name):
 
 
 @cli.group(name="at", invoke_without_command=True)
+@_detail_options
 @click.argument("spkg", type=str)
 @click.pass_obj
-async def at_grp(obj, spkg):
+async def at_grp(obj, spkg, yaml, n_branches):
     """Scope subsequent verbs to one source package.
 
     Verifies the SPKG exists and stashes it on ``obj.spkg``. With no
@@ -348,14 +462,15 @@ async def at_grp(obj, spkg):
 
     ctx = click.get_current_context()
     if ctx.invoked_subcommand is None:
-        yprint(obj.spkg.dump(), stream=obj.stdout)
+        _render_detail(obj, obj.spkg, yaml=yaml, n_branches=n_branches)
 
 
 @at_grp.command(name="list")
+@_detail_options
 @click.pass_obj
-async def at_list(obj):
+async def at_list(obj, yaml, n_branches):
     """Show this source package's detail."""
-    yprint(obj.spkg.dump(), stream=obj.stdout)
+    _render_detail(obj, obj.spkg, yaml=yaml, n_branches=n_branches)
 
 
 @at_grp.command(name="set")

@@ -1,0 +1,28 @@
+# Default role vocabulary for moat.db.src.
+# Applied by Alembic revision f33c4c0319f0_seed_src_roles.
+#
+# These rows are inserted by the data migration on upgrade and deleted by
+# name on downgrade, so user-added roles always survive a rollback.
+#
+# Nothing in this file is loaded into moat.db runtime config; the migration
+# reads it directly with yload at upgrade time.
+
+archive_role:
+  - {name: upstream, rank: 1, comment: "Primary public source (origin/upstream remote)"}
+  - {name: fork, rank: 2, comment: "Fetch-only remote you watch but can't push to"}
+  - {name: mirror, rank: 3, comment: "Push-capable mirror (--mirror on import)"}
+  - {
+      name: local,
+      rank: 4,
+      comment: "Your own writable local copy (push-capable, not mirrored)",
+    }
+  - {name: internal, rank: 5, comment: "Internally-hosted authoritative copy"}
+  - {name: radicle, rank: 7, comment: "Radicle peer-to-peer replica"}
+  - {name: backup, rank: 9, comment: "Offline / backup copy"}
+
+branch_role:
+  - {name: main, comment: "Primary integration branch"}
+  - {name: release, comment: "Maintenance / release branch"}
+  - {name: develop, comment: "Long-lived development branch"}
+  - {name: feature, abstract: true, comment: "Short-lived feature work"}
+  - {name: migrated, comment: "Marker branch left by moat.src move"}

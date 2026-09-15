@@ -209,3 +209,33 @@ async def test_export_refuses_non_empty_dest(src, seed_roles, tmp_path):  # noqa
     with _raises(click.UsageError) as err:
         await src("at", "ex2", "export", "--dest", str(dest))
     assert "not empty" in _msg(err)
+
+
+async def test_import_reads_beads_prefix_from_git_config(src, seed_roles, tmp_path):  # noqa:ARG001
+    """Import sources the SPKG prefix from the repo's `beads.prefix` git config."""
+    repo = _make_repo(tmp_path, "wpfx")
+    _git("-C", str(repo), "config", "--local", "beads.prefix", "gpfx")
+    await src("import", str(repo), "--name", "pfxpkg")
+    res = await src("at", "-y", "pfxpkg")
+    assert "prefix: gpfx" in res.stdout
+
+
+async def test_import_prefix_cli_wins_over_git_config(src, seed_roles, tmp_path):  # noqa:ARG001
+    """An explicit `--prefix` on import overrides the repo's `beads.prefix`."""
+    repo = _make_repo(tmp_path, "wpfx2")
+    _git("-C", str(repo), "config", "--local", "beads.prefix", "gpfx")
+    await src("import", str(repo), "--name", "pfxpkg2", "--prefix", "clipfx")
+    res = await src("at", "-y", "pfxpkg2")
+    assert "prefix: clipfx" in res.stdout
+    assert "gpfx" not in res.stdout
+
+
+async def test_import_resync_refreshes_prefix_from_git_config(src, seed_roles, tmp_path):  # noqa:ARG001
+    """Re-sync updates the prefix when the repo's `beads.prefix` changes."""
+    repo = _make_repo(tmp_path, "wpfx3")
+    _git("-C", str(repo), "config", "--local", "beads.prefix", "orig")
+    await src("import", str(repo), "--name", "pfxpkg3")
+    _git("-C", str(repo), "config", "--local", "beads.prefix", "changed")
+    await src("at", "pfxpkg3", "import", str(repo))
+    res = await src("at", "-y", "pfxpkg3")
+    assert "prefix: changed" in res.stdout

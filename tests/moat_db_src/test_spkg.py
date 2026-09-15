@@ -34,12 +34,49 @@ async def test_at_unknown_points_at_add(src):
     assert "add" in _msg(err)
 
 
-async def test_at_detail_dumps_prefix(src):
-    """``at SPKG`` (no subcommand) dumps the package incl. ``prefix``."""
-    await src("add", "p1", "--prefix", "pp")
+async def test_at_detail_human_view_shows_prefix(src):
+    """``at SPKG`` (no subcommand) renders the human view incl. ``(prefix)``."""
+    await src("add", "p1", "--prefix", "pp", "--comment", "c1")
     res = await src("at", "p1")
-    assert "p1" in res.stdout
-    assert "pp" in res.stdout
+    assert "p1 (pp): c1" in res.stdout
+
+
+async def test_at_detail_skips_prefix_when_equal_to_name(src):
+    """The ``(prefix)`` is omitted when prefix == name."""
+    await src("add", "same", "--prefix", "same")
+    res = await src("at", "same")
+    assert res.stdout.splitlines()[0] == "same"  # no '(same)' suffix
+
+
+async def test_at_detail_yaml_flag_emits_raw_dump(src):
+    """``-y`` switches to the raw YAML dump (machine view)."""
+    await src("add", "yk", "--prefix", "yy")
+    res = await src("at", "-y", "yk")
+    # YAML view keys appear, not the human header.
+    assert "name: yk" in res.stdout
+    assert "prefix: yy" in res.stdout
+
+
+async def test_at_detail_n_branches_caps_and_notes_rest(src, seed_roles):  # noqa:ARG001
+    """``-n N`` caps the branch list and prints '(… and N more)'."""
+    await src("add", "nb")
+    for i in range(7):
+        await src("at", "nb", "branch", "add", f"b{i}", "--status", f"s{i}")
+    res = await src("at", "-n", "3", "nb")
+    lines = [ln for ln in res.stdout.splitlines() if ln.startswith("  ") and "more" not in ln]
+    assert len(lines) == 3
+    assert "(… and 4 more)" in res.stdout
+
+
+async def test_at_detail_n_zero_shows_all_branches(src, seed_roles):  # noqa:ARG001
+    """``-n 0`` shows every branch."""
+    await src("add", "nz")
+    for i in range(7):
+        await src("at", "nz", "branch", "add", f"b{i}")
+    res = await src("at", "-n", "0", "nz")
+    blines = [ln for ln in res.stdout.splitlines() if ln.startswith("  b")]
+    assert len(blines) == 7
+    assert "more" not in res.stdout
 
 
 async def test_set_updates_comment_and_prefix(src):

@@ -27,7 +27,7 @@ def get_serial(cfg: dict) -> Any:
         Ser = p
     elif p == "USB":
         Ser = getattr(
-            __import__("moat.micro.part.serial", fromlist=("USBSerial",)),
+            __import__("moat.micro.part.serial", globals(), None, ("USBSerial",)),
             "USBSerial",
             None,
         )

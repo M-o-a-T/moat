@@ -30,7 +30,7 @@ class SerialPackerBlkBuf(StackedBlk):
     def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
         StackedBlk.__init__(self, stream, None)
 
-        SerialPacker = __import__("serialpacker", fromlist=("SerialPacker",)).SerialPacker
+        SerialPacker = __import__("serialpacker", globals(), None, ("SerialPacker",)).SerialPacker
 
         self.p = SerialPacker(**frame)
         self.buf = bytearray(16)

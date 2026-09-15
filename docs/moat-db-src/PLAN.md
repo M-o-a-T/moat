@@ -77,7 +77,7 @@ With no subcommand, behave as global `list`.
 ```
 moat db src                                     # ≡ list
 moat db src list                                # list all SPKGs
-moat db src add SPKG [--comment …]              # create a SPKG
+moat db src add SPKG [--comment …] [--prefix …]    # create a SPKG
 ```
 
 `archive` and `branch` are **groups** (the global role registries), each
@@ -106,7 +106,7 @@ the SPKG exists (`sess.one(Spkg, name=SPKG)`, else error pointing at
 ```
 moat db src at SPKG                             # ≡ list (SPKG detail)
 moat db src at SPKG list                        # show SPKG detail
-moat db src at SPKG set    [--comment …]        # modify the SPKG
+moat db src at SPKG set    [--comment …] [--prefix …]  # modify the SPKG
 moat db src at SPKG delete                      # remove SPKG (cascades)
 
 moat db src at SPKG remote list
@@ -140,9 +140,9 @@ moat db src branch show main
 moat db src branch delete main
 
 # ---- packages ----
-moat db src add moat-util --comment "Utility lib"
+moat db src add moat-util --comment "Utility lib" --prefix moat-util
 moat db src at moat-util                         # show detail
-moat db src at moat-util set --comment "Utility library (core)"
+moat db src at moat-util set --comment "Utility library (core)" --prefix mu
 moat db src at moat-util delete
 
 # ---- remotes (Archive) of a package ----
@@ -197,8 +197,8 @@ options relevant to that leaf’s single mode are declared — no unions.
 - `remote` leaves (under `at`): `--role <rolename>`, `--url URL`,
   `--ext-url URL`, `--api <github|forgejo|radicle|localgit>`,
   `--default` / `--no-default`, `--comment`.
-- `add` (top, SPKG create): `--comment`.
-- `set` under `at` (SPKG modify): `--comment`.
+- `add` (top, SPKG create): `--comment`, `--prefix`.
+- `set` under `at` (SPKG modify): `--comment`, `--prefix`.
 - `import` (top, bootstrap SPKG): `PATH` positional (required), `--name SPKG`
   (optional; inferred from repo basename if omitted), `--comment`, repeatable
   `--role REMOTE=ROLE` overrides, `--mirror REMOTE` (mark a push-capable
@@ -236,7 +236,7 @@ prefix  String(20)  NULL              # for Beads issue tracker
 ```
 Relationships (attached in `model_.py`): `archives: set[Archive]`,
 `branches: set[LocalBranch]` (both cascade-delete).
-`dump()`: name, comment, then `archives: [{role,name,url,default}]`,
+`dump()`: name, comment, prefix, then `archives: [{role,name,url,default}]`,
 `branches: [{name,role,status,updated,commit}]`.
 
 ### `ArchiveRole` — `src_archive_role`  (global registry)
@@ -304,7 +304,9 @@ Pairs:
 
 `apply` methods:
 
-- **`spkg_apply(self, *, comment=NotGiven, **kw)`** → `Base.apply`.
+- **`spkg_apply(self, *, comment=NotGiven, prefix=NotGiven, **kw)`** →
+  `Base.apply`. Both scalar columns forwarded unchanged; `prefix` may be
+  cleared with `--prefix -` (handled by the CLI leaf passing `None`).
 - **`archiverole_apply(self, *, comment=NotGiven, rank=NotGiven, **kw)`**
   → `Base.apply`; set `rank` (None allowed to clear).
 - **`branchrole_apply(self, *, comment=NotGiven, abstract=False, real=False, **kw)`**
@@ -558,7 +560,8 @@ fixture, async CLI driver wrapping `moat.src.test.run`):
 - **`test_smoke.py`** — `await R("src","--help")` exits 0 and lists
   `list`/`add`/`import`/`archive`/`branch`/`at`.
 - **`test_spkg.py`** — `add SPKG`; `at SPKG list` detail; duplicate `add`
-  exits 1; `at <unknown>` errors pointing at `add`; `set`/`delete`.
+  exits 1; `at <unknown>` errors pointing at `add`; `set`/`delete`;
+  `--prefix` set/clear (`--prefix -`) round-trips through `dump()`.
 - **`test_roles.py`** — `archive`/`branch` registry CRUD (`list`/`add`/
   `show`/`set`/`delete`); uniqueness; `--abstract/--real` toggle.
 - **`test_archive.py`** — `at SPKG remote` CRUD; `--default`

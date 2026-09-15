@@ -79,12 +79,18 @@ class CmdStream(HandlerStream):
     async def read_stream(self):  # noqa: D102
         msg = self.__msg
 
-        async for m in msg:
-            if m.kw:
-                log("R%s: incoming keywords ignored!? %r", self.__debug or "", m)
-            elif self.__debug:
-                log("R%s %r", self.__debug, m)
-            await self.msg_in(cast("list", m.args_l))
+        try:
+            async for m in msg:
+                if m.kw:
+                    log("R%s: incoming keywords ignored!? %r", self.__debug or "", m)
+                elif self.__debug:
+                    log("R%s %r", self.__debug, m)
+                await self.msg_in(cast("list", m.args_l))
+        except EOFError:
+            # The underlying transport stream went away. This is the
+            # normal end-of-life signal for a nested command stream,
+            # mirroring the EOFError handling in ``write_stream`` below.
+            return
 
     async def write_stream(self):  # noqa: D102
         msg = self.__msg

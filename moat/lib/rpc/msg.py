@@ -884,8 +884,28 @@ class Msg(MsgLink, MsgResult):
                 m, self._fli = self._fli, 0
                 await self.warn_int(m)
 
+    def _term_is_error(self) -> bool:
+        """Whether the incoming stream ended with an error frame.
+
+        A stream terminates cleanly when a non-streaming result message
+        arrives (stored in ``_msg`` as an :class:`outcome.Value`).  When the
+        peer instead terminates the stream with an error, ``_msg`` holds an
+        :class:`outcome.Error` (e.g. a ``CancelledError`` when the remote
+        handler was cancelled).
+
+        Such a terminal error must be surfaced to the consumer rather than
+        being silently turned into the end of iteration, otherwise a stream
+        that broke mid-transfer looks indistinguishable from one that
+        completed normally.
+        """
+        if self._stream_in != S_END:
+            return False
+        return isinstance(self._msg, outcome.Error)
+
     async def __anext__(self) -> MsgResult:
         if self._recv_q is None:
+            if self._term_is_error():
+                raise EOFError
             raise StopAsyncIteration
         elif isinstance(self._recv_q, Exception):
             exc, self._recv_q = self._recv_q, None
@@ -895,6 +915,8 @@ class Msg(MsgLink, MsgResult):
         try:
             res = await self._recv_q.get()
         except EOFError:
+            if self._term_is_error():
+                raise EOFError from None
             raise StopAsyncIteration from None
 
         await self._qsize()

@@ -30,7 +30,13 @@ from moat.lib.run import load_subgroup, option_ng
 from .model import Archive, ArchiveRole, BranchRole, LocalBranch, Spkg
 
 
-@load_subgroup(prefix="moat.db.src", invoke_without_command=True)
+@load_subgroup(
+    sub_pre="moat.db.src",
+    sub_post="cli",
+    ext_pre="moat.db.src",
+    ext_post="_main.cli",
+    invoke_without_command=True,
+)
 @click.pass_context
 async def cli(ctx):
     """Track source packages, their archive remotes, and local branches."""
@@ -55,7 +61,7 @@ async def _list_spkgs(obj) -> None:
     with sess.execute(select(Spkg).order_by(Spkg.name)) as rows:
         for (sp,) in rows:
             seen = True
-            print(sp.name)
+            print(sp.name, file=obj.stdout)
     if not seen:
         print("No source packages defined yet. Use '--help'?", file=sys.stderr)
 
@@ -87,8 +93,7 @@ async def add(obj, name, **kw):
     except KeyError:
         pass
     else:
-        print(f"Source package {name!r} already exists", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Source package {name!r} already exists") from None
 
     sp = Spkg(name=name)
     obj.session.add(sp)
@@ -140,12 +145,10 @@ async def import_top(obj, path, iname, iroles, imirrors, **kw):
     except KeyError:
         pass
     else:
-        print(
+        raise click.UsageError(
             f"Source package {iname!r} already exists. "
-            f"Use 'moat db src at {iname} import' to re-sync.",
-            file=sys.stderr,
+            f"Use 'moat db src at {iname} import' to re-sync."
         )
-        sys.exit(1)
 
     sp = Spkg(name=iname)
     obj.session.add(sp)
@@ -178,7 +181,7 @@ async def archive_list(obj):
     with sess.execute(select(ArchiveRole).order_by(ArchiveRole.rank, ArchiveRole.name)) as rows:
         for (ar,) in rows:
             seen = True
-            print(ar.name)
+            print(ar.name, file=obj.stdout)
     if not seen:
         print("No archive roles defined yet. Use '--help'?", file=sys.stderr)
 
@@ -191,9 +194,8 @@ async def archive_show(obj, name):
     try:
         ar = obj.session.one(ArchiveRole, name=name)
     except KeyError:
-        print(f"Archive role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
-    yprint(ar.dump())
+        raise click.UsageError(f"Archive role {name!r} doesn't exist") from None
+    yprint(ar.dump(), stream=obj.stdout)
 
 
 @archive_grp.command(name="add")
@@ -207,8 +209,7 @@ async def archive_add(obj, name, **kw):
     except KeyError:
         pass
     else:
-        print(f"Archive role {name!r} already exists", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Archive role {name!r} already exists") from None
     ar = ArchiveRole(name=name)
     obj.session.add(ar)
     ar.apply(**kw)
@@ -223,8 +224,7 @@ async def archive_set(obj, name, **kw):
     try:
         ar = obj.session.one(ArchiveRole, name=name)
     except KeyError:
-        print(f"Archive role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Archive role {name!r} doesn't exist") from None
     ar.apply(**kw)
 
 
@@ -236,8 +236,7 @@ async def archive_delete(obj, name):
     try:
         ar = obj.session.one(ArchiveRole, name=name)
     except KeyError:
-        print(f"Archive role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Archive role {name!r} doesn't exist") from None
     obj.session.delete(ar)
 
 
@@ -267,7 +266,7 @@ async def branch_list(obj):
     with sess.execute(select(BranchRole).order_by(BranchRole.name)) as rows:
         for (br,) in rows:
             seen = True
-            print(br.name)
+            print(br.name, file=obj.stdout)
     if not seen:
         print("No branch roles defined yet. Use '--help'?", file=sys.stderr)
 
@@ -280,9 +279,8 @@ async def branch_show(obj, name):
     try:
         br = obj.session.one(BranchRole, name=name)
     except KeyError:
-        print(f"Branch role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
-    yprint(br.dump())
+        raise click.UsageError(f"Branch role {name!r} doesn't exist") from None
+    yprint(br.dump(), stream=obj.stdout)
 
 
 @branch_grp.command(name="add")
@@ -296,8 +294,7 @@ async def branch_add(obj, name, **kw):
     except KeyError:
         pass
     else:
-        print(f"Branch role {name!r} already exists", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch role {name!r} already exists") from None
     br = BranchRole(name=name)
     obj.session.add(br)
     br.apply(**kw)
@@ -312,8 +309,7 @@ async def branch_set(obj, name, **kw):
     try:
         br = obj.session.one(BranchRole, name=name)
     except KeyError:
-        print(f"Branch role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch role {name!r} doesn't exist") from None
     br.apply(**kw)
 
 
@@ -325,8 +321,7 @@ async def branch_delete(obj, name):
     try:
         br = obj.session.one(BranchRole, name=name)
     except KeyError:
-        print(f"Branch role {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch role {name!r} doesn't exist") from None
     obj.session.delete(br)
 
 
@@ -347,22 +342,20 @@ async def at_grp(obj, spkg):
     try:
         obj.spkg = obj.session.one(Spkg, name=spkg)
     except KeyError:
-        print(
-            f"Source package {spkg!r} doesn't exist. Use 'moat db src add {spkg}'.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        raise click.UsageError(
+            f"Source package {spkg!r} doesn't exist. Use 'moat db src add {spkg}'."
+        ) from None
 
     ctx = click.get_current_context()
     if ctx.invoked_subcommand is None:
-        yprint(obj.spkg.dump())
+        yprint(obj.spkg.dump(), stream=obj.stdout)
 
 
 @at_grp.command(name="list")
 @click.pass_obj
 async def at_list(obj):
     """Show this source package's detail."""
-    yprint(obj.spkg.dump())
+    yprint(obj.spkg.dump(), stream=obj.stdout)
 
 
 @at_grp.command(name="set")
@@ -374,7 +367,6 @@ async def at_set(obj, **kw):
 
 
 @at_grp.command(name="delete")
-@click.confirmation_option(prompt="Are you sure?")
 @click.pass_obj
 async def at_delete(obj):
     """Remove this source package (cascades to remotes and branches)."""
@@ -483,7 +475,7 @@ async def remote_list(obj):
     for ar in sorted(sp.archives, key=lambda a: a.name):
         seen = True
         mark = "*" if ar.default else " "
-        print(f"{mark} {ar.name}\t{ar.archiverole.name}\t{ar.url}")
+        print(f"{mark} {ar.name}\t{ar.archiverole.name}\t{ar.url}", file=obj.stdout)
     if not seen:
         print("No remotes defined yet. Use '--help'?", file=sys.stderr)
 
@@ -496,9 +488,8 @@ async def remote_show(obj, name):
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Remote {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
-    yprint(ar.dump())
+        raise click.UsageError(f"Remote {name!r} doesn't exist") from None
+    yprint(ar.dump(), stream=obj.stdout)
 
 
 @remote_grp.command(name="add")
@@ -517,16 +508,15 @@ async def remote_add(obj, name, default, **kw):
     ``--role`` and ``--url`` are required on create.
     """
     if kw.get("role") in (None, NotGiven):
-        raise click.UsageError("New remotes need a role (--role NAME)")
+        raise click.UsageError("New remotes need a role (--role NAME)") from None
     if kw.get("url") in (None, NotGiven):
-        raise click.UsageError("New remotes need a url (--url URL)")
+        raise click.UsageError("New remotes need a url (--url URL)") from None
     try:
         obj.session.one(Archive, spkg=obj.spkg, name=name)
     except KeyError:
         pass
     else:
-        print(f"Remote {name!r} already exists", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Remote {name!r} already exists") from None
     ar = Archive(name=name, spkg=obj.spkg)
     obj.session.add(ar)
     kw["ext_url"] = _parse_clearable(kw.get("ext_url", NotGiven))
@@ -550,8 +540,7 @@ async def remote_set(obj, name, default, **kw):
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Remote {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Remote {name!r} doesn't exist") from None
     kw["ext_url"] = _parse_clearable(kw.get("ext_url", NotGiven))
     if default is not None:
         kw["default"] = default
@@ -566,8 +555,7 @@ async def remote_delete(obj, name):
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Remote {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Remote {name!r} doesn't exist") from None
     obj.session.delete(ar)
 
 
@@ -595,7 +583,7 @@ async def lb_list(obj):
     for br in sorted(sp.branches, key=lambda b: b.name):
         seen = True
         role = br.branchrole.name if br.branchrole is not None else "-"
-        print(f"{br.name}\t{role}")
+        print(f"{br.name}\t{role}", file=obj.stdout)
     if not seen:
         print("No branches defined yet. Use '--help'?", file=sys.stderr)
 
@@ -608,9 +596,8 @@ async def lb_show(obj, name):
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Branch {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
-    yprint(br.dump())
+        raise click.UsageError(f"Branch {name!r} doesn't exist") from None
+    yprint(br.dump(), stream=obj.stdout)
 
 
 @lb_grp.command(name="add")
@@ -624,8 +611,7 @@ async def lb_add(obj, name, **kw):
     except KeyError:
         pass
     else:
-        print(f"Branch {name!r} already exists", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch {name!r} already exists") from None
     br = LocalBranch(name=name, spkg=obj.spkg)
     obj.session.add(br)
     kw["status"] = _parse_clearable(kw.get("status", NotGiven))
@@ -642,8 +628,7 @@ async def lb_set(obj, name, **kw):
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Branch {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch {name!r} doesn't exist") from None
     kw["status"] = _parse_clearable(kw.get("status", NotGiven))
     kw["commit"] = _parse_clearable(kw.get("commit", NotGiven))
     br.apply(**kw)
@@ -657,6 +642,5 @@ async def lb_delete(obj, name):
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
     except KeyError:
-        print(f"Branch {name!r} doesn't exist", file=sys.stderr)
-        sys.exit(1)
+        raise click.UsageError(f"Branch {name!r} doesn't exist") from None
     obj.session.delete(br)

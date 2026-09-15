@@ -265,8 +265,13 @@ async def import_top(obj, path, iname, iroles, imirrors, **kw):
 
     sp = Spkg(name=iname)
     obj.session.add(sp)
+    # Apply scalars except `prefix` — a CLI `--prefix` must win over the
+    # repo's `beads.prefix` git config, so apply it after import_repo.
+    cli_prefix = kw.pop("prefix", NotGiven)
     sp.apply(**kw)
     await import_repo(sp, path, iroles=iroles, imirrors=imirrors)
+    if cli_prefix is not NotGiven:
+        sp.apply(prefix=cli_prefix)
 
 
 # ---------------------------------------------------------------------------

@@ -102,6 +102,20 @@ async def discover_branches(repo: str | Path) -> list[tuple[str, str]]:
     return out
 
 
+async def read_prefix(repo: str | Path) -> str | None:
+    """Read the SPKG's Beads prefix from the repo's local git config.
+
+    Sources ``beads.prefix`` via ``git config --local`` (repo-scoped, so a
+    user's global ``~/.gitconfig`` is ignored). Returns ``None`` when the
+    key is unset (``git config --get`` exits 1).
+    """
+    try:
+        val = await _git(repo, "config", "--local", "--get", "beads.prefix")
+    except DetailedCalledProcessError:
+        return None
+    return val or None
+
+
 async def resolve_role(
     remote_name: str,
     has_push: bool,
@@ -184,6 +198,12 @@ async def import_repo(
 
     remotes = await discover_remotes(path)
     branches = await discover_branches(path)
+
+    # Source the Beads prefix from the repo's local git config when declared;
+    # an absent key leaves any existing DB prefix untouched.
+    prefix = await read_prefix(path)
+    if prefix is not None:
+        sp.apply(prefix=prefix)
 
     # Upsert remotes → Archive.
     existing_archives = {a.name: a for a in sp.archives}

@@ -96,14 +96,18 @@ release: doc
 	./mt src tag
 	./mt -V src build -ar
 
-# Run all TS/JS package tests
+# Run all TS/JS package tests.
+# Each package owns its test runner (vitest, node --test, …); delegate to its
+# Makefile instead of assuming a common toolchain. Dependencies are bootstrapped
+# via the package's own `install` target when node_modules is missing.
 jstest:
 	@for dir in ts/*/ js/*/ ; do \
 	  if [ -f "$$dir/package.json" ]; then \
 	    echo "Running tests in $$dir"; \
-	    (cd "$$dir" && { [ -d node_modules ] || npm ci; } \
-	      && npx vitest run \
-	      && { [ ! -f vitest.interop.config.ts ] || npx vitest run --config vitest.interop.config.ts; }) || exit 1; \
+	    (cd "$$dir" \
+	      && { [ -d node_modules ] || $(MAKE) install; } \
+	      && $(MAKE) test \
+	      && { if grep -q '^test-interop:' Makefile 2>/dev/null; then $(MAKE) test-interop; fi; }) || exit 1; \
 	  fi; \
 	done
 

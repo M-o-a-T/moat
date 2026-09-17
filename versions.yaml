@@ -82,6 +82,11 @@ moat-db-rain:
   pypi: 0.0.1
   rev: 6a21b2660ab11490e99ebfb7d2fb5b6d35ea5624
   tag: 0.0.1
+moat-db-inv:
+  new: 0.0.1
+  pkg: 1
+  pypi: 0.0.1
+  tag: 0.0.1
 moat-db-thing:
   deb: 0.0.4-2
   new: 0.0.4

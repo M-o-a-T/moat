@@ -16,4 +16,8 @@ It can
 - monitor a KV entry and write any updates to GPIO
 - work with MoaT-KV's runner system, either centrally or distributed
 
+## Deprecation Warning
+
+This package is deprecated.  Use ``moat-link-gpio`` instead.
+
 % end main

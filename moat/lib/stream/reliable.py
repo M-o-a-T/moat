@@ -114,6 +114,7 @@ class ReliableMsg(StackedMsg):
         window = cfg.get("window", 8)
         timeout = cfg.get("timeout", 1000)
         retries = cfg.get("retries", 5)
+        self.persist = cfg.get("persist", False)
 
         if window < 4:
             raise RuntimeError(f"window must be >=4, not {window}")
@@ -340,10 +341,19 @@ class ReliableMsg(StackedMsg):
 
                 await idle()
 
-        except Exception:  # noqa:TRY203
-            # if not self.persist:
-            raise
-            # log("Reliable", err=exc)
+        except (EOFError, OSError) as exc:
+            # Connection dropped. If persist is set, log and return so
+            # _run()'s loop reconnects; otherwise re-raise.
+            if not self.persist:
+                raise
+            log("Reliable reconnect: %r", exc)
+            # Signal that the link is down while we reconnect.
+            self.__tg = None
+            self.s = None
+            self._is_down.set()
+            if self._is_up.is_set():
+                self._is_up = Event()
+            self._trigger.set()
 
     async def _run(self):
         self.reset()

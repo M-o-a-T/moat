@@ -1,0 +1,40 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "moat-db-inv"
+version = "0.0.1"
+description = "MoaT network inventory database (VLANs, networks, hosts, interfaces, cables)"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["MoaT"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Framework :: AsyncIO",
+  "Framework :: Trio",
+  "Framework :: AnyIO",
+  "Development Status :: 3 - Alpha",
+]
+dependencies = [
+  "moat-util ~= 0.63.0",
+  "moat-db ~= 0.2.9",
+  "moat-db-thing ~= 0.0.4",
+  "moat-lib-run ~= 0.2.0",
+  "netaddr",
+]
+
+[[project.authors]]
+name = "Matthias Urlichs"
+email = "matthias@urlichs.de"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

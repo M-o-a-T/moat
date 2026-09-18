@@ -113,5 +113,11 @@ class Cmd(BaseCmd):
     async def cmd_x(self):
         """
         Activate the new config.
+
+        Uses ``safe_reload`` so that a bad configuration does not
+        leave the system in a broken state.  If the reload fails, the
+        previous configuration is retained.
         """
-        await self.root.reload()
+        ok = await self.root.safe_reload()
+        if not ok:
+            raise RuntimeError("Config reload failed; previous config retained")

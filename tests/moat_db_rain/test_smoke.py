@@ -15,4 +15,16 @@ async def test_rain_help_lists_subcommands():
     runner = CliRunner()
     result = await runner.invoke(rain_cli, ["--help"], obj={})
     assert result.exit_code == 0, result.output
-    assert "controller" in result.output
+    assert "at" in result.output
+    assert "day" in result.output
+    assert "dayrange" in result.output
+
+
+@pytest.mark.trio
+async def test_rain_no_args_prints_help():
+    """`moat db rain` with no arguments prints help instead of doing nothing."""
+    runner = CliRunner()
+    result = await runner.invoke(rain_cli, [], obj={})
+    assert result.exit_code == 0, result.output
+    assert "Irrigation management." in result.output
+    assert "at" in result.output

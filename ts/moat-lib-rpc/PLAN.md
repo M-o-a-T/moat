@@ -299,8 +299,8 @@ behaviours.
 
 Use the npm package **`cbor2`** (v2.3.0, MIT, hildjj/cbor2) — RFC 8949,
 ESM/CJS, custom `Tag` handling, and a streaming decoder for incremental TCP
-decode. (The existing `moat/nodered/moat-meta-codec` uses the older `cbor` ^9;
-follow-up `moat-p5m` moves that package to `js/` and switches it to `cbor2`.)
+decode. (The Node-RED codec package — now `@moat/meta-codec` under
+`js/moat-meta-codec/` — likewise switched to `cbor2`; see issue `moat-p5m`.)
 
 ### 5.2 MoaT extension tag table
 

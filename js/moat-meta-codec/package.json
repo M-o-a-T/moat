@@ -1,0 +1,67 @@
+{
+  "name": "@moat/meta-codec",
+  "version": "0.2.0",
+  "description": "Metadata codec for MoaT messages — Node-RED encode/decode nodes",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/codec.js",
+      "require": "./lib/codec.cjs",
+      "types": "./lib/codec.d.ts"
+    },
+    "./encode": {
+      "import": "./lib/codec.js",
+      "require": "./lib/codec.cjs"
+    }
+  },
+  "main": "./lib/codec.cjs",
+  "module": "./lib/codec.js",
+  "types": "./lib/codec.d.ts",
+  "files": [
+    "lib/",
+    "moat-meta-codec.html",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/codec.test.js",
+    "test:nodered": "node --test test/codec.nodered.test.js",
+    "lint": "eslint lib/ test/",
+    "fmt": "prettier --write lib/ test/"
+  },
+  "author": "Matthias Urlichs <matthias@urlichs.de>",
+  "license": "LGPL-3.0-or-later",
+  "dependencies": {
+    "base85-full": "^3.2.0",
+    "cbor2": "^2.3.0"
+  },
+  "devDependencies": {
+    "node-red": "^4.1.0",
+    "node-red-node-test-helper": "^0.3.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/M-o-a-T/moat",
+    "directory": "js/moat-meta-codec"
+  },
+  "keywords": [
+    "node-red",
+    "mqtt",
+    "moat",
+    "cbor"
+  ],
+  "bugs": {
+    "url": "https://github.com/M-o-a-T/moat/issues"
+  },
+  "homepage": "https://github.com/M-o-a-T/moat/tree/main/js/moat-meta-codec",
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "node-red": {
+    "nodes": {
+      "moat-meta-encode": "lib/codec.js",
+      "moat-meta-decode": "lib/codec.js"
+    }
+  }
+}

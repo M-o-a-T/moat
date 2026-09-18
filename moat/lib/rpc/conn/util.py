@@ -5,13 +5,16 @@ Basic handler for iterating incoming Moat connections.
 from __future__ import annotations
 
 from moat.util import Queue
-from moat.lib.micro import ACM, AC_exit, Event, L, TaskGroup
+from moat.lib.micro import ACM, AC_exit, AC_use, Event, L, TaskGroup
+from moat.lib.stream import BaseConn
 
 # typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.lib.stream import BaseConn
+    from types import TracebackType
+
+    from moat.lib.stream.base import Buffer, MutBuffer
 
     from collections.abc import Awaitable
     from typing import Never
@@ -86,3 +89,94 @@ class BaseConnIter:
 
     def __anext__(self) -> Awaitable[BaseConn]:
         return self.q.get()
+
+
+class ListenerLink(BaseConn):
+    """
+    Adapter that presents a :class:`BaseConnIter` as a reconnectable stream.
+
+    Each time this stream is (re-)entered as an async context manager, it
+    pulls the next incoming connection from the underlying :class:`BaseConnIter`
+    and delegates I/O to it.
+
+    This allows a :class:`~moat.lib.stream.ReliableMsg` layer (or any other
+    stacked stream) to sit *above* the listener and transparently reconnect
+    when the underlying transport disappears.
+
+    The class provides ``rd``/``wr`` (for :func:`~moat.lib.stream.serial_stack`)
+    and ``snd``/``rcv`` (for :func:`~moat.lib.stream.ws_stack`) by delegating
+    to the current connection.  The appropriate set of methods is used
+    depending on the stream stack built on top.
+
+    Args:
+        listener: A :class:`BaseConnIter` subclass.
+    """
+
+    listener: BaseConnIter
+
+    def __init__(self, listener: BaseConnIter):
+        super().__init__()
+        self.listener = listener
+
+    async def __aenter__(self):
+        await self.listener.__aenter__()
+        return await super().__aenter__()
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
+        try:
+            return await super().__aexit__(exc_type, exc, tb)
+        finally:
+            await self.listener.__aexit__(exc_type, exc, tb)
+
+    async def stream(self):
+        """Return the next incoming connection."""
+        conn = await self.listener.__anext__()
+        await AC_use(self, conn)
+        return conn
+
+    # -- BaseBuf delegation (for serial_stack) --
+
+    async def rd(self, buf: MutBuffer) -> int:
+        """Read data from the current connection."""
+        if self.s is None:
+            raise EOFError
+        return await self.s.rd(buf)
+
+    async def wr(self, data: Buffer) -> int:
+        """Write data to the current connection."""
+        if self.s is None:
+            raise EOFError
+        return await self.s.wr(data)
+
+    # -- BaseBlk delegation (for ws_stack) --
+
+    async def snd(self, m: Buffer) -> None:
+        """Send a block via the current connection."""
+        if self.s is None:
+            raise EOFError
+        await self.s.snd(m)
+
+    async def rcv(self) -> Buffer:
+        """Receive a block from the current connection."""
+        if self.s is None:
+            raise EOFError
+        return await self.s.rcv()
+
+    # -- Console delegation (crd/cwr) --
+
+    async def crd(self, buf: MutBuffer) -> int:
+        """Read console data from the current connection."""
+        if self.s is None:
+            raise EOFError
+        return await self.s.crd(buf)
+
+    async def cwr(self, buf: Buffer) -> None:
+        """Write console data to the current connection."""
+        if self.s is None:
+            raise EOFError
+        await self.s.cwr(buf)

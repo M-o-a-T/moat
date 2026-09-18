@@ -56,6 +56,7 @@ _imports = {
     "BaseListenOneCmd": "cmd.tree.listen",
     # From conn
     "BaseConnIter": "conn.util",
+    "ListenerLink": "conn.util",
     "TcpIter": "conn.tcp",
     "UnixIter": "conn.unix",
     "WsIter": "conn.ws",
@@ -179,6 +180,7 @@ __all__ = [  # noqa:RUF022
     "BaseListenOneCmd",
     # From conn
     "BaseConnIter",
+    "ListenerLink",
     "TcpIter",
     "UnixIter",
     "WsIter",
@@ -243,6 +245,7 @@ if _TC or _DOC:
     from .conn.tcp import TcpIter as TcpIter
     from .conn.unix import UnixIter as UnixIter
     from .conn.util import BaseConnIter as BaseConnIter
+    from .conn.util import ListenerLink as ListenerLink
     from .conn.ws import WsIter as WsIter
     from .msg import Msg as Msg
     from .msg import MsgLink as MsgLink

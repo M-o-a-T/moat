@@ -36,7 +36,16 @@ class TcpIter(BaseConnIter):
 
             await tgx.spawn(rdy, evt)
 
-            await run_server(self._handle, self.host, self.port, evt=evt)
+            if self.port == 0:
+
+                def port_cb(p):
+                    self.port = p
+                    self._port_assigned()
+
+            else:
+                port_cb = None
+
+            await run_server(self._handle, self.host, self.port, evt=evt, port_cb=port_cb)
 
     async def _handle(self, conn):
         await self.add_conn(SingleAIOBuf(conn))

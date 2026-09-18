@@ -355,7 +355,6 @@ nitpick_ignore = [
     ("py:class", "moat.db.util.Mgr"),
     ("py:func", "moat.db.util.database"),
     ("py:mod", "moat.db.rain.range"),
-    ("py:mod", "moat.db.rain.cmds.monitor"),
     ("py:func", "moat.util.times.time_until"),
     ("py:class", "moat.db.rain.monitor._AsyncCMIter"),
     # Test-only stand-in referenced from ``Monitor``'s docstring.

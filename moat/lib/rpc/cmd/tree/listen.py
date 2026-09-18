@@ -10,7 +10,6 @@ from .dir import BaseSubCmd
 from .layer import BaseLayerCmd
 
 # Typing
-
 from typing import TYPE_CHECKING, cast  # isort:skip
 
 if TYPE_CHECKING:
@@ -25,10 +24,13 @@ class BaseListenOneCmd(BaseLayerCmd):
     """
     An app that runs a listener and accepts a single connection.
 
-    Override `listener` to return it.
+    The listener is wrapped in a :class:`~moat.lib.rpc.ListenerLink` so that
+    the resulting stream stack can be reconnected when the underlying
+    transport drops.  This allows a :class:`~moat.lib.stream.ReliableMsg`
+    layer (when ``lossy`` is set) to resume where it left off.
 
-    TODO: this needs to be a stream layer instead: we want the
-    Reliable module to be able to pick up where it left off.
+    Override `listener` to return the connection iterator.
+    Override `wrapper` to customise the stream stack.
     """
 
     def listener(self) -> BaseConnIter:
@@ -91,22 +93,54 @@ class BaseListenOneCmd(BaseLayerCmd):
     async def task(self) -> None:
         """
         Accept connections.
+
+        When ``lossy`` is set in the config, a single :class:`CmdMsg` is used
+        with a :class:`~moat.lib.rpc.ListenerLink` underneath.  The
+        :class:`~moat.lib.stream.ReliableMsg` layer (added by
+        :func:`~moat.lib.stream.serial_stack`) reconnects automatically when
+        the underlying transport drops.
+
+        Without ``lossy``, the classic per-connection approach is used:
+        each incoming connection gets its own :class:`ExtCmdMsg`.
         """
         tg = self.tg
         if tg is None:
             raise RuntimeError("No taskgroup")
         tg = cast("_TaskGroupProto", tg)
-        listener = cast("Callable[[], BaseConnIter]", self.listener)
-        async with listener() as conns:
-            # The listener's __aenter__ blocks until the port is assigned.
-            if isinstance(conns.port, int):
-                self.cfg["port"] = conns.port
-            async for conn in conns:
 
-                async def _handle(conn=conn) -> None:
-                    await self.handler(conn)
+        link_cfg = self.cfg.get("link", {})
+        if link_cfg.get("lossy", None):
+            # Stream-based approach: one CmdMsg with ListenerLink + ReliableMsg.
+            # ReliableMsg handles reconnection via its _run loop.
+            from moat.lib.rpc.cmd.msg import CmdMsg  # noqa: PLC0415
+            from moat.lib.rpc.conn.util import ListenerLink  # noqa: PLC0415
 
-                tg.start_soon(_handle)
+            listener = cast("Callable[[], BaseConnIter]", self.listener)
+            link = ListenerLink(listener())
+            stack = self.wrapper(link)
+            app = CmdMsg(self.cfg, stack)
+            app.attached(self, "_")
+            self.app = app
+            await self.start_app(app)
+            if L:
+                self.set_ready()
+                await app.wait_ready()
+            await app.wait_stopped()
+            if self.app is app:
+                self.app = None
+        else:
+            # Classic per-connection approach.
+            listener = cast("Callable[[], BaseConnIter]", self.listener)
+            async with listener() as conns:
+                # The listener's __aenter__ blocks until the port is assigned.
+                if isinstance(conns.port, int):
+                    self.cfg["port"] = conns.port
+                async for conn in conns:
+
+                    async def _handle(conn=conn) -> None:
+                        await self.handler(conn)
+
+                    tg.start_soon(_handle)
 
 
 class BaseListenCmd(BaseSubCmd):

@@ -33,6 +33,7 @@ from moat.lib.micro import (
     ObjSequence,
     TaskGroup,
     idle,
+    log,
 )
 from moat.lib.path import Path
 from moat.lib.rpc import MsgHandler, MsgSender
@@ -427,7 +428,10 @@ class RootCmd(Base):
     async def reload(self):
         "Reload me."
         await self.app.reload()
+        self._process_updates()
 
+    def _process_updates(self) -> None:
+        """Drain pending config-update markers and notify tagged subtrees."""
         upd, self._updates = self._updates, {}
 
         def _upd(val):
@@ -441,6 +445,33 @@ class RootCmd(Base):
                     _upd(v)
 
         _upd(upd)
+
+    async def safe_reload(self) -> bool:
+        """Reload with fallback on failure.
+
+        Delegates to the app's ``safe_reload`` if it has one, otherwise
+        falls back to plain ``reload`` wrapped in a try/except.
+
+        Returns:
+            True if the reload succeeded, False if it failed.
+        """
+        app = self.app
+        if app is None:
+            return False
+        sr = getattr(app, "safe_reload", None)
+        try:
+            if sr is not None:
+                ok = await sr()
+            else:
+                await app.reload()
+                ok = True
+        except Exception as exc:
+            log("RootCmd.safe_reload failed", err=exc)
+            ok = False
+
+        if ok:
+            self._process_updates()
+        return ok
 
     def cfg_updated(self, cfg):
         "Mark TODO for update"

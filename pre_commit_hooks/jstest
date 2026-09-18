@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """
-Pre-commit hook to run vitest on TS packages with modified files.
+Pre-commit hook to run tests on TS/JS packages with modified files.
 
 Mirrors the pytest-modified hook: takes the list of modified files from
 pre-commit, filters for files under ts/ (or js/), determines which package
-directory they belong to, and runs `npx vitest run` in that directory.
+directory they belong to, and runs that package's own test command.
+
+Each package owns its test runner: the top-level ``Makefile``'s ``jstest``
+target likewise delegates to ``$(MAKE) test`` per package. Hard-coding a
+single runner (e.g. vitest) breaks packages whose ``package.json`` ``test``
+script uses Node's built-in runner (``node --test``).
 
 If no TS/JS files are modified, exits 0 (nothing to test).
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -60,9 +66,9 @@ def _resolve_python() -> str | None:
 
 
 def _python_env() -> dict[str, str]:
-    """Env for the vitest subprocess, with a moat-capable python3 on PATH.
+    """Env for the test subprocess, with a moat-capable python3 on PATH.
 
-    Vitest's interop tests spawn ``python3``; ensure that resolves to an
+    Interop suites spawn ``python3``; ensure that resolves to an
     interpreter that can import moat (preferring the project venv). Falls
     back to the inherited environment unchanged if no such interpreter is
     found — the interop suite will then surface the import failure itself.
@@ -105,6 +111,22 @@ def get_package_dir(filepath: str) -> Path | None:
     return None
 
 
+def _has_interop_config(pkg_dir: Path) -> bool:
+    """Whether the package ships a vitest interop config."""
+    return (pkg_dir / "vitest.interop.config.ts").exists()
+
+
+def _has_test_script(pkg_dir: Path) -> bool:
+    """Whether the package declares a runnable ``test`` script."""
+    manifest = pkg_dir / "package.json"
+    try:
+        data = json.loads(manifest.read_text())
+    except (OSError, ValueError):
+        return False
+    scripts = data.get("scripts") or {}
+    return isinstance(scripts, dict) and bool(scripts.get("test"))
+
+
 def main(filenames: list[str]) -> int:
     """
     Main entry point for pre-commit hook.
@@ -136,7 +158,7 @@ def main(filenames: list[str]) -> int:
     for pkg_dir in sorted(pkg_dirs):
         print(f"\n{'=' * 60}")
         if (pkg_dir / "node_modules").is_dir():
-            print(f"Running vitest in {pkg_dir}")
+            print(f"Testing {pkg_dir}")
         else:
             print(f"Installing deps in {pkg_dir}")
         print("=" * 60)
@@ -153,8 +175,15 @@ def main(filenames: list[str]) -> int:
                 failed_pkgs.append(pkg_dir)
                 continue
 
+        # Delegate to the package's own test runner via its declared
+        # ``test`` script — vitest for some packages, ``node --test`` for
+        # others. Mirrors the top-level Makefile's ``jstest`` target.
+        if not _has_test_script(pkg_dir):
+            print(f"No 'test' script in {pkg_dir}/package.json; skipping.")
+            continue
+
         result = subprocess.run(
-            ["npx", "vitest", "run"],  # noqa: S607
+            ["npm", "test"],  # noqa: S607
             cwd=str(pkg_dir),
             check=False,
             env=env,
@@ -165,7 +194,7 @@ def main(filenames: list[str]) -> int:
             continue
 
         # Also run the interop suite if this package has one.
-        if (pkg_dir / "vitest.interop.config.ts").exists():
+        if _has_interop_config(pkg_dir):
             result = subprocess.run(
                 ["npx", "vitest", "run", "--config", "vitest.interop.config.ts"],  # noqa: S607
                 cwd=str(pkg_dir),

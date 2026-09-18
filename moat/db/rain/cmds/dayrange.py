@@ -1,12 +1,10 @@
 """Command-line interface for irrigation day ranges.
 
-``moat db rain <SITE> dayrange {show,add,set,delete}``
+``moat db rain dayrange {show,add,set,delete}``
 
 A :class:`DayRange` is a **globally**-scoped named intersection of
-:class:`Day` unions — the ``<SITE>`` argument is accepted for consistency
-but ignored, so the dummy site ``-`` may be used
-(``moat db rain - dayrange …``). Groups (see ``moat db rain <SITE>
-group``) link to day ranges to express "water on these days".
+:class:`Day` unions. Groups (see ``moat db rain at <SITE> group``)
+link to day ranges to express "water on these days".
 
 Days are linked by name; a ``-`` prefix unlinks. A day must exist before
 it can be linked.

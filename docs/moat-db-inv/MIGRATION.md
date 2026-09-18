@@ -405,7 +405,7 @@ New package `moat.db.inv`, laid out exactly like `moat.db.box` /
 moat/db/inv/
   __init__.py        # docstring; CfgStore.with_(__name__) if a _cfg.yaml is needed
   ip.py              # address TypeDecorator / composite + conversion + EUI-64 link-local helper
-  model.py           # ORM models: Vlan, Network, Host, Interface, Address, Cable, Group, host_group
+  model.py           # ORM models: Vlan, Network, Host, Interface, Address, Cable, HostGroup, host_group
   model_.py          # relationship wiring + *.apply() (resolve FKs by name, like box/thing)
   _main.py           # CLI: `mt db inv …` (load_subgroup(prefix="moat.db.inv"))
   _cfg.yaml          # optional; only if static config is required

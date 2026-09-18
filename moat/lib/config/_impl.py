@@ -12,7 +12,7 @@ from pathlib import Path as FSPath
 from weakref import WeakSet
 
 from moat.util import NotGiven, attrdict, combine_dict, ctx_as, merge, yload
-from moat.lib.micro import ObjSequence
+from moat.lib.micro import ObjSequence, log
 from moat.lib.path import P, Path
 
 from ._reg import to_process
@@ -434,6 +434,32 @@ class CfgStore:
             pass
         self.notify()
         self._updated = self.updated
+
+    def safe_reload(self) -> bool:
+        """Rebuild the config with fallback on failure.
+
+        Snapshots the current result before rebuilding.  If ``redo``
+        raises an exception, the snapshot is restored so callers
+        continue to see the last-known-good configuration.
+
+        Returns:
+            True if the reload succeeded, False if it failed and the
+            previous config was restored.
+        """
+        import copy  # noqa: PLC0415
+
+        saved = copy.deepcopy(self._result)
+        saved_updated = self._updated
+        try:
+            self._redo = True
+            self.redo()
+        except Exception as exc:
+            log("CfgStore.safe_reload failed", err=exc)
+            self._result = saved
+            self._redo = False
+            self._updated = saved_updated
+            return False
+        return True
 
     @classmethod
     def with_(cls, path: str | Path) -> None:

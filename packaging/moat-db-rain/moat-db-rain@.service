@@ -8,7 +8,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/moat db rain %i monitor
+ExecStart=/usr/bin/moat db rain at %i monitor
 EnvironmentFile=/usr/lib/moat/link/env
 EnvironmentFile=-/etc/moat/rain.env
 TimeoutSec=300

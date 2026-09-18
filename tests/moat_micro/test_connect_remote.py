@@ -52,10 +52,9 @@ s:
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
 @pytest.mark.parametrize("remote_first", [True, False])
-async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_port):
+async def test_net_r(tmp_path, server_first, link_in, remote_first):
     "basic connectivity test"
     log(f"SF={server_first} LI={link_in} RF={remote_first}")
-    port = free_tcp_port
 
     async def set_server(c):
         await c.set({
@@ -63,13 +62,13 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
                 "r": {
                     "app": "net.tcp.LinkIn" if link_in else "net.tcp.Port",
                     "host": "127.0.0.1",
-                    "port": port,
+                    "port": 0,
                     "wait": False,
                 },
             },
         })
 
-    async def set_client(c):
+    async def set_client(c, port):
         await c.set({
             "app": {
                 "r": {
@@ -87,10 +86,21 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_por
         if remote_first:
             cl, cr = cr, cl
 
-        await (set_server if server_first else set_client)(cl)
-        log("Wait before starting the %s", "client" if server_first else "server")
+        # Always start the server first to obtain the OS-assigned port,
+        # then start the client with that port.  The ``server_first``
+        # parameter controls which side is the server, not the temporal
+        # order of config-set calls.
+        server_side = cl if server_first else cr
+        client_side = cr if server_first else cl
+
+        await set_server(server_side)
+        # Wait for the server to start and update its config with the
+        # actual port.
         await sleep_ms(100)
-        await (set_client if server_first else set_server)(cr)
+        server_cfg = await server_side.get()
+        port = server_cfg["app"]["r"]["port"]
+
+        await set_client(client_side, port)
         if (server_first == remote_first, link_in) != (True, False):
             log("Wait Ready remote")
             await d.cmd(P("s.r.!.rdy_"))

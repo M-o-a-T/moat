@@ -41,6 +41,24 @@ selective ACKs, and retransmission of lost messages while preserving order.
 Modeled roughly on X.75. This is what makes the MicroPython serial RPC robust
 despite line noise.
 
+## WebSocket connector (`ws.py`)
+
+`WsLink` (client) and `SingleWsBlk` (server, reached via `WsIter`) adapt a
+WebSocket connection to a block stream. Binary frames carry structured
+messages; text frames carry the out-of-band console channel.
+
+Both sides support **subprotocol negotiation**. The client offers a list
+of subprotocol names (e.g. `["cbor"]`); the server accepts the first
+matching name from its own list. The negotiated subprotocol is stored in
+`self.subprotocol` after the handshake. Configuration key: `subprotocols`
+(list of strings) on the `net.ws.Link`, `net.ws.Port`, `net.ws.LinkIn`,
+and `net.ws.Raw` apps.
+
+Note that the subprotocol is negotiated and stored but not yet used to
+select the wire codec: the codec is still chosen independently via
+`cfg["codec"]` (default `"std-cbor"`). Wiring the negotiated subprotocol
+to codec selection is tracked separately (see `moat-svt`).
+
 ## Embedded mirror
 
 The MicroPython side mirrors a subset (`moat/micro/_embed/lib/moat/lib/stream/`:

@@ -206,6 +206,7 @@ async def dump_(obj, one_line: bool) -> None:
     "at",
     invoke_without_command=True,
     short_help="Create/show/delete a port entry.",
+    cls=AliasedGroup,
 )
 @click.argument("type_", type=str, nargs=1)
 @click.argument("card", type=int, nargs=1)

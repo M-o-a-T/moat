@@ -128,7 +128,7 @@ async def set_(obj, thread, script, data, async_, info, **kw):
 
 
 # disabled for now
-@cli.group("module", hidden=True)
+@cli.group("module", hidden=True, cls=AliasedGroup)
 async def mod():
     """
     Change the code of a module stored in MoaT-KV

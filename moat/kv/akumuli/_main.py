@@ -10,7 +10,7 @@ from moat.util import NotGiven, attrdict, yprint
 from moat.kv.data import data_get, node_attr
 from moat.kv.obj.command import std_command
 from moat.lib.path import P
-from moat.lib.run import attr_args
+from moat.lib.run import AliasedGroup, attr_args
 from moat.link.announce import as_service
 
 from .model import AkumuliRoot
@@ -52,7 +52,9 @@ async def dump_(obj, one_line):
         print(n, file=obj.stdout)
 
 
-@cli.group("at", invoke_without_command=True, short_help="create/show/delete an entry")
+@cli.group(
+    "at", invoke_without_command=True, short_help="create/show/delete an entry", cls=AliasedGroup
+)
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
 async def at_cli(ctx, path):

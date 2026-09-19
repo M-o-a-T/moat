@@ -1,18 +1,16 @@
 """Command-line interface for irrigation day definitions.
 
-``moat db rain <SITE> day {show,add,set,delete,time}``
+``moat db rain day {show,add,set,delete,time}``
 
 A :class:`Day` is a named union of time fragments (:class:`DayTime`),
-scoped **globally** (not per site) — the ``<SITE>`` argument is accepted
-for consistency with the rest of the CLI but ignored here, so the dummy
-site ``-`` may be used (``moat db rain - day …``). A
-:class:`DayRange` (see ``moat db rain <SITE> dayrange``) intersects Days.
+scoped **globally** (not per site). A :class:`DayRange` (see
+``moat db rain dayrange``) intersects Days.
 
 Each :class:`DayTime` is a free-form description string (e.g.
 ``"8:00-12:00"``) belonging to one Day, addressed through the nested
 ``time`` subgroup::
 
-    moat db rain <SITE> day -n <DAY> time {show,add,set,delete}
+    moat db rain day -n <DAY> time {show,add,set,delete}
 """
 
 from __future__ import annotations
@@ -23,7 +21,7 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.db.rain.model import Day, DayTime
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 from ._util import (
     absent,
@@ -33,7 +31,7 @@ from ._util import (
 )
 
 
-@click.group(name="day", short_help="Manage day definitions (global)")
+@click.group(name="day", cls=AliasedGroup, short_help="Manage day definitions (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day name")
 @click.pass_obj
 async def cli(obj, name):
@@ -101,7 +99,7 @@ def _day_of(obj) -> Day:
     return get_one(obj, Day, "day", name=require_name(obj, "day"))
 
 
-@cli.group(name="time", short_help="Manage a day's time fragments")
+@cli.group(name="time", cls=AliasedGroup, short_help="Manage a day's time fragments")
 @click.option("--descr", "-d", type=str, default=None, help="Time-fragment description")
 @click.pass_obj
 async def time_cli(obj, descr):

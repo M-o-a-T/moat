@@ -19,7 +19,7 @@ from moat.util import (
     yprint,
 )
 from moat.db import database
-from moat.lib.run import load_subgroup, option_ng
+from moat.lib.run import AliasedGroup, load_subgroup, option_ng
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
 
@@ -43,7 +43,7 @@ class CustomContext(click.Context):
     formatter_class = CustomFormatter
 
 
-@load_subgroup(prefix="moat.label")
+@load_subgroup(prefix="moat.db.label")
 @click.pass_context
 def cli(ctx):
     """Labels for boxes and things."""
@@ -60,8 +60,7 @@ def cli(ctx):
 ###
 
 
-@cli.group
-@click.option("--name", "-n", "text", type=str, help="Text on the label")
+@cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Scancode of the label")
 @click.pass_obj
 def one(obj, text, nr):
@@ -183,7 +182,7 @@ def delete(obj):
 ###
 
 
-@cli.group(name="print")
+@cli.group(name="print", cls=AliasedGroup)
 @click.pass_obj
 @click.option("-p", "--printer", help="Printer name")
 @click.option(
@@ -208,7 +207,7 @@ def print_(obj, printer, output):
                 return k
         raise ValueError("Duh?")
 
-    cfg = obj.cfg.label
+    cfg = obj.cfg.db.label
     if printer is None and len(cfg.printer) == 2:
         printer = ndef(cfg.printer)
     if printer is None:
@@ -232,7 +231,7 @@ def test(obj, label):
     """\
     Create a test PDF that frames first and last labels.
     """
-    cfg = obj.cfg
+    cfg = obj.cfg.db.label
     p = obj.pdf
 
     fmt = merge(cfg.format[label], cfg.format["_default"], replace=False)
@@ -260,7 +259,7 @@ def print_sheet(obj, sheets, test):
     """\
     Print these sheets.
     """
-    cfg = obj.cfg.label
+    cfg = obj.cfg.db.label
     p = obj.pdf
     sess = obj.session
     fmt = lab = None
@@ -371,7 +370,7 @@ def print_sheet(obj, sheets, test):
 ###
 
 
-@cli.group
+@cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the label type")
 @click.pass_obj
 def typ(obj, name):
@@ -392,7 +391,7 @@ def typ_show_(obj):
     Otherwise list all label types.
     """
     sess = obj.session
-    cfg = obj.cfg.label
+    cfg = obj.cfg.db.label
 
     if obj.name is None:
         seen = False
@@ -480,7 +479,7 @@ def typ_delete(obj):
 ###
 
 
-@cli.group(name="format")
+@cli.group(name="format", cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the sheet type")
 @click.pass_obj
 def sheettyp(obj, name):
@@ -501,7 +500,7 @@ def sheettyp_show_(obj):
     Otherwise list all label formats.
     """
     sess = obj.session
-    cfg = obj.cfg.label
+    cfg = obj.cfg.db.label
 
     if obj.name is None:
         seen = False
@@ -586,7 +585,7 @@ def sheettyp_delete(obj):
 ###
 
 
-@cli.group
+@cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Number of the sheet")
 @click.pass_obj
 def sheet(obj, nr):

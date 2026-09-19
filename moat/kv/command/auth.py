@@ -108,7 +108,7 @@ async def init(obj, switch):
             print("Authorization turned off.", file=obj.stdout)
 
 
-@cli.group()
+@cli.group(cls=AliasedGroup)
 async def user():
     """Manage users."""
     pass

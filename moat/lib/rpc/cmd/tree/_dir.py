@@ -10,6 +10,7 @@ from moat.lib.micro import (
     L,
     Lock,
     TaskGroup,
+    log,
 )
 from moat.lib.rpc import BaseCmd
 
@@ -148,6 +149,42 @@ class BaseSubCmd(BaseSuperCmd):
             for app in list(self.sub.values()):
                 tg.start_soon(app.reload)
 
+    async def safe_reload(self) -> bool:
+        """Reload sub-apps with per-app fallback.
+
+        Unlike :meth:`reload`, a failure in one sub-app does not
+        prevent the remaining sub-apps from reloading.  Sub-apps that
+        fail to reload keep their previous configuration.
+
+        Returns:
+            True if all sub-apps reloaded successfully, False if at
+            least one failed.
+        """
+        root = self.root
+        if root is None:
+            raise RuntimeError("No root")
+        root.cfg_reloaded(self.cfg)
+
+        await super().reload()
+        oks: list[bool] = []
+
+        async def _one(app, sr) -> None:
+            try:
+                if sr is not None:
+                    oks.append(bool(await sr()))
+                else:
+                    await app.reload()
+                    oks.append(True)
+            except Exception as exc:
+                log("Sub-app reload failed: %s", app, err=exc)
+                oks.append(False)
+
+        async with TaskGroup() as tg:
+            for app in list(self.sub.values()):
+                sr = getattr(app, "safe_reload", None)
+                tg.start_soon(_one, app, sr)
+        return all(oks)
+
     def find_sub(self, scmd: PathElem) -> BaseMsgHandler | Callable[..., object] | None:
         """
         Resolve a subcommand.
@@ -202,6 +239,38 @@ class DirCmd(BaseSubCmd):
         async with self._lock:
             await super().reload()
             await self._setup_apps()
+
+    async def safe_reload(self) -> bool:
+        """Reload with fallback to the previous sub-app state.
+
+        Snapshots the current sub-app mapping before attempting the
+        reload.  If the reload raises an exception, the old sub-apps
+        are restored so the system keeps running with the last-known-
+        good configuration.
+
+        Returns:
+            True if the reload succeeded, False if it failed and the
+            previous state was restored.
+        """
+        async with self._lock:
+            saved_sub = dict(self.sub)
+            try:
+                await super().reload()
+                await self._setup_apps()
+            except Exception as exc:
+                log("DirCmd.safe_reload failed", err=exc)
+                # Restore old sub-apps that were detached during the
+                # failed reload.
+                for name, app in saved_sub.items():
+                    if name not in self.sub:
+                        await self.attach(name, app)
+                # Detach any apps that were newly created but not
+                # fully set up.
+                for name in list(self.sub.keys()):
+                    if name not in saved_sub:
+                        await self.detach(name)
+                return False
+            return True
 
     cmd_upd_ = reload
 

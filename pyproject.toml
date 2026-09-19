@@ -277,6 +277,7 @@ include = [
     "moat/db/thing/",
     "moat/db/rain/",
     "moat/bus/",
+    "moat/dev/",
     "moat/ems/",
     "moat/lib/",
     "moat/link/",

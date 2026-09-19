@@ -38,12 +38,17 @@ from moat.lib.path import (
 from moat.lib.pid import CPID
 from moat.lib.run import AliasedGroup
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from typing import Self
+
 FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 logger = logging.root
 
-GPIO = None
+GPIO: Any = None
 
 
 class Run(IntEnum):
@@ -466,9 +471,12 @@ with open("/etc/moat/moat.cfg") as _f:
 
 
 class APID(CPID):
-    "a PID that logs asynchronously"
+    """A PID that logs asynchronously."""
 
-    def __init__(self, data, name, cfg):
+    data: Any
+    name: str
+
+    def __init__(self, data: Any, name: str, cfg: Any) -> None:
         if "state" in cfg:
             state = data.state.setdefault(cfg.state, attrdict())
         else:
@@ -477,17 +485,17 @@ class APID(CPID):
         self.data = data
         self.name = name
 
-    async def setpoint(self, val):
-        "communicates the setpoint"
-        if self.state.get("setpoint", None) == val:
+    async def setpoint(self, setpoint: float) -> None:
+        """Communicate the setpoint."""
+        if self.state.get("setpoint", None) == setpoint:
             return
-        super().setpoint(val)
+        super().setpoint(setpoint)
 
         with contextlib.suppress(AttributeError):
-            await self.data.cl.set(self.cfg.log.setpoint, value=val, idem=True)
+            await self.data.cl.set(self.cfg.log.setpoint, value=setpoint, idem=True)
 
-    async def __call__(self, val, split: bool = False, **kw):
-        "run the PID and log the result"
+    async def __call__(self, val: float, split: bool = False, **kw: Any) -> Any:  # ty:ignore[invalid-method-override]
+        """Run the PID and log the result."""
         if split:
             p_i_d = super().integrate(val, **kw)
             res = self.sum(p_i_d)
@@ -498,8 +506,8 @@ class APID(CPID):
         await self.log_value(res)
         return res
 
-    async def log_value(self, res):
-        "log the result"
+    async def log_value(self, res: Any) -> None:
+        """Log the result."""
         if not isinstance(res, (int, float)):
             return
         with contextlib.suppress(AttributeError):
@@ -507,30 +515,80 @@ class APID(CPID):
 
 
 class Data:
-    "encapsulates the heat supply system"
+    """Encapsulate the heat supply system."""
 
-    force_on = False
-    heat_dest = None
+    # Configuration and client
+    _cfg: Any
+    _cl: Any
+    _got: anyio.Event
+    _want: set[str]
+    _sigs: dict[str, anyio.Event]
+    record: Any
+    pid: attrdict
+    no_op: bool
+    state: Any
+    cp_flow: float | None
+    m_errors: dict[Any, Any]
+    set_flow_pwm: Any  # set in __init__
 
-    t_adj = None
-    t_nom = None
-    t_low = None
-    t_limit = None
-    wp_on = False
-    hc_pos = 0
-    r_no = "----"
-    pellet_load = 0
-    pellet_on: bool = None
+    # Calculated values
+    force_on: bool = False
+    heat_dest: float | None = None
+    t_adj: float | None = None
+    t_nom: float | None = None
+    t_low: float | None = None
+    t_limit: float | None = None
+    wp_on: bool = False
+    hc_pos: int = 0
+    r_no: str | None = "----"
+    pellet_load: float = 0
+    pellet_on: bool | None = None
 
-    # outside temperature average
-    t_ext_avg = None
+    # Outside temperature average
+    t_ext_avg: float | None = None
 
-    def __init__(self, cfg, cl, record=None, no_op=False, state=None):
+    # Dynamic sensor values, set via _kv() callbacks in run_init().
+    # These are None until the first data arrives, but the code waits
+    # for all values (all_done) before using them, so they're treated
+    # as non-optional after initialization.
+    t_in: float
+    t_out: float
+    t_heat: float
+    r_flow: float
+    m_ice: bool
+    m_cop: float
+    m_pellet_state: int
+    tb_water: float
+    tb_heat: float
+    tb_mid: float
+    tb_low: float
+    m_power: float
+    m_air: float
+    m_air_pred: float
+    m_pellet: float
+    m_switch: bool
+
+    # Command values, set via _kv() callbacks in run_init().
+    c_flow: float
+    c_bypass: bool
+    c_bypass_mode: int
+    c_bypass_power: float
+    cm_wp: bool
+    cm_heat: bool
+    cm_pellet: bool
+    cm_pellet_force: float | None
+    c_heat: float
+    c_heat_night: float
+    c_water: float
+
+    def __init__(
+        self, cfg: Any, cl: Any, record: Any = None, no_op: bool = False, state: Any = None
+    ) -> None:
         self._cfg = cfg
         self._cl = cl
         self._got = anyio.Event()
-        self._want = set()
-        self._sigs = {}
+        self._want: set[str] = set()
+        self._sigs: dict[str, anyio.Event] = {}
         self.record = record
         self.pid = attrdict()
         self.no_op = no_op
@@ -538,8 +596,8 @@ class Data:
         self.state = state or attrdict()
 
         # calculated pump flow rate, 0…1
-        self.cp_flow = None
-        self.m_errors = {}
+        self.cp_flow: float | None = None
+        self.m_errors: dict[Any, Any] = {}
 
         for k, v in self.cfg.pid.items():
             self.pid[k] = APID(self, k, v)
@@ -556,19 +614,19 @@ class Data:
             self._flow_port = port = GPIO.PWM(pin, 200)
             port.start(0)
 
-            async def set_flow_pwm(r):
+            async def set_flow_pwm(r: float) -> None:
                 self.state.last_pwm = r
                 port.ChangeDutyCycle(100 * r)
 
         else:
 
-            async def set_flow_pwm(r):
+            async def set_flow_pwm(r: float) -> None:
                 self.state.last_pwm = r
                 await self.cl_set(path, value=r, idem=True)
 
         self.set_flow_pwm = set_flow_pwm
 
-    async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):  # noqa:D102
+    async def reload_cfg(self, cfgf: Any, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:  # noqa:D102
         flg = aionotify.Flags.CLOSE_WRITE | aionotify.Flags.MOVE_SELF
         async with aionotify.Watcher() as watcher:
             await watcher.awatch(path=cfgf, flags=flg)
@@ -586,48 +644,48 @@ class Data:
         pass
 
     @property
-    def time(self):
-        "current time"
+    def time(self) -> float:
+        """Return current time."""
         try:
-            return self.TS
+            return self.TS  # ty:ignore[unresolved-attribute]  # set by trigger()
         except AttributeError:
             return time.time()
 
     @property
-    def cl(self):
-        "MoaT-KV controller"
+    def cl(self) -> Any:
+        """MoaT-KV controller."""
         return self._cl
 
-    async def cl_set(self, *a, **kw):
-        "just calls self.cl.set(), except when running with ``--no-save``"
+    async def cl_set(self, *a: Any, **kw: Any) -> Any:
+        """Call self.cl.set(), except when running with ``--no-save``."""
         if self.no_op:
             print("SET", a, kw)
             return
         return await self._cl.set(*a, **kw)
 
     @property
-    def cfg(self):
-        "config data"
+    def cfg(self) -> Any:
+        """Config data."""
         return self._cfg
 
     # async def set_flow_pwm(self, rate):
     # added by .run_flow
 
-    def log_hc(self, i, *a):
-        "print+remember the current heating state cause"
+    def log_hc(self, i: int, *a: Any) -> None:
+        """Print and remember the current heating state cause."""
         print(f" H={i}", *a, end="\r" if self.hc_pos == i else "\n")
         sys.stdout.flush()
         self.hc_pos = i
 
-    async def log_zero(self):
-        "log zero values for all PIDs"
+    async def log_zero(self) -> None:
+        """Log zero values for all PIDs."""
         for name, pid in self.pid.items():
             if name.startswith("p_"):
                 continue
             await pid.log_value(0)
 
-    async def set_load(self, p):
-        "heat pump load update; sets to zero if less than minimum"
+    async def set_load(self, p: float) -> None:
+        """Heat pump load update; sets to zero if less than minimum."""
         if p < self.cfg.lim.power.min:
             await self.cl_set(self.cfg.cmd.power, value=0, idem=True)
             await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off, idem=True)
@@ -637,22 +695,22 @@ class Data:
             await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.on, idem=True)
             self.state.last_load = p
 
-    async def run_pump(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "Core method: Heat pump controller."
+    async def run_pump(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Core method: Heat pump controller."""
         run = Run(self.state.get("run", 0))
         # 0 off; 1 go_up, 2 up, 3 go_down
         # TODO charge the hot water part separately
-        tlast = 0
+        tlast: float = 0
 
-        orun = None
-        m_ice = False
-        cm_wp = None
-        cm_heat = None
-        n_cop = 0
-        t_no_power = None
-        heat_off = False
-        water_ok = True
-        t_change_max = None
+        orun: Run | None = None
+        m_ice: bool = False
+        cm_wp: bool | None = None
+        cm_heat: bool | None = None
+        n_cop: int = 0
+        t_no_power: float | None = None
+        heat_off: bool | None = False
+        water_ok: bool = True
+        t_change_max: float | None = None
         heat_pin = self.cfg.setting.heat.get("power", {}).get("pin", None)
 
         self.state.setdefault("avg_heat", self.t_heat)
@@ -858,7 +916,7 @@ class Data:
 
                 heat_off = True
                 await self.pid.flow.setpoint(
-                    self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow,
+                    self.cfg.misc.stop.flow if orun != Run.off else self.cfg.lim.defrost.flow,
                 )
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
@@ -866,7 +924,11 @@ class Data:
             else:
                 raise ValueError(f"State ?? {run!r}")
 
-            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
+            if (
+                self.state.t_change is not None
+                and t_change_max is not None
+                and self.time - self.state.t_change > t_change_max
+            ):
                 raise TimeoutError("Time exceeded. Turning off.")
 
             orun = run
@@ -1399,8 +1461,8 @@ class Data:
                     run = Run.off
                     continue
 
-    async def run_set_pellet(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        """run the pellet burner when it's too cold for the heat pump"""
+    async def run_set_pellet(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Run the pellet burner when it's too cold for the heat pump."""
         task_status.started()
 
         if self.state.get("t_pellet_on", None) is None:
@@ -1547,8 +1609,8 @@ class Data:
                     )
                     sys.stdout.flush()
 
-    async def run_temp_thresh(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "temperature thresholds for pellet burner on/off switch"
+    async def run_temp_thresh(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Temperature thresholds for pellet burner on/off switch."""
         task_status.started()
         run = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
@@ -1604,8 +1666,8 @@ class Data:
             if "pellet" in self.cfg.feedback:
                 await self.cl_set(self.cfg.feedback.pellet, run)
 
-    async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        """set the goal for heating"""
+    async def run_set_heat(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Set the goal for heating."""
         cf = self.cfg.adj.curve
 
         locks = attrdict(day=False, night=False)
@@ -1613,7 +1675,7 @@ class Data:
         t_cur = None
         _lock = anyio.Lock()
 
-        async def _upd():
+        async def _upd() -> float:
             nonlocal cf, dest, locks, t_cur, _lock
             if t_cur is None:
                 print("t_cur bad")
@@ -1652,7 +1714,7 @@ class Data:
 
                 return delay
 
-        async def sf_day_night(sf, dn, nd, *, task_status):
+        async def sf_day_night(sf: Any, dn: str, nd: str, *, task_status: Any) -> None:
             async with self._cl.watch(sf[dn].cmd, max_depth=0, fetch=True) as msgs:
                 task_status.started()
                 async for m in msgs:
@@ -1668,7 +1730,7 @@ class Data:
                     locks[dn] = val
                     await _upd()
 
-        async def update_dest(*, task_status):
+        async def update_dest(*, task_status: Any) -> None:
             d = await _upd()
             task_status.started()
             while True:
@@ -1696,10 +1758,8 @@ class Data:
                     self.t_ext_avg = t_cur = m.value
                 await _upd()
 
-    async def handle_flow(self, use_min=False):
-        """
-        Flow handler while not operational
-        """
+    async def handle_flow(self, use_min: bool = False) -> None:
+        """Flow handler while not operational."""
         l_flow = await self.pid.flow(self.r_flow)
         l_temp = await self.pid.pump(self.t_out)
         print(
@@ -1717,15 +1777,15 @@ class Data:
         await self.set_flow_pwm(res)
         self.state.last_pump = res
 
-    def has(self, name, value):
-        "Update a variable."
+    def has(self, name: str, value: Any) -> None:
+        """Update a variable."""
         setattr(self, name, value)
         if (evt := self._sigs.get(name)) is not None:
             evt.set()
         self.trigger()
 
-    def trigger(self):
-        "Signal that some variable has been updated."
+    def trigger(self) -> None:
+        """Signal that some variable has been updated."""
         if self.record:
             d = attrdict(
                 (k, v)
@@ -1738,8 +1798,8 @@ class Data:
         self._got.set()
         self._got = anyio.Event()
 
-    async def err_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "Monitor the heat pump for errors"
+    async def err_mon(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Monitor the heat pump for errors."""
         async with self.cl.watch(self.cfg.sensor.error, long_path=False, fetch=True) as msgs:
             task_status.started()
             errs = self.m_errors
@@ -1765,12 +1825,12 @@ class Data:
                     print("****** ERROR ********", errs)
                 self.trigger()
 
-    async def wait(self):
-        "wait for update to any variable"
+    async def wait(self) -> None:
+        """Wait for update to any variable."""
         await self._got.wait()
 
-    async def wait_for(self, v):
-        "wait for update to a specific variable"
+    async def wait_for(self, v: str) -> None:
+        """Wait for update to a specific variable."""
         if (evt := self._sigs.get(v)) is not None:
             await evt.wait()
         else:
@@ -1778,7 +1838,7 @@ class Data:
             await evt.wait()
             del self._sigs[v]
 
-    async def all_done(self):
+    async def all_done(self) -> None:
         """
         Wait for startup to be completed.
 
@@ -1794,7 +1854,7 @@ class Data:
                 with anyio.move_on_after(t2 - t):
                     await self._got.wait()
 
-    async def _kv(self, p, v, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _kv(self, p: Any, v: str, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
         self._want.add(v)
         miss = False
         task_status.started()
@@ -1819,8 +1879,8 @@ class Data:
                         self._want.remove(v)
                     self.has(v, m.value)
 
-    async def off(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "turn the heat pump off in a controlled way"
+    async def off(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Turn the heat pump off in a controlled way."""
         self.state.run = Run.down.value
         await self.save()
 
@@ -1836,8 +1896,8 @@ class Data:
             self.state.run = 0
         await self.save()
 
-    async def run_init(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "setup listeners"
+    async def run_init(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Set up listeners."""
         cfg = self._cfg
         async with anyio.create_task_group() as tg:
             await tg.start(self._kv, cfg.cmd.flow, "c_flow")
@@ -1884,8 +1944,10 @@ class Data:
     #               },
     #           )
 
-    async def run_rec(self, rec, tg, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "read a recording"
+    async def run_rec(
+        self, rec: Any, tg: Any, *, task_status: Any = anyio.TASK_STATUS_IGNORED
+    ) -> None:
+        """Read a recording."""
         task_status.started()
         for r in yload(rec, multi=True):
             if r is None:
@@ -1900,10 +1962,10 @@ class Data:
             for _ in range(20):
                 await anyio.sleep(0.001)
 
-    async def run_fake(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "run a playback"
+    async def run_fake(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Run a playback."""
 
-        async def fkv(var):
+        async def fkv(var: str) -> None:
             while not hasattr(self, var):
                 await self.wait()
 
@@ -1935,16 +1997,16 @@ class Data:
         await fkv("m_switch")
         task_status.started()
 
-    async def saver(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "loop to periodically save the current state"
+    async def saver(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Loop to periodically save the current state."""
         task_status.started()
         while True:
             await anyio.sleep(10)
             await self.save()
             await self.wait()
 
-    async def save(self):
-        "save the current state"
+    async def save(self) -> None:
+        """Save the current state."""
         logger.debug("Saving")
         if isinstance(self.cfg.state, Path):
             await self.cl.set(self.cfg.state, value=self.state)
@@ -1956,15 +2018,15 @@ class Data:
             await fn.write_text(fs.getvalue())
             await fn.rename(f)
 
-    async def run_solvis_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        "start a separate modbus poll process for the Solvis"
+    async def run_solvis_mon(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Start a separate modbus poll process for the Solvis."""
         again = anyio.Event()
         kick = anyio.Event()
         cfg = self.cfg.misc.mon_solvis
 
         task_status.started()  # well not really but the caller doesn't care
 
-        async def s_run():
+        async def s_run() -> None:
             nonlocal again, kick
             while True:
                 async with await anyio.open_process(
@@ -2010,19 +2072,19 @@ class Data:
 
 
 class fake_cl:
-    "fake MoaT-KW client, for playbacks"
+    """Fake MoaT-KV client, for playbacks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *tb):
+    async def __aexit__(self, *tb: object) -> None:
         pass
 
-    async def set(self, path, value, **_k):
-        "don't set anything, we're replaying"
+    async def set(self, path: Any, value: Any, **_k: Any) -> None:
+        """Don't set anything, we're replaying."""
         print("SET", path, value)
 
 
@@ -2040,8 +2102,8 @@ class fake_cl:
 
 @click.group(cls=AliasedGroup)
 @click.pass_context
-@click.option("-c", "--config", type=click.Path("r"), help="config file")
-async def cli(ctx, config):
+@click.option("-c", "--config", type=click.Path(dir_okay=False), help="config file")
+async def cli(ctx: click.Context, config: str | None) -> None:
     """
     Manage a Solvis heat pump controller
 
@@ -2071,8 +2133,8 @@ async def cli(ctx, config):
 @click.option("-r", "--record", type=click.File("w"))
 @click.option("-n", "--no-save", is_flag=True)
 @click.option("-f", "--force-on", is_flag=True)
-async def run(obj, record, force_on, no_save):
-    "Heat pump controller. Designed to run continuously"
+async def run(obj: Any, record: Any, force_on: bool, no_save: bool) -> None:
+    """Heat pump controller. Designed to run continuously."""
     async with open_client(**mcfg.kv) as cl:
         d = None
         try:
@@ -2122,8 +2184,8 @@ async def run(obj, record, force_on, no_save):
 @cli.command
 @click.pass_obj
 @click.argument("record", type=click.File("r"))
-async def replay(obj, record):
-    "Replay a previous run, for testing"
+async def replay(obj: Any, record: Any) -> None:
+    """Replay a previous run, for testing."""
     async with fake_cl() as cl, anyio.create_task_group() as tg:
         d = Data(obj.cfg, cl)
         await tg.start(d.run_rec, record, tg)
@@ -2133,7 +2195,7 @@ async def replay(obj, record):
 
 @cli.command
 @click.pass_obj
-async def pwm(obj):
+async def pwm(obj: Any) -> None:
     """
     Run a backgrounds task for software PWM outputs.
 
@@ -2157,7 +2219,7 @@ async def pwm(obj):
 #           GPIO.setup(heat_pin, GPIO.OUT)
 
 
-async def _run_pwm(cl, k, v):
+async def _run_pwm(cl: Any, k: str, v: Any) -> None:
     GPIO.setup(v.pin, GPIO.OUT)
     #   port = GPIO.PWM(v.pin, v.get("freq", 200))
     #   port.start(0)
@@ -2169,7 +2231,7 @@ async def _run_pwm(cl, k, v):
     dly = False
     lpct = -1
 
-    def upd():
+    def upd() -> None:
         nonlocal dly, lpct
 
         pct = xval if xover else val
@@ -2183,7 +2245,7 @@ async def _run_pwm(cl, k, v):
         else:
             dly = pct / v.freq
 
-    async def mon_flag(*, task_status):
+    async def mon_flag(*, task_status: Any) -> None:
         nonlocal xover
         async with cl.watch(v.override.flag, max_depth=0, fetch=True) as msgs:
             async for m in msgs:
@@ -2195,7 +2257,7 @@ async def _run_pwm(cl, k, v):
                 xover = m.value
                 upd()
 
-    async def mon_pct(*, task_status):
+    async def mon_pct(*, task_status: Any) -> None:
         nonlocal xval
         async with cl.watch(v.override.val, max_depth=0, fetch=True) as msgs:
             async for m in msgs:
@@ -2207,7 +2269,7 @@ async def _run_pwm(cl, k, v):
                 xval = m.value
                 upd()
 
-    async def mon_value(*, task_status):
+    async def mon_value(*, task_status: Any) -> None:
         nonlocal val
         async with cl.watch(v.path, max_depth=0, fetch=True) as msgs:
             async for m in msgs:
@@ -2243,8 +2305,8 @@ async def _run_pwm(cl, k, v):
 
 @cli.command
 @click.pass_obj
-async def off(obj):
-    "Emergency handler to turn the heat pump off in a controlled way."
+async def off(obj: Any) -> None:
+    """Emergency handler to turn the heat pump off in a controlled way."""
     async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
         d = Data(obj.cfg, cl)
         await tg.start(d.run_init)
@@ -2252,7 +2314,7 @@ async def off(obj):
         tg.cancel_scope.cancel()
 
 
-def vt(tau, ti, cf):  # noqa:D103
+def vt(tau: float, ti: float, cf: Any) -> float:  # noqa:D103
     if tau >= ti:
         return ti
     return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)
@@ -2260,8 +2322,8 @@ def vt(tau, ti, cf):  # noqa:D103
 
 @cli.command
 @click.pass_obj
-async def curve(obj):
-    "show the current heating curve"
+async def curve(obj: Any) -> None:
+    """Show the current heating curve."""
 
     cf = obj.cfg.adj.curve
 

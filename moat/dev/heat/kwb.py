@@ -1,5 +1,8 @@
 """
-command line interface thing for KWB pellet burner
+Command line interface for KWB pellet burner.
+
+This module connects to a KWB EasyFire pellet burner via Modbus and
+sends periodic lifetick updates.
 """
 
 from __future__ import annotations
@@ -13,11 +16,16 @@ import asyncclick as click
 from moat.util import yload
 from moat.modbus.dev.poll import dev_poll
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 logger = logging.getLogger()
 
 
-async def lifeticker(dest):
-    "Task to periodically update the lifeticker modbus var"
+async def lifeticker(dest: Any) -> None:
+    """Periodically update the lifeticker modbus variable."""
     t_out = dest.regs.ksm.modbus.lifetick
     t_in = dest.regs.ksm.modbus.commit_lifetick
 
@@ -45,7 +53,9 @@ async def lifeticker(dest):
 @click.option("-p", "--port", type=int, help="Port to access")
 @click.option("-u", "--unit", type=int, help="Unit to access")
 @click.pass_context
-async def cli(ctx, cfg, host, port, unit):
+async def cli(
+    ctx: click.Context, cfg: Any, host: str | None, port: int | None, unit: int | None
+) -> None:
     """
     This command starts a Modbus client that connects to a KWB EasyFire pellet burner.
 
@@ -53,7 +63,6 @@ async def cli(ctx, cfg, host, port, unit):
 
     By default this command talks to all hosts with a `regs.modbus.lifetick` register.
     (DO NOT set `regs.modbus.lifetick` to mirror from anywhere.)
-
     """
 
     cfg = yload(cfg, attr=True)
@@ -63,13 +72,13 @@ async def cli(ctx, cfg, host, port, unit):
         # pylint: disable=import-outside-toplevel
         from moat.link.client import Link  # noqa: PLC0415
 
-        ln_ctx = Link(obj.cfg.link)
+        ln_ctx: Any = Link(obj.cfg.link)
     else:
         ln_ctx = nullcontext(None)
 
     n = 0
 
-    def get_one(d, h):
+    def get_one(d: dict[str, Any], h: Any) -> Iterator[Any]:
         if h is None:
             yield from d.values()
         elif h in d:
@@ -81,7 +90,7 @@ async def cli(ctx, cfg, host, port, unit):
     ):
         cfg = await tg.start(dev_poll, cfg, mt_ln)
 
-        def proc(dest):
+        def proc(dest: Any) -> None:
             try:
                 dest.regs.ksm.modbus.lifetick  # noqa:B018 pylint: disable=pointless-statement
             except AttributeError:

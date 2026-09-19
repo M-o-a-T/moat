@@ -21,7 +21,7 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.db.rain.model import Day, DayTime
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 from ._util import (
     absent,
@@ -31,7 +31,7 @@ from ._util import (
 )
 
 
-@click.group(name="day", short_help="Manage day definitions (global)")
+@click.group(name="day", cls=AliasedGroup, short_help="Manage day definitions (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day name")
 @click.pass_obj
 async def cli(obj, name):
@@ -99,7 +99,7 @@ def _day_of(obj) -> Day:
     return get_one(obj, Day, "day", name=require_name(obj, "day"))
 
 
-@cli.group(name="time", short_help="Manage a day's time fragments")
+@cli.group(name="time", cls=AliasedGroup, short_help="Manage a day's time fragments")
 @click.option("--descr", "-d", type=str, default=None, help="Time-fragment description")
 @click.pass_obj
 async def time_cli(obj, descr):

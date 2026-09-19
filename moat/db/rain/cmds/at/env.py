@@ -16,10 +16,10 @@ import asyncclick as click
 from moat.util import yprint
 from moat.db.rain.cmds._util import absent, bool_pair, get_one, list_in_site, require_name, site_of
 from moat.db.rain.model import EnvGroup
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 
-@click.group(name="env", short_help="Manage environment groups")
+@click.group(name="env", cls=AliasedGroup, short_help="Manage environment groups")
 @click.option("--name", "-n", type=str, default=None, help="Env-group name")
 @click.pass_obj
 async def cli(obj, name):

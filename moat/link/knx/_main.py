@@ -212,6 +212,7 @@ async def dump_(obj, one_line: bool) -> None:
     "at",
     invoke_without_command=True,
     short_help="create/show/delete an entry",
+    cls=AliasedGroup,
 )
 @click.argument("group", type=str, nargs=1)
 @click.pass_context

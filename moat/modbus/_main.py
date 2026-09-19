@@ -11,7 +11,7 @@ import traceback
 import asyncclick as click
 
 from moat.lib.modbus.pdu import WriteSingleRegisterRequest
-from moat.lib.run import load_subgroup
+from moat.lib.run import AliasedGroup, load_subgroup
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import RelayServer, SerialModbusServer
 
@@ -34,7 +34,7 @@ def print_exc(exc, **kw):  # pylint: disable=missing-function-docstring
     traceback.print_exception(type(exc), exc, exc.__traceback__, **kw)
 
 
-@cli.group(invoke_without_command=True)
+@cli.group(invoke_without_command=True, cls=AliasedGroup)
 @add_serial_cfg
 @click.option("-t", "--timeout", type=float, default=0, help="Error if no more data (seconds)")
 @click.option(

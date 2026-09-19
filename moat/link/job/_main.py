@@ -78,7 +78,12 @@ async def cli(ctx: click.Context, node: str | None, group: str | None) -> None:
     obj.statepath = Path.build(job_cfg["state"]) + obj.subpath
 
 
-@cli.group("at", short_help="Path of the job to operate on.", invoke_without_command=True)
+@cli.group(
+    "at",
+    invoke_without_command=True,
+    short_help="Path of the job to operate on.",
+    cls=AliasedGroup,
+)
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
 async def at_cli(ctx: click.Context, path: Path) -> None:

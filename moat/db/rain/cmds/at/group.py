@@ -32,10 +32,10 @@ from moat.db.rain.cmds._util import (
     valve_spec,
 )
 from moat.db.rain.model import Group, GroupAdjust, GroupOverride
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 
-@click.group(name="group", short_help="Manage valve groups")
+@click.group(name="group", cls=AliasedGroup, short_help="Manage valve groups")
 @click.option("--name", "-n", type=str, default=None, help="Group name")
 @click.pass_obj
 async def cli(obj, name):
@@ -176,7 +176,7 @@ def _group_of(obj) -> Group:
 # (group, start).
 
 
-@cli.group(name="override", short_help="Manage this group's overrides")
+@cli.group(name="override", cls=AliasedGroup, short_help="Manage this group's overrides")
 @click.option("--start", "-s", type=str, default=None, help="Override start (ISO timestamp)")
 @click.pass_obj
 async def override_cli(obj, start):
@@ -257,7 +257,7 @@ async def override_delete(obj):
 # GroupAdjust: a dated demand multiplier, keyed by (group, start).
 
 
-@cli.group(name="adjust", short_help="Manage this group's adjusters")
+@cli.group(name="adjust", cls=AliasedGroup, short_help="Manage this group's adjusters")
 @click.option("--start", "-s", type=str, default=None, help="Adjuster start (ISO timestamp)")
 @click.pass_obj
 async def adjust_cli(obj, start):

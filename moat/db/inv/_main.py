@@ -27,7 +27,7 @@ from sqlalchemy import select
 
 from moat.util import NotGiven, yprint
 from moat.db import database
-from moat.lib.run import load_subgroup, option_ng
+from moat.lib.run import AliasedGroup, load_subgroup, option_ng
 
 from .model import Address, Cable, Host, HostGroup, Interface, Network, Vlan
 
@@ -82,7 +82,7 @@ def _norm_iface(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="vlan")
+@cli.group(name="vlan", cls=AliasedGroup)
 @click.option("--tag", "-t", "tag", type=int, help="802.1Q VLAN tag")
 @click.pass_obj
 def vlan_grp(obj, tag):
@@ -151,7 +151,7 @@ def vlan_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="net")
+@cli.group(name="net", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Network name")
 @click.pass_obj
 def net_grp(obj, name):
@@ -223,7 +223,7 @@ def net_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="host")
+@cli.group(name="host", cls=AliasedGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the host")
 @click.pass_obj
 def host_grp(obj, domain):
@@ -299,7 +299,7 @@ def host_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@host_grp.group(name="iface")
+@host_grp.group(name="iface", cls=AliasedGroup)
 @click.argument("iname", type=str)
 @click.pass_obj
 def iface_grp(obj, iname):
@@ -456,7 +456,7 @@ def _resolve_iface_spec(obj, spec: str) -> Interface:
 # ---------------------------------------------------------------------------
 
 
-@iface_grp.group(name="addr")
+@iface_grp.group(name="addr", cls=AliasedGroup)
 @click.pass_obj
 def addr_grp(obj):
     """Manage addresses on an interface."""
@@ -509,7 +509,7 @@ def addr_delete(obj, addr):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="wire")
+@cli.group(name="wire", cls=AliasedGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the wire")
 @click.pass_obj
 def wire_grp(obj, domain):
@@ -620,7 +620,7 @@ def wire_link(obj, end, dest):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="cable")
+@cli.group(name="cable", cls=AliasedGroup)
 @click.pass_obj
 def cable_grp(obj):
     """Manage cables."""
@@ -648,7 +648,7 @@ def cable_show(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="group")
+@cli.group(name="group", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Group name")
 @click.pass_obj
 def group_grp(obj, name):
@@ -714,7 +714,7 @@ def group_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@host_grp.group(name="group")
+@host_grp.group(name="group", cls=AliasedGroup)
 @click.option("--name", "-g", type=str, help="Group name")
 @click.pass_obj
 def host_group_grp(obj, name):

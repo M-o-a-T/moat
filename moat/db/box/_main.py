@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from moat.util import yprint
 from moat.db import database
-from moat.lib.run import load_subgroup, option_ng
+from moat.lib.run import AliasedGroup, load_subgroup, option_ng
 
 from .model import Box, BoxTyp
 
@@ -31,7 +31,7 @@ def cli(ctx):
     obj.session = sess
 
 
-@cli.group
+@cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Text on the label")
 @click.pass_obj
 def one(obj, name):
@@ -132,7 +132,7 @@ def delete(obj):
     obj.session.delete(box)
 
 
-@cli.group(name="typ")
+@cli.group(name="typ", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Name of the box type")
 @click.pass_context
 def typ_(ctx, name):

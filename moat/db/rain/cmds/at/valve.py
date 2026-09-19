@@ -26,10 +26,10 @@ from moat.db.rain.cmds._util import (
     site_of,
 )
 from moat.db.rain.model import Controller, Level, Schedule, Valve, ValveOverride
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 
-@click.group(name="valve", short_help="Manage irrigation valves")
+@click.group(name="valve", cls=AliasedGroup, short_help="Manage irrigation valves")
 @click.option("--controller", "-c", type=str, default=None, help="Controller this valve is on")
 @click.option("--name", "-n", type=str, default=None, help="Valve name")
 @click.pass_obj
@@ -177,7 +177,7 @@ def _valve_of(obj) -> Valve:
 # ValveOverride: force a valve on/off for a window, keyed by (valve, start).
 
 
-@cli.group(name="override", short_help="Manage this valve's overrides")
+@cli.group(name="override", cls=AliasedGroup, short_help="Manage this valve's overrides")
 @click.option("--start", "-s", type=str, default=None, help="Override start (ISO timestamp)")
 @click.pass_obj
 async def override_cli(obj, start):
@@ -258,7 +258,7 @@ async def override_delete(obj):
 # Schedule: one planned run, keyed by (valve, start).
 
 
-@cli.group(name="schedule", short_help="Manage this valve's schedules")
+@cli.group(name="schedule", cls=AliasedGroup, short_help="Manage this valve's schedules")
 @click.option("--start", "-s", type=str, default=None, help="Run start (ISO timestamp)")
 @click.pass_obj
 async def schedule_cli(obj, start):
@@ -349,7 +349,7 @@ async def schedule_delete(obj):
 # Level: a historic capacity sample, keyed by (valve, time).
 
 
-@cli.group(name="level", short_help="Manage this valve's level samples")
+@cli.group(name="level", cls=AliasedGroup, short_help="Manage this valve's level samples")
 @click.option("--time", "-t", type=str, default=None, help="Sample time (ISO timestamp)")
 @click.pass_obj
 async def level_cli(obj, time):

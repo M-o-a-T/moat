@@ -26,10 +26,10 @@ from moat.db.rain.cmds._util import (
     valve_spec,
 )
 from moat.db.rain.model import History, Log
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 
-@click.group(name="history", short_help="Manage weather history and logs")
+@click.group(name="history", cls=AliasedGroup, short_help="Manage weather history and logs")
 @click.option("--time", "-t", type=str, default=None, help="Sample time (ISO timestamp)")
 @click.pass_obj
 async def cli(obj, time):
@@ -114,7 +114,7 @@ async def delete_(obj):
 # --- Log (nested subgroup) ----------------------------------------------
 
 
-@cli.group(name="log", short_help="Manage this site's event log")
+@cli.group(name="log", cls=AliasedGroup, short_help="Manage this site's event log")
 @click.option("--id", "log_id", type=int, default=None, help="Log entry id")
 @click.pass_obj
 async def log_cli(obj, log_id):

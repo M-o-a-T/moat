@@ -18,12 +18,12 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.db.rain.model import DayRange
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 from ._util import absent, get_one, list_global, lookup_errors, require_name
 
 
-@click.group(name="dayrange", short_help="Manage day ranges (global)")
+@click.group(name="dayrange", cls=AliasedGroup, short_help="Manage day ranges (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day-range name")
 @click.pass_obj
 async def cli(obj, name):

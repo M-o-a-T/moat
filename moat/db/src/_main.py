@@ -25,7 +25,7 @@ from sqlalchemy import select
 
 from moat.util import NotGiven, yprint
 from moat.db import database
-from moat.lib.run import load_subgroup, option_ng
+from moat.lib.run import AliasedGroup, load_subgroup, option_ng
 from moat.util.times import humandelta, now
 
 from .model import Archive, ArchiveRole, BranchRole, LocalBranch, Spkg
@@ -279,7 +279,7 @@ async def import_top(obj, path, iname, iroles, imirrors, **kw):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="archive")
+@cli.group(name="archive", cls=AliasedGroup)
 def archive_grp():
     """Manage the global archive-role registry."""
 
@@ -363,7 +363,7 @@ async def archive_delete(obj, name):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="branch")
+@cli.group(name="branch", cls=AliasedGroup)
 def branch_grp():
     """Manage the global branch-role registry."""
 
@@ -448,7 +448,7 @@ async def branch_delete(obj, name):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="at", invoke_without_command=True)
+@cli.group(name="at", invoke_without_command=True, cls=AliasedGroup)
 @_detail_options
 @click.argument("spkg", type=str)
 @click.pass_obj
@@ -552,7 +552,7 @@ async def at_export(obj, dest, bare, force):
 # ----- remotes (Archive) under `at SPKG` -----
 
 
-@at_grp.group(name="remote")
+@at_grp.group(name="remote", cls=AliasedGroup)
 def remote_grp():
     """Manage this package's archive remotes."""
 
@@ -682,7 +682,7 @@ async def remote_delete(obj, name):
 # ----- local branches (LocalBranch) under `at SPKG` -----
 
 
-@at_grp.group(name="branch")
+@at_grp.group(name="branch", cls=AliasedGroup)
 def lb_grp():
     """Manage this package's local branches."""
 

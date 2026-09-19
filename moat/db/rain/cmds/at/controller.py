@@ -12,10 +12,10 @@ import asyncclick as click
 from moat.util import yprint
 from moat.db.rain.cmds._util import absent, get_one, is_given, list_in_site, require_name, site_of
 from moat.db.rain.model import Controller
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 
-@click.group(name="controller", short_help="Manage irrigation controllers")
+@click.group(name="controller", cls=AliasedGroup, short_help="Manage irrigation controllers")
 @click.option("--name", "-n", type=str, default=None, help="Controller name")
 @click.pass_obj
 async def cli(obj, name):

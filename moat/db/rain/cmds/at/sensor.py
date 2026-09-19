@@ -16,12 +16,12 @@ from sqlalchemy import select
 from moat.util import yprint
 from moat.db.rain.cmds._util import absent, get_one, is_given, require_name, site_of
 from moat.db.rain.model import Sensor
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 KINDS = ["rain", "temp", "wind", "sun"]
 
 
-@click.group(name="sensor", short_help="Manage weather/flow sensors")
+@click.group(name="sensor", cls=AliasedGroup, short_help="Manage weather/flow sensors")
 @click.option("--kind", "-k", type=click.Choice(KINDS), default=None, help="Sensor kind")
 @click.option("--name", "-n", type=str, default=None, help="Sensor name")
 @click.pass_obj

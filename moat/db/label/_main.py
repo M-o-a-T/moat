@@ -19,7 +19,7 @@ from moat.util import (
     yprint,
 )
 from moat.db import database
-from moat.lib.run import load_subgroup, option_ng
+from moat.lib.run import AliasedGroup, load_subgroup, option_ng
 
 from .model import Label, LabelTyp, Sheet, SheetTyp
 
@@ -60,8 +60,7 @@ def cli(ctx):
 ###
 
 
-@cli.group
-@click.option("--name", "-n", "text", type=str, help="Text on the label")
+@cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Scancode of the label")
 @click.pass_obj
 def one(obj, text, nr):
@@ -183,7 +182,7 @@ def delete(obj):
 ###
 
 
-@cli.group(name="print")
+@cli.group(name="print", cls=AliasedGroup)
 @click.pass_obj
 @click.option("-p", "--printer", help="Printer name")
 @click.option(
@@ -371,7 +370,7 @@ def print_sheet(obj, sheets, test):
 ###
 
 
-@cli.group
+@cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the label type")
 @click.pass_obj
 def typ(obj, name):
@@ -480,7 +479,7 @@ def typ_delete(obj):
 ###
 
 
-@cli.group(name="format")
+@cli.group(name="format", cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the sheet type")
 @click.pass_obj
 def sheettyp(obj, name):
@@ -586,7 +585,7 @@ def sheettyp_delete(obj):
 ###
 
 
-@cli.group
+@cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Number of the sheet")
 @click.pass_obj
 def sheet(obj, nr):

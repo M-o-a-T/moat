@@ -7,6 +7,7 @@ import sys
 import asyncclick as click
 
 from moat.util import NotGiven
+from moat.lib.run import AliasedGroup
 
 from collections.abc import Mapping
 
@@ -108,6 +109,7 @@ def std_command(cli, *a, **kw):
         name=tname,
         invoke_without_command=True,
         short_help=tinv.short_help,
+        cls=AliasedGroup,
         help=f"""\
             Manager for {tinv.long_name}.
 

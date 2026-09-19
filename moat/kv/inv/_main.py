@@ -206,7 +206,9 @@ cmd_host = std_command(
 )
 
 
-@cmd_host.group(name="port", short_help="Manage ports", invoke_without_command=True)
+@cmd_host.group(
+    name="port", short_help="Manage ports", invoke_without_command=True, cls=AliasedGroup
+)
 @click.argument("name", type=str, nargs=1)
 @click.pass_context
 async def host_port(ctx, name):

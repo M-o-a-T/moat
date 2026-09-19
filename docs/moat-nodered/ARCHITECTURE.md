@@ -6,9 +6,9 @@ ecosystem.
 
 ## Contents
 
-A single npm package `moat-meta-codec` (under `nodered/moat-meta-codec/`):
+A single npm package `@moat/meta-codec` (under `js/moat-meta-codec/`):
 
-- **`lib/codec.js`** (194 lines) — two Node-RED node types:
+- **`lib/codec.js`** (~240 lines) — two Node-RED node types:
   `moat-meta-encode` and `moat-meta-decode`. Encoding produces a compact
   string: UTF-8 path elements separated by `/`, binary/CBOR elements
   separated by `\` and base85-encoded. Decoding reverses this. Populates/
@@ -16,7 +16,7 @@ A single npm package `moat-meta-codec` (under `nodered/moat-meta-codec/`):
   `msg.userProperties.MoaT`.
 - **`moat-meta-codec.html`** — Node-RED UI registration (editor palette,
   templates, help).
-- **`package.json`** — declares dependencies (`base85-full`, `cbor`),
+- **`package.json`** — declares dependencies (`base85-full`, `cbor2`),
   Node-RED node registration.
 
 ## Integration

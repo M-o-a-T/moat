@@ -20,3 +20,8 @@ API
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: moat.db.rain.cmds.at.monitor
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,12 +1,10 @@
 """Command-line interface for irrigation day ranges.
 
-``moat db rain <SITE> dayrange {show,add,set,delete}``
+``moat db rain dayrange {show,add,set,delete}``
 
 A :class:`DayRange` is a **globally**-scoped named intersection of
-:class:`Day` unions — the ``<SITE>`` argument is accepted for consistency
-but ignored, so the dummy site ``-`` may be used
-(``moat db rain - dayrange …``). Groups (see ``moat db rain <SITE>
-group``) link to day ranges to express "water on these days".
+:class:`Day` unions. Groups (see ``moat db rain at <SITE> group``)
+link to day ranges to express "water on these days".
 
 Days are linked by name; a ``-`` prefix unlinks. A day must exist before
 it can be linked.
@@ -20,12 +18,12 @@ import asyncclick as click
 
 from moat.util import yprint
 from moat.db.rain.model import DayRange
-from moat.lib.run import option_ng
+from moat.lib.run import AliasedGroup, option_ng
 
 from ._util import absent, get_one, list_global, lookup_errors, require_name
 
 
-@click.group(name="dayrange", short_help="Manage day ranges (global)")
+@click.group(name="dayrange", cls=AliasedGroup, short_help="Manage day ranges (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day-range name")
 @click.pass_obj
 async def cli(obj, name):

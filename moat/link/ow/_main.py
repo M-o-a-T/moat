@@ -212,6 +212,7 @@ async def dump_(obj, one_line: bool) -> None:
     "at",
     invoke_without_command=True,
     short_help="create/show/delete an attribute mapping",
+    cls=AliasedGroup,
 )
 @click.argument("device", type=str, nargs=1)
 @click.argument("attr", type=str, nargs=1)

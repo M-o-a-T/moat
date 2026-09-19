@@ -4,6 +4,9 @@ Stream infrastructure for handling data streams in a structured manner.
 
 from __future__ import annotations
 
+# Import _layers to register layer factories with build_stack.
+from . import _layers  # noqa: F401
+
 # Import base classes directly (not lazy)
 from .base import Base as Base
 from .base import BaseBlk as BaseBlk
@@ -14,6 +17,7 @@ from .base import StackedBlk as StackedBlk
 from .base import StackedBuf as StackedBuf
 from .base import StackedConn as StackedConn
 from .base import StackedMsg as StackedMsg
+from .base import build_stack as build_stack
 
 from typing import TYPE_CHECKING as _TC
 
@@ -81,6 +85,8 @@ __all__ = [  # noqa:RUF022
     "StackedBuf",
     "StackedConn",
     "StackedMsg",
+    # Stack builder
+    "build_stack",
     # Logging (lazy)
     "LogBlk",
     "LogBuf",
@@ -101,3 +107,7 @@ __all__ = [  # noqa:RUF022
     # compatibility
     "ProcessDeadError",
 ]
+
+
+def __dir__():
+    return __all__

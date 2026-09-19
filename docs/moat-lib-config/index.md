@@ -232,6 +232,41 @@ function or method.
 
 Alternately, use {py:class}`~moat.lib.config.monitor`.
 
+### Safe Reload
+
+When applying a new configuration that might be invalid, use
+{py:meth}`~moat.lib.config.CfgStore.safe_reload` instead of calling
+`redo()` directly.  It snapshots the current result, attempts the
+rebuild, and restores the previous configuration on failure:
+
+```python
+cfg.mod(P("server.port"), 9999)
+if not cfg.safe_reload():
+    # bad config — previous values retained
+    log.warning("Config reload failed; keeping old config")
+```
+
+At the RPC level, `cfg app cmd_x` uses `RootCmd.safe_reload()`, which
+propagates the fallback through `DirCmd` (restoring detached sub-apps)
+and `BaseSubCmd` (per-app individual reload with continuation on
+failure).
+
+### NotGiven and Deletions
+
+Setting a config key to `NotGiven` marks it for deletion.  Because the
+internal `merge` only removes `NotGiven` keys that *already exist* in
+the result, deleting a newly-added key requires a second convergence
+pass.  `redo()` handles this automatically by looping until no
+`NotGiven` placeholders remain (typically one pass; two when deletions
+of previously-absent keys are pending):
+
+```python
+cfg.mod(P("data.temp"), "ephemeral")
+cfg.mod(P("data.temp"), NotGiven)  # add then delete in same cycle
+cfg.redo()
+assert "temp" not in cfg.result.data  # converged — no NotGiven leaked
+```
+
 ```{toctree}
 :maxdepth: 2
 :hidden:

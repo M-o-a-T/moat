@@ -6,10 +6,6 @@ import sys
 from moat.lib.mqtt import MQTTPublishPacket, QoS
 from moat.lib.mqtt.sync_client import MQTTClient
 
-pytestmark = pytest.mark.skip
-
-# XXX This *requires* `mqtt_broker_addr` to fork off a threaded or external service
-
 
 @pytest.mark.parametrize("qos", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
 async def test_publish_subscribe(mqtt_broker_addr: str, qos: QoS) -> None:  # noqa: D103

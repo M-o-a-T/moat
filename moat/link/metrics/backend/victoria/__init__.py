@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 
 __all__ = ["Backend"]
 
+MOCK_DELTA = 0
+MOCK_TM = 0
+
 
 class Backend(_Backend):
     """The VictoriaMetrics backend driver."""
@@ -55,6 +58,20 @@ class Backend(_Backend):
         from asyncvictoria import DS  # noqa: PLC0415
 
         mode = getattr(DS, point.mode) if isinstance(point.mode, str) else point.mode
+
+        # Test BS
+        if MOCK_DELTA:
+            global MOCK_TM
+            if MOCK_TM and (point.timestamp is None or point.timestamp < MOCK_TM):
+                point.timestamp = MOCK_TM
+                MOCK_TM += MOCK_DELTA
+            else:
+                if point.timestamp is None:
+                    import time  # noqa:PLC0415
+
+                    point.timestamp = time.time_ns()
+                MOCK_TM = point.timestamp + MOCK_DELTA
+
         entry = victoria.Entry(
             series=point.series,
             value=cast("int", point.value),

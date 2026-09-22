@@ -24,7 +24,7 @@ dependencies = [
     "asyncclick",
     "asyncowfs",
     "asyncscope",
-    "asyncvictoria ~= 0.7.0",
+    "asyncvictoria ~= 0.8.1",
     "asyncwago",
     "asyncwebsockets",
     "cffi",

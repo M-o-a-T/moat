@@ -4,6 +4,8 @@ Console data handling for stream layers.
 
 from __future__ import annotations
 
+import sys
+
 from moat.lib.micro import Event
 
 from typing import TYPE_CHECKING
@@ -19,12 +21,7 @@ class _CReader:
 
     def __init__(self, cons: bool | int):
         if cons is True:
-            try:
-                __import__("machine")
-            except ImportError:
-                cons = 32768
-            else:
-                cons = 240
+            cons = 240 if sys.implementation.name == "micropython" else 32768
         self.cevt = Event()
         self.cpos = 0
         self.cbuf = bytearray(cons)

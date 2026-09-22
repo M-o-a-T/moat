@@ -1,6 +1,6 @@
 from __future__ import annotations  # noqa: D100
 
-from anyio.from_thread import BlockingPortal, BlockingPortalProvider
+from anyio.from_thread import BlockingPortal, start_blocking_portal
 from contextlib import ExitStack, contextmanager
 
 from attrs import define
@@ -24,9 +24,6 @@ if TYPE_CHECKING:
 
     from collections.abc import Generator
     from typing import Any, Literal, Self
-
-
-portal_provider = BlockingPortalProvider()
 
 
 @define(eq=False, repr=False, slots=True)
@@ -64,36 +61,62 @@ class MQTTClient:  # noqa: D101
         max_packet_size: int | None = None,
         will: Will | None = None,
     ) -> None:
-        kwargs: dict[str, Any] = {}
+        self._ctor_args = (host_or_path, port)
+        self._ctor_kwargs: dict[str, Any] = {
+            "transport": transport,
+            "websocket_path": websocket_path,
+            "ssl": ssl,
+            "username": username,
+            "password": password,
+            "clean_start": clean_start,
+            "receive_maximum": receive_maximum,
+            "max_packet_size": max_packet_size,
+            "will": will,
+        }
         if client_id is not None:
-            kwargs["client_id"] = client_id
+            self._ctor_kwargs["client_id"] = client_id
 
-        self._async_client = AsyncMQTTClient(
-            host_or_path,
-            port,
-            transport=transport,
-            websocket_path=websocket_path,
-            ssl=ssl,
-            username=username,
-            password=password,
-            clean_start=clean_start,
-            receive_maximum=receive_maximum,
-            max_packet_size=max_packet_size,
-            will=will,
-            **kwargs,
-        )
+        # Primitives (locks, events) inside the client must all belong to ONE
+        # event loop; constructing the client inside the portal guarantees that
+        # irrespective of how/where this object was instantiated.
+        self._async_client: AsyncMQTTClient | None = None
+
+    @property
+    def async_client(self) -> AsyncMQTTClient:
+        "The underlying async client; available after entering."
+        if self._async_client is None:
+            raise RuntimeError("MQTTClient not entered (use it as a context manager)")
+        return self._async_client
 
     @property
     def cap_retain(self) -> bool:  # noqa: D102
-        return self._async_client.cap_retain
+        return self.async_client.cap_retain
+
+    @property
+    def cap_subscription_ids(self) -> bool:  # noqa: D102
+        return self.async_client.cap_subscription_ids
+
+    @property
+    def cap_qos(self) -> QoS:  # noqa: D102
+        return self.async_client.cap_qos
 
     def __enter__(self) -> Self:
         with ExitStack() as exit_stack:
-            self._portal = exit_stack.enter_context(portal_provider)
-            exit_stack.enter_context(self._portal.wrap_async_context_manager(self._async_client))
+            self._portal = exit_stack.enter_context(start_blocking_portal("asyncio"))
+
+            def build() -> AsyncMQTTClient:
+                return AsyncMQTTClient(*self._ctor_args, **self._ctor_kwargs)
+
+            client = self._portal.call(build)
+            exit_stack.callback(self._unset_client)
+            exit_stack.enter_context(self._portal.wrap_async_context_manager(client))
+            self._async_client = client
             self._exit_stack = exit_stack.pop_all()
 
         return self
+
+    def _unset_client(self) -> None:
+        self._async_client = None
 
     def __exit__(
         self,
@@ -113,7 +136,7 @@ class MQTTClient:  # noqa: D101
         properties: dict[PropertyType, PropertyValue] | None = None,
     ) -> None:
         return self._portal.call(
-            lambda: self._async_client.publish(
+            lambda: self.async_client.publish(
                 topic, payload, qos=qos, retain=retain, properties=properties
             )
         )
@@ -127,7 +150,8 @@ class MQTTClient:  # noqa: D101
         retain_as_published: bool = True,
         retain_handling: RetainHandling = RetainHandling.SEND_RETAINED,
     ) -> Generator[MQTTSubscription, None, None]:
-        async_cm = self._async_client.subscribe(
+        ac = self.async_client
+        async_cm = ac.subscribe(
             *patterns,
             qos=qos,
             no_local=no_local,
@@ -138,13 +162,18 @@ class MQTTClient:  # noqa: D101
             yield MQTTSubscription(async_subscription, self._portal)
 
 
-# Copy the docstrings from the async variant
-for attrname in dir(AsyncMQTTClient):
-    if attrname.startswith("_"):
-        continue
+def _copy_docstrings() -> None:
+    "Copy the docstrings from the async variant to the sync façade."
 
-    value = getattr(AsyncMQTTClient, attrname)
-    if callable(value):
-        sync_method = getattr(MQTTClient, attrname, None)
-        if sync_method and not sync_method.__doc__:
-            sync_method.__doc__ = value.__doc__
+    for attrname in dir(AsyncMQTTClient):
+        if attrname.startswith("_"):
+            continue
+        value = getattr(AsyncMQTTClient, attrname)
+        if not callable(value):
+            continue
+        sync_attr = getattr(MQTTClient, attrname, None)
+        if sync_attr is not None and callable(sync_attr) and not sync_attr.__doc__:
+            sync_attr.__doc__ = value.__doc__
+
+
+_copy_docstrings()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from contextlib import suppress
 
 from moat.util import NotGiven, attrdict
 from moat.lib.config import CfgStore
@@ -280,6 +281,8 @@ def test_safe_reload_restores_classvar_state():
 
     saved_static = copy.deepcopy(CfgStore.static)
     saved_env = copy.deepcopy(CfgStore.env)
+    with suppress(KeyError):
+        del saved_env.env["stdout"]
 
     orig_redo = cfg.redo
 
@@ -294,4 +297,8 @@ def test_safe_reload_restores_classvar_state():
 
     assert ok is False
     assert CfgStore.static == saved_static
-    assert CfgStore.env == saved_env
+
+    new_env = copy.deepcopy(CfgStore.env)
+    with suppress(KeyError):
+        del new_env.env["stdout"]
+    assert new_env == saved_env

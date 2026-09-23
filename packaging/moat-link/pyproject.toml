@@ -33,7 +33,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"
 description = "Messaging for MoaT instances"
-readme = "README.rst"
+readme = "README.md"
 
 [[project.authors]]
 name = "Matthias Urlichs"

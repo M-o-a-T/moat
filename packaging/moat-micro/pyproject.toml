@@ -38,7 +38,7 @@ requires-python = ">=3.8"
 name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
-readme = "README.rst"
+readme = "README.md"
 version = "0.22.2"
 
 [project.urls]

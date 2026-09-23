@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moat-lib-mqtt"
 description = "Sans-io MQTT v5 client/broker with an AnyIO based I/O implementation"
-readme = "README.rst"
+readme = "README.md"
 authors = [{name = "Alex Grönholm", email = "alex.gronholm@nextday.fi"},
            {name = "Matthias Urlichs", email = "matthias@urlichs.de"},]
 license = "MIT"

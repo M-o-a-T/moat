@@ -31,7 +31,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"
 description = "Utility code for the rest of MoaT"
-readme = "README.rst"
+readme = "README.md"
 
 [[project.authors]]
 name = "Matthias Urlichs"

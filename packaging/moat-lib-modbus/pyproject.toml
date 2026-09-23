@@ -17,7 +17,7 @@ requires-python = ">=3.11"
 name = "moat-lib-modbus"
 maintainers = [{email = "matthias@urlichs.de", name = "Matthias Urlichs"}]
 description = "Sans-IO Modbus protocol core (no pymodbus)"
-readme = "README.rst"
+readme = "README.md"
 authors = [{email = "matthias@urlichs.de", name = "Matthias Urlichs"}]
 version = "0.0.1"
 

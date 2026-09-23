@@ -23,7 +23,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db-thing"
 description = "MoaT support for storing info about things"
-readme = "README.rst"
+readme = "README.md"
 
 [[project.authors]]
 name = "Matthias Urlichs"

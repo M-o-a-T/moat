@@ -11,7 +11,7 @@ classifiers = [
 dependencies = [
 	"cffi",
 	]
-version = "0.1.2"
+version = "0.1.3"
 keywords = [ "MoaT", "Bosch", "BMV080", "sensor",]
 requires-python = ">=3.11"
 name = "moat-api-bosch"

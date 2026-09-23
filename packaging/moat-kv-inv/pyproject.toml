@@ -16,7 +16,7 @@ dependencies = [
 	"moat-lib-config ~= 0.2.0",
 	"netaddr",
 ]
-version = "0.22.14"
+version = "0.22.15"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-inv"

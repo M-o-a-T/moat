@@ -20,7 +20,7 @@ dependencies = [
 	"moat-lib-config ~= 0.2.0",
 	"moat-lib-xknx ~= 3.15.0",
 	]
-version = "0.20.2"
+version = "0.20.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.13"
 name = "moat-link-knx"

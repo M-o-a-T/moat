@@ -1,3 +1,9 @@
+moat-db-label (0.0.8-1) unstable; urgency=medium
+
+  * New release for 26.2.13
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 23 Sep 2026 15:10:22 +0200
+
 moat-db-label (0.0.7-2) unstable; urgency=medium
 
   * New release for 26.2.9

@@ -4,7 +4,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "moat-db-rain"
-version = "0.0.1"
+version = "0.0.2"
 description = "MoaT irrigation scheduling and monitoring"
 readme = "README.md"
 requires-python = ">=3.11"

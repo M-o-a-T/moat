@@ -148,7 +148,7 @@ class ModbusError(RuntimeError):
 
 class HostCommon:
     stream = None
-    framer = None  # overridden
+    framer: FramerTCP | FramerRTU  # set by subclasses in __init__
 
     def _trace(*_x):
         return None  # overridden
@@ -328,8 +328,6 @@ class Host(HostCommon, CtxObj):
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write")
 
-        data = bytearray()
-
         while True:
             try:
                 if self.stream is None:
@@ -347,21 +345,26 @@ class Host(HostCommon, CtxObj):
                         if task_status is not None:
                             task_status.started()
                             task_status = None
-                    data = bytearray()
+                    self.framer.resetFrame()
 
-                data += await self.stream.receive(4096)
+                chunk = await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy
-                self._trace("recv: " + " ".join([hex(x) for x in data]))
+                self._trace("recv: " + " ".join([hex(x) for x in chunk]))
 
                 replies = []
 
+                # Feed only the freshly-received bytes; the framer owns
+                # the accumulator and retains any surplus internally.
+                # Repeatedly call handleFrame with no new data to drain
+                # every complete frame the chunk may contain.
+                feed = bytes(chunk)
                 while True:
-                    used, pdu = self.framer.handleFrame(bytes(data))
-                    data = data[used:]
+                    used, pdu = self.framer.handleFrame(feed)
                     if pdu is not None:
                         replies.append(pdu)
                     if not used:
                         break
+                    feed = b""
 
             except (
                 IncompleteRead,
@@ -493,40 +496,48 @@ class SerialHost(HostCommon, CtxObj):
         self._trace("recv START")
 
         mon = self._monitor
-        data = bytearray()
         while True:
             try:
                 async with ungroup, Serial(port=self.port, **self.ser) as self.stream:
                     self._connected.set()
+                    self.framer.resetFrame()
                     while True:
                         try:
-                            if data:
+                            if self.framer.pending:
+                                # A partial frame is in progress: bound
+                                # the wait so a torn frame or a silent
+                                # slave is recovered via resetFrame(),
+                                # not held forever.
                                 with anyio.fail_after(RTU_INTER_FRAME_TIMEOUT):
-                                    data += await self.stream.receive(4096)
+                                    chunk = await self.stream.receive(4096)
                             else:
-                                data = await self.stream.receive(4096)
+                                chunk = await self.stream.receive(4096)
                         except TimeoutError:
                             # Inter-frame timeout: the framer accumulator
                             # is non-empty but no more bytes arrived within
                             # the window.  Drop the stale partial frame and
                             # continue — do NOT tear down the connection.
                             self.framer.resetFrame()
-                            data = bytearray()
                             continue
 
                         # pylint: disable=logging-not-lazy
-                        self._trace("recv: " + " ".join([hex(x) for x in data]))
+                        self._trace("recv: " + " ".join([hex(x) for x in chunk]))
 
                         replies = []
 
-                        # check for decoding errors
+                        # Feed only the freshly-received bytes; the framer
+                        # owns the accumulator and retains any surplus
+                        # internally.  Repeatedly call handleFrame with no
+                        # new data to drain every complete frame the chunk
+                        # may contain.
+                        feed = bytes(chunk)
                         while True:
-                            used, pdu = self.framer.handleFrame(bytes(data))
+                            used, pdu = self.framer.handleFrame(feed)
                             if pdu is not None:
                                 replies.append(pdu)
                             if not used:
                                 break
-                            data = data[used:]
+                            feed = b""
 
                         if mon:
                             for reply in replies:

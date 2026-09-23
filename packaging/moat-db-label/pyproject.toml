@@ -25,7 +25,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db-label"
 description = "MoaT support for printing labels"
-readme = "README.rst"
+readme = "README.md"
 
 [[project.authors]]
 name = "Matthias Urlichs"

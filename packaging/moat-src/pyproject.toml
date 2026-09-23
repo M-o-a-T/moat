@@ -26,7 +26,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"
 description = "Tools for managing the MoaT sources"
-# readme = "README.rst"
+# readme = "README.md"
 
 [[project.authors]]
 email = "matthias@urlichs.de"

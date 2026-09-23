@@ -23,7 +23,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.11"
 name = "moat-db-box"
 description = "MoaT support for managing containers"
-readme = "README.rst"
+readme = "README.md"
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"

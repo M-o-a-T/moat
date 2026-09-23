@@ -20,7 +20,7 @@ requires-python = ">=3.8"
 name = "moat-ems-victron"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
-readme = "README.rst"
+readme = "README.md"
 version = "0.1.10"
 
 [project.urls]

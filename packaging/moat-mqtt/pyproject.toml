@@ -33,7 +33,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-mqtt"
 description = "Async MQTT broker and client, with optional MoaT-KV support"
-readme = "README.rst"
+readme = "README.md"
 
 [[project.authors]]
 email = "matthias@urlichs.de"

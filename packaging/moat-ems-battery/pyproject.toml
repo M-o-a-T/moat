@@ -33,7 +33,7 @@ name = "moat-ems-battery"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.2.21"
+version = "0.2.22"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

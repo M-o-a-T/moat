@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 import shutil
 import sys
+from datetime import UTC, datetime
 
 import asyncclick as click
 
@@ -90,15 +91,27 @@ async def discover_remotes(repo: str | Path) -> dict[str, dict[str, str]]:
     return remotes
 
 
-async def discover_branches(repo: str | Path) -> list[tuple[str, str]]:
-    """Return ``[(branch_name, tip_sha)]`` for local branches of ``repo``."""
+async def discover_branches(
+    repo: str | Path,
+) -> list[tuple[str, str, int]]:
+    """Return ``[(branch_name, tip_sha, commit_unix_ts)]`` for local branches.
+
+    The third element is the tip commit's committer date as a Unix epoch
+    (whole seconds); ``import`` seeds a new branch's ``updated`` from it so
+    that a freshly-imported repo doesn't mis-report every branch as having
+    just moved.
+    """
     lines = await _git_lines(
-        repo, "for-each-ref", "--format=%(refname:short)%09%(objectname)", "refs/heads/"
+        repo,
+        "for-each-ref",
+        "--format=%(refname:short)%09%(objectname)%09%(committerdate:unix)",
+        "refs/heads/",
     )
     out = []
     for ln in lines:
-        name, _, sha = ln.partition("\t")
-        out.append((name, sha))
+        name, _, rest = ln.partition("\t")
+        sha, _, ts = rest.partition("\t")
+        out.append((name, sha, int(ts)))
     return out
 
 
@@ -238,17 +251,24 @@ async def import_repo(
 
     # Upsert branches → LocalBranch.
     existing_branches = {b.name: b for b in sp.branches}
-    for bn, sha in branches:
+    for bn, sha, ts in branches:
         br = existing_branches.get(bn)
         if br is None:
             br = LocalBranch(name=bn, spkg=sp)
             sess.add(br)
             br.apply(commit=sha)
+            # Seed ``updated`` from the tip's committer date, not the
+            # import moment: a freshly-imported repo shouldn't claim
+            # every branch just moved.  Store naive-local to match the
+            # storage frame: SQLite strips tzinfo on write, and
+            # ``localbranch_apply`` stamps ``now()`` (aware local) which
+            # becomes naive-local after the strip.
+            br.updated = datetime.fromtimestamp(ts, tz=UTC).astimezone().replace(tzinfo=None)
         else:
             if br.commit != sha:
                 br.apply(commit=sha)
 
-    vanished_br = sorted(set(existing_branches) - set(dict(branches)))
+    vanished_br = sorted(set(existing_branches) - {bn for bn, _, _ in branches})
     for bn in vanished_br:
         print(
             f"Note: branch {bn!r} is in the DB but not in the repo; keeping. "

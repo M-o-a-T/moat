@@ -34,6 +34,21 @@ ARCH = (
     .strip()
 )
 SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
+MAP_FNAME = "pkg-map.yaml"
+
+
+def load_pack_map(where: Path | str = ".") -> dict[str, str]:
+    """
+    Loads the prefix-to-package map assigning alternative source roots
+    to packages. Returns an empty map if the file is absent.
+    """
+    fn = Path(where) / MAP_FNAME
+    try:
+        txt = fn.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    data = yload(txt, attr=True)
+    return dict(data) if data else {}
 
 
 def _tagsplit(tag: str | None) -> list[int]:
@@ -104,6 +119,7 @@ class Package(_Common):
     under: str = field(init=False, repr=False)
     path: Path = field(init=False, repr=False)
     files: set[Path] = field(init=False, factory=set, repr=False)
+    files_src: dict[str, set[Path]] = field(init=False, factory=dict, repr=False)
     subs: dict[str, Package] = field(factory=dict, init=False, repr=False)
     hidden: bool = field(init=False, repr=False)
 
@@ -111,6 +127,7 @@ class Package(_Common):
         self._repo = repo
         self.name = name
         self.files: set[Path] = set()
+        self.files_src: dict[str, set[Path]] = {}
         self.subs: dict[str, Package] = {}
         self.under = name.replace(".", "_")
         self.path = Path(*name.split("."))
@@ -180,9 +197,28 @@ class Package(_Common):
         assert sm is not None
         return sm.group(1)
 
+    def calc_files_src(self) -> dict[str, set[Path]]:
+        """
+        Determine which files came from which source root,
+        so that copies can preserve the layout.
+        """
+        srcs: dict[str, set[Path]] = {}
+        for f in self.files:
+            src = "."
+            for pfx, _pk in self._repo.prefixes:
+                if f.parts[: len(pfx)] == pfx:
+                    src = "/".join(pfx)
+                    break
+            srcs.setdefault(src, set()).add(f)
+        return srcs
+
     def copy(self) -> None:
         """
         Copies the current version of this subsystem to its packaging area.
+
+        The default source root ``(empty)`` maps the files to their original
+        location relative to the packaging area; alternate source roots
+        are recreated inside it.
         """
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
@@ -192,15 +228,26 @@ class Package(_Common):
             rmtree(p)
         with suppress(FileNotFoundError):
             rmtree(pe)
-        dest = p / self.path
-        dest.mkdir(parents=True)
-        for f in self.files:
-            pf = p / f
-            pf.parent.mkdir(parents=True, exist_ok=True)
-            if f.is_dir():
-                copytree(f, pf, symlinks=False, dirs_exist_ok=True)
+        for srcrel, fs in self.files_src.items():
+            if not fs:
+                continue
+            fp = p if srcrel == "." else p / Path(srcrel)
+            if srcrel == ".":
+                dest = fp / self.path
+                dest.mkdir(parents=True)
             else:
-                copyfile(f, pf, follow_symlinks=True)
+                fp.mkdir(parents=True, exist_ok=True)
+            for f in fs:
+                sf = fp
+                if srcrel != ".":
+                    sf = fp / f.relative_to(srcrel)
+                else:
+                    sf = fp / f
+                sf.parent.mkdir(parents=True, exist_ok=True)
+                if f.is_dir():
+                    copytree(f, sf, symlinks=False, dirs_exist_ok=True)
+                else:
+                    copyfile(f, sf, follow_symlinks=True)
 
         p = Path("packaging") / self.dash
         licd = p / "LICENSE.txt"
@@ -254,6 +301,8 @@ class Repo(git.Repo, _Common):
         self._commit_topo: dict[Any, Any] = {}
 
         self._repos: dict[str, Package] = {}
+        self.prefixes: list[tuple[tuple[str, ...], Package]] = []
+        self.pkg_map: dict[str, str] = load_pack_map(Path("packaging/moat-src"))
         self._make_repos()
 
         for t in self.tags:
@@ -349,6 +398,11 @@ class Repo(git.Repo, _Common):
                 continue
             self._add_repo(str(fn.name))
 
+        # Alternative source roots are assigned via the package map.
+        # Longer prefixes take precedence.
+        self.prefixes = [(Path(k).parts, self._add_repo(v)) for k, v in self.pkg_map.items()]
+        self.prefixes.sort(key=lambda x: len(x[0]), reverse=True)
+
         res = subprocess.run(
             ["/usr/bin/git", "ls-files", "-z", "--exclude-standard"],
             check=False,
@@ -368,23 +422,36 @@ class Repo(git.Repo, _Common):
                 raise RuntimeError(f"Inconsistent repo data: {sb} not found")
             self._repos[sb].files.add(fn)
 
+        # Remember which files come from which alternative source root,
+        # so that copies can preserve the layout.
+        for pk in self._repos.values():
+            if pk.files:
+                pk.files_src = pk.calc_files_src()
+
     def repo_for(self, path: Path | str, main: bool | None) -> str | None:
         """
-        Given a file path, returns the subrepo in question
+        Given a file path, returns the subrepo in charge.
         """
-        sc = self._repos["moat"]
         path = Path(path)
+        parts = path.parts
 
-        if main is not True and path.parts[0] in ("docs", "packaging", "examples"):
+        if main is not True and parts[0] in ("docs", "packaging", "examples"):
             try:
-                return undash(path.parts[1])
+                return undash(parts[1])
             except IndexError:
                 return None
 
-        name = path.parts[0]
+        # Alternative source roots are assigned via the package map;
+        # longest prefix wins.
+        for pfx, pk in self.prefixes:
+            if parts[: len(pfx)] == pfx:
+                return pk.name
+
+        name = parts[0]
         if main is not False and name == self.toplevel:
+            sc = self._repos[self.toplevel]
             res = name
-            for p in path.parts[1:]:
+            for p in parts[1:]:
                 if p not in sc.subs:
                     break
                 sc = sc.subs[p]

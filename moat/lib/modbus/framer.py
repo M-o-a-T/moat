@@ -6,6 +6,9 @@ with a required *role* flag:
 
 - ``True`` / ``"server"`` -- decode incoming bytes as **requests**.
 - ``False`` / ``"client"`` -- decode incoming bytes as **responses**.
+- ``"monitor"`` -- (**RTU only**) passive bus sniffer: decode alternating
+  request/response frames, starting with a request.  Sending is
+  prohibited; see :class:`FramerRTU`.
 
 Both share the contract::
 
@@ -56,7 +59,36 @@ def _resolve_role(role: typing.Any) -> bool:
 _MBAP_HEADER_SIZE = 7
 
 
-class FramerTCP:
+class _FramerBase:
+    """Common base for Modbus framers.
+
+    Owns the receive byte accumulator -- the only mutable state permitted
+    under the sans-IO rule -- and exposes the parts of the framer contract
+    that are independent of the wire format: :attr:`pending` and
+    :meth:`resetFrame`.  Subclasses provide :meth:`buildFrame` and
+    :meth:`handleFrame`.
+    """
+
+    _buffer: bytearray
+
+    def __init__(self) -> None:
+        self._buffer = bytearray()
+
+    @property
+    def pending(self) -> int:
+        """Number of buffered bytes awaiting more data to complete a frame.
+
+        Non-zero means a partial frame is in progress; the caller may use
+        this to decide whether to arm an inter-frame (idle-gap) timeout.
+        """
+        return len(self._buffer)
+
+    def resetFrame(self) -> None:
+        """Clear the internal byte accumulator."""
+        self._buffer = bytearray()
+
+
+class FramerTCP(_FramerBase):
     """Modbus TCP framer (MBAP).
 
     Args:
@@ -65,8 +97,11 @@ class FramerTCP:
     """
 
     def __init__(self, role: typing.Any) -> None:
+        if isinstance(role, str) and role.lower() == "monitor":
+            raise ValueError("Monitor mode is only supported for RTU (FramerRTU)")
         self.role_is_server: bool = _resolve_role(role)
-        self._buffer: bytearray = bytearray()
+        self.is_monitor: bool = False
+        super().__init__()
 
     def buildFrame(self, msg: PDU) -> bytes:
         """Build an MBAP-framed TCP message from *msg*."""
@@ -112,25 +147,70 @@ class FramerTCP:
         pdu.unit_id = unit_id
         return total_len, pdu
 
-    def resetFrame(self) -> None:
-        """Clear the internal byte accumulator."""
-        self._buffer = bytearray()
 
-
-class FramerRTU:
+class FramerRTU(_FramerBase):
     """Modbus RTU framer (serial).
 
     Args:
         role: ``True`` / ``"server"`` to decode incoming bytes as
-            requests; ``False`` / ``"client"`` to decode as responses.
+            requests; ``False`` / ``"client"`` to decode as responses;
+            ``"monitor"`` for passive bus sniffing (RTU only).
+
+    **Monitor mode** (``role="monitor"``) turns the framer into a passive
+    bus sniffer.  Sending is prohibited: :meth:`buildFrame` raises
+    :class:`~moat.lib.modbus.errors.ModbusIOError`.  Received frames are
+    decoded as an alternating request/response sequence, starting with a
+    request: each successfully decoded frame flips the expectation, so a
+    request is followed by a response, then the next request, and so on.
+
+    A Modbus RTU bus is strict master/slave: after a request the next
+    frame is either the slave's reply or -- if the slave stays silent --
+    nothing.  Because the framer is sans-IO it cannot measure the idle
+    gap itself; the *caller* must signal "no reply / stalled frame" by
+    calling :meth:`resetFrame`, which clears the accumulator and returns
+    the framer to expecting a request.  In monitor mode :meth:`resetFrame`
+    therefore always resets the phase to "expecting a request", regardless
+    of which frame was pending.  Do **not** call :meth:`resetFrame` after
+    a successfully decoded frame -- only on an inter-frame timeout.
+
+    The current phase is queryable via :attr:`expecting_request`.
     """
 
     def __init__(self, role: typing.Any) -> None:
-        self.role_is_server: bool = _resolve_role(role)
-        self._buffer: bytearray = bytearray()
+        if isinstance(role, str) and role.lower() == "monitor":
+            self.is_monitor: bool = True
+            # Initial phase: expect a request (server-like decoding).
+            self.role_is_server: bool = True
+            self._expect_request: bool = True
+        else:
+            self.is_monitor = False
+            self.role_is_server = _resolve_role(role)
+            self._expect_request = self.role_is_server
+        super().__init__()
+
+    @property
+    def expecting_request(self) -> bool:
+        """Whether the next frame is decoded as a request.
+
+        In monitor mode this tracks the alternating request/response
+        phase; for a fixed-role framer it mirrors the constructor role
+        flag (a server expects requests, a client expects responses).
+        """
+        return self._expect_request
+
+    @property
+    def _decoding_server(self) -> bool:
+        """Effective role flag for the current decode (monitor-aware)."""
+        return self._expect_request if self.is_monitor else self.role_is_server
 
     def buildFrame(self, msg: PDU) -> bytes:
-        """Build an RTU-framed message from *msg*."""
+        """Build an RTU-framed message from *msg*.
+
+        Raises:
+            ModbusIOError: in monitor mode (sending is prohibited).
+        """
+        if self.is_monitor:
+            raise ModbusIOError("Monitor mode: sending is prohibited")
         pdu = msg.encode_frame()
         unit_id = getattr(msg, "unit_id", 0)
         frame = bytes([unit_id]) + pdu
@@ -166,7 +246,7 @@ class FramerRTU:
             fc = remaining[1]  # noqa: F841
 
             # Estimate PDU payload size based on FC byte and role
-            pdu_size = _estimate_pdu_size(remaining, self.role_is_server)
+            pdu_size = _estimate_pdu_size(remaining, self._decoding_server)
             if pdu_size is None:
                 # Unknown FC -- can't determine size, advance one byte
                 offset += 1
@@ -203,9 +283,13 @@ class FramerRTU:
             consumed = offset + frame_len
             self._buffer = self._buffer[consumed:]
 
-            pdu = decode_pdu(pdu_bytes, server=self.role_is_server)
+            pdu = decode_pdu(pdu_bytes, server=self._decoding_server)
             pdu.unit_id = unit_id
             pdu.transaction_id = 0  # RTU has no transaction ID
+            if self.is_monitor:
+                # Alternate the phase: a decoded frame is followed by its
+                # counterpart (request -> response -> request ...).
+                self._expect_request = not self._expect_request
             return consumed, pdu
 
         # If we scanned through some bad bytes, consume them
@@ -216,8 +300,15 @@ class FramerRTU:
         return 0, None
 
     def resetFrame(self) -> None:
-        """Clear the internal byte accumulator."""
-        self._buffer = bytearray()
+        """Clear the internal byte accumulator.
+
+        In monitor mode this also returns the framer to expecting a
+        request: a timeout means the pending frame (request or reply)
+        did not arrive, so the next frame must be a new request.
+        """
+        super().resetFrame()
+        if self.is_monitor:
+            self._expect_request = True
 
 
 def _estimate_pdu_size(buf: bytes, server: bool) -> int | None:

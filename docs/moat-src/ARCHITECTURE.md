@@ -11,6 +11,10 @@ and inspection tooling.
   `rerepo`/`move_repo` (forge migration), `tags`, `tag` (version tagging),
   `path`.
 - **`_repo.py`** — `Repo` class for walking the monorepo's subpackages.
+  Files outside the ``moat`` namespace (currently: ``js/`` and ``ts/`
+  subtrees) are assigned to a package via ``packaging/moat-src/pkg-map.yaml``,
+  a mapping of path prefix to package name; prefixed files are copied to
+  ``packaging/<package>/src/<prefix>/`` rather than nested under ``src/moat``.
 - **`build.py`, `dep-update.py`, `inspect.py`, `move.py`, `test.py`,
   `worktree.py`** — subcommand implementations imported lazily inside
   `_main.py` handlers (e.g. `from .move import mv_repos`).

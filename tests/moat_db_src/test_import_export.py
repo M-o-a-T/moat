@@ -239,3 +239,93 @@ async def test_import_resync_refreshes_prefix_from_git_config(src, seed_roles, t
     await src("at", "pfxpkg3", "import", str(repo))
     res = await src("at", "-y", "pfxpkg3")
     assert "prefix: changed" in res.stdout
+
+
+async def test_import_seeds_updated_from_commit_date(src, seed_roles, tmp_path):  # noqa:ARG001
+    """Fresh import stamps `updated` from the tip's committer date.
+
+    Regression: previously every newly-imported branch got `updated=now()`,
+    so a freshly-imported repo falsely claimed all branches just moved.
+    Now `updated` reflects when the tip commit was authored, so branches
+    with differently-aged tips land at differently-aged timestamps.
+    """
+    repo = _make_repo(tmp_path, "wts")
+    # Backdate the initial commit so `main`'s tip is plainly older than
+    # the late commit we add next.  Amend in place with a fixed date.
+    early_env = {
+        **_clean_env(),
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@t",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@t",
+        "GIT_AUTHOR_DATE": "2020-01-01T00:00:00",
+        "GIT_COMMITTER_DATE": "2020-01-01T00:00:00",
+    }
+    subprocess.run(  # noqa: ASYNC221
+        (
+            "git",
+            "-C",
+            str(repo),
+            "commit",
+            "-q",
+            "--amend",
+            "--no-edit",
+            "--date",
+            "2020-01-01T00:00:00",
+        ),
+        check=True,
+        env=early_env,
+    )
+    # Capture the initial commit's SHA before branching; it is `main`'s
+    # original (older) tip.
+    early = subprocess.run(  # noqa: ASYNC221
+        ("git", "-C", str(repo), "rev-parse", "HEAD"),
+        capture_output=True,
+        text=True,
+        check=True,
+        env=_clean_env(),
+    ).stdout.strip()
+    # Second commit dated much later, on a new branch.
+    late_env = {
+        **_clean_env(),
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@t",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@t",
+        "GIT_AUTHOR_DATE": "2024-06-01T00:00:00",
+        "GIT_COMMITTER_DATE": "2024-06-01T00:00:00",
+    }
+    subprocess.run(  # noqa: ASYNC221
+        ("git", "-C", str(repo), "checkout", "-q", "-b", "fresh"),
+        check=True,
+        env=late_env,
+    )
+    (repo / "late.txt").write_text("late\n")
+    subprocess.run(("git", "-C", str(repo), "add", "late.txt"), check=True, env=late_env)  # noqa: ASYNC221
+    subprocess.run(  # noqa: ASYNC221
+        ("git", "-C", str(repo), "commit", "-qm", "later"),
+        check=True,
+        env=late_env,
+    )
+    # Reset `main` to the older initial commit so the two branches have
+    # tips with very different committer dates.  ``update-ref`` moves the
+    # ref unconditionally (no checked-out-branch guard).
+    _git("-C", str(repo), "update-ref", "refs/heads/main", early)
+
+    await src("import", str(repo), "--name", "tspkg")
+    res_main = await src("at", "tspkg", "branch", "show", "main")
+    res_fresh = await src("at", "tspkg", "branch", "show", "fresh")
+
+    def _updated(res):
+        line = next(ln for ln in res.stdout.splitlines() if ln.lstrip().startswith("updated:"))
+        return line.split("updated:", 1)[1].strip()
+
+    u_main = _updated(res_main)
+    u_fresh = _updated(res_fresh)
+    # Both must be real timestamps, and the later commit's branch must
+    # sort strictly after the older one — i.e. they did not collapse to
+    # the import moment.
+    assert u_main
+    assert u_fresh
+    assert u_main != u_fresh
+    assert u_fresh > u_main  # 2024-06-01 > the initial commit's date

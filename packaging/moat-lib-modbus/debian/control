@@ -8,7 +8,7 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/moat
 
-Package: moat-lib-modbus
+Package: python3-moat-lib-modbus
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
 Description: Sans-IO Modbus protocol core

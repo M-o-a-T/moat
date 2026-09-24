@@ -163,6 +163,79 @@ def do_copy_repos(repos: list[Package]) -> None:
         r.copy()
 
 
+# Maximum number of consecutive boilerplate "New release for <gtag>" stanzas
+# considered legitimate.  More than this is almost certainly corruption
+# (e.g. a runaway builder appending the same stanza every run); refuse
+# to silently chew through it.
+_PRUNE_MAX_STANZAS = 32
+
+
+def prune_for_gtag(changelog: str, gtag: str) -> str | None:
+    """Strip leading boilerplate release stanzas for *gtag* from a changelog.
+
+    A Debian changelog typically gains one ``New release for <gtag>`` stanza
+    per build.  When rebuilding the same tag repeatedly the prior runs'
+    stanzas pile up at the top; this function trims that leading run so
+    only the curated history beneath survives.
+
+    A stanza is "boilerplate" iff it carries exactly one bullet whose text
+    is literally ``New release for <gtag>``.  Cutting proceeds from the top
+    while successive stanzas qualify and stops at the first curated entry;
+    the returned string is the suffix beginning with that entry (byte-exact,
+    no reformatting).  If the very first stanza is *not* boilerplate nothing
+    is pruned and ``None`` is returned -- the caller decides whether to
+    treat that as "nothing to do".
+
+    Args:
+        changelog: Full Debian changelog text.
+        gtag: Release tag the boilerplate bullets cite.
+
+    Returns:
+        The pruned changelog, or ``None`` if the leader isn't boilerplate.
+
+    Raises:
+        RuntimeError: if more than :data:`_PRUNE_MAX_STANZAS` leading
+            stanzas are boilerplate -- a corruption safeguard; the input
+            is left unmutated.
+    """
+    bullet = f"New release for {gtag}"
+    # Split into stanzas at each header line ("pkg (ver) dist; urgency=..").
+    # A header begins a new stanza, so splitting *before* every header
+    # yields pieces that each start with their own header and carry their
+    # trailing trailer + separating blank line -- reconstruction is
+    # lossless and the cut boundary lands between stanzas.
+    pieces = re.split(r"(?m)(?=^\S+ \([^)]+\) \S+; urgency=\S+$)", changelog)
+    # An empty leading piece appears when the changelog starts with a
+    # header (the normal case); drop it so pieces align to stanzas.
+    if pieces and pieces[0] == "":
+        pieces = pieces[1:]
+    if not pieces:
+        return None
+
+    def _is_boilerplate(stanza: str) -> bool:
+        """True iff *stanza* has exactly one bullet == ``bullet``."""
+        # Bullet lines are "  * <text>"; gather them.
+        bullets = [ln[4:].rstrip("\r\n") for ln in stanza.splitlines() if ln.startswith("  * ")]
+        return len(bullets) == 1 and bullets[0] == bullet
+
+    # The leader must itself be boilerplate; otherwise refuse outright.
+    if not _is_boilerplate(pieces[0]):
+        return None
+
+    cut = 0
+    for stanza in pieces:
+        if not _is_boilerplate(stanza):
+            break
+        cut += 1
+        if cut > _PRUNE_MAX_STANZAS:
+            raise RuntimeError(
+                f"prune_for_gtag: {cut} consecutive boilerplate stanzas "
+                f"for {gtag!r} -- refusing to prune; inspect the changelog"
+            )
+
+    return "".join(pieces[cut:])
+
+
 async def do_build_deb(
     repo: Repo,
     repos: list[Package],

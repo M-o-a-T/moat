@@ -1,3 +1,9 @@
+moat-link-job (0.0.5-2) unstable; urgency=medium
+
+  * New release for 26.3.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 25 Sep 2026 21:30:38 +0200
+
 moat-link-job (0.0.4-1) unstable; urgency=medium
 
   * New release for 26.2.13

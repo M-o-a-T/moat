@@ -11,6 +11,11 @@ backend_example:
     key: '/path/to/cert.key'
 client:
   init_timeout: 5  # set to None to not require a server
+  local_only: false
+  # Refrain from falling back to the MQTT server-announcement mechanism:
+  # a unix socket set via "path" MUST be connectable.
+  # Also settable with ``moat link -L|--local``.
+
   # path: '/run/moat/link/socket'  # try this Unix socket first
   # name: foo  # try this named server next
   # otherwise monitor server announcements (no config option)

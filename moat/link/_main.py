@@ -67,11 +67,37 @@ Please run "sudo systemctl start moat-link-server", or
 start "moat link server" in a separate terminal, and try again.
 """
 
+LOCAL_USAGE = """
+The --local / -L option locks "moat link" clients to a local server
+(Unix-domain socket).
+
+It requires "client: path:" in the configuration, pointing at said socket,
+e.g.:\
+
+    moat:
+      link:
+        client:
+          path: /run/moat/link/socket
+
+Either adjust the config, check whether "moat link server" is running, or
+omit --local/-L (possibly using "-s SERVERNAME" instead).
+
+"""
+
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
 @click.option("-s", "--server", "link_name", default=None, help="Connect to named server only")
+@click.option(
+    "-L",
+    "--local",
+    "force_local",
+    is_flag=True,
+    help="Talk to the local server via its Unix socket only "
+    '(requires "client: path:"). No MQTT-announcement fallback. '
+    'Mirrors "local_only: yes" under "client:".',
+)
 @click.pass_context
-async def cli(ctx, link_name):
+async def cli(ctx, link_name, force_local):
     """
     MoaT's data link
 
@@ -87,6 +113,20 @@ async def cli(ctx, link_name):
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")
+
+    if force_local:
+        # Flag beats config. Inject into the hydrated subtree; the client
+        # consults the SAME slot, ensuring uniformity.
+        clnt = cfg.link.setdefault("client", {})
+        clnt["local_only"] = True
+
+        # Sanity-check the *configuration* (not the filesystem: whether the
+        # socket actually answers is decided by the connect attempt, which
+        # the client reports verbosely upon failure).
+        if clnt.get("path") is None:
+            sys.stderr.write(LOCAL_USAGE)
+            raise click.UsageError('--local requested but "client: path:" is not configured.')
+
     if link_name is not None:
         obj.link_name = link_name
 

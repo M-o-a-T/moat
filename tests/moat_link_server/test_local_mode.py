@@ -32,9 +32,41 @@ from moat.util import NotGiven, attrdict, ungroup
 from moat.lib.config import CFG
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.link.client import BasicLink
+from moat.link.meta import MsgMeta
+from moat.link.node import Node
 from moat.link.server._server import Server
 
 from typing import Any
+
+
+def _walk_fetch(client, path):
+    "Retrieve subtree contents as a `Node` (mirrors test_sync's walker)."
+    from moat.lib.path import PathLongener  # noqa: PLC0415
+    from moat.lib.rpc import StreamError  # noqa: PLC0415
+
+    async def impl():
+        nn = Node()
+        pl = PathLongener()
+        pp = P(path)
+        async with client.cmd(P("d.walk"), pp).stream_in() as msgs:
+            try:
+                it = aiter(msgs)
+            except StreamError as exc:
+                try:
+                    if exc.args[0][0] == "KeyError":
+                        return nn  # empty
+                except Exception:
+                    pass
+                raise exc from None
+
+            async for pr, pth, dt, *mt in it:
+                pth = pl.long(pr, pth)
+                nn.set(pth, dt, MsgMeta.restore(mt))
+        return nn
+
+    return impl
+
 
 # --------------------------------------------------------------- #
 # Stubs                                                           #
@@ -611,3 +643,63 @@ async def test_cli_local_good_socket_passes(tmp_path):
         assert obj.cfg.link.client.local_only is True
     finally:
         await lst.aclose()
+
+
+# --------------------------------------------------------------- #
+# Cross-compartment isolation: client-local-only ⇏ server-local    #
+# --------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_server_sync_indifferent_to_client_local_flag(cfg):
+    """
+    `cfg.client.local_only` poisons NOTHING beyond client connection policy.
+
+    A server sharing that same config blob keeps talking to REMOTE
+    servers for data sync: `_watch_up` notices strangers' announcements
+    and dials them; the flag never enters `_watch_up`/`_run_server_link`
+    territory. Both directions get exercised.
+    """
+    # Adversarial: both SERVERS inherit a client-poisoned blob; only the
+    # writer client is spared (otherwise IT couldn't connect, by design).
+    poison = {"client": {"local_only": True}}
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        # SRVs are born seeing "local_only": True under ``client`` —
+        # proving the flag never steers SERVER outbound linking.
+        await sf.server(poison, init={"cross.sync": "seeded"})
+        await sf.server()  # pristine partner
+
+        c_write = await sf.client()  # ordinary writer
+        await c_write.cmd(P("d.set"), P("symmetry.case"), "shared-data")
+
+        # THE observation: a fresh (cleanly-configured) client witnesses
+        # the disseminated datum, proving A↔B synchronized THROUGH the
+        # respective inbounds/outbounds rather than any client-direct lane.
+        c_read = await sf.client()
+        await c_read.i_sync()
+        res, *_meta = await c_read.cmd(P("d.get"), P("symmetry.case"))
+        assert res == "shared-data"
+
+        # Belt&braces: ALSO verify via BasicLink (what servers deploy among
+        # themselves), reconstructing announcement data — confirming that
+        # the "client"-lane banishment didn't starve server lanes.
+        c_probe = await sf.client()
+        if c_probe._link._last_link is None:  # noqa: SLF001
+            await c_probe._link._last_link_seen.wait()  # noqa: SLF001
+        link_payload = c_probe._link._last_link.data  # noqa: SLF001
+
+        # Replica-convergence patience: the probe's server may trail the
+        # writer's by an iota; poll gently until the datum is observable.
+        observed = None
+        with anyio.move_on_after(5):
+            async with BasicLink(cfg, "_probe", link_payload) as bl:
+                while observed is None:
+                    # Depth-relativity: walking 'symmetry' responds with
+                    # fragments RELATIVE to that prefix ('case').
+                    nn = await _walk_fetch(bl, "symmetry")()
+                    if P("case") in nn:
+                        observed = nn[P("case")].data
+                        break
+                    await anyio.sleep(0.1)
+        assert observed == "shared-data"

@@ -1025,7 +1025,7 @@ class Server(MsgHandler):
 
     #: Hard-switch for the "don't volunteer for leading" behaviour,
     #: controlled via the ``--local`` / ``-L`` command-line switches.
-    forced_local: bool
+    force_local: bool
 
     def __init__(
         self,
@@ -1034,7 +1034,7 @@ class Server(MsgHandler):
         init: Any = NotGiven,
         load: anyio.Path | FSPath | str | None = None,
         save: anyio.Path | FSPath | str | None = None,
-        forced_local: bool = False,
+        force_local: bool = False,
     ):
         self.data = Node()
         self.rdata = Node()
@@ -1056,7 +1056,7 @@ class Server(MsgHandler):
         self._downed = {}
 
         # "local_only" is hard-enabled by -L / --local
-        self.forced_local = forced_local
+        self.force_local = force_local
 
         # connected clients
         self._clients: dict[str, ServerClient] = dict()
@@ -1077,13 +1077,7 @@ class Server(MsgHandler):
         Returns True iff either the config says so (``local_only``, settable
         via ``--local`` / ``-L``) or the operator forced it.
         """
-        cfgo = self.cfg.get("server")
-        try:
-            lo = cfgo.get("local_only", False)
-        except AttributeError:
-            # defensive: someone emptied the server config?
-            return self.forced_local
-        return bool(lo) or self.forced_local
+        return self.cfg.server.local_only or self.force_local
 
     def server_link(self, name):
         return self._server_link[name]

@@ -1,3 +1,9 @@
+moat-lib-modbus (0.0.2-2) unstable; urgency=medium
+
+  * New release for 26.3.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 25 Sep 2026 16:15:15 +0200
+
 moat-lib-modbus (0.0.2-1) unstable; urgency=medium
 
   * Initial release for 26.2.13

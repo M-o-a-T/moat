@@ -1,5 +1,5 @@
 _:
-  new: 26.2.13
+  new: 26.3.2
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -288,10 +288,10 @@ moat-lib-micro:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.3.4
 moat-lib-modbus:
-  deb: 0.0.2-1
+  deb: 0.0.2-2
   new: 0.0.2
-  pkg: 1
-  pkgrev: c33f0e3c9fd77fbdcfb0586d1a711c3465d9cc87
+  pkg: 2
+  pkgrev: 388aac3a87ac8d98808820345794827c17162014
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.0.1
 moat-lib-mqtt:
@@ -546,13 +546,12 @@ moat-nodered:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.1.3
 moat-src:
-  deb: 0.12.7-2
-  new: 0.12.7
-  pkg: 2
-  pkgrev: c33f0e3c9fd77fbdcfb0586d1a711c3465d9cc87
+  deb: 0.12.8-1
+  new: 0.12.8
+  pkg: 1
   pypi: 0.12.6
-  rev: 182fce44365e22d6328de9d83e54a7e683a248bd
-  tag: 0.12.7
+  rev: 388aac3a87ac8d98808820345794827c17162014
+  tag: 0.12.8
 moat-thing:
   deb: 0.2.1-3
   pkg: 1

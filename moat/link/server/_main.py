@@ -27,6 +27,14 @@ from moat.link.server import Server
     help="Save a data snapshot after startup.",
 )
 @click.option(
+    "-L",
+    "--local",
+    "force_local",
+    is_flag=True,
+    help="Don't compete for master status. Implies local-only operation.\n"
+    'Same as configuring "local_only: yes"; cannot be overridden by config.',
+)
+@click.option(
     "-I",
     "--init",
     default=None,
@@ -34,7 +42,7 @@ from moat.link.server import Server
     "setting up a new cluster!",
 )
 @click.pass_obj
-async def cli(obj, load, save, init, name):
+async def cli(obj, load, save, init, force_local, name):
     """
     Start a MoaT-Link server. It defaults to connecting to the local MQTT
     broker.
@@ -47,6 +55,11 @@ async def cli(obj, load, save, init, name):
     This command requires a unique NAME argument ("moat link -n NAME server …").
     The name identifies this server on the network. Never start two servers
     with the same name!
+
+    With --local (-L) the server participates in normal operation (sending
+    ping messages) but refrains from claiming responsibility: its heartbeat
+    remains quiet so it will neither be elected nor considered eligible.
+    This mirrors the config setting ``moat.link.server.local_only``.
     """
 
     kw = {}
@@ -64,8 +77,15 @@ async def cli(obj, load, save, init, name):
 
         name = platform.node()
 
+    if force_local:
+        # Flag beats config. Writing it into the (already defaulted) ``link``
+        # subtree keeps every consumer consistent; ``forced_local`` is the
+        # untouchable belt-and-braces twin.
+        scf = obj.cfg.link.setdefault("server", {})
+        scf["local_only"] = True
+
     async with as_service(obj) as evt:
-        s = Server(cfg=obj.cfg.link, name=name, **kw)
+        s = Server(cfg=obj.cfg.link, name=name, forced_local=force_local, **kw)
         ev = anyio.Event()
 
         async def mon(ev):

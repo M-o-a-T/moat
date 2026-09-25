@@ -36,4 +36,12 @@ If your MQTT cluster crashes, restoring the status from a day-old backup
 may not be the best strategy. The MoaT-Link server will reload the current
 state from its log and restore the server's state to just before the crash.
 
+### Passive Servers
+
+Normally the MoaT-Link servers cooperate closely and continuously discuss
+who of them is responsible for whatever needs doing. To keep a particular
+server out of this discussion yet still have it exchange data with its
+peers, start it with the ``-L`` (“local”) option; equivalently, set
+“local_only” in the “server” section of the configuration.
+
 % end main

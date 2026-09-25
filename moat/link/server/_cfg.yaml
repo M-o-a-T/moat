@@ -35,6 +35,10 @@ probe:
   timeout: 3
   repeat: 30
 
+local_only: false
+# Local-only operation: refrain from participating in leader elections.
+# Settable with the ``--local`` / ``-L`` command-line options.
+
 # TODO Port configuration uses the database.
 # port: 0
 port: 27587

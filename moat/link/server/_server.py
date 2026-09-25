@@ -1023,6 +1023,10 @@ class Server(MsgHandler):
 
     _downed: dict[str, float]
 
+    #: Hard-switch for the "don't volunteer for leading" behaviour,
+    #: controlled via the ``--local`` / ``-L`` command-line switches.
+    forced_local: bool
+
     def __init__(
         self,
         cfg: dict,
@@ -1030,6 +1034,7 @@ class Server(MsgHandler):
         init: Any = NotGiven,
         load: anyio.Path | FSPath | str | None = None,
         save: anyio.Path | FSPath | str | None = None,
+        forced_local: bool = False,
     ):
         self.data = Node()
         self.rdata = Node()
@@ -1050,6 +1055,9 @@ class Server(MsgHandler):
         self._server_link_add = anyio.Event()
         self._downed = {}
 
+        # "local_only" is hard-enabled by -L / --local
+        self.forced_local = forced_local
+
         # connected clients
         self._clients: dict[str, ServerClient] = dict()
 
@@ -1061,6 +1069,21 @@ class Server(MsgHandler):
     @property
     def clients(self) -> dict[str, ServerClient]:
         return self._clients
+
+    def _local_mode(self) -> bool:
+        """
+        Are we deliberately keeping a low profile?
+
+        Returns True iff either the config says so (``local_only``, settable
+        via ``--local`` / ``-L``) or the operator forced it.
+        """
+        cfgo = self.cfg.get("server")
+        try:
+            lo = cfgo.get("local_only", False)
+        except AttributeError:
+            # defensive: someone emptied the server config?
+            return self.forced_local
+        return bool(lo) or self.forced_local
 
     def server_link(self, name):
         return self._server_link[name]
@@ -1193,9 +1216,15 @@ class Server(MsgHandler):
 
         The initial ping is delayed randomly.
 
+        Unless the server operates in "local-only" mode, the actor's ping
+        value is set to acknowledge peer announcements, marking this node
+        as willing to take over the leadership role when necessary.
+        "Local-only" servers stay passive; they still process the events
+        so that dependants proceed correctly.
+
         Args:
-          delay: an event to set after the initial ping message has been
-            sent.
+          ready: an event to set once the server is synced with a peer
+            (or knows nobody is around).
         """
         T = get_transport("moat_link")
         async with Actor(
@@ -1221,22 +1250,25 @@ class Server(MsgHandler):
 
                 elif isinstance(msg, GoodNodeEvent):
                     # self._tg.start_soon(self.fetch_data, msg.nodes)
-                    await actor.set_value(True)
                     ready.set()
+                    if not self._local_mode():
+                        await actor.set_value(True)
 
                 elif isinstance(msg, TagEvent):
                     # We're "it"
                     await self.set_main_link()
-                    await actor.set_value(True)
                     ready.set()
+                    if not self._local_mode():
+                        await actor.set_value(True)
 
                 elif isinstance(msg, PingEvent):
                     # record history, for recovery
                     if msg.msg.node == self.name:
                         continue
-                    await actor.set_value(True)
                     ready.set()
                     self._ping_history = msg.msg.history
+                    if not self._local_mode():
+                        await actor.set_value(True)
 
     async def set_main_link(self):
         await self.backend.send(

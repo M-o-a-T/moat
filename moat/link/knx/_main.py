@@ -14,7 +14,7 @@ import sys
 import asyncclick as click
 
 from moat.util import NotGiven, yprint
-from moat.lib.path import Path
+from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
 from moat.link.announce import as_service
@@ -347,7 +347,7 @@ async def monitor(obj, local_ip, initial) -> None:
     """Stand-alone task to talk to a single KNX gateway."""
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, host=False) as srv:
+    async with as_service(obj, name=P("moat.link.knx") / obj.knx_name, host=False) as srv:
         await task(
             obj.conn,
             obj.knx_cfg,

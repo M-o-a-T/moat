@@ -1341,6 +1341,7 @@ class Link(LinkCommon, CtxObj):
             self._port = self.cfg.client.port
         with suppress(AttributeError):
             self._socket_path = str(self.cfg.client.path)
+        self._local_only = bool(self.cfg.client.get("local_only", False))
         if self._only is None:
             with suppress(AttributeError):
                 self._only = str(self.cfg.client.name)
@@ -1517,8 +1518,20 @@ class Link(LinkCommon, CtxObj):
         1. Unix socket (cfg.client.path), if configured
         2. Named server announcement (cfg.client.name), if configured
         3. Any server announcement
+
+        In "local-only" mode (``cfg.client.local_only``, also via
+        ``--local`` / ``-L``) stage 2 and 3 are unavailable: connecting
+        via the configured Unix socket is mandatory.
         """
         task_status = TS(task_status)
+
+        # Fail fast: local-only without a configured socket is unsatisfiable.
+        if self._local_only and self._socket_path is None:
+            raise RuntimeError(
+                "Client requested '--local'/local_only but no Unix socket "
+                "configured (cfg.client.path). Either specify a path, "
+                "or drop local-only mode."
+            )
 
         # Try Unix socket first, if configured
         if self._socket_path is not None:
@@ -1533,17 +1546,27 @@ class Link(LinkCommon, CtxObj):
                     entered = True
                     await self._connect_run(rem, task_status=task_status)
             except OSError as exc:
-                if entered:
-                    raise
+                if entered or self._local_only:
+                    raise RuntimeError(
+                        f"Connecting to {self._socket_path!r} failed ({exc!r}); "
+                        "no fallback allowed (local-only mode)."
+                    ) from None
                 self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
             except TimeoutError:
-                if entered:
-                    raise
+                if entered or self._local_only:
+                    raise RuntimeError(
+                        f"Timed out contacting {self._socket_path!r}; "
+                        "no fallback allowed (local-only mode)."
+                    ) from None
                 self.logger.info("%r timed out, trying announcements", self._socket_path)
             finally:
                 self.current_server = None
                 if self._server_up.is_set():
                     self._server_up = anyio.Event()
+            if self._local_only:
+                # Organic fall-through means the session ended unexpectedly.
+                # Deliberate teardown cancels outright, bypassing this line.
+                raise RuntimeError("Local-only link terminated abruptly.")
 
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)

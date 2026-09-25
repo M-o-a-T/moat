@@ -24,10 +24,14 @@ from contextlib import asynccontextmanager
 from asyncactor import GoodNodeEvent, NodeList, PingEvent, TagEvent
 from asyncactor.messages import PingMessage
 
+import moat.link._main as link_main
+import moat.link.announce as announce_mod
 import moat.link.server._main as main_mod
 import moat.link.server._server as srv_mod
-from moat.util import NotGiven, attrdict
+from moat.util import NotGiven, attrdict, ungroup
 from moat.lib.config import CFG
+from moat.lib.path import P
+from moat.link._test import Scaffold
 from moat.link.server._server import Server
 
 from typing import Any
@@ -441,3 +445,169 @@ async def test_cli_unmodified_config_remains_absent(cli_hook):
     scf = s.cfg.get("server")
     if scf is not None:
         assert "local_only" not in scf
+
+
+# ------------------------------------------------------------ #
+# Client local-only (--local / local_only)                      #
+# ------------------------------------------------------------ #
+
+
+@pytest.mark.anyio
+async def test_client_local_requires_path(cfg):
+    "``local_only`` sans socket path is rejected outright."
+    async with Scaffold(cfg, use_servers=True) as sf:
+        with pytest.raises(RuntimeError) as ei, ungroup:
+            async with sf.client_({"client": {"local_only": True}}) as _c:
+                pass
+    assert "path" in str(ei.value), f"Wanted path advice, got {ei.value!s}"
+
+
+@pytest.mark.anyio
+async def test_client_local_missing_socket(cfg):
+    "Unresponsive (vacant) socket path ⇒ connect itself refuses; no fallback."
+    # Deliberately NO pre-probing: the connect attempt is the truth source.
+    async with Scaffold(cfg, use_servers=True) as sf:
+        with pytest.raises(RuntimeError) as ei, ungroup:
+            async with sf.client_({
+                "client": {"local_only": True, "path": "/nonexistent/hopeless.sock"}
+            }) as _c:
+                pass
+    msg = str(ei.value)
+    assert "hopeless.sock" in msg
+    assert "failed" in msg.lower()
+
+
+@pytest.mark.anyio
+async def test_client_local_dead_socket(cfg):
+    "Bound-then-abandoned socket (lingering inode, deaf) ⇒ refused."
+    async with anyio.TemporaryDirectory() as td:
+        dead_sock = f"{td}/dead.sock"
+        # Closing the listener leaves the inode; connects hit ECONNREFUSED.
+        listener = await anyio.create_unix_listener(dead_sock)
+        await listener.aclose()
+
+        async with Scaffold(cfg, use_servers=True) as sf:
+            with pytest.raises(RuntimeError) as ei, ungroup:
+                async with sf.client_({"client": {"local_only": True, "path": dead_sock}}) as _c:
+                    pass
+        # Deaf socket: refusal must cite the culprit explicitly.
+        assert "failed" in str(ei.value)
+
+
+@pytest.mark.anyio
+async def test_client_local_success_via_socket(cfg):
+    "Happy path: local-only client connects through the real socket."
+    async with anyio.TemporaryDirectory() as td:
+        sock_path = f"{td}/live.sock"
+        server_patch = {
+            "server": {
+                "ports": {
+                    "main": {"host": "0.0.0.0", "port": 0},  # noqa:S104
+                    "unix": {"port": sock_path},
+                }
+            }
+        }
+        async with (
+            Scaffold(cfg, use_servers=True) as sf,
+            sf.server_(server_patch, init={}),
+            sf.client_({"client": {"local_only": True, "path": sock_path}}) as c,
+        ):
+            await c.d_set(P("test.local"), "yes!")
+            await c.i_sync()
+            assert (await c.d_get(P("test.local"))) == "yes!"
+
+
+@pytest.mark.anyio
+async def test_client_local_survives_without_announcements(cfg, monkeypatch):
+    "Even with a sabotaged announcement facility, local-only connects happily;"
+    "local-only mode must be utterly indifferent."
+    ann_mod = announce_mod
+
+    async def refuse(*_a, **_kw):
+        raise RuntimeError("Shouldn't even peek at announcements in local-only mode")
+
+    monkeypatch.setattr(ann_mod, "announcing", refuse)
+
+    async with anyio.TemporaryDirectory() as td:
+        sock_path = f"{td}/silent.sock"
+        server_patch = {
+            "server": {
+                "ports": {
+                    "main": {"host": "0.0.0.0", "port": 0},  # noqa:S104
+                    "unix": {"port": sock_path},
+                }
+            }
+        }
+        async with (
+            Scaffold(cfg, use_servers=True) as sf,
+            sf.server_(server_patch, init={}),
+            sf.client_({"client": {"local_only": True, "path": sock_path}}) as c,
+        ):
+            await c.d_set(P("test.quiet"), "fine")
+            await c.i_sync()
+            assert (await c.d_get(P("test.quiet"))) == "fine"
+
+
+# ------------------------------------------------------------ #
+# CLI: `moat link -L`                                         #
+# ------------------------------------------------------------ #
+
+
+def _link_group_obj(sock_path=None):
+    "Fabricate the context-object that `moat.link._main.cli` expects."
+    cl = attrdict({})
+    if sock_path is not None:
+        cl["path"] = sock_path
+    lk = attrdict(
+        root=P("test.moat.link.cli"),
+        backend=attrdict(driver="mqtt", codec="std-cbor", host="127.0.0.1", port=1),
+        client=cl,
+    )
+    return attrdict(cfg=attrdict(link=lk), stdout=io.StringIO(), debug=0)
+
+
+@pytest.mark.anyio
+async def test_cli_local_missing_path_block():
+    '`-L` without a "path" aborts immediately.'
+    mlm = link_main
+
+    obj = _link_group_obj(None)
+    ctx_stub = attrdict(obj=obj)
+    with pytest.raises(mlm.click.UsageError) as ei:
+        await mlm.cli.callback.__wrapped__(ctx_stub, None, True)  # link_name=?, -L
+    assert "path" in str(ei.value)
+
+
+@pytest.mark.anyio
+async def test_cli_local_arbitrary_path_accepted(tmp_path):
+    """
+    `-L` cares about CONFIGURATION, not the filesystem.
+
+    A dangling path is fine at gate time: existence/connectivity verdicts
+    belong to the actual connect attempt (TOCTOU avoidance), where the
+    client reports problems loudly.
+    """
+    mlm = link_main
+
+    obj = _link_group_obj(str(tmp_path / "later-allegedly-a.socket"))
+    ctx_stub = attrdict(obj=obj)
+    # Plain invocation: with no subcommand scheduled, `load_subgroup`
+    # degenerates into a benign no-op here.
+    await mlm.cli.callback.__wrapped__(ctx_stub, None, True)
+    assert obj.cfg.link.client.local_only is True
+
+
+@pytest.mark.anyio
+async def test_cli_local_good_socket_passes(tmp_path):
+    "`-L` with a healthy socket passes the gate and plants the flag."
+    mlm = link_main
+
+    sock = tmp_path / "ok.sock"
+    lst = await anyio.create_unix_listener(str(sock))
+    try:
+        obj = _link_group_obj(str(sock))
+        ctx_stub = attrdict(obj=obj)
+        await mlm.cli.callback.__wrapped__(ctx_stub, None, True)
+        assert obj.cfg.link.client.local_only is True
+    finally:
+        await lst.aclose()

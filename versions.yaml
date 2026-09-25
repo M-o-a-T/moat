@@ -3,7 +3,7 @@ _:
 ext:
   micropython:
     github: M-o-a-T/micropython.git
-    rev: d7f762ccd4d6fbfaa8a9d23399b0415bf559b994
+    rev: 7ad594a9d61a0d0b5b7b2cbc354dc054fcf8276e
   mpdb:
     github: M-o-a-T/mpdb.git
     rev: c944351c3c75e41c26084168e1446833689db928

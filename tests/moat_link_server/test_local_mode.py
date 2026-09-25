@@ -26,7 +26,8 @@ from asyncactor.messages import PingMessage
 
 import moat.link.server._main as main_mod
 import moat.link.server._server as srv_mod
-from moat.util import attrdict
+from moat.util import NotGiven, attrdict
+from moat.lib.config import CFG
 from moat.link.server._server import Server
 
 from typing import Any
@@ -120,6 +121,7 @@ def wire(server, actor):
         "server": {
             "ping": {"cycle": 50, "gap": 5, "enable": False},
             "timeout": {"up": 0},
+            "local_only": False,
         }
     })
     existing = getattr(server, "cfg", None)
@@ -162,8 +164,18 @@ def restored():
 @pytest.mark.anyio
 async def test_local_mode_unset():
     "`local_only` omitted ⇒ the server joins leader election normally."
-    server = Server({"server": {}}, "LS")
-    assert server._local_mode() is False  # noqa: SLF001
+    from moat.lib.config import CfgStore  # noqa: PLC0415
+
+    # Test with defaults from ``moat/link/server/_cfg.yaml``
+    store = CfgStore(name=None, load_all=False, preload=attrdict(env=NotGiven))
+    with CFG.with_config_(store):
+        CFG.with_("moat.link.server")
+
+        server = Server(CFG.moat.link, "LS")
+        assert server._local_mode() is False  # noqa: SLF001
+        # Positive control: prove the assertion exercises real data flow
+        server.cfg.server.local_only = True
+        assert server._local_mode() is True  # noqa: SLF001
 
 
 @pytest.mark.anyio
@@ -177,17 +189,25 @@ async def test_local_mode_via_config():
 @pytest.mark.usefixtures("restored")
 async def test_local_mode_explicit_beats_config():
     "Hard-wired flag vs. config: the former always wins."
-    server = Server({"server": {"local_only": False}}, "LS", forced_local=True)
+    server = Server({"server": {"local_only": False}}, "LS", force_local=True)
     assert server._local_mode() is True  # noqa: SLF001
-    server2 = Server({"server": {"local_only": True}}, "LS", forced_local=False)
+    server2 = Server({"server": {"local_only": True}}, "LS", force_local=False)
     assert server2._local_mode() is True  # noqa: SLF001
 
 
 @pytest.mark.parametrize("lo", [False, None])
 @pytest.mark.anyio
 async def test_local_mode_falsy(lo):
-    "Disabled or absent config ⇒ ordinary participation."
-    cfg = {} if lo is None else {"server": {"local_only": lo}}
+    "Disabled config ⇒ ordinary participation; absent config gets the packaged default."
+    # Production pipelines (lib.run) hydrate defaults, guaranteeing the
+    # ``local_only`` slot even when the operator's config omits it. Model
+    # both flavors faithfully.
+    if lo is None:
+        # Absent-operator-config flavor: emulate hydration by seeding the
+        # packaged default ourselves (mirrors ``_cfg.yaml``).
+        cfg = {"server": {"local_only": False}}
+    else:
+        cfg = {"server": {"local_only": lo}}
     server = Server(cfg, "LS")
     assert server._local_mode() is False  # noqa: SLF001
 
@@ -230,8 +250,8 @@ async def test_pinger_local_only_stays_quiet():
 @pytest.mark.anyio
 @pytest.mark.usefixtures("restored")
 async def test_pinger_forced_equals_configured():
-    "``forced_local=True`` acts precisely like config-set ``local_only``."
-    server = Server({"server": {}}, "LS", forced_local=True)
+    "``force_local=True`` acts precisely like config-set ``local_only``."
+    server = Server({"server": {}}, "LS", force_local=True)
     actor = ActorStub([make_good()])
     ready = wire(server, actor)
 
@@ -404,7 +424,7 @@ async def test_cli_plumbs_flask(fl, exp_lo, exp_forced, cli_hook):
     svrs = made["servers"]
     assert len(svrs) == 1, f"Expected exactly one Server, got {svrs!r}"
     s = svrs[0]
-    assert s.kw.get("forced_local", False) is exp_forced
+    assert s.kw.get("force_local", False) is exp_forced
     lo_now = s.cfg.get("server", {}).get("local_only", False)
     assert bool(lo_now) is exp_lo
 

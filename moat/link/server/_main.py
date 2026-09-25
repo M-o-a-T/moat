@@ -79,13 +79,13 @@ async def cli(obj, load, save, init, force_local, name):
 
     if force_local:
         # Flag beats config. Writing it into the (already defaulted) ``link``
-        # subtree keeps every consumer consistent; ``forced_local`` is the
+        # subtree keeps every consumer consistent; ``force_local`` is the
         # untouchable belt-and-braces twin.
         scf = obj.cfg.link.setdefault("server", {})
         scf["local_only"] = True
 
     async with as_service(obj) as evt:
-        s = Server(cfg=obj.cfg.link, name=name, forced_local=force_local, **kw)
+        s = Server(cfg=obj.cfg.link, name=name, force_local=force_local, **kw)
         ev = anyio.Event()
 
         async def mon(ev):

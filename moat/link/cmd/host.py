@@ -16,6 +16,11 @@ from moat.link.announce import announcing
 from moat.link.client import Link
 from moat.link.host import HostList, ServiceMon
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import Path
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,9 +83,22 @@ async def list(obj, timeout, dump):  # noqa: A001
     * service path
 
     The host name is empty if the service path starts with it.
+
+    Each up→down or down→up transition of a (connection, path) pair is
+    reported once. Subsequent indications of the same outage – the
+    host's ``run.host`` entry going away, its ``run.id`` identity (thus
+    possibly the displayed hostname) – stay silent: they corroborate
+    downtime, not new events.
     """
 
-    hc: dict = {}
+    def host_of(h, k):
+        """Compute the display host name for a service path."""
+        if "i" not in h.data or (len(k) and k[0] == h.data.i["host"]):
+            return ""
+        return h.data.i["host"]
+
+    # Last printed up-state per (connection id, path). Truthiness marks up.
+    stated: dict[tuple[str, Path], bool] = {}
     # Per-host id, paths previously reported as up.
     seen: dict = {}
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
@@ -97,31 +115,21 @@ async def list(obj, timeout, dump):  # noqa: A001
                     known = seen.setdefault(h.id, set())
                     # Report previously-seen paths that disappeared as DOWN.
                     for k in known - current:
-                        if hc.get((h.id, k), None) is False:
+                        if not stated.get((h.id, k), True):
                             continue
-                        hc[(h.id, k)] = False
+                        stated[(h.id, k)] = False
+                        print(h.id, host_of(h, k), k, "** DOWN **")
+                    for k, v in h.data.h.items():
+                        known.add(k)
+                        ok = up if up is not None else v.get("up", False)
+                        if stated.get((h.id, k), None) is ok:
+                            continue
+                        stated[(h.id, k)] = ok
                         print(
                             h.id,
                             ""
                             if "i" not in h.data or (len(k) and k[0] == h.data.i["host"])
                             else h.data.i["host"],
-                            k,
-                            "** DOWN **",
-                        )
-                    for k, v in h.data.h.items():
-                        known.add(k)
-                        ok = up if up is not None else v.get("up", False)
-                        hostname = (
-                            ""
-                            if "i" not in h.data or (len(k) and k[0] == h.data.i["host"])
-                            else h.data.i["host"]
-                        )
-                        if hc.get((h.id, k), None) == (ok, hostname):
-                            continue
-                        hc[(h.id, k)] = (ok, hostname)
-                        print(
-                            h.id,
-                            hostname,
                             k,
                             "" if ok else "** DOWN **",
                         )

@@ -275,11 +275,23 @@ MoaT config data (strict mode, `extra="allow"`, `validate_assignment`).
 
 ### Path fields
 
-Fields annotated as {py:class}`~moat.lib.path.Path` accept either a
-`Path` or a `str` (parsed via {py:func}`~moat.lib.path.P`); every other
-type is rejected.  Serialisation keeps the `Path` object in Python mode
-(so it round-trips through the MoaT-Link CBOR codec) and emits the
-dotted-string form in JSON mode.
+Fields annotated as {py:class}`~moat.lib.path.Path` accept:
+
+* a `Path` — this is what a YAML ``!P`` tag decodes to;
+* a `list`/`tuple` — built element-wise via `Path.build` (the list form,
+  for configs that spell out the elements);
+* a `str` — parsed via {py:func}`~moat.lib.path.P`, **but only outside
+  YAML context**.
+
+YAML config has an explicit ``!P`` tag for paths, so a bare dotted string
+there is almost always a forgotten tag.  When configuration is loaded
+through `from_cfg` / `cfg_monitor` (which mark the data as YAML-sourced),
+a bare string is therefore a validation error — use ``!P`` or a list.
+JSON, which has no such tag, keeps accepting strings.
+
+Serialisation keeps the `Path` object in Python mode (so it round-trips
+through the MoaT-Link CBOR codec) and emits the dotted-string form in
+JSON mode.
 
 ```python
 from moat.lib.config.base import BaseModel
@@ -289,6 +301,10 @@ class UnitCfg(BaseModel):
     power_path: Path
     mode_path: Path
 
+# YAML config (via from_cfg) requires !P or a list:
+#   power_path: !P heat.s.pump.cmd.power
+#   mode_path: [heat, s, pump, cmd, mode]
+# Direct / JSON validation also accepts a string:
 cfg = UnitCfg(power_path="heat.s.pump.cmd.power",
               mode_path=Path.build(("heat","s","pump","cmd","mode")))
 isinstance(cfg.power_path, Path)  # True

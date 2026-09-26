@@ -5,9 +5,10 @@ This module extends :class:`moat.lib.config.base.BaseModel` with the
 features needed by unit-configuration models (see HEAT.md §2.4):
 
 * :class:`moat.lib.path.Path` fields accept a :class:`~moat.lib.path.Path`
-  or a ``str`` (parsed via :func:`moat.lib.path.P`) and serialise back as
-  a :class:`~moat.lib.path.Path`, so they survive the MoaT-Link codec
-  round-trip.  Validation is strict: any other type is rejected.
+  (a YAML ``!P`` tag) or a ``list``/``tuple``; a bare ``str`` is accepted
+  only outside YAML context (JSON), so a forgotten ``!P`` in YAML config
+  is a validation error.  Paths serialise back as a
+  :class:`~moat.lib.path.Path`, surviving the MoaT-Link codec round-trip.
 * (Nested) :class:`moat.util.attrdict` input is accepted by
   :meth:`pydantic.BaseModel.model_validate` and by the constructor.
 * :meth:`BaseModel.from_cfg` reads a subtree of the current
@@ -21,7 +22,7 @@ from __future__ import annotations
 import logging
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, ValidationInfo, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import core_schema
 from pydantic_variants.core import DecomposedModel
@@ -34,25 +35,49 @@ from typing import Any
 
 _logger = logging.getLogger(__name__)
 
+#: Validation context marking data originating from YAML config.  Path
+#: fields reject bare dotted strings under this context (a YAML path must
+#: use ``!P`` or a list); see :func:`_path_core_schema`.
+_CFG_CTX = {"source": "yaml"}
+
 
 def _path_core_schema(_cls: Any, _source: Any, _handler: Any) -> Any:
     """Pydantic core schema for :class:`moat.lib.path.Path`.
 
-    Accepts a :class:`~moat.lib.path.Path` (returned unchanged) or a
-    ``str`` (parsed via :func:`moat.lib.path.P`); every other type is
-    rejected.  Serialisation keeps the :class:`~moat.lib.path.Path` object
-    in Python mode (so it round-trips through the MoaT-Link CBOR codec)
-    and emits its dotted-string form in JSON mode.
+    Accepted input:
+
+    * a :class:`~moat.lib.path.Path` — returned unchanged (this is what
+      a YAML ``!P`` tag decodes to);
+    * a ``list``/``tuple`` — built via :meth:`Path.build` (list form, for
+      compatibility with configs that spell out the elements);
+    * a ``str`` — parsed via :func:`moat.lib.path.P`, **but only when the
+      validation context does not mark the source as YAML**.
+
+    YAML config has an explicit ``!P`` tag for paths; a bare dotted
+    string there is almost always a forgotten tag, so it is rejected when
+    the context's ``source`` is ``"yaml"`` (see :meth:`BaseModel.from_cfg`
+    and :meth:`BaseModel.cfg_monitor`, which set that context).  Other
+    sources — notably JSON, which has no tag — keep accepting strings.
+
+    Every other type is rejected.  Serialisation keeps the
+    :class:`~moat.lib.path.Path` object in Python mode (so it round-trips
+    through the MoaT-Link CBOR codec) and emits its dotted-string form in
+    JSON mode.
     """
 
-    def _validate(value: Any) -> Path:
+    def _validate(value: Any, info: ValidationInfo) -> Path:
         if isinstance(value, Path):
             return value
+        if isinstance(value, (list, tuple)):
+            return Path.build(tuple(value))
         if isinstance(value, str):
+            source = (info.context or {}).get("source")
+            if source == "yaml":
+                raise ValueError("Bare dotted string is not a Path in YAML config; use '!P'.")
             return P(value)
-        raise ValueError(f"Not a Path or str: {type(value).__name__}")
+        raise ValueError(f"Not a Path, list, or str: {type(value).__name__}")
 
-    return core_schema.no_info_plain_validator_function(
+    return core_schema.with_info_plain_validator_function(
         _validate,
         serialization=core_schema.plain_serializer_function_ser_schema(str, when_used="json"),
     )
@@ -170,7 +195,7 @@ class BaseModel(_BaseModel):
             subtree = cfg.result.get_(path)
         except KeyError:
             subtree = attrdict()
-        return cls.model_validate(subtree)
+        return cls.model_validate(subtree, context=_CFG_CTX)
 
     @classmethod
     async def cfg_monitor(

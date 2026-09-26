@@ -2,12 +2,14 @@
 
 Covers the prerequisites of HEAT.md §2.4 / issue moat-n84.3:
 
-* :class:`moat.lib.path.Path` fields accept ``Path`` or ``str`` (parsed via
-  ``P()``) and reject other types under strict mode.
+* :class:`moat.lib.path.Path` fields accept a ``Path`` (YAML ``!P``) or a
+  ``list``/``tuple``; under YAML context a bare dotted ``str`` is rejected
+  (a forgotten ``!P``), while JSON / context-less validation still accepts
+  strings.
 * ``Path`` fields survive a round-trip through the standard CBOR codec and
   re-validation.
 * (Nested) :class:`moat.util.attrdict` input validates.
-* :meth:`BaseModel.from_cfg` reads a CFG subtree.
+* :meth:`BaseModel.from_cfg` reads a CFG subtree (YAML context).
 * :meth:`BaseModel.cfg_monitor` yields a re-validated instance per change
   and skips invalid updates.
 """
@@ -26,6 +28,10 @@ from moat.lib.config import CFG, CfgStore, current_cfg
 from moat.lib.config.base import BaseModel
 from moat.lib.path import P, Path
 
+# Validation context used by ``from_cfg`` / ``cfg_monitor`` to mark data as
+# originating from YAML (where bare dotted strings are forbidden).
+_YAML_CTX = {"source": "yaml"}
+
 # ── Models used across the tests ──────────────────────────────────────
 
 
@@ -43,30 +49,66 @@ class Nest(BaseModel):
     top: Path
 
 
-# ── Path fields ───────────────────────────────────────────────────────
+# ── Path fields: accepted forms ────────────────────────────────────────
 
 
-def test_path_accepts_str_and_path():
-    """A Path field accepts a ``str`` (parsed via ``P()``) or a ``Path``."""
-    a = Leaf(p="a.b.c")
-    b = Leaf(p=P("a.b.c"))
+def test_path_accepts_path_list_and_json_str():
+    """A Path field accepts a ``Path``, a ``list``/``tuple``, or (outside
+    YAML context) a ``str`` parsed via ``P()``."""
+    a = Leaf(p=P("a.b.c"))
+    b = Leaf(p=["a", "b", "c"])
+    c = Leaf(p=("a", "b", "c"))
+    d = Leaf(p="a.b.c")  # JSON / no context: a string is fine
+    for m in (a, b, c, d):
+        assert isinstance(m.p, Path)
+    assert a.p == b.p == c.p == d.p
+
+
+def test_path_list_builds_path_elementwise():
+    """A list input is built into a Path element-wise (compatibility form)."""
+    m = Leaf(p=["heat", "s", "pump"])
+    assert isinstance(m.p, Path)
+    assert m.p == P("heat.s.pump")
+
+
+# ── Path fields: YAML context forbids bare strings ────────────────────
+
+
+def test_path_yaml_rejects_bare_string():
+    """Under YAML context a bare dotted string is rejected (forgotten ``!P``)."""
+    with pytest.raises(ValidationError):
+        Leaf.model_validate({"p": "a.b.c"}, context=_YAML_CTX)
+    with pytest.raises(ValidationError):
+        Leaf.model_validate(attrdict(p="a.b.c"), context=_YAML_CTX)
+
+
+def test_path_yaml_accepts_path_and_list():
+    """Under YAML context a ``Path`` (``!P``) or a list are accepted."""
+    a = Leaf.model_validate({"p": P("a.b.c")}, context=_YAML_CTX)
+    b = Leaf.model_validate({"p": ["a", "b", "c"]}, context=_YAML_CTX)
     assert isinstance(a.p, Path)
     assert isinstance(b.p, Path)
-    assert a.p == b.p
-    assert a == b
+    assert a.p == b.p == P("a.b.c")
 
 
 def test_path_strict_rejects_bad_types():
-    """Strict mode rejects every type that is not a ``Path`` or ``str``."""
-    for bad in (123, 1.5, None, True, False, [], (), {}, b"x"):
+    """Types that are not a ``Path``, list, or ``str`` are rejected."""
+    for bad in (123, 1.5, None, True, False, {}, b"x"):
         with pytest.raises(ValidationError):
             Leaf(p=bad)  # type: ignore[arg-type]
+    # Even under YAML, non-str/list/Path types are rejected.
+    for bad in (123, 1.5, None, True, False, {}, b"x"):
+        with pytest.raises(ValidationError):
+            Leaf.model_validate({"p": bad}, context=_YAML_CTX)  # type: ignore[arg-type]
+
+
+# ── Path fields: codec round-trips ────────────────────────────────────
 
 
 def test_path_round_trip_cbor():
     """A Path field survives encode → decode → re-validation."""
     codec = Codec()
-    m = Leaf(p="heat.s.pump.cmd.power", n=3)
+    m = Leaf(p=P("heat.s.pump.cmd.power"), n=3)
 
     dumped = m.model_dump(mode="python")
     # Python-mode serialisation keeps the Path object (needed for CBOR).
@@ -77,7 +119,8 @@ def test_path_round_trip_cbor():
     assert dec == dumped  # codec reproduces the Path
     assert isinstance(dec["p"], Path)
 
-    m2 = Leaf.model_validate(dec)
+    # Re-validation works under YAML context too (Path is kept, not a str).
+    m2 = Leaf.model_validate(dec, context=_YAML_CTX)
     assert isinstance(m2.p, Path)
     assert m2 == m
 
@@ -87,6 +130,7 @@ def test_path_json_serialisation_is_string():
     m = Leaf(p="a.b.c", n=1)
     js = m.model_dump_json()
     assert json.loads(js)["p"] == "a.b.c"
+    # JSON round-trip (no YAML context) accepts the string back.
     m2 = Leaf.model_validate(json.loads(js))
     assert m2 == m
     assert isinstance(m2.p, Path)
@@ -123,6 +167,12 @@ def test_attrdict_with_extras():
     assert m.__pydantic_extra__ == {"extra": "kept"}
 
 
+def test_attrdict_yaml_context_rejects_bare_string():
+    """A nested attrdict from YAML with a bare string Path is rejected."""
+    with pytest.raises(ValidationError):
+        Nest.model_validate(attrdict(leaf=attrdict(p="x.y", n=2), top="m.n"), context=_YAML_CTX)
+
+
 # ── from_cfg ─────────────────────────────────────────────────────────
 
 
@@ -135,18 +185,34 @@ def _store_with(target: attrdict) -> CfgStore:
     return store
 
 
-def test_from_cfg_reads_subtree():
-    """``from_cfg`` validates the subtree at the given path."""
-    store = _store_with(attrdict(p="heat.s.pump.cmd.power", n=7))
+def test_from_cfg_accepts_path():
+    """``from_cfg`` validates a subtree whose Path comes in as ``!P``."""
+    store = _store_with(attrdict(p=P("heat.s.pump.cmd.power"), n=7))
     with CFG.with_config_(store):
         m = Leaf.from_cfg(P("dev.heat.target"))
     assert m.p == P("heat.s.pump.cmd.power")
     assert m.n == 7
 
 
-def test_from_cfg_accepts_str_path():
-    """``from_cfg`` accepts a dotted-string path."""
-    store = _store_with(attrdict(p="a.b", n=4))
+def test_from_cfg_accepts_list():
+    """``from_cfg`` validates a subtree whose Path comes in as a list."""
+    store = _store_with(attrdict(p=["heat", "s", "pump"], n=7))
+    with CFG.with_config_(store):
+        m = Leaf.from_cfg(P("dev.heat.target"))
+    assert m.p == P("heat.s.pump")
+    assert m.n == 7
+
+
+def test_from_cfg_rejects_bare_string():
+    """``from_cfg`` rejects a bare dotted string (YAML requires ``!P``)."""
+    store = _store_with(attrdict(p="heat.s.pump.cmd.power", n=7))
+    with CFG.with_config_(store), pytest.raises(ValidationError):
+        Leaf.from_cfg(P("dev.heat.target"))
+
+
+def test_from_cfg_accepts_str_path_argument():
+    """``from_cfg`` accepts a dotted-string *path argument* (not a value)."""
+    store = _store_with(attrdict(p=P("a.b"), n=4))
     with CFG.with_config_(store):
         m = Leaf.from_cfg("dev.heat.target")
     assert m.n == 4
@@ -188,7 +254,7 @@ async def test_cfg_monitor_yields_valid_changes():
     *changes* only (there is no initial snapshot), one validated instance
     per detected change.
     """
-    store = _store_with(attrdict(p="a.b", n=1))
+    store = _store_with(attrdict(p=P("a.b"), n=1))
     received: list[Leaf] = []
 
     async def watcher() -> None:
@@ -218,7 +284,7 @@ async def test_cfg_monitor_yields_valid_changes():
 @pytest.mark.anyio
 async def test_cfg_monitor_skips_invalid(caplog):
     """An invalid update is skipped; the previous instance stays in effect."""
-    store = _store_with(attrdict(p="a.b", n=1))
+    store = _store_with(attrdict(p=P("a.b"), n=1))
     received: list[Leaf] = []
 
     async def watcher() -> None:
@@ -250,6 +316,38 @@ async def test_cfg_monitor_skips_invalid(caplog):
     # The invalid update was logged at WARNING level.
     rec = [r for r in caplog.records if "Invalid config" in r.message]
     assert rec, "invalid update should be logged"
+
+
+@pytest.mark.anyio
+async def test_cfg_monitor_skips_bare_string_path(caplog):
+    """A change introducing a bare-string Path is skipped (YAML requires ``!P``)."""
+    store = _store_with(attrdict(p=P("a.b"), n=1))
+    received: list[Leaf] = []
+
+    async def watcher() -> None:
+        with CFG.with_config_(store):
+            async for inst in Leaf.cfg_monitor(P("dev.heat.target"), delay=0.05):
+                received.append(inst)
+                if len(received) >= 1:
+                    break
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(watcher)
+        await anyio.sleep(0.1)
+        # Replace the Path value with a bare string → invalid under YAML.
+        store.mod(P("dev.heat.target.p"), "bare.string")
+        store.redo()
+        await anyio.sleep(0.1)
+        # Restore a valid Path → yielded.
+        store.mod(P("dev.heat.target.p"), P("c.d"))
+        store.redo()
+        await anyio.sleep(0.1)
+        tg.cancel_scope.cancel()
+
+    assert len(received) == 1
+    assert received[0].p == P("c.d")
+    rec = [r for r in caplog.records if "Invalid config" in r.message]
+    assert rec, "bare-string update should be logged and skipped"
 
 
 @pytest.mark.anyio

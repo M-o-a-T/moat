@@ -14,6 +14,7 @@ from weakref import WeakSet
 from moat.util import NotGiven, attrdict, combine_dict, ctx_as, merge, yload
 from moat.lib.micro import ObjSequence, log
 from moat.lib.path import P, Path
+from moat.util.dict import NoOp
 
 from ._reg import to_process
 
@@ -632,6 +633,9 @@ class monitor:
         self.sig.set()
 
     def __enter__(self) -> Self:
+        if self.cfg.updated_.__func__ is not NoOp:
+            raise RuntimeError("Cannot run two monitors in parallel")
+
         self.cfg.updated_ = self.trigger
         return self
 
@@ -641,7 +645,7 @@ class monitor:
         _exc: BaseException | None,
         _tb: TracebackType | None,
     ) -> None:
-        del self.cfg.updated_
+        self.cfg.updated_ = NoOp
 
     def __aiter__(self) -> Self:
         return self

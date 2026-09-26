@@ -267,6 +267,64 @@ cfg.redo()
 assert "temp" not in cfg.result.data  # converged — no NotGiven leaked
 ```
 
+## Typed configuration models
+
+Subsystems that need structured, validated configuration subclass
+`moat.lib.config.base.BaseModel`, a pydantic model tuned for
+MoaT config data (strict mode, `extra="allow"`, `validate_assignment`).
+
+### Path fields
+
+Fields annotated as {py:class}`~moat.lib.path.Path` accept either a
+`Path` or a `str` (parsed via {py:func}`~moat.lib.path.P`); every other
+type is rejected.  Serialisation keeps the `Path` object in Python mode
+(so it round-trips through the MoaT-Link CBOR codec) and emits the
+dotted-string form in JSON mode.
+
+```python
+from moat.lib.config.base import BaseModel
+from moat.lib.path import Path
+
+class UnitCfg(BaseModel):
+    power_path: Path
+    mode_path: Path
+
+cfg = UnitCfg(power_path="heat.s.pump.cmd.power",
+              mode_path=Path.build(("heat","s","pump","cmd","mode")))
+isinstance(cfg.power_path, Path)  # True
+```
+
+### attrdict input
+
+`BaseModel` accepts (nested) {py:class}`~moat.util.attrdict` input via
+`model_validate` and the constructor, so a config subtree coming straight
+from a {py:class}`~moat.lib.config.CfgStore` validates without manual
+conversion:
+
+```python
+sub = CFG.dev.heat.target          # an attrdict
+m = UnitCfg.model_validate(sub)     # nested attrdicts validated too
+```
+
+### Loading and live reload
+
+`BaseModel.from_cfg` reads a subtree of
+the active configuration and validates it.  A missing subtree validates
+against the model's defaults (reverting to defaults on deletion).
+
+`BaseModel.cfg_monitor` ties
+{py:class}`~moat.lib.config.monitor` to re-validation: it yields a fresh,
+typed instance on every change of the subtree.  An update that fails
+validation is logged and skipped, so the previous instance stays in
+effect — matching the live-reload contract of the heat-controller design
+(an invalid update is logged and ignored; deleting the item reverts to
+the defaults).
+
+```python
+async for cfg in UnitCfg.cfg_monitor(P("dev.heat.target")):
+    self.apply(cfg)
+```
+
 ```{toctree}
 :maxdepth: 2
 :hidden:

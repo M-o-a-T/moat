@@ -162,3 +162,28 @@ async def test_lost_mqtt_link_ends_client(cfg):
             except* MQTTConnectionLost as exc:
                 got.extend(exc.exceptions)
     assert len(got) == 1
+
+
+async def test_lost_server_link_ends_client(cfg):
+    "a client whose MoaT-Link server goes away fails; it does not fail over"
+    from moat.link.exceptions import ServerLinkLost  # noqa: PLC0415
+
+    got: list[BaseException] = []
+    async with Scaffold(cfg, use_servers=True) as sf:
+        stop = anyio.Event()
+
+        async def run_server(*, task_status):
+            async with sf.server_(init="INIT"):
+                task_status.started()
+                await stop.wait()
+
+        await sf.tg.start(run_server)
+        with anyio.fail_after(5):
+            try:
+                async with sf.client_() as c:
+                    await c.d_set(P("test.lost"), 1, retain=True)  # it works
+                    stop.set()  # the server goes away
+                    await anyio.sleep_forever()
+            except* ServerLinkLost as exc:
+                got.extend(exc.exceptions)
+    assert len(got) == 1

@@ -111,7 +111,9 @@ class PID:
             Control signal.
 
         """
-        return self.sum(self.integrate(e, t))
+        # Not ``self.integrate``: subclasses (CPID) override it with a
+        # different contract.
+        return self.sum(PID.integrate(self, e, t))
 
     def sum(self, args: Sequence[float]) -> float:
         """

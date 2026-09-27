@@ -11,7 +11,8 @@ from math import cos, pi, sin
 
 from numpy import allclose, arange, array, diff, insert, zeros_like
 
-from moat.lib.pid import PID, PID_TC
+from moat.util import attrdict
+from moat.lib.pid import CPID, PID, PID_TC
 
 from typing import cast
 
@@ -373,3 +374,14 @@ def test_set_gains_bumpless_tf_updates_e():  # noqa:D103
 
     assert not almost_equal(e0, e1, delta=1e-12)
     assert almost_equal(u_ref, u_new, delta=1e-3)
+
+
+def test_cpid_call_matches_integrate():
+    "calling a CPID subtracts the setpoint once, like integrate+sum"
+    cfg = attrdict(p=1, i=0, d=0, tf=0, min=-100, max=100)
+    a = CPID(cfg, t=1)
+    b = CPID(cfg, t=1)
+    a.setpoint(25)
+    b.setpoint(25)
+    assert a(20.0, t=2) == 5.0
+    assert b.sum(b.integrate(20.0, t=2)) == 5.0

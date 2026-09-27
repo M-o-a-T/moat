@@ -1,12 +1,12 @@
 # Plan: moat-aqu — overridable `time()` / `monotonic()` and codebase conversion
 
 Issue: **moat-aqu** — “moat.util.time: overridable time() and monotonic();
-convert codebase”.
+convert codebase”. Revised per review **moat-lom**.
 
-Goal: give tests and simulated runs a controllable clock for **both** wall
-time and monotonic time. trio’s `MockClock` only fakes the event loop’s
-monotonic clock, not `time.time()`. Persisted timestamps, schedules, and
-comparisons with MoaT-Link message timestamps all need a fakeable wall clock.
+Goal: give tests and simulated runs a controllable clock for **wall** time
+(the part trio’s `MockClock` does *not* fake) and a sane story for monotonic
+time. Persisted timestamps, schedules, and comparisons with MoaT-Link message
+timestamps all need a fakeable wall clock.
 
 Acceptance criteria (verbatim):
 
@@ -17,94 +17,187 @@ Acceptance criteria (verbatim):
 
 ---
 
-## Design decisions (locked in)
+## Design decisions (revised after moat-lom)
 
 ### D1 — Override mechanism
 
-Follow the established `moat/util/random.py` pattern: hold the active clock
-functions in module-level slots and swap them at runtime.
+Adapts the module-global-slot idea from `moat/util/random.py` (which holds a
+swappable `_rand_choices` binding). NOTE (per review): `random.py` has no
+set/patch API — it only picks the binding at import — so this is an
+*extension* of that pattern, not a mirror of it.
 
 `moat/util/time.py` exposes:
 
-- `time() -> float` — current wall-clock seconds (defaults to `time.time`).
-- `monotonic() -> float` — monotonic seconds (defaults to `time.monotonic`).
-- `set_clock(*, time=None, monotonic=None)` — permanently replace one or
-  both slots (passing `None` resets to the stdlib default). Used by fixtures
-  that manage their own teardown.
-- `@contextmanager patch_clock(*, time=None, monotonic=None)` — restore-on-
-  exit variant, the idiomatic thing tests reach for. Restores prior slots even
-  on exception (uses `try/finally`; re-raises `BaseException`-but-not-
-  `Exception` per house rule — actually plain `try/finally` suffices and
-  preserves cancellation naturally).
+- `time() -> float` — wall-clock seconds (slot defaults to stdlib `time.time`).
+- `monotonic() -> float` — monotonic seconds (slot defaults to stdlib
+  `time.monotonic`). Kept for **loop-less** code only (see D2).
+- `loop_time() -> float` — `anyio.current_time()`, falling back to the
+  `monotonic()` slot when no event loop is running (`RuntimeError`). Promoted
+  out of `moat/kv/mock/mqtt.py::tm()` (Blocker 1).
+- `set_clock(*, time=None, monotonic=None) -> None` — permanently replace one
+  or both slots; passing `None` for a slot resets it to the stdlib default.
+- `patch_clock(*, time=None, monotonic=None)` — `contextmanager` that saves
+  the current slots, applies the overrides, and restores them on exit
+  (including on exception / cancellation — plain `try/finally` propagates
+  `Cancelled` correctly; no special-casing needed).
 
-Slots are module-private (`_time_fn`, `_mono_fn`). Public `time()`/
-`monotonic()` delegate. This mirrors `random._rand_choices` exactly.
+Implementation detail (per review): inside `moat/util/time.py` the stdlib
+module is imported **as `_time`** (`import time as _time`) so the `time` /
+`monotonic` *parameter names* of `set_clock`/`patch_clock` cannot shadow the
+stdlib reference used to reset defaults. Slots `_time_fn` / `_mono_fn` are
+module-private; public `time()`/`monotonic()` delegate.
 
-Why not a class/object passed around: the whole point is that *existing*
-callsites `time.time()` become `mtime.time()` with no threading of state;
-the override is process-global, scoped by the context manager. Matches the
-precedent and the existing ad-hoc monkeypatch in `test_cmd_data.py`.
+Why global slots, not threaded state: existing callsites `time.time()` become
+`mtime.time()` with no plumbing; the override is process-global and scoped by
+`patch_clock`. This also fixes a latent global-pollution bug in the existing
+ad-hoc monkeypatch (`tests/moat_link/test_cmd_data.py` mutates stdlib
+`time.time` itself — see D6).
 
-### D2 — Device boundary (MicroPython)
+### D2 — Wall vs monotonic, and the async-monotonic rule (Blocker 2)
 
-Survey result: of the 26 conversion-target files, **only**
-`moat/micro/app/_sys.py` is mirrored into the MicroPython device tree
-(symlinked as `moat/micro/_embed/lib/app/_sys_.py`). Everything else is pure
-CPython.
+Two clocks, two policies:
 
-`_sys.py` uses `time.time()` solely to report the device’s wall clock back
-over RPC (`"t"`/`"ms"`/`"us"` keys). On a device there is exactly one real
-wall clock and tests do not run there, so making it fakeable buys nothing but
-would force shipping `moat.util.time` to MicroPython as a frozen module.
+- **Wall clock (`time.time()` → `mtime.time()`)**: the *new* fakeable thing.
+  Converted everywhere wall time is read, **regardless of sync/async** —
+  because `anyio`/trio offer no fakeable wall clock. This is the heart of the
+  issue.
+- **Monotonic clock**: `anyio.current_time()` is *already* fakeable via
+  `MockClock`/`autojump_clock` and is used in ~30 places already. Routing
+  async monotonic readers through a *second* slot would yield two
+  unsynchronised fake monotonic clocks. Therefore:
+  - **async** monotonic callers → `anyio.current_time()` (no slot).
+  - **loop-less / sync** monotonic callers → `mtime.monotonic()` (slot, for
+    completeness and for tests that drive sync code).
 
-Decision: **leave `moat/micro/app/_sys.py` unchanged**, with an inline
-comment citing the reason. This satisfies the acceptance criterion’s
-“…except … (or with a documented reason)” clause. Recorded as a deliberate
-exclusion, not an oversight.
+AST classification of all 14 `monotonic()` sites:
 
-### D3 — Import style for converters
+| file | line | enclosing fn | async? | target |
+|------|------|--------------|--------|--------|
+| bus/fake/bus.py | 69 | `report` | sync | `mtime.monotonic()` |
+| bus/fake/client.py | 62,93 | `main` | async | `anyio.current_time()` |
+| kv/server.py | 2495,2513,2520 | `save_stream` | async | `anyio.current_time()` |
+| link/notify/__init__.py | 246 | `send` | async | `anyio.current_time()` |
+| link/schema/_main.py | 94 | `_worker` | async | `anyio.current_time()` |
+| link/server/_server.py | 1560,1588,1592 | `_save_stream` | async | `anyio.current_time()` |
+| modbus/server.py | 241,258 | `serve` | async | `anyio.current_time()` |
 
-Each converted file replaces `time.time()` → `mtime.time()` and
-`time.monotonic()` → `mtime.monotonic()`, importing the new module as
-`from moat.util import time as mtime` (short alias, avoids shadowing the
-stdlib `time` module that some files still need for `time.sleep`,
-`time.clock_gettime_ns`, etc.).
+Plus the loop-less `from time import monotonic as time` sites:
+`lib/priomap/_impl.py` (sync `T_ADD`/`T_SUB`) → `mtime.monotonic()`.
+(`lib/pid/_impl.py` is excluded — see D3.)
 
-Where a file uses `time.time()`/`time.monotonic()` **and** other stdlib
-`time.*` members (e.g. `solvis.py` keeps `time.sleep`; `gpio/_impl.py` keeps
-`time.clock_gettime_ns`/`CLOCK_MONOTONIC`), keep `import time` alongside the
-new `mtime` import.
+`t_iter.time()` in `moat/util/times.py` currently mixes real
+`time.monotonic()` with `anyio.sleep` — that is the unsynchronised-clock smell
+the review flags. Switch it to `anyio.current_time()` so the iterator tracks
+the same (fakeable) clock its `sleep` advances.
 
-Where a file uses **only** `time.time()`/`time.monotonic()`, drop
-`import time` entirely and rely on `mtime`.
+### D3 — Device boundary (MicroPython) — exclusions
+
+Of all conversion targets, two are shared with MicroPython and are
+**excluded** with documented reasons (acceptance allows “…or with a
+documented reason”):
+
+1. **`moat/micro/app/_sys.py`** — symlinked into the device tree as
+   `_embed/lib/app/_sys_.py`. Uses `time.time()` only to report the device’s
+   wall clock back over RPC (`t`/`ms`/`us`). Per review it *does* run under
+   CPython in micro tests, but its purpose is to expose the (simulated)
+   device’s RTC, not a host value tests need to steer; importing
+   `moat.util.time` would force freezing an extra module into device firmware
+   for one info field. Inline comment documents this.
+2. **`lib/pid/_impl.py`** — `moat/lib/pid` is a *directory* symlink into the
+   device tree; the file has a dual import (`from time import ticks_ms as
+   time` on MicroPython, `from time import monotonic as time` on CPython).
+   Rewiring to `mtime.monotonic()` would again require shipping
+   `moat.util.time` to the device and would break the MicroPython branch.
+   Left as-is with an inline comment.
+
+Everything else is pure CPython and convertible.
 
 ### D4 — `moat/util/times.py`
 
-`now()` switches to `mtime.time()` via `dt.datetime.fromtimestamp(...)`.
-`t_iter.time()` and `ts2iso()`’s delta computation switch to `mtime.monotonic()`
-and `mtime.time()` respectively. `import time` is replaced by the `mtime`
-alias. This is the one functional behavior change worth a careful look
-(previously `now()` used `dt.datetime.now().astimezone()`; the new form is
-equivalent and lets the wall clock be mocked, which is the stated aim:
-“`moat.util.times.now()` should use the new `time()` as well”).
+- `now()`: `dt.datetime.now().astimezone()` →
+  `dt.datetime.fromtimestamp(mtime.time(), dt.UTC).astimezone()`. Equivalent
+  for real clocks (`fromtimestamp` sets the DST fold; matches `ts2iso`’s
+  existing UTC-then-astimezone form, per review). Lets the wall clock be
+  mocked — the stated aim (“`moat.util.times.now()` should use the new
+  `time()` as well”). Import-time `startup = dt.datetime.now()...` stays on
+  the real clock (fine).
+- `t_iter.time()`: `time.monotonic()` → `anyio.current_time()` (D2).
+- `ts2iso()` delta: `time.time()` → `mtime.time()`.
+- Replace `import time` with `from moat.util import time as mtime` (and add
+  `import anyio` if not present for `t_iter`).
 
-### D5 — Export wiring
+### D5 — Export wiring (Blocker 3 — FIXED)
 
-Add `time`/`monotonic`/`set_clock`/`patch_clock` to `moat/util/__init__.py`’s
-`_imports` map keyed to `"time"`, so `from moat.util import time as mtime`
-works through the lazy loader. (Direct `from moat.util.time import …` also
-works regardless.)
+**Empirically verified**: adding `"time": "time"` to
+`moat/util/__init__.py::_imports` makes `from moat.util import time as mtime`
+return the *function* on first access (the lazy `__getattr__` fires and
+shadows the submodule), breaking every converter. Confirmed with a throwaway
+loader replica.
 
-Note: `moat/util/__init__.py` shadows the stdlib name only for callers who do
-`from moat.util import time` — fine, that’s the intent.
+Fix: **do NOT add the keys `time` or `monotonic`** to `_imports`. The
+submodule `moat.util.time` then resolves naturally and
+`from moat.util import time as mtime` yields the module (verified).
 
-### D6 — Update the existing ad-hoc mock
+Optionally add the non-colliding callable names for ergonomic flat access:
+`"set_clock": "time"`, `"patch_clock": "time"`, `"loop_time": "time"`. These
+keys do not collide with the submodule name and resolve via the existing
+relative-import loader (`__import__("time", …, level=1)` → `moat.util.time`).
+Direct `from moat.util.time import …` works regardless.
 
-`tests/moat_link/test_cmd_data.py:test_load_force_retries_with_start_timestamp`
-currently does `monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)`.
-After conversion `data_cmd` no longer imports stdlib `time`; rewrite to
-`patch_clock(time=lambda: 9999.25)` (or `mtime.set_clock(time=...)` with
-teardown). Keeps the test green and demonstrates the new API in situ.
+### D6 — Update existing mocks
+
+1. `tests/moat_link/test_cmd_data.py::test_load_force_retries_with_start_timestamp`
+   currently does `monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)`
+   — which mutates the **stdlib** `time.time` globally. Rewrite to
+   `with mtime.patch_clock(time=lambda: 9999.25):` wrapping the test body.
+   Fixes the global pollution and demos the new API.
+2. `moat/kv/mock/mqtt.py` (Blocker 1): replace the two
+   `mock.patch("time.time", new=tm)` / `mock.patch("time.monotonic", new=tm)`
+   `enter_context` calls with a single
+   `ex.enter_context(mtime.patch_clock(time=mtime.loop_time, monotonic=mtime.loop_time))`.
+   Delete the local `tm()`/`otm` definitions (their job moves to
+   `mtime.loop_time`). Rationale: once MoaT callers route through `mtime`,
+   the global stdlib patch no longer reaches them; `patch_clock` does.
+   Risk: any *third-party* code (amqtt/asyncscope) reading stdlib
+   `time.time` reverts to real time. `moat/mqtt` has no such reads (audited);
+   if a kv test regresses, fall back to keeping the global patch alongside
+   `patch_clock` and note it. Decide empirically in Step 4.
+
+### D7 — `datetime.now()` wall-clock reads (review smaller-point)
+
+Audited 26 `datetime.now()`/`dt.datetime.now()` sites in `moat/` (non-embed).
+They bypass the fakeable wall clock and thus defeat the goal, but are
+**outside the issue’s literal acceptance** (“`time.time()`/`time.monotonic()`”
+only). Policy:
+
+- In files **already touched** by Step 3, convert obvious wall-clock-for-
+  timestamp `datetime.now(UTC)` → `dt.datetime.fromtimestamp(mtime.time(),
+  dt.UTC)` opportunistically (low marginal cost): `link/server/_server.py`
+  (1437/1445/1452/1822/1824), `kv/cal/util.py`, `link/cal/util.py`,
+  `util/_main.py`, `util/times.py`.
+- Standalone `datetime.now()` files **not** otherwise touched
+  (`db/rain/monitor.py`, `ems/inv/__init__.py`, `mqtt/mqtt/packet.py`,
+  `mqtt/plugins/sys/broker.py`, `dev/heat/solvis.py:1688`,
+  `kv/command/dump/__init__.py`): **file a follow-up beads issue** rather
+  than expand this change. Documented here.
+
+### D8 — Import-alias strategy for converters
+
+`from moat.util import time as mtime` (short alias; avoids shadowing stdlib
+`time` where a file still needs `time.sleep`/`time.clock_gettime_ns`).
+
+- Files using `time.time()`/`time.monotonic()` **and** other stdlib `time.*`
+  members keep `import time` alongside `mtime` (e.g. `solvis.py` keeps
+  `time.sleep`; `gpio/_impl.py` keeps `time.clock_gettime_ns`/
+  `CLOCK_MONOTONIC`).
+- Files using only `time.time()`/`time.monotonic()` drop `import time`.
+- Files whose only `time` use is `from time import time`/`monotonic` switch to
+  `from moat.util import time as mtime` and call `mtime.time()`/…
+  (`kv/errors.py`, `util/_main.py`, `priomap/_impl.py`).
+- Async-monotonic converters add/use `anyio.current_time()` (ensure
+  `import anyio`).
+
+Quick per-file check that the name `mtime` is unused before adopting it.
 
 ---
 
@@ -112,105 +205,102 @@ teardown). Keeps the test green and demonstrates the new API in situ.
 
 ### Step 1 — New module + tests (isolatable, provable first)
 
-- [ ] Create `moat/util/time.py`:
-  - module docstring (RST, Google-style);
-  - `__all__`;
-  - private slots `_time_fn`, `_mono_fn` initialized to `time.time` /
-    `time.monotonic`;
-  - `time() -> float`, `monotonic() -> float`;
-  - `set_clock(*, time=None, monotonic=None) -> None`;
-  - `patch_clock(*, time=None, monotonic=None)` context manager
-    (`contextlib.contextmanager`);
-  - comprehensive typing (no `Any`/casts/`type:ignore` unless ty demands and
-    no alternative exists).
-- [ ] Wire exports into `moat/util/__init__.py::_imports`.
-- [ ] Create `tests/moat_util/test_time.py` covering:
-  - defaults match `time.time`/`time.monotonic` (sanity);
-  - `set_clock` overrides both independently and restores via `None`;
-  - `patch_clock` overrides and restores on normal exit;
-  - `patch_clock` restores on exception;
-  - nesting / partial override (patch only `time`, leave `monotonic` default).
-- [ ] Verify: `ty check` clean for the new file; `pytest tests/moat_util/test_time.py`
-  green (write output to a temp logfile, inspect via tmux head/tail — no piping).
+- [ ] Create `moat/util/time.py` per D1: `import time as _time`; slots
+  `_time_fn`/`_mono_fn`; `time()`,`monotonic()`,`loop_time()`,
+  `set_clock()`,`patch_clock()`; `__all__`; full typing (no `Any`/casts/
+  `type:ignore` unless ty insists and no alternative).
+- [ ] Wire D5: add `set_clock`/`patch_clock`/`loop_time` to `_imports`
+  (**never** `time`/`monotonic`).
+- [ ] `tests/moat_util/test_time.py`: defaults sanity; `set_clock` overrides
+  each independently + resets via `None`; `patch_clock` restores on normal
+  exit and on exception; partial override (patch `time` only); `loop_time()`
+  returns ≥0 outside a loop (fallback) and inside trio advances with
+  `anyio.sleep`.
+- [ ] `ty check` clean; pytest green (logs to temp file, inspect via tmux).
 
-Definition of done for Step 1: new module lands, tests green, ty happy. This
-already fulfills the “tests show both functions can be overridden and
-restored” half of acceptance on its own.
+### Step 2 — Convert `moat/util/times.py` (D4) + `moat/util/_main.py`
 
-### Step 2 — Convert `moat/util/times.py` (functional change, review carefully)
+- [ ] `times.py`: `now()`, `t_iter.time()`→`anyio.current_time()`, `ts2iso`.
+- [ ] `util/_main.py:100` `time()` → `mtime.time()` (drop `from time import
+  time`).
+- [ ] Re-run `tests/moat_util/` (test_times + test_time).
 
-- [ ] Replace `import time` with `from moat.util import time as mtime`;
-  adjust `now()`, `t_iter.time()`, `ts2iso()`.
-- [ ] Re-run `tests/moat_util/test_times.py` (+ the new test_time) to confirm
-  no regression.
+### Step 3 — Mechanical conversions, batched by subtree (counts corrected)
 
-### Step 3 — Mechanical conversions, batched by subtree
+Counts from the full audit (form-aware: incl. `from time import …` and
+`= time.time` aliases):
 
-Apply D3 import rules. Order chosen to cluster reviews and keep diffs boring:
+- [ ] **link/** — **16 files**: `_data.py`, `_test.py` (drop `otm`),
+  `backend/mqtt.py`, `client.py`, `cmd/data.py`, `cmd/error.py`,
+  `cmd/raw.py`, `flow/_main.py`, `gate/__init__.py`, `host.py`,
+  `job/_main.py`, `job/runner.py`, `meta.py`, `notify/__init__.py`,
+  `schema/_main.py`, `server/_server.py`. Apply D2 table for monotonic;
+  opportunistic `datetime.now()` per D7 in `server/_server.py`.
+- [ ] **kv/** — **5 direct + 1 mock**: `command/data.py`, `command/job.py`,
+  `data.py`, `runner.py`, `server.py`, plus `errors.py` (`from time import
+  time`), plus `mock/mqtt.py` (D6.2 helper migration, no direct call).
+- [ ] **ems/** — 2: `sched/_main.py`, `sched/control.py`.
+- [ ] **bus/fake/** — 2: `bus.py` (sync→`mtime.monotonic()`), `client.py`
+  (async→`anyio.current_time()`).
+- [ ] **modbus/** — 1: `server.py` (async→`anyio.current_time()`).
+- [ ] **dev/heat/** — 1: `solvis.py` (keeps `import time` for `time.sleep`;
+  D7 leaves its `datetime.now` for the follow-up).
+- [ ] **lib/** — 2: `gpio/_impl.py` (keeps `import time` for
+  `clock_gettime_ns`/`CLOCK_MONOTONIC`; `time.time()`→`mtime.time()`),
+  `repl/commands.py`, `priomap/_impl.py` (`from time import monotonic as
+  time` → `mtime.monotonic()`).
+- [ ] **micro/** — 1: `micro/_main.py` (`from time import monotonic as tm` →
+  `anyio.current_time()`; async elapsed-time). **Excluded**: `micro/app/_sys.py`
+  (D3) — add inline comment.
 
-- [ ] **link/** (largest cluster, 13 files): `_data.py`, `_test.py`,
-  `backend/mqtt.py`, `client.py`, `cmd/data.py`, `cmd/error.py`, `cmd/raw.py`,
-  `flow/_main.py`, `gate/__init__.py`, `host.py`, `job/_main.py`,
-  `job/runner.py`, `meta.py`, `notify/__init__.py`, `schema/_main.py`,
-  `server/_server.py`.
-- [ ] **kv/** (6 files): `command/data.py`, `command/job.py`, `data.py`,
-  `runner.py`, `server.py`, *(skip `mock/mqtt.py` — uses MockClock, no
-  `time.time`/`time.monotonic` direct call; double-check)*.
-- [ ] **ems/** (2): `sched/_main.py`, `sched/control.py`.
-- [ ] **bus/fake/** (2): `bus.py`, `client.py` (monotonic only).
-- [ ] **modbus/** (1): `server.py` (monotonic).
-- [ ] **dev/heat/** (1): `solvis.py` (keeps `import time` for `time.sleep`).
-- [ ] **lib/** (2): `gpio/_impl.py` (keeps `import time` for
-  `clock_gettime_ns`/`CLOCK_MONOTONIC`), `repl/commands.py`.
-- [ ] **micro/app/** (1): `_sys.py` — **DO NOT CONVERT**; add inline comment
-  documenting the device-boundary reason (D2).
+### Step 4 — Update mocks (D6)
 
-### Step 4 — Update the existing ad-hoc test mock (D6)
+- [ ] `tests/moat_link/test_cmd_data.py` → `patch_clock`.
+- [ ] `moat/kv/mock/mqtt.py` → `patch_clock(loop_time…)`, delete `tm`/`otm`.
+- [ ] Run `tests/moat_kv/` (esp. mqtt-backed tests) to validate Blocker-1 fix;
+  if regression, keep global patch too and note.
 
-- [ ] Rewrite `tests/moat_link/test_cmd_data.py` monkeypatch to use
-  `patch_clock`/`set_clock`.
+### Step 5 — Verification sweep (audit catches all equivalent forms)
 
-### Step 5 — Verification sweep
+- [ ] Form-aware grep returns only `moat/util/time.py` internals + the two
+  documented exclusions (`micro/app/_sys.py`, `lib/pid/_impl.py`):
+  `git grep -nE "time\.(time|monotonic)\(\)|from time import (time|monotonic)" -- 'moat/*.py' ':!moat/micro/_embed/*'`
+  plus `= time\.(time|monotonic)\b` aliases.
+- [ ] `ty check --output-format github` clean repo-wide.
+- [ ] Pytest touched subtrees: `tests/moat_util/`, `tests/moat_link*/`,
+  `tests/moat_kv/`, `tests/moat_bus/`, `tests/moat_modbus/`,
+  `tests/moat_lib_priomap/`, `tests/moat_micro/`. Logs to temp files.
+- [ ] Pre-commit (formats + ty + per-module tests) green on commit.
 
-- [ ] Grep audit: `git grep -nE "time\.(time|monotonic)\(\)" -- 'moat/*.py'
-  ':!moat/micro/_embed/*'` returns only `moat/util/time.py` internals +
-  `moat/micro/app/_sys.py` (documented exclusion).
-- [ ] Full repo `ty check --output-format github` clean.
-- [ ] Targeted pytest on touched subtrees: `tests/moat_util/`,
-  `tests/moat_link/`, `tests/moat_kv/`, `tests/moat_emssched/` (if present),
-  `tests/moat_bus/`, `tests/moat_modbus/`. Capture logs to temp files.
-- [ ] Pre-commit hook runs (formats + typechecks + tests) on commit.
+### Step 6 — Follow-ups + hygiene
 
-### Step 6 — Docs / packaging hygiene
-
-- [ ] Ensure `moat/util/time.py` is picked up by `[tool.ty.src] include =
-  "moat/util/"` (already covered — no pyproject change expected).
-- [ ] No README/doc-page update required for a util submodule unless the
-  package README lists submodules; spot-check `moat/util` packaging readme.
+- [ ] Create follow-up beads issue for the standalone `datetime.now()` sites
+  (D7 list) — fakeable wall clock via `mtime.time()`.
+- [ ] Spot-check `moat/util` packaging README for a submodule list; update
+  only if it enumerates submodules.
 
 ---
 
 ## Risks / notes
 
-- **Behavior equivalence in `times.now()`**: switching from
-  `dt.datetime.now().astimezone()` to `dt.datetime.fromtimestamp(mtime.time())`
-  .astimezone() is semantically identical for real clocks; flagged in D4 for
-  reviewer attention.
-- **`link/server/_server.py`** shows `time.now`/`time.time`/`time.monotonic`
-  in greps — `time.now` there is a local/attribute, not stdlib; verify during
-  conversion that only genuine `time.time()`/`time.monotonic()` calls are
-  retargeted.
-- **Shadowing**: files that do `from moat.util import time as mtime` must not
-  already bind the name `mtime`; quick check per file during conversion.
-- **Out of scope**: `time.time_ns()` in
-  `moat/link/metrics/backend/victoria/__init__.py` and
-  `time.monotonic_ns()` in `moat/lib/micro/__init__.py` are *not* in the
-  issue’s stated scope (~51 `time.time()` + ~14 `time.monotonic()`); leave
-  them. If desired, a follow-up issue can extend `moat.util.time` with
-  `time_ns`/`monotonic_ns`.
+- **Blocker 1 regression window**: removing the kv mock’s global stdlib
+  patch could let third-party `time.time` readers see real time in autojump
+  tests. Audited `moat/mqtt` (none); amqtt/asyncscope unknown — Step 4
+  decides empirically, with a documented fallback.
+- **`link/server/_server.py`** greps show `time.now`/`time.desc` etc. — those
+  are SQLAlchemy column attrs / locals, not stdlib; only genuine
+  `time.time()`/`time.monotonic()`/`datetime.now()` are retargeted.
+- **`lib/pid/_impl.py`** exclusion is structural (device-shared dual import),
+  not laziness; the follow-up could add a `moat.util.time` MicroPython stub
+  if device-side fakeability is ever wanted.
+- **Out of scope**: `time.time_ns()` (`link/metrics/backend/victoria`) and
+  `time.monotonic_ns()` (`lib/micro/__init__.py`) — not in the issue’s
+  ~51/~14 counts; leave (follow-up can add `*_ns` to `moat.util.time`).
 
 ## Review checkpoint
 
-Plan covers a new public module + API, a behavioral tweak to `times.now()`,
-and touches ~26 files. Per AGENTS.md this warrants a review sub-issue blocking
-moat-aqu. Created after the plan is committed.
+Plan revised to address all three moat-lom blockers (kv-mock helper promotion,
+async-monotonic→`anyio.current_time()`, lazy-loader key collision) and the
+smaller points (random.py wording, `_time` alias, missed import-equivalent
+forms, count corrections, `datetime.now()` policy). moat-lom remains the
+blocking review; reopen/continue it after this revision is committed.

@@ -1613,12 +1613,7 @@ class Server(MsgHandler):
             ):
                 del d.meta
             drop = []
-            # Iterate over a snapshot: concurrent updates may mutate the
-            # subtree (adding/removing siblings) while we're suspended,
-            # which would kill this iteration with "dictionary changed
-            # size during iteration". Deleted children are collected and
-            # dropped after walking; __delitem__ refuses non-empty nodes,
-            # so racing deletions fail benignly and are retried later.
+
             for k, v in tuple(d.items()):
                 r = await _walk(v, t)
                 if r:
@@ -1635,13 +1630,20 @@ class Server(MsgHandler):
                 return True
             return d.meta is not None
 
+        _fails = 0
         while True:
             try:
                 await _walk(self.data, time.time())
             except Exception:
                 # A missed round recovers on the next cycle; crashing the
                 # whole server because housekeeping hiccupped is worse.
+                if _fails >= 3:
+                    raise
+
                 self.logger.exception("Flushing deleted nodes failed")
+                _fails += 1
+            else:
+                _fails = 0
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 

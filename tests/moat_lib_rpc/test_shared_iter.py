@@ -51,7 +51,9 @@ async def test_shared_iter_multi(tmp_path):
         results_b: list[int] = []
 
         async def subscriber(res: list[int]):
-            async with b.cmd(P("mon_"), P("a.it"), lim=5, delay=0.01).stream_in() as st:
+            # 20 items, 50 ms apart: the stream is still running when the
+            # second subscriber joins, even on a busy machine
+            async with b.cmd(P("mon_"), P("a.it"), lim=20, delay=0.05).stream_in() as st:
                 async for data in st:
                     res.append(data[0])
 
@@ -61,8 +63,7 @@ async def test_shared_iter_multi(tmp_path):
             tg.start_soon(subscriber, results_b)
 
         # Both subscribers should have received the same data.
-        assert len(results_a) == 5
-        assert results_a == [0, 1, 2, 3, 4]
+        assert results_a == list(range(20))
         # Second subscriber joined after a delay, so it may have missed
         # early items, but should have received the later ones.
         assert len(results_b) > 0

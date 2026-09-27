@@ -142,6 +142,17 @@ async def test_select_by_name(db_url):
     assert await show("host", "-n", "srv") == await show("host", "-d", "srv.lan.example")
     assert "srv.lan.example" in await show("host", "-n", "srv")
     assert await show("wire", "-n", "w1") == await show("wire", "-d", "w1")
+    assert await show("vlan", "-n", "std") == await show("vlan", "-t", "10")
+    assert "10\tstd" in await show("vlan")
+    assert await show("net", "-a", "192.168.1.77") == await show("net", "-n", "std4")
+    assert await show("net", "-a", "2001:db8:0:1::5") == await show("net", "-n", "std6")
+    assert (await show("host", "-n", "srv", "iface", "-")).split("\n")[:2] == [
+        "en0 std 02-00-00-00-00-01",
+        "en1 infra -",
+    ]
+    assert "seqnum: 11" in await show("host", "-n", "pi", "iface", ".")
+    with raises(click.UsageError):
+        await show("net", "-a", "172.16.0.1")
     with raises(click.UsageError):
         await show("host", "-n", "nope")
     with raises(click.UsageError):

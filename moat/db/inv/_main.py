@@ -84,28 +84,39 @@ def _norm_iface(name: str) -> str:
 
 @cli.group(name="vlan", cls=AliasedGroup)
 @click.option("--tag", "-t", "tag", type=int, help="802.1Q VLAN tag")
+@click.option("--name", "-n", "vname", type=str, help="VLAN name (instead of '--tag')")
 @click.pass_obj
-def vlan_grp(obj, tag):
-    """Manage VLANs."""
+def vlan_grp(obj, tag, vname):
+    """Manage VLANs.
+
+    Select a VLAN with '-t TAG' or '-n NAME'.
+    """
+    if vname is not None:
+        if tag is not None:
+            raise click.UsageError("Use either '--tag' or '--name'.")
+        tag = _get_one(obj, Vlan, "VLAN", name=vname).tag
     obj.tag = tag
 
 
 @vlan_grp.command(name="show")
 @click.pass_obj
 def vlan_show(obj):
-    """Show a VLAN or list all VLANs."""
+    """Show a VLAN or list all VLANs.
+
+    Use 'vlan -t TAG show' or 'vlan -n NAME show' for a single VLAN.
+    """
     sess = obj.session
     if obj.tag is None:
         seen = False
         with sess.execute(select(Vlan).order_by(Vlan.tag)) as rs:
             for (v,) in rs:
                 seen = True
-                print(f"{v.tag}\t{v.name}")
+                print(f"{v.tag}\t{v.name}", file=obj.stdout)
         if not seen:
             print("No VLANs defined yet. Use '--help'?", file=sys.stderr)
     else:
         v = _get_one(obj, Vlan, "VLAN", tag=obj.tag)
-        yprint(v.dump())
+        yprint(v.dump(), stream=obj.stdout)
 
 
 def vlan_opts(c):
@@ -153,28 +164,56 @@ def vlan_delete(obj):
 
 @cli.group(name="net", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Network name")
+@click.option("--address", "-a", type=str, help="An address in the network (instead of '--name')")
 @click.pass_obj
-def net_grp(obj, name):
-    """Manage IP networks on VLANs."""
+def net_grp(obj, name, address):
+    """Manage IP networks on VLANs.
+
+    Select a network with '-n NAME' or '-a ADDRESS'.
+    """
+    if address is not None:
+        if name is not None:
+            raise click.UsageError("Use either '--name' or '--address'.")
+        name = _net_for(obj, address).name
     obj.name = name
+
+
+def _net_for(obj, address: str) -> Network:
+    """The most specific network that contains ``address``."""
+    import ipaddress  # noqa: PLC0415
+
+    try:
+        ip = ipaddress.ip_interface(address).ip
+    except ValueError:
+        raise click.UsageError(f"Not an IP address: {address!r}") from None
+    best: Network | None = None
+    for (n,) in obj.session.execute(select(Network)):
+        if ip in n.subnet.net and (best is None or n.prefix > best.prefix):
+            best = n
+    if best is None:
+        raise click.UsageError(f"No network contains {address}.")
+    return best
 
 
 @net_grp.command(name="show")
 @click.pass_obj
 def net_show(obj):
-    """Show a network or list all networks."""
+    """Show a network or list all networks.
+
+    Use 'net -n NAME show' or 'net -a ADDRESS show' for a single network.
+    """
     sess = obj.session
     if obj.name is None:
         seen = False
         with sess.execute(select(Network).order_by(Network.name)) as rs:
             for (n,) in rs:
                 seen = True
-                print(n.name, str(n.subnet.net))
+                print(n.name, str(n.subnet.net), file=obj.stdout)
         if not seen:
             print("No networks defined yet. Use '--help'?", file=sys.stderr)
     else:
         n = _get_one(obj, Network, "network", name=obj.name)
-        yprint(n.dump())
+        yprint(n.dump(), stream=obj.stdout)
 
 
 def net_opts(c):
@@ -328,28 +367,41 @@ def host_delete(obj):
 def iface_grp(obj, iname):
     """Manage interfaces of a host.
 
-    Use '.' for the empty-named interface (former direct attachment).
+    Use '.' for the empty-named interface (former direct attachment),
+    '-' to list all interfaces ('iface - show').
     """
-    obj.iname = _norm_iface(iname)
+    obj.iname = None if iname == "-" else _norm_iface(iname)
+
+
+def _iname(obj) -> str:
+    """The selected interface name; required by everything except listing."""
+    if obj.iname is None:
+        raise click.UsageError("'-' can only be used to list the interfaces.")
+    return obj.iname
 
 
 @iface_grp.command(name="show")
 @click.pass_obj
 def iface_show(obj):
-    """Show an interface or list all interfaces of the host."""
+    """Show an interface, or list all interfaces of the host.
+
+    Use 'host -n NAME iface - show' to list all interfaces, or
+    'host -n NAME iface IFACE show' for a single one.
+    """
     h = _get_one(obj, Host, "host", domain=obj.domain)
 
-    if obj.iname == "" and not obj.__dict__.get("_iface_explicit"):
+    if obj.iname is None:
         # List all interfaces
         seen = False
         for i in sorted(h.interfaces, key=lambda x: x.name):
             seen = True
-            print(i.name or ".", i.vlan.name if i.vlan else "-", str(i.mac) if i.mac else "-")
+            vlan = i.vlan.name if i.vlan else "-"
+            print(i.name or ".", vlan, str(i.mac) if i.mac else "-", file=obj.stdout)
         if not seen:
             print("No interfaces. Use '--help'?", file=sys.stderr)
     else:
-        i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
-        yprint(i.dump())
+        i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
+        yprint(i.dump(), stream=obj.stdout)
 
 
 def iface_opts(c):
@@ -368,8 +420,8 @@ def iface_opts(c):
 def iface_add(obj, **kw):
     """Add an interface to a host."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    _absent(obj, Interface, "interface", host=h, name=obj.iname)
-    i = Interface(host=h, name=obj.iname)
+    _absent(obj, Interface, "interface", host=h, name=_iname(obj))
+    i = Interface(host=h, name=_iname(obj))
     obj.session.add(i)
 
     alloc = kw.pop("alloc", NotGiven)
@@ -385,7 +437,7 @@ def iface_add(obj, **kw):
 def iface_set(obj, **kw):
     """Modify an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
 
     alloc = kw.pop("alloc", NotGiven)
     if alloc is not NotGiven and alloc:
@@ -399,7 +451,7 @@ def iface_set(obj, **kw):
 def iface_delete(obj):
     """Delete an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
     obj.session.delete(i)
 
 
@@ -413,7 +465,7 @@ def iface_link(obj, dest):
     interface).
     """
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    src_iface = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    src_iface = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
     dst_iface = _resolve_iface_spec(obj, dest)
 
     # Check neither endpoint is already cabled
@@ -491,11 +543,11 @@ def addr_grp(obj):
 def addr_show(obj):
     """Show addresses on an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
     for a in sorted(i.addresses, key=lambda x: x.addr):
-        print(str(a.ip.ip))
+        print(str(a.ip.ip), file=obj.stdout)
     if i.link_local is not None:
-        print(f"link-local: {i.link_local} (computed, not stored)")
+        print(f"link-local: {i.link_local} (computed, not stored)", file=obj.stdout)
 
 
 @addr_grp.command(name="add")
@@ -504,7 +556,7 @@ def addr_show(obj):
 def addr_add(obj, addr):
     """Add a manual address to an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
     a = Address(interface=i)
     obj.session.add(a)
     a.apply(ip=addr)
@@ -518,7 +570,7 @@ def addr_delete(obj, addr):
     from .ip import IpValue  # noqa: PLC0415
 
     h = _get_one(obj, Host, "host", domain=obj.domain)
-    i = _get_one(obj, Interface, "interface", host=h, name=obj.iname)
+    i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
     target = IpValue.from_ip(addr)
     for a in i.addresses:
         if a.addr == target.addr:
@@ -569,7 +621,7 @@ def wire_show(obj):
         seen = False
         for (h,) in rs:
             seen = True
-            print(h.domain)
+            print(h.domain, file=obj.stdout)
         if not seen:
             print("No wires defined yet. Use '--help'?", file=sys.stderr)
 
@@ -668,7 +720,8 @@ def cable_show(obj):
             seen = True
             a = c.iface_a
             b = c.iface_b
-            print(f"{c.id}\t{a.host.domain}:{a.name or '.'} ↔ {b.host.domain}:{b.name or '.'}")
+            ends = f"{a.host.domain}:{a.name or '.'} ↔ {b.host.domain}:{b.name or '.'}"
+            print(f"{c.id}\t{ends}", file=obj.stdout)
         if not seen:
             print("No cables defined yet.", file=sys.stderr)
 
@@ -689,19 +742,22 @@ def group_grp(obj, name):
 @group_grp.command(name="show")
 @click.pass_obj
 def group_show(obj):
-    """Show a group or list all groups."""
+    """Show a group or list all groups.
+
+    Use 'group -n NAME show' for a single group.
+    """
     sess = obj.session
     if obj.name is None:
         seen = False
         with sess.execute(select(HostGroup).order_by(HostGroup.name)) as rs:
             for (g,) in rs:
                 seen = True
-                print(g.name)
+                print(g.name, file=obj.stdout)
         if not seen:
             print("No groups defined yet. Use '--help'?", file=sys.stderr)
     else:
         g = _get_one(obj, HostGroup, "group", name=obj.name)
-        yprint(g.dump())
+        yprint(g.dump(), stream=obj.stdout)
 
 
 def group_opts(c):
@@ -758,7 +814,7 @@ def host_group_show(obj):
     """Show groups of a host."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     for g in sorted(h.groups, key=lambda x: x.name):
-        print(g.name)
+        print(g.name, file=obj.stdout)
 
 
 @host_group_grp.command(name="add")

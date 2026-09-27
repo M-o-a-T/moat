@@ -143,3 +143,13 @@ def cfg():
     "fixture for the static config"
     with CFG.with_config_(config.CfgStore()) as c:
         yield copy.deepcopy(c.result.moat)
+
+
+def pytest_addoption(parser):
+    "command-line options"
+    parser.addoption(
+        "--heat-refresh",
+        action="store_true",
+        default=False,
+        help="moat.dev.heat: rewrite reference traces instead of comparing against them",
+    )

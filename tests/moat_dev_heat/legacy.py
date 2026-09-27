@@ -26,7 +26,6 @@ import contextlib
 import datetime as _dt
 import importlib
 import io
-import json
 import logging
 import sys
 import time as _time
@@ -38,6 +37,7 @@ from unittest import mock
 from moat.util import attrdict, combine_dict, yload
 from moat.util import time as mtime
 from moat.dev.heat.sim import Plant, PlantCfg
+from moat.dev.heat.sim.trace import dump
 from moat.lib.path import P, Path
 from moat.lib.pid import _impl as _pid_impl
 
@@ -552,22 +552,6 @@ def run_scenario(sc: Scenario) -> dict[str, Any]:
 def trace_file(name: str) -> FSPath:
     """Where a scenario's reference trace lives."""
     return TRACES / f"{name}.json"
-
-
-def dump(trace: dict[str, Any]) -> str:
-    """Serialise a trace: one sample per line, so diffs stay readable."""
-    head = {k: v for k, v in trace.items() if k != "samples"}
-    lines = [json.dumps(head, sort_keys=True)]
-    lines += [json.dumps(s, sort_keys=True) for s in trace["samples"]]
-    return "\n".join(lines) + "\n"
-
-
-def load(text: str) -> dict[str, Any]:
-    """Inverse of :func:`dump`."""
-    first, *rest = text.splitlines()
-    trace = json.loads(first)
-    trace["samples"] = [json.loads(s) for s in rest]
-    return trace
 
 
 H = 3600

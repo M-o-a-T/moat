@@ -24,11 +24,16 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable
 
-__all__ = ["Inputs", "Override", "Reader", "ServiceMonitor", "Writer", "service_path"]
+__all__ = ["Inputs", "Override", "Reader", "ServiceMonitor", "Writer", "out_path", "service_path"]
 
 _logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+def out_path(unit: str) -> Path:
+    """The path of a unit's published view, ``app.heat.<unit>.out`` (HEAT.md §2.2)."""
+    return P("app.heat") / unit / "out"
 
 
 def service_path(host: str, unit: str) -> Path:
@@ -70,7 +75,13 @@ class Reader(Generic[T]):
         self.on_change = on_change
         self.value = None
         self.ts = None
-        self._changed = anyio.Event()
+        # created on demand, so that a reader can be built outside an event
+        # loop (the closed-loop test runner feeds readers synchronously)
+        self._changed: anyio.Event | None = None
+
+    def feed(self, value: Any, ts: float | None) -> None:
+        """Set a new raw value, as if it had arrived from MoaT-Link."""
+        self._update(value, ts)
 
     def _update(self, value: Any, ts: float | None) -> None:
         """Store a new raw value and notify listeners."""
@@ -79,8 +90,9 @@ class Reader(Generic[T]):
         self._notify()
 
     def _notify(self) -> None:
-        self._changed.set()
-        self._changed = anyio.Event()
+        if self._changed is not None:
+            self._changed.set()
+            self._changed = None
         if self.on_change is not None:
             self.on_change()
 
@@ -111,11 +123,13 @@ class Reader(Generic[T]):
     async def wait_value(self) -> T:
         """Wait until the item has a value, and return it."""
         while self.value is None:
-            await self._changed.wait()
+            await self.wait_changed()
         return self.value
 
     async def wait_changed(self) -> None:
         """Wait until the value changes."""
+        if self._changed is None:
+            self._changed = anyio.Event()
         await self._changed.wait()
 
 

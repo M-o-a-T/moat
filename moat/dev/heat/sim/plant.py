@@ -35,6 +35,8 @@ SENSORS = (
     "m_pellet",
     "m_pellet_state",
     "m_switch",
+    "c_heat",
+    "c_water",
     "errors",
 )
 """Sensor names, as used by the legacy controller where it has one."""
@@ -304,6 +306,9 @@ class Plant:
             "m_pellet": self.pellet.temp,
             "m_pellet_state": self.pellet.code,
             "m_switch": self.switch,
+            # the Solvis reports the setpoints it works with
+            "c_heat": self.inputs.heat_setpoint,
+            "c_water": self.inputs.water_setpoint,
             "errors": {**self.hp.errors, **self._errors},
         }
 

@@ -9,7 +9,7 @@ Regenerate with
 
     python3 -m tests.moat_dev_heat.legacy [SCENARIO…]
 
-or `MOAT_HEAT_REFRESH=1 pytest tests/moat_dev_heat/test_legacy.py`.
+or `pytest --heat-refresh tests/moat_dev_heat/test_legacy.py`.
 
 Nothing touches a real MoaT-KV server or MQTT broker: `solvis` is
 imported with a dummy `/etc/moat/moat.cfg`, its `open_client` is replaced

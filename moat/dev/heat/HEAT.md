@@ -103,7 +103,10 @@ moat/dev/heat/
     pwm.py            # software PWM daemon, ported to MoaT-Link
     modbus_mon.py     # Solvis poll babysitter, ported to MoaT-Link
     sim/              # plant simulator (§5.3)
-        __init__.py   # sans-IO model
+        __init__.py   # sans-IO model (plant.py, buffer.py, heat_pump.py, …)
+        paths.py      # where sensors and commands live in MoaT-Link
+        loop.py       # closed-loop runner: plant + unit cores, by path
+        trace.py      # trace recording and comparison
         link.py       # MoaT-Link adapter
     system/
         runner.py     # `moat dev heat run`
@@ -778,7 +781,10 @@ operator dry runs.
 
 ```
 tests/moat_dev_heat/
-    conftest.py           # closed-loop runner, heat_scaffold fixture, trace compare
+    conftest.py           # heat_scaffold / heat fixtures, trace_check
+    legacy.py             # legacy solvis.Data vs. simulator (reference traces)
+    test_harness.py       # self-tests of runner, fixtures, trace compare
+    test_legacy.py
     data/                 # legacy reference traces, scenario files
     test_sim.py           # simulator physics sanity
     test_link_helpers.py  # Reader, Writer, override readers, service monitor
@@ -820,7 +826,8 @@ residual risk), pump restart mid-run with and without watchdog, each
 override with expiry, passthru requested while the heat pump runs
 (deferred until idle), force start.
 
-Reference traces are refreshed only via an explicit pytest option;
+Reference traces are refreshed only via an explicit pytest option
+(`--heat-refresh`); a missing reference fails;
 comparison diffs go to a temporary file.
 
 ## 6. Implementation order

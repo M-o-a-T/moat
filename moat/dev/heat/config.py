@@ -32,6 +32,7 @@ __all__ = [
     "UnitCfg",
     "defaults",
     "load_config",
+    "make_config",
     "unit_config",
 ]
 
@@ -78,6 +79,21 @@ def _merge(model: type[M], item: Any, dflt: attrdict) -> M:
     else:
         raise TypeError(f"Config item is not a mapping: {item!r}")
     return model.model_validate(data)
+
+
+def make_config(unit: str, model: type[M], item: Any = NotGiven) -> M:
+    """
+    Build a unit's configuration from a (partial) item and the package defaults.
+
+    This is what :func:`load_config` does with the Link item; tests use it
+    to configure cores directly.
+
+    Args:
+        unit: The unit's name, e.g. ``pump``.
+        model: The unit's configuration model.
+        item: Overrides, as the Link item would contain them.
+    """
+    return _merge(model, item, defaults(unit))
 
 
 async def load_config(link: LinkSender, unit: str, model: type[M]) -> M:

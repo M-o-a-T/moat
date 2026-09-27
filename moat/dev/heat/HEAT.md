@@ -565,6 +565,16 @@ Core structure:
   `moat dev heat pump --force-on` sets it.
 - In passthru `original` state the unit writes nothing to `cmd.*` and
   stays in `off`.
+- Dynamic load limit (new): the load is capped at an exponential
+  average of the recent load (`load_limit.tau`, 10 min) plus
+  `load_limit.margin` (0.25), so the PIDs can't jump the compressor to
+  full load; when the goal (`t_adj`) rises, the average is pushed up to
+  at least `load_limit.push`. There is no outside-temperature start
+  limit.
+- The legacy "run the water pump when the heat pump's water is below
+  `lim.defrost.temp`" rule in `off` never ran (its own transition rules
+  turned `off` → `down` into `off`); it is not ported. Frost protection
+  is a separate unit (moat-n84.29).
 
 The adapter announces the pump service (§2.5), writes state
 immediately on every transition, and on restart restores the load of

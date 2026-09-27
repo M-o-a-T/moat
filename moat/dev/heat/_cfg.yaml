@@ -31,7 +31,44 @@ flow:
     log:
       value: !P heat.s.pump.pct.pump
       setpoint: !P heat.s.pump.set.pump
-pump: {}
+pump:
+  # production values (solvis.yml)
+  load:  # t_cur -> load
+    p: 0.08
+    i: 0.0015
+    min: 0.15
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.load
+      setpoint: !P heat.s.pump.set.load
+  load_pellet:  # same, while the pellet burner runs (adj.pellet.pid.load)
+    p: 0.08
+    i: 0.0015
+    d: 50
+    tf: 250
+    min: 0.15
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.load
+      setpoint: !P heat.s.pump.set.load
+  buffer:  # tb_low -> load
+    p: 0.3
+    i: 0.0005
+    d: 50
+    tf: 100
+    min: 0.1
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.buffer
+      setpoint: !P heat.s.pump.set.buffer
+  limit:  # t_out -> load
+    p: 0.025
+    i: 0.001
+    min: 0.1
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.limit
+      setpoint: !P heat.s.pump.set.limit
 pellet: {}
 selector: {}
 errors: {}

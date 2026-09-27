@@ -119,7 +119,10 @@ New units should either match these or deviate deliberately.
 11. **Several state changes per tick.** A transition `continue`s without
     waiting, so e.g. `down` → `off` → `wait_time` can happen within one
     input update.
-12. **Run state is written to `sensor.pump.state`**, the heat pump's own
+12. **The frost rule in `off` is dead code.** `off` asks for `down` when
+    the heat pump's water is below `lim.defrost.temp`, but the validity
+    check turns `off` → `down` into `off`.
+13. **Run state is written to `sensor.pump.state`**, the heat pump's own
     state path (HEAT.md §1).
 
 ## Problems found while building the harness

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import anyio
-import time
 from contextlib import suppress
 
 import asyncclick as click
@@ -91,7 +90,7 @@ async def monitor(obj, path, limit, verbose):
             if exc is None:
                 continue
             n_bad += 1
-            now = time.monotonic()
+            now = anyio.current_time()
             if limit <= 0 or now >= next_err:
                 await _schema_record_error(obj.conn, full, data, exc)
                 n_err += 1

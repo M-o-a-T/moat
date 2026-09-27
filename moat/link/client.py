@@ -9,7 +9,6 @@ import logging
 import os
 import platform
 import sys
-import time
 from contextlib import asynccontextmanager, nullcontext, suppress
 from contextvars import ContextVar
 from functools import partial
@@ -30,6 +29,9 @@ from moat.util import (
     timed_ctx,
     to_attrdict,
     ungroup,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.lib.config import CFG
 from moat.lib.mqtt import QoS, RetainHandling
@@ -573,8 +575,8 @@ class LinkSender(MsgSender, MsgRoot):
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
-        verify: bool | None | NotGivenType = NotGiven,
-    ) -> bool | None | tuple[Any, MsgMeta | None]:
+        verify: bool | NotGivenType | None = NotGiven,
+    ) -> bool | tuple[Any, MsgMeta | None] | None:
         """
         Data update.
 
@@ -776,7 +778,7 @@ class LinkSender(MsgSender, MsgRoot):
         path: Path,
         meta: bool = False,
         subtree: bool = False,
-        state: bool | None | NotGivenType = None,
+        state: bool | NotGivenType | None = None,
         age: float | None = None,
         mark: bool = False,
         min_length: int | None = None,
@@ -1776,7 +1778,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
     path: Path = field()
     meta: bool = field(default=False)
     subtree: bool = field(default=False)
-    state: bool | None | NotGivenType = field(default=None)
+    state: bool | NotGivenType | None = field(default=None)
     age: float | None = field(default=None)
     mark: bool = field(default=False)
     node_cls: type[_NodeType] = field(default=Node)  # ty:ignore[invalid-assignment]
@@ -1794,7 +1796,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
         if self.mark and self.state is NotGiven:
             raise ValueError("MQTT doesn't send a mark. Sorry.")
         if self.age is not None:
-            self.age = time.time() - self.age
+            self.age = mtime.time() - self.age
 
     def _chk(self, p, m):
         if self.age and m.timestamp < self.age:

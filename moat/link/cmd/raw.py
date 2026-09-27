@@ -10,12 +10,12 @@ import anyio
 import logging
 import math
 import sys
-import time
 from functools import partial
 
 import asyncclick as click
 
 from moat.util import NotGiven, gen_ident, yprint
+from moat.util import time as mtime
 from moat.lib.codec import get_codec
 from moat.lib.mqtt import MQTTException
 from moat.lib.path import P, PathLongener, set_root
@@ -218,7 +218,7 @@ async def run_kvsub(client, topic, lock, timing, ignore):
         pl = PathLongener(topic)
         async for r in res:
             async with lock:
-                tm = time.time()
+                tm = mtime.time()
                 atm = anyio.current_time()
 
                 # if "value" in r:
@@ -292,7 +292,7 @@ async def run_sub(client, topic, args, cfg, lock, timing, ignore, retained):
                 continue
             async with lock:
                 if args["yaml"]:
-                    tm = time.time()
+                    tm = mtime.time()
                     atm = anyio.current_time()
 
                     d = dict(

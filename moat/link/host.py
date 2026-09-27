@@ -2,7 +2,6 @@ from __future__ import annotations  # noqa: D100
 
 import anyio
 import logging
-import time
 from contextlib import asynccontextmanager, suppress
 from enum import Enum, auto
 from functools import partial
@@ -10,6 +9,7 @@ from functools import partial
 from attrs import define, field
 
 from moat.util import CtxObj, NotGiven, attrdict, srepr
+from moat.util import time as mtime
 from moat.lib.broadcast import Broadcaster
 from moat.lib.path import P
 from moat.lib.priomap import TimerMap
@@ -216,7 +216,7 @@ class Service:
         if self.state is HostState.TIMEOUT:
             if not self.last:
                 return pto.delete
-            age = time.time() - self.last
+            age = mtime.time() - self.last
             return max(pto.delete, 0.0, pto.delay - age)
         if self.state is HostState.STALE:
             return pto.delay

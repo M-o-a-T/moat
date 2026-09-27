@@ -30,3 +30,18 @@ API
 
 .. autoclass:: moat.dev.heat.state.State
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.pid
+   :members:
+   :exclude-members: PIDCfg, PIDLog, PIDState
+
+.. autoclass:: moat.dev.heat.pid.PIDCfg
+   :class-doc-from: class
+   :members: log, rebase_after
+
+.. autoclass:: moat.dev.heat.pid.PIDLog
+   :class-doc-from: class
+   :members:
+
+.. autoclass:: moat.dev.heat.pid.PIDState
+   :class-doc-from: class

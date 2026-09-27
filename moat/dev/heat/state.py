@@ -11,6 +11,9 @@ import logging
 
 from moat.lib.config.base import BaseModel
 from moat.lib.path import P
+from moat.util.time import loop_time, time
+
+from .pid import T_OFFSET
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
@@ -40,6 +43,9 @@ def state_path(unit: str) -> Path:
 class StateStore(Generic[S]):
     """
     Loads a unit's state and saves it when it changes.
+
+    Monotonic timestamps in the state (see `~moat.dev.heat.pid.PIDState`)
+    are persisted as wall-clock time.
 
     Call :meth:`load`, then start :meth:`run` in a task group. After
     modifying :attr:`state`, call :meth:`changed`. Pending changes are
@@ -81,7 +87,7 @@ class StateStore(Generic[S]):
             self.state = self.model()
         else:
             try:
-                self.state = self.model.model_validate(data)
+                self.state = self.model.model_validate(data, context=self._ctx())
             except Exception as exc:
                 _logger.warning("Invalid state at %s, using defaults: %r", self.path, exc)
                 self.state = self.model()
@@ -101,7 +107,12 @@ class StateStore(Generic[S]):
 
     async def save(self) -> None:
         """Write the state."""
-        await self.link.d_set(self.path, self.state.model_dump(), retain=True)
+        await self.link.d_set(self.path, self.state.model_dump(context=self._ctx()), retain=True)
+
+    @staticmethod
+    def _ctx() -> dict[str, float]:
+        """Conversion between persisted wall-clock and in-memory monotonic time."""
+        return {T_OFFSET: time() - loop_time()}
 
     async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
         """Save the state whenever it has changed."""

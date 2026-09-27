@@ -712,6 +712,7 @@ def setup(app):
     import moat.lib.config.base
     import moat.dev.heat.config
     import moat.dev.heat.state
+    import moat.dev.heat.pid
 
     import typing
 

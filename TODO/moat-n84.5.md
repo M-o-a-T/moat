@@ -26,6 +26,9 @@ Step 0 updates HEAT.md §2.1 (package layout), §2.2 and §5.2 accordingly.
 
 ## Steps
 
+All steps are done: 02e877818, 34426aed7, 30b6c96dd, a37d27326,
+a21a70c84, 59e2171ad.
+
 Each step is one commit with its tests. Modules pass `ty`.
 
 ### 0. HEAT.md: drop `clock.py`

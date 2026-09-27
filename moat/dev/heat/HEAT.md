@@ -113,12 +113,12 @@ moat/dev/heat/
 
 Every unit consists of
 
-- a **sans-IO core**: a class whose `step(inputs, now)` returns outputs
-  and actions, with no I/O, no clock access and no MoaT-Link
-  dependency; and
-- a thin **Link adapter**: `async def run(link, cfg) -> None`,
-  which watches inputs, feeds the core, writes outputs, and persists
-  state.
+- a **sans-IO core**: a class whose `step(inputs, now)` returns a
+  `unit.Step` (outputs, state-save request, next wake-up delay), with
+  no I/O, no clock access and no MoaT-Link dependency; and
+- a thin **Link adapter**, a subclass of `unit.Unit`, which loads the
+  config, watches inputs, feeds the core, writes outputs, persists
+  state and announces the service.
 
 This split lets the cores run in closed loop against the simulator in
 simulated time (§5), while the adapters are tested against a real

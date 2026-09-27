@@ -23,7 +23,7 @@ from moat.dev.heat.config import make_config
 from moat.dev.heat.link import Override
 from moat.util.time import patch_clock
 
-from .paths import ERRORS, INPUT_PATHS, SENSOR_PATHS
+from .paths import INPUT_PATHS, SENSOR_PATHS, sensor_items
 from .plant import Plant
 
 from typing import TYPE_CHECKING, Any
@@ -158,18 +158,8 @@ class ClosedLoop:
 
     def publish_sensors(self) -> None:
         """Copy the plant's sensor readings to the bus."""
-        s = self.plant.sensors()
-        for name, paths in self.sensors.items():
-            if name not in s:
-                continue
-            for p in paths:
-                self.set(p, s[name])
-        err = s.get("errors", {})
-        for k in self._errors - err.keys():
-            self.set(ERRORS / k, None)
-        for k, v in err.items():
-            self.set(ERRORS / k, v)
-        self._errors = set(err)
+        for p, v in sensor_items(self.plant.sensors(), self.sensors, self._errors):
+            self.set(p, v)
 
     def apply_inputs(self) -> None:
         """Copy commands from the bus to the plant."""

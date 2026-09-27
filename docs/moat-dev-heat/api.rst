@@ -48,3 +48,9 @@ API
 
 .. automodule:: moat.dev.heat.unit
    :members:
+
+.. automodule:: moat.dev.heat.sim.scenario
+   :members:
+
+.. automodule:: moat.dev.heat.sim.link
+   :members:

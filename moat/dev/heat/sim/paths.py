@@ -10,7 +10,15 @@ from __future__ import annotations
 
 from moat.lib.path import P
 
-__all__ = ["ERRORS", "INPUT_PATHS", "SENSOR_PATHS"]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.path import Path
+
+    from collections.abc import Iterator, Mapping
+    from typing import Any
+
+__all__ = ["ERRORS", "INPUT_PATHS", "SENSOR_PATHS", "sensor_items"]
 
 SENSOR_PATHS = {
     "t_in": (P("heat.s.pump.temp.in"),),
@@ -53,3 +61,32 @@ INPUT_PATHS = {
     "pellet_patch_goal": P("heat.s.pellets.aux:1.goal"),
 }
 """Plant input (:class:`~moat.dev.heat.sim.Inputs` field) → the path it is read from."""
+
+
+def sensor_items(
+    readings: Mapping[str, Any],
+    sensors: Mapping[str, tuple[Path, ...]],
+    errors: set[str],
+) -> Iterator[tuple[Path, Any]]:
+    """
+    The items to publish for a set of plant sensor readings.
+
+    Args:
+        readings: The result of :meth:`~moat.dev.heat.sim.Plant.sensors`.
+        sensors: Plant sensor name → paths to publish it at.
+        errors: The error keys published last time; updated in place.
+
+    Yields:
+        ``(path, value)``; a value of `None` deletes a cleared error.
+    """
+    for name, paths in sensors.items():
+        if name in readings:
+            for p in paths:
+                yield p, readings[name]
+    err = readings.get("errors", {})
+    for k in errors - err.keys():
+        yield ERRORS / k, None
+    for k, v in err.items():
+        yield ERRORS / k, v
+    errors.clear()
+    errors.update(err)

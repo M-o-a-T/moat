@@ -106,8 +106,15 @@ class StateStore(Generic[S]):
             self._now.set()
 
     async def save(self) -> None:
-        """Write the state."""
+        """
+        Write the state, and wait until the server has it.
+
+        ``d_set`` only publishes the value; without the sync, a
+        :meth:`load` right afterwards (e.g. by a restarted unit) may still
+        get the previous state from the server.
+        """
         await self.link.d_set(self.path, self.state.model_dump(context=self._ctx()), retain=True)
+        await self.link.i_sync()
 
     @staticmethod
     def _ctx() -> dict[str, float]:

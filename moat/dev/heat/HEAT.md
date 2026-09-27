@@ -86,10 +86,9 @@ moat/dev/heat/
     _main.py          # click group: every unit + support commands
     kwb.py            # KWB modbus helper (unchanged)
     config.py         # pydantic config models, config loader (§2.4)
-    clock.py          # injectable clock (§5.2)
     link.py           # Reader, Writer, input merging, override readers, service monitor
     state.py          # per-unit persistent state
-    pid.py            # APID: CPID with wall-clock state and Link logging
+    pid.py            # APID: CPID with persistable state and Link logging
     unit.py           # Unit base: sans-IO core + Link adapter
     emergency.py      # emergency_shutdown() (§2.6)
     target.py
@@ -117,7 +116,7 @@ Every unit consists of
 - a **sans-IO core**: a class whose `step(inputs, now)` returns outputs
   and actions, with no I/O, no clock access and no MoaT-Link
   dependency; and
-- a thin **Link adapter**: `async def run(link, cfg, *, clock) -> None`,
+- a thin **Link adapter**: `async def run(link, cfg) -> None`,
   which watches inputs, feeds the core, writes outputs, and persists
   state.
 
@@ -183,7 +182,7 @@ class Reader[T]:
 A unit merges its readers into one "some input changed" stream and
 feeds a snapshot of all readers to its core. Timer-driven work (PID
 ticks, delays, schedule boundaries) is requested by the core as a
-"next wake-up time" and handled by the adapter via the injected clock.
+delay until the next wake-up and handled by the adapter (§5.2).
 
 #### Staleness
 
@@ -217,11 +216,11 @@ absent), `save(link)` (debounced, default 10 s) and an immediate-write
 flag used for critical changes such as pump state transitions.
 
 PID state (`i`, `e`, `setpoint`, `t`) is kept inside the owning unit's
-state (e.g. `PumpState.pids.load`). `pid.APID` stores **wall-clock**
-timestamps so that the integrator does not jump after a restart; on
-load, a timestamp older than a configurable limit is re-based to "now"
-so that the first step after a long outage does not integrate over the
-outage. `APID` also publishes value and setpoint to the configured
+state (e.g. `PumpState.pids.load`). `pid.APID` runs on monotonic time but
+persists its timestamp as wall-clock time, so that the integrator does
+not jump after a restart; on load, a timestamp older than a configurable
+limit is re-based to "now" so that the first step after a long outage
+does not integrate over the outage. `APID` also publishes value and setpoint to the configured
 `log.value` / `log.setpoint` paths, as in production today.
 
 ### 2.4 Configuration
@@ -440,7 +439,8 @@ weekday/weekend night schedule (`night.start.{wk,we}`,
 `night.stop.{wk,we}`; note the legacy code uses the weekend stop time
 on Fridays and Saturdays, the weekend start time on Saturdays and
 Sundays) or a force switch. The unit wakes at the next schedule
-boundary via the clock. `t_ext` is the last outside-temperature
+boundary; its adapter passes the local date and time to the core as an
+input. `t_ext` is the last outside-temperature
 reading (the legacy name `t_ext_avg` was misleading). Demand values are
 the port of the `tw_*`/`th_*` computation in `run_pump`.
 
@@ -736,14 +736,20 @@ the old controller's outputs. Testing therefore rests on three layers:
 
 ### 5.2 Time
 
-Cores never read the clock; they receive `now` (wall-clock seconds)
-and return the next time they need to be woken. Adapters get an
-injectable `clock.Clock` (`now()`, local `datetime`, `sleep_until()`),
-defaulting to real time. PIDs are always called with an explicit `t`
-(the `moat.lib.pid` classes support that; they have no clock injection
-of their own). The target schedule uses the clock's local datetime.
-Closed-loop tests use a simulated clock; Scaffold tests use real time
-(MoaT-Link message timestamps are wall-clock).
+Cores never read a clock. They receive `now` (monotonic seconds) and
+return the delay until they next need to be woken; inputs that depend on
+the date (the target schedule) are passed in by the adapter. PIDs are
+always called with an explicit `t`.
+
+There is no clock object. Adapters use the event loop's time
+(`anyio.current_time()`, `sleep_until()`, `move_on_after()`), which tests
+replace with trio's `MockClock`. Wall-clock time, needed only for
+persisted PID timestamps, override expiry and comparison with MoaT-Link
+message timestamps, comes from `moat.util.time.time()`; tests patch it to
+advance together with the mock clock. Closed-loop tests of the cores need
+neither: they call `core.step()` and `sim.step()` in a plain loop.
+Scaffold tests use real time (MoaT-Link message timestamps are
+wall-clock).
 
 ### 5.3 Plant simulator
 
@@ -824,7 +830,7 @@ epic for dependencies.
 
 1. `moat.lib.config.base.BaseModel` extensions.
 2. Verify all sensor/command paths in MoaT-Link.
-3. Package skeleton and shared infrastructure (§2.1–2.4, clock, APID).
+3. Package skeleton and shared infrastructure (§2.1–2.4, APID).
 4. Plant simulator core; legacy reference traces; test harness;
    simulator Link adapter.
 5. Override items.

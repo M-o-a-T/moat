@@ -7,6 +7,7 @@ from __future__ import annotations
 from ._base_client_state_machine import MQTTClientState as MQTTClientState
 from ._exceptions import InvalidPattern as InvalidPattern
 from ._exceptions import MQTTConnectFailed as MQTTConnectFailed
+from ._exceptions import MQTTConnectionLost as MQTTConnectionLost
 from ._exceptions import MQTTDecodeError as MQTTDecodeError
 from ._exceptions import MQTTException as MQTTException
 from ._exceptions import MQTTOperationFailed as MQTTOperationFailed

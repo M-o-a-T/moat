@@ -141,3 +141,24 @@ async def test_d_set_verify_missing_schema(monkeypatch):
 
     assert (await sender.d_set(P("test.value"), "x", verify=True)) is True
     assert len(sent) == 1
+
+
+async def test_lost_mqtt_link_ends_client(cfg):
+    "a client whose MQTT connection dies fails out of its context; it does not reconnect"
+    from moat.lib.mqtt import MQTTConnectionLost  # noqa: PLC0415
+    from moat.link._test import Scaffold  # noqa: PLC0415
+    from moat.link.client import Link  # noqa: PLC0415
+
+    got: list[BaseException] = []
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="INIT")
+        link = Link(sf.cfg, "C_lost")
+        with anyio.fail_after(5):
+            try:
+                async with sf.client_(cli=link) as c:
+                    await c.d_set(P("test.lost"), 1, retain=True)  # it works
+                    await link.backend.client._stream.aclose()  # noqa: SLF001
+                    await anyio.sleep_forever()
+            except* MQTTConnectionLost as exc:
+                got.extend(exc.exceptions)
+    assert len(got) == 1

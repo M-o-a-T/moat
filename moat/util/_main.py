@@ -8,13 +8,13 @@ import anyio
 import io
 import logging  # pylint: disable=wrong-import-position
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import partial
-from time import time
 
 import asyncclick as click
 
 from moat.util import help_preserve_blocks
+from moat.util import time as mtime
 from moat.lib.config import CFG
 from moat.lib.path import P, Path, PathLongener, PathShortener, path_eval
 from moat.lib.run import attr_args, load_subgroup, process_args
@@ -91,13 +91,13 @@ y, yr   Year (2023–)
     if back and sleep:
         raise click.UsageError("We don't have time machines.")
 
-    t = datetime.now().astimezone()
+    t = datetime.fromtimestamp(mtime.time(), UTC).astimezone()
     if not now:
         t = time_until(args, t, invert=not inv, back=back)
     t = time_until(args, t, invert=inv, back=back)
 
     t = t.timestamp()
-    tt = int(t - time() + 0.9)
+    tt = int(t - mtime.time() + 0.9)
     if back:
         tt = -tt
     if human or segments:

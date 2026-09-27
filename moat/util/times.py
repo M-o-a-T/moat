@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import anyio
 import datetime as dt
-import time
 from calendar import monthrange
+
+from moat.util import time as mtime
 
 from . import attrdict
 
@@ -31,7 +32,7 @@ TRACE: Any = None
 
 def now(force: bool = False) -> dt.datetime:  # noqa:ARG001  # future use
     "current time"
-    return dt.datetime.now().astimezone()
+    return dt.datetime.fromtimestamp(mtime.time(), dt.UTC).astimezone()
 
 
 class t_iter:
@@ -43,7 +44,7 @@ class t_iter:
 
     def time(self) -> float:
         "get-time hook"
-        return time.monotonic()
+        return anyio.current_time()
 
     async def sleep(self, dt: float) -> None:
         "sleep hook"
@@ -85,7 +86,7 @@ def ts2iso(ts: float, delta: bool = False, msec: int = 1) -> str:
         .isoformat(sep=" ", timespec="milliseconds")
     )
     if delta:
-        res += f" ({humandelta(ts - time.time(), ago=True, msec=msec)})"
+        res += f" ({humandelta(ts - mtime.time(), ago=True, msec=msec)})"
     return res
 
 

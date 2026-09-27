@@ -263,6 +263,7 @@ autodoc_member_order = "groupwise"
 nitpicky = True
 nitpick_ignore = [
     ("py:class", "Sequence"),
+    ("py:class", "trio.testing.MockClock"),
     ("py:class", "Broadcaster"),
     ("py:class", "T"),
     ("py:class", "PathElem"),

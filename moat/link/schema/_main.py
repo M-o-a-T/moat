@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import anyio
-import time
 from contextlib import suppress
 
 import asyncclick as click
 
+from moat.util import time as mtime
 from moat.util import yprint
 from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup
@@ -91,7 +91,7 @@ async def monitor(obj, path, limit, verbose):
             if exc is None:
                 continue
             n_bad += 1
-            now = time.monotonic()
+            now = mtime.monotonic()
             if limit <= 0 or now >= next_err:
                 await _schema_record_error(obj.conn, full, data, exc)
                 n_err += 1

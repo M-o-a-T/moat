@@ -4,11 +4,11 @@ from __future__ import annotations
 import errno
 import socket
 import sys
-import time
 from contextlib import asynccontextmanager
 
 import trio
 
+from moat.util import time as mtime
 from moat.bus.handler import ERR, BaseHandler
 
 from typing import Any
@@ -59,7 +59,7 @@ class Client(BaseHandler):  # noqa:D101
         task_status.started()
         while True:
             if self.__t is not None:
-                t1 = time.monotonic()
+                t1 = mtime.monotonic()
             if self.__msg is not None:
                 m, self.__msg = self.__msg, None
                 await self.__q.put(m)
@@ -90,7 +90,7 @@ class Client(BaseHandler):  # noqa:D101
                 elif not b:
                     sys.exit(1)
                 if self.__t is not None:
-                    t2 = time.monotonic()
+                    t2 = mtime.monotonic()
                     t1, t2 = t2, t2 - t1
                     self.__t -= t2
 

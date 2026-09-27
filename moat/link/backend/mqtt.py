@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
 from contextlib import asynccontextmanager
 
 from moat.util import NotGiven, attrdict, srepr
+from moat.util import time as mtime
 from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
@@ -154,7 +154,7 @@ class Backend(_Backend):
         self,
         topic: Path,
         *,
-        codec: str | Codec | None | EllipsisType = NotGiven,
+        codec: str | Codec | EllipsisType | None = NotGiven,
         raw: bool | None = False,
         subtree: bool = False,
         mine: bool = True,
@@ -225,7 +225,7 @@ class Backend(_Backend):
         self,
         topic: Path,
         data: Any,
-        codec: Codec | str | None | EllipsisType = NotGiven,
+        codec: Codec | str | EllipsisType | None = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool | None = None,
         **kw: Any,
@@ -315,7 +315,7 @@ class _SubGet:
 
                     assert prop.origin
                     if not prop.timestamp:
-                        prop.timestamp = time.time()
+                        prop.timestamp = mtime.time()
 
                 except Exception as exc:
                     back.logger.debug("Property Error", exc_info=exc)

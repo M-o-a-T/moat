@@ -4,7 +4,6 @@ Encoding and decoding the metadata for MoaT
 
 from __future__ import annotations
 
-import time
 from base64 import b85decode, b85encode
 
 try:
@@ -14,6 +13,7 @@ except ImportError:
 from attrs import define, field
 
 from moat.util import NotGiven, pop_kw, push_kw
+from moat.util import time as mtime
 from moat.lib.codec.moat_cbor import Codec as StdCBOR
 from moat.lib.proxy import as_proxy
 from moat.util.times import ts2iso
@@ -177,7 +177,7 @@ class MsgMeta:
                 name = f"via:{name}"
             self.origin = name
         if not self.timestamp:
-            self.timestamp = time.time()
+            self.timestamp = mtime.time()
 
     def _len(self, n):
         while len(self.a) < n:

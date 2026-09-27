@@ -11,6 +11,8 @@ from gpiod import LineSettings, is_gpiochip_device
 from gpiod.edge_event import EdgeEvent
 from gpiod.line import Bias, Direction, Drive, Edge, Value
 
+from moat.util import time as mtime
+
 from typing import TYPE_CHECKING, Any, NoReturn, Self
 
 if TYPE_CHECKING:
@@ -381,7 +383,7 @@ class Event:
     def time(self) -> float:
         """Return the event's wall-clock time"""
         now_bns = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
-        return time.time() - (now_bns - self._ts) / 1000000000
+        return mtime.time() - (now_bns - self._ts) / 1000000000
 
     def __repr__(self) -> str:
         return f"<{self.value} @{self.time}>"

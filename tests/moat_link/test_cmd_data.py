@@ -7,7 +7,7 @@ from io import StringIO
 
 import asyncclick as click
 
-from moat.util import attrdict
+from moat.util import attrdict, patch_clock
 from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.cmd import data as data_cmd
@@ -217,14 +217,14 @@ async def test_load_force_retries_with_start_timestamp(monkeypatch):
     """`load --force` retries stale data with current-time metadata."""
 
     monkeypatch.setattr(data_cmd, "MsgReader", _ReaderCtx)
-    monkeypatch.setattr(data_cmd.time, "time", lambda: 9999.25)
-    _ReaderCtx.data = [[P("a"), 1, "src", 1.0]]
+    with patch_clock(time=lambda: 9999.25):
+        _ReaderCtx.data = [[P("a"), 1, "src", 1.0]]
 
-    conn = _Conn()
-    conn.d.res = [False, True]
-    obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
+        conn = _Conn()
+        conn.d.res = [False, True]
+        obj = attrdict(conn=conn, path=P("root"), stdout=StringIO())
 
-    await _load_data(obj, "-", force=True)
+        await _load_data(obj, "-", force=True)
 
     assert len(conn.d.calls) == 2
     p1, v1, m1, kw1 = conn.d.calls[0]

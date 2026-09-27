@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
 from abc import ABCMeta, abstractmethod
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from moat.util import CtxObj, NotGiven, as_service, attrdict
+from moat.util import time as mtime
 from moat.lib.path import P, Path
 from moat.lib.priomap import PrioMap
 
@@ -243,7 +243,7 @@ class Notify:
     async def send(self, **kw) -> None:
         """Send this notification to that topic."""
         # reactivate dropped items
-        tm = time.monotonic()
+        tm = mtime.monotonic()
         retry: set[Notifier] = set()
         error_seen = False
 
@@ -304,7 +304,7 @@ class Notify:
                     if evt is not None:
                         evt.set()
                     async for path, msg, meta in mon:
-                        t = time.time()
+                        t = mtime.time()
                         if meta.timestamp < t - self.cfg.max_age:
                             continue
                         if msg is NotGiven:

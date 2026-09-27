@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
 from anyio import Lock
 from contextlib import AsyncExitStack
 
 from attrs import define, field
 
 from moat.util import NotGiven, to_attrdict
+from moat.util import time as mtime
 from moat.lib.codec import get_codec
 from moat.lib.codec.null import Codec as _NullCodec
 from moat.lib.path import P, Path
@@ -257,7 +257,7 @@ class Gate:
                 node.src_write_time,
                 node.meta.timestamp if node.meta is not None else 0.0,
             )
-            if speed and ts and (tm := ts + speed - time.time()) > 0:
+            if speed and ts and (tm := ts + speed - mtime.time()) > 0:
                 key = (path, False)
                 existing = self._speed_pending.get(key)
                 if existing is not None:

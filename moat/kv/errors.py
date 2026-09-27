@@ -85,10 +85,10 @@ import anyio
 import contextlib
 import logging
 import traceback
-from time import time  # wall clock, intentionally
 from weakref import WeakValueDictionary
 
 from moat.util import Cache, NotGiven
+from moat.util import time as mtime
 from moat.lib.codec import get_codec
 from moat.lib.path import Path
 
@@ -196,7 +196,7 @@ class ErrorEntry(AttrClientEntry):
             res = self.allocate(node)
         if True:  # pylint: disable=using-constant-test  # just for the pylint block
             # pylint: disable=attribute-defined-outside-init
-            res.seen = time()
+            res.seen = mtime.time()
             res.tock = await self.root.client.get_tock()
             res.comment = comment or repr(exc)
 
@@ -248,7 +248,7 @@ class ErrorEntry(AttrClientEntry):
         One per node, so we don't need to avoid collisions.
         """
         res = dict(
-            seen=time(),
+            seen=mtime.time(),
             tock=await self.root.client.get_tock(),
             comment=comment,
             data=data,
@@ -478,7 +478,7 @@ class ErrorRoot(ClientRoot):
         if rec is None:
             return
         if not rec.resolved:
-            rec.resolved = time()
+            rec.resolved = mtime.time()
             await rec.save()
         if comment or data:
             await rec.real_entry.add_comment(self.name, comment, data)
@@ -520,7 +520,7 @@ class ErrorRoot(ClientRoot):
         rec.path = path
         rec.resolved = False
         rec.count += 1
-        rec.last_seen = time()
+        rec.last_seen = mtime.time()
         if not hasattr(rec, "first_seen"):
             rec.first_seen = rec.last_seen
 

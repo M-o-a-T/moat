@@ -4,7 +4,6 @@ from __future__ import annotations
 import anyio
 import os
 import sys
-import time
 from contextlib import nullcontext, suppress
 
 import asyncclick as click
@@ -18,6 +17,9 @@ from moat.util import (
     yformat,
     yload,
     yprint,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.lib.path import P, Path, Root
 from moat.lib.run import AliasedGroup, attr_args, process_args
@@ -148,7 +150,7 @@ async def _load_data(obj, infile: str, force: bool) -> None:
             p = obj.path + p
 
             if force:
-                ts = time.time()
+                ts = mtime.time()
                 res = _write_result(await obj.conn.d.set(p, d, m))
                 if res is False:
                     if m is None:

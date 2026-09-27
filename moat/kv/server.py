@@ -2,24 +2,11 @@
 from __future__ import annotations
 
 import anyio
+import logging
 import os
 import signal
-import time
 from anyio.abc import SocketAttribute
-
-from asyncscope import scope
-
-from moat.util import DelayedRead, DelayedWrite, create_queue
-from moat.lib.codec import get_codec
-
-from collections.abc import Mapping
-
-try:
-    from contextlib import asynccontextmanager
-except ImportError:
-    from async_generator import asynccontextmanager
-
-import logging
+from contextlib import asynccontextmanager
 from functools import partial
 from pprint import pformat
 
@@ -33,9 +20,12 @@ from asyncactor import (
     UntagEvent,
 )
 from asyncactor.backend import get_transport
+from asyncscope import scope
 from range_set import RangeSet
 
 from moat.util import (
+    DelayedRead,
+    DelayedWrite,
     MsgReader,
     MsgWriter,
     NotGiven,
@@ -43,10 +33,13 @@ from moat.util import (
     attrdict,
     byte2num,
     combine_dict,
+    create_queue,
     gen_ssl,
     num2byte,
     run_tcp_server,
 )
+from moat.util import time as mtime
+from moat.lib.codec import get_codec
 from moat.lib.path import P, Path, PathLongener, PathShortener
 
 from . import _version_tuple
@@ -66,6 +59,7 @@ from .exceptions import (
 from .model import Node, NodeEvent, NodeSet, UpdateEvent, Watcher
 from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -2492,7 +2486,7 @@ class Server:
             msg = await self.get_state(nodes=True, known=True, deleted=False)
             # await mw({"info": msg})
             await mw(msg)  # XXX legacy
-            last_saved = time.monotonic()
+            last_saved = mtime.monotonic()
             last_saved_count = 0
 
             async with Watcher(self.root, full=True) as updates:
@@ -2510,14 +2504,14 @@ class Server:
                 cnt = 0
                 while True:
                     # This dance ensures that we save the system state often enough.
-                    t = time.monotonic()
+                    t = mtime.monotonic()
                     td = t - last_saved
                     if td >= 60 or last_saved_count > 1000:
                         msg = await self.get_state(nodes=True, known=True, deleted=False)
                         # await mw({"info": msg})
                         await mw(msg)  # XXX legacy
                         await mw.flush()
-                        last_saved = time.monotonic()
+                        last_saved = mtime.monotonic()
                         last_saved_count = 0
                         td = -99999  # translates to something large, below
                         cnt = 0

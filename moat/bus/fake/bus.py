@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import anyio
 import os
-import time
 from contextlib import asynccontextmanager, suppress
 from random import random
 
 import asyncclick as click
+
+from moat.util import time as mtime
 
 from typing import TYPE_CHECKING, Any
 
@@ -66,7 +67,7 @@ class Main:  # noqa:D101
     def report(self, n: int, val: int) -> None:  # noqa:D102
         if not self.verbose:
             return
-        t = time.monotonic()
+        t = mtime.monotonic()
         self.t, t = t, (0 if self.t is None else t - self.t)
 
         n_str = f"{n:%02d}" if n else "--"

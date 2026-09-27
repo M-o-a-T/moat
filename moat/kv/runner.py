@@ -7,7 +7,6 @@ This module's job is to run code, resp. to keep it running.
 from __future__ import annotations
 
 import anyio
-import time
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from weakref import ref
 
@@ -21,6 +20,9 @@ from moat.util import (
     create_queue,
     digits,
     spawn,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.lib.path import (
     P,
@@ -572,7 +574,7 @@ class RunnerEntry(AttrClientEntry):
                 data["_log"] = self._logger
                 data["_digits"] = digits
 
-                state.started = time.time()
+                state.started = mtime.time()
                 state.node = state.root.name
 
                 await state.save(wait=True)
@@ -590,7 +592,7 @@ class RunnerEntry(AttrClientEntry):
             finally:
                 self.scope = None
                 self._q = None
-                t = time.time()
+                t = mtime.time()
 
         except ErrorRecorded:
             # record_error() has already been called
@@ -732,7 +734,7 @@ class RunnerEntry(AttrClientEntry):
 
     @property
     def age(self):  # noqa: D102
-        return time.time() - self.state.started
+        return mtime.time() - self.state.started
 
 
 class RunnerNode:
@@ -804,7 +806,7 @@ class StateEntry(AttrClientEntry):
             self.root.runner.get_node(self.node)
             return
 
-        self.stopped = time.time()
+        self.stopped = mtime.time()
         self.node = None
         self.backoff = min(20, self.backoff + 1)
         await self.root.runner.err.record_error(
@@ -817,11 +819,11 @@ class StateEntry(AttrClientEntry):
     async def ping(self):  # noqa: D102
         if self.node != self.root.name:
             raise RuntimeError("Not our state!")
-        self.pinged = time.time()
+        self.pinged = mtime.time()
         await self.save()
 
     async def stale(self):  # noqa: D102
-        self.stopped = time.time()
+        self.stopped = mtime.time()
         node, self.node = self.node, None
         self.backoff = min(20, self.backoff + 2)
         await self.root.runner.err.record_error(
@@ -916,7 +918,7 @@ class StateRoot(MirrorRoot):
     _last_t = 0
 
     async def ping(self):  # noqa: D102
-        t = time.time()
+        t = mtime.time()
         if t - self._last_t >= abs(self._cfg["ping"]):
             self._last_t = t
             if self._cfg["ping"] > 0:
@@ -1036,14 +1038,14 @@ class _BaseRunnerRoot(ClientRoot):
             self._run_now_task = sc
             if evt is not None:
                 evt.set()
-            t = time.time()
+            t = mtime.time()
             while True:
                 if t_next > t:
                     with anyio.move_on_after(t_next - t):
                         await self._trigger.wait()
                         self._trigger = anyio.Event()
 
-                t = time.time()
+                t = mtime.time()
                 t_next = t + 999
                 for j in self.all_children:
                     d, r = j.should_start()
@@ -1144,7 +1146,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
 
                     node = self.get_node(msg.node)
                     node.load = msg.value
-                    node.seen = time.time()
+                    node.seen = mtime.time()
                     if self.seen_load is not None:
                         self.seen_load += msg.value
                     self.node_history += node
@@ -1156,7 +1158,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
                     if self.seen_load is not None:
                         pass  # TODO
 
-                    self.get_node(self.name).seen = time.time()
+                    self.get_node(self.name).seen = mtime.time()
                     self.node_history += self.name
                     evt = anyio.Event()
                     await self.spawn(self._run_now, evt)
@@ -1208,12 +1210,12 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         TODO check where to use time.monotonic
         """
         t0 = None
-        t1 = time.time()
+        t1 = mtime.time()
         while True:
             with anyio.move_on_after(self.max_age):
                 await age_q.get()
-                t1 = time.time()
-            t2 = time.time()
+                t1 = mtime.time()
+            t2 = mtime.time()
             if t1 + self.max_age < t2:
                 raise NotSelected(self.max_age, t2, t1)
             t0 = t1

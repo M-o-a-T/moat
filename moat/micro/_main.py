@@ -26,6 +26,9 @@ from moat.util import (
     yload,
     yprint,
 )
+from moat.util import (
+    time as mtime,
+)
 from moat.lib.codec import get_codec
 from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.lib.micro import idle
@@ -395,18 +398,16 @@ async def cmd(obj: attrdict, path: P, time: bool, parts: bool, stream: bool, **a
         "-" if not val else " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
 
-    from time import monotonic as tm  # noqa: PLC0415
-
     from moat.util.times import humandelta  # noqa: PLC0415
 
-    t1 = tm()
+    t1 = mtime.monotonic()
     async with (
         SigCancel(),
         RootCmd(cfg) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
     ):
         try:
-            t2 = tm()
+            t2 = mtime.monotonic()
             cmd = cfr.sub_at(path)
             if parts:
                 from moat.lib.rpc import SubStore  # noqa: PLC0415
@@ -428,11 +429,11 @@ async def cmd(obj: attrdict, path: P, time: bool, parts: bool, stream: bool, **a
             else:
                 res = await cmd(*args, **val)
         except RemoteError as err:
-            t3 = tm()
+            t3 = mtime.monotonic()
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
             if not stream:
-                t3 = tm()
+                t3 = mtime.monotonic()
                 if isinstance(res, Msg):
                     res = [res.args, res.kw]
                 yprint(res, stream=obj.stdout)

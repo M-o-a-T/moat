@@ -600,7 +600,30 @@ async def _import_legacy_dict(obj, doc, as_dict: str) -> None:
     await walk(Path(), doc)
 
 
-@cli.command("import", short_help="Import data from a MoaT-KV dump")
+async def _import_docs(obj, infile: str) -> None:
+    """Import the YAML document stream emitted by ``mt link data … get -r``.
+
+    Each document is a ``[path, value]`` list; trailing metadata is ignored.
+
+    Args:
+        obj: the command-context object (provides ``conn`` and ``path``).
+        infile: source file name, or ``-`` for stdin.
+
+    Raises:
+        click.UsageError: if a document does not match the expected shape.
+    """
+    path = "/dev/stdin" if infile == "-" else infile
+    async with MsgReader(path=path, codec="yaml") as reader:
+        async for msg in reader:
+            if not isinstance(msg, list | tuple) or len(msg) < 2:
+                raise click.UsageError(
+                    "Without --legacy or --as-dict, "
+                    "each YAML document must be a [path, value] list.",
+                )
+            await obj.conn.d_set(obj.path + _as_path(msg[0]), msg[1])
+
+
+@cli.command("import", short_help="Import data from a dump")
 @click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
 @click.option(
     "--legacy",
@@ -617,17 +640,18 @@ async def _import_legacy_dict(obj, doc, as_dict: str) -> None:
 )
 @click.pass_obj
 async def import_(obj, infile: str, legacy: bool, as_dict: str | None) -> None:
-    """Import data from a ``mt kv data … get -r`` dump.
+    """Import data from a ``mt link data … get -r`` or ``mt kv data … get -r`` dump.
 
-    Exactly one of ``--legacy`` or ``--as-dict`` must be given to
-    indicate which on-disk format the input is in. Imported values are
-    written below the current ``PATH``.
+    Without options, the input is the YAML document stream written by
+    ``mt link data … get -r``. Use ``--legacy`` or ``--as-dict`` for
+    MoaT-KV dumps. Imported values are written below the current ``PATH``.
     """
-    if legacy == (as_dict is not None):
-        raise click.UsageError(
-            "Pass exactly one of --legacy or --as-dict to select the input format.",
-        )
-    await _import_data(obj, infile, as_dict=as_dict)
+    if legacy and as_dict is not None:
+        raise click.UsageError("--legacy and --as-dict are mutually exclusive.")
+    if legacy or as_dict is not None:
+        await _import_data(obj, infile, as_dict=as_dict)
+    else:
+        await _import_docs(obj, infile)
 
 
 @cli.command()

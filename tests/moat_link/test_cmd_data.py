@@ -457,18 +457,41 @@ async def test_import_rejects_wrong_shape(tmp_path):
     assert conn.calls == []
 
 
-async def test_import_cli_requires_one_mode(tmp_path):
-    """`import` errors when neither (or both) --legacy/--as-dict are given."""
+async def test_import_link_get_format(tmp_path):
+    """`import` without options ingests the document stream of `link data get -r`."""
+
+    src = tmp_path / "dump.yaml"
+    src.write_text(
+        "- !P a.b\n- 42\n---\n- !P x\n- nested: 1\n- origin: me\n---\n- [k, l]\n- 9\n---\n"
+    )
+    conn = _ImportConn()
+    obj = attrdict(conn=conn, path=P("root"))
+
+    await data_cmd.import_.callback.__wrapped__(obj, infile=str(src), legacy=False, as_dict=None)
+    assert [(str(p), v) for p, v, _m in conn.calls] == [
+        ("root.a.b", 42),
+        ("root.x", {"nested": 1}),
+        ("root.k.l", 9),
+    ]
+
+    # the legacy list form is not a document stream of [path, value] lists
+    src.write_text("- !P a: 1\n---\n")
+    conn.calls.clear()
+    with pytest.raises(click.UsageError, match=r"\[path, value\]"):
+        await data_cmd.import_.callback.__wrapped__(
+            obj, infile=str(src), legacy=False, as_dict=None
+        )
+    assert conn.calls == []
+
+
+async def test_import_cli_rejects_both_modes(tmp_path):
+    """`import` errors when both --legacy and --as-dict are given."""
 
     src = tmp_path / "x.yaml"
     src.write_text("- !P a: 1\n")
     conn = _ImportConn()
     obj = attrdict(conn=conn, path=P("root"))
 
-    with pytest.raises(click.UsageError):
-        await data_cmd.import_.callback.__wrapped__(
-            obj, infile=str(src), legacy=False, as_dict=None
-        )
     with pytest.raises(click.UsageError):
         await data_cmd.import_.callback.__wrapped__(obj, infile=str(src), legacy=True, as_dict="_")
     assert conn.calls == []

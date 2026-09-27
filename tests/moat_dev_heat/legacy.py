@@ -41,7 +41,7 @@ from moat.dev.heat.sim import Plant, PlantCfg
 from moat.lib.path import P, Path
 from moat.lib.pid import _impl as _pid_impl
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -175,6 +175,60 @@ class Scenario:
     seed: int = 1
     dt: float = 10
     sample: float = 60
+    wp: bool = False  # also run the frost-protection task (data/wp.py.txt)
+
+
+# the frost-protection task's heat-pump loop valve
+VALVE_CMD = P("home.ass.dyn.switch.plug-n5.relay.cmd")
+VALVE_STATE = P("home.ass.dyn.switch.plug-n5.relay.state")
+
+
+class FakeLink:
+    """
+    Just enough of the MoaT-Link client for ``wp.py``, backed by a :class:`FakeKV`.
+
+    ``legacy.…`` paths are MoaT-KV paths gated into Link; the prefix is dropped.
+    """
+
+    def __init__(self, kv: FakeKV) -> None:
+        self.kv = kv
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *_tb: object) -> None:
+        pass
+
+    @staticmethod
+    def _path(p: Path) -> Path:
+        return p[1:] if len(p) and p[0] == "legacy" else p
+
+    @asynccontextmanager
+    async def d_watch(self, path: Path, **_kw: Any) -> AsyncIterator[Any]:
+        """Yield the current value (if any), then updates."""
+        async with self.kv.watch(self._path(path), max_depth=0, fetch=True) as msgs:
+
+            async def values() -> AsyncIterator[Any]:
+                async for m in msgs:
+                    if "value" in m:
+                        yield m.value
+
+            yield values()
+
+    async def d_set(self, path: Path, value: Any, **_kw: Any) -> None:
+        """Write a value."""
+        await self.kv.set(self._path(path), value)
+
+
+def load_wp(kv: FakeKV) -> Callable[[], Any]:
+    """The frost-protection task's ``main``, unchanged except for its Link client."""
+    src = (DATA / "wp.py.txt").read_text()
+    src = src.replace('anyio.run(main, backend="trio")', "")
+    ns: dict[str, Any] = {"__name__": "wp"}
+    exec(compile(src, "wp.py", "exec"), ns)  # noqa: S102
+    ns["Link"] = lambda _cfg: FakeLink(kv)
+    ns["CFG"] = lambda: attrdict(moat=attrdict(link=None))
+    return ns["main"]
 
 
 # operator / Solvis inputs, keyed by name → legacy config path
@@ -323,6 +377,9 @@ async def _run(sc: Scenario, trace: dict[str, Any], mclock: Any) -> None:
             inp.pellet_load = v
         elif p == cpath["p_temp"]:
             inp.pellet_temp = v
+        elif p == VALVE_CMD:
+            inp.hp_valve = bool(v)
+            kv.publish(VALVE_STATE, bool(v))
         elif p in patch_paths:
             inp.pellet_patch_goal = v
 
@@ -358,6 +415,9 @@ async def _run(sc: Scenario, trace: dict[str, Any], mclock: Any) -> None:
     kv.publish(cfg.sensor.cop, 3.0)
     kv.publish(cfg.cmd.pellet.wanted, False)
     kv.publish(cfg.cmd.pellet.run, False)
+    if sc.wp:
+        inp.hp_valve = False
+        kv.publish(VALVE_STATE, False)
     publish_sensors()
 
     d = solvis.Data(cfg, kv, state=attrdict())
@@ -386,6 +446,8 @@ async def _run(sc: Scenario, trace: dict[str, Any], mclock: Any) -> None:
         for k in _TRACE_SENSORS:
             row[k] = _r(s[k])
         row["hp"] = str(plant.hp.stage)
+        if sc.wp:
+            row["valve"] = inp.hp_valve
         samples.append(row)
 
     async with anyio.create_task_group() as tg:
@@ -395,6 +457,8 @@ async def _run(sc: Scenario, trace: dict[str, Any], mclock: Any) -> None:
         await tg.start(d.run_set_heat)
         await tg.start(d.run_set_pellet)
         await tg.start(d.run_pump)
+        if sc.wp:
+            tg.start_soon(load_wp(kv))
         sample()
         while plant.now < sc.duration:
             while todo and todo[0][0] <= plant.now:
@@ -563,6 +627,20 @@ SCENARIOS = {
             plant={"buffer": {"t_init": (50, 30)}, "weather": {"mean": 3, "amp": 2}},
             start=18 * H,
             events=[(10 * H, "force_day", True), (12 * H, "force_day", False)],
+        ),
+        Scenario(
+            "frost",
+            "A frosty night, heat pump switched off, pellets heating: the heat "
+            "pump's pipes cool down, and the frost-protection task (wp.py) runs "
+            "alongside.",
+            10 * H,
+            plant={
+                "buffer": {"t_init": (65, 45)},
+                "weather": {"sigma": 0.2, "mean": -8, "amp": 2},
+            },
+            start=22 * H,
+            cmd={"cm_wp": False},
+            wp=True,
         ),
         Scenario(
             "error_mid_run",

@@ -178,7 +178,7 @@ def test_deice_takes_heat():
 
 
 def test_circulation_pump():
-    "Flow is zero at PWM 0 and in the dead zone, lags, and dies with the pump."
+    "Flow is zero at PWM 0, in the dead zone and with the valve closed; it lags; it dies with the pump."
     cfg = PlantCfg()
     p = Plant(cfg, seed=1)
     p.inputs.pwm = 0
@@ -200,6 +200,14 @@ def test_circulation_pump():
     p.faults.dead_flow_pump = True
     p.step(5)
     assert p.sensors()["r_flow"] == 0
+
+    p.faults.dead_flow_pump = False
+    p.inputs.hp_valve = False
+    p.run(60, 5)
+    assert p.sensors()["r_flow"] == 0
+    p.inputs.hp_valve = True
+    p.run(60, 5)
+    assert p.sensors()["r_flow"] > 0
 
 
 def test_switchover_charges_top():

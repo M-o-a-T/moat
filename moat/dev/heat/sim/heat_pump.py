@@ -37,7 +37,8 @@ class CircPump:
         cfg = self.cfg
         if pwm <= cfg.dead:
             return 0.0
-        return cfg.flow_max * ((min(pwm, 1) - cfg.dead) / (1 - cfg.dead)) ** cfg.exp
+        f = cfg.flow_max * ((min(pwm, 1) - cfg.dead) / (1 - cfg.dead)) ** cfg.exp
+        return max(f, cfg.flow_min)
 
     def step(self, dt: float, pwm: float, dead: bool = False) -> float:
         """Advance; returns the mean flow over the interval."""

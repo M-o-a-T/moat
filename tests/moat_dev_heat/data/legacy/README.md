@@ -35,6 +35,7 @@ simulated time, `t` in seconds from the scenario start):
 | `p_wanted`, `p_load`, `p_temp` | pellet commands |
 | `t_in` … `m_switch` | true plant values (no sensor noise) |
 | `hp` | simulated heat-pump stage |
+| `valve` | heat-pump loop valve (only in scenarios that run `wp.py`) |
 
 ## Scenarios
 
@@ -45,6 +46,7 @@ simulated time, `t` in seconds from the scenario start):
 | `deice` | cold humid air: repeated de-icing while running |
 | `pellet_handover` | heat pump running at +3 °C, frost to −6 °C, thaw: the burner starts at about +1 °C, the heat pump keeps running until the buffer is charged, stays off during the frost, and takes over again after the thaw |
 | `day_night` | 18:00 to 10:00: night setback at 21:30, forced day mode 04:00–06:00 |
+| `frost` | frosty night, heat pump switched off, pellets heating; `wp.py` runs alongside and pulses the pump to keep the heat pump's pipes above 8 °C |
 | `error_mid_run` | heat-pump error at 2 h, cleared at 3 h |
 | `hp_no_power` | heat pump stops drawing power at 1 h, error on `:1` |
 | `bypass` | manual bypass from 1 h to 2 h |
@@ -60,6 +62,12 @@ simulated time, `t` in seconds from the scenario start):
 - Plant parameters are the simulator defaults, not measurements, so
   absolute numbers (run lengths, temperatures) are only indicative.
   State sequences and decision rules are what matters.
+- Scenarios with `wp: True` also run the frost-protection task, the
+  unchanged code of `../wp.py.txt` with a fake Link client (its
+  `legacy.…` paths map to the KV paths). The loop valve starts closed
+  and blocks all flow while closed. Elsewhere there is no valve.
+- The circulation pump starts above 5 % PWM (as `wp.py` assumes) with a
+  minimum flow of 4 l/min; both are guesses.
 - A controller exception ends the trace. In production, `run`'s
   `finally` then calls `Data.off()` and systemd restarts the process;
   the harness does not emulate that.

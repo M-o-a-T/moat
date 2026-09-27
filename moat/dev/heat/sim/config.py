@@ -127,9 +127,10 @@ class PumpCfg(_Cfg):
     """Heat-pump circulation pump, PWM controlled."""
 
     flow_max: float = 30
-    dead: float = 0.1  # PWM dead zone
+    dead: float = 0.05  # PWM dead zone (the frost task pulses at 1/16, "more than 5%")
     exp: float = 0.8  # flow = flow_max * ((pwm-dead)/(1-dead)) ** exp
-    tau: float = 8  # first-order lag
+    flow_min: float = 4  # minimum flow once the pump runs
+    tau: float = 3  # first-order lag
 
 
 @dataclass

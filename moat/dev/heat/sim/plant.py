@@ -58,6 +58,7 @@ class Inputs:
     hp_mode: int = 0  # cmd.mode.path
     hp_power: float = 0.0  # cmd.power
     pwm: float = 0.0  # output.flow.path
+    hp_valve: bool | None = None  # heat-pump loop valve; None: no valve (always open)
     heat_mode: int = 5  # setting.heat.mode.path
     heat_setpoint: float = 40.0  # adj.curve.setting
     water_setpoint: float | None = 50.0  # setting.water; drives the automatic switchover
@@ -194,7 +195,7 @@ class Plant:
 
         # heat pump loop
         self.hp.blocked = bool(self._blocking)
-        flow = self.pump.step(dt, inp.pwm, self.faults.dead_flow_pump)
+        flow = self.pump.step(dt, inp.pwm, self.faults.dead_flow_pump or inp.hp_valve is False)
         hp_out = buf.layer(bc.hp_out)
         t_sup, e_th, loss = self.hp.step(
             dt,

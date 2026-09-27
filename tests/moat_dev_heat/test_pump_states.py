@@ -420,10 +420,24 @@ def test_load_limit():
     for _ in range(180):  # 30 min
         d.step(tb_heat=30.0, tb_low=28.0)  # very cold: the PIDs want full load
         loads.append(d.power)
-        assert d.power <= d.state.avg_load + d.cfg.load_limit.margin + 0.02
+        ll = d.cfg.load_limit
+        assert d.power <= max(d.state.avg_load + ll.margin, ll.floor) + 0.02
     assert loads[0] < 0.5
     assert loads[-1] > 0.9
     assert all(b >= a - 1e-9 for a, b in pairwise(loads))
+
+
+def test_load_limit_floor():
+    "the limit doesn't go below its floor, however low the average"
+    d = _running()
+    d.state.avg_load = 0.0
+    d.step(tb_heat=30.0, tb_low=28.0)
+    assert d.power == pytest.approx(d.cfg.load_limit.floor, abs=1e-6)
+
+    d = _running(load_limit={"floor": 0.5})
+    d.state.avg_load = 0.0
+    d.step(tb_heat=30.0, tb_low=28.0)
+    assert d.power == pytest.approx(0.5, abs=1e-6)
 
 
 def test_load_limit_push():

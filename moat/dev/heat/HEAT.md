@@ -568,7 +568,8 @@ Core structure:
   stays in `off`.
 - Dynamic load limit (new): the load is capped at an exponential
   average of the recent load (`load_limit.tau`, 10 min) plus
-  `load_limit.margin` (0.25), so the PIDs can't jump the compressor to
+  `load_limit.margin` (0.25), but not below `load_limit.floor` (0.3),
+  so the PIDs can't jump the compressor to
   full load; when the goal (`t_adj`) rises, the average is pushed up to
   at least `load_limit.push`. There is no outside-temperature start
   limit.

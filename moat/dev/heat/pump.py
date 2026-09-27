@@ -238,7 +238,9 @@ class _LoadLimit(BaseModel):
     tau: float | None = 600
     """Time constant of the load average, seconds; `None` disables the limit."""
     margin: float = 0.25
-    """The load may be at most the average plus this."""
+    """The load may be at most the average plus this …"""
+    floor: float = 0.3
+    """… but the limit is never below this."""
     push: float = 0.5
     """When the goal (``t_adj``) rises, raise the average to at least this."""
     push_delta: float = 1
@@ -850,7 +852,7 @@ class PumpCore:
         ll = cfg.load_limit
         l_max = None
         if ll.tau is not None:
-            l_max = st.avg_load + ll.margin
+            l_max = max(st.avg_load + ll.margin, ll.floor)
             lim = min(lim, l_max)
         self._load(lim)
         st.load_last = lim

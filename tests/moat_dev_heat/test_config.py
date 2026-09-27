@@ -6,20 +6,16 @@ from __future__ import annotations
 
 import anyio
 import pytest
-from contextlib import asynccontextmanager
 
 from moat.util import NotGiven, attrdict
 from moat.dev.heat import config as hcfg
 from moat.dev.heat.config import CFG_PATH, ServiceCfg, UnitCfg, unit_config
 from moat.lib.config.base import BaseModel
-from moat.link._test import Scaffold
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.link.client import LinkSender
-
-    from collections.abc import AsyncIterator
 
 pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("dflt")]
 
@@ -74,24 +70,15 @@ class Cfgs:
             raise AssertionError(f"Unexpected config: {cfg!r}")
 
 
-@asynccontextmanager
-async def _setup(cfg: dict) -> AsyncIterator[tuple[LinkSender, Cfgs]]:
-    async with (
-        Scaffold(cfg, use_servers=True) as sf,
-        sf.server_(init={}),
-        sf.client_() as c,
-    ):
-        yield c, Cfgs(c)
-
-
 async def _set(c: LinkSender, data: object) -> None:
     await c.d_set(CFG_PATH / UNIT, data, retain=True, verify=False)
     await c.i_sync()
 
 
-async def test_defaults_only(cfg):
+async def test_defaults_only(link):
     "no Link item: the package defaults"
-    async with _setup(cfg) as (_c, cf), anyio.create_task_group() as tg:
+    cf = Cfgs(link)
+    async with anyio.create_task_group() as tg:
         await tg.start(cf.run)
         res = await cf.next()
         assert res.x == 1
@@ -100,51 +87,52 @@ async def test_defaults_only(cfg):
         tg.cancel_scope.cancel()
 
 
-async def test_partial_override(cfg):
+async def test_partial_override(link):
     "a partial Link item overrides nested keys only"
-    async with _setup(cfg) as (c, cf):
-        await _set(c, {"inner": {"b": 5}})
-        async with anyio.create_task_group() as tg:
-            await tg.start(cf.run)
-            res = await cf.next()
-            assert res.x == 1
-            assert res.inner.a == 10
-            assert res.inner.b == 5
-            tg.cancel_scope.cancel()
+    cf = Cfgs(link)
+    await _set(link, {"inner": {"b": 5}})
+    async with anyio.create_task_group() as tg:
+        await tg.start(cf.run)
+        res = await cf.next()
+        assert res.x == 1
+        assert res.inner.a == 10
+        assert res.inner.b == 5
+        tg.cancel_scope.cancel()
 
 
-async def test_live_update_invalid_delete(cfg):
+async def test_live_update_invalid_delete(link):
     "live update, invalid update ignored, deletion reverts to defaults"
-    async with _setup(cfg) as (c, cf), anyio.create_task_group() as tg:
+    cf = Cfgs(link)
+    async with anyio.create_task_group() as tg:
         await tg.start(cf.run)
         assert (await cf.next()).x == 1
 
-        await _set(c, {"x": 3})
+        await _set(link, {"x": 3})
         assert (await cf.next()).x == 3
 
-        await _set(c, {"x": "bad"})
+        await _set(link, {"x": "bad"})
         await cf.none()
 
-        await _set(c, {"x": 4, "inner": {"a": 7}})
+        await _set(link, {"x": 4, "inner": {"a": 7}})
         res = await cf.next()
         assert res.x == 4
         assert res.inner.a == 7
 
-        await _set(c, NotGiven)
+        await _set(link, NotGiven)
         res = await cf.next()
         assert res.x == 1
         assert res.inner.a == 10
         tg.cancel_scope.cancel()
 
 
-async def test_invalid_initial(cfg):
+async def test_invalid_initial(link):
     "an invalid item at startup yields the defaults"
-    async with _setup(cfg) as (c, cf):
-        await _set(c, {"x": "bad"})
-        async with anyio.create_task_group() as tg:
-            await tg.start(cf.run)
-            assert (await cf.next()).x == 1
-            tg.cancel_scope.cancel()
+    cf = Cfgs(link)
+    await _set(link, {"x": "bad"})
+    async with anyio.create_task_group() as tg:
+        await tg.start(cf.run)
+        assert (await cf.next()).x == 1
+        tg.cancel_scope.cancel()
 
 
 def test_package_defaults(cfg):  # noqa: ARG001

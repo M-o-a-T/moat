@@ -264,6 +264,7 @@ nitpicky = True
 nitpick_ignore = [
     ("py:class", "Sequence"),
     ("py:class", "trio.testing.MockClock"),
+    ("py:class", "moat.dev.heat.link.T"),
     ("py:class", "Broadcaster"),
     ("py:class", "T"),
     ("py:class", "PathElem"),

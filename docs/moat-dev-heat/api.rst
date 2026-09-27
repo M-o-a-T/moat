@@ -20,3 +20,6 @@ API
 
 .. autoclass:: moat.dev.heat.config.EmergencyCfg
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.link
+   :members:

@@ -35,7 +35,7 @@ timeout:
     min: .9  # answering old messages. Should be > ping timeout
   restart:
     error: .1
-    flap: .2
+    flap: .4  # test_mon: well above scenario 3's steps, well below the others
     up: .17
 """
 
@@ -262,7 +262,7 @@ async def test_mon(cfg):
 
             # Scenario 1: service announces but never calls .set() (up stays False)
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
-                await anyio.sleep(0.5)
+                await anyio.sleep(0.8)
             await anyio.sleep(0.5)
             assert len(emsgs) == 3
             assert emsgs[0]["msg"] == "not up"
@@ -277,7 +277,7 @@ async def test_mon(cfg):
             # Scenario 2: service announces and calls .set() immediately (up=True)
             async with announcing(cl, host="test123", name=P("test.mon")) as s:
                 s.set()
-                await anyio.sleep(0.5)
+                await anyio.sleep(0.8)
                 assert len(emsgs) == 1
             await anyio.sleep(0.5)
             assert len(emsgs) == 2
@@ -314,8 +314,8 @@ async def test_mon(cfg):
             # Scenario 4: service announces with a value but never calls .set()
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
                 s.value = 43
-                await anyio.sleep(0.25)
-            await anyio.sleep(0.25)
+                await anyio.sleep(0.8)
+            await anyio.sleep(0.5)
             assert len(emsgs) == 3
             assert emsgs[0]["msg"] == "not up"
             assert emsgs[1] is Ellipsis

@@ -103,8 +103,10 @@ As described above.
 
 1. Is a wall-clock `wake_at` returned by the cores right? The alternative
    is a relative delay.
-2. HEAT.md §2.7 says an expiring override "publishes an event saying so",
-   but names no path. Proposal: leave this to the units (step 2 only
-   signals the change).
-3. The simulator (n84.6) configures itself with dataclasses, not the
-   pydantic `BaseModel`. Leave it as is?
+
+Decided:
+
+- Publishing an event when an override expires is left to the units;
+  `Override` only signals the change.
+- The simulator keeps its dataclass configuration (it is not production
+  code).

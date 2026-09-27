@@ -191,14 +191,20 @@ class Inputs:
 
     Start :meth:`run` in a task group. After it is started, every reader
     knows the current state of its item.
+
+    Args:
+        on_change: Also called whenever any input changes.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, on_change: Callable[[], None] | None = None) -> None:
         self.readers: dict[str, Reader[Any]] = {}
+        self.on_change = on_change
         self._changed = anyio.Event()
 
     def _on_change(self) -> None:
         self._changed.set()
+        if self.on_change is not None:
+            self.on_change()
 
     def add(self, name: str, reader: Reader[T]) -> Reader[T]:
         """Add a reader and return it."""

@@ -22,10 +22,18 @@ from typing import TYPE_CHECKING, TypeVar
 if TYPE_CHECKING:
     from moat.link.client import LinkSender
 
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
     from typing import Any
 
-__all__ = ["CFG_PATH", "EmergencyCfg", "ServiceCfg", "UnitCfg", "defaults", "unit_config"]
+__all__ = [
+    "CFG_PATH",
+    "EmergencyCfg",
+    "ServiceCfg",
+    "UnitCfg",
+    "defaults",
+    "load_config",
+    "unit_config",
+]
 
 _logger = logging.getLogger(__name__)
 
@@ -72,9 +80,35 @@ def _merge(model: type[M], item: Any, dflt: attrdict) -> M:
     return model.model_validate(data)
 
 
-async def unit_config(link: LinkSender, unit: str, model: type[M]) -> AsyncIterator[M]:
+async def load_config(link: LinkSender, unit: str, model: type[M]) -> M:
+    """
+    Return a unit's validated configuration once.
+
+    If the Link item does not validate, the defaults are used.
+
+    Args:
+        link: The MoaT-Link client.
+        unit: The unit's name, e.g. ``service``.
+        model: The unit's configuration model.
+    """
+    dflt = defaults(unit)
+    try:
+        item = await link.d_get(CFG_PATH / unit)
+    except KeyError:
+        item = NotGiven
+    try:
+        return _merge(model, item, dflt)
+    except Exception as exc:
+        _logger.warning("Invalid config for %s, ignored: %r", unit, exc)
+        return _merge(model, NotGiven, dflt)
+
+
+async def unit_config(link: LinkSender, unit: str, model: type[M]) -> AsyncGenerator[M]:
     """
     Yield a unit's validated configuration, and again whenever it changes.
+
+    Iterate until cancelled; don't stop early (the watcher runs in a task
+    group, which must not be left from a suspended generator).
 
     The first instance is yielded once the current state of the Link item
     is known; if that item does not validate, the defaults are used. A

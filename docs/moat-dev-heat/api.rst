@@ -45,3 +45,6 @@ API
 
 .. autoclass:: moat.dev.heat.pid.PIDState
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.unit
+   :members:

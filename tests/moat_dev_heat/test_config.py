@@ -9,7 +9,7 @@ import pytest
 
 from moat.util import NotGiven, attrdict
 from moat.dev.heat import config as hcfg
-from moat.dev.heat.config import CFG_PATH, ServiceCfg, UnitCfg, unit_config
+from moat.dev.heat.config import CFG_PATH, ServiceCfg, UnitCfg, load_config, unit_config
 from moat.lib.config.base import BaseModel
 
 from typing import TYPE_CHECKING
@@ -133,6 +133,16 @@ async def test_invalid_initial(link):
         await tg.start(cf.run)
         assert (await cf.next()).x == 1
         tg.cancel_scope.cancel()
+
+
+async def test_load_config(link):
+    "one-shot loading: defaults, merged item, invalid item"
+    assert (await load_config(link, UNIT, TCfg)).x == 1
+    await _set(link, {"inner": {"a": 3}})
+    res = await load_config(link, UNIT, TCfg)
+    assert (res.x, res.inner.a, res.inner.b) == (1, 3, 20)
+    await _set(link, {"x": "bad"})
+    assert (await load_config(link, UNIT, TCfg)).x == 1
 
 
 def test_package_defaults(cfg):  # noqa: ARG001

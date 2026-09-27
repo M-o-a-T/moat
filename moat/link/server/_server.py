@@ -1598,9 +1598,8 @@ class Server(MsgHandler):
         """
         task_status.started()
         await anyio.sleep(self.cfg.timeout.delete / 10)
-        t = time.time()
 
-        async def _walk(d: Node) -> bool:
+        async def _walk(d: Node, t: float) -> bool:
             # return True if we need to keep this
 
             has_any = False
@@ -1613,20 +1612,38 @@ class Server(MsgHandler):
                 and t - d.meta.timestamp > self.cfg.timeout.delete
             ):
                 del d.meta
-            drop = set()
-            for k, v in d.items():
-                if await _walk(v):
+            drop = []
+
+            for k, v in tuple(d.items()):
+                r = await _walk(v, t)
+                if r:
                     has_any = True
                 else:
-                    drop.add(k)
-            for k in drop:
+                    drop.append((k, v))
+            for k, v in drop:
+                if v._sub or v.data_ is not NotGiven:  # noqa:SLF001
+                    continue  # raced: child came alive again
+                if d._sub.get(k) is not v:  # noqa:SLF001
+                    continue  # raced: key vanished / was recreated
                 del d[k]
             if has_any or d._data is not NotGiven:  # noqa:SLF001
                 return True
             return d.meta is not None
 
+        _fails = 0
         while True:
-            await _walk(self.data)
+            try:
+                await _walk(self.data, time.time())
+            except Exception:
+                # A missed round recovers on the next cycle; crashing the
+                # whole server because housekeeping hiccupped is worse.
+                if _fails >= 3:
+                    raise
+
+                self.logger.exception("Flushing deleted nodes failed")
+                _fails += 1
+            else:
+                _fails = 0
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 

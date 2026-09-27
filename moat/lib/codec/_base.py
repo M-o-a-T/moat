@@ -90,6 +90,14 @@ class Codec:
         """
         raise NotImplementedError
 
+    def eof(self) -> None:
+        """
+        Signal that no more data will be fed.
+
+        Afterwards, iterating returns any objects still in the buffer
+        that are not terminated explicitly. The default does nothing.
+        """
+
     def unfeed(self, buf: VarByteType) -> int:
         """
         Take from the front of the decoder's buffer.

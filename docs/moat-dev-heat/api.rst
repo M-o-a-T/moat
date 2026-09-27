@@ -49,6 +49,12 @@ API
 .. automodule:: moat.dev.heat.unit
    :members:
 
+.. automodule:: moat.dev.heat.sim.plant
+   :members: Plant
+
+.. automodule:: moat.dev.heat.sim.config
+   :members: PlantCfg
+
 .. automodule:: moat.dev.heat.sim.scenario
    :members:
 

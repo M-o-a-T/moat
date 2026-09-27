@@ -100,7 +100,7 @@ class Scenario:
     """A plant setup plus a schedule of events."""
 
     plant: dict[str, Any] = field(default_factory=dict)
-    """Overrides of the :class:`~moat.dev.heat.sim.PlantCfg` defaults."""
+    """Overrides of the :class:`~moat.dev.heat.sim.config.PlantCfg` defaults."""
 
     seed: int = 0
     """Random seed of the plant."""

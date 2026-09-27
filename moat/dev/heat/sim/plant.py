@@ -102,7 +102,7 @@ class Plant:
     """
     Sans-IO heating plant simulator.
 
-    Set :attr:`inputs`, call :meth:`step`, read :meth:`sensors`. Physics
+    Set ``inputs``, call :meth:`step`, read :meth:`sensors`. Physics
     is deterministic for a given seed; sensor noise uses a separate
     random stream, so reading sensors does not perturb the physics.
     """

@@ -619,6 +619,7 @@ SCENARIOS = {
                 },
             },
             start=6 * H,
+            sample=120,  # keeps the trace file below the repository's size limit
         ),
         Scenario(
             "day_night",

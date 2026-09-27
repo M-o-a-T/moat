@@ -22,7 +22,7 @@ One JSON object per line. Line 1 is the header: scenario name, `doc`,
 and `events` — `[t, "run", state]` for every controller state change,
 `[t, <input>, value]` for scripted inputs, `[t, "exception", text]` if
 the controller died. Every following line is a sample (every 60 s of
-simulated time, `t` in seconds from the scenario start):
+simulated time, 120 s for `pellet_handover`; `t` in seconds from the scenario start):
 
 | Key | Meaning |
 | --- | --- |

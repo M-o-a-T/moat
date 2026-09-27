@@ -1,0 +1,388 @@
+state: !P heat.state
+adj:
+    # offsets to destination temperature
+    water: 2
+    heat: 1.5
+    more: 2.0  # output temperature offset
+    max: 59  # don't try for more
+    max_max: 61  # don't try for more
+    buffer: 3.0  # above requred temp
+    pellet:
+      pid:
+        load:
+          d: 50
+          tf: 250
+      load: 3
+      low: 15 # 8
+      preload:
+        low: 2
+        wp: 3.5
+      max: 75
+    low:
+      water: 2
+      heat: 1
+      buffer: -5  # for pid.buffer
+    curve:
+      dest: 21
+      max: 72
+      min: -15
+      exp: 1.35
+      current: !P temp.avg.temp.aussen_kompost.min
+      setting: !P heat.s.heat.temp.cmd
+
+      night:
+        dest: 15
+        start:
+          wk: 5.5
+          we: 7
+        stop:
+          wk: 21.5
+          we: 23
+
+output:
+    flow:
+      pin: 4
+      freq: 200
+      path: !P heat.s.pump.pid
+sensor:
+    pump:
+      in: !P heat.s.pump.temp.in   # t_in
+      out: !P heat.s.pump.temp.out # t_out
+      flow: !P heat.s.pump.flow    # r_flow: flow rate
+      ice: !P heat.s.pump.de_ice   # m_ice
+    buffer:
+      top: !P heat.s.buffer.temp.water   # tb_water
+      heat: !P heat.s.buffer.temp.heat   # tb_heat
+      mid: !P heat.s.buffer.temp.mid     # tb_mid
+      low: !P heat.s.buffer.temp.return  # tb_low
+    error: !P heat.s.pump.err
+    power: !P heat.s.pump.power  # m_power
+    cop: !P home.ass.dyn.sensor.heizung.wp_cop.state  # m_cop
+    temp:
+      current: !P home.ass.dyn.sensor.temp.garten_kompost_schatten.state
+      predict: !P temp.min.forecast:6
+      pellet: !P heat.s.pellets.temp.top
+      heat: !P heat.s.heating.temp.out
+    pellet:
+      state: !P heat.s.pellets.state
+
+setting:
+    heat:
+      day: !P heat.s.heat.temp        # c_heat
+      night: !P heat.s.heat.temp_low  # c_heat_night
+#     power:
+#       pin: 19
+      mode:
+        path: !P heat.s.heat.mode.cmd    # 5:standby 2:auto 3:day 4:night
+        on: 3
+        off: 5
+        delay: 30
+        force:
+          day:
+            cmd: !P home.ass.dyn.switch.heizung.day_mode.cmd
+            state: !P home.ass.dyn.switch.heizung.day_mode.state
+          night:
+            cmd: !P home.ass.dyn.switch.heizung.night_mode.cmd
+            state: !P home.ass.dyn.switch.heizung.night_mode.state
+
+    water: !P heat.s.water.temp         # c_water
+    passthru: !P heat.s.pump.pass       # m_passthru
+lim:
+    flow:
+      min: 5
+    power:
+      min: .05
+      off: .2   # power cutoff if the buffer is warm enough
+      time: 300  # must run at least this long
+    times:
+      start: 500
+      ice: 1000
+      stop: 150
+    low:
+      scale: .015
+      limit: .15
+      pellet:
+        scale: .01
+        limit: .25
+    pellet:
+      stop:
+        buffer: 0
+      start:
+        buffer: 6
+        heat:
+          delta: 1.5  #
+          scale: .01
+cmd:
+    bypass:
+      cmd: !P home.ass.dyn.switch.heizung.wp_bypass.cmd  # c_bypass
+      mode: !P heat.s.pump.cmd.want.mode
+      power: !P heat.s.pump.cmd.want.power
+    flow: !P heat.s.pump.rate.cmd       # c_flow
+    wp: !P home.ass.dyn.switch.heizung.wp.cmd  # cm_wp
+    heat: !P home.ass.dyn.switch.heizung.main.cmd  # cm_heat
+    mode:
+      path: !P heat.s.pump.cmd.mode       # write
+      on: 3
+      off: 0
+    power: !P heat.s.pump.cmd.power
+    pellet:
+      force: !P heat.s.pellets.load.force  # cm_pellet_force
+      temp: !P heat.s.pellets.temp.goal.cmd
+      load: !P heat.s.pellets.load.goal.cmd
+      wanted: !P heat.s.pellets.power.cmd.auto  # request flag, set by us
+      switch: !P home.ass.dyn.switch.heizung.pellets.cmd # manual switch
+      run: !P heat.s.pellets.power.cmd  # cm_pellet -- also controls the burner
+
+feedback:
+    bypass: !P home.ass.dyn.switch.heizung.wp_bypass.state
+    wp: !P home.ass.dyn.switch.heizung.wp.state
+    heat: !P home.ass.dyn.switch.heizung.main.state
+    pump: !P home.ass.dyn.binary_sensor.heizung.pump.state
+    ice: !P home.ass.dyn.binary_sensor.heizung.wp_de_ice.state
+    # pellet: !P home.ass.dyn.binary_sensor.heizung.pellets.state
+
+misc:
+    switch:
+      state: !P heat.s.pump.switchover
+    pellet:
+      current: 1
+      predict: 0.5
+      avg_off: -1
+
+    init_timeout: 5
+    de_ice:
+      flow: 18  # flow rate when de-icing
+      pwm: .5
+      min: .4
+    stop:
+      flow: 10  # or more if the max outflow temperature wants us to
+      delta: 3  # outflow-inflow: if less than .delta, the pump can be turned off
+    start: # conditions when starting up
+      delay: 450  # 10min
+      flow:
+        init:
+          rate: 6
+          pwm: .25
+        power:
+          rate: 15
+          pwm: .4
+        run: 15
+      power: 0.1
+      delta: 2  # outflow-inflow: if more than .delta, we start the main control algorithm
+      # TODO add pump power uptake, to make sure this is no fluke
+    min_power: 1.2
+    heat:
+      delta: 12
+
+pid:
+    flow:
+        ## direct flow rate control for the pump
+        # input: desired flow rate
+        # output: PWM for the flow pump
+        # instable: p: 0.03 i: 0.0005
+        p: 0.02
+        i: 0.0003
+        d: 0.0
+        tf: 0.0
+
+        min: .25
+        max: .95
+
+        # setpoint change
+        # .8 == 20 l/min
+        factor: 0 # .04
+        offset: 0
+
+        # state attr
+        state: p_flow
+        log:
+          value: !P heat.s.pump.pct.flow
+          setpoint: !P heat.s.pump.set.flow
+
+    pump:
+        ## indirect flow rate control. The heat pump delivers some amount of energy;
+        ## we want the flow rate to be such that the temperature of the outflow is
+        ## what we want. Too high and the efficiency suffery; too low and we don't get
+        ## the temperature we want.
+        #
+        # setpoint: desired buffer temperature, plus offset
+        # input: exchanger output temperature
+        # output: PWM for the flow pump
+        ## Adjust the flow to keep the output temperature within range.
+        # unstable: -0.05/-0.001
+        # unstable: -0.03/-0.001
+        # stable: -0.04/-0.0005
+        p: -0.02
+        i: -0.0003
+        d: -.2
+        tf: 30
+
+        min: .25
+        max: 1
+
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: p_pump
+        log:
+          value: !P heat.s.pump.pct.pump
+          setpoint: !P heat.s.pump.set.pump
+
+    load:
+        ## Primary heat exchanger control. We want the top buffer temperature to be at a certain value.
+        ##
+        # setpoint: desired buffer temperature
+        # input: buffer temperature
+        # output: heat exchanger load
+        ## Add as much load as required to keep the buffer temperature up.
+        # slow: p: 0.08 i: 0.0005
+        p: 0.08
+        i: 0.0015
+        d: 0.0
+        tf: 0.0
+
+        min: .15
+        max: 1
+
+        # no setpoint change, always zero
+        #
+        # 50: 5 /min
+        #
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: p_load
+        log:
+          value: !P heat.s.pump.pct.load
+          setpoint: !P heat.s.pump.set.load
+
+    buffer:
+        ## More heat exchanger control. We want the bottom buffer temperature not to get too high.
+        ##
+        # setpoint: desired buffer temperature
+        # input: buffer temperature
+        # output: heat exchanger load
+        ## Reduce the load as required to keep the buffer temperature down.
+        # slow: p: 0.1 i: 0.0005
+        # ugh: p: 0.15 i: 0.001
+        p: 0.3
+        i: 0.0005
+        d: 50
+        tf: 100
+
+        min: .1
+        max: 1
+
+        # no setpoint change, always zero
+        #
+        # 50: 5 /min
+        #
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: p_buffer
+        log:
+          value: !P heat.s.pump.pct.buffer
+          setpoint: !P heat.s.pump.set.buffer
+
+    limit:
+        ## Secondary heat exchanger control. We don't want more load than the pump can transfer
+        ## to the buffer, otherwise the system overheats.
+        #
+        # setpoint: desired buffer temperature plus adj.more
+        # input: exchanger output temperature
+        # output: heat exchanger load
+        #
+        # instable: p=.05 i=.001
+        # instable: p=.03 i=.001
+        # instable: p=.03 i=.0005
+        # probably stable: p=.02 i=.0005
+        # mostly stable: p=.025 i=.0005
+        p: 0.025
+        i: 0.001
+        d: 0.0
+        tf: 0.0
+
+        min: .1
+        max: 1
+
+        # setpoint change
+        # 65: 20 /min
+        # 50: 5 /min
+        #
+        factor: 0 # 1
+        offset: 0 # -45
+
+        # state attr
+        state: p_limit
+        log:
+          value: !P heat.s.pump.pct.limit
+          setpoint: !P heat.s.pump.set.limit
+
+    p_load:
+        ## Primary pellet control. We want the top buffer temperature to be at a certain value.
+        ##
+        # setpoint: desired buffer temperature
+        # input: buffer temperature
+        # output: heat exchanger load
+        ## Add as much load as required to keep the buffer temperature up.
+        # slow: p: 0.01 i: 0.0001 d: 100 tf: 2000
+        # tf:1500 seems to have too long a memory
+        # p:.03 seems too low( but ??)
+        # p:.05 might be too high (or not?)
+        # i: 0.0001 seems too high
+        # i: 0.00005 is rather slow
+        # d: 100/120 tf: 750
+        p: 0.003  # # 0.01 # 0.05 0.075
+        i: 0.00002  # 0.0001
+        d: 10  # 20 # 50
+        tf: 300  # 900
+
+        min: .3
+        max: 1
+
+        # no setpoint change, always zero
+        #
+        # 50: 5 /min
+        #
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: pp_load
+        log:
+          value: !P heat.s.pellets.pct.load
+          setpoint: !P heat.s.pellets.set.load
+
+    p_buffer:
+        ## More heat exchanger control. We want the bottom buffer temperature not to get too high.
+        ##
+        # setpoint: desired buffer temperature
+        # input: buffer temperature
+        # output: heat exchanger load
+        ## Reduce the load as required to keep the buffer temperature down.
+        # slow: p: 0.1 i: 0.0005
+        # ugh: p: 0.15 i: 0.001
+        p: 0.01
+        i: 0.00001
+        d: 0
+        tf: 0
+
+        min: .3
+        max: 1
+
+        # no setpoint change, always zero
+        #
+        # 50: 5 /min
+        #
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: pp_buffer
+        log:
+          value: !P heat.s.pellets.pct.buffer
+          setpoint: !P heat.s.pellets.set.buffer

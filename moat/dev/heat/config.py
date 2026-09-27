@@ -14,7 +14,10 @@ import logging
 from moat.util import NotGiven, attrdict, combine_dict
 from moat.lib.config import CFG
 from moat.lib.config.base import BaseModel
-from moat.lib.path import P
+from moat.lib.path import (
+    P,
+    Path,  # pydantic needs it at runtime
+)
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, TypeVar
@@ -57,6 +60,23 @@ class ServiceCfg(UnitCfg):
 
 class EmergencyCfg(UnitCfg):
     """Tunables of the emergency shutdown procedure (HEAT.md §2.6)."""
+
+    flow_rate: float = 12
+    """Flow while draining the heat exchanger, l/min."""
+    timeout: float = 120
+    """Maximum cool-down wait, seconds."""
+    stop_delta: float = 3.0
+    """The heat pump has cooled down when ``t_out - t_in`` is below this, K."""
+    max_sensor_age: float = 30
+    """``t_in``/``t_out`` older than this are ignored, seconds."""
+    total_timeout: float = 180
+    """Upper bound of the whole procedure, seconds."""
+    power_path: Path = P("heat.s.pump.cmd.power")
+    mode_path: Path = P("heat.s.pump.cmd.mode")
+    mode_off: int = 0
+    sensor_in: Path = P("heat.s.pump.temp.in")
+    sensor_out: Path = P("heat.s.pump.temp.out")
+    flow_request: Path = P("app.heat.flow.request")
 
 
 def defaults(unit: str) -> attrdict:

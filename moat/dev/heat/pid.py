@@ -179,6 +179,11 @@ class APID:
         self._log(self.cfg.log.value, res)
         return res
 
+    def idle(self, now: float) -> None:
+        """Advance the time without integrating, while the output is not used."""
+        self.pid.set_state(t=now)
+        self._sync()
+
     def move_to(self, value: float, out: float, now: float) -> None:
         """Change the state so that this measurement results in that output."""
         self.pid.move_to(value, out, t=now)

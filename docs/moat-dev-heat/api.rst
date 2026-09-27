@@ -60,3 +60,17 @@ API
 
 .. automodule:: moat.dev.heat.sim.link
    :members:
+
+.. automodule:: moat.dev.heat.flow
+   :members:
+   :exclude-members: FlowCfg, FlowRequest, FlowState
+
+.. autoclass:: moat.dev.heat.flow.FlowRequest
+   :class-doc-from: class
+   :members: pwm, rate, temp, min_pwm, preload, seq, to_link
+
+.. autoclass:: moat.dev.heat.flow.FlowCfg
+   :class-doc-from: class
+
+.. autoclass:: moat.dev.heat.flow.FlowState
+   :class-doc-from: class

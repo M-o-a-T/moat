@@ -24,7 +24,16 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable
 
-__all__ = ["Inputs", "Override", "Reader", "ServiceMonitor", "Writer", "out_path", "service_path"]
+__all__ = [
+    "Inputs",
+    "Override",
+    "Reader",
+    "ServiceMonitor",
+    "Writer",
+    "is_up",
+    "out_path",
+    "service_path",
+]
 
 _logger = logging.getLogger(__name__)
 
@@ -276,6 +285,16 @@ class Writer:
         return True
 
 
+def is_up(announcement: Any) -> bool:
+    """
+    Whether a service announcement says the service is up.
+
+    Args:
+        announcement: The value of a ``run.host.<host>.…`` item, or `None`.
+    """
+    return isinstance(announcement, Mapping) and bool(announcement.get("up"))
+
+
 class ServiceMonitor(Reader[Any]):
     """
     Tracks whether a unit's service is alive, from its announcement.
@@ -295,4 +314,4 @@ class ServiceMonitor(Reader[Any]):
     @property
     def alive(self) -> bool:
         """Whether the service is announced and up."""
-        return isinstance(self.value, Mapping) and bool(self.value.get("up"))
+        return is_up(self.value)

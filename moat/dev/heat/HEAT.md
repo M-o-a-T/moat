@@ -351,6 +351,7 @@ earlier drafts. They are plain retained data items:
 | `app.heat.override.wp` | `bool \| None` | heat pump forced on / forced off / automatic |
 | `app.heat.override.pellet` | `bool \| None` | pellet burner forced on / forced off / automatic |
 | `app.heat.override.flow_temp` | `float \| None` | intended flow temperature / automatic |
+| `app.heat.override.pwm` | `float \| None` | water-pump PWM / automatic (flow unit) |
 
 Each item may instead hold `{value: …, expires: <epoch>, reason: str}`;
 after `expires` the consumer treats it as `None` (automatic) and
@@ -481,7 +482,9 @@ daemon or a hardware driver).
 - **Watches**: `sensor.pump.flow` (`r_flow`), `sensor.pump.out`
   (`t_out`), `app.heat.flow.request`.
 - **Publishes**: PWM output, `app.heat.flow.out` = `{pwm, mode,
-  stable, request_ts}`.
+  stable, request_seq}`; `request_seq` is the `seq` of the request in
+  effect. Besides the request modes, `mode` can be `override`, `freeze`
+  and `safe` (stale sensor), `fallback` and `idle` (no trusted request).
 - **State**: PID slots `flow`, `pump`.
 
 Request (`app.heat.flow.request`, written by the pump unit and by
@@ -505,6 +508,12 @@ Request (`app.heat.flow.request`, written by the pump unit and by
 | `rate_temp` | `temp`, `down`, `ice` (`handle_flow`) | `max(pid.flow, pid.pump)`, ≥ `min_pwm` |
 | `temp` | `run` | `pid.pump(t_out)`; 1.0 if `t_out > adj.max_max` (with `move_to`) |
 | `drain` | emergency | `pid.flow` at `rate`, ≥ `safe_pwm` |
+
+The request is written with plain types (`FlowRequest.to_link()`). A
+sensor counts as stale when its value has not changed for `max_age`
+seconds, because values are published on change; `max_age` must
+therefore be longer than a sensor's longest steady spell. A PID whose
+output is not used follows the time without integrating.
 
 The pellet unit never requests flow. `flow.out.pwm` replaces the old
 `state.last_pwm` for its consumers (`pump`, `heat_valve`).

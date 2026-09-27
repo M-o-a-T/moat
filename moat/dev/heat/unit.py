@@ -97,6 +97,9 @@ class Unit(Generic[C, S]):
     state_model: type[S]
     """The unit's state model."""
 
+    service: ServiceCfg = ServiceCfg()
+    """The shared service settings; loaded by :meth:`run` before the inputs are built."""
+
     def __init__(self, link: LinkSender, save_delay: float = 10.0) -> None:
         self.link = link
         self.store = StateStore(link, self.name, self.state_model, save_delay=save_delay)
@@ -140,7 +143,7 @@ class Unit(Generic[C, S]):
 
     async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
         """Run the unit."""
-        svc = await load_config(self.link, "service", ServiceCfg)
+        self.service = svc = await load_config(self.link, "service", ServiceCfg)
         state = await self.store.load()
 
         async with (

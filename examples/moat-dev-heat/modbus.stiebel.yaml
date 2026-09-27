@@ -1,0 +1,215 @@
+# MoaT-Link version of /etc/moat/modbus.stiebel.yaml, for `moat modbus dev poll`.
+# See README.md in this directory.
+
+inc:
+  stiebel:
+    include: heating/Stiebel.yaml
+
+slots:
+  1sec:
+    read_delay: 1
+    read_align: null
+    write_delay: 1
+  5sec:
+    read_delay: 5
+    read_align: null
+    write_delay: 5
+  15sec:
+    read_delay: 5
+    write_delay: 15
+    read_align: null
+server:
+  - host: 0.0.0.0
+    port: 503
+
+ports:
+  /dev/ttyUSB0:  # EDIT: production uses !env DEV_STIEBEL
+    serial:
+      baudrate: 19200
+      parity: "E"
+    101:
+      server: 3
+      ref: inc.stiebel
+      regs:
+        op:
+          mode:
+            src: !P heat.s.pump.cmd.mode
+            slot: 5sec
+          power:
+            src: !P heat.s.pump.cmd.power
+            slot: 5sec
+          reset:
+            src: !P heat.s.pump.cmd.reset
+            slot: write
+            idle: 0
+          keepalive:
+            src: !P heat.s.pump.cmd.live
+            slot: write
+            idle: 0
+        state:
+          state:
+            dest: !P heat.s.pump.state
+            slot: 15sec
+          compressor:
+            dest: !P heat.s.pump.compr.speed
+            slot: 15sec
+          water:
+            in:
+              dest:
+                - !P heat.s.pump.temp.in
+                - !P home.ass.dyn.sensor.temp.heizung_wp_in.state
+              slot: 5sec
+            out:
+              dest:
+                - !P heat.s.pump.temp.out
+                - !P home.ass.dyn.sensor.temp.heizung_wp_out.state
+              slot: 1sec
+          evaporator:
+            dest: !P heat.s.pump.temp.evaporator
+            slot: 15sec
+          hot_gas:
+            dest: !P heat.s.pump.gas
+            slot: 15sec
+          low_p:
+            dest: !P heat.s.pump.pressure.low
+            slot: 15sec
+          high_p:
+            dest: !P heat.s.pump.pressure.high
+            slot: 15sec
+          power:
+            dest:
+              - !P heat.s.pump.power
+              - !P home.ass.dyn.sensor.power.heizung_wp.state
+            slot: 1sec
+          flow:
+            dest:
+              - !P heat.s.pump.flow
+              - !P home.ass.dyn.sensor.flow.heatpump.state
+            slot: 1sec
+          de_ice:
+            dest: !P heat.s.pump.de_ice
+            slot: 1sec
+
+          _y1:
+            dest: !P heat.s.pump._y:1
+            slot: 15sec
+          _y2:
+            dest: !P heat.s.pump._y:2
+            slot: 15sec
+          _y3:
+            dest: !P heat.s.pump._y:3
+            slot: 15sec
+          _y4:
+            dest: !P heat.s.pump._y:4
+            slot: 15sec
+          _y5:
+            dest: !P heat.s.pump._y:5
+            slot: 15sec
+          _y6:
+            dest: !P heat.s.pump._y:6
+            slot: 15sec
+          _y7:
+            dest: !P heat.s.pump._y:7
+            slot: 15sec
+
+          _x1:
+            dest: !P heat.s.pump._x:1
+            slot: 15sec
+          _x2:
+            dest: !P heat.s.pump._x:2
+            slot: 15sec
+          _x3:
+            dest: !P heat.s.pump._x:3
+            slot: 15sec
+          _x4:
+            dest: !P heat.s.pump._x:4
+            slot: 15sec
+          _x5:
+            dest: !P heat.s.pump._x:5
+            slot: 15sec
+          _x6:
+            dest: !P heat.s.pump._x:6
+            slot: 15sec
+          _x7:
+            dest: !P heat.s.pump._x:7
+            slot: 15sec
+          _x8:
+            dest: !P heat.s.pump._x:8
+            slot: 15sec
+
+          _c1:
+            dest: !P heat.s.pump._c:1
+            slot: 15sec
+          _c2:
+            dest: !P heat.s.pump._c:2
+            slot: 15sec
+          _c3:
+            dest: !P heat.s.pump._c:3
+            slot: 15sec
+          _c4:
+            dest: !P heat.s.pump._c:4
+            slot: 15sec
+          _c5:
+            dest: !P heat.s.pump._c:5
+            slot: 15sec
+          error:
+            1:
+              dest: !P heat.s.pump.err:1
+              slot: 15sec
+            2:
+              dest: !P heat.s.pump.err:2
+              slot: 15sec
+            3:
+              dest: !P heat.s.pump.err:3
+              slot: 15sec
+            4:
+              dest: !P heat.s.pump.err:4
+              slot: 15sec
+            5:
+              dest: !P heat.s.pump.err:5
+              slot: 15sec
+            6:
+              dest: !P heat.s.pump.err:6
+              slot: 15sec
+            7:
+              dest: !P heat.s.pump.err:7
+              slot: 15sec
+            8:
+              dest: !P heat.s.pump.err:8
+              slot: 15sec
+            9:
+              dest: !P heat.s.pump.err:9
+              slot: 15sec
+            10:
+              dest: !P heat.s.pump.err:10
+              slot: 15sec
+            11:
+              dest: !P heat.s.pump.err:11
+              slot: 15sec
+            12:
+              dest: !P heat.s.pump.err:12
+              slot: 15sec
+            13:
+              dest: !P heat.s.pump.err:13
+              slot: 15sec
+            14:
+              dest: !P heat.s.pump.err:14
+              slot: 15sec
+            15:
+              dest: !P heat.s.pump.err:15
+              slot: 15sec
+            16:
+              dest: !P heat.s.pump.err:16
+              slot: 15sec
+            17:
+              dest: !P heat.s.pump.err:17
+              slot: 15sec
+            18:
+              dest: !P heat.s.pump.err:18
+              slot: 15sec
+            19:
+              dest: !P heat.s.pump.err:19
+              slot: 15sec
+            20:
+              dest: !P heat.s.pump.err:20
+              slot: 15sec

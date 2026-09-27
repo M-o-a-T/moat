@@ -1,0 +1,144 @@
+# MoaT-Link version of /etc/moat/modbus.stiebelfake.yaml, for `moat modbus dev poll`.
+# See README.md in this directory.
+
+inc:
+  stiebel:
+    include: heating/Stiebel.yaml
+
+# the other side is DEV_STIEBEL
+server:
+- port: /dev/ttyUSB1  # EDIT: production uses !env DEV_SOLVIS
+  serial:
+    baudrate: 19200
+    parity: "E"
+  ignored:
+    - 7
+    - 16
+    - 60
+    - 61
+    - 62
+    - 117
+  units:
+    101:
+      ref: inc.stiebel
+      regs:
+        op:
+          mode:
+            dest: !P heat.s.pump.cmd.want.mode
+            src: !P heat.s.pump.cmd.mode
+          power:
+            dest: !P heat.s.pump.cmd.want.power
+            src: !P heat.s.pump.cmd.power
+          reset:
+            dest: !P heat.s.pump.cmd.reset
+          keepalive:
+            dest: !P heat.s.pump.cmd.live
+
+        state:
+          state:
+            src: !P heat.s.pump.state
+          compressor:
+            src: !P heat.s.pump.compr.speed
+          water:
+            in:
+              src: !P heat.s.pump.temp.in
+            out:
+              src: !P heat.s.pump.temp.out
+          evaporator:
+            src: !P heat.s.pump.temp.evaporator
+          hot_gas:
+            src: !P heat.s.pump.gas
+          low_p:
+            src: !P heat.s.pump.pressure.low
+          high_p:
+            src: !P heat.s.pump.pressure.high
+          power:
+            src: !P heat.s.pump.power
+          flow:
+            src: !P heat.s.pump.flow
+          de_ice:
+            src: !P heat.s.pump.de_ice.fake
+
+          _y1:
+            src: !P heat.s.pump._y:1
+          _y2:
+            src: !P heat.s.pump._y:2
+          _y3:
+            src: !P heat.s.pump._y:3
+          _y4:
+            src: !P heat.s.pump._y:4
+          _y5:
+            src: !P heat.s.pump._y:5
+          _y6:
+            src: !P heat.s.pump._y:6
+          _y7:
+            src: !P heat.s.pump._y:7
+
+          _x1:
+            src: !P heat.s.pump._x:1
+          _x2:
+            src: !P heat.s.pump._x:2
+          _x3:
+            src: !P heat.s.pump._x:3
+          _x4:
+            src: !P heat.s.pump._x:4
+          _x5:
+            src: !P heat.s.pump._x:5
+          _x6:
+            src: !P heat.s.pump._x:6
+          _x7:
+            src: !P heat.s.pump._x:7
+          _x8:
+            src: !P heat.s.pump._x:8
+
+          _c1:
+            src: !P heat.s.pump._c:1
+          _c2:
+            src: !P heat.s.pump._c:2
+          _c3:
+            src: !P heat.s.pump._c:3
+          _c4:
+            src: !P heat.s.pump._c:4
+          _c5:
+            src: !P heat.s.pump._c:5
+          error:
+            1:
+              src: !P heat.s.pump.err:1
+            2:
+              src: !P heat.s.pump.err:2
+            3:
+              src: !P heat.s.pump.err:3
+            4:
+              src: !P heat.s.pump.err:4
+            5:
+              src: !P heat.s.pump.err:5
+            6:
+              src: !P heat.s.pump.err:6
+            7:
+              src: !P heat.s.pump.err:7
+            8:
+              src: !P heat.s.pump.err:8
+            9:
+              src: !P heat.s.pump.err:9
+            10:
+              src: !P heat.s.pump.err:10
+            11:
+              src: !P heat.s.pump.err:11
+            12:
+              src: !P heat.s.pump.err:12
+            13:
+              src: !P heat.s.pump.err:13
+            14:
+              src: !P heat.s.pump.err:14
+            15:
+              src: !P heat.s.pump.err:15
+            16:
+              src: !P heat.s.pump.err:16
+            17:
+              src: !P heat.s.pump.err:17
+            18:
+              src: !P heat.s.pump.err:18
+            19:
+              src: !P heat.s.pump.err:19
+            20:
+              src: !P heat.s.pump.err:20

@@ -126,19 +126,10 @@ New units should either match these or deviate deliberately.
 
 - `solvis.py` no longer imported: `t_iter` moved from `moat.util` to
   `moat.util.times` (fixed).
-- Open question (moat-vou): `CPID.__call__(measurement)` passes
-  `setpoint - measurement` to `PID.__call__`, which calls the overridden
-  `CPID.integrate` with it, so the setpoint is subtracted a second time.
-  With the production `flow` gains, setpoint 15 and a measured 28,
-  `pid(28)` returns 0.95 while `pid.sum(pid.integrate(28))` returns 0.25.
-  The legacy code uses the first form for the flow and pump PWM in the
-  `flow`, `wait_power`, `temp`, `ice` and `down` states (not in `run`,
-  which uses the split form), so in these traces the circulation pump
-  runs at maximum there. At minimum start load in cold air the
-  simulated heat pump then barely reaches `misc.start.delta`; see the
-  `hp_no_power`-style start timeout if that happens. Whether the
-  production PID code behaves the same is to be settled. The traces are
-  recorded with `moat.lib.pid` as it is.
+- `CPID.__call__` subtracted the setpoint twice, so the flow and pump
+  PWM in `flow`, `wait_power`, `temp`, `ice` and `down` ran at maximum
+  (moat-vou, fixed on main in 681e053d1). The traces are recorded with
+  the fix; the pump now runs at 0.25–0.6 in those states.
 - `../wp.py.txt`, a verbatim copy of the separate frost-protection task (not part of
   `solvis.py`), is kept here for the port (moat-n84.29).
 

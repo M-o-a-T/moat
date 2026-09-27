@@ -747,3 +747,39 @@ def host_group_delete(obj):
     h = _get_one(obj, Host, "host", domain=obj.domain)
     g = _get_one(obj, HostGroup, "group", name=obj.group_name)
     h.groups.discard(g)
+
+
+# ---------------------------------------------------------------------------
+# Migration from MoaT-KV
+# ---------------------------------------------------------------------------
+
+
+@cli.command(name="migrate-from-kv")
+@click.option(
+    "-i",
+    "--infile",
+    type=click.File("r"),
+    help="Read 'moat kv data PREFIX get -r' output instead of asking MoaT-KV.",
+)
+@click.option("-n", "--dry-run", is_flag=True, help="Report, but don't store anything.")
+@click.option("-f", "--force", is_flag=True, help="Import even if the inventory isn't empty.")
+@click.pass_obj
+async def migrate_from_kv(obj, infile, dry_run, force):
+    """Import the MoaT-KV inventory ('moat kv inv').
+
+    Prints a report of skipped entries and of changes to review.
+    """
+    from moat.util import yload  # noqa: PLC0415
+
+    from .migrate import import_inv, kv_items, read_kv  # noqa: PLC0415
+
+    sess = obj.session
+    if not force and any(sess.execute(select(t.id).limit(1)).first() for t in (Vlan, Host)):
+        raise click.UsageError("The inventory is not empty. Use '--force' to import anyway.")
+
+    items = kv_items(yload(infile)) if infile is not None else await read_kv(obj.cfg)
+    with sess.begin_nested() as sp:
+        report = import_inv(sess, items)
+        if dry_run:
+            sp.rollback()
+    yprint(report.dump(), stream=obj.stdout)

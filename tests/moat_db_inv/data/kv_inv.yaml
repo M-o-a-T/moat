@@ -1,0 +1,79 @@
+# A small MoaT-KV inventory, as written by 'moat kv data PREFIX get -r'.
+- !P vlan:10:
+    name: std
+    desc: standard network
+- !P vlan:20:
+    name: infra
+- !P net:24:3232235776:
+    name: std4
+    vlan: std
+    shift: 0
+    dhcp: [100, 50]
+    wlan: Home
+    passwd: secret
+- !P net:64:sIAENuAAAAAEAAAAAAAAAAA==:
+    name: std6
+    vlan: std
+    shift: 0
+    desc: std, IPv6
+- !P net:24:3232236032:
+    name: infra4
+    vlan: infra
+    shift: 0
+    dhcp: [1, 0]
+- !P net:8:167772160:
+    name: ten
+    desc: no VLAN
+- !P host.example.lan.srv:
+    name: srv
+    desc: a server
+    loc: basement
+    groups: [servers]
+    ports:
+      en0:
+        mac: !hex 02:00:00:00:00:01
+        net: std4
+        num: 10
+      en1:
+        net: 192.168.2.7/24
+        extra: 42
+- !P host.example.lan.pi:
+    name: pi
+    net: std4
+    num: 11
+- !P host.example.lan.clash:
+    name: clash
+    ports:
+      en0:
+        net: std4
+        num: 10
+- !P host.example.lan.sw:
+    name: sw
+    ports:
+      '1': {}
+      '2':
+        vlan: '20'
+      '3': {}
+- !P host.example.lan.ghost:
+    name: ghost
+    ports:
+      en0:
+        net: nonexistent
+- !P wire.w1:
+    loc: wall
+- !P cable.dev:1:
+    a: [!P host.example.lan.srv, en0]
+    b: [!P host.example.lan.sw, '1']
+- !P cable.dev:2:
+    a: [!P host.example.lan.pi]
+    b: [!P wire.w1, a]
+- !P cable.dev:3:
+    a: [!P wire.w1, b]
+    b: [!P host.example.lan.sw, '3']
+- !P cable.dev:4:
+    a: [!P host.example.lan.gone, en0]
+    b: [!P host.example.lan.sw, '2']
+- !P net:64:sIAENuAAAAAIAAAAAAAAAAA==:
+    name: infra6
+    master: infra4
+    shift: 0

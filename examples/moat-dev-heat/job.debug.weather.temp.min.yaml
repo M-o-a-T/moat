@@ -1,0 +1,8 @@
+code: !P weather.min-temp
+data:
+  dst: !P test.temp.min.forecast
+  key: !P test.weather.key
+  lat: 49.46
+  lon: 11.11
+delay: 600
+info: 'Minimum-temperature forecast (debug: writes to test.*)'

@@ -1,0 +1,64 @@
+args:
+  eval_: []
+  path_: []
+  proxy_: []
+  set_: []
+  vars_: []
+code: |
+  import httpx
+
+  # Minimum hourly temperature forecast (OpenWeatherMap One Call 3.0).
+  #
+  # Every `interval` seconds, fetch the hourly forecast for lat/lon and write
+  # the minimum temperature of the next n hours to dst:n, for each n in
+  # `horizons`. Values are only written when they change.
+  #
+  # The API key is not part of this code: `key` is the MoaT-Link path of an
+  # item that holds it.
+
+  appid = await _link.d_get(key)
+  params = dict(
+      lat=lat,
+      lon=lon,
+      units="metric",
+      exclude="minutely,daily,current,alerts",
+      appid=appid,
+  )
+  last = {}
+  ok = False
+  async with httpx.AsyncClient(timeout=30) as client:
+      while True:
+          res = await client.get(url, params=params)
+          res.raise_for_status()
+          hourly = res.json()["hourly"]
+          for n in horizons:
+              val = min(h["temp"] for h in hourly[:n])
+              if last.get(n) != val:
+                  await _link.d_set(dst / n, val)
+                  last[n] = val
+          if not ok:
+              await _self.setup_done()
+              ok = True
+          _log.debug("Forecast: %r", last)
+          await anyio.sleep(interval)
+default:
+  horizons:
+  - 4
+  - 5
+  - 6
+  - 10
+  - 12
+  - 18
+  - 24
+  interval: 3600
+  url: https://api.openweathermap.org/data/3.0/onecall
+info: Minimum-temperature forecast from OpenWeatherMap
+is_async: true
+vars:
+- key
+- lat
+- lon
+- dst
+- horizons
+- interval
+- url

@@ -116,9 +116,11 @@ minute while any heating runs.
 
 ## Gaps
 
-- `temp.min.forecast:*` is written into KV by a separate script
-  (`temp_min`) and has not been updated for 220 days. It needs to be
-  ported to MoaT-Link and fed to the new units.
+- `temp.min.forecast:*` was written into KV by a cron script
+  (`temp_min`) and has not been updated for 220 days. Its replacement is
+  the MoaT-Link job `weather.min-temp` (see
+  `examples/moat-dev-heat/README.md`); a production job in the `default`
+  group, with the API key stored in Link, is still to be set up.
 - `gate.hass.heat` (MQTT, JSON codec) fails to decode
   `heat.s.pump.err` and the `*_auto_mode` switch topics; see
   `error.link.mqtt.codec.hass.heat.*`.

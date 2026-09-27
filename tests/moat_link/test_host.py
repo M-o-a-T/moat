@@ -10,6 +10,7 @@ from moat.util import as_service, merge, to_attrdict, yload
 from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.announce import announcing
+from moat.link.client import Link
 from moat.link.host import HostEvent, HostState, Service, ServiceMon
 
 from typing import TYPE_CHECKING
@@ -34,7 +35,7 @@ timeout:
     min: .9  # answering old messages. Should be > ping timeout
   restart:
     error: .1
-    flap: .2
+    flap: .4  # test_mon: well above scenario 3's steps, well below the others
     up: .17
 """
 
@@ -261,7 +262,7 @@ async def test_mon(cfg):
 
             # Scenario 1: service announces but never calls .set() (up stays False)
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
-                await anyio.sleep(0.5)
+                await anyio.sleep(0.8)
             await anyio.sleep(0.5)
             assert len(emsgs) == 3
             assert emsgs[0]["msg"] == "not up"
@@ -276,7 +277,7 @@ async def test_mon(cfg):
             # Scenario 2: service announces and calls .set() immediately (up=True)
             async with announcing(cl, host="test123", name=P("test.mon")) as s:
                 s.set()
-                await anyio.sleep(0.5)
+                await anyio.sleep(0.8)
                 assert len(emsgs) == 1
             await anyio.sleep(0.5)
             assert len(emsgs) == 2
@@ -313,8 +314,8 @@ async def test_mon(cfg):
             # Scenario 4: service announces with a value but never calls .set()
             async with cl.announcing(host="test123", name=P("test.mon")) as s:
                 s.value = 43
-                await anyio.sleep(0.25)
-            await anyio.sleep(0.25)
+                await anyio.sleep(0.8)
+            await anyio.sleep(0.5)
             assert len(emsgs) == 3
             assert emsgs[0]["msg"] == "not up"
             assert emsgs[1] is Ellipsis
@@ -324,3 +325,102 @@ async def test_mon(cfg):
             assert hmsgs[-2]["value"] == 43
             hmsgs = []
             emsgs = []
+
+
+_crashed: set[str] = set()
+
+
+async def _crash(link) -> None:
+    """
+    Make a client look like it crashed: drop its connection without an MQTT
+    DISCONNECT, and don't reconnect. The broker then publishes the client's
+    WILL.
+
+    (Cancelling a client does not do this: its shutdown sends DISCONNECT,
+    which suppresses the WILL.)
+    """
+    _crashed.add(link.name)
+    cl = link.backend.client
+    cl._closed = True  # noqa: SLF001  # no reconnect
+    await cl._stream.aclose()  # noqa: SLF001
+
+
+async def run_crashable_service(sf: Scaffold, *, task_status) -> None:
+    "Announce a service; return the client object itself, for `_crash`."
+    link = Link(sf.cfg, "C_crash")
+    try:
+        async with (
+            sf.client_(cli=link) as cl,
+            announcing(cl, host="test123", name=P("test.crash")) as srv,
+        ):
+            srv.set()
+            task_status.started(link)
+            await anyio.sleep_forever()
+    except* Exception:
+        # a crashed client's tasks fail on the dead connection
+        if link.name not in _crashed:
+            raise
+
+
+async def test_will_drops_crashed_service(cfg):
+    "A crashed client's WILL makes the service monitor drop its announcements at once."
+    merge(cfg.link, yload(TIMES, attr=True))
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+        cl = await sf.client()
+
+        async with ServiceMon(link=cl, cfg=cfg.link) as br:
+            ibr = aiter(br)
+            with anyio.CancelScope() as sc:
+                svc = await sf.tg.start(run_crashable_service, sf)
+                sid = svc.id
+                id_path = P("run.id") / sid
+
+                host_path = P("run.host.test123.test.crash")
+                with anyio.fail_after(2):
+                    while (await sel_br(ibr, sid)).state.name != "UP":
+                        pass
+                    assert await cl.d_get(id_path)
+                    while not (await cl.d_get(host_path)).get("up"):  # noqa: ASYNC110
+                        await anyio.sleep(0.05)
+
+                pings = []
+
+                async def mon_ping(*, task_status):
+                    async with cl.d_watch(P("run.ping.id") / sid, state=False) as mon:
+                        task_status.started()
+                        async for m in mon:
+                            pings.append(m)
+
+                await sf.tg.start(mon_ping)
+
+                t0 = time.monotonic()
+                await _crash(svc)
+
+                states = []
+                with anyio.fail_after(2):
+                    while not states or states[-1] != "DROP":
+                        states.append((await sel_br(ibr, sid)).state.name)
+                dt = time.monotonic() - t0
+
+                assert any(
+                    isinstance(m, dict) and m.get("state") == "will" and m.get("up") is False
+                    for m in pings
+                ), pings
+                # Dead is dead: the WILL drops the service at once, not after
+                # the ping timeout (.2) and deletion delay (.4).
+                assert "TIMEOUT" not in states, states
+                assert "STALE" not in states, states
+                assert dt < 0.15, dt
+
+                # the crashed client's retained entries are gone right away
+                with anyio.fail_after(0.15):
+                    for p in (id_path, host_path):
+                        while True:
+                            try:
+                                await cl.d_get(p)
+                            except KeyError:
+                                break
+                            await anyio.sleep(0.01)
+                sc.cancel()

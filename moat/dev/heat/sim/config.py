@@ -183,7 +183,7 @@ class PelletCfg(_Cfg):
     ua: float = 0.02
     t_amb: float = 15
     t_init: float = 20
-    flow: float = 12  # charging pump
+    flow: float = 20  # charging pump; must carry p_nom at the boiler goal
     pump_on: float = 65  # default charging-pump start temperature
     pump_hyst: float = 3
     pump_min_delta: float = 2  # boiler must be this much warmer than the return

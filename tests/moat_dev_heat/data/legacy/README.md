@@ -43,7 +43,7 @@ simulated time, `t` in seconds from the scenario start):
 | `cold_start` | cold buffer, cold day: start-up, warm-up, de-ice, cycling |
 | `steady` | mild weather, warm buffer: normal cycling |
 | `deice` | cold humid air: repeated de-icing while running |
-| `pellet_handover` | frost then thaw: pellets take over, later hand back |
+| `pellet_handover` | heat pump running at +3 °C, frost to −6 °C, thaw: pellets start, take over, hand back |
 | `day_night` | 18:00 to 10:00: night setback at 21:30, forced day mode 04:00–06:00 |
 | `error_mid_run` | heat-pump error at 2 h, cleared at 3 h |
 | `hp_no_power` | heat pump stops drawing power at 1 h, error on `:1` |
@@ -95,12 +95,17 @@ New units should either match these or deviate deliberately.
 9. **Heat pump and pellets run together.** While the burner is on, the
    heat pump keeps being started when the buffer is cold; it only stops
    early when the burner is hot enough (`OFF 3`/`OFF 6`), and the burner
-   is driven at full load whenever the heat pump runs (from the code;
-   `pellet_handover` currently ends before this shows, see below).
-10. **Several state changes per tick.** A transition `continue`s without
+   is driven at full load whenever the heat pump runs (`pellet_handover`).
+10. **The "burner is hot" early stop can't fire while heating.** `OFF 3`
+    and `OFF 6` require `pellet_on and tb_heat > t_cur`, but with heating
+    enabled `t_cur` *is* `tb_heat` (solvis.py, `run_pump`). The heat pump
+    then only stops through the buffer rules (`OFF 4`/`OFF 5`/`SCALED`) or
+    `OFF SCALE PELLET`, which needs `t_pellet_on` to become `True` after
+    `lim.pellet.t_min` of uninterrupted burner run.
+11. **Several state changes per tick.** A transition `continue`s without
     waiting, so e.g. `down` → `off` → `wait_time` can happen within one
     input update.
-11. **Run state is written to `sensor.pump.state`**, the heat pump's own
+12. **Run state is written to `sensor.pump.state`**, the heat pump's own
     state path (HEAT.md §1).
 
 ## Problems found while building the harness
@@ -112,11 +117,15 @@ New units should either match these or deviate deliberately.
   `CPID.integrate` with it, so the setpoint is subtracted a second time.
   With the production `flow` gains, setpoint 15 and a measured 28,
   `pid(28)` returns 0.95 while `pid.sum(pid.integrate(28))` returns 0.25.
-  The legacy code uses the first form for the flow and pump PWM, so in
-  these traces the circulation pump runs at maximum whenever it is under
-  flow or temperature control. At −6 °C that keeps `t_out - t_in` below
-  `misc.start.delta`, and `pellet_handover` ends with the start timeout.
-  The traces are recorded with `moat.lib.pid` as it is.
+  The legacy code uses the first form for the flow and pump PWM in the
+  `flow`, `wait_power`, `temp`, `ice` and `down` states (not in `run`,
+  which uses the split form), so in these traces the circulation pump
+  runs at maximum there. With the simulator's heat pump at start load
+  that keeps `t_out - t_in` below `misc.start.delta` at −6 °C, and
+  `pellet_handover` ends with the start timeout when the heat pump
+  restarts in the frost. Either the production PID code behaves
+  differently or the simulated heat pump is too weak at minimum load;
+  to be settled. The traces are recorded with `moat.lib.pid` as it is.
 
 ## Reproducibility
 

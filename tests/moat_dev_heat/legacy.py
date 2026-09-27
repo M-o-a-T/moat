@@ -537,16 +537,24 @@ SCENARIOS = {
         ),
         Scenario(
             "pellet_handover",
-            "Frost, then a thaw: the pellet burner takes over and hands back to the heat pump.",
+            "Heat pump running at +3 °C, frost down to -6 °C, then a thaw: the pellet "
+            "burner starts, takes over, and hands back to the heat pump.",
             24 * H,
             plant={
-                "buffer": {"t_init": (40, 25)},
+                "buffer": {"t_init": (45, 30)},
                 "weather": {
                     "sigma": 0.2,
-                    "profile": ((0, -6), (8 * H, -6), (12 * H, 6), (24 * H, 8)),
+                    "profile": (
+                        (0, 3),
+                        (3 * H, 3),
+                        (6 * H, -6),
+                        (14 * H, -6),
+                        (18 * H, 6),
+                        (24 * H, 8),
+                    ),
                 },
             },
-            start=0,
+            start=6 * H,
         ),
         Scenario(
             "day_night",

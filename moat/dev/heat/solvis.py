@@ -23,7 +23,6 @@ from moat.util import (
     attrdict,
     combine_dict,
     pos2val,
-    t_iter,
     to_attrdict,
     val2pos,
     yload,
@@ -37,6 +36,7 @@ from moat.lib.path import (
 )
 from moat.lib.pid import CPID
 from moat.lib.run import AliasedGroup
+from moat.util.times import t_iter
 
 from typing import TYPE_CHECKING, Any
 

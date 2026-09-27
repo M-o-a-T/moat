@@ -23,3 +23,10 @@ API
 
 .. automodule:: moat.dev.heat.link
    :members:
+
+.. automodule:: moat.dev.heat.state
+   :members:
+   :exclude-members: State, S
+
+.. autoclass:: moat.dev.heat.state.State
+   :class-doc-from: class

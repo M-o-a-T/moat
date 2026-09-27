@@ -265,6 +265,7 @@ nitpick_ignore = [
     ("py:class", "Sequence"),
     ("py:class", "trio.testing.MockClock"),
     ("py:class", "moat.dev.heat.link.T"),
+    ("py:class", "moat.dev.heat.state.S"),
     ("py:class", "Broadcaster"),
     ("py:class", "T"),
     ("py:class", "PathElem"),
@@ -705,9 +706,12 @@ def setup(app):
     import moat.db.rain.monitor
 
     # pydantic imports ``BaseModel`` from itself under ``TYPE_CHECKING``,
-    # which is circular when first imported with that flag set.
+    # which is circular when first imported with that flag set; models
+    # defined with that flag set fail to build. Import them now.
     import pydantic
     import moat.lib.config.base
+    import moat.dev.heat.config
+    import moat.dev.heat.state
 
     import typing
 

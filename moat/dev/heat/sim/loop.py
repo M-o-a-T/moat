@@ -20,7 +20,8 @@ from math import inf
 
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
-from moat.dev.heat.link import Override
+from moat.dev.heat.link import Override, TreeReader
+from moat.lib.path import Path
 from moat.util.time import patch_clock
 
 from .paths import INPUT_PATHS, SENSOR_PATHS, sensor_items
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
     from moat.dev.heat.link import Reader
     from moat.dev.heat.state import State
     from moat.dev.heat.unit import Core, Unit
-    from moat.lib.path import Path
 
     from .config import PlantCfg
 
@@ -47,6 +47,14 @@ WALL0 = 1_767_567_600.0  # 2026-01-05 00:00 CET, a Monday
 
 MAX_ROUNDS = 20
 """How often cores may be stepped within one tick before we give up settling."""
+
+
+def _below(path: Path, root: Path) -> Path | None:
+    """``path`` relative to ``root``, or `None` if it is not inside ``root``'s subtree."""
+    n = len(root)
+    if len(path) < n or path[:n] != root[:n]:
+        return None
+    return Path.build(path[n:])
 
 
 @dataclass
@@ -63,10 +71,14 @@ class CoreSlot:
     saves: int = 0
     dirty: bool = True
     by_path: dict[Path, list[str]] = field(default_factory=dict)
+    trees: list[TreeReader] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         for k, r in self.readers.items():
-            self.by_path.setdefault(r.path, []).append(k)
+            if isinstance(r, TreeReader):
+                self.trees.append(r)
+            else:
+                self.by_path.setdefault(r.path, []).append(k)
             r.on_change = self._changed
 
     def _changed(self) -> None:
@@ -150,6 +162,9 @@ class ClosedLoop:
         for slot in self.slots:
             for name in slot.by_path.get(path, ()):
                 slot.readers[name].feed(value, self.wall)
+            for tree in slot.trees:
+                if (sub := _below(path, tree.path)) is not None:
+                    tree.feed_item(sub, value, self.wall)
         return True
 
     def get(self, path: Path, default: Any = None) -> Any:
@@ -185,7 +200,13 @@ class ClosedLoop:
         """
         slot = CoreSlot(name, core, dict(readers), cfg=cfg, state=state, wake_at=self.now)
         for r in slot.readers.values():
-            if r.path in self.bus:
+            if isinstance(r, TreeReader):
+                below = {p: sub for p in self.bus if (sub := _below(p, r.path)) is not None}
+                r.feed(
+                    {sub: self.bus[p] for p, sub in below.items()},
+                    max((self.ts[p] for p in below), default=None),
+                )
+            elif r.path in self.bus:
                 r.feed(self.bus[r.path], self.ts[r.path])
             else:
                 r.feed(None, None)

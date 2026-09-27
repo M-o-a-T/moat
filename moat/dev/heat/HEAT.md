@@ -352,6 +352,7 @@ earlier drafts. They are plain retained data items:
 | `app.heat.override.pellet` | `bool \| None` | pellet burner forced on / forced off / automatic |
 | `app.heat.override.flow_temp` | `float \| None` | intended flow temperature / automatic |
 | `app.heat.override.pwm` | `float \| None` | water-pump PWM / automatic (flow unit) |
+| `app.heat.override.errors` | `{key: code} \| None` | injected errors (errors unit; always in the `{value: …}` form) |
 
 Each item may instead hold `{value: …, expires: <epoch>, reason: str}`;
 after `expires` the consumer treats it as `None` (automatic) and
@@ -649,12 +650,22 @@ Rules:
 
 Publish-only; does not stop anything itself.
 
-- **Watches**: `sensor.error` subtree.
+- **Watches**: `sensor.error` subtree (`feed`), `app.heat.override.errors`,
+  optionally the feed writer's service announcement (`source`).
 - **Publishes**: `app.heat.errors.out` = `{errors: {path: code},
-  severity: "none" | "warning" | "critical", since}`.
+  severity: "none" | "warning" | "critical", since}`; `path` is relative
+  to the feed (e.g. `:3`), `since` is the wall-clock time of the last
+  severity change.
+- **State**: `{severity, since}`.
 - Config: ignore list, default code 30055 (communication error) and
-  path `:1`; per-code severity.
-- A stale feed is reported as a synthetic critical error.
+  path `:1`; per-code severity (default `critical`). A code of 0 means
+  "no error".
+- A stale feed is reported as a synthetic critical error `{stale:
+  "stale"}`. Error codes are published on change, so their age says
+  nothing; the feed counts as stale while the `source` announcement is
+  not up. Without a `source`, staleness is not detected.
+- The override item injects errors as `{value: {key: code}, expires,
+  reason}`; the mapping must be wrapped in `value`.
 
 ### 3.8 `watchdog` (optional)
 

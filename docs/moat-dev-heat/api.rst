@@ -74,3 +74,13 @@ API
 
 .. autoclass:: moat.dev.heat.flow.FlowState
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.errors
+   :members:
+   :exclude-members: ErrorsCfg, ErrorsState
+
+.. autoclass:: moat.dev.heat.errors.ErrorsCfg
+   :class-doc-from: class
+
+.. autoclass:: moat.dev.heat.errors.ErrorsState
+   :class-doc-from: class

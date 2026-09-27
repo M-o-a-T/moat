@@ -29,6 +29,7 @@ __all__ = [
     "Override",
     "Reader",
     "ServiceMonitor",
+    "TreeReader",
     "Writer",
     "is_up",
     "out_path",
@@ -140,6 +141,52 @@ class Reader(Generic[T]):
         if self._changed is None:
             self._changed = anyio.Event()
         await self._changed.wait()
+
+
+class TreeReader(Reader[dict[Path, Any]]):
+    """
+    The current values of all items in a MoaT-Link subtree.
+
+    :attr:`~Reader.value` maps each item's path, relative to the watched
+    path, to its value; it is an empty mapping once the subtree is known to
+    be empty. :attr:`~Reader.ts` is the timestamp of the latest change.
+    """
+
+    def feed(self, value: Any, ts: float | None) -> None:
+        """Replace the whole subtree (a mapping of relative paths to values, or `None`)."""
+        self._update(None if value is None else dict(value), ts)
+
+    def feed_item(self, path: Path, value: Any, ts: float | None) -> None:
+        """
+        Set or delete one item, as if it had arrived from MoaT-Link.
+
+        Args:
+            path: The item's path, relative to the watched path.
+            value: The new value; `None` or `NotGiven` deletes the item.
+            ts: The value's timestamp.
+        """
+        items = dict(self.value or {})
+        if value is None or value is NotGiven:
+            items.pop(path, None)
+        else:
+            items[path] = value
+        self._update(items, ts)
+
+    async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
+        """
+        Watch the subtree.
+
+        Signals readiness once the subtree's current state is known.
+        """
+        async with self.link.d_watch(self.path, meta=True, mark=True, subtree=True) as mon:
+            async for msg in mon:
+                if msg is None:
+                    if self.value is None:
+                        self._update({}, None)
+                    task_status.started()
+                    continue
+                path, data, meta = msg
+                self.feed_item(Path.build(path), data, meta.timestamp)
 
 
 class Override(Reader[T]):

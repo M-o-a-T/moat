@@ -223,23 +223,46 @@ def net_delete(obj):
 # ---------------------------------------------------------------------------
 
 
+def _select_host(obj, domain: str | None, name: str | None) -> None:
+    """Set ``obj.domain`` from ``--domain`` or, via the Thing's short name, ``--name``."""
+    if name is not None:
+        if domain is not None:
+            raise click.UsageError("Use either '--domain' or '--name'.")
+        from moat.db.thing.model import Thing  # noqa: PLC0415
+
+        h = obj.session.execute(
+            select(Host).join(Thing, Host.thing_id == Thing.id).where(Thing.name == name)
+        ).scalar_one_or_none()
+        if h is None:
+            raise click.UsageError(f"There's no host named {name!r}.")
+        domain = h.domain
+    obj.domain = domain
+
+
 @cli.group(name="host", cls=AliasedGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the host")
+@click.option("--name", "-n", type=str, help="Short name of the host (instead of '--domain')")
 @click.pass_obj
-def host_grp(obj, domain):
-    """Manage hosts."""
-    obj.domain = domain
+def host_grp(obj, domain, name):
+    """Manage hosts.
+
+    Select a host with '-d FQDN' or '-n NAME', e.g. 'host -n sw-ur1 show'.
+    """
+    _select_host(obj, domain, name)
 
 
 @host_grp.command(name="show")
 @click.option("--type", "-t", "type_", type=str, help="Thing type to filter by")
 @click.pass_obj
 def host_show(obj, type_):
-    """Show a host or list all hosts."""
+    """Show a host or list all hosts.
+
+    Use 'host -d FQDN show' or 'host -n NAME show' for a single host.
+    """
     sess = obj.session
     if obj.domain is not None:
         h = _get_one(obj, Host, "host", domain=obj.domain)
-        yprint(h.dump())
+        yprint(h.dump(), stream=obj.stdout)
         return
 
     sel = select(Host)
@@ -251,7 +274,7 @@ def host_show(obj, type_):
         sel = sel.where(Host.thing_id.in_(thing_ids))
     with sess.execute(sel.order_by(Host.domain)) as rs:
         for (h,) in rs:
-            print(h.domain, h.thing.name if h.thing else "?")
+            print(h.domain, h.thing.name if h.thing else "?", file=obj.stdout)
 
 
 def host_opts(c):
@@ -511,22 +534,29 @@ def addr_delete(obj, addr):
 
 @cli.group(name="wire", cls=AliasedGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the wire")
+@click.option("--name", "-n", type=str, help="Short name of the wire (instead of '--domain')")
 @click.pass_obj
-def wire_grp(obj, domain):
-    """Manage wires (hosts with thing type 'wire' and two interfaces a/b)."""
-    obj.domain = domain
+def wire_grp(obj, domain, name):
+    """Manage wires (hosts with thing type 'wire' and two interfaces a/b).
+
+    Select a wire with '-d FQDN' or '-n NAME'.
+    """
+    _select_host(obj, domain, name)
 
 
 @wire_grp.command(name="show")
 @click.pass_obj
 def wire_show(obj):
-    """Show a wire or list all wires."""
+    """Show a wire or list all wires.
+
+    Use 'wire -d FQDN show' or 'wire -n NAME show' for a single wire.
+    """
     sess = obj.session
     from moat.db.thing.model import ThingTyp  # noqa: PLC0415
 
     if obj.domain is not None:
         h = _get_one(obj, Host, "wire", domain=obj.domain)
-        yprint(h.dump())
+        yprint(h.dump(), stream=obj.stdout)
         return
 
     ttyp = sess.one(ThingTyp, name="wire")

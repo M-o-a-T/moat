@@ -1598,9 +1598,8 @@ class Server(MsgHandler):
         """
         task_status.started()
         await anyio.sleep(self.cfg.timeout.delete / 10)
-        t = time.time()
 
-        async def _walk(d: Node) -> bool:
+        async def _walk(d: Node, t: float) -> bool:
             # return True if we need to keep this
 
             has_any = False
@@ -1613,20 +1612,36 @@ class Server(MsgHandler):
                 and t - d.meta.timestamp > self.cfg.timeout.delete
             ):
                 del d.meta
-            drop = set()
-            for k, v in d.items():
-                if await _walk(v):
+            drop = []
+            # Iterate over a snapshot: concurrent updates may mutate the
+            # subtree (adding/removing siblings) while we're suspended,
+            # which would kill this iteration with "dictionary changed
+            # size during iteration". Deleted children are collected and
+            # dropped after walking; __delitem__ refuses non-empty nodes,
+            # so racing deletions fail benignly and are retried later.
+            for k, v in tuple(d.items()):
+                r = await _walk(v, t)
+                if r:
                     has_any = True
                 else:
-                    drop.add(k)
-            for k in drop:
+                    drop.append((k, v))
+            for k, v in drop:
+                if v._sub or v.data_ is not NotGiven:  # noqa:SLF001
+                    continue  # raced: child came alive again
+                if d._sub.get(k) is not v:  # noqa:SLF001
+                    continue  # raced: key vanished / was recreated
                 del d[k]
             if has_any or d._data is not NotGiven:  # noqa:SLF001
                 return True
             return d.meta is not None
 
         while True:
-            await _walk(self.data)
+            try:
+                await _walk(self.data, time.time())
+            except Exception:
+                # A missed round recovers on the next cycle; crashing the
+                # whole server because housekeeping hiccupped is worse.
+                self.logger.exception("Flushing deleted nodes failed")
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 

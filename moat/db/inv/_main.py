@@ -754,7 +754,7 @@ def host_group_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.command(name="migrate-from-kv")
+@cli.command(name="migrate-from-kv", hidden=True)
 @click.option(
     "-i",
     "--infile",

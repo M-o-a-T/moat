@@ -33,7 +33,7 @@ simulated time, `t` in seconds from the scenario start):
 | `heat_mode` | heating valve `setting.heat.mode.path` (3 on, 5 standby) |
 | `curve` | flow setpoint `adj.curve.setting` |
 | `p_wanted`, `p_load`, `p_temp` | pellet commands |
-| `t_in` … `m_switch` | true plant values (no sensor noise) |
+| `t_in` … `m_switch` | true plant values (no sensor noise or lag) |
 | `hp` | simulated heat-pump stage |
 | `valve` | heat-pump loop valve (only in scenarios that run `wp.py`) |
 
@@ -66,8 +66,14 @@ simulated time, `t` in seconds from the scenario start):
   unchanged code of `../wp.py.txt` with a fake Link client (its
   `legacy.…` paths map to the KV paths). The loop valve starts closed
   and blocks all flow while closed. Elsewhere there is no valve.
-- The circulation pump starts above 5 % PWM (as `wp.py` assumes) with a
-  minimum flow of 4 l/min; both are guesses.
+- The heat-pump loop is calibrated to your description of the frost
+  cycle, not to measurements: long insulated pipes, half outdoors;
+  residual flow of 0.6 l/min with the valve open and the pump off;
+  pump starts above 5 % PWM with at least 2 l/min; thermometers in
+  wells with a 1-minute lag; some heat leaks between the `t_in` and
+  `t_out` ends inside the unit. With these, a frost cycle starts about
+  2.5 h after the heat pump stops, takes five pulses, and the pipes
+  settle at about 13 °C afterwards.
 - A controller exception ends the trace. In production, `run`'s
   `finally` then calls `Data.off()` and systemd restarts the process;
   the harness does not emulate that.

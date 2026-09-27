@@ -57,8 +57,8 @@ class HeatPump:
     """
     Air/water heat pump: inflow pipe, condenser, compressor, de-icing.
 
-    ``t_in`` is the temperature of the inflow pipe; ``t_out`` that of
-    the condenser. Without flow both drift towards the air temperature,
+    ``t_in`` is the temperature at the end of the supply pipe; ``t_out``
+    that of the condenser. Without flow both drift towards the air temperature,
     and a running compressor overheats the condenser until the
     over-temperature trip latches.
     """
@@ -70,7 +70,8 @@ class HeatPump:
         self.t_run = 0.0
         self.speed = 0.0
         self.ice = 0.0
-        self.t_in = t_init
+        self.pipe = [t_init] * cfg.n_pipe  # supply segments; t_in is the last one
+        self.ret = [t_init] * cfg.n_ret  # return segments
         self.t_out = t_init
         self.p_th = 0.0
         self.p_el = 0.0
@@ -79,10 +80,38 @@ class HeatPump:
         self.blocked = False  # an injected blocking error is present
 
     @property
+    def t_in(self) -> float:
+        """Temperature at the heat pump's inlet."""
+        return self.pipe[-1]
+
+    @property
     def energy(self) -> float:
-        """Stored energy in pipe and condenser, kJ."""
+        """Stored energy in pipes and condenser, kJ."""
         cfg = self.cfg
-        return cfg.cap_pipe * self.t_in + cfg.cap_hx * self.t_out
+        return (
+            cfg.cap_pipe * sum(self.pipe) / cfg.n_pipe
+            + cfg.cap_ret * sum(self.ret) / cfg.n_ret
+            + cfg.cap_hx * self.t_out
+        )
+
+    @staticmethod
+    def _chain(
+        seg: list[float], cap: float, ua: float, fc: float, t: float, amb: list[float], dt: float
+    ) -> tuple[float, float]:
+        """Pass water at ``t`` through a chain of segments. Returns (outflow temp, loss)."""
+        n = len(seg)
+        loss = 0.0
+        for i in range(n):
+            seg[i], t, lo = tank(seg[i], cap / n, fc, t, ua / n, amb[i], 0, dt)
+            loss += lo
+        return t, loss
+
+    def _ambients(self, n: int, t_air: float, supply: bool) -> list[float]:
+        """Per-segment surroundings: indoors near the buffer, outdoors near the unit."""
+        cfg = self.cfg
+        n_out = round(n * cfg.outdoor)
+        amb = [cfg.t_room] * (n - n_out) + [t_air] * n_out
+        return amb if supply else amb[::-1]
 
     def p_max(self, t_air: float) -> float:
         """Thermal output at full speed."""
@@ -182,12 +211,19 @@ class HeatPump:
 
         e_th = self.p_th * dt
         fc = kgps(flow) * C_WATER
-        self.t_in, t_in_avg, loss_p = tank(
-            self.t_in, cfg.cap_pipe, fc, t_ret, cfg.ua_pipe, t_air, 0, dt
-        )
-        self.t_out, t_sup, loss_h = tank(
+        # heat leaking between the two sensor positions inside the unit
+        q = cfg.k_bleed * (self.pipe[-1] - self.t_out) * dt
+        self.pipe[-1] -= q / (cfg.cap_pipe / cfg.n_pipe)
+        self.t_out += q / cfg.cap_hx
+
+        amb = self._ambients(cfg.n_pipe, t_air, True)
+        t_in_avg, loss_p = self._chain(self.pipe, cfg.cap_pipe, cfg.ua_pipe, fc, t_ret, amb, dt)
+        self.t_out, t_hx, loss_h = tank(
             self.t_out, cfg.cap_hx, fc, t_in_avg, cfg.ua_hx, t_air, self.p_th, dt
         )
+        amb = self._ambients(cfg.n_ret, t_air, False)
+        t_sup, loss_r = self._chain(self.ret, cfg.cap_ret, cfg.ua_ret, fc, t_hx, amb, dt)
+        loss_h += loss_r
 
         if st in (Stage.run, Stage.delay) and (
             self.t_out > cfg.trip_out or self.t_in > cfg.trip_in

@@ -93,18 +93,28 @@ class HeatPumpCfg(_Cfg):
     mode_off: int = 0  # cmd.mode value meaning "off"
     min_load: float = 0.04  # commanded load below this means "off"
     min_mod: float = 0.35  # minimum compressor speed while running
-    start_speed: float = 0.5  # speed during the warm-up phase
-    warmup: float = 120
+    start_speed: float = 0.6  # speed during the start program
+    warmup: float = 300
     ramp: float = 0.01  # speed change per second
     start_delay: float = 60  # after mode on, before the compressor starts
 
     aux: float = 0.15  # electrical draw of fan/controls while running
     standby: float = 0.01
 
-    cap_pipe: float = 42  # inflow pipe (t_in sensor)
-    ua_pipe: float = 0.01
+    # The pipes between buffer and heat pump are long and insulated; each is
+    # a chain of mixed segments, which gives them some transport latency.
+    # Capacities include the pipe itself.
+    cap_pipe: float = 30  # supply pipe, buffer → heat pump; t_in at its end
+    ua_pipe: float = 0.006
+    n_pipe: int = 10
+    cap_ret: float = 30  # return pipe, heat pump → buffer
+    ua_ret: float = 0.006
+    n_ret: int = 10
+    outdoor: float = 0.5  # fraction of each pipe that is outside; the rest is at t_room
+    t_room: float = 15
     cap_hx: float = 17  # condenser (t_out sensor)
-    ua_hx: float = 0.005
+    ua_hx: float = 0.002
+    k_bleed: float = 0.03  # conduction between the t_in and t_out ends inside the unit
 
     trip_out: float = 65  # t_out over-temperature trip
     trip_in: float = 58  # t_in over-temperature trip
@@ -129,7 +139,8 @@ class PumpCfg(_Cfg):
     flow_max: float = 30
     dead: float = 0.05  # PWM dead zone (the frost task pulses at 1/16, "more than 5%")
     exp: float = 0.8  # flow = flow_max * ((pwm-dead)/(1-dead)) ** exp
-    flow_min: float = 4  # minimum flow once the pump runs
+    flow_min: float = 2  # minimum flow once the pump runs
+    residual: float = 0.6  # flow with the pump off and the loop valve open
     tau: float = 3  # first-order lag
 
 
@@ -230,6 +241,7 @@ class SensorCfg(_Cfg):
     """Sensor imperfections."""
 
     noise: float = 0.05  # σ of temperature noise
+    tau_pipe: float = 60  # lag of the t_in / t_out thermometers (in wells)
     res_temp: float = 0.1
     res_flow: float = 0.1
     res_power: float = 0.01

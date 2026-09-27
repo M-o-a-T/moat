@@ -127,6 +127,7 @@ class Plant:
         self._day = math.floor((now + cfg.day_offset) / 86400)
         self.dhw.add_daily(self._day * 86400, cfg.day_offset)
 
+        self._lag = {"t_in": self.hp.t_in, "t_out": self.hp.t_out}  # thermometer readings
         self._errors: dict[str, int] = {}
         self._blocking: set[str] = set()
         self._published: dict[str, tuple[Any, float]] = {}
@@ -196,6 +197,9 @@ class Plant:
         # heat pump loop
         self.hp.blocked = bool(self._blocking)
         flow = self.pump.step(dt, inp.pwm, self.faults.dead_flow_pump or inp.hp_valve is False)
+        if inp.hp_valve is True:
+            # some water moves even with the pump off (not seen by the flow meter)
+            flow = max(flow, cfg.pump.residual)
         hp_out = buf.layer(bc.hp_out)
         t_sup, e_th, loss = self.hp.step(
             dt,
@@ -207,6 +211,9 @@ class Plant:
             t_air=w.t_air,
             rh=w.rh,
         )
+        a = math.exp(-dt / cfg.sensor.tau_pipe) if cfg.sensor.tau_pipe else 0.0
+        for k, v in (("t_in", self.hp.t_in), ("t_out", self.hp.t_out)):
+            self._lag[k] = v + (self._lag[k] - v) * a
         led.hp += e_th
         led.hp_el += self.hp.p_el * dt
         led.loss += loss
@@ -301,11 +308,11 @@ class Plant:
         }
 
     def sensors(self) -> dict[str, Any]:
-        """Sensor readings, with noise, quantisation and injected faults."""
+        """Sensor readings: lagged, noisy and quantised, with injected faults."""
         sc = self.cfg.sensor
         rng = self._rng_sensor
         res = {}
-        for k, v in self.truth().items():
+        for k, v in {**self.truth(), **self._lag}.items():
             if k in self.faults.stale and k in self._published:
                 res[k] = self._published[k][0]
                 continue

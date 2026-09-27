@@ -46,7 +46,7 @@ from moat.util.random import al_unique
 
 from .common import CmdCommon
 from .conn import TCPConn, UnixConn
-from .exceptions import AuthError, ClientCancelledError
+from .exceptions import AuthError, ClientCancelledError, ServerLinkLost
 from .hello import Hello
 from .meta import MsgMeta
 from .node import Node
@@ -110,6 +110,13 @@ class _Requeue(Exception):
     pass
 
 
+def _link_lost(exc: BaseException) -> bool:
+    "Is this (or does this group contain) a `ServerLinkLost`?"
+    if isinstance(exc, BaseExceptionGroup):
+        return exc.subgroup(ServerLinkLost) is not None
+    return isinstance(exc, ServerLinkLost)
+
+
 __all__ = [
     "BasicLink",
     "ClientCaller",
@@ -151,8 +158,8 @@ class BasicCmd:
     """
     A simple command that doesn't require streaming.
 
-    The command can thus be repeated if a connection dies while it's
-    running.
+    If the server connection dies while it runs, the command fails; it is
+    not repeated (the client terminates, see `ServerLinkLost`).
     """
 
     def __init__(self, a, kw):
@@ -291,6 +298,7 @@ class LinkCommon(CmdCommon):
             if self.logger.isEnabledFor(logging.INFO):
                 self.logger.info("Connection %s to %s", self.name, srepr(remote))
             handler = MsgSender(conn)
+            self._server_conn = conn
             if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")
 
@@ -1330,7 +1338,6 @@ class Link(LinkCommon, CtxObj):
         if _the_link.get(NotGiven) is self:
             return
         super().__init__(cfg, name=name)
-        self._retry_msgs: set[BasicCmd] = set()
         self._server_up = anyio.Event()
         self._state_change = anyio.Event()
         self._common = common
@@ -1512,7 +1519,7 @@ class Link(LinkCommon, CtxObj):
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         This is the manager task for the server link channel.
-        It starts a server connection (and tries to keep it alive).
+        It starts a server connection; losing it later ends the client (`ServerLinkLost`).
 
         Connection order:
         1. Unix socket (cfg.client.path), if configured
@@ -1537,23 +1544,31 @@ class Link(LinkCommon, CtxObj):
         if self._socket_path is not None:
             entered = False
             try:
-                async with (
-                    ungroup,
-                    timed_ctx(
-                        self.cfg.client.init_timeout, self._connect_one(self._socket_path)
-                    ) as rem,
-                ):
-                    entered = True
-                    await self._connect_run(rem, task_status=task_status)
+                try:
+                    async with (
+                        ungroup,
+                        timed_ctx(
+                            self.cfg.client.init_timeout, self._connect_one(self._socket_path)
+                        ) as rem,
+                    ):
+                        entered = True
+                        await self._connect_run(rem, task_status=task_status)
+                    # The RPC layer ends the connection quietly on EOF.
+                    raise ServerLinkLost(self._socket_path)
+                except Exception as exc:
+                    if entered and not isinstance(exc, ServerLinkLost):
+                        # whatever ended an established connection: it's gone
+                        raise ServerLinkLost(self._socket_path) from exc
+                    raise
             except OSError as exc:
-                if entered or self._local_only:
+                if self._local_only:
                     raise RuntimeError(
                         f"Connecting to {self._socket_path!r} failed ({exc!r}); "
                         "no fallback allowed (local-only mode)."
                     ) from None
                 self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
             except TimeoutError:
-                if entered or self._local_only:
+                if self._local_only:
                     raise RuntimeError(
                         f"Timed out contacting {self._socket_path!r}; "
                         "no fallback allowed (local-only mode)."
@@ -1563,10 +1578,6 @@ class Link(LinkCommon, CtxObj):
                 self.current_server = None
                 if self._server_up.is_set():
                     self._server_up = anyio.Event()
-            if self._local_only:
-                # Organic fall-through means the session ended unexpectedly.
-                # Deliberate teardown cancels outright, bypassing this line.
-                raise RuntimeError("Local-only link terminated abruptly.")
 
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)
@@ -1582,7 +1593,9 @@ class Link(LinkCommon, CtxObj):
             try:
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
-                if isinstance(exc, (NameError, AttributeError, TypeError, ImportError)):
+                if _link_lost(exc) or isinstance(
+                    exc, (NameError, AttributeError, TypeError, ImportError)
+                ):
                     raise
                 if srv.meta is None:
                     err_path = P("run.service.main.server")
@@ -1636,10 +1649,23 @@ class Link(LinkCommon, CtxObj):
                     task_status = None
 
     async def _connect_run(self, rem, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Run the connection to a server.
+
+        The connection is not re-established or moved to another server:
+        when it ends (other than by cancellation), this raises
+        `ServerLinkLost`, which terminates the client.
+        """
         # We're connected.
         self.current_server = rem
         self._server_up.set()
+        try:
+            await self._connect_run_(rem, task_status=task_status)
+        except Exception as exc:
+            raise ServerLinkLost(rem) from exc
+        raise ServerLinkLost(rem)
 
+    async def _connect_run_(self, rem, *, task_status):
         # Check backend compatibility when connecting to a named server
         if self._only is not None:
             try:
@@ -1659,9 +1685,15 @@ class Link(LinkCommon, CtxObj):
         async def run_(cmd):
             await cmd.run(rem)
 
+        async def watch_conn():
+            # The RPC layer doesn't end the connection's context when the
+            # server goes away, it just stops reading.
+            if (conn := getattr(self, "_server_conn", None)) is not None:
+                await conn.reader_done.wait()
+                raise ServerLinkLost(rem)
+
         async with anyio.create_task_group() as tg:
-            for msg in self._retry_msgs:
-                tg.start_soon(run_, msg)
+            tg.start_soon(watch_conn)
             task_status.started()
             async for msg in self._cmdq_r:
                 tg.start_soon(run_, msg)
@@ -1670,26 +1702,20 @@ class Link(LinkCommon, CtxObj):
         """
         Queue and run a simple command.
 
-        If @_idem is False, the command will error out if the connection
-        dies while it's running. Otherwise (the default) it may be repeated.
+        Waits for the initial server connection. If the connection dies
+        while the command runs, it fails with `EOFError` (and the client
+        is terminating anyway, see `ServerLinkLost`).
         """
+        _idem  # noqa:B018  # accepted for compatibility; commands are never repeated
         cmd_ = BasicCmd(a, kw)
+        while self.current_server is None:
+            await self._server_up.wait()
         try:
-            self._retry_msgs.add(cmd_)
-            while True:
-                while self.current_server is None:
-                    await self._server_up.wait()
-
-                try:
-                    with ungroup:
-                        await self._cmdq_w.send(cmd_)
-                        return await cmd_.result
-                except _Requeue:
-                    if _idem:
-                        raise EOFError from None
-
-        finally:
-            self._retry_msgs.discard(cmd_)
+            with ungroup:
+                await self._cmdq_w.send(cmd_)
+                return await cmd_.result
+        except _Requeue:
+            raise EOFError from None
 
     async def _connect_server(self, srv: Message, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status = TS(task_status)
@@ -1708,11 +1734,23 @@ class Link(LinkCommon, CtxObj):
                 continue
             elif remote["host"] in local_addrs:
                 continue
+            connected = False
             try:
-                async with timed_ctx(
-                    self.cfg.client.init_timeout, self._connect_one(remote, srv.data)
-                ) as rem:
-                    await self._connect_run(rem, task_status=task_status)
+                try:
+                    async with timed_ctx(
+                        self.cfg.client.init_timeout, self._connect_one(remote, srv.data)
+                    ) as rem:
+                        connected = True
+                        await self._connect_run(rem, task_status=task_status)
+                    # The RPC layer ends the connection quietly on EOF.
+                    raise ServerLinkLost(remote)
+                except Exception as exc:
+                    if connected and not isinstance(exc, ServerLinkLost):
+                        # whatever ended an established connection: it's gone
+                        raise ServerLinkLost(remote) from exc
+                    raise
+            except ServerLinkLost:
+                raise
             except OSError as exc:
                 self.logger.warning("Link failed: %r (%r)", remote, exc)
             except Exception as exc:

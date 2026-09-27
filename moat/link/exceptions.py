@@ -39,6 +39,15 @@ class OutOfDateError(MoaTLinkError):  # noqa: D101
 
 
 @as_proxy("_EMLClSup")
+class ServerLinkLost(MoaTLinkError):
+    """
+    The connection to the MoaT-Link server died.
+
+    The client does not fail over to another server: the process is
+    expected to terminate and be restarted.
+    """
+
+
 class ServiceSupplanted(MoaTLinkError):  # noqa: D101
     pass
 

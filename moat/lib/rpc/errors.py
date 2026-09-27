@@ -54,33 +54,41 @@ class RemoteError(RuntimeError):
 
 class StreamError(RuntimeError):  # noqa: D101
     def __new__(cls, msg: Sequence[object] = ()):  # noqa: D102
-        if len(msg) != 1:
+        # Error codes map to fully constructed instances: MicroPython
+        # does not call __init__ on them, and refuses to raise an
+        # exception whose native base was never initialized.
+        if cls is not StreamError or len(msg) != 1:
             pass
         elif isinstance((m := msg[0]), int):
             if m >= 0:
                 return Flow(m)
             elif m == E_UNSPEC:
-                return super().__new__(StopMe)
+                return StopMe()
             elif m == E_NO_STREAM:
-                return super().__new__(NoStream)
+                return NoStream()
             elif m == E_MUST_STREAM:
-                return super().__new__(MustStream)
+                return MustStream()
             elif m == E_SKIP:
-                return super().__new__(SkippedData)
+                return SkippedData()
             elif m == E_NO_CMDS:
-                return super().__new__(NoCmds)
+                return NoCmds()
             elif m == E_CANCEL:
                 return CancelledError()
             elif m == E_ERROR:
-                return super().__new__(RemoteError)
+                return RemoteError()
             elif m <= E_NO_CMD:
-                return super().__new__(NoCmd, E_NO_CMD - m)
+                return NoCmd((E_NO_CMD - m,))
         elif isinstance(m, Exception):
             return m
-        return super().__new__(cls, *msg)
+        return super().__new__(cls)
 
     def __init__(self, msg=()):
-        pass
+        # CPython calls __init__ again with the original error code
+        # when __new__ returned a subclass instance.
+        if getattr(self, "_init", False):
+            return
+        self._init = True
+        super().__init__(*msg)
 
 
 class Flow(BaseException):

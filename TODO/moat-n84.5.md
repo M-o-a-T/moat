@@ -79,7 +79,8 @@ As described above.
 
 - `PIDState` (`i`, `e`, `setpoint`, `t`) as a pydantic model that lives
   inside a unit's `State`.
-- `APID`: wraps `moat.lib.pid.CPID`. Always called with wall time `t`. On
+- `APID`: wraps `moat.lib.pid.CPID`, keeping its contract: the input is
+  the current measurement, not the error. Always called with wall time `t`. On
   load, a `t` older than `rebase_after` is moved to "now", so the first step
   after an outage doesn't integrate over it. Writes value and setpoint to
   the configured `log.value` / `log.setpoint` paths through a `Writer`.

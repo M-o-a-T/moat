@@ -1,0 +1,19 @@
+# Package defaults of the heat controller.
+#
+# Each unit's configuration is this subtree merged with the MoaT-Link item
+# ``cfg.app.heat.<unit>``; the Link item takes precedence.
+
+service:
+  host: heat
+
+emergency: {}
+
+target: {}
+heat_valve: {}
+flow: {}
+pump: {}
+pellet: {}
+selector: {}
+errors: {}
+watchdog: {}
+passthru: {}

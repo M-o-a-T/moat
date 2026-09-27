@@ -703,6 +703,11 @@ def setup(app):
     import moat.db.rain.engine
     import moat.db.rain.monitor
 
+    # pydantic imports ``BaseModel`` from itself under ``TYPE_CHECKING``,
+    # which is circular when first imported with that flag set.
+    import pydantic
+    import moat.lib.config.base
+
     import typing
 
     typing.TYPE_CHECKING = True

@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import anyio
 import sys
-import time
 from functools import partial
 
 import asyncclick as click
 
 from moat.util import attrdict, yprint
+from moat.util import time as mtime
 from moat.kv.code import CodeRoot
 from moat.kv.data import add_dates, data_get
 from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
@@ -406,7 +406,7 @@ async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw):
         if tm == "-":
             res["target"] = None
         else:
-            res["target"] = time.time() + float(tm)
+            res["target"] = mtime.time() + float(tm)
 
     res = await obj.client.set(path, value=res, nchain=3, chain=chain)
     if obj.meta:

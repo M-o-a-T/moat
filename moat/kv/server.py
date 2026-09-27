@@ -4,7 +4,6 @@ from __future__ import annotations
 import anyio
 import os
 import signal
-import time
 from anyio.abc import SocketAttribute
 
 from asyncscope import scope
@@ -2492,7 +2491,7 @@ class Server:
             msg = await self.get_state(nodes=True, known=True, deleted=False)
             # await mw({"info": msg})
             await mw(msg)  # XXX legacy
-            last_saved = time.monotonic()
+            last_saved = anyio.current_time()
             last_saved_count = 0
 
             async with Watcher(self.root, full=True) as updates:
@@ -2510,14 +2509,14 @@ class Server:
                 cnt = 0
                 while True:
                     # This dance ensures that we save the system state often enough.
-                    t = time.monotonic()
+                    t = anyio.current_time()
                     td = t - last_saved
                     if td >= 60 or last_saved_count > 1000:
                         msg = await self.get_state(nodes=True, known=True, deleted=False)
                         # await mw({"info": msg})
                         await mw(msg)  # XXX legacy
                         await mw.flush()
-                        last_saved = time.monotonic()
+                        last_saved = anyio.current_time()
                         last_saved_count = 0
                         td = -99999  # translates to something large, below
                         cnt = 0

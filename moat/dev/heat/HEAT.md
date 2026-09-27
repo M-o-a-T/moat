@@ -149,9 +149,10 @@ input immediately.
 Sensor and physical-output paths (`heat.s.*`, `home.ass.*`,
 `temp.*`) keep their locations; they are not owned by this package.
 Each unit's config maps them to the unit's inputs and outputs.
-[PATHS.md](PATHS.md) lists where each of them lives in MoaT-Link
-(`heat.*` and `temp.*` currently appear under `legacy.`, via the KV
-gateway), with type, update rate and known gaps.
+Units use the native names; `heat.*` and `temp.*` currently reach
+MoaT-Link only under `legacy.` via the MoaT-KV gateway, which is going
+away. [PATHS.md](PATHS.md) lists every path with its current location,
+type, update rate and known gaps.
 
 #### Liveness
 

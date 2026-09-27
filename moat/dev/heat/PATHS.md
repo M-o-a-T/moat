@@ -18,10 +18,14 @@ Only part of `solvis.py` is currently active in production.
 | `temp.*` | `legacy.temp.*` | `gate.kv.temp` | |
 | `home.ass.*` | `home.ass.*` | `gate.kv.hass` and `gate.hass` (MQTT) | `.state` mostly via KV, `.cmd` via Home Assistant's MQTT |
 
-`heat.s.*` and `temp.*` therefore do **not** keep their KV names in
-Link: a unit reads them with the `legacy.` prefix. `home.ass.*` keeps
-its name. A stale copy of `home.ass` also exists under
-`legacy.home.ass`; do not use it.
+`heat.s.*` and `temp.*` therefore currently appear in Link only with
+the `legacy.` prefix. MoaT-KV is being retired, so the units use the
+native names (`heat.s.*`, `temp.*`); their writers are moved to MoaT-Link
+before the units go live. The Modbus poller already writes to MoaT-Link
+natively. `home.ass.*` keeps its name. A stale copy of `home.ass` also
+exists under `legacy.home.ass`; do not use it.
+
+The "Link path" column below shows where each value is found today.
 
 Values are published on change. While the heat pump is idle, its sensors
 (`heat.s.pump.*`) are not updated for weeks, so age is not a liveness

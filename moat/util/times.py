@@ -44,7 +44,7 @@ class t_iter:
 
     def time(self) -> float:
         "get-time hook"
-        return anyio.current_time()
+        return mtime.monotonic()
 
     async def sleep(self, dt: float) -> None:
         "sleep hook"

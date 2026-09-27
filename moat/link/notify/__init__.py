@@ -243,7 +243,7 @@ class Notify:
     async def send(self, **kw) -> None:
         """Send this notification to that topic."""
         # reactivate dropped items
-        tm = anyio.current_time()
+        tm = mtime.monotonic()
         retry: set[Notifier] = set()
         error_seen = False
 

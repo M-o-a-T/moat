@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
 from contextlib import nullcontext
 from functools import partial
 
 from moat.util import attrdict
+from moat.util import time as mtime
 from moat.util.times import humandelta, ts2iso
 
 from .mode import Loader
@@ -121,7 +121,7 @@ class Model:
     def __init__(self, cfg: attrdict, t: float | None = None):
         if t is None:
             t_slot = 3600 / cfg.steps
-            t_now = time.time()
+            t_now = mtime.time()
             t = t_now + t_slot / 2
             t -= t % t_slot
             if abs(t_now - t) > t_slot / 10:

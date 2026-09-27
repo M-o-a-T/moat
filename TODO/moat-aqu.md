@@ -55,40 +55,32 @@ ad-hoc monkeypatch (`tests/moat_link/test_cmd_data.py` mutates stdlib
 
 ### D2 — Wall vs monotonic, and the async-monotonic rule (Blocker 2)
 
-Two clocks, two policies:
+REVISED (post-review-feedback): the original plan routed async monotonic
+readers to `anyio.current_time()`. That was wrong — it fragments the control
+surface (those sites become unreachable via `patch_clock`) and defeats the
+issue's central ask of an *overridable* `monotonic()`. The synchronisation
+concern that motivated it is already handled by `loop_time()`: a test does
+`patch_clock(monotonic=loop_time)` and `mtime.monotonic()` then delegates to
+`anyio.current_time()` *through the slot*, staying in sync with `anyio.sleep`
+while remaining overridable.
 
-- **Wall clock (`time.time()` → `mtime.time()`)**: the *new* fakeable thing.
-  Converted everywhere wall time is read, **regardless of sync/async** —
-  because `anyio`/trio offer no fakeable wall clock. This is the heart of the
-  issue.
-- **Monotonic clock**: `anyio.current_time()` is *already* fakeable via
-  `MockClock`/`autojump_clock` and is used in ~30 places already. Routing
-  async monotonic readers through a *second* slot would yield two
-  unsynchronised fake monotonic clocks. Therefore:
-  - **async** monotonic callers → `anyio.current_time()` (no slot).
-  - **loop-less / sync** monotonic callers → `mtime.monotonic()` (slot, for
-    completeness and for tests that drive sync code).
+Corrected rule (uniform):
+- **Wall clock** (`time.time()` → `mtime.time()`): converted everywhere,
+  sync or async — anyio/trio offer no fakeable wall clock; this is the issue's
+  core.
+- **Monotonic clock** (`time.monotonic()` → `mtime.monotonic()`): converted
+  *everywhere*, sync or async alike. Overridability is uniform; tests wanting
+  loop-synced monotonic time patch the slot to `loop_time`.
+- **Pre-existing `anyio.current_time()` sites** (≈30, in `dev/sew`, `ems/inv`,
+  `kv/gpio`, `lib/mqtt`, `lib/stream`, `link/cmd/raw`, `link/gpio`,
+  `link/metrics`, `link/server`, `modbus/client`, `bus/serial`, …): LEFT
+  AS-IS. They are out of this issue's scope (not `time.monotonic()` calls) and
+  already ride the fakeable loop clock; converting them is unnecessary scope
+  creep.
 
-AST classification of all 14 `monotonic()` sites:
-
-| file | line | enclosing fn | async? | target |
-|------|------|--------------|--------|--------|
-| bus/fake/bus.py | 69 | `report` | sync | `mtime.monotonic()` |
-| bus/fake/client.py | 62,93 | `main` | async | `anyio.current_time()` |
-| kv/server.py | 2495,2513,2520 | `save_stream` | async | `anyio.current_time()` |
-| link/notify/__init__.py | 246 | `send` | async | `anyio.current_time()` |
-| link/schema/_main.py | 94 | `_worker` | async | `anyio.current_time()` |
-| link/server/_server.py | 1560,1588,1592 | `_save_stream` | async | `anyio.current_time()` |
-| modbus/server.py | 241,258 | `serve` | async | `anyio.current_time()` |
-
-Plus the loop-less `from time import monotonic as time` sites:
-`lib/priomap/_impl.py` (sync `T_ADD`/`T_SUB`) → `mtime.monotonic()`.
-(`lib/pid/_impl.py` is excluded — see D3.)
-
-`t_iter.time()` in `moat/util/times.py` currently mixes real
-`time.monotonic()` with `anyio.sleep` — that is the unsynchronised-clock smell
-the review flags. Switch it to `anyio.current_time()` so the iterator tracks
-the same (fakeable) clock its `sleep` advances.
+`t_iter.time()` in `moat/util/times.py` switches to `mtime.monotonic()`
+(formerly mixed real `time.monotonic()` with `anyio.sleep` — now uniformly
+overridable; a test patches the slot to `loop_time` to sync with `sleep`).
 
 ### D3 — Device boundary (MicroPython) — exclusions
 

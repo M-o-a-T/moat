@@ -1559,7 +1559,7 @@ class Server(MsgHandler):
     async def _save_stream(rdr, mw, shorter, ign):
         # helper for .save_stream() to keep the indent levels down
 
-        last_saved = anyio.current_time()
+        last_saved = mtime.monotonic()
         last_saved_count = 1
         TIMEOUT = 5
         MAXMSG = 100
@@ -1587,11 +1587,11 @@ class Server(MsgHandler):
                 await mw(msg)
 
             # Ensure that we save the system state often enough.
-            t = anyio.current_time()
+            t = mtime.monotonic()
             td = t - last_saved
             if td >= TIMEOUT or last_saved_count >= MAXMSG:
                 await mw.flush(force=True)
-                last_saved = anyio.current_time()
+                last_saved = mtime.monotonic()
                 last_saved_count = 0
 
     async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):

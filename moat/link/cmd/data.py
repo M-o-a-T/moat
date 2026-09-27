@@ -562,7 +562,7 @@ def _as_path(p) -> Path:
     if isinstance(p, Path):
         return p
     if isinstance(p, str):
-        return P(p)
+        raise click.UsageError(f"Cannot interpret {p!r} is not a path. Prefix !P.")
     if isinstance(p, (list, tuple)):
         return Path.build(p)
     raise click.UsageError(f"Cannot interpret {p!r} as a path.")

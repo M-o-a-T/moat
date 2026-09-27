@@ -389,7 +389,9 @@ async def test_import_legacy_list_format(tmp_path):
 
     src = tmp_path / "dump.yaml"
     # mix of !P-tagged Path, string and list-form path keys
-    src.write_text("- !P a.b: 42\n- !P a.c: hi\n- !P x:\n    nested: 1\n- p.q: 7\n- [k, l]: 9\n")
+    src.write_text(
+        "- !P a.b: 42\n- !P a.c: hi\n- !P x:\n    nested: 1\n- !P p.q: 7\n- [k, l]: 9\n"
+    )
 
     conn = _ImportConn()
     obj = attrdict(conn=conn, path=P("root"))

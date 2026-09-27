@@ -542,10 +542,26 @@ decision 1’s wording.
 
 ## Data migration
 
-A one-time importer `mt db inv migrate-from-kv` (or a script under
-`examples/moat-db-inv/`) that reads the live DistKV tree via the existing
-`moat.kv.inv.model.InventoryRoot.as_handler(client)` and writes the new
-rows in one DB transaction.
+The one-time importer `mt db inv migrate-from-kv` reads the raw DistKV
+entries below the inventory prefix (`kv.inv.prefix`) and writes the new
+rows in one DB transaction. With `-i FILE` it reads the output of
+`moat kv data PREFIX get -r` instead; `-n` only prints the report. It
+refuses to run on a non-empty inventory unless `--force` is given.
+
+Implementation notes (`moat/db/inv/migrate.py`):
+
+- A net without a VLAN gets its `master`'s VLAN (D3); nets that still
+  have none are skipped and reported, as are interfaces on them (their
+  `seqnum` is dropped).
+- A short name that is already taken, or longer than 40 characters, is
+  changed (`NAME-2`, …) and reported.
+- A `seqnum` already used on the same VLAN is dropped and reported.
+- A port's `vlan` attribute sets the interface's VLAN if the port has no
+  net; other port attributes are reported. The production inventory had
+  none besides `vlan` (Q7).
+- "Expanded" interfaces are reported only for networks outside the old
+  net's master/slave family, since DistKV already gave hosts addresses on
+  those.
 
 ### Source → target mapping
 
@@ -653,9 +669,9 @@ interfaces so the operator can prune unintended addresses.
 6. ~~**Removal of `moat/kv/inv`.**~~ **Resolved — scheduled:** filed as a
    separate issue, blocked by this implementation issue (removal proceeds
    once the migration has run everywhere).
-7. **Arbitrary port `attrs` (D6, tentative).** Deferred until the
-   migrator is written: scan a real DistKV tree for `attrs` in use beyond
-   `vlan`; add a `JSON` column if any matter.
+7. ~~**Arbitrary port `attrs` (D6, tentative).**~~ **Resolved — dropped:**
+   the production DistKV tree has no port `attrs` besides `vlan`; the
+   importer reports any it finds.
 8. ~~**`seqnum` scope.**~~ **Resolved — OK:** VLAN-wide (one `seqnum` per
    interface, shared across the VLAN’s networks, enforcing
    `unique(network, seqnum)` via `UNIQUE(vlan_id, seqnum)`). If

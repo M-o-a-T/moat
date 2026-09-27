@@ -42,7 +42,7 @@ unchanged: since 2026-09-27 these are native MoaT-Link paths.
 
 `temp.min.forecast:<n>`, the minimum outside temperature over the next
 *n* hours, used to be written by a cron script (`temp_min`) through
-MoaT-KV. It is now a MoaT-Link job that loops forever, fetching the
+MoaT-KV. It is now a long-running MoaT-Link job that fetches the
 OpenWeatherMap One Call 3.0 hourly forecast every `interval` seconds
 (moat-n84.27.1).
 
@@ -51,9 +51,10 @@ OpenWeatherMap One Call 3.0 hourly forecast every `interval` seconds
 | `code.weather.min-temp.yaml` | `moat link code weather.min-temp get` |
 | `job.debug.weather.temp.min.yaml` | `moat link job -g debug at weather.temp.min` |
 
-The debug job writes to `test.temp.min.forecast:<n>`. The API key is not
-stored in the code or the job: the job's `key` names the MoaT-Link item
-that holds it.
+The debug job writes to `test.temp.min.forecast:<n>`. The job's `key` is
+either the API key itself or, as here, the path of the MoaT-Link item that
+holds it; that item is watched, and a new key triggers an immediate fetch.
+Refreshes are driven by a one-shot job timer.
 
 ```shell
 moat link code weather.min-temp set -a -d code.weather.min-temp.yaml

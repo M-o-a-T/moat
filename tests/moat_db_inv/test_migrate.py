@@ -129,3 +129,20 @@ async def test_dry_run(db_url):
         assert s.execute(select(Host)).first() is None
         assert s.execute(select(Vlan)).first() is None
     eng.dispose()
+
+
+@pytest.mark.anyio
+async def test_select_by_name(db_url):
+    "'-n NAME' selects a host or wire by its short name"
+    await _migrate(db_url)
+
+    async def show(*args):
+        return (await run("-s", "moat.db.url", db_url, "db", "inv", *args, "show")).stdout
+
+    assert await show("host", "-n", "srv") == await show("host", "-d", "srv.lan.example")
+    assert "srv.lan.example" in await show("host", "-n", "srv")
+    assert await show("wire", "-n", "w1") == await show("wire", "-d", "w1")
+    with raises(click.UsageError):
+        await show("host", "-n", "nope")
+    with raises(click.UsageError):
+        await show("host", "-n", "srv", "-d", "srv.lan.example")

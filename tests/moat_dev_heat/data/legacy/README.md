@@ -43,7 +43,7 @@ simulated time, `t` in seconds from the scenario start):
 | `cold_start` | cold buffer, cold day: start-up, warm-up, de-ice, cycling |
 | `steady` | mild weather, warm buffer: normal cycling |
 | `deice` | cold humid air: repeated de-icing while running |
-| `pellet_handover` | heat pump running at +3 °C, frost to −6 °C, thaw: pellets start, take over, hand back |
+| `pellet_handover` | heat pump running at +3 °C, frost to −6 °C, thaw: the burner starts at about +1 °C, the heat pump keeps running until the buffer is charged, stays off during the frost, and takes over again after the thaw |
 | `day_night` | 18:00 to 10:00: night setback at 21:30, forced day mode 04:00–06:00 |
 | `error_mid_run` | heat-pump error at 2 h, cleared at 3 h |
 | `hp_no_power` | heat pump stops drawing power at 1 h, error on `:1` |
@@ -120,12 +120,13 @@ New units should either match these or deviate deliberately.
   The legacy code uses the first form for the flow and pump PWM in the
   `flow`, `wait_power`, `temp`, `ice` and `down` states (not in `run`,
   which uses the split form), so in these traces the circulation pump
-  runs at maximum there. With the simulator's heat pump at start load
-  that keeps `t_out - t_in` below `misc.start.delta` at −6 °C, and
-  `pellet_handover` ends with the start timeout when the heat pump
-  restarts in the frost. Either the production PID code behaves
-  differently or the simulated heat pump is too weak at minimum load;
-  to be settled. The traces are recorded with `moat.lib.pid` as it is.
+  runs at maximum there. At minimum start load in cold air the
+  simulated heat pump then barely reaches `misc.start.delta`; see the
+  `hp_no_power`-style start timeout if that happens. Whether the
+  production PID code behaves the same is to be settled. The traces are
+  recorded with `moat.lib.pid` as it is.
+- `../wp.py.txt`, a verbatim copy of the separate frost-protection task (not part of
+  `solvis.py`), is kept here for the port (moat-n84.29).
 
 ## Reproducibility
 

@@ -18,9 +18,11 @@ class Pellet:
     """
     Pellet burner, modelled as a state-code sequence driving the fire.
 
-    ``off`` → ``prepare`` → ``ignite`` → ``run``; ``run`` burns out
-    (``burnout`` → ``afterrun``) when the burner is switched off or the
-    boiler exceeds its goal temperature, then goes to ``off`` or
+    ``off`` → ``prepare`` → ``ignite`` → ``run``. In ``run`` the fire
+    follows the load goal, but is modulated down (to ``min_mod``) as the
+    boiler rises from its goal temperature to ``goal + hyst_off``. It burns
+    out (``burnout`` → ``afterrun``) when the burner is switched off or the
+    boiler still exceeds ``goal + hyst_off``, then goes to ``off`` or
     ``standby``. A failed ignition retries ``ignite_retries`` times, then
     latches ``fault`` until the burner is switched off.
 
@@ -118,6 +120,9 @@ class Pellet:
             self.fire = p_min * min(1.0, age / cfg.t_ignite)
         elif code == c.run:
             tgt = cfg.p_nom * clamp(load, cfg.min_mod, 1)
+            # the burner's own temperature limiter: modulate down above the goal
+            lim = (goal + cfg.hyst_off - self.temp) / cfg.hyst_off
+            tgt = min(tgt, cfg.p_nom * clamp(lim, cfg.min_mod, 1))
             dv = cfg.ramp * dt
             self.fire = clamp(tgt, self.fire - dv, self.fire + dv)
         elif code == c.burnout:

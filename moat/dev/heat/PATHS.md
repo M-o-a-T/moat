@@ -4,6 +4,12 @@ Inventory of every sensor, command, setting, feedback and output path in
 the legacy `solvis.py` configuration, and where it lives in MoaT-Link
 (surveyed 2026-09-27 against the production server; see HEAT.md §2.2).
 
+Production runs with an override file (`solvis.yml`) merged over the
+built-in `CFG`. The tables show the effective paths; rows marked
+"(override)" differ from or are missing in the built-in `CFG`, rows
+marked "(unused)" are configured but not read by the current code.
+Only part of `solvis.py` is currently active in production.
+
 ## Where the data comes from
 
 | KV subtree | Link location | Gateway | Notes |
@@ -43,13 +49,14 @@ minute while any heating runs.
 | `sensor.error` | `heat.s.pump.err` | `legacy.heat.s.pump.err:1` … `err:20` | subtree | | |
 | `sensor.power` | `heat.s.pump.power` | `legacy.heat.s.pump.power` | float | 87d | 0 |
 | `sensor.cop` | `home.ass.dyn.sensor.heizung.wp_cop.state` | same | float | 126d | 0 |
-| `sensor.temp.current` | `temp.avg.temp.aussen_kompost` | `legacy.temp.avg.temp.aussen_kompost` | float | 97d | 0 |
+| `sensor.temp.current` (override) | `home.ass.dyn.sensor.temp.garten_kompost_schatten.state` | same | float | <1h | |
 | `sensor.temp.predict` | `temp.min.forecast:6` | `legacy.temp.min.forecast:6` | float | 220d | 0 |
 | `sensor.temp.pellet` | `heat.s.pellets.temp.top` | `legacy.heat.s.pellets.temp.top` | float | 4m | 0 |
 | `sensor.temp.heat` | `heat.s.heating.temp.out` | `legacy.heat.s.heating.temp.out` | float | 3m | 13 |
 | `sensor.pellet.state` | `heat.s.pellets.state` | `legacy.heat.s.pellets.state` | int | 62d | 0 |
 | `adj.curve.current` | `temp.avg.temp.aussen_kompost.min` | `legacy.temp.avg.temp.aussen_kompost.min` | float | 7m | 1 |
 | `misc.switch.state` | `heat.s.pump.switchover` | `legacy.heat.s.pump.switchover` | bool | 51m | 0 |
+| `setting.passthru` (override, unused) | `heat.s.pump.pass` | `legacy.heat.s.pump.pass` | bool | 31d | |
 
 ### Settings
 
@@ -82,12 +89,16 @@ minute while any heating runs.
 | `cmd.pellet.load` | `heat.s.pellets.load.goal.cmd` | `legacy.heat.s.pellets.load.goal.cmd` | int | 62d |
 | `cmd.pellet.wanted` | `heat.s.pellets.power.cmd.auto` | `legacy.heat.s.pellets.power.cmd.auto` | bool | 20h |
 | `cmd.pellet.run` | `heat.s.pellets.power.cmd` | `legacy.heat.s.pellets.power.cmd` | bool | 55d |
-| `cmd.passthru.pump` | `home.ass.dyn.switch.heizung.wp_auto_mode.cmd` | same | bool | 418d |
-| `cmd.passthru.pellet` | `home.ass.dyn.switch.heizung.pellet_auto_mode.cmd` | same | bool | 418d |
+| `cmd.passthru.pump` (unused) | `home.ass.dyn.switch.heizung.wp_auto_mode.cmd` | same | bool | 418d |
+| `cmd.passthru.pellet` (unused) | `home.ass.dyn.switch.heizung.pellet_auto_mode.cmd` | same | bool | 418d |
+| `cmd.pellet.switch` (override) | `home.ass.dyn.switch.heizung.pellets.cmd` | same | bool | 62d |
 | `adj.pellet.startup.patch.path` | `heat.s.pellets.aux:1.goal`, `aux:2.goal`, `aux.r-min.goal` | `legacy.` + KV path | float | 3m |
 | `output.flow.path` | `heat.s.pump.pid` | `legacy.heat.s.pump.pid` | int | 87d |
 | `output.flow.override.flag` | `home.ass.state.input_boolean.test_override_on.state` | same | bool | 418d |
 | `output.flow.override.val` | `home.ass.state.input_number.test_override_pct.state` | same | float | 418d |
+| `pid.{flow,pump,load,buffer,limit}.log` (override) | `heat.s.pump.pct.*`, `heat.s.pump.set.*` | `legacy.` + KV path | float | 87–123d |
+| `pid.{p_load,p_buffer}.log` (override) | `heat.s.pellets.pct.*`, `heat.s.pellets.set.*` | `legacy.` + KV path | float | 62–125d |
+| `state` (override; built-in uses a file) | `heat.state` | `legacy.heat.state` | subtree | <1h |
 
 ### Feedback (written by the controller, read by Home Assistant)
 
@@ -98,14 +109,14 @@ minute while any heating runs.
 | `feedback.heat` | `home.ass.dyn.switch.heizung.main.state` | same | bool | 1h |
 | `feedback.pump` | `home.ass.dyn.binary_sensor.heizung.pump.state` | same | bool | 39m |
 | `feedback.ice` | `home.ass.dyn.binary_sensor.heizung.wp_de_ice.state` | same | bool | 87d |
-| `feedback.passthru.pump` | `home.ass.dyn.switch.heizung.wp_auto_mode.state` | missing; HA publishes `home.ass.state.switch.heizung_wp_auto_mode.state` | bool | |
-| `feedback.passthru.pellet` | `home.ass.dyn.switch.heizung.pellet_auto_mode.state` | missing; HA publishes `home.ass.state.switch.heizung_pellet_auto_mode.state` | bool | |
+| `feedback.passthru.pump` (unused) | `home.ass.dyn.switch.heizung.wp_auto_mode.state` | missing; HA publishes `home.ass.state.switch.heizung_wp_auto_mode.state` | bool | |
+| `feedback.passthru.pellet` (unused) | `home.ass.dyn.switch.heizung.pellet_auto_mode.state` | missing; HA publishes `home.ass.state.switch.heizung_pellet_auto_mode.state` | bool | |
 
 ## Gaps
 
-- `temp.min.forecast:*` has not been updated for 220 days, and the
-  `temp.avg.temp.aussen_kompost` node itself for 97 days (its `.min`
-  child is current).
+- `temp.min.forecast:*` is written into KV by a separate script
+  (`temp_min`) and has not been updated for 220 days. It needs to be
+  ported to MoaT-Link and fed to the new units.
 - `gate.hass.heat` (MQTT, JSON codec) fails to decode
   `heat.s.pump.err` and the `*_auto_mode` switch topics; see
   `error.link.mqtt.codec.hass.heat.*`.

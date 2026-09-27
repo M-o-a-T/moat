@@ -35,7 +35,7 @@ class HostState(Enum):
     # constants
     INIT = "in"
     NEW = "nw"
-    DOWN = "dn"  # id state=down seen
+    DOWN = "dn"  # id state=down seen (a DOWN ping drops the service at once)
     UP = "up"
     TIMEOUT = "tm"  # no ping for some time, error generated
     STALE = "sl"  # superseded
@@ -171,6 +171,13 @@ class HostMachine:
             else:
                 dest = self.state
             await self._set_state(dest, event, **kwargs)
+            return
+
+        if event is _E.MSG_DOWN:
+            # The client says it is gone; in practice this is its WILL,
+            # published by the broker when the connection died. Dead is
+            # dead: drop its entries now instead of waiting for timeouts.
+            await self._set_state(_S.DROP, event, **kwargs)
             return
 
         if event in (_E.DEL_ID, _E.DEL_HOST) and self.state in (_S.TIMEOUT, _S.STALE):

@@ -10,11 +10,13 @@ There is no `clock.py` and no clock object passed to the units.
 - Monotonic time and timers: `anyio.current_time()`, `anyio.sleep_until()`,
   `anyio.move_on_after()` (via `moat.util.time.loop_time()` where a loop may
   be absent). Tests fake it with trio's `MockClock` (autojump).
-- Wall-clock time (persisted PID timestamps, schedules, override expiry,
-  comparison with `MsgMeta.timestamp`): `moat.util.time.time()`. A test
+- Cores run on monotonic time: they get `now` (loop time) as an argument,
+  never read a clock, and ask to be woken after a delay.
+- Wall-clock time is only needed at the edges: persisted PID timestamps
+  (converted on save and load), override expiry, and comparison with
+  `MsgMeta.timestamp`. It comes from `moat.util.time.time()`. A test
   fixture patches it to `<fixed epoch> + anyio.current_time()`, so both
   clocks advance together under `MockClock`.
-- Cores still get `now` (wall seconds) as an argument and never read a clock.
 - Closed-loop tests of cores need neither: they are a plain loop that calls
   `core.step(inputs, now)` and `sim.step(dt)`.
 - Tests against a real Link server (Scaffold) run in real time with short
@@ -80,9 +82,10 @@ As described above.
 - `PIDState` (`i`, `e`, `setpoint`, `t`) as a pydantic model that lives
   inside a unit's `State`.
 - `APID`: wraps `moat.lib.pid.CPID`, keeping its contract: the input is
-  the current measurement, not the error. Always called with wall time `t`. On
-  load, a `t` older than `rebase_after` is moved to "now", so the first step
-  after an outage doesn't integrate over it. Writes value and setpoint to
+  the current measurement, not the error. It runs on monotonic time; `t` is
+  converted to wall time when the state is saved and back when it is
+  loaded. On load, a `t` older than `rebase_after` is moved to "now", so
+  the first step after an outage doesn't integrate over it. Writes value and setpoint to
   the configured `log.value` / `log.setpoint` paths through a `Writer`.
 - `test_pid.py`: state persisted and restored across instances, no
   integrator jump after a restart one hour later, logging.
@@ -90,22 +93,18 @@ As described above.
 ### 5. `unit.py`
 
 - Core protocol: `step(inputs, now) -> Step` with `outputs`, `actions`
-  and `wake_at` (wall time or `None`).
+  and `wake_in` (a delay in seconds, or `None`). `now` is monotonic.
 - `Unit` base (Link adapter): loads config (step 1) and state (step 3),
   builds the readers from the config, announces the service, then loops:
-  wait for an input change or `wake_at` (converted to a loop-time
-  deadline), call `core.step(snapshot, time())`, write outputs, save
+  wait for an input change or until `wake_in` has passed, call
+  `core.step(snapshot, anyio.current_time())`, write outputs, save
   state. A config change rebuilds the readers.
 - `test_unit.py`: a trivial core on Scaffold (input change triggers a
-  step, `wake_at` triggers a step, config change is applied).
+  step, `wake_in` triggers a step, config change is applied).
 
-## Open questions
+## Review decisions
 
-1. Is a wall-clock `wake_at` returned by the cores right? The alternative
-   is a relative delay.
-
-Decided:
-
+- Cores use monotonic time and request wake-ups as a delay.
 - Publishing an event when an override expires is left to the units;
   `Override` only signals the change.
 - The simulator keeps its dataclass configuration (it is not production

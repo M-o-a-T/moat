@@ -111,7 +111,7 @@ class _Requeue(Exception):
 
 
 def _link_lost(exc: BaseException) -> bool:
-    "Is this (or does this group contain) a `ServerLinkLost`?"
+    "Is this (or does this group contain) a `~moat.link.exceptions.ServerLinkLost`?"
     if isinstance(exc, BaseExceptionGroup):
         return exc.subgroup(ServerLinkLost) is not None
     return isinstance(exc, ServerLinkLost)
@@ -159,7 +159,7 @@ class BasicCmd:
     A simple command that doesn't require streaming.
 
     If the server connection dies while it runs, the command fails; it is
-    not repeated (the client terminates, see `ServerLinkLost`).
+    not repeated (the client terminates, see `~moat.link.exceptions.ServerLinkLost`).
     """
 
     def __init__(self, a, kw):
@@ -1519,7 +1519,8 @@ class Link(LinkCommon, CtxObj):
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         This is the manager task for the server link channel.
-        It starts a server connection; losing it later ends the client (`ServerLinkLost`).
+        It starts a server connection; losing it later ends the client
+        (`~moat.link.exceptions.ServerLinkLost`).
 
         Connection order:
         1. Unix socket (cfg.client.path), if configured
@@ -1654,7 +1655,7 @@ class Link(LinkCommon, CtxObj):
 
         The connection is not re-established or moved to another server:
         when it ends (other than by cancellation), this raises
-        `ServerLinkLost`, which terminates the client.
+        `~moat.link.exceptions.ServerLinkLost`, which terminates the client.
         """
         # We're connected.
         self.current_server = rem
@@ -1704,7 +1705,7 @@ class Link(LinkCommon, CtxObj):
 
         Waits for the initial server connection. If the connection dies
         while the command runs, it fails with `EOFError` (and the client
-        is terminating anyway, see `ServerLinkLost`).
+        is terminating anyway, see `~moat.link.exceptions.ServerLinkLost`).
         """
         _idem  # noqa:B018  # accepted for compatibility; commands are never repeated
         cmd_ = BasicCmd(a, kw)

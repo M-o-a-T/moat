@@ -333,16 +333,14 @@ _crashed: set[str] = set()
 async def _crash(link) -> None:
     """
     Make a client look like it crashed: drop its connection without an MQTT
-    DISCONNECT, and don't reconnect. The broker then publishes the client's
-    WILL.
+    DISCONNECT. The broker then publishes the client's WILL (and the client
+    itself fails with MQTTConnectionLost).
 
     (Cancelling a client does not do this: its shutdown sends DISCONNECT,
     which suppresses the WILL.)
     """
     _crashed.add(link.name)
-    cl = link.backend.client
-    cl._closed = True  # noqa: SLF001  # no reconnect
-    await cl._stream.aclose()  # noqa: SLF001
+    await link.backend.client._stream.aclose()  # noqa: SLF001
 
 
 async def run_crashable_service(sf: Scaffold, *, task_status) -> None:

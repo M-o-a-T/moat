@@ -88,3 +88,31 @@ async def test_retained_message(mqtt_broker_addr: str) -> None:  # noqa: D103
         while isinstance(exc, BaseExceptionGroup) and len(exc.exceptions) == 1:
             exc = exc.exceptions[0]
         raise exc  # noqa: TRY201
+
+
+async def test_connection_lost_ends_client() -> None:
+    "a client whose broker goes away raises MQTTConnectionLost instead of reconnecting"
+    from moat.util import attrdict  # noqa: PLC0415
+    from moat.lib.mqtt import MQTTConnectionLost  # noqa: PLC0415
+    from moat.link._test import run_broker  # noqa: PLC0415
+
+    got: list[BaseException] = []
+    async with anyio.create_task_group() as tg:
+        broker = anyio.CancelScope()
+
+        async def run_b(*, task_status):
+            with broker:
+                await run_broker(attrdict(), task_status=task_status)
+
+        path = await tg.start(run_b)
+        with anyio.fail_after(10):
+            try:
+                async with (
+                    AsyncMQTTClient(path, transport="unix") as client,
+                    client.subscribe("test/#"),
+                ):
+                    broker.cancel()  # the broker dies
+                    await anyio.sleep_forever()
+            except* MQTTConnectionLost as exc:
+                got.extend(exc.exceptions)
+    assert len(got) == 1

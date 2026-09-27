@@ -116,7 +116,11 @@ class MsgReader(_MsgRW):
             assert self.stream is not None  # stream is set in __aenter__
             d = await self.stream.read(self.buflen)  # ty:ignore[unresolved-attribute]  # AsyncFile has read
             if d == b"":
-                raise StopAsyncIteration
+                self.codec.eof()
+                try:
+                    return next(self.codec)
+                except StopIteration:
+                    raise StopAsyncIteration from None
             self.codec.feed(d)
 
 

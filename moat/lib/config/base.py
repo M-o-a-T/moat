@@ -31,7 +31,7 @@ from moat.util import attrdict
 from moat.lib.path import P, Path
 
 from collections.abc import AsyncIterator, Mapping
-from typing import Any
+from typing import Any, Self
 
 _logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ class BaseModel(_BaseModel):
         raise AttributeError(k)
 
     @classmethod
-    def from_cfg(cls, path: str | Path) -> BaseModel:
+    def from_cfg(cls, path: str | Path) -> Self:
         """
         Validate a subtree of the current configuration into this model.
 
@@ -198,9 +198,7 @@ class BaseModel(_BaseModel):
         return cls.model_validate(subtree, context=_CFG_CTX)
 
     @classmethod
-    async def cfg_monitor(
-        cls, path: str | Path, *, delay: float = 0.25
-    ) -> AsyncIterator[BaseModel]:
+    async def cfg_monitor(cls, path: str | Path, *, delay: float = 0.25) -> AsyncIterator[Self]:
         """
         Yield re-validated instances of this model as a config subtree changes.
 

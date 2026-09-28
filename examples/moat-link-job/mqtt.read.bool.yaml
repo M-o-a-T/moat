@@ -1,0 +1,71 @@
+info: copy an incoming MQTT boolean to MoaT-Link
+is_async: true
+vars:
+- src
+- dst
+- on_val
+- off_val
+default:
+  off_val: null
+  on_val: null
+code: |
+  # Messages at the MQTT topic 'src' are text. 'on_val' sets the Link
+  # entry 'dst' to True, 'off_val' to False. Other messages are ignored;
+  # they're logged if both 'on_val' and 'off_val' are set.
+  class Src(_cls.MQTTmsg): pass
+
+  await _self.monitor(src, cls=Src, raw=True)
+  async for msg in _info:
+      if isinstance(msg, Src):
+          val = msg.value
+          if isinstance(val, (bytes, bytearray)):
+              val = val.decode("utf-8", errors="replace")
+          if val == on_val:
+              await _self.set(dst, True)
+          elif val == off_val:
+              await _self.set(dst, False)
+          elif on_val is not None and off_val is not None:
+              _log.warning("Unknown value: %r", val)
+tests:
+  on:
+    info: "only on_val (production: door opener)"
+    timeout: 10
+    data:
+      out:
+        _: false
+    args:
+      src: !P bus.door
+      dst: !P out
+      on_val: open
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.door, "close"]
+    - [send, !P bus.door, "open"]
+    - [wait, 2, "out[-1] is True"]
+    - [sleep, 0.3]
+    - [check, "out == [False, True]"]
+  on_off:
+    info: on_val and off_val; unknown values are logged and ignored
+    timeout: 10
+    data:
+      out:
+        _: false
+    args:
+      src: !P bus.sw
+      dst: !P out
+      on_val: "on"
+      off_val: "off"
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.sw, "on"]
+    - [wait, 2, "out[-1] is True"]
+    - [send, !P bus.sw, "off"]
+    - [wait, 2, "out[-1] is False"]
+    - [send, !P bus.sw, "maybe"]
+    - [send, !P bus.sw, "on"]
+    - [wait, 2, "out[-1] is True"]
+    - [check, "out == [False, True, False, True]"]

@@ -1,0 +1,135 @@
+code: |
+  class _dly(_cls.ChangeMsg): pass
+  class _src(_cls.ChangeMsg): pass
+
+  # Every @seconds, write a counter to @dst that runs from val.min to
+  # val.max. The other side is expected to echo it to @src. If @src
+  # doesn't change for more than @lim ticks, @err is set to True.
+  # @seconds may be a path to read the interval from; zero stops.
+
+  cnt = val["min"]
+  v_old = None
+  n_0 = 0
+  timer = None
+
+  await _self.watch(src, fetch=False, cls=_src)
+  if isinstance(seconds, (float, int)):
+      timer = await _self.timer(seconds)
+  else:
+      await _self.watch(seconds, fetch=True, cls=_dly)
+
+  async for msg in _info:
+      if isinstance(msg, _src):
+          if msg.value != v_old:
+              n_0 = 0
+              v_old = msg.value
+
+      elif isinstance(msg, _dly):
+          seconds = msg.value
+          if timer is not None:
+              timer.cancel()
+              timer = None
+          if isinstance(seconds, (float, int)) and seconds > 0:
+              timer = await _self.timer(seconds)
+
+      elif isinstance(msg, _cls.TimerMsg):
+          if msg.msg is not timer:
+              continue
+          await _link.set(dst, cnt)
+          cnt += 1
+          if cnt > val["max"]:
+              cnt = val["min"]
+
+          await _link.set(err, (n_0 > lim), idem=True)
+          n_0 += 1
+          await timer.run(seconds)
+default:
+  lim: 2
+  seconds: 10
+  val:
+    max: 9
+    min: 1
+info: Keepalive. Set @err if @src doesn't change when writing @dst.
+is_async: true
+vars:
+- dst
+- val
+- seconds
+- lim
+- err
+- src
+tests:
+  count:
+    info: the counter runs from min to max, then wraps
+    timeout: 10
+    args:
+      src: !P in
+      dst: !P out
+      err: !P err
+      seconds: 0.2
+      val:
+        min: 10
+        max: 12
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) >= 4"]
+    - [check, "out[:4] == [10, 11, 12, 10]"]
+  error:
+    info: no echo sets the error after lim ticks; an echo clears it
+    timeout: 10
+    args:
+      src: !P in
+      dst: !P out
+      err: !P err
+      seconds: 0.2
+      lim: 2
+    steps:
+    - [monitor, err, !P err]
+    - [start]
+    - [wait, 3, "len(err) > 0 and err[-1] == False"]
+    - [wait, 3, "err[-1] == True"]
+    - [set, !P in, 1]
+    - [wait, 3, "err[-1] == False"]
+  alive:
+    info: a changing echo keeps the error off
+    timeout: 10
+    args:
+      src: !P in
+      dst: !P out
+      err: !P err
+      seconds: 0.2
+      lim: 2
+    steps:
+    - [monitor, err, !P err]
+    - [start]
+    - [set, !P in, 1]
+    - [sleep, 0.2]
+    - [set, !P in, 2]
+    - [sleep, 0.2]
+    - [set, !P in, 3]
+    - [sleep, 0.2]
+    - [set, !P in, 4]
+    - [sleep, 0.2]
+    - [set, !P in, 5]
+    - [sleep, 0.2]
+    - [set, !P in, 6]
+    - [check, "len(err) > 0 and True not in err"]
+  seconds.path:
+    info: the interval is read from a path
+    timeout: 10
+    data:
+      sec:
+        _: 0.2
+    args:
+      src: !P in
+      dst: !P out
+      err: !P err
+      seconds: !P sec
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) >= 2"]
+    - [check, "out[:2] == [1, 2]"]
+    - [set, !P sec, 0.1]
+    - [wait, 3, "len(out) >= 6"]

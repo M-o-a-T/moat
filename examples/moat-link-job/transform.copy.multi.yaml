@@ -1,0 +1,59 @@
+code: |
+  await _self.watch(src, fetch=False)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              continue
+          if (not val) is not level:
+              for d in dst.values():
+                  await _link.set(d, val)
+default:
+  level: null
+info: Distribute one input command to several outputs
+is_async: true
+vars:
+- dst
+- src
+- level
+tests:
+  copy:
+    info: each change is copied to all outputs; the initial value is not
+    timeout: 10
+    data:
+      in:
+        _: true
+    args:
+      src: !P in
+      dst:
+        a: !P out.a
+        b: !P out.b
+        c: !P out.c
+    steps:
+    - [monitor, a, !P out.a]
+    - [monitor, c, !P out.c]
+    - [start]
+    - [sleep, 0.5]
+    - [check, "a == [] and c == []"]
+    - [set, !P in, false]
+    - [wait, 3, "a and a[-1] is False and c and c[-1] is False"]
+    - [set, !P in, true]
+    - [wait, 3, "a and a[-1] is True and c and c[-1] is True"]
+  deleted:
+    info: deleting the source leaves the outputs alone
+    timeout: 10
+    args:
+      src: !P in
+      dst:
+        a: !P out.a
+        b: !P out.b
+    steps:
+    - [monitor, b, !P out.b]
+    - [start]
+    - [sleep, 0.5]
+    - [set, !P in, 5]
+    - [wait, 3, "b and b[-1] == 5"]
+    - [delete, !P in]
+    - [sleep, 0.5]
+    - [check, "b == [5]"]

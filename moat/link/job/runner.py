@@ -393,13 +393,13 @@ class JobEntry:
                 self._q = None
                 t = time.time()
 
-        except ErrorRecorded:
-            self._comment = None
-            st.backoff = min(st.backoff + 1, 20)
         except Exception as exc:
+            # The snippet runs inside a task group, which wraps its errors.
+            err = ungroup.one(exc)
             c, self._comment = self._comment, None
-            with anyio.move_on_after(5, shield=True):
-                await link.e_exc(self.path, exc, data=self.data, comment=c)
+            if not isinstance(err, ErrorRecorded):
+                with anyio.move_on_after(5, shield=True):
+                    await link.e_exc(self.path, err, data=self.data, comment=c)
             st.backoff = min(st.backoff + 1, 20)
         else:
             st.result = res

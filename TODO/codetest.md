@@ -158,9 +158,10 @@ expressions are strings (syntax-checked when parsed).
 Below `moat link code PATH` (`moat/link/code/_main.py`):
 
 - `test` — list the snippet's test cases.
-- `test CASE get` / `set -d FILE` / `edit` / `delete`.
+- `test CASE get` / `set -d FILE` / `edit` / `delete`; `get -e` and
+  `set -e` use the editor format. `test CASE` alone is `get`.
 - `test CASE run [--keep] [-v]` — run one test; exit code 1 on failure.
-- `test - run` — run all of the snippet's tests, in parallel.
+- `test - run [-j N]` — run all of the snippet's tests, in parallel.
 - `moat link code : test-all [-j N]` — run the tests of every snippet;
   a summary per snippet, non-zero exit if anything failed.
 

@@ -248,11 +248,12 @@ async def test_mon(cfg):
                     h = await sel_br(ibr, sid)
                     assert h.state.name == "UP", h
 
+            # The service's client closes cleanly: its "closed" ping drops
+            # the service at once (moat-7mx), without going through the
+            # TIMEOUT/STALE sequence of a silently vanished client.
             sc2.cancel()
             with anyio.fail_after(0.5):
                 h = await sel_br(ibr, sid)
-                if h.state.name == "STALE":
-                    return  # XXX investigate why that happens
                 while h.state.name == "DOWN":
                     h = await sel_br(ibr, sid)
                 assert h.state.name == "DROP", h

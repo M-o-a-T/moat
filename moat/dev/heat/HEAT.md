@@ -799,6 +799,25 @@ Handles the case where the pump unit cannot run its own shutdown
   duration, exit_delta}` for auditing.
 - Never restarts the pump unit; that is up to systemd or the operator.
 
+As implemented (`watchdog.py`):
+
+- The pump service must have been gone for `grace` seconds (default 5):
+  the pump unit's announcement and its first output are separate
+  messages. A crashed pump unit's announcement disappears as soon as the
+  link's service monitor sees its WILL.
+- The pump unit's saved state is checked, too: after its own emergency
+  shutdown it says `off` while `pump.out` may still show the last state.
+- It fires once per pump run and is re-armed by new pump output, so its
+  own takeover of the pump service doesn't trigger it again.
+- `app.heat.watchdog.disable` is read like an override item (plain value
+  or `{value, expires, reason}`).
+- `out` is `{status, triggered_at, reason, result, duration,
+  exit_delta}`, `status` being `watching`, `idle`, `disabled`,
+  `passthru`, `shutdown` or `done`; the last intervention is also kept in
+  the unit's state. `exit_delta` is `t_out - t_in` afterwards.
+- The unit adapter runs the procedure: a core may ask its adapter to do
+  something (`Step.act`, `Unit.act`).
+
 ### 3.9 `passthru`
 
 See §2.8.

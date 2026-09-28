@@ -187,3 +187,21 @@ async def test_lost_server_link_ends_client(cfg):
             except* ServerLinkLost as exc:
                 got.extend(exc.exceptions)
     assert len(got) == 1
+
+
+@pytest.mark.anyio
+async def test_two_watchers(cfg):
+    "Two d_watch on the same path, one client: both see updates"
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+        c.d_watch(P("test.x"), state=None, mark=True) as w1,
+        c.d_watch(P("test.x"), state=None, mark=True) as w2,
+    ):
+        with anyio.fail_after(3):
+            assert await anext(w1) is None
+            assert await anext(w2) is None
+            await c.d_set(P("test.x"), 5)
+            assert await anext(w1) == 5
+            assert await anext(w2) == 5

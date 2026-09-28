@@ -93,6 +93,9 @@ edits don't restart running jobs.
   needs no test awareness.
 - After the test, the test root is deleted (`d.delete(rec=True)`), even
   if the test failed; `--keep` skips that for debugging.
+- Implemented in `moat.link.code.testroot` (`TestRoot.resolve`,
+  `with_test_root`). The `T_Root` context variable is not set to the test
+  root: incoming MQTT topics would then carry `:T` instead of `:R`.
 
 ### Actions
 
@@ -141,6 +144,13 @@ spaces, values in the `set -s` syntax, `#` starting a comment line
 (stored as `comment`). An expression is the rest of the line. Saving
 parses it back into the structured form; a syntax error re-opens the
 editor, as `moat link data … edit` does.
+
+`moat.link.code.steps` does the conversion (`parse_editor`,
+`format_editor`; errors are `StepSyntaxError` with the line number).
+Arguments containing blanks or quotes are shell-quoted. Stored forms
+mirror the line: `[update, PATH, KEY, VALUE, …]`,
+`[monitor, NAME, PATH, "mqtt", CODEC]`; paths are `Path` objects,
+expressions are strings (syntax-checked when parsed).
 
 ## Command line
 

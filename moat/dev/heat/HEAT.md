@@ -74,6 +74,13 @@ Units:
 | `watchdog` | Optional; emergency shutdown if the pump unit dies while active. |
 | `passthru` | Coordinates handing the heat pump to its original controller for maintenance (§2.8). |
 
+`moat dev heat run [UNIT…]` (`system/runner.py`) runs the named units,
+or all but the watchdog, each on its own MoaT-Link client, and talks to
+systemd. The package `moat-dev-heat-service` installs the systemd units:
+`moat-heat@UNIT.service` per unit, `moat-heat.service` for all of them
+in one process, `moat-heat-pwm.service` and
+`moat-heat-modbus-mon.service`.
+
 Support commands: `off` (emergency shutdown), `curve` (print the
 heating curve), `migrate`, `sim` (plant simulator on MoaT-Link),
 `record` (side-car recorder), `pwm` and `modbus-monitor` (ported

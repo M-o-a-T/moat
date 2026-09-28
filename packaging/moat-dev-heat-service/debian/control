@@ -1,0 +1,19 @@
+Source: moat-dev-heat-service
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  dh-sequence-installsysusers,
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat
+
+Package: moat-dev-heat-service
+Architecture: all
+Depends: ${misc:Depends},
+  moat,
+  moat-dev-heat,
+Description: systemd units for the MoaT heating controller
+ Runs the MoaT heating controller's units (moat dev heat run), its
+ software PWM daemon and its Solvis Modbus monitor as systemd services.

@@ -1,0 +1,18 @@
+[Unit]
+Description=MoaT heating: software PWM for GPIO outputs
+After=moat-link-server.service
+After=flashmq.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/moat dev heat pwm
+
+EnvironmentFile=-/etc/moat/heat.env
+
+Restart=always
+RestartSec=10

@@ -879,6 +879,25 @@ replaces a pulse at once.
 
 The script works on the YAML directly and does not import `solvis.py`.
 
+As implemented (`system/migrate.py`, command in `migrate.py`):
+
+- The legacy `CFG` literal is kept as `system/legacy.yaml`.
+- One legacy key may feed several units (e.g. `sensor.pump.out`: pump,
+  flow, heat_valve, frost, watchdog, emergency); `pid.load` also sets the
+  pump's `load_pellet`, whose `d`/`tf` come from `adj.pellet.pid.load`.
+  Dropped keys (with the reason) are listed by `-v`.
+- Only values that differ from the package defaults are written. The
+  production configuration maps to no changes at all: the package
+  defaults are its values.
+- State: the legacy `t_change`, `t_run` and `t_load` are wall-clock time
+  while the pump unit keeps monotonic time, so they are not migrated;
+  PID timestamps are set to the migration time; a pending `heat_ok`
+  (a timestamp) becomes a pending switch-on that waits again.
+- The state is read from `-s FILE`, else from where the config's `state`
+  says (a Link path or a file). Without `--commit` the command prints the
+  differences to the current Link items (`+` new, `~` changed) and the
+  items as YAML.
+
 ### 4.2 Cutover
 
 1. All units are implemented and tested against the simulator and the

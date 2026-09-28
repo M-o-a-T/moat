@@ -1,0 +1,25 @@
+# A recording of the legacy controller ('solvis.py run -r'): one Data snapshot per document.
+TS: 1000.0
+t_in: 30.0
+t_out: 30.0
+tb_heat: 40.5
+m_power: 0
+state:
+  run: 0
+p_load: 0.5
+---
+TS: 1010.5
+t_in: 30.0
+t_out: 31.5
+tb_heat: 40.5
+m_power: 0
+state:
+  run: 0
+---
+TS: 1020.0
+t_in: 30.0
+t_out: 31.5
+tb_heat: 41.0
+m_power: 1.2
+m_air_pred: -3.5
+---

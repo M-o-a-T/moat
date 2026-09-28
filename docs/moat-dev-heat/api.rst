@@ -94,3 +94,6 @@ API
 
 .. autoclass:: moat.dev.heat.pellet.PelletState
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.record
+   :members: record, replay, read_timeline, convert_legacy, HEADER, DEFAULT_PATHS, LEGACY_PATHS

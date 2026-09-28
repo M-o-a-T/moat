@@ -100,6 +100,7 @@ moat/dev/heat/
     errors.py
     watchdog.py
     passthru.py
+    record.py         # side-car recorder / open-loop replay
     pwm.py            # software PWM daemon, ported to MoaT-Link
     modbus_mon.py     # Solvis poll babysitter, ported to MoaT-Link
     sim/              # plant simulator (§5.3)
@@ -111,7 +112,6 @@ moat/dev/heat/
     system/
         runner.py     # `moat dev heat run`
         migrate.py    # one-shot KV/YAML → Link migration
-        record.py     # side-car recorder / open-loop replay
 ```
 
 Every unit consists of
@@ -901,9 +901,10 @@ The script works on the YAML directly and does not import `solvis.py`.
 - `--no-save`: dropped. `--force-on`: kept as `app.heat.force_start`.
 - Bypass mode: replaced by overrides (§2.7) and passthru (§2.8).
 - `record` / `replay` of `Data.__dict__`: replaced by the side-car
-  recorder (`moat dev heat record`, `d_watch`es configured paths) with
-  open-loop replay into a test server, plus a converter for old
-  recordings. Controller validation uses the closed-loop simulator.
+  recorder with open-loop replay into a test server, plus a converter
+  for old recordings (`moat dev heat record save|replay|convert-legacy`,
+  `record.py`; the timeline format is described there). Controller
+  validation uses the closed-loop simulator.
 - `pwm` and `modbus-monitor`: ported to MoaT-Link (§3.10).
 
 ## 5. Testing

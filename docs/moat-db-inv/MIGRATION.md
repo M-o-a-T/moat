@@ -536,9 +536,15 @@ decision 1’s wording.
   address(es) from it. Scanning `seqnum` is cheaper and clearer than
   probing the 16-byte `addr`. Link-local addresses come from the MAC, not
   the allocator.
-- **`host_template` / `connected_vlans`** are ported later (out of scope
-  here) but depend only on the interface/cable/vlan graph, which the new
-  schema represents directly.
+- **`connected_vlans`** is implemented in :mod:`moat.db.inv.vlans`
+  (:func:`~moat.db.inv.vlans.connected_vlans`): the per-interface VLAN
+  exposure collector, ported from the DistKV walker with the
+  `force_vlan` early-return dropped (see the module docstring for the
+  deviation). It depends only on the interface/cable/vlan graph, which
+  the new schema represents directly.
+- **`host_template` / `host_find` / `connected_hosts`** are ported later
+  (out of scope here) but likewise depend only on the
+  interface/cable/vlan graph.
 
 ## Data migration
 

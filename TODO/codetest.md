@@ -91,6 +91,9 @@ edits don't restart running jobs.
   needs no test awareness.
 - After the test, the test root is deleted (`d.delete(rec=True)`), even
   if the test failed; `--keep` skips that for debugging.
+- Implemented in `moat.link.code.testroot` (`TestRoot.resolve`,
+  `with_test_root`). The `T_Root` context variable is not set to the test
+  root: incoming MQTT topics would then carry `:T` instead of `:R`.
 
 ### Actions
 

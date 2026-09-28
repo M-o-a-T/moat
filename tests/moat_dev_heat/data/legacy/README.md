@@ -124,6 +124,12 @@ New units should either match these or deviate deliberately.
     check turns `off` → `down` into `off`.
 13. **Run state is written to `sensor.pump.state`**, the heat pump's own
     state path (HEAT.md §1).
+14. **The `t_adj` raise of `log_hc 11` is dead code.** In `temp` with
+    heating off and `tb_low + misc.heat.delta > t_adj`, `run_pump` sets
+    `t_adj = tb_low + misc.heat.delta`, but nothing reads it before the
+    `run != Run.run` `continue`, and `t_adj` is recomputed at the top of
+    the next pass. The valve decision is the same as without it
+    (moat-n84.31); the new units don't port it.
 
 ## Problems found while building the harness
 

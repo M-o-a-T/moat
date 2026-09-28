@@ -9,27 +9,41 @@ in a `PIDState`, which lives inside the owning unit's
 
 from __future__ import annotations
 
-from pydantic import ValidationInfo, field_serializer, field_validator
+from pydantic import AfterValidator, PlainSerializer, SerializationInfo, ValidationInfo
 
 from moat.util import attrdict
 from moat.lib.config.base import BaseModel
 from moat.lib.path import Path  # noqa: TC002  # pydantic needs it at runtime
 from moat.lib.pid import CPID
 
-from typing import TYPE_CHECKING
+from typing import Annotated
 
-if TYPE_CHECKING:
-    from pydantic import SerializationInfo
-
-__all__ = ["APID", "T_OFFSET", "PIDCfg", "PIDLog", "PIDState"]
+__all__ = ["APID", "T_OFFSET", "MonoTime", "PIDCfg", "PIDLog", "PIDState"]
 
 T_OFFSET = "t_offset"
 """
 The validation and serialisation context key for the difference between
 wall-clock and monotonic time. :class:`~moat.dev.heat.state.StateStore`
-sets it so that the ``t`` field of a `PIDState` is persisted as
-wall-clock time.
+sets it so that ``MonoTime`` fields (such as the ``t`` field of a
+`PIDState`) are persisted as wall-clock time.
 """
+
+
+def _to_wall(t: float | None, info: SerializationInfo) -> float | None:
+    off = (info.context or {}).get(T_OFFSET)
+    return t if t is None or off is None else t + off
+
+
+def _to_mono(t: float | None, info: ValidationInfo) -> float | None:
+    off = (info.context or {}).get(T_OFFSET)
+    return t if t is None or off is None else t - off
+
+
+# A monotonic timestamp in a unit's state. It is persisted as wall-clock
+# time (when (de)serialised with a `T_OFFSET` context, as
+# `~moat.dev.heat.state.StateStore` does), so it stays valid across a
+# restart or a reboot.
+MonoTime = Annotated[float | None, AfterValidator(_to_mono), PlainSerializer(_to_wall)]
 
 
 class PIDLog(BaseModel):
@@ -79,22 +93,7 @@ class PIDState(BaseModel):
     i: float = 0
     e: float = 0
     setpoint: float | None = None
-    t: float | None = None
-
-    @field_serializer("t")
-    def _ser_t(self, t: float | None, info: SerializationInfo) -> float | None:
-        off = (info.context or {}).get(T_OFFSET)
-        if t is None or off is None:
-            return t
-        return t + off
-
-    @field_validator("t")
-    @classmethod
-    def _val_t(cls, t: float | None, info: ValidationInfo) -> float | None:
-        off = (info.context or {}).get(T_OFFSET)
-        if t is None or off is None:
-            return t
-        return t - off
+    t: MonoTime = None
 
 
 class APID:

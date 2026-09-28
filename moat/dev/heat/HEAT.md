@@ -232,6 +232,10 @@ limit is re-based to "now" so that the first step after a long outage
 does not integrate over the outage. `APID` also publishes value and setpoint to the configured
 `log.value` / `log.setpoint` paths, as in production today.
 
+All timestamps in unit states work that way (`pid.MonoTime`): monotonic
+in memory, wall-clock time when persisted, so they survive a reboot
+(e.g. the pump's `t_load`, which gates the next start).
+
 ### 2.4 Configuration
 
 Each unit has exactly **one** configuration object, obtained as
@@ -896,8 +900,8 @@ As implemented (`system/migrate.py`, command in `migrate.py`):
 - Only values that differ from the package defaults are written. The
   production configuration maps to no changes at all: the package
   defaults are its values.
-- State: the legacy `t_change`, `t_run` and `t_load` are wall-clock time
-  while the pump unit keeps monotonic time, so they are not migrated;
+- State: the legacy `t_change`, `t_run` and `t_load` are wall-clock
+  time, which is how the units persist their timestamps (`pid.MonoTime`);
   PID timestamps are set to the migration time; a pending `heat_ok`
   (a timestamp) becomes a pending switch-on that waits again.
 - The state is read from `-s FILE`, else from where the config's `state`

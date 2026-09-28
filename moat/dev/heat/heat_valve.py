@@ -26,6 +26,7 @@ from moat.lib.path import (
 
 from .config import UnitCfg
 from .link import Reader, out_path
+from .pid import MonoTime  # noqa: TC001  # pydantic needs it at runtime
 from .state import State
 from .unit import Step, Unit
 
@@ -103,8 +104,8 @@ class HeatValveState(State):
 
     heat_ok: bool = False
     """The heating circuit is on."""
-    pending: float | None = None
-    """Ok since (monotonic time), while waiting for ``delay``."""
+    pending: MonoTime = None
+    """Ok since, while waiting for ``delay``."""
 
 
 def _num(v: Any) -> float | None:

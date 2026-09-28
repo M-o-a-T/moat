@@ -44,7 +44,7 @@ class StateStore(Generic[S]):
     """
     Loads a unit's state and saves it when it changes.
 
-    Monotonic timestamps in the state (see `~moat.dev.heat.pid.PIDState`)
+    Monotonic timestamps in the state (``pid.MonoTime`` fields)
     are persisted as wall-clock time.
 
     Call :meth:`load`, then start :meth:`run` in a task group. After

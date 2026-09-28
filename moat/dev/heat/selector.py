@@ -38,6 +38,7 @@ from moat.lib.path import (
 from .config import UnitCfg
 from .link import Reader, out_path
 from .override import reader as override_reader
+from .pid import MonoTime  # noqa: TC001  # pydantic needs it at runtime
 from .state import State
 from .unit import Step, Unit
 
@@ -122,10 +123,10 @@ class SelectorState(State):
     primary: str | None = WP
     phase: str = Phase.STEADY.value
     """A `Phase` (stored as a plain string)."""
-    since: float | None = None
-    """Start of the current phase (monotonic)."""
-    failed: dict[str, float] = {}
-    """Sources that failed, and when (monotonic)."""
+    since: MonoTime = None
+    """Start of the current phase."""
+    failed: dict[str, MonoTime] = {}
+    """Sources that failed, and when."""
 
 
 def _num(v: Any) -> float | None:

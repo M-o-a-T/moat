@@ -428,9 +428,10 @@ _STATE_MAP: dict[str, tuple[str, str] | Drop] = {
     "load_last": ("pump", "load_last"),
     "avg_heat": ("pump", "avg_heat"),
     "avg_heat_t": ("pump", "avg_heat_t"),
-    "t_change": Drop("monotonic time in the pump unit; restarted on startup"),
-    "t_run": Drop("monotonic time in the pump unit"),
-    "t_load": Drop("monotonic time in the pump unit"),
+    # wall-clock time, as the pump unit persists them
+    "t_change": ("pump", "t_change"),
+    "t_run": ("pump", "t_run"),
+    "t_load": ("pump", "t_load"),
     "t_pellet_on": ("pellet", "t_pellet_on"),
     "pellet_on": ("pellet", "pellet_on"),
     "pellet_load": ("pellet", "load"),

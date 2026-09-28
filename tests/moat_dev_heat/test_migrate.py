@@ -159,7 +159,8 @@ def test_state() -> None:
     assert flow.pump.i == 0.2
     pump = PumpState.model_validate(st["pump"])
     assert pump.run == 6
-    assert pump.t_change is None  # monotonic in the unit; not migrated
+    # persisted as wall-clock time; StateStore converts it on loading
+    assert (pump.t_change, pump.t_run, pump.t_load) == (1790000000.0, 1790000000.0, 1790000100.0)
     assert (pump.scaled_low, pump.load_last, pump.avg_heat, pump.avg_heat_t) == (
         0.4,
         0.7,

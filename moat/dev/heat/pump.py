@@ -40,7 +40,7 @@ from .emergency import emergency_shutdown
 from .flow import FlowMode, FlowRequest
 from .link import Reader, out_path, service_path
 from .override import reader as override_reader
-from .pid import APID, PIDCfg, PIDState
+from .pid import APID, MonoTime, PIDCfg, PIDState
 from .state import State
 from .unit import Step, Unit
 
@@ -353,12 +353,12 @@ class PumpState(State):
     model_config = ConfigDict(strict=False)  # "run" is stored as a number
 
     run: Run = R.off
-    t_change: float | None = None
-    """Start of the current timed phase (monotonic)."""
-    t_load: float | None = None
-    """Last time the heat pump produced heat (monotonic)."""
-    t_run: float | None = None
-    """Start of the current run (monotonic)."""
+    t_change: MonoTime = None
+    """Start of the current timed phase."""
+    t_load: MonoTime = None
+    """Last time the heat pump produced heat."""
+    t_run: MonoTime = None
+    """Start of the current run."""
     scaled_low: float = 1.0
     load_last: float | None = None
     avg_heat: float | None = None

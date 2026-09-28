@@ -95,3 +95,20 @@ async def test_flush_on_exit(link):
         await anyio.sleep(0.1)
         tg.cancel_scope.cancel()
     assert (await _stored(link))["run"] == 7
+
+
+def test_mono_time_across_reboot() -> None:
+    "monotonic timestamps are persisted as wall-clock time, so a reboot doesn't break them"
+    from moat.dev.heat.pid import T_OFFSET  # noqa: PLC0415
+    from moat.dev.heat.pump import PumpState  # noqa: PLC0415
+
+    wall = 1_800_000_000.0
+    # before: monotonic 5000 at wall time `wall`; t_load was 100 s ago
+    st = PumpState(t_load=4900.0, t_run=4000.0, t_change=4950.0)
+    data = st.model_dump(context={T_OFFSET: wall - 5000})
+    assert data["t_load"] == wall - 100
+    # after a reboot, 60 s later: monotonic 30
+    st2 = PumpState.model_validate(data, context={T_OFFSET: wall + 60 - 30})
+    assert st2.t_load == pytest.approx(30 - 160)
+    assert st2.t_run == pytest.approx(30 - 1060)
+    assert st2.t_change == pytest.approx(30 - 110)

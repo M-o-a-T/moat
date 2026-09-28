@@ -1,0 +1,90 @@
+code: |
+  n = 0
+  data = []
+  dstval = None  # None until all inputs have been read
+
+  def mkChg(n):
+      class chg(_cls.ChangeMsg):
+          pos = n
+      return chg
+
+  for s in src.values():
+      data.append(min_val)
+      await _self.watch(s, fetch=True, cls=mkChg(n))
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          dstval = max(data)
+          await _link.set(dst, dstval)
+
+      elif isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              val = min_val
+          data[msg.pos] = val
+          if dstval is None:
+              continue
+          val = max(data)
+          if val != dstval:
+              dstval = val
+              await _link.set(dst, dstval)
+default:
+  min_val: 0
+info: Collect inputs, set output to the maximum input
+is_async: true
+vars:
+- src
+- dst
+- min_val
+tests:
+  basic:
+    info: the output follows the largest input
+    timeout: 10
+    data:
+      lader:
+        1:
+          _: 1
+        2:
+          _: 5
+        3:
+          _: 3
+    args:
+      src:
+        1: !P lader:1
+        2: !P lader:2
+        3: !P lader:3
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 5"]
+    - [set, !P lader:1, 7]
+    - [wait, 3, "out[-1] == 7"]
+    - [set, !P lader:1, 2]
+    - [wait, 3, "out[-1] == 5"]
+    - [set, !P lader:3, 4]
+    - [sleep, 0.3]
+    - [check, "out == [5, 7, 5]"]
+  deleted:
+    info: missing and deleted inputs count as min_val
+    timeout: 10
+    data:
+      lader:
+        1:
+          _: -3
+    args:
+      src:
+        1: !P lader:1
+        2: !P lader:2
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 0"]
+    - [set, !P lader:2, 2]
+    - [wait, 3, "out[-1] == 2"]
+    - [delete, !P lader:2]
+    - [wait, 3, "out[-1] == 0"]

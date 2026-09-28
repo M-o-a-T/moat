@@ -1,0 +1,143 @@
+code: |
+  class Delay(_cls.ChangeMsg): pass
+  class Src(_cls.ChangeMsg): pass
+
+  n = 0
+  await _self.watch(src, fetch=False, cls=Src)
+
+  if not isinstance(delay, (float, int)):
+      await _self.watch(delay, fetch=True, cls=Delay)
+      delay = None
+      n += 1
+
+  timer = None
+  is_on = None
+
+  async def _switch():
+      # pulse dst_on or dst_off for `delay` seconds
+      await _link.set(dst_off if is_on else dst_on, False, idem=True)
+      await _link.set(dst_on if is_on else dst_off, True)
+      await timer.run(delay)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n or timer is not None:
+              continue
+          timer = await _self.timer(0)
+          if is_on is not None and delay:
+              await _switch()
+          else:
+              await _link.set(dst_on, False)
+              await _link.set(dst_off, False)
+
+      elif isinstance(msg, _cls.TimerMsg):
+          await _link.set(dst_on if is_on else dst_off, False)
+          if dst:
+              await _link.set(dst, is_on)
+
+      elif isinstance(msg, Delay):
+          if msg.value is not _cls.NotGiven:
+              delay = msg.value
+
+      elif isinstance(msg, Src):
+          if msg.value is _cls.NotGiven:  # deleted
+              continue
+          is_on = msg.value
+          if timer is None:
+              continue  # not ready yet
+          if delay:
+              await _switch()
+          else:
+              _log.warning("%s: no delay", src)
+default:
+  delay: 1
+  dst: null
+info: 'Distribute signalling: pulse dst_on or dst_off when src changes, then set dst'
+is_async: true
+vars:
+- delay
+- dst_on
+- src
+- dst_off
+- dst
+tests:
+  pulse:
+    info: a command pulses dst_on or dst_off, then sets dst
+    timeout: 10
+    args:
+      src: !P cmd
+      dst_on: !P open
+      dst_off: !P close
+      dst: !P state
+      delay: 0.3
+    steps:
+    - [monitor, on, !P open]
+    - [monitor, off, !P close]
+    - [monitor, state, !P state]
+    - [start]
+    - [wait, 3, "on == [False] and off == [False]"]
+    - [set, !P cmd, true]
+    - [wait, 3, "on[-1] is True"]
+    - [check, "off == [False] and state == []"]
+    - [wait, 3, "on[-1] is False and state and state[-1] is True"]
+    - [set, !P cmd, false]
+    - [wait, 3, "off[-1] is True"]
+    - [check, "on[-1] is False and state[-1] is True"]
+    - [wait, 3, "off[-1] is False and state[-1] is False"]
+    - [check, "on == [False, True, False] and off == [False, True, False]"]
+  reverse:
+    info: a command during a pulse switches to the other output
+    timeout: 10
+    args:
+      src: !P cmd
+      dst_on: !P open
+      dst_off: !P close
+      dst: !P state
+      delay: 0.5
+    steps:
+    - [monitor, on, !P open]
+    - [monitor, off, !P close]
+    - [monitor, state, !P state]
+    - [start]
+    - [wait, 3, "on == [False] and off == [False]"]
+    - [set, !P cmd, true]
+    - [wait, 3, "on[-1] is True"]
+    - [set, !P cmd, false]
+    - [wait, 3, "on[-1] is False and off[-1] is True"]
+    - [wait, 3, "off[-1] is False and state and state[-1] is False"]
+    - [check, "state == [False]"]
+  no_dst:
+    info: without dst, only the pulse happens
+    timeout: 10
+    args:
+      src: !P cmd
+      dst_on: !P open
+      dst_off: !P close
+      delay: 0.2
+    steps:
+    - [monitor, on, !P open]
+    - [start]
+    - [wait, 3, "on == [False]"]
+    - [set, !P cmd, true]
+    - [wait, 3, "on[-1] is True"]
+    - [wait, 3, "on[-1] is False"]
+  delay_path:
+    info: the delay can be read from a path
+    timeout: 10
+    data:
+      dly:
+        _: 0.2
+    args:
+      src: !P cmd
+      dst_on: !P open
+      dst_off: !P close
+      dst: !P state
+      delay: !P dly
+    steps:
+    - [monitor, on, !P open]
+    - [monitor, state, !P state]
+    - [start]
+    - [wait, 3, "on == [False]"]
+    - [set, !P cmd, true]
+    - [wait, 3, "on[-1] is True"]
+    - [wait, 3, "on[-1] is False and state and state[-1] is True"]

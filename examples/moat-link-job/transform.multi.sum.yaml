@@ -1,0 +1,160 @@
+code: |
+  n = 0
+  data = []
+  ready = False
+  waiting = False  # a sum has been written less than `delay` seconds ago
+  pending = False  # a newer sum is waiting for the timer
+  timer = await _self.timer(0)
+
+  def mkChg(n):
+      class chg(_cls.ChangeMsg):
+          pos = n
+      return chg
+
+  for s in src.values():
+      data.append(None)
+      await _self.watch(s, fetch=True, cls=mkChg(n))
+      n += 1
+
+  async def _post():
+      global waiting, pending
+      try:
+          val = sum(data)
+      except (TypeError, ValueError):
+          return  # not all inputs are known
+      if waiting:
+          pending = True
+          return
+      pending = False
+      await _link.set(dst, val)
+      if delay:
+          waiting = True
+          await timer.run(delay)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          ready = True
+          await _post()
+
+      elif isinstance(msg, _cls.TimerMsg):
+          waiting = False
+          if pending:
+              await _post()
+
+      elif isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              val = 0
+          if val == data[msg.pos]:
+              continue
+          data[msg.pos] = val
+          if ready:
+              await _post()
+default:
+  delay: 60
+info: Collect inputs, set output to the sum of the inputs, at most once every `delay` seconds
+is_async: true
+vars:
+- dst
+- src
+- delay
+tests:
+  basic:
+    info: the sum is written at once, then at most every `delay` seconds
+    timeout: 10
+    data:
+      in:
+        eg:
+          _: 1
+        og:
+          _: 2
+        ug:
+          _: 3
+    args:
+      src:
+        eg: !P in.eg
+        og: !P in.og
+        ug: !P in.ug
+      dst: !P out
+      delay: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 6"]
+    - [set, !P in.eg, 10]
+    - [wait, 3, "out[-1] == 15"]
+    - [set, !P in.og, 20]
+    - [set, !P in.ug, 30]
+    - [wait, 3, "out[-1] == 60"]
+    - [sleep, 0.7]
+    - [check, "out == [6, 15, 60]"]
+  missing:
+    info: nothing is written until all inputs are known
+    timeout: 10
+    data:
+      in:
+        eg:
+          _: 1
+        og:
+          _: 2
+    args:
+      src:
+        eg: !P in.eg
+        og: !P in.og
+        ug: !P in.ug
+      dst: !P out
+      delay: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [check, "out == []"]
+    - [set, !P in.ug, 4]
+    - [wait, 3, "out and out[-1] == 7"]
+  deleted:
+    info: a deleted input counts as zero
+    timeout: 10
+    data:
+      in:
+        eg:
+          _: 1
+        og:
+          _: 2
+    args:
+      src:
+        eg: !P in.eg
+        og: !P in.og
+      dst: !P out
+      delay: 0.2
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 3"]
+    - [delete, !P in.og]
+    - [wait, 3, "out[-1] == 1"]
+  no_delay:
+    info: with delay=0 every change is written
+    timeout: 10
+    data:
+      in:
+        eg:
+          _: 1
+        og:
+          _: 2
+    args:
+      src:
+        eg: !P in.eg
+        og: !P in.og
+      dst: !P out
+      delay: 0
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 3"]
+    - [set, !P in.eg, 5]
+    - [wait, 3, "out[-1] == 7"]
+    - [set, !P in.og, 5]
+    - [wait, 3, "out[-1] == 10"]
+    - [check, "out == [3, 7, 10]"]

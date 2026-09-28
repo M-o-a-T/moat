@@ -1,0 +1,112 @@
+code: |
+  n = 0
+  data = []
+  dstval = None  # None until all inputs have been read
+
+  def mkChg(n):
+      class chg(_cls.ChangeMsg):
+          pos = n
+      return chg
+
+  for s in src.values():
+      data.append(None)
+      await _self.watch(s, fetch=True, cls=mkChg(n))
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          dstval = all(data)
+          await _link.set(dst, dstval != invert, idem=idem)
+
+      elif isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              continue
+          data[msg.pos] = val
+          if dstval is None:
+              continue
+          if dstval != all(data):
+              dstval = not dstval
+              if (not dstval) is not level:
+                  await _link.set(dst, dstval != invert, idem=idem)
+default:
+  idem: true
+  invert: false
+  level: null
+info: Collect inputs, set output True if all are True
+is_async: true
+vars:
+- invert
+- level
+- src
+- idem
+- dst
+tests:
+  basic:
+    info: the output is True if all inputs are
+    timeout: 10
+    data:
+      in:
+        auto:
+          _: false
+        manual:
+          _: false
+    args:
+      src:
+        auto: !P in.auto
+        manual: !P in.manual
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is False"]
+    - [sleep, 0.3]
+    - [check, "out == [False]"]
+    - [set, !P in.auto, true]
+    - [sleep, 0.3]
+    - [check, "out == [False]"]
+    - [set, !P in.manual, true]
+    - [wait, 3, "out[-1] is True"]
+    - [set, !P in.auto, false]
+    - [wait, 3, "out[-1] is False"]
+  missing:
+    info: an input that doesn't exist counts as False
+    timeout: 10
+    data:
+      in:
+        auto:
+          _: true
+    args:
+      src:
+        auto: !P in.auto
+        manual: !P in.manual
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is False"]
+    - [set, !P in.manual, true]
+    - [wait, 3, "out[-1] is True"]
+  invert:
+    info: with invert=True the output is False if all inputs are True
+    timeout: 10
+    data:
+      in:
+        a:
+          _: true
+        b:
+          _: false
+    args:
+      src:
+        a: !P in.a
+        b: !P in.b
+      dst: !P out
+      invert: true
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is True"]
+    - [set, !P in.b, true]
+    - [wait, 3, "out[-1] is False"]

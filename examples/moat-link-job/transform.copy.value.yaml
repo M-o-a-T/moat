@@ -1,0 +1,49 @@
+code: |
+  await _self.watch(src, fetch=True)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          if msg.value is _cls.NotGiven:  # deleted
+              continue
+          await _link.set(dst, msg.value)
+info: 'Copy value: src to dst'
+is_async: true
+vars:
+- dst
+- src
+tests:
+  copy:
+    info: the current value is copied, then every change
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 1"]
+    - [set, !P in, 2.5]
+    - [wait, 3, "out and out[-1] == 2.5"]
+    - [set, !P in, "text"]
+    - [wait, 3, "out and out[-1] == 'text'"]
+  deleted:
+    info: deleting the source leaves the destination alone
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 1"]
+    - [delete, !P in]
+    - [sleep, 0.5]
+    - [set, !P in, 3]
+    - [wait, 3, "out and out[-1] == 3"]
+    - [check, "out == [1, 3]"]

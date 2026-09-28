@@ -1,0 +1,139 @@
+code: |
+  n = 0
+  data = []
+  dstval = None  # None until all inputs have been read
+
+  def mkChg(n):
+      class chg(_cls.ChangeMsg):
+          pos = n
+      return chg
+
+  for s in src.values():
+      data.append(None)
+      await _self.watch(s, fetch=True, cls=mkChg(n))
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          dstval = any(data)
+          await _link.set(dst, dstval != invert, idem=idem)
+
+      elif isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              continue
+          data[msg.pos] = val
+          if dstval is None:
+              continue
+          if dstval != any(data):
+              dstval = not dstval
+              if (not dstval) is not level:
+                  await _link.set(dst, dstval != invert, idem=idem)
+default:
+  idem: true
+  invert: false
+  level: null
+info: Collect inputs, set output True if any are True
+is_async: true
+vars:
+- dst
+- idem
+- invert
+- src
+- level
+tests:
+  basic:
+    info: the output is True if any input is
+    timeout: 10
+    data:
+      in:
+        a:
+          _: false
+        b:
+          _: false
+    args:
+      src:
+        a: !P in.a
+        b: !P in.b
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is False"]
+    - [sleep, 0.3]
+    - [check, "out == [False]"]
+    - [set, !P in.a, true]
+    - [wait, 3, "out[-1] is True"]
+    - [set, !P in.b, 1]
+    - [sleep, 0.3]
+    - [set, !P in.a, false]
+    - [sleep, 0.3]
+    - [check, "out == [False, True]"]
+    - [set, !P in.b, 0]
+    - [wait, 3, "out[-1] is False"]
+  invert:
+    info: with invert=True the output is False if any input is True
+    timeout: 10
+    data:
+      in:
+        a:
+          _: false
+        b:
+          _: false
+    args:
+      src:
+        a: !P in.a
+        b: !P in.b
+      dst: !P out
+      invert: true
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is True"]
+    - [sleep, 0.3]
+    - [check, "out == [True]"]
+    - [set, !P in.b, true]
+    - [wait, 3, "out[-1] is False"]
+    - [set, !P in.b, false]
+    - [wait, 3, "out[-1] is True"]
+  deleted:
+    info: a deleted input keeps its last value
+    timeout: 10
+    data:
+      in:
+        a:
+          _: true
+        b:
+          _: false
+    args:
+      src:
+        a: !P in.a
+        b: !P in.b
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] is True"]
+    - [delete, !P in.a]
+    - [sleep, 0.5]
+    - [check, "out == [True]"]
+  idem:
+    info: an output that is already correct is not rewritten
+    timeout: 10
+    data:
+      in:
+        a:
+          _: true
+      out:
+        _: true
+    args:
+      src:
+        a: !P in.a
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [check, "out == [True]"]

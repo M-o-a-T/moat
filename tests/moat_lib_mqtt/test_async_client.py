@@ -4,7 +4,7 @@ import anyio
 import pytest
 import sys
 
-from moat.lib.mqtt import MQTTPublishPacket, QoS
+from moat.lib.mqtt import MQTTPublishPacket, QoS, RetainHandling
 from moat.lib.mqtt.async_client import AsyncMQTTClient
 
 if sys.version_info < (3, 11):  # noqa: UP036
@@ -116,3 +116,30 @@ async def test_connection_lost_ends_client() -> None:
             except* MQTTConnectionLost as exc:
                 got.extend(exc.exceptions)
     assert len(got) == 1
+
+
+async def test_subscribe_twice(mqtt_broker_addr: str) -> None:
+    "Two subscriptions to the same pattern on one client both get messages"
+    async with AsyncMQTTClient(mqtt_broker_addr, transport="unix") as client:
+        rh = RetainHandling.NO_RETAINED
+        async with (
+            client.subscribe("test/same", retain_handling=rh) as one,
+            client.subscribe("test/same", retain_handling=rh) as two,
+        ):
+            await client.publish("test/same", "hello")
+            with anyio.fail_after(2):
+                async for packet in one:
+                    assert packet.payload == "hello"
+                    break
+                async for packet in two:
+                    assert packet.payload == "hello"
+                    break
+
+        # the pattern is unsubscribed once both are gone; a new
+        # subscription works again
+        async with client.subscribe("test/same") as three:
+            await client.publish("test/same", "again")
+            with anyio.fail_after(2):
+                async for packet in three:
+                    assert packet.payload == "again"
+                    break

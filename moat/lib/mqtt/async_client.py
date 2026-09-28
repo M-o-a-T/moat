@@ -706,7 +706,7 @@ class AsyncMQTTClient:
                                 if subscr.subscription_id:
                                     del self._subscription_ids[subscr.subscription_id]
                                 else:
-                                    del self._subscription_no_id[pattern]
+                                    del self._subscription_no_id[subscr.pattern]
 
                         if patterns:
                             if unsubscribe_packet_id := self._state_machine.unsubscribe(patterns):
@@ -747,10 +747,9 @@ class AsyncMQTTClient:
                                 f"Already subscribed: cannot get retained messages for {pattern}"
                             )
 
-                        if subscr.max_qos >= qos:
-                            # nothing to do
-                            continue
+                        need_sub = subscr.max_qos < qos
                     else:
+                        need_sub = True
                         subscr = ClientSubscription(
                             pattern=pattern,
                             max_qos=qos,
@@ -769,6 +768,9 @@ class AsyncMQTTClient:
                     subscription.subscriptions.append(subscr)
                     subscr.users.add(subscription)
 
+                    if not need_sub:
+                        # already subscribed with a sufficient QoS
+                        continue
                     if subscr.subscription_id:
                         # every topic has (in fact, needs) its own ID.
                         subscribe_packet_id = self._state_machine.subscribe([subscr], max_qos=qos)

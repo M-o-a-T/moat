@@ -1,5 +1,7 @@
 # Code snippets, and testing them
 
+Epic: `moat-zshv` in Beads.
+
 `./mt kv job` runs a number of tasks that are, obviously, MoaT-KV based.
 We need to move them to `moat.link` and its job handling
 (`moat link job`, `moat/link/job/`).

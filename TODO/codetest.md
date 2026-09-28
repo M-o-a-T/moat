@@ -140,6 +140,13 @@ spaces, values in the `set -s` syntax, `#` starting a comment line
 parses it back into the structured form; a syntax error re-opens the
 editor, as `moat link data … edit` does.
 
+`moat.link.code.steps` does the conversion (`parse_editor`,
+`format_editor`; errors are `StepSyntaxError` with the line number).
+Arguments containing blanks or quotes are shell-quoted. Stored forms
+mirror the line: `[update, PATH, KEY, VALUE, …]`,
+`[monitor, NAME, PATH, "mqtt", CODEC]`; paths are `Path` objects,
+expressions are strings (syntax-checked when parsed).
+
 ## Command line
 
 Below `moat link code PATH` (`moat/link/code/_main.py`):

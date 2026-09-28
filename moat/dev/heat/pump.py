@@ -19,8 +19,13 @@ New compared to the legacy code:
 
 from __future__ import annotations
 
+import anyio
+import logging
 import math
 from enum import IntEnum
+
+import asyncclick as click
+from pydantic import ConfigDict
 
 from moat.util import pos2val, val2pos
 from moat.lib.config.base import BaseModel
@@ -28,10 +33,12 @@ from moat.lib.path import (
     P,
     Path,  # pydantic needs it at runtime
 )
+from moat.link.exceptions import ServiceSupplanted
 
-from .config import UnitCfg
+from .config import EmergencyCfg, UnitCfg, load_config
+from .emergency import emergency_shutdown
 from .flow import FlowMode, FlowRequest
-from .link import Reader, out_path
+from .link import Reader, out_path, service_path
 from .override import reader as override_reader
 from .pid import APID, PIDCfg, PIDState
 from .state import State
@@ -39,7 +46,10 @@ from .unit import Step, Unit
 
 from typing import Any
 
+_logger = logging.getLogger(__name__)
+
 __all__ = [
+    "PumpAbort",
     "PumpCfg",
     "PumpCore",
     "PumpState",
@@ -47,7 +57,9 @@ __all__ = [
     "PumpUnit",
     "Run",
     "TransitionError",
+    "cli",
     "next_state",
+    "set_force_start",
 ]
 
 
@@ -98,6 +110,10 @@ class TransitionError(ValueError):
 
 class PumpTimeout(RuntimeError):
     """A start-up, de-icing or cool-down phase took too long: abnormal exit."""
+
+
+class PumpAbort(RuntimeError):
+    """The adapter saw a critical error or a stale sensor while the heat pump was active."""
 
 
 def next_state(old: Run | None, new: Run) -> Run:
@@ -283,6 +299,18 @@ class PumpCfg(UnitCfg):
     feedback_wp: Path | None = P("home.ass.dyn.switch.heizung.wp.state")
     feedback_ice: Path | None = P("home.ass.dyn.binary_sensor.heizung.wp_de_ice.state")
 
+    legacy_state: Path | None = None
+    """Also write the run state (a `Run` number) here, as the legacy code did.
+
+    Production used ``heat.s.pump.state``, which is also the heat pump's
+    own state (HEAT.md §1), hence off by default."""
+
+    stale: float | None = 900
+    """While active, a sensor in `stale_sensors` that has not changed for this
+    long (or has no value) stops the unit with an emergency shutdown;
+    `None`: never."""
+    stale_sensors: list[str] = ["t_in", "t_out", "r_flow", "m_power"]
+
     min_load: float = 0.05
     """A load below this means power 0 and mode off (``lim.power.min``)."""
     min_run: float = 300
@@ -321,6 +349,8 @@ class PumpPids(BaseModel):
 
 class PumpState(State):
     """Persistent state of the pump unit."""
+
+    model_config = ConfigDict(strict=False)  # "run" is stored as a number
 
     run: Run = R.off
     t_change: float | None = None
@@ -662,6 +692,8 @@ class PumpCore:
 
         outputs[cfg.power] = self._power
         outputs[cfg.mode] = self._mode
+        if cfg.legacy_state is not None:
+            outputs[cfg.legacy_state] = int(run)
         if self._flow is not None:
             outputs[cfg.flow_request] = self._flow.to_link()
         if cfg.feedback_wp is not None:
@@ -922,15 +954,33 @@ class PumpCore:
 
 class PumpUnit(Unit[PumpCfg, PumpState]):
     """
-    MoaT-Link adapter of the pump unit.
+    MoaT-Link adapter of the pump unit (HEAT.md §2.5, §2.6).
 
-    Only enough for the closed-loop runner; announcing, the emergency
-    procedure and restart handling are moat-n84.18.
+    Besides running the core, it stops the heat pump with an emergency
+    shutdown (`~moat.dev.heat.emergency.emergency_shutdown`) when the unit
+    ends abnormally while the heat pump is active: a critical error, a
+    stale sensor, a start-up timeout, any other exception, or
+    cancellation. It does not when it is supplanted by another process
+    (e.g. ``moat dev heat off``), which then owns the shutdown.
     """
 
     name = "pump"
     cfg_model = PumpCfg
     state_model = PumpState
+
+    emergency: EmergencyCfg = EmergencyCfg()
+    """The emergency procedure's settings, loaded when the unit starts."""
+
+    def __init__(self, *a: Any, **kw: Any) -> None:
+        super().__init__(*a, **kw)
+        self._seen: dict[str, Any] = {}
+        self._changed: dict[str, float] = {}
+
+    async def run(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+        """Run the unit; see :meth:`Unit.run`."""
+        # loaded up front: when the unit stops, reading it might not work any more
+        self.emergency = await load_config(self.link, "emergency", EmergencyCfg)
+        await super().run(task_status=task_status)
 
     def make_core(self, cfg: PumpCfg, state: PumpState, now: float) -> PumpCore:
         """The core."""
@@ -964,3 +1014,85 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         }
         rd["override"] = override_reader(self.link, "wp", cfg.override)
         return rd
+
+    def check(self, inputs: dict[str, Any], now: float) -> None:
+        """Stop on a critical error or a stale sensor while the heat pump is active."""
+        assert isinstance(self.core, PumpCore)
+        cfg = self.core.cfg
+        for k in cfg.stale_sensors:
+            v = inputs.get(k)
+            if k not in self._seen or self._seen[k] != v:
+                self._seen[k] = v
+                self._changed[k] = now
+        if self.store.state.run in (R.off, R.down) or inputs.get("passthru") == "original":
+            return
+        err = inputs.get("errors")
+        if isinstance(err, dict) and err.get("errors") and err.get("severity") == "critical":
+            raise PumpAbort(f"errors: {err['errors']}")
+        if cfg.stale is not None:
+            for k in cfg.stale_sensors:
+                if inputs.get(k) is None or now - self._changed[k] > cfg.stale:
+                    raise PumpAbort(f"stale sensor: {k}")
+
+    async def _supplanted(self) -> bool:
+        "whether another process now owns the pump service"
+        try:
+            with anyio.fail_after(2):
+                ann = await self.link.d_get(service_path(self.service.host, self.name))
+        except (KeyError, TimeoutError):
+            return False
+        return isinstance(ann, dict) and ann.get("id") != self.link.id
+
+    async def abort(self, exc: BaseException) -> None:
+        """Emergency shutdown, unless the heat pump is off or we were supplanted."""
+        st = self.store.state
+        if st.run == R.off:
+            return
+        if _has(exc, ServiceSupplanted) or (
+            _has(exc, anyio.get_cancelled_exc_class()) and await self._supplanted()
+        ):
+            _logger.warning("Pump service supplanted, not shutting down")
+            return
+        _logger.error("Pump unit ends in %s: %r; emergency shutdown", st.run.name, exc)
+        with anyio.move_on_after(self.emergency.total_timeout + 5):
+            res = await emergency_shutdown(
+                self.link, self.emergency, from_pump=True, service=self.service
+            )
+            _logger.warning("Emergency shutdown: %s", res)
+        st.run = R.off
+        st.t_change = None
+        st.t_run = None
+        st.load_last = None
+        with anyio.move_on_after(5):
+            await self.store.save()
+
+
+def _has(exc: BaseException, cls: type[BaseException]) -> bool:
+    "whether ``exc`` is, or is a group containing, a ``cls``"
+    if isinstance(exc, BaseExceptionGroup):
+        return exc.subgroup(cls) is not None
+    return isinstance(exc, cls)
+
+
+async def set_force_start(link: Any, path: Path = P("app.heat.force_start")) -> None:
+    """Ask the pump unit to start once, even if the buffer is warm (legacy ``--force-on``)."""
+    await link.d_set(path, True, retain=True)
+
+
+@click.command(short_help="Run the heat-pump unit.")
+@click.option("-f", "--force-on", is_flag=True, help="Start once, even if the buffer is warm.")
+@click.pass_obj
+async def cli(obj: Any, force_on: bool) -> None:
+    """
+    Run the ``pump`` unit: the heat pump's state machine and load control.
+
+    It announces the ``heat.pump`` service; ``moat dev heat off`` takes it
+    over and shuts the heat pump down.
+    """
+    from moat.link.client import Link  # noqa: PLC0415
+
+    async with Link(obj.cfg.link) as link:
+        if force_on:
+            cfg = await load_config(link, "pump", PumpCfg)
+            await set_force_start(link, cfg.force_start)
+        await PumpUnit(link).run()

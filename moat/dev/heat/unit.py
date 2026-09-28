@@ -106,6 +106,9 @@ class Unit(Generic[C, S]):
     service: ServiceCfg = ServiceCfg()
     """The shared service settings; loaded by :meth:`run` before the inputs are built."""
 
+    core: Core[C] | None = None
+    """The running core."""
+
     def __init__(self, link: LinkSender, save_delay: float = 10.0) -> None:
         self.link = link
         self.store = StateStore(link, self.name, self.state_model, save_delay=save_delay)
@@ -120,6 +123,21 @@ class Unit(Generic[C, S]):
     def make_inputs(self, cfg: C) -> dict[str, Reader[Any]]:
         """Create the readers for the core's inputs, by name."""
         raise NotImplementedError
+
+    def check(self, inputs: dict[str, Any], now: float) -> None:
+        """
+        Look at the inputs before the core does; raise to stop the unit.
+
+        The default does nothing.
+        """
+
+    async def abort(self, exc: BaseException) -> None:
+        """
+        Clean up after the unit's main loop ended with ``exc``.
+
+        Called shielded, while the service is still announced; ``exc`` is
+        re-raised afterwards. The default does nothing.
+        """
 
     def _trigger(self) -> None:
         self._wake.set()
@@ -158,33 +176,45 @@ class Unit(Generic[C, S]):
         ):
             await tg.start(self.store.run)
             cfg: C = await tg.start(self._watch_cfg)
-            core = self.make_core(cfg, state, anyio.current_time())
+            self.core = core = self.make_core(cfg, state, anyio.current_time())
             inputs, scope = await self._start_inputs(tg, cfg)
             srv.set()
             task_status.started()
 
-            wake_in: float | None = 0
-            while True:
-                with anyio.move_on_after(inf if wake_in is None else wake_in):
-                    await self._wake.wait()
-                self._wake = anyio.Event()
+            try:
+                await self._loop(tg, core, inputs, scope)
+            except BaseException as exc:
+                with anyio.CancelScope(shield=True):
+                    await self.abort(exc)
+                raise
 
-                if (new := self._new_cfg) is not None:
-                    self._new_cfg = None
-                    core.update_cfg(new)
-                    scope.cancel()
-                    inputs, scope = await self._start_inputs(tg, new)
+    async def _loop(
+        self, tg: TaskGroup, core: Core[C], inputs: Inputs, scope: anyio.CancelScope
+    ) -> None:
+        wake_in: float | None = 0
+        while True:
+            with anyio.move_on_after(inf if wake_in is None else wake_in):
+                await self._wake.wait()
+            self._wake = anyio.Event()
 
-                snap = inputs.snapshot()
-                if self.local_time:
-                    snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
-                res = core.step(snap, anyio.current_time())
-                watched = {r.path: r for r in inputs.readers.values()}
-                for path, value in res.outputs.items():
-                    # a path we also watch may have been changed by someone
-                    # else since we last wrote it
-                    r = watched.get(path)
-                    await self.writer.set(path, value, force=r is not None and r.differs(value))
-                if res.save or res.save_now:
-                    self.store.changed(immediate=res.save_now)
-                wake_in = res.wake_in
+            if (new := self._new_cfg) is not None:
+                self._new_cfg = None
+                core.update_cfg(new)
+                scope.cancel()
+                inputs, scope = await self._start_inputs(tg, new)
+
+            snap = inputs.snapshot()
+            if self.local_time:
+                snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
+            now = anyio.current_time()
+            self.check(snap, now)
+            res = core.step(snap, now)
+            watched = {r.path: r for r in inputs.readers.values()}
+            for path, value in res.outputs.items():
+                # a path we also watch may have been changed by someone
+                # else since we last wrote it
+                r = watched.get(path)
+                await self.writer.set(path, value, force=r is not None and r.differs(value))
+            if res.save or res.save_now:
+                self.store.changed(immediate=res.save_now)
+            wake_in = res.wake_in

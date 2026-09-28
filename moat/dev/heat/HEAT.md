@@ -629,6 +629,27 @@ The adapter announces the pump service (§2.5), writes state
 immediately on every transition, and on restart restores the load of
 `run` from `load_last`.
 
+As implemented (`PumpUnit`):
+
+- Abnormal exits (§2.6) while the heat pump is not `off` run the
+  emergency shutdown shielded, with `from_pump=True`, then re-raise:
+  `errors.out` with severity `critical` while active (a warning only
+  stops the heat pump the normal way), a stale sensor while active
+  (`stale`, default 900 s without a change, for `stale_sensors`, default
+  `t_in`, `t_out`, `r_flow`, `m_power`), a core timeout, any other
+  exception, and cancellation. Afterwards the saved state is `off`
+  without `load_last`, so a restart doesn't resume the run.
+- Supplanted (e.g. by `moat dev heat off`): no shutdown of its own. As
+  the supplant only shows up as a cancellation of the unit, the adapter
+  then checks whether another client owns the pump service.
+- `legacy_state` (default off) also writes the run state to a path, as
+  the legacy code did to `heat.s.pump.state`.
+- The shutdown on cancellation needs the Link client to stay up; the
+  CLI doesn't ensure that yet (moat-n84.32).
+- `moat dev heat pump [--force-on]` runs the unit; `--force-on` sets
+  `app.heat.force_start` first. Bypass is replaced by `override.wp`
+  and passthru (decision 6).
+
 ### 3.5 `pellet` — pellet burner
 
 Owns `p_load`, `p_buffer`.

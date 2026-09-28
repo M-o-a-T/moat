@@ -616,7 +616,7 @@ class CallAdmin:
         """Store ``value`` at link path ``path``.
 
         Keywords (``idem``, ``retain``, ``meta``, …) are passed to
-        `LinkSender.set`.
+        `moat.link.client.LinkSender.set`.
         """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)

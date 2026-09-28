@@ -329,8 +329,10 @@ class _Sub_d(MsgHandler):
     async def stream_deltree(self, msg: Msg) -> None:
         await self.parent.d_deltree_stream_(msg)
 
-    async def cmd_search(self, path: Path) -> Any:
-        return await self.parent.d_search_(path)
+    async def stream_search(self, msg: Msg) -> None:
+        # not a command: a plain return value that's a dict would be sent
+        # as keyword arguments, and the client couldn't find the data
+        await self.parent.d_search_stream_(msg)
 
     async def cmd_set(
         self,
@@ -718,7 +720,7 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
-    async def d_search_(self, path: Path):
+    async def d_search_stream_(self, msg):
         """Search for wildcard-matching sub-node data.
 
         Arguments:
@@ -726,13 +728,24 @@ class ServerClient(LinkCommon):
 
         Result:
         * data
+        * metadata dump
+
+        This returns a single result, like ``get``; it doesn't stream.
         """
+        if msg.can_stream:
+            raise ValueError("d.search does not stream")
+        path = Path.build(msg[0])
         if len(path) and path[0] == "run":
             data = self.server.rdata
         else:
             data = self.server.data
         d = data.search(path)
-        return d.data
+        if d.data is NotGiven:
+            raise KeyError(path)
+        if d.meta is None:
+            await msg.result(d.data)
+        else:
+            await msg.result(d.data, *d.meta.dump())
 
     async def d_set_(
         self,

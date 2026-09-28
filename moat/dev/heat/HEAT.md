@@ -498,8 +498,8 @@ Port of the tail of `run_pump` (`log_hc` 1…11). Kept separate from
   `cmd.heat` (`cm_heat`).
 - **Publishes**: `setting.heat.mode.path` (on/off value), optionally
   `feedback.pump`, `feedback.heat` (echo of `cm_heat`),
-  `app.heat.heat_valve.out` = `{on, reason, since}`.
-- **State**: `{heat_ok}` (False / pending-since timestamp / True).
+  `app.heat.heat_valve.out` = `{on, pending, hc, reason}`.
+- **State**: `{heat_ok, pending}` (on; ok since, while waiting).
 
 Rules (from the legacy code): heating on after `mode.delay` seconds of
 "ok"; the pre-heat test blends `tb_heat` and `t_out` by
@@ -510,7 +510,16 @@ the sudden warm return would overload the heat pump.
 
 The GPIO heat-pin output of older configs is supported only as an
 interim option; replacing it with a Modbus circulation-pump speed
-controller is a follow-up issue.
+controller is a follow-up issue. The unit has no GPIO code: its optional
+`pin` output (1.0/0.0) can drive a `pwm` daemon output.
+
+Implementation (`heat_valve.py`): the state is `{heat_ok, pending}`,
+`pending` being the monotonic time since which the circuit is ok while
+the delay runs (restarted after a restart). `out` is `{on, pending, hc,
+reason}`; `hc` is the legacy `log_hc` number, extended by 12 (too cold
+while the heat pump runs, circuit off), 13 (pellet burner), 14 (heating
+disabled) and 15 (an input is missing: the circuit is held as it is,
+also when `cm_heat` is unknown).
 
 ### 3.3 `flow` — water-pump PWM
 

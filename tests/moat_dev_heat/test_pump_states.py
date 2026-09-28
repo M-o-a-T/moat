@@ -535,8 +535,6 @@ def test_closed_loop_vs_legacy(name: str) -> None:
     assert new["frac"] == pytest.approx(old["frac"], abs=0.2)
     assert abs(new["ice"] - old["ice"]) <= 1
     assert abs(new["runs"] - old["runs"]) <= max(3, old["runs"] // 2)
-    # (the stand-in keeps the heating circuit on; the legacy valve logic
-    # switches it off around every start, so the buffer ends up warmer there)
     assert tr["tb_water"] == pytest.approx(last["tb_water"], abs=10)
     assert tr["tb_heat"] == pytest.approx(last["tb_heat"], abs=10)
 

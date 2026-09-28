@@ -1,0 +1,111 @@
+code: |
+  class _src(_cls.ChangeMsg): pass
+  class _dst(_cls.ChangeMsg): pass
+
+  await _self.watch(src, fetch=False, cls=_src)
+  await _self.watch(state or dst, cls=_dst)
+  cur = None
+  vprev = None
+
+  async for msg in _info:
+      if isinstance(msg, _src):
+          val = msg.value
+          if value is not None:
+              if val == vprev:
+                  continue
+              vprev = val
+              if (val == value) if invert else (val != value):
+                  continue
+          cur = not cur
+          await _link.set(dst, cur)
+
+      elif isinstance(msg, _dst):
+          cur = None if msg.value is _cls.NotGiven else msg.value
+default:
+  invert: false
+  state: null
+  value: null
+info: Use src to toggle dst. "state" optionally describes the dest state. "value" limits reactions to this source value (or not if "invert" is True).
+is_async: true
+vars:
+- src
+- dst
+- state
+- value
+- invert
+tests:
+  button:
+    info: toggle when the button changes to "value" (as in production)
+    timeout: 10
+    data:
+      out:
+        _: false
+    args:
+      src: !P in
+      dst: !P out
+      value: true
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [set, !P in, true]
+    - [wait, 3, "out == [False, True]"]
+    - [set, !P in, false]
+    - [sleep, 0.3]
+    - [check, "out == [False, True]"]
+    - [set, !P in, true]
+    - [wait, 3, "out == [False, True, False]"]
+    - [comment, repeating the same value does nothing]
+    - [set, !P in, true]
+    - [sleep, 0.3]
+    - [check, "out == [False, True, False]"]
+  state:
+    info: a separate state path, inverted value (as in production)
+    timeout: 10
+    data:
+      st:
+        _: false
+    args:
+      src: !P in
+      dst: !P cmd
+      state: !P st
+      value: false
+      invert: true
+    steps:
+    - [monitor, cmd, !P cmd]
+    - [start]
+    - [sleep, 0.3]
+    - [set, !P in, true]
+    - [wait, 3, "cmd == [True]"]
+    - [set, !P in, false]
+    - [set, !P st, true]
+    - [sleep, 0.3]
+    - [check, "cmd == [True]"]
+    - [set, !P in, true]
+    - [wait, 3, "cmd == [True, False]"]
+    - [set, !P st, false]
+    - [comment, someone else turns the device on]
+    - [sleep, 0.3]
+    - [set, !P st, true]
+    - [sleep, 0.3]
+    - [set, !P in, false]
+    - [set, !P in, true]
+    - [wait, 3, "len(cmd) == 3"]
+    - [check, "cmd[-1] is False"]
+  any:
+    info: without "value", every change toggles
+    timeout: 10
+    data:
+      out:
+        _: true
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [set, !P in, 1]
+    - [wait, 3, "out == [True, False]"]
+    - [set, !P in, 2]
+    - [wait, 3, "out == [True, False, True]"]

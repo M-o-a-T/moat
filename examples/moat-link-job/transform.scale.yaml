@@ -1,0 +1,58 @@
+code: |
+  await _self.watch(src)
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          if not isinstance(msg.value, (int, float)):
+              continue
+          await _link.set(dst, msg.value * factor + offset, idem=True)
+default:
+  factor: 1
+  offset: 0
+info: Apply factor+offset
+is_async: true
+vars:
+- src
+- dst
+- factor
+- offset
+tests:
+  factor:
+    info: a factor (as in production); the current value is copied at start
+    timeout: 10
+    data:
+      in:
+        _: 0.5
+    args:
+      src: !P in
+      dst: !P out
+      factor: 100
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out == [50]"]
+    - [set, !P in, 0.25]
+    - [wait, 3, "out == [50, 25]"]
+    - [comment, non-numeric values are ignored]
+    - [set, !P in, foo]
+    - [delete, !P in]
+    - [set, !P in, 0.01]
+    - [wait, 3, "out == [50, 25, 1]"]
+  offset:
+    info: factor and offset (as in production)
+    timeout: 10
+    data:
+      in:
+        _: 2
+    args:
+      src: !P in
+      dst: !P out
+      factor: 22.5
+      offset: 887.3
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) == 1"]
+    - [check, "round(out[0], 3) == 932.3"]
+    - [set, !P in, 0]
+    - [wait, 3, "len(out) == 2"]
+    - [check, "round(out[1], 3) == 887.3"]

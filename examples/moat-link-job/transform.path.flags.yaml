@@ -1,0 +1,65 @@
+code: |
+  await _self.watch(src, min_length=1)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          if msg.value is _cls.NotGiven or not msg.value:
+              continue
+          val = msg.path[-1]
+          if factor is not None:
+              if isinstance(val, str):
+                  # MQTT topics have string elements
+                  val = float(val)
+              val *= factor
+          await _link.set(dst, val, idem=True)
+default:
+  factor: 1
+info: Set dst to the last element of the subpath that's true
+is_async: true
+vars:
+- src
+- dst
+- factor
+tests:
+  factor:
+    info: flags below src, scaled (as in production)
+    timeout: 10
+    data:
+      flags:
+        0:
+          _: false
+        30:
+          _: false
+        60:
+          _: true
+    args:
+      src: !P flags
+      dst: !P out
+      factor: 0.01
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out == [0.6]"]
+    - [set, !P flags.30, true]
+    - [wait, 3, "out == [0.6, 0.3]"]
+    - [set, !P flags.60, false]
+    - [delete, !P flags.30]
+    - [sleep, 0.3]
+    - [check, "out == [0.6, 0.3]"]
+    - [set, !P flags.0, true]
+    - [wait, 3, "out == [0.6, 0.3, 0]"]
+  plain:
+    info: without a factor, the path element itself; deeper paths work too
+    timeout: 10
+    args:
+      src: !P flags
+      dst: !P out
+      factor: null
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [set, !P flags.x.foo, 1]
+    - [wait, 3, "out == ['foo']"]
+    - [set, !P flags.bar, true]
+    - [wait, 3, "out == ['foo', 'bar']"]

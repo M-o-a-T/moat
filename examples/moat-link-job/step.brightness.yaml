@@ -1,0 +1,169 @@
+code: |
+  # src: input button
+  # src_state: state output for the button (e.g. its LED); may be null
+  # dst_on: on/off command
+  # dst_bright: brightness command
+  # state_on: current on/off; may be null
+  # state_bright: current brightness; may be null
+  # seq: brightness values to step through; "off" is implied at the
+  #      beginning and the end
+  # seconds: how long to ignore the lamp's state after a button press
+
+  class _src(_cls.ChangeMsg): pass
+  class _state_on(_cls.ChangeMsg): pass
+  class _state_bright(_cls.ChangeMsg): pass
+
+  def _val(msg):
+      return None if msg.value is _cls.NotGiven else msg.value
+
+  def _step():
+      # The step that the lamp's state corresponds to.
+      if on is False or bright == 0:
+          return -1
+      if bright is not None:
+          return min(range(len(seq)), key=lambda e: abs(seq[e] - bright))
+      if on:
+          return step if step >= 0 else 0
+      return step
+
+  await _self.watch(src, fetch=False, cls=_src)
+  n = 0
+  if state_on:
+      await _self.watch(state_on, cls=_state_on)
+      n += 1
+  if state_bright:
+      await _self.watch(state_bright, cls=_state_bright)
+      n += 1
+
+  on = None
+  bright = None
+  step = -1
+  timer = None
+  ready = False
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          ready = True
+
+      elif isinstance(msg, _src):
+          if not _val(msg):
+              continue
+          step += 1
+          if step >= len(seq):
+              step = -1
+              await _link.set(dst_on, False)
+          else:
+              await _link.set(dst_on, True)
+              await _link.set(dst_bright, seq[step])
+          if timer is None:
+              timer = await _self.timer(seconds)
+          else:
+              await timer.run(seconds)
+
+      elif isinstance(msg, (_state_on, _state_bright)):
+          if isinstance(msg, _state_on):
+              on = _val(msg)
+          else:
+              bright = _val(msg)
+          if timer is not None:
+              # the lamp is still following the button: wait some more
+              await timer.run(seconds)
+              continue
+
+      elif isinstance(msg, _cls.TimerMsg):
+          timer = None
+
+      else:
+          continue
+
+      if ready and timer is None:
+          step = _step()
+      if ready and src_state:
+          await _link.set(src_state, step >= 0, idem=True)
+default:
+  seconds: 0.5
+  seq:
+  - 100
+  - 15
+  src_state: null
+  state_on: null
+  state_bright: null
+info: step through brightness values
+is_async: true
+vars:
+- src
+- src_state
+- dst_on
+- dst_bright
+- state_on
+- state_bright
+- seq
+- seconds
+tests:
+  step:
+    info: each press steps through the brightness values, then off
+    timeout: 10
+    args:
+      src: !P btn
+      src_state: !P led
+      dst_on: !P on
+      dst_bright: !P bright
+      seconds: 0.2
+    steps:
+    - [monitor, on, !P on]
+    - [monitor, bright, !P bright]
+    - [monitor, led, !P led]
+    - [start]
+    - [wait, 3, "led == [False]"]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [True] and bright == [100]"]
+    - [wait, 3, "led == [False, True]"]
+    - [set, !P btn, false]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [True, True] and bright == [100, 15]"]
+    - [set, !P btn, false]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [True, True, False] and bright == [100, 15]"]
+    - [wait, 3, "led == [False, True, False]"]
+    - [set, !P btn, false]
+    - [set, !P btn, true]
+    - [wait, 3, "on[-1] is True and bright == [100, 15, 100]"]
+  state:
+    info: the lamp's state decides where the next press continues (as in production)
+    timeout: 10
+    data:
+      st_on:
+        _: true
+      st_bright:
+        _: 20
+    args:
+      src: !P btn
+      dst_on: !P on
+      dst_bright: !P bright
+      state_on: !P st_on
+      state_bright: !P st_bright
+      seconds: 0.3
+    steps:
+    - [monitor, on, !P on]
+    - [monitor, bright, !P bright]
+    - [start]
+    - [sleep, 0.3]
+    - [comment, "20 is closest to 15, the last step; the next press turns the lamp off"]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [False] and bright == []"]
+    - [set, !P btn, false]
+    - [comment, the lamp's state after a press only counts once the delay is over]
+    - [set, !P st_on, false]
+    - [sleep, 0.5]
+    - [comment, someone turns the lamp on at full brightness]
+    - [set, !P st_bright, 90]
+    - [set, !P st_on, true]
+    - [sleep, 0.3]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [False, True] and bright == [15]"]
+    - [set, !P btn, false]
+    - [comment, a press during the delay continues from the pressed step]
+    - [set, !P btn, true]
+    - [wait, 3, "on == [False, True, False]"]

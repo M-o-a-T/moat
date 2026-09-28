@@ -21,9 +21,7 @@ pytestmark = pytest.mark.anyio
 
 EXAMPLES = FSPath(__file__).parents[2] / "examples" / "moat-link-job"
 
-XFAIL = {
-    "timer.auto_off:same": "moat-5m1s: the test's monitor and the snippet watch the same path",
-}
+XFAIL: dict[str, str] = {}
 "Test cases that are known to fail, with the reason."
 
 

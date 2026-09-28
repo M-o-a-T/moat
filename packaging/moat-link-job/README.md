@@ -17,6 +17,11 @@ Static job records live below ``cfg.link.job.prefix`` (default ``job``).
 Per-run dynamic status lives below ``cfg.link.job.state`` (default
 ``run.job``).  Code snippets are resolved through ``moat.link.code``.
 
+All-node runners keep per-node state below
+``cfg.link.job.state``, keyed by the machine's hostname (unless a
+specific ``link.client.name`` is configured), so that restarting a
+runner does not abandon its previous state subtree.
+
 % end main
 
 ## Usage

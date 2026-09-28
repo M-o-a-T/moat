@@ -7,6 +7,7 @@ from __future__ import annotations
 import anyio
 import os
 from contextvars import ContextVar
+from copy import deepcopy
 from importlib import import_module
 from pathlib import Path as FSPath
 from weakref import WeakSet
@@ -420,7 +421,8 @@ class CfgStore:
             res = combine_dict(
                 lcfg,
                 self.get_config(load_all),
-                self.static,
+                # a copy: `set_` below must not modify the shared static config
+                deepcopy(self.static),
                 cls=attrdict,
                 keep=True,
             )

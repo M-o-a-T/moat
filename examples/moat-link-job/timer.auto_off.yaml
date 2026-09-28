@@ -1,0 +1,169 @@
+code: |
+  from time import monotonic as time
+  class Enable(_cls.ChangeMsg): pass
+  class Delay(_cls.ChangeMsg): pass
+  class Src(_cls.ChangeMsg): pass
+
+  # "enable" and "delay" may be paths, which are then watched.
+  n = 1
+  await _self.watch(src, cls=Src)
+  if isinstance(enable, Path):
+      await _self.watch(enable, cls=Enable)
+      enabled = None
+      n += 1
+  else:
+      enabled = enable is None or bool(enable)
+  if isinstance(delay, Path):
+      await _self.watch(delay, cls=Delay)
+      delay = None
+      n += 1
+  if dst is None:
+      dst = src
+
+  timer = None
+  is_on = False
+  on_time = None
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          timer = await _self.timer(0)
+          if is_on:
+              on_time = time()
+              if delay is not None:
+                  await timer.run(delay)
+
+      elif isinstance(msg, _cls.TimerMsg):
+          if enabled and is_on:
+              await _link.set(dst, False)
+              is_on = False
+
+      elif isinstance(msg, Enable):
+          enabled = msg.value is not _cls.NotGiven and bool(msg.value)
+          if (
+              timer is not None and enabled and is_on
+              and delay is not None and time() - on_time >= delay
+          ):
+              await _link.set(dst, False)
+              is_on = False
+
+      elif isinstance(msg, Delay):
+          delay = None if msg.value is _cls.NotGiven else msg.value
+          if timer is None or not is_on:
+              continue
+          if delay is None:
+              await timer.run(0)
+          elif time() - on_time >= delay:
+              await timer.run(0)
+              if enabled:
+                  await _link.set(dst, False)
+                  is_on = False
+          else:
+              await timer.run(delay - (time() - on_time))
+
+      elif isinstance(msg, Src):
+          is_on = msg.value is not _cls.NotGiven and bool(msg.value)
+          if timer is not None:
+              if is_on:
+                  on_time = time()
+                  if delay is not None:
+                      await timer.run(delay)
+              else:
+                  await timer.run(0)
+          if src != dst:
+              await _link.set(dst, is_on)
+default:
+  delay: 1
+  dst: null
+  enable: null
+info: Turn off after delay, if enabled
+is_async: true
+vars:
+- dst
+- delay
+- src
+- enable
+tests:
+  same:
+    info: without dst, src itself is turned off after the delay
+    timeout: 10
+    data:
+      lamp:
+        _: false
+    args:
+      src: !P lamp
+      delay: 0.5
+    steps:
+    - [start]
+    - [monitor, lamp, !P lamp]
+    - [sleep, 0.2]
+    - [set, !P lamp, true]
+    - [sleep, 0.2]
+    - [check, "lamp == [False, True]"]
+    - [wait, 3, "lamp == [False, True, False]"]
+  dst:
+    info: dst follows src and is turned off after the delay
+    timeout: 10
+    data:
+      switch:
+        _: false
+    args:
+      src: !P switch
+      dst: !P lamp
+      delay: 0.5
+    steps:
+    - [monitor, lamp, !P lamp]
+    - [start]
+    - [wait, 3, "lamp == [False]"]
+    - [set, !P switch, true]
+    - [wait, 3, "lamp == [False, True]"]
+    - [wait, 3, "lamp == [False, True, False]"]
+    - [comment, turning off early cancels the timer]
+    - [set, !P switch, false]
+    - [wait, 3, "len(lamp) == 4"]
+    - [set, !P switch, true]
+    - [sleep, 0.2]
+    - [set, !P switch, false]
+    - [sleep, 0.6]
+    - [check, "lamp[4:] == [True, False]"]
+  enable:
+    info: while disabled nothing is turned off; enabling turns off at once if the delay has passed
+    timeout: 10
+    data:
+      switch:
+        _: false
+      auto:
+        _: false
+    args:
+      src: !P switch
+      dst: !P lamp
+      enable: !P auto
+      delay: 0.3
+    steps:
+    - [monitor, lamp, !P lamp]
+    - [start]
+    - [wait, 3, "lamp == [False]"]
+    - [set, !P switch, true]
+    - [sleep, 0.6]
+    - [check, "lamp == [False, True]"]
+    - [set, !P auto, true]
+    - [wait, 3, "lamp == [False, True, False]"]
+  delay_path:
+    info: the delay can be a path; changing it while on reschedules the timer
+    timeout: 10
+    data:
+      switch:
+        _: true
+      dly:
+        _: 5
+    args:
+      src: !P switch
+      dst: !P lamp
+      delay: !P dly
+    steps:
+    - [monitor, lamp, !P lamp]
+    - [start]
+    - [wait, 3, "lamp == [True]"]
+    - [set, !P dly, 0.3]
+    - [wait, 3, "lamp == [True, False]"]

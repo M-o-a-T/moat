@@ -14,6 +14,7 @@ from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.case import is_test_path
+from moat.link.code.io import path_from_file, read_snippet, split_snippet, write_snippet
 from moat.link.code.run import make_proc
 from moat.link.meta import MsgMeta
 
@@ -150,12 +151,20 @@ async def cli(ctx, path, meta):
 
 @cli.command()
 @click.option("-S", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
+@click.option("-r", "--recursive", is_flag=True, help="Include the test cases")
 @click.pass_obj
-async def get(obj, script):
+async def get(obj, script, recursive):
     """
     Read a code entry.
+
+    With ``-r``, the output includes the snippet's test cases (as
+    ``tests``); ``import`` reads this format.
     """
-    if obj.meta:
+    if recursive:
+        if obj.meta:
+            raise click.UsageError("'-m' and '-r' are incompatible.")
+        out = await read_snippet(obj.conn, obj.path)
+    elif obj.meta:
         data, *meta = await obj.conn.d.get(CODE_EXEC_ROOT + obj.path)
         out = dict(data=data, meta=MsgMeta.restore(meta).repr())
     else:
@@ -218,6 +227,31 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)
     if obj.meta:
         yprint(res, stream=obj.stdout)
+
+
+@cli.command("import")
+@click.argument("files", type=click.Path(exists=True, dir_okay=False), nargs=-1, required=True)
+@click.pass_obj
+async def import_(obj, files):
+    """
+    Store snippets with their test cases.
+
+    The files are in the format ``get -r`` prints. With an empty PATH
+    (``:``), each file's name is the snippet's path, e.g.
+    ``transform.copy.value.yaml``; otherwise PATH is used, and only one
+    file may be given. Existing test cases are replaced.
+    """
+    if len(obj.path) and len(files) > 1:
+        raise click.UsageError("Use an empty path (':') to import more than one file.")
+    for fn in files:
+        path = obj.path if len(obj.path) else path_from_file(fn)
+        with open(fn) as f:  # noqa:ASYNC230
+            data = yload(f)
+        rec, _tests = split_snippet(data)
+        _check_exec_syntax(rec, path)
+        await write_snippet(obj.conn, path, data)
+        if obj.debug:
+            print(path, file=obj.stdout)
 
 
 @cli.command("list")

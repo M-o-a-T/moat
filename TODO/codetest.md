@@ -186,6 +186,11 @@ test cases: `transform.copy.value`, `transform.hysteresis` and
 format `moat link code PATH get -r` exports (the snippet plus its `:n`
 test cases), so `moat link code import` loads them.
 
+The format is the snippet's record plus a `tests` key that maps each
+case's name to its test record; the file's name is the snippet's path
+(`transform.copy.value.yaml`). `moat.link.code.io` reads and writes it;
+`moat link code : import FILE…` takes each path from the file name.
+
 `tests/moat_link_job/test_examples.py` finds these files, loads each
 into a Scaffold server and runs every test case through the test runner
 (one pytest item per case). So the examples are checked with the rest of

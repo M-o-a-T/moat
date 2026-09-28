@@ -4,6 +4,8 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
+from enum import Enum
+
 from moat.lib.path import Path
 
 from ._misc import de_async as de_async
@@ -101,6 +103,9 @@ def srepr(x, bare=False):
         if bare:
             return ",".join(drepr(k, v) for k, v in x.items())
         return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
+    if isinstance(x, Enum):
+        # vars() of a member leads back to its class, and thus to itself
+        return srepr(x.value)
     try:
         d = vars(x)
     except TypeError:

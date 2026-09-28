@@ -4,7 +4,9 @@ More util functions
 
 from __future__ import annotations
 
-from moat.util.misc import pos2val, val2pos
+from enum import IntEnum, StrEnum
+
+from moat.util.misc import pos2val, srepr, val2pos
 
 
 def test_val2pos():
@@ -39,3 +41,15 @@ def test_pos2val():
     assert pos2val(0, 2, 2) == 4
     assert pos2val(0, 1.5, 2, clamp=True) == 2
     assert pos2val(0, -1, 2, clamp=True) == 0.0
+
+
+def test_srepr_enum():
+    "enum members are shown by value, not recursed into"
+
+    class S(StrEnum):
+        A = "a"
+
+    class I(IntEnum):  # noqa: E742
+        B = 2
+
+    assert srepr({"s": S.A, "i": I.B}) == "{s=a,i=2}"

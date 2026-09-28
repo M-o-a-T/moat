@@ -20,6 +20,7 @@ from moat.lib.path import (
 )
 
 from .config import UnitCfg
+from .frost import FROST_MODE
 from .link import Reader, ServiceMonitor, is_up, out_path
 from .override import reader as override_reader
 from .pid import APID, PIDCfg, PIDState
@@ -79,6 +80,8 @@ class FlowCfg(UnitCfg):
     """Where the requests come from."""
     override: Path = P("app.heat.override.pwm")
     """Operator override of the PWM (HEAT.md §2.7)."""
+    frost: Path | None = out_path("frost")
+    """The frost unit's pulses, used while nothing else wants the pump to run."""
     output: Path = P("heat.s.pump.pid")
     """The PWM output (``output.flow.path``)."""
     r_flow: Path = P("heat.s.pump.flow")
@@ -136,7 +139,9 @@ class FlowCore:
     Sans-IO core of the flow unit.
 
     Inputs: ``request``, ``override``, ``r_flow``, ``t_out``, ``t_in``,
-    and ``pump`` (the pump unit's service announcement). A sensor is stale
+    ``frost`` (the frost unit's output: its pulses are used while the PWM
+    would otherwise be 0), and ``pump`` (the pump unit's service
+    announcement). A sensor is stale
     when its value has not changed for ``max_age`` seconds (values are
     published on change). A PID whose output is not used only follows the
     time, so it does not integrate over the gap.
@@ -284,6 +289,12 @@ class FlowCore:
             if req.min_pwm is not None:
                 pwm = max(pwm, req.min_pwm)
 
+        if ovr is None and pwm == 0:
+            # nothing else wants the pump to run: frost-protection pulses
+            fp = (inputs.get("frost") or {}).get("pulse")
+            if isinstance(fp, (int, float)) and not isinstance(fp, bool) and fp > 0:
+                mode, pwm = FROST_MODE, min(float(fp), 1.0)
+
         if pwm != self.state.pwm:
             self.state.pwm = pwm
             save = True
@@ -323,5 +334,6 @@ class FlowUnit(Unit[FlowCfg, FlowState]):
             "r_flow": Reader[float](self.link, cfg.r_flow),
             "t_out": Reader[float](self.link, cfg.t_out),
             "t_in": Reader[float](self.link, cfg.t_in),
+            **({} if cfg.frost is None else {"frost": Reader[Any](self.link, cfg.frost)}),
             "pump": ServiceMonitor(self.link, self.service.host, "pump"),
         }

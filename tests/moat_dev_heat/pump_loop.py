@@ -1,11 +1,12 @@
 """
 Closed-loop helper for the pump core: the simulator with the target,
-heat-valve, flow and pump units, for the legacy scenarios.
+heat-valve, flow, pump and frost units, for the legacy scenarios.
 """
 
 from __future__ import annotations
 
 from moat.dev.heat.flow import FlowUnit
+from moat.dev.heat.frost import FrostUnit
 from moat.dev.heat.heat_valve import HeatValveUnit
 from moat.dev.heat.pump import PumpUnit
 from moat.dev.heat.sim import PlantCfg
@@ -21,7 +22,7 @@ CM_HEAT = P("home.ass.dyn.switch.heizung.main.cmd")
 def pump_loop(
     plant: dict[str, Any], seed: int = 1, start: float = 0, pump: Any = None
 ) -> ClosedLoop:
-    "the simulator with the target, heat-valve, flow and pump units wired up; heating enabled"
+    "the simulator with the target, heat-valve, flow, pump and frost units wired up; heating enabled"
     cfg = PlantCfg.from_dict({**plant, "day_offset": start})
     loop = ClosedLoop(cfg=cfg, seed=seed)
     loop.set(CM_HEAT, True)
@@ -29,4 +30,5 @@ def pump_loop(
     loop.add_unit(HeatValveUnit)
     loop.add_unit(FlowUnit)
     loop.add_unit(PumpUnit, pump)
+    loop.add_unit(FrostUnit)  # also owns the heat-pump loop valve
     return loop

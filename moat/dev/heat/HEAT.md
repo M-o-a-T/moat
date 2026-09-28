@@ -528,11 +528,13 @@ Owns `pid.flow` (flow rate → PWM) and `pid.pump` (outflow temperature
 daemon or a hardware driver).
 
 - **Watches**: `sensor.pump.flow` (`r_flow`), `sensor.pump.out`
-  (`t_out`), `app.heat.flow.request`.
+  (`t_out`), `app.heat.flow.request`, `app.heat.frost.out` (§3.11).
 - **Publishes**: PWM output, `app.heat.flow.out` = `{pwm, mode,
   stable, request_seq}`; `request_seq` is the `seq` of the request in
   effect. Besides the request modes, `mode` can be `override`, `freeze`
-  and `safe` (stale sensor), `fallback` and `idle` (no trusted request).
+  and `safe` (stale sensor), `fallback` and `idle` (no trusted request),
+  and `frost` (a frost-protection pulse, used while the PWM would
+  otherwise be 0 and there is no override).
 - **State**: PID slots `flow`, `pump`.
 
 Request (`app.heat.flow.request`, written by the pump unit and by
@@ -806,6 +808,31 @@ See §2.8.
   now reading value and override paths from MoaT-Link.
 - `modbus_mon.py`: restarts `moat modbus dev poll` when the Solvis
   reports error code 26, now watching MoaT-Link.
+
+### 3.11 `frost` — heat-pump loop frost protection
+
+Port of the standalone `wp.py` task. Owns the heat-pump loop valve
+(`home.ass.dyn.switch.plug-n5.relay.cmd`).
+
+- **Watches**: `sensor.pump.{in,out}`, `app.heat.flow.out`, the valve's
+  `.state`.
+- **Publishes**: the valve command, `app.heat.frost.out` = `{active,
+  pulse, t_min, reason}`.
+- **State**: none; after a restart a loop below `t_start` starts a cycle.
+
+When `min(t_in, t_out)` drops below `t_start` (8 °C) and nobody runs the
+circulation pump, a cycle opens the valve and asks for `pulse` (1/16)
+for `t_pulse` (5 s), then pauses for `t_wait` (60 s), until the loop is
+at `t_stop` (10 °C). It ends early when the valve is closed by someone
+else (after it has reported open), or when someone else runs the pump:
+then the valve stays open for them. Otherwise the valve is open exactly
+while `flow.out.pwm > 0` from something other than a pulse.
+
+The pulses go through the flow unit (`app.heat.frost.out.pulse`), so
+the flow unit stays the only writer of the PWM output and any request
+or override takes precedence. The legacy task only noticed a PWM other
+than its own at the end of a pulse; here the pump unit's request
+replaces a pulse at once.
 
 ## 4. Migration and cutover
 

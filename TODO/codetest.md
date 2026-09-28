@@ -103,7 +103,8 @@ Stored as lists (`[verb, arg, …]`); the editor shows one per line
 (below). Values use the syntax of `moat link data PATH set -s KEY VALUE`
 (`~str`, `=expr`, `.path`, …), expressions are evaluated with
 `moat.lib.run`'s restricted evaluator (`simpleeval`), with the monitors
-(see below), `P`, `len`, `abs`, `min`, `max` available.
+(see below), `result`, `error`, `P`, `len`, `abs`, `min`, `max`,
+`round` and `str` available.
 
 | Action | Meaning |
 | --- | --- |

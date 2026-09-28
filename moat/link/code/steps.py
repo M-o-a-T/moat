@@ -42,7 +42,7 @@ __all__ = [
 ]
 
 #: Names the expression evaluator provides; monitors may not use them.
-EXPR_NAMES = frozenset({"P", "len", "abs", "min", "max", "result", "error"})
+EXPR_NAMES = frozenset({"P", "len", "abs", "min", "max", "round", "str", "result", "error"})
 
 #: The keys of the header, in editor order.
 HEADER_KEYS = ("info", "timeout", "data", "args")

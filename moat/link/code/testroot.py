@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import anyio
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from itertools import count
 
 from moat.lib.path import Path, RootPath
@@ -38,6 +38,9 @@ __all__ = ["TEST_ROOT", "TestRoot", "with_test_root"]
 
 TEST_ROOT = Path.build(("test",))
 "The subtree below :R where test roots are allocated."
+
+ERROR_ROOT = Path.build(("error",))
+"Where the server keeps error records (see ``Server.set_error``)."
 
 _seq = count(1)
 
@@ -109,8 +112,10 @@ class TestRoot:
         return data
 
     async def delete(self, link: LinkSender) -> None:
-        "Delete the test subtree."
+        "Delete the test subtree, and errors the test has recorded."
         await link.d.delete(self.path, rec=True)
+        with suppress(KeyError):
+            await link.d.delete(ERROR_ROOT + self.path, rec=True)
 
 
 @asynccontextmanager

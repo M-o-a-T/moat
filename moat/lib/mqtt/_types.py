@@ -377,7 +377,7 @@ multi_properties = frozenset((PropertyType.SUBSCRIPTION_IDENTIFIER,))
 class PropertiesMixin:
     allowed_property_types: ClassVar[frozenset[PropertyType]] = frozenset()
     properties: dict[PropertyType, PropertyValue] = field(repr=False, factory=dict)
-    user_properties: dict[str, str] = field(repr=False, factory=dict)
+    user_properties: dict[str, str] = field(repr=True, factory=dict)
 
     def encode_properties(self, buffer: bytearray) -> None:
         internal_buffer = bytearray()

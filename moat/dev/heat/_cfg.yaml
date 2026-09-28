@@ -69,7 +69,26 @@ pump:
     log:
       value: !P heat.s.pump.pct.limit
       setpoint: !P heat.s.pump.set.limit
-pellet: {}
+pellet:
+  # production values (solvis.yml)
+  p_load:  # tb_heat -> load
+    p: 0.003
+    i: 0.00002
+    d: 10
+    tf: 300
+    min: 0.3
+    max: 1
+    log:
+      value: !P heat.s.pellets.pct.load
+      setpoint: !P heat.s.pellets.set.load
+  p_buffer:  # tb_low -> load
+    p: 0.01
+    i: 0.00001
+    min: 0.3
+    max: 1
+    log:
+      value: !P heat.s.pellets.pct.buffer
+      setpoint: !P heat.s.pellets.set.buffer
 selector: {}
 errors: {}
 watchdog: {}

@@ -651,6 +651,25 @@ Port of `run_set_pellet` plus the pellet writes from `run_pump`:
 - `mode` in `pellet.out` tells the pump which `pid.load` gains to use.
 - Does **not** write `cmd.pellet.wanted`.
 
+As implemented (`pellet.py`):
+
+- `mode` is `off`, `starting` or `running` (codes 2 and 4); the load is
+  controlled only while `running`. Until the burner reports code 4
+  (`pellet_on`), the unit asks for load 1 and the start-up temperature
+  (`startup.buf` above the warmer buffer sensor, also written to the patch
+  goals). That is where the legacy "load 1 in codes 31/32" comes from:
+  the check inside `run_set_pellet` is dead code, as 31/32 are off codes.
+- `t_pellet_on` holds wall-clock time, so a restart keeps the start time.
+  As in the legacy code, code 4 right after `off` counts as settled at
+  once (`time - False`).
+- The burner is wanted when `override.pellet` says so, else when
+  `selector.out.pellet` does. `override.pellet = False` also sets the load
+  to 0, since this unit can't switch the burner off itself.
+- `hot`: the burner runs and `sensor.temp.pellet` is at least `t_adj`
+  (plus `hot_delta`).
+- `tp_limit` is computed here from `target.out.demand` and the buffer
+  sensors, as `run_pump` did.
+
 ### 3.6 `selector` — heat-source selection
 
 Decides which heat sources run, including handover and fallback. A

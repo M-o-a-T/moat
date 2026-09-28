@@ -718,6 +718,7 @@ def setup(app):
     import moat.dev.heat.pid
     import moat.dev.heat.flow
     import moat.dev.heat.errors
+    import moat.dev.heat.pellet
 
     import typing
 

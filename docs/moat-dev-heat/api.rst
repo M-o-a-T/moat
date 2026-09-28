@@ -84,3 +84,13 @@ API
 
 .. autoclass:: moat.dev.heat.errors.ErrorsState
    :class-doc-from: class
+
+.. automodule:: moat.dev.heat.pellet
+   :members:
+   :exclude-members: PelletCfg, PelletState
+
+.. autoclass:: moat.dev.heat.pellet.PelletCfg
+   :class-doc-from: class
+
+.. autoclass:: moat.dev.heat.pellet.PelletState
+   :class-doc-from: class

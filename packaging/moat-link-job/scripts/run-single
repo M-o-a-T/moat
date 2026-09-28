@@ -1,0 +1,17 @@
+#!/bin/bash
+set -ex
+
+# This script starts a MoaT-Link single-node job runner.
+# NAME is the node name in the job tree (job.at.NAME.GROUP…);
+# set it in /etc/moat/link.env.
+
+if test ! -v NAME ; then
+    echo "NAME is not set. Exiting." >&2
+    exit 1
+fi
+
+if test $# = 1 ; then
+    exec moat link job -n "$NAME" -g "$1" run
+else
+    exec moat link job -n "$NAME" run
+fi

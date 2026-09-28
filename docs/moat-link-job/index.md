@@ -64,5 +64,6 @@ Both top-level paths are extended with a mode tag (``any``, ``at``, or
 :maxdepth: 2
 :hidden:
 
+cutover
 api
 ```

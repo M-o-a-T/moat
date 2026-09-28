@@ -1,0 +1,10 @@
+#!/bin/bash
+set -ex
+
+# This script starts a MoaT-Link all-nodes job runner.
+
+if test $# = 1 ; then
+    exec moat link job -n - -g "$1" run
+else
+    exec moat link job -n - run
+fi

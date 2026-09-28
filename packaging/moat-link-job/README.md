@@ -28,6 +28,18 @@ moat link job [-n NODE] [-g GROUP] run [-n NODES]
 moat link job [-n NODE] [-g GROUP] monitor
 ```
 
+## Services
+
+| Unit | Runs |
+| --- | --- |
+| ``moat-link-job`` | any-node runner, group ``default`` (enabled on install) |
+| ``moat-link-job@GROUP`` | any-node runner for GROUP |
+| ``moat-link-job-all[@GROUP]`` | all-nodes runner |
+| ``moat-link-job-single[@GROUP]`` | single-node runner; ``NAME`` from ``/etc/moat/link.env`` |
+
+They mirror the ``moat-kv-run-*`` units. See the cutover procedure in the
+documentation for switching from ``moat kv job``.
+
 ## License
 
 This project is licensed under the same terms as MoaT.

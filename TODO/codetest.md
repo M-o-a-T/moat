@@ -208,7 +208,10 @@ the test suite, and they show how snippets and their tests are written.
 2. Paths in job `data` that pointed at MoaT-KV-only trees are checked
    against Link (report, don't guess).
 3. Cutover: stop `moat kv job run`, start `moat link job run` for the
-   same groups; watch the jobs' state and the error tree.
+   same groups; watch the jobs' state and the error tree. The procedure
+   is `docs/moat-link-job/cutover.md`, rehearsed by
+   `tests/moat_link_job/test_cutover.py`; `packaging/moat-link-job` has
+   units for every mode and group, like `moat-kv-run-*`.
 
 ## Decisions (2026-09-28)
 

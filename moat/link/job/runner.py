@@ -603,13 +603,17 @@ class CallAdmin:
             raise TypeError(f"You didn't pass in a path: {path!r}")
         await self._link.send(path, value, retain=False)
 
-    async def set(self, path: Path, value: Any) -> Any:
-        """Store ``value`` at link path ``path``."""
+    async def set(self, path: Path, value: Any, **kw: Any) -> Any:
+        """Store ``value`` at link path ``path``.
+
+        Keywords (``idem``, ``retain``, ``meta``, …) are passed to
+        `LinkSender.set`.
+        """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
         elif not isinstance(path, Path):
             raise TypeError(f"You didn't pass in a path: {path!r}")
-        return await self._link.d_set(path, value)
+        return await self._link.set(path, value, **kw)
 
     async def get(self, path: Path) -> Any:
         """Fetch the value stored at link path ``path``."""

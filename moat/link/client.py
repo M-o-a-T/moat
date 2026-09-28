@@ -649,6 +649,29 @@ class LinkSender(MsgSender, MsgRoot):
             return old
         return res
 
+    async def set(
+        self, path: Path, data: Any = NotGiven, *, idem: bool = False, **kw: Any
+    ) -> bool | None | tuple[Any, MsgMeta | None]:
+        """
+        Store @data at @path. Frontend for `d_set`; all its keywords are
+        passed through.
+
+        If @idem is set, nothing is written when the stored value equals
+        @data (or is missing and @data is `NotGiven`). The result is then
+        `False`, or the stored value and its metadata if @with_prev is set.
+        """
+        if idem:
+            try:
+                old = await self.d_get(path, meta=True)
+            except KeyError:
+                old = (NotGiven, None)
+            if old[0] == data:
+                return old if kw.get("with_prev") else False
+        return await self.d_set(path, data, **kw)
+
+    get = d_get
+    "Data retrieval, same as `d_get`."
+
     @asynccontextmanager
     async def d_walk(
         self,

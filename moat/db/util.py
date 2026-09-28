@@ -24,9 +24,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sqlalchemy.sql.schema import MetaData
 
+    from collections.abc import Iterable
+
 logger = logging.getLogger(__name__)
 
-__all__ = ["Session", "alembic_cfg", "database", "dispose", "load", "session"]
+__all__ = ["Session", "alembic_cfg", "database", "dispose", "load", "load_schemas", "session"]
 
 
 @event.listens_for(Engine, "connect")
@@ -68,17 +70,41 @@ def dispose() -> None:
 atexit.register(dispose)
 
 
+def load_schemas(schemas: Iterable[str] | None = None) -> MetaData:
+    """
+    Import the database models, so that their tables are all known.
+
+    Importing only some of them leaves foreign keys to tables of the others
+    dangling, which breaks e.g. ``MetaData.create_all``.
+
+    Args:
+        schemas: The model modules; default: all of ``moat.db.schemas``.
+
+    Returns:
+        The shared metadata.
+    """
+    from moat.db.schema import Base  # noqa: PLC0415
+
+    global _loaded
+    if not _loaded:
+        if schemas is None:
+            from moat.lib.config import CfgStore  # noqa: PLC0415
+
+            with CFG.with_config_(CfgStore()):
+                CFG.with_("moat.db")
+                schemas = list(CFG.moat.db.schemas)
+        for schema in schemas:
+            import_module(schema)
+        _loaded = True
+    return Base.metadata
+
+
 def load(cfg: attrdict) -> MetaData:
     """Load database models as per config."""
     from moat.db.schema import Base  # noqa: PLC0415
 
     merge(cfg, CFG.moat.db, replace=False)
-
-    global _loaded
-    if not _loaded:
-        for schema in cfg.schemas:
-            import_module(schema)
-        _loaded = True
+    load_schemas(cfg.schemas)
 
     # Reuse one engine per URL; the first call's ``echo`` setting wins.
     engine = _engines.get(cfg.url)

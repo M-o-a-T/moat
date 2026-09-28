@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 import moat.db.util  # noqa: F401  — attaches the sqlite ``foreign_keys=ON`` pragma listener
 from moat.db.rain import model as rmodel
 from moat.db.schema import Base
-from moat.db.util import Mgr
+from moat.db.util import Mgr, load_schemas
 from moat.lib.path import Path
 from moat.src.test import run
 
@@ -45,7 +45,7 @@ def _db_url(tmp_path_factory):
     db_path = tmp_path_factory.mktemp("rain-db") / "r.db"
     url = f"sqlite:///{db_path}"
     eng = create_engine(url)
-    Base.metadata.create_all(eng)
+    load_schemas().create_all(eng)
     try:
         yield url
     finally:

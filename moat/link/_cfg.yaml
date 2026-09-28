@@ -45,6 +45,9 @@ timeout:
   # time after which deleted entries are flushed
   delete: 100000
 
+  # leaving a client's context: wait this long for the link to close cleanly
+  close: 5
+
   # Ping messages every … seconds
   ping:
     every: 10  # ping transmit frequency

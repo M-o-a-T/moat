@@ -663,3 +663,89 @@ async def test_restart_when_code_changes(cfg):
             )
             assert st["stopped"] > 0
             tg.cancel_scope.cancel()
+
+
+async def _run_until_result(sf, c, name: str, code: str, act, result: Any) -> None:
+    """Run ``code`` as job ``name``, call ``act()`` once it has started,
+    and wait for the job to return ``result``."""
+    await c.d_set(CODE_EXEC_ROOT + P("test") / name, dict(code=code, is_async=True))
+    job_cfg = _job_cfg(sf)
+    sub = job_cfg["sub"]["group"] + P("default")
+    state_path = job_cfg["state"] + sub / name
+    await c.d_set(
+        job_cfg["prefix"] + sub / name,
+        dict(code=P("test") / name, target=time.time(), data={}),
+    )
+    await c.i_sync()
+
+    runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+    async with anyio.create_task_group() as tg, runner.run():
+        await _wait_state(c, state_path, until=lambda s: s.get("started", 0) > 0)
+        await anyio.sleep(0.5)
+        await act()
+        await _wait_state(c, state_path, until=lambda s: s.get("result") == result)
+        tg.cancel_scope.cancel()
+
+
+async def test_call_admin_monitor_raw(cfg):
+    "With ``raw=True``, ``msg.msg`` and ``msg.value`` are the payload bytes."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+
+        async def act():
+            await c.send(P("test.raw"), b"on", codec=None, retain=False)
+
+        await _run_until_result(
+            sf,
+            c,
+            "raw",
+            """
+await _self.setup_done()
+await _self.monitor(_P("test.raw"), raw=True)
+async for msg in _info:
+    if isinstance(msg, _cls.MQTTmsg):
+        return msg.msg.decode("ascii") + str(msg.value == msg.msg)
+""",
+            act,
+            "onTrue",
+        )
+
+
+async def test_call_admin_watch_min_length(cfg):
+    "``min_length`` watches the subtree but not the node itself."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+
+        async def act():
+            await c.d_set(P("test.flags"), 1)
+            await c.d_set(P("test.flags.b"), 2)
+
+        await _run_until_result(
+            sf,
+            c,
+            "flags",
+            """
+await _self.setup_done()
+await _self.watch(_P("test.flags"), fetch=False, min_length=1)
+async for msg in _info:
+    if isinstance(msg, _cls.ChangeMsg):
+        return str(msg.path[-1]) + str(msg.value)
+""",
+            act,
+            "b2",
+        )
+
+
+async def test_call_admin_watch_rejects_unknown_keywords():
+    "Unknown keywords to ``_self.watch`` are an error, not silently dropped."
+    from moat.link.job.runner import CallAdmin  # noqa: PLC0415
+
+    adm = object.__new__(CallAdmin)
+    with pytest.raises(TypeError, match="max_depth, min_depth"):
+        await adm.watch(P("test.x"), min_depth=1, max_depth=-1)

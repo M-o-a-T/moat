@@ -104,7 +104,8 @@ class ChangeMsg(RunnerMsg):
 class MQTTmsg(RunnerMsg):
     """An MQTT message has arrived.
 
-    ``value`` is the decoded payload (when decodable). ``path`` is the
+    ``msg`` and ``value`` are the payload: decoded, or the raw bytes if
+    the monitor uses ``raw=True`` or decoding failed. ``path`` is the
     full topic the message was sent to.
     """
 
@@ -561,12 +562,19 @@ class CallAdmin:
         watchers have transmitted their initial state.
 
         Pass ``subtree=True`` to also receive changes for children of
-        ``path``.
+        ``path``. ``min_length`` and ``max_length`` restrict that to
+        children whose path below ``path`` has that many elements (and
+        imply ``subtree``); ``age`` skips entries older than that many
+        seconds. Other keywords are rejected.
         """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
         elif not isinstance(path, Path):
             raise TypeError(f"You didn't pass in a path: {path!r}")
+        if bad := set(kw) - _WATCH_KW:
+            raise TypeError(f"watch: unknown keyword(s) {', '.join(sorted(bad))}")
+        if kw.get("min_length") is not None or kw.get("max_length") is not None:
+            kw["subtree"] = True
 
         if kw.setdefault("fetch", True):
             self._n_watch += 1
@@ -581,7 +589,8 @@ class CallAdmin:
         """Subscribe to MQTT topic ``path``.
 
         Each message is dispatched to the job's event queue as an
-        instance of ``cls`` (a :class:`MQTTmsg` subclass).  MQTT
+        instance of ``cls`` (a :class:`MQTTmsg` subclass) whose ``msg``
+        and ``value`` are the payload (raw bytes with ``raw=True``).  MQTT
         wildcards are supported.
         """
         if isinstance(path, (tuple, list)):
@@ -636,6 +645,9 @@ class CallAdmin:
         return t
 
 
+_WATCH_KW = frozenset(("fetch", "subtree", "age", "min_length", "max_length"))
+
+
 class _Watcher:
     """Background task: watch a link path on behalf of a running job."""
 
@@ -674,6 +686,7 @@ class _Watcher:
                 subtree=subtree,
                 mark=fetch,
                 meta=False,
+                **kw,
             ) as mon:
                 async for item in mon:
                     if item is None:
@@ -736,9 +749,11 @@ class _Monitor:
             self.scope = sc
             async with self.client.monitor(self.path, **self.kw) as mon:
                 async for msg in mon:
-                    chg = self.cls(getattr(msg, "raw", None))
-                    with suppress(AttributeError):
-                        chg.value = msg.data
+                    # ``msg`` and ``value`` are both the payload: decoded,
+                    # or the raw bytes if the monitor was started with
+                    # ``raw=True`` or the message couldn't be decoded
+                    chg = self.cls(msg.data)
+                    chg.value = msg.data
                     chg.path = Path.build(msg.topic)
                     await self.admin._entry.send_event(chg)  # noqa: SLF001
 

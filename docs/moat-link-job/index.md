@@ -22,7 +22,9 @@ moat link job [-n NODE] [-g GROUP] monitor
 
 * (omitted) – one cluster member runs the job (Any-runner).
 * ``-n NAME`` – the job runs on the named node (Single-runner).
-* ``-n -`` – the job runs on every node (All-runner).
+* ``-n -`` – the job runs on every node (All-runner); each node keeps
+  its state below ``state.group.HOSTNAME`` (unless the link has an
+  explicitly-configured name).
 
 ``-g``/``--group`` selects the job group (default: ``default``).
 

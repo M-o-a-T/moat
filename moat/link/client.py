@@ -1539,6 +1539,12 @@ class Link(LinkCommon, CtxObj):
                                 )
                         except Exception as exc:
                             self.logger.warning("Could not send Close message", exc_info=exc)
+        except Exception as exc:
+            if not stop.is_set():
+                raise
+            # We're closing anyway. The other end may well be going away
+            # at the same time, e.g. when a test shuts down its broker.
+            self.logger.debug("Error while closing the link: %r", exc)
         finally:
             done.set()
 

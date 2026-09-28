@@ -1,0 +1,130 @@
+code: |
+  from time import monotonic as time
+
+  # Convert a randomly-updating counter (a rain meter, a water meter) into
+  # a rate: the counter's increase per @seconds, times @factor.
+  #
+  # The first increase after an idle period is written immediately, so
+  # that readers see a value > 0 at once. After that the rate is updated
+  # every @seconds until the counter stops increasing; then @dst is set
+  # to zero. A decreasing counter (reset, wraparound) starts over.
+
+  last_val = None
+  last_time = None
+  this_val = None
+  timer = None
+  await _link.set(dst, 0, idem=True)
+  await _self.watch(src, fetch=True)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if not isinstance(val, (int, float)) or isinstance(val, bool):
+              continue
+          this_val = val
+          if last_val is None or val < last_val:
+              # first value, or the counter went back: new baseline
+              last_val = val
+              last_time = time()
+              if timer is not None:
+                  timer.cancel()
+                  timer = None
+                  await _link.set(dst, 0)
+          elif val > last_val and timer is None:
+              # fire an immediate update at the first change
+              await _link.set(dst, (val - last_val) * factor)
+              last_val = val
+              last_time = time()
+              timer = await _self.timer(seconds)
+
+      elif isinstance(msg, _cls.TimerMsg):
+          if msg.msg is not timer:
+              continue
+          now = time()
+          delta = this_val - last_val
+          if delta > 0:
+              await _link.set(dst, delta * factor * seconds / (now - last_time))
+              await timer.run(seconds)
+          else:
+              await _link.set(dst, 0)
+              timer = None
+          last_val = this_val
+          last_time = now
+default:
+  factor: 1
+info: generate timeslots for counter deltas
+is_async: true
+vars:
+- src
+- factor
+- dst
+- seconds
+tests:
+  burst:
+    info: immediate update, one rate update, then zero
+    timeout: 10
+    data:
+      cnt:
+        _: 100
+    args:
+      src: !P cnt
+      dst: !P out
+      seconds: 0.5
+      factor: 2
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 0"]
+    - [sleep, 0.3]
+    - [set, !P cnt, 103]
+    - [wait, 3, "out[-1] == 6"]
+    - [set, !P cnt, 104]
+    - [wait, 3, "out[-1] != 6"]
+    - [check, "abs(out[-1] - 2) < 0.3"]
+    - [wait, 3, "out[-1] == 0"]
+  idle:
+    info: an idle period before the first increase doesn't dilute the rate
+    timeout: 10
+    data:
+      cnt:
+        _: 5
+    args:
+      src: !P cnt
+      dst: !P out
+      seconds: 0.5
+      factor: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 1.5]
+    - [set, !P cnt, 9]
+    - [wait, 3, "out[-1] == 2"]
+    - [set, !P cnt, 13]
+    - [wait, 3, "out[-1] != 2"]
+    - [check, "abs(out[-1] - 2) < 0.3"]
+    - [wait, 3, "out[-1] == 0"]
+  reset:
+    info: a counter that goes back is a new baseline
+    timeout: 10
+    data:
+      cnt:
+        _: 100
+    args:
+      src: !P cnt
+      dst: !P out
+      seconds: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 0"]
+    - [sleep, 0.3]
+    - [set, !P cnt, 3]
+    - [sleep, 0.7]
+    - [check, "out[-1] == 0"]
+    - [set, !P cnt, 7]
+    - [wait, 3, "out[-1] == 4"]
+    - [set, !P cnt, 1]
+    - [wait, 0.3, "out[-1] == 0"]
+    - [set, !P cnt, 2]
+    - [wait, 3, "out[-1] == 1"]
+    - [wait, 3, "out[-1] == 0"]

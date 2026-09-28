@@ -1,0 +1,174 @@
+code: |
+  class Delay(_cls.ChangeMsg): pass
+  class Src(_cls.ChangeMsg): pass
+  class Dst(_cls.ChangeMsg): pass
+
+  # src: path to source value
+  # dst: path to destination value
+  # delay: seconds between updates, or a path to read them from
+  # up: decay constant for increase
+  # down: decay constant for decrease
+
+  samples = 0
+  total = 0
+  val = None
+  timer = None
+  ready = False
+
+  n = 2
+  await _self.watch(src, fetch=True, cls=Src)
+  await _self.watch(dst, fetch=True, cls=Dst)
+  if isinstance(delay, Path):
+      await _self.watch(delay, fetch=True, cls=Delay)
+      delay = None
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n or ready:
+              continue
+          ready = True
+          if delay:
+              timer = await _self.timer(delay)
+
+      elif isinstance(msg, _cls.TimerMsg):
+          if msg.msg is not timer:
+              continue
+          if samples > 0:
+              avg = total / samples
+              if val is None:
+                  val = avg
+              else:
+                  c = up if avg > val else down
+                  val = val*(1-c) + avg*c
+              await _link.set(dst, val)
+              samples = total = 0
+          await timer.run(delay)
+
+      elif isinstance(msg, Delay):
+          v = msg.value
+          if not isinstance(v, (int, float)) or isinstance(v, bool) or v <= 0:
+              continue
+          delay = v
+          if not ready:
+              pass
+          elif timer is None:
+              timer = await _self.timer(delay)
+          else:
+              await timer.run(delay)
+
+      elif isinstance(msg, Src):
+          v = msg.value
+          if isinstance(v, (int, float)) and not isinstance(v, bool):
+              samples += 1
+              total += v
+
+      elif isinstance(msg, Dst):
+          v = msg.value
+          if isinstance(v, (int, float)) and not isinstance(v, bool):
+              val = v
+          else:
+              val = None
+default:
+  delay: 300
+  down: 0.01
+  up: 0.01
+info: Exponential-decay average
+is_async: true
+vars:
+- dst
+- delay
+- src
+- up
+- down
+tests:
+  first:
+    info: the first average is the mean, then it decays towards the samples
+    timeout: 10
+    data:
+      in:
+        _: 10
+    args:
+      src: !P in
+      dst: !P out
+      delay: 0.3
+      up: 0.5
+      down: 0.25
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 10"]
+    - [set, !P in, 20]
+    - [wait, 3, "out[-1] == 15"]
+    - [set, !P in, 5]
+    - [wait, 3, "out[-1] == 12.5"]
+  resume:
+    info: an existing average is continued, not replaced
+    timeout: 10
+    data:
+      in:
+        _: 0
+      out:
+        _: 100
+    args:
+      src: !P in
+      dst: !P out
+      delay: 0.3
+      up: 0.1
+      down: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out[-1] == 50"]
+  mean:
+    info: all samples of one interval are averaged
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+      delay: 1
+      up: 1
+      down: 1
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 1"]
+    - [set, !P in, 2]
+    - [set, !P in, 6]
+    - [wait, 3, "out[-1] == 4"]
+  idle:
+    info: no samples, no update; non-numeric values are ignored
+    timeout: 10
+    data:
+      in:
+        _: unavailable
+    args:
+      src: !P in
+      dst: !P out
+      delay: 0.3
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 1]
+    - [check, "len(out) == 0"]
+    - [set, !P in, 4]
+    - [wait, 3, "len(out) > 0 and out[-1] == 4"]
+  delay.path:
+    info: the interval is read from a path
+    timeout: 10
+    data:
+      in:
+        _: 7
+      dly:
+        _: 0.3
+    args:
+      src: !P in
+      dst: !P out
+      delay: !P dly
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] == 7"]

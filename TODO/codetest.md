@@ -184,7 +184,8 @@ the test suite, and they show how snippets and their tests are written.
    writes `job.any.GROUP.…` / `job.at.NODE.GROUP.…` / `job.all.GROUP.…`
    records, mapping the fields (`code`, `data`, `delay`, `repeat`,
    `ok_after`, `backoff`, `target`, `info`); dry run by default, like
-   `moat db inv migrate-from-kv`.
+   `moat db inv migrate-from-kv`. Done: `moat link job migrate-from-kv
+   [-i DUMP] [-w [-f]]` (`moat.link.job.migrate`).
 2. Paths in job `data` that pointed at MoaT-KV-only trees are checked
    against Link (report, don't guess).
 3. Cutover: stop `moat kv job run`, start `moat link job run` for the

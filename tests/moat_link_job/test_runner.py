@@ -554,6 +554,42 @@ async def test_failing_job_records_error(cfg):
             tg.cancel_scope.cancel()
 
 
+async def test_recorded_error_is_kept(cfg):
+    """An error recorded by ``_self.error`` is not replaced by the runner."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.rec"),
+            dict(code="await _self.error(message='bad', why='bad')", is_async=True),
+        )
+
+        job_cfg = _job_cfg(sf)
+        sub = job_cfg["sub"]["group"] + P("default")
+        job_path = job_cfg["prefix"] + sub + P("rec")
+        state_path = job_cfg["state"] + sub + P("rec")
+        error_path = P("error") + job_path
+
+        await c.d_set(
+            job_path,
+            dict(code=P("test.rec"), target=time.time(), data={}, delay=2),
+        )
+        await c.i_sync()
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            await _wait_state(c, state_path, until=lambda s: s.get("backoff", 0) > 0)
+            # Give a stray e_exc from the runner time to arrive.
+            await anyio.sleep(0.5)
+            await c.i_sync()
+            err = await c.d_get(error_path)
+            assert "exc" not in err, err
+            assert err.get("why") == "bad", err
+            tg.cancel_scope.cancel()
+
+
 async def test_recovering_job_clears_error(cfg):
     """A job that failed before but now runs cleanly clears its error.
 

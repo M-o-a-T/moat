@@ -1,0 +1,86 @@
+code: |
+  await _self.watch(src, fetch=False)
+  inv = high < low
+  if inv:
+      high, low = low, high
+  try:
+      is_high = (await _link.get(flip)) != inv
+  except KeyError:
+      await _link.set(flip, inv)
+      is_high = False
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if not isinstance(val, (int, float)):
+              continue
+          if is_high and val < low:
+              is_high = False
+              await _link.set(flip, inv)
+          elif not is_high and val > high:
+              is_high = True
+              await _link.set(flip, not inv)
+          else:
+              if is_high:
+                  val += high - low
+              await _link.set(dst, val)
+default: {}
+info: Switch input range during polling
+is_async: true
+vars:
+- src
+- dst
+- flip
+- high
+- low
+tests:
+  basic:
+    info: switch to the high range above "high", back below "low"
+    timeout: 10
+    args:
+      src: !P in
+      dst: !P out
+      flip: !P flip
+      low: 1
+      high: 4
+    steps:
+    - [monitor, out, !P out]
+    - [monitor, flip, !P flip]
+    - [start]
+    - [wait, 3, "flip == [False]"]
+    - [set, !P in, 2]
+    - [wait, 3, "out == [2]"]
+    - [set, !P in, 5]
+    - [wait, 3, "flip == [False, True]"]
+    - [set, !P in, 3]
+    - [wait, 3, "out == [2, 6]"]
+    - [set, !P in, 0.5]
+    - [wait, 3, "flip == [False, True, False]"]
+    - [set, !P in, 2]
+    - [wait, 3, "out == [2, 6, 2]"]
+    - [check, "len(flip) == 3"]
+  inverted:
+    info: low > high (as in production); the stored switch state is used
+    timeout: 10
+    data:
+      flip:
+        _: false
+    args:
+      src: !P in
+      dst: !P out
+      flip: !P flip
+      low: 4
+      high: 1
+    steps:
+    - [monitor, out, !P out]
+    - [monitor, flip, !P flip]
+    - [start]
+    - [sleep, 0.3]
+    - [set, !P in, 3]
+    - [wait, 3, "out == [6]"]
+    - [set, !P in, 0.5]
+    - [wait, 3, "flip == [False, True]"]
+    - [set, !P in, 2]
+    - [wait, 3, "out == [6, 2]"]
+    - [set, !P in, 5]
+    - [wait, 3, "flip == [False, True, False]"]

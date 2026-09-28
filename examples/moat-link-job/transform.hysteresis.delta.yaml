@@ -1,0 +1,186 @@
+code: |
+  class Src(_cls.ChangeMsg): pass
+  class Target(_cls.ChangeMsg): pass
+  class Delta(_cls.ChangeMsg): pass
+  class D_Low(_cls.ChangeMsg): pass
+  class D_High(_cls.ChangeMsg): pass
+
+  def _val(msg):
+      return None if msg.value is _cls.NotGiven else msg.value
+
+  # Parameters that are paths are watched.
+  n = 1
+  await _self.watch(src, cls=Src)
+  if isinstance(target, Path):
+      await _self.watch(target, cls=Target)
+      target = None
+      n += 1
+  if isinstance(delta, Path):
+      await _self.watch(delta, cls=Delta)
+      delta = None
+      n += 1
+  if isinstance(d_low, Path):
+      await _self.watch(d_low, cls=D_Low)
+      d_low = None
+      n += 1
+  if isinstance(d_high, Path):
+      await _self.watch(d_high, cls=D_High)
+      d_high = None
+      n += 1
+
+  ready = False
+  is_high = None  # unknown: the next value beyond a threshold decides
+  data = None
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          ready = True
+          # Start from the current output, if there is one.
+          try:
+              cur = await _link.get(dst)
+          except KeyError:
+              pass
+          else:
+              try:
+                  is_high = cur >= (d_high + d_low) / 2
+              except TypeError:
+                  _log.debug("Output %r: state unknown", cur)
+              else:
+                  if d_high < d_low:
+                      is_high = not is_high
+      elif isinstance(msg, Target):
+          target = _val(msg)
+      elif isinstance(msg, Delta):
+          delta = _val(msg)
+      elif isinstance(msg, D_Low):
+          d_low = _val(msg)
+      elif isinstance(msg, D_High):
+          d_high = _val(msg)
+      elif isinstance(msg, Src):
+          data = _val(msg)
+      else:
+          continue
+
+      if not ready or data is None or None in (target, delta, d_low, d_high):
+          continue
+      _log.debug("Data %r %r %r±%r %r/%r", is_high, data, target, delta, d_low, d_high)
+      if is_high is not False and data <= target - delta:
+          is_high = False
+          await _link.set(dst, d_low)
+      elif is_high is not True and data >= target + delta:
+          is_high = True
+          await _link.set(dst, d_high)
+default:
+  d_high: true
+  d_low: false
+  delta: 0.1
+  target: 0.5
+info: 'Hysteresis around a target: dst is d_high once src >= target+delta, d_low once src <= target-delta'
+is_async: true
+vars:
+- src
+- dst
+- target
+- delta
+- d_low
+- d_high
+tests:
+  basic:
+    info: switches at target±delta, not in between
+    timeout: 10
+    data:
+      in:
+        _: 0.5
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [check, "out == []"]
+    - [set, !P in, 0.6]
+    - [wait, 3, "out == [True]"]
+    - [set, !P in, 0.5]
+    - [set, !P in, 0.45]
+    - [sleep, 0.3]
+    - [check, "out == [True]"]
+    - [set, !P in, 0.4]
+    - [wait, 3, "out == [True, False]"]
+    - [set, !P in, 0.55]
+    - [sleep, 0.3]
+    - [check, "out == [True, False]"]
+    - [set, !P in, 0.7]
+    - [wait, 3, "out == [True, False, True]"]
+  target:
+    info: the target is a path (as in production); changing it re-evaluates
+    timeout: 10
+    data:
+      in:
+        _: 20.5
+      want:
+        _: 21
+    args:
+      src: !P in
+      dst: !P out
+      target: !P want
+      delta: 1
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [check, "out == []"]
+    - [set, !P in, 22]
+    - [wait, 3, "out == [True]"]
+    - [set, !P want, 23.5]
+    - [wait, 3, "out == [True, False]"]
+    - [set, !P want, 20]
+    - [wait, 3, "out == [True, False, True]"]
+  fraction:
+    info: a fractional delta (as in production), starting from the current output
+    timeout: 10
+    data:
+      in:
+        _: 21
+      want:
+        _: 21
+      out:
+        _: true
+    args:
+      src: !P in
+      dst: !P out
+      target: !P want
+      delta: 0.2
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [set, !P in, 20.9]
+    - [sleep, 0.3]
+    - [check, "out == [True]"]
+    - [set, !P in, 20.7]
+    - [wait, 3, "out == [True, False]"]
+    - [set, !P in, 21.1]
+    - [sleep, 0.3]
+    - [check, "out == [True, False]"]
+    - [set, !P in, 21.3]
+    - [wait, 3, "out == [True, False, True]"]
+  missing:
+    info: nothing happens while the target is unknown
+    timeout: 10
+    data:
+      in:
+        _: 30
+    args:
+      src: !P in
+      dst: !P out
+      target: !P want
+      delta: 1
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.3]
+    - [check, "out == []"]
+    - [set, !P want, 25]
+    - [wait, 3, "out == [True]"]

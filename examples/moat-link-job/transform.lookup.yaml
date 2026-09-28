@@ -1,0 +1,45 @@
+code: |
+  await _self.watch(src)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          if msg.value is _cls.NotGiven:
+              continue
+          try:
+              val = data[msg.value]
+          except (KeyError, TypeError):
+              val = f"? {msg.value !r}"
+          await _link.set(dst, val, idem=True)
+default: {}
+info: Convert input to text
+is_async: true
+vars:
+- src
+- dst
+- data
+tests:
+  basic:
+    info: numeric states to text (as in production)
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+      data:
+        0: aus
+        1: warte Zeit
+        6: Betrieb
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out == ['warte Zeit']"]
+    - [set, !P in, 6]
+    - [wait, 3, "out[-1] == 'Betrieb'"]
+    - [set, !P in, 0]
+    - [wait, 3, "out[-1] == 'aus'"]
+    - [set, !P in, 5]
+    - [wait, 3, "out[-1] == '? 5'"]
+    - [set, !P in, [1]]
+    - [wait, 3, "out[-1] == '? [1]'"]

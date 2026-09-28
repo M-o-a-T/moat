@@ -1,0 +1,181 @@
+info: copy an incoming MQTT number to MoaT-Link
+is_async: true
+vars:
+- src
+- dst
+- delay
+- min
+- max
+- rounding
+default:
+  delay: 10
+  max: null
+  min: null
+  rounding: null
+code: |
+  # Copy numbers arriving at the MQTT topic 'src' to the Link entry 'dst'.
+  #
+  # Values outside of [min, max] are logged and ignored; 'rounding' rounds
+  # to that many digits.
+  #
+  # If 'delay' is not zero, 'dst' is set to False that many seconds after
+  # a value arrives; messages that arrive in between are ignored. This is
+  # for buttons that send a message when pressed, but not when released.
+  # 'delay' can also be the path of an entry that holds the delay.
+  class Src(_cls.MQTTmsg): pass
+  class Delay(_cls.ChangeMsg): pass
+  timer = None
+  n = 0
+  is_on = False
+
+  await _self.monitor(src, cls=Src, raw=False)
+  if not isinstance(delay, (int, float)):
+      await _self.watch(delay, fetch=True, cls=Delay)
+      delay = None
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          timer = await _self.timer(0)
+
+      elif isinstance(msg, Src):
+          if is_on:
+              continue
+          if timer is None:
+              continue
+          if isinstance(msg.value, (int, float)) and \
+                  (min is None or min <= msg.value) and \
+                  (max is None or msg.value <= max):
+              val = msg.value
+              if rounding is not None:
+                  val = round(val, rounding)
+              await _self.set(dst, val)
+              if delay:
+                  is_on = True
+                  await timer.run(delay)
+          else:
+              _log.error("Bad value: %r", msg.value)
+
+      elif isinstance(msg, Delay):
+          delay = msg.value
+
+      elif isinstance(msg, _cls.TimerMsg):
+          if is_on:
+              is_on = False
+              await _self.set(dst, False)
+tests:
+  button:
+    info: "a button press: the value, then False after the delay (production: delay 10)"
+    timeout: 10
+    data:
+      out:
+        _: false
+    args:
+      src: !P bus.btn
+      dst: !P out
+      delay: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.btn, 1]
+    - [wait, 2, "len(out) > 1 and out[-1] == 1"]
+    - [comment, ignored while on]
+    - [send, !P bus.btn, 2]
+    - [wait, 2, "out[-1] is False"]
+    - [check, "out == [False, 1, False]"]
+    - [send, !P bus.btn, 3]
+    - [wait, 2, "out[-1] == 3"]
+    - [wait, 2, "out[-1] is False"]
+  delay.path:
+    info: the delay is read from an entry
+    timeout: 10
+    data:
+      out:
+        _: false
+      cfg:
+        delay:
+          _: 0.5
+    args:
+      src: !P bus.btn
+      dst: !P out
+      delay: !P cfg.delay
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.btn, 1]
+    - [wait, 2, "len(out) > 1 and out[-1] == 1"]
+    - [wait, 2, "out[-1] is False"]
+    - [comment, no delay]
+    - [set, !P cfg.delay, 0]
+    - [sleep, 0.2]
+    - [send, !P bus.btn, 5]
+    - [wait, 2, "out[-1] == 5"]
+    - [sleep, 0.5]
+    - [check, "out == [False, 1, False, 5]"]
+  no_delay:
+    info: "plain copy (production: power.car)"
+    timeout: 10
+    data:
+      out:
+        _: -1
+    args:
+      src: !P bus.power
+      dst: !P out
+      delay: 0
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.power, 3.5]
+    - [wait, 2, "out[-1] == 3.5"]
+    - [send, !P bus.power, 7]
+    - [wait, 2, "out[-1] == 7"]
+    - [sleep, 0.3]
+    - [check, "out == [-1, 3.5, 7]"]
+  rounding:
+    info: "rounded copy (production: power.wp, rounding 1)"
+    timeout: 10
+    data:
+      out:
+        _: -1
+    args:
+      src: !P bus.power
+      dst: !P out
+      delay: 0
+      rounding: 1
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.power, 1234.56]
+    - [wait, 2, "out[-1] == 1234.6"]
+    - [send, !P bus.power, -0.04]
+    - [wait, 2, "out[-1] == 0"]
+  limits:
+    info: values outside of min/max, and non-numbers, are ignored
+    timeout: 10
+    data:
+      out:
+        _: -1
+    args:
+      src: !P bus.power
+      dst: !P out
+      delay: 0
+      min: 0
+      max: 100
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [send, !P bus.power, 150]
+    - [send, !P bus.power, -1]
+    - [send, !P bus.power, "foo"]
+    - [send, !P bus.power, 100]
+    - [wait, 2, "out[-1] == 100"]
+    - [send, !P bus.power, 0]
+    - [wait, 2, "out[-1] == 0"]
+    - [check, "out == [-1, 100, 0]"]

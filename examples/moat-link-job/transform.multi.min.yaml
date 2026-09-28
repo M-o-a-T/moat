@@ -1,0 +1,91 @@
+code: |
+  n = 0
+  data = []
+  dstval = None  # None until all inputs have been read
+
+  def mkChg(n):
+      class chg(_cls.ChangeMsg):
+          pos = n
+      return chg
+
+  for s in src.values():
+      data.append(max_val)
+      await _self.watch(s, fetch=True, cls=mkChg(n))
+      n += 1
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          dstval = min(data)
+          await _link.set(dst, dstval)
+
+      elif isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              val = max_val
+          data[msg.pos] = val
+          if dstval is None:
+              continue
+          val = min(data)
+          if val != dstval:
+              dstval = val
+              await _link.set(dst, dstval)
+default:
+  max_val: 0
+info: Collect inputs, set output to the minimum input
+is_async: true
+vars:
+- dst
+- src
+- max_val
+tests:
+  basic:
+    info: the output follows the smallest input
+    timeout: 10
+    data:
+      in:
+        long:
+          _: 5
+        short:
+          _: 10
+    args:
+      src:
+        long: !P in.long
+        short: !P in.short
+      dst: !P out
+      max_val: 99
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 5"]
+    - [set, !P in.short, 3]
+    - [wait, 3, "out[-1] == 3"]
+    - [set, !P in.short, 4]
+    - [wait, 3, "out[-1] == 4"]
+    - [set, !P in.long, 4.5]
+    - [sleep, 0.3]
+    - [check, "out == [5, 3, 4]"]
+    - [set, !P in.short, 7]
+    - [wait, 3, "out[-1] == 4.5"]
+  deleted:
+    info: missing and deleted inputs count as max_val
+    timeout: 10
+    data:
+      in:
+        long:
+          _: 105
+    args:
+      src:
+        long: !P in.long
+        short: !P in.short
+      dst: !P out
+      max_val: 99
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and out[-1] == 99"]
+    - [set, !P in.short, 20]
+    - [wait, 3, "out[-1] == 20"]
+    - [delete, !P in.short]
+    - [wait, 3, "out[-1] == 99"]

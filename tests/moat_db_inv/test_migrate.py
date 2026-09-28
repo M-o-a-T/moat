@@ -144,6 +144,8 @@ async def test_select_by_name(db_url):
     assert await show("wire", "-n", "w1") == await show("wire", "-d", "w1")
     assert await show("vlan", "-n", "std") == await show("vlan", "-t", "10")
     assert "10\tstd" in await show("vlan")
+    nocmd = await run("-s", "moat.db.url", db_url, "db", "inv", "vlan", "-n", "std")
+    assert nocmd.stdout == await show("vlan", "-n", "std")  # 'show' is the default
     assert await show("net", "-a", "192.168.1.77") == await show("net", "-n", "std4")
     assert await show("net", "-a", "2001:db8:0:1::5") == await show("net", "-n", "std6")
     assert (await show("host", "-n", "srv", "iface", "-")).split("\n")[:2] == [

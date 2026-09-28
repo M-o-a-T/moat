@@ -47,6 +47,20 @@ def cli(ctx):
 # ---------------------------------------------------------------------------
 
 
+class _ShowGroup(AliasedGroup):
+    """A command group that runs its ``show`` subcommand if none is given."""
+
+    def __init__(self, *a, **kw):
+        kw.setdefault("no_args_is_help", False)
+        super().__init__(*a, **kw)
+
+    async def invoke(self, ctx):
+        """Default to ``show``."""
+        if not ctx._protected_args:  # noqa: SLF001
+            ctx._protected_args = ["show"]  # noqa: SLF001
+        return await super().invoke(ctx)
+
+
 def _require(obj, what: str) -> str:
     """Return ``obj.name`` or raise a usage error."""
     name = obj.name
@@ -82,7 +96,7 @@ def _norm_iface(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="vlan", cls=AliasedGroup)
+@cli.group(name="vlan", cls=_ShowGroup)
 @click.option("--tag", "-t", "tag", type=int, help="802.1Q VLAN tag")
 @click.option("--name", "-n", "vname", type=str, help="VLAN name (instead of '--tag')")
 @click.pass_obj
@@ -162,7 +176,7 @@ def vlan_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="net", cls=AliasedGroup)
+@cli.group(name="net", cls=_ShowGroup)
 @click.option("--name", "-n", type=str, help="Network name")
 @click.option("--address", "-a", type=str, help="An address in the network (instead of '--name')")
 @click.pass_obj
@@ -278,7 +292,7 @@ def _select_host(obj, domain: str | None, name: str | None) -> None:
     obj.domain = domain
 
 
-@cli.group(name="host", cls=AliasedGroup)
+@cli.group(name="host", cls=_ShowGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the host")
 @click.option("--name", "-n", type=str, help="Short name of the host (instead of '--domain')")
 @click.pass_obj
@@ -361,7 +375,7 @@ def host_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@host_grp.group(name="iface", cls=AliasedGroup)
+@host_grp.group(name="iface", cls=_ShowGroup)
 @click.argument("iname", type=str)
 @click.pass_obj
 def iface_grp(obj, iname):
@@ -531,7 +545,7 @@ def _resolve_iface_spec(obj, spec: str) -> Interface:
 # ---------------------------------------------------------------------------
 
 
-@iface_grp.group(name="addr", cls=AliasedGroup)
+@iface_grp.group(name="addr", cls=_ShowGroup)
 @click.pass_obj
 def addr_grp(obj):
     """Manage addresses on an interface."""
@@ -584,7 +598,7 @@ def addr_delete(obj, addr):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="wire", cls=AliasedGroup)
+@cli.group(name="wire", cls=_ShowGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the wire")
 @click.option("--name", "-n", type=str, help="Short name of the wire (instead of '--domain')")
 @click.pass_obj
@@ -702,7 +716,7 @@ def wire_link(obj, end, dest):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="cable", cls=AliasedGroup)
+@cli.group(name="cable", cls=_ShowGroup)
 @click.pass_obj
 def cable_grp(obj):
     """Manage cables."""
@@ -731,7 +745,7 @@ def cable_show(obj):
 # ---------------------------------------------------------------------------
 
 
-@cli.group(name="group", cls=AliasedGroup)
+@cli.group(name="group", cls=_ShowGroup)
 @click.option("--name", "-n", type=str, help="Group name")
 @click.pass_obj
 def group_grp(obj, name):
@@ -800,7 +814,7 @@ def group_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-@host_grp.group(name="group", cls=AliasedGroup)
+@host_grp.group(name="group", cls=_ShowGroup)
 @click.option("--name", "-g", type=str, help="Group name")
 @click.pass_obj
 def host_group_grp(obj, name):

@@ -48,12 +48,13 @@ def test_model_defaults():
     [
         dict(steps=[["frobnicate"]]),
         dict(steps=[[]]),
+        dict(steps=[["check"]]),
         dict(timeout=0),
         dict(code="return 1"),
     ],
 )
 def test_model_rejects(rec):
-    "Unknown actions, empty steps, bad timeouts and unknown keys are rejected."
+    "Bad steps, bad timeouts and unknown keys are rejected."
     with pytest.raises(ValidationError):
         CodeTest.model_validate(rec)
 

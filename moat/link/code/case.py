@@ -11,6 +11,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from moat.link.code import CODE_EXEC_ROOT
+from moat.link.code.steps import format_steps
 
 from typing import TYPE_CHECKING, Any
 
@@ -20,23 +21,7 @@ if TYPE_CHECKING:
 
     from collections.abc import AsyncIterator
 
-__all__ = ["ACTIONS", "CodeTest", "del_test", "get_test", "is_test_path", "list_tests", "set_test"]
-
-ACTIONS: frozenset[str] = frozenset((
-    "start",
-    "set",
-    "update",
-    "delete",
-    "send",
-    "monitor",
-    "wait",
-    "check",
-    "sleep",
-    "result",
-    "error",
-    "comment",
-))
-"The verbs a test step may use."
+__all__ = ["CodeTest", "del_test", "get_test", "is_test_path", "list_tests", "set_test"]
 
 
 class CodeTest(BaseModel):
@@ -67,9 +52,7 @@ class CodeTest(BaseModel):
     @field_validator("steps")
     @classmethod
     def _check_steps(cls, steps: list[list[Any]]) -> list[list[Any]]:
-        for n, step in enumerate(steps):
-            if not step or step[0] not in ACTIONS:
-                raise ValueError(f"Step {n}: unknown action {step[:1]!r}")
+        format_steps(steps)
         return steps
 
     def dump(self) -> dict[str, Any]:

@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 import pytest
 
-from moat.dev.heat.link import Inputs, Override, Reader, ServiceMonitor, Writer
+from moat.dev.heat.link import Inputs, Override, Reader, ServiceMonitor, Switch, Writer
 from moat.lib.path import P
 from moat.util.time import time
 
@@ -147,3 +147,20 @@ async def test_service_monitor(heat_scaffold: Scaffold, link: LinkSender):
             while sm.alive:
                 await sm.wait_changed()
         tg.cancel_scope.cancel()
+
+
+def test_switch() -> None:
+    "a Switch counts changes by others, not our own"
+    r = Switch(None, P("test.sw"))  # ty:ignore[invalid-argument-type]
+    r.me = "me"
+    r.feed(True, 1, "op")
+    assert r.value == (True, 1)
+    r.feed(False, 2, "me")
+    assert r.own
+    assert r.value == (False, 1)
+    assert r.differs(True)
+    assert not r.differs(False)
+    r.feed(True, 3, "op")
+    assert r.value == (True, 2)
+    r.feed(None, 4, "op")
+    assert r.value == (None, 3)

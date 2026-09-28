@@ -127,6 +127,7 @@ class ClosedLoop:
         self.local0 = local0
         self.bus: dict[Path, Any] = {}
         self.ts: dict[Path, float] = {}
+        self.origin: dict[Path, str | None] = {}
         self.slots: list[CoreSlot] = []
         self.writes: list[tuple[float, Path, Any]] = []
         self.watchers: list[Callable[[float, Path, Any], None]] = []
@@ -152,16 +153,17 @@ class ClosedLoop:
 
     # the bus
 
-    def set(self, path: Path, value: Any) -> bool:
+    def set(self, path: Path, value: Any, origin: str | None = None) -> bool:
         """
         Publish a value; returns whether it changed.
 
-        ``None`` (or ``NotGiven``) deletes the item.
+        ``None`` (or ``NotGiven``) deletes the item. ``origin`` is the
+        writer, a core's name for its outputs.
         """
         with self.clock():
-            return self._set(path, value)
+            return self._set(path, value, origin)
 
-    def _set(self, path: Path, value: Any) -> bool:
+    def _set(self, path: Path, value: Any, origin: str | None = None) -> bool:
         if value is NotGiven:
             value = None
         if path in self.bus and self.bus[path] == value:
@@ -173,11 +175,12 @@ class ClosedLoop:
         else:
             self.bus[path] = value
         self.ts[path] = self.wall
+        self.origin[path] = origin
         for w in self.watchers:
             w(self.now, path, value)
         for slot in self.slots:
             for name in slot.by_path.get(path, ()):
-                slot.readers[name].feed(value, self.wall)
+                slot.readers[name].feed(value, self.wall, origin)
             for tree in slot.trees:
                 if (sub := _below(path, tree.path)) is not None:
                     tree.feed_item(sub, value, self.wall)
@@ -220,6 +223,7 @@ class ClosedLoop:
             name, core, dict(readers), cfg=cfg, state=state, wake_at=self.now, local=local
         )
         for r in slot.readers.values():
+            r.me = name
             if isinstance(r, TreeReader):
                 below = {p: sub for p in self.bus if (sub := _below(p, r.path)) is not None}
                 r.feed(
@@ -227,7 +231,7 @@ class ClosedLoop:
                     max((self.ts[p] for p in below), default=None),
                 )
             elif r.path in self.bus:
-                r.feed(self.bus[r.path], self.ts[r.path])
+                r.feed(self.bus[r.path], self.ts[r.path], self.origin.get(r.path))
             else:
                 r.feed(None, None)
         self.slots.append(slot)
@@ -270,7 +274,7 @@ class ClosedLoop:
                     and r.expires <= self.wall
                     and r.value is not None
                 ):
-                    r.feed(self.bus.get(r.path), self.ts.get(r.path))
+                    r.feed(self.bus.get(r.path), self.ts.get(r.path), self.origin.get(r.path))
 
     def _step_cores(self) -> None:
         for _ in range(MAX_ROUNDS):
@@ -288,7 +292,7 @@ class ClosedLoop:
                     slot.saves += 1
                 slot.wake_at = inf if res.wake_in is None else self.now + res.wake_in
                 for path, value in res.outputs.items():
-                    if self.set(path, value):
+                    if self.set(path, value, slot.name):
                         self.writes.append((self.now, path, value))
                         busy = True
             if not busy and not any(s.dirty for s in self.slots):

@@ -184,7 +184,7 @@ class Unit(Generic[C, S]):
                     # a path we also watch may have been changed by someone
                     # else since we last wrote it
                     r = watched.get(path)
-                    await self.writer.set(path, value, force=r is not None and r.value != value)
+                    await self.writer.set(path, value, force=r is not None and r.differs(value))
                 if res.save or res.save_now:
                     self.store.changed(immediate=res.save_now)
                 wake_in = res.wake_in

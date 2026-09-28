@@ -475,9 +475,12 @@ off (or `cm_heat` unknown) they are the water values only.
 The outside temperature counts as stale when it has not changed for
 `max_age` (default 1 h) or was deleted; its last value is used for
 another `freeze` (default 1 h), then `flow_temp` drops to `dest`, the
-curve's lower end. Force switches are handled as edges: a switch that
-turns on clears the other one's `cmd` and `state`, and the locks are
-kept in the state. `moat dev heat target curve [-d]` prints the curve
+curve's lower end. A force switch that turns on clears the other one's
+`cmd` and `state`; the locks are kept in the state. The switches are
+read with `link.Switch`, which counts changes made by others (the
+message's origin is not our client), so the unit's own writes, and old
+values those writes have not replaced yet, are never taken for an
+operator's action. `moat dev heat target curve [-d]` prints the curve
 (outside, day and night flow temperature) from the live or the package
 default config.
 

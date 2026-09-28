@@ -24,7 +24,7 @@ from moat.lib.path import (
 )
 
 from .config import UnitCfg
-from .link import Reader, out_path
+from .link import Reader, Switch, out_path
 from .override import reader as override_reader
 from .state import State
 from .unit import Step, Unit
@@ -178,7 +178,8 @@ class TargetCore:
     Sans-IO core of the target unit.
 
     Inputs: ``t_ext``, ``c_heat``, ``c_water``, ``cm_heat``, ``override``,
-    ``force_day``, ``force_night``, and ``local`` (the local time; without
+    ``force_day`` and ``force_night`` (`~moat.dev.heat.link.Switch`
+    values), and ``local`` (the local time; without
     it, it's always day).
 
     The outside temperature is stale when it has not changed for
@@ -200,21 +201,33 @@ class TargetCore:
         self.cfg = cfg
 
     def _force(self, inputs: dict[str, Any], out: dict[Path, Any]) -> bool:
-        """Process the force switches; returns whether the locks changed."""
+        """
+        Process the force switches; returns whether the locks changed.
+
+        Each switch input is ``(state, n)`` (see `~moat.dev.heat.link.Switch`):
+        only a change of ``n``, i.e. by someone else, is acted upon.
+        """
         locks = self.state.locks
         old = (locks.day, locks.night)
         for dn, nd in (("day", "night"), ("night", "day")):
-            v = inputs.get(f"force_{dn}")
-            if v is None or (dn in self._seen and self._seen[dn] == v):
+            sw = inputs.get(f"force_{dn}")
+            if sw is None:
                 continue
-            self._seen[dn] = v
-            v = bool(v)
+            v, n = sw
+            if self._seen.get(dn) == n:
+                continue
+            self._seen[dn] = n
             me: _Force = getattr(self.cfg, f"force_{dn}")
             other: _Force = getattr(self.cfg, f"force_{nd}")
+            if v is None or out.get(me.cmd) is False:
+                # deleted, or both were switched on at once and the other won
+                continue
+            v = bool(v)
             if me.state is not None:
                 out[me.state] = v
             if v:
-                if inputs.get(f"force_{nd}"):
+                osw = inputs.get(f"force_{nd}")
+                if osw is not None and osw[0]:
                     out[other.cmd] = False
                 if other.state is not None:
                     out[other.state] = False
@@ -324,8 +337,8 @@ class TargetUnit(Unit[TargetCfg, TargetState]):
             k: Reader[Any](self.link, getattr(cfg, k))
             for k in ("t_ext", "c_heat", "c_water", "cm_heat")
         }
-        rd["force_day"] = Reader[Any](self.link, cfg.force_day.cmd)
-        rd["force_night"] = Reader[Any](self.link, cfg.force_night.cmd)
+        rd["force_day"] = Switch(self.link, cfg.force_day.cmd)
+        rd["force_night"] = Switch(self.link, cfg.force_night.cmd)
         rd["override"] = override_reader(self.link, "flow_temp", cfg.override)
         return rd
 

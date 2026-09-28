@@ -29,6 +29,7 @@ __all__ = [
     "Override",
     "Reader",
     "ServiceMonitor",
+    "Switch",
     "TreeReader",
     "Writer",
     "is_up",
@@ -77,6 +78,12 @@ class Reader(Generic[T]):
     ts: float | None
     """Wall-clock timestamp of :attr:`value`, from its metadata."""
 
+    origin: str | None
+    """The writer of :attr:`value`, from its metadata."""
+
+    me: str | None
+    """The origin of our own writes (the client's name); set by :meth:`run`."""
+
     def __init__(
         self, link: LinkSender, path: Path, on_change: Callable[[], None] | None = None
     ) -> None:
@@ -85,13 +92,25 @@ class Reader(Generic[T]):
         self.on_change = on_change
         self.value = None
         self.ts = None
+        self.origin = None
+        self.me = None
         # created on demand, so that a reader can be built outside an event
         # loop (the closed-loop test runner feeds readers synchronously)
         self._changed: anyio.Event | None = None
 
-    def feed(self, value: Any, ts: float | None) -> None:
+    def feed(self, value: Any, ts: float | None, origin: str | None = None) -> None:
         """Set a new raw value, as if it had arrived from MoaT-Link."""
+        self.origin = origin
         self._update(value, ts)
+
+    @property
+    def own(self) -> bool:
+        """Whether the current value was written by us."""
+        return self.me is not None and self.origin == self.me
+
+    def differs(self, value: Any) -> bool:
+        """Whether writing ``value`` would change the item, as far as we know."""
+        return self.value != value
 
     def _update(self, value: Any, ts: float | None) -> None:
         """Store a new raw value and notify listeners."""
@@ -112,12 +131,14 @@ class Reader(Generic[T]):
 
         Signals readiness once the item's current state is known.
         """
+        self.me = self.link.name
         async with self.link.d_watch(self.path, meta=True, mark=True) as mon:
             async for msg in mon:
                 if msg is None:
                     task_status.started()
                     continue
                 data, meta = msg
+                self.origin = meta.origin
                 self._update(data, meta.timestamp)
 
     def fresh(self, now: float, max_age: float) -> bool:
@@ -152,8 +173,9 @@ class TreeReader(Reader[dict[Path, Any]]):
     be empty. :attr:`~Reader.ts` is the timestamp of the latest change.
     """
 
-    def feed(self, value: Any, ts: float | None) -> None:
+    def feed(self, value: Any, ts: float | None, origin: str | None = None) -> None:
         """Replace the whole subtree (a mapping of relative paths to values, or `None`)."""
+        self.origin = origin
         self._update(None if value is None else dict(value), ts)
 
     def feed_item(self, path: Path, value: Any, ts: float | None) -> None:
@@ -187,6 +209,36 @@ class TreeReader(Reader[dict[Path, Any]]):
                     continue
                 path, data, meta = msg
                 self.feed_item(Path.build(path), data, meta.timestamp)
+
+
+class Switch(Reader[tuple[Any, int]]):
+    """
+    A switch that others toggle and we may reset, such as a force switch.
+
+    :attr:`~Reader.value` is ``(state, n)``: the item's current value and
+    the number of changes made by others. Our own writes change ``state``
+    but not ``n``, so a core acts on ``n`` and never mistakes its own
+    write, or an old value that our write has not replaced yet, for an
+    operator's action. Changes are counted even if the core does not see
+    every intermediate state.
+    """
+
+    def __init__(
+        self, link: LinkSender, path: Path, on_change: Callable[[], None] | None = None
+    ) -> None:
+        super().__init__(link, path, on_change)
+        self._n = 0
+
+    def _update(self, value: Any, ts: float | None) -> None:
+        if value is NotGiven:
+            value = None
+        if not self.own:
+            self._n += 1
+        super()._update((value, self._n), ts)
+
+    def differs(self, value: Any) -> bool:
+        """Compare with the switch's state."""
+        return self.value is None or self.value[0] != value
 
 
 class Override(Reader[T]):

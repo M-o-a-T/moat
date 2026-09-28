@@ -5,7 +5,6 @@ demand, staleness and override (HEAT.md §3.1).
 
 from __future__ import annotations
 
-import anyio
 import pytest
 from datetime import datetime, timedelta
 from itertools import pairwise
@@ -166,12 +165,12 @@ def test_force() -> None:
     "the force switches override the schedule and exclude each other"
     core = _core()
     night = _at(0, 23)
-    res = core.step(_in(local=night, force_day=False, force_night=False), 0)
+    res = core.step(_in(local=night, force_day=(False, 1), force_night=(False, 1)), 0)
     assert res.outputs[DAY_STATE] is False
     assert res.outputs[NIGHT_STATE] is False
     assert res.outputs[OUT]["day_active"] is False
 
-    res = core.step(_in(local=night, force_day=True, force_night=False), 1)
+    res = core.step(_in(local=night, force_day=(True, 2), force_night=(False, 1)), 1)
     assert res.save
     assert res.outputs[DAY_STATE] is True
     assert res.outputs[NIGHT_STATE] is False
@@ -181,7 +180,7 @@ def test_force() -> None:
     assert not core.state.locks.night
 
     # night: clears day
-    res = core.step(_in(local=NOON, force_day=True, force_night=True), 2)
+    res = core.step(_in(local=NOON, force_day=(True, 2), force_night=(True, 2)), 2)
     assert res.outputs[NIGHT_STATE] is True
     assert res.outputs[DAY_CMD] is False
     assert res.outputs[DAY_STATE] is False
@@ -189,22 +188,58 @@ def test_force() -> None:
     assert core.state.locks.night
     assert not core.state.locks.day
 
-    # the cleared switch comes back: nothing more happens
-    res = core.step(_in(local=NOON, force_day=False, force_night=True), 3)
-    assert res.outputs[DAY_STATE] is False
+    # our own write comes back: nothing happens
+    res = core.step(_in(local=NOON, force_day=(False, 2), force_night=(True, 2)), 3)
+    assert DAY_STATE not in res.outputs
     assert NIGHT_CMD not in res.outputs
     assert res.outputs[OUT]["day_active"] is False
 
     # off: the schedule applies again
-    res = core.step(_in(local=NOON, force_day=False, force_night=False), 4)
+    res = core.step(_in(local=NOON, force_day=(False, 2), force_night=(False, 3)), 4)
     assert res.outputs[NIGHT_STATE] is False
     assert res.outputs[OUT]["day_active"] is True
     assert not core.state.locks.night
     # unchanged switches are not echoed again
-    res = core.step(_in(local=NOON, force_day=False, force_night=False), 5)
+    res = core.step(_in(local=NOON, force_day=(False, 2), force_night=(False, 3)), 5)
     assert DAY_STATE not in res.outputs
     assert NIGHT_STATE not in res.outputs
     assert not res.save
+
+
+def test_force_races() -> None:
+    "own writes in flight and quick toggles"
+    core = _core()
+    core.step(_in(force_day=(True, 1), force_night=(False, 1)), 0)
+    assert core.state.locks.day
+    res = core.step(_in(force_day=(True, 1), force_night=(True, 2)), 1)
+    assert res.outputs[DAY_CMD] is False
+    assert core.state.locks.night
+
+    # another input changes before our write comes back: the day switch
+    # still reads True, but that's not news
+    res = core.step(_in(t_ext=1.0, force_day=(True, 1), force_night=(True, 2)), 2)
+    assert DAY_CMD not in res.outputs
+    assert core.state.locks.night
+
+    # our write came back and the operator switched day on again, all
+    # before the next step: that is news
+    res = core.step(_in(force_day=(True, 2), force_night=(True, 2)), 3)
+    assert res.outputs[NIGHT_CMD] is False
+    assert res.outputs[DAY_STATE] is True
+    assert core.state.locks.day
+    assert not core.state.locks.night
+
+
+def test_force_both() -> None:
+    "both switched on at once: the first one wins"
+    core = _core()
+    res = core.step(_in(force_day=(True, 1), force_night=(True, 1)), 0)
+    assert res.outputs[NIGHT_CMD] is False
+    assert res.outputs[NIGHT_STATE] is False
+    assert res.outputs[DAY_STATE] is True
+    assert DAY_CMD not in res.outputs
+    assert core.state.locks.day
+    assert not core.state.locks.night
 
 
 def test_force_state_restored() -> None:
@@ -423,16 +458,14 @@ async def test_unit(heat) -> None:
     o = await u.wait("out", lambda o: o["day_active"] is False)
     assert o["flow_temp"] == pytest.approx(vt(0, 15, CurveCfg()))
 
-    # the day switch again: the night switch, set by someone else, is
-    # cleared although the unit has written False there before.
-    # (Switch changes are edges: the unit must see its own write come back
-    # before the next toggle, or the two coalesce. Operators aren't that fast.)
-    await heat.feed(DAY_CMD, True)
-    await heat.expect(NIGHT_CMD, lambda v: v is False)
-    await anyio.sleep(0.2)
-    await heat.feed(NIGHT_CMD, True)
-    await heat.expect(DAY_CMD, lambda v: v is False)
-    await anyio.sleep(0.2)
+    # toggling quickly: the night switch, set by someone else, is cleared
+    # although the unit has written False there before, and the unit's own
+    # writes are never mistaken for an operator's
+    for _ in range(3):
+        await heat.feed(DAY_CMD, True)
+        await heat.expect(NIGHT_CMD, lambda v: v is False)
+        await heat.feed(NIGHT_CMD, True)
+        await heat.expect(DAY_CMD, lambda v: v is False)
     await heat.feed(DAY_CMD, True)
     await heat.expect(NIGHT_CMD, lambda v: v is False)
     await u.wait("out", lambda o: o["day_active"] is True)

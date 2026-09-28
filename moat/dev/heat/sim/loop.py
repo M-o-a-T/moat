@@ -16,6 +16,7 @@ more, so a chain of units settles in one tick.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from math import inf
 
 from moat.util import NotGiven
@@ -40,10 +41,13 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable, Mapping
 
-__all__ = ["WALL0", "ClosedLoop", "CoreSlot"]
+__all__ = ["LOCAL0", "WALL0", "ClosedLoop", "CoreSlot"]
 
 WALL0 = 1_767_567_600.0  # 2026-01-05 00:00 CET, a Monday
 """Default wall-clock time at simulated time 0."""
+
+LOCAL0 = datetime(2026, 1, 5)  # noqa: DTZ001
+"""Default local midnight of simulated day 0 (the plant's ``day_offset`` counts from here)."""
 
 MAX_ROUNDS = 20
 """How often cores may be stepped within one tick before we give up settling."""
@@ -70,6 +74,8 @@ class CoreSlot:
     steps: int = 0
     saves: int = 0
     dirty: bool = True
+    local: bool = False
+    """The core gets the local date and time as input ``local``."""
     by_path: dict[Path, list[str]] = field(default_factory=dict)
     trees: list[TreeReader] = field(default_factory=list)
 
@@ -98,6 +104,9 @@ class ClosedLoop:
         inputs: Plant input name → path to read it from.
         wall0: Wall-clock time at simulated time 0 (for message
             timestamps, override expiry and PID persistence).
+        local0: Local midnight of the plant's day 0; the local time is
+            this plus the plant's ``day_offset`` plus the simulated time,
+            as in the legacy harness.
     """
 
     def __init__(
@@ -109,11 +118,13 @@ class ClosedLoop:
         sensors: Mapping[str, tuple[Path, ...]] = SENSOR_PATHS,
         inputs: Mapping[str, Path] = INPUT_PATHS,
         wall0: float = WALL0,
+        local0: datetime = LOCAL0,
     ) -> None:
         self.plant = plant or Plant(cfg, seed=seed)
         self.sensors = sensors
         self.inputs = inputs
         self.wall0 = wall0
+        self.local0 = local0
         self.bus: dict[Path, Any] = {}
         self.ts: dict[Path, float] = {}
         self.slots: list[CoreSlot] = []
@@ -133,6 +144,11 @@ class ClosedLoop:
     def wall(self) -> float:
         """Simulated wall-clock time."""
         return self.wall0 + self.plant.now
+
+    @property
+    def local(self) -> datetime:
+        """Simulated local date and time."""
+        return self.local0 + timedelta(seconds=self.plant.cfg.day_offset + self.plant.now)
 
     # the bus
 
@@ -192,13 +208,17 @@ class ClosedLoop:
         readers: Mapping[str, Reader[Any]],
         cfg: Any = None,
         state: State | None = None,
+        local: bool = False,
     ) -> CoreSlot:
         """
         Add a core with its readers (as the unit's ``make_inputs`` would build them).
 
-        Current bus values are fed to the readers at once.
+        Current bus values are fed to the readers at once. With ``local``,
+        the core also gets the local time (see `Unit.local_time`).
         """
-        slot = CoreSlot(name, core, dict(readers), cfg=cfg, state=state, wake_at=self.now)
+        slot = CoreSlot(
+            name, core, dict(readers), cfg=cfg, state=state, wake_at=self.now, local=local
+        )
         for r in slot.readers.values():
             if isinstance(r, TreeReader):
                 below = {p: sub for p in self.bus if (sub := _below(p, r.path)) is not None}
@@ -233,7 +253,7 @@ class ClosedLoop:
         adapter.link = None
         readers = adapter.make_inputs(cfg)
         core = adapter.make_core(cfg, state, self.now)
-        return self.add_core(unit.name, core, readers, cfg=cfg, state=state)
+        return self.add_core(unit.name, core, readers, cfg=cfg, state=state, local=unit.local_time)
 
     def update_cfg(self, slot: CoreSlot, cfg: Any) -> None:
         """Change a core's configuration, as a config update would."""
@@ -260,6 +280,8 @@ class ClosedLoop:
                     continue
                 slot.dirty = False
                 snap = {k: r.value for k, r in slot.readers.items()}
+                if slot.local:
+                    snap["local"] = self.local
                 res = slot.core.step(snap, self.now)
                 slot.steps += 1
                 if res.save or res.save_now:

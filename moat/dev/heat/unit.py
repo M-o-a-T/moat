@@ -13,8 +13,10 @@ from __future__ import annotations
 import anyio
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from math import inf
 
+from moat.util import time as mtime
 from moat.lib.path import P
 
 from .config import ServiceCfg, UnitCfg, load_config, unit_config
@@ -70,7 +72,8 @@ class Core(Protocol[C_contra]):
 
         Args:
             inputs: The current value of every input, by name; `None` if
-                unknown.
+                unknown. Units with :attr:`Unit.local_time` also get
+                ``local``, the local date and time (a naive `datetime`).
             now: The current monotonic time.
         """
         ...
@@ -96,6 +99,9 @@ class Unit(Generic[C, S]):
 
     state_model: type[S]
     """The unit's state model."""
+
+    local_time: ClassVar[bool] = False
+    """The core gets the local date and time as input ``local``."""
 
     service: ServiceCfg = ServiceCfg()
     """The shared service settings; loaded by :meth:`run` before the inputs are built."""
@@ -169,9 +175,16 @@ class Unit(Generic[C, S]):
                     scope.cancel()
                     inputs, scope = await self._start_inputs(tg, new)
 
-                res = core.step(inputs.snapshot(), anyio.current_time())
+                snap = inputs.snapshot()
+                if self.local_time:
+                    snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
+                res = core.step(snap, anyio.current_time())
+                watched = {r.path: r for r in inputs.readers.values()}
                 for path, value in res.outputs.items():
-                    await self.writer.set(path, value)
+                    # a path we also watch may have been changed by someone
+                    # else since we last wrote it
+                    r = watched.get(path)
+                    await self.writer.set(path, value, force=r is not None and r.value != value)
                 if res.save or res.save_now:
                     self.store.changed(immediate=res.save_now)
                 wake_in = res.wake_in

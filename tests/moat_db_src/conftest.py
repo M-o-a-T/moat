@@ -31,6 +31,7 @@ import moat.db.src.model_  # noqa: F401
 import moat.db.util  # noqa: F401  — attaches the sqlite ``foreign_keys=ON`` pragma listener
 from moat.db.schema import Base
 from moat.db.src.model import ArchiveRole, BranchRole
+from moat.db.util import load_schemas
 from moat.src.test import run
 
 
@@ -55,7 +56,7 @@ def _db_url(tmp_path_factory):
     db_path = tmp_path_factory.mktemp("src-db") / "s.db"
     url = f"sqlite:///{db_path}"
     eng = create_engine(url)
-    Base.metadata.create_all(eng)
+    load_schemas().create_all(eng)
     try:
         yield url
     finally:

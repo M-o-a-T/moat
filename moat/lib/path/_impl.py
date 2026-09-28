@@ -130,6 +130,7 @@ class Path(Sequence[PathElem]):
         :Q   An alias for an alternate root
         :P   An alias for another alternate root
         :S   An alias for yet another alternate root
+        :T   An alias for a root used for testing
         :@   Marks this path as relative
 
     The empty path is denoted by a single colon. A path that starts or ends
@@ -343,7 +344,7 @@ class Path(Sequence[PathElem]):
         Slash encoding does not work with empty paths; marks are ignored.
 
         Roots are expanded when slashed. Otherwise they are represented
-        as ``:S``, ``:P``, ``:Q``, or ``:R``.
+        as ``:S``, ``:P``, ``:Q``, ``:R``, or ":T".
         """
 
         def _escol(x, spaces=True):
@@ -1280,7 +1281,7 @@ _root = RootPath("R", Root)
 as_proxy("R", _root)
 _Roots = {"R": _root}
 
-for _idx in "SPQ":  # and R. Yes I know.
+for _idx in "SPQT":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar[Path | None](_name, default=None)
     _path = RootPath(_idx, _ctx)
@@ -1297,5 +1298,6 @@ if TYPE_CHECKING:
     S_Root = ContextVar[Path | None]("S_Root", default=None)
     P_Root = ContextVar[Path | None]("P_Root", default=None)
     Q_Root = ContextVar[Path | None]("Q_Root", default=None)
+    T_Root = ContextVar[Path | None]("T_Root", default=None)
 
-__all__ += ["P_Root", "Q_Root", "S_Root"]
+__all__ += ["P_Root", "Q_Root", "S_Root", "T_Root"]

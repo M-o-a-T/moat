@@ -713,6 +713,31 @@ Rules:
   runs, reported as such.
 - Stale inputs latch the current decision.
 
+As implemented (`selector.py`):
+
+- `out` is `{wp, pellet, primary, phase, reason, failed}`; `failed`
+  lists the sources that failed within the last `retry` seconds (default
+  2 h), which the selector won't choose again on its own until then. The
+  state is `{primary, phase, since, failed}`; timers restart after a
+  restart.
+- The primary choice needs `debounce` seconds (default 120) of agreement.
+  Missing inputs latch it.
+- `wp_to_pellet` ends when `pellet.out.hot`; the burner has failed if it
+  isn't `running` after `start_timeout` (30 min), isn't hot after
+  `hot_timeout` (1 h), or reports one of `fail_codes` (none by default,
+  the KWB fault codes still have to be collected).
+- `pellet_to_wp` ends after the heat pump has been in `run` for `stable`
+  seconds (10 min), or has stayed `off` for `idle_release` (30 min) without
+  errors: with a warm buffer it has no reason to start, and waiting for it
+  would keep the burner on indefinitely. `errors.out` reporting errors
+  fails the heat pump.
+- In steady pellet operation a burner that doesn't run counts as failed
+  only while `tb_heat` is below `t_low`: it pauses when the buffer is warm.
+- A failed source makes the other one primary at once (steady, no
+  handover), unless it is forced off.
+- Overrides: `True` forces the source on, `False` off; `False` also makes
+  the other one primary, and both `False` means nothing runs.
+
 ### 3.7 `errors` — error aggregator
 
 Publish-only; does not stop anything itself.

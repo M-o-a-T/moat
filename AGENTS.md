@@ -244,16 +244,12 @@ Work is NOT complete until `git push` succeeds.
    Don't add information to the bug that's also in the commit's text.
 1. **After closing an issue**:
    - (A) Run `git merge main`. Fix conflicts if any.
-   - (B) In the main arc and `git merge --ff-only ISSUE_BRANCH`.
+   - (B) In the main repo: `git merge --ff-only ISSUE_BRANCH`.
      If that does not work, go back to step A.
 
-   - (C) `git push intern main`. If that fails, go back to the worktree and
-     run `git merge intern main`. Fix conflicts, if any, then go back to
-     step A.
-
-   - (D) `git status` (must be clean)
-   - (E) `git worktree remove ISSUE_BRANCH`
-   - (F) `git branch -d ISSUE_BRANCH`
+   - (C) `git status` (must be clean)
+   - (D) `git worktree remove ISSUE_BRANCH`
+   - (E) `git branch -d ISSUE_BRANCH`
 
 #### Planning Mode
 

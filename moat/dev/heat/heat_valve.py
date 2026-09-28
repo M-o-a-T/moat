@@ -72,16 +72,16 @@ class HeatValveCfg(UnitCfg):
     t_out: Path = P("heat.s.pump.temp.out")
     m_switch: Path = P("heat.s.pump.switchover")
     c_heat: Path = P("heat.s.heat.temp")
-    cm_heat: Path = P("home.ass.dyn.switch.heizung.main.cmd")
+    cm_heat: Path = P("app.heat.ha.heat")
 
     # outputs
     mode: Path | None = P("heat.s.heat.mode.cmd")
     """The Solvis' heating mode (``setting.heat.mode.path``)."""
     mode_on: int = 3
     mode_off: int = 5
-    feedback_pump: Path | None = P("home.ass.dyn.binary_sensor.heizung.pump.state")
-    """Heating circuit on/off, for Home Assistant (``feedback.pump``)."""
-    feedback_heat: Path | None = P("home.ass.dyn.switch.heizung.main.state")
+    feedback_pump: Path | None = P("app.heat.ha.pump_state")
+    """Heating circuit on/off, copied to Home Assistant (``feedback.pump``)."""
+    feedback_heat: Path | None = P("app.heat.ha.heat_state")
     """Echo of ``cm_heat`` (``feedback.heat``)."""
     pin: Path | None = None
     """

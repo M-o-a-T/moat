@@ -97,17 +97,17 @@ class TargetCfg(UnitCfg):
     """The Solvis' heating setpoint (``setting.heat.day``)."""
     c_water: Path = P("heat.s.water.temp")
     """The hot-water setpoint (``setting.water``)."""
-    cm_heat: Path = P("home.ass.dyn.switch.heizung.main.cmd")
+    cm_heat: Path = P("app.heat.ha.heat")
     """Heating enabled (``cmd.heat``)."""
     override: Path = P("app.heat.override.flow_temp")
     """Operator override of the flow temperature (HEAT.md §2.7)."""
     force_day: _Force = _Force(
-        cmd=P("home.ass.dyn.switch.heizung.day_mode.cmd"),
-        state=P("home.ass.dyn.switch.heizung.day_mode.state"),
+        cmd=P("app.heat.ha.force_day.cmd"),
+        state=P("app.heat.ha.force_day.state"),
     )
     force_night: _Force = _Force(
-        cmd=P("home.ass.dyn.switch.heizung.night_mode.cmd"),
-        state=P("home.ass.dyn.switch.heizung.night_mode.state"),
+        cmd=P("app.heat.ha.force_night.cmd"),
+        state=P("app.heat.ha.force_night.state"),
     )
 
     # outputs

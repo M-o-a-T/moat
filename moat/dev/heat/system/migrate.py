@@ -95,6 +95,8 @@ class Drop:
 Target: TypeAlias = tuple[str, str]
 """``(unit, dotted path in the unit's configuration)``"""
 
+_HA = Drop("Home Assistant entity: jobs copy it to/from app.heat.ha.* (see HA.md)")
+
 _CFG_MAP: dict[str, list[Target] | Drop] = {
     # the location of the legacy state: an input of the migration
     "state": Drop("location of the legacy state (read by the migration)"),
@@ -140,8 +142,8 @@ _CFG_MAP: dict[str, list[Target] | Drop] = {
     "output.flow.freq": [("pwm", "outputs.flow.freq")],
     "output.flow.path": [("pwm", "outputs.flow.path"), ("flow", "output")],
     "output.flow.inverted": [("pwm", "outputs.flow.inverted")],
-    "output.flow.override.flag": [("pwm", "outputs.flow.override.flag")],
-    "output.flow.override.val": [("pwm", "outputs.flow.override.val")],
+    "output.flow.override.flag": _HA,
+    "output.flow.override.val": _HA,
     # sensor
     "sensor.pump.in": [
         ("pump", "t_in"),
@@ -177,8 +179,8 @@ _CFG_MAP: dict[str, list[Target] | Drop] = {
     ],
     "sensor.error": [("errors", "feed")],
     "sensor.power": [("pump", "m_power")],
-    "sensor.cop": [("pump", "cop_out")],
-    "sensor.temp.current": [("selector", "m_air")],
+    "sensor.cop": _HA,
+    "sensor.temp.current": _HA,
     "sensor.temp.predict": [("selector", "m_air_pred")],
     "sensor.temp.pellet": [("pellet", "t_pellet")],
     "sensor.temp.heat": [("pump", "t_heat")],
@@ -190,10 +192,10 @@ _CFG_MAP: dict[str, list[Target] | Drop] = {
     "setting.heat.mode.on": [("heat_valve", "mode_on")],
     "setting.heat.mode.off": [("heat_valve", "mode_off")],
     "setting.heat.mode.delay": [("heat_valve", "delay")],
-    "setting.heat.mode.force.day.cmd": [("target", "force_day.cmd")],
-    "setting.heat.mode.force.day.state": [("target", "force_day.state")],
-    "setting.heat.mode.force.night.cmd": [("target", "force_night.cmd")],
-    "setting.heat.mode.force.night.state": [("target", "force_night.state")],
+    "setting.heat.mode.force.day.cmd": _HA,
+    "setting.heat.mode.force.day.state": _HA,
+    "setting.heat.mode.force.night.cmd": _HA,
+    "setting.heat.mode.force.night.state": _HA,
     "setting.heat.power.pin": Drop(
         "GPIO heat pin: use a pwm daemon output driven by heat_valve.pin instead"
     ),
@@ -227,7 +229,7 @@ _CFG_MAP: dict[str, list[Target] | Drop] = {
     "cmd.bypass.power": Drop("bypass mode is replaced by overrides and passthru"),
     "cmd.flow": Drop("bypass mode is replaced by overrides and passthru"),
     "cmd.wp": Drop("mapped onto app.heat.override.wp by the Home Assistant bridge"),
-    "cmd.heat": [("target", "cm_heat"), ("heat_valve", "cm_heat"), ("selector", "cm_heat")],
+    "cmd.heat": _HA,
     "cmd.mode.path": [("pump", "mode"), ("emergency", "mode_path")],
     "cmd.mode.on": [("pump", "mode_on")],
     "cmd.mode.off": [("pump", "mode_off"), ("emergency", "mode_off")],
@@ -241,11 +243,11 @@ _CFG_MAP: dict[str, list[Target] | Drop] = {
     "cmd.passthru.pump": Drop("deprecated"),
     "cmd.passthru.pellet": Drop("deprecated"),
     # feedback
-    "feedback.wp": [("pump", "feedback_wp")],
-    "feedback.heat": [("heat_valve", "feedback_heat")],
-    "feedback.pump": [("heat_valve", "feedback_pump")],
-    "feedback.ice": [("pump", "feedback_ice")],
-    "feedback.pellet": [("selector", "feedback_pellet")],  # commented out in production
+    "feedback.wp": _HA,
+    "feedback.heat": _HA,
+    "feedback.pump": _HA,
+    "feedback.ice": _HA,
+    "feedback.pellet": _HA,
     "feedback.main": Drop("unused"),
     "feedback.bypass": Drop("deprecated"),
     "feedback.passthru.pump": Drop("deprecated"),

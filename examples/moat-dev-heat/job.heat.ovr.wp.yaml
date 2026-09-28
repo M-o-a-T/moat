@@ -1,0 +1,7 @@
+code: !P heat.ha.override
+data:
+  dst: !P app.heat.override.wp
+  value: !P home.ass.dyn.switch.heizung.wp
+  manual: !P home.ass.dyn.switch.heizung.wp_override
+  actual: !P app.heat.ha.wp_enabled
+info: 'Heat pump override: HA switches heizung.wp and heizung.wp_override'

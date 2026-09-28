@@ -22,8 +22,8 @@ from typing import Any
 
 OUT = out_path("heat_valve")
 MODE = P("heat.s.heat.mode.cmd")
-FB_PUMP = P("home.ass.dyn.binary_sensor.heizung.pump.state")
-FB_HEAT = P("home.ass.dyn.switch.heizung.main.state")
+FB_PUMP = P("app.heat.ha.pump_state")
+FB_HEAT = P("app.heat.ha.heat_state")
 ON, OFF = 3, 5
 
 
@@ -205,7 +205,7 @@ def test_closed_loop_vs_legacy(name: str) -> None:
     loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
     on: list[bool] = []
     todo = sorted(sc.events)
-    paths = {"force_day": P("home.ass.dyn.switch.heizung.day_mode.cmd")}
+    paths = {"force_day": P("app.heat.ha.force_day.cmd")}
 
     def cb(lp) -> None:
         while todo and todo[0][0] <= lp.now:
@@ -232,7 +232,7 @@ async def test_unit(heat) -> None:
     await heat.feed(P("heat.s.buffer.temp.return"), 25.0)
     await heat.feed(P("heat.s.pump.temp.out"), 30.0)
     await heat.feed(P("heat.s.heat.temp"), 35)
-    await heat.feed(P("home.ass.dyn.switch.heizung.main.cmd"), True)
+    await heat.feed(P("app.heat.ha.heat"), True)
     u = await heat.run_unit(HeatValveUnit)
     await heat.expect(MODE, lambda v: v == OFF)
     await heat.expect(FB_HEAT, lambda v: v is True)
@@ -241,6 +241,6 @@ async def test_unit(heat) -> None:
     await heat.expect(MODE, lambda v: v == ON)
     await u.wait("state", lambda s: s is not None and s["heat_ok"] is True)
 
-    await heat.feed(P("home.ass.dyn.switch.heizung.main.cmd"), False)
+    await heat.feed(P("app.heat.ha.heat"), False)
     await heat.expect(MODE, lambda v: v == OFF)
     await heat.expect(FB_HEAT, lambda v: v is False)

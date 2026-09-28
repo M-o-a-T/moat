@@ -64,7 +64,7 @@ class SelectorCfg(UnitCfg):
     """Configuration of the selector unit. Defaults: the production values."""
 
     # inputs
-    m_air: Path = P("home.ass.dyn.sensor.temp.garten_kompost_schatten.state")
+    m_air: Path = P("app.heat.ha.t_air")
     """Current outside temperature (``sensor.temp.current``)."""
     m_air_pred: Path = P("temp.min.forecast:6")
     """Forecast minimum (``sensor.temp.predict``)."""
@@ -73,7 +73,7 @@ class SelectorCfg(UnitCfg):
     tb_water: Path = P("heat.s.buffer.temp.water")
     tb_heat: Path = P("heat.s.buffer.temp.heat")
     tb_low: Path = P("heat.s.buffer.temp.return")
-    cm_heat: Path = P("home.ass.dyn.switch.heizung.main.cmd")
+    cm_heat: Path = P("app.heat.ha.heat")
     target: Path = out_path("target")
     pump: Path = out_path("pump")
     pellet: Path = out_path("pellet")

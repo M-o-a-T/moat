@@ -74,6 +74,12 @@ After the cutover (moat-n84.24):
    `legacy.heat` and `legacy.temp`. Don't use `moat link gate … delete`
    for this: it deletes the path without the `gate.` prefix (moat-pxqy).
 
+## Home Assistant
+
+HA.md: the HA entities, the jobs that copy them to and from
+`app.heat.ha.*`, and the override jobs (`code.heat.ha.override.yaml`,
+`job.heat.ovr.wp.yaml`).
+
 ## Weather forecast job
 
 `temp.min.forecast:<n>`, the minimum outside temperature over the next

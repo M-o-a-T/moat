@@ -51,11 +51,11 @@ class FrostCfg(UnitCfg):
     t_in: Path = P("heat.s.pump.temp.in")
     t_out: Path = P("heat.s.pump.temp.out")
     flow: Path = out_path("flow")
-    valve_state: Path | None = P("home.ass.dyn.switch.plug-n5.relay.state")
+    valve_state: Path | None = P("app.heat.ha.valve.state")
     """The valve's feedback; closing it ends a frost cycle. `None`: not available."""
 
     # outputs
-    valve: Path = P("home.ass.dyn.switch.plug-n5.relay.cmd")
+    valve: Path = P("app.heat.ha.valve.cmd")
     """The heat-pump loop valve."""
 
     t_start: float = 8

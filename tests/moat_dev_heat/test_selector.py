@@ -414,12 +414,12 @@ def test_closed_loop_cold_snap() -> None:
 async def test_unit(heat) -> None:
     "the adapter: cold weather requests the burner after the debounce time"
     await heat.seed_config("selector", {"debounce": 0.3})
-    await heat.feed(P("home.ass.dyn.sensor.temp.garten_kompost_schatten.state"), -3.0)
+    await heat.feed(P("app.heat.ha.t_air"), -3.0)
     await heat.feed(P("temp.min.forecast:6"), -5.0)
     await heat.feed(P("heat.s.pellets.state"), 0)
     await heat.feed(P("heat.s.buffer.temp.water"), 45.0)
     await heat.feed(P("heat.s.buffer.temp.heat"), 45.0)
-    await heat.feed(P("home.ass.dyn.switch.heizung.main.cmd"), True)
+    await heat.feed(P("app.heat.ha.heat"), True)
     await heat.feed(out_path("target"), {"t_ext": -3.0, "demand": DEM})
     u = await heat.run_unit(SelectorUnit)
     o = await u.wait("out", lambda o: o is not None and o["primary"] == PELLET)

@@ -295,9 +295,9 @@ class PumpCfg(UnitCfg):
     mode_on: int = 3
     mode_off: int = 0
     flow_request: Path = P("app.heat.flow.request")
-    cop_out: Path | None = P("home.ass.dyn.sensor.heizung.wp_cop.state")
-    feedback_wp: Path | None = P("home.ass.dyn.switch.heizung.wp.state")
-    feedback_ice: Path | None = P("home.ass.dyn.binary_sensor.heizung.wp_de_ice.state")
+    cop_out: Path | None = P("app.heat.ha.cop")
+    feedback_wp: Path | None = P("app.heat.ha.wp_enabled")
+    feedback_ice: Path | None = P("app.heat.ha.de_ice")
 
     legacy_state: Path | None = None
     """Also write the run state (a `Run` number) here, as the legacy code did.

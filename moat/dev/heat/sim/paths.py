@@ -32,7 +32,7 @@ SENSOR_PATHS = {
     "tb_low": (P("heat.s.buffer.temp.return"),),
     "t_heat": (P("heat.s.heating.temp.out"),),
     "m_air": (
-        P("home.ass.dyn.sensor.temp.garten_kompost_schatten.state"),
+        P("app.heat.ha.t_air"),
         P("temp.avg.temp.aussen_kompost.min"),
     ),
     "m_air_pred": (P("temp.min.forecast:6"),),
@@ -51,7 +51,7 @@ INPUT_PATHS = {
     "hp_mode": P("heat.s.pump.cmd.mode"),
     "hp_power": P("heat.s.pump.cmd.power"),
     "pwm": P("heat.s.pump.pid"),
-    "hp_valve": P("home.ass.dyn.switch.plug-n5.relay.cmd"),
+    "hp_valve": P("app.heat.ha.valve.cmd"),
     "heat_mode": P("heat.s.heat.mode.cmd"),
     "heat_setpoint": P("heat.s.heat.temp.cmd"),
     "pellet_run": P("heat.s.pellets.power.cmd"),

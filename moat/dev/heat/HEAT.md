@@ -390,18 +390,12 @@ override NAME VALUE [-t seconds] [-r reason]` write them. Consumers use
 expired item is deleted, so every consumer and the operator's UI see it
 lapse.
 
-Home Assistant mapping (to be set up in the HA gateway or a MoaT-Link
-job; the units only read the override items):
-
-| HA entity | Override | Mapping |
-| --- | --- | --- |
-| `home.ass.dyn.switch.heizung.wp.cmd` | `wp` | off → `false`, on → `null` (automatic) |
-| `home.ass.dyn.switch.heizung.pellets.cmd` | `pellet` | on → `true`, off → `null` |
-| `…heizung.day_mode.cmd` / `…night_mode.cmd` | — | read by `target` directly (force switches, §3.1) |
-| `input_boolean.test_override_on` + `input_number.test_override_pct` | — | read by the `pwm` daemon directly |
-
-The legacy `wp.cmd` switch only ever switched the heat pump off (on
-meant "the controller decides"); the mapping keeps that meaning.
+Home Assistant: the units don't read or write HA entities. Jobs on the
+main node copy them to and from `app.heat.ha.*`, and show each override
+item as a value entity plus a "manual" switch (job snippet
+`heat.ha.override`); see `examples/moat-dev-heat/HA.md`. The legacy
+`wp.cmd` switch (off = heat pump off, on = automatic) becomes the pair
+`heizung.wp` / `heizung.wp_override`.
 
 ### 2.8 Passthru mode
 

@@ -25,8 +25,8 @@ from .pump_loop import pump_loop
 from typing import Any
 
 OUT = out_path("frost")
-VALVE = P("home.ass.dyn.switch.plug-n5.relay.cmd")
-VALVE_STATE = P("home.ass.dyn.switch.plug-n5.relay.state")
+VALVE = P("app.heat.ha.valve.cmd")
+VALVE_STATE = P("app.heat.ha.valve.state")
 PWM = P("heat.s.pump.pid")
 
 

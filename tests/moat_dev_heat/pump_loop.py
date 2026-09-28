@@ -16,7 +16,7 @@ from moat.lib.path import P
 
 from typing import Any
 
-CM_HEAT = P("home.ass.dyn.switch.heizung.main.cmd")
+CM_HEAT = P("app.heat.ha.heat")
 
 
 def pump_loop(

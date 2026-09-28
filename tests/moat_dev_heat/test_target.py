@@ -35,11 +35,11 @@ from typing import Any
 
 OUT = out_path("target")
 SET = P("heat.s.heat.temp.cmd")
-DAY_CMD = P("home.ass.dyn.switch.heizung.day_mode.cmd")
-DAY_STATE = P("home.ass.dyn.switch.heizung.day_mode.state")
-NIGHT_CMD = P("home.ass.dyn.switch.heizung.night_mode.cmd")
-NIGHT_STATE = P("home.ass.dyn.switch.heizung.night_mode.state")
-CM_HEAT = P("home.ass.dyn.switch.heizung.main.cmd")
+DAY_CMD = P("app.heat.ha.force_day.cmd")
+DAY_STATE = P("app.heat.ha.force_day.state")
+NIGHT_CMD = P("app.heat.ha.force_night.cmd")
+NIGHT_STATE = P("app.heat.ha.force_night.state")
+CM_HEAT = P("app.heat.ha.heat")
 C_WATER = P("heat.s.water.temp")
 
 MON = datetime(2026, 1, 5)  # noqa: DTZ001  # a Monday

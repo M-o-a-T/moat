@@ -3,7 +3,8 @@ Software PWM for GPIO outputs, driven from MoaT-Link (HEAT.md §3.10).
 
 Port of the legacy ``pwm`` command. Each output watches a value path
 (0…1, e.g. the flow unit's ``heat.s.pump.pid``) and, optionally, an
-override flag and value (e.g. Home Assistant helpers for testing), and
+override flag and value (for testing; normally the flow unit's
+``app.heat.override.pwm`` is the way to set the PWM by hand), and
 drives a GPIO pin at a fixed frequency. ``RPi.GPIO`` is imported only
 when the outputs actually run; tests pass their own GPIO object.
 """
@@ -67,10 +68,6 @@ class PwmCfg(UnitCfg):
         "flow": OutputCfg(
             pin=4,
             path=P("heat.s.pump.pid"),
-            override=Override(
-                flag=P("home.ass.state.input_boolean.test_override_on.state"),
-                val=P("home.ass.state.input_number.test_override_pct.state"),
-            ),
         )
     }
 

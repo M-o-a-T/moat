@@ -454,7 +454,7 @@ overrides. Does not depend on other units.
   - force-switch feedback `setting.heat.mode.force.{day,night}.state`
     (setting one clears the other),
   - `app.heat.target.out` = `{flow_temp, flow_temp_computed,
-    overridden, day_active, t_ext, demand: {t_nom, t_low, t_adj,
+    overridden, day_active, t_ext, t_ext_stale, demand: {t_nom, t_low, t_adj,
     t_set_on, t_set_off, source}}` where `source` is `heat` or
     `water` (which buffer sensor `t_cur` refers to: `tb_heat` when
     heating is enabled, else `tb_water`).
@@ -466,9 +466,22 @@ weekday/weekend night schedule (`night.start.{wk,we}`,
 on Fridays and Saturdays, the weekend start time on Saturdays and
 Sundays) or a force switch. The unit wakes at the next schedule
 boundary; its adapter passes the local date and time to the core as an
-input. `t_ext` is the last outside-temperature
+input (`Unit.local_time`; the closed-loop runner passes simulated local
+time). `t_ext` is the last outside-temperature
 reading (the legacy name `t_ext_avg` was misleading). Demand values are
-the port of the `tw_*`/`th_*` computation in `run_pump`.
+the port of the `tw_*`/`th_*` computation in `run_pump`; with heating
+off (or `cm_heat` unknown) they are the water values only.
+
+The outside temperature counts as stale when it has not changed for
+`max_age` (default 1 h) or was deleted; its last value is used for
+another `freeze` (default 1 h), then `flow_temp` drops to `dest`, the
+curve's lower end. Force switches are handled as edges: a switch that
+turns on clears the other one's `cmd` and `state`, and the locks are
+kept in the state. `moat dev heat target curve [-d]` prints the curve
+(outside, day and night flow temperature) from the live or the package
+default config.
+
+Implementation: `target.py`.
 
 ### 3.2 `heat_valve` — heating circuit
 

@@ -7,6 +7,7 @@ import sys
 from moat.util import NotGiven, attrdict
 from moat.lib.config import CfgStore
 from moat.lib.config._impl import _has_notgiven
+from moat.lib.path import P
 
 
 def test_has_notgiven():
@@ -49,3 +50,24 @@ def test_with_loads_submodule(tmp_path, monkeypatch):
     finally:
         CfgStore.static = saved_static
         CfgStore.updated = saved_updated
+
+
+def test_mod_does_not_leak():
+    """A store's ``mod`` changes neither the static config nor other stores."""
+    saved_static = copy.deepcopy(CfgStore.static)
+    try:
+        CfgStore.static.leaktest = attrdict(sub=attrdict(val=0, other=1))
+        a = CfgStore(name=None, load_all=None, preload=attrdict(env=NotGiven))
+        b = CfgStore(name=None, load_all=None, preload=attrdict(env=NotGiven))
+        a.mod(P("leaktest.sub.val"), 1)
+        b.mod(P("leaktest.sub.val"), 2)
+        assert a.leaktest.sub.val == 1
+        assert b.leaktest.sub.val == 2
+        assert CfgStore.static.leaktest.sub.val == 0
+
+        # rebuilding one store must not change the other
+        a.redo()
+        assert b.leaktest.sub.val == 2
+        assert a.leaktest.sub.other == 1
+    finally:
+        CfgStore.static = saved_static

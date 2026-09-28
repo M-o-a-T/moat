@@ -646,8 +646,9 @@ As implemented (`PumpUnit`):
   then checks whether another client owns the pump service.
 - `legacy_state` (default off) also writes the run state to a path, as
   the legacy code did to `heat.s.pump.state`.
-- The shutdown on cancellation needs the Link client to stay up; the
-  CLI doesn't ensure that yet (moat-n84.32).
+- The shutdown on cancellation needs the Link client to stay up: a
+  `Link` keeps its connection until its context is left, even when the
+  enclosing scope is cancelled (moat-n84.32).
 - `moat dev heat pump [--force-on]` runs the unit; `--force-on` sets
   `app.heat.force_start` first. Bypass is replaced by `override.wp`
   and passthru (decision 6).

@@ -47,18 +47,27 @@ SENSORS = {
 class Pump:
     "runs the pump unit on its own client; keeps the exception it ended with"
 
-    def __init__(self, heat) -> None:
+    def __init__(self, heat, outer: bool = False) -> None:
         self.heat = heat
+        self.outer = outer
         self.exc: BaseException | None = None
         self.done = anyio.Event()
         self.scope: anyio.CancelScope | None = None
 
     async def _run(self, *, task_status) -> None:
-        # the client stays up while the unit is cancelled, as it must for
-        # the shutdown to work
+        if self.outer:
+            # cancel the client's scope too, as SIGTERM would
+            with anyio.CancelScope() as self.scope:
+                await self._run_unit(task_status=task_status)
+        else:
+            await self._run_unit(task_status=task_status)
+
+    async def _run_unit(self, *, task_status) -> None:
         async with self.heat.sf.client_() as c:
             try:
-                with anyio.CancelScope() as self.scope:
+                with anyio.CancelScope() as sc:
+                    if self.scope is None:
+                        self.scope = sc
                     await PumpUnit(c, save_delay=0.1).run(task_status=task_status)
             except Exception as exc:
                 self.exc = exc
@@ -173,6 +182,16 @@ async def test_cancel(heat):
     "cancelled while running: the shutdown runs shielded"
     await _setup(heat)
     p = Pump(heat)
+    await p.start()
+    await heat.expect(OUT, lambda v: v is not None and v["run"] == "run")
+    assert await p.stop() is None
+    await _shut_down(heat)
+
+
+async def test_cancel_with_client(heat):
+    "cancelled together with its Link client (SIGTERM): the link stays up for the shutdown"
+    await _setup(heat)
+    p = Pump(heat, outer=True)
     await p.start()
     await heat.expect(OUT, lambda v: v is not None and v["run"] == "run")
     assert await p.stop() is None

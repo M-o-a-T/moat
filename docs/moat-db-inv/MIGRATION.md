@@ -483,13 +483,18 @@ submodules.
   `add`), `-s/--shift` (nullable), `-d/--desc`, `-a/--dhcp FIRST LEN`,
   `-V/-R` (virt/real); id = the `name` (address shown via `subnet`).
 - `mt db inv host   {add,set,delete,show}` — `-d/--desc` (→ `thing.descr`),
-  `-l/--loc`, `-N/--name`, `-t/--thingtyp` (defaults to `host`).
+  `-l/--loc`, `-N/--name`, `-t/--thingtyp` (defaults to `host`). Selection:
+  `-d/--domain` FQDN, `-n/--name` short name, or `-a/--addr` IP address
+  (the host that owns it; an error if none or several/anycast).
 - `mt db inv host HOST iface {add,set,delete,show,link}` — manage
   interfaces. `HOST iface .` selects the empty-named interface (former
   direct attachment). Options: `-V/--vlan` (the VLAN it’s on), `-m/--mac`,
   `-s/--seqnum`, `-a/--alloc` (pick a free `seqnum` on the VLAN), `-d/--desc`,
   `-N/--name` (rename). `link DEST` replaces the old `port link`/`wire
-  link` and creates a `cable` between two interfaces.
+  link` and creates a `cable` between two interfaces. Selection: besides
+  the positional `IFACE` name, `-a/--addr` IP address picks the interface
+  that owns it (give `.` as the placeholder name); an error if none or
+  several/anycast.
 - `mt db inv host HOST iface IFACE addr {add,delete,show}` — manage the
   interface’s `address` rows (manual/anycast addresses; derived ones are
   regenerated automatically and shown read-only). Options: `-a/--addr`,

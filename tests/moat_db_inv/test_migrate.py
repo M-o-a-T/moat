@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 import moat.db.inv.model_  # noqa: F401  — wires the Thing relationships
 import moat.db.util  # noqa: F401  — sqlite foreign_keys pragma
 from moat.util import yload
-from moat.db.inv.model import Cable, Host, HostGroup, Interface, Network, Vlan
+from moat.db.inv.ip import IpValue
+from moat.db.inv.model import Address, Cable, Host, HostGroup, Interface, Network, Vlan
 from moat.src.test import raises, run
 
 DUMP = Path(__file__).parent / "data" / "kv_inv.yaml"
@@ -159,3 +160,113 @@ async def test_select_by_name(db_url):
         await show("host", "-n", "nope")
     with raises(click.UsageError):
         await show("host", "-n", "srv", "-d", "srv.lan.example")
+
+
+@pytest.mark.anyio
+async def test_select_by_addr(db_url):
+    "'-a ADDR' selects the host (or interface) that owns an IP address"
+    await _migrate(db_url)
+
+    async def show(*args):
+        return (await run("-s", "moat.db.url", db_url, "db", "inv", *args, "show")).stdout
+
+    # srv.lan.example:en0 owns 192.168.1.10/24 and 2001:db8:0:1::a/64;
+    # srv.lan.example:en1 owns 192.168.2.7/24. All three resolve to srv.
+    for addr in ("192.168.1.10", "2001:db8:0:1::a", "192.168.2.7"):
+        assert await show("host", "-a", addr) == await show("host", "-d", "srv.lan.example")
+
+    # '-a' agrees with '-n' for the same host.
+    assert await show("host", "-a", "192.168.1.10") == await show("host", "-n", "srv")
+
+    # 'host -a ADDR iface -a ADDR .' pins both host and interface to the owner.
+    assert await show("host", "-a", "192.168.1.10", "iface", "-a", "192.168.1.10", ".") == (
+        await show("host", "-d", "srv.lan.example", "iface", "en0")
+    )
+    # '-a' may supply the host too (no outer selector needed).
+    assert await show("host", "iface", "-a", "192.168.2.7", ".") == await show(
+        "host", "-d", "srv.lan.example", "iface", "en1"
+    )
+    # '-' is accepted as the placeholder interface name alongside '-a'.
+    assert await show("host", "iface", "-a", "192.168.1.10", "-") == await show(
+        "host", "-d", "srv.lan.example", "iface", "en0"
+    )
+
+    # Errors: no owner, garbage, and selector exclusivity.
+    with raises(click.UsageError):
+        await show("host", "-a", "10.255.255.1")
+    with raises(click.UsageError):
+        await show("host", "-a", "not.an.address")
+    with raises(click.UsageError):
+        await show("host", "-a", "192.168.1.10", "-d", "srv.lan.example")
+    with raises(click.UsageError):
+        await show("host", "-a", "192.168.1.10", "-n", "srv")
+    with raises(click.UsageError):
+        await show("host", "-n", "srv", "iface", "-a", "192.168.1.10", "en0")
+    with raises(click.UsageError):
+        await show("host", "-n", "srv", "iface", "-a", "10.255.255.1", ".")
+
+
+@pytest.mark.anyio
+async def test_select_by_addr_anycast(tmp_path):
+    "'-a ADDR' errors when several hosts/interfaces own the address"
+    # The schema marks Address.addr UNIQUE, so a genuine duplicate requires
+    # relaxing that constraint on the shared metadata before the file DB is
+    # created — mirroring tests/moat_db_inv/test_resolve.py's anycast axis.
+    from sqlalchemy import UniqueConstraint  # noqa: PLC0415
+
+    from moat.db.util import load_schemas  # noqa: PLC0415
+
+    load_schemas()
+    tbl = Address.__table__
+    removed = [
+        c
+        for c in list(tbl.constraints)
+        if isinstance(c, UniqueConstraint) and [col.name for col in c.columns] == ["addr"]
+    ]
+    for c in removed:
+        tbl.constraints.discard(c)
+    url = f"sqlite:///{tmp_path / 'anycast.db'}"
+    try:
+        await run("-s", "moat.db.url", url, "db", "init")
+    finally:
+        for c in removed:
+            tbl.constraints.add(c)
+
+    eng = create_engine(url)
+    with Session(eng) as s:
+        from moat.db.thing.model import Thing, ThingTyp  # noqa: PLC0415
+
+        tt = ThingTyp(name="host", abstract=False)
+        s.add(tt)
+        s.flush()
+        t1 = Thing(name="anyc-a", thingtyp=tt)
+        t2 = Thing(name="anyc-b", thingtyp=tt)
+        s.add_all([t1, t2])
+        s.flush()
+        h1 = Host(domain="anyc-a.example", thing=t1)
+        h2 = Host(domain="anyc-b.example", thing=t2)
+        s.add_all([h1, h2])
+        s.flush()
+        i1 = Interface(host=h1, name="")
+        i2 = Interface(host=h2, name="")
+        s.add_all([i1, i2])
+        s.flush()
+        key = IpValue.from_ip("203.0.113.42").addr
+        s.add(Address(interface=i1, addr=key, prefix=None))
+        s.add(Address(interface=i2, addr=key, prefix=None))
+        s.commit()
+    eng.dispose()
+
+    async def show(*args):
+        return (await run("-s", "moat.db.url", url, "db", "inv", *args, "show")).stdout
+
+    # Both 'host -a' and 'iface -a' refuse, naming the contenders.
+    with raises(click.UsageError) as exc:
+        await show("host", "-a", "203.0.113.42")
+    assert "2 hosts" in str(exc.value)
+    assert "anyc-a.example" in str(exc.value)
+
+    with raises(click.UsageError) as exc:
+        await show("host", "iface", "-a", "203.0.113.42", ".")
+    assert "2 interfaces" in str(exc.value)
+    assert "anyc-a.example:." in str(exc.value)

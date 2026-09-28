@@ -276,11 +276,33 @@ def net_delete(obj):
 # ---------------------------------------------------------------------------
 
 
-def _select_host(obj, domain: str | None, name: str | None) -> None:
-    """Set ``obj.domain`` from ``--domain`` or, via the Thing's short name, ``--name``."""
-    if name is not None:
-        if domain is not None:
-            raise click.UsageError("Use either '--domain' or '--name'.")
+def _select_host(obj, domain: str | None, name: str | None, addr: str | None = None) -> None:
+    """Set ``obj.domain`` from ``--domain``, ``--name``, or ``--addr``.
+
+    Exactly one of the selectors may be given. ``--addr`` looks the address
+    up via :mod:`moat.db.inv.resolve` and requires a single owning host; an
+    address owned by no host or by several (anycast) is an error.
+    """
+    given = [x for x in (domain, name, addr) if x is not None]
+    if len(given) > 1:
+        raise click.UsageError("Use either '--domain', '--name', or '--addr'.")
+    if addr is not None:
+        from moat.db.inv.resolve import resolve_hosts  # noqa: PLC0415
+
+        try:
+            hosts = resolve_hosts(obj.session, addr)
+        except ValueError as exc:
+            raise click.UsageError(f"Not an IP address: {addr!r}: {exc}") from None
+        if not hosts:
+            raise click.UsageError(f"No host owns the address {addr!r}.")
+        if len(hosts) > 1:
+            whom = ", ".join(sorted(h.domain for h in hosts))
+            raise click.UsageError(
+                f"Address {addr!r} is owned by {len(hosts)} hosts ({whom}); "
+                "use '--domain' to disambiguate."
+            )
+        domain = next(iter(hosts)).domain
+    elif name is not None:
         from moat.db.thing.model import Thing  # noqa: PLC0415
 
         h = obj.session.execute(
@@ -295,13 +317,15 @@ def _select_host(obj, domain: str | None, name: str | None) -> None:
 @cli.group(name="host", cls=_ShowGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the host")
 @click.option("--name", "-n", type=str, help="Short name of the host (instead of '--domain')")
+@click.option("--addr", "-a", type=str, help="Select the host that owns this IP address")
 @click.pass_obj
-def host_grp(obj, domain, name):
+def host_grp(obj, domain, name, addr):
     """Manage hosts.
 
-    Select a host with '-d FQDN' or '-n NAME', e.g. 'host -n sw-ur1 show'.
+    Select a host with '-d FQDN', '-n NAME', or '-a ADDR', e.g.
+    'host -n sw-ur1 show' or 'host -a 10.0.0.5 show'.
     """
-    _select_host(obj, domain, name)
+    _select_host(obj, domain, name, addr)
 
 
 @host_grp.command(name="show")
@@ -376,15 +400,45 @@ def host_delete(obj):
 
 
 @host_grp.group(name="iface", cls=_ShowGroup)
+@click.option("--addr", "-a", type=str, help="Select the interface that owns this IP address")
 @click.argument("iname", type=str)
 @click.pass_obj
-def iface_grp(obj, iname):
+def iface_grp(obj, iname, addr):
     """Manage interfaces of a host.
 
     Use '.' for the empty-named interface (former direct attachment),
     '-' to list all interfaces ('iface - show').
+
+    Alternatively, select the interface owning an address with '-a ADDR'.
+    A positional interface name is still required (use '.' as a placeholder);
+    the resolved interface overrides it. The two selectors are otherwise
+    mutually exclusive.
     """
-    obj.iname = None if iname == "-" else _norm_iface(iname)
+    if addr is not None:
+        if iname not in (None, ".", "-"):
+            raise click.UsageError("Use either '--addr' or an interface name (not both).")
+        from moat.db.inv.resolve import (  # noqa: PLC0415
+            AddressNotFound,
+            AmbiguousAddress,
+            resolve_one,
+        )
+
+        try:
+            i = resolve_one(obj.session, addr)
+        except AddressNotFound:
+            raise click.UsageError(f"No interface owns the address {addr!r}.") from None
+        except AmbiguousAddress as exc:
+            whom = ", ".join(sorted(f"{ix.host.domain}:{ix.name or '.'}" for ix in exc.candidates))
+            raise click.UsageError(
+                f"Address {addr!r} is owned by {len(exc.candidates)} interfaces "
+                f"({whom}); use '--domain' and an interface name to disambiguate."
+            ) from None
+        except ValueError as exc:
+            raise click.UsageError(f"Not an IP address: {addr!r}: {exc}") from None
+        obj.domain = i.host.domain
+        obj.iname = i.name
+    else:
+        obj.iname = None if iname == "-" else _norm_iface(iname)
 
 
 def _iname(obj) -> str:
@@ -601,13 +655,14 @@ def addr_delete(obj, addr):
 @cli.group(name="wire", cls=_ShowGroup)
 @click.option("--domain", "-d", type=str, help="FQDN of the wire")
 @click.option("--name", "-n", type=str, help="Short name of the wire (instead of '--domain')")
+@click.option("--addr", "-a", type=str, help="Select the wire that owns this IP address")
 @click.pass_obj
-def wire_grp(obj, domain, name):
+def wire_grp(obj, domain, name, addr):
     """Manage wires (hosts with thing type 'wire' and two interfaces a/b).
 
-    Select a wire with '-d FQDN' or '-n NAME'.
+    Select a wire with '-d FQDN', '-n NAME', or '-a ADDR'.
     """
-    _select_host(obj, domain, name)
+    _select_host(obj, domain, name, addr)
 
 
 @wire_grp.command(name="show")

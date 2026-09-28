@@ -9,14 +9,11 @@ Every test case is a separate pytest item.
 from __future__ import annotations
 
 import pytest
-from io import StringIO
 from pathlib import Path as FSPath
 
 import moat.link.job  # noqa:F401 - register cfg
-from moat.util import attrdict, yload, yprint
-from moat.lib.path import P
+from moat.util import yload, yprint
 from moat.link._test import Scaffold
-from moat.link.code import _main as code_cmd
 from moat.link.code.io import path_from_file, split_snippet, write_snippet
 from moat.link.code.testrun import run_test
 
@@ -62,17 +59,6 @@ async def test_example(cfg, fn, case):
         assert out.ok, "\n".join(out.log)
 
 
-def _obj(c, path, **kw):
-    "The ``obj`` a ``moat link code PATH …`` command gets."
-    return attrdict(conn=c, path=path, meta=False, debug=False, stdout=StringIO(), **kw)
-
-
-async def _get_r(c, path):
-    obj = _obj(c, path)
-    await code_cmd.get.callback.__wrapped__(obj, script=None, recursive=True)
-    return yload(obj.stdout.getvalue())
-
-
 async def test_import_get(cfg):
     "``moat link code : import FILE…`` stores the examples, ``get -r`` reads them back."
     files = sorted(EXAMPLES.glob("*.yaml"))
@@ -81,14 +67,13 @@ async def test_import_get(cfg):
         sf.server_(init={"Hello": "there!"}),
         sf.client_() as c,
     ):
-        await code_cmd.import_.callback.__wrapped__(
-            _obj(c, P(":")), files=[str(fn) for fn in files]
-        )
+        await sf.run(["link", "code", ":", "import", *(str(fn) for fn in files)])
         await c.i_sync()
         for fn in files:
             with fn.open() as f:
                 data = yload(f)
-            got = await _get_r(c, path_from_file(fn.name))
+            path = path_from_file(fn.name)
+            got = yload((await sf.run(f"link code {path} get -r")).stdout)
             rec, tests = split_snippet(data)
             grec, gtests = split_snippet(got)
             assert grec == rec
@@ -105,7 +90,7 @@ async def test_import_get(cfg):
         dst = FSPath(sf.tempdir) / fn.name
         with dst.open("w") as f:
             yprint(data, stream=f)
-        await code_cmd.import_.callback.__wrapped__(_obj(c, path), files=[str(dst)])
+        await sf.run(["link", "code", str(path), "import", str(dst)])
         await c.i_sync()
-        got = await _get_r(c, path)
+        got = yload((await sf.run(f"link code {path} get -r")).stdout)
         assert list(got["tests"]) == list(data["tests"])

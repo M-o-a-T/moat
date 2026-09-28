@@ -1,0 +1,88 @@
+info: copy a MoaT-Link boolean to an MQTT topic
+is_async: true
+vars:
+- src
+- dst
+- level
+- on_value
+- off_value
+default:
+  level: null
+  off_value: "off"
+  on_value: "on"
+code: |
+  # Changes of the Link entry 'src' are sent to the MQTT topic 'dst', as
+  # text: 'on_value' if true, 'off_value' if false. With 'level' set to
+  # True (False), only true (false) values are sent. The initial value is
+  # not sent.
+  await _self.watch(src, fetch=False)
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if (not val) is level:
+              continue
+          val = on_value if val else off_value
+          await _self.send(dst, str(val))
+tests:
+  bell:
+    info: "only true values (production: door bells)"
+    timeout: 10
+    data:
+      in:
+        _: true
+    args:
+      src: !P in
+      dst: !P bus.fon
+      level: true
+      on_value: oben
+    steps:
+    - [monitor, out, !P bus.fon, mqtt]
+    - [start]
+    - [sleep, 0.5]
+    - [comment, the initial value is not sent]
+    - [set, !P in, false]
+    - [set, !P in, true]
+    - [wait, 2, "len(out) == 1"]
+    - [set, !P in, false]
+    - [set, !P in, true]
+    - [wait, 2, "len(out) == 2"]
+    - [sleep, 0.3]
+    - [check, "out == ['oben', 'oben']"]
+  both:
+    info: all values, default texts
+    timeout: 10
+    data:
+      in:
+        _: false
+    args:
+      src: !P in
+      dst: !P bus.sw
+    steps:
+    - [monitor, out, !P bus.sw, mqtt]
+    - [start]
+    - [sleep, 0.5]
+    - [set, !P in, true]
+    - [set, !P in, 0]
+    - [set, !P in, 1]
+    - [wait, 2, "len(out) == 3"]
+    - [check, "out == ['on', 'off', 'on']"]
+  off_only:
+    info: only false values
+    timeout: 10
+    data:
+      in:
+        _: false
+    args:
+      src: !P in
+      dst: !P bus.sw
+      level: false
+      off_value: 0
+    steps:
+    - [monitor, out, !P bus.sw, mqtt]
+    - [start]
+    - [sleep, 0.5]
+    - [set, !P in, true]
+    - [set, !P in, false]
+    - [wait, 2, "len(out) == 1"]
+    - [sleep, 0.3]
+    - [check, "out == ['0']"]

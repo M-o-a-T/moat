@@ -19,13 +19,15 @@ Problem: the code may need updates and is basically untested.
   short-long,path.flags,distribute,copy.multi}`, `transform.multi.{min,max,and}`,
   `step.brightness`, `mqtt.read.bool`, `keepalive.monitor`). There are also
   `dev` and `debug` groups and all-node jobs.
-- 29 snippets have already been copied into MoaT-Link (`code.*`,
-  `moat link code`), unchanged. They still use the MoaT-KV job API:
-  53 × `_client.set(…, idem=True)`, 3 × `_client.get`. The Link job
-  runner has no `_client`; it passes `_link` (a `LinkSender`) and `_self`
-  (a `CallAdmin`: `watch`, `monitor`, `timer`, `set`, `get`, `send`,
-  `setup_done`, …). So these snippets fail in the Link runner as they
-  are.
+- 29 snippets have been copied into MoaT-Link (`code.*`,
+  `moat link code`). Their `_client` calls have been replaced by `_link`
+  (a `LinkSender`): 53 × `_link.set(…, idem=…)`, 3 × `_link.get`. The
+  job runner also passes `_self` (a `CallAdmin`: `watch`, `monitor`,
+  `timer`, `set`, `get`, `send`, `setup_done`, …).
+- `LinkSender.set` passes all `d_set` keywords through and understands
+  `idem=True` (don't write if the stored value is equal);
+  `LinkSender.get` is `d_get`. `_self.set` forwards its keywords to
+  `_link.set` (moat-zshv.12). There is no `_client` shim.
 - `moat link job … debug` (`moat.link.job.runner.debug_run`) runs one
   stored job interactively; it is the natural base for running code
   under test.
@@ -153,16 +155,28 @@ Below `moat link code PATH` (`moat/link/code/_main.py`):
 
 For each of the 25 snippets used in production:
 
-1. Replace the MoaT-KV API: `_client.set(p, value=v, idem=True)` →
-   `_self.set(p, v)` (idempotent writes: `Writer`-like cache in
-   `CallAdmin`, or compare with the last value in the snippet),
-   `_client.get(p)` → `await _self.get(p)`.
+1. Fix the leftovers of the MoaT-KV API. `_link.get` returns the bare
+   value, not a MoaT-KV entry: `transform.switch` still checks
+   `"value" in res` / `res.value`.
 2. Write test cases covering the snippet's documented behaviour
    (at least one per parameter combination used in production).
 3. Fix whatever the tests find.
 
 The snippets that no job uses (`test.sleep`, `timer.float_avg.debug`, …)
 are deleted or moved to `code.old`.
+
+## Examples in the repository
+
+A few snippets are also kept in `examples/moat-link-job/`, with their
+test cases: `transform.copy.value`, `transform.hysteresis` and
+`timer.auto_off` (the most-used ones). One YAML file per snippet, in the
+format `moat link code PATH get -r` exports (the snippet plus its `:n`
+test cases), so `moat link code import` loads them.
+
+`tests/moat_link_job/test_examples.py` finds these files, loads each
+into a Scaffold server and runs every test case through the test runner
+(one pytest item per case). So the examples are checked with the rest of
+the test suite, and they show how snippets and their tests are written.
 
 ## Migrating the jobs
 
@@ -176,12 +190,9 @@ are deleted or moved to `code.old`.
 3. Cutover: stop `moat kv job run`, start `moat link job run` for the
    same groups; watch the jobs' state and the error tree.
 
-## Open questions
+## Decisions (2026-09-28)
 
-- Should the test cases also be kept in the repository (e.g. exported
-  to `examples/moat-link/code/`) and run by pytest against a Scaffold
-  server, or do they live only in the production Link tree?
-- `idem=True`: give `CallAdmin.set` an `idem` flag (as MoaT-KV had), or
-  change the snippets to compare themselves?
-- Keep a compatibility `_client` in the Link runner for a transition
-  period, or port all snippets before the cutover (plan above)?
+- No transitional `_client` shim; the snippets use `_link` and `_self`.
+- `idem` and every other `d_set` keyword go through `_link.set`.
+- Some snippets and their tests live in the repository and run under
+  pytest (see "Examples in the repository").

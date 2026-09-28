@@ -185,7 +185,7 @@ async def delete(obj: attrdict, before: float | None, recursive: bool) -> None:
         args["rec"] = recursive
     if before:
         args["ts"] = before
-    res = await obj.conn.d.delete(obj.path, **args)
+    res = await obj.conn.d.delete(P("gate") + obj.path, **args)
     if obj.meta:
         res = dict(data=res[0], meta=MsgMeta.restore(res[1:]).repr())
     else:

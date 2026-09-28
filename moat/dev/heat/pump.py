@@ -31,7 +31,8 @@ from moat.lib.path import (
 
 from .config import UnitCfg
 from .flow import FlowMode, FlowRequest
-from .link import Override, Reader, out_path
+from .link import Reader, out_path
+from .override import reader as override_reader
 from .pid import APID, PIDCfg, PIDState
 from .state import State
 from .unit import Step, Unit
@@ -961,5 +962,5 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
                 "force_start",
             )
         }
-        rd["override"] = Override[bool](self.link, cfg.override)
+        rd["override"] = override_reader(self.link, "wp", cfg.override)
         return rd

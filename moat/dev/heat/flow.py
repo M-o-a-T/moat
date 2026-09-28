@@ -20,7 +20,8 @@ from moat.lib.path import (
 )
 
 from .config import UnitCfg
-from .link import Override, Reader, ServiceMonitor, is_up, out_path
+from .link import Reader, ServiceMonitor, is_up, out_path
+from .override import reader as override_reader
 from .pid import APID, PIDCfg, PIDState
 from .state import State
 from .unit import Step, Unit
@@ -318,7 +319,7 @@ class FlowUnit(Unit[FlowCfg, FlowState]):
         """Request, override, sensors, and whether the pump unit is alive."""
         return {
             "request": Reader[Any](self.link, cfg.request),
-            "override": Override[float](self.link, cfg.override),
+            "override": override_reader(self.link, "pwm", cfg.override),
             "r_flow": Reader[float](self.link, cfg.r_flow),
             "t_out": Reader[float](self.link, cfg.t_out),
             "t_in": Reader[float](self.link, cfg.t_in),

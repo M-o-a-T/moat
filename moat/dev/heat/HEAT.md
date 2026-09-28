@@ -370,6 +370,28 @@ The existing Home Assistant switches (`…heizung.wp.cmd`,
 `…heizung.pellets.cmd`, day/night force) are mapped onto these items
 by configuration, not by code in the units.
 
+Implementation (`override.py`): `OVERRIDES` lists the items and their
+types; `publish_schemas()` stores their JSON schemas (a plain value,
+`null`, or the `{value, expires, reason}` form) below
+`schema.app.heat.override`; `set_override()` and `moat dev heat
+override NAME VALUE [-t seconds] [-r reason]` write them. Consumers use
+`override.reader()`: a value of the wrong type reads as `None`, and an
+expired item is deleted, so every consumer and the operator's UI see it
+lapse.
+
+Home Assistant mapping (to be set up in the HA gateway or a MoaT-Link
+job; the units only read the override items):
+
+| HA entity | Override | Mapping |
+| --- | --- | --- |
+| `home.ass.dyn.switch.heizung.wp.cmd` | `wp` | off → `false`, on → `null` (automatic) |
+| `home.ass.dyn.switch.heizung.pellets.cmd` | `pellet` | on → `true`, off → `null` |
+| `…heizung.day_mode.cmd` / `…night_mode.cmd` | — | read by `target` directly (force switches, §3.1) |
+| `input_boolean.test_override_on` + `input_number.test_override_pct` | — | read by the `pwm` daemon directly |
+
+The legacy `wp.cmd` switch only ever switched the heat pump off (on
+meant "the controller decides"); the mapping keeps that meaning.
+
 ### 2.8 Passthru mode
 
 For manufacturer maintenance, the original heat-pump controller (the

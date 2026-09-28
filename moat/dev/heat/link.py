@@ -196,7 +196,14 @@ class Override(Reader[T]):
     The item holds a value, `None` (automatic), or a mapping
     ``{value, expires, reason}``; ``expires`` (wall-clock time) and
     ``reason`` are optional. After ``expires`` the override reads as `None`
-    and a change is signalled.
+    and a change is signalled; with ``clear``, the expired item is also
+    deleted, so that every consumer (and the operator's UI) sees it lapse.
+
+    Args:
+        kind: The value's type (`bool` or `float`); a value of another
+            type reads as `None`, with a warning. `float` accepts ints but
+            not booleans.
+        clear: Delete the item when it expires.
     """
 
     reason: str | None
@@ -206,15 +213,32 @@ class Override(Reader[T]):
     """When the override expires (wall-clock time), if ever."""
 
     def __init__(
-        self, link: LinkSender, path: Path, on_change: Callable[[], None] | None = None
+        self,
+        link: LinkSender,
+        path: Path,
+        on_change: Callable[[], None] | None = None,
+        *,
+        kind: type | None = None,
+        clear: bool = False,
     ) -> None:
         super().__init__(link, path, on_change)
         self.reason = None
         self.expires = None
+        self.kind = kind
+        self.clear = clear
+        self._raw: Any = None
         self._timer: anyio.CancelScope | None = None
         self._tg: TaskGroup | None = None
 
+    def _ok(self, value: Any) -> bool:
+        if self.kind is None or value is None:
+            return True
+        if self.kind is float:
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+        return isinstance(value, self.kind)
+
     def _update(self, value: Any, ts: float | None) -> None:
+        self._raw = value
         self.reason = None
         self.expires = None
         if isinstance(value, Mapping):
@@ -223,6 +247,9 @@ class Override(Reader[T]):
             value = value.get("value")
             if self.expires is not None and self.expires <= time():
                 value = None
+        if not self._ok(value):
+            _logger.warning("Override %s: not a %s: %r", self.path, self.kind, value)
+            value = None
         self._set_timer()
         super()._update(value, ts)
 
@@ -243,6 +270,11 @@ class Override(Reader[T]):
                 _logger.info("Override %s expired", self.path)
                 self.value = None
                 self._notify()
+            raw = self._raw
+            if self.clear and isinstance(raw, Mapping) and raw.get("expires") == expires:
+                # the item is still the expired one: remove it
+                with anyio.CancelScope(shield=True):
+                    await self.link.d_set(self.path, retain=True, verify=False)
 
     async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
         """Watch the item and expire it on time."""

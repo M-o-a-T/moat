@@ -20,7 +20,8 @@ from moat.lib.path import (
 from moat.util.time import time
 
 from .config import UnitCfg
-from .link import Override, Reader, TreeReader, is_up, out_path
+from .link import Reader, TreeReader, is_up, out_path
+from .override import reader as override_reader
 from .state import State
 from .unit import Step, Unit
 
@@ -159,7 +160,7 @@ class ErrorsUnit(Unit[ErrorsCfg, ErrorsState]):
         """The error subtree, the override, and the feed writer's announcement if configured."""
         res: dict[str, Reader[Any]] = {
             "feed": TreeReader(self.link, cfg.feed),
-            "override": Override[dict[str, Any]](self.link, cfg.override),
+            "override": override_reader(self.link, "errors", cfg.override),
         }
         if cfg.source is not None:
             res["source"] = Reader[Any](self.link, cfg.source)

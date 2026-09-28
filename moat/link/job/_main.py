@@ -499,3 +499,38 @@ async def monitor(obj: attrdict) -> None:
         async for msg in mon:
             yprint({"topic": msg.topic, "data": msg.data}, stream=obj.stdout)
             print("---", file=obj.stdout)
+
+
+@cli.command(name="migrate-from-kv")
+@click.option(
+    "-i",
+    "--infile",
+    type=click.File("r"),
+    help="Read 'moat kv data :.moat.kv.run get -r' output instead of asking MoaT-KV.",
+)
+@click.option("-w", "--write", is_flag=True, help="Store the jobs. Default: only report.")
+@click.option("-f", "--force", is_flag=True, help="Replace existing, different jobs.")
+@click.pass_obj
+async def migrate_from_kv(obj: attrdict, infile: Any, write: bool, force: bool) -> None:
+    """Copy the MoaT-KV job records ('moat kv job') to MoaT-Link.
+
+    \b
+    All groups and modes are converted; '-n' and '-g' are ignored.
+    This is a dry run unless '--write' is given. MoaT-KV is only read.
+
+    Prints a report: the jobs per group, fields that were dropped,
+    code snippets that don't exist in MoaT-Link, and paths in the jobs'
+    data that don't exist in MoaT-Link or are MoaT-KV internal.
+    """
+    from moat.util import yload  # noqa: PLC0415
+
+    from .migrate import check_jobs, convert, kv_items, read_kv, store_jobs  # noqa: PLC0415
+
+    if force and not write:
+        raise click.UsageError("'--force' requires '--write'.")
+    items = kv_items(yload(infile)) if infile is not None else await read_kv(obj.cfg)
+    report = convert(items)
+    await check_jobs(obj.conn, report)
+    if write:
+        await store_jobs(obj.conn, Path.build(obj.job_cfg["prefix"]), report, force=force)
+    yprint(report.dump(), stream=obj.stdout)

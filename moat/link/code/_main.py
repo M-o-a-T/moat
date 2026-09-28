@@ -13,6 +13,7 @@ from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
+from moat.link.code.case import is_test_path
 from moat.link.code.run import make_proc
 from moat.link.meta import MsgMeta
 
@@ -99,6 +100,8 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
     async with obj.conn.d.walk(CODE_EXEC_ROOT + obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
             path = pl.long(n, p)
+            if is_test_path(path):
+                continue
             if not isinstance(data, Mapping):
                 continue
             if "code" not in data:

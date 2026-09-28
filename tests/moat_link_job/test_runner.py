@@ -16,6 +16,7 @@ from moat.util import NotGiven, attrdict, combine_dict
 from moat.lib.path import P, Root
 from moat.link._test import Scaffold
 from moat.link.code import CODE_EXEC_ROOT
+from moat.link.code.case import CodeTest, set_test
 from moat.link.job import (
     JOB_ROOT_DEFAULT,
     STATE_ROOT_DEFAULT,
@@ -662,6 +663,33 @@ async def test_restart_when_code_changes(cfg):
                 until=lambda s: s.get("result") == "restarted",
             )
             assert st["stopped"] > 0
+            tg.cancel_scope.cancel()
+
+
+async def test_no_restart_when_test_changes(cfg):
+    "Storing a test case of a running job's snippet leaves the job alone."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, _job_path, state_path = await _setup_long_job(sf, c, "nr")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            await set_test(c, P("test.sleeper"), P("basic"), CodeTest(info="test"))
+            await c.i_sync()
+            await anyio.sleep(1)
+
+            st2 = await c.d_get(state_path)
+            assert st2["started"] == st["started"]
+            assert not st2.get("stopped")
             tg.cancel_scope.cancel()
 
 

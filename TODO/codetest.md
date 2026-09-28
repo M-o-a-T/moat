@@ -53,7 +53,9 @@ A snippet lives at `code.PATH.TO.NAME`. Its test cases live at
 the snippet from its tests, as snippets can have children
 (`transform.hysteresis` and `transform.hysteresis.delta`).
 
-A test case is one item, validated by a pydantic model:
+A test case is one item, validated by a pydantic model
+(`moat.link.code.case.CodeTest`; `get_test`, `set_test`, `del_test` and
+`list_tests` access them):
 
 ```yaml
 info: short description

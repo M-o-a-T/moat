@@ -58,6 +58,9 @@ class Step:
     save_now: bool = False
     """The state has changed and must be saved right away."""
 
+    act: Any = None
+    """Something for the adapter to do (see `Unit.act`)."""
+
 
 class Core(Protocol[C_contra]):
     """The sans-IO part of a unit."""
@@ -129,6 +132,12 @@ class Unit(Generic[C, S]):
         Look at the inputs before the core does; raise to stop the unit.
 
         The default does nothing.
+        """
+
+    async def act(self, what: Any) -> None:
+        """
+        Do what the core asked for in `Step.act`; the core is stepped again
+        afterwards. The default does nothing.
         """
 
     async def abort(self, exc: BaseException) -> None:
@@ -218,3 +227,6 @@ class Unit(Generic[C, S]):
             if res.save or res.save_now:
                 self.store.changed(immediate=res.save_now)
             wake_in = res.wake_in
+            if res.act is not None:
+                await self.act(res.act)
+                wake_in = 0

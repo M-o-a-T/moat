@@ -8,11 +8,12 @@ through the dynamic state path.
 from __future__ import annotations
 
 import anyio
+import platform
 import pytest
 import time
 
 import moat.link.job  # noqa:F401 - register cfg
-from moat.util import NotGiven, attrdict, combine_dict
+from moat.util import NotGiven, al_unique, attrdict, combine_dict, gen_ident
 from moat.lib.path import P, Root
 from moat.link._test import Scaffold
 from moat.link.code import CODE_EXEC_ROOT
@@ -172,7 +173,8 @@ async def test_allrunner_per_node_state(cfg):
         job_cfg = _job_cfg(sf)
         sub = job_cfg["sub"]["all"] + P("default")
         job_path = job_cfg["prefix"] + sub + P("e")
-        state_path = job_cfg["state"] + sub + P(c.name) + P("e")
+        state_path_base = job_cfg["state"] + sub + P(c.name)
+        state_path = state_path_base + P("e")
 
         await c.d_set(
             job_path,
@@ -181,10 +183,55 @@ async def test_allrunner_per_node_state(cfg):
         await c.i_sync()
 
         runner = AllJobRunner(c, job_cfg, sub, nodes=1)
+        # An explicitly-configured client name passes through unmapped;
+        # the scaffold assigns deterministic ids such as “S_x…”.
+        assert runner.statepath == job_cfg["state"] + sub + P(c.name)
         async with anyio.create_task_group() as tg, runner.run():
             st = await _wait_state(c, state_path, until=lambda s: s.get("result") == "ok")
             assert st["stopped"] > 0
             tg.cancel_scope.cancel()
+
+
+class _RandomNamedProxy:
+    """Expose only ``name``/``id``, emulating an auto-generated ident."""
+
+    def __init__(self, wrapped: Any, name: str) -> None:
+        self._wrapped = wrapped
+        self._name = name
+
+    def __getattr__(self, nm: str):
+        return getattr(self._wrapped, nm)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    id = name
+
+
+async def test_allrunner_default_to_platform_node(cfg):
+    """Without an explicit client name, the subtree keys by hostname."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        rnd = "_" + gen_ident(12, alphabet=al_unique)
+        cc = _RandomNamedProxy(c, rnd)
+        assert cc.name.startswith("_")
+        assert hasattr(cc, "cfg")
+
+        job_cfg = _job_cfg(sf)
+        sub = job_cfg["sub"]["all"] + P("default")
+        state_path_base = job_cfg["state"] + sub / platform.node()
+
+        runner = AllJobRunner(cc, job_cfg, sub, nodes=1)
+        assert runner.statepath == state_path_base
+
+        # A clean non-auto name passes through verbatim.
+        good = _RandomNamedProxy(c, "plain")
+        rg = AllJobRunner(good, job_cfg, sub, nodes=1)
+        assert rg.statepath == job_cfg["state"] + sub / "plain"
 
 
 async def test_call_admin_watch_and_timer(cfg):

@@ -238,9 +238,12 @@ class Scaffold(CtxObj):
             name = f"S_{_seq}"
 
         s = Server(cfg, name, **kw)
-        await self.tg.start(s.serve)
-        task_status.started(s)
-        await anyio.sleep_forever()
+        # run the server in this task's scope, so that leaving `server_`
+        # really stops it
+        async with anyio.create_task_group() as tg:
+            await tg.start(s.serve)
+            task_status.started(s)
+            await anyio.sleep_forever()
 
     @asynccontextmanager
     async def server_(self, cfg: dict | None = None, **kw) -> AsyncIterator[Server]:

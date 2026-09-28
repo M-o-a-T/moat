@@ -331,8 +331,10 @@ class _Sub_d(MsgHandler):
     async def stream_deltree(self, msg: Msg) -> None:
         await self.parent.d_deltree_stream_(msg)
 
-    async def cmd_search(self, path: Path) -> Any:
-        return await self.parent.d_search_(path)
+    async def stream_search(self, msg: Msg) -> None:
+        # not a command: a plain return value that's a dict would be sent
+        # as keyword arguments, and the client couldn't find the data
+        await self.parent.d_search_stream_(msg)
 
     async def cmd_set(
         self,
@@ -720,7 +722,7 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
-    async def d_search_(self, path: Path):
+    async def d_search_stream_(self, msg):
         """Search for wildcard-matching sub-node data.
 
         Arguments:
@@ -728,13 +730,24 @@ class ServerClient(LinkCommon):
 
         Result:
         * data
+        * metadata dump
+
+        This returns a single result, like ``get``; it doesn't stream.
         """
+        if msg.can_stream:
+            raise ValueError("d.search does not stream")
+        path = Path.build(msg[0])
         if len(path) and path[0] == "run":
             data = self.server.rdata
         else:
             data = self.server.data
         d = data.search(path)
-        return d.data
+        if d.data is NotGiven:
+            raise KeyError(path)
+        if d.meta is None:
+            await msg.result(d.data)
+        else:
+            await msg.result(d.data, *d.meta.dump())
 
     async def d_set_(
         self,
@@ -1600,9 +1613,8 @@ class Server(MsgHandler):
         """
         task_status.started()
         await anyio.sleep(self.cfg.timeout.delete / 10)
-        t = mtime.time()
 
-        async def _walk(d: Node) -> bool:
+        async def _walk(d: Node, t: float) -> bool:
             # return True if we need to keep this
 
             has_any = False
@@ -1615,20 +1627,38 @@ class Server(MsgHandler):
                 and t - d.meta.timestamp > self.cfg.timeout.delete
             ):
                 del d.meta
-            drop = set()
-            for k, v in d.items():
-                if await _walk(v):
+            drop = []
+
+            for k, v in tuple(d.items()):
+                r = await _walk(v, t)
+                if r:
                     has_any = True
                 else:
-                    drop.add(k)
-            for k in drop:
+                    drop.append((k, v))
+            for k, v in drop:
+                if v._sub or v.data_ is not NotGiven:  # noqa:SLF001
+                    continue  # raced: child came alive again
+                if d._sub.get(k) is not v:  # noqa:SLF001
+                    continue  # raced: key vanished / was recreated
                 del d[k]
             if has_any or d._data is not NotGiven:  # noqa:SLF001
                 return True
             return d.meta is not None
 
+        _fails = 0
         while True:
-            await _walk(self.data)
+            try:
+                await _walk(self.data, mtime.time())
+            except Exception:
+                # A missed round recovers on the next cycle; crashing the
+                # whole server because housekeeping hiccupped is worse.
+                if _fails >= 3:
+                    raise
+
+                self.logger.exception("Flushing deleted nodes failed")
+                _fails += 1
+            else:
+                _fails = 0
 
             await anyio.sleep(self.cfg.timeout.delete / 20)
 

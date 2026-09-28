@@ -47,3 +47,35 @@ class TestYamlCodecCreation:
         yaml_bytes = "name: Hëllo\n".encode("utf-8")
         result = c.decode(yaml_bytes)
         assert result == {"name": "Hëllo"}
+
+
+class TestYamlCodecStream:
+    """Test incremental decoding of a YAML document stream."""
+
+    def _docs(self, data: bytes, eof: bool = True) -> list:
+        c = get_codec("yaml")
+        c.feed(data)
+        res = list(c)
+        if eof:
+            c.eof()
+            res.extend(c)
+        return res
+
+    def test_terminated(self):
+        """Documents are returned once their "---" terminator arrives."""
+        assert self._docs(b"a: 1\n---\nb: 2\n---\n", eof=False) == [{"a": 1}, {"b": 2}]
+
+    def test_unterminated_last_held_back(self):
+        """Without EOF, a trailing unterminated document stays buffered."""
+        assert self._docs(b"a: 1\n---\nb: 2\n", eof=False) == [{"a": 1}]
+
+    def test_unterminated_last_at_eof(self):
+        """At EOF, a trailing unterminated document is returned."""
+        assert self._docs(b"a: 1\n---\nb: 2\n") == [{"a": 1}, {"b": 2}]
+        assert self._docs(b"a: 1\n---\nb: 2\n---") == [{"a": 1}, {"b": 2}]
+
+    def test_eof_nothing_left(self):
+        """EOF after a terminated stream, or on blank input, adds nothing."""
+        assert self._docs(b"a: 1\n---\n") == [{"a": 1}]
+        assert self._docs(b"a: 1\n---\n\n") == [{"a": 1}]
+        assert self._docs(b"") == []

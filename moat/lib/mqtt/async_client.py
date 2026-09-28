@@ -45,10 +45,9 @@ from . import (
 )
 from ._exceptions import (
     MQTTConnectFailed,
-    MQTTNoReconnect,
+    MQTTConnectionLost,
     MQTTOperationFailed,
     MQTTPublishFailed,
-    MQTTServerRestarted,
     MQTTSubscribeFailed,
     MQTTUnsubscribeFailed,
 )
@@ -338,12 +337,13 @@ class AsyncMQTTClient:
                 with move_on_after(2, shield=True):
                     try:
                         self._closed = True
-                        self._state_machine.disconnect()
-                        operation = MQTTDisconnectOperation()
-                        try:
-                            await self._run_operation(operation)
-                        except anyio.BrokenResourceError:
-                            pass
+                        if self._stream is not None:  # still connected
+                            self._state_machine.disconnect()
+                            operation = MQTTDisconnectOperation()
+                            try:
+                                await self._run_operation(operation)
+                            except anyio.BrokenResourceError:
+                                pass
                         if self._stream is not None:
                             await self._stream.aclose()
                     finally:
@@ -358,67 +358,49 @@ class AsyncMQTTClient:
         *,
         task_status: TaskStatus[None] | None = None,
     ) -> None:
-        while not self._closed:
-            t_conn = 0
-            t_backoff = 0
+        """
+        Connect to the broker and run the connection.
 
-            # Establish the transport stream
-            try:
-                if self.websocket_path:
-                    cm = self._connect_ws()
-                else:
-                    cm = self._connect_mqtt()
+        There is no reconnection. If the connection dies while we're not
+        closing it ourselves, this raises `MQTTConnectionLost`, which
+        propagates out of the client's context.
+        """
+        try:
+            cm = self._connect_ws() if self.websocket_path else self._connect_mqtt()
 
-                with anyio.CancelScope() as self._conn_scope:
-                    async with AsyncExitStack() as exit_stack:
-                        (
-                            stream,
-                            self._ignored_exc_classes,
-                        ) = await exit_stack.enter_async_context(cm)
-                        self._stream = stream
+            with anyio.CancelScope() as self._conn_scope:
+                async with AsyncExitStack() as exit_stack:
+                    (
+                        stream,
+                        self._ignored_exc_classes,
+                    ) = await exit_stack.enter_async_context(cm)
+                    self._stream = stream
 
-                        # Start handling inbound packets
-                        task_group = await exit_stack.enter_async_context(create_task_group())
-                        task_group.start_soon(self._read_inbound_packets, stream, task_group)
+                    # Start handling inbound packets. When the stream ends,
+                    # this cancels the task group, ending the connection.
+                    task_group = await exit_stack.enter_async_context(create_task_group())
+                    task_group.start_soon(self._read_inbound_packets, stream, task_group)
 
-                        # Perform the MQTT handshake (send conn + receive connack)
-                        await self._do_handshake()
-                        t_conn = anyio.current_time()
+                    # Perform the MQTT handshake (send conn + receive connack)
+                    await self._do_handshake()
 
-                        # Manage keepalives
-                        task_group.start_soon(self._keep_alive)
+                    # Manage keepalives
+                    task_group.start_soon(self._keep_alive)
 
-                        # Signal that the client is ready
-                        if task_status is not None:
-                            task_status.started()
-                            task_status = None
+                    # Signal that the client is ready
+                    if task_status is not None:
+                        task_status.started()
+                        task_status = None
 
-            except* MQTTServerRestarted:
-                raise
-
-            except* Exception as exc:
-                logger.warning("Connection died: %r", exc, exc_info=exc)
-
-            finally:
-                self._conn_scope = None
-
-            # reset the thing
+        finally:
+            self._conn_scope = None
             if self._stream is not None:
                 stream, self._stream = self._stream, None
-                await stream.aclose()
-            self._state_machine = MQTTClientStateMachine()
+                with anyio.move_on_after(1, shield=True):
+                    await stream.aclose()
 
-            # incremental back-off
-            if self._closed:
-                return
-            if t_conn and anyio.current_time() - t_conn > 10:
-                t_backoff = 0
-                continue
-            else:
-                t_backoff += 0.1 + t_backoff * 1.3
-                if t_backoff > 10:
-                    raise MQTTNoReconnect
-                await anyio.sleep(t_backoff)
+        if not self._closed:
+            raise MQTTConnectionLost
 
     async def _keep_alive(self) -> None:
         if not self._state_machine.keep_alive:
@@ -492,9 +474,6 @@ class AsyncMQTTClient:
             self._pending_connect.response = packet
             self._pending_connect.event.set()
             self._pending_connect = None
-            if not packet.session_present and self._subscriptions:
-                # The server restarted and forgot our session. Owch.
-                raise MQTTServerRestarted
 
     async def _deliver_publish(self, packet: MQTTPublishPacket) -> None:
         async with create_task_group() as tg:

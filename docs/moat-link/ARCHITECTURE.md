@@ -99,7 +99,8 @@ with timestamp-based conflict resolution.
   restarts (driver change) and stops gates as entries appear/change/vanish.
   A gate announced by another live client is left alone until that
   announcement goes away; `--force` takes over the gates present at startup.
-  A crashed gate is reported via `e_exc` (and `e_ok` once it runs again) and
+  A crashed gate is reported via `e_exc` (and `e_ok` once it has been up for
+  `link.gate.recovery` seconds, which also resets the backoff) and
   retried with exponential backoff (`link.gate.backoff`: `min`, `max`,
   `factor`), or at once when its entry changes.
 

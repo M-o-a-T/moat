@@ -187,6 +187,7 @@ async def test_retry(cfg, monkeypatch):
     monkeypatch.setitem(sys.modules, "flaky.gate", _Flaky)
     _Flaky.fails = 2
     cfg.link.gate.backoff = dict(min=0.2, max=0.3, factor=2)
+    cfg.link.gate.recovery = 0.3
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!"})
         c = await sf.client()
@@ -205,6 +206,10 @@ async def test_retry(cfg, monkeypatch):
 
                 # two failures later, it runs
                 await _wait_owner(c, "grp.a", r.id, up=True)
+                # and is reported as working after a while
+                async for _p, d in mon:
+                    if d is NotGiven or not d:
+                        break
         assert _Flaky.fails == 0
 
 

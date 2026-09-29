@@ -617,6 +617,7 @@ class _GateJob:
         self.up = anyio.Event()
         self.logger = logging.getLogger(f"moat.link.{path}")
 
+        self._recovery = link.cfg["gate"]["recovery"]
         bo = link.cfg["gate"]["backoff"]
         self._bo_min = bo["min"]
         self._bo_max = bo["max"]
@@ -666,10 +667,14 @@ class _GateJob:
             await self._retry.wait()
 
     async def _report_up(self) -> None:
-        "Wait for the gate to be up, then report it."
+        """
+        Wait for the gate to be up. If it stays up for a while, report it
+        as working and reset the retry delay.
+        """
         await self.up.wait()
-        self._delay = 0.0
         self.settled.set()
+        await anyio.sleep(self._recovery)
+        self._delay = 0.0
         await self.link.e_ok(self.path)
 
     async def run(self, force: bool) -> None:
@@ -743,6 +748,7 @@ async def run_gates(
     service has announced is skipped until that announcement goes away.
     A gate that crashes is reported to the error subsystem and retried
     with exponential backoff (``link.gate.backoff`` in the configuration),
+    and reported as working ``link.gate.recovery`` seconds after it is up;
     or as soon as its entry changes.
 
     Args:

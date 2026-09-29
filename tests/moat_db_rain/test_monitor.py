@@ -910,12 +910,18 @@ async def test_cli_monitor_smoke(engine, monkeypatch):
     """
     _seed_and_commit(engine)
 
-    import moat.db as mdb  # noqa: PLC0415
+    import moat.db._main  # noqa: PLC0415,F401
+    import moat.db.util as mdb_util  # noqa: PLC0415
     import moat.link.client as link_client  # noqa: PLC0415
 
     # Patch the database so the CLI's session setup uses our test engine.
+    # Patch ``moat.db.util``, not ``moat.db``: running the CLI imports every
+    # ``moat db`` subcommand module, and those that do
+    # ``from moat.db import database`` would keep the fake after this test
+    # (breaking e.g. later ``moat db src`` tests in the same process).
+    # ``moat.db._main`` binds ``util.database`` directly, so import it first.
     db = _fake_database(engine)
-    monkeypatch.setattr(mdb, "database", db)
+    monkeypatch.setattr(mdb_util, "database", db)
 
     # Patch Link so ``Link(cfg)`` returns a StubLink-compatible object.
     class StubLinkCM:

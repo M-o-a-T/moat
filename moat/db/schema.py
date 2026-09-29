@@ -1,8 +1,11 @@
 # noqa:D100
 from __future__ import annotations
 
-from sqlalchemy import Column, Integer
-from sqlalchemy.orm import DeclarativeBase, declared_attr
+import sys
+from importlib import import_module
+
+from sqlalchemy import Column, Integer, event
+from sqlalchemy.orm import DeclarativeBase, Mapper, declared_attr
 
 from moat.util import NotGiven
 
@@ -39,3 +42,26 @@ class Base(DeclarativeBase):
             if v is NotGiven:
                 continue
             setattr(self, k, v)
+
+
+@event.listens_for(Mapper, "before_configured")
+def _complete_models() -> None:
+    """Import the ``model_`` companion of every loaded ``moat.db.*.model``.
+
+    The ``model_`` modules add relationships that ``back_populates`` in the
+    base models refer to. If mappers get configured while one of them is
+    missing, configuration fails, and so does importing it later on.
+    """
+    done: set[str] = set()
+    while todo := [
+        n
+        for n in list(sys.modules)
+        if n.startswith("moat.db.") and n.endswith(".model") and n not in done
+    ]:
+        for name in todo:
+            done.add(name)
+            try:
+                import_module(name + "_")
+            except ModuleNotFoundError as exc:
+                if exc.name != name + "_":
+                    raise

@@ -3,6 +3,8 @@ This program controls a SolvisMax+SolvisLea combination "manually"
 because the SolvisMax controller doesn't support a heap of features I need.
 
 See the accompanying .rst file for details.
+
+This is legacy code.
 """
 
 from __future__ import annotations
@@ -45,8 +47,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from typing import Self
 
-FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+# FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
+# logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 logger = logging.root
 
@@ -467,6 +469,8 @@ pid:
 
 """
 
+# On non-legacy systems this will fail, thus prevent a "moat dev heat solvis"
+# command from working
 
 with open("/etc/moat/moat.cfg") as _f:
     mcfg = yload(_f, attr=True)

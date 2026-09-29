@@ -50,9 +50,9 @@ Phase 2 — credential submission::
     Client → Server:  (username, nonce, encrypted_password_hash, challenge_response)
 
 Both sides derive the shared secret via ECDH-style modular exponentiation
-(DH group 14, 2048-bit), feed it through HKDF-SHA256 with the info string
-``b"moat-rpc-password-dh"``, and use the 32-byte result as an AES-256-GCM
-key.
+over the fixed RFC 7919 ``ffdhe2048`` group (2048-bit safe prime, generator 2),
+feed it through HKDF-SHA256 with the info string ``b"moat-rpc-password-dh"``,
+and use the 32-byte result as an AES-256-GCM key.
 
 If DH negotiation fails on either side (exception, unexpected response),
 the client falls back to the plain (TLS-protected) submission path.
@@ -112,13 +112,45 @@ def _derive_dh_key(shared_secret: bytes) -> bytes:
     ).derive(shared_secret)
 
 
+# RFC 7919 §A.1 "ffdhe2048" group: a fixed, standardized 2048-bit safe prime
+# with generator 2.  Using a well-known group instead of freshly generated
+# random parameters means both peers always share the *same* group — which is
+# required for DH to work at all across separate processes — and avoids the
+# multi-second safe-prime search that ``dh.generate_parameters`` performs.
+#
+# The prime has the characteristic ffdhe shape ``2^2048 - 2^1984 + k*2^64 - 1``,
+# so its top and bottom 64 bits are all ones; we assert that at load time as a
+# cheap guard against accidental corruption of the literal below.
+_FFDHE2048_P = int(
+    "ffffffffffffffffadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695"
+    "a9e13641146433fbcc939dce249b3ef97d2fe363630c75d8f681b202aec4617a"
+    "d3df1ed5d5fd65612433f51f5f066ed0856365553ded1af3b557135e7f57c935"
+    "984f0c70e0e68b77e2a689daf3efe8721df158a136ade73530acca4f483a797a"
+    "bc0ab182b324fb61d108a94bb2c8e3fbb96adab760d7f4681d4f42a3de394df4"
+    "ae56ede76372bb190b07a7c8ee0a6d709e02fce1cdf7e2ecc03404cd28342f61"
+    "9172fe9ce98583ff8e4f1232eef28183c3fe3b1b4c6fad733bb5fcbc2ec22005"
+    "c58ef1837d1683b2c6f34a26c1b2effa886b423861285c97ffffffffffffffff",
+    16,
+)
+_FFDHE2048_G = 2
+
+
 def _generate_dh_parameters():
-    """Generate DH parameters (2048-bit, generator 2). Cached at module level."""
+    """Return the fixed RFC 7919 ffdhe2048 DH group. Cached at module level.
+
+    Both peers must use the same DH group; a freshly generated random group
+    would differ between processes and make the key exchange impossible.
+    """
     global _dh_params
     if _dh_params is None:
         from cryptography.hazmat.primitives.asymmetric import dh  # noqa: PLC0415
 
-        _dh_params = dh.generate_parameters(generator=2, key_size=2048)
+        # Cheap integrity guard: the ffdhe2048 prime is exactly 2048 bits and
+        # its top and bottom 64 bits are all ones (see comment above).
+        assert _FFDHE2048_P.bit_length() == 2048
+        assert (_FFDHE2048_P >> (2048 - 64)) == (1 << 64) - 1
+        assert (_FFDHE2048_P & ((1 << 64) - 1)) == (1 << 64) - 1
+        _dh_params = dh.DHParameterNumbers(_FFDHE2048_P, _FFDHE2048_G).parameters()
     return _dh_params
 
 

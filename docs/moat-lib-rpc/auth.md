@@ -74,7 +74,7 @@ package — no custom crypto is rolled.
 
 | Component | Algorithm |
 |-----------|-----------|
-| Key exchange | Diffie-Hellman, MODP Group 14 (2048-bit, RFC 3526) |
+| Key exchange | Diffie-Hellman, RFC 7919 ``ffdhe2048`` group (2048-bit safe prime, generator 2) |
 | Key derivation | HKDF-SHA256, info = `b"moat-rpc-password-dh"`, 32-byte output |
 | Symmetric encryption | AES-256-GCM (12-byte nonce, authenticated) |
 | Password hashing | SHA-256 |
@@ -146,8 +146,11 @@ credential submission.
   `_dh_key` and `_dh_challenge` via `_cleanup_dh_state()`.
 - The client deletes the shared secret and derived key after sending.
 - Neither the shared secret nor the derived key is ever logged.
-- DH parameters (2048-bit MODP group) are generated once and cached at
-  module level; ephemeral keypairs are generated per connection.
+- DH parameters use the fixed RFC 7919 ``ffdhe2048`` group (a standardized
+  2048-bit safe prime), constructed once and cached at module level;
+  ephemeral keypairs are generated per connection.  Because the group is
+  fixed and well-known, both peers always share it — a prerequisite for the
+  key exchange to succeed across separate processes.
 
 ## API
 

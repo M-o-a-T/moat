@@ -11,7 +11,6 @@ from hashlib import sha256
 from os import urandom
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from moat.util import attrdict, yload
@@ -90,9 +89,20 @@ def test_generate_dh_parameters_caches():
     assert p1 is p2
 
 
+def test_generate_dh_parameters_uses_ffdhe2048():
+    """The DH group is the fixed RFC 7919 ffdhe2048 group (stable across processes)."""
+    from moat.lib.rpc.auth.password import _FFDHE2048_G, _FFDHE2048_P  # noqa: PLC0415
+
+    params = _generate_dh_parameters()
+    nums = params.parameter_numbers()
+    assert nums.g == _FFDHE2048_G
+    assert nums.p == _FFDHE2048_P
+    assert nums.p.bit_length() == 2048
+
+
 def test_dh_key_agreement_roundtrip():
-    """Two parties can derive the same shared secret via the cryptography package."""
-    params = dh.generate_parameters(generator=2, key_size=2048)
+    """Two parties can derive the same shared secret via the library's DH group."""
+    params = _generate_dh_parameters()
     alice_priv = params.generate_private_key()
     bob_priv = params.generate_private_key()
     alice_shared = alice_priv.exchange(bob_priv.public_key())

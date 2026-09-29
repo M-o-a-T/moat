@@ -77,7 +77,8 @@ After the cutover (moat-n84.24):
 ## Home Assistant
 
 HA.md: the HA entities, the jobs that copy them to and from
-`app.heat.ha.*`, and the override jobs (`code.heat.ha.override.yaml`,
+`app.heat.ha.*`, and the override jobs (snippet
+`../moat-link-job/code.transform.hass.override.yaml`, job
 `job.heat.ovr.wp.yaml`).
 
 ## Weather forecast job

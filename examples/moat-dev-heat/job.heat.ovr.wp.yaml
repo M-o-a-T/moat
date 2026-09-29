@@ -1,4 +1,4 @@
-code: !P heat.ha.override
+code: !P transform.hass.override
 data:
   dst: !P app.heat.override.wp
   value: !P home.ass.dyn.switch.heizung.wp

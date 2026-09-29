@@ -5,18 +5,19 @@ args:
   set_: []
   vars_: []
 code: |
-  # A heat override item (app.heat.override.*: a value, or unset for
-  # "automatic") as two Home Assistant entities: an on/off switch or a
-  # number (`value`), and a switch (`manual`) that turns the override on.
+  # An override item (a value, or unset for "automatic"; e.g. the heating's
+  # app.heat.override.*) as two Home Assistant entities: an on/off switch
+  # or a number (`value`), and a switch (`manual`) that turns the override
+  # on.
   #
   # - `manual` on: the override is `value`'s last command (or, if there
   #   was none, the current `actual` value, so that nothing changes).
   #   `manual` off: the override is cleared.
   # - A `value` command while `manual` is on changes the override.
-  #   While `manual` is off, `value` shows `actual` (what the heating
-  #   does by itself), so changing it has no lasting effect.
+  #   While `manual` is off, `value` shows `actual` (what the controlled
+  #   system does by itself), so changing it has no lasting effect.
   # - The override item is authoritative: if someone else sets or clears
-  #   it (`moat dev heat override`), the HA entities follow.
+  #   it, the HA entities follow.
   #
   # `value` and `manual` are HA entity paths (with .cmd and .state below
   # them). `actual` is a MoaT-Link path; `key` selects a field if its
@@ -104,7 +105,7 @@ code: |
 default:
   actual: null
   key: null
-info: A heat override item as two Home Assistant entities (value, manual on/off)
+info: An override item as two Home Assistant entities (value, manual on/off)
 is_async: true
 vars:
 - dst

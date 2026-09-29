@@ -1,5 +1,5 @@
 """
-Tests for the ``heat.ha.override`` job snippet (examples/moat-dev-heat):
+Tests for the ``transform.hass.override`` job snippet (examples/moat-link-job):
 an override item as a Home Assistant value entity plus a "manual" switch.
 Runs the snippet in the MoaT-Link job runner.
 """
@@ -20,8 +20,13 @@ from moat.link.job import AnyJobRunner
 
 from typing import Any
 
-CODE = FSPath(__file__).parents[2] / "examples" / "moat-dev-heat" / "code.heat.ha.override.yaml"
-SNIPPET = P("heat.ha.override")
+CODE = (
+    FSPath(__file__).parents[2]
+    / "examples"
+    / "moat-link-job"
+    / "code.transform.hass.override.yaml"
+)
+SNIPPET = P("transform.hass.override")
 
 DST = P("test.app.heat.override.wp")
 VAL = P("test.home.ass.dyn.switch.heizung.wp")

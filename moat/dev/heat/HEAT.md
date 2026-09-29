@@ -393,7 +393,7 @@ lapse.
 Home Assistant: the units don't read or write HA entities. Jobs on the
 main node copy them to and from `app.heat.ha.*`, and show each override
 item as a value entity plus a "manual" switch (job snippet
-`heat.ha.override`); see `examples/moat-dev-heat/HA.md`. The legacy
+`transform.hass.override`); see `examples/moat-dev-heat/HA.md`. The legacy
 `wp.cmd` switch (off = heat pump off, on = automatic) becomes the pair
 `heizung.wp` / `heizung.wp_override`.
 

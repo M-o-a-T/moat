@@ -178,6 +178,11 @@ class Package(_Common):
         return self.vers.get("tag", None)
 
     @property
+    def empty(self) -> bool:
+        """Whether this package ships no source of its own."""
+        return bool(self.vers.get("empty", False))
+
+    @property
     def last_commit(self) -> str:
         return self.vers.get("rev", "0" * 40)
 
@@ -220,6 +225,11 @@ class Package(_Common):
         location relative to the packaging area; alternate source roots
         are recreated inside it.
         """
+        if self.empty:
+            # No source to copy; the packaging tree stands on its own.
+            if not self.files:
+                return
+            raise ValueError(f"{self.name} is marked empty but contains files?")
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
         p = Path("packaging") / self.dash / "src"
@@ -263,6 +273,10 @@ class Package(_Common):
         Test whether the given subsystem changed
         between the head and the @tag commit
         """
+        if self.empty and main is not False:
+            # An empty package has no source of its own, so its source
+            # never changes; only its packaging (``main=False``) can.
+            return False
         head = self._repo.head.commit
         if not hasattr(self, "last_commit"):
             return True

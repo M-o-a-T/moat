@@ -92,7 +92,7 @@ def do_autotag(
 ) -> None:
     """Create tags for updated subrepos"""
     for r in repos:
-        if r.has_changes(True) or "tag" not in r.vers:
+        if r.has_changes(True) or ("tag" not in r.vers and not r.empty):
             r.next_tag(major, minor)
             if r.vers.get("tag", "") != r.vers.new:
                 r.vers.tag = r.vers.new
@@ -140,7 +140,13 @@ async def do_versions(
             pr = tomlkit.loads(content)
             proj = get_table(pr, "project")
             if proj is not None:
-                proj["version"] = r.vers.get("new", r.last_tag)
+                if r.empty and r.last_tag is None:
+                    # An empty package without a recorded version has no
+                    # source-defined tag to write; leave the maintainer's
+                    # ``version`` in pyproject untouched.
+                    pass
+                else:
+                    proj["version"] = r.vers.get("new", r.last_tag)
             changed = r.has_changes(True)
 
             if not no.version:
@@ -686,6 +692,12 @@ async def cli(
                     print("Please commit changes and try again.", file=sys.stderr)
                     return
 
+    # Step 1a: sanity-check packages flagged "empty" -- they must not
+    # secretly carry source files.
+    for r in repos:
+        if r.empty and r.files:
+            raise ValueError(f"Package {r.name} is flagged empty but has files: {sorted(r.files)}")
+
     # Step 1: check for changed files since last tagging
     if autotag:
         do_autotag(repo, repos, major, minor, tags)
@@ -701,6 +713,10 @@ async def cli(
                 if not await p.is_file():
                     continue
                 raise
+            if r.empty:
+                # Empty packages ship no source of their own; they have
+                # nothing to tag and never carry untagged source changes.
+                continue
             assert tag is not None
             tags[r.mdash] = tag
             if r.has_changes(True):

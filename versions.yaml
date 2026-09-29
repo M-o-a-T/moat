@@ -113,6 +113,12 @@ moat-dev-heat:
   pypi: 0.1.8
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.1.9
+moat-dev-heat-service:
+  empty: True
+  new: 0.1.0
+  pkg: 1
+  rev: 159371d8339ea871ac1212bc70ffd79e3d9edde2
+  tag: 0.1.0
 moat-dev-sew:
   deb: 0.1.1-3
   new: 0.1.7

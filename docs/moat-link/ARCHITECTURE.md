@@ -99,6 +99,9 @@ with timestamp-based conflict resolution.
   restarts (driver change) and stops gates as entries appear/change/vanish.
   A gate announced by another live client is left alone until that
   announcement goes away; `--force` takes over the gates present at startup.
+  A crashed gate is reported via `e_exc` (and `e_ok` once it runs again) and
+  retried with exponential backoff (`link.gate.backoff`: `min`, `max`,
+  `factor`), or at once when its entry changes.
 
 Each gate's `codec` (default `"cbor"`) is for the **destination** side; the
 source (MoaT-Link) side is always `std-cbor`.

@@ -1,0 +1,4 @@
+backoff:
+  factor: 1.4
+  min: 5
+  max: 900

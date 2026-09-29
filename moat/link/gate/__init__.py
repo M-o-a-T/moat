@@ -15,6 +15,7 @@ from moat.util import NotGiven, to_attrdict
 from moat.util import time as mtime
 from moat.lib.codec import get_codec
 from moat.lib.codec.null import Codec as _NullCodec
+from moat.lib.config import register as _register
 from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
 from moat.link.meta import MsgMeta
@@ -31,6 +32,8 @@ if TYPE_CHECKING:
     from moat.link.client import Link, Watcher
 
 __all__ = ["DelayedGate", "Gate", "GateNode", "run_gate", "run_gates"]
+
+_register(__name__)
 
 
 class GateVanished(RuntimeError):
@@ -596,7 +599,8 @@ class _GateJob:
     Announce and run one gate, for `run_gates`.
 
     If another live client has announced the gate, wait until that
-    announcement goes away, then take over.
+    announcement goes away, then take over. If the gate crashes, report
+    the error and retry after a delay.
     """
 
     def __init__(self, cfg: dict[str, Any], link: Link, path: Path, driver: str) -> None:
@@ -605,10 +609,23 @@ class _GateJob:
         self.path = path
         self.driver = driver
         self.scope: anyio.CancelScope | None = None
-        self.waiting = False
+        self.idle = False
+        "True while the gate neither runs nor is announced."
         self.settled = anyio.Event()
-        "Set when the gate runs, or waits for another service."
+        "Set when the gate runs, waits for another service, or has crashed."
+        self._retry = anyio.Event()
+        self.up = anyio.Event()
         self.logger = logging.getLogger(f"moat.link.{path}")
+
+        bo = link.cfg["gate"]["backoff"]
+        self._bo_min = bo["min"]
+        self._bo_max = bo["max"]
+        self._bo_factor = bo["factor"]
+        self._delay = 0.0
+
+    def retry(self) -> None:
+        "The gate's entry has changed: retry a crashed gate now."
+        self._retry.set()
 
     async def _wait_free(self) -> None:
         "Wait until no other live client announces this gate."
@@ -617,11 +634,12 @@ class _GateJob:
         spath = await get_service_path(False, self.path)
         async with self.link.d_watch(spath, state=None, mark=True) as mon:
             owner = None
+            waiting = False
             async for msg in mon:
                 if msg is None:
                     if owner is None:
                         return
-                    self.waiting = True
+                    waiting = True
                     self.settled.set()
                     self.logger.info("Announced by %s: waiting", owner)
                     continue
@@ -631,8 +649,28 @@ class _GateJob:
                     owner = msg["id"]
                 else:
                     owner = None
-                if owner is None and self.waiting:
+                if owner is None and waiting:
                     return
+
+    async def _crashed(self, exc: Exception) -> None:
+        "Report a crash, then wait before retrying."
+        self._delay = min(
+            self._bo_max, self._delay * self._bo_factor if self._delay else self._bo_min
+        )
+        self.logger.warning("Gate %s failed: %r; retry in %.1fs", self.path, exc, self._delay)
+        with anyio.move_on_after(5, shield=True):
+            await self.link.e_exc(self.path, exc, driver=self.driver)
+        self.settled.set()
+        self._retry = anyio.Event()
+        with anyio.move_on_after(self._delay):
+            await self._retry.wait()
+
+    async def _report_up(self) -> None:
+        "Wait for the gate to be up, then report it."
+        await self.up.wait()
+        self._delay = 0.0
+        self.settled.set()
+        await self.link.e_ok(self.path)
 
     async def run(self, force: bool) -> None:
         """
@@ -645,14 +683,18 @@ class _GateJob:
 
         with anyio.CancelScope() as self.scope:
             while True:
+                self.idle = True
                 if not force:
                     await self._wait_free()
-                self.waiting = False
+                self.idle = False
                 err: Exception | None = None
                 try:
-                    async with announcing(
-                        self.link, host=False, name=self.path, force=force
-                    ) as srv:
+                    self.up = anyio.Event()
+                    async with (
+                        announcing(self.link, host=False, name=self.path, force=force) as srv,
+                        anyio.create_task_group() as tg,
+                    ):
+                        tg.start_soon(self._report_up)
                         try:
                             await run_gate(
                                 self.cfg, self.link, self.path, task_status=_Started(srv, self)
@@ -660,11 +702,14 @@ class _GateJob:
                         except Exception as exc:
                             # leave normally, so that the announcement is removed
                             err = exc
-                    if err is not None:
-                        raise err
-                    return
+                        tg.cancel_scope.cancel()
                 except* (ServiceSupplanted, ServiceCleared):
                     self.logger.warning("Gate %s announced elsewhere", self.path)
+                else:
+                    if err is None:
+                        return
+                    self.idle = True
+                    await self._crashed(err)
                 force = False
 
 
@@ -677,7 +722,7 @@ class _Started:
 
     def started(self, value: Any = None) -> None:
         self.srv.started(value)
-        self.job.settled.set()
+        self.job.up.set()
 
 
 async def run_gates(
@@ -696,29 +741,26 @@ async def run_gates(
     Gates are started when their entry appears, restarted when its driver
     changes, and stopped when it is deleted. A gate that another live
     service has announced is skipped until that announcement goes away.
+    A gate that crashes is reported to the error subsystem and retried
+    with exponential backoff (``link.gate.backoff`` in the configuration),
+    or as soon as its entry changes.
 
     Args:
+        cfg: The global configuration.
         only: Only run the gate at @path itself, not the ones below it.
         force: Force the announcement of the gates found at startup.
 
     The task status is set when all gates found at startup are running,
-    or are waiting for another service.
+    waiting for another service, or have crashed.
     """
     jobs: dict[Path, _GateJob] = {}
     current: dict[Path, Any] = {}
-    failed: dict[Path, Any] = {}
-    "Gates that crashed, with their entry at the time. Retried when it changes."
 
     async with anyio.create_task_group() as tg:
 
         async def _run(job: _GateJob, force: bool) -> None:
             try:
                 await job.run(force)
-            except Exception:
-                job.logger.exception("Gate %s failed", job.path)
-                failed[job.path] = current.get(job.path)
-                job.settled.set()
-                return
             finally:
                 if jobs.get(job.path) is job:
                     del jobs[job.path]
@@ -727,17 +769,14 @@ async def run_gates(
 
         def _check(p: Path, force: bool) -> None:
             d = current.get(p, NotGiven)
-            if p in failed:
-                if failed[p] == d:
-                    return
-                del failed[p]
             drv = d.get("driver") if isinstance(d, Mapping) else None
             job = jobs.get(p)
             if job is not None:
                 if drv == job.driver:
-                    return  # the gate handles all other changes itself
-                if job.waiting and job.scope is not None:
-                    # not running yet, thus nothing to clean up
+                    job.retry()  # the gate handles all other changes itself
+                    return
+                if job.idle and job.scope is not None:
+                    # not running, thus nothing to clean up
                     job.scope.cancel()
                     del jobs[p]
                 else:

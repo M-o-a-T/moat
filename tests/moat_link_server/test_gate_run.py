@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+import sys
 from functools import partial
 
 from moat.util import NotGiven
@@ -12,6 +13,7 @@ from moat.link._test import Scaffold
 from moat.link.announce import announcing
 from moat.link.exceptions import ServiceSupplanted
 from moat.link.gate import run_gates
+from moat.link.gate.mqtt import Gate as MqttGate
 
 pytestmark = pytest.mark.anyio
 
@@ -34,15 +36,20 @@ async def _owner(c, name: str):
     return d["id"]
 
 
-async def _wait_owner(c, name: str, want) -> None:
-    "Wait until gate @name is announced by @want (None: not at all)"
+async def _wait_owner(c, name: str, want, up: bool = False) -> None:
+    """
+    Wait until gate @name is announced by @want (None: not at all).
+    With @up, also wait for the gate to be up.
+    """
     owner = None
+    is_up = False
     with anyio.fail_after(5):
         async with c.d_watch(ANN + P(name), state=None, mark=True) as mon:
             async for d in mon:
                 if d is not None:
                     owner = None if d is NotGiven else d["id"]
-                if owner == want:
+                    is_up = d is not NotGiven and d.get("up", False)
+                if owner == want and (is_up or not up):
                     return
 
 
@@ -160,3 +167,61 @@ async def test_force(cfg):
         await _wait_owner(c, "grp.a", r.id)
         await anyio.sleep(0.3)
         assert await _owner(c, "grp.a") == r.id
+
+
+class _Flaky:
+    "A gate driver that fails a few times, then works"
+
+    fails = 0
+
+    class Gate(MqttGate):
+        async def setup_(self) -> None:
+            if _Flaky.fails:
+                _Flaky.fails -= 1
+                raise RuntimeError("flaky")
+            await super().setup_()
+
+
+async def test_retry(cfg, monkeypatch):
+    "A crashed gate is reported, retried with backoff, and reported OK once it runs"
+    monkeypatch.setitem(sys.modules, "flaky.gate", _Flaky)
+    _Flaky.fails = 2
+    cfg.link.gate.backoff = dict(min=0.2, max=0.3, factor=2)
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!"})
+        c = await sf.client()
+        r = await sf.client()
+        await c.d_set(P("gate.grp.a"), dict(_gate("a"), driver="flaky.gate"))
+        await c.i_sync()
+
+        async with c.d_watch(P("error.gate.grp.a"), subtree=True, state=None) as mon:
+            with anyio.fail_after(5):
+                await sf.tg.start(run_gates, sf.cfg, r, P("gate.grp"))
+                # the first failure has been reported by now
+                async for _p, d in mon:
+                    if "flaky" in str(d):
+                        break
+                assert await _owner(c, "grp.a") is None
+
+                # two failures later, it runs
+                await _wait_owner(c, "grp.a", r.id, up=True)
+        assert _Flaky.fails == 0
+
+
+async def test_retry_on_change(cfg, monkeypatch):
+    "A crashed gate is retried at once when its entry changes"
+    monkeypatch.setitem(sys.modules, "flaky.gate", _Flaky)
+    _Flaky.fails = 1
+    cfg.link.gate.backoff = dict(min=100, max=100, factor=2)
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"Hello": "there!"})
+        c = await sf.client()
+        r = await sf.client()
+        await c.d_set(P("gate.grp.a"), dict(_gate("a"), driver="flaky.gate"))
+        await c.i_sync()
+
+        with anyio.fail_after(5):
+            await sf.tg.start(run_gates, sf.cfg, r, P("gate.grp"))
+            assert await _owner(c, "grp.a") is None
+            await c.d_set(P("gate.grp.a"), dict(_gate("a"), driver="flaky.gate", info="fixed"))
+            await _wait_owner(c, "grp.a", r.id, up=True)

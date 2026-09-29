@@ -1,5 +1,9 @@
 """Run the slowest tests first, based on durations from previous runs.
 
+Load it with ``-p moat.src.pytest_longfirst``, not from the ``tests``
+package: importing that configures logging, which then prints to the
+terminal before pytest starts capturing output.
+
 Durations are kept in the pytest cache (key ``longfirst/durations``).
 Sorting happens in pytest_collection_modifyitems, which runs on every
 xdist worker; since all workers read the same cache the order is

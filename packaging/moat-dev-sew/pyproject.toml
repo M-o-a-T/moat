@@ -13,9 +13,9 @@ classifiers = [
 ]
 dependencies = [
 	"anyio ~= 4.2",
-	"moat-lib-config ~= 0.2.0",
-	"moat-lib-run ~= 0.2.0",
-	"moat-util ~= 0.63.0",
+	"moat-lib-config ~= 0.2.2",
+	"moat-lib-run ~= 0.2.2",
+	"moat-util ~= 0.63.11",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -23,7 +23,7 @@ name = "moat-dev-sew"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.md"
-version = "0.1.7"
+version = "0.1.8"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

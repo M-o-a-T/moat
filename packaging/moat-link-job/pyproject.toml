@@ -17,8 +17,8 @@ dependencies = [
 	"asyncclick ~= 8.3",
 	"attrs",
 	"psutil",
-	"moat-util ~= 0.63.0",
-	"moat-link ~= 0.10.0",
+	"moat-util ~= 0.63.11",
+	"moat-link ~= 0.10.1",
 	]
 version = "0.0.5"
 keywords = [ "MoaT",]

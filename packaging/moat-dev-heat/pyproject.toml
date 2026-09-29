@@ -14,9 +14,9 @@ classifiers = [
 dependencies = [
 	"anyio ~= 4.2",
 	"aionotify",
-	"moat-lib-pid ~= 0.8.1",
-	"moat-lib-run ~= 0.2.0",
-	"moat-util ~= 0.63.0",
+	"moat-lib-pid ~= 0.8.2",
+	"moat-lib-run ~= 0.2.2",
+	"moat-util ~= 0.63.11",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

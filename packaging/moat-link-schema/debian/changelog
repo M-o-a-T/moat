@@ -1,3 +1,9 @@
+moat-link-schema (0.0.3-1) unstable; urgency=medium
+
+  * New release for 26.4.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 29 Sep 2026 16:48:38 +0200
+
 moat-link-schema (0.0.2-5) unstable; urgency=medium
 
   * New release for 26.2.12

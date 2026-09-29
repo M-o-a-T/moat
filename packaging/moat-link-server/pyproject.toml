@@ -18,15 +18,15 @@ dependencies = [
 	"attrs",
 	"ruyaml",
 	"simpleeval",
-	"moat-util ~= 0.63.0",
-	"moat-lib-rpc ~= 0.7.0",
-	"moat-lib-codec ~= 0.4.14",
-	"moat-link ~= 0.10.0",
-	"moat-lib-mqtt ~= 0.8.0",
-	"moat-lib-config ~= 0.2.0",
-	"moat-lib-broadcast ~= 0.1.3",
+	"moat-util ~= 0.63.11",
+	"moat-lib-rpc ~= 0.7.6",
+	"moat-lib-codec ~= 0.4.20",
+	"moat-link ~= 0.10.1",
+	"moat-lib-mqtt ~= 0.8.3",
+	"moat-lib-config ~= 0.2.2",
+	"moat-lib-broadcast ~= 0.1.4",
 	]
-version = "0.6.5"
+version = "0.6.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-server"

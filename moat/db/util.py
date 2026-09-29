@@ -146,7 +146,7 @@ def database(cfg: attrdict) -> Session:
             sess = Mgr(conn)
             with ctx_as(session, sess):
                 yield sess
-    except click.exceptions.ClickException:
+    except (click.exceptions.ClickException, click.exceptions.Exit):
         raise
     except Exception:
         logger.error("On database %r:", getattr(cfg, "url", "?"))

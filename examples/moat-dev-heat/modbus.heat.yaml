@@ -1,0 +1,325 @@
+# MoaT-Link version of /etc/moat/modbus.heat.yaml, for `moat modbus dev poll`.
+# See README.md in this directory.
+
+inc:
+  sdm630:
+    include: energy/Eastron/SDM630.yaml
+  sdm720:
+    include: energy/Eastron/SDM720.yaml
+  wp:
+    include: heating/Solvis.yaml
+  kwb:
+    include: heating/KWB/easyfire.yaml
+  buf:
+    include: heating/KWB/buffer.yaml
+slots:
+  1sec:
+    read_delay: 1
+    read_align: false
+  1min:
+    read_delay: 60
+    read_align: true
+  15sec:
+    read_delay: 15
+    read_align: null
+  5sec:
+    read_delay: 5
+    read_align: null
+  5min:
+    read_delay: 300
+    read_align: true
+  30min:
+    read_delay: 1800
+  write:
+    write_delay: 0.1
+  default:
+    write_delay: 1
+server:
+  - host: 0.0.0.0
+    port: 502
+ports:
+  "/dev/serial/by-path/platform-3f980000.usb-usb-0:1.5:1.0-port0":
+    serial:
+      baudrate: 9600
+      parity: "E"
+    1:
+      server: 2
+      ref: inc.sdm630
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P grid.s.heat.l1  # was :mr. (raw MQTT)
+          L2:
+            active:
+              slot: 1sec
+              dest: !P grid.s.heat.l2  # was :mr. (raw MQTT)
+          L3:
+            active:
+              slot: 1sec
+              dest: !P grid.s.heat.l3  # was :mr. (raw MQTT)
+        energy:
+          reset:
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.heat.meter
+hosts:
+  wp.hz.smurf.noris.de:
+    1:
+      server: 1
+      ref: inc.wp
+      dev:
+        errors:
+          n:
+            dest: !P heat.s.control.errors
+            slot: 15sec
+          1:
+            time:
+              dest: !P heat.s.control.errors:1.time
+              slot: 15sec
+            code:
+              dest: !P heat.s.control.errors:1.code
+              slot: 15sec
+            par:
+              1:
+                dest: !P heat.s.control.errors:1.p1
+                slot: 15sec
+              2:
+                dest: !P heat.s.control.errors:1.p2
+                slot: 15sec
+          2:
+            time:
+              dest: !P heat.s.control.errors:2.time
+              slot: 15sec
+            code:
+              dest: !P heat.s.control.errors:2.code
+              slot: 15sec
+            par:
+              1:
+                dest: !P heat.s.control.errors:2.p1
+                slot: 15sec
+              2:
+                dest: !P heat.s.control.errors:2.p2
+                slot: 15sec
+      regs:
+        output:
+          14:
+            slot: 5sec
+            dest: !P heat.s.pump.switchover
+        water:
+          mode:
+            src: !P heat.s.water.mode.cmd
+            dest: !P heat.s.water.mode
+            slot: 15sec
+          dest:
+            src: !P heat.s.water.temp.cmd
+            dest: !P heat.s.water.temp
+            slot: 15sec
+        heat:
+          1:
+            mode:
+              src: !P heat.s.heat.mode.cmd
+              dest: !P heat.s.heat.mode
+              slot: 1min
+            fix_day:
+              src: !P heat.s.heat.temp.cmd
+              dest: !P heat.s.heat.temp
+              slot: 1min
+            fix_night:
+              src: !P heat.s.heat.temp_low.cmd
+              dest: !P heat.s.heat.temp_low
+              slot: 1min
+        analog:
+          out:
+            4:
+              dest: !P heat.s.pump.rate.cmd
+              slot: 1sec
+
+        volume:
+          int:
+            2:
+              dest:
+                - !P home.ass.dyn.sensor.flow.warmwater.state
+                - !P heat.s.water.flow
+              slot: 15sec
+#       power:
+#         heat:
+#           dest: !P home.ass.dyn.sensor.power.heatpump.state
+#           slot: 15sec
+
+        temperature:
+          default:
+            slot: 5sec
+          int:
+            1:
+              dest:
+                - !P home.ass.dyn.sensor.temp.warmwasser_kessel.state
+                - !P heat.s.buffer.temp.water
+            2:
+              dest:
+                - !P home.ass.dyn.sensor.temp.warmwasser_vorlauf.state
+                - !P heat.s.water.out
+            4:
+              dest:
+                - !P home.ass.dyn.sensor.temp.heizung_kessel_oben.state
+                - !P heat.s.buffer.temp.heat
+            11:
+              dest:
+                - !P home.ass.dyn.sensor.temp.warmwasser_ruecklauf.state
+                - !P heat.s.water.in
+            14:
+              dest:
+                - !P home.ass.dyn.sensor.temp.heizung_weiche.state
+                - !P heat.s.buffer.temp.switch
+            9:
+              dest:
+                - !P home.ass.dyn.sensor.temp.heizung_kessel.state
+                - !P heat.s.buffer.temp.mid
+            12:
+              dest:
+                - !P home.ass.dyn.sensor.temp.heizung_vorlauf.state
+                - !P heat.s.heating.temp.out
+            3:
+              dest:
+                - !P home.ass.dyn.sensor.temp.heizung_ruecklauf.state
+                - !P heat.s.buffer.temp.return
+            10:
+              dest:
+                - !P home.ass.dyn.sensor.temp.aussen_hinten.state
+  pellet.hz.smurf.noris.de:
+    1:
+      server: 3
+      ref:
+        - !P inc.kwb
+        - !P inc.buf
+      regs:
+        puf:
+          temperatur:
+            1:
+              0:
+                value:
+                  dest: !P temp.heat.s.pellets.buffer.top
+                  slot: 15sec
+            5:
+              0:
+                value:
+                  dest: !P temp.heat.s.pellets.buffer.bottom
+                  slot: 15sec
+        ak:
+          anlage:
+            ein:
+              src: !P home.ass.dyn.switch.heizung.pellets.cmd
+              dest: !P home.ass.dyn.switch.heizung.pellets.state
+              mirror: true
+              slot: 1min
+          kesselprogramm:
+            slot: 1min
+            src: !P heat.s.pellets.prog.cmd
+            dest: !P heat.s.pellets.prog
+        ksm:
+          aschefuellstand:
+            dest: !P home.ass.dyn.sensor.pct.heating_ash.state
+            slot: 5min
+          ruecklauftempmin:
+            src: !P heat.s.pellets.aux.r-min.goal
+            dest: !P heat.s.pellets.aux.r-min
+            slot: 1min
+
+          i:
+            rauchgastemp:
+              ist:
+                value:
+                  dest:
+                    - !P heat.s.pellets.exhaust
+                    - !P home.ass.dyn.sensor.heizung_pellet_rauch.state
+                  slot: 1min
+            kesseltemp:
+              ist:
+                value:
+                  dest:
+                    - !P heat.s.pellets.temp.top
+                    - !P home.ass.dyn.sensor.temp.heizung_pellet_top.state
+                  slot: 15sec
+            ruecklauftemp:
+              ist:
+                value:
+                  dest:
+                    - !P heat.s.pellets.temp.bottom
+                    - !P home.ass.dyn.sensor.temp.heizung_pellet_bottom.state
+                  slot: 15sec
+            flammtemp:
+              ist:
+                value:
+                  dest:
+                    - !P heat.s.pellets.temp.flame
+                    - !P home.ass.dyn.sensor.temp.heizung_pellet_flame.state
+                  slot: 15sec
+          serviceintervallreststunden:
+            dest:
+              - !P heat.s.pellets.service.h_until
+              - !P home.ass.dyn.sensor.heizung_pellet_service_h.state
+            slot: 30min
+          brennerleistung:
+            dest:
+              - !P heat.s.pellets.load
+              - !P home.ass.dyn.sensor.heizung_pellet_load.state
+            slot: 1min
+          kesselstatus_anzeige:
+            dest: !P heat.s.pellets.state
+            slot: 15sec
+          kesselpumpe_steuerstufe:
+            dest:
+              - !P heat.s.pellets.pump
+              - !P home.ass.dyn.sensor.heizung_pellet_pump.state
+            slot: 1min
+          restmenge_brennstofflager:
+            dest:
+              - !P home.ass.dyn.sensor.usage.pellets.state
+              - !P heat.s.pellets.storage
+            slot: 5min
+          waermemenge_gesamt:
+            dest: !P heat.s.pellets.energy
+            slot: 5min
+          ruecklauf_temp:
+            dest:
+              - !P heat.s.pellets.temp.in
+              - !P home.ass.dyn.sensor.heizung_pellet_in.state
+            src: !P heat.s.pellets.temp.in.cmd
+            mirror: true
+          modbus:
+            lifetick:
+              src: !P temp.heat.s.pellets.tick.out
+            commit_lifetick:
+              dest: !P temp.heat.s.pellets.tick.in
+              slot: 15sec
+            kesselanforderung:
+              src: !P heat.s.pellets.power.cmd
+              dest: !P heat.s.pellets.power
+              slot: 1min
+            kesseltemp_vorgabe:
+              dest:
+                - !P heat.s.pellets.temp.goal
+                - !P home.ass.dyn.sensor.heizung_pellet_max_out.state
+              src: !P heat.s.pellets.temp.goal.cmd
+              slot: 1min
+            leistung_vorgabe:
+              dest:
+                - !P heat.s.pellets.load.goal
+                - !P home.ass.dyn.sensor.heizung_pellet_load_goal.state
+              src: !P heat.s.pellets.load.goal.cmd
+              slot: 1min
+        fs:
+          pelletsverbrauch:
+            dest: !P heat.s.pellets.used
+            slot: 5min
+        ef2:
+          kesseltempsoll1:
+            dest: !P heat.s.pellets.aux:1.goal
+            src: !P heat.s.pellets.aux:1
+            slot: 1min
+          kesseltempsoll2:
+            dest: !P heat.s.pellets.aux:2.goal
+            src: !P heat.s.pellets.aux:2
+            slot: 1min

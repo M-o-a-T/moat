@@ -1,0 +1,27 @@
+[Unit]
+Description=MoaT heating units (all but the watchdog)
+After=moat-link-server.service
+After=flashmq.service
+Conflicts=moat-heat@target.service moat-heat@heat_valve.service moat-heat@flow.service
+Conflicts=moat-heat@pump.service moat-heat@pellet.service moat-heat@selector.service
+Conflicts=moat-heat@errors.service moat-heat@frost.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat dev heat run
+
+User=MoaT-Heat
+Group=MoaT
+
+EnvironmentFile=-/etc/moat/heat.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

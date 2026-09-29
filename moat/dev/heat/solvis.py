@@ -13,7 +13,6 @@ import io
 import logging
 import subprocess
 import sys
-import time
 from enum import IntEnum, auto
 
 import aionotify
@@ -23,11 +22,13 @@ from moat.util import (
     attrdict,
     combine_dict,
     pos2val,
-    t_iter,
     to_attrdict,
     val2pos,
     yload,
     yprint,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.kv.client import open_client
 from moat.lib.path import (
@@ -37,6 +38,7 @@ from moat.lib.path import (
 )
 from moat.lib.pid import CPID
 from moat.lib.run import AliasedGroup
+from moat.util.times import t_iter
 
 from typing import TYPE_CHECKING, Any
 
@@ -649,7 +651,7 @@ class Data:
         try:
             return self.TS  # ty:ignore[unresolved-attribute]  # set by trigger()
         except AttributeError:
-            return time.time()
+            return mtime.time()
 
     @property
     def cl(self) -> Any:

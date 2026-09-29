@@ -10,7 +10,8 @@ import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click
 
-from moat.util import combine_dict, load_cfg, merge
+from moat.util import combine_dict, merge
+from moat.lib.config import CFG
 from moat.lib.path import P, Path
 from moat.lib.run import load_subgroup
 
@@ -28,26 +29,19 @@ async def cli(obj: Any, sub: Path) -> None:
 
     obj.sub = sub
     obj.sew = combine_dict(obj.cfg._get(sub), obj.cfg["dev"]["sew"])  # noqa:SLF001
+    CFG.with_("moat.mqtt")
     merge(
         obj.sew.setdefault("mqtt", {}),
         obj.cfg.get("mqtt", {}).get("client", {}),
-        load_cfg("moat.mqtt")["mqtt"]["client"],
+        CFG.moat.mqtt.client,
         replace=False,
     )
 
     mqw: dict[str, Any] = obj.sew["mqtt"].get("will", {})
-    try:
-        top = mqw["topic"]
-    except KeyError:
-        pass
-    else:
-        if isinstance(top, Path):
-            mqw["topic"] = "/".join(top)
-    try:
-        msg = mqw["message"]
-    except KeyError:
-        pass
-    else:
+    # the defaults have no will (topic and message are None)
+    if isinstance(top := mqw.get("topic"), Path):
+        mqw["topic"] = "/".join(top)
+    if (msg := mqw.get("message")) is not None:
         codec = get_codec(obj.sew["mqtt"]["codec"])
         mqw["message"] = codec.encode(msg)
 

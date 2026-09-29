@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import anyio
-import time
 from contextlib import nullcontext
 
 import asyncclick as click
 
 from moat.util import NotGiven, yprint
+from moat.util import time as mtime
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
@@ -111,7 +111,7 @@ async def list_(obj, ok, raw):
     The default is to list only open errors.
     """
     seen = False
-    now = time.time()
+    now = mtime.time()
     if ok is None:
         ok = False
     elif ok is False:

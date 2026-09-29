@@ -1,11 +1,10 @@
 # command line interface  # noqa:D100
 from __future__ import annotations
 
-import time
-
 import asyncclick as click
 
 from moat.util import MsgReader, NotGiven, yprint
+from moat.util import time as mtime
 from moat.kv.client import StreamedRequest
 from moat.kv.data import add_dates, data_get, node_attr
 from moat.lib.path import P, PathLongener
@@ -149,7 +148,7 @@ class nstr:
     instead of stringified).
     """
 
-    def __new__(cls, val: str | None | Literal[NotGiven]):  ## noqa:D102
+    def __new__(cls, val: str | Literal[NotGiven] | None):  ## noqa:D102
         if val is None or val is NotGiven:
             return val
         return str(val)
@@ -256,7 +255,7 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
                         # value has been deleted
                         continue
             if flushing:
-                r["time"] = ts = time.time()
+                r["time"] = ts = mtime.time()
                 r["_time"] = ts2iso(ts)
             yprint(r, stream=obj.stdout)
             print("---", file=obj.stdout)

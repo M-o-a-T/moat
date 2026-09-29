@@ -26,6 +26,9 @@ API
 
 .. autoclass:: moat.util.server._Server
 
+.. automodule:: moat.util.time
+   :members: time, monotonic
+
 .. automodule:: moat.util.liner
    :members:
    :undoc-members:

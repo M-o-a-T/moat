@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import anyio
-import time
 from contextlib import suppress
 
 import asyncclick as click
 from attrs import define, field
 
 from moat.util import NotGiven, get_part, yprint
+from moat.util import time as mtime
 from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
 from moat.lib.run import AliasedGroup
@@ -425,7 +425,7 @@ class FlowMon:
                     meta=meta,
                     flow=flow,
                     previous=self.previous,
-                    now=time.time(),
+                    now=mtime.time(),
                     do_copied=False,
                     do_stale_age=False,
                     queue_copied=True,
@@ -519,7 +519,7 @@ async def check(obj, path, verbose, monitor):
                 meta=meta,
                 flow=flow,
                 previous=previous,
-                now=time.time(),
+                now=mtime.time(),
                 do_copied=True,
                 queue_copied=False,
             )

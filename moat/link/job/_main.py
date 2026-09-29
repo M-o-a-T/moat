@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import anyio
 import sys
-import time
 from functools import partial
 
 import asyncclick as click
 
 from moat.util import attrdict, yprint
+from moat.util import time as mtime
 from moat.lib.path import P, Path
 from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import add_dates, data_get
@@ -422,7 +422,7 @@ async def set_(
         if tm == "-":
             res["target"] = None
         else:
-            res["target"] = time.time() + float(tm)
+            res["target"] = mtime.time() + float(tm)
 
     await obj.conn.d_set(path, res)
 

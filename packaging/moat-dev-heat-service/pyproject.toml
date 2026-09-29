@@ -1,0 +1,27 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["wheel","setuptools"]
+
+[project]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Programming Language :: Python :: 3",
+	"Intended Audience :: Developers",
+]
+dependencies = [
+	"moat-dev-heat ~= 0.1.9",
+]
+keywords = ["MoaT"]
+requires-python = ">=3.8"
+name = "moat-dev-heat-service"
+authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description = "systemd units for the MoaT heating controller"
+readme = "README.md"
+version = "0.1.0"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
+
+[tool.setuptools]
+packages = []

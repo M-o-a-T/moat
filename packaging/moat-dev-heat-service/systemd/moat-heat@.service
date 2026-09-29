@@ -1,0 +1,24 @@
+[Unit]
+Description=MoaT heating unit %i
+After=moat-link-server.service
+After=flashmq.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat dev heat run %i
+
+User=MoaT-Heat
+Group=MoaT
+
+EnvironmentFile=-/etc/moat/heat.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

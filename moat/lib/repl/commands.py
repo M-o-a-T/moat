@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import os
-import time
+
+from moat.util import time as mtime
 
 from typing import TYPE_CHECKING
 
@@ -497,14 +498,14 @@ class perform_bracketed_paste(Command):
     async def do(self) -> None:
         done = "\x1b[201~"
         data = ""
-        start = time.time()
+        start = mtime.time()
         while done not in data:
             ev = await self.reader.console.getpending()
             data += ev.data
         trace(
             "bracketed pasting of {l} chars done in {s:.2f}s",
             l=len(data),
-            s=time.time() - start,
+            s=mtime.time() - start,
         )
         self.reader.insert(data.replace(done, ""))
         self.reader.last_refresh_cache.invalidated = True

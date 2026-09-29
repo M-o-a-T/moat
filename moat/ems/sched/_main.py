@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import anyio
 import logging
-import time
 from textwrap import dedent as _dedent
 
 import asyncclick as click
 
 from moat.util import merge, yload, yprint
+from moat.util import time as mtime
 from moat.lib.run import attr_args, list_ext, load_subgroup, process_args
 
 from .control import Model
@@ -139,7 +139,7 @@ async def analyze(obj, all_, force):
     t = None
     if force:
         t_slot = 3600 / cfg.steps
-        t = time.time() + t_slot / 2
+        t = mtime.time() + t_slot / 2
         t -= t % t_slot
 
     m = Model(cfg, t)

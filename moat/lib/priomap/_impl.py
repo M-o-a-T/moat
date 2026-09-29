@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import anyio
 from dataclasses import dataclass
-from time import monotonic as time
+
+from moat.util import time as mtime
 
 from collections.abc import Hashable, MutableMapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
@@ -427,12 +428,12 @@ class TimerMap(Generic[KeyT]):
     @staticmethod
     def T_ADD(p) -> float:
         "Add the current time."
-        return p + time()
+        return p + mtime.monotonic()
 
     @staticmethod
     def T_SUB(p) -> float:
         "Subtract the current time."
-        return p - time()
+        return p - mtime.monotonic()
 
     def __setitem__(self, key: KeyT, delay: float) -> None:
         self._pm[key] = self.T_ADD(delay)

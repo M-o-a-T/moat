@@ -1,0 +1,114 @@
+args:
+  eval_: []
+  path_: []
+  proxy_: []
+  set_: []
+  vars_: []
+code: |
+  # A heat override item (app.heat.override.*: a value, or unset for
+  # "automatic") as two Home Assistant entities: an on/off switch or a
+  # number (`value`), and a switch (`manual`) that turns the override on.
+  #
+  # - `manual` on: the override is `value`'s last command (or, if there
+  #   was none, the current `actual` value, so that nothing changes).
+  #   `manual` off: the override is cleared.
+  # - A `value` command while `manual` is on changes the override.
+  #   While `manual` is off, `value` shows `actual` (what the heating
+  #   does by itself), so changing it has no lasting effect.
+  # - The override item is authoritative: if someone else sets or clears
+  #   it (`moat dev heat override`), the HA entities follow.
+  #
+  # `value` and `manual` are HA entity paths (with .cmd and .state below
+  # them). `actual` is a MoaT-Link path; `key` selects a field if its
+  # value is a mapping.
+
+  from moat.util import NotGiven
+
+  class _Dst(_cls.ChangeMsg):
+      pass
+
+  class _Val(_cls.ChangeMsg):
+      pass
+
+  class _Man(_cls.ChangeMsg):
+      pass
+
+  class _Act(_cls.ChangeMsg):
+      pass
+
+  def _ovr(v):
+      "the value of an override item (which may be {value, expires, reason})"
+      if isinstance(v, dict):
+          v = v.get("value")
+      return v
+
+  n = 3
+  await _self.watch(dst, cls=_Dst)
+  await _self.watch(value / "cmd", cls=_Val)
+  await _self.watch(manual / "cmd", cls=_Man)
+  if actual is not None:
+      await _self.watch(actual, cls=_Act)
+      n += 1
+
+  cur = None  # the override's value; None: automatic
+  cmd = None  # the last command of the value entity
+  act = None  # the actual value
+  sent = {}
+  unset = object()
+  up = False
+
+  async def _put(path, v):
+      if sent.get(path, unset) == v:
+          return
+      sent[path] = v
+      await _link.d_set(path, v)
+
+  async for msg in _info:
+      v = getattr(msg, "value", None)
+      if v is NotGiven:  # deleted
+          v = None
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          up = True
+          await _self.setup_done()
+      elif isinstance(msg, _Dst):
+          cur = _ovr(v)
+      elif isinstance(msg, _Act):
+          if key is not None and isinstance(v, dict):
+              v = v.get(key)
+          act = v
+      elif isinstance(msg, _Val):
+          cmd = v
+          if up and cur is not None and cmd is not None and cmd != cur:
+              await _link.d_set(dst, cmd)
+              cur = cmd
+      elif isinstance(msg, _Man):
+          if up and v and cur is None:
+              v = cmd if cmd is not None else act
+              if v is not None:
+                  await _link.d_set(dst, v)
+                  cur = v
+          elif up and v is False and cur is not None:
+              await _link.d_set(dst)  # delete: automatic
+              cur = None
+      else:
+          continue
+      if not up:
+          continue
+
+      await _put(manual / "state", cur is not None)
+      shown = cur if cur is not None else act
+      if shown is not None:
+          await _put(value / "state", shown)
+default:
+  actual: null
+  key: null
+info: A heat override item as two Home Assistant entities (value, manual on/off)
+is_async: true
+vars:
+- dst
+- value
+- manual
+- actual
+- key

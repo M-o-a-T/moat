@@ -20,11 +20,18 @@ if TYPE_CHECKING:
 
     from collections.abc import Callable
 
-__all__ = ["attrdict", "combine_dict", "to_attrdict"]
+__all__ = ["NoOp", "attrdict", "combine_dict", "to_attrdict"]
 
 T = TypeVar("T", bound=MutableMapping)
 
 _Nope = object()
+
+
+def NoOp(_) -> None:
+    """
+    Do-Nothing update notification handler
+    """
+    return None
 
 
 def combine_dict(
@@ -138,7 +145,7 @@ class attrdict(MutableMapping[Hashable, Any]):
     _post: bool = False
     _super: ref[attrdict] | None = None
 
-    updated_: Callable[[attrdict], None] = lambda _: None
+    updated_: Callable[[attrdict], None] = NoOp
     "Callback. Used by moat.lib.config."
 
     def __init__(self, *a: Any, **kw: Any) -> None:

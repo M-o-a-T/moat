@@ -1,0 +1,100 @@
+args:
+  eval_: []
+  path_: []
+  proxy_: []
+  set_: []
+  vars_: []
+code: |
+  import httpx
+
+  # Minimum hourly temperature forecast (OpenWeatherMap One Call 3.0).
+  #
+  # Every `interval` seconds, fetch the hourly forecast for lat/lon and write
+  # the minimum temperature of the next n hours to dst:n, for each n in
+  # `horizons`. Values are only written when they change.
+  #
+  # `key` is the API key, or the MoaT-Link path of an item that holds it.
+  # That item is watched: a new key triggers an immediate fetch.
+
+  class _Key(_cls.ChangeMsg):
+      pass
+
+  n = 0
+  if isinstance(key, _Path):
+      await _self.watch(key, fetch=True, cls=_Key)
+      appid = None
+      n = 1
+  else:
+      appid = key
+
+  last = {}
+  up = False
+  ok = False
+  timer = None
+
+  async with httpx.AsyncClient(timeout=30) as client:
+      async for msg in _info:
+          if isinstance(msg, _cls.ReadyMsg):
+              if msg.msg < n:
+                  continue
+              up = True
+          elif isinstance(msg, _Key):
+              appid = msg.value if isinstance(msg.value, str) else None  # deleted
+          elif not isinstance(msg, _cls.TimerMsg):
+              continue
+
+          if not up:
+              continue
+          if not appid:
+              _log.warning("No API key at %s", key)
+              if timer is not None:
+                  timer.cancel()
+              continue
+
+          res = await client.get(
+              url,
+              params=dict(
+                  lat=lat,
+                  lon=lon,
+                  units="metric",
+                  exclude="minutely,daily,current,alerts",
+                  appid=appid,
+              ),
+          )
+          res.raise_for_status()
+          hourly = res.json()["hourly"]
+          for h in horizons:
+              val = min(x["temp"] for x in hourly[:h])
+              if last.get(h) != val:
+                  await _link.d_set(dst / h, val)
+                  last[h] = val
+          _log.debug("Forecast: %r", last)
+          if not ok:
+              await _self.setup_done()
+              ok = True
+
+          if timer is None:
+              timer = await _self.timer(interval)
+          else:
+              await timer.run(interval)
+default:
+  horizons:
+  - 4
+  - 5
+  - 6
+  - 10
+  - 12
+  - 18
+  - 24
+  interval: 3600
+  url: https://api.openweathermap.org/data/3.0/onecall
+info: Minimum-temperature forecast from OpenWeatherMap
+is_async: true
+vars:
+- key
+- lat
+- lon
+- dst
+- horizons
+- interval
+- url

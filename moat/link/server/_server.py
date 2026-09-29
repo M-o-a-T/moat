@@ -13,7 +13,6 @@ import random
 import signal
 import struct
 import sys
-import time
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
@@ -37,6 +36,9 @@ from moat.util import (
     gen_ident,
     id2str,
     to_attrdict,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.lib.broadcast import Broadcaster, BroadcastReader
 from moat.lib.codec import get_codec
@@ -453,7 +455,7 @@ class ServerClient(LinkCommon):
         # there sustained rate might be > 10 connections per second.
         # >100 requires rate limiting.
         global _client_nr
-        t = int(time.time() * 100 - 175000000000)
+        t = int(mtime.time() * 100 - 175000000000)
         if t < 0:  # testing. Revert.
             t += 175000000000
         if _client_nr == 0 or _client_nr < t:
@@ -886,7 +888,7 @@ class ServerClient(LinkCommon):
     async def e_mon_stream_(self, msg: Msg):
         path = msg[0]
         kw = dict(msg.kw)
-        kw["start"] = time.time()
+        kw["start"] = mtime.time()
         kw["log"] = log = []
         try:
             async with msg.stream_in() as mon:
@@ -1330,7 +1332,7 @@ class Server(MsgHandler):
     async def set_error(
         self,
         path: Path,
-        err: str | BaseException | None | NotGivenType,
+        err: str | BaseException | NotGivenType | None,
         kw: dict[str, Any],
         meta: MsgMeta,
     ):
@@ -1447,7 +1449,7 @@ class Server(MsgHandler):
         mstr += " " * (25 - len(mstr))
         kw["mode"] = mode
         kw["name"] = name
-        kw["time"] = datetime.now(UTC)
+        kw["time"] = datetime.fromtimestamp(mtime.time(), UTC)
 
         return gen_start(mstr, **kw)
 
@@ -1455,14 +1457,14 @@ class Server(MsgHandler):
         """Return the CBOR tag for an end-of-file record"""
         from moat.lib.codec.moat_cbor import gen_stop  # noqa: PLC0415
 
-        kw["time"] = datetime.now(UTC)
+        kw["time"] = datetime.fromtimestamp(mtime.time(), UTC)
         return gen_stop(**kw)
 
     def gen_hdr_change(self, **kw):
         """Return the CBOR tag that describes a change"""
         from moat.lib.codec.moat_cbor import gen_change  # noqa: PLC0415
 
-        kw["time"] = datetime.now(UTC)
+        kw["time"] = datetime.fromtimestamp(mtime.time(), UTC)
         return gen_change(**kw)
 
     def get_state(self):
@@ -1570,7 +1572,7 @@ class Server(MsgHandler):
     async def _save_stream(rdr, mw, shorter, ign):
         # helper for .save_stream() to keep the indent levels down
 
-        last_saved = time.monotonic()
+        last_saved = mtime.monotonic()
         last_saved_count = 1
         TIMEOUT = 5
         MAXMSG = 100
@@ -1598,11 +1600,11 @@ class Server(MsgHandler):
                 await mw(msg)
 
             # Ensure that we save the system state often enough.
-            t = time.monotonic()
+            t = mtime.monotonic()
             td = t - last_saved
             if td >= TIMEOUT or last_saved_count >= MAXMSG:
                 await mw.flush(force=True)
-                last_saved = time.monotonic()
+                last_saved = mtime.monotonic()
                 last_saved_count = 0
 
     async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1646,7 +1648,7 @@ class Server(MsgHandler):
         _fails = 0
         while True:
             try:
-                await _walk(self.data, time.time())
+                await _walk(self.data, mtime.time())
             except Exception:
                 # A missed round recovers on the next cycle; crashing the
                 # whole server because housekeeping hiccupped is worse.
@@ -1849,9 +1851,9 @@ class Server(MsgHandler):
 
         while True:
             if save.get("use_local_time", False):
-                now = datetime.now().astimezone()
+                now = datetime.fromtimestamp(mtime.time(), UTC).astimezone()
             else:
-                now = datetime.now(UTC)
+                now = datetime.fromtimestamp(mtime.time(), UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
 

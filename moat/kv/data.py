@@ -7,9 +7,9 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-import time
 
 from moat.util import NotGiven, attrdict, yprint
+from moat.util import time as mtime
 from moat.lib.run import process_args
 from moat.util.times import ts2iso
 
@@ -26,7 +26,7 @@ def add_dates(d):
     add ``_*`` with a textual representation.
     """
 
-    t = time.time()
+    t = mtime.time()
     start = t - 366 * 24 * 3600
     stop = t + 366 * 24 * 3600
 

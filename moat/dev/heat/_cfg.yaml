@@ -1,0 +1,95 @@
+# Package defaults of the heat controller.
+#
+# Each unit's configuration is this subtree merged with the MoaT-Link item
+# ``cfg.app.heat.<unit>``; the Link item takes precedence.
+
+service:
+  host: heat
+
+emergency: {}
+
+target: {}
+heat_valve: {}
+flow:
+  # production values (solvis.yml)
+  max_max: 61
+  flow:  # flow rate -> PWM
+    p: 0.02
+    i: 0.0003
+    min: 0.25
+    max: 0.95
+    log:
+      value: !P heat.s.pump.pct.flow
+      setpoint: !P heat.s.pump.set.flow
+  pump:  # outflow temperature -> PWM
+    p: -0.02
+    i: -0.0003
+    d: -0.2
+    tf: 30
+    min: 0.25
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.pump
+      setpoint: !P heat.s.pump.set.pump
+pump:
+  # production values (solvis.yml)
+  load:  # t_cur -> load
+    p: 0.08
+    i: 0.0015
+    min: 0.15
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.load
+      setpoint: !P heat.s.pump.set.load
+  load_pellet:  # same, while the pellet burner runs (adj.pellet.pid.load)
+    p: 0.08
+    i: 0.0015
+    d: 50
+    tf: 250
+    min: 0.15
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.load
+      setpoint: !P heat.s.pump.set.load
+  buffer:  # tb_low -> load
+    p: 0.3
+    i: 0.0005
+    d: 50
+    tf: 100
+    min: 0.1
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.buffer
+      setpoint: !P heat.s.pump.set.buffer
+  limit:  # t_out -> load
+    p: 0.025
+    i: 0.001
+    min: 0.1
+    max: 1
+    log:
+      value: !P heat.s.pump.pct.limit
+      setpoint: !P heat.s.pump.set.limit
+pellet:
+  # production values (solvis.yml)
+  p_load:  # tb_heat -> load
+    p: 0.003
+    i: 0.00002
+    d: 10
+    tf: 300
+    min: 0.3
+    max: 1
+    log:
+      value: !P heat.s.pellets.pct.load
+      setpoint: !P heat.s.pellets.set.load
+  p_buffer:  # tb_low -> load
+    p: 0.01
+    i: 0.00001
+    min: 0.3
+    max: 1
+    log:
+      value: !P heat.s.pellets.pct.buffer
+      setpoint: !P heat.s.pellets.set.buffer
+selector: {}
+errors: {}
+watchdog: {}
+passthru: {}

@@ -13,7 +13,15 @@ import.
   circular imports.
 - `_impl.py` — core: `CfgStore`, `CFG_` singleton, `default_cfg`, `monitor`.
 - `base.py` — pydantic `BaseModel` (extra="allow", validate_assignment,
-  dynamic field addition via `DecomposedModel`).
+  dynamic field addition via `DecomposedModel`). Extended for typed unit
+  config (HEAT.md §2.4): registers a pydantic core schema for
+  `moat.lib.path.Path` (accepts `Path`/list always; `str` only outside
+  YAML context, so a forgotten `!P` in YAML config is a validation error;
+  serialises as `Path` for the CBOR codec round-trip), accepts (nested)
+  `attrdict` input via a wrap model validator, and offers `from_cfg(path)`
+  plus `cfg_monitor(path)` for loading and live-reloading a validated
+  model from a `CfgStore` subtree (YAML-sourced context; invalid updates
+  logged and skipped).
 - `_reg.py` — deferred registration: global `to_process` set drained by
   `CfgStore.redo()`.
 

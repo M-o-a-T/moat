@@ -7,13 +7,13 @@ from __future__ import annotations
 import anyio
 import logging
 import socket
-import time
 from anyio.abc import SocketAttribute
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from moat.util import CtxObj, ungroup
+from moat.util import time as mtime
 from moat.lib.modbus import (
     ExcCodes,
     ExceptionResponse,
@@ -238,7 +238,7 @@ class SerialModbusServer(BaseModbusServer):
 
             if opened is not None:
                 opened.set()
-            t = time.monotonic()
+            t = mtime.monotonic()
             while True:
                 with anyio.move_on_after(0.1):
                     await ser.receive()
@@ -255,7 +255,7 @@ class SerialModbusServer(BaseModbusServer):
                     self.framer.resetFrame()
                     continue
 
-                t2 = time.monotonic()
+                t2 = mtime.monotonic()
                 if t2 - t > RTU_INTER_FRAME_TIMEOUT:
                     self.framer.resetFrame()
                 t = t2

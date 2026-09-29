@@ -21,12 +21,12 @@ from __future__ import annotations
 import anyio
 import logging
 import platform
-import time
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 
 from asyncactor import AuthPingEvent, NodeList, PingEvent, TagEvent, UntagEvent
 
 from moat.util import NotGiven, attrdict, combine_dict, create_queue, digits, ungroup
+from moat.util import time as mtime
 from moat.lib.path import P, Path, logger_for
 from moat.link.code import CODE_EXEC_ROOT
 from moat.util.spawn import spawn
@@ -356,7 +356,7 @@ class JobEntry:
 
         st = self.state
         link = self.runner.link
-        t = time.time()
+        t = mtime.time()
         try:
             self._running = True
             try:
@@ -392,7 +392,7 @@ class JobEntry:
             finally:
                 self.scope = None
                 self._q = None
-                t = time.time()
+                t = mtime.time()
 
         except Exception as exc:
             # The snippet runs inside a task group, which wraps its errors.
@@ -965,14 +965,14 @@ class JobRunner:
             self._run_now_task = sc
             if evt is not None:
                 evt.set()
-            t = time.time()
+            t = mtime.time()
             t_next = t
             while True:
                 if t_next > t:
                     with anyio.move_on_after(t_next - t):
                         await self._trigger.wait()
                         self._trigger = anyio.Event()
-                t = time.time()
+                t = mtime.time()
                 t_next = t + 999
                 for j in list(self.entries.values()):
                     if j._running or j.scope is not None:  # noqa: SLF001
@@ -1269,7 +1269,7 @@ async def run_job(
     await entry.state.save()
 
     st = entry.state
-    t = time.time()
+    t = mtime.time()
     result: Any = None
     try:
         entry._running = True  # noqa: SLF001
@@ -1320,7 +1320,7 @@ async def run_job(
         with anyio.fail_after(2, shield=True):
             if st.node == our_id:
                 st.node = None
-            st.stopped = time.time()
+            st.stopped = mtime.time()
             with suppress(anyio.ClosedResourceError):
                 await st.save()
         if handler is not None:

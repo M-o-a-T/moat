@@ -60,6 +60,11 @@ _imports = {
     "al_unique": "random",
     "gen_ident": "random",
     "id2str": "random",
+    # time (callable names only; the "time" submodule resolves naturally,
+    # so do NOT add "time":"time" — that shadows it with the function)
+    "loop_time": "time",
+    "patch_clock": "time",
+    "set_clock": "time",
     # inexact
     "InexactFloat": "inexact",
     # event

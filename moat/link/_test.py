@@ -3,7 +3,6 @@ from __future__ import annotations
 import anyio
 import os
 import sys
-import time
 from contextlib import asynccontextmanager, nullcontext
 from functools import partial
 from pathlib import Path as FSPath
@@ -17,6 +16,9 @@ from moat.util import (
     attrdict,
     combine_dict,
     merge,
+)
+from moat.util import (
+    time as mtime,
 )
 from moat.lib.config import CFG
 from moat.lib.path import P, Root
@@ -34,8 +36,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import Literal, Never, Self
 
-
-otm = time.time
 
 _seq = 0
 
@@ -359,7 +359,7 @@ class Scaffold(CtxObj):
                     async with c.d_watch(path, **kw) as mon:
                         async for r in mon:
                             if kw.get("meta"):
-                                t = time.time()
+                                t = mtime.time()
                                 assert t - 1 < r[-1].timestamp < t
                             elif not kw.get("subtree"):
                                 # neither meta nor subtree

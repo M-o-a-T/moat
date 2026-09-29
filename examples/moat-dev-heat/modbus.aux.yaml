@@ -1,0 +1,138 @@
+# MoaT-Link version of /etc/moat/modbus.aux.yaml, for `moat modbus dev poll`.
+# See README.md in this directory.
+
+inc:
+  sdm630:
+    include: energy/Eastron/SDM630.yaml
+  sdm720:
+    include: energy/Eastron/SDM720.yaml
+  wp:
+    include: heating/Solvis.yaml
+slots:
+  1sec:
+    read_delay: 1
+    read_align: false
+  1min:
+    read_delay: 60
+    read_align: true
+  15sec:
+    read_delay: 15
+    read_align: null
+  default:
+    write_delay: 0.1
+hosts:
+  i.pi.smurf.noris.de:
+    1:
+      ref: inc.sdm630
+      regs:
+        power:
+          sum:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.car  # was :mr. (raw MQTT)
+          L1:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.car.l1  # was :mr. (raw MQTT)
+          L2:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.car.l2  # was :mr. (raw MQTT)
+          L3:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.car.l3  # was :mr. (raw MQTT)
+        energy:
+          total:
+            active:
+              sum:
+                slot: 1min
+                dest: !P grid.s.energy.car
+    2:
+      ref: inc.sdm720
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.main.l1  # was :mr. (raw MQTT)
+          L2:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.main.l2  # was :mr. (raw MQTT)
+          L3:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.main.l3  # was :mr. (raw MQTT)
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main.in
+            export:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main.out
+  l.pi.smurf.noris.de:
+    11:
+      ref: inc.sdm720
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.multi.l1  # was :mr. (raw MQTT)
+          L2:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.multi.l2  # was :mr. (raw MQTT)
+          L3:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.multi.l3  # was :mr. (raw MQTT)
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi.in
+            export:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi.out
+  e.pi.smurf.noris.de:
+    11:
+      ref: inc.sdm720
+      regs:
+        power:
+          sum:
+            active:
+              slot: 15sec
+              dest: !P grid.s.power.wp  # was :mr. (raw MQTT)
+          L1:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.wp.l1  # was :mr. (raw MQTT)
+          L2:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.wp.l2  # was :mr. (raw MQTT)
+          L3:
+            active:
+              slot: 1sec
+              dest: !P grid.s.power.wp.l3  # was :mr. (raw MQTT)
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.wp

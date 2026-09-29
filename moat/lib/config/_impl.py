@@ -647,7 +647,8 @@ class monitor:
         _exc: BaseException | None,
         _tb: TracebackType | None,
     ) -> None:
-        self.cfg.updated_ = NoOp
+        del self.cfg.updated_
+        # returns to class var
 
     def __aiter__(self) -> Self:
         return self

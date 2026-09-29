@@ -1,3 +1,9 @@
+moat-db-inv (0.0.3-2) unstable; urgency=medium
+
+  * New release for 26.4.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 29 Sep 2026 17:04:10 +0200
+
 moat-db-inv (0.0.3-1) unstable; urgency=medium
 
   * Initial release for 26.4.0.

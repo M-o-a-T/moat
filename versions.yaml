@@ -1,5 +1,5 @@
 _:
-  new: 26.4.0
+  new: 26.4.1
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -66,8 +66,10 @@ moat-db-box:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.0.4
 moat-db-inv:
+  deb: 0.0.3-2
   new: 0.0.3
-  pkg: 1
+  pkg: 2
+  pkgrev: dd1b85f91cef8da40ae3dbd3078d60cddb7627dc
   pypi: 0.0.1
   rev: d610b9c94d28cd43b24b45e5302f210ac8226254
   tag: 0.0.3
@@ -106,7 +108,8 @@ moat-dev:
 moat-dev-heat:
   deb: 0.1.1-3
   new: 0.1.10
-  pkg: 1
+  pkg: 2
+  pkgrev: dd1b85f91cef8da40ae3dbd3078d60cddb7627dc
   pypi: 0.1.8
   rev: d610b9c94d28cd43b24b45e5302f210ac8226254
   tag: 0.1.10

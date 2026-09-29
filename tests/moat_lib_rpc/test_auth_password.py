@@ -851,21 +851,28 @@ async def test_constant_time_comparison_sanity():
     # Far-mismatch: completely different input
     far = sha256(b"completely_different_password_that_is_also_long").digest()
 
-    num_samples = 200
+    # Time batches of calls (a single call is close to the timer's
+    # resolution) and compare medians: under a loaded machine (pytest -n30)
+    # a single preemption adds milliseconds to one sample, which wrecks
+    # the mean but not the median.
+    num_samples = 51
+    batch = 500
     near_times: list[float] = []
     far_times: list[float] = []
 
     for _i in range(num_samples):
         t0 = time.perf_counter_ns()
-        hmac.compare_digest(correct, near_bytes)
+        for _j in range(batch):
+            hmac.compare_digest(correct, near_bytes)
         near_times.append(time.perf_counter_ns() - t0)
 
         t0 = time.perf_counter_ns()
-        hmac.compare_digest(correct, far)
+        for _j in range(batch):
+            hmac.compare_digest(correct, far)
         far_times.append(time.perf_counter_ns() - t0)
 
-    near_mean = statistics.mean(near_times)
-    far_mean = statistics.mean(far_times)
+    near_mean = statistics.median(near_times) / batch
+    far_mean = statistics.median(far_times) / batch
 
     # The ratio should be close to 1.0 for constant-time comparison.
     # Allow generous tolerance (factor of 2) due to scheduling jitter.

@@ -1,0 +1,171 @@
+code: |
+  class _f1(_cls.ChangeMsg): pass
+  class _f2(_cls.ChangeMsg): pass
+  class _src(_cls.ChangeMsg): pass
+  class _dly(_cls.ChangeMsg): pass
+
+  timer = None
+  await _link.set(dst1, False)
+  await _link.set(dst2, False)
+  await _self.watch(src, cls=_src)
+  n = 1
+  s1 = True
+  s2 = True
+
+  if state1:
+      await _self.watch(state1, cls=_f1)
+      n += 1
+  if state2:
+      await _self.watch(state2, cls=_f2)
+      n += 1
+
+  if isinstance(seconds, Path):
+      await _self.watch(seconds, cls=_dly)
+      seconds = None
+      n += 1
+
+  # The button's state at startup is not a press.
+  ready = False
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg >= n:
+              ready = True
+
+      elif isinstance(msg, _src):
+          if not ready:
+              continue
+          if timer is not None:
+              timer.cancel()
+          if msg.value is not _cls.NotGiven and msg.value:
+              timer = await _self.timer(seconds)
+          elif timer is not None:
+              # released before the timer ran out: short press
+              timer = None
+              await _link.set(dst1, s1)
+              if not state1:
+                  s1 = not s1
+
+      elif isinstance(msg, _dly):
+          seconds = msg.value
+
+      elif isinstance(msg, _f1):
+          s1 = not msg.value
+
+      elif isinstance(msg, _f2):
+          s2 = not msg.value
+
+      elif isinstance(msg, _cls.TimerMsg):
+          # long press
+          timer = None
+          await _link.set(dst2, s2)
+          if not state2:
+              s2 = not s2
+default:
+  seconds: 0.5
+  state1: null
+  state2: null
+info: 'Button: a short press toggles dst1, a long press toggles dst2. state1/state2 optionally describe their current state.'
+is_async: true
+vars:
+- src
+- dst1
+- dst2
+- state1
+- state2
+- seconds
+tests:
+  toggle:
+    info: without state paths, each press toggles its output
+    timeout: 10
+    args:
+      src: !P in
+      dst1: !P a
+      dst2: !P b
+      seconds: 0.4
+    steps:
+    - [monitor, a, !P a]
+    - [monitor, b, !P b]
+    - [start]
+    - [wait, 3, "a == [False] and b == [False]"]
+    - [sleep, 0.2]
+    - [comment, short press]
+    - [set, !P in, true]
+    - [sleep, 0.1]
+    - [set, !P in, false]
+    - [wait, 3, "a == [False, True]"]
+    - [set, !P in, true]
+    - [sleep, 0.1]
+    - [set, !P in, false]
+    - [wait, 3, "a == [False, True, False]"]
+    - [comment, long press]
+    - [set, !P in, true]
+    - [wait, 3, "b == [False, True]"]
+    - [set, !P in, false]
+    - [sleep, 0.3]
+    - [check, "a == [False, True, False] and b == [False, True]"]
+  state:
+    info: with state paths (as in production), the outputs follow the state
+    timeout: 10
+    data:
+      st1:
+        _: false
+      st2:
+        _: true
+    args:
+      src: !P in
+      dst1: !P a
+      dst2: !P b
+      state1: !P st1
+      state2: !P st2
+      seconds: 0.4
+    steps:
+    - [monitor, a, !P a]
+    - [monitor, b, !P b]
+    - [start]
+    - [wait, 3, "a == [False] and b == [False]"]
+    - [sleep, 0.2]
+    - [set, !P in, true]
+    - [sleep, 0.1]
+    - [set, !P in, false]
+    - [wait, 3, "a == [False, True]"]
+    - [set, !P st1, true]
+    - [sleep, 0.2]
+    - [set, !P in, true]
+    - [sleep, 0.1]
+    - [set, !P in, false]
+    - [wait, 3, "a == [False, True, False]"]
+    - [set, !P in, true]
+    - [wait, 3, "b == [False, False]"]
+    - [set, !P in, false]
+  delay:
+    info: the delay can be a path; a pressed button at startup is ignored
+    timeout: 10
+    data:
+      in:
+        _: true
+      dly:
+        _: 0.2
+    args:
+      src: !P in
+      dst1: !P a
+      dst2: !P b
+      seconds: !P dly
+    steps:
+    - [monitor, a, !P a]
+    - [monitor, b, !P b]
+    - [start]
+    - [sleep, 0.5]
+    - [check, "a == [False] and b == [False]"]
+    - [set, !P in, false]
+    - [sleep, 0.2]
+    - [check, "a == [False] and b == [False]"]
+    - [set, !P in, true]
+    - [wait, 3, "b == [False, True]"]
+    - [set, !P in, false]
+    - [set, !P dly, 5]
+    - [sleep, 0.2]
+    - [set, !P in, true]
+    - [sleep, 0.5]
+    - [set, !P in, false]
+    - [wait, 3, "a == [False, True]"]

@@ -8,6 +8,8 @@ install: installsystemd
 installsystemd:
 	mkdir -p $(PREFIX)/lib/systemd/system
 	cp systemd/*.service $(PREFIX)/lib/systemd/system/
+	mkdir -p $(PREFIX)/usr/lib/moat/link/job
+	cp scripts/* $(PREFIX)/usr/lib/moat/link/job/
 
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)

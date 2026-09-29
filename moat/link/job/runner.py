@@ -26,7 +26,7 @@ from contextlib import AsyncExitStack, asynccontextmanager, suppress
 
 from asyncactor import AuthPingEvent, NodeList, PingEvent, TagEvent, UntagEvent
 
-from moat.util import NotGiven, attrdict, combine_dict, create_queue, digits
+from moat.util import NotGiven, attrdict, combine_dict, create_queue, digits, ungroup
 from moat.lib.path import P, Path, logger_for
 from moat.link.code import CODE_EXEC_ROOT
 from moat.util.spawn import spawn
@@ -71,6 +71,7 @@ __all__ = [
     "StateEntry",
     "TimerMsg",
     "debug_run",
+    "run_job",
 ]
 
 
@@ -105,7 +106,8 @@ class ChangeMsg(RunnerMsg):
 class MQTTmsg(RunnerMsg):
     """An MQTT message has arrived.
 
-    ``value`` is the decoded payload (when decodable). ``path`` is the
+    ``msg`` and ``value`` are the payload: decoded, or the raw bytes if
+    the monitor uses ``raw=True`` or decoding failed. ``path`` is the
     full topic the message was sent to.
     """
 
@@ -392,13 +394,13 @@ class JobEntry:
                 self._q = None
                 t = time.time()
 
-        except ErrorRecorded:
-            self._comment = None
-            st.backoff = min(st.backoff + 1, 20)
         except Exception as exc:
+            # The snippet runs inside a task group, which wraps its errors.
+            err = ungroup.one(exc)
             c, self._comment = self._comment, None
-            with anyio.move_on_after(5, shield=True):
-                await link.e_exc(self.path, exc, data=self.data, comment=c)
+            if not isinstance(err, ErrorRecorded):
+                with anyio.move_on_after(5, shield=True):
+                    await link.e_exc(self.path, err, data=self.data, comment=c)
             st.backoff = min(st.backoff + 1, 20)
         else:
             st.result = res
@@ -562,12 +564,19 @@ class CallAdmin:
         watchers have transmitted their initial state.
 
         Pass ``subtree=True`` to also receive changes for children of
-        ``path``.
+        ``path``. ``min_length`` and ``max_length`` restrict that to
+        children whose path below ``path`` has that many elements (and
+        imply ``subtree``); ``age`` skips entries older than that many
+        seconds. Other keywords are rejected.
         """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
         elif not isinstance(path, Path):
             raise TypeError(f"You didn't pass in a path: {path!r}")
+        if bad := set(kw) - _WATCH_KW:
+            raise TypeError(f"watch: unknown keyword(s) {', '.join(sorted(bad))}")
+        if kw.get("min_length") is not None or kw.get("max_length") is not None:
+            kw["subtree"] = True
 
         if kw.setdefault("fetch", True):
             self._n_watch += 1
@@ -582,7 +591,8 @@ class CallAdmin:
         """Subscribe to MQTT topic ``path``.
 
         Each message is dispatched to the job's event queue as an
-        instance of ``cls`` (a :class:`MQTTmsg` subclass).  MQTT
+        instance of ``cls`` (a :class:`MQTTmsg` subclass) whose ``msg``
+        and ``value`` are the payload (raw bytes with ``raw=True``).  MQTT
         wildcards are supported.
         """
         if isinstance(path, (tuple, list)):
@@ -604,13 +614,17 @@ class CallAdmin:
             raise TypeError(f"You didn't pass in a path: {path!r}")
         await self._link.send(path, value, retain=False)
 
-    async def set(self, path: Path, value: Any) -> Any:
-        """Store ``value`` at link path ``path``."""
+    async def set(self, path: Path, value: Any, **kw: Any) -> Any:
+        """Store ``value`` at link path ``path``.
+
+        Keywords (``idem``, ``retain``, ``meta``, …) are passed to
+        `moat.link.client.LinkSender.set`.
+        """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
         elif not isinstance(path, Path):
             raise TypeError(f"You didn't pass in a path: {path!r}")
-        return await self._link.d_set(path, value)
+        return await self._link.set(path, value, **kw)
 
     async def get(self, path: Path) -> Any:
         """Fetch the value stored at link path ``path``."""
@@ -631,6 +645,9 @@ class CallAdmin:
         t = _Timer(self._entry, cls, self._taskgroup)
         await t.run(delay)
         return t
+
+
+_WATCH_KW = frozenset(("fetch", "subtree", "age", "min_length", "max_length"))
 
 
 class _Watcher:
@@ -671,6 +688,7 @@ class _Watcher:
                 subtree=subtree,
                 mark=fetch,
                 meta=False,
+                **kw,
             ) as mon:
                 async for item in mon:
                     if item is None:
@@ -733,9 +751,11 @@ class _Monitor:
             self.scope = sc
             async with self.client.monitor(self.path, **self.kw) as mon:
                 async for msg in mon:
-                    chg = self.cls(getattr(msg, "raw", None))
-                    with suppress(AttributeError):
-                        chg.value = msg.data
+                    # ``msg`` and ``value`` are both the payload: decoded,
+                    # or the raw bytes if the monitor was started with
+                    # ``raw=True`` or the message couldn't be decoded
+                    chg = self.cls(msg.data)
+                    chg.value = msg.data
                     chg.path = Path.build(msg.topic)
                     await self.admin._entry.send_event(chg)  # noqa: SLF001
 
@@ -1163,14 +1183,67 @@ async def debug_run(
                 f"Job already running on {owner!r} (use force=True / -f to override)",
             )
 
+    try:
+        return await run_job(
+            link,
+            job,
+            job_path,
+            state_path,
+            state=prev if isinstance(prev, Mapping) else None,
+            data_overrides=data_overrides,
+            use_pdb=use_pdb,
+            log_stream=log_stream,
+        )
+    except ErrorRecorded:
+        return None
+
+
+async def run_job(
+    link: LinkSender,
+    job: Mapping[str, Any],
+    job_path: Path,
+    state_path: Path,
+    *,
+    state: Mapping[str, Any] | None = None,
+    data_overrides: Mapping[str, Any] | None = None,
+    use_pdb: bool = False,
+    log_stream: Any = None,
+    report: bool = True,
+) -> Any:
+    """Run a job record once, in this task.
+
+    This is the core of :func:`debug_run`; the job record and its
+    previous state are passed in instead of being read from the job
+    tree, so that code under test can be run without storing a job.
+
+    Args:
+        link: Connected MoaT-Link client.
+        job: The job record (``code``, ``data``, …).
+        job_path: The job's path. Used for error reports, and for the
+            ``_log`` logger's name.
+        state_path: Where to store the job's state.
+        state: The previous state record, if any.
+        data_overrides: Extra values merged on top of the job's
+            ``data``.  Keys present here win.
+        use_pdb: Drop into :mod:`pdb` before calling the snippet.
+        log_stream: Mirror the snippet's ``_log`` output to this stream.
+        report: Report the outcome to the link's error channel.
+
+    Returns:
+        Whatever the snippet returned. Exceptions, including
+        :class:`ErrorRecorded`, are propagated.
+    """
+    if "code" not in job:
+        raise RuntimeError(f"Job at {job_path} has no 'code'")
+
     stub = _DebugStub(link, job_path, state_path)
     entry = JobEntry(stub, ())  # ty:ignore[invalid-argument-type]  # subpath empty: path == stub.path
     entry.update_value(dict(job))
     # The snippet's ``_log`` logger should reflect the job path, not
     # the empty subpath we used to wire :attr:`JobEntry.path`.
     entry._logger = logger_for(job_path)  # noqa: SLF001
-    if isinstance(prev, Mapping):
-        entry.state._load(dict(prev))  # noqa: SLF001
+    if state is not None:
+        entry.state._load(dict(state))  # noqa: SLF001
 
     if data_overrides:
         entry.data = combine_dict(dict(data_overrides), entry.data or {}, deep=True)
@@ -1185,6 +1258,8 @@ async def debug_run(
         entry._logger.addHandler(handler)  # noqa: SLF001
         if entry._logger.level == logging.NOTSET or entry._logger.level > logging.DEBUG:  # noqa: SLF001
             entry._logger.setLevel(logging.DEBUG)  # noqa: SLF001
+
+    our_id = link.id
 
     # Take ownership.  Clear any leftover "running" markers.
     entry.state.started = 0
@@ -1224,15 +1299,21 @@ async def debug_run(
 
             pdb.set_trace()  # noqa: T100
         result = await admin._run(code_obj, kw)  # noqa: SLF001
-    except ErrorRecorded:
-        pass
     except Exception as exc:
-        with anyio.move_on_after(5, shield=True):
-            await link.e_exc(job_path, exc, data=entry.data)
-        raise
+        # The snippet runs inside a task group, which wraps its errors.
+        err = ungroup.one(exc)
+        if isinstance(err, ErrorRecorded):
+            raise err from None
+        if report:
+            with anyio.move_on_after(5, shield=True):
+                await link.e_exc(job_path, err, data=entry.data)
+        if err is exc:
+            raise
+        raise err from None
     else:
         st.result = result
-        await link.e_ok(job_path)
+        if report:
+            await link.e_ok(job_path)
     finally:
         entry._running = False  # noqa: SLF001
         entry._q = None  # noqa: SLF001

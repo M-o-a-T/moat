@@ -1,0 +1,25 @@
+[Unit]
+Description=MoaT-Link default single-node job runner
+After=moat-link-server.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/lib/moat/link/job/run-single
+
+RuntimeDirectory=moat/link
+
+User=MoaT-Link
+Group=MoaT
+
+EnvironmentFile=/usr/lib/moat/link/env
+EnvironmentFile=-/etc/moat/link.env
+
+TimeoutSec=300
+WatchdogSec=10
+Restart=always
+RestartSec=10

@@ -5,15 +5,21 @@ Command-line interface for managing stored code snippets.
 from __future__ import annotations
 
 import os
+import sys
 
 import asyncclick as click
+from pydantic import ValidationError
 
 from moat.util import NotGiven, edit_text, edit_yaml, yload, yprint
 from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
+from moat.link.code.case import CodeTest, del_test, get_test, is_test_path, list_tests, set_test
+from moat.link.code.io import path_from_file, read_snippet, split_snippet, write_snippet
 from moat.link.code.run import make_proc
+from moat.link.code.steps import StepSyntaxError, format_editor, parse_editor
+from moat.link.code.testrun import run_tests
 from moat.link.meta import MsgMeta
 
 from collections.abc import Mapping
@@ -99,6 +105,8 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
     async with obj.conn.d.walk(CODE_EXEC_ROOT + obj.path, *args).stream_in() as mon:
         async for n, p, data, *_m in mon:
             path = pl.long(n, p)
+            if is_test_path(path):
+                continue
             if not isinstance(data, Mapping):
                 continue
             if "code" not in data:
@@ -147,12 +155,20 @@ async def cli(ctx, path, meta):
 
 @cli.command()
 @click.option("-S", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
+@click.option("-r", "--recursive", is_flag=True, help="Include the test cases")
 @click.pass_obj
-async def get(obj, script):
+async def get(obj, script, recursive):
     """
     Read a code entry.
+
+    With ``-r``, the output includes the snippet's test cases (as
+    ``tests``); ``import`` reads this format.
     """
-    if obj.meta:
+    if recursive:
+        if obj.meta:
+            raise click.UsageError("'-m' and '-r' are incompatible.")
+        out = await read_snippet(obj.conn, obj.path)
+    elif obj.meta:
         data, *meta = await obj.conn.d.get(CODE_EXEC_ROOT + obj.path)
         out = dict(data=data, meta=MsgMeta.restore(meta).repr())
     else:
@@ -215,6 +231,31 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
     res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)
     if obj.meta:
         yprint(res, stream=obj.stdout)
+
+
+@cli.command("import")
+@click.argument("files", type=click.Path(exists=True, dir_okay=False), nargs=-1, required=True)
+@click.pass_obj
+async def import_(obj, files):
+    """
+    Store snippets with their test cases.
+
+    The files are in the format ``get -r`` prints. With an empty PATH
+    (``:``), each file's name is the snippet's path, e.g.
+    ``transform.copy.value.yaml``; otherwise PATH is used, and only one
+    file may be given. Existing test cases are replaced.
+    """
+    if len(obj.path) and len(files) > 1:
+        raise click.UsageError("Use an empty path (':') to import more than one file.")
+    for fn in files:
+        path = obj.path if len(obj.path) else path_from_file(fn)
+        with open(fn) as f:  # noqa:ASYNC230
+            data = yload(f)
+        rec, _tests = split_snippet(data)
+        _check_exec_syntax(rec, path)
+        await write_snippet(obj.conn, path, data)
+        if obj.debug:
+            print(path, file=obj.stdout)
 
 
 @cli.command("list")
@@ -328,3 +369,220 @@ async def edit(obj, editor):
             else:
                 click.echo("Saved.", err=True)
             return
+
+
+# Test cases
+
+
+def _editor_text(test: CodeTest) -> str:
+    "Format a test case in the editor format."
+    hdr = test.dump()
+    steps = hdr.pop("steps", [])
+    return format_editor(hdr, steps)
+
+
+def _parse_editor_text(text: str) -> CodeTest:
+    "Parse the editor format into a test case."
+    hdr, steps = parse_editor(text)
+    return CodeTest.model_validate(dict(hdr, steps=steps))
+
+
+def _print_outcome(name: Any, out, stream, *, verbose: bool = False, keep: bool = False) -> None:
+    "Print a test's outcome, its log if @verbose, and its kept test root."
+    print(f"{name}: {out} ({out.duration:.2f}s)", file=stream)
+    if verbose:
+        for line in out.log:
+            print(f"  {line}", file=stream)
+    if keep and out.root is not None:
+        print(f"  root: {out.root}", file=stream)
+
+
+@cli.group("test", cls=AliasedGroup, invoke_without_command=True)
+@click.argument("case", type=str, required=False)
+@click.pass_context
+async def cmd_test(ctx, case):
+    """
+    Manage the snippet's test cases.
+
+    Without CASE, list them. CASE '-' means all of them (only for 'run').
+    Without a subcommand, print the test case.
+    """
+    obj = ctx.obj
+    if case is None:
+        if ctx.invoked_subcommand is not None:
+            raise click.UsageError("Which test case?")
+        async for name, test in list_tests(obj.conn, obj.path):
+            print(name, "::", test.info or f"<{len(test.steps)} steps>", file=obj.stdout)
+        return
+    obj.case = None if case == "-" else P(case)
+    if ctx.invoked_subcommand is None:
+        await ctx.invoke(case_get)
+
+
+def _one_case(obj) -> Path:
+    if obj.case is None:
+        raise click.UsageError("This needs a single test case, not '-'.")
+    return obj.case
+
+
+@cmd_test.command("get")
+@click.option("-e", "--editor-format", is_flag=True, help="Print in the editor's format")
+@click.pass_obj
+async def case_get(obj, editor_format):
+    """
+    Print a test case.
+    """
+    test = await get_test(obj.conn, obj.path, _one_case(obj))
+    if editor_format:
+        print(_editor_text(test), end="", file=obj.stdout)
+    else:
+        yprint(test.dump(), stream=obj.stdout)
+
+
+@cmd_test.command("set")
+@click.option(
+    "-d", "--data", type=click.File(mode="r"), required=True, help="The test case (YAML)"
+)
+@click.option("-e", "--editor-format", is_flag=True, help="The file uses the editor's format")
+@click.pass_obj
+async def case_set(obj, data, editor_format):
+    """
+    Store a test case.
+    """
+    case = _one_case(obj)
+    if editor_format:
+        test = _parse_editor_text(data.read())
+    else:
+        test = CodeTest.model_validate(yload(data))
+    await set_test(obj.conn, obj.path, case, test)
+
+
+@cmd_test.command("delete")
+@click.pass_obj
+async def case_delete(obj):
+    """
+    Delete a test case.
+    """
+    try:
+        await del_test(obj.conn, obj.path, _one_case(obj))
+    except KeyError:
+        if obj.debug:
+            print("Does not exist.", file=obj.stdout)
+    else:
+        if obj.debug:
+            print("Deleted.", file=obj.stdout)
+
+
+@cmd_test.command("edit")
+@click.option("-e", "--editor", type=str, default=None, help="Editor (default: $EDITOR or vi)")
+@click.pass_obj
+async def case_edit(obj, editor):
+    """
+    Edit a test case.
+
+    The header (info, timeout, data, args) is a YAML document; after a
+    '---' line, each line is one action.
+    """
+    case = _one_case(obj)
+    if editor is None:
+        editor = os.environ.get("VISUAL", os.environ.get("EDITOR", "vi"))
+
+    try:
+        original = await get_test(obj.conn, obj.path, case)
+    except KeyError:
+        original = CodeTest(steps=[["start"]])
+    content = orig_content = _editor_text(original)
+
+    while True:
+        content = await edit_text(editor, content, suffix=".yaml")
+        try:
+            test = _parse_editor_text(content)
+        except (StepSyntaxError, ValidationError) as exc:
+            click.echo(f"Error: {exc}", err=True)
+            choice = await click.prompt(
+                "Re-open with [o]riginal, [e]dited content, or [q]uit?",
+                type=click.Choice(["o", "e", "q"], case_sensitive=False),
+                default="e",
+            )
+            if choice == "q":
+                click.echo("Not saved.", err=True)
+                return
+            if choice == "o":
+                content = orig_content
+            continue
+        break
+
+    if test == original:
+        click.echo("No changes.", err=True)
+        return
+    await set_test(obj.conn, obj.path, case, test)
+    click.echo("Saved.", err=True)
+
+
+@cmd_test.command("run")
+@click.option("-k", "--keep", is_flag=True, help="Don't delete the test root afterwards")
+@click.option("-v", "--verbose", is_flag=True, help="Show the test's log")
+@click.option("-j", "--jobs", type=int, default=None, help="Run at most N tests at a time")
+@click.pass_obj
+async def case_run(obj, keep, verbose, jobs):
+    """
+    Run a test case, or all of them ('-').
+
+    Exits with code 1 if a test fails.
+    """
+    if obj.case is None:
+        tests = [(name, obj.path, test) async for name, test in list_tests(obj.conn, obj.path)]
+        if not tests:
+            raise click.UsageError("This snippet has no tests.")
+    else:
+        tests = [(obj.case, obj.path, await get_test(obj.conn, obj.path, obj.case))]
+
+    res = await run_tests(
+        obj.conn,
+        tests,
+        limit=jobs,
+        keep=keep,
+        log_stream=obj.stdout if verbose else None,
+    )
+    for name, out in res:
+        _print_outcome(name, out, obj.stdout, verbose=verbose, keep=keep)
+    if not all(out.ok for _, out in res):
+        sys.exit(1)
+
+
+@cli.command("test-all")
+@click.option("-j", "--jobs", type=int, default=None, help="Run at most N tests at a time")
+@click.option("-v", "--verbose", is_flag=True, help="Show every test's outcome")
+@click.pass_obj
+async def cmd_test_all(obj, jobs, verbose):
+    """
+    Run the tests of every snippet below PATH.
+
+    Prints a summary per snippet, and the failed tests. Exits with code 1
+    if a test fails.
+    """
+    tests = []
+    async with obj.conn.d_walk(CODE_EXEC_ROOT + obj.path) as mon:
+        async for path, data in mon:
+            if not is_test_path(path):
+                continue
+            i = path.index(None)
+            code, name = obj.path + path[:i], Path.build(path[i + 1 :])
+            if not len(name):
+                continue
+            tests.append(((code, name), code, CodeTest.model_validate(data)))
+    if not tests:
+        print("No tests.", file=obj.stdout)
+        return
+
+    res = await run_tests(obj.conn, tests, limit=jobs)
+
+    summary: dict[Path, list[int]] = {}
+    for (code, name), out in res:
+        summary.setdefault(code, [0, 0])[not out.ok] += 1
+        if verbose or not out.ok:
+            _print_outcome(f"{code} {name}", out, obj.stdout, verbose=verbose)
+    for code, (good, bad) in summary.items():
+        print(f"{code}: {good} passed, {bad} failed", file=obj.stdout)
+    if any(bad for _, bad in summary.values()):
+        sys.exit(1)

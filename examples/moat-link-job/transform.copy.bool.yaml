@@ -1,0 +1,76 @@
+code: |
+  await _self.watch(src, fetch=False)
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ChangeMsg):
+          val = msg.value
+          if val is _cls.NotGiven:  # deleted
+              continue
+          if (not val) is not level:
+              await _link.set(dst, bool(val))
+default:
+  level: null
+info: Copy boolean command
+is_async: true
+vars:
+- dst
+- src
+- level
+tests:
+  copy:
+    info: changes are copied as booleans; the initial value is not
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [check, "out == []"]
+    - [set, !P in, 0]
+    - [wait, 3, "out and out[-1] is False"]
+    - [set, !P in, "on"]
+    - [wait, 3, "out and out[-1] is True"]
+    - [set, !P in, 0]
+    - [wait, 3, "out and out[-1] is False"]
+  deleted:
+    info: deleting the source leaves the destination alone
+    timeout: 10
+    data:
+      in:
+        _: 1
+    args:
+      src: !P in
+      dst: !P out
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [set, !P in, 1]
+    - [wait, 3, "out and out[-1] is True"]
+    - [delete, !P in]
+    - [sleep, 0.5]
+    - [check, "out == [True]"]
+  level:
+    info: with level=True only true values are copied
+    timeout: 10
+    args:
+      src: !P in
+      dst: !P out
+      level: true
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [sleep, 0.5]
+    - [set, !P in, 0]
+    - [sleep, 0.5]
+    - [check, "out == []"]
+    - [set, !P in, 1]
+    - [wait, 3, "out and out[-1] is True"]
+    - [set, !P in, false]
+    - [sleep, 0.5]
+    - [check, "out and out[-1] is True"]

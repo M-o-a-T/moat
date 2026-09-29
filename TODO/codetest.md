@@ -53,7 +53,9 @@ A snippet lives at `code.PATH.TO.NAME`. Its test cases live at
 the snippet from its tests, as snippets can have children
 (`transform.hysteresis` and `transform.hysteresis.delta`).
 
-A test case is one item, validated by a pydantic model:
+A test case is one item, validated by a pydantic model
+(`moat.link.code.case.CodeTest`; `get_test`, `set_test`, `del_test` and
+`list_tests` access them):
 
 ```yaml
 info: short description
@@ -91,6 +93,9 @@ edits don't restart running jobs.
   needs no test awareness.
 - After the test, the test root is deleted (`d.delete(rec=True)`), even
   if the test failed; `--keep` skips that for debugging.
+- Implemented in `moat.link.code.testroot` (`TestRoot.resolve`,
+  `with_test_root`). The `T_Root` context variable is not set to the test
+  root: incoming MQTT topics would then carry `:T` instead of `:R`.
 
 ### Actions
 
@@ -98,7 +103,8 @@ Stored as lists (`[verb, arg, …]`); the editor shows one per line
 (below). Values use the syntax of `moat link data PATH set -s KEY VALUE`
 (`~str`, `=expr`, `.path`, …), expressions are evaluated with
 `moat.lib.run`'s restricted evaluator (`simpleeval`), with the monitors
-(see below), `P`, `len`, `abs`, `min`, `max` available.
+(see below), `result`, `error`, `P`, `len`, `abs`, `min`, `max`,
+`round` and `str` available.
 
 | Action | Meaning |
 | --- | --- |
@@ -140,14 +146,22 @@ spaces, values in the `set -s` syntax, `#` starting a comment line
 parses it back into the structured form; a syntax error re-opens the
 editor, as `moat link data … edit` does.
 
+`moat.link.code.steps` does the conversion (`parse_editor`,
+`format_editor`; errors are `StepSyntaxError` with the line number).
+Arguments containing blanks or quotes are shell-quoted. Stored forms
+mirror the line: `[update, PATH, KEY, VALUE, …]`,
+`[monitor, NAME, PATH, "mqtt", CODEC]`; paths are `Path` objects,
+expressions are strings (syntax-checked when parsed).
+
 ## Command line
 
 Below `moat link code PATH` (`moat/link/code/_main.py`):
 
 - `test` — list the snippet's test cases.
-- `test CASE get` / `set -d FILE` / `edit` / `delete`.
+- `test CASE get` / `set -d FILE` / `edit` / `delete`; `get -e` and
+  `set -e` use the editor format. `test CASE` alone is `get`.
 - `test CASE run [--keep] [-v]` — run one test; exit code 1 on failure.
-- `test - run` — run all of the snippet's tests, in parallel.
+- `test - run [-j N]` — run all of the snippet's tests, in parallel.
 - `moat link code : test-all [-j N]` — run the tests of every snippet;
   a summary per snippet, non-zero exit if anything failed.
 
@@ -173,6 +187,11 @@ test cases: `transform.copy.value`, `transform.hysteresis` and
 format `moat link code PATH get -r` exports (the snippet plus its `:n`
 test cases), so `moat link code import` loads them.
 
+The format is the snippet's record plus a `tests` key that maps each
+case's name to its test record; the file's name is the snippet's path
+(`transform.copy.value.yaml`). `moat.link.code.io` reads and writes it;
+`moat link code : import FILE…` takes each path from the file name.
+
 `tests/moat_link_job/test_examples.py` finds these files, loads each
 into a Scaffold server and runs every test case through the test runner
 (one pytest item per case). So the examples are checked with the rest of
@@ -184,11 +203,15 @@ the test suite, and they show how snippets and their tests are written.
    writes `job.any.GROUP.…` / `job.at.NODE.GROUP.…` / `job.all.GROUP.…`
    records, mapping the fields (`code`, `data`, `delay`, `repeat`,
    `ok_after`, `backoff`, `target`, `info`); dry run by default, like
-   `moat db inv migrate-from-kv`.
+   `moat db inv migrate-from-kv`. Done: `moat link job migrate-from-kv
+   [-i DUMP] [-w [-f]]` (`moat.link.job.migrate`).
 2. Paths in job `data` that pointed at MoaT-KV-only trees are checked
    against Link (report, don't guess).
 3. Cutover: stop `moat kv job run`, start `moat link job run` for the
-   same groups; watch the jobs' state and the error tree.
+   same groups; watch the jobs' state and the error tree. The procedure
+   is `docs/moat-link-job/cutover.md`, rehearsed by
+   `tests/moat_link_job/test_cutover.py`; `packaging/moat-link-job` has
+   units for every mode and group, like `moat-kv-run-*`.
 
 ## Decisions (2026-09-28)
 

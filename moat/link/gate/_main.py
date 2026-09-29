@@ -77,21 +77,26 @@ async def cli(ctx: click.Context, path: Path) -> None:
 
 
 @cli.command()
+@click.option("-o", "--only", is_flag=True, help="Only run this gate, not the ones below it")
+@click.option("-f", "--force", is_flag=True, help="Take over the gates found at startup")
 @click.pass_obj
-async def run(obj: attrdict) -> None:
+async def run(obj: attrdict, only: bool, force: bool) -> None:
     """
-    Run a gateway setup.
+    Run the gates at and below this path.
+
+    Every entry with a driver is announced and run. Gates are started,
+    restarted and stopped as their entries appear, change and vanish. A
+    gate that another service has announced is skipped until that
+    service goes away, unless '--force' is used (which only applies to
+    the gates that exist when this command starts).
     """
-    from moat.link.announce import announcing  # noqa: PLC0415
-    from moat.link.gate import run_gate  # noqa: PLC0415
+    from moat.link.gate import run_gates  # noqa: PLC0415
     from moat.util.systemd import as_service  # noqa: PLC0415
 
-    gate = P("gate") + obj.path
-    async with (
-        as_service(obj) as srv,
-        announcing(obj.conn, host=False, name=gate, force=True, via=srv.evt),
-    ):
-        await run_gate(obj.cfg, obj.conn, gate, task_status=srv)
+    async with as_service(obj) as srv:
+        await run_gates(
+            obj.cfg, obj.conn, P("gate") + obj.path, only=only, force=force, task_status=srv
+        )
 
 
 @cli.command("list")

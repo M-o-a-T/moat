@@ -20,6 +20,7 @@ from moat.lib.priomap import TimerMap
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.client import Link, Watcher
 
-__all__ = ["DelayedGate", "Gate", "GateNode"]
+__all__ = ["DelayedGate", "Gate", "GateNode", "run_gate", "run_gates"]
 
 
 class GateVanished(RuntimeError):
@@ -588,3 +589,183 @@ async def run_gate(
         drv = "moat.link.gate." + drv
     gate = import_module(drv).Gate(cfg, cf, path, link)
     await gate.run(task_status=task_status)
+
+
+class _GateJob:
+    """
+    Announce and run one gate, for `run_gates`.
+
+    If another live client has announced the gate, wait until that
+    announcement goes away, then take over.
+    """
+
+    def __init__(self, cfg: dict[str, Any], link: Link, path: Path, driver: str) -> None:
+        self.cfg = cfg
+        self.link = link
+        self.path = path
+        self.driver = driver
+        self.scope: anyio.CancelScope | None = None
+        self.waiting = False
+        self.settled = anyio.Event()
+        "Set when the gate runs, or waits for another service."
+        self.logger = logging.getLogger(f"moat.link.{path}")
+
+    async def _wait_free(self) -> None:
+        "Wait until no other live client announces this gate."
+        from moat.link.announce import get_service_path  # noqa: PLC0415
+
+        spath = await get_service_path(False, self.path)
+        async with self.link.d_watch(spath, state=None, mark=True) as mon:
+            owner = None
+            async for msg in mon:
+                if msg is None:
+                    if owner is None:
+                        return
+                    self.waiting = True
+                    self.settled.set()
+                    self.logger.info("Announced by %s: waiting", owner)
+                    continue
+                if msg is NotGiven or msg.get("id") == self.link.id:
+                    owner = None
+                elif await self.link.i_checkid(msg["id"]):
+                    owner = msg["id"]
+                else:
+                    owner = None
+                if owner is None and self.waiting:
+                    return
+
+    async def run(self, force: bool) -> None:
+        """
+        Run the gate until its entry is deleted or its driver changes.
+
+        @force forces the first announcement.
+        """
+        from moat.link.announce import announcing  # noqa: PLC0415
+        from moat.link.exceptions import ServiceCleared, ServiceSupplanted  # noqa: PLC0415
+
+        with anyio.CancelScope() as self.scope:
+            while True:
+                if not force:
+                    await self._wait_free()
+                self.waiting = False
+                err: Exception | None = None
+                try:
+                    async with announcing(
+                        self.link, host=False, name=self.path, force=force
+                    ) as srv:
+                        try:
+                            await run_gate(
+                                self.cfg, self.link, self.path, task_status=_Started(srv, self)
+                            )
+                        except Exception as exc:
+                            # leave normally, so that the announcement is removed
+                            err = exc
+                    if err is not None:
+                        raise err
+                    return
+                except* (ServiceSupplanted, ServiceCleared):
+                    self.logger.warning("Gate %s announced elsewhere", self.path)
+                force = False
+
+
+@define
+class _Started:
+    "Signal both the announcement and the supervisor that a gate is up."
+
+    srv: Any
+    job: _GateJob
+
+    def started(self, value: Any = None) -> None:
+        self.srv.started(value)
+        self.job.settled.set()
+
+
+async def run_gates(
+    cfg: dict[str, Any],
+    link: Link,
+    path: Path,
+    *,
+    only: bool = False,
+    force: bool = False,
+    task_status=anyio.TASK_STATUS_IGNORED,
+) -> None:
+    """
+    Announce and run every gate at or below @path (which includes the
+    ``gate`` prefix): each entry with a ``driver``.
+
+    Gates are started when their entry appears, restarted when its driver
+    changes, and stopped when it is deleted. A gate that another live
+    service has announced is skipped until that announcement goes away.
+
+    Args:
+        only: Only run the gate at @path itself, not the ones below it.
+        force: Force the announcement of the gates found at startup.
+
+    The task status is set when all gates found at startup are running,
+    or are waiting for another service.
+    """
+    jobs: dict[Path, _GateJob] = {}
+    current: dict[Path, Any] = {}
+    failed: dict[Path, Any] = {}
+    "Gates that crashed, with their entry at the time. Retried when it changes."
+
+    async with anyio.create_task_group() as tg:
+
+        async def _run(job: _GateJob, force: bool) -> None:
+            try:
+                await job.run(force)
+            except Exception:
+                job.logger.exception("Gate %s failed", job.path)
+                failed[job.path] = current.get(job.path)
+                job.settled.set()
+                return
+            finally:
+                if jobs.get(job.path) is job:
+                    del jobs[job.path]
+            # The gate ended on its own, e.g. because the driver changed.
+            _check(job.path, False)
+
+        def _check(p: Path, force: bool) -> None:
+            d = current.get(p, NotGiven)
+            if p in failed:
+                if failed[p] == d:
+                    return
+                del failed[p]
+            drv = d.get("driver") if isinstance(d, Mapping) else None
+            job = jobs.get(p)
+            if job is not None:
+                if drv == job.driver:
+                    return  # the gate handles all other changes itself
+                if job.waiting and job.scope is not None:
+                    # not running yet, thus nothing to clean up
+                    job.scope.cancel()
+                    del jobs[p]
+                else:
+                    return  # the gate will stop by itself, then re-check
+            if drv is None:
+                return
+            jobs[p] = job = _GateJob(cfg, link, p, drv)
+            tg.start_soon(_run, job, force)
+
+        async with link.d_watch(path, subtree=not only, state=None, mark=True) as mon:
+            initial = True
+            async for msg in mon:
+                if msg is None:
+                    initial = False
+                    for p in list(current):
+                        _check(p, force)
+                    for job in list(jobs.values()):
+                        await job.settled.wait()
+                    task_status.started()
+                    continue
+                if only:
+                    p, d = path, msg
+                else:
+                    p, d = msg
+                    p = path + p
+                if d is NotGiven:
+                    current.pop(p, None)
+                else:
+                    current[p] = d
+                if not initial:
+                    _check(p, False)

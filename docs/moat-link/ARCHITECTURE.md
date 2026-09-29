@@ -92,8 +92,13 @@ with timestamp-based conflict resolution.
   (Link↔Link sync, extends `DelayedGate`), `gate/venus.py` (Victron Venus OS
   JSON, forces `codec='json'`, `N/`/`W/`/`R/` topics).
 - **`run_gate`**: dispatcher — reads config at `:R.gate.<name>`, imports
-  `moat.link.gate.<driver>`, instantiates its `Gate`, calls `.run()`. Invoked
-  by `gate run` CLI.
+  `moat.link.gate.<driver>`, instantiates its `Gate`, calls `.run()`.
+- **`run_gates`**: supervisor behind `moat link gate PATH run` — watches the
+  `gate.PATH` subtree (just `gate.PATH` with `--only`), announces each entry
+  with a `driver` at `run.host.gate.…` and runs it via `run_gate`; starts,
+  restarts (driver change) and stops gates as entries appear/change/vanish.
+  A gate announced by another live client is left alone until that
+  announcement goes away; `--force` takes over the gates present at startup.
 
 Each gate's `codec` (default `"cbor"`) is for the **destination** side; the
 source (MoaT-Link) side is always `std-cbor`.

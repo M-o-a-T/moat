@@ -22,13 +22,16 @@ vb.MOCK_TM = time_ns() - 2 * vb.MOCK_DELTA  # nanoseconds
 
 
 @pytest.mark.anyio
-async def test_basic(cfg):
+async def test_basic(cfg, free_tcp_port_factory):
     """Metrics entries are forwarded to the VictoriaMetrics mock."""
-    # VictoriaTester manages its own port allocation internally (PID-based),
-    # since victoria-metrics is an external process that needs the port in its config.
+    # Allocate distinct ephemeral ports instead of relying on VictoriaTester's
+    # PID-based scheme, which collides badly under heavy pytest-xdist
+    # parallelism (-n 30) where many workers reuse the same port numbers.
+    tcp_port = free_tcp_port_factory()
+    http_port = free_tcp_port_factory()
     async with (
         Scaffold(cfg, use_servers=True) as sf,
-        VictoriaTester().run() as t,
+        VictoriaTester(tcp_port=tcp_port, http_port=http_port).run() as t,
     ):
         await sf.server(init="INIT")
         c = await sf.client()

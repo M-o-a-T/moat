@@ -63,11 +63,16 @@ def test_safe_reload_preserves_state_on_failure():
 
     saved_updated = cfg._updated  # noqa: SLF001
 
+    orig_redo = cfg.redo
+
     def failing_redo():
         raise RuntimeError("boom")
 
     cfg.redo = failing_redo
-    ok = cfg.safe_reload()
+    try:
+        ok = cfg.safe_reload()
+    finally:
+        cfg.redo = orig_redo
 
     assert ok is False
     assert cfg._redo is False  # noqa: SLF001

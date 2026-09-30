@@ -1197,7 +1197,7 @@ class Server(MsgHandler):
                 await self.maybe_update(path, msg.data, msg.meta)
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
-        rdr = self.write_monitor.reader(99)
+        rdr = self.write_monitor.reader(99, skip=False)
         task_status.started()
         async for msg in rdr:
             if isinstance(msg, Tag):
@@ -1510,7 +1510,7 @@ class Server(MsgHandler):
                 if spath in self._writing:
                     raise RuntimeError(f"Already writing: {spath!r}")
                 self._writing.add(spath)
-                rdr = self.write_monitor.reader(99)
+                rdr = self.write_monitor.reader(99, skip=False)
                 async with (
                     anyio.create_task_group() as tg,
                     MsgWriter(path=path, codec="std-cbor") as mw,
@@ -1523,7 +1523,7 @@ class Server(MsgHandler):
                         # This ensures that the Stop message isn't seen by
                         # the new writer
                         await self.write_monitor.send(msg)
-                        rdr = self.write_monitor.reader(99, send_last=False)
+                        rdr = self.write_monitor.reader(99, send_last=False, skip=False)
                         task_status.started(scope)
 
                         msg = self.gen_hdr_start(
@@ -2393,7 +2393,7 @@ class Server(MsgHandler):
             # Allow for retrieving data from MQTT if no server is running.
             # This should not be done lightly.
             if self.cfg.server.timeout.mqtt:
-                rdr = self.write_monitor.reader(100)
+                rdr = self.write_monitor.reader(100, skip=False)
                 while True:
                     with anyio.move_on_after(self.cfg.server.timeout.mqtt):
                         await anext(rdr)

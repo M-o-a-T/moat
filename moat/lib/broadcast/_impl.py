@@ -59,13 +59,18 @@ class BroadcastReader(Generic[TData]):
     due to the reader being too slow.
 
     Call this object to inject a value.
+
+    Skip:
+      True: silently skip queue-full, never raise an error
+      False: always block (async send only)
+      None(default): error on queue full.
     """
 
     def __init__(
         self,
         parent: Broadcaster,
         length: int = 1,
-        skip: bool = False,
+        skip: bool | None = None,
     ) -> None:
         self.parent = parent
         self.length = length
@@ -130,7 +135,10 @@ class BroadcastReader(Generic[TData]):
 
     async def send(self, value: TData) -> None:
         """enqueue a value, to this reader only"""
-        await self._q.put(value)
+        if self.skip is False:
+            await self._q.put(value)
+        else:
+            self(value)
 
     def _close(self) -> None:
         self._q.close_sender()
@@ -187,6 +195,8 @@ class Broadcaster(Generic[TData]):
                     print(msg)
 
     Do **not** skip the *aclosing*, esp. on MicroPython.
+
+    skip: default ``skip`` param for readers, defaults to None
 
     To safely re-sync, do something like this::
 
@@ -247,13 +257,13 @@ class Broadcaster(Generic[TData]):
         return aiter(r)
 
     def reader(
-        self, length: int, send_last: bool | None = None, skip: bool = False
+        self, length: int, send_last: bool | None = None, skip: bool | None = None
     ) -> BroadcastReader[TData]:
         """Create a reader with an explicit queue length.
 
         Args:
             length: Queue size.
-            skip: if `True`, ignore overflows.
+            skip: if `True`, ignore overflows; if `False`, block async senders.
         """
         assert self._rdr is not None
 

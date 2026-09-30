@@ -113,3 +113,68 @@ vars:
 - manual
 - actual
 - key
+tests:
+  manual:
+    info: manual on/off, value changes, the actual state shadowed, external changes
+    timeout: 20
+    data:
+      act:
+        _:
+          run: true
+    args:
+      dst: !P ovr
+      value: !P val
+      manual: !P man
+      actual: !P act
+      key: run
+    steps:
+    - [monitor, ovr, !P ovr]
+    - [monitor, vst, !P val.state]
+    - [monitor, mst, !P man.state]
+    - [start]
+    - [comment, "automatic: the value entity shows the actual state"]
+    - [wait, 3, "mst == [False] and vst == [True]"]
+    - [set, !P act, {run: false}]
+    - [wait, 3, "vst == [True, False]"]
+    - [comment, flipping the value while automatic has no lasting effect]
+    - [set, !P val.cmd, true]
+    - [sleep, 0.3]
+    - [check, "ovr == [] and vst == [True, False]"]
+    - [comment, "manual on: the override takes the last command"]
+    - [set, !P man.cmd, true]
+    - [wait, 3, "ovr == [True] and mst == [False, True] and vst == [True, False, True]"]
+    - [comment, a command while manual changes the override]
+    - [set, !P val.cmd, false]
+    - [wait, 3, "ovr == [True, False] and vst == [True, False, True, False]"]
+    - [comment, "someone else clears the override: HA follows"]
+    - [delete, !P ovr]
+    - [wait, 3, "mst == [False, True, False]"]
+    - [set, !P act, {run: true}]
+    - [wait, 3, "vst == [True, False, True, False, True]"]
+    - [comment, "or sets it, in the wrapped form"]
+    - [set, !P ovr, {value: false, reason: service}]
+    - [wait, 3, "len(mst) == 4 and mst[-1] is True and len(vst) == 6 and vst[-1] is False"]
+    - [comment, "manual off: automatic again"]
+    - [set, !P man.cmd, false]
+    - [wait, 3, "len(mst) == 5 and mst[-1] is False and len(vst) == 7 and vst[-1] is True"]
+    - [check, "ovr[-1] is None"]
+  no-command:
+    info: manual on before any value command keeps what the controlled system does now
+    timeout: 10
+    data:
+      act:
+        _:
+          run: true
+    args:
+      dst: !P ovr
+      value: !P val
+      manual: !P man
+      actual: !P act
+      key: run
+    steps:
+    - [monitor, ovr, !P ovr]
+    - [monitor, mst, !P man.state]
+    - [start]
+    - [wait, 3, "mst == [False]"]
+    - [set, !P man.cmd, true]
+    - [wait, 3, "ovr == [True]"]

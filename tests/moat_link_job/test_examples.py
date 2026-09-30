@@ -25,6 +25,30 @@ XFAIL: dict[str, str] = {}
 "Test cases that are known to fail, with the reason."
 
 
+def _untested() -> list[str]:
+    "Names of example files that have no test cases."
+    res = []
+    for fn in sorted(EXAMPLES.glob("*.yaml")):
+        with fn.open() as f:
+            _rec, tests = split_snippet(yload(f))
+        if not tests:
+            res.append(fn.name)
+    return res
+
+
+def _check_tested() -> None:
+    if missing := _untested():
+        raise AssertionError(
+            f"Every example needs a 'tests:' section (see transform.toggle.yaml), "
+            f"but these have none: {', '.join(missing)}"
+        )
+
+
+def test_examples_have_tests():
+    "Every snippet in examples/moat-link-job/ comes with test cases."
+    _check_tested()
+
+
 def _cases():
     for fn in sorted(EXAMPLES.glob("*.yaml")):
         with fn.open() as f:
@@ -59,6 +83,7 @@ async def test_example(cfg, fn, case):
 
 async def test_import_get(cfg):
     "``moat link code : import FILE…`` stores the examples, ``get -r`` reads them back."
+    _check_tested()
     files = sorted(EXAMPLES.glob("*.yaml"))
     async with (
         Scaffold(cfg, use_servers=True) as sf,

@@ -6,7 +6,7 @@ import logging
 import os
 import signal
 from anyio.abc import SocketAttribute
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from functools import partial
 from pprint import pformat
 
@@ -1228,7 +1228,23 @@ class ServerClient:
             await self.send(msg)
 
             while True:
+                bad = False
                 for msg in self.codec:
+                    if not isinstance(msg, Mapping):
+                        # Not a MoaT-KV client, or a port clash: whatever
+                        # we'd answer would only be misread in turn.
+                        err = (
+                            f"Not a MoaT-KV message: got {type(msg).__name__} {msg!r:.40}. "
+                            "Is something that doesn't speak the MoaT-KV protocol "
+                            "connected to this port?"
+                        )
+                        self.logger.error(
+                            "Client %d: %s Closing the connection.", self._client_nr, err
+                        )
+                        with suppress(Exception):
+                            await self.send({"error": err})
+                        bad = True
+                        break
                     seq = None
                     try:
                         seq = msg.seq
@@ -1252,6 +1268,8 @@ class ServerClient:
                         if seq is not None:
                             msg["seq"] = seq
                         await self.send(msg)
+                if bad:
+                    break
 
                 try:
                     buf = await self.stream.receive(4096)

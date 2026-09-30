@@ -40,6 +40,23 @@ async def test_00_runner(autojump_clock):  # pylint: disable=unused-argument  # 
     # await run('pdb','pdb')  # used for verifying that debugging works
 
 
+@pytest.mark.trio
+async def test_00_not_moat_kv(autojump_clock):  # pylint: disable=unused-argument  # noqa: ARG001
+    "Talking some other protocol to the server gets a clear error, and a closed connection."
+    async with stdtest(args={"init": 123}, tocks=50) as st:
+        await st.s[0].is_serving
+        host, port, *_ = next(p for p in st.s[0].ports if p[0][0] != ":" or p[0] == "::")
+        if host == "::":
+            host = "::1"
+        async with await trio.open_tcp_stream(host, port) as s:
+            await s.send_all(b"+42\r\n:1\r\n")
+            data = b""
+            with trio.fail_after(10):
+                while (buf := await s.receive_some()) != b"":
+                    data += buf
+        assert b"Not a MoaT-KV message" in data
+
+
 async def collect(i, path=()):  # noqa: D103
     res = []
     pl = PathLongener(path)

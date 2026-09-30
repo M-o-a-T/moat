@@ -30,15 +30,17 @@ akumuli_model._test_hook = _hook  # noqa: SLF001
 
 
 @pytest.mark.anyio
-async def test_basic():  # noqa: D103
-    # AkumuliTester manages its own port allocation internally (PID-based),
-    # since akumulid is an external process that needs the port in its config.
+async def test_basic(free_tcp_port_factory):  # noqa: D103
+    # AkumuliTester's default ports are PID-based (4xxxx), which can collide
+    # with the ephemeral port of the kv test server: akumulid then fails to
+    # bind, and the client talks RESP to the kv server. Ask the OS instead.
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
         st.client(0) as client,
-        AkumuliTester().run() as t,
+        AkumuliTester(
+            tcp_port=free_tcp_port_factory(), http_port=free_tcp_port_factory()
+        ).run() as t,
     ):
-        # AkumuliTester selects a per-PID TCP port in the 4xxxx range.
         await st.run(f"akumuli test add -h 127.0.0.1 -p {t.TCP_PORT}")
         await client.set(P("test.one.two"), value=41)
         await st.run("akumuli test at test.foo.bar add test.one.two whatever foo=bar")

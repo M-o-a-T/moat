@@ -128,6 +128,10 @@ class BroadcastReader(Generic[TData]):
             self._q.put_nowait(value)
             self.loss += 1
 
+    async def send(self, value: TData) -> None:
+        """enqueue a value, to this reader only"""
+        await self._q.put(value)
+
     def _close(self) -> None:
         self._q.close_sender()
 
@@ -270,6 +274,14 @@ class Broadcaster(Generic[TData]):
         self.value = value
         for r in self._rdr:
             r(value)
+
+    async def send(self, value: TData) -> None:
+        """Enqueue a value to all readers. Warning: Blocking!"""
+        assert self._rdr is not None
+
+        self.value = value
+        for r in list(self._rdr):
+            await r.send(value)
 
     async def read(self) -> TData:
         "gets the last value (waits until there is one)"

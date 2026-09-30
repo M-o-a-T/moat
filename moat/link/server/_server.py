@@ -788,7 +788,7 @@ class ServerClient(LinkCommon):
             ):
                 raise OutOfDateError(node.meta)
 
-        return self.server.maybe_update(path, value, meta, force=True)
+        return await self.server.maybe_update(path, value, meta, force=True)
 
     async def d_delete_(
         self,
@@ -835,7 +835,7 @@ class ServerClient(LinkCommon):
                     await anyio.sleep(0.01)
                     for pp, nn in n.items():
                         await rec_del(nn, p / pp)
-                    self.server.maybe_update(p, NotGiven, meta)
+                    await self.server.maybe_update(p, NotGiven, meta)
 
                 if sub:
                     for pp, nn in list(node.items()):
@@ -847,7 +847,7 @@ class ServerClient(LinkCommon):
                     return None
                 if t is not None and (node.meta is None or abs(node.meta.timestamp - t) > 0.001):
                     raise OutOfDateError(node.meta)
-                self.server.maybe_update(path, NotGiven, meta)
+                await self.server.maybe_update(path, NotGiven, meta)
 
         if node is None or dv is NotGiven:
             return None
@@ -960,7 +960,7 @@ class ServerClient(LinkCommon):
                 meta.source = "Client"
 
                 data = entry.data
-                if self.server.maybe_update(path, NotGiven, meta) and ws is not None:
+                if (await self.server.maybe_update(path, NotGiven, meta)) and ws is not None:
                     await ws.send(*ps.short(path), data, *meta.dump())
 
                 nonlocal res
@@ -1126,7 +1126,7 @@ class Server(MsgHandler):
             res.append(self.last_auth)
         return res
 
-    def maybe_update(
+    async def maybe_update(
         self,
         path: Path,
         data: Any,
@@ -1143,7 +1143,7 @@ class Server(MsgHandler):
             return False
         if res := self.data.set(path, data, meta, force=force):
             if not local:
-                self.write_monitor((path, data, meta))
+                await self.write_monitor.send((path, data, meta))
         return res
 
     async def _mon_run(self, topic: Path, msg: Message) -> bool:
@@ -1194,10 +1194,10 @@ class Server(MsgHandler):
                     elif self.data and msg.data != self.data.data:
                         raise RuntimeError(f"Existing data? {msg} {self.data}")
 
-                self.maybe_update(path, msg.data, msg.meta)
+                await self.maybe_update(path, msg.data, msg.meta)
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
-        rdr = self.write_monitor.reader(999)
+        rdr = self.write_monitor.reader(99)
         task_status.started()
         async for msg in rdr:
             if isinstance(msg, Tag):
@@ -1379,7 +1379,7 @@ class Server(MsgHandler):
         # this shortcuts maybe_update
         # forcing is required because we just modified the dict in-place
         if dt.set(Path(), dd, meta, force=True):
-            self.write_monitor((p, dd, meta))
+            await self.write_monitor.send((p, dd, meta))
 
     async def _save(
         self,
@@ -1510,7 +1510,7 @@ class Server(MsgHandler):
                 if spath in self._writing:
                     raise RuntimeError(f"Already writing: {spath!r}")
                 self._writing.add(spath)
-                rdr = self.write_monitor.reader(999)
+                rdr = self.write_monitor.reader(99)
                 async with (
                     anyio.create_task_group() as tg,
                     MsgWriter(path=path, codec="std-cbor") as mw,
@@ -1522,8 +1522,8 @@ class Server(MsgHandler):
                         )
                         # This ensures that the Stop message isn't seen by
                         # the new writer
-                        self.write_monitor(msg)
-                        rdr = self.write_monitor.reader(999, send_last=False)
+                        await self.write_monitor.send(msg)
+                        rdr = self.write_monitor.reader(99, send_last=False)
                         task_status.started(scope)
 
                         msg = self.gen_hdr_start(
@@ -1921,7 +1921,7 @@ class Server(MsgHandler):
                 ),
             )
         else:
-            self.write_monitor(self.gen_hdr_stop(reason="log_end"))
+            await self.write_monitor.send(self.gen_hdr_stop(reason="log_end"))
 
     async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
@@ -1960,7 +1960,7 @@ class Server(MsgHandler):
 
         async with (
             EventSetter(self._stopped),
-            Broadcaster(send_last=True, length=1000) as self.write_monitor,
+            Broadcaster(send_last=True, length=100) as self.write_monitor,
             get_backend(self.cfg, name=self.name, will=will_data) as self.backend,
             anyio.create_task_group() as _tg,
         ):
@@ -2008,7 +2008,7 @@ class Server(MsgHandler):
                 await _tg.start(self._save_task)
 
             if self._init is not NotGiven:
-                self.maybe_update(Path(), self._init, MsgMeta(origin="INIT", source="INIT"))
+                await self.maybe_update(Path(), self._init, MsgMeta(origin="INIT", source="INIT"))
 
             if self._f_save is not None:
                 await _tg.start(self.save, self._f_save)
@@ -2114,7 +2114,7 @@ class Server(MsgHandler):
 
     async def _stop_writers(self):
         """Tell our writers to stop"""
-        self.write_monitor(self.gen_hdr_stop(reason="Shutdown"))
+        await self.write_monitor.send(self.gen_hdr_stop(reason="Shutdown"))
         while self._writing:
             try:
                 with anyio.fail_after(0.5):
@@ -2350,7 +2350,7 @@ class Server(MsgHandler):
                 path = pl.long(d, p)
                 meta = MsgMeta.restore(mt)
                 meta.source = "_Load"
-                if self.maybe_update(prefix + path, data, meta):
+                if await self.maybe_update(prefix + path, data, meta):
                     upd += 1
                 else:
                     skp += 1
@@ -2393,7 +2393,7 @@ class Server(MsgHandler):
             # Allow for retrieving data from MQTT if no server is running.
             # This should not be done lightly.
             if self.cfg.server.timeout.mqtt:
-                rdr = self.write_monitor.reader(10000)
+                rdr = self.write_monitor.reader(100)
                 while True:
                     with anyio.move_on_after(self.cfg.server.timeout.mqtt):
                         await anext(rdr)
@@ -2511,7 +2511,7 @@ class Server(MsgHandler):
                 path = pl.long(d, p)
                 meta = MsgMeta.restore(mt)
                 meta.source = "_file"
-                if self.maybe_update(path, data, meta, local=local):
+                if await self.maybe_update(path, data, meta, local=local):
                     # Entries that have been deleted don't count as updates
                     if data is not NotGiven:
                         upd += 1

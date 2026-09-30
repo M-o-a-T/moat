@@ -16,6 +16,21 @@ from moat.util.liner import Liner
 pytestmark = pytest.mark.anyio
 
 
+async def wait_for(cob: list[str], *texts: str, timeout: float = 5) -> str:
+    """
+    Wait until all @texts have shown up in the console output collected in @cob.
+
+    A fixed sleep is not enough: on a loaded machine the REPL takes a while
+    to start and to answer.
+    """
+    with anyio.fail_after(timeout):
+        while True:
+            cb = "".join(cob)
+            if all(t in cb for t in texts):
+                return cb
+            await anyio.sleep(0.05)
+
+
 CFG1 = """
 app: dir
 r:
@@ -71,12 +86,9 @@ async def test_repl(tmp_path, free_tcp_port):
         co = d.sub_at(P("r.co"))
         cob = []
         d.tg.start_soon(readcons, "CO ", co.r, cob)
-        await anyio.sleep(0.3)
+        await wait_for(cob, ">>>")
         await co.w(b"'Foo',2*21\n")
-        await anyio.sleep(0.1)
-        cb = "".join(cob)
-        assert "Foo" in cb
-        assert "42" in cb
+        await wait_for(cob, "Foo", "42")
 
 
 async def test_repl_stream(tmp_path, free_tcp_port):
@@ -119,12 +131,9 @@ async def test_repl_stream(tmp_path, free_tcp_port):
             return (await anext(co_r))[0]
 
         tg.start_soon(readcons, "CO ", co_next, cob)
-        await anyio.sleep(0.3)
+        await wait_for(cob, ">>>")
         await co.send(b"'Foo',2*21\n")
-        await anyio.sleep(0.1)
-        cb = "".join(cob)
-        assert "Foo" in cb
-        assert "42" in cb
+        await wait_for(cob, "Foo", "42")
         tg.cancel_scope.cancel()
 
 
@@ -199,11 +208,8 @@ async def test_repl_direct(tmp_path):
         cob = []
         tg.start_soon(readcons, "CONS ", d.sub_at(P("r.crd")), cob)
         await d.cmd(P("r.rdy_"))
-        await anyio.sleep(0.5)
+        await wait_for(cob, ">>>")
 
         await cr.cwr(b"'Foo',2*21\n")
-        await anyio.sleep(0.5)
-        cb = "".join(cob)
-        assert "Foo" in cb
-        assert "42" in cb
+        await wait_for(cob, "Foo", "42")
         tg.cancel_scope.cancel()

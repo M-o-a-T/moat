@@ -18,6 +18,7 @@ from moat.lib.codec.null import Codec as _NullCodec
 from moat.lib.config import register as _register
 from moat.lib.path import P, Path
 from moat.lib.priomap import TimerMap
+from moat.link.exceptions import ServerLinkLost
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
@@ -510,7 +511,7 @@ class Gate:
                         update.node.ext_data = update.data
                         update.node.ext_meta = update.meta or NotGiven
                         update.node.todo = False
-            except AttributeError:
+            except ServerLinkLost:
                 # Connection is being closed during shutdown, ignore
                 return
 

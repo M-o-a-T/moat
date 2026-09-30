@@ -14,6 +14,7 @@ from moat.lib.codec import get_codec
 from moat.lib.codec.noop import Codec as NoopCodec
 from moat.lib.mqtt.async_client import AsyncMQTTClient, PropertyType, RetainHandling, Will
 from moat.lib.path import PS, P, Path
+from moat.link.exceptions import ServerLinkLost
 from moat.link.meta import MsgMeta
 
 from . import Backend as _Backend
@@ -147,7 +148,7 @@ class Backend(_Backend):
             try:
                 yield self
             finally:
-                del self.client
+                self.client = None  # noqa:PLW2901
 
     @asynccontextmanager
     async def monitor(
@@ -192,7 +193,8 @@ class Backend(_Backend):
             "retain_handling",
             RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED,
         )
-        assert self.client is not None
+        if self.client is None:
+            raise ServerLinkLost("The MQTT backend is not connected")
         try:
             async with self.client.subscribe(tops, **kw) as sub:
                 yield _SubGet(self, sub, codec_obj, raw)
@@ -268,7 +270,8 @@ class Backend(_Backend):
             msg = codec.encode(data)
 
         self.logger.debug("S %s %s %s", topic, srepr(data), meta)
-        assert self.client is not None
+        if self.client is None:
+            raise ServerLinkLost(f"The MQTT backend is not connected, can't send to {topic}")
         await self.client.publish(
             topic.slashed2,
             payload=msg,

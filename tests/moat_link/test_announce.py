@@ -119,3 +119,23 @@ async def test_call(cfg):
             d = await res.yes(22)
             assert d[0] == 44
             evt2.set()
+
+
+@pytest.mark.anyio
+async def test_link_lost_in_body(cfg):
+    """
+    The link goes away while the announcement is running (production crash:
+    ``AttributeError: 'Backend' object has no attribute 'client'``).
+
+    Leaving the block normally must not fail just because the
+    announcement can't be withdrawn any more.
+    """
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+        c = await sf.client()
+        async with c.announcing(P("foo.bar"), value="C1") as s:
+            s.set()
+            await c.i_sync()
+            c._link._hold_scope.cancel()  # noqa:SLF001
+            await anyio.sleep(0.3)

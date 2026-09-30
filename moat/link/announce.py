@@ -20,7 +20,7 @@ from moat.util import as_service as _as_service
 from moat.lib.path import P, Path
 
 from .client import Link
-from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
+from .exceptions import ServerLinkLost, ServiceCleared, ServiceNotFound, ServiceSupplanted
 
 from typing import TYPE_CHECKING
 
@@ -292,7 +292,12 @@ async def announcing(
             yield srv
 
             # only remove the host entry when we terminated normally.
-            await link.d_set(path, retain=True)
+            try:
+                await link.d_set(path, retain=True)
+            except ServerLinkLost:
+                # The link is gone, so we can't withdraw the entry.
+                # The process is going down anyway; don't mask why.
+                logger.warning("Link lost: could not clear the announcement of %s", path)
 
         except ServiceSupplanted:
             logger.warning("Service %s on %s already exists", name, host)

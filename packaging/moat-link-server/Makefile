@@ -6,10 +6,10 @@ MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 install: installscript installsystemd
 
 installsystemd:
-	mkdir -p $(PREFIX)/lib/systemd/system
+	mkdir -p $(PREFIX)/usr/lib/systemd/system
 	mkdir -p $(PREFIX)/usr/lib/sysusers.d
-	cp systemd/*.service $(PREFIX)/lib/systemd/system/
-	# cp systemd/*.timer $(PREFIX)/lib/systemd/system/
+	cp systemd/*.service $(PREFIX)/usr/lib/systemd/system/
+	# cp systemd/*.timer $(PREFIX)/usr/lib/systemd/system/
 	cp systemd/sysusers $(PREFIX)/usr/lib/sysusers.d/moat-link-server.conf
 
 installscript:
@@ -17,8 +17,8 @@ installscript:
 	cp scripts/* $(PREFIX)/usr/lib/moat/link/
 
 	# sigh
-	mkdir -p $(PREFIX)/lib/systemd/system
-	cp systemd/*@.service $(PREFIX)/lib/systemd/system/
+	mkdir -p $(PREFIX)/usr/lib/systemd/system
+	cp systemd/*@.service $(PREFIX)/usr/lib/systemd/system/
 
 
 ifneq ($(wildcard $(MAKEINCL)),)

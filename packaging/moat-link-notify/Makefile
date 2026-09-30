@@ -6,8 +6,8 @@ MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 install: installsystemd
 
 installsystemd:
-	mkdir -p $(PREFIX)/lib/systemd/system
-	cp systemd/*.service $(PREFIX)/lib/systemd/system/
+	mkdir -p $(PREFIX)/usr/lib/systemd/system
+	cp systemd/*.service $(PREFIX)/usr/lib/systemd/system/
 
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)

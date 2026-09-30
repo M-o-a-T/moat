@@ -16,6 +16,6 @@ endif
 install:
 	mkdir -p $(PREFIX)/usr/lib/moat/mqtt
 	mkdir -p $(PREFIX)/usr/lib/sysusers.d
-	mkdir -p $(PREFIX)/lib/systemd/system
-	cp systemd/*.service $(PREFIX)/lib/systemd/system/
+	mkdir -p $(PREFIX)/usr/lib/systemd/system
+	cp systemd/*.service $(PREFIX)/usr/lib/systemd/system/
 	cp systemd/sysusers $(PREFIX)/usr/lib/sysusers.d/moat-mqtt.conf

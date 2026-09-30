@@ -1,3 +1,9 @@
+moat-link (0.10.2-2) unstable; urgency=medium
+
+  * New release for 26.4.4
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 30 Sep 2026 18:38:25 +0200
+
 moat-link (0.10.2-1) unstable; urgency=medium
 
   * New release for 26.4.0

@@ -5,6 +5,8 @@ Some rudimentary tests for merge and combine_dict
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
+import pytest
+
 from moat.util import NotGiven, attrdict, combine_dict, merge, to_attrdict
 from moat.lib.path import P
 
@@ -86,3 +88,15 @@ def test_post():
     assert not g.needs_post_
     g.set_(P("i:2.k"), attrdict((("$b", "cd"),)))
     assert g.needs_post_
+
+
+def test_attrdict_simplejson():
+    "simplejson (as used by `requests`, with allow_nan=False) can serialize attrdicts"
+    simplejson = pytest.importorskip("simplejson")
+
+    a = attrdict(x=1, y=attrdict(z=[2, attrdict(w=3)]))
+    assert simplejson.loads(simplejson.dumps(a)) == {"x": 1, "y": {"z": [2, {"w": 3}]}}
+    assert simplejson.loads(simplejson.dumps(a, allow_nan=False)) == {
+        "x": 1,
+        "y": {"z": [2, {"w": 3}]},
+    }

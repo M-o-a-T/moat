@@ -291,6 +291,17 @@ class attrdict(MutableMapping[Hashable, Any]):
         new._post = self._post
         return new
 
+    def _asdict(self) -> dict[Hashable, Any]:
+        """
+        Return the content as a plain `dict` (shallow).
+
+        attrdict is a mapping, not a `dict` subclass, so JSON encoders
+        don't know it. simplejson (which e.g. ``requests`` prefers over
+        the stdlib's ``json``) serializes objects that have this method, like
+        namedtuples; nested attrdicts are handled by the same hook.
+        """
+        return dict(self._d)
+
     @property
     def needs_post_(self) -> bool:
         """

@@ -20,7 +20,7 @@ dependencies = [
 	"moat-util ~= 0.63.11",
 	"moat-link ~= 0.10.1",
 	]
-version = "0.0.5"
+version = "0.1.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-job"

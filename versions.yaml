@@ -1,5 +1,5 @@
 _:
-  new: 26.4.2
+  new: 26.4.3
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -108,7 +108,8 @@ moat-dev:
 moat-dev-heat:
   deb: 0.1.1-3
   new: 0.1.11
-  pkg: 1
+  pkg: 2
+  pkgrev: cd954d0dec3c9476292562e103f0f255ab371049
   pypi: 0.1.8
   rev: 27e925a53e896cddd4c34a6c96ed10c353424a31
   tag: 0.1.11
@@ -167,9 +168,10 @@ moat-ems-victron:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.1.10
 moat-kv:
-  deb: 0.71.36-1
+  deb: 0.71.36-2
   new: 0.71.36
-  pkg: 1
+  pkg: 2
+  pkgrev: cd954d0dec3c9476292562e103f0f255ab371049
   pypi: 0.71.33
   rev: 27e925a53e896cddd4c34a6c96ed10c353424a31
   tag: 0.71.36
@@ -394,9 +396,10 @@ moat-link-cal:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.0.1
 moat-link-gate:
-  deb: 0.0.14-1
+  deb: 0.0.14-2
   new: 0.0.14
-  pkg: 1
+  pkg: 2
+  pkgrev: cd954d0dec3c9476292562e103f0f255ab371049
   pypi: 0.0.11
   rev: 27e925a53e896cddd4c34a6c96ed10c353424a31
   tag: 0.0.14
@@ -412,9 +415,9 @@ moat-link-ha:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.0.1
 moat-link-job:
-  deb: 0.0.5-2
-  new: 0.0.5
-  pkg: 2
+  deb: 0.1.0-1
+  new: 0.1.0
+  pkg: 1
   pypi: 0.0.3
   rev: d610b9c94d28cd43b24b45e5302f210ac8226254
   tag: 0.0.5

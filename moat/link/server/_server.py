@@ -2413,6 +2413,7 @@ class Server(MsgHandler):
         async for fn in dest.rglob("*.moat"):
             fs.append(fn)
         fs.sort()
+        self.logger.info("Scanned %d state file(s) in %r", len(fs), str(dest))
         fn = None
 
         while fs:
@@ -2421,6 +2422,9 @@ class Server(MsgHandler):
 
             sfn = str(fn)
             if sfn in done or sfn in self._writing:
+                self.logger.info(
+                    "Skipping %s: %s", fn, "already done" if sfn in done else "being written"
+                )
                 fn = None
                 continue
             done.add(sfn)
@@ -2440,7 +2444,17 @@ class Server(MsgHandler):
                         self.logger.error("Failed to remove bad %s", fn, exc_info=exc)
                 continue
 
+            self.logger.info(
+                "%s: mode=%r upd=%d tags=%d end=%s",
+                fn,
+                mode,
+                upd,
+                len(tags),
+                bool(tags and tags[-1].tag == CBOR_TAG_MOAT_FILE_END),
+            )
+
             if mode != "init" and (not upd or not tags):
+                self.logger.info("Skipping %s: no data / no tags", fn)
                 continue
             if not tag_check(tags):
                 # extract the first tag's value
@@ -2449,15 +2463,28 @@ class Server(MsgHandler):
                     tt = tt.value
                 if isinstance(tt, Sequence):
                     tt = tt[1]
-                fn = tt.get("prev", None)
-                if fn is not None:
+                prev = tt.get("prev", None)
+                self.logger.info(
+                    "Rejecting %s: incomplete/non-full dump (mode=%r); following prev=%r",
+                    fn,
+                    mode,
+                    prev,
+                )
+                if prev is not None:
                     # Resolve relative paths (new files) against dest;
                     # pathlib silently ignores dest when fn is absolute
                     # (backward-compat with old files storing absolute paths).
-                    fn = dest / anyio.Path(fn)
+                    fn = dest / anyio.Path(prev)
+                else:
+                    fn = None
                 continue
+            self.logger.info("Loaded initial state from %s", fn)
             ready.set()
             return
+
+        self.logger.warning(
+            "No usable state file found in %r (considered %d file(s))", str(dest), len(done)
+        )
 
     async def load_file(
         self, fn: anyio.Path, prefix: Path = Path(), local: bool = False

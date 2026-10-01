@@ -197,7 +197,7 @@ async def do_versions(
                 deps = get_array(proj, "dependencies")
                 if deps is not None:
                     deps_changed |= fix_deps(deps, tags, changed)
-                opt = get_table(proj, "optional_dependencies")
+                opt = get_table(proj, "optional-dependencies")
                 if opt is not None:
                     for v in opt.values():
                         if isinstance(v, tomlkit.items.Array):

@@ -142,10 +142,10 @@ def pyproject_key(text: str, internal: set[str]) -> Any:
 
     if "dependencies" in proj:
         proj["dependencies"] = _strip(proj["dependencies"])
-    for k in ("optional-dependencies", "optional_dependencies"):
-        opt = proj.get(k)
-        if isinstance(opt, dict):
-            proj[k] = {n: _strip(v) for n, v in opt.items()}
+    k = "optional-dependencies"
+    opt = proj.get(k)
+    if isinstance(opt, dict):
+        proj[k] = {n: _strip(v) for n, v in opt.items()}
     return data
 
 

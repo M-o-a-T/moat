@@ -47,7 +47,7 @@ class AlertB(Alert):
 
 async def rd(x, s=False, evt=None):
     res = []
-    async with x.r.stream_in(1, s=s) as it:
+    async with x.r.stream_in(s=s) as it:
         if evt is not None:
             evt.set()
         async for r in it:

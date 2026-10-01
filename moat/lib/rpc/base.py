@@ -183,7 +183,7 @@ class Caller:
     async def __aexit__(self, *err):
         return await AC_exit(self, *err)
 
-    def stream(self, size: int = 42, *, flow: bool = True) -> Self:
+    def stream(self, *, size: int = 42, flow: bool = True) -> Self:
         """mark as streaming bidirectionally (the default)
 
         Args:
@@ -201,7 +201,7 @@ class Caller:
         self._flow = flow
         return self
 
-    def stream_in(self, size: int = 42, *, flow: bool = True) -> Self:
+    def stream_in(self, *, size: int = 42, flow: bool = True) -> Self:
         """mark as only streaming in.
 
         Args:
@@ -436,10 +436,10 @@ class SubMsgSender(MsgSender):
         return Caller(self, (cmd, a, kw))
 
     def stream(self, *a, size: int = 42, flow: bool = True, **kw):
-        return self.cmd(Path(), *a, **kw).stream(size, flow=flow)
+        return self.cmd(Path(), *a, **kw).stream(size=size, flow=flow)
 
     def stream_in(self, *a, size: int = 42, flow: bool = True, **kw):
-        return self.cmd(Path(), *a, **kw).stream_in(size, flow=flow)
+        return self.cmd(Path(), *a, **kw).stream_in(size=size, flow=flow)
 
     def stream_out(self, *a, **kw):
         return self.cmd(Path(), *a, **kw).stream_out()

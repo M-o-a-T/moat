@@ -97,7 +97,7 @@ async def example():
         (res,) = await client.cmd("Start")
         assert res.startswith("OK")
 
-        async with client.cmd("gimme data", x=5).stream_in(5) as st:
+        async with client.cmd("gimme data", x=5).stream_in(size=5) as st:
             assert st.args[0] == "Start", st.args
             async for (nr,) in st:
                 print(nr)  # 5, 6, .. 14

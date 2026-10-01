@@ -396,7 +396,7 @@ async def test_stream_no_flow_ok(use_socket):
     got = []
     async with (
         scaffold(EP(), None, use_socket=use_socket) as (_a, b),
-        b.cmd("Test").stream_in(2, flow=False) as st,
+        b.cmd("Test").stream_in(size=2, flow=False) as st,
     ):
         async for (m,) in st:
             got.append(m)
@@ -431,7 +431,7 @@ async def test_stream_overrun_reader(use_socket):
     got = []
     async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
         with pytest.raises(OverrunError), ungroup:  # noqa:PT012
-            async with b.cmd("Test").stream_in(2, flow=False) as st:
+            async with b.cmd("Test").stream_in(size=2, flow=False) as st:
                 async for (m,) in st:
                     got.append(m)
                     # Drain much slower than the producer fills.

@@ -976,22 +976,24 @@ class Msg(MsgLink, MsgResult):
                 self._fli = 0
                 # - send a message announcing 1/4 of the queue space
                 await self.warn_int(self._recv_qlen // 4)
+            return
+
+        # Every message we consume frees one slot. It must be counted
+        # unconditionally: a message that's dropped from the ledger is a
+        # credit the sender never gets back, which shrinks the window until
+        # it's too small to ever trigger the next announcement.
+        self._fli += 1
 
         # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
         #   have been processed (which will happen because the queue was
         #   half-full when we started), announce that space
-        elif self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2:
-            m = self._recv_qlen // 2 + 1
-            self._fli -= m
-            await self.warn_int(m)
-
         # - additionally, if the max queue is < 10
         #   we send a bit more aggressively, to reduce lag
-        else:
-            self._fli += 1
-            if self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4:
-                m, self._fli = self._fli, 0
-                await self.warn_int(m)
+        if (self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2) or (
+            self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4
+        ):
+            m, self._fli = self._fli, 0
+            await self.warn_int(m)
 
     def _term_error(self) -> BaseException | None:
         """The error the incoming stream ended with, if any.

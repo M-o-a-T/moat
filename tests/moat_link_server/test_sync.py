@@ -7,6 +7,7 @@ import pytest
 from moat.util import ungroup
 from moat.lib.codec.cbor import Tag as CBORTag
 from moat.lib.codec.moat_cbor import CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_FILE_ID
+from moat.lib.micro import CancelledError
 from moat.lib.path import P, PathLongener
 from moat.lib.rpc import StreamError
 from moat.link._test import Scaffold
@@ -171,7 +172,8 @@ async def test_lsy_switch_server_hard_break(cfg):
             nonlocal n
             await c1.cmd(P("d.set"), P("test.one"), 123)
             await sf.server()
-            with pytest.raises(EOFError), ungroup:  # noqa:PT012
+            # the server's handler is cancelled; that error reaches us
+            with pytest.raises(CancelledError), ungroup:  # noqa:PT012
                 async with c1.cmd(P("i.count")).stream_in() as st:
                     async for _m in st:
                         n += 1

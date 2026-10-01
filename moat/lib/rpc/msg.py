@@ -794,6 +794,15 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send_error(exc)
         except BaseException as exc:
             await self.ml_send_error(exc)
+            if self._got_cancel and isinstance(exc, BaseExceptionGroup):
+                # The remote cancelled this call. That cancels the handler,
+                # and it may also have seen the cancel as a CancelledError,
+                # e.g. from a nested stream on this message. That's the
+                # same event: don't let it escape the cancelled scope.
+                _m, rest = exc.split(CancelledError)
+                if rest is None:
+                    return
+                raise rest from None
             raise
         else:
             if self._stream_out != S_END:
@@ -884,8 +893,8 @@ class Msg(MsgLink, MsgResult):
                 m, self._fli = self._fli, 0
                 await self.warn_int(m)
 
-    def _term_is_error(self) -> bool:
-        """Whether the incoming stream ended with an error frame.
+    def _term_error(self) -> BaseException | None:
+        """The error the incoming stream ended with, if any.
 
         A stream terminates cleanly when a non-streaming result message
         arrives (stored in ``_msg`` as an :class:`outcome.Value`).  When the
@@ -893,19 +902,19 @@ class Msg(MsgLink, MsgResult):
         :class:`outcome.Error` (e.g. a ``CancelledError`` when the remote
         handler was cancelled).
 
-        Such a terminal error must be surfaced to the consumer rather than
+        Such a terminal error must be re-raised to the consumer rather than
         being silently turned into the end of iteration, otherwise a stream
         that broke mid-transfer looks indistinguishable from one that
         completed normally.
         """
-        if self._stream_in != S_END:
-            return False
-        return isinstance(self._msg, outcome.Error)
+        if self._stream_in != S_END or not isinstance(self._msg, outcome.Error):
+            return None
+        return self._msg.error
 
     async def __anext__(self) -> MsgResult:
         if self._recv_q is None:
-            if self._term_is_error():
-                raise EOFError
+            if (err := self._term_error()) is not None:
+                raise err
             raise StopAsyncIteration
         elif isinstance(self._recv_q, Exception):
             exc, self._recv_q = self._recv_q, None
@@ -915,8 +924,8 @@ class Msg(MsgLink, MsgResult):
         try:
             res = await self._recv_q.get()
         except EOFError:
-            if self._term_is_error():
-                raise EOFError from None
+            if (err := self._term_error()) is not None:
+                raise err from None
             raise StopAsyncIteration from None
 
         await self._qsize()

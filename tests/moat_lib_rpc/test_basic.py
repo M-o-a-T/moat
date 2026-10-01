@@ -5,6 +5,7 @@ import pytest
 
 from tests.moat_lib_rpc.scaffold import scaffold
 
+from moat.util import ungroup
 from moat.lib.micro import log
 from moat.lib.path import P
 from moat.lib.rpc import MsgHandler, MsgSender
@@ -265,6 +266,32 @@ async def test_stream_out(use_socket):  # noqa: D103
         assert tuple(st.args) == ({},)
         assert not st.kw
         assert n == 3
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_out_error(use_socket):
+    "An error that ends the remote's stream is re-raised to the reader, not swallowed."
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                await st.send(1)
+                await st.send(2)
+                raise RuntimeError("Broken", 42)
+
+    got = []
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+        with pytest.raises(RuntimeError) as err, ungroup:  # noqa:PT012
+            async with b.cmd("Test").stream_in() as st:
+                async for m in st:
+                    got.append(m[0])
+    assert got == [1, 2]
+    # (over a socket, the exception's args also carry its type)
+    assert err.match("Broken")
+    assert err.match("42")
 
 
 @pytest.mark.anyio

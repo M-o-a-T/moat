@@ -1654,6 +1654,19 @@ class Link(LinkCommon, CtxObj):
 
         tm = self.cfg.timeout.connect
         timeout = tm.initial
+        # Bound the *initial* hunt for a server by ``init_timeout``: until the
+        # first connection is established (signalled in ``_connect_run`` via
+        # ``task_status.started()``, which sets ``current_server``), retrying
+        # forever would deadlock ``Link.__aenter__`` — it awaits
+        # ``tg.start(self._run_server_link)`` and thus a successful start.  The
+        # deadline is only consulted while no connection has been made yet;
+        # once connected, a dropped link terminates the client via
+        # ``ServerLinkLost`` before this check runs again.
+        init_deadline: float | None
+        if self.cfg.client.init_timeout:
+            init_deadline = anyio.current_time() + self.cfg.client.init_timeout
+        else:
+            init_deadline = None
         while True:
             if srv is None:
                 await self._last_link_seen.wait()
@@ -1685,8 +1698,14 @@ class Link(LinkCommon, CtxObj):
                 # TODO and if not, do that
 
             # Back off to either a new server announcement or the exponential timeout
+            # While the initial-connect budget is active, don't wait longer than
+            # the remaining budget — otherwise a long backoff would stall the
+            # init-deadline check below.
+            backoff = timeout
+            if init_deadline is not None:
+                backoff = min(backoff, init_deadline - anyio.current_time())
             try:
-                with anyio.fail_after(timeout):
+                with anyio.fail_after(max(backoff, 0)):
                     await self._last_link_seen.wait()
             except TimeoutError:
                 # try the last-reported connection again
@@ -1695,6 +1714,19 @@ class Link(LinkCommon, CtxObj):
                 # immediately use the new data
                 srv = self._last_link
                 self._last_link_seen = anyio.Event()
+
+            # Still no server after exhausting the initial budget: fail loudly
+            # instead of looping forever (which would hang ``__aenter__``).
+            if (
+                init_deadline is not None
+                and self.current_server is None
+                and anyio.current_time() >= init_deadline
+            ):
+                what = "any server" if self._only is None else f"server {self._only!r}"
+                raise TimeoutError(
+                    f"Could not connect to {what} within "
+                    f"{self.cfg.client.init_timeout}s. Is it running?"
+                ) from None
 
     async def _read_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # Background process that monitors the server link channel

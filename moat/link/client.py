@@ -1622,6 +1622,14 @@ class Link(LinkCommon, CtxObj):
                         # whatever ended an established connection: it's gone
                         raise ServerLinkLost(self._socket_path) from exc
                     raise
+            except TimeoutError:
+                # (before OSError: TimeoutError is a subclass)
+                if self._local_only:
+                    raise RuntimeError(
+                        f"Timed out contacting {self._socket_path!r}; "
+                        "no fallback allowed (local-only mode)."
+                    ) from None
+                self.logger.info("%r timed out, trying announcements", self._socket_path)
             except OSError as exc:
                 if self._local_only:
                     raise RuntimeError(
@@ -1629,13 +1637,6 @@ class Link(LinkCommon, CtxObj):
                         "no fallback allowed (local-only mode)."
                     ) from None
                 self.logger.info("%r error: %r, trying announcements", self._socket_path, exc)
-            except TimeoutError:
-                if self._local_only:
-                    raise RuntimeError(
-                        f"Timed out contacting {self._socket_path!r}; "
-                        "no fallback allowed (local-only mode)."
-                    ) from None
-                self.logger.info("%r timed out, trying announcements", self._socket_path)
             finally:
                 self.current_server = None
                 if self._server_up.is_set():

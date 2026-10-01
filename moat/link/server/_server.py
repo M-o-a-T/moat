@@ -230,7 +230,13 @@ def cmp_n(a, b):
 
 def tag_check(tags: Sequence[Tag]) -> bool:
     """
-    Check that these tags describe a complete dump
+    Check that these tags describe a complete dump.
+
+    A dump is complete if it has a file-ID start tag (mode ``full``/``init``)
+    and either an end marker or a change marker.  The change marker is emitted
+    once the initial full-state snapshot has been flushed; a writer that is
+    killed before the final end marker (power loss, crash) thus still leaves a
+    usable, complete dump behind.
     """
     if len(tags) < 2:
         return False
@@ -241,11 +247,7 @@ def tag_check(tags: Sequence[Tag]) -> bool:
     if t.get("mode", "") not in {"full", "init"}:
         return False
 
-    t = tags[-1]
-    if t.tag != CBOR_TAG_MOAT_FILE_END:
-        return False
-
-    return True
+    return any(tag.tag in (CBOR_TAG_MOAT_FILE_END, CBOR_TAG_MOAT_CHANGE) for tag in tags)
 
 
 def _get_my_ip(ip6: bool = False):

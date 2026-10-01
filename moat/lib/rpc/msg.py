@@ -410,6 +410,7 @@ class Msg(MsgLink, MsgResult):
     _recv_skip: bool = False
 
     _fli: int | None = None
+    _flo: int | None = None
     _flo_evt: Event | None = None
     warnings: list
 
@@ -569,14 +570,16 @@ class Msg(MsgLink, MsgResult):
                 a.append(kw)
             exc = StreamError(a)
             if isinstance(exc, Flow):
-                if self._flo_evt is None:
-                    self._flo = exc.n
-                    self._flo_evt = Event()
-                else:
-                    if self._flo == 0:
-                        self._flo_evt.set()
+                # Credit-based flow control: the peer grants a number of
+                # additional streamed messages we may send. Wake any sender
+                # blocked in ``_flow_take`` when the window opens.
+                was_closed = self._flo is None or self._flo <= 0
+                self._flo = (self._flo or 0) + exc.n
+                if was_closed and self._flo > 0:
+                    if self._flo_evt is None:
                         self._flo_evt = Event()
-                    self._flo += exc.n
+                    self._flo_evt.set()
+                    self._flo_evt = Event()
                 # otherwise ignore
             elif self._stream_in == S_ON and self._recv_q is not None:
                 await self._recv_q.put_error(exc)
@@ -610,7 +613,33 @@ class Msg(MsgLink, MsgResult):
             log("NoStream:%d", self._stream_out)
             raise NoStream
         await self._skipped()
+        await self._flow_take()
         await self.ml_send(a, kw, B_STREAM)
+
+    async def _flow_take(self) -> None:
+        """Send-side per-stream flow control.
+
+        If the receiver requests flow control, waits for it to advertise
+        room for one more streamed message before forwarding it. The window
+        is driven by the receiver's ``_qsize`` credit notices (``Flow``
+        warnings); see ``ml_recv`` for the bookkeeping that arms
+        ``_flo_evt``.
+
+        Flow control is opt-in: until the peer first sends a ``Flow``
+        notice (``_flo is None``), sending is unrestricted.
+        """
+        while True:
+            flo = self._flo
+            if flo is None:
+                return  # peer doesn't practise flow control
+            if flo > 0:
+                break
+            evt = self._flo_evt
+            if evt is None:
+                evt = Event()
+                self._flo_evt = evt
+            await evt.wait()
+        self._flo = flo - 1
 
     async def warn(self, *a, **kw) -> None:
         """
@@ -957,9 +986,12 @@ class _Stream:
         # stream-in depends on what the remote side sent
         await slf.prep_stream(self.flag)
 
-        if slf._recv_qlen < 10:  # noqa: SLF001
-            slf._fli = 0  # noqa: SLF001
-            await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
+        # Advertise our receive-window size up front so the peer can gate
+        # its sends on it from the very first message (see ``_flow_take``).
+        # Without an initial credit notice the peer has no window to honour
+        # and falls back to unrestricted sending.
+        slf._fli = 0  # noqa: SLF001
+        await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
 
         if self.initial:
             await slf.wait_replied()

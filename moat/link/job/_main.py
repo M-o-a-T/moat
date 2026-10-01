@@ -15,7 +15,7 @@ import asyncclick as click
 
 from moat.util import attrdict, yprint
 from moat.util import time as mtime
-from moat.lib.path import P, Path
+from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import add_dates, data_get
 from moat.link.client import Link
@@ -222,9 +222,11 @@ async def list_(
         state_path = obj.statepath + path
 
     if table:
+        pl = PathLongener()
         async with obj.conn.d.walk(obj.path + path).stream_in() as mon:
             async for r in mon:
-                _, p, d, *_m = r
+                n, p, d, *_m = r
+                p = pl.long(n, p)
                 try:
                     s = await obj.conn.d_get(obj.statepath + path + p)
                 except KeyError:

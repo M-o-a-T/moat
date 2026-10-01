@@ -108,6 +108,35 @@ async def test_list_table(cfg):
         assert r.stdout.count("-never-") == 2
 
 
+async def test_list_table_many(cfg):
+    """``list -t`` over a larger subtree must not deadlock.
+
+    Regression test: fetching each job's state inline while still
+    iterating the walking stream deadlocked once the walk's flow-control
+    window filled, because the consumer blocked in a ``d.get`` call and
+    stopped advancing credit to the server.  Using more jobs than the
+    stream's receive-window (plus a handful of nested sub-paths) is
+    enough to reproduce the original hang.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        # Plenty of jobs, spread across nested paths, exceeding the
+        # walk stream's receive window (default 20).
+        for i in range(40):
+            grp = "grp" + str(i // 10)
+            await sf.run(f"link job at {grp}.job{i} set -c code.x -t -")
+        await c.i_sync()
+
+        r = await sf.run("link job at : list -t")
+        # Every job shows up, each marked "-never-" since nothing ran.
+        assert r.stdout.count("-never-") == 40
+        assert "grp0.job0" in r.stdout
+        assert "grp3.job39" in r.stdout
+
+
 async def test_info_lists_groups(cfg):
     """``info`` lists the groups (or hosts) below the current root."""
     async with (

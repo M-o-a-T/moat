@@ -156,6 +156,12 @@ class Caller:
                 cmd = Path.build((cmd,))
             m1 = Msg.Call(cmd, list(args), kw)
 
+            # Honour the receive-queue size requested via stream()/stream_in(size)/
+            # stream_out(size). Without this the Msg always defaulted to 20,
+            # so callers couldn't size the window to their consumption pattern.
+            if self._qlen:
+                m1._recv_qlen = self._qlen  # noqa: SLF001
+
             tg = await acm(TaskGroup())
             m2 = await acm(m1.ensure_remote())
             # m2 is the one with the command data

@@ -532,6 +532,20 @@ class Msg(MsgLink, MsgResult):
                 self._stream_in = S_ON
         await super().ml_send(a, kw, flags)
 
+    async def ml_send_error(self, exc):
+        """Send an exception, unless it's the peer's own terminal error.
+
+        Overrides :meth:`MsgLink.ml_send_error`: if the exception escaping
+        the handler/body is the very error the peer sent us (recorded in
+        ``_recv_err`` — e.g. an ``OverrunError`` the receiver signalled,
+        or any other peer-originated terminal error), don't echo it back.
+        The peer already knows; sending it again is redundant and, once the
+        stream is fully ended, would spuriously log “Err after end”.
+        """
+        if exc is self._term_error():
+            return
+        await super().ml_send_error(exc)
+
     async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """
         Receiver for data from the other side.
@@ -555,6 +569,19 @@ class Msg(MsgLink, MsgResult):
                 self._stream_out = S_OFF
             if self._recv_q is not None:
                 self._recv_q.close_sender()
+            # Record a peer-originated terminal error durably so that
+            # ``_term_error`` keeps returning it even after ``wait_replied``
+            # has consumed ``_msg``. This lets us recognise — and suppress —
+            # echoes of the peer's own error (see ``ml_send_error``).
+            # Cancellation is handled separately (``_got_cancel``) and
+            # already raises ``CancelledError`` via the handler task being
+            # cancelled, so don't shadow it here.
+            if (
+                flags & B_ERROR
+                and not (len(a) == 1 and a[0] == E_CANCEL)
+                and isinstance(self._msg, outcome.Error)
+            ):
+                self._recv_err = self._msg.error
             # A terminal error ends the incoming direction; wake any
             # sender blocked in ``_flow_take`` so it can re-check and
             # raise (e.g. an ``OverrunError`` from the receiver) instead

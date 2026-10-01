@@ -473,3 +473,37 @@ async def test_submsgsender_stream_in_routes_flow(use_socket):
                     got.append(m)
                     await anyio.sleep(0.01)
     assert 0 < len(got) < 1000
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_overrun_no_echo(use_socket, caplog):
+    """A producer that lets the reader's ``OverrunError`` propagate must
+    not echo it back to the reader (which already knows) nor log a
+    spurious “Err after end”.
+
+    Mirrors ``d.walk``: the writer's ``send`` raises ``OverrunError`` and
+    the handler doesn't catch it.
+    """
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                for i in range(1000):
+                    # No try/except: let OverrunError propagate, like d.walk.
+                    await st.send(i)
+                pytest.fail("producer should have been stopped by overrun")
+
+    got = []
+    with caplog.at_level("DEBUG", logger="moat.lib.rpc.msg"):
+        async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+            with pytest.raises(OverrunError), ungroup:  # noqa:PT012
+                async with b.cmd("Test").stream_in(size=2, flow=False) as st:
+                    async for (m,) in st:
+                        got.append(m)
+                        await anyio.sleep(0.01)
+    assert 0 < len(got) < 1000
+    # The producer must not have echoed the reader's OverrunError back.
+    assert not any("Err after end" in r.message for r in caplog.records)

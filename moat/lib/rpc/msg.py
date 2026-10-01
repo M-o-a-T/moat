@@ -409,6 +409,7 @@ class Msg(MsgLink, MsgResult):
     _recv_q: Queue | None = None
     _recv_qlen: int = 20
     _recv_skip: bool = False
+    _recv_err: BaseException | None = None  # terminal receive-side error (e.g. OverrunError)
 
     _fli: int | None = None
     _flo: int | None = None
@@ -607,8 +608,12 @@ class Msg(MsgLink, MsgResult):
                 # shouldn't happen (the sender gates on our window); with
                 # it off the caller accepted that the peer might overrun.
                 # Either way we must not block the connection's read loop:
-                # surface the error to our consumer and tell the sender.
-                self._recv_q = OverrunError()
+                # stash a terminal error for our consumer, drain-stop the
+                # queue so its ``get`` returns promptly, and tell the
+                # sender to stop.
+                if self._recv_err is None:
+                    self._recv_err = OverrunError()
+                self._recv_q.close_sender()
                 if self._stream_out != S_END:
                     self._stream_out = S_END
                     self._stream_in = S_END
@@ -895,6 +900,8 @@ class Msg(MsgLink, MsgResult):
 
         if self._msg is None:
             if self._stream_in == S_END:
+                if (err := self._term_error()) is not None:
+                    raise err
                 raise NoStream
             await self._msg_in.wait()
             self._msg_in = Event()
@@ -927,6 +934,11 @@ class Msg(MsgLink, MsgResult):
         # Incoming message queue handling strategy:
         # - read without flow control until the queue is half full
         assert self._recv_q is not None  # to shut up pyright
+
+        if self._recv_err is not None:
+            # Stream is dead (e.g. overruned); don't touch the queue or
+            # advertise further credit.
+            return
 
         if not self._flow:
             # Flow control disabled by the caller: don't advertise a window.
@@ -968,18 +980,18 @@ class Msg(MsgLink, MsgResult):
         that broke mid-transfer looks indistinguishable from one that
         completed normally.
         """
+        # A local receive-side overrun is terminal too.
+        if self._recv_err is not None:
+            return self._recv_err
         if self._stream_in != S_END or not isinstance(self._msg, outcome.Error):
             return None
         return self._msg.error
 
     async def __anext__(self) -> MsgResult:
+        if (err := self._term_error()) is not None:
+            raise err
         if self._recv_q is None:
-            if (err := self._term_error()) is not None:
-                raise err
             raise StopAsyncIteration
-        elif isinstance(self._recv_q, Exception):
-            exc, self._recv_q = self._recv_q, None
-            raise exc
         await self._skipped()
 
         try:

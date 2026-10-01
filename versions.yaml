@@ -1,5 +1,5 @@
 _:
-  new: 26.4.16
+  new: 26.4.17
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -389,12 +389,12 @@ moat-lib-xknx:
   rev: 43d36f1b36ce7fef0933915a67e26532e8aab691
   tag: 3.15.0
 moat-link:
-  deb: 0.10.5-1
-  new: 0.10.5
+  deb: 0.10.6-1
+  new: 0.10.6
   pkg: 1
   pypi: 0.10.0
-  rev: d92a0c0883904eadf3ba0d619b7417850f7172d3
-  tag: 0.10.5
+  rev: 6aa3bd59034f500fa1cb8df02c3cc2831e447755
+  tag: 0.10.6
 moat-link-cal:
   new: 0.0.1
   pkg: 3
@@ -487,10 +487,9 @@ moat-link-server:
   deb: 0.7.0-2
   new: 0.7.0
   pkg: 2
-  pkgrev: a69557a854dca0f3e412a5d6d1812da491d346c3
   pypi: 0.6.3
-  rev: c663236eb942ec259d45122ccb98ca0ef8f88bb8
-  tag: 0.6.7
+  rev: 6aa3bd59034f500fa1cb8df02c3cc2831e447755
+  tag: 0.7.0
 moat-link-wago:
   deb: 0.10.5-3
   new: 0.10.5

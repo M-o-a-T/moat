@@ -1013,7 +1013,7 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
+    def __init__(self, slf: Msg, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
         self.slf = slf
         self.a = a
         self.kw = kw

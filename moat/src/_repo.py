@@ -75,6 +75,11 @@ class _Common:
         """Version dict for this component."""
         raise NotImplementedError
 
+    def _built(self, vers: str) -> bool:
+        """Whether a package with version @vers has been built."""
+        v = self.vers
+        return v.get("deb", "-").rsplit("-", 1)[0] == vers or v.get("pypi", None) == vers
+
     def next_tag(
         self,
         major: bool = False,
@@ -88,6 +93,9 @@ class _Common:
             tag = None
         verstag = self.vers.get("new", None)
         nt = _tagsplit(tag) if tag is not None else [0, 0, 0]
+        if incr and new_tag is None and verstag and self._built(verstag):
+            # "new" has already been released: don't reuse it for new code.
+            nt = max(nt, _tagsplit(verstag))
         if incr or tag is None:
             if major:
                 nt = [nt[0] + 1, 0, 0]

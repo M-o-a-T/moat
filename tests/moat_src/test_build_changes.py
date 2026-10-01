@@ -142,17 +142,43 @@ def test_autotag_plain():
     assert (v.tag, v.pkg) == ("0.6.8", 1)
 
 
-def test_autotag_pending_version_already_packaged():
+def test_autotag_version_already_packaged():
     """
-    A pre-set "new" version that packaging-only builds have already used
-    must not restart the build number: that'd collide with the existing
-    package and thus skip the build.
+    A "new" version that packaging-only builds have already released
+    must not be reused for changed source.
     """
     v = _autotag(
         attrdict(tag="0.6.7", new="0.7.0", pkg=2, deb="0.7.0-2", rev="0" * 39 + "1", pkgrev="a")
     )
-    assert (v.tag, v.pkg) == ("0.7.0", 3)
+    assert (v.tag, v.new, v.pkg) == ("0.7.1", "0.7.1", 1)
     assert "pkgrev" not in v
+
+
+def test_autotag_version_on_pypi():
+    "Likewise if the version only went to PyPI."
+    v = _autotag(attrdict(tag="0.6.7", new="0.7.0", pkg=1, pypi="0.7.0", rev="0" * 39 + "1"))
+    assert (v.tag, v.pkg) == ("0.7.1", 1)
+
+
+def test_autotag_pending_version():
+    "A requested version that hasn't been built yet gets used."
+    v = _autotag(attrdict(tag="0.6.7", new="0.7.0", pkg=2, deb="0.6.7-2", rev="0" * 39 + "1"))
+    assert (v.tag, v.pkg) == ("0.7.0", 1)
+
+
+def test_explicit_tag_already_packaged():
+    """
+    Explicitly re-requesting a released version must not restart the
+    build number: that'd collide with the existing package and thus
+    skip the build.
+    """
+    from moat.src._repo import Package  # noqa: PLC0415
+
+    vers = attrdict(tag="0.6.7", new="0.7.0", pkg=2, deb="0.7.0-2")
+    repo = MagicMock()
+    repo.versions = {"moat-foo": vers}
+    assert Package(repo, "moat.foo").next_tag(new_tag="0.7.0") == "0.7.0"
+    assert vers.pkg == 3
 
 
 def test_autotag_untagged():

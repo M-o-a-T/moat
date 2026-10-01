@@ -438,3 +438,38 @@ async def test_stream_overrun_reader(use_socket):
                     await anyio.sleep(0.01)
     # We received some data before the overrun, but not all 1000.
     assert 0 < len(got) < 1000
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_submsgsender_stream_in_routes_flow(use_socket):
+    """``SubMsgSender.stream_in`` forwards ``size``/``flow`` to the stream
+    configurator rather than dropping them onto the command arguments.
+
+    With ``flow=False`` the receiver must not advertise a window, so an
+    over-producing peer raises ``OverrunError`` instead of being throttled.
+    """
+
+    class EP(MsgHandler):
+        async def stream_Test(self, msg):
+            async with msg.stream_out("Takeme") as st:
+                for i in range(1000):
+                    try:
+                        await st.send(i)
+                    except OverrunError:
+                        break
+                else:
+                    pytest.fail("producer should have been stopped by overrun")
+                await msg.result({})
+
+    got = []
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+        # Reach the "Test" command through a SubMsgSender, the path that
+        # previously swallowed size/flow into the command arguments.
+        bsub = b.sub_at(P("Test"))
+        with pytest.raises(OverrunError), ungroup:  # noqa:PT012
+            async with bsub.stream_in(size=2, flow=False) as st:
+                async for (m,) in st:
+                    got.append(m)
+                    await anyio.sleep(0.01)
+    assert 0 < len(got) < 1000

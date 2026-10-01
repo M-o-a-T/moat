@@ -435,11 +435,11 @@ class SubMsgSender(MsgSender):
         # calls our .handle method
         return Caller(self, (cmd, a, kw))
 
-    def stream(self, *a, **kw):
-        return self.cmd(Path(), *a, **kw).stream()
+    def stream(self, *a, size: int = 42, flow: bool = True, **kw):
+        return self.cmd(Path(), *a, **kw).stream(size, flow=flow)
 
-    def stream_in(self, *a, **kw):
-        return self.cmd(Path(), *a, **kw).stream_in()
+    def stream_in(self, *a, size: int = 42, flow: bool = True, **kw):
+        return self.cmd(Path(), *a, **kw).stream_in(size, flow=flow)
 
     def stream_out(self, *a, **kw):
         return self.cmd(Path(), *a, **kw).stream_out()

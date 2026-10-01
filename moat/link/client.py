@@ -1274,13 +1274,13 @@ class ServiceSender(MsgSender):
             raise RuntimeError("Service not available: destination terminated")
         return inner.cmd(cmd, *a, **kw)
 
-    def stream(self, *a, **kw):
+    def stream(self, *a, size: int = 42, flow: bool = True, **kw):
         """Issue a bidirectional streaming call to the service."""
-        return self.cmd(Path(), *a, **kw).stream()
+        return self.cmd(Path(), *a, **kw).stream(size, flow=flow)
 
-    def stream_in(self, *a, **kw):
+    def stream_in(self, *a, size: int = 42, flow: bool = True, **kw):
         """Issue an inbound-only streaming call to the service."""
-        return self.cmd(Path(), *a, **kw).stream_in()
+        return self.cmd(Path(), *a, **kw).stream_in(size, flow=flow)
 
     def stream_out(self, *a, **kw):
         """Issue an outbound-only streaming call to the service."""

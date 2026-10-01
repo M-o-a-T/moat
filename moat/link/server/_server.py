@@ -1031,6 +1031,8 @@ class Server(MsgHandler):
     _stamp_in_evt: anyio.Event
 
     _ping_history: Sequence[str] = ()
+    # our listening addresses; None until we're synced and accept clients
+    link_data: list[dict[str, Any]] | None = None
 
     _server_link: dict[str, tuple[anyio.CancelScope, BasicLink | None]]
     _server_link_add: anyio.Event
@@ -2234,6 +2236,12 @@ class Server(MsgHandler):
                 await tg.start(self._run_server_link, name, msg.data)
 
     async def _down_one(self, name: str):
+        if self.link_data is None:
+            # We're still starting up (`_watch_up` runs while the initial
+            # sync is in progress): no data and no open ports yet, thus
+            # we can't take over.
+            return
+
         # protect against repeats
         t = anyio.current_time()
         if name in self._downed and t - self._downed[name] < self.cfg.server.ping.cycle:

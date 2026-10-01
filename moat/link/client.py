@@ -1642,8 +1642,15 @@ class Link(LinkCommon, CtxObj):
                 if self._server_up.is_set():
                     self._server_up = anyio.Event()
 
-        with anyio.fail_after(self.cfg.client.init_timeout):
-            srv = await self.tg.start(self._read_server_link)
+        try:
+            with anyio.fail_after(self.cfg.client.init_timeout):
+                srv = await self.tg.start(self._read_server_link)
+        except TimeoutError:
+            what = "any server" if self._only is None else f"server {self._only!r}"
+            raise TimeoutError(
+                f"No announcement of {what} seen within "
+                f"{self.cfg.client.init_timeout}s. Is it running?"
+            ) from None
 
         tm = self.cfg.timeout.connect
         timeout = tm.initial

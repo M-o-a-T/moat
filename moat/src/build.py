@@ -55,6 +55,45 @@ def fix_deps(deps: list[str], tags: dict[str, str], changed: bool = False) -> bo
     return work
 
 
+class Status:
+    """
+    A transient status line on a terminal: "  DOING PACKAGE  \\r".
+
+    Disabled (all methods do nothing, except `print`) unless @enabled is set
+    and stdout is a terminal.
+    """
+
+    def __init__(self, enabled: bool = False):
+        self.enabled = enabled and sys.stdout.isatty()
+        self._len = 0
+
+    def __call__(self, doing: str, pkg: str) -> None:
+        "Show what we're doing now."
+        if not self.enabled:
+            return
+        line = f"  {doing} {pkg}  "
+        sys.stdout.write(line.ljust(self._len) + "\r")
+        sys.stdout.flush()
+        self._len = len(line)
+
+    def clear(self) -> None:
+        "Remove the status line."
+        if self._len:
+            sys.stdout.write(" " * self._len + "\r")
+            sys.stdout.flush()
+            self._len = 0
+
+    def print(self, *a, **kw) -> None:
+        "Print a permanent line (always), removing the status line first."
+        self.clear()
+        print(*a, **kw)
+
+    def report(self, *a) -> None:
+        "Print a permanent progress line, if enabled."
+        if self.enabled:
+            self.print(*a)
+
+
 async def run_tests(pkg: str | None, opts: tuple[str, ...], debug: bool) -> bool:
     """Run subtests for subpackage @pkg."""
 
@@ -112,27 +151,31 @@ def do_autotag(
             logger.debug("No Changes: %s %s", r.name, r.verstr)
 
 
-async def do_runtest(repos: list[Package], pytest_opts: tuple[str, ...], debug: bool) -> set[str]:
+async def do_runtest(
+    repos: list[Package], pytest_opts: tuple[str, ...], debug: bool, st: Status
+) -> set[str]:
     """Run tests"""
     fails: set[str] = set()
     for r in repos:
+        st.clear()  # the tests report their own progress
         if not await run_tests(r.under, pytest_opts, debug):
             fails.add(r.name)
     return fails
 
 
 async def do_versions(
-    repo: Repo, repos: list[Package], tags: dict[str, str], no: attrdict
+    repo: Repo, repos: list[Package], tags: dict[str, str], no: attrdict, st: Status
 ) -> None:
     """set versions"""
     for r in repos:
+        st("versioning", r.dash)
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
         skip = rd / "SKIP.build"
 
         if await skip.is_file():
             # bad=True
-            print("Skip:", r.name, file=sys.stderr)
+            st.print("Skip:", r.name, file=sys.stderr)
             continue
 
         if await p.is_file():
@@ -163,9 +206,10 @@ async def do_versions(
             repo.index.add(str(p))
 
 
-def do_copy_repos(repos: list[Package]) -> None:
+def do_copy_repos(repos: list[Package], st: Status) -> None:
     """copy repos to packaging dir"""
     for r in repos:
+        st("copying", r.dash)
         r.copy()
 
 
@@ -249,11 +293,13 @@ async def do_build_deb(
     no: attrdict,
     debug: bool,
     gtag: str,
+    st: Status,
 ) -> None:
     "Build Debian packages"
     await DIST_DEBIAN.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
+        st("building deb", r.dash)
         ltag = r.next_tag(incr=False)
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
             continue
@@ -401,12 +447,14 @@ async def do_build_deb(
                                 shutil.move(str(src), str(dest))
                                 moved_files.add(filename)
 
+                st.report(r.srcname, f"{ltag}-{r.vers.pkg}")
+
         except subprocess.CalledProcessError as exc:
             if no.run:
                 if debug:
-                    print(f"\n*** Failure packaging {r.name}", file=sys.stderr)
+                    st.print(f"\n*** Failure packaging {r.name}", file=sys.stderr)
                 else:
-                    print(
+                    st.print(
                         """
 *** Failure packaging {r.name}
 
@@ -420,7 +468,7 @@ async def do_build_deb(
                     )
             else:
                 err = exc.stderr or "?"
-                print(f"Failure packaging {r.name}: {err.strip()}", file=sys.stderr)
+                st.print(f"Failure packaging {r.name}: {err.strip()}", file=sys.stderr)
                 if not debug and not exc.stderr:
                     raise
                 no.commit = True
@@ -429,7 +477,7 @@ async def do_build_deb(
 
 
 async def do_build_pypi(
-    repos: list[Package], no: attrdict, debug: bool
+    repos: list[Package], no: attrdict, debug: bool, st: Status
 ) -> tuple[set[Package], set[str]]:
     """build for pypi"""
     err: set[str] = set()
@@ -437,6 +485,7 @@ async def do_build_pypi(
     await DIST_PYPI.mkdir(parents=True, exist_ok=True)
 
     for r in repos:
+        st("building pypi", r.dash)
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
         if not await p.is_file():
@@ -467,12 +516,15 @@ async def do_build_pypi(
     return up, err
 
 
-async def do_upload_pypi(up: set[Package], debug: bool, no: attrdict, twine_repo: str) -> set[str]:
+async def do_upload_pypi(
+    up: set[Package], debug: bool, no: attrdict, twine_repo: str, st: Status
+) -> set[str]:
     """send packages to pypi"""
     err: set[str] = set()
     official = twine_repo == "pypi"
 
     for r in up:
+        st("uploading pypi", r.dash)
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
         if not await p.is_file():
@@ -510,12 +562,14 @@ async def do_upload_deb(
     debug: bool,
     dput_opts: list[str],
     g_done: Path | None,
+    st: Status,
 ) -> set[str]:
     """Upload to Debian"""
     err: set[str] = set()
     if not dput_opts:
         dput_opts = ["-u", "ext"]
     for r in repos:
+        st("uploading deb", r.dash)
         ltag = r.next_tag(incr=False)
         if r.vers.get("deb", "-") == f"{ltag}-{r.vers.pkg}":
             continue
@@ -589,6 +643,7 @@ it is dropped when you use '--dput'.
     help="Update external dependency",
 )
 @click.option("-E", "--no-ext", is_flag=True, help="don't record external repository HEAD commits")
+@click.option("-q", "--quiet", is_flag=True, help="don't report progress")
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
@@ -614,10 +669,71 @@ async def cli(
     autotag: bool,
     twine_repo: str,
     no_ext: bool,
+    quiet: bool,
 ) -> None:
     """
     Rebuild all modified packages.
+
+    On a terminal, reports what it's doing, and the Debian packages it
+    has built, unless '--quiet' (or the global '-Q') is used.
     """
+    # With -vv, the commands' output is echoed and would mess this up.
+    st = Status(not quiet and 0 < obj.debug < 2)
+    try:
+        await _build(
+            obj,
+            st,
+            no_commit,
+            no_dirty,
+            no_test,
+            no_tag,
+            no_pypi,
+            parts,
+            dput_opts,
+            pytest_opts,
+            deb_opts,
+            run,
+            no_test_chg,
+            version,
+            no_version,
+            no_deb,
+            skip_,
+            major,
+            minor,
+            forcetag,
+            autotag,
+            twine_repo,
+            no_ext,
+        )
+    finally:
+        st.clear()
+
+
+async def _build(
+    obj: attrdict,
+    st: Status,
+    no_commit: bool,
+    no_dirty: bool,
+    no_test: bool,
+    no_tag: bool,
+    no_pypi: bool,
+    parts: tuple[str, ...],
+    dput_opts: tuple[str, ...],
+    pytest_opts: tuple[str, ...],
+    deb_opts: tuple[str, ...],
+    run: bool,
+    no_test_chg: bool,
+    version: tuple[tuple[str, str], ...],
+    no_version: bool,
+    no_deb: bool,
+    skip_: tuple[str, ...],
+    major: bool,
+    minor: bool,
+    forcetag: str | None,
+    autotag: bool,
+    twine_repo: str,
+    no_ext: bool,
+) -> None:
     cfg = obj.cfg
     g_done: Path | None = cfg.get("src", {}).get("done")
     if g_done is not None:
@@ -705,6 +821,7 @@ async def cli(
     elif not no.tag:
         err: set[str] = set()
         for r in repos:
+            st("checking", r.dash)
             try:
                 tag = r.last_tag
             except KeyError:
@@ -721,6 +838,7 @@ async def cli(
             tags[r.mdash] = tag
             if r.has_changes(True):
                 err.add(r.dash)
+        st.clear()
         if err:
             if no.run:
                 print("*** Untagged changes:", file=sys.stderr)
@@ -733,7 +851,7 @@ async def cli(
 
     # Step 2: run tests
     if not no.test:
-        fails = await do_runtest(repos, pytest_opts, debug=obj.debug > 1)
+        fails = await do_runtest(repos, pytest_opts, debug=obj.debug > 1, st=st)
         if fails:
             if no.run:
                 print("*** Tests failed:", *fails, file=sys.stderr)
@@ -743,21 +861,22 @@ async def cli(
                 raise SystemExit(1)
 
     # Step 3: set version and fix versioned dependencies
-    await do_versions(repo, repos, tags, no)
+    await do_versions(repo, repos, tags, no, st)
 
     # Step 3: copy to packaging dir
-    do_copy_repos(repos)
+    do_copy_repos(repos, st)
 
     # Step 4: build Debian package
     if not no.deb:
         deb_opts_list: list[str] = list(deb_opts)
         if not deb_opts_list:
             deb_opts_list = ["--no-sign"]
-        await do_build_deb(repo, repos, deb_opts_list, no, obj.debug > 1, forcetag)
+        await do_build_deb(repo, repos, deb_opts_list, no, obj.debug > 1, forcetag, st)
 
     # Step 5: build PyPI package
     if not no.pypi:
-        up, err = await do_build_pypi(repos, no, obj.debug > 1)
+        up, err = await do_build_pypi(repos, no, obj.debug > 1, st)
+        st.clear()
 
         if err:
             if no.run:
@@ -772,7 +891,8 @@ async def cli(
 
         # Step 6: upload PyPI package
         elif not no.run:
-            err = await do_upload_pypi(up, obj.debug > 1, no, twine_repo)
+            err = await do_upload_pypi(up, obj.debug > 1, no, twine_repo, st)
+            st.clear()
             if err:
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
@@ -783,7 +903,8 @@ async def cli(
     # Step 7: upload Debian package
     if not no.run and not no.deb:
         dput_opts_list: list[str] = list(dput_opts)
-        err = await do_upload_deb(repos, obj.debug > 1, dput_opts_list, g_done)
+        err = await do_upload_deb(repos, obj.debug > 1, dput_opts_list, g_done, st)
+        st.clear()
 
         if err:
             print("Upload errors:", file=sys.stderr)

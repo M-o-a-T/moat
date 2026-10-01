@@ -1,5 +1,5 @@
 _:
-  new: 26.4.14
+  new: 26.4.16
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -358,12 +358,12 @@ moat-lib-ring:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.2.4
 moat-lib-rpc:
-  deb: 0.7.10-1
-  new: 0.7.10
+  deb: 0.7.11-1
+  new: 0.7.11
   pkg: 1
   pypi: 0.7.5
-  rev: d92a0c0883904eadf3ba0d619b7417850f7172d3
-  tag: 0.7.10
+  rev: f91bec9fc79dc496337a3e878a9ba83c3a78bbd6
+  tag: 0.7.11
 moat-lib-run:
   deb: 0.2.2-3
   new: 0.2.2

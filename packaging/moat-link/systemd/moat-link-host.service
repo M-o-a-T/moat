@@ -12,8 +12,6 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/moat link host run
 
-RuntimeDirectory=moat/link
-
 User=MoaT-Link
 Group=MoaT
 

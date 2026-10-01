@@ -11,8 +11,6 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/lib/moat/link/job/run-single
 
-RuntimeDirectory=moat/link
-
 User=MoaT-Link
 Group=MoaT
 

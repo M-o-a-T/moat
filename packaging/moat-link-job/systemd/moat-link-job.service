@@ -10,8 +10,6 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/moat link job run
 
-RuntimeDirectory=moat/link
-
 User=MoaT-Link
 Group=MoaT
 

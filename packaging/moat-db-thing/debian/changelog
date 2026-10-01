@@ -1,3 +1,9 @@
+moat-db-thing (0.0.6-3) unstable; urgency=medium
+
+  * New release for 26.4.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 01 Oct 2026 11:14:22 +0200
+
 moat-db-thing (0.0.6-2) unstable; urgency=medium
 
   * New release for 26.3.3

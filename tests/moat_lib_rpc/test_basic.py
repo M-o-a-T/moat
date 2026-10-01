@@ -507,3 +507,39 @@ async def test_stream_overrun_no_echo(use_socket, caplog):
     assert 0 < len(got) < 1000
     # The producer must not have echoed the reader's OverrunError back.
     assert not any("Err after end" in r.message for r in caplog.records)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_flow_throttles_fast_producer_slow_consumer(use_socket):
+    """With flow control ON, a fast producer flooding a slow consumer must
+    throttle and deliver everything — not overrun.
+
+    Regression test for the initial-credit race: the receiver advertises an
+    opening window, but until the sender's read loop processed that (async)
+    credit notice it treated ``_flo is None`` as "no flow control" and burst
+    unrestricted, overflowing a small receive queue before the window was
+    honoured.  The fix sends the initial credit *before* the opening command
+    (and buffers early notices on the receiver) so the sender is gated from
+    the very first message.
+    """
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                for i in range(1000):
+                    await st.send(i)
+                await msg.result({})
+
+    got = []
+    async with (
+        scaffold(EP(), None, use_socket=use_socket) as (_a, b),
+        b.cmd("Test").stream_in(size=4, flow=True) as st,
+    ):
+        async for (m,) in st:
+            got.append(m)
+            # Drain much slower than the producer floods.
+            await anyio.sleep(0.005)
+    assert got == list(range(1000)), f"lost data: got {len(got)} of 1000"

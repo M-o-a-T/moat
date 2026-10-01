@@ -164,6 +164,10 @@ class Caller:
                 m1._recv_qlen = self._qlen  # noqa: SLF001
             if not self._flow:
                 m1._flow = False  # noqa: SLF001
+            # Seed the direction early so the forwarding handler can decide
+            # whether to advertise an initial receive-window credit before
+            # the opening command goes out (see StreamHandler.handle).
+            m1._dir = self._dir  # noqa: SLF001
 
             tg = await acm(TaskGroup())
             m2 = await acm(m1.ensure_remote())

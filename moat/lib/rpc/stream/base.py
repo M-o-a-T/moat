@@ -34,6 +34,7 @@ from moat.lib.rpc import (
     E_NO_STREAM,
     E_SKIP,
     E_UNSPEC,
+    SD_IN,
     Msg,
     MsgHandler,
     MsgLink,
@@ -136,6 +137,11 @@ class HandlerStream(MsgHandler):
 
     def __init__(self, sender: BaseMsgHandler | None, logger: object | None = None):
         self._msgs: dict[int, StreamLink] = {}
+        # Flow-control notices that arrived before the link's opening command.
+        # The protocol allows the initial credit to precede the open; we buffer
+        # such early internal warnings per link-id and replay them once the
+        # link is assembled (see ``msg_in``).
+        self._pending: dict[int, list[tuple[list, OptDict, int]]] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._sender = sender
@@ -182,6 +188,24 @@ class HandlerStream(MsgHandler):
         link = StreamLink(self, i)
         msg.replace_with(link)
         self.attach(link)
+
+        # Advertise the originator's receive window *before* the opening
+        # command so the peer gates its sends from the very first message.
+        # The protocol permits a flow-control notice to precede the open;
+        # ``msg_in`` buffers such early notices until the link is assembled.
+        # Without this the sender treats ``_flo is None`` as "no flow control"
+        # and bursts unrestricted, which can overrun a small receive queue
+        # before the (later, asynchronous) credit catches up.
+        org = link.remote
+        if (
+            can_stream
+            and org is not None
+            and getattr(org, "_dir", 0) & SD_IN
+            and getattr(org, "_flow", True)
+            and (qlen := getattr(org, "_recv_qlen", 0))
+        ):
+            await self.send(link, [qlen], None, B_WARNING_INTERNAL)
+
         args = [rcmd]
         args.extend(msg.args)
         await self.send(link, args, msg._kw, B_STREAM if can_stream else 0)  # noqa: SLF001
@@ -253,6 +277,12 @@ class HandlerStream(MsgHandler):
         except KeyError:
             if i > 0:
                 log("Spurious message %r", msg)
+            elif flag == B_WARNING_INTERNAL:
+                # A flow-control notice arrived before the opening command.
+                # (Check before the ``error`` clause: B_WARNING_INTERNAL also
+                # carries the B_ERROR bit.)  Buffer it; it is replayed onto
+                # the link once the open assembles it below.
+                self._pending.setdefault(i, []).append((a, kw, flag))
             elif error:
                 log("Spurious error %r", msg)
             else:
@@ -266,6 +296,10 @@ class HandlerStream(MsgHandler):
                 if not stream:
                     link.set_end()
                 self.attach(link)
+                # Replay any flow-control notices that arrived before the open.
+                if pend := self._pending.pop(i, None):
+                    for pa, pkw, pflag in pend:
+                        await link.ml_send(pa, pkw, pflag)
                 link.task = await self._tgs.spawn(self._handle, msg, link)
         else:
             try:

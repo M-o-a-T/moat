@@ -1063,7 +1063,13 @@ class _Stream:
         # and falls back to unrestricted sending. Skipped when the caller
         # opted out of flow control (sparse/paced streams where the
         # bookkeeping isn't worth it and an overrun is impossible).
-        if slf._flow:  # noqa: SLF001
+        #
+        # The *initiator's* initial credit is sent by the forwarding handler
+        # before the opening command (see ``StreamHandler.handle``) so that
+        # it reaches the peer ahead of the first streamed data.  Here we only
+        # advertise the *responder's* window — the link is already open by
+        # then, so the notice is processed normally.
+        if slf._flow and not self.initial:  # noqa: SLF001
             slf._fli = 0  # noqa: SLF001
             await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
 

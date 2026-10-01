@@ -16,7 +16,7 @@ dependencies = [
 	"aionotify",
 	"moat-lib-pid ~= 0.8.2",
 	"moat-lib-run ~= 0.2.2",
-	"moat-util ~= 0.63.11",
+	"moat-util ~= 0.64.0",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -24,7 +24,7 @@ name = "moat-dev-heat"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.md"
-version = "0.1.11"
+version = "0.2.0"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

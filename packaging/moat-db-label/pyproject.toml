@@ -12,7 +12,7 @@ classifiers = [
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
-	"moat-util ~= 0.63.0",
+	"moat-util ~= 0.64.0",
 	"moat-db ~= 0.2.7",
 	"moat-db-box ~= 0.0.3",
 	"moat-db-thing ~= 0.0.3",

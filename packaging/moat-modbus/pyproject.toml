@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 4.2",
 	"moat-lib-modbus ~= 0.0.1",
 	"anyio-serial",
-	"moat-util ~= 0.63.11",
+	"moat-util ~= 0.64.0",
 	"asyncscope ~= 0.8.3",
 	"moat-lib-run ~= 0.2.2",
 ]

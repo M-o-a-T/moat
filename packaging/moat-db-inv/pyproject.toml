@@ -4,7 +4,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "moat-db-inv"
-version = "0.0.3"
+version = "0.1.0"
 description = "MoaT network inventory database (VLANs, networks, hosts, interfaces, cables)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,7 +18,7 @@ classifiers = [
   "Development Status :: 3 - Alpha",
 ]
 dependencies = [
-  "moat-util ~= 0.63.11",
+  "moat-util ~= 0.64.0",
   "moat-db ~= 0.2.10",
   "moat-db-thing ~= 0.0.5",
   "moat-lib-run ~= 0.2.2",

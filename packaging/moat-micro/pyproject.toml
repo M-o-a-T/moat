@@ -20,7 +20,7 @@ dependencies = [
   "msgpack",
   "serialpacker >= 0.10.3",
   "pyfuse3 >= 3.2",
-  "moat-util ~= 0.63.11",
+  "moat-util ~= 0.64.0",
   "moat-src ~= 0.12.8",
   "asyncdbus",
   "smbus3",

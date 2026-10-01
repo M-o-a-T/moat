@@ -15,11 +15,11 @@ dependencies = [
 	"anyio ~= 4.2",
 	"asyncclick ~= 8.3",
 	"attrs",
-	"moat-util ~= 0.63.11",
+	"moat-util ~= 0.64.0",
 	"moat-link ~= 0.10.1",
 	"moat-lib-mqtt ~= 0.8.3",
 	]
-version = "0.0.15"
+version = "0.1.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-gate"

@@ -18,7 +18,7 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"typing-extensions >= 4.12",
-	"moat-util ~= 0.63.11",
+	"moat-util ~= 0.64.0",
 	"moat-lib-rpc ~= 0.7.6",
 	"moat-lib-priomap ~= 0.2.7",
 	"moat-lib-mqtt ~= 0.8.3",
@@ -29,7 +29,7 @@ dependencies = [
 	"moat-lib-broadcast ~= 0.1.4",
 	"pydantic ~= 2.12",
 	]
-version = "0.10.3"
+version = "0.10.4"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"

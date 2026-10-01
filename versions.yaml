@@ -1,5 +1,5 @@
 _:
-  new: 26.4.12
+  new: 26.4.14
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -358,12 +358,12 @@ moat-lib-ring:
   rev: e9f31576e96a0e37dd87f196162e688da4ebfaf8
   tag: 0.2.4
 moat-lib-rpc:
-  deb: 0.7.9-1
-  new: 0.7.9
+  deb: 0.7.10-1
+  new: 0.7.10
   pkg: 1
   pypi: 0.7.5
-  rev: 5114f988de67a5e605d28977874a5078296b6e23
-  tag: 0.7.9
+  rev: d92a0c0883904eadf3ba0d619b7417850f7172d3
+  tag: 0.7.10
 moat-lib-run:
   deb: 0.2.2-3
   new: 0.2.2
@@ -389,13 +389,12 @@ moat-lib-xknx:
   rev: 43d36f1b36ce7fef0933915a67e26532e8aab691
   tag: 3.15.0
 moat-link:
-  deb: 0.10.4-2
-  new: 0.10.4
-  pkg: 2
-  pkgrev: a69557a854dca0f3e412a5d6d1812da491d346c3
+  deb: 0.10.5-1
+  new: 0.10.5
+  pkg: 1
   pypi: 0.10.0
-  rev: 03f48f076835ecbb2c0f6bb1eef336ad73c34331
-  tag: 0.10.4
+  rev: d92a0c0883904eadf3ba0d619b7417850f7172d3
+  tag: 0.10.5
 moat-link-cal:
   new: 0.0.1
   pkg: 3
@@ -501,10 +500,10 @@ moat-link-wago:
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.10.4
 moat-mcp:
-  deb: 0.2.2-3
+  deb: 0.2.2-4
   new: 0.2.2
-  pkg: 3
-  pkgrev: a69557a854dca0f3e412a5d6d1812da491d346c3
+  pkg: 4
+  pkgrev: d92a0c0883904eadf3ba0d619b7417850f7172d3
   pypi: 0.2.0
   rev: 182fce44365e22d6328de9d83e54a7e683a248bd
   tag: 0.2.1

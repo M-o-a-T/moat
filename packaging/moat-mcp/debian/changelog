@@ -1,3 +1,9 @@
+moat-mcp (0.2.2-4) unstable; urgency=medium
+
+  * New release for 26.4.14
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 01 Oct 2026 21:31:33 +0200
+
 moat-mcp (0.2.2-3) unstable; urgency=medium
 
   * New release for 26.4.8

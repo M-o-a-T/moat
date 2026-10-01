@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.client import Link, Watcher
 
-__all__ = ["DelayedGate", "Gate", "GateNode", "run_gate", "run_gates"]
+__all__ = ["AnnouncedJob", "DelayedGate", "Gate", "GateNode", "run_gate", "run_gates"]
 
 _register(__name__)
 
@@ -595,13 +595,16 @@ async def run_gate(
     await gate.run(task_status=task_status)
 
 
-class _GateJob:
+class AnnouncedJob:
     """
-    Announce and run one gate, for `run_gates`.
+    Announce something at @path and run it, like `run_gates` does for gates.
 
-    If another live client has announced the gate, wait until that
-    announcement goes away, then take over. If the gate crashes, report
-    the error and retry after a delay.
+    If another live client has announced @path, wait until that
+    announcement goes away, then take over. If the work crashes, report
+    the error and retry after a delay (``link.gate.backoff``); report it
+    as working ``link.gate.recovery`` seconds after it is up.
+
+    Subclasses implement `work`. @driver is reported along with errors.
     """
 
     def __init__(self, cfg: dict[str, Any], link: Link, path: Path, driver: str) -> None:
@@ -626,8 +629,12 @@ class _GateJob:
         self._delay = 0.0
 
     def retry(self) -> None:
-        "The gate's entry has changed: retry a crashed gate now."
+        "The job's entry has changed: retry a crashed job now."
         self._retry.set()
+
+    async def work(self, *, task_status) -> None:
+        "Do the actual work. Call ``task_status.started()`` when it's up."
+        raise NotImplementedError
 
     async def _wait_free(self) -> None:
         "Wait until no other live client announces this gate."
@@ -659,7 +666,7 @@ class _GateJob:
         self._delay = min(
             self._bo_max, self._delay * self._bo_factor if self._delay else self._bo_min
         )
-        self.logger.warning("Gate %s failed: %r; retry in %.1fs", self.path, exc, self._delay)
+        self.logger.warning("%s failed: %r; retry in %.1fs", self.path, exc, self._delay)
         with anyio.move_on_after(5, shield=True):
             await self.link.e_exc(self.path, exc, driver=self.driver)
         self.settled.set()
@@ -702,15 +709,13 @@ class _GateJob:
                     ):
                         tg.start_soon(self._report_up)
                         try:
-                            await run_gate(
-                                self.cfg, self.link, self.path, task_status=_Started(srv, self)
-                            )
+                            await self.work(task_status=_Started(srv, self))
                         except Exception as exc:
                             # leave normally, so that the announcement is removed
                             err = exc
                         tg.cancel_scope.cancel()
                 except* (ServiceSupplanted, ServiceCleared):
-                    self.logger.warning("Gate %s announced elsewhere", self.path)
+                    self.logger.warning("%s announced elsewhere", self.path)
                 else:
                     if err is None:
                         return
@@ -724,11 +729,18 @@ class _Started:
     "Signal both the announcement and the supervisor that a gate is up."
 
     srv: Any
-    job: _GateJob
+    job: AnnouncedJob
 
     def started(self, value: Any = None) -> None:
         self.srv.started(value)
         self.job.up.set()
+
+
+class _GateJob(AnnouncedJob):
+    "Announce and run one gate, for `run_gates`."
+
+    async def work(self, *, task_status) -> None:
+        await run_gate(self.cfg, self.link, self.path, task_status=task_status)
 
 
 async def run_gates(

@@ -1,5 +1,9 @@
 prefix: !P "1wire"
 
-# There is no "server" entry, that's stored in the MoaT-Link node
+# Servers are stored in MoaT-Link, at PREFIX.server.NAME.
+# These are the defaults for their settings.
 server_default:
   port: 4304
+  # Re-scan the buses this often (seconds), to notice devices that
+  # appeared, vanished, or moved to another bus.
+  scan: 60

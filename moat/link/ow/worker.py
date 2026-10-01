@@ -23,14 +23,14 @@ if TYPE_CHECKING:
     from moat.lib.path import Path
     from moat.link.client import LinkSender
 
-    from .model import OwAttr
+    from .model import AttrCfg
 
     from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-async def forward_read(link: LinkSender, entry: OwAttr, val: Any) -> None:
+async def forward_read(link: LinkSender, entry: AttrCfg, val: Any) -> None:
     """Publish a polled device value to the entry's MoaT-Link destination.
 
     If :attr:`~moat.link.ow.model.OwAttr.dest_attr` is set, the value is
@@ -39,7 +39,7 @@ async def forward_read(link: LinkSender, entry: OwAttr, val: Any) -> None:
 
     Args:
         link: Active MoaT-Link sender.
-        entry: Configuration entry for this attribute.
+        entry: Effective configuration of this attribute.
         val: The value read from the 1-Wire device.
     """
     dest = entry.dest
@@ -66,25 +66,29 @@ async def forward_read(link: LinkSender, entry: OwAttr, val: Any) -> None:
 async def run_out(
     link: LinkSender,
     dev: Any,
-    entry: OwAttr,
+    entry: AttrCfg,
     attr_path: Path,
-    subpath: Path,
+    name: str,
 ) -> None:
     """Forward MoaT-Link source updates onto a 1-Wire device attribute.
+
+    This runs while the device is located. The source's current value is
+    written first, so that a device that (re)appears, possibly on another
+    bus, gets the current state.
 
     Args:
         link: Active MoaT-Link sender.
         dev: Located asyncowfs :class:`~asyncowfs.device.Device`.
-        entry: Configuration entry for this attribute.
+        entry: Effective configuration of this attribute.
         attr_path: The device-side attribute path to write to.
-        subpath: Path of this entry relative to the server (for logging).
+        name: Name of this entry (for logging).
     """
     src = entry.src
     if src is None:
         return
     src_attr = entry.src_attr
 
-    async with link.d_watch(src, mark=False, state=False) as wp:
+    async with link.d_watch(src, mark=False, state=None) as wp:
         async for val in wp:
             if val is NotGiven:
                 continue
@@ -97,10 +101,10 @@ async def run_out(
                     logger.warning(
                         "Attribute %r missing in source value at %s",
                         tuple(src_attr),
-                        subpath,
+                        name,
                     )
                     continue
             try:
                 await dev.set(*attr_path, value=out)
             except Exception as exc:
-                logger.warning("Write to %s failed: %r", subpath, exc)
+                logger.warning("Write to %s failed: %r", name, exc)

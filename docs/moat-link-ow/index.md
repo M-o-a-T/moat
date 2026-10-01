@@ -8,15 +8,35 @@
 
 ## Configuration
 
-OWFS server entries are stored in MoaT-Link under the configured prefix
-(default: `ow`).  Each server has its own subtree; attribute mappings
-live below it, keyed by the device's family code, hardware code, and the
-attribute path.
+The configuration is stored in MoaT-Link below the configured prefix
+(default: `1wire`). 1-Wire device IDs are globally unique, so it is keyed
+by device, not by bus: a device that is moved to another bus (or another
+owserver) keeps its settings.
 
-A server entry contains:
+```yaml
+0x10:                         # family: settings for all its devices
+  _: {interval: 60}
+  0x0bac6b010800:             # device: settings for its attributes
+    _: {}
+    temperature:              # attribute mapping
+      _:
+        dest: !P home.ass.dyn.sensor.temp.garten.state
+        interval: 30
+server:
+  pi-e:
+    _:
+      server: {host: e.pi.example.com}
+```
+
+Family and device codes are stored as integers, but shown and entered as
+two and twelve hex digits (`10.0bac6b010800`).
+
+An owserver entry (`server.NAME`) contains:
 
 - **server.host**: owserver host name or IP.
 - **server.port**: owserver port (default ``4304``).
+- **server.scan**: re-scan the buses every N seconds (default ``60``,
+  at least 1), to notice devices that appear, vanish, or move.
 
 An attribute mapping contains:
 
@@ -27,33 +47,53 @@ An attribute mapping contains:
 - **src_attr**: sub-attribute path extracted from ``src``'s value.
 - **idem**: idempotency flag (default ``True``).
 
-Exactly one of ``dest`` (read) or ``src`` (write) must be set.
+Its effective settings are its own, merged over its device's, merged over
+its family's; e.g. set ``interval`` on the family to poll all its
+devices' mappings at that rate. One of ``dest`` (read) or ``src`` (write)
+must be set.
+
+A write mapping writes the source's current value when its device is
+found, then every change.
 
 ## CLI reference
 
 ```
-moat link ow -                                  # list servers
-moat link ow NAME                               # show server config
-moat link ow NAME add -h HOST [-p PORT]          # add a server
-moat link ow NAME set -h HOST [-p PORT]          # modify a server
-moat link ow NAME delete [-r]                    # delete a server
-moat link ow NAME dump                           # dump configuration
-moat link ow NAME at DEVICE ATTR                 # show one attribute mapping
-moat link ow NAME at DEVICE ATTR add [-w] [-i SEC] [-a SUBATTR] [-s key value …]
-moat link ow NAME at DEVICE ATTR set [-s key value …]
-moat link ow NAME at DEVICE ATTR delete
-moat link ow NAME monitor                        # run the connector
+moat link ow server -                              # list servers
+moat link ow server NAME                           # show a server
+moat link ow server NAME add -h HOST [-p PORT]
+moat link ow server NAME set [-h HOST] [-p PORT]
+moat link ow server NAME delete
+
+moat link ow at -                                  # list families
+moat link ow at FAMILY                             # list its devices
+moat link ow at FAMILY get [ATTR…]                 # show family settings
+moat link ow at FAMILY set -s KEY VALUE …          # change them
+moat link ow at FAMILY.CODE                        # list its mappings
+moat link ow at FAMILY.CODE get|set|delete …       # device settings
+moat link ow at FAMILY.CODE.ATTR                   # show a mapping
+moat link ow at FAMILY.CODE.ATTR add [-w] [-i SEC] [-a SUBATTR] [-s KEY VALUE …]
+moat link ow at FAMILY.CODE.ATTR get|set|delete …
+moat link ow at SPEC dump                          # subtree as YAML
+moat link ow dump                                  # everything as YAML
+
+moat link ow monitor [-f] [NAME…]                  # run the connector
 ```
 
-`DEVICE` is a 1-Wire device id `FF.CODE.CHK` (the checksum is ignored);
-`ATTR` is the device attribute path, e.g. `temperature` or `foo.bar`.
+`ATTR` is the device attribute path, e.g. `temperature` or `foo.bar`;
+`get ATTR…` takes lookup paths into the settings.
 
-## systemd
+## Running
 
-Enable the connector for a server named ``mybus``:
+`moat link ow monitor` talks to all owservers, or to those named on the
+command line. Each server is announced like a gate (see `moat link gate
+… run`): a server that another live connector has announced is skipped
+until that connector goes away (unless `-f` is used), so several hosts
+can run connectors for the same configuration. A server whose connection
+fails is reported to the error subsystem and retried with backoff.
 
 ```shell
-systemctl enable --now moat-link-ow@mybus.service
+systemctl enable --now moat-link-ow.service        # all servers
+systemctl enable --now moat-link-ow@mybus.service  # only server "mybus"
 ```
 
 ```{toctree}

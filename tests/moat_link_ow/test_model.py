@@ -4,129 +4,128 @@ from __future__ import annotations
 
 import pytest
 
-from moat.lib.path import P
+from moat.lib.path import P, Path
 from moat.link.meta import MsgMeta
 from moat.link.ow.model import (
+    AttrCfg,
     OwAttr,
     OwDevice,
     OwFamily,
     OwRoot,
     OwServer,
-    device_subpath,
-    parse_device,
+    OwServers,
+    fmt_device,
+    fmt_family,
+    parse_at,
 )
 
 
-def test_parse_device_basic():
-    """``FF.CODE.CHK`` parses into the ``(family, code)`` integer pair."""
-    assert parse_device("10.345678.90") == (0x10, 0x345678)
-    assert parse_device("28.abcdef.01") == (0x28, 0xABCDEF)
+def _meta(t=1):
+    return MsgMeta(origin="t", t=t)
 
 
-def test_parse_device_rejects_bad():
-    """Non-3-part ids are rejected."""
-    with pytest.raises(ValueError, match="3-part"):
-        parse_device("10.345678")
-    with pytest.raises(ValueError, match="3-part"):
-        parse_device("10.345678.90.ab")
+def _p(*a) -> Path:
+    "Build a path. (P() would parse numbers as strings.)"
+    res = []
+    for x in a:
+        res.extend(P(x) if isinstance(x, str) else (x,))
+    return Path.build(res)
 
 
-def test_device_subpath():
-    """`device_subpath` returns the ``(family, code)`` int path."""
-    p = device_subpath("10.345678.90")
-    assert tuple(p) == (0x10, 0x345678)
+def test_fmt():
+    "Family and device codes are shown as 2 and 12 hex digits."
+    assert fmt_family(0x10) == "10"
+    assert fmt_family(5) == "05"
+    assert fmt_device(0x10, 0x0BAC6B010800) == "10.0bac6b010800"
+    assert fmt_device(5, 0x678) == "05.000000000678"
 
 
-def test_tree_typed_add_child():
-    """The tree creates the correct subclasses at each level."""
+def test_parse_at():
+    "FAMILY[.CODE[.ATTR…]] parses into ints and an attribute path."
+    assert parse_at("10") == (0x10, None, Path())
+    assert parse_at("10.0bac6b010800") == (0x10, 0x0BAC6B010800, Path())
+    assert parse_at("10.0BAC6B010800.temperature") == (0x10, 0x0BAC6B010800, P("temperature"))
+    assert parse_at("05.345678.foo.plugh:1") == (5, 0x345678, P("foo.plugh:1"))
+
+
+@pytest.mark.parametrize("bad", ["", "x", "123", "10.", "10.xyz", "10.1234567890123"])
+def test_parse_at_bad(bad):
+    "Malformed family or device codes are rejected."
+    with pytest.raises(ValueError, match="1-Wire"):
+        parse_at(bad)
+
+
+def test_tree_types():
+    "The tree creates the correct node types at each level."
     root = OwRoot()
-    srv = root.add_child("s1")
-    assert isinstance(srv, OwServer)
-    fam = srv.add_child(0x10)
+    assert isinstance(root.add_child("server"), OwServers)
+    assert isinstance(root.get(P("server.pi")), OwServer)
+    fam = root.add_child(0x10)
     assert isinstance(fam, OwFamily)
     dev = fam.add_child(0x345678)
     assert isinstance(dev, OwDevice)
-    attr = dev.add_child("temperature")
+    attr = dev.add_child("foo")
     assert isinstance(attr, OwAttr)
-    # nested attribute segments stay OwAttr
-    nested = attr.add_child("bar")
-    assert isinstance(nested, OwAttr)
+    assert isinstance(attr.add_child("bar"), OwAttr)
 
 
-def test_attr_properties_read():
-    """``OwAttr`` exposes its read-direction config fields."""
-    a = OwAttr()
-    a.set_(
-        (),
-        {
-            "dest": ("data", "temp", "room"),
-            "interval": 5,
-            "dest_attr": ("baz", 2),
-        },
-        MsgMeta(origin="test", t=1),
-    )
-    assert a.dest == P("data.temp.room")
-    assert a.interval == 5
-    assert a.dest_attr == P("baz:2")
-    assert a.src is None
-    assert a.is_read
-    assert not a.is_write
-    assert a.is_complete()
-
-
-def test_attr_properties_write():
-    """``OwAttr`` exposes its write-direction config fields."""
-    a = OwAttr()
-    a.set_(
-        (),
-        {
-            "src": ("cmd", "low"),
-            "src_attr": ("bar", 1),
-            "idem": False,
-        },
-        MsgMeta(origin="test", t=1),
-    )
-    assert a.src == P("cmd.low")
-    assert a.src_attr == P("bar:1")
-    assert a.idem is False
-    assert a.is_write
-    assert not a.is_read
-    assert a.is_complete()
-
-
-def test_attr_incomplete():
-    """``is_complete`` requires either dest or src."""
-    a = OwAttr()
-    assert not a.is_complete()
-
-    a.set_((), {"interval": 5}, MsgMeta(origin="t", t=1))
-    assert not a.is_complete()  # neither dest nor src
-
-    a.set_((), {"dest": ("a",)}, MsgMeta(origin="t", t=2))
-    assert a.is_complete()
-
-
-def test_attr_defaults():
-    """Empty / unset entries report sane defaults."""
-    a = OwAttr()
-    assert a.dest is None
-    assert a.src is None
-    assert a.interval is None
-    assert a.dest_attr is None
-    assert a.src_attr is None
-    assert a.idem is True
-
-
-def test_typed_watcher_round_trip():
-    """An OwRoot built up via ``set`` keeps the type chain consistent."""
+def test_server_cfg():
+    "A server's settings are below its 'server' key."
     root = OwRoot()
-    root.set(
-        P("s1.16.345678.temperature"),
-        {"dest": ("a", "b"), "interval": 4},
-        MsgMeta(origin="t", t=1),
-    )
-    leaf = root.get(P("s1.16.345678.temperature"))
-    assert isinstance(leaf, OwAttr)
-    assert leaf.is_complete()
-    assert leaf.dest == P("a.b")
-    assert leaf.interval == 4
+    root.set(P("server.pi"), {"server": {"host": "pi", "port": 1234}}, _meta())
+    assert root.get(P("server.pi")).cfg == {"host": "pi", "port": 1234}
+
+
+def test_attr_cfg():
+    "AttrCfg converts paths and reports the direction."
+    c = AttrCfg.build({"dest": ("a", "b"), "interval": 5, "dest_attr": ("baz", 2)})
+    assert c.dest == P("a.b")
+    assert c.dest_attr == P("baz:2")
+    assert c.interval == 5
+    assert c.is_read
+    assert not c.is_write
+    assert c.is_complete()
+
+    c = AttrCfg.build({"src": ("cmd",), "idem": False})
+    assert c.src == P("cmd")
+    assert c.idem is False
+    assert c.is_write
+    assert not c.is_read
+
+    c = AttrCfg.build({"interval": 5})
+    assert not c.is_complete()
+    assert AttrCfg.build().idem is True
+
+
+def test_inheritance():
+    "An attribute's settings are merged over its device's and family's."
+    root = OwRoot()
+    root.set(_p(16), {"interval": 30, "idem": False}, _meta())
+    root.set(_p(16, 0x345678), {"interval": 10}, _meta())
+    root.set(_p(16, 0x345678, "temperature"), {"dest": P("a")}, _meta())
+    root.set(_p(16, 0x345678, "humidity"), {"dest": P("b"), "interval": 5}, _meta())
+    root.set(_p(16, 0x999, "temperature"), {"dest": P("c")}, _meta())
+
+    c = root.attr_cfg(16, 0x345678, P("temperature"))
+    assert c == AttrCfg(dest=P("a"), interval=10, idem=False)
+    assert root.attr_cfg(16, 0x345678, P("humidity")).interval == 5
+    assert root.attr_cfg(16, 0x999, P("temperature")).interval == 30
+    assert root.attr_cfg(16, 0x345678, P("nope")) is None
+    assert root.attr_cfg(17, 0x345678, P("temperature")) is None
+
+
+def test_attrs():
+    "The mappings below a family or device are found, including nested ones."
+    root = OwRoot()
+    root.set(_p(16, 1, "temperature"), {"dest": P("a")}, _meta())
+    root.set(_p(16, 1, "foo.bar"), {"dest": P("b")}, _meta())
+    root.set(_p(16, 2, "temperature"), {"dest": P("c")}, _meta())
+    root.set(_p(17, 1, "temperature"), {"dest": P("d")}, _meta())
+
+    assert set(root.attrs(16)) == {
+        (16, 1, P("temperature")),
+        (16, 1, P("foo.bar")),
+        (16, 2, P("temperature")),
+    }
+    assert set(root.attrs(16, 2)) == {(16, 2, P("temperature"))}
+    assert set(root.attrs(18)) == set()

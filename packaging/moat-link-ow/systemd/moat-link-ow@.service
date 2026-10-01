@@ -10,7 +10,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/moat link ow %I monitor
+ExecStart=/usr/bin/moat link ow monitor %I
 
 EnvironmentFile=-/etc/moat/link.env
 

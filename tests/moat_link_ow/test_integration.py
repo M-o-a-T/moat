@@ -41,28 +41,32 @@ basic_tree = {
 }
 
 
-async def _run_mock_ow(link, cfg_ow, name, tree, *, task_status):
-    """Serve a mock owserver and run the connector task for one server."""
+async def _mock_ow(link, cfg, name, tree, *, scan=None, task_status):
+    """Serve a mock owserver and register it as server @name."""
     async with await anyio.create_tcp_listener(
         local_host="127.0.0.1",
         local_port=0,
         reuse_port=True,
     ) as listener:
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
-        port = addr[1]
+        srv = {"host": "127.0.0.1", "port": addr[1]}
+        if scan is not None:
+            srv["scan"] = scan
 
-        prefix = Path.build(cfg_ow["prefix"])
-        await link.d_set(prefix / name, {"server": {"host": "127.0.0.1", "port": port}})
+        prefix = Path.build(cfg.link.ow.prefix)
+        await link.d_set(prefix / "server" / name, {"server": srv})
         await link.i_sync()
 
-        async with anyio.create_task_group() as tg:
+        with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
+            task_status.started()
+            await listener.serve(partial(some_server, tree, {}))
 
-            async def serve():
-                with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
-                    await listener.serve(partial(some_server, tree, {}))
 
-            tg.start_soon(serve)
-            await task(link, cfg_ow, name, task_status=task_status)
+async def _run_mock_ow(link, cfg, name, tree, *, task_status):
+    """Serve a mock owserver and run the connector."""
+    async with anyio.create_task_group() as tg:
+        await tg.start(_mock_ow, link, cfg, name, tree)
+        await task(link, cfg, task_status=task_status)
 
 
 async def _expect_link(c, path, want, timeout=5.0):
@@ -108,16 +112,14 @@ async def test_mirror(cfg):
         sf.server_(init={"Hello": "there!"}),
         sf.client_() as c,
     ):
-        await sf.tg.start(_run_mock_ow, c, cfg.link.ow, "g1", my_tree)
+        await sf.tg.start(_run_mock_ow, c, cfg, "g1", my_tree)
 
         # configure mirroring (small intervals for a fast test)
+        await sf.run("link ow at 10.345678.temperature add -s dest .data.temp -s interval =0.5")
+        await sf.run("link ow at 10.345678.templow add -w -s src .data.low")
+        await sf.run("link ow at 10.345678.foo.bar add -w -s src .data.what.ever -a bar:1")
         await sf.run(
-            "link ow g1 at 10.345678.90 temperature add -s dest .data.temp -s interval =0.5"
-        )
-        await sf.run("link ow g1 at 10.345678.90 templow add -w -s src .data.low")
-        await sf.run("link ow g1 at 10.345678.90 foo.bar add -w -s src .data.what.ever -a bar:1")
-        await sf.run(
-            "link ow g1 at 10.345678.90 foo.plugh:1 add -s dest .data.this -s interval =0.5 -a baz:2"
+            "link ow at 10.345678.foo.plugh:1 add -s dest .data.this -s interval =0.5 -a baz:2"
         )
         await c.i_sync()
 
@@ -140,3 +142,37 @@ async def test_mirror(cfg):
 
         await _expect_link(c, P("data.temp"), 42)
         await _expect_link(c, P("data.this"), {"this": "is", "baz": {2: 22, 3: 33}})
+
+
+async def test_move(cfg):
+    """A device that moves to another bus keeps being mirrored."""
+    tree_a = deepcopy(basic_tree)
+    tree_b = deepcopy(basic_tree)
+    dev = tree_b["bus.0"].pop("10.345678.90")
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await sf.run("link ow at 10.345678.temperature add -s dest .data.temp -i 0.3")
+        await sf.run("link ow at 10.345678.templow add -w -s src .data.low")
+        await c.i_sync()
+
+        await sf.tg.start(partial(_mock_ow, scan=1), c, cfg, "a", tree_a)
+        await sf.tg.start(partial(_mock_ow, scan=1), c, cfg, "b", tree_b)
+        await sf.tg.start(task, c, cfg)
+
+        await _expect_link(c, P("data.temp"), 12.5)
+        await c.d_set(P("data.low"), 11)
+        await _expect_tree(tree_a["bus.0"]["10.345678.90"], ("templow",), "11")
+
+        # move the device from bus a to bus b
+        del tree_a["bus.0"]["10.345678.90"]
+        dev["temperature"] = "33"
+        tree_b["bus.0"]["10.345678.90"] = dev
+
+        await _expect_link(c, P("data.temp"), 33)
+        # the writer is restarted on the new bus
+        await c.d_set(P("data.low"), 9)
+        await _expect_tree(dev, ("templow",), "9")

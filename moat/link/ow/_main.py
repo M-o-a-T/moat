@@ -1,9 +1,9 @@
 """
 Command-line interface for moat.link.ow.
 
-Manages 1-Wire (OWFS) servers and their per-attribute mirror entries.
-The ``at`` sub-group targets a single device attribute identified by a
-1-Wire device id (``FF.CODE.CHK``) and an attribute path.
+The configuration is keyed by device (see `moat.link.ow.model`), so that
+devices can move between buses. Devices are addressed as
+``FAMILY.CODE`` with two and twelve hex digits.
 """
 
 from __future__ import annotations
@@ -15,12 +15,11 @@ import asyncclick as click
 
 from moat.util import NotGiven, yprint
 from moat.lib.path import P, Path
-from moat.lib.run import AliasedGroup, attr_args
+from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import data_get, node_attr
-from moat.link.announce import as_service
 from moat.link.client import Link
 
-from .model import device_subpath
+from .model import SERVER, fmt_code, fmt_device, fmt_family, parse_at
 
 from typing import TYPE_CHECKING
 
@@ -30,240 +29,268 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _server_path(obj) -> Path:
-    """Return the link path of the currently-selected OWFS server."""
-    return obj.ow_prefix + Path.build((obj.ow_name,))
-
-
-async def _require_server(obj) -> dict[str, Any]:
-    """Fetch the data stored at the server entry, or raise.
-
-    Raises:
-        click.UsageError: if the entry is missing or not a mapping.
+@click.group(cls=AliasedGroup, name="ow", short_help="Manage 1-Wire (OWFS) devices.")
+@click.pass_context
+async def cli(ctx) -> None:
     """
-    try:
-        data = await obj.conn.d_get(_server_path(obj))
-    except KeyError:
-        raise click.UsageError(f"Server {obj.ow_name!r} does not exist.") from None
-    if not isinstance(data, dict):
-        raise click.UsageError(f"Server {obj.ow_name!r} has no configuration.")
-    return data
+    Manager for 1-Wire (OWFS) servers and devices.
+
+    \b
+    … server -                    list servers
+    … server NAME [add|set|delete]
+    … at -                        list device families
+    … at FAMILY                   list devices; get/set common settings
+    … at FAMILY.CODE              get/set device settings, list mappings
+    … at FAMILY.CODE.ATTR         get/add/set/delete an attribute mapping
+    … monitor [NAME…]             run the connector
+
+    FAMILY and CODE are hex numbers (2 and 12 digits).
+    """
+    obj = ctx.obj
+    obj.conn = await ctx.with_async_resource(Link(obj.cfg["link"]))
+    obj.ow_prefix = obj.cfg.link.ow.prefix
 
 
-@click.group(
+def _hex_keys(p: Path, depth: int = 0) -> Path:
+    "Show the family and device elements of a path (that starts at @depth) in hex."
+    res = []
+    for i, k in enumerate(p, start=depth):
+        if i == 0 and isinstance(k, int):
+            k = fmt_family(k)  # noqa:PLW2901
+        elif i == 1 and isinstance(k, int):
+            k = fmt_code(k)  # noqa:PLW2901
+        res.append(k)
+    return Path.build(res)
+
+
+async def _list(obj, path: Path, fmt) -> int:
+    "List the integer children of @path, formatted by @fmt."
+    cnt = 0
+    keys = [k async for k in obj.conn.d_list(path)]
+    for k in sorted(k for k in keys if isinstance(k, int)):
+        cnt += 1
+        print(fmt(k), file=obj.stdout)
+    if not cnt and obj.debug:
+        print("no entries", file=sys.stderr)
+    return cnt
+
+
+# Servers
+
+
+@cli.group(
+    "server",
     cls=AliasedGroup,
-    name="ow",
-    short_help="Manage 1-Wire (OWFS) servers.",
     invoke_without_command=True,
-    help="""\
-        Manager for 1-Wire (OWFS) bus servers.
-
-        \b
-        Use '… ow -' to list all servers.
-        Use '… ow NAME' to show details of a single server.
-        """,
+    short_help="Manage owservers.",
 )
 @click.argument("name", type=str, nargs=1)
 @click.pass_context
-async def cli(ctx, name: str) -> None:
-    """Dispatch to a server- or attribute-specific subcommand."""
-    obj = ctx.obj
-    cfg = obj.cfg["link"]
-    obj.conn = await ctx.with_async_resource(Link(cfg))
-    obj.ow_cfg = obj.cfg.link.ow
-    obj.ow_prefix = obj.ow_cfg.prefix
-    obj.ow_name = name
+async def server_(ctx, name: str) -> None:
+    """
+    Manage an owserver.
 
+    Use '-' to list all servers. Without a subcommand, show a server's
+    settings.
+    """
+    obj = ctx.obj
+    obj.ow_server = obj.ow_prefix / SERVER / name
     if name == "-":
         if ctx.invoked_subcommand is not None:
-            raise click.BadParameter(
-                "The name '-' triggers a list and precludes subcommands.",
-            )
+            raise click.UsageError("The name '-' lists servers and precludes subcommands.")
         cnt = 0
-        async with obj.conn.d_walk(obj.ow_prefix, min_depth=1, max_depth=1) as mon:
-            async for p, _d in mon:
-                cnt += 1
-                print(p[-1], file=obj.stdout)
+        async for k in obj.conn.d_list(obj.ow_prefix / SERVER):
+            cnt += 1
+            print(k, file=obj.stdout)
         if not cnt and obj.debug:
             print("no entries", file=sys.stderr)
         return
-
     if ctx.invoked_subcommand is None:
         try:
-            data = await obj.conn.d_get(_server_path(obj))
+            data = await obj.conn.d_get(obj.ow_server)
         except KeyError:
-            raise click.UsageError(
-                f"Server {obj.ow_name!r} does not exist.",
-            ) from None
-        srv = data.get("server", {}) if isinstance(data, dict) else {}
-        cnt = 0
-        if isinstance(srv, dict):
-            for k in ("host", "port"):
-                v = srv.get(k)
-                if v is not None:
-                    cnt += 1
-                    print(f"server {k} {v}", file=obj.stdout)
-        if not cnt and obj.debug:
-            print("exists, no data", file=sys.stderr)
+            raise click.UsageError(f"Server {name!r} does not exist.") from None
+        yprint(data, stream=obj.stdout)
 
 
 def _server_options(proc):
     """Decorate ``add``/``set`` with the server-config options."""
-    proc = click.option(
-        "-p",
-        "--port",
-        type=int,
-        default=None,
-        help="Port of the owserver (default 4304).",
-    )(proc)
-    proc = click.option(
-        "-h",
-        "--host",
-        type=str,
-        default=None,
-        help="Host name or IP of the owserver.",
-    )(proc)
+    proc = click.option("-p", "--port", type=int, help="Port of the owserver (default 4304).")(
+        proc
+    )
+    proc = click.option("-h", "--host", type=str, help="Host name or IP of the owserver.")(proc)
     return proc
 
 
-@cli.command(short_help="Add an OWFS server")
+@server_.command("add", short_help="Add an owserver")
 @_server_options
 @click.option("-f", "--force", is_flag=True, help="Allow replacing an existing server.")
 @click.pass_obj
-async def add(obj, host, port, force) -> None:
-    """Add an OWFS server (owserver)."""
-    path = _server_path(obj)
+async def server_add(obj, host, port, force) -> None:
+    """Add an owserver."""
+    if host is None:
+        raise click.UsageError("You need to set the host ('-h').")
     if not force:
         try:
-            await obj.conn.d_get(path)
+            await obj.conn.d_get(obj.ow_server)
         except KeyError:
             pass
         else:
             raise click.UsageError(
-                f"Server {obj.ow_name!r} already exists. Use --force or 'set'.",
+                f"Server {obj.ow_server[-1]!r} already exists. Use --force or 'set'."
             )
+    srv: dict[str, Any] = {"host": host}
+    if port is not None:
+        srv["port"] = port
+    await obj.conn.d_set(obj.ow_server, {SERVER: srv})
 
-    srv: dict[str, Any] = {}
+
+@server_.command("set", short_help="Modify an owserver")
+@_server_options
+@click.pass_obj
+async def server_set(obj, host, port) -> None:
+    """Modify an owserver."""
+    try:
+        data = await obj.conn.d_get(obj.ow_server)
+    except KeyError:
+        raise click.UsageError(f"Server {obj.ow_server[-1]!r} does not exist.") from None
+    data = dict(data) if isinstance(data, dict) else {}
+    srv = data.get(SERVER)
+    srv = dict(srv) if isinstance(srv, dict) else {}
     if host is not None:
         srv["host"] = host
     if port is not None:
         srv["port"] = port
-    await obj.conn.d_set(path, {"server": srv})
+    data[SERVER] = srv
+    await obj.conn.d_set(obj.ow_server, data)
 
 
-@cli.command("set", short_help="Modify an OWFS server")
-@_server_options
+@server_.command("delete", short_help="Delete an owserver")
 @click.pass_obj
-async def set_(obj, host, port) -> None:
-    """Modify an OWFS server.
-
-    Pass ``-`` as a value (where applicable) to clear an existing setting.
-    """
-    data = await _require_server(obj)
-    srv = data.get("server", {})
-    if not isinstance(srv, dict):
-        srv = {}
-
-    if host is not None:
-        if host == "-":
-            srv.pop("host", None)
-        else:
-            srv["host"] = host
-    if port is not None:
-        srv["port"] = port
-    data["server"] = srv
-
-    await obj.conn.d_set(_server_path(obj), data)
+async def server_delete(obj) -> None:
+    """Delete an owserver."""
+    try:
+        await obj.conn.d_get(obj.ow_server)
+    except KeyError:
+        raise click.UsageError(f"Server {obj.ow_server[-1]!r} does not exist.") from None
+    await obj.conn.d_set(obj.ow_server, NotGiven)
 
 
-@cli.command("delete", short_help="Delete an OWFS server")
-@click.option("-r", "--recursive", is_flag=True, help="Also remove all entries below.")
-@click.pass_obj
-async def delete_(obj, recursive: bool) -> None:
-    """Delete an OWFS server.
-
-    Without ``--recursive`` the server entry itself is removed but its
-    child attribute entries are kept (they become orphans).
-    """
-    path = _server_path(obj)
-    args: dict[str, Any] = {}
-    if recursive:
-        args["rec"] = True
-    res = await obj.conn.d.delete(path, **args)
-    if getattr(obj, "meta", False):
-        yprint(res[0], stream=obj.stdout)
-
-
-@cli.command("dump")
-@click.option("-l", "--one-line", is_flag=True, help="Single line per entry")
-@click.pass_obj
-async def dump_(obj, one_line: bool) -> None:
-    """Emit a server's (sub)state as a list / YAML file."""
-    path = _server_path(obj)
-    if not one_line:
-        await data_get(obj.conn, path, recursive=True, out=obj.stdout)
-        return
-    async with obj.conn.d_walk(path) as mon:
-        async for p, d in mon:
-            print(f"{path + p} {d}", file=obj.stdout)
+# Families, devices, attributes
 
 
 @cli.group(
     "at",
-    invoke_without_command=True,
-    short_help="create/show/delete an attribute mapping",
     cls=AliasedGroup,
+    invoke_without_command=True,
+    short_help="Manage device settings and attribute mappings.",
 )
-@click.argument("device", type=str, nargs=1)
-@click.argument("attr", type=str, nargs=1)
+@click.argument("spec", type=str, nargs=1)
 @click.pass_context
-async def at_cli(ctx, device: str, attr: str) -> None:
-    """Manage a single 1-Wire attribute mapping under a server.
+async def at_(ctx, spec: str) -> None:
+    """
+    Manage a device family, a device, or an attribute mapping.
 
-    DEVICE is a 1-Wire device id in ``FF.CODE.CHK`` form (the checksum is
-    ignored); ATTR is the device attribute path, e.g. ``temperature`` or
-    ``foo.bar``.
+    \b
+    SPEC is
+    -                   list the device families
+    FAMILY              list the family's devices
+    FAMILY.CODE         list the device's attribute mappings
+    FAMILY.CODE.ATTR    show an attribute mapping
+
+    Use 'get' and 'set' for the settings at that level. A family's and a
+    device's settings are inherited by the attribute mappings below them.
     """
     obj = ctx.obj
+    if spec == "-":
+        if ctx.invoked_subcommand is not None:
+            raise click.UsageError("'-' lists families and precludes subcommands.")
+        await _list(obj, obj.ow_prefix, fmt_family)
+        return
     try:
-        dev_sub = device_subpath(device)
+        fam, code, attr = parse_at(spec)
     except ValueError as exc:
         raise click.UsageError(str(exc)) from None
-    try:
-        sub = dev_sub + P(attr)
-    except Exception as exc:
-        raise click.UsageError(f"Bad attribute {attr!r}: {exc}") from None
-    try:
-        await obj.conn.d_get(_server_path(obj))
-    except KeyError:
-        raise click.UsageError(
-            "Create the server before mapping attributes to it!",
-        ) from None
-    obj.ow_subpath = sub
-    if ctx.invoked_subcommand is None:
-        await data_get(
-            obj.conn,
-            _server_path(obj) + sub,
-            recursive=False,
-            out=obj.stdout,
-        )
 
+    obj.ow_family = fam
+    obj.ow_code = code
+    obj.ow_attr = attr
+    obj.ow_path = obj.ow_prefix / fam
+    if code is not None:
+        obj.ow_path = obj.ow_path / code + attr
 
-@at_cli.command("dump")
-@click.option("-l", "--one-line", is_flag=True, help="Single line per entry")
-@click.pass_obj
-async def dump_at(obj, one_line: bool) -> None:
-    """Emit a subtree as a list / YAML file."""
-    path = _server_path(obj) + obj.ow_subpath
-    if not one_line:
-        await data_get(obj.conn, path, recursive=True, out=obj.stdout)
+    if ctx.invoked_subcommand is not None:
         return
-    async with obj.conn.d_walk(path) as mon:
-        async for p, d in mon:
-            print(f"{path + p} {d}", file=obj.stdout)
+    if code is None:
+        await _list(obj, obj.ow_path, lambda c: fmt_device(fam, c))
+    elif not len(attr):
+        cnt = 0
+        async with obj.conn.d_walk(obj.ow_path, min_depth=1) as mon:
+            async for p, _d in mon:
+                cnt += 1
+                print(f"{fmt_device(fam, code)}.{p}", file=obj.stdout)
+        if not cnt and obj.debug:
+            print("no entries", file=sys.stderr)
+    else:
+        await _get(obj, ())
 
 
-@at_cli.command("add", short_help="Add an attribute mapping")
+async def _get(obj, attrs) -> None:
+    try:
+        data = await obj.conn.d_get(obj.ow_path)
+    except KeyError:
+        raise click.UsageError("This entry doesn't exist.") from None
+    if not attrs:
+        yprint(data, stream=obj.stdout)
+        return
+
+    def _lookup(a: Path) -> Any:
+        v = data
+        for k in a:
+            try:
+                v = v[k]
+            except (KeyError, IndexError, TypeError):
+                raise click.UsageError(f"Not found: {a}") from None
+        return v
+
+    if len(attrs) == 1:
+        yprint(_lookup(attrs[0]), stream=obj.stdout)
+    else:
+        yprint({str(a): _lookup(a) for a in attrs}, stream=obj.stdout)
+
+
+@at_.command("get")
+@click.argument("attrs", type=P, nargs=-1)
+@click.pass_obj
+async def at_get(obj, attrs: tuple[Path, ...]) -> None:
+    """
+    Show the settings at this level.
+
+    ATTRS are lookup paths into the settings; without them, show all.
+    """
+    await _get(obj, attrs)
+
+
+@at_.command("set")
+@attr_args
+@click.pass_obj
+async def at_set(obj, **kw) -> None:
+    """
+    Modify the settings at this level.
+
+    Family and device settings are defaults for the mappings below them,
+    e.g. '-s interval =30'.
+    """
+    try:
+        val = await obj.conn.d_get(obj.ow_path)
+    except KeyError:
+        val = {}
+    res, _meta = await node_attr(obj, obj.ow_path, val=val, **kw)
+    if getattr(obj, "meta", False):
+        yprint(res, stream=obj.stdout)
+
+
+@at_.command("add", short_help="Add an attribute mapping")
 @attr_args
 @click.option("-f", "--force", is_flag=True, help="Allow replacing an existing entry.")
 @click.option(
@@ -272,37 +299,27 @@ async def dump_at(obj, one_line: bool) -> None:
     is_flag=True,
     help="Write direction (Link→device); needs 'src'. Default: read (device→Link).",
 )
-@click.option(
-    "-i",
-    "--interval",
-    type=float,
-    default=None,
-    help="Polling interval in seconds (read direction).",
-)
+@click.option("-i", "--interval", type=float, help="Polling interval in seconds (read).")
 @click.option(
     "-a",
     "--attr",
     "attr_",
-    default=None,
     help="Sub-attribute path: 'src_attr' for write, 'dest_attr' for read.",
 )
 @click.pass_obj
-async def add_at(obj, write, interval, attr_, force, **kw) -> None:
-    """Add a 1-Wire attribute mapping.
-
-    \b
-    DEVICE ATTR: identify the device attribute. Required.
-
-    For read direction (default) set ``dest`` to the MoaT-Link path that
-    receives the polled value; for write direction (``-w``) set ``src``
-    to the MoaT-Link path whose changes are forwarded to the device.
-
-    Use the ``-s`` option to set attributes, e.g. ``-s dest .my.path``
-    or ``-s src .my.path``.
+async def at_add(obj, write, interval, attr_, force, **kw) -> None:
     """
-    sub: Path = obj.ow_subpath
-    path = _server_path(obj) + sub
+    Add an attribute mapping (FAMILY.CODE.ATTR).
 
+    For the read direction (default) set ``dest`` to the MoaT-Link path
+    that receives the polled value; for the write direction ('-w') set
+    ``src`` to the path whose changes are written to the device, e.g.
+    '-s dest .my.path'. The interval may also be inherited from the
+    device or family.
+    """
+    if not len(obj.ow_attr):
+        raise click.UsageError("Use FAMILY.CODE.ATTR to add an attribute mapping.")
+    path = obj.ow_path
     if not force:
         try:
             await obj.conn.d_get(path)
@@ -317,52 +334,70 @@ async def add_at(obj, write, interval, attr_, force, **kw) -> None:
     if not write and interval is not None:
         val["interval"] = interval
 
-    res, _meta = await node_attr(obj, path, val=val, **kw)
-
+    res = process_args(val, **kw)
     required = "src" if write else "dest"
     if not isinstance(res, dict) or res.get(required) is None:
         raise click.UsageError(
-            f"For {'write' if write else 'read'} direction you must set the "
-            f"{required!r} attribute, e.g. `-s {required} .some.path`.",
+            f"For the {'write' if write else 'read'} direction you must set the "
+            f"{required!r} attribute, e.g. `-s {required} .some.path`."
         )
-
+    await obj.conn.d_set(path, res)
     if getattr(obj, "meta", False):
         yprint(res, stream=obj.stdout)
 
 
-@at_cli.command("set")
-@attr_args
+@at_.command("delete")
+@click.option("-r", "--recursive", is_flag=True, help="Also delete everything below.")
 @click.pass_obj
-async def set_at(obj, **kw) -> None:
-    """Modify a 1-Wire attribute mapping."""
-    path = _server_path(obj) + obj.ow_subpath
-    res, _meta = await node_attr(obj, path, **kw)
-    if getattr(obj, "meta", False):
-        yprint(res, stream=obj.stdout)
-
-
-@at_cli.command("delete")
-@click.pass_obj
-async def delete_at(obj) -> None:
-    """Remove an attribute mapping from the server."""
-    path = _server_path(obj) + obj.ow_subpath
+async def at_delete(obj, recursive: bool) -> None:
+    """Delete the settings at this level."""
+    if recursive:
+        await obj.conn.d.delete(obj.ow_path, rec=True)
+        return
     try:
-        await obj.conn.d_get(path)
+        await obj.conn.d_get(obj.ow_path)
     except KeyError:
         raise click.UsageError("This entry doesn't exist.") from None
-    await obj.conn.d_set(path, NotGiven)
+    await obj.conn.d_set(obj.ow_path, NotGiven)
+
+
+@at_.command("dump")
+@click.pass_obj
+async def at_dump(obj) -> None:
+    """Show the subtree as YAML (family and device codes in hex)."""
+    depth = 1 if obj.ow_code is None else 2 + len(obj.ow_attr)
+    await data_get(
+        obj.conn,
+        obj.ow_path,
+        recursive=True,
+        path_mangle=lambda p: _hex_keys(p, depth),
+        out=obj.stdout,
+    )
+
+
+@cli.command("dump")
+@click.pass_obj
+async def dump_(obj) -> None:
+    """Show the whole configuration as YAML (family and device codes in hex)."""
+    await data_get(obj.conn, obj.ow_prefix, recursive=True, path_mangle=_hex_keys, out=obj.stdout)
 
 
 @cli.command()
+@click.option("-f", "--force", is_flag=True, help="Take over servers announced elsewhere.")
+@click.argument("servers", type=str, nargs=-1)
 @click.pass_obj
-async def monitor(obj) -> None:
-    """Stand-alone task to talk to a single OWFS server."""
+async def monitor(obj, servers: tuple[str, ...], force: bool) -> None:
+    """
+    Run the 1-Wire connector.
+
+    Talks to all owservers (or the SERVERS given). Each server is
+    announced, so that several connectors can share the work; a server
+    that another live connector has announced is skipped until that
+    one goes away, unless '--force' is used.
+    """
+    from moat.util.systemd import as_service  # noqa: PLC0415
+
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, host=False) as srv:
-        await task(
-            obj.conn,
-            obj.ow_cfg,
-            obj.ow_name,
-            task_status=srv,
-        )
+    async with as_service(obj) as srv:
+        await task(obj.conn, obj.cfg, servers, force=force, task_status=srv)

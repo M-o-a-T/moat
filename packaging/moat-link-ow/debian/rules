@@ -6,5 +6,7 @@ export PYBUILD_NAME=moat-link-ow
 
 override_dh_auto_install:
 	dh_auto_install
+	install -D -m 644 systemd/moat-link-ow.service \
+		debian/moat-link-ow/usr/lib/systemd/system/moat-link-ow.service
 	install -D -m 644 systemd/moat-link-ow@.service \
 		debian/moat-link-ow/usr/lib/systemd/system/moat-link-ow@.service

@@ -13,18 +13,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 from moat.util import NotGiven
 from moat.lib.path import P
-from moat.link.meta import MsgMeta
 from moat.link.ow import worker as ow_worker
-from moat.link.ow.model import OwAttr
+from moat.link.ow.model import AttrCfg
 
 
-def _make_entry(**data) -> OwAttr:
-    """Build an OwAttr with given config overlay."""
-    defaults: dict = {}
-    defaults.update(data)
-    e = OwAttr()
-    e.set_((), defaults, MsgMeta(origin="t", timestamp=1))
-    return e
+def _make_entry(**data) -> AttrCfg:
+    """Build an attribute's effective configuration."""
+    return AttrCfg.build(data)
 
 
 class _WatchCtx:

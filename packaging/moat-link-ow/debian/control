@@ -13,6 +13,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat-link,
+  python3-asyncowfs (>= 0.15.3),
 Recommends:
   python3-trio (>= 0.22),
 Description: 1-Wire (OWFS) connector for MoaT-Link

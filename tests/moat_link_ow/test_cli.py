@@ -11,62 +11,67 @@ import pytest
 import asyncclick as click
 
 import moat.link.ow  # noqa:F401 - register cfg
-from moat.lib.path import P
+from moat.util import yload
+from moat.lib.path import P, Path
 from moat.link._test import Scaffold
-from moat.link.ow.model import device_subpath
 from moat.src.test import raises as _raises
 
 pytestmark = pytest.mark.anyio
 
+FAM = 0x10
+CODE = 0x0BAC6B010800
+DEV = "10.0bac6b010800"
 
-def _entry(prefix, server: str, device: str, attr: str):
-    """Build the link path of one attribute mapping."""
-    return prefix + P(server) + device_subpath(device) + P(attr)
+
+def _dev(prefix, *attr) -> Path:
+    "The path of the test device, or an attribute mapping below it."
+    return (
+        prefix + Path.build((FAM, CODE)) + P(".".join(attr))
+        if attr
+        else prefix + Path.build((FAM, CODE))
+    )
 
 
-async def test_server_lifecycle(cfg):
-    """Add, set, list and delete an OWFS server via the CLI."""
-
+async def test_server(cfg):
+    """Add, set, show, list and delete an owserver."""
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init={"Hello": "there!"}),
         sf.client_() as c,
     ):
         prefix = cfg.link.ow.prefix
+        spath = prefix + P("server.g1")
 
-        await sf.run("link ow g1 add -h 10.0.0.1 -p 4304")
+        await sf.run("link ow server g1 add -h 10.0.0.1 -p 4305")
         await c.i_sync()
+        assert await c.d_get(spath) == {"server": {"host": "10.0.0.1", "port": 4305}}
 
-        data = await c.d_get(prefix + P("g1"))
-        assert data == {"server": {"host": "10.0.0.1", "port": 4304}}
-
-        # second add without --force fails
         with _raises(click.UsageError) as r:
-            await sf.run("link ow g1 add -h other -p 1")
-        assert r.value is not None
+            await sf.run("link ow server g1 add -h other")
         assert "already exists" in r.value.format_message().lower()
 
-        # set updates fields
-        await sf.run("link ow g1 set -h 10.0.0.2")
+        with _raises(click.UsageError) as r:
+            await sf.run("link ow server g2 add -p 1")
+        assert "host" in r.value.format_message().lower()
+
+        await sf.run("link ow server g1 set -h 10.0.0.2")
         await c.i_sync()
-        data = await c.d_get(prefix + P("g1"))
-        assert data["server"]["host"] == "10.0.0.2"
-        assert data["server"]["port"] == 4304
+        assert await c.d_get(spath) == {"server": {"host": "10.0.0.2", "port": 4305}}
 
-        # list servers
-        r = await sf.run("link ow -")
-        assert "g1" in r.stdout
+        r = await sf.run("link ow server g1")
+        assert yload(r.stdout) == {"server": {"host": "10.0.0.2", "port": 4305}}
 
-        # delete
-        await sf.run("link ow g1 delete")
+        r = await sf.run("link ow server -")
+        assert r.stdout.split() == ["g1"]
+
+        await sf.run("link ow server g1 delete")
         await c.i_sync()
         with pytest.raises(KeyError):
-            await c.d_get(prefix + P("g1"))
+            await c.d_get(spath)
 
 
-async def test_at_attr_lifecycle(cfg):
-    """``at DEVICE ATTR`` manages a single attribute mapping."""
-
+async def test_at(cfg):
+    """Families, devices and attribute mappings."""
     async with (
         Scaffold(cfg, use_servers=True) as sf,
         sf.server_(init={"Hello": "there!"}),
@@ -74,49 +79,87 @@ async def test_at_attr_lifecycle(cfg):
     ):
         prefix = cfg.link.ow.prefix
 
-        await sf.run("link ow g1 add -h 10.0.0.1 -p 4304")
+        # a read mapping
+        await sf.run(f"link ow at {DEV}.temperature add -s dest .data.temp -i 5")
         await c.i_sync()
+        assert await c.d_get(_dev(prefix, "temperature")) == {
+            "dest": P("data.temp"),
+            "interval": 5,
+        }
 
-        # add a read mapping
-        await sf.run(
-            "link ow g1 at 10.345678.90 temperature add -s dest .data.temp -s interval =5"
-        )
-        await c.i_sync()
-
-        stored = await c.d_get(_entry(prefix, "g1", "10.345678.90", "temperature"))
-        assert stored["dest"] == P("data.temp")
-        assert stored["interval"] == 5
-
-        # adding again without --force is an error
         with _raises(click.UsageError) as r:
-            await sf.run(
-                "link ow g1 at 10.345678.90 temperature add -s dest .data.temp -s interval =5"
-            )
-        assert r.value is not None
+            await sf.run(f"link ow at {DEV}.temperature add -s dest .data.temp")
         assert "already exists" in r.value.format_message().lower()
 
-        # read direction without dest fails the post-add validation
+        # missing dest/src: nothing is written
         with _raises(click.UsageError) as r:
-            await sf.run("link ow g1 at 10.345678.90 humidity add -s interval =5")
-        assert r.value is not None
+            await sf.run(f"link ow at {DEV}.humidity add -i 5")
         assert "dest" in r.value.format_message().lower()
-
-        # write direction without src fails the post-add validation
         with _raises(click.UsageError) as r:
-            await sf.run("link ow g1 at 10.345678.90 foobar add -w -a bar:1")
-        assert r.value is not None
+            await sf.run(f"link ow at {DEV}.foo add -w -a bar:1")
         assert "src" in r.value.format_message().lower()
-
-        # add a write mapping
-        await sf.run("link ow g1 at 10.345678.90 templow add -w -s src .data.low -a bar:1")
-        await c.i_sync()
-
-        stored = await c.d_get(_entry(prefix, "g1", "10.345678.90", "templow"))
-        assert stored["src"] == P("data.low")
-        assert stored["src_attr"] == P("bar:1")
-
-        # delete
-        await sf.run("link ow g1 at 10.345678.90 temperature delete")
         await c.i_sync()
         with pytest.raises(KeyError):
-            await c.d_get(_entry(prefix, "g1", "10.345678.90", "temperature"))
+            await c.d_get(_dev(prefix, "humidity"))
+
+        # adding needs an attribute
+        with _raises(click.UsageError) as r:
+            await sf.run(f"link ow at {DEV} add -s dest .x")
+        assert "attr" in r.value.format_message().lower()
+
+        # a write mapping, nested
+        await sf.run(f"link ow at {DEV}.foo.bar add -w -s src .data.low -a bar:1")
+        await c.i_sync()
+        assert await c.d_get(_dev(prefix, "foo.bar")) == {
+            "src": P("data.low"),
+            "src_attr": P("bar:1"),
+        }
+
+        # device settings
+        await sf.run(f"link ow at {DEV} set -s interval =30")
+        await c.i_sync()
+        assert await c.d_get(_dev(prefix)) == {"interval": 30}
+
+        # family settings
+        await sf.run("link ow at 10 set -s interval =60 -s idem =False")
+        await c.i_sync()
+        assert await c.d_get(prefix + Path.build((FAM,))) == {"interval": 60, "idem": False}
+
+        r = await sf.run("link ow at 10 get")
+        assert yload(r.stdout) == {"interval": 60, "idem": False}
+        r = await sf.run("link ow at 10 get interval")
+        assert yload(r.stdout) == 60
+        r = await sf.run("link ow at 10 get interval idem")
+        assert yload(r.stdout) == {"interval": 60, "idem": False}
+
+        r = await sf.run(f"link ow at {DEV}.temperature get dest")
+        assert yload(r.stdout) == P("data.temp")
+        r = await sf.run(f"link ow at {DEV}.temperature")
+        assert yload(r.stdout)["interval"] == 5
+
+        # listings show hex codes
+        await sf.run("link ow at 05.345678.x add -s dest .y")
+        await c.i_sync()
+        r = await sf.run("link ow at -")
+        assert r.stdout.split() == ["05", "10"]
+        r = await sf.run("link ow at 10")
+        assert r.stdout.split() == [DEV]
+        r = await sf.run(f"link ow at {DEV}")
+        assert sorted(r.stdout.split()) == [f"{DEV}.foo.bar", f"{DEV}.temperature"]
+
+        r = await sf.run("link ow dump")
+        d = yload(r.stdout)
+        assert d["10"]["0bac6b010800"]["temperature"]["_"]["interval"] == 5
+        assert d["05"]["000000345678"]["x"]["_"]["dest"] == P("y")
+
+        with _raises(click.UsageError) as r:
+            await sf.run("link ow at 1x")
+        assert "family" in r.value.format_message().lower()
+
+        # delete
+        await sf.run(f"link ow at {DEV}.temperature delete")
+        await c.i_sync()
+        with pytest.raises(KeyError):
+            await c.d_get(_dev(prefix, "temperature"))
+        with _raises(click.UsageError):
+            await sf.run(f"link ow at {DEV}.temperature delete")

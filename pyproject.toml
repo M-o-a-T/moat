@@ -22,7 +22,7 @@ dependencies = [
     "asyncactor ~= 0.28.0",
     "asyncakumuli ~= 0.6.2",
     "asyncclick",
-    "asyncowfs",
+    "asyncowfs >= 0.15.3",
     "asyncscope",
     "asyncvictoria ~= 0.8.1",
     "asyncwago",
@@ -100,7 +100,7 @@ testpaths = [
 dev = [
     "ansible",
     "asyncdbus ~= 0.7",
-    "asyncowfs ~= 0.15",
+    "asyncowfs >= 0.15.3",
     "asyncactor ~= 0.27",
     "asyncscope ~= 0.11",
     "asyncwago",

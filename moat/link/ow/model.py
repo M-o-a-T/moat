@@ -1,32 +1,41 @@
 """
-Node model for the 1-Wire (OWFS) bus connector.
+Data model for the 1-Wire (OWFS) bus connector.
 
-The tree mirrors the MoaT-Link subtree under the configured prefix.
-Each server entry is keyed by its name; below it the tree branches
-into the device's family code (a byte), then the device's 48-bit
-hardware code, and finally the attribute path that selects the
-1-Wire value to mirror.
+The configuration lives below the ``link.ow.prefix`` path (default
+``1wire``). 1-Wire device IDs are globally unique, so the configuration
+is keyed by device, not by bus: a device may move to another bus and
+keeps its settings.
 
-A single attribute entry can mirror in either direction:
+* ``FAMILY``: settings common to all devices of this family code.
+* ``FAMILY.CODE``: settings for one device.
+* ``FAMILY.CODE.ATTR…``: one attribute mapping.
+* ``server.NAME``: one owserver, ``{server: {host, port}}``.
 
-* **read** (``dest`` set): the device attribute is polled and its value
-  is published to the MoaT-Link path ``dest``.
-* **write** (``src`` set): a MoaT-Link path ``src`` is watched and its
-  value is written to the device attribute.
+``FAMILY`` and ``CODE`` are stored as integers but always shown as two
+and twelve hex digits.
 
-Both directions accept an optional sub-attribute path (``dest_attr`` /
-``src_attr``) that selects, or merges into, a nested field of the
-transferred value.
+An attribute mapping's effective configuration is its own data, merged
+over its device's, merged over its family's. It mirrors in one
+direction:
+
+* **read** (``dest`` set): the device attribute is polled every
+  ``interval`` seconds and its value is published to ``dest``.
+* **write** (``src`` set): ``src`` is watched and its value is written to
+  the device attribute.
+
+``dest_attr`` / ``src_attr`` select a nested field of the transferred
+value; ``idem`` (default ``True``) controls idempotent publishing.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 
 from attrs import define
 
-from moat.util import NotGiven
-from moat.lib.path import Path
+from moat.util import NotGiven, combine_dict
+from moat.lib.path import P, Path
 from moat.link.node import Node
 
 from collections.abc import Mapping
@@ -39,95 +48,90 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+SERVER = "server"
+"Below the prefix: the owserver entries."
 
-def parse_device(addr: str) -> tuple[int, int]:
-    """Split a 1-Wire device id ``FF.CODE.CHECK`` into ``(family, code)``.
+_FAMILY = re.compile(r"^[0-9a-fA-F]{1,2}$")
+_CODE = re.compile(r"^[0-9a-fA-F]{1,12}$")
 
-    Args:
-        addr: A device id such as ``"10.345678.90"``.  The family and code
-            components are interpreted as hexadecimal; the trailing
-            checksum is discarded.
+
+def fmt_family(family: int) -> str:
+    """Display a family code: two hex digits."""
+    return f"{family:02x}"
+
+
+def fmt_code(code: int) -> str:
+    """Display a device code: twelve hex digits."""
+    return f"{code:012x}"
+
+
+def fmt_device(family: int, code: int) -> str:
+    """Display a device: ``FAMILY.CODE``."""
+    return f"{fmt_family(family)}.{fmt_code(code)}"
+
+
+def parse_at(spec: str) -> tuple[int, int | None, Path]:
+    """Parse ``FAMILY[.CODE[.ATTR…]]``.
+
+    FAMILY and CODE are hex numbers (at most 2 and 12 digits). The rest,
+    if any, is the attribute path, in `moat.lib.path.P` syntax.
 
     Returns:
-        ``(family, code)`` as a pair of ``int``.
+        ``(family, code, attr)``. *code* is ``None`` if not given; *attr*
+        is empty unless a code is given.
 
     Raises:
-        ValueError: if *addr* is not a 3-part dotted device id.
+        ValueError: on a malformed family or code.
     """
-    parts = addr.split(".")
-    if len(parts) != 3:
-        raise ValueError(f"Not a 3-part 1-Wire device id: {addr!r}")
-    return int(parts[0], 16), int(parts[1], 16)
+    fam, dot, rest = spec.partition(".")
+    if not _FAMILY.match(fam):
+        raise ValueError(f"Not a 1-Wire family code (two hex digits): {fam!r}")
+    if not dot:
+        return int(fam, 16), None, Path()
+    code, _, attr = rest.partition(".")
+    if not _CODE.match(code):
+        raise ValueError(f"Not a 1-Wire device code (twelve hex digits): {code!r}")
+    return int(fam, 16), int(code, 16), P(attr) if attr else Path()
 
 
-def device_subpath(addr: str) -> Path:
-    """Return the ``(family, code)`` subpath for a 1-Wire device id."""
-    f, c = parse_device(addr)
-    return Path.build((f, c))
+def _mapping(d: Any) -> Mapping:
+    return d if isinstance(d, Mapping) else {}
 
 
 @define
-class OwAttr(Node):
-    """A single 1-Wire attribute mapping.
+class AttrCfg:
+    """The effective configuration of one attribute mapping."""
 
-    The stored configuration is a dict with these keys:
+    dest: Path | None = None
+    "Destination path (read direction)."
+    src: Path | None = None
+    "Source path (write direction)."
+    interval: float | None = None
+    "Polling interval in seconds (read direction)."
+    dest_attr: Path | None = None
+    "Sub-attribute merged into ``dest``'s value."
+    src_attr: Path | None = None
+    "Sub-attribute extracted from ``src``'s value."
+    idem: bool = True
+    "Idempotency flag."
 
-    * ``dest``: destination MoaT-Link path (read direction).
-    * ``src``: source MoaT-Link path (write direction).
-    * ``interval``: polling interval in seconds (read direction).
-    * ``dest_attr``: sub-attribute path merged into ``dest``'s value.
-    * ``src_attr``: sub-attribute path extracted from ``src``'s value.
-    * ``idem``: idempotency flag (default ``True``).
-    """
+    @classmethod
+    def build(cls, *data: Any) -> AttrCfg:
+        """Build from attr, device and family data (the first one wins)."""
+        d = combine_dict(*(_mapping(x) for x in data))
 
-    def add_child(self, item: Key) -> OwAttr:
-        """Nested attribute segments are :class:`OwAttr` nodes too."""
-        if item in self._sub:
-            raise ValueError("exists")
-        self._sub[item] = s = OwAttr()
-        return s
+        def _p(k):
+            v = d.get(k)
+            return None if v is None else Path.build(v)
 
-    @property
-    def dest(self) -> Path | None:
-        """Destination path (read direction), or ``None``."""
-        d = self.data_
-        s = d.get("dest") if isinstance(d, Mapping) else None
-        return s if s is None else Path.build(s)
-
-    @property
-    def src(self) -> Path | None:
-        """Source path (write direction), or ``None``."""
-        d = self.data_
-        s = d.get("src") if isinstance(d, Mapping) else None
-        return s if s is None else Path.build(s)
-
-    @property
-    def interval(self) -> float | None:
-        """Polling interval in seconds (read direction), or ``None``."""
-        d = self.data_
-        return d.get("interval") if isinstance(d, Mapping) else None
-
-    @property
-    def dest_attr(self) -> Path | None:
-        """Sub-attribute merged into ``dest``'s value, or ``None``."""
-        d = self.data_
-        s = d.get("dest_attr") if isinstance(d, Mapping) else None
-        return s if s is None else Path.build(s)
-
-    @property
-    def src_attr(self) -> Path | None:
-        """Sub-attribute extracted from ``src``'s value, or ``None``."""
-        d = self.data_
-        s = d.get("src_attr") if isinstance(d, Mapping) else None
-        return s if s is None else Path.build(s)
-
-    @property
-    def idem(self) -> bool:
-        """Idempotency flag (default ``True``)."""
-        d = self.data_ if self.data_ is not NotGiven else {}
-        if not isinstance(d, Mapping):
-            return True
-        return bool(d.get("idem", True))
+        return cls(
+            dest=_p("dest"),
+            src=_p("src"),
+            interval=d.get("interval"),
+            dest_attr=_p("dest_attr"),
+            src_attr=_p("src_attr"),
+            idem=bool(d.get("idem", True)),
+        )
 
     @property
     def is_read(self) -> bool:
@@ -145,6 +149,18 @@ class OwAttr(Node):
 
 
 @define
+class OwAttr(Node):
+    """An attribute mapping (or an intermediate attribute path element)."""
+
+    def add_child(self, item: Key) -> OwAttr:
+        """Nested attribute path elements are :class:`OwAttr` nodes too."""
+        if item in self._sub:
+            raise ValueError("exists")
+        self._sub[item] = s = OwAttr()
+        return s
+
+
+@define
 class OwDevice(Node):
     """One 1-Wire device; children are :class:`OwAttr`."""
 
@@ -158,51 +174,89 @@ class OwDevice(Node):
 
 @define
 class OwFamily(Node):
-    """Intermediate family-code node; children are :class:`OwDevice`."""
+    """A family code; children are :class:`OwDevice`."""
 
-    def add_child(self, item: Key) -> OwDevice:
-        """Create child entries as :class:`OwDevice`."""
+    def add_child(self, item: Key) -> Node:
+        """Integer children are devices."""
         if item in self._sub:
             raise ValueError("exists")
-        self._sub[item] = s = OwDevice()
+        self._sub[item] = s = OwDevice() if isinstance(item, int) else Node()
         return s
 
 
 @define
 class OwServer(Node):
-    """One OWFS server (owserver) in the configuration tree.
-
-    Children at the integer ``family`` level branch out into
-    code/attribute levels and finally into :class:`OwAttr` leaves.
-    """
-
-    def add_child(self, item: Key) -> OwFamily:
-        """Create child entries as :class:`OwFamily`."""
-        if item in self._sub:
-            raise ValueError("exists")
-        self._sub[item] = s = OwFamily()
-        return s
+    """One owserver."""
 
     @property
     def cfg(self) -> dict[str, Any]:
-        """Server-level config dict (``host``/``port``)."""
-        d = self.data_
-        if d is NotGiven or not isinstance(d, Mapping):
-            return {}
-        s = d.get("server", {})
-        return s if isinstance(s, Mapping) else {}
+        """The ``host``/``port`` settings."""
+        return dict(_mapping(_mapping(self.data_).get(SERVER)))
+
+
+@define
+class OwServers(Node):
+    """The ``server`` subtree; children are :class:`OwServer`."""
+
+    def add_child(self, item: Key) -> OwServer:
+        """Create child entries as :class:`OwServer`."""
+        if item in self._sub:
+            raise ValueError("exists")
+        self._sub[item] = s = OwServer()
+        return s
 
 
 @define
 class OwRoot(Node):
     """Root of the 1-Wire configuration tree.
 
-    Children are :class:`OwServer` nodes.
+    Integer children are :class:`OwFamily` nodes; the ``server`` child
+    holds the owservers.
     """
 
-    def add_child(self, item: Key) -> OwServer:
-        """Create child servers as :class:`OwServer`."""
+    def add_child(self, item: Key) -> Node:
+        """Create typed children."""
         if item in self._sub:
             raise ValueError(f"exists: {item!r}")
-        self._sub[item] = s = OwServer()
+        if isinstance(item, int):
+            s: Node = OwFamily()
+        elif item == SERVER:
+            s = OwServers()
+        else:
+            s = Node()
+        self._sub[item] = s
         return s
+
+    def attr_cfg(self, family: int, code: int, attr: Path) -> AttrCfg | None:
+        """The effective configuration of an attribute mapping.
+
+        Returns ``None`` if the mapping doesn't exist.
+        """
+        try:
+            fam = self.get(family, create=False)
+            dev = fam.get(code, create=False)
+            node = dev.get(attr, create=False)
+        except KeyError:
+            return None
+        if node.data_ is NotGiven:
+            return None
+        return AttrCfg.build(node.data_, dev.data_, fam.data_)
+
+    def attrs(self, family: int, code: int | None = None):
+        """Yield ``(family, code, attr)`` of the mappings below a family or device."""
+        try:
+            fam = self.get(family, create=False)
+        except KeyError:
+            return
+        for c, dev in fam:
+            if not isinstance(c, int) or (code is not None and c != code):
+                continue
+            yield from ((family, c, a) for a in _attr_paths(dev, Path()))
+
+
+def _attr_paths(node: Node, prefix: Path):
+    for k, sub in node:
+        p = prefix / k
+        if sub.data_ is not NotGiven:
+            yield p
+        yield from _attr_paths(sub, p)

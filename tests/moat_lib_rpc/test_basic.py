@@ -543,3 +543,36 @@ async def test_stream_flow_throttles_fast_producer_slow_consumer(use_socket):
             # Drain much slower than the producer floods.
             await anyio.sleep(0.005)
     assert got == list(range(1000)), f"lost data: got {len(got)} of 1000"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_flow_completes_large_transfer(use_socket):
+    """A flow-controlled stream must deliver everything — no stall.
+
+    Regression test for the credit-ledger desync that followed the
+    initial-credit race fix: the initiator's opening credit moved to the
+    forwarding handler, but ``_fli`` was no longer seeded, so ``_qsize``'s
+    replenishment bookkeeping started from an unbalanced ledger and the
+    consumer stopped advertising credit — the producer stalled and the
+    transfer never completed (e.g. a joining server's ``d.walk`` sync hung).
+    """
+    n = 5000
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                for i in range(n):
+                    await st.send(i)
+                await msg.result({})
+
+    got = []
+    async with (
+        scaffold(EP(), None, use_socket=use_socket) as (_a, b),
+        b.cmd("Test").stream_in(size=8, flow=True) as st,
+    ):
+        async for (m,) in st:
+            got.append(m)
+    assert got == list(range(n)), f"incomplete: got {len(got)} of {n}"

@@ -23,6 +23,9 @@ from moat.lib.run import AliasedGroup
 from moat.link.backend import RawMessage, get_backend
 from moat.util.times import humandelta, ts2iso
 
+from collections.abc import Mapping
+from typing import Any
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,40 +70,106 @@ async def init(file):
 @cli.command("test")
 @click.pass_obj
 async def test(obj):
-    "Test"
+    """
+    Check the root dataset, the server broadcast, and the running servers.
+
+    Every MoaT-Link server (``run.host.*.moat.link.server``) and the main
+    cleanup task (``run.host``) must send pings. One that doesn't within
+    ``link.timeout.ping.stale`` seconds is reported as dead, and the exit
+    status is 1.
+    """
 
     lock = anyio.Lock()
-    cfg = obj.cfg.link
+    back = obj.conn
+    stale = obj.cfg.link.timeout.ping.stale
+    dead: list[str] = []
 
-    async def check_root():
+    async def say(msg):
+        async with lock:
+            print(msg, file=obj.stdout)
+
+    async def check(path, what):
         try:
             with anyio.fail_after(1):
-                async with back.monitor(cfg.root) as mon:
+                async with back.monitor(path) as mon:
                     async for msg in mon:
                         async with lock:
-                            print("Root dataset:")
-                            yprint(msg.data)
-                            print("---")
+                            print(f"{what}:", file=obj.stdout)
+                            yprint(msg.data, stream=obj.stdout)
+                            print("---", file=obj.stdout)
                             return
         except TimeoutError:
-            print(f"No retained root dataset on {cfg.root} found.")
+            await say(f"No retained {what.lower()} on {path} found.")
 
-    async def check_server():
-        try:
-            with anyio.fail_after(1):
-                async with back.monitor(cfg.root + P("run.service.main")) as mon:
+    async def check_ping(names, ident):
+        state = f"dead (no ping within {stale}s)"
+        with anyio.move_on_after(stale):
+            async with back.monitor(P(":R.run.ping.id") / ident) as mon:
+                async for msg in mon:
+                    d = msg.data
+                    if isinstance(d, Mapping) and d.get("up"):
+                        state = f"alive ({d.get('state')})"
+                    else:
+                        state = "dead (went down)"
+                    break
+        for name in names:
+            if state.startswith("dead"):
+                dead.append(name)
+            await say(f"{name}: {state}")
+
+    async def check_running():
+        found: dict[str, Any] = {}
+
+        async def collect(path):
+            with anyio.move_on_after(1):
+                async with back.monitor(path) as mon:
                     async for msg in mon:
-                        async with lock:
-                            print("Server broadcast:")
-                            yprint(msg.data)
-                            print("---")
-                            return
-        except TimeoutError:
-            print(f"No retained root dataset on {cfg.root} found.")
+                        d = msg.data
+                        if not isinstance(d, Mapping) or d.get("id") is None:
+                            continue
+                        t = list(msg.topic)
+                        if t == ["run", "host"]:
+                            found["Cleanup task (run.host)"] = d["id"]
+                        else:
+                            found[f"Server {t[-4]}"] = d["id"]
 
-    async with get_backend(cfg) as back, back.connect(), anyio.create_task_group() as tg:
-        tg.start_soon(check_root)
-        tg.start_soon(check_server)
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(collect, P(":R.run.host"))
+            tg.start_soon(collect, P(":R.run.host.+.moat.link.server"))
+
+        cleanup = "Cleanup task (run.host)"
+        if cleanup not in found:
+            dead.append("run.host")
+            await say(f"{cleanup}: not announced")
+        else:
+            # where it runs: the "host" in its (retained) run.id message
+            ident = found.pop(cleanup)
+            host = "unknown host"
+            with anyio.move_on_after(1):
+                async with back.monitor(P(":R.run.id") / ident) as mon:
+                    async for msg in mon:
+                        if isinstance(msg.data, Mapping) and msg.data.get("host"):
+                            host = msg.data["host"]
+                        break
+            found[f"{cleanup} on {host}"] = ident
+        if not any(k.startswith("Server ") for k in found):
+            dead.append("servers")
+            await say("No running servers announced.")
+        # one process may announce several services
+        by_id: dict[Any, list[str]] = {}
+        for name, ident in sorted(found.items()):
+            by_id.setdefault(ident, []).append(name)
+        async with anyio.create_task_group() as tg:
+            for ident, names in by_id.items():
+                tg.start_soon(check_ping, names, ident)
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(check, P(":R"), "Root dataset")
+        tg.start_soon(check, P(":R.run.service.main.conn"), "Server broadcast")
+        tg.start_soon(check_running)
+
+    if dead:
+        sys.exit(1)
 
 
 def _get_message(args):

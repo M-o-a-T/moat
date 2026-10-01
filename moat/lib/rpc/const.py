@@ -20,6 +20,7 @@ E_NO_CMDS = const(-4)
 E_SKIP = const(-5)
 E_MUST_STREAM = const(-6)
 E_ERROR = const(-7)
+E_OVERRUN = const(-8)
 E_NO_CMD = const(-11)
 
 # Stream states (separate for in/out)
@@ -51,6 +52,7 @@ __all__ = [  # noqa:RUF022
     "E_SKIP",
     "E_MUST_STREAM",
     "E_ERROR",
+    "E_OVERRUN",
     "E_NO_CMD",
     # stream states
     "S_END",

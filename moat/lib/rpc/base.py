@@ -64,6 +64,7 @@ class Caller:
     """
 
     _qlen = 0
+    _flow = True
 
     def __init__(
         self,
@@ -161,6 +162,8 @@ class Caller:
             # so callers couldn't size the window to their consumption pattern.
             if self._qlen:
                 m1._recv_qlen = self._qlen  # noqa: SLF001
+            if not self._flow:
+                m1._flow = False  # noqa: SLF001
 
             tg = await acm(TaskGroup())
             m2 = await acm(m1.ensure_remote())
@@ -180,26 +183,35 @@ class Caller:
     async def __aexit__(self, *err):
         return await AC_exit(self, *err)
 
-    def stream(self, size: int = 42) -> Self:
+    def stream(self, size: int = 42, *, flow: bool = True) -> Self:
         """mark as streaming bidirectionally (the default)
 
         Args:
             size: length of the incoming queue
+            flow: if False, disable credit-based flow control on the
+                incoming direction. Use this when the remote side sends
+                sparse or self-paced data so the window bookkeeping
+                isn't warranted — but note that an over-producing peer
+                will then trigger an ``OverrunError`` instead of being
+                throttled.
         """
         assert not self._dir
         self._dir = SD_BOTH
         self._qlen = size
+        self._flow = flow
         return self
 
-    def stream_in(self, size: int = 42) -> Self:
+    def stream_in(self, size: int = 42, *, flow: bool = True) -> Self:
         """mark as only streaming in.
 
         Args:
             size: length of the incoming queue
+            flow: see :meth:`stream`
         """
         assert not self._dir
         self._dir = SD_IN
         self._qlen = size
+        self._flow = flow
         return self
 
     def stream_out(self) -> Self:

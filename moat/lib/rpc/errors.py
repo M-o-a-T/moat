@@ -14,6 +14,7 @@ from .const import (
     E_NO_CMD,
     E_NO_CMDS,
     E_NO_STREAM,
+    E_OVERRUN,
     E_SKIP,
     E_UNSPEC,
 )
@@ -70,6 +71,8 @@ class StreamError(RuntimeError):  # noqa: D101
                 return MustStream()
             elif m == E_SKIP:
                 return SkippedData()
+            elif m == E_OVERRUN:
+                return OverrunError()
             elif m == E_NO_CMDS:
                 return NoCmds()
             elif m == E_CANCEL:
@@ -108,6 +111,13 @@ class StopMe(StreamError):
 @as_proxy("_CSDErr")
 class SkippedData(StreamError):
     "Data skipped, took too long"
+
+    pass
+
+
+@as_proxy("_COVErr")
+class OverrunError(StreamError):
+    "The receiver's buffer is full and flow control is off."
 
     pass
 
@@ -155,6 +165,7 @@ __all__ = [
     "NoCmds",
     "NoStream",
     "NotReadyError",
+    "OverrunError",
     "RemoteError",
     "ShortCommandError",
     "SkippedData",

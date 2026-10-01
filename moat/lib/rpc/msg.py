@@ -4,7 +4,7 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util import ExpectedError, outcome, push_kw
+from moat.util import ExpectedError, QueueFull, outcome, push_kw
 from moat.lib.codec.errors import SilentRemoteError
 from moat.lib.micro import (
     CancelledError,
@@ -29,6 +29,7 @@ from .const import (
     E_CANCEL,
     E_ERROR,
     E_NO_STREAM,
+    E_OVERRUN,
     E_SKIP,
     S_END,
     S_NEW,
@@ -39,7 +40,7 @@ from .const import (
     SD_NONE,
     SD_OUT,
 )
-from .errors import Flow, NoStream, StreamError, WantsStream
+from .errors import Flow, NoStream, OverrunError, StreamError, WantsStream
 
 from typing import TYPE_CHECKING, cast, overload
 
@@ -412,6 +413,7 @@ class Msg(MsgLink, MsgResult):
     _fli: int | None = None
     _flo: int | None = None
     _flo_evt: Event | None = None
+    _flow: bool = True  # whether this side practises credit-based flow control
     warnings: list
 
     _loaded: bool = False
@@ -552,6 +554,13 @@ class Msg(MsgLink, MsgResult):
                 self._stream_out = S_OFF
             if self._recv_q is not None:
                 self._recv_q.close_sender()
+            # A terminal error ends the incoming direction; wake any
+            # sender blocked in ``_flow_take`` so it can re-check and
+            # raise (e.g. an ``OverrunError`` from the receiver) instead
+            # of waiting forever for a credit that will never come.
+            if flags & B_ERROR and self._flo_evt is not None:
+                self._flo_evt.set()
+                self._flo_evt = Event()
             # If this is a client-side cancel of a non-streaming call,
             # force the outgoing direction closed so _ended() can finalize
             # and cancel the handler task via stream_detach.
@@ -591,7 +600,22 @@ class Msg(MsgLink, MsgResult):
             self._stream_in = S_ON
 
         elif self._recv_q is not None:
-            await self._recv_q.put((a, kw))
+            try:
+                self._recv_q.put_nowait((a, kw))
+            except QueueFull:
+                # The receive buffer is full. With flow control on this
+                # shouldn't happen (the sender gates on our window); with
+                # it off the caller accepted that the peer might overrun.
+                # Either way we must not block the connection's read loop:
+                # surface the error to our consumer and tell the sender.
+                self._recv_q = OverrunError()
+                if self._stream_out != S_END:
+                    self._stream_out = S_END
+                    self._stream_in = S_END
+                    # We notify the peer ourselves; suppress ``kill()``'s
+                    # echoing a cancel on top of it.
+                    self._got_cancel = True
+                    await self.ml_send([E_OVERRUN], None, B_ERROR)
 
         else:
             log("Unwanted stream: %r/%r/%d", a, kw, flags)
@@ -610,6 +634,8 @@ class Msg(MsgLink, MsgResult):
         if not self._dir & SD_OUT:
             raise RuntimeError("This stream is read only")
         if self._stream_out != S_ON:
+            if (err := self._term_error()) is not None:
+                raise err
             log("NoStream:%d", self._stream_out)
             raise NoStream
         await self._skipped()
@@ -629,6 +655,8 @@ class Msg(MsgLink, MsgResult):
         notice (``_flo is None``), sending is unrestricted.
         """
         while True:
+            if (err := self._term_error()) is not None:
+                raise err
             flo = self._flo
             if flo is None:
                 return  # peer doesn't practise flow control
@@ -900,6 +928,10 @@ class Msg(MsgLink, MsgResult):
         # - read without flow control until the queue is half full
         assert self._recv_q is not None  # to shut up pyright
 
+        if not self._flow:
+            # Flow control disabled by the caller: don't advertise a window.
+            return
+
         if self._fli is None:
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
@@ -989,9 +1021,12 @@ class _Stream:
         # Advertise our receive-window size up front so the peer can gate
         # its sends on it from the very first message (see ``_flow_take``).
         # Without an initial credit notice the peer has no window to honour
-        # and falls back to unrestricted sending.
-        slf._fli = 0  # noqa: SLF001
-        await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
+        # and falls back to unrestricted sending. Skipped when the caller
+        # opted out of flow control (sparse/paced streams where the
+        # bookkeeping isn't worth it and an overrun is impossible).
+        if slf._flow:  # noqa: SLF001
+            slf._fli = 0  # noqa: SLF001
+            await slf.warn_int(slf._recv_qlen)  # noqa: SLF001
 
         if self.initial:
             await slf.wait_replied()

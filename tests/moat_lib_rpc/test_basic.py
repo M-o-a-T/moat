@@ -9,6 +9,7 @@ from moat.util import ungroup
 from moat.lib.micro import log
 from moat.lib.path import P
 from moat.lib.rpc import MsgHandler, MsgSender
+from moat.lib.rpc.errors import OverrunError
 
 
 @pytest.mark.anyio
@@ -371,3 +372,69 @@ async def test_stream_ba(use_socket):  # noqa: D103
         assert res == [1, 3, 2]
         assert tuple(st.args) == ("XYZ",)
         assert not st.kw
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_no_flow_ok(use_socket):
+    """Opting out of flow control works for a sparse, self-paced stream.
+
+    The producer dribbles data slowly enough that the small receive queue
+    never fills, so no overrun occurs and no flow-control bookkeeping runs.
+    """
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                for i in range(5):
+                    await st.send(i)
+                    await anyio.sleep(0.01)
+                await msg.result({})
+
+    got = []
+    async with (
+        scaffold(EP(), None, use_socket=use_socket) as (_a, b),
+        b.cmd("Test").stream_in(2, flow=False) as st,
+    ):
+        async for (m,) in st:
+            got.append(m)
+    assert got == [0, 1, 2, 3, 4]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("use_socket", [False, True])
+async def test_stream_overrun_reader(use_socket):
+    """With flow control off, an over-producing peer overruns the reader.
+
+    The reader asked for a tiny queue and opted out of flow control, then
+    drains slower than the producer floods. The reader's iterator must
+    raise ``OverrunError`` rather than block forever.
+    """
+
+    class EP(MsgHandler):
+        @staticmethod
+        async def handle(msg, rcmd):
+            rcmd  # noqa:B018
+            async with msg.stream_out("Takeme") as st:
+                for i in range(1000):
+                    try:
+                        await st.send(i)
+                    except OverrunError:
+                        # The reader signalled overrun; stop producing.
+                        break
+                else:
+                    pytest.fail("producer should have been stopped by overrun")
+                await msg.result({})
+
+    got = []
+    async with scaffold(EP(), None, use_socket=use_socket) as (_a, b):
+        with pytest.raises(OverrunError), ungroup:  # noqa:PT012
+            async with b.cmd("Test").stream_in(2, flow=False) as st:
+                async for (m,) in st:
+                    got.append(m)
+                    # Drain much slower than the producer fills.
+                    await anyio.sleep(0.01)
+    # We received some data before the overrun, but not all 1000.
+    assert 0 < len(got) < 1000

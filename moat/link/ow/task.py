@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+from functools import partial
 
 from asyncowfs import OWFS
 from asyncowfs.event import (
@@ -24,9 +25,11 @@ from asyncowfs.event import (
     DeviceLocated,
     DeviceNotFound,
     DeviceValue,
+    ServerConnected,
+    ServerDisconnected,
 )
 
-from moat.util import NotGiven, combine_dict
+from moat.util import NotGiven, combine_dict, ungroup
 from moat.lib.path import Path
 from moat.link.gate import AnnouncedJob
 
@@ -71,15 +74,36 @@ def _name(key: Key) -> str:
     return f"{fmt_device(f, c)}.{a}" if len(a) else fmt_device(f, c)
 
 
+CONN_ERRORS = (
+    OSError,  # includes TimeoutError, connection refused/reset
+    anyio.BrokenResourceError,
+    anyio.ClosedResourceError,
+    anyio.EndOfStream,
+)
+
+
+def is_conn_error(exc: BaseException) -> bool:
+    "Is this a problem talking to the owserver?"
+    return isinstance(ungroup.one(exc), CONN_ERRORS)
+
+
 class _Devices:
-    """Apply the device configuration to the devices asyncowfs finds."""
+    """Apply the device configuration to the devices asyncowfs finds.
+
+    Problems with a mapping or its device are reported to the error
+    subsystem, at the mapping's path. Other errors are logged, or re-raised
+    if @crash is set.
+    """
 
     root: OwRoot | None = None
 
-    def __init__(self, link: Link, prefix: Path, tg: TaskGroup) -> None:
+    def __init__(self, link: Link, prefix: Path, tg: TaskGroup, crash: bool = False) -> None:
         self.link = link
         self.prefix = prefix
         self.tg = tg
+        self.crash = crash
+        self.errored: set[Key] = set()
+        "Mappings with a reported error."
         self.devs: dict[tuple[int, int], Any] = {}
         "All devices seen so far. asyncowfs keeps them across bus changes."
         self.active: dict[Key, AttrCfg] = {}
@@ -146,12 +170,28 @@ class _Devices:
         if new.is_write and dev.bus is not None:
             await self._start_writer(dev, key, new)
 
+    def _path(self, key: Key) -> Path:
+        "The configuration path of a mapping."
+        f, c, a = key
+        return self.prefix / f / c + a
+
+    async def _report(self, key: Key, exc: Exception | None) -> None:
+        "Report a mapping's error, or that it works (again)."
+        if exc is None:
+            if key in self.errored:
+                self.errored.discard(key)
+                await self.link.e_ok(self._path(key))
+            return
+        self.errored.add(key)
+        await self.link.e_exc(self._path(key), exc)
+
     async def _poll(self, dev: Any, key: Key, interval: float) -> None:
         # asyncowfs remembers the interval while the device isn't located.
         try:
             await dev.set_polling_interval(key[2], interval)
         except Exception as exc:
             logger.warning("Polling setup for %s failed: %r", _name(key), exc)
+            await self._report(key, exc)
 
     async def _start_writer(self, dev: Any, key: Key, cfg: AttrCfg) -> None:
         self._stop_writer(key)
@@ -161,9 +201,14 @@ class _Devices:
                 self.writers[key] = sc
                 task_status.started()
                 try:
-                    await run_out(self.link, dev, cfg, key[2], _name(key))
-                except Exception:
+                    await run_out(
+                        self.link, dev, cfg, key[2], _name(key), partial(self._report, key)
+                    )
+                except Exception as exc:
+                    if self.crash:
+                        raise
                     logger.exception("Writer for %s failed", _name(key))
+                    await self._report(key, exc)
                 finally:
                     if self.writers.get(key) is sc:
                         del self.writers[key]
@@ -192,11 +237,25 @@ class _Devices:
                     elif isinstance(msg, DeviceNotFound):
                         self._on_not_found(msg.device)
                     elif isinstance(msg, DeviceException):
-                        logger.warning(
-                            "OWFS error at %s.%s: %r", msg.device, msg.attribute, msg.exception
-                        )
+                        await self._on_error(msg.device, msg.attribute, msg.exception)
+                    elif isinstance(msg, ServerDisconnected):
+                        # (no exception: closed on purpose)
+                        if msg.exception is not None:
+                            await self.link.e_exc(
+                                self.prefix / SERVER / msg.server.name, msg.exception
+                            )
+                    elif isinstance(msg, ServerConnected):
+                        await self.link.e_ok(self.prefix / SERVER / msg.server.name)
                 except Exception:
+                    if self.crash:
+                        raise
                     logger.exception("Event processing failed for %r", msg)
+
+    async def _on_error(self, dev: Any, attr: Any, exc: Exception) -> None:
+        logger.warning("OWFS error at %s.%s: %r", dev, attr, exc)
+        key = self.by_canon.get((int(dev.family), int(dev.code), _canon_attr(attr)))
+        if key is not None:
+            await self._report(key, exc)
 
     async def _on_located(self, dev: Any) -> None:
         fc = int(dev.family), int(dev.code)
@@ -228,36 +287,47 @@ class _Devices:
                 await forward_read(self.link, cfg, val)
             except Exception as exc:
                 logger.warning("Forward read for %s failed: %r", _name(key), exc)
+                await self._report(key, exc)
+            else:
+                await self._report(key, None)
 
 
 class _ServerJob(AnnouncedJob):
-    """Announce one owserver; add it to the OWFS instance while we hold it."""
+    """Announce one owserver; add it to the OWFS instance while we hold it.
+
+    Connection errors are reported and retried. So are other errors,
+    unless @crash is set: then they end the job, and the connector.
+    """
 
     def __init__(
-        self, cfg: dict[str, Any], link: Link, path: Path, ow: Service, srv: Mapping[str, Any]
+        self,
+        cfg: dict[str, Any],
+        link: Link,
+        path: Path,
+        ow: Service,
+        srv: Mapping[str, Any],
+        crash: bool = False,
     ) -> None:
         super().__init__(cfg, link, path, "ow")
         self.name = str(path[-1])
         self.ow = ow
         self.srv = srv
+        self.crash = crash
         self.changed = anyio.Event()
 
     async def work(self, *, task_status) -> None:
-        srv = dict(self.srv)
-        # asyncowfs' own periodic scan (``add_server(scan=…)``) re-acquires
-        # the scan lock it already holds. Rescan here instead.
-        scan = srv.pop("scan", None)
-        server = await self.ow.add_server(name=self.name, **srv)
+        server = await self.ow.add_server(name=self.name, **self.srv)
         try:
             task_status.started()
-            while not self.changed.is_set():
-                with anyio.move_on_after(scan or float("inf")):
-                    await self.changed.wait()
-                if scan and not self.changed.is_set():
-                    await server.scan_now()
+            await self.changed.wait()
         finally:
             with anyio.CancelScope(shield=True):
                 await server.drop()
+
+    async def _crashed(self, exc: Exception) -> None:
+        if self.crash and not is_conn_error(exc):
+            raise exc
+        await super()._crashed(exc)
 
 
 def _srv_cfg(cfg: Mapping[str, Any], d: Any) -> dict[str, Any] | None:
@@ -275,6 +345,7 @@ async def run_servers(
     *,
     only: Sequence[str] = (),
     force: bool = False,
+    crash: bool = False,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Announce and run the owservers (all of them, or those in @only).
@@ -283,6 +354,9 @@ async def run_servers(
     entry is deleted. One that another live process has announced is
     skipped until that announcement goes away, unless @force is set (which
     only applies to the servers that exist at startup).
+
+    Connection errors are reported and retried. Other errors are too,
+    unless @crash is set.
     """
     ocfg = cfg["link"]["ow"]
     spath = Path.build(ocfg["prefix"]) / SERVER
@@ -316,7 +390,7 @@ async def run_servers(
                     return
             if srv is None:
                 return
-            jobs[name] = job = _ServerJob(cfg, link, spath / name, ow, srv)
+            jobs[name] = job = _ServerJob(cfg, link, spath / name, ow, srv, crash=crash)
             tg.start_soon(_run, job, force)
 
         async with link.d_watch(spath, subtree=True, state=None, mark=True) as mon:
@@ -353,6 +427,7 @@ async def task(
     only: Sequence[str] = (),
     *,
     force: bool = False,
+    crash: bool = False,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Run the 1-Wire connector.
@@ -362,14 +437,18 @@ async def task(
         cfg: the global configuration.
         only: the owservers to run; default: all of them.
         force: take over servers announced by another process.
+        crash: errors other than connection problems end the connector,
+            instead of being logged (and retried).
         task_status: started when the servers found at startup are
             running, waiting for another process, or have crashed.
     """
     prefix = Path.build(cfg["link"]["ow"]["prefix"])
     async with OWFS() as ow, anyio.create_task_group() as tg:
-        devs = _Devices(link, prefix, tg)
+        devs = _Devices(link, prefix, tg, crash=crash)
         # Start the event reader before adding servers, so that the
         # initial scan's device-location events are not lost.
         await tg.start(devs.run_events, ow)
         await tg.start(devs.watch_cfg)
-        await run_servers(cfg, link, ow, only=only, force=force, task_status=task_status)
+        await run_servers(
+            cfg, link, ow, only=only, force=force, crash=crash, task_status=task_status
+        )

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from .model import AttrCfg
 
+    from collections.abc import Awaitable, Callable
     from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ async def run_out(
     entry: AttrCfg,
     attr_path: Path,
     name: str,
+    report: Callable[[Exception | None], Awaitable[None]] | None = None,
 ) -> None:
     """Forward MoaT-Link source updates onto a 1-Wire device attribute.
 
@@ -82,6 +84,8 @@ async def run_out(
         entry: Effective configuration of this attribute.
         attr_path: The device-side attribute path to write to.
         name: Name of this entry (for logging).
+        report: called with the error when a write fails, or with
+            ``None`` when it works.
     """
     src = entry.src
     if src is None:
@@ -103,8 +107,15 @@ async def run_out(
                         tuple(src_attr),
                         name,
                     )
+                    if report is not None:
+                        await report(KeyError(f"{src}: no {src_attr}"))
                     continue
             try:
                 await dev.set(*attr_path, value=out)
             except Exception as exc:
                 logger.warning("Write to %s failed: %r", name, exc)
+                if report is not None:
+                    await report(exc)
+            else:
+                if report is not None:
+                    await report(None)

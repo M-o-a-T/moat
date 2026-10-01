@@ -63,6 +63,7 @@ moat link ow server NAME                           # show a server
 moat link ow server NAME add -h HOST [-p PORT]
 moat link ow server NAME set [-h HOST] [-p PORT]
 moat link ow server NAME delete
+moat link ow server NAME monitor [-f]              # run the connector for one server
 
 moat link ow at -                                  # list families
 moat link ow at FAMILY                             # list its devices
@@ -76,7 +77,7 @@ moat link ow at FAMILY.CODE.ATTR get|set|delete …
 moat link ow at SPEC dump                          # subtree as YAML
 moat link ow dump                                  # everything as YAML
 
-moat link ow monitor [-f] [NAME…]                  # run the connector
+moat link ow monitor [-f] [NAME…]                  # run the connector (all servers)
 ```
 
 `ATTR` is the device attribute path, e.g. `temperature` or `foo.bar`;
@@ -88,8 +89,19 @@ moat link ow monitor [-f] [NAME…]                  # run the connector
 command line. Each server is announced like a gate (see `moat link gate
 … run`): a server that another live connector has announced is skipped
 until that connector goes away (unless `-f` is used), so several hosts
-can run connectors for the same configuration. A server whose connection
-fails is reported to the error subsystem and retried with backoff.
+can run connectors for the same configuration.
+
+Errors are reported to MoaT-Link's error subsystem:
+
+- connection problems, at `server.NAME`; these are always retried with
+  backoff;
+- problems with a mapping or its device (read errors, failed writes,
+  bad attributes), at the mapping's path;
+- anything else, at `server.NAME`. `moat link ow monitor` logs and
+  retries these. `moat link ow server NAME monitor` exits instead, so
+  that e.g. systemd restarts it.
+
+When something works again, its error is cleared.
 
 ```shell
 systemctl enable --now moat-link-ow.service        # all servers

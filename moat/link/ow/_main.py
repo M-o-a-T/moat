@@ -176,6 +176,30 @@ async def server_delete(obj) -> None:
     await obj.conn.d_set(obj.ow_server, NotGiven)
 
 
+@server_.command("monitor")
+@click.option("-f", "--force", is_flag=True, help="Take over if announced elsewhere.")
+@click.pass_obj
+async def server_monitor(obj, force: bool) -> None:
+    """
+    Run the 1-Wire connector for this owserver only.
+
+    Connection problems are reported and retried. Other errors end the
+    connector (unlike 'moat link ow monitor', which logs and retries
+    them), so that e.g. systemd can restart it.
+    """
+    from moat.util.systemd import as_service  # noqa: PLC0415
+
+    from .task import task  # noqa: PLC0415
+
+    name = obj.ow_server[-1]
+    try:
+        await obj.conn.d_get(obj.ow_server)
+    except KeyError:
+        raise click.UsageError(f"Server {name!r} does not exist.") from None
+    async with as_service(obj) as srv:
+        await task(obj.conn, obj.cfg, (name,), force=force, crash=True, task_status=srv)
+
+
 # Families, devices, attributes
 
 
@@ -394,6 +418,9 @@ async def monitor(obj, servers: tuple[str, ...], force: bool) -> None:
     announced, so that several connectors can share the work; a server
     that another live connector has announced is skipped until that
     one goes away, unless '--force' is used.
+
+    Errors are reported to the error subsystem and retried. Use
+    'moat link ow server NAME monitor' to run a single server.
     """
     from moat.util.systemd import as_service  # noqa: PLC0415
 

@@ -11,12 +11,14 @@ import anyio
 import contextlib
 import logging
 import pytest
+import socket
 from copy import deepcopy
 from functools import partial
 
 from asyncowfs.mock import some_server, structs
 
 import moat.link.ow  # noqa:F401 - register cfg
+from moat.util import ungroup
 from moat.lib.path import P, Path
 from moat.link._test import Scaffold
 from moat.link.ow.task import task
@@ -176,3 +178,97 @@ async def test_move(cfg):
         # the writer is restarted on the new bus
         await c.d_set(P("data.low"), 9)
         await _expect_tree(dev, ("templow",), "9")
+
+
+def _closed_port() -> int:
+    "A local port that nobody listens on."
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+async def _expect_error(c, path, text, timeout=5.0):
+    "Wait until an error containing @text is reported at @path."
+    with anyio.fail_after(timeout):
+        async with c.d_watch(P("error") + path, subtree=True, state=None) as mon:
+            async for _p, d in mon:
+                if text in str(d):
+                    return
+
+
+def _fast_retry(cfg):
+    cfg.link.gate.backoff = dict(min=0.2, max=0.3, factor=2)
+    cfg.link.gate.recovery = 0.3
+
+
+@pytest.mark.parametrize("crash", [False, True])
+async def test_refused(cfg, crash):
+    "A server that refuses connections is reported and retried, in both modes."
+    _fast_retry(cfg)
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        prefix = Path.build(cfg.link.ow.prefix)
+        await c.d_set(
+            prefix / "server" / "bad", {"server": {"host": "127.0.0.1", "port": _closed_port()}}
+        )
+        await c.i_sync()
+
+        await sf.tg.start(partial(task, crash=crash), c, cfg)
+        await _expect_error(c, prefix / "server" / "bad", "connect")
+        # still running (a crash would end the scaffold), still retrying
+        await anyio.sleep(1)
+
+
+@pytest.mark.parametrize("crash", [False, True])
+async def test_crash(cfg, crash, monkeypatch):
+    "Other errors are retried by the shared monitor, but end a single-server one."
+    from asyncowfs.service import Service  # noqa: PLC0415
+
+    _fast_retry(cfg)
+    calls = 0
+    retried = anyio.Event()
+
+    async def add_server(_self, *_a, **_kw):
+        nonlocal calls
+        calls += 1
+        if calls >= 3:
+            retried.set()
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(Service, "add_server", add_server)
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        prefix = Path.build(cfg.link.ow.prefix)
+        await c.d_set(prefix / "server" / "s", {"server": {"host": "127.0.0.1"}})
+        await c.i_sync()
+
+        if crash:
+            with pytest.raises(RuntimeError, match="boom"), ungroup, anyio.fail_after(5):
+                await task(c, cfg, ("s",), crash=True)
+            assert calls == 1
+        else:
+            await sf.tg.start(task, c, cfg)
+            await _expect_error(c, prefix / "server" / "s", "boom")
+            with anyio.fail_after(5):
+                await retried.wait()
+
+
+async def test_mapping_error(cfg):
+    "A mapping that doesn't work is reported at its path."
+    my_tree = deepcopy(basic_tree)
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await sf.tg.start(_run_mock_ow, c, cfg, "g1", my_tree)
+        await sf.run("link ow at 10.345678.nonexistent add -s dest .data.x -i 0.5")
+        prefix = Path.build(cfg.link.ow.prefix)
+        await _expect_error(c, prefix / 0x10 / 0x345678 / "nonexistent", "nonexistent")

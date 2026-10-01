@@ -11,6 +11,7 @@ from shutil import copyfile, copytree, rmtree
 
 import git
 from attrs import define, field
+from packaging.requirements import InvalidRequirement, Requirement
 from packaging.version import Version
 
 from moat.util import attrdict, yload, yprint
@@ -110,6 +111,57 @@ class _Common:
                         return self.vers.new
                 self.vers.pkg = 1
         return self.vers.new
+
+
+def pyproject_key(text: str, internal: set[str]) -> Any:
+    """
+    The parts of a ``pyproject.toml`` that ``moat src build`` doesn't
+    write itself: everything except ``project.version`` and the version
+    specifiers of internal (moat) dependencies.
+    """
+    import tomlkit  # noqa: PLC0415
+
+    data = tomlkit.loads(text).unwrap()
+    proj = data.get("project")
+    if not isinstance(proj, dict):
+        return data
+    proj.pop("version", None)
+
+    def _strip(deps: Any) -> Any:
+        if not isinstance(deps, list):
+            return deps
+        res = []
+        for dep in deps:
+            try:
+                r = Requirement(dep)
+            except (InvalidRequirement, TypeError):
+                res.append(dep)
+                continue
+            res.append(r.name if r.name in internal else str(r))
+        return res
+
+    if "dependencies" in proj:
+        proj["dependencies"] = _strip(proj["dependencies"])
+    for k in ("optional-dependencies", "optional_dependencies"):
+        opt = proj.get(k)
+        if isinstance(opt, dict):
+            proj[k] = {n: _strip(v) for n, v in opt.items()}
+    return data
+
+
+def only_build_changes(d: git.Diff, internal: set[str]) -> bool:
+    """
+    Whether diff @d of a ``pyproject.toml`` only contains changes that
+    ``moat src build`` makes itself (see `pyproject_key`).
+    """
+    if d.a_blob is None or d.b_blob is None:
+        return False
+    try:
+        a = d.a_blob.data_stream.read().decode("utf-8")
+        b = d.b_blob.data_stream.read().decode("utf-8")
+        return pyproject_key(a, internal) == pyproject_key(b, internal)
+    except Exception:  # unparseable: a real change
+        return False
 
 
 @define
@@ -291,6 +343,13 @@ class Package(_Common):
             if pp.name == "changelog" and pp.parent.name == "debian":
                 continue
             if (
+                not main
+                and pp.name == "pyproject.toml"
+                and only_build_changes(d, self._repo.internal_names)
+            ):
+                # the build writes these: not a reason to rebuild
+                continue
+            if (
                 self._repo.repo_for(d.a_path, main) != self.name
                 and self._repo.repo_for(d.b_path, main) != self.name
             ):
@@ -383,6 +442,11 @@ class Repo(git.Repo, _Common):
     @property
     def _repo(self) -> Repo:
         return self
+
+    @property
+    def internal_names(self) -> set[str]:
+        "The distribution names of our own packages."
+        return {p.mdash for p in self.parts}
 
     @property
     def parts(self) -> Any:

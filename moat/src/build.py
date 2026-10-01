@@ -192,18 +192,27 @@ async def do_versions(
                     proj["version"] = r.vers.get("new", r.last_tag)
             changed = r.has_changes(True)
 
+            deps_changed = False
             if not no.version:
                 deps = get_array(proj, "dependencies")
                 if deps is not None:
-                    fix_deps(deps, tags, changed)
+                    deps_changed |= fix_deps(deps, tags, changed)
                 opt = get_table(proj, "optional_dependencies")
                 if opt is not None:
                     for v in opt.values():
                         if isinstance(v, tomlkit.items.Array):
-                            fix_deps(v, tags, changed)
+                            deps_changed |= fix_deps(v, tags, changed)
             await p.write_text(pr.as_string())
 
             repo.index.add(str(p))
+
+            if deps_changed:
+                # The package's metadata changes, so rebuild it now. (The
+                # next build ignores these edits, see `only_build_changes`.)
+                ltag = r.next_tag(incr=False)
+                if r.vers.get("deb", "-") == f"{ltag}-{r.vers.get('pkg', 0)}":
+                    r.vers.pkg = r.vers.get("pkg", 0) + 1
+                    r.vers.pkgrev = repo.head.commit.hexsha
 
 
 def do_copy_repos(repos: list[Package], st: Status) -> None:

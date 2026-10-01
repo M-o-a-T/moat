@@ -121,3 +121,41 @@ async def test_no_bump_without_change(tmp_path, monkeypatch):
     await _run(repo, r)
     assert r.vers.pkg == 1
     assert "pkgrev" not in r.vers
+
+
+def _autotag(vers: attrdict) -> attrdict:
+    from moat.src._repo import Package  # noqa: PLC0415
+    from moat.src.build import do_autotag  # noqa: PLC0415
+
+    repo = MagicMock()
+    repo.versions = {"moat-foo": vers}
+    repo.head.commit.hexsha = "f" * 40
+    r = Package(repo, "moat.foo")
+    r.has_changes = lambda main=None: bool(main)  # type: ignore[method-assign]
+    do_autotag(repo, [r], False, False, {})
+    return vers
+
+
+def test_autotag_plain():
+    "A source change bumps the version and restarts the build number."
+    v = _autotag(attrdict(tag="0.6.7", new="0.6.7", pkg=2, deb="0.6.7-2", rev="0" * 39 + "1"))
+    assert (v.tag, v.pkg) == ("0.6.8", 1)
+
+
+def test_autotag_pending_version_already_packaged():
+    """
+    A pre-set "new" version that packaging-only builds have already used
+    must not restart the build number: that'd collide with the existing
+    package and thus skip the build.
+    """
+    v = _autotag(
+        attrdict(tag="0.6.7", new="0.7.0", pkg=2, deb="0.7.0-2", rev="0" * 39 + "1", pkgrev="a")
+    )
+    assert (v.tag, v.pkg) == ("0.7.0", 3)
+    assert "pkgrev" not in v
+
+
+def test_autotag_untagged():
+    "A package without a tag starts at build 1."
+    v = _autotag(attrdict())
+    assert (v.tag, v.pkg) == ("0.0.1", 1)

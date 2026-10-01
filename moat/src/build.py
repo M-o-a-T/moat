@@ -134,8 +134,11 @@ def do_autotag(
         if r.has_changes(True) or ("tag" not in r.vers and not r.empty):
             r.next_tag(major, minor)
             if r.vers.get("tag", "") != r.vers.new:
+                if "tag" not in r.vers or "pkg" not in r.vers:
+                    r.vers.pkg = 1
+                # otherwise `next_tag` has set the build number; it may be
+                # >1 if this version was already packaged from "new".
                 r.vers.tag = r.vers.new
-                r.vers.pkg = 1
             else:
                 r.vers.pkg += 1
             r.vers.rev = repo.head.commit.hexsha

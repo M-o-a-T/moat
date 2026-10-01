@@ -653,7 +653,7 @@ class LinkSender(MsgSender, MsgRoot):
 
     async def set(
         self, path: Path, data: Any = NotGiven, *, idem: bool = False, **kw: Any
-    ) -> bool | None | tuple[Any, MsgMeta | None]:
+    ) -> bool | tuple[Any, MsgMeta | None] | None:
         """
         Store @data at @path. Frontend for `d_set`; all its keywords are
         passed through.

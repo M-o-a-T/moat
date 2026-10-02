@@ -188,3 +188,27 @@ async def test_code_at_context_parallel_enter(cfg):
                 await ready.wait()
             assert seen[0] is seen[1]
             done.set()
+
+
+@pytest.mark.anyio
+async def test_code_traceback_shows_source():
+    "A failing snippet's traceback (and thus the debugger) shows its source."
+    import traceback  # noqa: PLC0415
+
+    src = "x = base + 1\nraise ValueError('boom %d' % x)\n"
+    link = _DummyCodeLink(dict(code=src, vars=["base"], default=dict(base=1)))
+    code = Code(link, CODE_EXEC_ROOT + P("test.tb"))
+
+    with pytest.raises(ValueError, match="boom 2") as err:
+        await code()
+    tb = "".join(traceback.format_exception(err.value))
+    assert "raise ValueError('boom %d' % x)" in tb
+    assert ", line 2, in" in tb
+
+    # … and follows a code update
+    code.update(dict(code="\n\nraise KeyError('new')\n"), compile=True)
+    with pytest.raises(KeyError) as err:
+        await code()
+    tb = "".join(traceback.format_exception(err.value))
+    assert "raise KeyError('new')" in tb
+    assert ", line 3, in" in tb

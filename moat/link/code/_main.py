@@ -72,7 +72,7 @@ def _check_exec_syntax(data: Mapping[str, Any], path: Path) -> None:
     is_async = data.get("is_async", None)
     if is_async not in (None, True, False):
         raise TypeError("is_async must be true, false, or null")
-    make_proc(code, path / "code", use_async=is_async is True)
+    make_proc(code, path, use_async=is_async is True)
 
 
 def _info_line(data: Mapping[str, Any]) -> str:

@@ -10,6 +10,7 @@ from anyio.to_thread import run_sync
 
 from moat.util import NotGiven, combine_dict
 from moat.lib.path import P, Path
+from moat.util.module import cache_source
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
@@ -84,12 +85,19 @@ class _ReturnRewriter(ast.NodeTransformer):
 def make_proc(code: str, path: Any, *, use_async: bool = False) -> CodeType:
     """
     Compile snippet code directly for eval/await execution.
+
+    The source is remembered, so that tracebacks and the debugger can show it.
     """
     flags = ast.PyCF_ALLOW_TOP_LEVEL_AWAIT if use_async else 0
-    tree = compile(code, str(path), "exec", flags=flags | ast.PyCF_ONLY_AST)
+    # The angle brackets tell pdb not to treat the name as a file's path
+    # (otherwise it won't find the source when it shows a stack frame).
+    name = f"<{path}>"
+    tree = compile(code, name, "exec", flags=flags | ast.PyCF_ONLY_AST)
     tree = _ReturnRewriter().visit(tree)
     ast.fix_missing_locations(tree)
-    return compile(tree, str(path), "exec", flags=flags)
+    proc = compile(tree, name, "exec", flags=flags)
+    cache_source(name, code)
+    return proc
 
 
 class Code:

@@ -9,7 +9,7 @@ classifiers = [
 	"Intended Audience :: Developers",
 ]
 dependencies = [
-	"moat-dev-heat ~= 0.1.9",
+	"moat-dev-heat ~= 0.2.1",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

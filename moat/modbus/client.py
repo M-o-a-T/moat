@@ -14,8 +14,6 @@ from contextlib import asynccontextmanager, suppress
 from functools import partial
 from pathlib import Path as FSPath
 
-from anyio_serial import Serial
-
 from moat.util import CtxObj, Queue, ValueEvent
 from moat.lib.modbus import ExcCodes, ExceptionResponse, FramerRTU, FramerTCP, ModbusIOError
 from moat.util.exc import ungroup
@@ -23,6 +21,11 @@ from moat.util.exc import ungroup
 from .types import MAX_REQ_LEN, BaseValue, DataBlock, TypeCodec
 
 from typing import Any
+
+try:
+    from anyio_serial import Serial
+except ImportError:
+    Serial = None
 
 _logger = logging.getLogger(__name__)
 
@@ -492,6 +495,9 @@ class SerialHost(HostCommon, CtxObj):
 
         if self._transactions:
             raise RuntimeError("Serial: cannot have open transaction on start")
+        if Serial is None:
+            raise RuntimeError("You need to install anyio_serial")
+
         task_status.started()
         self._trace("recv START")
 

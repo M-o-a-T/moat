@@ -503,7 +503,7 @@ async def monitor(obj: attrdict) -> None:
             print("---", file=obj.stdout)
 
 
-@cli.command(name="migrate-from-kv")
+@cli.command(name="migrate-from-kv", hidden=True)
 @click.option(
     "-i",
     "--infile",

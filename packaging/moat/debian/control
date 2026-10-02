@@ -34,6 +34,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.8),
   moat-util,
   python3-trio (>= 0.30),
+  python3-httpcore (>= 1.0.9),
 Conflicts: python3-moat-main, moat-main
 Replaces: moat-main, moat (<= 0.11.4-2)
 Description: The command line for MoaT
@@ -41,5 +42,5 @@ Description: The command line for MoaT
 
 Package: moat-doc
 Architecture: all
-Description: The documentationfor MoaT
+Description: The documentation for MoaT
  This module contains the documentation for the MoaT system.

@@ -7,7 +7,7 @@
  * Tag 32769: Proxy (by name) → string/int name
  */
 
-import { RemoteError } from './errors.js';
+import { OverrunError, RemoteError } from './errors.js';
 
 /** Registry mapping proxy names ↔ constructors. */
 const nameToCtor = new Map<string, new (...args: unknown[]) => unknown>();
@@ -48,6 +48,7 @@ export class Proxy {
 asProxy('_rErr', RemoteError);
 asProxy('_CSMErr', class StopMeProxy extends RemoteError {});
 asProxy('_CSDErr', class SkippedDataProxy extends RemoteError {});
+asProxy('_COVErr', class OverrunErrorProxy extends OverrunError {});
 asProxy('_CNsErr', class NoStreamProxy extends RemoteError {});
 asProxy('_CNCsErr', class NoCmdsProxy extends RemoteError {});
 asProxy('_CNCErr', class NoCmdProxy extends RemoteError {});

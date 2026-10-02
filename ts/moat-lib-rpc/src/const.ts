@@ -27,6 +27,7 @@ export const E_NO_CMDS = -4;
 export const E_SKIP = -5;
 export const E_MUST_STREAM = -6;
 export const E_ERROR = -7;
+export const E_OVERRUN = -8;
 export const E_NO_CMD = -11;
 
 // --- Stream states (separate for in/out) ---
@@ -66,5 +67,6 @@ export function bErrName(err: unknown): string {
   if (err === E_NO_CMDS) return 'NO_CMDS';
   if (err === E_SKIP) return 'SKIP';
   if (err === E_ERROR) return 'ERROR';
+  if (err === E_OVERRUN) return 'OVERRUN';
   return `?${err}`;
 }

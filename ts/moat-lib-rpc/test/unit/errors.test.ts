@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decodeStreamError, StopMe, NoStream, NoCmds, NoCmd, RemoteError, CancelledError, SkippedData, MustStream, Flow } from '../../src/errors.js';
-import { E_UNSPEC, E_NO_STREAM, E_CANCEL, E_NO_CMDS, E_SKIP, E_ERROR, E_NO_CMD, E_MUST_STREAM } from '../../src/const.js';
+import { decodeStreamError, StopMe, NoStream, NoCmds, NoCmd, RemoteError, CancelledError, SkippedData, MustStream, Flow, OverrunError } from '../../src/errors.js';
+import { E_UNSPEC, E_NO_STREAM, E_CANCEL, E_NO_CMDS, E_SKIP, E_ERROR, E_NO_CMD, E_MUST_STREAM, E_OVERRUN } from '../../src/const.js';
 
 describe('error taxonomy', () => {
   it('decodes E_UNSPEC to StopMe', () => {
@@ -31,6 +31,12 @@ describe('error taxonomy', () => {
   it('decodes E_MUST_STREAM to MustStream', () => {
     const err = decodeStreamError([E_MUST_STREAM]);
     expect(err).toBeInstanceOf(MustStream);
+  });
+
+  it('decodes E_OVERRUN to OverrunError', () => {
+    const err = decodeStreamError([E_OVERRUN]);
+    expect(err).toBeInstanceOf(OverrunError);
+    expect(E_OVERRUN).toBe(-8);
   });
 
   it('decodes E_ERROR to RemoteError', () => {

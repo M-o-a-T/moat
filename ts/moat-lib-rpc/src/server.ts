@@ -81,8 +81,13 @@ export class RpcServer {
   private _handleConnection(transport: Transport): void {
     const core = new RpcCore(this._handler, {
       onNewCommand: (msg: Msg, _link: StreamLink) => {
-        return this._handler.handle(msg, msg.rcmd).catch(() => {
-          // Error already sent by the handler
+        return this._handler.handle(msg, msg.rcmd).catch(async (exc: unknown) => {
+          // Errors raised by the leaf handlers have been sent already.
+          // Others (unknown command, short path, streamed call without a
+          // stream handler …) end up here and must be reported, as Python's
+          // HandlerStream._handle does; else the caller waits forever.
+          // (A no-op if the call has already ended.)
+          await msg.mlSendError(exc instanceof Error ? exc : new Error(String(exc)));
         });
       },
     });

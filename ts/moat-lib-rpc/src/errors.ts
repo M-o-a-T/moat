@@ -11,6 +11,7 @@ import {
   E_NO_CMD,
   E_NO_CMDS,
   E_NO_STREAM,
+  E_OVERRUN,
   E_SKIP,
   E_UNSPEC,
 } from './const.js';
@@ -43,6 +44,9 @@ export class StopMe extends StreamError {}
 
 /** Data skipped, took too long. */
 export class SkippedData extends StreamError {}
+
+/** The receiver's buffer is full and flow control is off. */
+export class OverrunError extends StreamError {}
 
 /** No streaming support. */
 export class NoStream extends StreamError {}
@@ -105,6 +109,7 @@ export function decodeStreamError(msg: unknown[]): Error | Flow {
     if (m === E_NO_STREAM) return new NoStream(msg);
     if (m === E_MUST_STREAM) return new MustStream(msg);
     if (m === E_SKIP) return new SkippedData(msg);
+    if (m === E_OVERRUN) return new OverrunError(msg);
     if (m === E_NO_CMDS) return new NoCmds(msg);
     if (m === E_CANCEL) return new CancelledError(msg);
     if (m === E_ERROR) return new RemoteError(msg);

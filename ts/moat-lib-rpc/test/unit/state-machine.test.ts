@@ -17,6 +17,7 @@ import {
   B_STREAM,
   B_ERROR,
   B_WARNING,
+  B_WARNING_INTERNAL,
   E_CANCEL,
   E_NO_STREAM,
   E_ERROR,
@@ -325,5 +326,31 @@ describe('state machine: command path handling', () => {
 
     expect(receivedCmd).not.toBeNull();
     expect(receivedCmd!.length).toBe(2);
+  });
+});
+
+describe('state machine: flow-control notices from a Python peer', () => {
+  it('a credit notice before the opening command is dropped, the open still works', () => {
+    const cmds: Msg[] = [];
+    const core = new RpcCore(null, { onNewCommand: (msg) => void cmds.push(msg) });
+
+    // Python's streaming initiator (id 1 → wire id 0) sends [header, n] with
+    // B_WARNING_INTERNAL (wire flag 3), then the open with B_STREAM.
+    expect(B_WARNING_INTERNAL & 3).toBe(B_WARNING);
+    expect(core.feed([i_f2wire(1, B_WARNING), 42])).toBeNull();
+    expect(cmds).toHaveLength(0);
+    expect(core.drain()).toHaveLength(0);
+
+    const link = core.feed([i_f2wire(1, B_STREAM), ['ping']]);
+    expect(link).not.toBeNull();
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0]!.canStream).toBe(true);
+  });
+
+  it('a credit notice on a live link is accepted without effect', () => {
+    const core = new RpcCore(null, { onNewCommand: () => {} });
+    core.feed([i_f2wire(1, B_STREAM), ['ping']]);
+    expect(() => core.feed([i_f2wire(1, B_WARNING), 7])).not.toThrow();
+    expect(core.drain()).toHaveLength(0);
   });
 });

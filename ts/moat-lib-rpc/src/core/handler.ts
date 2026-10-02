@@ -225,6 +225,15 @@ export class RpcCore {
         // Spurious message for unknown positive id — log and drop
         return null;
       }
+      if (effectiveFlag === B_WARNING_INTERNAL) {
+        // A flow-control credit notice that precedes the opening command:
+        // Python's initiator advertises its receive window before it opens
+        // a stream. Phase 1 has no streams, hence no window to apply: drop
+        // it without creating a link (the open that follows is handled
+        // normally). Phase 2 must buffer it per id and replay it after the
+        // open (see Python's HandlerStream._pending).
+        return null;
+      }
       if (error) {
         // Spurious error — log and drop
         return null;

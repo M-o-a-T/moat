@@ -20,6 +20,7 @@ import { RpcServer } from '../../src/server.js';
 import { MsgHandler } from '../../src/dispatch/handler.js';
 import { encodeMoat, decodeMoat } from '../../src/codec.js';
 import { i_f2wire, wire2i_f } from '../../src/wire.js';
+import { createConnection } from 'node:net';
 import { resolve } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..', '..');
@@ -505,4 +506,88 @@ describeOrSkip('interop: byte-for-byte wire compatibility (≥10 exchanges)', ()
       expect(result.args.length).toBeGreaterThan(0);
     }
   }, 30000);
+});
+
+// ─── Suite 4: Python's streaming initiator (credit before open) ────
+
+describe('interop: Python streaming open against a Phase-1 TS server', () => {
+  let server: RpcServer | null = null;
+  const PORT = 18096;
+
+  class H extends MsgHandler {
+    async cmd_ping(): Promise<string> {
+      return 'pong';
+    }
+  }
+
+  beforeAll(async () => {
+    server = new RpcServer(new H());
+    await server.listenTcp(PORT);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }, 15000);
+
+  afterAll(async () => {
+    await server?.stop();
+    server = null;
+  });
+
+  /** Send raw frames, return the decoded frames received within @ms. */
+  async function exchange(frames: unknown[][], ms = 500): Promise<unknown[][]> {
+    const sock = createConnection(PORT, 'localhost');
+    const got: Buffer[] = [];
+    sock.on('data', (d: Buffer) => got.push(d));
+    await new Promise<void>((res, rej) => {
+      sock.once('connect', () => res());
+      sock.once('error', rej);
+    });
+    for (const f of frames) sock.write(encodeMoat(f));
+    await new Promise((r) => setTimeout(r, ms));
+    sock.destroy();
+    // frames are back-to-back CBOR arrays
+    const buf = new Uint8Array(Buffer.concat(got));
+    const out: unknown[][] = [];
+    let off = 0;
+    while (off < buf.length) {
+      let found = false;
+      for (let end = off + 1; end <= buf.length; end++) {
+        try {
+          out.push(decodeMoat(buf.subarray(off, end)) as unknown[]);
+          off = end;
+          found = true;
+          break;
+        } catch {
+          // need more bytes
+        }
+      }
+      if (!found) break;
+    }
+    return out;
+  }
+
+  it('a credit notice before the open is ignored; the open gets exactly one (error) reply', async () => {
+    // What Python's HandlerStream.handle sends for a flow-controlled
+    // stream: the initial window as B_WARNING_INTERNAL (wire flag 3),
+    // *then* the opening command with the stream bit.
+    const frames = await exchange([
+      [i_f2wire(1, 3), 42],
+      [i_f2wire(1, 1), ['ping']],
+    ]);
+    expect(frames).toHaveLength(1);
+    const [id, flag] = wire2i_f(frames[0]![0] as number);
+    expect(id).toBe(-1);
+    expect(flag & 2).toBe(2); // an error: no streaming in Phase 1
+  });
+
+  it('an unknown command is answered with an error, not left hanging', async () => {
+    const frames = await exchange([[i_f2wire(1, 0), ['nope']]]);
+    expect(frames).toHaveLength(1);
+    const [id, flag] = wire2i_f(frames[0]![0] as number);
+    expect(id).toBe(-1);
+    expect(flag & 2).toBe(2);
+  });
+
+  it('a late credit notice for an unknown id draws no reply', async () => {
+    const frames = await exchange([[i_f2wire(1, 3), 7]], 300);
+    expect(frames).toHaveLength(0);
+  });
 });

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import shutil
 import sys
 from contextlib import nullcontext
 from platform import uname
@@ -131,7 +132,11 @@ async def list(obj, timeout, dump):  # noqa: A001
             clear()
             print(line)
         elif tty:
-            print(f"  {line}  \r", end="", flush=True)
+            # Stay within one terminal row, else the \r can't overwrite it.
+            width = shutil.get_terminal_size().columns - 3
+            if len(line) > width:
+                line = line[: max(width - 1, 0)] + "…"
+            print(f"\r  {line}\x1b[K\r", end="", flush=True)
             shown = True
 
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):

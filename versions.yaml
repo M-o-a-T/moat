@@ -1,5 +1,5 @@
 _:
-  new: 26.4.24
+  new: 26.4.25
 ext:
   micropython:
     github: M-o-a-T/micropython.git

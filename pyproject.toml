@@ -86,7 +86,7 @@ packages = [ "moat",]
 
 [tool.pytest.ini_options]
 # addopts = "--cov=moat --cov-report=term-missing -x"
-addopts = "-x --no-cov -n logical -p moat.src.pytest --maxschedchunk 1 --longfirst"
+addopts = "-x --no-cov -n auto -p no:aiohttp, -p no:hypothesispytest -p moat.src.pytest --maxschedchunk 1 --longfirst"
 log_cli_level = "DEBUG"
 pythonpath = [
     ".",

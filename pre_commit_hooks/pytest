@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Pre-commit hook to run pytest only on test directories corresponding to modified files.
+Pre-commit hook to run pytest on test directories corresponding to modified files.
 
 For a modified file like moat/foo/bar/baz.py, this will:
 1. Look for tests/moat_foo_bar/ directory
 2. If not found, look for tests/moat_foo/ directory
 3. If not found, look for tests/ directory
-4. Run pytest on all found test directories with coverage
-5. Ensure coverage doesn't decrease
+
+All directories found are tested in one parallel pytest run.
+The parallelism (``-n auto``, scaled down for small runs) and ``-x`` come
+from the project's pytest configuration.
+
+Set ``NO_TEST=1`` to skip.
 """
 
 from __future__ import annotations
 
-import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
-
-COVERAGE_FILE = Path(".coverage-baseline")
 
 # Prefer the project's pinned virtualenv so the hook runs against the same
 # dependency versions (e.g. pymodbus ~= 3.9.0) the code targets. Fall back to
@@ -71,42 +71,6 @@ def get_test_dir(filepath: str) -> Path | None:
     return None
 
 
-def get_module_from_test_dir(test_dir: Path) -> str:
-    """
-    Get the module name to test from the test directory.
-
-    Examples:
-    - tests/moat_lib_broadcast -> moat.lib.broadcast
-    - tests/moat_kv -> moat.kv
-    - tests/moat_link_server -> moat.link.server
-    """
-    # Remove 'tests/' prefix and convert underscores to dots
-    module_name = test_dir.name.replace("_", ".")
-    return module_name
-
-
-def load_coverage_baseline() -> dict[str, float]:
-    """Load coverage baseline from file."""
-    if not COVERAGE_FILE.exists():
-        return {}
-    return json.loads(COVERAGE_FILE.read_text())
-
-
-def save_coverage_baseline(baseline: dict[str, float]) -> None:
-    """Save coverage baseline to file."""
-    COVERAGE_FILE.write_text(json.dumps(baseline, indent=2))
-
-
-def parse_coverage(output: str) -> float | None:
-    """Parse coverage percentage from pytest output."""
-    # Look for pattern like "TOTAL    271    202     80      9    23%"
-    # Format: TOTAL  Stmts  Miss  Branch  BrPart  Cover
-    match = re.search(r"TOTAL\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)%", output)
-    if match:
-        return float(match.group(1))
-    return None
-
-
 def main(filenames: list[str]) -> int:
     """
     Main entry point for pre-commit hook.
@@ -115,108 +79,19 @@ def main(filenames: list[str]) -> int:
         filenames: List of modified files from pre-commit
 
     Returns:
-        0 if tests pass and coverage doesn't decrease, non-zero otherwise
+        pytest's exit code; 0 if there is nothing to test.
     """
-    # Check whether to skip
     if os.environ.get("NO_TEST", "") in {"1", "Y", "y"}:
         return 0
 
-    # Collect unique test directories
-    test_dirs = set()
-
-    for filename in filenames:
-        if (test_dir := get_test_dir(filename)) is not None:
-            test_dirs.add(test_dir)
-
-    # If no test directories found, nothing to test
+    test_dirs = {d for f in filenames if (d := get_test_dir(f)) is not None}
     if not test_dirs:
         return 0
 
-    # Load coverage baseline
-    baseline = load_coverage_baseline()
-    new_coverage = {}
-    failed_dirs = []
-    coverage_decreased = []
-
-    # Run pytest with coverage on each test directory
-    for test_dir in sorted(test_dirs):
-        module_name = get_module_from_test_dir(test_dir)
-        print(f"\n{'=' * 60}")
-        print(f"Running tests in {test_dir}")
-        print(f"Coverage for module: {module_name}")
-        print("=" * 60)
-
-        env = os.environ.copy()
-        env["PYTHONPATH"] = "."
-        result = subprocess.run(  # noqa:S603
-            [
-                PYTEST,
-                # "--override-ini=addopts=-x -n auto",  # disable --no-cov
-                # f"--cov={module_name}",
-                # "--cov-report=term",
-                "-x",
-                "-n",
-                "auto",
-                str(test_dir),
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-
-        # Show output
-        print(result.stdout)
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-
-        if result.returncode != 0:
-            failed_dirs.append(test_dir)
-            continue
-
-        # Parse coverage
-        coverage = parse_coverage(result.stdout)
-        if coverage is not None:
-            new_coverage[module_name] = coverage
-            old_coverage = baseline.get(module_name, 0.0)
-
-            print(f"\nCoverage for {module_name}: {coverage}%", end="")
-            if old_coverage > 0:
-                print(f" (was {old_coverage}%)")
-                if coverage * 1.02 < old_coverage:
-                    coverage_decreased.append((module_name, old_coverage, coverage))
-            else:
-                print(" (new)")
-
-    # Update baseline with new coverage
-    baseline.update(new_coverage)
-    save_coverage_baseline(baseline)
-
-    # Report results
-    success = True
-
-    if failed_dirs:
-        print(f"\n{'=' * 60}")
-        print("FAILED test directories:")
-        for d in failed_dirs:
-            print(f"  - {d}")
-        print("=" * 60)
-        success = False
-
-    if coverage_decreased:
-        print(f"\n{'=' * 60}")
-        print("COVERAGE DECREASED:")
-        for module, old, new in coverage_decreased:
-            print(f"  - {module}: {old}% → {new}% (▼ {old - new:.1f}%)")
-        print("=" * 60)
-        success = False
-
-    if success:
-        print(f"\n{'=' * 60}")
-        print("All tests passed and coverage maintained!")
-        print("=" * 60)
-
-    return 0 if success else 1
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    cmd = [PYTEST, *(str(d) for d in sorted(test_dirs))]
+    return subprocess.run(cmd, check=False, env=env).returncode  # noqa:S603
 
 
 if __name__ == "__main__":

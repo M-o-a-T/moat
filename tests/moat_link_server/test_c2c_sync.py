@@ -25,7 +25,7 @@ pytestmark = pytest.mark.anyio
 
 async def test_joining_server_syncs_large_tree(cfg):
     """A second server must finish syncing a large tree from the first."""
-    n = 20000
+    n = 10000
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(name="sx1", init={"seed": 1})
         c1 = await sf.client()

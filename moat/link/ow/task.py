@@ -382,8 +382,7 @@ async def run_servers(
                 if srv == job.srv:
                     job.retry()
                     return
-                if job.idle and job.scope is not None:
-                    job.scope.cancel()  # not running, nothing to clean up
+                if job.idle and job.stop():
                     del jobs[name]
                 else:
                     job.changed.set()  # the job will stop by itself, then re-check

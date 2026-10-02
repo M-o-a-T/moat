@@ -614,7 +614,7 @@ class AnnouncedJob:
         self.driver = driver
         self.scope: anyio.CancelScope | None = None
         self.idle = False
-        "True while the gate neither runs nor is announced."
+        "True while the gate is not running its work (waiting for another service, or in backoff)."
         self.settled = anyio.Event()
         "Set when the gate runs, waits for another service, or has crashed."
         self._retry = anyio.Event()
@@ -627,6 +627,24 @@ class AnnouncedJob:
         self._bo_max = bo["max"]
         self._bo_factor = bo["factor"]
         self._delay = 0.0
+        self._stopped = False
+        self.ann: Any = None
+        "The announcement, while it is held (even if the work is down)."
+
+    def stop(self) -> bool:
+        """
+        Stop a job that is not running its work.
+
+        Returns True if the job is gone immediately, otherwise it will
+        end (and withdraw its announcement) by itself.
+        """
+        if self.ann is not None:
+            self._stopped = True
+            self._retry.set()
+            return False
+        if self.scope is not None:
+            self.scope.cancel()
+        return True
 
     def retry(self) -> None:
         "The job's entry has changed: retry a crashed job now."
@@ -667,9 +685,14 @@ class AnnouncedJob:
             self._bo_max, self._delay * self._bo_factor if self._delay else self._bo_min
         )
         self.logger.warning("%s failed: %r; retry in %.1fs", self.path, exc, self._delay)
+        if self.ann is not None:
+            self.ann.up = False
+            self.ann.value = f"backoff {self._delay:g}: {exc!r}"
         with anyio.move_on_after(5, shield=True):
             await self.link.e_exc(self.path, exc, driver=self.driver)
         self.settled.set()
+        if self._stopped:
+            return
         self._retry = anyio.Event()
         with anyio.move_on_after(self._delay):
             await self._retry.wait()
@@ -697,30 +720,44 @@ class AnnouncedJob:
         with anyio.CancelScope() as self.scope:
             while True:
                 self.idle = True
+                self.ann = None
                 if not force:
                     await self._wait_free()
-                self.idle = False
-                err: Exception | None = None
+                fatal: Exception | None = None
                 try:
-                    self.up = anyio.Event()
-                    async with (
-                        announcing(self.link, host=False, name=self.path, force=force) as srv,
-                        anyio.create_task_group() as tg,
-                    ):
-                        tg.start_soon(self._report_up)
-                        try:
-                            await self.work(task_status=_Started(srv, self))
-                        except Exception as exc:
-                            # leave normally, so that the announcement is removed
-                            err = exc
-                        tg.cancel_scope.cancel()
+                    # The announcement is kept while the work is retried,
+                    # to avoid needless churn.
+                    async with announcing(
+                        self.link, host=False, name=self.path, force=force
+                    ) as srv:
+                        self.ann = srv
+                        while True:
+                            self.idle = False
+                            err: Exception | None = None
+                            self.up = anyio.Event()
+                            async with anyio.create_task_group() as tg:
+                                tg.start_soon(self._report_up)
+                                try:
+                                    await self.work(task_status=_Started(srv, self))
+                                except Exception as exc:
+                                    err = exc
+                                tg.cancel_scope.cancel()
+                            if err is None:
+                                return
+                            self.idle = True
+                            try:
+                                await self._crashed(err)
+                            except Exception as exc:
+                                # leave normally, so that the announcement is removed
+                                fatal = exc
+                                break
+                            if self._stopped:
+                                return
                 except* (ServiceSupplanted, ServiceCleared):
                     self.logger.warning("%s announced elsewhere", self.path)
                 else:
-                    if err is None:
-                        return
-                    self.idle = True
-                    await self._crashed(err)
+                    if fatal is not None:
+                        raise fatal
                 force = False
 
 
@@ -731,8 +768,9 @@ class _Started:
     srv: Any
     job: AnnouncedJob
 
-    def started(self, value: Any = None) -> None:
-        self.srv.started(value)
+    def started(self, _value: Any = None) -> None:
+        if not self.srv.up:  # a retry keeps the announcement
+            self.srv.started("running")
         self.job.up.set()
 
 
@@ -794,9 +832,7 @@ async def run_gates(
                 if drv == job.driver:
                     job.retry()  # the gate handles all other changes itself
                     return
-                if job.idle and job.scope is not None:
-                    # not running, thus nothing to clean up
-                    job.scope.cancel()
+                if job.idle and job.stop():
                     del jobs[p]
                 else:
                     return  # the gate will stop by itself, then re-check

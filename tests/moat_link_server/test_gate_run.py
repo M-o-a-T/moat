@@ -72,8 +72,9 @@ async def test_subtree(cfg):
         assert await _owner(c, "grp.sub.b") == r.id
         assert await _owner(c, "grp.sub") is None
         assert await _owner(c, "other") is None
-        # a broken gate doesn't take the others down
-        assert await _owner(c, "grp.bad") is None
+        # a broken gate doesn't take the others down; it keeps its
+        # announcement while it's being retried
+        assert await _owner(c, "grp.bad") == r.id
 
         # the gates work
         await c.d_set(P("test.src.a.one"), 1)
@@ -202,7 +203,7 @@ async def test_retry(cfg, monkeypatch):
                 async for _p, d in mon:
                     if "flaky" in str(d):
                         break
-                assert await _owner(c, "grp.a") is None
+                assert await _owner(c, "grp.a") == r.id  # announcement is kept while retrying
 
                 # two failures later, it runs
                 await _wait_owner(c, "grp.a", r.id, up=True)
@@ -227,6 +228,6 @@ async def test_retry_on_change(cfg, monkeypatch):
 
         with anyio.fail_after(5):
             await sf.tg.start(run_gates, sf.cfg, r, P("gate.grp"))
-            assert await _owner(c, "grp.a") is None
+            assert await _owner(c, "grp.a") == r.id  # announcement is kept while retrying
             await c.d_set(P("gate.grp.a"), dict(_gate("a"), driver="flaky.gate", info="fixed"))
             await _wait_owner(c, "grp.a", r.id, up=True)

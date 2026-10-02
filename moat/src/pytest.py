@@ -91,7 +91,7 @@ _new: dict[str, float] = {}
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
     """Sort the items by descending duration of their previous run."""
-    if not config.getoption("longfirst") or config.cache is None:
+    if not config.getoption("longfirst") or getattr(config, "cache", None) is None:
         return
     known = config.cache.get(KEY, {})
     if not known:
@@ -121,7 +121,7 @@ def pytest_runtest_logreport(report):
 def pytest_sessionfinish(session):
     """Merge this run's durations into the cache."""
     config = session.config
-    if config.cache is None or hasattr(config, "workerinput"):
+    if getattr(config, "cache", None) is None or hasattr(config, "workerinput"):
         return  # only the controller (or a non-xdist run) writes the cache
     known = config.cache.get(KEY, {})
     known.update(_new)

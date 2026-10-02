@@ -65,6 +65,18 @@ async def test_forward_read_plain(autojump_clock):  # noqa:ARG001
 
 
 @pytest.mark.trio
+async def test_forward_read_src(autojump_clock):  # noqa:ARG001
+    """The device's address ends up in the item's metadata."""
+    entry = _make_entry(dest=("data", "temp"))
+    link = MagicMock()
+    link.d_set = AsyncMock()
+
+    await ow_worker.forward_read(link, entry, 12.5, src="10.345678")
+
+    link.d_set.assert_awaited_once_with(P("data.temp"), 12.5, meta={"src": "10.345678"})
+
+
+@pytest.mark.trio
 async def test_forward_read_merge(autojump_clock):  # noqa:ARG001
     """With ``dest_attr`` the polled value is merged into ``dest``'s dict."""
     entry = _make_entry(dest=("data", "this"), dest_attr=("baz", 2))

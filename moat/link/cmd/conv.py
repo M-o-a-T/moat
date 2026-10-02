@@ -62,7 +62,7 @@ async def _do_add(obj, codec, *, require_parent):
     if require_parent and obj.parent_path is not None:
         await _ensure_exists(obj.conn, obj.parent_path, "Parent")
     await _ensure_absent(obj.conn, obj.path, "Entry")
-    res = await obj.conn.d_set(obj.path, {"codec": codec}, meta=obj.meta)
+    res = await obj.conn.d_set(obj.path, {"codec": codec})
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

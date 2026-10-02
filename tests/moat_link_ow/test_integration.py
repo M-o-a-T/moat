@@ -130,6 +130,8 @@ async def test_mirror(cfg):
 
         # read direction: temperature is polled into .data.temp
         await _expect_link(c, P("data.temp"), 12.5)
+        _, meta = await c.d_get(P("data.temp"), meta=True)
+        assert meta["src"] == "10.000000345678"
 
         # write direction: setting sources writes onto the bus
         await c.d_set(P("data.low"), 11)

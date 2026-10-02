@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def forward_read(link: LinkSender, entry: AttrCfg, val: Any) -> None:
+async def forward_read(link: LinkSender, entry: AttrCfg, val: Any, src: str | None = None) -> None:
     """Publish a polled device value to the entry's MoaT-Link destination.
 
     If :attr:`~moat.link.ow.model.OwAttr.dest_attr` is set, the value is
@@ -42,7 +42,10 @@ async def forward_read(link: LinkSender, entry: AttrCfg, val: Any) -> None:
         link: Active MoaT-Link sender.
         entry: Effective configuration of this attribute.
         val: The value read from the 1-Wire device.
+        src: The device's address (``FAMILY.CODE``); recorded as ``src``
+            in the item's metadata.
     """
+    kw: dict[str, Any] = {} if src is None else {"meta": {"src": src}}
     dest = entry.dest
     if dest is None:
         return
@@ -59,9 +62,9 @@ async def forward_read(link: LinkSender, entry: AttrCfg, val: Any) -> None:
             else:
                 cur = attrdict(cur)
         new = cur._update(dest_attr, val)  # noqa: SLF001
-        await link.d_set(dest, new)
+        await link.d_set(dest, new, **kw)
     else:
-        await link.d_set(dest, val)
+        await link.d_set(dest, val, **kw)
 
 
 async def run_out(

@@ -286,9 +286,7 @@ async def set_(obj, yaml, one, retain, force, **kw):
     if yaml:
         d = combine_dict(yload(sys.stdin), d)
     d = process_args(d, **kw)
-    res = await obj.conn.d_set(
-        obj.path, d, retain=True if retain else False if one else None, meta=obj.meta
-    )
+    res = await obj.conn.d_set(obj.path, d, retain=True if retain else False if one else None)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -349,7 +347,7 @@ async def edit(obj, yes, editor):
                 return
 
         # Save
-        res = await obj.conn.d_set(obj.path, new_data, meta=obj.meta)
+        res = await obj.conn.d_set(obj.path, new_data)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         else:

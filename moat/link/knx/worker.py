@@ -91,6 +91,8 @@ async def run_in(
 
     name = f"{mode}." + ".".join(str(x) for x in subpath)
     evt = anyio.Event()
+    # the item's metadata names the group address it came from
+    meta = {"src": (addr.main, addr.middle, addr.sub)}
 
     def _cb(_dev) -> None:
         evt.set()
@@ -103,7 +105,7 @@ async def run_in(
         while True:
             await evt.wait()
             evt = anyio.Event()
-            await link.d_set(dest, get_val(device))
+            await link.d_set(dest, get_val(device), meta=meta)
     finally:
         srv.devices.async_remove(device)
 

@@ -128,6 +128,48 @@ async def test_anyrunner_simple_job(cfg):
             tg.cancel_scope.cancel()
 
 
+async def test_call_admin_set_names_job(cfg):
+    "Items written by a job carry the job's path as ``src`` in their metadata."
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "world!"}),
+        sf.client_() as c,
+    ):
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.writer"),
+            dict(
+                code="""
+await _self.set(P("test.out.plain"), 1)
+await _self.set(P("test.out.more"), 2, meta={"foo": "bar"})
+await _self.set(P("test.out.own"), 3, meta={"src": "me"})
+return "done"
+""",
+                is_async=True,
+            ),
+        )
+
+        job_cfg = _job_cfg(sf)
+        sub = job_cfg["sub"]["group"] + P("default")
+        job_path = job_cfg["prefix"] + sub + P("writer")
+        state_path = job_cfg["state"] + sub + P("writer")
+        await c.d_set(job_path, dict(code=P("test.writer"), target=time.time(), delay=100))
+        await c.i_sync()
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            await _wait_state(c, state_path, until=lambda s: s.get("result") == "done")
+            await c.i_sync()
+            val, meta = await c.d_get(P("test.out.plain"), meta=True)
+            assert val == 1
+            assert meta["src"] == job_path
+            val, meta = await c.d_get(P("test.out.more"), meta=True)
+            assert meta["src"] == job_path
+            assert meta["foo"] == "bar"
+            val, meta = await c.d_get(P("test.out.own"), meta=True)
+            assert meta["src"] == "me"
+            tg.cancel_scope.cancel()
+
+
 async def test_singlerunner_specific_node(cfg):
     "SingleJobRunner runs jobs scoped to one named node."
     async with (

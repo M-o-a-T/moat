@@ -579,7 +579,7 @@ class LinkSender(MsgSender, MsgRoot):
         self,
         path: Path,
         data: Any = NotGiven,
-        meta: MsgMeta | None = None,
+        meta: MsgMeta | Mapping | None = None,
         t: float | None = None,
         with_prev: bool = False,
         retain: bool | None = None,
@@ -631,6 +631,8 @@ class LinkSender(MsgSender, MsgRoot):
 
         if meta is None:
             meta = MsgMeta(origin=self._link.name)
+        elif not isinstance(meta, MsgMeta):
+            meta = MsgMeta(origin=self._link.name, **meta)
         if t is None and not with_prev:
             if retain is None:
                 retain = len(path) == 0 or path[0] != "run"

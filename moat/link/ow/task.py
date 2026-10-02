@@ -284,7 +284,7 @@ class _Devices:
         cfg = self.active.get(key)
         if cfg is not None and cfg.is_read:
             try:
-                await forward_read(self.link, cfg, val)
+                await forward_read(self.link, cfg, val, src=fmt_device(*key[:2]))
             except Exception as exc:
                 logger.warning("Forward read for %s failed: %r", _name(key), exc)
                 await self._report(key, exc)

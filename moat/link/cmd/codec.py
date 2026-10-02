@@ -122,6 +122,6 @@ async def set_(obj, path, encode, decode, data, in_, out):
         raise click.UsageError("Missing encode tests")
 
     full = obj.codec_prefix + path
-    res = await obj.conn.d_set(full, msg, meta=obj.meta)
+    res = await obj.conn.d_set(full, msg)
     if obj.meta:
         yprint(res, stream=obj.stdout)

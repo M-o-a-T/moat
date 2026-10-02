@@ -29,6 +29,7 @@ from moat.util import NotGiven, attrdict, combine_dict, create_queue, digits, un
 from moat.util import time as mtime
 from moat.lib.path import P, Path, logger_for
 from moat.link.code import CODE_EXEC_ROOT
+from moat.link.meta import MsgMeta
 from moat.util.spawn import spawn
 
 from .actor import (
@@ -619,11 +620,22 @@ class CallAdmin:
 
         Keywords (``idem``, ``retain``, ``meta``, …) are passed to
         `moat.link.client.LinkSender.set`.
+
+        The item's metadata names this job (its path) as ``src``, unless
+        the ``meta`` you pass in says otherwise.
         """
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
         elif not isinstance(path, Path):
             raise TypeError(f"You didn't pass in a path: {path!r}")
+        meta = kw.get("meta")
+        if meta is None:
+            kw["meta"] = {"src": self._entry.path}
+        elif isinstance(meta, MsgMeta):
+            if "src" not in meta.kw:
+                meta["src"] = self._entry.path
+        elif "src" not in meta:
+            kw["meta"] = {**meta, "src": self._entry.path}
         return await self._link.set(path, value, **kw)
 
     async def get(self, path: Path) -> Any:

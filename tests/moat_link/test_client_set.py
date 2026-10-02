@@ -85,5 +85,12 @@ async def test_call_admin_set_passes_keywords():
 
     adm = object.__new__(CallAdmin)
     adm._link = _Link()  # noqa: SLF001
+
+    class _Entry:
+        path = P("job.test")
+
+    adm._entry = _Entry()  # noqa: SLF001
     assert await adm.set(("test", "x"), 3, idem=True, retain=False) is False
-    assert seen == [(P("test.x"), 3, {"idem": True, "retain": False})]
+    # … and names the job as the data's source
+    meta = {"src": P("job.test")}
+    assert seen == [(P("test.x"), 3, {"idem": True, "retain": False, "meta": meta})]

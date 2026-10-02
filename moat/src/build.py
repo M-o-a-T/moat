@@ -521,7 +521,8 @@ async def do_build_pypi(
                         if artifact.suffix in {".gz", ".whl"}:
                             dest = DIST_PYPI / artifact.name
                             shutil.move(str(artifact), str(dest))
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as exc:
+                st.print(f"\n*** Failure building {r.name}:\n{exc}", file=sys.stderr)
                 err.add(r.name)
             else:
                 up.add(r)
@@ -560,7 +561,8 @@ async def do_upload_pypi(
                 cwd=DIST_PYPI,
                 echo=debug,
             )
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
+            st.print(f"\n*** Failure uploading {r.name}:\n{exc}", file=sys.stderr)
             err.add(r.name)
         else:
             await done.touch()
@@ -599,7 +601,8 @@ async def do_upload_deb(
                 continue
         try:
             await run_("dput", *dput_opts, changes, echo=debug)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
+            st.print(f"\n*** Failure uploading {r.name} (deb):\n{exc}", file=sys.stderr)
             err.add(r.name)
         else:
             await done.touch()

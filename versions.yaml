@@ -392,11 +392,11 @@ moat-lib-xknx:
   tag: 3.15.0
 moat-link:
   deb: 0.10.7-1
-  new: 0.10.7
+  new: 0.10.8
   pkg: 1
-  pypi: 0.10.7
-  rev: 041e237f107290e9477f0b5f228bdb14066877fc
-  tag: 0.10.7
+  pypi: 0.10.8
+  rev: 854bd907b4d86550308b53615039b528e1d1bca1
+  tag: 0.10.8
 moat-link-cal:
   new: 0.0.1
   pkg: 3

@@ -12,7 +12,9 @@ from __future__ import annotations
 import anyio
 import logging
 
-from moat.dev.heat.link import Inputs, Reader, Writer
+from moat.dev.heat.config import ServiceCfg, load_config
+from moat.dev.heat.link import PWM_UNIT, Inputs, Reader, Writer
+from moat.lib.path import P
 
 from .paths import INPUT_PATHS, SENSOR_PATHS, sensor_items
 from .scenario import Scenario
@@ -102,10 +104,21 @@ class SimLink:
         await self.publish()
 
     async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
-        """Run the simulator until cancelled."""
-        async with anyio.create_task_group() as tg:
+        """
+        Run the simulator until cancelled.
+
+        The simulator stands in for the PWM daemon (it reads the PWM value
+        itself), so it announces that daemon's service: the pump unit
+        doesn't start the heat pump without it.
+        """
+        svc = await load_config(self.link, "service", ServiceCfg)
+        async with (
+            self.link.announcing(P("heat") / PWM_UNIT, host=svc.host, wait=True) as srv,
+            anyio.create_task_group() as tg,
+        ):
             await tg.start(self.inputs.run)
             await self.publish()
+            srv.set()
             task_status.started()
 
             t0 = anyio.current_time()

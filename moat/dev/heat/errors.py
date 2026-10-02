@@ -146,7 +146,11 @@ class ErrorsCore:
 
 
 class ErrorsUnit(Unit[ErrorsCfg, ErrorsState]):
-    """MoaT-Link adapter of the errors unit."""
+    """
+    Collect the heat pump's errors and rate their severity.
+
+    This is the MoaT-Link adapter of the errors unit.
+    """
 
     name = "errors"
     cfg_model = ErrorsCfg

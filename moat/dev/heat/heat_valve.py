@@ -243,7 +243,11 @@ class HeatValveCore:
 
 
 class HeatValveUnit(Unit[HeatValveCfg, HeatValveState]):
-    """MoaT-Link adapter of the heat-valve unit."""
+    """
+    Switch the heating circuit on and off.
+
+    This is the MoaT-Link adapter of the heat-valve unit.
+    """
 
     name = "heat_valve"
     cfg_model = HeatValveCfg

@@ -349,7 +349,11 @@ class PelletCore:
 
 
 class PelletUnit(Unit[PelletCfg, PelletState]):
-    """MoaT-Link adapter of the pellet unit."""
+    """
+    Set the pellet burner's load and temperature.
+
+    This is the MoaT-Link adapter of the pellet unit.
+    """
 
     name = "pellet"
     cfg_model = PelletCfg

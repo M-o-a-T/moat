@@ -387,7 +387,11 @@ class SelectorCore:
 
 
 class SelectorUnit(Unit[SelectorCfg, SelectorState]):
-    """MoaT-Link adapter of the selector unit."""
+    """
+    Decide which heat sources may run.
+
+    This is the MoaT-Link adapter of the selector unit.
+    """
 
     name = "selector"
     cfg_model = SelectorCfg

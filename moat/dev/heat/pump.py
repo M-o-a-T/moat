@@ -38,7 +38,7 @@ from moat.link.exceptions import ServiceSupplanted
 from .config import EmergencyCfg, UnitCfg, load_config
 from .emergency import emergency_shutdown
 from .flow import FlowMode, FlowRequest
-from .link import Reader, out_path, service_path
+from .link import PWM_UNIT, Reader, ServiceMonitor, is_up, out_path, service_path
 from .override import reader as override_reader
 from .pid import APID, MonoTime, PIDCfg, PIDState
 from .state import State
@@ -310,6 +310,11 @@ class PumpCfg(UnitCfg):
     long (or has no value) stops the unit with an emergency shutdown;
     `None`: never."""
     stale_sensors: list[str] = ["t_in", "t_out", "r_flow", "m_power"]
+    pwm_grace: float | None = 3
+    """The PWM daemon (service ``heat.pwm``) drives the water pump. When it
+    has been gone for this long, the heat pump is not started; if it is
+    active, the unit stops with an emergency shutdown. Seconds; `None`:
+    don't care."""
 
     min_load: float = 0.05
     """A load below this means power 0 and mode off (``lim.power.min``)."""
@@ -715,6 +720,8 @@ class PumpCore:
         ov = inputs.get("override")
         if ov is False:
             return False
+        if inputs.get("pwm") is False:
+            return False  # no water pump: not even when overridden
         sel = inputs.get("selector")
         if isinstance(sel, dict) and sel.get("wp") is False and ov is not True:
             return False
@@ -725,6 +732,8 @@ class PumpCore:
     def _why_not(inputs: dict[str, Any]) -> str:
         if inputs.get("override") is False:
             return "override"
+        if inputs.get("pwm") is False:
+            return "pwm"
         err = inputs.get("errors")
         if isinstance(err, dict) and err.get("errors"):
             return "errors"
@@ -954,7 +963,9 @@ class PumpCore:
 
 class PumpUnit(Unit[PumpCfg, PumpState]):
     """
-    MoaT-Link adapter of the pump unit (HEAT.md §2.5, §2.6).
+    Control the heat pump: its state machine and load.
+
+    This is the MoaT-Link adapter of the pump unit (HEAT.md §2.5, §2.6).
 
     Besides running the core, it stops the heat pump with an emergency
     shutdown (`~moat.dev.heat.emergency.emergency_shutdown`) when the unit
@@ -975,12 +986,13 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         super().__init__(*a, **kw)
         self._seen: dict[str, Any] = {}
         self._changed: dict[str, float] = {}
+        self._pwm_gone: float | None = None
 
-    async def run(self, *, task_status: Any = anyio.TASK_STATUS_IGNORED) -> None:
+    async def run(self, **kw: Any) -> None:
         """Run the unit; see :meth:`Unit.run`."""
         # loaded up front: when the unit stops, reading it might not work any more
         self.emergency = await load_config(self.link, "emergency", EmergencyCfg)
-        await super().run(task_status=task_status)
+        await super().run(**kw)
 
     def make_core(self, cfg: PumpCfg, state: PumpState, now: float) -> PumpCore:
         """The core."""
@@ -1013,19 +1025,49 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
             )
         }
         rd["override"] = override_reader(self.link, "wp", cfg.override)
+        if cfg.pwm_grace is not None:
+            rd["pwm"] = ServiceMonitor(self.link, self.service.host, PWM_UNIT)
         return rd
 
-    def check(self, inputs: dict[str, Any], now: float) -> None:
-        """Stop on a critical error or a stale sensor while the heat pump is active."""
+    def _check_pwm(self, inputs: dict[str, Any], now: float) -> float | None:
+        """
+        Replace the ``pwm`` input (the PWM daemon's announcement) with
+        whether it is there, or hasn't been gone for long.
+
+        Returns when to look again, if that might change.
+        """
+        assert isinstance(self.core, PumpCore)
+        grace = self.core.cfg.pwm_grace
+        if grace is None:
+            inputs.pop("pwm", None)
+            return None
+        if is_up(inputs.get("pwm")):
+            self._pwm_gone = None
+            inputs["pwm"] = True
+            return None
+        if self._pwm_gone is None:
+            self._pwm_gone = now
+        left = self._pwm_gone + grace - now
+        inputs["pwm"] = left > 0
+        return left if left > 0 else None
+
+    def check(self, inputs: dict[str, Any], now: float) -> float | None:
+        """
+        Stop on a critical error, a stale sensor, or a missing PWM daemon
+        while the heat pump is active.
+        """
         assert isinstance(self.core, PumpCore)
         cfg = self.core.cfg
+        recheck = self._check_pwm(inputs, now)
         for k in cfg.stale_sensors:
             v = inputs.get(k)
             if k not in self._seen or self._seen[k] != v:
                 self._seen[k] = v
                 self._changed[k] = now
         if self.store.state.run in (R.off, R.down) or inputs.get("passthru") == "original":
-            return
+            return recheck
+        if inputs.get("pwm") is False:
+            raise PumpAbort("PWM service gone")
         err = inputs.get("errors")
         if isinstance(err, dict) and err.get("errors") and err.get("severity") == "critical":
             raise PumpAbort(f"errors: {err['errors']}")
@@ -1033,6 +1075,7 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
             for k in cfg.stale_sensors:
                 if inputs.get(k) is None or now - self._changed[k] > cfg.stale:
                     raise PumpAbort(f"stale sensor: {k}")
+        return recheck
 
     async def _supplanted(self) -> bool:
         "whether another process now owns the pump service"

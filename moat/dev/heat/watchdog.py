@@ -149,7 +149,11 @@ class WatchdogCore:
 
 
 class WatchdogUnit(Unit[WatchdogCfg, WatchdogState]):
-    """MoaT-Link adapter of the watchdog unit."""
+    """
+    Shut the heat pump down when its pump unit dies.
+
+    This is the MoaT-Link adapter of the watchdog unit.
+    """
 
     name = "watchdog"
     cfg_model = WatchdogCfg

@@ -23,8 +23,8 @@ from moat.lib.path import (
 )
 from moat.util.times import t_iter
 
-from .config import UnitCfg
-from .link import Reader
+from .config import ServiceCfg, UnitCfg, load_config
+from .link import PWM_UNIT, Reader
 
 from typing import TYPE_CHECKING, Any
 
@@ -157,21 +157,34 @@ async def run_pwm(
     cfg: PwmCfg,
     gpio: Any = None,
     *,
+    service: ServiceCfg | None = None,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """
     Drive all configured outputs until cancelled.
 
+    The ``heat.pwm`` service is announced while the outputs are driven.
+    The pump unit depends on it: without a water pump the heat pump must
+    not run. The announcement is withdrawn when this function ends,
+    however it does.
+
     Args:
         link: The MoaT-Link client.
         cfg: The daemon's configuration.
         gpio: The GPIO module; default: ``RPi.GPIO``, imported now.
+        service: The shared service settings; default: ``cfg.app.heat.service``.
     """
     if gpio is None:
         gpio = _gpio()
-    async with anyio.create_task_group() as tg:
+    if service is None:
+        service = await load_config(link, "service", ServiceCfg)
+    async with (
+        link.announcing(P("heat") / PWM_UNIT, host=service.host, wait=True) as srv,
+        anyio.create_task_group() as tg,
+    ):
         for name, out in cfg.outputs.items():
             await tg.start(run_output, link, name, out, gpio)
+        srv.set()
         task_status.started()
 
 
@@ -181,10 +194,11 @@ async def cli(obj: Any) -> None:
     """
     Drive the configured GPIO outputs (``cfg.app.heat.pwm``) from their
     MoaT-Link values. Needs ``RPi.GPIO``.
+
+    Announces the ``heat.pwm`` service. If that is gone for more than a
+    few seconds while the heat pump runs, the pump unit shuts it down.
     """
     from moat.link.client import Link  # noqa: PLC0415
-
-    from .config import load_config  # noqa: PLC0415
 
     async with Link(obj.cfg.link) as link:
         cfg = await load_config(link, "pwm", PwmCfg)

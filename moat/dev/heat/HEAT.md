@@ -76,7 +76,19 @@ Units:
 
 `moat dev heat run [UNIT…]` (`system/runner.py`) runs the named units,
 or all but the watchdog, each on its own MoaT-Link client, and talks to
-systemd. The package `moat-dev-heat-service` installs the systemd units:
+systemd.
+
+- Without arguments, each unit waits until nobody else announces its
+  service. A unit that fails is logged, reported to MoaT-Link's error
+  subsystem (`error.app.heat.<unit>`) and restarted with exponential
+  backoff (`cfg.app.heat.service`: `backoff.min/max/factor`; the error
+  is cleared and the delay reset after `recovery` seconds of running).
+  A unit that is supplanted (e.g. by `moat dev heat off`) waits for its
+  service and then resumes.
+- Named units take their service over from whoever runs it (for
+  debugging). A failure is reported to MoaT-Link and ends the command.
+
+The package `moat-dev-heat-service` installs the systemd units:
 `moat-heat@UNIT.service` per unit, `moat-heat.service` for all of them
 in one process, `moat-heat-pwm.service` and
 `moat-heat-modbus-mon.service`.
@@ -831,6 +843,11 @@ See §2.8.
 
 - `pwm.py`: software PWM for `output.*` on RPi.GPIO (lazy import),
   now reading value and override paths from MoaT-Link.
+  It announces the service `heat.pwm` (`run.host.<host>.heat.pwm`)
+  while it drives its outputs, and withdraws it when it ends. The pump
+  unit watches it: once it has been gone for `pump.pwm_grace` seconds
+  (default 3) the heat pump is not started (reason `pwm`), and an
+  active heat pump is stopped with the emergency shutdown (§2.6).
 - `modbus_mon.py`: restarts `moat modbus dev poll` when the Solvis
   reports error code 26, now watching MoaT-Link.
 

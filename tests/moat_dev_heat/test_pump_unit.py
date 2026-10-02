@@ -91,8 +91,12 @@ class Pump:
         return self.exc
 
 
-async def _setup(heat, run: Run = Run.run, **pump: Any) -> None:
-    "a cold buffer, sensors of a running heat pump, a saved state, short timeouts"
+async def _setup(heat, run: Run = Run.run, pwm: bool = True, **pump: Any) -> Any:
+    """
+    a cold buffer, sensors of a running heat pump, a saved state, short
+    timeouts, and the PWM daemon's service (returns its scope)
+    """
+    pwm_scope = await heat.run_pwm() if pwm else None
     for p, v in SENSORS.items():
         await heat.feed(P(p), v)
     await heat.feed(out_path("target"), {"flow_temp": 45.0, "demand": DEMAND})
@@ -101,6 +105,7 @@ async def _setup(heat, run: Run = Run.run, **pump: Any) -> None:
         await heat.seed_config("pump", pump)
     st = PumpState(run=run, load_last=0.5)
     await heat.feed(STATE, st.model_dump(context={T_OFFSET: 0}))
+    return pwm_scope
 
 
 async def _shut_down(heat) -> None:
@@ -247,4 +252,51 @@ async def test_override_off(heat):
     out = await heat.expect(OUT, lambda v: v["run"] in ("down", "off"))
     assert out["reason"] == "override"
     assert p.exc is None
+    await p.stop()
+
+
+@pytest.mark.anyio
+async def test_pwm_gone(heat):
+    "the PWM daemon vanishes while the heat pump runs: emergency shutdown after the grace time"
+    pwm = await _setup(heat, pwm_grace=0.5)
+    p = Pump(heat)
+    await p.start()
+    await anyio.sleep(0.8)
+    assert not p.done.is_set()
+
+    pwm.cancel()
+    t0 = anyio.current_time()
+    exc = await p.ended()
+    assert isinstance(exc, BaseExceptionGroup)
+    sub = exc.subgroup(PumpAbort)
+    assert sub is not None
+    assert "PWM" in repr(sub.exceptions)
+    assert anyio.current_time() - t0 >= 0.4
+    await _shut_down(heat)
+
+
+@pytest.mark.anyio
+async def test_pwm_blip(heat):
+    "a PWM daemon that comes back within the grace time doesn't stop anything"
+    pwm = await _setup(heat, pwm_grace=2)
+    p = Pump(heat)
+    await p.start()
+    pwm.cancel()
+    await anyio.sleep(0.3)
+    await heat.run_pwm()
+    await anyio.sleep(2.5)
+    assert not p.done.is_set()
+    assert await p.stop() is None
+
+
+@pytest.mark.anyio
+async def test_pwm_missing_no_start(heat):
+    "without a PWM daemon an idle heat pump is not started"
+    await _setup(heat, run=Run.off, pwm=False, pwm_grace=0.2)
+    p = Pump(heat)
+    await p.start()
+    out = await heat.expect(OUT, lambda v: v is not None and v.get("reason") == "pwm")
+    assert out["run"] == "off"
+    await anyio.sleep(0.5)
+    assert not p.done.is_set()
     await p.stop()

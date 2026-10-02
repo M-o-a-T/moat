@@ -544,4 +544,5 @@ def test_unit_inputs():
     u = PumpUnit.__new__(PumpUnit)
     u.link = None
     names = set(u.make_inputs(_cfg()))
-    assert names == set(_inputs())
+    # … and the PWM daemon's service, which the adapter turns into a flag
+    assert names == set(_inputs()) | {"pwm"}

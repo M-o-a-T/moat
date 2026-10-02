@@ -170,7 +170,11 @@ class FrostCore:
 
 
 class FrostUnit(Unit[FrostCfg, FrostState]):
-    """MoaT-Link adapter of the frost unit."""
+    """
+    Protect the idle heat-pump loop from frost.
+
+    This is the MoaT-Link adapter of the frost unit.
+    """
 
     name = "frost"
     cfg_model = FrostCfg

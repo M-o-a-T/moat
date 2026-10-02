@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CFG_PATH",
+    "Backoff",
     "EmergencyCfg",
     "ServiceCfg",
     "UnitCfg",
@@ -51,11 +52,28 @@ class UnitCfg(BaseModel):
     """Base class of every unit's configuration model."""
 
 
+class Backoff(BaseModel):
+    """How long to wait before a failed unit is restarted."""
+
+    min: float = 1
+    """Delay after the first failure, seconds."""
+    max: float = 300
+    """Upper limit of the delay, seconds."""
+    factor: float = 2
+    """The delay grows by this factor with every further failure."""
+
+
 class ServiceCfg(UnitCfg):
-    """Service announcement settings shared by all units."""
+    """Service announcement and supervision settings shared by all units."""
 
     host: str = "heat"
     """Host name under which the units announce themselves (``run.host.<host>.heat.<unit>``)."""
+
+    backoff: Backoff = Backoff()
+    """Restart delays of ``moat dev heat run``."""
+    recovery: float = 60
+    """A restarted unit that has been running for this long counts as
+    working again: its error is cleared and the restart delay is reset. Seconds."""
 
 
 class EmergencyCfg(UnitCfg):

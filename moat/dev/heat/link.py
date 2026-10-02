@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 __all__ = [
+    "PWM_UNIT",
     "Inputs",
     "Override",
     "Reader",
@@ -45,6 +46,10 @@ T = TypeVar("T")
 def out_path(unit: str) -> Path:
     """The path of a unit's published view, ``app.heat.<unit>.out`` (HEAT.md §2.2)."""
     return P("app.heat") / unit / "out"
+
+
+PWM_UNIT = "pwm"
+"""The PWM daemon's service is ``heat.pwm``, announced like a unit's."""
 
 
 def service_path(host: str, unit: str) -> Path:

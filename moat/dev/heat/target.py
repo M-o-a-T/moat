@@ -320,7 +320,11 @@ class TargetCore:
 
 
 class TargetUnit(Unit[TargetCfg, TargetState]):
-    """MoaT-Link adapter of the target unit."""
+    """
+    Compute the heating curve and the heat demand.
+
+    This is the MoaT-Link adapter of the target unit.
+    """
 
     name = "target"
     cfg_model = TargetCfg

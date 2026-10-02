@@ -16,9 +16,10 @@ import pytest
 from pathlib import Path as FSPath
 
 from moat.dev.heat.config import CFG_PATH, ServiceCfg, load_config
-from moat.dev.heat.link import Reader, ServiceMonitor, out_path
+from moat.dev.heat.link import PWM_UNIT, Reader, ServiceMonitor, out_path
 from moat.dev.heat.sim.trace import compare, dump, load
 from moat.dev.heat.state import state_path
+from moat.lib.path import P
 from moat.link._test import Scaffold
 
 from typing import TYPE_CHECKING, Any
@@ -90,11 +91,7 @@ class UnitHandle:
 
     def cancel(self) -> None:
         """
-        Stop the unit, as a crash would: its client just goes away.
-
-        The service announcement is only removed on a normal exit; after a
-        crash it stays up until the server notices the lost client, which
-        takes longer than the test timeouts.
+        Stop the unit by cancelling it. Its service announcement is withdrawn.
         """
         self._scope.cancel()
 
@@ -149,6 +146,24 @@ class HeatScaffold:
     ) -> None:
         with sc:
             await r.run(task_status=task_status)
+
+    async def run_pwm(self) -> anyio.CancelScope:
+        """
+        Announce the PWM daemon's service, which the pump unit requires.
+
+        Cancel the scope to withdraw it.
+        """
+        return await self.tg.start(self._pwm)
+
+    async def _pwm(self, *, task_status: TaskStatus[anyio.CancelScope]) -> None:
+        svc = await load_config(self.link, "service", ServiceCfg)
+        async with self.sf.client_() as c:
+            with anyio.CancelScope() as sc:
+                async with c.announcing(P("heat") / PWM_UNIT, host=svc.host) as srv:
+                    srv.set()
+                    await c.i_sync()
+                    task_status.started(sc)
+                    await anyio.sleep_forever()
 
     async def run_unit(self, unit: type[Unit[Any, Any]], save_delay: float = 0.1) -> UnitHandle:
         """Start a unit on its own client; returns once it is running."""

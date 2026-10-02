@@ -316,7 +316,11 @@ class FlowCore:
 
 
 class FlowUnit(Unit[FlowCfg, FlowState]):
-    """MoaT-Link adapter of the flow unit."""
+    """
+    Drive the heat pump's water pump (PWM) as requested.
+
+    This is the MoaT-Link adapter of the flow unit.
+    """
 
     name = "flow"
     cfg_model = FlowCfg

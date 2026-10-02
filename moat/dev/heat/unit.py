@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
     from .link import Reader
 
+    from collections.abc import Callable
+
 __all__ = ["Core", "Step", "Unit"]
 
 _logger = logging.getLogger(__name__)
@@ -127,9 +129,12 @@ class Unit(Generic[C, S]):
         """Create the readers for the core's inputs, by name."""
         raise NotImplementedError
 
-    def check(self, inputs: dict[str, Any], now: float) -> None:
+    def check(self, inputs: dict[str, Any], now: float) -> float | None:
         """
         Look at the inputs before the core does; raise to stop the unit.
+
+        The inputs may be amended. If the result is a number, the unit is
+        stepped again after (at most) that many seconds.
 
         The default does nothing.
         """
@@ -174,13 +179,29 @@ class Unit(Generic[C, S]):
                 await tg.start(inputs.run)
                 task_status.started(sc)
 
-    async def run(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED) -> None:
-        """Run the unit."""
+    async def run(
+        self,
+        *,
+        force: bool = False,
+        on_wait: Callable[[str | None], None] | None = None,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
+    ) -> None:
+        """
+        Run the unit.
+
+        Args:
+            force: Take the unit's service over from whoever runs it.
+                Otherwise, wait until nobody else does.
+            on_wait: Called when the unit has to wait for its service; see
+                :func:`moat.link.announce.announcing`.
+        """
         self.service = svc = await load_config(self.link, "service", ServiceCfg)
         state = await self.store.load()
 
         async with (
-            self.link.announcing(P("heat") / self.name, host=svc.host, wait=True) as srv,
+            self.link.announcing(
+                P("heat") / self.name, host=svc.host, force=force, wait=True, on_wait=on_wait
+            ) as srv,
             anyio.create_task_group() as tg,
         ):
             await tg.start(self.store.run)
@@ -216,7 +237,7 @@ class Unit(Generic[C, S]):
             if self.local_time:
                 snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
             now = anyio.current_time()
-            self.check(snap, now)
+            recheck = self.check(snap, now)
             res = core.step(snap, now)
             watched = {r.path: r for r in inputs.readers.values()}
             for path, value in res.outputs.items():
@@ -227,6 +248,8 @@ class Unit(Generic[C, S]):
             if res.save or res.save_now:
                 self.store.changed(immediate=res.save_now)
             wake_in = res.wake_in
+            if recheck is not None and (wake_in is None or recheck < wake_in):
+                wake_in = recheck
             if res.act is not None:
                 await self.act(res.act)
                 wake_in = 0

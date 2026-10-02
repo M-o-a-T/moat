@@ -105,3 +105,18 @@ async def test_stale_sensor(link, monkeypatch):
     assert max(writes) <= 40  # the stale fault starts in the step after t=30
     assert await link.d_get(INPUT_PATHS["heat_setpoint"]) == 38
     assert sim.plant.inputs.heat_setpoint == 38
+
+
+@pytest.mark.anyio
+async def test_pwm_service(link) -> None:
+    "the simulator stands in for the PWM daemon, thus announces its service"
+    from moat.dev.heat.link import PWM_UNIT, ServiceMonitor  # noqa: PLC0415
+
+    mon = ServiceMonitor(link, "heat", PWM_UNIT)
+    async with anyio.create_task_group() as tg:
+        await tg.start(mon.run)
+        await tg.start(SimLink(link, dt=10, scale=1000).run)
+        with anyio.fail_after(2):
+            while not mon.alive:
+                await mon.wait_changed()
+        tg.cancel_scope.cancel()

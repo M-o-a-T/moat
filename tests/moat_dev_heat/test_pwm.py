@@ -9,8 +9,9 @@ import anyio
 import pytest
 from contextlib import asynccontextmanager
 
+from moat.dev.heat.link import ServiceMonitor
 from moat.dev.heat.modbus_mon import ModbusMonCfg, run_modbus_mon
-from moat.dev.heat.pwm import OutputCfg, Override, duty, run_output
+from moat.dev.heat.pwm import PWM_UNIT, OutputCfg, Override, PwmCfg, duty, run_output, run_pwm
 from moat.lib.path import P
 
 from typing import Any
@@ -126,6 +127,55 @@ async def test_pwm_override(link):
     assert f == 1
     _, f = await _measure(link, CFG, value=0.0, flag=False, ovr=1.0)
     assert f == 0
+
+
+async def _alive(mon: ServiceMonitor, want: bool) -> None:
+    with anyio.fail_after(2):
+        while mon.alive != want:
+            await mon.wait_changed()
+
+
+class BadGPIO(FakeGPIO):
+    "fails after a while"
+
+    def output(self, pin: int, level: bool) -> None:
+        "set a pin"
+        super().output(pin, level)
+        if len(self.log) > 20 and level:
+            raise RuntimeError("GPIO broke")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("crash", [False, True])
+async def test_pwm_service(link, crash: bool):
+    "the daemon announces ``heat.pwm`` while it runs, and withdraws it when it ends"
+    await link.d_set(VALUE, 0.5, retain=True)
+    cfg = PwmCfg(outputs={"test": CFG})
+    mon = ServiceMonitor(link, "heat", PWM_UNIT)
+    async with anyio.create_task_group() as tg:
+        await tg.start(mon.run)
+        assert not mon.alive
+
+        if crash:
+
+            async def run() -> None:
+                with pytest.raises(BaseExceptionGroup):
+                    await run_pwm(link, cfg, BadGPIO())
+
+            tg.start_soon(run)
+            await _alive(mon, True)
+        else:
+            sc = anyio.CancelScope()
+
+            async def run(*, task_status) -> None:
+                with sc:
+                    await run_pwm(link, cfg, FakeGPIO(), task_status=task_status)
+
+            await tg.start(run)
+            await _alive(mon, True)
+            sc.cancel()
+        await _alive(mon, False)
+        tg.cancel_scope.cancel()
 
 
 # Modbus monitor

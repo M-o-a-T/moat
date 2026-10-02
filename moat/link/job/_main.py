@@ -13,12 +13,13 @@ from functools import partial
 
 import asyncclick as click
 
-from moat.util import attrdict, yprint
+from moat.util import NotGiven, attrdict, yprint
 from moat.util import time as mtime
 from moat.lib.path import P, Path, PathLongener
 from moat.lib.run import AliasedGroup, attr_args, process_args
 from moat.link._data import add_dates, data_get
 from moat.link.client import Link
+from moat.util.times import humandelta
 
 from .runner import AllJobRunner, AnyJobRunner, JobRunner, SingleJobRunner, debug_run
 
@@ -165,38 +166,83 @@ async def run(obj: attrdict, nodes: int) -> None:
         await anyio.sleep_forever()
 
 
+async def _error_of(obj: attrdict, jobpath: Path) -> Any:
+    """The job's current error record, or None if it has none."""
+    try:
+        err = await obj.conn.d_get(P("error") + obj.path + jobpath)
+    except KeyError:
+        return None
+    if err is NotGiven or not isinstance(err, dict) or err.get("ok", False):
+        return None
+    return err
+
+
+def _is_running(state: Any) -> bool:
+    "Does this job state record say that the job is running?"
+    return isinstance(state, dict) and state.get("started", 0) > state.get("stopped", 0)
+
+
+def _fmt_error(err: dict[str, Any]) -> dict[str, Any]:
+    "Make an error record printable."
+    err = dict(err)
+    if "exc" in err:
+        err["exc"] = repr(err["exc"])  # not YAML-representable as-is
+    add_dates(err)
+    return err
+
+
 async def _state_fix(
     obj: attrdict,
     state_path: Path | None,
     state_only: bool,
     path_prefix: Path | None,
+    errors: bool,
+    not_ok: bool,
+    show_state: bool,
+    pl: PathLongener,
     r: Any,
 ) -> Any:
-    """Augment a job record with its current state and optional dates."""
-    try:
-        val = r.value
-    except AttributeError:
-        return r
+    """
+    Augment a job record with its current state, error, and dates.
+
+    Returns the record with its full path (so that the caller's path
+    shortening is not affected), or `None` to skip it.
+    """
+    n, p, val, *m = r
+    p = pl.long(n, p)
+    rs = None
     if state_path is not None:
         try:
-            rs = await obj.conn.d_get(state_path + r.path)
+            rs = await obj.conn.d_get(state_path + p)
         except KeyError:
             rs = None
-        if state_only:
-            r.value = rs
-        elif rs is not None:
+    err = None
+    if errors or not_ok:
+        err = await _error_of(obj, obj.jobpath + p)
+        if not_ok and (_is_running(rs) or err is None):
+            return None
+    if state_only:
+        if show_state:
+            val = rs
+    else:
+        if show_state and rs is not None:
             val["state"] = rs
             add_dates(rs)
-    if not state_only:
+        if errors and err is not None:
+            val["error"] = _fmt_error(err)
         if path_prefix is not None:
-            r.path = path_prefix + r.path
+            p = path_prefix + p
         add_dates(val)
-    return r
+    return [0, p, val, *m]
 
 
 @at_cli.command("list")
 @click.option("-s", "--state", is_flag=True, help="Add state data.")
 @click.option("-S", "--state-only", is_flag=True, help="Only output state data.")
+@click.option("-e", "--errors", is_flag=True, help="Add the current error state, if any.")
+@click.option(
+    "-N", "--not-ok", is_flag=True, help="Skip jobs that are OK (running, or without an error)."
+)
 @click.option("-t", "--table", is_flag=True, help="One-line output.")
 @click.option(
     "-d",
@@ -209,6 +255,8 @@ async def list_(
     obj: attrdict,
     state: bool,
     state_only: bool,
+    errors: bool,
+    not_ok: bool,
     table: bool,
     as_dict: str | None,
 ) -> None:
@@ -218,7 +266,7 @@ async def list_(
 
     path = obj.jobpath
     state_path: Path | None = None
-    if state or state_only or table:
+    if state or state_only or table or not_ok:
         state_path = obj.statepath + path
 
     if table:
@@ -230,12 +278,29 @@ async def list_(
                 try:
                     s = await obj.conn.d_get(obj.statepath + path + p)
                 except KeyError:
+                    s = None
+                err = None
+                if s is not None and not _is_running(s):
+                    err = await _error_of(obj, path + p)
+                if not_ok and err is None:
+                    continue
+                if s is None:
                     st = "-never-"
+                elif _is_running(s):
+                    st = s.get("node", "?")
+                elif err is not None:
+                    st = "-error-"
+                    if s.get("backoff"):
+                        # same formula (and defaults) as the runner
+                        retry = s.get("stopped", 0) + d.get("delay", 100) * (
+                            d.get("backoff", 1.1) ** s["backoff"]
+                        )
+                        wait = retry - mtime.time()
+                        st += f" retry {humandelta(wait, ago=True) if wait > 0 else 'due'}"
+                    if errors and "exc" in err:
+                        st += f" {err['exc']!r}"
                 else:
-                    if s.get("started", 0) > s.get("stopped", 0):
-                        st = s.get("node", "?")
-                    else:
-                        st = "-stopped-"
+                    st = "-stopped-"
                 print(path + p, d.get("code"), st, file=obj.stdout)
         return
 
@@ -249,6 +314,10 @@ async def list_(
             state_path,
             state_only,
             None if as_dict else path,
+            errors,
+            not_ok,
+            state or state_only,
+            PathLongener(),
         ),
         out=obj.stdout,
     )
@@ -279,8 +348,9 @@ async def state_(obj: attrdict, result: bool) -> None:
 
 @at_cli.command()
 @click.option("-s", "--state", is_flag=True, help="Add state data.")
+@click.option("-e", "--error", is_flag=True, help="Add the current error state, if any.")
 @click.pass_obj
-async def get(obj: attrdict, state: bool) -> None:
+async def get(obj: attrdict, state: bool, error: bool) -> None:
     """Read a single job record."""
     if obj.subpath[-1] == "-":
         raise click.UsageError("Group '-' can only be used for listing.")
@@ -302,6 +372,8 @@ async def get(obj: attrdict, state: bool) -> None:
         else:
             add_dates(sres)
             res["state"] = sres
+    if error and (eres := await _error_of(obj, obj.jobpath)) is not None:
+        res["error"] = _fmt_error(eres)
     yprint(res, stream=obj.stdout)
 
 

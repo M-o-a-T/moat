@@ -108,6 +108,55 @@ async def test_list_table(cfg):
         assert r.stdout.count("-never-") == 2
 
 
+async def test_error_state(cfg):
+    """A stopped job with an open error is "-error-"; ``get -e`` shows it."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        prefix = cfg.link.job.prefix
+        state = cfg.link.job.state
+        sub = cfg.link.job.sub.group + P("default")
+
+        await sf.run("link job at bad set -c code.bad -t -")
+        await sf.run("link job at fine set -c code.fine -t -")
+        now = time.time()
+        for n in ("bad", "fine"):
+            await c.d_set(
+                state + sub + P(n),
+                dict(started=now - 2, stopped=now - 1, node=None, backoff=1),
+                retain=True,
+            )
+        await c.e_exc(prefix + sub + P("bad"), RuntimeError("boom"))
+        await c.i_sync()
+
+        r = await sf.run("link job at : list -t")
+        rows = {ln.split()[0]: ln for ln in r.stdout.splitlines() if ln.strip()}
+        assert "-error-" in rows["bad"]
+        # stopped 1s ago, delay 100 * 1.1 ** 1
+        assert "retry in" in rows["bad"]
+        assert "-stopped-" in rows["fine"]
+
+        r = await sf.run("link job at : list -t -N")
+        assert "bad" in r.stdout
+        assert "fine" not in r.stdout
+        r = await sf.run("link job at : list -t -e")
+        assert "boom" in r.stdout
+        r = await sf.run("link job at : list -e")
+        assert r.stdout.count("error:") == 1
+        r = await sf.run("link job at : list -s")
+        assert r.stdout.count("state:") == 2
+        r = await sf.run("link job at : list -N")
+        assert "bad" in r.stdout
+        assert "fine" not in r.stdout
+
+        r = await sf.run("link job at bad get -e")
+        assert "error:" in r.stdout
+        r = await sf.run("link job at fine get -e")
+        assert "error:" not in r.stdout
+
+
 async def test_list_table_many(cfg):
     """``list -t`` over a larger subtree must not deadlock.
 

@@ -20,7 +20,7 @@ from moat.util import as_service as _as_service
 from moat.lib.path import P, Path
 
 from .client import Link
-from .exceptions import ServerLinkLost, ServiceCleared, ServiceNotFound, ServiceSupplanted
+from .exceptions import ServiceCleared, ServiceNotFound, ServiceSupplanted
 
 from typing import TYPE_CHECKING
 
@@ -306,14 +306,6 @@ async def announcing(
                     entered = True
                     yield srv
 
-                    # only remove the host entry when we terminated normally.
-                    try:
-                        await link.d_set(path, retain=True)
-                    except ServerLinkLost:
-                        # The link is gone, so we can't withdraw the entry.
-                        # The process is going down anyway; don't mask why.
-                        logger.warning("Link lost: could not clear the announcement of %s", path)
-
                 except ServiceSupplanted:
                     if wait and not entered:
                         # Somebody else got there between our check and
@@ -323,9 +315,33 @@ async def announcing(
                     raise
                 finally:
                     tg.cancel_scope.cancel()
+                    if entered:
+                        await _withdraw(link, path)
         finally:
             link.announced.pop(path).set()
         return
+
+
+async def _withdraw(link: LinkSender, path: Path) -> None:
+    """
+    Remove our announcement at @path, however the announcing block ended.
+
+    Otherwise a program that keeps running (e.g. with other services)
+    would leave a dead entry behind, which the host monitor can't tell
+    from a live one. An entry that somebody else has taken over is left
+    alone.
+    """
+    with anyio.move_on_after(2, shield=True):
+        try:
+            ann = await link.d_get(path)
+            if isinstance(ann, dict) and ann.get("id") == link.id:
+                await link.d_set(path, retain=True)
+        except KeyError:
+            pass
+        except Exception as exc:
+            # Typically the link is gone, so we can't withdraw the entry.
+            # Don't mask why we're ending.
+            logger.warning("Could not clear the announcement of %s: %r", path, exc)
 
 
 async def _wait_free(

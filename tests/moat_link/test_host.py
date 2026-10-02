@@ -364,6 +364,12 @@ async def run_crashable_service(sf: Scaffold, *, task_status) -> None:
 async def test_will_drops_crashed_service(cfg):
     "A crashed client's WILL makes the service monitor drop its announcements at once."
     merge(cfg.link, yload(TIMES, attr=True))
+    # Slow the pings down: the test tells "dropped by the WILL" from "dropped by
+    # the ping timeout", which must stay distinguishable on a loaded machine.
+    cfg.link.timeout.ping.every = 0.5
+    cfg.link.timeout.ping.timeout = 1.0
+    cfg.link.timeout.ping.delete = 2.0
+    cfg.link.timeout.ping.stale = 1.0
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init="TEST")
@@ -377,7 +383,7 @@ async def test_will_drops_crashed_service(cfg):
                 id_path = P("run.id") / sid
 
                 host_path = P("run.host.test123.test.crash")
-                with anyio.fail_after(2):
+                with anyio.fail_after(5):
                     while (await sel_br(ibr, sid)).state.name != "UP":
                         pass
                     assert await cl.d_get(id_path)
@@ -398,7 +404,7 @@ async def test_will_drops_crashed_service(cfg):
                 await _crash(svc)
 
                 states = []
-                with anyio.fail_after(2):
+                with anyio.fail_after(5):
                     while not states or states[-1] != "DROP":
                         states.append((await sel_br(ibr, sid)).state.name)
                 dt = time.monotonic() - t0
@@ -408,13 +414,13 @@ async def test_will_drops_crashed_service(cfg):
                     for m in pings
                 ), pings
                 # Dead is dead: the WILL drops the service at once, not after
-                # the ping timeout (.2) and deletion delay (.4).
+                # the ping timeout (1.0) and deletion delay (2.0).
                 assert "TIMEOUT" not in states, states
                 assert "STALE" not in states, states
-                assert dt < 0.15, dt
+                assert dt < 0.6, dt
 
                 # the crashed client's retained entries are gone right away
-                with anyio.fail_after(0.15):
+                with anyio.fail_after(0.6):
                     for p in (id_path, host_path):
                         while True:
                             try:

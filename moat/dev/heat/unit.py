@@ -180,7 +180,7 @@ class Unit(Generic[C, S]):
         state = await self.store.load()
 
         async with (
-            self.link.announcing(P("heat") / self.name, host=svc.host) as srv,
+            self.link.announcing(P("heat") / self.name, host=svc.host, wait=True) as srv,
             anyio.create_task_group() as tg,
         ):
             await tg.start(self.store.run)

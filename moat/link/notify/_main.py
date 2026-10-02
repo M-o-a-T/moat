@@ -34,7 +34,7 @@ async def run(obj, backend):
     cfg = obj.cfg.link.notify
     if backend:
         cfg.backends = backend
-    async with announcing(obj.conn) as ann:
+    async with announcing(obj.conn, wait=True) as ann:
         await Notify(cfg).run(obj.conn, evt=ann)
 
 
@@ -55,5 +55,5 @@ async def mirror(obj):
     from moat.link.notify import ErrorMirror  # noqa: PLC0415
 
     cfg = obj.cfg.link.notify
-    async with announcing(obj.conn) as ann:
+    async with announcing(obj.conn, wait=True) as ann:
         await ErrorMirror(cfg).run(obj.conn, evt=ann)

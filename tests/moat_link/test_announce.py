@@ -139,3 +139,69 @@ async def test_link_lost_in_body(cfg):
             await c.i_sync()
             c._link._hold_scope.cancel()  # noqa:SLF001
             await anyio.sleep(0.3)
+
+
+@pytest.mark.anyio
+async def test_wait(cfg):
+    "wait=True: the block isn't entered until the other client has left"
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+
+        c1 = await sf.client()
+        c2 = await sf.client()
+        up1 = anyio.Event()
+        left1 = anyio.Event()
+        waited: list[str | None] = []
+        async with anyio.create_task_group() as tg:
+
+            @tg.start_soon
+            async def ann1():
+                async with c1.announcing(P("foo.bar"), value="C1", host=False) as s:
+                    s.set()
+                    up1.set()
+                    await anyio.sleep(0.5)
+                left1.set()
+
+            with anyio.fail_after(2):
+                await up1.wait()
+            await c1.i_sync()
+
+            async with c2.announcing(
+                P("foo.bar"), value="C2", host=False, wait=True, on_wait=waited.append
+            ):
+                assert left1.is_set()
+                assert waited == [c1.id]
+                await c2.i_sync()
+                assert (await c2.d_get(P("run.host.foo.bar")))["id"] == c2.id
+
+
+@pytest.mark.anyio
+async def test_wait_local(cfg):
+    "wait=True also waits for another task using the same link"
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="TEST")
+
+        c1 = await sf.client()
+        up1 = anyio.Event()
+        left1 = anyio.Event()
+        waited: list[str | None] = []
+        async with anyio.create_task_group() as tg:
+
+            @tg.start_soon
+            async def ann1():
+                async with c1.announcing(P("foo.bar")) as s:
+                    s.set()
+                    up1.set()
+                    await anyio.sleep(0.3)
+                left1.set()
+
+            with anyio.fail_after(2):
+                await up1.wait()
+            with pytest.raises(RuntimeError):
+                async with c1.announcing(P("foo.bar")):
+                    pass
+            async with c1.announcing(P("foo.bar"), wait=True, on_wait=waited.append):
+                assert left1.is_set()
+                assert waited == [None]

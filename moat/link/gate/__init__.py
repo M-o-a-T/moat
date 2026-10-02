@@ -654,30 +654,10 @@ class AnnouncedJob:
         "Do the actual work. Call ``task_status.started()`` when it's up."
         raise NotImplementedError
 
-    async def _wait_free(self) -> None:
-        "Wait until no other live client announces this gate."
-        from moat.link.announce import get_service_path  # noqa: PLC0415
-
-        spath = await get_service_path(False, self.path)
-        async with self.link.d_watch(spath, state=None, mark=True) as mon:
-            owner = None
-            waiting = False
-            async for msg in mon:
-                if msg is None:
-                    if owner is None:
-                        return
-                    waiting = True
-                    self.settled.set()
-                    self.logger.info("Announced by %s: waiting", owner)
-                    continue
-                if msg is NotGiven or msg.get("id") == self.link.id:
-                    owner = None
-                elif await self.link.i_checkid(msg["id"]):
-                    owner = msg["id"]
-                else:
-                    owner = None
-                if owner is None and waiting:
-                    return
+    def _waiting(self, owner: str | None) -> None:
+        "Called by `announcing` when somebody else holds the announcement."
+        self.settled.set()
+        self.logger.info("Announced by %s: waiting", owner or "a local task")
 
     async def _crashed(self, exc: Exception) -> None:
         "Report a crash, then wait before retrying."
@@ -721,14 +701,17 @@ class AnnouncedJob:
             while True:
                 self.idle = True
                 self.ann = None
-                if not force:
-                    await self._wait_free()
                 fatal: Exception | None = None
                 try:
                     # The announcement is kept while the work is retried,
                     # to avoid needless churn.
                     async with announcing(
-                        self.link, host=False, name=self.path, force=force
+                        self.link,
+                        host=False,
+                        name=self.path,
+                        force=force,
+                        wait=True,
+                        on_wait=self._waiting,
                     ) as srv:
                         self.ann = srv
                         while True:

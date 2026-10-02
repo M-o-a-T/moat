@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from .client import LinkSender
 
+    from collections.abc import Callable
     from typing import Any, Unpack
 
 __all__ = ["announcing"]
@@ -213,6 +214,8 @@ async def announcing(
     service: MsgSender | None = None,
     via: anyio.Event | None = None,
     value: Any = None,
+    wait: bool = False,
+    on_wait: Callable[[str | None], None] | None = None,
 ):
     """
     This async context manager broadcasts the availability of a named service.
@@ -224,6 +227,12 @@ async def announcing(
         service: Service to delegate to
         force: Flag to override an existing server
         via: Use this event as a readiness proxy.
+        wait: If the service is already announced by some other task or
+            client, wait until that is gone instead of raising
+            :class:`~moat.link.exceptions.ServiceSupplanted`. The block is not entered until this
+            task holds the announcement. Ignored if @force is set.
+        on_wait: Called (with the other client's ID, or `None` for a task
+            using the same link) when waiting becomes necessary.
 
     The context manager yields a SetReady object.
 
@@ -258,10 +267,6 @@ async def announcing(
         yield FakeReady()
         return
 
-    if path in link.announced:
-        raise RuntimeError("A service announcement is already running")
-    link.announced.add(path)
-
     service_path = Path.build((gen_ident(12),)) if service is not None else None
 
     async def _delegate(
@@ -274,37 +279,96 @@ async def announcing(
             task_status.started()
             await anyio.sleep_forever()
 
-    async with anyio.create_task_group() as tg:
+    wait = wait and not force
+    while True:
+        if wait:
+            await _wait_free(link, path, on_wait)
+        elif path in link.announced:
+            raise RuntimeError("A service announcement is already running")
+        entered = False
+        link.announced[path] = anyio.Event()
         try:
-            if service:
-                await tg.start(_delegate, service_path, service)
-            srv = SetReady(link, path, force, service_path)
-            if value is not None:
-                srv.value = value
-            await tg.start(srv.monitor)
-            tg.start_soon(srv.run)
-            tg.start_soon(srv.wait_sr)
-            if via:
-                tg.start_soon(srv.wait_evt, via)
+            async with anyio.create_task_group() as tg:
+                try:
+                    if service:
+                        await tg.start(_delegate, service_path, service)
+                    srv = SetReady(link, path, force, service_path)
+                    if value is not None:
+                        srv.value = value
+                    await tg.start(srv.monitor)
+                    tg.start_soon(srv.run)
+                    tg.start_soon(srv.wait_sr)
+                    if via:
+                        tg.start_soon(srv.wait_evt, via)
 
-            await link.i_sync()
+                    await link.i_sync()
 
-            yield srv
+                    entered = True
+                    yield srv
 
-            # only remove the host entry when we terminated normally.
-            try:
-                await link.d_set(path, retain=True)
-            except ServerLinkLost:
-                # The link is gone, so we can't withdraw the entry.
-                # The process is going down anyway; don't mask why.
-                logger.warning("Link lost: could not clear the announcement of %s", path)
+                    # only remove the host entry when we terminated normally.
+                    try:
+                        await link.d_set(path, retain=True)
+                    except ServerLinkLost:
+                        # The link is gone, so we can't withdraw the entry.
+                        # The process is going down anyway; don't mask why.
+                        logger.warning("Link lost: could not clear the announcement of %s", path)
 
-        except ServiceSupplanted:
-            logger.warning("Service %s on %s already exists", name, host)
-            raise
+                except ServiceSupplanted:
+                    if wait and not entered:
+                        # Somebody else got there between our check and
+                        # our announcement: wait for them, too.
+                        continue
+                    logger.warning("Service %s on %s already exists", name, host)
+                    raise
+                finally:
+                    tg.cancel_scope.cancel()
         finally:
-            link.announced.discard(path)
-            tg.cancel_scope.cancel()
+            link.announced.pop(path).set()
+        return
+
+
+async def _wait_free(
+    link: LinkSender, path: Path, on_wait: Callable[[str | None], None] | None = None
+) -> None:
+    """
+    Wait until nobody else holds the announcement at @path: neither a task
+    using the same link, nor another live client.
+
+    @on_wait is called (with the other client's ID, or `None` if it's a
+    local task) when we have to wait.
+
+    The result is only a hint, as the situation might change before the
+    caller acts on it. `announcing` thus retries if it's beaten to it.
+    """
+    told = False
+    while (evt := link.announced.get(path)) is not None:
+        if not told and on_wait is not None:
+            on_wait(None)
+            told = True
+        await evt.wait()
+
+    async with link.d_watch(path, state=None, mark=True) as mon:
+        owner = None
+        waiting = False
+        async for msg in mon:
+            if msg is None:
+                if owner is None:
+                    return
+                waiting = True
+                if not told and on_wait is not None:
+                    on_wait(owner)
+                    told = True
+                logger.info("Announced by %s: waiting", owner)
+                continue
+            if msg is NotGiven or msg.get("id") == link.id:
+                owner = None
+            elif await link.i_checkid(msg["id"]):
+                owner = msg["id"]
+            else:
+                owner = None
+            if owner is None and waiting:
+                return
 
 
 class _AsServiceKwargs(TypedDict, total=False, closed=True):

@@ -206,7 +206,7 @@ class LinkCommon(CmdCommon):
     _hello: Hello | None = None
     _port: dict[str, Any] | str | None = None
     sdr: LinkSender
-    announced: set[Path]
+    announced: dict[Path, anyio.Event]
     backend: Backend
     tg: Any
     current_server: MsgSender | None
@@ -1348,7 +1348,7 @@ class Link(LinkCommon, CtxObj):
     _only: str | None = None
     _ctx_active: bool = False
     _setup_done: bool = False
-    announced: set[Path]
+    announced: dict[Path, anyio.Event]
     sdr: LinkSender
 
     def __new__(cls, cfg, name: str | None = None, common: bool = False, only: str | None = None):  # noqa:D102
@@ -1368,7 +1368,7 @@ class Link(LinkCommon, CtxObj):
         self._common = common
         self._only = only
         self._socket_path: str | None = None
-        self.announced = set()
+        self.announced = {}
         with suppress(AttributeError):
             self._port = self.cfg.client.port
         with suppress(AttributeError):

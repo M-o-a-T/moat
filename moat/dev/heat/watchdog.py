@@ -175,14 +175,11 @@ class WatchdogUnit(Unit[WatchdogCfg, WatchdogState]):
         assert isinstance(core, WatchdogCore)
         t0, m0 = time(), anyio.current_time()
         cfg = await load_config(self.link, "emergency", EmergencyCfg)
-        with anyio.CancelScope(shield=True):
-            try:
-                res = await emergency_shutdown(
-                    self.link, cfg, from_pump=False, service=self.service
-                )
-            except Exception as exc:
-                _logger.exception("Watchdog: emergency shutdown failed")
-                res = f"error: {exc!r}"
+        try:
+            res = await emergency_shutdown(self.link, cfg, from_pump=False, service=self.service)
+        except Exception as exc:
+            _logger.exception("Watchdog: emergency shutdown failed")
+            res = f"error: {exc!r}"
         delta = None
         try:
             t_in = await self.link.d_get(core.cfg.t_in)

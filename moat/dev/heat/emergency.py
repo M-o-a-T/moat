@@ -99,13 +99,13 @@ async def emergency_shutdown(
     The service is announced under the configured host name, not this
     machine's, so this works from any machine.
     """
-    if cfg is None:
-        cfg = await load_config(link, "emergency", EmergencyCfg)
-    if service is None:
-        service = await load_config(link, "service", ServiceCfg)
+    with anyio.move_on_after(cfg.total_timeout if cfg else 30, shield=True):
+        if cfg is None:
+            cfg = await load_config(link, "emergency", EmergencyCfg)
+        if service is None:
+            service = await load_config(link, "service", ServiceCfg)
 
-    result: Result = "total_timeout"
-    with anyio.move_on_after(cfg.total_timeout):
+        result: Result = "total_timeout"
         async with (
             nullcontext()
             if from_pump

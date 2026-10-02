@@ -410,6 +410,7 @@ async def delete(obj, before, recursive, sub, mqtt):
 @click.option("-o", "--only", is_flag=True, help="Value only, nothing fancy.")
 @click.option("-s", "--subtree", is_flag=True, help="Read the whole tree.")
 @click.option("-p", "--path-only", is_flag=True, help="Value only, nothing fancy.")
+@click.option("-P", "--full-path", is_flag=True, help="Report the complete path (subtree).")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.option("-i", "--ignore", multiple=True, type=P, help="Skip this (sub)tree")
 @click.option("-n", "--mindepth", type=int, help="Minimum path length")
@@ -424,6 +425,7 @@ async def monitor(
     only,
     path_only,
     add_date,  # noqa: ARG001
+    full_path,
     ignore,
     mark,
     subtree,
@@ -491,6 +493,8 @@ async def monitor(
                         res = [p, d, m]
                     else:
                         res = [p, d]
+                if full_path:
+                    p = obj.path + p
                 with suppress(BrokenPipeError):
                     yprint(res, stream=obj.stdout)
                     print("---", file=obj.stdout)

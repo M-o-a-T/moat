@@ -178,7 +178,7 @@ async def monitor(obj, name, chip):
     """
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, host=False) as srv:
+    async with as_service(obj, host=False, wait=True) as srv:
         await task(
             obj.conn,
             obj.gpio_cfg,

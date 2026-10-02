@@ -352,5 +352,5 @@ async def monitor(obj) -> None:
     """Stand-alone task to monitor a single metrics server."""
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj) as srv:
+    async with as_service(obj, wait=True) as srv:
         await task(obj.conn, obj.metrics_cfg, obj.metrics_name, task_status=srv)

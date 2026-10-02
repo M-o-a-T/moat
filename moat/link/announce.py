@@ -397,6 +397,7 @@ class _AsServiceKwargs(TypedDict, total=False, closed=True):
     name: Path | None
     host: Path | str | bool
     force: bool
+    wait: bool
     service: MsgSender | None
     value: Any
 

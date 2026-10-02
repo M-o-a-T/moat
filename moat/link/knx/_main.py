@@ -347,7 +347,9 @@ async def monitor(obj, local_ip, initial) -> None:
     """Stand-alone task to talk to a single KNX gateway."""
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, name=P("moat.link.knx") / obj.knx_name, host=False) as srv:
+    async with as_service(
+        obj, name=P("moat.link.knx") / obj.knx_name, host=False, wait=True
+    ) as srv:
         await task(
             obj.conn,
             obj.knx_cfg,

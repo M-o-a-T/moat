@@ -316,7 +316,7 @@ async def monitor(obj) -> None:
     """Stand-alone task to talk to a single Wago controller."""
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, host=False) as srv:
+    async with as_service(obj, host=False, wait=True) as srv:
         await task(
             obj.conn,
             obj.wago_cfg,

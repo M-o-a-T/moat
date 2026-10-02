@@ -161,7 +161,7 @@ async def run(obj: attrdict, nodes: int) -> None:
 
     runner_cls: type[JobRunner] = obj.runner_cls
     runner = runner_cls(obj.conn, obj.job_cfg, obj.subpath, nodes=nodes)
-    async with as_service(obj) as srv, runner.run():
+    async with as_service(obj, wait=True) as srv, runner.run():
         srv.set()
         await anyio.sleep_forever()
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+import sys
 from contextlib import nullcontext
 from platform import uname
 
@@ -89,6 +90,11 @@ async def list(obj, timeout, dump):  # noqa: A001
     host's ``run.host`` entry going away, its ``run.id`` identity (thus
     possibly the displayed hostname) – stay silent: they corroborate
     downtime, not new events.
+
+    Whenever a service's state or announced value changes, a status line
+    ("service up|down value") is shown. On a terminal it overwrites
+    itself, and is not shown with "-Q"; with "-V" it is printed like any
+    other line.
     """
 
     def host_of(h, k):
@@ -101,6 +107,33 @@ async def list(obj, timeout, dump):  # noqa: A001
     stated: dict[tuple[str, Path], bool] = {}
     # Per-host id, paths previously reported as up.
     seen: dict = {}
+    # Last status reported per (connection id, path).
+    status: dict[tuple[str, Path], tuple[bool, object]] = {}
+    verbose = getattr(obj, "debug", 1)
+    tty = sys.stdout.isatty()
+    shown = False
+
+    def clear():
+        """Erase a pending transient status line."""
+        nonlocal shown
+        if shown:
+            print("\r\x1b[K", end="")
+            shown = False
+
+    def show_status(hid, k, ok, value):
+        """Report a service's state and value, if they changed."""
+        nonlocal shown
+        if status.get((hid, k)) == (ok, value) or not verbose:
+            return
+        status[(hid, k)] = (ok, value)
+        line = f"{k} {'up' if ok else 'down'}" + ("" if value is None else f" {value}")
+        if verbose > 1:
+            clear()
+            print(line)
+        elif tty:
+            print(f"  {line}  \r", end="", flush=True)
+            shown = True
+
     with nullcontext() if timeout is None else anyio.move_on_after(timeout):
         async with HostList(link=obj.conn, cfg=obj.cfg.link, broadcaster=Broadcaster(10000)) as mq:
             async for h in mq:
@@ -118,13 +151,17 @@ async def list(obj, timeout, dump):  # noqa: A001
                         if not stated.get((h.id, k), True):
                             continue
                         stated[(h.id, k)] = False
+                        status.pop((h.id, k), None)
+                        clear()
                         print(h.id, host_of(h, k), k, "** DOWN **")
                     for k, v in h.data.h.items():
                         known.add(k)
                         ok = up if up is not None else v.get("up", False)
+                        show_status(h.id, k, ok, v.get("value"))
                         if stated.get((h.id, k), None) is ok:
                             continue
                         stated[(h.id, k)] = ok
+                        clear()
                         print(
                             h.id,
                             ""

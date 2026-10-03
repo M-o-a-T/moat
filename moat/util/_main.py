@@ -394,10 +394,19 @@ async def cfg_(obj, path, yaml, empty) -> None:
     """
     from .exc import ungroup  # noqa: PLC0415
 
-    cfg = CFG.result
-
     if not path:
         raise click.UsageError("Missing path(s). Add ':' for the complete config.")
+
+    for p in path:
+        while len(p):
+            try:
+                CFG.with_(str(p))
+            except ImportError:
+                pass
+            p = p.parent  # noqa:PLW2901
+
+    cfg = CFG.result
+
     delim = False
     for p in path:
         if delim and yaml:

@@ -16,6 +16,7 @@ from pathlib import Path as FSPath
 
 from moat.util import CtxObj, Queue, ValueEvent
 from moat.lib.modbus import ExcCodes, ExceptionResponse, FramerRTU, FramerTCP, ModbusIOError
+from moat.lib.path import P, Path
 from moat.util.exc import exc_iter, ungroup
 
 from .types import MAX_REQ_LEN, BaseValue, DataBlock, TypeCodec
@@ -24,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from anyio_serial import Serial
+
+    from moat.link.client import LinkSender
 
     from collections.abc import Callable
 else:
@@ -59,8 +62,12 @@ class ModbusClient(CtxObj):
 
     _tg: TaskGroup | None = None
 
-    def __init__(self) -> None:
+    def __init__(self, link: LinkSender | None = None) -> None:
         self.hosts = {}
+        # Optional MoaT-Link client. When set, transport errors in the
+        # host readers and slot pollers are reported to / cleared from
+        # MoaT-Link's error subsystem (``app.modbus.…``).
+        self._link = link
 
     @asynccontextmanager
     async def _ctx(self):
@@ -253,6 +260,34 @@ def _log_read_error(slot, exc: BaseException, *, backoff: bool) -> None:
             _logger.error("Read error %s (not retried): %s", slot, e)
 
 
+async def _report_exc(link: LinkSender | None, path: Path, exc: Exception, **kw) -> None:
+    """Best-effort: record *exc* at *path* in MoaT-Link's error subsystem.
+
+    Reporting must never disrupt the caller (a broken link shouldn't take
+    down the modbus reader), so failures here are merely logged.
+    """
+    if link is None:
+        return
+    try:
+        await link.e_exc(path, exc, **kw)
+    except Exception:  # pylint: disable=broad-except
+        _logger.warning("Failed to report error to MoaT-Link at %s: %r", path, exc)
+
+
+async def _report_ok(link: LinkSender | None, path: Path, **kw) -> None:
+    """Best-effort: clear any recorded error at *path* in MoaT-Link.
+
+    Called once at start-up / after a successful (re)connect so the error
+    subsystem reflects that the transport is healthy again.
+    """
+    if link is None:
+        return
+    try:
+        await link.e_ok(path, **kw)
+    except Exception:  # pylint: disable=broad-except
+        _logger.warning("Failed to report recovery to MoaT-Link at %s", path)
+
+
 class HostCommon:
     stream: ByteStream | None = None
     framer: FramerTCP | FramerRTU  # set by subclasses in __init__
@@ -281,6 +316,14 @@ class HostCommon:
 
         self.cap = anyio.CapacityLimiter(cap)
         self.timeout = timeout
+        # Inherit the optional MoaT-Link client from the owning ModbusClient
+        # so the reader can report transport errors / recovery.
+        self._link: LinkSender | None = getattr(gate, "_link", None)
+
+    @property
+    def err_path(self) -> Path:
+        """Where this host's transport health is reported to MoaT-Link."""
+        raise NotImplementedError
 
     def unit(self, unit):
         """
@@ -424,6 +467,10 @@ class Host(HostCommon, CtxObj):
     def _gate_key(self):
         return (self.addr, self.port)
 
+    @property
+    def err_path(self) -> Path:
+        return P("app.modbus.tcp") / str(self.addr) / str(self.port)
+
     # reader task #
 
     async def _reader(self, *, task_status) -> None:
@@ -455,6 +502,10 @@ class Host(HostCommon, CtxObj):
             task_status.started()
             task_status = None
 
+        # Clear any error retained from a previous run, then report reality
+        # as the connection comes up (or fails).
+        await _report_ok(self._link, self.err_path)
+
         reconnect_delay = DISCONNECT_DELAY
 
         while True:
@@ -475,6 +526,9 @@ class Host(HostCommon, CtxObj):
                     self.framer.resetFrame()
                     # Up and healthy again: reset the reconnect backoff.
                     reconnect_delay = DISCONNECT_DELAY
+                    # Tell MoaT-Link the transport is healthy (also fires
+                    # once on the initial connect, i.e. at program start).
+                    await _report_ok(self._link, self.err_path)
 
                 chunk = await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy
@@ -521,6 +575,10 @@ class Host(HostCommon, CtxObj):
                         exc,
                         len(self._transactions),
                     )
+
+                # Record the transport failure in MoaT-Link's error
+                # subsystem (every failure, not just transient ones).
+                await _report_exc(self._link, self.err_path, exc)
 
                 s, self.stream = self.stream, None
                 if s:
@@ -623,6 +681,10 @@ class SerialHost(HostCommon, CtxObj):
     @property
     def _gate_key(self):
         return self.port
+
+    @property
+    def err_path(self) -> Path:
+        return P("app.modbus.serial") / str(self.port)
 
     # reader task #
 
@@ -761,6 +823,7 @@ class Unit(CtxObj):
         self.host = host
         self.unit = unit
         self.slots = {}
+        self._link: LinkSender | None = getattr(host, "_link", None)
 
     def __str__(self) -> str:
         try:
@@ -895,6 +958,10 @@ class Slot(CtxObj):
 
         self.modes = {}
         self.mqtt_registers = set()  # Link Registers with dest configured
+        # Inherit the optional MoaT-Link client from the unit (→ host →
+        # ModbusClient) so read failures can be reported to / cleared from
+        # MoaT-Link's error subsystem.
+        self._link: LinkSender | None = getattr(unit, "_link", None)
         if kw:
             _logger.warning("%s:%s: extra arguments: %r", unit, slot, kw)
 
@@ -903,6 +970,15 @@ class Slot(CtxObj):
 
     def __repr__(self) -> str:
         return f"<Unit:{self.unit}:{self.slot}>"
+
+    @property
+    def err_path(self) -> Path:
+        """Where this slot's polling health is reported to MoaT-Link.
+
+        Nested under the owning host's transport-health path so a glance at
+        ``app.modbus.…/<host>/<unit>/<slot>`` shows the full addressing.
+        """
+        return self.unit.host.err_path / str(self.unit.unit) / self.slot
 
     @asynccontextmanager
     async def _ctx(self):
@@ -1078,16 +1154,24 @@ class Slot(CtxObj):
 
         Transport errors (host unreachable, connection reset) and Modbus
         “unit not available” exception codes trigger an exponential
-        backoff so we don\'t pound an offline gateway every cycle;
-        permanent protocol errors (illegal function/address/value) are
-        logged prominently but otherwise keep the regular cadence.
+        backoff so we don\'t pound an offline gateway every cycle.
+        Permanent protocol errors (illegal function/address/value) are
+        reported and then propagated, terminating the slot.
+
+        Every failure is recorded in MoaT-Link\'s error subsystem (at
+        :attr:`err_path`); a successful read after a failure clears it.
         """
         await self.run_lock.wait()
+
+        # Clear any error retained from a previous run, then report reality
+        # as the first read succeeds (or fails).
+        await _report_ok(self._link, self.err_path)
 
         try:
             await self.read()
         except Exception as exc:  # pylint:disable=broad-except
             _log_read_error(self, exc, backoff=False)
+            await _report_exc(self._link, self.err_path, exc)
         else:
             # Notify MQTT tasks after initial read
             for reg in self.mqtt_registers:
@@ -1137,12 +1221,17 @@ class Slot(CtxObj):
                 except Exception as exc:  # pylint:disable=broad-except
                     transient = _is_transient(exc)
                     _log_read_error(self, exc, backoff=transient)
+                    # Record every failure, transient or permanent.
+                    await _report_exc(self._link, self.err_path, exc)
                     if transient:
                         # Exponential backoff, capped at ~1 minute.
                         backoff = min(60, 1 + backoff * 1.5)
                     else:
                         raise
                 else:
+                    if backoff:
+                        # Recovered after a series of errors: clear them.
+                        await _report_ok(self._link, self.err_path)
                     backoff = 0
                     # Only update t_read if we actually read
                     if did_read:

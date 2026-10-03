@@ -50,7 +50,7 @@ async def dev_poll(
     s = cfg.setdefault("src", attrdict())
     sl = cfg.slots
 
-    async with ModbusClient() as cl, anyio.create_task_group() as tg:
+    async with ModbusClient(link=link) as cl, anyio.create_task_group() as tg:
         nd = 0
 
         async def make_dev(v, Reg, host: HostCommon, **kw) -> ClientDevice:

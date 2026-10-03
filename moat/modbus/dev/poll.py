@@ -215,6 +215,6 @@ async def dev_poll(
         if nd:
             logger.info("Server running.")
         else:
-            logger.error("Poll running, no server.")
+            logger.info("Poll running, no server.")
 
         pass  # wait until all tasks are done

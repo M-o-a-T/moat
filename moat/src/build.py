@@ -39,20 +39,38 @@ SRC = re.compile(r"^Source:\s+(\S+)\s*$", re.MULTILINE)
 
 
 def fix_deps(deps: list[str], tags: dict[str, str], changed: bool = False) -> bool:
-    """Adjust dependencies"""
+    """Adjust dependencies
+
+    Internal packages (those present in *tags*) are pinned to their current
+    tag with ``~=``, preserving any extras.  External dependencies are left
+    alone.
+
+    Whether the resulting change counts as "real" depends on *changed*: when
+    the package is being rebuilt anyway any difference triggers a rewrite,
+    otherwise only a shift in the minor-version stem (everything up to the
+    last dot) does -- a mere patch bump shouldn't force a rebuild.
+    """
     work = False
     for i, dep in enumerate(deps):
         r = Requirement(dep)
         if r.name in tags:
-            dep = f"{r.name} ~= {tags[r.name]}"  # noqa:PLW2901
-            if (
-                (deps[i] != dep)
-                if changed
-                else (deps[i][: deps[i].rindex(".")] != dep[: dep.rindex(".")])
-            ):
+            ext = f"[{','.join(sorted(r.extras))}]" if r.extras else ""
+            dep = f"{r.name}{ext} ~= {tags[r.name]}"  # noqa:PLW2901
+            if (deps[i] != dep) if changed else (_stem(deps[i]) != _stem(dep)):
                 deps[i] = dep
                 work = True
     return work
+
+
+def _stem(spec: str) -> str:
+    """Minor-version stem of a requirement string.
+
+    Everything up to (excluding) the last ``.`` -- or the whole string when
+    it carries no version specifier at all.  Used to ignore patch-level
+    differences when deciding whether a dependency change matters.
+    """
+    pos = spec.rfind(".")
+    return spec if pos < 0 else spec[:pos]
 
 
 class Status:

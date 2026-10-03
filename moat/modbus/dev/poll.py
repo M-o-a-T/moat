@@ -18,22 +18,33 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path as FSPath
+
     from moat.link.client import HostCommon, Link
 
 logger = logging.getLogger(__name__)
 
 
-async def dev_poll(cfg: dict, link: Link, *, task_status=anyio.TASK_STATUS_IGNORED):
+async def dev_poll(
+    cfg: dict,
+    link: Link,
+    *,
+    this_file: FSPath | None = None,
+    task_status=anyio.TASK_STATUS_IGNORED,
+):
     """
     Run a device task on this set of devices, as configured by the config.
 
     The config will be preprocessed by `moat.modbus.dev.device.fixup`; the
     result will be returned via @task_status after setup is complete.
+
+    Pass *this_file* (the path the config was loaded from) so that
+    ``include:`` directives are resolved relative to the config file too.
     """
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
     sl._apply_default = True  # pylint:disable=protected-access  # noqa: SLF001
-    cfg = fixup(cfg)
+    cfg = fixup(cfg, this_file=this_file)
 
     s = cfg.setdefault("src", attrdict())
     sl = cfg.slots

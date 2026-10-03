@@ -40,13 +40,14 @@ def dump(path, raw, no_refs):
 
 
 @cli.command()
-@click.argument("path", type=click.File("r"))
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=FSPath))
 @click.pass_context
 async def poll(ctx, path):
     """Poll Modbus devices as directed via YAML."""
     obj = ctx.obj
 
-    cfg = yload(path, attr=True)
+    with path.open("r") as f:
+        cfg = yload(f, attr=True)
 
     if "link" in obj.cfg:
         # pylint: disable=import-outside-toplevel
@@ -57,4 +58,4 @@ async def poll(ctx, path):
         ln_ctx = nullcontext(None)
 
     async with ln_ctx as mt_ln:
-        await dev_poll(cfg, link=mt_ln)
+        await dev_poll(cfg, link=mt_ln, this_file=path)

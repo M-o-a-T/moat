@@ -73,12 +73,20 @@ def fixup_i(d, this_file=None):
             elif not isinstance(inc, list):
                 inc = [inc]
             for i, dd in enumerate(inc):
-                try:
-                    f = _data / dd
-                    df = f.open("r")
-                except FileNotFoundError:
-                    f = this_file.parent / dd
-                    df = f.open("r")
+                candidates = [_data / dd]
+                if this_file is not None:
+                    candidates.append(this_file.parent / dd)
+                for f in candidates:
+                    try:
+                        df = f.open("r")
+                    except FileNotFoundError:
+                        continue
+                    break
+                else:
+                    locs = ", ".join(str(c) for c in candidates)
+                    raise FileNotFoundError(
+                        f"Include file not found: {dd!r}\n  searched: {locs}"
+                    ) from None
                 with df:
                     dd = yload(df, attr=True)  # noqa:PLW2901
                 inc[i] = fixup_i(dd, this_file=f)
@@ -88,7 +96,7 @@ def fixup_i(d, this_file=None):
 
     for k, v in d.items() if hasattr(d, "items") else enumerate(d):
         if isinstance(v, (Mapping, list, tuple)):
-            d[k] = fixup_i(v)
+            d[k] = fixup_i(v, this_file=this_file)
 
     return d
 

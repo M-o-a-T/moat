@@ -322,7 +322,7 @@ async def test_in_names_group_address(monkeypatch, autojump_clock):  # noqa:ARG0
     monkeypatch.setattr(knx_worker, "_make_in_device", _make)
     entry = _make_entry(dest=("data", "x"))
     link = MagicMock()
-    link.d_set = AsyncMock()
+    link.set = AsyncMock()
     srv = MagicMock()
     srv.devices = MagicMock()
 
@@ -333,4 +333,31 @@ async def test_in_names_group_address(monkeypatch, autojump_clock):  # noqa:ARG0
         await anyio.sleep(0.1)
         tg.cancel_scope.cancel()
 
-    link.d_set.assert_awaited_once_with(P("data.x"), 42, meta={"src": (1, 2, 3)})
+    link.set.assert_awaited_once_with(P("data.x"), 42, meta={"src": (1, 2, 3)})
+
+
+@pytest.mark.trio
+async def test_idem(monkeypatch, autojump_clock):  # noqa:ARG001
+    """A value read from the bus carries its group address as ``src`` metadata."""
+    cbs: list = []
+    device = MagicMock()
+
+    def _make(_srv, _addr, _mode, _name, cb):
+        cbs.append(cb)
+        return device, lambda _d: 42
+
+    monkeypatch.setattr(knx_worker, "_make_in_device", _make)
+    entry = _make_entry(dest=("data", "x"), idem=True)
+    link = MagicMock()
+    link.set = AsyncMock()
+    srv = MagicMock()
+    srv.devices = MagicMock()
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(knx_worker.run_in, link, srv, entry, GroupAddress("1/2/3"), P("k.1.2.3"))
+        await anyio.sleep(0.1)
+        cbs[0](device)
+        await anyio.sleep(0.1)
+        tg.cancel_scope.cancel()
+
+    link.set.assert_awaited_once_with(P("data.x"), 42, idem=True, meta={"src": (1, 2, 3)})

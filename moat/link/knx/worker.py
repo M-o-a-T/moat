@@ -93,6 +93,11 @@ async def run_in(
     evt = anyio.Event()
     # the item's metadata names the group address it came from
     meta = {"src": (addr.main, addr.middle, addr.sub)}
+    args = {}
+    # ``in entry`` would test the *child-node* map (see ``Node.__contains__``);
+    # we need to know whether the key is present in this entry's config dict.
+    if "idem" in entry.data_:
+        args["idem"] = entry.idem
 
     def _cb(_dev) -> None:
         evt.set()
@@ -105,7 +110,7 @@ async def run_in(
         while True:
             await evt.wait()
             evt = anyio.Event()
-            await link.d_set(dest, get_val(device), meta=meta)
+            await link.set(dest, get_val(device), meta=meta, **args)
     finally:
         srv.devices.async_remove(device)
 

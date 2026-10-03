@@ -41,7 +41,9 @@ class DetailedCalledProcessError(CalledProcessError):
 
         res = [
             f"Command returned exit status {self.returncode}",
-            f"Args: {' '.join(quote(x) for x in self.cmd)}",
+            # ``self.cmd`` may contain non-string path-likes (e.g. ``Path``);
+            # ``shlex.quote`` only accepts ``str``, so coerce each element.
+            f"Args: {' '.join(quote(str(x)) for x in self.cmd)}",
         ]
         if self.dir:
             res.append(f"Dir: {self.dir}")

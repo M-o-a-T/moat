@@ -16,7 +16,7 @@ from pathlib import Path as FSPath
 
 from moat.util import CtxObj, Queue, ValueEvent
 from moat.lib.modbus import ExcCodes, ExceptionResponse, FramerRTU, FramerTCP, ModbusIOError
-from moat.util.exc import ungroup
+from moat.util.exc import exc_iter, ungroup
 
 from .types import MAX_REQ_LEN, BaseValue, DataBlock, TypeCodec
 
@@ -142,11 +142,109 @@ class ModbusClient(CtxObj):
 
 
 class ModbusError(RuntimeError):
-    """Error entry in returned datasets"""
+    """Error entry in returned datasets.
+
+    Wraps a Modbus exception response (an :class:`~moat.lib.modbus.ExceptionResponse`)
+    or, occasionally, another error object returned by the gateway.
+    """
 
     def __init__(self, result):
-        super().__init__()
+        super().__init__(_explain(result))
         self.result = result
+
+    @property
+    def code(self) -> ExcCodes | None:
+        """The Modbus exception code, or ``None`` if not an exception response."""
+        if isinstance(self.result, ExceptionResponse):
+            try:
+                return ExcCodes(self.result.exception_code)
+            except ValueError:
+                return None
+        return None
+
+    @property
+    def transient(self) -> bool:
+        """Whether this error is worth retrying after a backoff.
+
+        True for the “unit / target unavailable” family of Modbus exception
+        codes (the gateway can\'t currently reach the slave) and for the
+        “busy / acknowledged” codes that promise a later retry.  Permanent
+        errors (illegal function/data) return ``False``.
+        """
+        return self.code in {
+            ExcCodes.ACKNOWLEDGE,
+            ExcCodes.SERVER_DEVICE_BUSY,
+            ExcCodes.GATEWAY_PATH_UNAVAILABLE,
+            ExcCodes.GATEWAY_TARGET_NO_RESPONSE,
+        }
+
+
+def _explain(result) -> str:
+    """Render a human-readable description of a Modbus error result."""
+    if isinstance(result, ExceptionResponse):
+        try:
+            code = ExcCodes(result.exception_code)
+        except ValueError:
+            return f"Modbus exception 0x{result.exception_code:02x}"
+        hints = {
+            ExcCodes.GATEWAY_PATH_UNAVAILABLE: "gateway path unavailable (unit not reachable)",
+            ExcCodes.GATEWAY_TARGET_NO_RESPONSE: "gateway target not responding (unit not found)",
+            ExcCodes.SERVER_DEVICE_FAILURE: "server/slave device failure",
+            ExcCodes.SERVER_DEVICE_BUSY: "server/slave device busy",
+            ExcCodes.ACKNOWLEDGE: "request acknowledged, retry later",
+            ExcCodes.NEGATIVE_ACKNOWLEDGE: "negative acknowledge",
+            ExcCodes.ILLEGAL_FUNCTION: "illegal function",
+            ExcCodes.ILLEGAL_DATA_ADDRESS: "illegal data address",
+            ExcCodes.ILLEGAL_DATA_VALUE: "illegal data value",
+            ExcCodes.MEMORY_PARITY_ERROR: "memory parity error",
+        }
+        return hints.get(code, f"Modbus exception {code.name}")
+    return f"Modbus error: {result!r}"
+
+
+# Errors that mean "the host/unit is currently unreachable" — retry with
+# backoff rather than hammering the gateway every cycle.
+_TRANSIENT_EXC: tuple[type[BaseException], ...] = (
+    OSError,  # connection refused, host unreachable, network down, ...
+    TimeoutError,
+    ClosedResourceError,
+    anyio.BrokenResourceError,
+    anyio.EndOfStream,
+    IncompleteRead,
+    ModbusIOError,
+)
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """Decide whether *exc* warrants an exponential backoff.
+
+    True for transport-level reachability errors (host down, connection
+    reset, timeout) and for the Modbus exception codes that signal a
+    temporarily-unavailable slave/unit (gateway path / target no-response,
+    device busy, acknowledge).
+    """
+    for e in exc_iter(exc):
+        if isinstance(e, _TRANSIENT_EXC):
+            return True
+        if isinstance(e, ModbusError) and e.transient:
+            return True
+    return False
+
+
+def _log_read_error(slot, exc: BaseException, *, backoff: bool) -> None:
+    """Log a read error, unwrapping exception groups for clarity.
+
+    The two nested task groups in :meth:`Slot.getValues`/:meth:`ValueList.readValues`
+    wrap a single :class:`ModbusError` in two layers of ``ExceptionGroup``;
+    showing those verbatim is useless.  Flatten to the underlying error(s)
+    and report them directly, noting whether we\'ll back off.
+    """
+    errs = list(exc_iter(exc)) or [exc]
+    for e in errs:
+        if backoff:
+            _logger.warning("Read error %s (retrying with backoff): %s", slot, e)
+        else:
+            _logger.error("Read error %s (not retried): %s", slot, e)
 
 
 class HostCommon:
@@ -938,13 +1036,19 @@ class Slot(CtxObj):
     async def read_task(self):
         """A background task for reading Modbus register values.
         We read every .`read_delay` seconds.
+
+        Transport errors (host unreachable, connection reset) and Modbus
+        “unit not available” exception codes trigger an exponential
+        backoff so we don\'t pound an offline gateway every cycle;
+        permanent protocol errors (illegal function/address/value) are
+        logged prominently but otherwise keep the regular cadence.
         """
         await self.run_lock.wait()
 
         try:
             await self.read()
         except Exception as exc:  # pylint:disable=broad-except
-            _logger.warning("Error %s: %r", self, exc)
+            _log_read_error(self, exc, backoff=False)
         else:
             # Notify MQTT tasks after initial read
             for reg in self.mqtt_registers:
@@ -957,7 +1061,7 @@ class Slot(CtxObj):
         if self.read_align:
             tn -= tn % self.read_delay
 
-        backoff = 0
+        backoff = 0.0
 
         while True:
             t = anyio.current_time()
@@ -992,9 +1096,13 @@ class Slot(CtxObj):
                 try:
                     did_read = await self.read_if_stale()
                 except Exception as exc:  # pylint:disable=broad-except
-                    _logger.warning("Error %s: %r", self, exc)
-                    backoff = 1 + backoff * 1.2
-                    # TODO re-raise if persistent?
+                    transient = _is_transient(exc)
+                    _log_read_error(self, exc, backoff=transient)
+                    if transient:
+                        # Exponential backoff, capped at ~1 minute.
+                        backoff = min(60, 1 + backoff * 1.5)
+                    else:
+                        backoff = 0
                 else:
                     backoff = 0
                     # Only update t_read if we actually read

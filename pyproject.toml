@@ -196,6 +196,8 @@ ignore = [
     "TD",
     "TRY003", "TRY300", "TRY301", "TRY400",
     "UP012", "UP015", "UP040", # "UP038",
+
+    "missing-copyright-notice"
     ]
 
 explicit-preview-rules = true
